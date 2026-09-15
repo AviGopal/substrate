@@ -1,0 +1,21 @@
+[Unit]
+Description=Validator-liveness detector — flags validators that stopped keeping their own cadence
+# For every validator-shaped activity with an established rhythm (>=5 executions in
+# 30d), asserts it has run within 6x its OWN median inter-execution gap while the
+# fleet is live. The expectation comes from each validator's history, not from a
+# period chosen here, so this measures rather than sets policy. Severed validators
+# are reported as one substrateGap. Meta-guarded: gaps on itself if it evaluates
+# nothing. Read-only except gap emission.
+#
+# Runs from a timer, not from the pool, on purpose: every validator that survived
+# the 2026-09-09 census was timer-driven and every dormant one was Thompson-selected,
+# including rhythm_conductor_tick itself. Per CLAUDE.md, a check cannot be scheduled
+# by the mechanism it exists to recover — this is that stated bootstrap-tier exception.
+After=activity-api.service surrealdb.service development-vessel.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/validator-liveness-tick.ts
+StandardOutput=journal
+StandardError=journal

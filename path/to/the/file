@@ -1,0 +1,1 @@
+Investigate and decompose the enumerated-anchor mechanism that makes a fabricated anchor impossible, which exists in this file and is wired only to the path the failures do not take. The goal is to extend it to the primary drafting path.

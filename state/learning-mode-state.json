@@ -1,7 +1,7 @@
 {
   "mode": "develop",
-  "driver": "frontier(10 necessary-but-unavailable; top=capabilityCensusReport)",
-  "pending_driver": "develop",
-  "pending_count": 0,
-  "updated_at": "2026-09-15T03:00:05.270Z"
+  "driver": "no_open_demand(routine collect)",
+  "pending_driver": "collect",
+  "pending_count": 1,
+  "updated_at": "2026-09-15T03:47:24.661Z"
 }

@@ -69,8 +69,20 @@ $wants
 
 [Service]
 Type=simple
-EnvironmentFile=/etc/substrate/env
+# ORDER IS LOAD-BEARING: systemd applies EnvironmentFile= directives in listing
+# order, so a LATER file overrides an earlier one. /etc/substrate/env is listed
+# LAST and is therefore authoritative for every rendered vessel.
+# /workspace/.substrate-secrets is a host-side restart cache for SECRETS; it is
+# not a source of truth for where this substrate is pointed. While it loaded
+# last, a stale HUB_DISCOVERY_URL carried forward from an older gen-env revision
+# (a decommissioned droplet IP) outranked env on every boot.
+#
+# Separately: the \$env_lines below are Environment= directives, and systemd
+# gives EnvironmentFile= precedence over Environment= REGARDLESS of line order
+# (systemd.exec: "Settings from these files override settings made with
+# Environment="). They survive only because gen-env never emits their names.
 EnvironmentFile=-/workspace/.substrate-secrets
+EnvironmentFile=/etc/substrate/env
 $env_lines
 WorkingDirectory=$workdir
 # A RESTART MUST BE ABLE TO REPAIR AN INCOMPLETE INSTALL.

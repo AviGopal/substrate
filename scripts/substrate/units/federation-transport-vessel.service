@@ -4,8 +4,15 @@ After=network.target discovery-vessel.service federation-relay.service
 
 [Service]
 Type=simple
-EnvironmentFile=/etc/substrate/env
+# ORDER IS LOAD-BEARING: systemd lets a LATER EnvironmentFile override an
+# earlier one, so /etc/substrate/env is listed LAST and is authoritative.
+# This unit is the reason the rule is written down: /workspace/.substrate-secrets
+# had carried a stale HUB_DISCOVERY_URL (a decommissioned droplet) since an older
+# revision of gen-env, and because it loaded last it beat the empty/derived value
+# in /etc/substrate/env — no relay anchor resolved and the transport hard-exited
+# every 5s, parked in `activating`, never `failed`.
 EnvironmentFile=-/workspace/.substrate-secrets
+EnvironmentFile=/etc/substrate/env
 Environment=FED_HEALTH_PORT=8401
 Environment=DISCOVERY_URL=http://127.0.0.1:8100
 WorkingDirectory=/workspace/git/super-repo/scripts/substrate/federation-relay

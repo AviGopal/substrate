@@ -7,8 +7,13 @@ Before=development-vessel.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-EnvironmentFile=/etc/substrate/env
+# ORDER IS LOAD-BEARING: systemd lets a LATER EnvironmentFile override an
+# earlier one, so /etc/substrate/env is listed LAST and is authoritative.
+# The persisted workspace file is a restart cache for SECRETS, never a source
+# of truth for routing anchors. SUBSTRATE_GIT_PAT/GITHUB_TOKEN are unaffected:
+# gen-env re-emits both verbatim into /etc/substrate/env.
 EnvironmentFile=-/workspace/.substrate-secrets
+EnvironmentFile=/etc/substrate/env
 ExecStart=/usr/local/bin/setup-git-push
 StandardOutput=journal
 StandardError=journal

@@ -4,3 +4,4 @@ SELECT * FROM v_paradigm_execution_traces WHERE id = "universal-tool-fallback-8e
 SELECT * FROM ONLY `v_paradigm_execution_traces:universal-tool-fallback-8eec96f4-1787872898339`;
 SELECT * FROM v_paradigm_execution_traces LIMIT 1;
 INFO FOR NS;
+SELECT execution_id, executed_at, execution_trace.tasks FROM activity_execution_traces ORDER BY executed_at DESC LIMIT 1

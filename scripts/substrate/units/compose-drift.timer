@@ -1,0 +1,17 @@
+[Unit]
+Description=Compose-drift detector timer
+
+[Timer]
+# The metric is day-scale by construction — only COMPLETE days are evaluated — so
+# a shorter period would re-judge the same finished day rather than see anything
+# new. Six hours matches the sibling liveness watchdog and gives four chances a
+# day to survive a transient database or vessel outage. The emitted gap id is
+# deterministic, so repeated runs update one row instead of accumulating rows.
+OnActiveSec=15min
+OnUnitActiveSec=6h
+Persistent=true
+AccuracySec=1min
+Unit=compose-drift.service
+
+[Install]
+WantedBy=timers.target

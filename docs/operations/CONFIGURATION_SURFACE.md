@@ -95,6 +95,7 @@ route preferences, and boredom pacing overrides of 240×–300× the in-code def
    >  gen-env hardcoded literal
   ─────────── resolution ends; the value is written to /etc/substrate/env ───────────
    >  unit Environment=
+   >  EnvironmentFile=-/workspace/.substrate-secrets (listed FIRST, so env outranks it)
    >  EnvironmentFile=/etc/substrate/env          (beats Environment=, see §1)
    >  EnvironmentFile=-/etc/substrate/llm-<id>.env (later file wins → per-arm pin)
    >  .service.d/*.conf Environment=              (applied last, beats everything)
@@ -109,6 +110,14 @@ Three sub-chains deviate:
   selection stays absent, and `apply-inventory` reads absence as "keep everything".
 - **Endpoints** insert a derivation tier: explicit env > **spoke auto-derivation** from the
   discovery host (scheme + port-offset arithmetic) > alias chain > loopback literal.
+  **Routing anchors are never persisted.** `HUB_DISCOVERY_URL`, `DISCOVERY_ENDPOINT`,
+  `IDENTITY_VESSEL_URL`, `ACTIVITY_API_ENDPOINT` and their aliases describe where this
+  substrate is pointed *right now*; they are re-derived every boot and are excluded from
+  `.substrate-secrets` by both of its writers — gen-env's merge loop and `secrets.env.sh`'s
+  carry-through — so a value that once reached the file cannot outlive the hub it named.
+  This is not a precaution: one such anchor, carried forward by a merge loop designed to
+  preserve keys it did not recognise, pinned the fleet to a decommissioned host and held
+  the federation transport in a permanent crash loop.
 - **`.env` only reaches the container for names listed in compose's `environment:` block.**
   An unlisted name in `.env` is a no-op regardless of the value.
 
@@ -198,7 +207,7 @@ This is the most consequential category, because a default only applies when a v
 | `DISCOVERY_ENDPOINT` | 4 | `discovery-vessel:8080` (wrong port for this fleet) and `localhost:8765` (a port used nowhere else) |
 | `ACTIVITY_API_ENDPOINT` | 4 | includes activity-api pointing at its **own** wrong port |
 | `GOAL_HOST_VESSEL_ENDPOINT` | 2 | `:8210` in 12 sites; `:8090` — the dev-vessel port — in one |
-| `FED_HEALTH_PORT` | 2 | `8401` in three consumers, `8402` in the server itself |
+| `FED_HEALTH_PORT` | 2 | `8401` in the in-container transport and its three consumers; `8402` in the **host-side Obsidian sidecar** (`libp2p-federation-transport/src/sidecar.ts`), a separate program reading the same name. One variable, two programs, two defaults — export it for one and the other silently moves. (Do not read this row as "the server disagrees with its consumers": the server agrees with them. Also distinct: `OBSIDIAN_PASSTHROUGH_HEALTH_PORT`, which also defaults to `8402` but is a different name.) |
 
 Adjacent hazards of the same kind:
 

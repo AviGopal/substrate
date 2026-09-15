@@ -221,6 +221,32 @@ converge_units() {
       && log "units: daemon-reload done — TimeoutStopSec/Restart apply at the next stop; Environment= needs the unit to restart (next convergence)" \
       || log "units: !!! daemon-reload FAILED — unit changes are on disk but NOT active"
   fi
+  # CONVERGING A TIMER'S FILE DOES NOT MAKE IT FIRE.
+  #
+  # `install` + daemon-reload leaves a NEW timer known-to-systemd and DISABLED:
+  # WantedBy=timers.target only takes effect once `enable` writes the
+  # timers.target.wants symlink. So a timer added to units/ sat on disk, correctly
+  # converged, logged as "converged", and never ran — and a timer that never runs
+  # emits silence, which every consumer reads as health. That is the same
+  # built-but-never-connected shape this file already fights for Environment= and
+  # drop-ins. Found 2026-09-09 while adding validator-liveness.timer: it only fired
+  # because it was enabled BY HAND, and that symlink lives in /etc, so the next
+  # image rebuild would have brought the unit back installed-and-disabled.
+  #
+  # Enable only what reports exactly `disabled`. `is-enabled` also returns `masked`
+  # (apply-inventory's mechanism for keeping a unit off a spoke — see the /usr/lib
+  # targeting note above), `static`, and `indirect`; acting on those would either
+  # un-mask a deliberately-masked unit or churn. Idempotent, so it is a no-op on
+  # every tick after the first, and it logs only when it actually changes something.
+  for uf in "$_cu_super"/scripts/substrate/units/*.timer; do
+    [ -f "$uf" ] || continue
+    ubase="$(basename "$uf")"
+    if [ "$(systemctl is-enabled "$ubase" 2>/dev/null)" = "disabled" ]; then
+      systemctl enable --now "$ubase" >/dev/null 2>&1 \
+        && log "units: ENABLED $ubase — it was converged but disabled, so it had never fired" \
+        || log "units: !!! failed to enable $ubase — the unit is on disk and will not fire"
+    fi
+  done
 }
 
 # converge_fleet_defs <super-repo-dir> — the LAST members of the

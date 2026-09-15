@@ -79,9 +79,25 @@ if [[ "${SECRETS_PERSIST:-1}" == "1" ]]; then
     # Every OTHER key already persisted, carried through untouched. Comments are
     # dropped deliberately: the header above replaces them, and a stale comment
     # about a key another writer has since changed is worse than none.
+    #
+    # EXCEPT ROUTING ANCHORS, which are dropped, not carried. They name where this
+    # substrate is pointed RIGHT NOW; they are re-derived from the run environment
+    # on every gen-env boot and are not secrets. Carrying one forward freezes a
+    # value that changes — a HUB_DISCOVERY_URL naming a decommissioned droplet
+    # survived here indefinitely and, because units loaded this file after
+    # /etc/substrate/env, outranked the substrate's own derivation and kept
+    # federation-transport-vessel crash-looping on "no relay anchor".
+    #
+    # This exclusion MUST stay in sync with the matching drop list in gen-env.sh's
+    # merge loop (search: "dropped stale routing anchor"). Two writers, one rule:
+    # either one alone leaves the other free to re-persist the anchor.
+    # PEER_DISCOVERY_ENDPOINTS is NOT an anchor for this purpose — it is an
+    # operator-explicit pin that gen-env owns and round-trips on purpose.
     if [[ -f "$SECRETS_FILE" ]]; then
       grep -E '^[A-Za-z_][A-Za-z0-9_]*=' "$SECRETS_FILE" 2>/dev/null | grep -vE \
         '^(JWT_SECRET|SURREAL_PASS|METABOB_API_KEY|SUBSTRATE_GIT_PAT|FEDERATION_SIGNING_SECRET|FEDERATION_PEER_AUTH_MODE)=' \
+        | grep -vE \
+        '^(HUB_DISCOVERY_URL|DISCOVERY_ENDPOINT|DISCOVERY_VESSEL_ENDPOINT|IDENTITY_VESSEL_URL|IDENTITY_ENDPOINT|ACTIVITY_API_ENDPOINT|ACTIVITY_API_URL|PRODUCER_DISCOVERY_ENDPOINT|METABOB_ENDPOINT|RELAY_MULTIADDR)=' \
         || true
     fi
   } > "$_tmp"

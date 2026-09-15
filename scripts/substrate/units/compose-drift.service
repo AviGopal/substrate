@@ -1,0 +1,28 @@
+[Unit]
+Description=Compose-drift detector — flags the composer degrading its own anchor-failure rate
+# Asserts that feature_compose's HARD anchor-failure rate (apply_failed AND
+# ops_applied==0) on the most recent COMPLETE day has not degraded against the
+# median of the composer's own preceding complete days. The expectation comes from
+# the composer's own history, not a threshold chosen here, so this measures rather
+# than sets policy. Degradation must clear a relative margin, an absolute margin
+# and a one-sample z simultaneously. Partial days and low-sample days are excluded;
+# sub-day windows are noise on this metric. Meta-guarded: gaps on itself if it
+# evaluates nothing. Read-only except gap emission.
+#
+# Runs from a timer, not from the pool, on purpose. This detector watches the
+# component that performs every code change in this substrate, including changes to
+# itself — and that component has no test file, so its own pipeline logs on every
+# run that "every gate below this point READS the diff; only a test RUNS it."
+# A detector for the authoring lane cannot be authored and scheduled by the
+# authoring lane. Per CLAUDE.md, a check cannot be scheduled by the mechanism it
+# exists to recover — this is that stated bootstrap-tier exception, and the
+# precedent is f0cfb91: a one-line inverted boolean that degraded the composer
+# threefold for two days while passing every gate on the way in.
+After=activity-api.service surrealdb.service development-vessel.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/compose-drift-tick.ts
+StandardOutput=journal
+StandardError=journal

@@ -23,10 +23,20 @@
 # arm is live, after which this script should not be needed.
 #
 # Usage:  bash scripts/substrate/bootstrap-remote-google-arm.sh
-# Env:    SSH_KEY (default ~/.ssh/syzygy_deploy)  HUB=root@138.197.116.56
+# Env:    SSH_KEY (default ~/.ssh/syzygy_deploy)  HUB=root@<hub-host>  (REQUIRED)
 
 set -euo pipefail
-HUB="${HUB:-root@138.197.116.56}"
+# No default hub. This previously defaulted to a specific droplet, which meant a script
+# shipped in the image pointed every operator at one machine — the same law-11 violation as
+# the peering drop-in, but in executable code rather than a comment, so it survived the
+# audit that only looked for frozen addresses in config. That droplet is now dead, so the
+# default could only ever fail; failing LOUDLY with a usage message beats timing out
+# against a host the caller never chose.
+if [ -z "${HUB:-}" ]; then
+  echo "ERROR: set HUB=root@<hub-host> — this script has no default hub, by design." >&2
+  exit 2
+fi
+HUB="${HUB}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/syzygy_deploy}"
 HUB_CONTAINER_IP="${HUB_CONTAINER_IP:-172.17.0.2}"
 HUB_PORT="${HUB_PORT:-8221}"  # llm-resolver-opus wrapper; full provider registry + cascade once the fixed image lands

@@ -26,6 +26,22 @@ configured, fetches `<discovery-endpoint>/bootstrap`, takes the relay anchor,
 reserves a p2p circuit (preferring the libp2p overlay), and registers itself. A
 valid API key is the **sole** gate.
 
+**An anchorless start is not a fatal start.** If the configured bootstrap URL is
+unreachable or serves no relay anchor, the transport falls back to the *local*
+discovery's `/bootstrap`, and if that is also anchorless it starts **direct-only**:
+it builds its libp2p node, serves resolves, registers locally, and logs a
+direct-only warning instead of exiting. It then polls for an anchor on a widening
+backoff and, when one appears, adopts it and acquires a circuit **without a unit
+restart** — the peer id is derived from the stored identity, so it survives the
+adoption. Direct-only is a degraded steady state, not a crash: see
+*Known limitations* below for what it does and does not buy you.
+
+**This applies to the in-container transport, not to the Obsidian sidecar.** The
+sidecar has no direct-only mode: with no relay override and no anchor from
+`/bootstrap` it exits, so on a surface host an unrelayed hub still shows up as a
+sidecar that will not stay running. Fix the hub's relay rather than pinning a
+multiaddr.
+
 A hand-set relay multiaddr is now an **optional override**, not a requirement —
 useful only to pin a specific relay or when `/bootstrap` is unreachable. Pinning
 one by hand is what used to break: a relay peer id changes on every relay
@@ -77,8 +93,11 @@ tags peer results `discoveredVia:"peer"`, and goal-host routes those over the re
 - **Hub-registration (spoke)** — one vessel or a small *trusted* set joining an
   existing substrate: same org, same learning state, same trust domain, lowest
   latency. `ENABLED_ROLES=spoke` + hub endpoints + a hub-issued
-  `METABOB_API_KEY`. The spoke's vessels must advertise endpoints the hub's
-  callers can reach (`VESSEL_ADVERTISE_ENDPOINT` / `SUBSTRATE_ADVERTISE_HOST`).
+  `METABOB_API_KEY`. The spoke's vessels are made reachable by the spoke's **own
+  federation transport**, which mirrors each of them into the hub as a
+  `<vessel>@<substrate>` row carrying that transport's libp2p peer id and circuit
+  — reachability is the substrate's one overlay identity, not a host address
+  advertised per vessel.
 - **Peer-substrate (federation)** — separate org, separate learning state, an
   adversarial-tolerant boundary, or a whole fleet on a remote host: own
   store/identity + `PEER_DISCOVERY_ENDPOINTS` + `FEDERATION_SIGNING_SECRET`
@@ -159,8 +178,10 @@ make -C scripts/substrate up LIVE_NAME=<hub> PORT_OFFSET=<n> ENABLED_ROLES=hub \
 docker exec <hub> vessel-ctl install federation-relay
 
 # The relay hard-exits without PUBLIC_IP, under Restart=always — so it fails as a
-# permanent crash-loop reporting `activating`, never `failed`. No launch path
-# passes it, so set it on the container and restart the unit:
+# permanent crash-loop reporting `activating`, never `failed`. (This is the relay
+# unit. The federation *transport* no longer exits when it has no anchor — it
+# starts direct-only and keeps polling.) No launch path passes PUBLIC_IP, so set
+# it on the container and restart the unit:
 docker exec <hub> sh -c 'echo PUBLIC_IP=<address-spokes-can-reach> >> /etc/substrate/env'
 docker exec <hub> systemctl restart federation-relay
 
@@ -212,22 +233,15 @@ ingress/egress fall out of the discovery anchor alone, with no relay multiaddr
 or federation id to supply. A spoke is **designed** to need no local LLM key — it is meant to inherit the
 hub's LLM arms through discovery.
 
-> ⚠ **Measured, and it does not work yet.** On a live hub+spoke pair the
-> federation is one-directional: all nine of the spoke's vessels registered into
-> the hub and refreshed on the ~2-minute heartbeat, while the spoke resolving a
-> hub-owned shape returned `found:false` for both `llmCompletion` and
-> `activityTemplate`. The byte-identical query against the hub returned
-> `found:true`, so that is a real negative and not a query-form artifact.
->
-> The cause is not the filter but what it filters. Discovery keeps only *dialable*
-> peer rows — a non-empty `libp2p_multiaddr`, or an endpoint that is not
-> loopback — and every hub vessel registers itself as `http://127.0.0.1:<port>`
-> with no multiaddr. `VESSEL_ADVERTISE_ENDPOINT` / `SUBSTRATE_ADVERTISE_HOST`
-> are the cure, but they are documented for the spoke direction only and are set
-> on no hub by default.
->
-> Until a hub advertises reachable endpoints, **give a spoke its own provider
-> key** if it must resolve models.
+> ⚠ **Federation is one-directional until the hub side is anchored too.** A
+> spoke's vessels mirror into the hub and refresh on the ~2-minute heartbeat,
+> while a spoke resolving a *hub-owned* shape gets `found:false` — the same
+> query answered directly by the hub returns `found:true`, so this is a real
+> negative and not a query-form artifact. **Give a spoke its own provider key**
+> if it must resolve models. The diagnosis and the correct direction are in
+> *Known limitations* below; the short version is that the hub must be running
+> its own federation transport over a live relay circuit, and that the fix is
+> **not** an advertised host address per vessel.
 
 `up` resumes a stopped container only when no launch settings are supplied. To
 change its hub, credential, role selection, or federation overrides, preserve
@@ -296,6 +310,116 @@ stale on a relay restart, which is exactly what the `/bootstrap` fetch avoids.
 The sidecar reserves on the relay, serves resolves over libp2p (proxying to the local
 vessel), and registers `protocol:"libp2p"` with the hub discovery. The hub
 then resolves those shapes over the relay — the vessel never learns libp2p is involved.
+
+## Joining by multiaddr
+
+A substrate can join knowing only a peer multiaddr and a key — no discovery URL.
+The distinction is the point: **a multiaddr names a peer identity, a URL names a
+host**, so an anchor that survives a re-IP has to be the former.
+
+```bash
+docker run -e METABOB_API_KEY=<key> -e PEER_MULTIADDR=/dns4/<peer>/tcp/4001/p2p/<peerId> ...
+```
+
+The transport dials that peer over libp2p and asks it for `substrateBootstrap`,
+which the peer answers from its own discovery. The relay anchor, identity endpoint
+and discovery endpoint come back over the overlay, and the joiner never needs an
+HTTP endpoint for the peer.
+
+This inverts the URL path deliberately. A URL join derives the relay *from* a
+discovery endpoint; a multiaddr join learns it *through* a peer already reachable,
+because the multiaddr is itself the reachability. When both are supplied the peer
+anchor is tried first — an operator who gave a multiaddr chose a peer, not a host.
+
+Anchors learned this way are held in memory and served at `:8401/anchors`. They are
+deliberately **not** written to `/etc/substrate/env`: `gen-env` truncates that file
+on every boot, which is exactly why the documented hand-carry of `RELAY_MULTIADDR`
+never survived a restart. Freezing a value that changes is the bug, not the storage.
+
+**Discovery itself is reachable over the overlay**, which is what makes this
+possible. It needs a special case, because `discovery-vessel` does not register
+itself into its own registry — so a `vesselCapability` lookup for `vesselRegistry`
+finds no owner, and the one vessel every joiner must reach is the one vessel that
+cannot be found by the mechanism used to find vessels. The transport ingress
+answers `vesselRegistry`, `vesselCapability`, `vesselEndpoint`, `vesselHealth` and
+`substrateBootstrap` directly rather than through shape-owner lookup.
+
+`substrateBootstrap` is unauthenticated over the overlay, matching discovery's own
+public treatment of `GET /bootstrap`: a joiner has not yet been told the identity
+authority, so requiring a credential to learn where that authority lives is a
+chicken-and-egg. It returns routing anchors only — never registry contents. The
+four registry shapes remain credentialed.
+
+**Not yet complete.** The identity namespace still reaches the hub over HTTP via
+`IDENTITY_VESSEL_URL`, so a multiaddr-only join currently federates at the overlay
+layer without inheriting the hub's `org_id`. The identity shim and caller-credential
+threading are the remaining pieces of the three-input contract.
+
+## Known limitations
+
+Read these before concluding a deployment is federated.
+
+**A substrate has exactly one overlay identity.** Every `<vessel>@<substrate>`
+row a transport mirrors carries *that transport's* libp2p peer id and circuit;
+per-vessel addressing happens inside the request (`pointer._fedTargetVessel`),
+not by giving each vessel its own multiaddr. A registration loop that omits
+`protocol` / `libp2p_peer_id` / `libp2p_multiaddr` is therefore behaving
+correctly, not under-advertising. `VESSEL_ADVERTISE_ENDPOINT` /
+`SUBSTRATE_ADVERTISE_HOST` exist in the registration client, but they are a
+host-address override, not the supported mechanism — prescribing them would pin
+a substrate to a host, which is exactly what the architecture forbids.
+
+**Why hub-owned shapes do not resolve from a spoke.** Discovery keeps only
+*dialable* peer rows — a non-empty `libp2p_multiaddr`, or a non-loopback
+endpoint — and a hub vessel registers itself on loopback with neither. What
+would make it dialable is the **hub's own** federation transport mirroring it
+with the hub transport's circuit. That mirror is skipped whenever the transport
+holds no live relay circuit: `registerAtHub` returns early and publishes
+nothing. So the missing piece is a relay the hub transport can reserve on, plus
+that transport running — not an address advertised per vessel. Until then,
+resolution works spoke → hub only.
+
+**Direct-only federates nothing, and nothing loudly says so.** Since the
+transport no longer exits when it has no anchor, an anchorless spoke comes up
+`active`, answers `/health` with `ok`, and mirrors **nothing** — `registerAtHub`
+is skipped for want of a circuit. The previous behaviour was a crash loop, which
+the self-recovery watchdog noticed; the current one is quiet. The unit's state
+is therefore no longer evidence of federation. Check the transport's health
+payload for a non-zero `activeReservations` and a non-empty `libp2p_multiaddr`,
+or check that the substrate's rows in the **hub's** registry carry a circuit
+multiaddr. The throttled journal line `no relay anchor (direct-only) — remote
+visibility suspended` is the other signal.
+
+**Direct-only reachability is narrower than it sounds.** Without a circuit the
+transport advertises only its direct listen addresses, on an ephemeral port that
+no deployment publishes. Those addresses are reachable from inside the
+container's own network and not from another host, so a relay-less transport is
+usable for *egress* to a relayed peer, but is not itself remotely dialable.
+
+**Over a circuit, only the lpStream path carries real payloads.** Measured across
+a live relay, per payload class: the lpStream path (`resolveViaLibp2p`) round-trips
+every class byte-identically — 1 B, the 1023/1024/1025 B chunk boundary, 64 KB,
+unicode, base64 binary, and 64-level nested JSON. The HTTP-over-libp2p path
+(`resolveViaHttp`) carries the 1-byte case and fails every class above it. The same
+matrix over a *direct* connection passes on both paths, so the ceiling is
+specifically HTTP-over-libp2p **across a circuit**. Callers that must move more
+than a token payload cross-substrate should use the lpStream path; the HTTP path
+remains only for peers that have not migrated.
+
+**`limits` tells you the relay's policy, not the path.** A connection's
+`limits != null` means the circuit is byte/time capped, and a relay run with
+`applyDefaultLimit: false` — which `scripts/substrate/federation-relay/relay.ts`
+does — produces uncapped circuits, so a genuinely relayed connection reports
+"not limited". To tell relayed from direct, look for a `/p2p-circuit` component in
+the connection's negotiated `remoteAddr`; treat `limits` as information about the
+relay, not about the route.
+
+**A federation unit that hard-exits is invisible.** `federation-relay` exits
+non-zero when `PUBLIC_IP` is unset, and under `Restart=always` that parks it in
+`activating` forever — it never reaches `failed`, so no `ActiveState` check above
+it fires. Supply the value as a unit drop-in rather than appending it to
+`/etc/substrate/env`, which `gen-env` truncates on every boot; that truncation is
+why the documented hand-carry of `RELAY_MULTIADDR` never survived a restart.
 
 ## End-to-end harness
 

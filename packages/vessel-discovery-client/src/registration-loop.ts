@@ -217,17 +217,73 @@ export class DiscoveryRegistrationLoop {
       this.logger.warn(
         `[DiscoveryRegistrationLoop] heartbeat HTTP ${res.status} (failure #${this.failureCount})`,
       )
-      if (this.failureCount >= 3 && this.unhealthyCallback) {
-        this.unhealthyCallback()
+      if (this.failureCount >= 3) {
+        void this.emitRegistrationHealth(
+          res.status === 401 || res.status === 403 ? "auth_rejected" : "heartbeat_failing",
+          `heartbeat HTTP ${res.status}`,
+        )
+        if (this.unhealthyCallback) this.unhealthyCallback()
       }
     } catch (err) {
       this.failureCount += 1
       this.logger.warn(
         `[DiscoveryRegistrationLoop] heartbeat error: ${(err as Error).message} (failure #${this.failureCount})`,
       )
-      if (this.failureCount >= 3 && this.unhealthyCallback) {
-        this.unhealthyCallback()
+      if (this.failureCount >= 3) {
+        void this.emitRegistrationHealth("heartbeat_unreachable", (err as Error).message)
+        if (this.unhealthyCallback) this.unhealthyCallback()
       }
+    }
+  }
+
+
+  /**
+   * A VESSEL THAT CAN NEVER REGISTER IS ABSENT, NOT STALE — AND ABSENCE READS AS
+   * "NOT DEPLOYED" RATHER THAN "BROKEN".
+   *
+   * Measured on a live substrate: discovery logged a steady 2 rejected heartbeats per
+   * minute — 8,017 over a day — each `401 ... identity rejected the key`. Every vessel
+   * that WAS registered looked perfect (all rows fresh under 60s), so no freshness check,
+   * health probe or ActiveState check could see the ones that were not there. The only
+   * record was a journal line, and a journal line is not an escalation.
+   *
+   * So say it in a shape. This mirrors the transport's emitJoinHealth, which exists for
+   * exactly the same reason on the federation side, and it names the vesselId — the single
+   * fact absence cannot carry.
+   *
+   * Fail-open and rate-limited: this runs inside the heartbeat loop, so it must never
+   * throw, never block, and never turn a once-a-minute rejection into a once-a-minute
+   * write. A repeated condition is reported on a cadence, not on every occurrence.
+   */
+  private lastHealthEmitAt = 0
+  private async emitRegistrationHealth(reason: string, detail: string): Promise<void> {
+    const EMIT_EVERY_MS = 600_000
+    if (Date.now() - this.lastHealthEmitAt < EMIT_EVERY_MS) return
+    this.lastHealthEmitAt = Date.now()
+    const api = (process.env.ACTIVITY_API_URL ?? process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080").replace(/\/$/, "")
+    const key = process.env.METABOB_API_KEY ?? ""
+    try {
+      await fetch(`${api}/v2/impulses/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(key ? { Authorization: `ApiKey ${key}` } : {}) },
+        body: JSON.stringify({
+          impulse: {
+            pointer: {
+              type: "registrationHealth_write",
+              vesselId: this.config.vesselId,
+              state: reason,
+              detail,
+              consecutive_failures: this.failureCount,
+              discovery_endpoint: this.config.discoveryEndpoint,
+              ts: Date.now(),
+            },
+          },
+        }),
+        signal: AbortSignal.timeout(5000),
+      })
+    } catch {
+      // Deliberately silent: this is the REPORTING path, and a reporting failure must not
+      // become a second fault in the loop it reports on.
     }
   }
 

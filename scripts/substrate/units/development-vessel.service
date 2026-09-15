@@ -5,8 +5,14 @@ Wants=activity-api.service
 
 [Service]
 Type=simple
-EnvironmentFile=/etc/substrate/env
+# ORDER IS LOAD-BEARING: systemd lets a LATER EnvironmentFile override an
+# earlier one, so /etc/substrate/env is listed LAST and is authoritative.
+# The persisted workspace file is a restart cache for SECRETS, never a source
+# of truth for where this substrate is pointed — when it was listed last, a
+# stale HUB_DISCOVERY_URL pinned to a decommissioned droplet outranked env on
+# every boot and crash-looped the federation transport.
 EnvironmentFile=-/workspace/.substrate-secrets
+EnvironmentFile=/etc/substrate/env
 Environment=PORT=8090
 Environment=HOST=0.0.0.0
 Environment=WORKSPACE_ROOT=/workspace
@@ -15,7 +21,10 @@ Environment=VESSEL_ENDPOINT=http://127.0.0.1:8090
 # Self-development through repositories (container-side direct push). The cutover
 # commits+pushes to MITOSIS_PUSH_CLONE_DIR/<vessel> (writable AviGopal clone set
 # up by git-push-setup.service) and mirrors into MITOSIS_RUNTIME_DIR/<vessel>
-# (live runtime). SUBSTRATE_GIT_PAT comes from the secrets EnvironmentFile above.
+# (live runtime). SUBSTRATE_GIT_PAT arrives via the EnvironmentFiles above: it is
+# minted/reused in .substrate-secrets and re-emitted verbatim into
+# /etc/substrate/env by gen-env (persisted_secret), so the env copy — which now
+# loads last — carries the same value.
 Environment=MITOSIS_DIRECT_PUSH=1
 Environment=MITOSIS_RUNTIME_DIR=/vessels
 Environment=EXTRA_WORKSPACE_ROOTS=/vessels/packages

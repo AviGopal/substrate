@@ -12,7 +12,7 @@
 #
 # Usage:
 #   GHCR_TOKEN=<pat-with-read:packages>  GHCR_USER=<gh-user>  SSH_KEY=~/.ssh/syzygy_deploy \
-#     ANTHROPIC_API_KEY=sk-ant-...  bash deploy-hub-pull.sh root@138.197.116.56 138.197.116.56
+#     ANTHROPIC_API_KEY=sk-ant-...  bash deploy-hub-pull.sh root@<hub-host> <hub-public-ip>
 #
 # GHCR_TOKEN / GHCR_USER are OPTIONAL — the package is public and pulls
 # anonymously. Supply them only for a private fork or a rate-limit-exempt pull;
@@ -167,8 +167,14 @@ After=network.target discovery-vessel.service federation-relay.service
 
 [Service]
 Type=simple
-EnvironmentFile=/etc/substrate/env
+# ORDER IS LOAD-BEARING: systemd lets a LATER EnvironmentFile override an
+# earlier one, so /etc/substrate/env is listed LAST and is authoritative.
+# Must stay identical to units/federation-transport-vessel.service — this is a
+# second copy of the same unit, and the copy that was NOT fixed is the one that
+# reinstates the bug. The bug: a stale HUB_DISCOVERY_URL persisted in
+# .substrate-secrets outranked env and crash-looped the transport.
 EnvironmentFile=-/workspace/.substrate-secrets
+EnvironmentFile=/etc/substrate/env
 Environment=FED_HEALTH_PORT=8401
 Environment=DISCOVERY_URL=http://127.0.0.1:8100
 WorkingDirectory=/workspace/git/super-repo/scripts/substrate/federation-relay

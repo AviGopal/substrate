@@ -270,6 +270,14 @@ Two related hazards on the same path, both measured:
   failed-unit check, which passed on a surface whose transport had restarted 222
   times. Read `restarts=` in `vessel-ctl status`.
 
+  **That tell no longer covers the commonest case.** A transport that finds no
+  relay anchor does not restart at all — it starts direct-only and polls for one —
+  so a surface that never reached the relay looks identical to a federated one
+  under both `--state=failed` and `restarts=`. The signal that separates them is
+  the reservation: `curl -s http://127.0.0.1:8401/health` inside the container and
+  read `.transport.activeReservations`; `0` means the surface is running and
+  federating nothing.
+
 ## Stopping and starting one
 
 A surface container can be stopped and started; it re-registers with the hub and

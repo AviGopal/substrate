@@ -34,8 +34,12 @@ Requires=development-vessel.service
 # Type=simple marks it started as soon as it forks; the seeding runs to
 # completion alongside the fleet.
 Type=simple
-EnvironmentFile=/etc/substrate/env
+# ORDER IS LOAD-BEARING: systemd lets a LATER EnvironmentFile override an
+# earlier one, so /etc/substrate/env is listed LAST and is authoritative. This
+# unit's ExecStart dials ${METABOB_ENDPOINT}, a routing anchor — it must come
+# from the substrate's own env, not from a value frozen into the host workspace.
 EnvironmentFile=-/workspace/.substrate-secrets
+EnvironmentFile=/etc/substrate/env
 Environment=WORKSPACE_ROOT=/workspace
 Environment=VESSEL_ID=development-vessel-local
 WorkingDirectory=/vessels/development-vessel

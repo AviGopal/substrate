@@ -1236,3 +1236,278 @@ guard (`64968c1`, 15 refinements → 0), and this one. Ten substrate-authored co
   landings non-deterministic.
 - The **admission prose-scan** fix is gone — it was live in the mirror, tracked in no repository, and
   erased by pull-sync exactly as predicted.
+
+---
+
+# Addendum 19: the 401 storm — measured, bounded, and root-cause NOT established
+
+## Two different 401s, only one of which matters
+
+- **Anthropic `authentication_error`** — 1–4 per hour, flat all day, against **330 successful LLM
+  completions in the last hour**. Failover covers it. Chronic, minor, not the incident.
+- **Identity vessel rejections** — accelerating: **2 → 276 → 872 → 1,226 per hour** from 21:00.
+  Identity's own access log shows **22 rejections against 167 successes in 20 minutes (12%)**.
+
+## It is load-bearing
+
+`auth.ts` classifies a 401 as `transient: false`, so the request is **denied, never retried**. The
+denied routes are core loop traffic:
+
+| route | count (25 min) |
+|---|---|
+| `GET /v2/activities/templates?limit=100` | 29 |
+| `POST /v2/activities/execution-traces` | 26 |
+| `POST /v2/events/publish` | 25 |
+
+**57 execution-trace writes were denied in one hour.** The trace store is therefore lossy right now,
+which means every count taken from it today — including the grading measurements in Addendum 18 — is
+an undercount of unknown size. One downstream failure is already in the log:
+`[retire-sweep] template listing HTTP 401 at offset 0 — sweeping only what was fetched`.
+
+## What it is not — ruled out by measurement, not assumption
+
+- **Not a bad service key.** All five configured keys (`METABOB`, `GOAL_HOST_VESSEL`,
+  `LOCAL_TOOLS_VESSEL`, `RIBOSOME_VESSEL`, `CONCEPT_DB`) are byte-identical, 160 chars.
+- **Not intermittent rejection of a valid key.** That key resolved **200 on 30 consecutive
+  attempts**.
+- **Not a missing credential.** Controlled experiment: a request with no auth header returns 401 to
+  the caller and produces **zero** identity warnings — activity-api rejects it before calling
+  identity. My "empty credential" hypothesis was refuted by its own control.
+
+## What it is — established by controlled experiment
+
+A request carrying a **present but unknown** credential produces 401 plus **exactly one** warning:
+
+| request | caller sees | identity warnings |
+|---|---|---|
+| no credential | 401 | 0 |
+| bogus `ApiKey mb-notarealkey…` | 401 | 1 |
+
+So all ~1,200/hour are callers presenting a credential identity does not recognise. Identity logs no
+`user_id` for them, and rejects in 3ms.
+
+## Why the caller cannot be named — the filed defect
+
+The rejection log records `url` and `status` only, never *what* was rejected. A failure occurring
+twenty times a minute is unattributable by construction. Filed as
+`the-identity-rejection-log-never-records-which-credential-was-rejected`, grounded, single op: add a
+3-character prefix and the length to that existing warning. Prefix leaks nothing — every valid key
+shares it — while length and prefix together discriminate the remaining possibilities.
+
+**Pre-registered prediction:** once it lands, the field will show either `eyJ` (a JWT presented where
+an API key is expected — six unauthenticated WebSocket clients are connected) or a `mb-` key of
+length 160 that identity nonetheless refuses, which would mean a second key exists outside
+`/etc/substrate/env`.
+
+## Unexplained and deliberately not claimed
+
+`identity-vessel` has been running since **2026-08-27 — 11 days without restart**, while activity-api
+restarted 8 times in the onset hour. That is the most conspicuous asymmetry around the 21:00 onset
+and it is **not** established as causal.
+
+---
+
+# Addendum 20: the grade fix is landed, deployed, correct — and inert at the learner
+
+Dispatch-and-observe, run on a fix already live. The prediction was that `feature_compose`'s
+posterior would drift toward its true landing rate once `28de0e8` keyed the grade to landing.
+
+**It has not moved at all.**
+
+| `feature_compose` posterior | value |
+|---|---|
+| alpha / beta | 6.918 / 2.973 |
+| n_observations | 64 |
+| **last_updated_at** | **2026-09-06T10:42:06** |
+| implied success rate | **0.699** |
+| measured landing rate since the fix | **4 / 26 = 0.154** |
+
+That timestamp is the same reading I recorded on the morning of 09-06. The arm has not updated in
+over 36 hours, across a window in which 26 graded rows were emitted for it, 4 of them successes.
+
+## The control rules out a global outage
+
+| posteriors updated | rows |
+|---|---|
+| 2026-09-05 | 317 |
+| 2026-09-06 | 429 |
+| **2026-09-07** | **873** |
+| 2026-09-08 | 27 |
+
+The learner is alive and updating hundreds of rows a day. The freeze is **specific to the arm whose
+grade was corrected**.
+
+## What this means
+
+`28de0e8` is landed, deployed, byte-correct, and verified at the emission site — the trace now
+carries an honest `success` keyed to `new_git_sha`, and Addendum 18 measured that change (80
+successes with zero landings before, 4 with 4 real landings after). **All of that is true and none
+of it reaches the learner.** Nothing propagates the corrected grade from the trace into
+`context_thompson_scores` for this arm.
+
+So the arm still believes it succeeds ~70% of the time while its measured landing rate is ~15%, and
+it will keep believing that regardless of what the traces now say.
+
+This is the pasted capstone's item 1, sharpened by measurement: my earlier claim that
+"grade means landing — done" was wrong at the layer that matters. Correcting *what is written* did
+not correct *what is learned*. The reward key still points wherever it pointed on 09-06, because the
+posterior is not reading the corrected signal at all.
+
+**The honest ceiling on today's three landed fixes:** two of them (the spec-refine guard, the
+environment label) act on execution and were verified by behaviour change. The third acts on the
+learning signal and is inert. Landing is not working, and *measured effect at the emission site* is
+not effect at the learner — a third distinct layer that this session's verification discipline had
+not separated until now.
+
+**This is precisely the loop the system should be able to run unaided:** dispatch a fix, observe the
+consequence, discover the fix is inert, and file that. Every step of it was operator-driven.
+
+---
+
+## Addendum 21 — the pre-registered test resolved: the emitter landed, the chain closed, and the credit is discarded one layer below
+
+**The emitter landed without operator hands.** `6fdcd71`, "substrate-authored: apply
+route-edit-52c39f7c-narrowed via mitosis cutover", 2026-09-08 15:20:41, author `Substrate
+Autonomous`. It carries exactly the single-line anchor form the gap specified. I did not notice at
+push time and built `ae48c95` directly on top of it. The blind-edit repair fix therefore was *not*
+the thing that unblocked the emitter — the substrate landed it on its own, before that fix deployed.
+The three prior relocation failures were followed by an unaided success on the fourth attempt.
+
+`origin/dev` has since advanced eight further substrate-authored commits past `ae48c95`, which
+remains an ancestor.
+
+**The chain from emitter to grader is closed and works.** dev-vessel restarted 22:31:42 carrying the
+emitter. In the following 17 minutes, 4 (later 6) `feature_compose` executions ran, and every one
+of them shows:
+
+- `metadata.reached: false` — the emitter fires
+- `tags: ["reach_graded:true","reached:false"]` — `2f01007` reads the field and writes a real verdict
+- `[reach-patch] late reach verdict graded into posteriors {"activity_id":"feature_compose"}` in the log
+
+Three landed fixes composing correctly, end to end. Both prior links are confirmed good.
+
+**And the posterior did not move.** `feature_compose` still reads α=6.91796875 / β=2.97265625,
+n_observations=64, `last_updated_at` 2026-09-06T10:42:06 — unchanged. Meanwhile 19 other posterior
+rows updated in the same window, so the learner is live.
+
+**Pre-registered prediction: FALSIFIED.** Item 1 of the minimum sequence was wrong. Emitting the
+verdict is necessary and not sufficient; the defect lies below the propagation layer, exactly as the
+pre-registration said it would if the posterior stayed frozen.
+
+### Where the credit is discarded
+
+`/vessels/activity-api/src/lib/posterior-update.ts:1178-1188`. The only write to
+`context_thompson_scores` on the outcome path is guarded:
+
+```
+    !skipVariantUpdate &&
+    !HOOK_SUBSCRIBER_PATTERN.test(activityId) &&
+    trace.signature &&
+    typeof trace.signature_version === 'number' &&
+    (alphaDelta !== 0 || betaDelta !== 0)
+```
+
+`feature_compose` execution rows carry `signature: null`. The guard is false, the write is skipped,
+**nothing throws**, and control returns to a caller that logs success.
+
+Three separate reasons this is invisible from inside:
+
+1. `execution-traces.ts:5267` calls `applyOutcomeToPosteriors(...)` **without awaiting it** —
+   fire-and-forget with a `.catch()`. The success line at 5291 runs synchronously right after
+   dispatching the promise, so it logs "graded into posteriors" regardless of outcome. Measured:
+   5,546 claimed successes in 24h against **0** `applyOutcomeToPosteriors failed` warnings — the
+   function genuinely is not throwing, it is silently declining.
+2. `reach_graded:true` is stamped on the authoritative row **before** the credit is applied
+   (5258-5262, deliberately, as a double-grade guard). A row whose write is then skipped is
+   permanently marked graded and can never be re-credited.
+3. `computeDeltas(success=false, failureMode=null)` returns `{α:0, β:1}` — a full penalty. The delta
+   is non-zero and correct. Nothing anywhere reports that a correct non-zero delta was computed and
+   then dropped.
+
+### The discriminating controls
+
+- **org_id — refuted.** Compose rows are `organizations:substrate`; so are all 19 rows that moved,
+  and so is the frozen row. Not the discriminator.
+- **signature — confirmed.** `ribosome-extract`, whose posterior *did* move in the same window,
+  carries `signature: "ad1543c893d377fc"`, `signature_version: 1`. `feature_compose` carries null.
+- **datetime comparison — instrument error caught by control.** `executed_at > '<string>'` does not
+  compare in SurrealDB 2.3.3; it matches every row. A year-2099 bound returned the full 41,974-row
+  table. First reading of "41,972 executions since deploy" was the whole table and was retracted
+  before use. `type::datetime(...)` fixes it; controls then return 0 for 2099 and the full table for
+  2020. Add to the false-zero list — this one is a **false-everything**.
+
+### This is a regression, not a design gap
+
+| window | compose rows | with signature |
+|---|---|---|
+| before 2026-09-06T10:42:07 | 994 | 28 |
+| after 2026-09-06T10:42:07 | 572 | **0** |
+
+Signature emission for `feature_compose` went to exactly zero at the freeze boundary. The frozen row
+carries `context_bucket: 57cffe5dcd63b199`, so this arm was keyed and credited normally until
+something stopped populating the field. The posterior did not freeze because grading broke — grading
+broke because the **key** stopped arriving. The freeze timestamp is not when the learner stalled; it
+is the timestamp of the last execution that still carried a signature.
+
+### Corrected minimum sequence
+
+The first three items are now landed, deployed and confirmed composing. The new item 1 is upstream of
+all of them:
+
+1. **Restore signature emission on the `feature_compose` path** (regressed 2026-09-06T10:42). Without
+   the key, every downstream grading fix is inert by construction.
+2. Make the discard observable: `applyOutcomeToPosteriors` computing a non-zero delta and then
+   writing nothing must log, and the caller must await it before claiming success. Today a correct
+   delta is dropped in silence and reported as a grade.
+3. Move `reach_graded:true` to *after* a confirmed write, so a skipped write does not permanently
+   strand the row.
+
+Item 2 is the general defect and item 1 is one instance of it. Any arm whose signature stops arriving
+goes silently un-credited and reports full success while doing so — and the only way I found this was
+by checking the row rather than believing the log line. **A channel's own reporting is not evidence
+about the channel**, for the fourth time this session.
+
+---
+
+## Addendum 22 — what deployed at 10:42: the killer commit found, and the restore filed
+
+**The regressing change is `3d648ad` in goal-host-vessel** — substrate-authored, landed
+2026-09-06 10:42:00 UTC, deployed by the goal-host restart at 10:42:33. One line: the edit-intent
+satisfier trace switched from its own id namespace (`feature_compose:<sha>`) to reusing the engine's
+`exec_…` execution_id. The bracket closes exactly: last signed execution 10:42:05, restart 10:42:33,
+first null row 10:43:16.
+
+**Mechanism, read at the consuming layer.** The signed rows were never written by the thin
+`POST /executions` path at all — they are a different record entirely (26 fields vs 15, two
+writers). The rich trace flows goal-host → `TranslatingTraceSink` → `POST
+/v2/activities/execution-traces`, where the receiver derives the v1 state-space signature from the
+trace's input shapes at INSERT time and grades with it. After `3d648ad`, the rich trace arrives
+carrying an id that the thin row already occupies; the authoritative store is an INSERT whose
+duplicate error is deliberately mapped to an idempotent 200. The sender sees success. The only
+record carrying the shapes the signature is derived from is discarded.
+
+**The last graded execution was the one that landed the regression.** The final signed row is
+`execution:⟨feature_compose:3d648ad…⟩` — the compose run that landed the killer commit was the last
+ever credited, 1.6 seconds before the posterior froze. The change was aimed at joining the reach
+verdict to the engine's execution record; that intent is now served by the emitter +`2f01007`
+(both landed 2026-09-08), so the id unification is no longer load-bearing — today its only effect
+is deleting the learning signal it meant to improve.
+
+**Restore filed:** `restore-the-satisfier-trace-id-namespace-so-the-signature-lands-again` — a
+verbatim one-line revert, anchor verified unique in goal-host `origin/dev` (line 12449), class1
+falsifier. First filing under a different id was created by the store and then vanished within
+seconds (probe gaps `heal-probe`/`placeholder-scrub-probe` were being written in the same second;
+the `{{…}}` scrub is timestamp-only, so the deletion path is unidentified — noted, not diagnosed).
+Re-filed under a new id per standing law; second write persisted and re-read cleanly after 5s.
+
+**Pre-registered expectations once the revert lands and goal-host restarts:**
+1. New rich rows appear under `execution:⟨feature_compose:<sha>⟩` with `signature` populated
+   (`57cffe5dcd63b199` for the standard edit-intent context).
+2. `feature_compose`'s `last_updated_at` advances for the first time since 2026-09-06T10:42:06.
+3. Direction: β rises faster than α (measured landing rate 0.154 vs implied 0.699), so the
+   posterior mean falls toward the real rate. History will NOT backfill — every skipped row is
+   already stamped `reach_graded:true`.
+4. If rows appear signed and the posterior still does not move, the defect is in
+   `applyOutcomeToPosteriors` below the guard, and the silent-discard gap
+   (`a-non-zero-posterior-delta…`, which the system has already narrowed on its own) becomes the
+   binding item.

@@ -1,0 +1,18 @@
+[Unit]
+Description=Gap-store census timer
+
+[Timer]
+# Hourly, which is a cost decision rather than a detection-latency one. The count
+# requires pulling every gap row — the cheap store-wide signal in the same
+# response covers only OPEN gaps and is therefore not monotonic, so it cannot
+# support the high-water comparison this check is built on. The 2026-09-09 loss
+# sat undetected for at least eight hours, so an hourly reading closes that
+# window by most of an order of magnitude at one large response per hour.
+OnActiveSec=10min
+OnUnitActiveSec=1h
+Persistent=true
+AccuracySec=5min
+Unit=gap-store-census.service
+
+[Install]
+WantedBy=timers.target

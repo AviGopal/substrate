@@ -1,0 +1,1029 @@
+{
+  "generator_version": "25.G1",
+  "generated_at": "2026-09-13T13:25:59.281Z",
+  "generator_seed": "42",
+  "held_out": false,
+  "count": 50,
+  "novelty_mix": {
+    "seen": 0.4,
+    "rare": 0.4,
+    "novel": 0.2
+  },
+  "depth_mix": {
+    "depth0": 0.5,
+    "depth1": 0.3,
+    "depth2+": 0.2
+  },
+  "scenario_mix": {
+    "A": 0.6,
+    "B": 0.2,
+    "C∪D": 0.2
+  },
+  "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674",
+  "adversarial_fraction": 0,
+  "adversarial_count": 0,
+  "cell_distribution": {
+    "seen|depth2+|B": 2,
+    "seen|depth1|A": 4,
+    "seen|depth0|C∪D": 3,
+    "seen|depth1|C∪D": 4,
+    "rare|depth0|C∪D": 2,
+    "novel|depth1|C∪D": 1,
+    "seen|depth2+|A": 3,
+    "rare|depth1|A": 5,
+    "rare|depth0|A": 7,
+    "rare|depth2+|A": 3,
+    "seen|depth0|B": 2,
+    "seen|depth0|A": 5,
+    "novel|depth1|A": 2,
+    "seen|depth1|B": 3,
+    "rare|depth1|C∪D": 1,
+    "novel|depth0|A": 3
+  },
+  "goals": [
+    {
+      "id": "gen-42-001",
+      "cell_id": "seen|depth2+|B",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "dispatch_latest_auto_draft"
+        ]
+      },
+      "goal_text": "Using file as the seed, construct a dispatch_latest_auto_draft through a rarely-exercised multi-hop composition.",
+      "expected_output_shapes": [
+        "dispatch_latest_auto_draft"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-002",
+      "cell_id": "seen|depth1|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "mitosis_pending_observer"
+        ]
+      },
+      "goal_text": "Starting from a file, resolve any missing intermediate shapes and deliver a mitosis_pending_observer.",
+      "expected_output_shapes": [
+        "mitosis_pending_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-003",
+      "cell_id": "seen|depth0|C∪D",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "signature_cluster_scan"
+        ]
+      },
+      "goal_text": "Attempt to produce a signature_cluster_scan from file where no existing template covers the target shape directly.",
+      "expected_output_shapes": [
+        "signature_cluster_scan"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-004",
+      "cell_id": "seen|depth1|C∪D",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "dead_end_decision_scan"
+        ]
+      },
+      "goal_text": "Resolve file and escalate to create a dead_end_decision_scan even though the shape has no matching activity template.",
+      "expected_output_shapes": [
+        "dead_end_decision_scan"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-005",
+      "cell_id": "rare|depth0|C∪D",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "discovery_vessel_registry_observer"
+        ]
+      },
+      "goal_text": "Produce a discovery_vessel_registry_observer from file where the shape is registered in a vessel but not yet backed by an activity template.",
+      "expected_output_shapes": [
+        "discovery_vessel_registry_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-006",
+      "cell_id": "novel|depth1|C∪D",
+      "shape_signature": {
+        "input": [
+          "lifecycle:task:preBinding"
+        ],
+        "output": [
+          "llm_api_health_observer"
+        ]
+      },
+      "goal_text": "Starting from lifecycle:task:preBinding, escalate through create-shape-provider-goal to produce a novel llm_api_health_observer that is absent from the registry.",
+      "expected_output_shapes": [
+        "llm_api_health_observer"
+      ],
+      "seed_impulse_pool": [
+        "lifecycle:task:preBinding:seed"
+      ],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-007",
+      "cell_id": "seen|depth2+|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "docs_decision_answer_scan"
+        ]
+      },
+      "goal_text": "Produce a docs_decision_answer_scan from file context via a deep composition chain with at least two intermediate goal escalations.",
+      "expected_output_shapes": [
+        "docs_decision_answer_scan"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-008",
+      "cell_id": "rare|depth1|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "detector_coverage_scan"
+        ]
+      },
+      "goal_text": "Starting from file, derive a detector_coverage_scan via one composition layer; this shape signature is infrequent in the trace history.",
+      "expected_output_shapes": [
+        "detector_coverage_scan"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-009",
+      "cell_id": "rare|depth0|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "obsidian_deliver_assist"
+        ]
+      },
+      "goal_text": "Produce a obsidian_deliver_assist from file — this shape pair has been seen in only a few prior traces.",
+      "expected_output_shapes": [
+        "obsidian_deliver_assist"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-010",
+      "cell_id": "rare|depth1|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "trace_outcome_validity_audit"
+        ]
+      },
+      "goal_text": "Starting from file, derive a trace_outcome_validity_audit via one composition layer; this shape signature is infrequent in the trace history.",
+      "expected_output_shapes": [
+        "trace_outcome_validity_audit"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-011",
+      "cell_id": "rare|depth2+|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "prune_stale_mitosis"
+        ]
+      },
+      "goal_text": "Produce a prune_stale_mitosis from file through a rarely-observed multi-hop composition.",
+      "expected_output_shapes": [
+        "prune_stale_mitosis"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-012",
+      "cell_id": "seen|depth0|B",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "cost_expectation_scan"
+        ]
+      },
+      "goal_text": "Generate a cost_expectation_scan from file using a sparsely-tested activity path (cold Thompson posterior).",
+      "expected_output_shapes": [
+        "cost_expectation_scan"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-013",
+      "cell_id": "seen|depth0|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "dispatch_dropped_observer"
+        ]
+      },
+      "goal_text": "Given a file as context, produce a dispatch_dropped_observer using the established pipeline.",
+      "expected_output_shapes": [
+        "dispatch_dropped_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-014",
+      "cell_id": "novel|depth1|A",
+      "shape_signature": {
+        "input": [
+          "executionTraceWithSignatures"
+        ],
+        "output": [
+          "capability_gap_audit"
+        ]
+      },
+      "goal_text": "Combine executionTraceWithSignatures with a sub-goal escalation to generate a capability_gap_audit for the first time.",
+      "expected_output_shapes": [
+        "capability_gap_audit"
+      ],
+      "seed_impulse_pool": [
+        "executionTraceWithSignatures:seed"
+      ],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-015",
+      "cell_id": "rare|depth0|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "activity_lifecycle_audit"
+        ]
+      },
+      "goal_text": "Produce a activity_lifecycle_audit from file — this shape pair has been seen in only a few prior traces.",
+      "expected_output_shapes": [
+        "activity_lifecycle_audit"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-016",
+      "cell_id": "seen|depth1|C∪D",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "gap_to_scenario_bridge"
+        ]
+      },
+      "goal_text": "Resolve file and escalate to create a gap_to_scenario_bridge even though the shape has no matching activity template.",
+      "expected_output_shapes": [
+        "gap_to_scenario_bridge"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-017",
+      "cell_id": "seen|depth1|C∪D",
+      "shape_signature": {
+        "input": [
+          "lifecycle:task:preBinding"
+        ],
+        "output": []
+      },
+      "goal_text": "Resolve lifecycle:task:preBinding and escalate to create a fileEdit even though the shape has no matching activity template.",
+      "expected_output_shapes": [],
+      "seed_impulse_pool": [
+        "lifecycle:task:preBinding:seed"
+      ],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-018",
+      "cell_id": "seen|depth0|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "concept_select_for_prompt",
+          "concept_usage_record",
+          "json_path_extract"
+        ]
+      },
+      "goal_text": "Given a file as context, produce a json_path_extract using the established pipeline.",
+      "expected_output_shapes": [
+        "concept_select_for_prompt",
+        "concept_usage_record",
+        "json_path_extract"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-019",
+      "cell_id": "seen|depth1|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "gate_self_probe"
+        ]
+      },
+      "goal_text": "Use the file to diagnose the issue and produce a gate_self_probe with at least one sub-task delegation.",
+      "expected_output_shapes": [
+        "gate_self_probe"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-020",
+      "cell_id": "seen|depth1|B",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "llm_api_health_observer"
+        ]
+      },
+      "goal_text": "Starting with file, produce llm_api_health_observer through a cold-start activity that has seen fewer than three executions.",
+      "expected_output_shapes": [
+        "llm_api_health_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-021",
+      "cell_id": "rare|depth0|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "disk_space_observer"
+        ]
+      },
+      "goal_text": "Produce a disk_space_observer from file — this shape pair has been seen in only a few prior traces.",
+      "expected_output_shapes": [
+        "disk_space_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-022",
+      "cell_id": "seen|depth0|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "host_container_source_drift_observer"
+        ]
+      },
+      "goal_text": "Given a file as context, produce a host_container_source_drift_observer using the established pipeline.",
+      "expected_output_shapes": [
+        "host_container_source_drift_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-023",
+      "cell_id": "rare|depth0|C∪D",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "docs_decision_solicit"
+        ]
+      },
+      "goal_text": "Produce a docs_decision_solicit from file where the shape is registered in a vessel but not yet backed by an activity template.",
+      "expected_output_shapes": [
+        "docs_decision_solicit"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-024",
+      "cell_id": "seen|depth2+|B",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "docs_decision_answer_scan"
+        ]
+      },
+      "goal_text": "Using file as the seed, construct a docs_decision_answer_scan through a rarely-exercised multi-hop composition.",
+      "expected_output_shapes": [
+        "docs_decision_answer_scan"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-025",
+      "cell_id": "rare|depth0|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "build_signature_detector"
+        ]
+      },
+      "goal_text": "Produce a build_signature_detector from file — this shape pair has been seen in only a few prior traces.",
+      "expected_output_shapes": [
+        "build_signature_detector"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-026",
+      "cell_id": "seen|depth1|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "dispatch_dropped_observer"
+        ]
+      },
+      "goal_text": "Starting from a file, resolve any missing intermediate shapes and deliver a dispatch_dropped_observer.",
+      "expected_output_shapes": [
+        "dispatch_dropped_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-027",
+      "cell_id": "seen|depth0|C∪D",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "docs_decision_answer_scan"
+        ]
+      },
+      "goal_text": "Attempt to produce a docs_decision_answer_scan from file where no existing template covers the target shape directly.",
+      "expected_output_shapes": [
+        "docs_decision_answer_scan"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-028",
+      "cell_id": "rare|depth0|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "selector_saturation_audit"
+        ]
+      },
+      "goal_text": "Produce a selector_saturation_audit from file — this shape pair has been seen in only a few prior traces.",
+      "expected_output_shapes": [
+        "selector_saturation_audit"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-029",
+      "cell_id": "seen|depth1|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "host_container_source_drift_observer"
+        ]
+      },
+      "goal_text": "Starting from a file, resolve any missing intermediate shapes and deliver a host_container_source_drift_observer.",
+      "expected_output_shapes": [
+        "host_container_source_drift_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-030",
+      "cell_id": "rare|depth1|C∪D",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "detector_meta_scan"
+        ]
+      },
+      "goal_text": "Using file as input, create-shape-provider-goal to obtain a detector_meta_scan that has no template but an advertising vessel.",
+      "expected_output_shapes": [
+        "detector_meta_scan"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-031",
+      "cell_id": "novel|depth0|A",
+      "shape_signature": {
+        "input": [
+          "lifecycle:task:preBinding"
+        ],
+        "output": [
+          "resolver_distribution_audit"
+        ]
+      },
+      "goal_text": "Produce a resolver_distribution_audit from lifecycle:task:preBinding — this exact shape combination has never appeared in prior execution traces.",
+      "expected_output_shapes": [
+        "resolver_distribution_audit"
+      ],
+      "seed_impulse_pool": [
+        "lifecycle:task:preBinding:seed"
+      ],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-032",
+      "cell_id": "seen|depth1|C∪D",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "docs_decision_answer_scan"
+        ]
+      },
+      "goal_text": "Resolve file and escalate to create a docs_decision_answer_scan even though the shape has no matching activity template.",
+      "expected_output_shapes": [
+        "docs_decision_answer_scan"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-033",
+      "cell_id": "rare|depth1|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "docs_decision_deliver"
+        ]
+      },
+      "goal_text": "Starting from file, derive a docs_decision_deliver via one composition layer; this shape signature is infrequent in the trace history.",
+      "expected_output_shapes": [
+        "docs_decision_deliver"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-034",
+      "cell_id": "seen|depth1|B",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "gate_self_probe"
+        ]
+      },
+      "goal_text": "Starting with file, produce gate_self_probe through a cold-start activity that has seen fewer than three executions.",
+      "expected_output_shapes": [
+        "gate_self_probe"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-035",
+      "cell_id": "rare|depth0|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "build_signature_detector"
+        ]
+      },
+      "goal_text": "Produce a build_signature_detector from file — this shape pair has been seen in only a few prior traces.",
+      "expected_output_shapes": [
+        "build_signature_detector"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-036",
+      "cell_id": "seen|depth0|C∪D",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "llm_api_health_observer"
+        ]
+      },
+      "goal_text": "Attempt to produce a llm_api_health_observer from file where no existing template covers the target shape directly.",
+      "expected_output_shapes": [
+        "llm_api_health_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-037",
+      "cell_id": "seen|depth2+|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "applied_proposal_sentinel_observer"
+        ]
+      },
+      "goal_text": "Orchestrate a multi-step workflow starting with file that eventually yields a applied_proposal_sentinel_observer through two or more composition layers.",
+      "expected_output_shapes": [
+        "applied_proposal_sentinel_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-038",
+      "cell_id": "seen|depth1|B",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "mitosis_pending_observer"
+        ]
+      },
+      "goal_text": "Starting with file, produce mitosis_pending_observer through a cold-start activity that has seen fewer than three executions.",
+      "expected_output_shapes": [
+        "mitosis_pending_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-039",
+      "cell_id": "novel|depth0|A",
+      "shape_signature": {
+        "input": [
+          "lifecycle:task:completed"
+        ],
+        "output": [
+          "trace_outcome_validity_audit"
+        ]
+      },
+      "goal_text": "Produce a trace_outcome_validity_audit from lifecycle:task:completed — this exact shape combination has never appeared in prior execution traces.",
+      "expected_output_shapes": [
+        "trace_outcome_validity_audit"
+      ],
+      "seed_impulse_pool": [
+        "lifecycle:task:completed:seed"
+      ],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-040",
+      "cell_id": "seen|depth0|B",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "mitosis_pending_observer"
+        ]
+      },
+      "goal_text": "Generate a mitosis_pending_observer from file using a sparsely-tested activity path (cold Thompson posterior).",
+      "expected_output_shapes": [
+        "mitosis_pending_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-041",
+      "cell_id": "rare|depth0|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "concept_db_health_observer"
+        ]
+      },
+      "goal_text": "Produce a concept_db_health_observer from file — this shape pair has been seen in only a few prior traces.",
+      "expected_output_shapes": [
+        "concept_db_health_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-042",
+      "cell_id": "rare|depth2+|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "detector_meta_scan"
+        ]
+      },
+      "goal_text": "Produce a detector_meta_scan from file through a rarely-observed multi-hop composition.",
+      "expected_output_shapes": [
+        "detector_meta_scan"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-043",
+      "cell_id": "novel|depth0|A",
+      "shape_signature": {
+        "input": [
+          "lifecycle:task:preBinding"
+        ],
+        "output": [
+          "obsidian_deliver_assist"
+        ]
+      },
+      "goal_text": "Produce a obsidian_deliver_assist from lifecycle:task:preBinding — this exact shape combination has never appeared in prior execution traces.",
+      "expected_output_shapes": [
+        "obsidian_deliver_assist"
+      ],
+      "seed_impulse_pool": [
+        "lifecycle:task:preBinding:seed"
+      ],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-044",
+      "cell_id": "rare|depth1|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "discovery_vessel_registry_observer"
+        ]
+      },
+      "goal_text": "Starting from file, derive a discovery_vessel_registry_observer via one composition layer; this shape signature is infrequent in the trace history.",
+      "expected_output_shapes": [
+        "discovery_vessel_registry_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-045",
+      "cell_id": "seen|depth0|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "json_path_extract",
+          "mitosis_pending_observer",
+          "vessel_mitosis_cutover",
+          "vessel_mitosis_evaluate"
+        ]
+      },
+      "goal_text": "Given a file as context, produce a json_path_extract using the established pipeline.",
+      "expected_output_shapes": [
+        "json_path_extract",
+        "mitosis_pending_observer",
+        "vessel_mitosis_cutover",
+        "vessel_mitosis_evaluate"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-046",
+      "cell_id": "rare|depth2+|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "concept_db_health_observer"
+        ]
+      },
+      "goal_text": "Produce a concept_db_health_observer from file through a rarely-observed multi-hop composition.",
+      "expected_output_shapes": [
+        "concept_db_health_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-047",
+      "cell_id": "novel|depth1|A",
+      "shape_signature": {
+        "input": [
+          "lifecycle:task:completed"
+        ],
+        "output": [
+          "disk_space_observer"
+        ]
+      },
+      "goal_text": "Combine lifecycle:task:completed with a sub-goal escalation to generate a disk_space_observer for the first time.",
+      "expected_output_shapes": [
+        "disk_space_observer"
+      ],
+      "seed_impulse_pool": [
+        "lifecycle:task:completed:seed"
+      ],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-048",
+      "cell_id": "seen|depth2+|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "gate_self_probe"
+        ]
+      },
+      "goal_text": "Orchestrate a multi-step workflow starting with file that eventually yields a gate_self_probe through two or more composition layers.",
+      "expected_output_shapes": [
+        "gate_self_probe"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-049",
+      "cell_id": "rare|depth1|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "selector_saturation_audit"
+        ]
+      },
+      "goal_text": "Starting from file, derive a selector_saturation_audit via one composition layer; this shape signature is infrequent in the trace history.",
+      "expected_output_shapes": [
+        "selector_saturation_audit"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    },
+    {
+      "id": "gen-42-050",
+      "cell_id": "seen|depth0|A",
+      "shape_signature": {
+        "input": [],
+        "output": [
+          "llm_api_health_observer"
+        ]
+      },
+      "goal_text": "Given a file as context, produce a llm_api_health_observer using the established pipeline.",
+      "expected_output_shapes": [
+        "llm_api_health_observer"
+      ],
+      "seed_impulse_pool": [],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "499c9fe441adfac1ed6545d136ef75233413dd89ea8fcc791225e3d30bad0674"
+    }
+  ]
+}

@@ -255,8 +255,11 @@ relay anchor are all derived from those two, the last of them from
 
 **Check the target is joinable first.** A reachable discovery is not necessarily
 a hub: a standalone substrate answers `/bootstrap` with `200` and an empty body,
-so "reachable" and "joinable" look identical, and the spoke boots and then
-crash-loops its transport against a relay that was never advertised.
+so "reachable" and "joinable" look identical — and the spoke will not tell you
+either. An anchorless transport does not fail: it starts **direct-only**, logs a
+throttled direct-only warning, and polls for an anchor on a widening backoff,
+adopting one that appears later without a unit restart. So the spoke boots clean,
+reports `active`, and federates nothing. Unit state is not evidence of a join.
 
 ```bash
 curl -s http://<hub-host>:18100/bootstrap | jq '.relay_multiaddrs'
@@ -275,9 +278,14 @@ dead host accepted the connection. There is no one-liner for this. The signal
 that actually settles it is the transport's own reservation, read after boot:
 
 ```bash
+docker exec <spoke> curl -s http://127.0.0.1:8401/health | jq '.transport.activeReservations, .libp2p_multiaddr'
+# 0 and ""  => running, but direct-only: no circuit, nothing mirrored to the hub
 docker exec <spoke> journalctl -u federation-transport-vessel -n 30
 # look for a circuit reservation against the advertised relay, not just "up"
 ```
+
+The transport's health port is container-internal and not host-mapped, so that
+first check is a `docker exec`, not a call to an `18xxx` port.
 
 Two things worth checking in that same payload: an address on a *different host*
 than the hub you are joining is a sign the advertisement has outlived its relay,
@@ -343,8 +351,9 @@ flags on the standalone `docker run` above, or as `VAR=value` arguments to
 > ⚠ **A spoke is *designed* to inherit the hub's LLM arms, and that inheritance
 > does not yet work.** Measured on a live join: the spoke's walk fails with
 > `No vessel advertising llm_completion found in discovery`, because arm
-> inheritance rides the federation transport — so a spoke whose transport is not
-> up (see the relay pre-flight above) has no model access at all, and loses
+> inheritance rides the federation transport's **circuit** — so a spoke whose
+> transport holds no reservation (see the relay pre-flight above; a direct-only
+> transport reports `active` and still holds none) has no model access at all, and loses
 > `concept-db` with it. Identity and the trace store keep working, because those
 > are reached by direct HTTP, which is why the fleet looks healthy. Until the
 > transport is confirmed carrying, give a spoke its own provider key.
@@ -367,11 +376,13 @@ make -C scripts/substrate up API_KEY=<hub-issued-key> \
   DISCOVERY_ENDPOINT=http://<hub-host>:18100
 ```
 
-> `make up` exits non-zero when any doctor check fails, and a **correct** spoke
-> join against a hub that serves no relay fails one: the federation transport
-> crash-loops (`restart loop: federation-transport-vessel`). Identity, the trace
-> store and the key check all pass. Read the checks, not the exit code — and see
-> the transport note above for what a dead transport actually costs you.
+> `make up` exits non-zero when any doctor check fails — so read the checks, not
+> the exit code. Note the inverse too: a spoke joined against a hub that serves no
+> relay no longer trips the restart-loop check, because the transport treats a
+> missing anchor as survivable and comes up direct-only instead of restarting —
+> and doctor has no reservation or circuit check to replace it. A green boot is
+> not a federated boot; see the transport note above for what an uncircuited
+> transport costs you, and confirm the join below.
 
 To apply changed launch settings to a stopped or running spoke without removing
 its named volumes, use `make -C scripts/substrate recreate` with the same
@@ -394,22 +405,29 @@ isolated", so check the two that can:
 docker exec <spoke> substrate-key whoami          # "valid": true + the hub's org_id
 
 # 2. Transport: the plane that actually mirrors your vessels to the hub.
+#    Read the RESERVATION, not the unit state — a transport with no anchor runs
+#    direct-only and mirrors nothing, while reporting `active` with NRestarts=0.
+docker exec <spoke> curl -s http://127.0.0.1:8401/health | jq '.transport.activeReservations'
 docker exec <spoke> systemctl show federation-transport-vessel -p NRestarts --value
 ```
 
-A climbing `NRestarts` means the transport is crash-looping, even though
-`systemctl is-active` intermittently reports `active` — it catches the gap
-between restarts. `docker exec <container> substrate-doctor` names it honestly.
+`activeReservations` of `0` means not federated, whatever the unit says. The
+restart counter is still worth reading, but only in one direction: a climbing
+`NRestarts` means the transport is crash-looping for some *other* reason, even
+though `systemctl is-active` intermittently reports `active` — it catches the gap
+between restarts, and `docker exec <container> substrate-doctor` names it
+honestly. A flat `NRestarts` proves the process is alive and nothing more.
 
 **The loss is in both directions, not just outbound.** The obvious half is that
 nothing is being mirrored *to* the hub. The half that surprises people is
 inbound: the transport is also how the spoke resolves shapes the hub serves, so
-while it is down the spoke loses `llm_completion` and `concept-db` outright — a
+without a circuit the spoke loses `llm_completion` and `concept-db` outright — a
 walk fails with `No vessel advertising llm_completion found in discovery`.
 Identity and the trace store keep answering because they are reached by direct
 HTTP, so the fleet reports healthy and a goal fails for reasons that look
-unrelated. A spoke with a dead transport is not "isolated but working"; it is
-degraded at both ends.
+unrelated. A spoke whose transport holds no reservation is not "isolated but
+working"; it is degraded at both ends — and because that transport now stays up
+rather than restarting, nothing about the unit says so.
 
 What will *not* tell you: the container's `healthy` state, and `substrate-key
 show` (prints a key whether or not the hub accepts it).

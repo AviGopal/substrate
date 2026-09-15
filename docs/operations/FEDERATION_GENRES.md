@@ -163,9 +163,30 @@ the circuit for inbound peer dials and do appear `@`-qualified in the hub's own 
 Expect those rows when debugging apparent duplicates on a hub; the startup log line still
 announces the mirror as disabled, which no longer describes what `registerAtHub` does.
 
-Its failure mode is deliberately loud rather than silent. Without a live relay circuit the
+Withdrawal crosses the boundary as explicitly as advertisement does. Each mirror tick
+diffs the ids it registered last tick against the ids it registers this tick and DELETEs
+the difference from the hub registry, rather than letting a departed vessel ride out the
+hub's TTL — for that window every peer would otherwise see a producer that no longer
+exists, select it (a mirror row advertises both the shape and a live circuit), dial in, and
+receive "no producer" from a substrate that was never at fault. The deletion is reached
+only after both of the mirror's guards, which is what keeps it safe: with no live circuit
+the tick returns early, so a dropped reservation — our reachability problem, not the
+fleet's — never wipes the fleet's rows; and with an empty local registry it also returns
+early, so a discovery restart repopulating its in-memory registry is ridden out on the hub
+TTL instead of amplified into a fleet-wide withdrawal. A row is removed only when this
+transport held a circuit, saw a non-empty local registry, and that vessel was absent from
+it. That second guard covers the fully-empty instant only: a registry caught *partially*
+repopulated is non-empty, so the tick proceeds and withdraws the rows of the vessels that
+have not re-registered yet, which then re-register on following ticks. The transient is
+bounded and self-healing, but a peer querying inside it sees fewer producers than exist.
+
+Its failure mode is loud in the journal, though not in unit state — a transport that
+mirrors nothing still runs and still answers `/health`. Without a live relay circuit the
 mirror is skipped and the loss of remote visibility is logged as an error, throttled so a
-persistent outage does not become log spam, and the registrations are refreshed
+persistent outage does not become log spam. That log distinguishes the two ways to lack a
+circuit — no relay anchor at all (the transport is running direct-only and will mirror
+nothing until an anchor appears) versus an anchor held but no reservation — because the
+operator response differs. The registrations are refreshed
 *immediately* when a reservation is reacquired rather than waiting out the periodic tick.
 An authentication rejection from the hub is emitted as a shaped join-health observation, so
 a stale key degrades queryably instead of blanking a downstream panel with no signal.
