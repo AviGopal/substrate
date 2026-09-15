@@ -1225,6 +1225,23 @@ setInterval(() => {
     void redialRelay('PHANTOM CONFIRMED: a /p2p-circuit listen address is advertised while the reservation store holds 0 reservations')
     return
   }
+  // A HELD RESERVATION MEANS THERE IS NO PHANTOM, WHATEVER THE TRAFFIC LOOKS LIKE.
+  //
+  // The traffic heuristic below reads "no inbound circuit connections for 2 ticks" as a
+  // lost reservation. That inference is wrong whenever peers reach us WITHOUT using the
+  // circuit — which is the normal case on a shared host or LAN, where DCUtR upgrades the
+  // connection to direct and the circuit legitimately carries nothing.
+  //
+  // Measured on this hub with two healthy federated peers: 14 `circuit=(pending)` redials
+  // in three hours and ZERO reservation re-acquisitions logged — the watchdog firing every
+  // 10 minutes against a reservation that was never lost. Each redial closes and re-dials
+  // the relay, opening a window where the circuit is empty and inbound dials fail with
+  // NO_RESERVATION. The detector was manufacturing the outage it existed to catch.
+  //
+  // So when the client's own store says a reservation is held, that settles it. The traffic
+  // heuristic survives only for the case the store cannot be read (held === -1), where an
+  // imperfect signal beats none.
+  if (truth.held > 0) { phantomStrikes = 0; return }
   const circuitConns = vl.node.getConnections().filter((c) => c.remoteAddr?.toString().includes('p2p-circuit'))
   if (circuitConns.length === 0) {
     phantomStrikes++
