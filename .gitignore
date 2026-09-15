@@ -244,6 +244,13 @@ scripts/substrate/workspace/
 /activities/
 /resolvers/
 /authoring-inflight/
+# The interactor log is the operator feedback channel: uiFeedback_write.jsonl and
+# its siblings are appended at runtime and read back by escalation_disposition_apply.
+# Tracked, they were restored to the committed blob by every `reset --hard`, which
+# destroyed 9 of 13 panels and 6 operator answers inside a single session on
+# 2026-09-15 and silently dropped escalation_disposition_apply from answered:7 to 3.
+/interactor-log/
+/load-attribution/
 /substrate-heartbeat.json
 /mitosis-applied.jsonl
 /metabob-mcp-doctor-*.json
