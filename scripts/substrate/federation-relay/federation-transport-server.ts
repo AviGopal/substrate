@@ -509,7 +509,20 @@ const resolveHandler = async (pointer: any): Promise<any> => {
         // Detached: the sweep outlives this request by design. It writes its own report to
         // the pool, which is where the next resolve will read it from.
         Bun.spawn({
-          cmd: [process.env.BUN_BIN || '/root/.bun/bin/bun', new URL('./federation-probe-tick.ts', import.meta.url).pathname],
+          // THE INSTRUMENT MUST NOT LIVE IN THE WORKSPACE IT MEASURES.
+          //
+          // This used to spawn the probe from a path relative to THIS file, i.e. from
+          // /workspace/git/super-repo — the substrate's own working clone. That clone is
+          // the substrate's development surface: it creates per-vessel branches and checks
+          // them out. Observed: HEAD moved from a merge on `obsidian-episode-vessel` to
+          // `development-vessel`, a branch on which federation-probe-tick.ts does not exist
+          // at all (`git ls-tree HEAD` lists only the transport). The probe silently
+          // vanished and no sweep could spawn — the oracle disabled by the routine activity
+          // of the thing it was watching.
+          //
+          // So prefer a STABLE install path and keep the in-tree copy only as a fallback
+          // for a dev checkout. FED_PROBE_PATH overrides both.
+          cmd: [process.env.BUN_BIN || '/root/.bun/bin/bun', probeScriptPath()],
           cwd: new URL('.', import.meta.url).pathname,
           env: process.env as Record<string, string>,
           stdout: 'ignore', stderr: 'ignore',
@@ -1070,6 +1083,21 @@ async function registerAtHub() {
 // Access path verified empirically, not assumed:
 //   node.components.transportManager.getTransports() -> the entry carrying .reservationStore
 // The sibling node.transportManager is undefined; only the components path resolves.
+
+// Resolve the probe script from a location the substrate's own branch switching cannot
+// remove. existsSync rather than a try/catch on spawn: a missing file must be visible as a
+// named choice in the log, not as a spawn error attributed to the probe itself.
+function probeScriptPath(): string {
+  const candidates = [
+    process.env.FED_PROBE_PATH || '',
+    '/usr/local/lib/substrate/federation-probe-tick.ts',
+    new URL('./federation-probe-tick.ts', import.meta.url).pathname,
+  ].filter(Boolean)
+  for (const c of candidates) { try { if (existsSync(c)) return c } catch { /* next */ } }
+  console.error('[fed-transport] probe script not found in any of: ' + candidates.join(', '))
+  return candidates[candidates.length - 1]!
+}
+
 function reservationTruth(): { held: number; relays: string[]; expiresInMs: number | null } {
   try {
     const ts = (vl.node as any)?.components?.transportManager?.getTransports?.() ?? []
