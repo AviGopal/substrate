@@ -1,7 +1,7 @@
 {
   "mode": "develop",
-  "driver": "frontier(65 necessary-but-unavailable; top=topology_snapshot)",
+  "driver": "frontier(10 necessary-but-unavailable; top=capabilityCensusReport)",
   "pending_driver": "develop",
   "pending_count": 0,
-  "updated_at": "2026-09-07T14:44:21.750Z"
+  "updated_at": "2026-09-15T03:00:05.270Z"
 }
