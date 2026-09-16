@@ -1,5 +1,15 @@
 # Runtime Activity Tracing
 
+> **STATUS: THIS SUBSYSTEM IS WRITTEN AND NOT WIRED. Read it as a design, not a description.**
+> The middleware exists and is correct, and nothing mounts it: `runtimeTracingMiddleware` is
+> exported at `middleware/runtime-tracing.ts:125`, and the only `app.use('*', …)` anywhere in
+> `repos/activity-api/src/` is at `:334` of that same file — **inside a `/* */` example block**.
+> Consequently `metadata.runtime_trace` is true on **0 of ~97,000** rows, and every read-side
+> query described below returns empty even where it parses. Two related fields in the
+> learnability minimum are also never populated (`state_signature` is empty on all ~97,000
+> rows). Mount the middleware or mark each claim below as unbuilt; do not cite this document
+> as evidence that request-time traces exist.
+
 Runtime tracing applies the impulse/activity/trace model to request-time execution: an HTTP
 request handled by a vessel is an activity, the functions it calls are resolvers, and the
 record it leaves is an execution trace in the same store the development loop learns from.

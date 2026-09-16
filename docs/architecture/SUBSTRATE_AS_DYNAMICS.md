@@ -1,5 +1,18 @@
 # The substrate is a slow–fast dynamical system on a growing complex
 
+> **STATUS: ASPIRATIONAL. None of this document's four observables was found live in an
+> adjudication against the running system (2026-09-16).** The producer, `spectral-gap.service`,
+> had been `failed` since 2026-09-14 on a source file truncated by an automated commit, and
+> its output had not been written since 2026-09-07 — while consumers kept reading the last
+> line as a current reading. That has since been repaired, but the structural caveats stand:
+> λ₁ is proxied as a raw edge count and is **not in units comparable to ρ_grow**, so the
+> master inequality below cannot actually be evaluated as written; the TTSA watchdog on the
+> two learning arms' update rates and the critical-slowing-down detector are **not
+> implemented**, and there is no residual time series to compute the latter from. The
+> measurement plane described here is a read-only ledger with no actuator. Treat the
+> mathematics as the intended model and verify any specific quantity against the store
+> before relying on it.
+
 > Companion to the formal-lens documents, all reading one running system through
 > different coordinate charts: [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md) (the
 > learning *rule* — factored-MDP Bayesian Q-learning),

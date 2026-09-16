@@ -52,6 +52,18 @@ answers are different, and that difference is the entire design.
 | Durability group | Cross-container algebra | Operator / transport | Trust gate |
 |---|---|---|---|
 | **Authored-durable** | **Shareable by reference.** Identical-by-construction while every container runs the same images; *diverges* once a substrate authors its own code. Merge = git merge, review-gated. | container-side authenticated `git push` to a shared remote; peers pull + redeploy | code review / CI — the operator-or-substrate-authored boundary |
+
+> **CORRECTION (verified against the running system): authored-durable state does NOT only
+> travel by git.** This row implies the review-gated push is the sole path into a peer's
+> runtime. It is not. `vessel-mitosis-cutover.ts` states its plan verbatim — after
+> `git push origin dev`, *copy `mitosis_root/<staged_files>` → `/vessels/<vessel>/…`* — a
+> direct filesystem write into the live tree. `self-recovery-tick.sh`'s revert does
+> `rm -rf /vessels/<name>/src && cp -r`, and `mirror-to-live` copies a clone into `/vessels`
+> outside any review gate. The existence of `runtime-drift-tick.ts` — a watchdog whose entire
+> purpose is detecting when `/vessels` diverges from committed source — is itself proof that
+> the divergence this table says cannot occur does occur routinely. A runtime tree can hold
+> bytes that are in no commit anywhere, and has: measured 2026-09-16, one vessel served
+> `/health` 200 for hours from an in-memory module while its on-disk source did not parse.
 | **Recorded** | **Union.** Append-only ⇒ commutative, associative. Trivial to combine, *hard to trust*. | substrate-state bundle (migration/backup); signed traces returned by peer-aware resolution | two-sided counterparty signatures + a foreign-provenance tag |
 | **Ephemeral** | **Never crosses.** A cross-container dispatch runs the Transient execution *in the remote container*; only a Recorded result returns. | n/a — reconstructable only from the trace | n/a (nothing in-flight is shipped) |
 | **Learned-durable** | **No single merge operator** — it is not homogeneous (see §2). Splits into a *structural* sublayer that merges and a *quantitative* sublayer that does not. | content-addressed keys (structural); signed evidence folded locally (quantitative) | content-addressed identity (keys); two-sided signatures (evidence) |
