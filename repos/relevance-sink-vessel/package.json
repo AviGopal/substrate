@@ -6,6 +6,7 @@
     "start": "bun src/index.ts"
   },
   "devDependencies": {
-    "bun-types": "latest"
+    "bun-types": "latest",
+    "typescript": "^5"
   }
 }
