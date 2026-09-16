@@ -343,6 +343,35 @@ for u in $(manageable_units); do
   fi
   disabled_count=$((disabled_count + 1))
 done
+
+# DISABLED_VESSELS must be able to say no to MANIFEST units too. The loop above
+# iterates manageable_units, which excludes "manifest": true entries — correct
+# for SELECTION (a manifest vessel is installed on demand, never auto-selected),
+# but it silently dropped an explicit DISABLED_VESSELS naming one: the operator
+# said no, resolve_list resolved it (all_units includes manifest), and then no
+# pass acted on it. Measured 2026-09-15: DISABLED_VESSELS=
+# federation-transport-vessel.service had no effect — the spoke entrypoint
+# auto-enabled the unit anyway (that auto-enable now honors DISABLED_VESSELS
+# itself; this pass covers the previously-installed-unit case, where the real
+# file already sits in /etc from an earlier boot).
+for u in $DISABLED_EXPLICIT; do
+  case "$u" in __UNRESOLVED__:*) continue ;; esac
+  manageable_units | grep -qx "$u" && continue   # handled by the loop above
+  all_units | grep -qx "$u" || continue          # not inventory-named at all
+  if [ "$DRY_RUN" = "1" ]; then
+    log "DRY-RUN would disable (manifest): $u"; continue
+  fi
+  systemctl disable "$u" >/dev/null 2>&1 || true
+  rm -f "/etc/systemd/system/multi-user.target.wants/$u" 2>/dev/null || true
+  if [ -f "/etc/systemd/system/$u" ] && [ ! -L "/etc/systemd/system/$u" ]; then
+    # a real installed unit file: removing the wants-symlink is the offline
+    # disable; masking would require deleting the operator-installed file
+    log "disabled (manifest, wants-symlink removed): $u"
+  else
+    ln -sf /dev/null "/etc/systemd/system/$u" 2>/dev/null || log "warn: could not mask $u"
+    log "disabled+masked (manifest): $u"
+  fi
+done
 log "done — $disabled_count unit(s) $( [ "$DRY_RUN" = "1" ] && echo 'would be' || echo '' ) disabled; the rest stay enabled"
 
 # Conformance: role selection can only govern units the inventory names, so any

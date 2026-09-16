@@ -63,7 +63,21 @@ set -a; . /etc/substrate/env 2>/dev/null || true; set +a
 # multiaddr has no HUB_DISCOVERY_URL to gate on, but it needs the transport MORE than a
 # URL-joined spoke does — the transport is the only thing that can reach that peer at all,
 # because the anchor names a peer identity rather than a host with an HTTP endpoint.
-if { [ -n "${HUB_DISCOVERY_URL:-}" ] || [ -n "${PEER_MULTIADDR:-}" ]; } && [ -x /usr/local/bin/vessel-ctl ]; then
+# DISABLED_VESSELS outranks the auto-enable. This block used to run
+# unconditionally on every spoke, so a deployment that explicitly said
+# DISABLED_VESSELS=federation-transport-vessel.service got the unit anyway —
+# selection could not say no to it, because manifest units sit outside
+# apply-inventory's loop and this auto-enable ran after it. Measured
+# 2026-09-15 (validation/reports/wiring-green-vs-miswired-proof): the unit
+# came up, crash-looped against a hub with no relay, and was the only red on
+# an otherwise-green fleet the operator had deliberately composed without it.
+_ftv_disabled=0
+case ",$(echo "${DISABLED_VESSELS:-}" | tr -d '[:space:]')," in
+  *,federation-transport-vessel.service,*|*,federation-transport-vessel,*) _ftv_disabled=1 ;;
+esac
+if [ "$_ftv_disabled" = 1 ]; then
+  echo "[substrate] spoke federation: federation-transport-vessel is in DISABLED_VESSELS — auto-enable skipped"
+elif { [ -n "${HUB_DISCOVERY_URL:-}" ] || [ -n "${PEER_MULTIADDR:-}" ]; } && [ -x /usr/local/bin/vessel-ctl ]; then
   echo "[substrate] spoke federation: enabling federation-transport-vessel (hub=${HUB_DISCOVERY_URL:-none} peer_multiaddr=${PEER_MULTIADDR:-none})"
   /usr/local/bin/vessel-ctl install federation-transport-vessel >/dev/null 2>&1 || true
   # vessel-ctl's `systemctl enable --now` no-ops pre-systemd; make boot-start deterministic

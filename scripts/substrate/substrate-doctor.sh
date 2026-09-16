@@ -99,8 +99,36 @@ IDENTITY_EP="$(csh 'grep -m1 "^IDENTITY_VESSEL_URL=" /etc/substrate/env 2>/dev/n
 [ "$IS_SPOKE" = 1 ] && note "topology: spoke — store/identity/trace checks target the hub ($ACTIVITY_EP)"
 
 echo "== 2. SurrealDB root auth =="
+# A masked store is only "lives on the hub" when there IS a hub. On a hubless
+# standalone this branch used to PASS with that rationale — measured 2026-09-15
+# (validation/reports/wiring-green-vs-miswired-proof): a fleet whose only
+# functional vessel wrote to a store nothing served drew a green check with a
+# false explanation, and the store was never probed anywhere. The discriminator
+# is systemd's own dependency metadata: a unit that declares Wants=/Requires=
+# surrealdb.service is a store client by its own declaration (After= is pure
+# ordering and deliberately NOT counted — most units order after the store
+# without being clients). Active clients + masked store + no hub → probe the
+# RESOLVED SURREALDB_URL (never assume loopback: a remote-store topology is
+# legitimate); unreachable means those clients write into the void.
 if masked surrealdb.service; then
-  ok "skipped — surrealdb is masked by this topology; the datastore lives on the hub"
+  if [ "$IS_SPOKE" = 1 ]; then
+    ok "skipped — surrealdb is masked on this spoke; the datastore lives on the hub"
+  else
+    STORE_CLIENTS="$(csh 'systemctl list-units --type=service --state=active --no-legend --plain 2>/dev/null | awk "{print \$1}" | while read -r u; do systemctl show -p Wants -p Requires --value "$u" 2>/dev/null | tr " " "\n" | grep -qx surrealdb.service && echo "$u"; done' 2>/dev/null || true)"
+    if [ -z "$STORE_CLIENTS" ]; then
+      ok "skipped — store masked, no hub, and no active unit declares a store dependency; nothing to verify"
+    else
+      SURREAL_URL="$(csh 'grep -m1 "^SURREALDB_URL=" /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d "\""' 2>/dev/null || true)"
+      [ -n "$SURREAL_URL" ] || SURREAL_URL="http://127.0.0.1:8000"
+      STORE_PROBE="$(csh 'P=$(grep -m1 "^SURREALDB_PASSWORD=" /etc/substrate/env | cut -d= -f2- | tr -d "\""); U=$(grep -m1 "^SURREALDB_URL=" /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d "\""); curl -s -m 5 -u "root:$P" -X POST "${U:-http://127.0.0.1:8000}/sql" -H "Accept: application/json" -H "surreal-ns: activity-system" -H "surreal-db: learning_loop" -d "RETURN 1;"' 2>/dev/null || true)"
+      if echo "$STORE_PROBE" | grep -q '"OK"'; then
+        ok "store masked locally but the resolved SURREALDB_URL ($SURREAL_URL) answers — remote-store topology"
+      else
+        bad "surrealdb is masked, no hub is configured, and SURREALDB_URL ($SURREAL_URL) does not answer — active store client(s) write into the void: $(echo "$STORE_CLIENTS" | tr '\n' ' ')"
+        note "either enable surrealdb.service here, point SURREALDB_URL at a store that exists, or disable the client unit(s)"
+      fi
+    fi
+  fi
 else
 SURREAL_CHECK="$(csh 'P=$(grep -m1 "^SURREALDB_PASSWORD=" /etc/substrate/env | cut -d= -f2- | tr -d "\""); curl -s -m 5 -u "root:$P" -X POST http://127.0.0.1:8000/sql -H "Accept: application/json" -H "surreal-ns: activity-system" -H "surreal-db: learning_loop" -d "RETURN 1;"' 2>/dev/null || true)"
 if echo "$SURREAL_CHECK" | grep -q '"OK"'; then
@@ -192,6 +220,44 @@ elif [ -n "$REG_N" ]; then
 else
   bad "discovery registry stats unreadable"
   note "response: $(echo "$REG" | head -c 120)"
+fi
+
+echo "== 4b. shape resolution round-trip =="
+# Liveness green is not wiring green — measured 2026-09-15
+# (validation/reports/wiring-green-vs-miswired-proof): a fleet can be healthy
+# at every port while a registered shape's producer cannot serve it. This is
+# the positive control at the consuming layer: take one shape the LOCAL
+# registry advertises, resolve it back THROUGH discovery the way a walk would
+# (vesselCapability), and confirm the endpoint discovery hands out actually
+# answers. It also catches the converse starvation: a vessel that runs
+# indefinitely unregistered because its /register 401s every 60s — visible
+# only in its own journal until this check.
+RT_SHAPE="$(csh 'curl -s -m 5 http://127.0.0.1:8100/registry/shapes 2>/dev/null | jq -r ".shapes[0] // empty" 2>/dev/null' 2>/dev/null || true)"
+if [ -z "$RT_SHAPE" ]; then
+  if [ "$IS_SPOKE" = 1 ]; then
+    note "local registry advertises no shapes — on a spoke whose vessels all resolve on the hub this can be by design; skipping round-trip"
+  else
+    bad "local registry advertises no shapes — nothing on this fleet is resolvable by a walk"
+  fi
+else
+  RT_EP="$(csh "K=\$(grep -m1 '^METABOB_API_KEY=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); curl -s -m 8 -X POST http://127.0.0.1:8100/resolve -H 'Content-Type: application/json' -H \"Authorization: ApiKey \$K\" -d '{\"pointer\":{\"type\":\"vesselCapability\",\"shape\":\"$RT_SHAPE\"}}' | jq -r '.content.vessels[0].endpoint // empty'" 2>/dev/null || true)"
+  if [ -z "$RT_EP" ]; then
+    bad "discovery could not resolve a producer for its own advertised shape '$RT_SHAPE'"
+  else
+    RT_CODE="$(csh "curl -s -o /dev/null -w '%{http_code}' -m 5 '$RT_EP/health' 2>/dev/null" 2>/dev/null || true)"
+    case "$RT_CODE" in
+      200) ok "round-trip: shape '$RT_SHAPE' resolves to $RT_EP and the producer answers" ;;
+      000) bad "round-trip: shape '$RT_SHAPE' resolves to $RT_EP but nothing answers there — the registry advertises a producer that does not exist" ;;
+      *)   bad "round-trip: shape '$RT_SHAPE' resolves to $RT_EP which answers HTTP $RT_CODE — the producer exists but reports unhealthy" ;;
+    esac
+  fi
+fi
+# Registration starvation: a vessel whose /register is rejected retries forever
+# and stays invisible to routing; the only trace is its own journal.
+REG_STARVED="$(csh 'journalctl --since "-15 min" --no-pager 2>/dev/null | grep -E "discovery register (failed|error)" | sed -E "s/^.* ([a-zA-Z0-9-]+)\[[0-9]+\]: \[([a-zA-Z0-9-]+)\].*/\2/" | sort -u | head -5' 2>/dev/null || true)"
+if [ -n "$REG_STARVED" ]; then
+  bad "vessel(s) failing discovery registration in the last 15 min: $(echo "$REG_STARVED" | tr '\n' ' ')"
+  note "they run but no walk can route to them; check identity/key wiring for the register call"
 fi
 
 echo "== 5. failed systemd units =="

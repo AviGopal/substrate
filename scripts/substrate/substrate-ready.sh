@@ -142,6 +142,20 @@ if [ "$IS_SPOKE" = 0 ]; then
   case ",$_roles," in *,spoke,*) IS_SPOKE=1 ;; esac
 fi
 
+# Did an operator SELECT this topology? gen-env persists the selection env
+# (PROFILE / ENABLED_VESSELS / ENABLED_ROLES / DISABLED_VESSELS) into
+# /etc/substrate/env only when non-empty, so any of them present means the
+# masks on this fleet are the product of a deliberate selection — not leftover
+# state on a default standalone. Without this, the masked-core-on-standalone
+# rule below declared every custom ENABLED_VESSELS standalone NOT-ready for
+# deliberately-excluded units (measured 2026-09-15 on a minimal control fleet:
+# 3 phantom "down" units on a healthy deployment), and a gate that fails on
+# healthy fleets gets ignored. The default full standalone — the topology the
+# rule was built for, where NO selection env exists — keeps its protection.
+HAS_SELECTION=0
+_sel="$(csh 'grep -m1 -E "^(PROFILE|ENABLED_VESSELS|ENABLED_ROLES|DISABLED_VESSELS)=" /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d "\"'"'"'"' 2>/dev/null || true)"
+[ -n "$_sel" ] && HAS_SELECTION=1
+
 check_unit() { # unit role port path core -> echo status: ok|down|skipped|masked
   local unit="$1" role="$2" port="$3" path="$4" core="${5:-}" enabled state
   enabled="$(csh "systemctl is-enabled '$unit' 2>/dev/null" 2>/dev/null || true)"
@@ -168,7 +182,7 @@ check_unit() { # unit role port path core -> echo status: ok|down|skipped|masked
   # inventory's core set should ever be masked, and if it is, the fleet is down
   # however cheerful its resting state looks.
   if [ "$enabled" = "masked" ] || [ "$enabled" = "masked-runtime" ]; then
-    if [ "$core" = "true" ] && [ "$IS_SPOKE" = 0 ]; then
+    if [ "$core" = "true" ] && [ "$IS_SPOKE" = 0 ] && [ "$HAS_SELECTION" = 0 ]; then
       echo down; return
     fi
     echo masked; return
@@ -256,7 +270,15 @@ pass() { # -> sets RESULTS (unit|status lines), FAILING count, MASKED count
   while IFS='|' read -r unit role port path core; do
     [ "$unit" = "substrate-ready.service" ] && continue  # never gate on self
     [ "$SERVICES_ONLY" = 1 ] && [ "${unit%.timer}" != "$unit" ] && continue
-    [ "$QUICK" = 1 ] && [ "$core" != "true" ] && continue
+    # --quick gates on core units PLUS any unit with a health_port. Core-only
+    # left the container HEALTHCHECK structurally blind to every non-core
+    # vessel: measured 2026-09-15, a fleet whose only functional vessel
+    # (relevance-sink, non-core, port 8255) could not serve a single write
+    # stayed docker-`healthy` because --quick never looked at it. A ported
+    # unit that is masked or not enabled classifies masked/skipped in one
+    # cheap state read, so this widens coverage without slowing the gate on
+    # role-subset fleets.
+    [ "$QUICK" = 1 ] && [ "$core" != "true" ] && [ -z "$port" ] && continue
     s="$(check_unit "$unit" "$role" "$port" "$path" "$core")"
     RESULTS="${RESULTS}${unit}|${s}
 "
