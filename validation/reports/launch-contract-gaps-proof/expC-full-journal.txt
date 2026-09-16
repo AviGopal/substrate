@@ -1,0 +1,64 @@
+Sep 16 00:54:21 7c1d7b2ebc7f systemd[1]: Started goal-host-vessel.service - goal-host-vessel.
+Sep 16 00:54:21 7c1d7b2ebc7f bun[729]: Starting @avigopal/ias-executor-ts v0.1.1
+Sep 16 00:54:21 7c1d7b2ebc7f bun[729]: [goal-host-vessel] started on port 8210 | activity-api: http://127.0.0.1:9999 | producer-discovery: http://127.0.0.1:9999 | discovery: http://127.0.0.1:8100 | llm: vessel(http://127.0.0.1:8220)
+Sep 16 00:54:21 7c1d7b2ebc7f bun[729]: [goal-host-vessel] registered built-in resolver: activity_recommendation
+Sep 16 00:54:21 7c1d7b2ebc7f bun[729]: [goal-host-vessel] registered built-in resolver: impulse_cooccurrence
+Sep 16 00:54:21 7c1d7b2ebc7f bun[729]: [goal-host-vessel] registered built-in resolver: noop
+Sep 16 00:54:21 7c1d7b2ebc7f bun[729]: [goal-host-vessel] registered built-in resolver: llm (override — impulse:/dotted/shape interpolation)
+Sep 16 00:54:21 7c1d7b2ebc7f bun[729]: [goal-host-vessel] failed to register dev-vessel proxies: Unable to connect. Is the computer able to access the url?
+Sep 16 00:54:21 7c1d7b2ebc7f bun[729]: [goal-host-vessel] discovery-proxy registration: +9 cross-vessel shapes — obsidian:workspace_state, obsidian:note, obsidian:write_note, obsidian:search, obsidian:backlinks, obsidian:frontmatter, obsidian:daily_note, obsidian:command_catalog, obsidian:open_note
+Sep 16 00:54:21 7c1d7b2ebc7f bun[729]: [startup] WS subscriber DISABLED via GOAL_HOST_WS_SUBSCRIBER=off (iter-8 ablation)
+Sep 16 00:54:21 7c1d7b2ebc7f bun[729]: [DiscoveryRegistrationLoop] register failed: 401 — vessel will be unreachable via discovery
+Sep 16 00:54:25 7c1d7b2ebc7f systemd[1]: Stopping goal-host-vessel.service - goal-host-vessel...
+Sep 16 00:54:25 7c1d7b2ebc7f bun[729]: [DiscoveryRegistrationLoop] deregistered goal-host-vessel
+Sep 16 00:54:25 7c1d7b2ebc7f bun[729]: [goal-host-vessel] SIGTERM: drained (0 in-flight)
+Sep 16 00:54:25 7c1d7b2ebc7f bun[729]: [goal-host-vessel] stopped
+Sep 16 00:54:25 7c1d7b2ebc7f systemd[1]: goal-host-vessel.service: Deactivated successfully.
+Sep 16 00:54:25 7c1d7b2ebc7f systemd[1]: Stopped goal-host-vessel.service - goal-host-vessel.
+Sep 16 00:54:25 7c1d7b2ebc7f systemd[1]: Started goal-host-vessel.service - goal-host-vessel.
+Sep 16 00:54:25 7c1d7b2ebc7f bun[1156]: Starting @avigopal/ias-executor-ts v0.1.1
+Sep 16 00:54:25 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] started on port 8210 | activity-api: http://127.0.0.1:9999 | producer-discovery: http://127.0.0.1:9999 | discovery: http://127.0.0.1:8100 | llm: vessel(http://127.0.0.1:8220)
+Sep 16 00:54:25 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] registered built-in resolver: activity_recommendation
+Sep 16 00:54:25 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] registered built-in resolver: impulse_cooccurrence
+Sep 16 00:54:25 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] registered built-in resolver: noop
+Sep 16 00:54:25 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] registered built-in resolver: llm (override — impulse:/dotted/shape interpolation)
+Sep 16 00:54:25 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] failed to register dev-vessel proxies: Unable to connect. Is the computer able to access the url?
+Sep 16 00:54:25 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] discovery-proxy registration: +9 cross-vessel shapes — obsidian:workspace_state, obsidian:note, obsidian:write_note, obsidian:search, obsidian:backlinks, obsidian:frontmatter, obsidian:daily_note, obsidian:command_catalog, obsidian:open_note
+Sep 16 00:54:25 7c1d7b2ebc7f bun[1156]: [startup] WS subscriber DISABLED via GOAL_HOST_WS_SUBSCRIBER=off (iter-8 ablation)
+Sep 16 00:54:25 7c1d7b2ebc7f bun[1156]: [DiscoveryRegistrationLoop] register failed: 401 — vessel will be unreachable via discovery
+Sep 16 00:54:55 7c1d7b2ebc7f bun[1156]: [mem-probe] rss=42.2MB heapUsed=2.5MB external=1.0MB arrayBuffers=0.0MB biggest_msg=0.0KB()
+Sep 16 00:54:55 7c1d7b2ebc7f bun[1156]: [gc-tick] freed=1932776B rss_after=42.2MB
+Sep 16 00:54:55 7c1d7b2ebc7f bun[1156]: [BoundedBusSink] in_flight=0 queue=0 bytes_in_flight=0 dropped_since_last=0 (overflow=0 byte_cap=0 timeout=0 waiters=0)
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [known-shapes] discovery /registry/shapes answered 401 — keeping an EMPTY vocabulary (no cache yet), which disables goal->target inference entirely
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [walk-concepts] recall SKIPPED — discovery named no concept-db row (neither a local http row nor a libp2p peer row)
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [walk-concepts] recall SKIPPED — discovery named no concept-db row (neither a local http row nor a libp2p peer row)
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [walk-concepts] concept-db could not be asked (no producer or transport error) — recall unavailable, NOT an empty result
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] /run-goal: goal-target inference {"goal_hash":"7b67125c","inferred_target_shapes":[],"confidence":0,"alternatives":[]}
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [walk-pool] standing pool hydrate skipped
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] walk(/run-goal): no shape-feasible step at chain.length=0 (producedShapes=2, missingTargets=0) — escalating (stop)
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] /run-goal: walk: no pick — opportunistic walk found no applicable pick (empty inferred target); terminating walk
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] walk(/run-goal): 0-step termination — opportunistic walk found no applicable pick (empty inferred target)
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] floor: ENTER universalToolFallback goalHash=7b67125c targetShapes=[]
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] floor: exit=no_dispatch_url goalHash=7b67125c
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] /run-goal: pool-walk took 0 shape-feasible steps — falling back to single-template recovery loop
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: Failed to resolve SHA for goal 'attribution probe: report the current substrate st...': 401 Unauthorized
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] emitAuthoringDecision(auto_draft_fallback_recommend) failed: Unable to connect. Is the computer able to access the url?
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [goal-host] goal-path record FAILED for a 1-step path (reached=false); this walk will not inform future reuse: Unable to connect. Is the computer able to access the url?
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [ActivityApiAdapter] recommend transport error: Unable to connect. Is the computer able to access the url?
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] reach-patch NOT ATTEMPTED (walk-threw): no executionId on the dispatch record — this execution stays ungraded and its arm learns nothing from it
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] async /run-goal error: 604 |                 impulseStateSpace: poolEntries,
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: 605 |             });
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: 606 |             candidates = response.recommendations;
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: 607 |             const top = candidates[0];
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: 608 |             if (!top) {
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: 609 |                 throw new Error(`GoalHost.runGoal: no template id returned for goal "${goalText.slice(0, 80)}" ` +
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]:                                 ^
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: error: GoalHost.runGoal: no template id returned for goal "attribution probe: report the current substrate status" (fallback_tier=null). Pass opts.targetTemplateId to bypass the recommend step.
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]:       at runGoal (/vessels/ias-executor-ts/dist/hosts/goal-host.js:609:27)
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]:       at async runGoalWithRecovery (/vessels/goal-host-vessel/src/index.ts:13097:25)
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]:       at async <anonymous> (/vessels/goal-host-vessel/src/index.ts:15434:26)
+Sep 16 00:55:25 7c1d7b2ebc7f bun[1156]: [mem-probe] rss=47.0MB heapUsed=2.4MB external=1.0MB arrayBuffers=0.0MB biggest_msg=0.0KB()
+Sep 16 00:55:25 7c1d7b2ebc7f bun[1156]: [gc-tick] freed=1965680B rss_after=47.0MB
+Sep 16 00:55:25 7c1d7b2ebc7f bun[1156]: [BoundedBusSink] in_flight=0 queue=0 bytes_in_flight=0 dropped_since_last=0 (overflow=0 byte_cap=0 timeout=0 waiters=0)
+Sep 16 00:55:25 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] failed to register dev-vessel proxies: Unable to connect. Is the computer able to access the url?
+Sep 16 00:55:25 7c1d7b2ebc7f bun[1156]: [DiscoveryRegistrationLoop] heartbeat HTTP 401 (failure #1)

@@ -565,6 +565,23 @@ IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT:-$IDENTITY_VESSEL_URL}"
 # substrate id the federation-transport-vessel uses. Empty on a plain local
 # substrate; set by `make up DISCOVERY_ENDPOINT=<hub>` (spoke auto-derivation)
 # and consumed by vessel-ctl'd dynamic vessels via /etc/substrate/env.
+#
+# A HUB self-anchors. `ENABLED_ROLES=hub` promises "spokes can join me", which
+# needs the hub's own federation-transport up and pointed at its own discovery —
+# deploy-hub.sh:170 has hardcoded HUB_DISCOVERY_URL=http://localhost:8100 since
+# the role existed, so every hub launched WITHOUT that script (the raw
+# `docker run -e ENABLED_ROLES=hub` contract) came up unable to dial its own
+# spokes' circuits. Measured 2026-09-16 (validation/reports/network-demo): the
+# hub resolved a mirrored spoke row and then `forward_failed` on it; installing
+# the transport by hand was one of five interventions the role should have
+# owned. Only when the operator supplied no anchor of their own: an explicit
+# HUB_DISCOVERY_URL (or a spoke derivation above) always wins.
+if [[ -z "${HUB_DISCOVERY_URL:-}" && "$_is_spoke" != "1" ]]; then
+  case ",$(printf '%s' "${ENABLED_ROLES:-}" | tr -d '[:space:]')," in
+    *,hub,*) HUB_DISCOVERY_URL="http://localhost:8100"
+             prov HUB_DISCOVERY_URL derived ;;
+  esac
+fi
 HUB_DISCOVERY_URL="${HUB_DISCOVERY_URL:-}"
 FED_SUBSTRATE_ID="${FED_SUBSTRATE_ID:-}"
 RELAY_MULTIADDR="${RELAY_MULTIADDR:-}"

@@ -99,6 +99,39 @@ elif { [ -n "${HUB_DISCOVERY_URL:-}" ] || [ -n "${PEER_MULTIADDR:-}" ]; } && [ -
   fi
 fi
 
+# Hub-side federation: ENABLED_ROLES=hub promises "spokes can join me", and that
+# promise has two runtime halves the role selection alone cannot deliver, because
+# both units are manifest-installed (outside apply-inventory's loop):
+#   - federation-relay: the reachability anchor every spoke circuit rides. Without
+#     it a joining spoke's transport has nothing to dial and /bootstrap advertises
+#     an empty relay list.
+#   - federation-transport-vessel: already auto-enabled by the block above, since
+#     gen-env now self-anchors a hub (HUB_DISCOVERY_URL=localhost) — without it the
+#     hub can SEE mirrored spoke rows and cannot dial them (forward_failed).
+# Both were manual interventions in the 2026-09-16 network demo
+# (validation/reports/network-demo); this block moves deploy-hub.sh's knowledge
+# into the boot path. DISABLED_VESSELS still outranks, same as the transport.
+_frl_disabled=0
+case ",$(echo "${DISABLED_VESSELS:-}" | tr -d '[:space:]')," in
+  *,federation-relay.service,*|*,federation-relay,*) _frl_disabled=1 ;;
+esac
+case ",$(echo "${ENABLED_ROLES:-}" | tr -d '[:space:]')," in
+  *,hub,*)
+    if [ "$_frl_disabled" = 1 ]; then
+      echo "[substrate] hub federation: federation-relay is in DISABLED_VESSELS — auto-enable skipped"
+    elif [ -x /usr/local/bin/vessel-ctl ]; then
+      echo "[substrate] hub federation: enabling federation-relay (the reachability anchor spokes dial)"
+      /usr/local/bin/vessel-ctl install federation-relay || \
+        echo "[substrate] hub federation: vessel-ctl install returned $? — relay may not start; see the line above for the reason"
+      if [ -f /etc/systemd/system/federation-relay.service ]; then
+        mkdir -p /etc/systemd/system/multi-user.target.wants
+        ln -sf ../federation-relay.service \
+          /etc/systemd/system/multi-user.target.wants/federation-relay.service
+      fi
+    fi
+    ;;
+esac
+
 # LLM arm fleet: render one unit per declared arm (llm-arms.json / LLM_ARMS env)
 # via render-llm-arms.sh, then boot-enable the rendered llm-<id>.service units.
 # Fail-open: no renderer found => skip (the static opus/haiku/google units still

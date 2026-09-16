@@ -1,0 +1,13 @@
+== ARM 2: HUB_DISCOVERY_URL=http://syzygy.host:18100 (same URL, the OTHER anchor) ==
+gen-env exit: 0
+--- wiring written to /etc/substrate/env:
+DISCOVERY_VESSEL_ENDPOINT="http://127.0.0.1:8100"
+ACTIVITY_API_ENDPOINT="http://127.0.0.1:8080"
+IDENTITY_VESSEL_URL="http://127.0.0.1:8101"
+HUB_DISCOVERY_URL="http://syzygy.host:18100"
+PEER_DISCOVERY_ENDPOINTS="http://syzygy.host:18100"
+--- apply-inventory DRY_RUN selection plan:
+[apply-inventory] no ENABLED_ROLES/ENABLED_VESSELS/DISABLED_VESSELS set — all units enabled (default)
+[apply-inventory] done — 0 unit(s) would be disabled; the rest stay enabled
+[apply-inventory] warn: 1 shipped unit(s) absent from the inventory — ungoverned by ENABLED_ROLES, they run in every role:
+[apply-inventory] warn:   unmanaged: metric-collector-vessel.service

@@ -1,0 +1,6 @@
+== Exp B: operator key harvest (canary sk-ant-CANARY-harvest-proof-000 planted in fake HOME; NOT passed on the command line) ==
+launch: HOME=/tmp/harvest-home make up LIVE_NAME=substrate-proof-harvest API_KEY=dummy-join-key DISCOVERY_ENDPOINT=http://203.0.113.1:18100 (spoke; needs no local provider key by design)
+--- container persisted secrets:
+ANTHROPIC_API_KEY=sk-ant-CANARY-harvest-proof-000
+--- container runtime env:
+ANTHROPIC_API_KEY="sk-ant-CANARY-harvest-proof-000"
