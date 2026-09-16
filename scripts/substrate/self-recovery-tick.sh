@@ -355,7 +355,7 @@ db_is_bottleneck() {
   [ "$DB_PRESSURE" = 1 ]
 }
 
-recovered=0; reverted=0; escalated=0; healthy_n=0; db_backoff=0; masked_skipped=0; starting_skipped=0; uninstalled_skipped=0
+recovered=0; reverted=0; escalated=0; healthy_n=0; db_backoff=0; masked_skipped=0; starting_skipped=0; uninstalled_skipped=0; exhausted=0; exhausted_skipped=0
 for entry in "${VESSELS[@]}"; do
   name="${entry%%:*}"; port="${entry##*:}"
   # Skip units apply-inventory masked for the active role: they are intentionally
@@ -372,7 +372,7 @@ for entry in "${VESSELS[@]}"; do
     log "STARTING: $name (:$port) — still in its start phase; deferring to TimeoutStartSec (no restart this tick)"
     starting_skipped=$((starting_skipped+1)); continue
   fi
-  if healthy "$name" "$port"; then healthy_n=$((healthy_n+1)); continue; fi
+  if healthy "$name" "$port"; then csh "rm -f /workspace/.self-recovery-fails/$name" >/dev/null 2>&1 || true; healthy_n=$((healthy_n+1)); continue; fi
   # Shared-DB pressure guard: if SurrealDB (the shared dependency) is the
   # bottleneck, restarting this vessel can't fix it and amplifies the load —
   # back off. Only reached AFTER a health failure, so a healthy DB with a
@@ -382,25 +382,75 @@ for entry in "${VESSELS[@]}"; do
     db_backoff=$((db_backoff+1))
     continue
   fi
+  # STAND DOWN ON AN EXHAUSTED VESSEL, BEFORE SPENDING THE RESTART.
+  #
+  # The counter below is only honest if something acts on it. Checked here rather than at the
+  # escalation so the cost is actually avoided: by the time we reach ESCALATE we have already
+  # burned the restart and the revert this is meant to stop.
+  #
+  # The vessel stays unhealthy and its gap stays open — this suppresses a known-futile REPAIR
+  # ATTEMPT, never the report. A recovery elsewhere (an operator fix, a pull-sync, a new
+  # deploy) clears the counter on its next success and the full ladder returns.
+  _ex_bound="${SELF_RECOVERY_ESCALATION_BOUND:-5}"
+  _ex_fails=$(csh "cat /workspace/.self-recovery-fails/$name 2>/dev/null || echo 0" 2>/dev/null | tr -dc '0-9')
+  if [ "${_ex_fails:-0}" -ge "$_ex_bound" ] 2>/dev/null; then
+    log "EXHAUSTED-SKIP: $name (:$port) unhealthy, but $_ex_fails consecutive recoveries have failed — not retrying an identical failure. Clear /workspace/.self-recovery-fails/$name to re-arm."
+    exhausted_skipped=$((exhausted_skipped+1))
+    continue
+  fi
   log "UNHEALTHY: $name (:$port) — restarting"
   csys restart "$name.service" >/dev/null 2>&1 || true
   sleep 6
-  if healthy "$name" "$port"; then log "recovered $name via restart"; recovered=$((recovered+1)); continue; fi
+  if healthy "$name" "$port"; then csh "rm -f /workspace/.self-recovery-fails/$name" >/dev/null 2>&1 || true; log "recovered $name via restart"; recovered=$((recovered+1)); continue; fi
   # Still down: revert a bad staged change from the in-container git clone
   # (last-good pin when recorded, else clone dev HEAD).
   if crevert "$name"; then
     log "still down — reverted $name /vessels/src from git clone (last-good pin if recorded)"
     csys restart "$name.service" >/dev/null 2>&1 || true
     sleep 6
-    if healthy "$name" "$port"; then log "RECOVERED $name via revert-from-git"; reverted=$((reverted+1)); continue; fi
+    if healthy "$name" "$port"; then csh "rm -f /workspace/.self-recovery-fails/$name" >/dev/null 2>&1 || true; log "RECOVERED $name via revert-from-git"; reverted=$((reverted+1)); continue; fi
   elif crevert_in_tree "$name"; then
     # In-tree vessels reach the rung that used to be void for them. See crevert_in_tree.
     log "still down — reverted $name /vessels/src from the super-repo COMMITTED tree (in-tree vessel, no clone)"
     csys restart "$name.service" >/dev/null 2>&1 || true
     sleep 6
-    if healthy "$name" "$port"; then log "RECOVERED $name via revert-from-in-tree"; reverted=$((reverted+1)); continue; fi
+    if healthy "$name" "$port"; then csh "rm -f /workspace/.self-recovery-fails/$name" >/dev/null 2>&1 || true; log "RECOVERED $name via revert-from-in-tree"; reverted=$((reverted+1)); continue; fi
   fi
-  log "ESCALATE: $name still unhealthy after restart+revert"
+  # ROUTE EXHAUSTION — THE RUNG THE LADDER NEVER HAD.
+  #
+  # The operator's standing instruction is that identical failures should not be possible.
+  # This ladder had no attempt budget, no repetition bound and no exhaustion branch, so when
+  # a rung was structurally impossible for a vessel it retried the identical sequence every
+  # three minutes indefinitely. Measured: 36+ byte-identical escalations against one vessel,
+  # each burning a full restart cycle on an outcome that was determined before it began.
+  #
+  # Repeating a deterministic failure is not persistence, it is a refusal to conclude. The
+  # information content of the 36th attempt is zero, and the cost is not: every one of those
+  # restarts interrupted whatever the vessel was doing and re-entered the same dead path.
+  #
+  # After BOUND consecutive failed recoveries the vessel is declared EXHAUSTED for this
+  # ladder: the restart/revert sequence stops, and the escalation says so in those words. The
+  # gap remains open and the diagnosis still ships — stopping the retry is not the same as
+  # forgetting the fault, and the point is to stop spending on a route that has been shown not
+  # to work, not to stop reporting it.
+  #
+  # The counter is per-vessel and resets the moment a recovery succeeds, so a vessel that is
+  # genuinely flapping-but-recoverable keeps its full ladder. Only a vessel that has failed
+  # the SAME way repeatedly loses it, which is exactly the class this exists to bound.
+  #
+  # Kept deliberately cheap and file-based: a counter that needs a live store would be
+  # unavailable in precisely the degraded conditions this tick runs in.
+  ESCALATION_BOUND="${SELF_RECOVERY_ESCALATION_BOUND:-5}"
+  _fail_state_dir=/workspace/.self-recovery-fails
+  csh "mkdir -p $_fail_state_dir" >/dev/null 2>&1 || true
+  _fails=$(csh "cat $_fail_state_dir/$name 2>/dev/null || echo 0" 2>/dev/null | tr -dc '0-9')
+  _fails=$(( ${_fails:-0} + 1 ))
+  csh "printf '%s' '$_fails' > $_fail_state_dir/$name" >/dev/null 2>&1 || true
+  if [ "$_fails" -ge "$ESCALATION_BOUND" ]; then
+    log "EXHAUSTED: $name has failed recovery $_fails consecutive times — this ladder has no remaining route and is standing down for it (the gap stays open; retrying an identical failure a ${_fails}th time buys no information)"
+    exhausted=$((exhausted+1))
+  fi
+  log "ESCALATE: $name still unhealthy after restart+revert (consecutive failures: $_fails)"
   escalated=$((escalated+1))
   # Carry the evidence. See diagnose() above for why this is not optional.
   diag="$(diagnose "$name" 2>/dev/null || true)"
@@ -484,4 +534,4 @@ if [ "$db_backoff" -gt 0 ]; then
 else
   streak_set 0
 fi
-echo "{\"healthy\":$healthy_n,\"recovered_by_restart\":$recovered,\"reverted_from_git\":$reverted,\"escalated\":$escalated,\"db_pressure_backoff\":$db_backoff,\"surreal_restarted\":$surreal_restarted,\"masked_skipped\":$masked_skipped,\"starting_skipped\":$starting_skipped,\"uninstalled_skipped\":$uninstalled_skipped}"
+echo "{\"healthy\":$healthy_n,\"recovered_by_restart\":$recovered,\"reverted_from_git\":$reverted,\"escalated\":$escalated,\"exhausted\":$exhausted,\"exhausted_skipped\":$exhausted_skipped,\"db_pressure_backoff\":$db_backoff,\"surreal_restarted\":$surreal_restarted,\"masked_skipped\":$masked_skipped,\"starting_skipped\":$starting_skipped,\"uninstalled_skipped\":$uninstalled_skipped}"

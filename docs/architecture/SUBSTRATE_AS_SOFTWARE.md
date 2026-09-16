@@ -382,6 +382,32 @@ observe-and-drain half firing) is an operational fact, not an architectural one.
   `/vessels` to last-good host source → escalate as a gap), `light-dispatch-healthcheck`
   (restart-if-hung), and the author-time typecheck **rollback** inside feature-compose.
   In-flight goal recovery (§3.2) is the per-goal form.
+
+  **Two tiers, and the distinction is load-bearing — this section previously read as a
+  contradiction.** It states that detection and resolution *are activities* and that a
+  fixed externally-scheduled recipe is the wrong shape, and then describes a fixed
+  externally-scheduled recipe. Both are right, for different tiers, and a reader who
+  collapses them will either rebuild the reflex as an activity (and deadlock it) or leave
+  the graded tier unbuilt because the reflex looks like it already covers the ground.
+
+  The **reflex tier** is a small, fixed, externally-scheduled ladder. It must be, for the
+  same reason the liveness watchdogs are exempted from the script-retention rule: a check
+  cannot be scheduled by the mechanism it exists to recover. A recovery path that depended
+  on the learning loop would be unavailable in precisely the degraded conditions it exists
+  for. Being fixed is the point of this tier, not a shortcoming of it.
+
+  The **graded tier** is where resolution becomes activities the loop selects and grades.
+  It is the layer that can learn *which* repair works for *which* failure, and it is the
+  one to build when repair quality is the problem.
+
+  What a fixed tier still owes, and what it is easy to omit precisely because it is
+  "just a reflex": **an attempt budget, a repetition bound, and a route-exhaustion
+  branch.** Without them a rung that is structurally impossible for some class of vessel
+  is retried identically forever — each attempt costing a full restart and yielding no
+  information, because the outcome was determined before it began. Bounding the reflex is
+  not a step toward making it an activity; it is what stops an unbounded reflex from
+  masquerading as resilience. Standing rule: identical failures should not be possible,
+  and where they occur the recurrence itself is the defect rather than the count.
 - **Improvement (convergence).** *Owner:* MDP §2 (per-cell Beta-Bernoulli; conjugate
   update = natural gradient, §2.1; regret `O(√(T log T))`), DEC §4.1 (the master rate
   `R_conv ∼ λ₁(L)·ρ_sample·κ(⋆)⁻¹`), DYNAMICS §3.1 (inertial acceleration capped by
