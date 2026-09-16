@@ -19,6 +19,36 @@ set -uo pipefail
 
 DEV="${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}"
 OBS="${OBSIDIAN_PLUGIN_ENDPOINT:-http://127.0.0.1:27182}"
+
+# PRESENCE GUARD — see obsidian-learn-tick.sh for the full account. In short: the rhythm
+# conductor already refuses to schedule presence-axis work when nobody serves obsidian:note,
+# and that gate is correct; this tick runs on a systemd timer, so the gate never applied to
+# it. Work dispatched at an absent surface reaches the goal gate, is judged hollow, and
+# charges the ACTIVITY for the ENVIRONMENT — false blame the posterior decay then has to be
+# aggressive enough to survive, so it is paid for twice.
+#
+# Exit 0: an absent human is an ordinary idle state, not a unit failure. Fail OPEN when
+# discovery itself cannot be reached — a guard that stops the loop whenever its own probe is
+# down would be worse than the problem it prevents.
+DISCOVERY="${DISCOVERY_ENDPOINT:-http://127.0.0.1:8100}"
+_surface_present() {
+  local body
+  body=$(curl -s -m 8 -X POST "${DISCOVERY}/resolve" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: ApiKey ${METABOB_API_KEY:-}" \
+    -d '{"pointer":{"type":"vesselCapability","shape":"obsidian:note"}}' 2>/dev/null) || return 0
+  [ -z "${body}" ] && return 0
+  case "${body}" in
+    *'"found":false'*) return 1 ;;
+    *'"vessels":[]'*)  return 1 ;;
+    *) return 0 ;;
+  esac
+}
+if ! _surface_present; then
+  echo "[$(basename "$0" .sh)] SKIPPED: no vessel advertises obsidian:note — the human surface is not connected."
+  exit 0
+fi
+
 FB_FILE="/vaults/substrate-vault/Substrate/Feedback.md"
 
 # Operator interaction guidance (the human teaching us how to interact).
