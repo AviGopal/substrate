@@ -79,7 +79,17 @@ if [ "$_ftv_disabled" = 1 ]; then
   echo "[substrate] spoke federation: federation-transport-vessel is in DISABLED_VESSELS — auto-enable skipped"
 elif { [ -n "${HUB_DISCOVERY_URL:-}" ] || [ -n "${PEER_MULTIADDR:-}" ]; } && [ -x /usr/local/bin/vessel-ctl ]; then
   echo "[substrate] spoke federation: enabling federation-transport-vessel (hub=${HUB_DISCOVERY_URL:-none} peer_multiaddr=${PEER_MULTIADDR:-none})"
-  /usr/local/bin/vessel-ctl install federation-transport-vessel >/dev/null 2>&1 || true
+  # DO NOT DISCARD THIS OUTPUT. It used to be `>/dev/null 2>&1 || true`, and that
+  # redirect hid the single most useful line in the whole boot: the install failed
+  # with "WORKDIR ABSENT (/workspace/git/super-repo/scripts/substrate/federation-relay)
+  # — dependencies NOT installed", because the clone does not exist yet at this point.
+  # The operator-visible symptom was a container that booted healthy, reported
+  # substrate-ready, and federated with nobody — with the cause already computed and
+  # thrown away. The unit now runs from the image path so the race is gone, but the
+  # output stays: a swallowed install error is how this went unnoticed for an entire
+  # development arc, and `|| true` keeps boot non-fatal without keeping it silent.
+  /usr/local/bin/vessel-ctl install federation-transport-vessel || \
+    echo "[substrate] spoke federation: vessel-ctl install returned $? — transport may not start; see the line above for the reason"
   # vessel-ctl's `systemctl enable --now` no-ops pre-systemd; make boot-start deterministic
   # with an offline wants-symlink (the unit is WantedBy=multi-user.target).
   if [ -f /etc/systemd/system/federation-transport-vessel.service ]; then
