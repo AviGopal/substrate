@@ -1,14 +1,26 @@
 # Runtime Activity Tracing
 
-> **STATUS: THIS SUBSYSTEM IS WRITTEN AND NOT WIRED. Read it as a design, not a description.**
-> The middleware exists and is correct, and nothing mounts it: `runtimeTracingMiddleware` is
-> exported at `middleware/runtime-tracing.ts:125`, and the only `app.use('*', …)` anywhere in
-> `repos/activity-api/src/` is at `:334` of that same file — **inside a `/* */` example block**.
-> Consequently `metadata.runtime_trace` is true on **0 of ~97,000** rows, and every read-side
-> query described below returns empty even where it parses. Two related fields in the
-> learnability minimum are also never populated (`state_signature` is empty on all ~97,000
-> rows). Mount the middleware or mark each claim below as unbuilt; do not cite this document
-> as evidence that request-time traces exist.
+> **This document describes an instrument that must be installed to do anything. An
+> instrument can be written, correct, and uninstalled at the same time, so confirm it is
+> running before treating anything below as a description of the live system.**
+>
+> Confirm it by its **effect**, not by its existence. Finding the code, or finding a call
+> that appears to install it, proves neither — an installation written inside an illustrative
+> example is indistinguishable from a real one to a search, and mounts nothing. The honest
+> evidence is traces appearing for request-time execution, because only a running instrument
+> can produce them.
+>
+> This matters more than it sounds, because **the failure is silent in the direction of
+> reassurance**. With no instrument running, the read paths described below still work and
+> simply return nothing. An empty result reads as "no runtime problems found", when it
+> actually means "nothing was ever recorded". Absence of the instrument and absence of
+> trouble are the same observation here, and only a freshness or population check
+> distinguishes them.
+>
+> The learnability minimum below carries the same hazard one level down: a field the writer
+> never populates makes its readers return empty rather than fail, so a consumer that depends
+> on it degrades quietly instead of erroring. Before depending on any field named here,
+> confirm something actually writes it.
 
 Runtime tracing applies the impulse/activity/trace model to request-time execution: an HTTP
 request handled by a vessel is an activity, the functions it calls are resolvers, and the

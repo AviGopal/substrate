@@ -53,17 +53,22 @@ answers are different, and that difference is the entire design.
 |---|---|---|---|
 | **Authored-durable** | **Shareable by reference.** Identical-by-construction while every container runs the same images; *diverges* once a substrate authors its own code. Merge = git merge, review-gated. | container-side authenticated `git push` to a shared remote; peers pull + redeploy | code review / CI — the operator-or-substrate-authored boundary |
 
-> **CORRECTION (verified against the running system): authored-durable state does NOT only
-> travel by git.** This row implies the review-gated push is the sole path into a peer's
-> runtime. It is not. `vessel-mitosis-cutover.ts` states its plan verbatim — after
-> `git push origin dev`, *copy `mitosis_root/<staged_files>` → `/vessels/<vessel>/…`* — a
-> direct filesystem write into the live tree. `self-recovery-tick.sh`'s revert does
-> `rm -rf /vessels/<name>/src && cp -r`, and `mirror-to-live` copies a clone into `/vessels`
-> outside any review gate. The existence of `runtime-drift-tick.ts` — a watchdog whose entire
-> purpose is detecting when `/vessels` diverges from committed source — is itself proof that
-> the divergence this table says cannot occur does occur routinely. A runtime tree can hold
-> bytes that are in no commit anywhere, and has: measured 2026-09-16, one vessel served
-> `/health` 200 for hours from an in-memory module while its on-disk source did not parse.
+> **The review-gated push is not the only way authored-durable state reaches a running
+> vessel.** The table above reads as though committed history is the sole channel. In
+> practice several mechanisms write a live vessel's tree directly — landing a change after
+> it is pushed, reverting one during recovery, and mirroring committed source into the
+> runtime all copy files into place without passing a review gate.
+>
+> The consequence is the part worth holding: **a running tree can contain bytes that exist in
+> no commit anywhere.** That the fleet maintains a watchdog for runtime-versus-committed
+> divergence is itself evidence the divergence this table excludes is ordinary rather than
+> exceptional — a guard is not built for something that cannot happen.
+>
+> This also breaks a health check's meaning. A vessel loads its source once at start, so it
+> can serve healthy indefinitely from what it loaded while the file on disk has since become
+> unloadable. Its next restart is the failure, and nothing before that restart reports a
+> fault. When the question is whether a vessel's code is sound, the honest test is whether
+> its current source loads — not whether the process is answering.
 | **Recorded** | **Union.** Append-only ⇒ commutative, associative. Trivial to combine, *hard to trust*. | substrate-state bundle (migration/backup); signed traces returned by peer-aware resolution | two-sided counterparty signatures + a foreign-provenance tag |
 | **Ephemeral** | **Never crosses.** A cross-container dispatch runs the Transient execution *in the remote container*; only a Recorded result returns. | n/a — reconstructable only from the trace | n/a (nothing in-flight is shipped) |
 | **Learned-durable** | **No single merge operator** — it is not homogeneous (see §2). Splits into a *structural* sublayer that merges and a *quantitative* sublayer that does not. | content-addressed keys (structural); signed evidence folded locally (quantitative) | content-addressed identity (keys); two-sided signatures (evidence) |

@@ -1,12 +1,10 @@
-# Failure modes — the taxonomy the schema defines, and the much smaller one the traces carry
+# Failure modes — the taxonomy the schema defines
 
-> **Read this first: this document describes a schema, not a census.** Its former subtitle
-> claimed it described "the taxonomy the traces actually carry", and that has never been
-> true of the running store. Three of the six members below have never been emitted once,
-> and the type that dominates real traffic is not in the union at all. The per-member
-> "actionable fields" — the thing the next paragraph says makes a record more than a label —
-> are, with one exception, never written. Treat the tables as the contract the schema is
-> willing to accept, and the *Measured state* section for what arrives.
+> **This document describes a schema, not a census.** It once claimed to describe "the
+> taxonomy the traces actually carry", which invited readers to treat it as evidence about
+> the running store; it is not. Read the tables below as the contract the schema is willing
+> to accept, and see *Check the census before reasoning from the taxonomy* for why the set
+> that actually arrives is reliably smaller and differently shaped.
 
 A failed execution is not one thing. The substrate records *how* it failed as a structured,
 discriminated object on the execution trace, and the posterior update reads that object to
@@ -19,45 +17,40 @@ The object is defined by `FailureModeSchema` in
 field of a trace written to `POST /v2/activities/execution-traces`. The step sizes it maps
 to live in `computeDeltas` in `repos/activity-api/src/lib/posterior-update.ts`.
 
-## Measured state
+## Check the census before reasoning from the taxonomy
 
-What the `execution` table holds, counted directly (`SELECT failure_mode.type, count() …
-GROUP BY`, with a positive control through the identical query shape confirming the zeros
-are real zeros and not a mis-addressed query):
+**A schema defines what may be recorded; it does not cause anything to be recorded.** Count
+the store by type before using this taxonomy to explain anything. Expect three findings, all
+of which have held whenever anyone has looked:
 
-| `type` | rows | in the union below? |
-|---|---|---|
-| `execution_error` | 37,715 (93.5%) | **no — undocumented** |
-| `cascading` | 2,778 | yes |
-| `verifier_negative` | 427 | yes |
-| `budget_exhausted` | **0, ever** | yes |
-| `safety_breach` | **0, ever** | yes |
-| `user_abort` | **0, ever** | yes |
-| `prediction_disagreement` | **0, ever** | yes |
+- **Some members have never been emitted at all.** A member with no producer is a name, not
+  a category, and reasoning that partitions failures across the full union silently assumes
+  a distribution that does not exist.
+- **The type that dominates real traffic may not be in the union.** When most failures arrive
+  under a type this document does not list, the members below describe a small minority of
+  what actually happens, and any conclusion drawn from them is scoped to that minority.
+- **The per-member fields are frequently unwritten.** This is the one that matters most,
+  because the whole claim of the taxonomy is that those fields make a record *actionable
+  rather than a label*. A record carrying only its type and a human-readable reason **is** a
+  label. Most consequentially, a failure typed as caused-by-an-upstream-task that does not
+  name the upstream task cannot be traced to its cause — which is the single fact a reader
+  opens that record to learn.
 
-Two consequences worth stating plainly, because both invert what a reader would assume:
+When counting, run a positive control through the identical query shape — something you know
+exists. An empty result is not a zero until you have shown the query can return a non-zero.
 
-- **The dominant failure type is undocumented.** `execution_error` is 93.5% of all
-  classified failures and appears nowhere in the union below. It is handled in
-  `computeDeltas`, whose own comment calls it "THE 98% CASE". Any reasoning that starts
-  from the six members below is reasoning about 6.5% of the traffic.
-- **The actionable fields are aspirational.** The paragraph under *The six members* says the
-  per-member fields "make the record actionable rather than a label". Measured: **0 of 2,778**
-  `cascading` rows carry `upstream_task_id`, and **0 of 427** `verifier_negative` rows carry
-  `validator_id` — while all 2,778 carry `reason`. So every record in the store today *is*
-  a label. A `cascading` row cannot name what it cascaded from, which is exactly the fact a
-  reader would go to that row to learn.
+**Why this outranks fixing the prose.** A taxonomy nothing emits cannot condition anything
+downstream. Where a failure arrives unclassified, the posterior update falls through to its
+default penalty, so the carefully differentiated step sizes in *Outcome-conditional step
+sizes* are not consulted for the bulk of failures. The taxonomy's purpose — teaching the
+selector to distinguish a merely-interrupted arm from a genuinely-rejected one — is
+defeated by the emitting side, not by the mapping.
 
-`action_no_effect` deserves its own note. It is the textbook type for "an action was
-dispatched and the world did not change", it carries `pre_signature`/`post_signature` for
-precisely that comparison, and it has **zero rows ever** — including through a stretch where
-one recovery path re-ran an identical no-op every three minutes for hours. The type that
-would have named that failure exists and was never reached.
-
-Fixing the doc is the cheap half. The load-bearing half is that a taxonomy nothing emits
-cannot condition anything: `computeDeltas` falls through to the full-β default for every
-unclassified failure, so the per-type step sizes in *Outcome-conditional step sizes* below
-are, for 93.5% of failures, not consulted.
+One member deserves specific attention: the type meaning *an action was dispatched and the
+world did not change*. It carries before-and-after signatures for exactly that comparison,
+and it is the textbook description of a repair that re-runs forever without effect. If it
+has no rows while such repairs are observably happening, the detector for the most important
+failure class in a self-maintaining system exists and has never been reached.
 
 ## The six members
 
@@ -108,14 +101,12 @@ and is penalised in full.
 | Success (binary path) | 1 | 0 |
 | Success (graded-yield path) | *y* | 1 − *y* |
 | Failure with no `failure_mode` recorded | 0 | 1 (warning — but see note) |
-| `execution_error` (undocumented, 93.5% of real failures) | 0 | 1 |
 
-> **The warning has no production reader.** `computeDeltas` collects these into a
-> `warnings: string[]` it is handed, and across `repos/activity-api/src/` the only code that
-> ever *reads* that array is `blame-attribution.test.ts`. Every production call site passes
-> it in and discards it. So "with a warning" describes a value that is computed correctly
-> and observed by nobody outside the test suite — the same shape as the other findings on
-> this page, and worth fixing before anyone relies on the warning as a signal.
+> **Do not treat that warning as a signal until you find its reader.** A warning collected
+> into a structure the caller discards is computed correctly and observed by nobody. Before
+> relying on any "with a warning" behaviour described here, confirm something outside the
+> test suite consumes it — tests reading a value prove the value is produced, never that
+> anyone is listening.
 | `verifier_negative` | 0 | 1 |
 | `budget_exhausted` | 0 | 0.5 |
 | `safety_breach` | 0 | 1 |

@@ -1,17 +1,26 @@
 # The substrate is a slow–fast dynamical system on a growing complex
 
-> **STATUS: ASPIRATIONAL. None of this document's four observables was found live in an
-> adjudication against the running system (2026-09-16).** The producer, `spectral-gap.service`,
-> had been `failed` since 2026-09-14 on a source file truncated by an automated commit, and
-> its output had not been written since 2026-09-07 — while consumers kept reading the last
-> line as a current reading. That has since been repaired, but the structural caveats stand:
-> λ₁ is proxied as a raw edge count and is **not in units comparable to ρ_grow**, so the
-> master inequality below cannot actually be evaluated as written; the TTSA watchdog on the
-> two learning arms' update rates and the critical-slowing-down detector are **not
-> implemented**, and there is no residual time series to compute the latter from. The
-> measurement plane described here is a read-only ledger with no actuator. Treat the
-> mathematics as the intended model and verify any specific quantity against the store
-> before relying on it.
+> **This is the intended model. Three things must hold before any quantity derived from it
+> means what the mathematics says it means, and none of them is guaranteed by the model
+> being correct.**
+>
+> 1. **Both sides of the stability inequality must be expressed on a common scale.** Where a
+>    quantity is approximated by a cheaper stand-in, the comparison silently becomes one
+>    between incomparable numbers — still arithmetically well-formed, no longer meaningful.
+>    Establish that the two sides share units before reading anything into their difference.
+> 2. **A detector described here is not thereby a detector that runs.** Confirm something
+>    invokes it, and that whatever history it needs is actually accumulating. A detector with
+>    no caller emits silence, and silence is read as "nothing is wrong" — so an unbuilt
+>    detector is worse than an absent one.
+> 3. **A measurement is not a governor until something acts on it.** Before treating any
+>    observable here as controlling behaviour, find the consumer that changes what the system
+>    does in response. A value nothing reads cannot gate anything, however correctly computed.
+>
+> **And check freshness, not merely presence.** These quantities come from periodic
+> producers, and a producer that has died keeps serving its final value indefinitely. A stale
+> reading is indistinguishable from a current one unless you compare the reading's own
+> timestamp against how often it should be produced. Staleness should be treated as loudly as
+> absence — absence is legible, whereas a stale number is confidently wrong.
 
 > Companion to the formal-lens documents, all reading one running system through
 > different coordinate charts: [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md) (the
