@@ -142,6 +142,39 @@ if [ -n \"\$PIN\" ]; then git -C \"\$CLONE\" reset --hard -q HEAD 2>/dev/null ||
 exit \$rc"
 }
 
+# NOT EVERY VESSEL HAS A CLONE, AND THE ONES THAT DO NOT HAD NO REVERT RUNG AT ALL.
+#
+# crevert() above exits 1 the moment there is no submodule clone, so for an IN-TREE vessel
+# — one whose code lives at <super-repo>/repos/<name> rather than in its own clone — the
+# ladder's third rung was not merely unsuccessful, it was VOID. Restart, then nothing, then
+# escalate, every three minutes, forever, while a correct committed copy of the file sat in
+# the super-repo the whole time. The same narrow reading of "the git clone" is duplicated in
+# the drift monitor and the close oracle, which is why all three are blind to the same
+# vessels; this fixes the rung, not the shared definition.
+#
+# REVERT FROM THE COMMITTED TREE, NEVER FROM THE WORKING COPY. The super-repo working tree
+# is where composes stage their edits, so it can legitimately hold a failed attempt's
+# leftovers — restoring from it is how you reinstate the exact corruption you are trying to
+# undo. `git archive HEAD` extracts the last committed state and ignores the working tree
+# entirely, which is the only version anything has agreed to.
+#
+# Scoped deliberately: this runs ONLY when no clone exists, so a clone-backed vessel's
+# behaviour is byte-for-byte unchanged. Where the previous behaviour was "do nothing and
+# escalate", the worst case here is the same escalation with the attempt recorded.
+crevert_in_tree() {
+  local name="$1"
+  csh "SR=/workspace/git/super-repo; \
+[ -d \"/workspace/git/vessels/$name/.git\" ] && exit 1; \
+[ -d \"\$SR/.git\" ] || exit 1; \
+git -C \"\$SR\" cat-file -e HEAD:repos/$name/src 2>/dev/null || exit 1; \
+TMP=\$(mktemp -d) || exit 1; \
+if ! git -C \"\$SR\" archive HEAD \"repos/$name/src\" 2>/dev/null | tar -x -C \"\$TMP\" 2>/dev/null; then rm -rf \"\$TMP\"; exit 1; fi; \
+[ -d \"\$TMP/repos/$name/src\" ] || { rm -rf \"\$TMP\"; exit 1; }; \
+rm -rf /vessels/$name/src && cp -r \"\$TMP/repos/$name/src\" /vessels/$name/src; rc=\$?; \
+rm -rf \"\$TMP\"; \
+exit \$rc"
+}
+
 # vessel:in-container-health-port — DERIVED at runtime from the fleet files
 # (inventory: every .service with a repo + health_port; manifest: entries with
 # self_recovery:true + health_port). Install/uninstall no longer mutates this
@@ -360,6 +393,12 @@ for entry in "${VESSELS[@]}"; do
     csys restart "$name.service" >/dev/null 2>&1 || true
     sleep 6
     if healthy "$name" "$port"; then log "RECOVERED $name via revert-from-git"; reverted=$((reverted+1)); continue; fi
+  elif crevert_in_tree "$name"; then
+    # In-tree vessels reach the rung that used to be void for them. See crevert_in_tree.
+    log "still down — reverted $name /vessels/src from the super-repo COMMITTED tree (in-tree vessel, no clone)"
+    csys restart "$name.service" >/dev/null 2>&1 || true
+    sleep 6
+    if healthy "$name" "$port"; then log "RECOVERED $name via revert-from-in-tree"; reverted=$((reverted+1)); continue; fi
   fi
   log "ESCALATE: $name still unhealthy after restart+revert"
   escalated=$((escalated+1))
