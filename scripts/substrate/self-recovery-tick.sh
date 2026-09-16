@@ -192,6 +192,52 @@ healthy() { # vessel-name port -> 0 if /health returns 200 within the probe budg
 emit_gap() {
   csh "curl -s --max-time 8 -X POST $DEV_VESSEL/v2/impulses/resolve -H 'Content-Type: application/json' -d '$1'" >/dev/null 2>&1 || true
 }
+# Quote-safe variant: the diagnostic text below is arbitrary journal output and WILL contain
+# quotes, backslashes and newlines, none of which survive emit_gap's `-d '$1'` interpolation.
+# base64's alphabet cannot break out of a single-quoted shell string, so the payload is built
+# once (with jq, which does the JSON escaping) and shipped opaquely.
+emit_gap_b64() {
+  csh "echo '$1' | base64 -d > /tmp/self-recovery-gap.json && curl -s --max-time 8 -X POST $DEV_VESSEL/v2/impulses/resolve -H 'Content-Type: application/json' -d @/tmp/self-recovery-gap.json" >/dev/null 2>&1 || true
+}
+# WHAT THE ESCALATION ALREADY KNOWS, AND USED TO THROW AWAY.
+#
+# sequences/04-improvisation-failure-modes.md:115 is explicit that an honest failure must
+# carry its reason: "a failure report that discards the diagnostic evidence it already held
+# violates this." This tick held the exact cause — a bun parse error naming file and line —
+# and emitted "needs deeper repair" with falsifier=none, 36+ times, once every three minutes.
+# Every one of those updated a record that could never close by evidence, because there was
+# no evidence in it.
+#
+# Three facts are gathered, in increasing order of what they let a reader do:
+#   1. the unit's own last error lines — where a load/parse failure actually prints;
+#   2. whether the live source PARSES — which separates "bad code on disk" from "runs but
+#      unhealthy", two failures with nothing in common except a red /health;
+#   3. whether a revert source EXISTS — the missing prerequisite. An absent prerequisite at
+#      execution time is precisely what failure-mode-autonomous-loop/spec.md:28 says must be
+#      typed `cascading` and must NAME what was missing, rather than reported as a generic
+#      failure of the step that needed it.
+diagnose() {
+  local name="$1"
+  local jrnl parses clone_state
+  jrnl="$(csh "journalctl -u $name.service -n 40 --no-pager 2>/dev/null | grep -viE 'systemd\[1\]:' | grep -viE '^-- ' | tail -6" 2>/dev/null || true)"
+  if csh "[ -d /vessels/$name/src ]" 2>/dev/null; then
+    if csh "for f in \$(find /vessels/$name/src -name '*.ts' 2>/dev/null); do /root/.bun/bin/bun build --target=bun \"\$f\" >/dev/null 2>&1 || exit 1; done" 2>/dev/null; then
+      parses="yes"
+    else
+      parses="NO — the live source does not parse, so this is broken code on disk, not a runtime fault"
+    fi
+  else
+    parses="unknown (no /vessels/$name/src)"
+  fi
+  if csh "[ -d /workspace/git/vessels/$name/.git ]" 2>/dev/null; then
+    clone_state="a clone exists at /workspace/git/vessels/$name, so the revert rung ran and did not fix it"
+  elif csh "[ -d /workspace/git/super-repo/repos/$name/src ]" 2>/dev/null; then
+    clone_state="MISSING PREREQUISITE: no clone at /workspace/git/vessels/$name, so crevert() exited 1 without reverting anything — the revert rung is VOID for this vessel, not merely unsuccessful. A committed copy DOES exist at /workspace/git/super-repo/repos/$name/src (an in-tree vessel), which no prescription forbids as a recovery source"
+  else
+    clone_state="MISSING PREREQUISITE: no clone at /workspace/git/vessels/$name and no in-tree copy under the super-repo either — this vessel has no committed source anywhere this tick can see"
+  fi
+  printf '%s\n---\nlive source parses: %s\nrevert source: %s\n' "$jrnl" "$parses" "$clone_state"
+}
 
 # Shared-DB pressure guard (2026-07-23 resource-cascade gap). Root: the fleet's
 # DB-backed vessels share ONE SurrealDB. When it saturates/throttles, activity-
@@ -317,7 +363,57 @@ for entry in "${VESSELS[@]}"; do
   fi
   log "ESCALATE: $name still unhealthy after restart+revert"
   escalated=$((escalated+1))
-  emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"self-recovery-failed-$name\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$name unhealthy and NOT recovered by restart+revert-from-git — needs deeper repair\",\"status\":\"open\"}}}}"
+  # Carry the evidence. See diagnose() above for why this is not optional.
+  diag="$(diagnose "$name" 2>/dev/null || true)"
+  # The diagnostic is also LOGGED, not only shipped: if the gap write fails, the reason must
+  # still be recoverable from the journal rather than dying with the request.
+  [ -n "$diag" ] && log "ESCALATE-DIAG $name: $(printf '%s' "$diag" | tr '\n' '|')"
+  payload=""
+  if [ -n "$diag" ] && command -v jq >/dev/null 2>&1; then
+    # falsifier: when the revert rung was VOID for want of a clone, the defect is not this
+    # vessel — it is that "authoritative source" is defined as one hardcoded path, here and
+    # in runtime-drift-tick.ts and in gap-to-feature's close oracle. Point the predicate at
+    # the line that encodes the narrow reading, so the gap closes when the reading widens.
+    case "$diag" in
+      *"MISSING PREREQUISITE"*)
+        payload="$(jq -nc --arg name "$name" --arg diag "$diag" '{impulse:{pointer:{
+          type:"substrateGap_write",
+          gap:{
+            id:("self-recovery-failed-" + $name),
+            category:"cascading",
+            source:"substrate_detected",
+            status:"open",
+            summary:($name + " is unhealthy and the revert rung did not merely fail — it was STRUCTURALLY VOID, because the prerequisite it needs was absent at execution time. Restart did not recover it and crevert() could not run. Evidence held at the moment of escalation:\n" + $diag + "\nA green /health elsewhere in the fleet is not evidence about this vessel; if its module is already in memory it can serve 200 while its source on disk is broken, and it will fail to load on the next restart."),
+            classification_metadata:{
+              edit_site:"scripts/substrate/self-recovery-tick.sh",
+              expected_literal:"CLONE=/workspace/git/vessels/$name",
+              falsifier_note:"POLARITY: the literal must go ABSENT. While the only authoritative source is that one hardcoded path, a vessel without a clone there has no revert rung at all — and the same narrow reading is duplicated in runtime-drift-tick.ts and in gap-to-feature landedCommitVerdict, so the fix is a shared definition, not three patches.",
+              missing_prerequisite:"git clone under /workspace/git/vessels",
+              vessel:$name
+            }
+          }}}}')"
+        ;;
+      *)
+        payload="$(jq -nc --arg name "$name" --arg diag "$diag" '{impulse:{pointer:{
+          type:"substrateGap_write",
+          gap:{
+            id:("self-recovery-failed-" + $name),
+            category:"service_failure",
+            source:"substrate_detected",
+            status:"open",
+            summary:($name + " unhealthy and NOT recovered by restart+revert-from-git. The revert rung ran with a real source and the vessel is still down, so this is a genuine repair failure rather than a missing prerequisite. Evidence held at the moment of escalation:\n" + $diag),
+            classification_metadata:{ vessel:$name }
+          }}}}')"
+        ;;
+    esac
+  fi
+  if [ -n "$payload" ]; then
+    emit_gap_b64 "$(printf '%s' "$payload" | base64 | tr -d '\n')"
+  else
+    # Fallback only when jq is unavailable or the diagnosis could not be taken. Kept
+    # deliberately: an escalation that cannot describe itself must still escalate.
+    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"self-recovery-failed-$name\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$name unhealthy and NOT recovered by restart+revert-from-git — needs deeper repair (diagnosis unavailable: jq missing or journal unreadable)\",\"status\":\"open\"}}}}"
+  fi
 done
 # When we backed off because the shared DB was the bottleneck, emit ONE
 # db_contention gap (not per-vessel service_failure gaps — those would be a
