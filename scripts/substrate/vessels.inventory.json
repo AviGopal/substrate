@@ -182,6 +182,13 @@
       "manifest": true
     },
     {
+      "unit": "training-dojo-vessel.service",
+      "role": "ui",
+      "repo": "training-dojo-vessel",
+      "health_port": 8320,
+      "manifest": true
+    },
+    {
       "unit": "obsidian-intake.timer",
       "role": "ui",
       "repo": "obsidian-vessel"
