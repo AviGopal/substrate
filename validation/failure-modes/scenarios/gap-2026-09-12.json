@@ -1,0 +1,19 @@
+{
+  "id": "gap-2026-09-12",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "conversation_only",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Close substrate gap the-model-selector-is-graded-on-call-returned-not-on-work-succeeded",
+  "description": "Close substrate gap the-model-selector-is-graded-on-call-returned-not-on-work-succeeded",
+  "goal_text": "Close substrate gap the-model-selector-is-graded-on-call-returned-not-on-work-succeeded",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-2026-09-12",
+  "source_gap_source": "operator_narration"
+}

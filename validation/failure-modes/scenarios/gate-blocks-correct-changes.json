@@ -1,0 +1,19 @@
+{
+  "id": "gate-blocks-correct-changes",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The newly-failing-test gate blocks correct changes by attributing load-sensitive TIMEOUTS to the draft under review. Its",
+  "description": "The newly-failing-test gate blocks correct changes by attributing load-sensitive TIMEOUTS to the draft under review. Its second-run reproduction check cannot tell a timeout apart from a regression, because a slow test stays slow on the retry.",
+  "goal_text": "The newly-failing-test gate blocks correct changes by attributing load-sensitive TIMEOUTS to the draft under review. Its second-run reproduction check cannot tell a timeout apart from a regression, because a slow test stays slow on the retry.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gate-blocks-correct-changes",
+  "source_gap_source": "operator_narration"
+}

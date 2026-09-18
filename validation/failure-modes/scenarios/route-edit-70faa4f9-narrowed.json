@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-70faa4f9-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-70faa4f9] investigate and decompose gap org-isolation-on-trace-reads-is-enforced-by-neither-la",
+  "description": "[narrowed from route-edit-70faa4f9] investigate and decompose gap org-isolation-on-trace-reads-is-enforced-by-neither-layer: Tenant isolation on trace reads is not enforced by either of its two supposed layers. The application-level org_id filter is silently dropped by the query engine, and the database PERMISSIONS layer that is documented as the real control is bypassed because the service connects as root.\n\nREPRODUCED 2026-09-11 against the live database, using the exact query shape activity-api emits (visible in its\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/routes/execution-traces.ts(232,1): error TS1128: Declaration or statement expected.\n- syntax_break: src/routes/execution-traces.ts(5341,20): error TS1005: ',' expected.\n- semantic_reject: The patch only adds a WHERE clause to an UPDATE operation that mirrors reached status, but the gap is about tenant isolation on TRACE READS being unenforced due to application-level org_id filter bein\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-70faa4f9] investigate and decompose gap org-isolation-on-trace-reads-is-enforced-by-neither-layer: Tenant isolation on trace reads is not enforced by either of its two supposed layers. The application-level org_id filter is silently dropped by the query engine, and the database PERMISSIONS layer that is documented as the real control is bypassed because the service connects as root.\n\nREPRODUCED 2026-09-11 against the live database, using the exact query shape activity-api emits (visible in its\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/routes/execution-traces.ts(232,1): error TS1128: Declaration or statement expected.\n- syntax_break: src/routes/execution-traces.ts(5341,20): error TS1005: ',' expected.\n- semantic_reject: The patch only adds a WHERE clause to an UPDATE operation that mirrors reached status, but the gap is about tenant isolation on TRACE READS being unenforced due to application-level org_id filter bein\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-70faa4f9-narrowed",
+  "source_gap_source": "substrate_detected"
+}

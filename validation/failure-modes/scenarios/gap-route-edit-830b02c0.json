@@ -1,0 +1,19 @@
+{
+  "id": "gap-route-edit-830b02c0",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "route-edit-f3fa9300",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "identical-failure-run check over the execution store: group recent failures by activity and failure class, and for any r",
+  "description": "identical-failure-run check over the execution store: group recent failures by activity and failure class, and for any run that has continued without an open gap naming that",
+  "goal_text": "identical-failure-run check over the execution store: group recent failures by activity and failure class, and for any run that has continued without an open gap naming that",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-route-edit-830b02c0",
+  "source_gap_source": "substrate_detected"
+}

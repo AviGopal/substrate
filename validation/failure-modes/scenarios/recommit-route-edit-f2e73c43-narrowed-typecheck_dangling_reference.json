@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-f2e73c43-narrowed-typecheck_dangling_reference",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-f2e73c43] The enumerated-anchor mechanism that prevents a fabricated anchor is wired only to t",
+  "description": "[narrowed from route-edit-f2e73c43] The enumerated-anchor mechanism that prevents a fabricated anchor is wired only to the paths the failures do not take. Extending it to the primary drafting path is the single highest-leverage change available to the authoring lane.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- typecheck_dangling_reference: src/resolvers/apply-proposal-as-patch.ts(37,10): error TS2305: Module '\"./feature-compose.js\"' has no exported member 'resolveFeatureCompose'.\nsrc/resolvers/feature-compose.ts(249,7): error TS2304: Ca\n- verify_failed: src/resolvers/feature-compose.ts(3394,15): error TS2339: Property 'anchor' does not exist on type 'FeatureComposePointer'. | src/resolvers/feature-compose.ts(3394,38): error TS2339: Property 'fileText\n- typecheck_dangling_reference: src/resolvers/feature-compose.ts(3383,5): error TS2304: Cannot find name 'pointer'. | src/resolvers/feature-compose.ts(3383,38): error TS2304: Cannot find name 'pointer'. | src/resolvers/feature-compo\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-f2e73c43-narrowed repeated already-recorded failure class typecheck_dangling_reference: src/resolvers/feature-compose.ts(5319,45): error TS2304: Cannot find name 'fileText'. | src/resolvers/feature-compose.ts(5319,55): error TS2304: Canno. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "[narrowed from route-edit-f2e73c43] The enumerated-anchor mechanism that prevents a fabricated anchor is wired only to the paths the failures do not take. Extending it to the primary drafting path is the single highest-leverage change available to the authoring lane.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- typecheck_dangling_reference: src/resolvers/apply-proposal-as-patch.ts(37,10): error TS2305: Module '\"./feature-compose.js\"' has no exported member 'resolveFeatureCompose'.\nsrc/resolvers/feature-compose.ts(249,7): error TS2304: Ca\n- verify_failed: src/resolvers/feature-compose.ts(3394,15): error TS2339: Property 'anchor' does not exist on type 'FeatureComposePointer'. | src/resolvers/feature-compose.ts(3394,38): error TS2339: Property 'fileText\n- typecheck_dangling_reference: src/resolvers/feature-compose.ts(3383,5): error TS2304: Cannot find name 'pointer'. | src/resolvers/feature-compose.ts(3383,38): error TS2304: Cannot find name 'pointer'. | src/resolvers/feature-compo\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-f2e73c43-narrowed repeated already-recorded failure class typecheck_dangling_reference: src/resolvers/feature-compose.ts(5319,45): error TS2304: Cannot find name 'fileText'. | src/resolvers/feature-compose.ts(5319,55): error TS2304: Canno. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-f2e73c43-narrowed-typecheck_dangling_reference",
+  "source_gap_source": "substrate_detected"
+}

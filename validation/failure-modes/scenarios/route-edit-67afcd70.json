@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-67afcd70",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap compose-lessons-are-loaded-but-never-credited-so-their-relevance-decays-with-use: feature-",
+  "description": "investigate and decompose gap compose-lessons-are-loaded-but-never-credited-so-their-relevance-decays-with-use: feature-compose.ts loads compose_lesson concepts into the drafter prompt and never records whether they helped, so the corpus cannot be graded: 17 compose_lesson concepts are loaded, 0 have ever been credited. Concept relevance is (times_succeeded + 1) / (times_loaded + 2), so an uncredited lesson's relevance decays monotonically with every use.\n\nWHY FIVE ATTEMPTS FAILED, AND WHAT TO DO DIFFERENTL",
+  "goal_text": "investigate and decompose gap compose-lessons-are-loaded-but-never-credited-so-their-relevance-decays-with-use: feature-compose.ts loads compose_lesson concepts into the drafter prompt and never records whether they helped, so the corpus cannot be graded: 17 compose_lesson concepts are loaded, 0 have ever been credited. Concept relevance is (times_succeeded + 1) / (times_loaded + 2), so an uncredited lesson's relevance decays monotonically with every use.\n\nWHY FIVE ATTEMPTS FAILED, AND WHAT TO DO DIFFERENTL",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-67afcd70",
+  "source_gap_source": "substrate_detected"
+}

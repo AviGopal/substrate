@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-abd8967c",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-2ee72ee1: In repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts, i",
+  "description": "investigate and decompose gap route-edit-2ee72ee1: In repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts, inside the drainBoredomQueue function, there is a line that reads: if (res) { (t as { status?: string }).status = \"dispatched\"; dispatched += 1; }. The response object res is returned by the POST to run-goal and carries a dispatchId, but that identifier is currently discarded, so a queue task records that it dispatched without rec",
+  "goal_text": "investigate and decompose gap route-edit-2ee72ee1: In repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts, inside the drainBoredomQueue function, there is a line that reads: if (res) { (t as { status?: string }).status = \"dispatched\"; dispatched += 1; }. The response object res is returned by the POST to run-goal and carries a dispatchId, but that identifier is currently discarded, so a queue task records that it dispatched without rec",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-abd8967c",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-253ed5e0",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts, accept two additional timestamp key names when re",
+  "description": "In repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts, accept two additional timestamp key names when reading a trace row's time.\n\nThe file currently contains this exact block:\n\n  if (typeof t.occurred_at === \"string\") {\n    const v = Date.parse(t.occurred_at);\n    if (!Number.isNaN(v)) return v;\n  }\n\nImmediately after that block, insert these two blocks:\n\n  if (typeof t.completed_at === \"string\") {\n    const v = Date.parse(t.completed_at);\n    if (!Number.isNaN(v)) return v;\n  }\n  if (typeof t.started_at === \"string\") {\n    const v = Date.parse(t.started_at);\n    if (!Number.isNaN(v)) return v;\n  }\n\nChange nothing else in the file. The two fields already exist on the row type, so this only widens which key names are read.",
+  "goal_text": "In repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts, accept two additional timestamp key names when reading a trace row's time.\n\nThe file currently contains this exact block:\n\n  if (typeof t.occurred_at === \"string\") {\n    const v = Date.parse(t.occurred_at);\n    if (!Number.isNaN(v)) return v;\n  }\n\nImmediately after that block, insert these two blocks:\n\n  if (typeof t.completed_at === \"string\") {\n    const v = Date.parse(t.completed_at);\n    if (!Number.isNaN(v)) return v;\n  }\n  if (typeof t.started_at === \"string\") {\n    const v = Date.parse(t.started_at);\n    if (!Number.isNaN(v)) return v;\n  }\n\nChange nothing else in the file. The two fields already exist on the row type, so this only widens which key names are read.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-253ed5e0",
+  "source_gap_source": "substrate_detected"
+}

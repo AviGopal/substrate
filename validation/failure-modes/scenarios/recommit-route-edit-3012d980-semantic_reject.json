@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-3012d980-semantic_reject",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "A gap was identified where a new line needs to be inserted after the existing line that handles the 'editHollow' case to",
+  "description": "A gap was identified where a new line needs to be inserted after the existing line that handles the 'editHollow' case to record a deterministic label. [RETRY CONTEXT — compose for gap route-edit-3012d980 repeated already-recorded failure class semantic_reject: The patch introduces the calls to recordDeterministicLabel but fails to address the execution paths defined by the gap due to conditional returns that. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "A gap was identified where a new line needs to be inserted after the existing line that handles the 'editHollow' case to record a deterministic label. [RETRY CONTEXT — compose for gap route-edit-3012d980 repeated already-recorded failure class semantic_reject: The patch introduces the calls to recordDeterministicLabel but fails to address the execution paths defined by the gap due to conditional returns that. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-3012d980-semantic_reject",
+  "source_gap_source": "substrate_detected"
+}

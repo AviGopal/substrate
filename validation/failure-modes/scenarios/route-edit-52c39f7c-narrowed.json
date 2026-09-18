@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-52c39f7c-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-52c39f7c] investigate and decompose gap feature-compose-never-asserts-the-reach-verdict-it-alr",
+  "description": "[narrowed from route-edit-52c39f7c] investigate and decompose gap feature-compose-never-asserts-the-reach-verdict-it-already-computes: In repos/development-vessel/src/resolvers/feature-compose.ts, replace one line.\n\nFind this exact text:\n\n```\n          landed_vessels: landedVessels.filter((v) => v.length > 0),\n```\n\nReplace it with exactly this:\n\n```\n          reached: verdict === \"FAVORABLE\" && landedVessels.length > 0, landed_vessels: landedVessels.filter((v) => v.length > 0),\n```\n\nOne line becomes one line. Do not touch any nei",
+  "goal_text": "[narrowed from route-edit-52c39f7c] investigate and decompose gap feature-compose-never-asserts-the-reach-verdict-it-already-computes: In repos/development-vessel/src/resolvers/feature-compose.ts, replace one line.\n\nFind this exact text:\n\n```\n          landed_vessels: landedVessels.filter((v) => v.length > 0),\n```\n\nReplace it with exactly this:\n\n```\n          reached: verdict === \"FAVORABLE\" && landedVessels.length > 0, landed_vessels: landedVessels.filter((v) => v.length > 0),\n```\n\nOne line becomes one line. Do not touch any nei",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-52c39f7c-narrowed",
+  "source_gap_source": "substrate_detected"
+}

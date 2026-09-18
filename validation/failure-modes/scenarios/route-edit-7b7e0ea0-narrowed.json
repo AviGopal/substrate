@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-7b7e0ea0-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-7b7e0ea0] In repos/development-vessel/src/resolvers/feature-compose.ts, widen the changesAreTe",
+  "description": "[narrowed from route-edit-7b7e0ea0] In repos/development-vessel/src/resolvers/feature-compose.ts, widen the changesAreTestOnly function so that it also treats files ending in .stories.tsx as test-only, by adding a .stories check alongside its existing test-file extension match.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/resolvers/feature-compose.ts(2,2): error TS1109: Expression expected.\nsrc/resolvers/feature-compose.ts(2,8): error TS1005: ';' expected.\nsrc/resolvers/feature-compose.ts(2,12): error TS1434: Unexp\n- typecheck_dangling_reference: src/resolvers/feature-compose.ts(313,79): error TS2304: Cannot find name 'METABOB_API_KEY'.\nsrc/resolvers/feature-compose.ts(1229,33): error TS2304: Cannot find name 'loadFleetShapeVocabulary'.\nsrc/re\n- syntax_break: src/resolvers/feature-compose.ts(2,2): error TS1109: Expression expected. | src/resolvers/feature-compose.ts(2,8): error TS1005: ';' expected. | src/resolvers/feature-compose.ts(2,12): error TS1434: U\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-7b7e0ea0] In repos/development-vessel/src/resolvers/feature-compose.ts, widen the changesAreTestOnly function so that it also treats files ending in .stories.tsx as test-only, by adding a .stories check alongside its existing test-file extension match.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/resolvers/feature-compose.ts(2,2): error TS1109: Expression expected.\nsrc/resolvers/feature-compose.ts(2,8): error TS1005: ';' expected.\nsrc/resolvers/feature-compose.ts(2,12): error TS1434: Unexp\n- typecheck_dangling_reference: src/resolvers/feature-compose.ts(313,79): error TS2304: Cannot find name 'METABOB_API_KEY'.\nsrc/resolvers/feature-compose.ts(1229,33): error TS2304: Cannot find name 'loadFleetShapeVocabulary'.\nsrc/re\n- syntax_break: src/resolvers/feature-compose.ts(2,2): error TS1109: Expression expected. | src/resolvers/feature-compose.ts(2,8): error TS1005: ';' expected. | src/resolvers/feature-compose.ts(2,12): error TS1434: U\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-7b7e0ea0-narrowed",
+  "source_gap_source": "substrate_detected"
+}

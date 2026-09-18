@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-4270c7c2",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap two-named-capabilities-in-the-goal-host-are-exported-imported-and-never-invoked: Two fully",
+  "description": "investigate and decompose gap two-named-capabilities-in-the-goal-host-are-exported-imported-and-never-invoked: Two fully implemented, exported capabilities in goal-host-vessel are imported by src/index.ts and invoked nowhere. The type checker can see both and was never asked.\n\nWHAT IS DEAD, AND HOW IT WAS FOUND. Running the vessel's own tsc with --noUnusedLocals --noUnusedParameters (flags that are NOT enabled fleet-wide) reports 12 unused symbols against a baseline of 0 errors. Two of them are not inciden",
+  "goal_text": "investigate and decompose gap two-named-capabilities-in-the-goal-host-are-exported-imported-and-never-invoked: Two fully implemented, exported capabilities in goal-host-vessel are imported by src/index.ts and invoked nowhere. The type checker can see both and was never asked.\n\nWHAT IS DEAD, AND HOW IT WAS FOUND. Running the vessel's own tsc with --noUnusedLocals --noUnusedParameters (flags that are NOT enabled fleet-wide) reports 12 unused symbols against a baseline of 0 errors. Two of them are not inciden",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-4270c7c2",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-ce3d2d1a",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Close substrate gap typecheck-failures-on-edited-files-get-no-repair-attempt. Edit repos/development-vessel/src/resolver",
+  "description": "Close substrate gap typecheck-failures-on-edited-files-get-no-repair-attempt. Edit repos/development-vessel/src/resolvers/feature-compose.ts.\n\nPURPOSE — this is instrumentation, deliberately, and it is the measurement the gap's falsifier asks for. The surgical typecheck-repair loop for edited files is SILENT except on success. Over 24 hours the journal carries exactly two '[fc-repair] replace_lines applied' lines and ZERO '[fc-repair] replace_lines REFUSED' lines, against 67 compose reports that failed typecheck and rolled back. Because only the apply stage logs, it is impossible to tell whether repair attempts are being made and failing earlier, or are never being made at all. Those two possibilities need opposite fixes, so the distinction must be measured before anything else is changed.\n\nLog one line at the start of each surgical repair attempt, immediately before the LLM call that asks for a fix.\n\nReplace this exact text, which occurs exactly once in the file:\n} catch { /* grounding is best-effort */ }\n\nwith this exact text:\n} catch { /* grounding is best-effort; repair attempt logged next */ }\n        console.warn(\"[fc-repair] ATTEMPT vessel=\" + String(fv.vessel));\n\nThe variable fv is already in scope: the enclosing loop is 'for (const fv of verify.filter((v) => !v.ok))' and the very next statement already reads fv.vessel. This adds one console.warn and changes one comment. It declares no variable, alters no control flow, and cannot change any verdict. The replacement does not contain the anchor, so applying it twice is a no-op.",
+  "goal_text": "Close substrate gap typecheck-failures-on-edited-files-get-no-repair-attempt. Edit repos/development-vessel/src/resolvers/feature-compose.ts.\n\nPURPOSE — this is instrumentation, deliberately, and it is the measurement the gap's falsifier asks for. The surgical typecheck-repair loop for edited files is SILENT except on success. Over 24 hours the journal carries exactly two '[fc-repair] replace_lines applied' lines and ZERO '[fc-repair] replace_lines REFUSED' lines, against 67 compose reports that failed typecheck and rolled back. Because only the apply stage logs, it is impossible to tell whether repair attempts are being made and failing earlier, or are never being made at all. Those two possibilities need opposite fixes, so the distinction must be measured before anything else is changed.\n\nLog one line at the start of each surgical repair attempt, immediately before the LLM call that asks for a fix.\n\nReplace this exact text, which occurs exactly once in the file:\n} catch { /* grounding is best-effort */ }\n\nwith this exact text:\n} catch { /* grounding is best-effort; repair attempt logged next */ }\n        console.warn(\"[fc-repair] ATTEMPT vessel=\" + String(fv.vessel));\n\nThe variable fv is already in scope: the enclosing loop is 'for (const fv of verify.filter((v) => !v.ok))' and the very next statement already reads fv.vessel. This adds one console.warn and changes one comment. It declares no variable, alters no control flow, and cannot change any verdict. The replacement does not contain the anchor, so applying it twice is a no-op.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-ce3d2d1a",
+  "source_gap_source": "substrate_detected"
+}

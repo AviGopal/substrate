@@ -1,0 +1,19 @@
+{
+  "id": "gap-route-edit-f885c3f8",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "route-edit-f3fa9300",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "ten-of-eleven-rhythm-families-have-no-staleness-driver",
+  "description": "ten-of-eleven-rhythm-families-have-no-staleness-driver",
+  "goal_text": "ten-of-eleven-rhythm-families-have-no-staleness-driver",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-route-edit-f885c3f8",
+  "source_gap_source": "operator_narration"
+}

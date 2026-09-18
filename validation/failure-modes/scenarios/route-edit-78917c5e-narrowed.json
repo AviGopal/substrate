@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-78917c5e-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-78917c5e] In repos/development-vessel/src/resolvers/goal-host-behavior-scan.ts, extend LIFECYC",
+  "description": "[narrowed from route-edit-78917c5e] In repos/development-vessel/src/resolvers/goal-host-behavior-scan.ts, extend LIFECYCLE_TEMPLATES so the scan also matches lifecycle templates.\n\nApply exactly one edit.\n\nold_string:\nconst LIFECYCLE_TEMPLATES = /validator-dispatch|slot-binding|lifecycle/i;\n\nnew_string:\nconst LIFECYCLE_TEMPLATES = /validator-dispatch|slot-binding|lifecycle|lifecycle/i;\n\nacceptance: LIFECYCLE_TEMPLATES matches lifecycle templates.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: == install ==\n== resolve ==\nDRYRUN_EXIT=0\n @types/bun@1.3.14\n typescript@5.9.3\n bun-types@1.3.14\n @types/node@25.9.1\n undici-types@7.24.6\n[2.00ms] done\n== typecheck ==\n$ tsc --noEmit\nsrc/resolvers/goa\n- syntax_break: == install ==\n== resolve ==\nDRYRUN_EXIT=0\n @types/bun@1.3.14\n typescript@5.9.3\n bun-types@1.3.14\n @types/node@25.9.1\n undici-types@7.24.6\n[2.00ms] done\n== typecheck ==\n$ tsc --noEmit\nsrc/resolvers/goa\n- typecheck_dangling_reference: src/resolvers/goal-host-behavior-scan.ts(102,12): error TS2304: Cannot find name 'ResolverResult'.\nsrc/resolvers/goal-host-behavior-scan.ts(107,43): error TS2304: Cannot find name 'DEFAULT_CONCEPT_DB'\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-78917c5e] In repos/development-vessel/src/resolvers/goal-host-behavior-scan.ts, extend LIFECYCLE_TEMPLATES so the scan also matches lifecycle templates.\n\nApply exactly one edit.\n\nold_string:\nconst LIFECYCLE_TEMPLATES = /validator-dispatch|slot-binding|lifecycle/i;\n\nnew_string:\nconst LIFECYCLE_TEMPLATES = /validator-dispatch|slot-binding|lifecycle|lifecycle/i;\n\nacceptance: LIFECYCLE_TEMPLATES matches lifecycle templates.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: == install ==\n== resolve ==\nDRYRUN_EXIT=0\n @types/bun@1.3.14\n typescript@5.9.3\n bun-types@1.3.14\n @types/node@25.9.1\n undici-types@7.24.6\n[2.00ms] done\n== typecheck ==\n$ tsc --noEmit\nsrc/resolvers/goa\n- syntax_break: == install ==\n== resolve ==\nDRYRUN_EXIT=0\n @types/bun@1.3.14\n typescript@5.9.3\n bun-types@1.3.14\n @types/node@25.9.1\n undici-types@7.24.6\n[2.00ms] done\n== typecheck ==\n$ tsc --noEmit\nsrc/resolvers/goa\n- typecheck_dangling_reference: src/resolvers/goal-host-behavior-scan.ts(102,12): error TS2304: Cannot find name 'ResolverResult'.\nsrc/resolvers/goal-host-behavior-scan.ts(107,43): error TS2304: Cannot find name 'DEFAULT_CONCEPT_DB'\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-78917c5e-narrowed",
+  "source_gap_source": "substrate_detected"
+}

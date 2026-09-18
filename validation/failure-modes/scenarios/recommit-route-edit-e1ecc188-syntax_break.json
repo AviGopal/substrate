@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-e1ecc188-syntax_break",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-0287b484: In repos/goal-host-vessel/src/index.ts, the edit-intent escalation re",
+  "description": "investigate and decompose gap route-edit-0287b484: In repos/goal-host-vessel/src/index.ts, the edit-intent escalation return block grades a goal `reached: false` even when the edit has already landed on origin/dev. The block returns an object containing `selectedTemplateId: \"feature_compose\"`, `reached: false`, and `executionId: `feature_compose:rejected:${goalHashOf(goal as string)}``, immediately after the tap line that ends `— returning the [RETRY CONTEXT — compose for gap route-edit-e1ecc188 repeated already-recorded failure class syntax_break: src/index.ts(7366,57): error TS1002: Unterminated string literal. | src/index.ts(7368,3): error TS1005: ',' expected. | src/index.ts(7368,9): error TS. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "investigate and decompose gap route-edit-0287b484: In repos/goal-host-vessel/src/index.ts, the edit-intent escalation return block grades a goal `reached: false` even when the edit has already landed on origin/dev. The block returns an object containing `selectedTemplateId: \"feature_compose\"`, `reached: false`, and `executionId: `feature_compose:rejected:${goalHashOf(goal as string)}``, immediately after the tap line that ends `— returning the [RETRY CONTEXT — compose for gap route-edit-e1ecc188 repeated already-recorded failure class syntax_break: src/index.ts(7366,57): error TS1002: Unterminated string literal. | src/index.ts(7368,3): error TS1005: ',' expected. | src/index.ts(7368,9): error TS. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-e1ecc188-syntax_break",
+  "source_gap_source": "substrate_detected"
+}

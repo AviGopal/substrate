@@ -1,0 +1,423 @@
+{
+  "projectThreadScanReport": {
+    "execute": true,
+    "items": [
+      {
+        "project": "new_undispatched_todo_project",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "NewProjectForTesting",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "New Project",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "temp_new_undispatched_project",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "Another New Project",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "temp_project_with_todos",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "NewProjectWithAnUndispatchedTodo",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "Test Project for Dispatch",
+        "tasks": {
+          "open": 0,
+          "closed": 2,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "NewProjectWithNewTodos",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "test_project_with_open_todos",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "Test Project",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My New Project with Todos",
+        "tasks": {
+          "open": 0,
+          "closed": 3,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My Project",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My Temp Project",
+        "tasks": {
+          "open": 0,
+          "closed": 4,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "NewProjectWithOpenTodo",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "NewProjectWithOpenTodos",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "MyTestProject",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "NewProjectWithNewUndispatchedTodo",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My Temporary Project",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "my_test_project_new",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My Test Project",
+        "tasks": {
+          "open": 0,
+          "closed": 2,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "test_dispatchable_project",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My New Project",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "test_single_dispatch",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "New Test Project",
+        "tasks": {
+          "open": 0,
+          "closed": 4,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "my_new_project",
+        "tasks": {
+          "open": 0,
+          "closed": 3,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "dummy_test_project",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My Test Project",
+        "tasks": {
+          "open": 0,
+          "closed": 3,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My Project",
+        "tasks": {
+          "open": 0,
+          "closed": 3,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My Project",
+        "tasks": {
+          "open": 0,
+          "closed": 2,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My New Undispatched Todo Project",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "Temporary Test Project",
+        "tasks": {
+          "open": 0,
+          "closed": 3,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "MyNewProject",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "Test Project with New Todo",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "temp_undispatched_todo",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "New To Do Test Project",
+        "tasks": {
+          "open": 0,
+          "closed": 3,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "my_dummy_project",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My New Project",
+        "tasks": {
+          "open": 0,
+          "closed": 2,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "test_undispatched_todo",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "NewProjectWithUndispatchedTodos",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "Dummy Project",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "New Project with Open Task",
+        "tasks": {
+          "open": 0,
+          "closed": 4,
+          "dispatched": 1
+        }
+      },
+      {
+        "project": "Test Project",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My New Undispatched Project",
+        "tasks": {
+          "open": 0,
+          "closed": 2,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "Fresh Project",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My New Project With Open Todo",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My New Project with an Undispatched Todo",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "test_project_with_todos",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "test_dispatch",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "test_tasks",
+        "tasks": {
+          "open": 0,
+          "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My Project",
+        "tasks": {
+          "open": 0,
+          "closed": 2,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "New Project With Undispatched Task",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
+          "dispatched": 0
+        }
+      }
+    ]
+  }
+}

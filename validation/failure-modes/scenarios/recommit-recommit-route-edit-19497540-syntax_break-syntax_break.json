@@ -1,0 +1,19 @@
+{
+  "id": "recommit-recommit-route-edit-19497540-syntax_break-syntax_break",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-5cdf696a: Edit repos/development-vessel/src/resolvers/env-gate-scan.ts. On the ",
+  "description": "investigate and decompose gap route-edit-5cdf696a: Edit repos/development-vessel/src/resolvers/env-gate-scan.ts. On the single line that begins with the text \"const GUARD_RE\", append one additional alternative to the end of that regular expression, immediately before its closing slash, matching a nullish-coalescing operator written as two consecutive question mark characters. Replace only that one line. Do not touch any other line, do not remove [RETRY CONTEXT — compose for gap route-edit-19497540 repeated already-recorded failure class syntax_break: src/resolvers/env-gate-scan.ts(33,124): error TS1127: Invalid character. | src/resolvers/env-gate-scan.ts(33,125): error TS1134: Variable declaration . The specification is above; this failure text is context only and is not the specification.] [RETRY CONTEXT — compose for gap recommit-route-edit-19497540-syntax_break repeated already-recorded failure class syntax_break: src/resolvers/env-gate-scan.ts(33,304): error TS1005: ';' expected. | src/resolvers/env-gate-scan.ts(33,305): error TS1109: Expression expected. | src. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "investigate and decompose gap route-edit-5cdf696a: Edit repos/development-vessel/src/resolvers/env-gate-scan.ts. On the single line that begins with the text \"const GUARD_RE\", append one additional alternative to the end of that regular expression, immediately before its closing slash, matching a nullish-coalescing operator written as two consecutive question mark characters. Replace only that one line. Do not touch any other line, do not remove [RETRY CONTEXT — compose for gap route-edit-19497540 repeated already-recorded failure class syntax_break: src/resolvers/env-gate-scan.ts(33,124): error TS1127: Invalid character. | src/resolvers/env-gate-scan.ts(33,125): error TS1134: Variable declaration . The specification is above; this failure text is context only and is not the specification.] [RETRY CONTEXT — compose for gap recommit-route-edit-19497540-syntax_break repeated already-recorded failure class syntax_break: src/resolvers/env-gate-scan.ts(33,304): error TS1005: ';' expected. | src/resolvers/env-gate-scan.ts(33,305): error TS1109: Expression expected. | src. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-recommit-route-edit-19497540-syntax_break-syntax_break",
+  "source_gap_source": "substrate_detected"
+}

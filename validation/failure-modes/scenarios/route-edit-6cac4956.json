@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-6cac4956",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The impulse_resolution_metrics table needs to record which vessel produced each metric. Add a mandatory text column name",
+  "description": "The impulse_resolution_metrics table needs to record which vessel produced each metric. Add a mandatory text column named producer_vessel to that existing table, in a new migration file repos/activity-api/sql/migrations/208-impulse-metrics-producer-vessel.surql.\n\nThe table is already defined elsewhere and must keep all its current columns. Only the one new column is being added, and it must always be populated.",
+  "goal_text": "The impulse_resolution_metrics table needs to record which vessel produced each metric. Add a mandatory text column named producer_vessel to that existing table, in a new migration file repos/activity-api/sql/migrations/208-impulse-metrics-producer-vessel.surql.\n\nThe table is already defined elsewhere and must keep all its current columns. Only the one new column is being added, and it must always be populated.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-6cac4956",
+  "source_gap_source": "substrate_detected"
+}

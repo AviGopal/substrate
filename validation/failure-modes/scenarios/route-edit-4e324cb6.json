@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-4e324cb6",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/activity-api/src/lib/decision-credit.ts, correct the doc comment above recordExecutionDecisionOutcome. The firs",
+  "description": "In repos/activity-api/src/lib/decision-credit.ts, correct the doc comment above recordExecutionDecisionOutcome. The first line currently reads exactly:\n\n * Universal decision→outcome capture, keyed on execution_id.\n\nThat claim is false and misleads every consumer of the decision_outcome table. The caller in activity-api/src/lib/posterior-update.ts at line 1027 invokes this function only inside the branch `} else if (!ungraded && trace.execution_id && activityId) {`, where line 1002 defines `const ungraded = reachVerdict === 'ungraded'`, and the comment at line 1033 states \"ungraded (satisfier/no-reach-tag) is skipped -- no honest outcome to grade.\" So this function records ONLY reach-graded executions, not every execution.\n\nReplace that single first line with a truthful one that says capture is limited to reach-graded executions, and add two or three sentences to the same doc comment explaining the consequence: because only already-graded executions are recorded, the fraction of rows in decision_outcome carrying a known reach is 100% by construction (measured 2026-09-03: 7,672 of 7,680 rows), so that fraction must NOT be read as evidence of grading coverage across the fleet. Note that the gate itself is correct -- refusing to record an outcome that cannot be honestly graded is deliberate -- and that it is the \"universal\" wording that is the defect.\n\nChange only comment text in this one file. Do not change any executable statement, any function signature, or any control flow.",
+  "goal_text": "In repos/activity-api/src/lib/decision-credit.ts, correct the doc comment above recordExecutionDecisionOutcome. The first line currently reads exactly:\n\n * Universal decision→outcome capture, keyed on execution_id.\n\nThat claim is false and misleads every consumer of the decision_outcome table. The caller in activity-api/src/lib/posterior-update.ts at line 1027 invokes this function only inside the branch `} else if (!ungraded && trace.execution_id && activityId) {`, where line 1002 defines `const ungraded = reachVerdict === 'ungraded'`, and the comment at line 1033 states \"ungraded (satisfier/no-reach-tag) is skipped -- no honest outcome to grade.\" So this function records ONLY reach-graded executions, not every execution.\n\nReplace that single first line with a truthful one that says capture is limited to reach-graded executions, and add two or three sentences to the same doc comment explaining the consequence: because only already-graded executions are recorded, the fraction of rows in decision_outcome carrying a known reach is 100% by construction (measured 2026-09-03: 7,672 of 7,680 rows), so that fraction must NOT be read as evidence of grading coverage across the fleet. Note that the gate itself is correct -- refusing to record an outcome that cannot be honestly graded is deliberate -- and that it is the \"universal\" wording that is the defect.\n\nChange only comment text in this one file. Do not change any executable statement, any function signature, or any control flow.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-4e324cb6",
+  "source_gap_source": "substrate_detected"
+}

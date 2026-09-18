@@ -1,0 +1,19 @@
+{
+  "id": "mcp-resolve-impulse-truncates-unpageable-observation",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "other",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Installed metabob-mcp resolve_impulse hard-truncates pretty JSON at 2048 characters. Reading activeDispatches (fixed lat",
+  "description": "Installed metabob-mcp resolve_impulse hard-truncates pretty JSON at 2048 characters. Reading activeDispatches (fixed latest 50 in goal-host) and substrateGap through MCP cuts off records and closing JSON. The gap resolver has a limit but no offset in the inspected contract, and total is the returned slice length. This forced authenticated raw read-only fallback to inventory active work safely. Owning code is host checkout /home/avi/documents/work/metabob-mcp/src/tools/resolve-impulse.ts, not repos/metabob-mcp in this checkout. Closure: complete, bounded, pageable or resource-linked observations through MCP with explicit scope and counts; no unbounded context dump. Route host work to its owning resolver/operator if fleet cannot access it.",
+  "goal_text": "Installed metabob-mcp resolve_impulse hard-truncates pretty JSON at 2048 characters. Reading activeDispatches (fixed latest 50 in goal-host) and substrateGap through MCP cuts off records and closing JSON. The gap resolver has a limit but no offset in the inspected contract, and total is the returned slice length. This forced authenticated raw read-only fallback to inventory active work safely. Owning code is host checkout /home/avi/documents/work/metabob-mcp/src/tools/resolve-impulse.ts, not repos/metabob-mcp in this checkout. Closure: complete, bounded, pageable or resource-linked observations through MCP with explicit scope and counts; no unbounded context dump. Route host work to its owning resolver/operator if fleet cannot access it.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "mcp-resolve-impulse-truncates-unpageable-observation",
+  "source_gap_source": "operator_narration"
+}

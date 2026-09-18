@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-cfc9fe60-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-cfc9fe60] investigate and decompose gap route-edit-0e120762: Target file: repos/development-ve",
+  "description": "[narrowed from route-edit-cfc9fe60] investigate and decompose gap route-edit-0e120762: Target file: repos/development-vessel/src/resolvers/feature-compose.ts. Single edit.\n\nLocate this line. It appears exactly once in the file and is indented with six spaces:\n      if (!covered) {\n\nInsert a new block immediately BEFORE that line. Do not modify that line, and do not modify anything above it.\n\nThe block to insert gives a changed source file a second chance to count as tested, by looki\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-cfc9fe60] investigate and decompose gap route-edit-0e120762: Target file: repos/development-vessel/src/resolvers/feature-compose.ts. Single edit.\n\nLocate this line. It appears exactly once in the file and is indented with six spaces:\n      if (!covered) {\n\nInsert a new block immediately BEFORE that line. Do not modify that line, and do not modify anything above it.\n\nThe block to insert gives a changed source file a second chance to count as tested, by looki\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-cfc9fe60-narrowed",
+  "source_gap_source": "substrate_detected"
+}

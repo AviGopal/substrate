@@ -1,0 +1,19 @@
+{
+  "id": "no-reconciler-checks-that-a-favorable-cutover-produced-a-commit",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Create repos/development-vessel/src/resolvers/cutover-landing-reconciler.ts — a new resolver that reconciles every FAVOR",
+  "description": "Create repos/development-vessel/src/resolvers/cutover-landing-reconciler.ts — a new resolver that reconciles every FAVORABLE mitosis-cutover verdict against the existence of a pushed commit, because today nothing does, and approved work vanishes uncounted. Edit repos/development-vessel/src/resolvers/cutover-landing-reconciler.ts.",
+  "goal_text": "Create repos/development-vessel/src/resolvers/cutover-landing-reconciler.ts — a new resolver that reconciles every FAVORABLE mitosis-cutover verdict against the existence of a pushed commit, because today nothing does, and approved work vanishes uncounted. Edit repos/development-vessel/src/resolvers/cutover-landing-reconciler.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "no-reconciler-checks-that-a-favorable-cutover-produced-a-commit",
+  "source_gap_source": "substrate_detected"
+}

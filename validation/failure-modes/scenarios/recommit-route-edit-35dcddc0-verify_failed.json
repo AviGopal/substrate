@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-35dcddc0-verify_failed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-bf461060: In repos/goal-host-vessel/src/index.ts, add one small self-contained ",
+  "description": "investigate and decompose gap route-edit-bf461060: In repos/goal-host-vessel/src/index.ts, add one small self-contained helper function at the TOP LEVEL of the module, immediately before the line that reads `async function recordGoalPath(` — do not insert anything inside an existing function, and do not modify any existing code in this change. The helper is exactly this shape and must be balanced on its own: an async function named `landedShaForGo [RETRY CONTEXT — compose for gap route-edit-35dcddc0 repeated already-recorded failure class verify_failed: src/index.ts(28,16): error TS2393: Duplicate function implementation. | src/index.ts(5926,16): error TS2393: Duplicate function implementation.. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "investigate and decompose gap route-edit-bf461060: In repos/goal-host-vessel/src/index.ts, add one small self-contained helper function at the TOP LEVEL of the module, immediately before the line that reads `async function recordGoalPath(` — do not insert anything inside an existing function, and do not modify any existing code in this change. The helper is exactly this shape and must be balanced on its own: an async function named `landedShaForGo [RETRY CONTEXT — compose for gap route-edit-35dcddc0 repeated already-recorded failure class verify_failed: src/index.ts(28,16): error TS2393: Duplicate function implementation. | src/index.ts(5926,16): error TS2393: Duplicate function implementation.. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-35dcddc0-verify_failed",
+  "source_gap_source": "substrate_detected"
+}

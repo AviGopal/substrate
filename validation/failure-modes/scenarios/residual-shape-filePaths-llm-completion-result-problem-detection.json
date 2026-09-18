@@ -1,0 +1,19 @@
+{
+  "id": "residual-shape-filePaths-llm-completion-result-problem-detection",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "residual_shape_proposal",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "PROPOSE (do NOT auto-mint) a new shape \"problemDetectionBundle\" naming a persistent unnamed axis: the cluster {filePaths",
+  "description": "PROPOSE (do NOT auto-mint) a new shape \"problemDetectionBundle\" naming a persistent unnamed axis: the cluster {filePaths, llm_completion_result, problem_detection} recurs 18× across 7 time windows, forced through generic carrier(s) [filePaths, llm_completion_result]. Producer auto-bridge-problem_detection. confidence=0.78. Human / verify-merge pipeline ratifies before any mint.",
+  "goal_text": "PROPOSE (do NOT auto-mint) a new shape \"problemDetectionBundle\" naming a persistent unnamed axis: the cluster {filePaths, llm_completion_result, problem_detection} recurs 18× across 7 time windows, forced through generic carrier(s) [filePaths, llm_completion_result]. Producer auto-bridge-problem_detection. confidence=0.78. Human / verify-merge pipeline ratifies before any mint.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": "persistent_unexplained_residual_implies_an_unnamed_axis",
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "residual-shape-filePaths-llm-completion-result-problem-detection",
+  "source_gap_source": "substrate_detected"
+}

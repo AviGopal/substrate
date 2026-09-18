@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-ee2fa6ac-narrowed-typecheck_dangling_reference",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap route-edit-ee2fa6ac-narrowed repeated already-recorded failure class typecheck_dangling_reference: 51 | ",
+  "description": "compose for gap route-edit-ee2fa6ac-narrowed repeated already-recorded failure class typecheck_dangling_reference: 51 |     expect(res.shape).not.toBe(\"structuredError\"); | 54 |     expect(rows.some((r) => r[\"id\"] === \"some-real-gap\")).toBe(true); | error: expect(r",
+  "goal_text": "compose for gap route-edit-ee2fa6ac-narrowed repeated already-recorded failure class typecheck_dangling_reference: 51 |     expect(res.shape).not.toBe(\"structuredError\"); | 54 |     expect(rows.some((r) => r[\"id\"] === \"some-real-gap\")).toBe(true); | error: expect(r",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-ee2fa6ac-narrowed-typecheck_dangling_reference",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-6bef5b0c",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "route-edit-7bd65854",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "A compose cutover for one gap committed another gap's staged edit under its own attribution, and mirrored only its own f",
+  "description": "A compose cutover for one gap committed another gap's staged edit under its own attribution, and mirrored only its own files — leaving the swept-in change present in git and absent from the running tree.",
+  "goal_text": "A compose cutover for one gap committed another gap's staged edit under its own attribution, and mirrored only its own files — leaving the swept-in change present in git and absent from the running tree.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-6bef5b0c",
+  "source_gap_source": "operator_narration"
+}

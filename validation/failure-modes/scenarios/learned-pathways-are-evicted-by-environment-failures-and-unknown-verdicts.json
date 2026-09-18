@@ -1,0 +1,19 @@
+{
+  "id": "learned-pathways-are-evicted-by-environment-failures-and-unknown-verdicts",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The reached-command cache destroys learned pathways on signals that carry no information about whether the command works",
+  "description": "The reached-command cache destroys learned pathways on signals that carry no information about whether the command works, and this is the mechanical reason learning does not compound. Edit repos/goal-host-vessel/src/index.ts.",
+  "goal_text": "The reached-command cache destroys learned pathways on signals that carry no information about whether the command works, and this is the mechanical reason learning does not compound. Edit repos/goal-host-vessel/src/index.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "learned-pathways-are-evicted-by-environment-failures-and-unknown-verdicts",
+  "source_gap_source": "substrate_detected"
+}

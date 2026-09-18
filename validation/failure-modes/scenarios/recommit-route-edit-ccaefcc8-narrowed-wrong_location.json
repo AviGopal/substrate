@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-ccaefcc8-narrowed-wrong_location",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-ccaefcc8] investigate and decompose gap route-edit-83d82360: Edit repos/development-vessel/src",
+  "description": "[narrowed from route-edit-ccaefcc8] investigate and decompose gap route-edit-83d82360: Edit repos/development-vessel/src/resolvers/env-gate-scan.ts. On the single line that begins with the text \"const GUARD_RE\", append one additional alternative to the end of that regular expression, immediately before its closing slash, matching a nullish-coalescing operator written as two consecutive question mark characters. Replace only that one line. Do not touch any other line, do not remove\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- wrong_location: adversarial refuters agreed 2/2 (conf 0.90, 1.00): The change on line 7 simply appends an additional '??' to the existing regex pattern in the GUARD_RE definition, which does not introduce any new val\n- semantic_reject: [fc-inert-regex] The only change in this patch is to a regex literal that behaves identically (matches 23 candidate strings equally) to its old version. Old source: 'if \\(!|return null|return FALLBACK\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-ccaefcc8-narrowed repeated already-recorded failure class wrong_location: The patch duplicates an existing nullish-coalescing operator pattern in the regex rather than adding a distinct new alternative, failing to change the. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "[narrowed from route-edit-ccaefcc8] investigate and decompose gap route-edit-83d82360: Edit repos/development-vessel/src/resolvers/env-gate-scan.ts. On the single line that begins with the text \"const GUARD_RE\", append one additional alternative to the end of that regular expression, immediately before its closing slash, matching a nullish-coalescing operator written as two consecutive question mark characters. Replace only that one line. Do not touch any other line, do not remove\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- wrong_location: adversarial refuters agreed 2/2 (conf 0.90, 1.00): The change on line 7 simply appends an additional '??' to the existing regex pattern in the GUARD_RE definition, which does not introduce any new val\n- semantic_reject: [fc-inert-regex] The only change in this patch is to a regex literal that behaves identically (matches 23 candidate strings equally) to its old version. Old source: 'if \\(!|return null|return FALLBACK\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-ccaefcc8-narrowed repeated already-recorded failure class wrong_location: The patch duplicates an existing nullish-coalescing operator pattern in the regex rather than adding a distinct new alternative, failing to change the. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-ccaefcc8-narrowed-wrong_location",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "reach-rate-repaired-http_response_json_extraction-0dab4494",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "execution_contract_shortfall",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Activity family 'repaired-http_response_json_extraction-0dab4494' reaches its goal 11.1% of the time (1/9 GRADED runs ov",
+  "description": "Activity family 'repaired-http_response_json_extraction-0dab4494' reaches its goal 11.1% of the time (1/9 GRADED runs over 24h; 42 of its 51 runs are ungraded). The execution contract expects ~90% regardless of priors; the detector floor is 50%. NOTE the exit status disagrees: success_rate=52.9% — this family exits cleanly and does not reach, which is precisely what the `reached` verdict exists to expose.",
+  "goal_text": "Activity family 'repaired-http_response_json_extraction-0dab4494' reaches its goal 11.1% of the time (1/9 GRADED runs over 24h; 42 of its 51 runs are ungraded). The execution contract expects ~90% regardless of priors; the detector floor is 50%. NOTE the exit status disagrees: success_rate=52.9% — this family exits cleanly and does not reach, which is precisely what the `reached` verdict exists to expose.\n\nRemediation hint: Read the walk's reasoning for this family before touching the template: a reach shortfall is usually information starvation at a decision point (the load-bearing fact was not an impulse at the moment of use), not a missing capability. Compare success_rate to reach_rate — a large gap means the family exits cleanly while producing nothing the goal asked for (hollow completion).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "reach-rate-repaired-http_response_json_extraction-0dab4494",
+  "source_gap_source": "substrate_detected"
+}

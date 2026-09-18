@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-ee2fa6ac",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap the-verify-failure-reason-lists-only-passing-checks: A compose that fails verification rep",
+  "description": "investigate and decompose gap the-verify-failure-reason-lists-only-passing-checks: A compose that fails verification reports a reason that names only PASSING checks, so the failing check is never identified. Observed 2026-09-10 on five consecutive attempts of one edit (op_count=3, ops_applied=3, verify_ok=[False], rolled_back=true). The entire goalReachReason is 416 characters: it announces verify failed (repos/development-vessel): and then lists three (pass) entries and ends",
+  "goal_text": "investigate and decompose gap the-verify-failure-reason-lists-only-passing-checks: A compose that fails verification reports a reason that names only PASSING checks, so the failing check is never identified. Observed 2026-09-10 on five consecutive attempts of one edit (op_count=3, ops_applied=3, verify_ok=[False], rolled_back=true). The entire goalReachReason is 416 characters: it announces verify failed (repos/development-vessel): and then lists three (pass) entries and ends",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-ee2fa6ac",
+  "source_gap_source": "substrate_detected"
+}

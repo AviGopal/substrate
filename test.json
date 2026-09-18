@@ -1,0 +1,9 @@
+[
+  {
+    "file": "test",
+    "goals": [
+      "goal1",
+      "goal2"
+    ]
+  }
+]

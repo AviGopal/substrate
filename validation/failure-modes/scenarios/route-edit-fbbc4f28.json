@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-fbbc4f28",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap gap-mu6vqwfv: PREMISE CORRECTED against the walk's own prior A/B: do NOT re-enable posteri",
+  "description": "investigate and decompose gap gap-mu6vqwfv: PREMISE CORRECTED against the walk's own prior A/B: do NOT re-enable posterior-based satisfier reuse-ordering (it scored 0/4 vs control 3/4, p~.029, and stays off). The narrow defect is that an EXACT goal-hash hit in reachedCommandCache — a verified whole command for this very goal — still does not steer shape choice, so verified replay fires on only 7 of 18 identical repetitions. Gate a",
+  "goal_text": "investigate and decompose gap gap-mu6vqwfv: PREMISE CORRECTED against the walk's own prior A/B: do NOT re-enable posterior-based satisfier reuse-ordering (it scored 0/4 vs control 3/4, p~.029, and stays off). The narrow defect is that an EXACT goal-hash hit in reachedCommandCache — a verified whole command for this very goal — still does not steer shape choice, so verified replay fires on only 7 of 18 identical repetitions. Gate a",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-fbbc4f28",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "docs-align-tick-never-executes",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "docs_align_tick has ZERO executions fleet-wide in the last 7 days (journalctl across all units on substrate-live returne",
+  "description": "docs_align_tick has ZERO executions fleet-wide in the last 7 days (journalctl across all units on substrate-live returned 0 matches for docs_align_tick / docsAlignReport). It is selectable in principle: referenced by rhythm-conductor-tick.ts:123 and by boredom-vessel's data-management family (index.ts:2585). CONSEQUENCE: the CONFIRMATION half of law 9 is unenforced -- ingest-docs pushes docs into concept-db every 6h (verified firing), but nothing checks any doc against live truth (advertised_shapes from discovery /registry/shapes, unit_names, existing_paths). SUSPECTED UPSTREAM CAUSE, already filed and still open: gap rhythm-cadence-registry_empty (first_detected 2026-08-16, reopen_count 1, re-detected 2026-09-04) reports the rhythm registry is EMPTY, so nothing rhythm-driven has a cadence at all. Diagnose that gap FIRST; this row exists to name the specific casualty and its measurement. FALSIFIER: any docsAlignTickReport in the trace store, or a journal line naming docs_align_tick.",
+  "goal_text": "docs_align_tick has ZERO executions fleet-wide in the last 7 days (journalctl across all units on substrate-live returned 0 matches for docs_align_tick / docsAlignReport). It is selectable in principle: referenced by rhythm-conductor-tick.ts:123 and by boredom-vessel's data-management family (index.ts:2585). CONSEQUENCE: the CONFIRMATION half of law 9 is unenforced -- ingest-docs pushes docs into concept-db every 6h (verified firing), but nothing checks any doc against live truth (advertised_shapes from discovery /registry/shapes, unit_names, existing_paths). SUSPECTED UPSTREAM CAUSE, already filed and still open: gap rhythm-cadence-registry_empty (first_detected 2026-08-16, reopen_count 1, re-detected 2026-09-04) reports the rhythm registry is EMPTY, so nothing rhythm-driven has a cadence at all. Diagnose that gap FIRST; this row exists to name the specific casualty and its measurement. FALSIFIER: any docsAlignTickReport in the trace store, or a journal line naming docs_align_tick.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "docs-align-tick-never-executes",
+  "source_gap_source": "operator_narration"
+}

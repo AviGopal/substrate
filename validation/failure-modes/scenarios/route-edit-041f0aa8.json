@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-041f0aa8",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/goal-host-vessel/src/index.ts to satisfy the following request. The relevant code is in the region \"edit repo",
+  "description": "Edit repos/goal-host-vessel/src/index.ts to satisfy the following request. The relevant code is in the region \"edit repos\". If that file is the wrong target, say so rather than editing it.\n\nClose substrate gap the-authoring-vessels-own-test-suite-has-18-stable-failures: MEASURED 2026-09-12 on a CLEAN tree, twice, with identical results: development-vessel's own test suite reports 18 fail and 1 error across 2262 tests in 273 files, taking about 45 seconds. Edit repos/development-vessel.",
+  "goal_text": "Edit repos/goal-host-vessel/src/index.ts to satisfy the following request. The relevant code is in the region \"edit repos\". If that file is the wrong target, say so rather than editing it.\n\nClose substrate gap the-authoring-vessels-own-test-suite-has-18-stable-failures: MEASURED 2026-09-12 on a CLEAN tree, twice, with identical results: development-vessel's own test suite reports 18 fail and 1 error across 2262 tests in 273 files, taking about 45 seconds. Edit repos/development-vessel.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-041f0aa8",
+  "source_gap_source": "substrate_detected"
+}

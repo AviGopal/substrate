@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-20bb5f28-typecheck_dangling_reference",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap the-newly-failing-gate-attributes-load-sensitive-timeouts-to-the-draft: The newly-failing-",
+  "description": "investigate and decompose gap the-newly-failing-gate-attributes-load-sensitive-timeouts-to-the-draft: The newly-failing-test gate blocks correct changes by attributing load-sensitive TIMEOUTS to the draft under review. Its second-run reproduction check cannot tell a timeout apart from a regression, because a slow test stays slow on the retry.\n\nOBSERVED 2026-09-10 on compose route-edit-e2e2e592, a two-line dead-code removal in [RETRY CONTEXT — compose for gap route-edit-20bb5f28 repeated already-recorded failure class typecheck_dangling_reference: src/resolvers/vessel-mitosis-cutover.ts(2187,49): error TS2554: Expected 1 arguments, but got 2. | src/resolvers/vessel-mitosis-cutover.ts(2188,30): e. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "investigate and decompose gap the-newly-failing-gate-attributes-load-sensitive-timeouts-to-the-draft: The newly-failing-test gate blocks correct changes by attributing load-sensitive TIMEOUTS to the draft under review. Its second-run reproduction check cannot tell a timeout apart from a regression, because a slow test stays slow on the retry.\n\nOBSERVED 2026-09-10 on compose route-edit-e2e2e592, a two-line dead-code removal in [RETRY CONTEXT — compose for gap route-edit-20bb5f28 repeated already-recorded failure class typecheck_dangling_reference: src/resolvers/vessel-mitosis-cutover.ts(2187,49): error TS2554: Expected 1 arguments, but got 2. | src/resolvers/vessel-mitosis-cutover.ts(2188,30): e. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-20bb5f28-typecheck_dangling_reference",
+  "source_gap_source": "substrate_detected"
+}

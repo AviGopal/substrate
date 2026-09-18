@@ -1,0 +1,19 @@
+{
+  "id": "the-substrate-cannot-compose-a-fix-outside-repos-vessel-src",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The substrate cannot author a change to any file outside repos/<vessel>/src, because both delivery paths require that pr",
+  "description": "The substrate cannot author a change to any file outside repos/<vessel>/src, because both delivery paths require that prefix - so a defect whose fix lives in .gitignore, a script, or any super-repo root file is structurally undeliverable by the system. Edit repos/development-vessel/src/resolvers/gap-to-feature.ts.",
+  "goal_text": "The substrate cannot author a change to any file outside repos/<vessel>/src, because both delivery paths require that prefix - so a defect whose fix lives in .gitignore, a script, or any super-repo root file is structurally undeliverable by the system. Edit repos/development-vessel/src/resolvers/gap-to-feature.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "the-substrate-cannot-compose-a-fix-outside-repos-vessel-src",
+  "source_gap_source": "substrate_detected"
+}

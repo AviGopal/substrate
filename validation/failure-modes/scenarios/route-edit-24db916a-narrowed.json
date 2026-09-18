@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-24db916a-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-24db916a] investigate and decompose gap route-edit-a45b4506: The executor interpolates placeho",
+  "description": "[narrowed from route-edit-24db916a] investigate and decompose gap route-edit-a45b4506: The executor interpolates placeholders in LLM prompt templates but not in non-LLM task configs, resulting in unprocessed placeholders in activity templates that require caller-supplied values.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: \n- verify_failed: src/adapters/activity-api-provider.ts(2,10): error TS2305: Module '\"../engine.interpolation\"' has no exported member 'interpolateString'.\n- verify_failed: src/adapters/activity-api-provider.ts(2,10): error TS2305: Module '\"../engine.interpolation\"' has no exported member 'interpolate'. | src/adapters/activity-api-provider.ts(86,31): error TS18048: 'raw.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-24db916a] investigate and decompose gap route-edit-a45b4506: The executor interpolates placeholders in LLM prompt templates but not in non-LLM task configs, resulting in unprocessed placeholders in activity templates that require caller-supplied values.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: \n- verify_failed: src/adapters/activity-api-provider.ts(2,10): error TS2305: Module '\"../engine.interpolation\"' has no exported member 'interpolateString'.\n- verify_failed: src/adapters/activity-api-provider.ts(2,10): error TS2305: Module '\"../engine.interpolation\"' has no exported member 'interpolate'. | src/adapters/activity-api-provider.ts(86,31): error TS18048: 'raw.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-24db916a-narrowed",
+  "source_gap_source": "substrate_detected"
+}

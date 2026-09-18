@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-eac0a06f",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap gap-env-gated-substrate-gap-skip-compose-trigger: env-gated capability: SUBSTRATE_GAP_SKIP",
+  "description": "investigate and decompose gap gap-env-gated-substrate-gap-skip-compose-trigger: env-gated capability: SUBSTRATE_GAP_SKIP_COMPOSE_TRIGGER is read by development-vessel, unset in the running environment, and its unset branch disables a capability or silently falls back (1 site(s), e.g. Edit repos/development-vessel/src/resolvers/substrate-gap.ts.",
+  "goal_text": "investigate and decompose gap gap-env-gated-substrate-gap-skip-compose-trigger: env-gated capability: SUBSTRATE_GAP_SKIP_COMPOSE_TRIGGER is read by development-vessel, unset in the running environment, and its unset branch disables a capability or silently falls back (1 site(s), e.g. Edit repos/development-vessel/src/resolvers/substrate-gap.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-eac0a06f",
+  "source_gap_source": "substrate_detected"
+}

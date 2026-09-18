@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-dd5db708",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-c0008610: Edit repos/development-vessel/src/resolvers/env-gate-scan.ts. On the ",
+  "description": "investigate and decompose gap route-edit-c0008610: Edit repos/development-vessel/src/resolvers/env-gate-scan.ts. On the single line that begins with the text \"const GUARD_RE\", append one additional alternative to the end of that regular expression, immediately before its closing slash, matching a nullish-coalescing operator written as two consecutive question mark characters. Replace only that one line. Do not touch any other line, do not remove",
+  "goal_text": "investigate and decompose gap route-edit-c0008610: Edit repos/development-vessel/src/resolvers/env-gate-scan.ts. On the single line that begins with the text \"const GUARD_RE\", append one additional alternative to the end of that regular expression, immediately before its closing slash, matching a nullish-coalescing operator written as two consecutive question mark characters. Replace only that one line. Do not touch any other line, do not remove",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-dd5db708",
+  "source_gap_source": "substrate_detected"
+}

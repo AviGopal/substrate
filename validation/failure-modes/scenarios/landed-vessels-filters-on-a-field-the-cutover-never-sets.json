@@ -1,0 +1,19 @@
+{
+  "id": "landed-vessels-filters-on-a-field-the-cutover-never-sets",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "correctness",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/development-vessel/src/resolvers/feature-compose.ts, replace one line.\n\nFind this exact text:\n\n```\n      .filte",
+  "description": "In repos/development-vessel/src/resolvers/feature-compose.ts, replace one line.\n\nFind this exact text:\n\n```\n      .filter((c) => (c?.result as Record<string, unknown> | undefined)?.applied === true)\n```\n\nReplace it with exactly this:\n\n```\n      .filter((c) => String(((c?.result as Record<string, unknown> | undefined)?.new_git_sha) ?? \"\").length > 0)\n```\n\nReason: this filter computes landedVessels, which now feeds the compose grade itself. It tests result.applied === true, but that field is never set true by the cutover — the landing path returns new_git_sha and push_status instead. Measured: landed_vessels is present on 1034 feature_compose rows and non-empty on zero of them, so the grade is permanently false and the learning loop receives only beta updates. Keying on new_git_sha uses the field the cutover actually emits when it lands.\n\nVerify with bun run lint in repos/development-vessel.",
+  "goal_text": "In repos/development-vessel/src/resolvers/feature-compose.ts, replace one line.\n\nFind this exact text:\n\n```\n      .filter((c) => (c?.result as Record<string, unknown> | undefined)?.applied === true)\n```\n\nReplace it with exactly this:\n\n```\n      .filter((c) => String(((c?.result as Record<string, unknown> | undefined)?.new_git_sha) ?? \"\").length > 0)\n```\n\nReason: this filter computes landedVessels, which now feeds the compose grade itself. It tests result.applied === true, but that field is never set true by the cutover — the landing path returns new_git_sha and push_status instead. Measured: landed_vessels is present on 1034 feature_compose rows and non-empty on zero of them, so the grade is permanently false and the learning loop receives only beta updates. Keying on new_git_sha uses the field the cutover actually emits when it lands.\n\nVerify with bun run lint in repos/development-vessel.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "landed-vessels-filters-on-a-field-the-cutover-never-sets",
+  "source_gap_source": "substrate_detected"
+}

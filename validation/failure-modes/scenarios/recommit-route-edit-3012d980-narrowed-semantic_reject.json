@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-3012d980-narrowed-semantic_reject",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-3012d980] A gap was identified where a new line needs to be inserted after the existing line t",
+  "description": "[narrowed from route-edit-3012d980] A gap was identified where a new line needs to be inserted after the existing line that handles the 'editHollow' case to record a deterministic label.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- wrong_location: adversarial refuters agreed 2/2 (conf 1.00, 1.00): The gap asks for a new line to be inserted *after* the existing line that handles the 'editHollow' case. The patch inserts the `recordDeterministicLa\n- syntax_break: src/index.ts(11942,11): error TS1005: 'try' expected.\nsrc/index.ts(11949,7): error TS1472: 'catch' or 'finally' expected.\nsrc/index.ts(12843,7): error TS1005: 'try' expected.\nsrc/index.ts(12847,3): er\n- wrong_location: The patch duplicates an existing `recordDeterministicLabel` call but doesn't address the core issue of missing recording before conditional returns.\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-3012d980-narrowed repeated already-recorded failure class semantic_reject: adversarial refuters agreed 2/2 (conf 0.90, 1.00): The gap asks for a new line to be inserted *after* the existing line that handles the 'editHollow' . The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "[narrowed from route-edit-3012d980] A gap was identified where a new line needs to be inserted after the existing line that handles the 'editHollow' case to record a deterministic label.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- wrong_location: adversarial refuters agreed 2/2 (conf 1.00, 1.00): The gap asks for a new line to be inserted *after* the existing line that handles the 'editHollow' case. The patch inserts the `recordDeterministicLa\n- syntax_break: src/index.ts(11942,11): error TS1005: 'try' expected.\nsrc/index.ts(11949,7): error TS1472: 'catch' or 'finally' expected.\nsrc/index.ts(12843,7): error TS1005: 'try' expected.\nsrc/index.ts(12847,3): er\n- wrong_location: The patch duplicates an existing `recordDeterministicLabel` call but doesn't address the core issue of missing recording before conditional returns.\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-3012d980-narrowed repeated already-recorded failure class semantic_reject: adversarial refuters agreed 2/2 (conf 0.90, 1.00): The gap asks for a new line to be inserted *after* the existing line that handles the 'editHollow' . The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-3012d980-narrowed-semantic_reject",
+  "source_gap_source": "substrate_detected"
+}

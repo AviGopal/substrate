@@ -1,0 +1,19 @@
+{
+  "id": "empty-api-key-crashes-llm-resolver-on-boot-and-darkens-the-whole-plane",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "A substrate-authored commit made llm-resolver-vessel crash on boot whenever ANY wired provider has an empty API key, tak",
+  "description": "A substrate-authored commit made llm-resolver-vessel crash on boot whenever ANY wired provider has an empty API key, taking down the entire LLM plane and with it every compose in the fleet. Edit repos/llm-resolver-vessel/src/index.ts.\nOPERATOR WORKAROUND CURRENTLY IN PLACE - READ BEFORE TOUCHING CREDENTIALS. To clear the fleet-wide outage, /etc/substrate/env now sets five provider keys to the literal string \"unset-placeholder\": GOOGLE_API_KEY, GROQ_API_KEY, MISTRAL_API_KEY, RUNPOD_API_KEY, VLLM_API_KEY. A backup of the original file is at /etc/substrate/env.bak-preplaceholder.\nTHESE ARE SENTINELS, NOT CREDENTIALS. Their only purpose is to be non-empty so `new OpenAI({ apiKey })` constructs instead of throwing at module scope. Calls through those providers will fail per-request, which is the intended fail-fast behaviour f4bae3c described.\nCONSEQUENCES TO HANDLE WHEN FIXING THIS PROPERLY: (1) once the code substitutes its own sentinel for an empty key, these env entries should be returned to empty or to real keys - leaving a fake key set is indistinguishable from a real one to any future reader; (2) anyone funding real credentials must OVERWRITE these, not assume the provider is unconfigured, because the vessel will now report the arm as present-but-failing rather than dark; (3) do not treat \"unset-placeholder\" appearing in a quota or health report as evidence of a configured provider.\n",
+  "goal_text": "A substrate-authored commit made llm-resolver-vessel crash on boot whenever ANY wired provider has an empty API key, taking down the entire LLM plane and with it every compose in the fleet. Edit repos/llm-resolver-vessel/src/index.ts.\nOPERATOR WORKAROUND CURRENTLY IN PLACE - READ BEFORE TOUCHING CREDENTIALS. To clear the fleet-wide outage, /etc/substrate/env now sets five provider keys to the literal string \"unset-placeholder\": GOOGLE_API_KEY, GROQ_API_KEY, MISTRAL_API_KEY, RUNPOD_API_KEY, VLLM_API_KEY. A backup of the original file is at /etc/substrate/env.bak-preplaceholder.\nTHESE ARE SENTINELS, NOT CREDENTIALS. Their only purpose is to be non-empty so `new OpenAI({ apiKey })` constructs instead of throwing at module scope. Calls through those providers will fail per-request, which is the intended fail-fast behaviour f4bae3c described.\nCONSEQUENCES TO HANDLE WHEN FIXING THIS PROPERLY: (1) once the code substitutes its own sentinel for an empty key, these env entries should be returned to empty or to real keys - leaving a fake key set is indistinguishable from a real one to any future reader; (2) anyone funding real credentials must OVERWRITE these, not assume the provider is unconfigured, because the vessel will now report the arm as present-but-failing rather than dark; (3) do not treat \"unset-placeholder\" appearing in a quota or health report as evidence of a configured provider.\n",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "empty-api-key-crashes-llm-resolver-on-boot-and-darkens-the-whole-plane",
+  "source_gap_source": "substrate_detected"
+}

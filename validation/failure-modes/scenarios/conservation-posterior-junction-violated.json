@@ -1,0 +1,19 @@
+{
+  "id": "conservation-posterior-junction-violated",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Conservation invariant 'posterior' is violated by 175 arm(s). Worst offenders: analyze-source-to-concept, audit-test-rep",
+  "description": "Conservation invariant 'posterior' is violated by 175 arm(s). Worst offenders: analyze-source-to-concept, audit-test-report, auth_resolve_v1, auto-bridge-activity_metrics, auto-bridge-author_composed_capability. posterior observations exceed 1.5x recorded executions - chain-credit inflation or evicted rows This gap is filed automatically by the conservation-audit-emit bridge and refreshed on each run; it aggregates all 175 violations of this invariant into one demand rather than one gap per arm.",
+  "goal_text": "Conservation invariant 'posterior' is violated by 175 arm(s). Worst offenders: analyze-source-to-concept, audit-test-report, auth_resolve_v1, auto-bridge-activity_metrics, auto-bridge-author_composed_capability. posterior observations exceed 1.5x recorded executions - chain-credit inflation or evicted rows This gap is filed automatically by the conservation-audit-emit bridge and refreshed on each run; it aggregates all 175 violations of this invariant into one demand rather than one gap per arm.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "conservation-posterior-junction-violated",
+  "source_gap_source": "substrate_detected"
+}

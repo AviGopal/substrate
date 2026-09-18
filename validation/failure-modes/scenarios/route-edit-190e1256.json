@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-190e1256",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Close substrate gap edit-intent-acceptance-reports-reached-true-for-a-rolled-back-edit. In repos/goal-host-vessel/src/in",
+  "description": "Close substrate gap edit-intent-acceptance-reports-reached-true-for-a-rolled-back-edit. In repos/goal-host-vessel/src/index.ts there is a return whose goalReachReason is built as deterministic:edit-intent-accepted-${verdict} and which sets reached: true unconditionally, so an edit whose compose verdict was UNFAVORABLE and which was rolled back is still reported as reached. Change ONLY that reached expression so it is true only when the verdict is FAVORABLE, for example reached: String(verdict).toUpperCase() === FAVORABLE. Leave the executionId feature_compose:accepted:<goal_hash> on that return exactly as it is, because it is the durable id that makes gate rejections labelable.",
+  "goal_text": "Close substrate gap edit-intent-acceptance-reports-reached-true-for-a-rolled-back-edit. In repos/goal-host-vessel/src/index.ts there is a return whose goalReachReason is built as deterministic:edit-intent-accepted-${verdict} and which sets reached: true unconditionally, so an edit whose compose verdict was UNFAVORABLE and which was rolled back is still reported as reached. Change ONLY that reached expression so it is true only when the verdict is FAVORABLE, for example reached: String(verdict).toUpperCase() === FAVORABLE. Leave the executionId feature_compose:accepted:<goal_hash> on that return exactly as it is, because it is the durable id that makes gate rejections labelable.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-190e1256",
+  "source_gap_source": "substrate_detected"
+}

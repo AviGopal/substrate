@@ -1,0 +1,19 @@
+{
+  "id": "config-surface-probe-has-no-scheduled-caller",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "other",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "scripts/substrate/config-surface-probe.sh is the ONLY check covering the config-lane defect class -- it runs gen-env.sh ",
+  "description": "scripts/substrate/config-surface-probe.sh is the ONLY check covering the config-lane defect class -- it runs gen-env.sh in a throwaway container across every launch lane and diffs three outputs (names emitted to /etc/substrate/env, names persisted to .substrate-secrets, sentinel values accepted vs silently discarded) against config-surface-baseline.txt. Nothing invokes it: no systemd timer in the fleet (39 timers, none matching), no .github/workflows entry, no activity; the only Makefile occurrence is a prose comment. Per the repo's script-retention convention this is the disqualifying shape -- a script nothing invokes cannot be observed failing, so it can never be trusted when it passes, the same defect as a verification gate with no call sites. It matters because config is the one region with no learning loop (the probe's own header says so): env is frozen at process start, invisible to traces and the walk, so no posterior ever grades a config mistake. FALSIFIER: a timer, workflow, or activity that runs config-surface-probe.sh and whose non-zero exit is visible to someone. SCOPE NOTE -- do not over-claim on closure: the probe covers gen-env lanes ONLY. The inventory/timer-masking class (a flavour-masked vessel left its timer armed and produced 49 of 53 hollow verdicts; fixed at runtime only, so an image rebuild re-arms it) is the SAME class but OUTSIDE this probe's coverage. Covering that is separate work, and it is the one item here with a known pending regression.",
+  "goal_text": "scripts/substrate/config-surface-probe.sh is the ONLY check covering the config-lane defect class -- it runs gen-env.sh in a throwaway container across every launch lane and diffs three outputs (names emitted to /etc/substrate/env, names persisted to .substrate-secrets, sentinel values accepted vs silently discarded) against config-surface-baseline.txt. Nothing invokes it: no systemd timer in the fleet (39 timers, none matching), no .github/workflows entry, no activity; the only Makefile occurrence is a prose comment. Per the repo's script-retention convention this is the disqualifying shape -- a script nothing invokes cannot be observed failing, so it can never be trusted when it passes, the same defect as a verification gate with no call sites. It matters because config is the one region with no learning loop (the probe's own header says so): env is frozen at process start, invisible to traces and the walk, so no posterior ever grades a config mistake. FALSIFIER: a timer, workflow, or activity that runs config-surface-probe.sh and whose non-zero exit is visible to someone. SCOPE NOTE -- do not over-claim on closure: the probe covers gen-env lanes ONLY. The inventory/timer-masking class (a flavour-masked vessel left its timer armed and produced 49 of 53 hollow verdicts; fixed at runtime only, so an image rebuild re-arms it) is the SAME class but OUTSIDE this probe's coverage. Covering that is separate work, and it is the one item here with a known pending regression.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "config-surface-probe-has-no-scheduled-caller",
+  "source_gap_source": "operator_narration"
+}

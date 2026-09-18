@@ -1,0 +1,19 @@
+{
+  "id": "learning-loop-selftest-probe-left-no-trace",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "instrumentation_gap",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The learning-loop selftest dispatched learning-loop-selftest successfully and then found NO execution row carrying its t",
+  "description": "The learning-loop selftest dispatched learning-loop-selftest successfully and then found NO execution row carrying its tag within 45s.\n\nEvery downstream link — verdict delivery, posterior delta, goal-path recording — is vacuously red for this one upstream reason, so they are NOT reported as separate failures. Either the probe's execution is not written to the authoritative store, or the probe tag is not threaded into the row and the selftest cannot find its own traffic.\n\nFIRST STEP: dispatch gate_self_probe by hand and look for the row directly, rather than trusting this detector's filter — a selftest that cannot see its own probe is indistinguishable from a chain that did not conduct, which is the exact ambiguity it exists to remove.",
+  "goal_text": "The learning-loop selftest dispatched learning-loop-selftest successfully and then found NO execution row carrying its tag within 45s.\n\nEvery downstream link — verdict delivery, posterior delta, goal-path recording — is vacuously red for this one upstream reason, so they are NOT reported as separate failures. Either the probe's execution is not written to the authoritative store, or the probe tag is not threaded into the row and the selftest cannot find its own traffic.\n\nFIRST STEP: dispatch gate_self_probe by hand and look for the row directly, rather than trusting this detector's filter — a selftest that cannot see its own probe is indistinguishable from a chain that did not conduct, which is the exact ambiguity it exists to remove.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "learning-loop-selftest-probe-left-no-trace",
+  "source_gap_source": "substrate_detected"
+}

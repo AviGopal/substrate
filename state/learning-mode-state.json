@@ -1,7 +1,7 @@
 {
-  "mode": "collect",
-  "driver": "frontier(11 necessary-but-unavailable; top=success_message)",
+  "mode": "develop",
+  "driver": "frontier(21 necessary-but-unavailable; top=sql_schema)",
   "pending_driver": "develop",
-  "pending_count": 1,
-  "updated_at": "2026-09-13T15:59:54.162Z"
+  "pending_count": 0,
+  "updated_at": "2026-09-18T16:30:52.803Z"
 }

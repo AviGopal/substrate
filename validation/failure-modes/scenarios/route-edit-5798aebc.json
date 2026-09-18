@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-5798aebc",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose goal: In repos/development-vessel/src/resolvers/feature-compose.ts, widen the plan-refusal tra",
+  "description": "investigate and decompose goal: In repos/development-vessel/src/resolvers/feature-compose.ts, widen the plan-refusal trace guard so it catches every refusal, not just one stage.\n\nThe wrapper emits an execution record when a compose is refused before it reaches the main emission. The guard currently requires the report's stage field to equal plan. That was wrong: refusal returns in this file carry at least six different stage values, including scope, decompose, guard and grounding, and only four of them say plan. The vacuous-edit gate, which is one of the most frequent refusers, returns stage scope. Measured directly: a refusal was triggered deliberately, the vacuous gate refused it as expected, and no execution row was created because the guard did not match.\n\nThe invariant that holds across every one of these returns is the verdict field being REFUSED, so the guard should test that alone.\n\nPerform exactly one replacement. Find the sole occurrence of this line:\n      if (ob[\"stage\"] === \"plan\" && ob[\"verdict\"] === \"REFUSED\") {\n\nReplace it with:\n      if (ob[\"verdict\"] === \"REFUSED\") {\n\nThis cannot double-report. Every refusal return exits before the resolver reaches its own execution emission further down, so a refused run posts exactly one record either way. The capacity refusal is unaffected because it returns from the wrapper before this point, which is correct: a capacity refusal is a non attempt and must not be recorded as a failure.\n\nOne replacement, one file. Change nothing else.",
+  "goal_text": "investigate and decompose goal: In repos/development-vessel/src/resolvers/feature-compose.ts, widen the plan-refusal trace guard so it catches every refusal, not just one stage.\n\nThe wrapper emits an execution record when a compose is refused before it reaches the main emission. The guard currently requires the report's stage field to equal plan. That was wrong: refusal returns in this file carry at least six different stage values, including scope, decompose, guard and grounding, and only four of them say plan. The vacuous-edit gate, which is one of the most frequent refusers, returns stage scope. Measured directly: a refusal was triggered deliberately, the vacuous gate refused it as expected, and no execution row was created because the guard did not match.\n\nThe invariant that holds across every one of these returns is the verdict field being REFUSED, so the guard should test that alone.\n\nPerform exactly one replacement. Find the sole occurrence of this line:\n      if (ob[\"stage\"] === \"plan\" && ob[\"verdict\"] === \"REFUSED\") {\n\nReplace it with:\n      if (ob[\"verdict\"] === \"REFUSED\") {\n\nThis cannot double-report. Every refusal return exits before the resolver reaches its own execution emission further down, so a refused run posts exactly one record either way. The capacity refusal is unaffected because it returns from the wrapper before this point, which is correct: a capacity refusal is a non attempt and must not be recorded as a failure.\n\nOne replacement, one file. Change nothing else.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-5798aebc",
+  "source_gap_source": "substrate_detected"
+}

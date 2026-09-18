@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-8e003900-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-8e003900] investigate and decompose gap gap-mu6dazag: The execution engine's vessel resolver t",
+  "description": "[narrowed from route-edit-8e003900] investigate and decompose gap gap-mu6dazag: The execution engine's vessel resolver treats a libp2p facade row's multiaddr as an HTTP URL, so every engine-level call to a federated vessel fails with 'fetch() URL is invalid' while walk-level calls to the same vessel succeed\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/engine.ts(237,152): error TS1005: ',' expected.\n- typecheck_dangling_reference: src/engine.ts(226,61): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.\n- semantic_reject: The patch defines a utility function 'convertMultiaddrToHttpUrl' but does not call it anywhere, rendering the change ineffective for the stated gap.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-8e003900] investigate and decompose gap gap-mu6dazag: The execution engine's vessel resolver treats a libp2p facade row's multiaddr as an HTTP URL, so every engine-level call to a federated vessel fails with 'fetch() URL is invalid' while walk-level calls to the same vessel succeed\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/engine.ts(237,152): error TS1005: ',' expected.\n- typecheck_dangling_reference: src/engine.ts(226,61): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.\n- semantic_reject: The patch defines a utility function 'convertMultiaddrToHttpUrl' but does not call it anywhere, rendering the change ineffective for the stated gap.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-8e003900-narrowed",
+  "source_gap_source": "substrate_detected"
+}

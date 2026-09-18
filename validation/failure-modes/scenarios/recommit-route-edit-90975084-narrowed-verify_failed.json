@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-90975084-narrowed-verify_failed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-90975084] investigate and decompose gap route-edit-2ece0b60: Edit repos/development-vessel/src",
+  "description": "[narrowed from route-edit-90975084] investigate and decompose gap route-edit-2ece0b60: Edit repos/development-vessel/src/resolvers/substrate-gap.ts. Make ONE contiguous change inside resolveSubstrateGapWrite.\n\nImmediately after this exact existing line:\n\n      existingIdx = gaps.findIndex((g) => hasClassifiableId(g) && g.status !== \"closed\" && gapClassKey(g.id) === classKey);\n\nand after the closing brace of the `if` block that contains it, insert a guard that refuses an echoed\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/resolvers/substrate-gap.ts(774,9): error TS2367: This comparison appears to be unintentional because the types 'SubstrateGapSource' and '\"walk_flat_pointer\"' have no overlap.\nSKIPPED_TYPECHECK_FAI\n- verify_failed: src/resolvers/substrate-gap.ts(769,9): error TS2367: This comparison appears to be unintentional because the types 'SubstrateGapSource' and '\"walk_flat_pointer\"' have no overlap.\nsrc/resolvers/substra\n- verify_failed: src/resolvers/substrate-gap.ts(784,100): error TS2693: 'FalsifierClass' only refers to a type, but is being used as a value here.\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-90975084-narrowed repeated already-recorded failure class verify_failed: src/resolvers/substrate-gap.ts(777,50): error TS2353: Object literal may only specify known properties, and 'success' does not exist in type 'Resolver. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "[narrowed from route-edit-90975084] investigate and decompose gap route-edit-2ece0b60: Edit repos/development-vessel/src/resolvers/substrate-gap.ts. Make ONE contiguous change inside resolveSubstrateGapWrite.\n\nImmediately after this exact existing line:\n\n      existingIdx = gaps.findIndex((g) => hasClassifiableId(g) && g.status !== \"closed\" && gapClassKey(g.id) === classKey);\n\nand after the closing brace of the `if` block that contains it, insert a guard that refuses an echoed\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/resolvers/substrate-gap.ts(774,9): error TS2367: This comparison appears to be unintentional because the types 'SubstrateGapSource' and '\"walk_flat_pointer\"' have no overlap.\nSKIPPED_TYPECHECK_FAI\n- verify_failed: src/resolvers/substrate-gap.ts(769,9): error TS2367: This comparison appears to be unintentional because the types 'SubstrateGapSource' and '\"walk_flat_pointer\"' have no overlap.\nsrc/resolvers/substra\n- verify_failed: src/resolvers/substrate-gap.ts(784,100): error TS2693: 'FalsifierClass' only refers to a type, but is being used as a value here.\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-90975084-narrowed repeated already-recorded failure class verify_failed: src/resolvers/substrate-gap.ts(777,50): error TS2353: Object literal may only specify known properties, and 'success' does not exist in type 'Resolver. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-90975084-narrowed-verify_failed",
+  "source_gap_source": "substrate_detected"
+}

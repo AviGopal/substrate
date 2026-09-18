@@ -1,0 +1,19 @@
+{
+  "id": "detector-value-sanity-learningMode-fraction_out_of_range",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "detector_value_sanity_violation",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Detector output shape 'learningMode' violated 1 value invariant(s): coverage_fraction=2.5 not in [0,1]. The detector's n",
+  "description": "Detector output shape 'learningMode' violated 1 value invariant(s): coverage_fraction=2.5 not in [0,1]. The detector's numbers do not match reality (e.g. a fraction outside [0,1] or a passing flag over an unmeasured dimension) - its verdict cannot be trusted, including by the lift gate.",
+  "goal_text": "Detector output shape 'learningMode' violated 1 value invariant(s): coverage_fraction=2.5 not in [0,1]. The detector's numbers do not match reality (e.g. a fraction outside [0,1] or a passing flag over an unmeasured dimension) - its verdict cannot be trusted, including by the lift gate.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": "detectors_must_match_reality",
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "detector-value-sanity-learningMode-fraction_out_of_range",
+  "source_gap_source": "substrate_detected"
+}

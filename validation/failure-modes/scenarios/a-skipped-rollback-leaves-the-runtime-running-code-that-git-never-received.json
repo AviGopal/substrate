@@ -1,0 +1,19 @@
+{
+  "id": "a-skipped-rollback-leaves-the-runtime-running-code-that-git-never-received",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "A compose whose verification fails can leave the RUNTIME tree holding an edit that the clone and git never receive, and ",
+  "description": "A compose whose verification fails can leave the RUNTIME tree holding an edit that the clone and git never receive, and the divergence then persists and blocks every later compose on that file. Edit repos/development-vessel/src/resolvers/feature-compose.ts.",
+  "goal_text": "A compose whose verification fails can leave the RUNTIME tree holding an edit that the clone and git never receive, and the divergence then persists and blocks every later compose on that file. Edit repos/development-vessel/src/resolvers/feature-compose.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "a-skipped-rollback-leaves-the-runtime-running-code-that-git-never-received",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "no-llm-provider-available-and-an-empty-key-is-reported-as-quota-exhaustion",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Every distinct provider failure is collapsed into 'marked exhausted' and sent into a 600 second cooldown retry loop, so ",
+  "description": "Every distinct provider failure is collapsed into 'marked exhausted' and sent into a 600 second cooldown retry loop, so three conditions requiring three different operator actions are reported as one condition and none is escalated. Edit repos/llm-resolver-vessel/src/index.ts.",
+  "goal_text": "Every distinct provider failure is collapsed into 'marked exhausted' and sent into a 600 second cooldown retry loop, so three conditions requiring three different operator actions are reported as one condition and none is escalated. Edit repos/llm-resolver-vessel/src/index.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "no-llm-provider-available-and-an-empty-key-is-reported-as-quota-exhaustion",
+  "source_gap_source": "substrate_detected"
+}
