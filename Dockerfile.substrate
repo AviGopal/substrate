@@ -312,7 +312,9 @@ RUN cd /usr/local/share/substrate/super-repo/scripts/substrate/federation-relay 
     rm -rf node_modules/@avigopal/libp2p-federation-transport && \
     mkdir -p node_modules/@avigopal/libp2p-federation-transport && \
     cp -a /vessels/libp2p-federation-transport/package.json /vessels/libp2p-federation-transport/src \
-      node_modules/@avigopal/libp2p-federation-transport/
+      node_modules/@avigopal/libp2p-federation-transport/ && \
+    bun -e 'const p=JSON.parse(await Bun.file("package.json").text()); delete p.dependencies["@avigopal/libp2p-federation-transport"]; await Bun.write("package.json", JSON.stringify(p,null,2))' && \
+    rm -f bun.lock
 COPY scripts/substrate/spoke-federate.sh /usr/local/bin/spoke-federate
 RUN chmod +x /usr/local/bin/spoke-federate
 
