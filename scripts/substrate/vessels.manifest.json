@@ -7,7 +7,9 @@
       "repo": "metric-collector-vessel",
       "workdir": "$RUNTIME",
       "exec": "src/index.ts",
-      "env": { "PORT": "8300" },
+      "env": {
+        "PORT": "8300"
+      },
       "secrets": [],
       "restart": "always",
       "health_port": 8300,
@@ -20,7 +22,11 @@
       "workdir": "$REPO_ROOT/repos/human-surface-vessel",
       "exec": "src/index.ts",
       "_host_comment": "HOST is 0.0.0.0 because this vessel exists to be reached by a human from OUTSIDE the container. THE REASON THIS WORKS IS NOT LINE ORDER, and the previous wording here had the systemd rule backwards. render-unit.sh does emit these env lines after EnvironmentFile=/etc/substrate/env, but that buys nothing: systemd.exec states plainly that settings from EnvironmentFile= override settings made with Environment=, regardless of which line comes first. Line order decides only FILE-vs-FILE precedence (a later EnvironmentFile beats an earlier one — which is why /etc/substrate/env is now listed last, after .substrate-secrets). So if /etc/substrate/env ever carried a HOST= line, it would win and this 0.0.0.0 would be silently ignored. The bind holds only because gen-env.sh never emits HOST, PORT or VESSEL_ID into /etc/substrate/env — an accident of that file's contents, not a guarantee of this file's position. Anyone adding HOST/PORT/VESSEL_ID to gen-env's env heredoc breaks every vessel's Environment= bind at once. A 127.0.0.1 bind does not accept the DNAT'd traffic a `docker run -p` publish delivers from the container's bridge IP, so the host port mapping exists and is dead — the vessel answers /health in-container and nothing on the host. stateful-ui-vessel, which this vessel replaces, sets 0.0.0.0 for the same reason. Registration is unaffected: the discovery payload uses SELF_ENDPOINT = http://127.0.0.1:$PORT (src/config.ts), a constant independent of HOST.",
-      "env": { "PORT": "8310", "HOST": "0.0.0.0", "VESSEL_ID": "human-surface-vessel" },
+      "env": {
+        "PORT": "8310",
+        "HOST": "0.0.0.0",
+        "VESSEL_ID": "human-surface-vessel"
+      },
       "secrets": [],
       "restart": "always",
       "health_port": 8310,
@@ -33,8 +39,12 @@
       "description": "Public libp2p Circuit Relay v2 — the from-anywhere reachability anchor.",
       "workdir": "$REPO_ROOT/scripts/substrate/federation-relay",
       "exec": "relay.ts",
-      "env": { "RELAY_KEY_FILE": "/workspace/fed-relay-key.pb" },
-      "env_from_file": [ "FED_PUBLIC_IP" ],
+      "env": {
+        "RELAY_KEY_FILE": "/workspace/fed-relay-key.pb"
+      },
+      "env_from_file": [
+        "FED_PUBLIC_IP"
+      ],
       "secrets": [],
       "restart": "always",
       "health_port": null,
@@ -44,16 +54,29 @@
     {
       "name": "federation-transport-vessel",
       "description": "libp2p reachability + cross-substrate resolve-over-http + /health sensing surface.",
-      "_workdir_comment": "REVERTED TO $REPO_ROOT ON 2026-09-16 AFTER THE FALSIFIER FAILED — the note below is kept because the diagnosis is correct and the blocker is now known. Repointing this to the image copy put the transport in a crash loop with 'Cannot find module @avigopal/libp2p-federation-transport'. REASON: the image's vendored dep is a STUB. In the image, node_modules/@avigopal/libp2p-federation-transport is a real directory containing only three symlinks (bun.lock, package.json, node_modules) pointing into /vessels/libp2p-federation-transport, with no src/ and no build output, so bun cannot resolve the module. In the working clone the same dep is a real directory with full contents (LICENSE, README, .d.ts files — an actually installed package). The Dockerfile copies package.json, src and tsconfig into /vessels/libp2p-federation-transport and runs bun install there, then rewrites federation-relay's dep to that file: path and installs again — which produces the stub. MAKING THE TRANSPORT IMAGE-RESIDENT THEREFORE REQUIRES COMPLETING THE VENDORED PACKAGE IN THE IMAGE, not just repointing this line. Tracked as a gap. THE ORIGINAL DIAGNOSIS, UNCHANGED: this manifest entry is the site that actually decides, because the baked unit in /usr/lib/systemd/system is shadowed by the one vessel-ctl RENDERS into /etc/systemd/system from here — fixing the unit file alone changed nothing. The baked unit in /usr/lib/systemd/system is shadowed by the one vessel-ctl RENDERS into /etc/systemd/system from this manifest entry, so fixing the unit file alone changed nothing; measured on a stock container, the rendered unit still carried the clone path. Three failures came from running out of /workspace/git/super-repo, all measured: (1) entrypoint enables this unit before the clone exists, so install reports 'WORKDIR ABSENT — dependencies NOT installed' and a healthy-looking container federates with nobody; (2) pull_cutover stashes local changes there, silently reverting a deployed transport fix mid-session; (3) the federation probe shares that directory and a branch checkout once left HEAD where the file does not exist, disabling the verifier by the routine activity of the thing it verifies. The image already bakes this whole directory WITH node_modules installed (see the federation-relay block in Dockerfile.substrate, which vendors @avigopal/libp2p-federation-transport to a file: path and runs bun install at build time), so nothing new ships — this points at what was already built and never used. THE TRADE, STATED: the transport can no longer be self-modified at runtime through the clone; a substrate-authored change to it needs an image rebuild. That is deliberate for a vessel whose job is reachability — it must not be able to break its own delivery path — but it is a real loss of self-modification and the honest follow-up is to mirror it into /vessels like every other vessel rather than leaving it image-only.",
-      "workdir": "$REPO_ROOT/scripts/substrate/federation-relay",
+      "_workdir_comment": "IMAGE PATH, second attempt 2026-09-18. The 2026-09-16 falsifier failed because the image's vendored @avigopal/libp2p-federation-transport was a symlink stub with no src, so bun could not resolve the module from the baked directory. Dockerfile.substrate now MATERIALISES the real package over the stub at build time (see the federation-relay RUN block), which was the stated prerequisite. The three measured failures of running from the workspace clone (enable-before-clone-exists, pull_cutover stashing deployed fixes, probe branch checkouts orphaning HEAD) are unchanged and remain the reason the clone path is wrong. The trade stands: transport self-modification now requires an image rebuild, deliberate for the vessel whose job is reachability.",
+      "workdir": "/usr/local/share/substrate/super-repo/scripts/substrate/federation-relay",
       "exec": "federation-transport-server.ts",
-      "env": { "FED_HEALTH_PORT": "8401", "DISCOVERY_URL": "http://127.0.0.1:8100" },
-      "env_from_file": [ "RELAY_MULTIADDR", "FED_VESSEL_ID", "FEDERATION_SIGNING_SECRET", "FEDERATION_PEER_AUTH_MODE" ],
-      "secrets": [ "FEDERATION_SIGNING_SECRET", "FEDERATION_PEER_AUTH_MODE" ],
+      "env": {
+        "FED_HEALTH_PORT": "8401",
+        "DISCOVERY_URL": "http://127.0.0.1:8100"
+      },
+      "env_from_file": [
+        "RELAY_MULTIADDR",
+        "FED_VESSEL_ID",
+        "FEDERATION_SIGNING_SECRET",
+        "FEDERATION_PEER_AUTH_MODE"
+      ],
+      "secrets": [
+        "FEDERATION_SIGNING_SECRET",
+        "FEDERATION_PEER_AUTH_MODE"
+      ],
       "restart": "always",
       "health_port": 8401,
       "self_recovery": true,
-      "depends_on": [ "federation-relay" ]
+      "depends_on": [
+        "federation-relay"
+      ]
     }
   ]
 }
