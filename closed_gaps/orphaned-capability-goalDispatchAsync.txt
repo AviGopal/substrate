@@ -1,0 +1,1 @@
+Resolver goalDispatchAsync is a live registered capability but is invoked by 0 of the activity corpus (387/335 live resolvers are ever invoked).

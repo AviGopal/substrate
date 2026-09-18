@@ -1,0 +1,17 @@
+{
+  "vessel_name": "development-vessel",
+  "base_version_id": "v1",
+  "mitosis_version_id": "mitosis-2026-09-12T20-40-47-737Z",
+  "mitosis_root": "/vessels/development-vessel-mitosis-2026-09-12T20-40-47-737Z",
+  "base_sha": "45bb124f06a4",
+  "staged_at": "2026-09-12T20:43:16.457Z",
+  "authored_by": "patch_with_tools",
+  "gap_id": "pwt-development-vessel-substrate-gap.ts-48fbbe54",
+  "proposal": "mitosis-2026-09-12T20-40-47-737Z",
+  "target_file": "repos/development-vessel/src/resolvers/substrate-gap.ts",
+  "staged_files": [
+    "src/resolvers/substrate-gap.ts"
+  ],
+  "plan_turns": 18,
+  "final_summary": "verified-green: code_replace_lines applied and typecheck clean (auto-done at turn 14)"
+}

@@ -1,7 +1,7 @@
 {
-  "mode": "develop",
-  "driver": "frontier(65 necessary-but-unavailable; top=topology_snapshot)",
-  "pending_driver": "develop",
+  "mode": "collect",
+  "driver": "no_open_demand(routine collect)",
+  "pending_driver": "collect",
   "pending_count": 0,
-  "updated_at": "2026-09-07T14:44:21.750Z"
+  "updated_at": "2026-09-18T11:35:00.503Z"
 }
