@@ -384,3 +384,31 @@ Open with the system: attempt-fencing root fix (verdict-truthfulness half
 landed as settle-confirm); moot-compose churn on closed gaps (observed:
 recommit/narrowed children keep composing after closure - unfiled, next
 session's first filing candidate).
+
+---
+
+# THE THIRD CONCEPT: A STANDING EXPECTATION ABOUT THE TREND (23:3xZ)
+
+The batteries above are attempts; their sequence is a trend; neither was yet
+an EXPECTATION — a persisted, independently checked commitment about what
+should hold going forward. Landed 7aa8a69b (substrate-authored,
+gate-verified): a trend-expectation checker in development-vessel that
+- reads its commitment from the impulse
+  memoryNote "expectation-trend:deterministic-battery" (bar, probe count,
+  cadence — read at use time; no note, no work),
+- when due, GENERATES fresh probe goals itself (seeded operands, never the
+  same battery twice), dispatches them, and BYTE-VERIFIES the artifacts
+  in-process — independent of goal-host's verdicts, closing the
+  agreeing-wrong blindness for this class,
+- files gap-trend-expectation-violated-deterministic-battery on a score
+  below the bar; closes it on recovery; appends history to the impulse.
+
+Operator minted the standing commitment (bar >=2/3, cadence 240m) at
+23:33:14. First autonomous check completed 23:37:05: **r=3/3, bar=2,
+violated=false**, history persisted. Attempt -> trend -> standing,
+self-checked expectation: all three now exist as running mechanisms, the
+third with zero operator involvement after the commitment was stated.
+
+Scope honesty: the standing expectation covers the deterministic-transform
+class (the class the batteries measured). Broader-domain trend expectations
+await generality round 2 + the ReAct baseline arm.
