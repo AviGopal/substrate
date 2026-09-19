@@ -1,0 +1,19 @@
+{
+  "id": "recommit-hassubstance-keyword-regex-rejects-legitimate-output-typecheck_dangling_reference",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap hassubstance-keyword-regex-rejects-legitimate-output repeated already-recorded failure class typecheck_d",
+  "description": "compose for gap hassubstance-keyword-regex-rejects-legitimate-output repeated already-recorded failure class typecheck_dangling_reference: src/resolvers/author-composed-capability.ts(335,142): error TS2304: Cannot find name 't'. Edit repos/development-vessel/src/resolvers/author-composed-capability.ts:339.",
+  "goal_text": "compose for gap hassubstance-keyword-regex-rejects-legitimate-output repeated already-recorded failure class typecheck_dangling_reference: src/resolvers/author-composed-capability.ts(335,142): error TS2304: Cannot find name 't'. Edit repos/development-vessel/src/resolvers/author-composed-capability.ts:339.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-hassubstance-keyword-regex-rejects-legitimate-output-typecheck_dangling_reference",
+  "source_gap_source": "substrate_detected"
+}

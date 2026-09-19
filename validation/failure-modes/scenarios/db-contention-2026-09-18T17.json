@@ -1,0 +1,19 @@
+{
+  "id": "db-contention-2026-09-18T17",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "db_contention",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "SurrealDB write/read contention: in_flight=10>8 (p50=821.4ms, slow_queries=4154, qps=15.23). Likely a write-storm or hot",
+  "description": "SurrealDB write/read contention: in_flight=10>8 (p50=821.4ms, slow_queries=4154, qps=15.23). Likely a write-storm or hot-row UPDATE pattern saturating the single-writer engine. Inspect by_op in /metrics/db; mitigations: batch hot-table writes, detach posterior/penalty writes from request hot paths, reduce failure-trace volume.",
+  "goal_text": "SurrealDB write/read contention: in_flight=10>8 (p50=821.4ms, slow_queries=4154, qps=15.23). Likely a write-storm or hot-row UPDATE pattern saturating the single-writer engine. Inspect by_op in /metrics/db; mitigations: batch hot-table writes, detach posterior/penalty writes from request hot paths, reduce failure-trace volume.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "db-contention-2026-09-18T17",
+  "source_gap_source": "substrate_detected"
+}

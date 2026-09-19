@@ -1,0 +1,19 @@
+{
+  "id": "gap-artifact-expectation-violated-cycle-demo-2",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "auto",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-2 was verified to byte-equal Y292ZW5hb",
+  "description": "Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-2 was verified to byte-equal Y292ZW5hbnQ= (goal determines Y292ZW5hbnQ= for base64(covenant)) but now stores Y292ZW5hbnQK — the artifact and its recorded verification disagree (violation #1). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
+  "goal_text": "Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-2 was verified to byte-equal Y292ZW5hbnQ= (goal determines Y292ZW5hbnQ= for base64(covenant)) but now stores Y292ZW5hbnQK — the artifact and its recorded verification disagree (violation #1). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-artifact-expectation-violated-cycle-demo-2",
+  "source_gap_source": "substrate_detected"
+}

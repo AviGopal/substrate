@@ -1,0 +1,19 @@
+{
+  "id": "learning-loop-chain-does-not-conduct",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "instrumentation_gap",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "1 of 5 links in the execution→learning chain did not conduct for a probe whose outcome is known by construction.\n\n  RED ",
+  "description": "1 of 5 links in the execution→learning chain did not conduct for a probe whose outcome is known by construction.\n\n  RED  posterior_delta: probe arm posterior did not move, but its verdict WAS delivered — consistent with the structural skip in posterior-update.ts, which declines to write a belief when the arm has no stochastic choice OR the trace's information_yield is 'idle'. Both hold for this probe, so the skip is double-determined. This link is UNTESTED by this probe, not severed; grading it needs an arm that is BOTH stochastic-tier AND non-idle — satisfying either one alone still skips.\n\nGREEN:\n  trace_write: 2 probe execution row(s) in the authoritative store\n  verdict_delivery: 2 probe row(s) carry a grading marker, measured at the receiver\n  goal_path: 30 goal-path row(s) for the probe's goal\n  confinement: 0 of 25 sampled non-probe arms moved\n\nWHY THIS IS NOT A REPORT ABOUT THE PROBE. The probe is a known-answer corpus: hostile and benign fixtures run through the real gate functions, so its own verdict needs no model and is not in question. A red link means the machinery BETWEEN execution and belief lost the information, which is the failure this substrate has produced repeatedly — a verdict tag written before the grade-check, grading called in-process at sites that were never awaited, a belief junction that logged success while moving nothing.\n\nMEASURE AT THE CONSUMING LAYER when repairing: the sender's log is not evidence that the receiver got it.",
+  "goal_text": "1 of 5 links in the execution→learning chain did not conduct for a probe whose outcome is known by construction.\n\n  RED  posterior_delta: probe arm posterior did not move, but its verdict WAS delivered — consistent with the structural skip in posterior-update.ts, which declines to write a belief when the arm has no stochastic choice OR the trace's information_yield is 'idle'. Both hold for this probe, so the skip is double-determined. This link is UNTESTED by this probe, not severed; grading it needs an arm that is BOTH stochastic-tier AND non-idle — satisfying either one alone still skips.\n\nGREEN:\n  trace_write: 2 probe execution row(s) in the authoritative store\n  verdict_delivery: 2 probe row(s) carry a grading marker, measured at the receiver\n  goal_path: 30 goal-path row(s) for the probe's goal\n  confinement: 0 of 25 sampled non-probe arms moved\n\nWHY THIS IS NOT A REPORT ABOUT THE PROBE. The probe is a known-answer corpus: hostile and benign fixtures run through the real gate functions, so its own verdict needs no model and is not in question. A red link means the machinery BETWEEN execution and belief lost the information, which is the failure this substrate has produced repeatedly — a verdict tag written before the grade-check, grading called in-process at sites that were never awaited, a belief junction that logged success while moving nothing.\n\nMEASURE AT THE CONSUMING LAYER when repairing: the sender's log is not evidence that the receiver got it.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "learning-loop-chain-does-not-conduct",
+  "source_gap_source": "substrate_detected"
+}

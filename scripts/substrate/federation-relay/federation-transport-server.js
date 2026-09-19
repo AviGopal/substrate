@@ -11,6 +11,8 @@
 import { createVesselLibp2p, serveResolve, serveResolveHttp, resolveViaLibp2p, resolveViaHttp } from '@avigopal/libp2p-federation-transport';
 import { ping } from '@libp2p/ping';
 import { hostname } from 'node:os';
+import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { multiaddr } from '@multiformats/multiaddr';
 // RESILIENCE: libp2p internals emit 'error' events on streams/sockets that have no
 // listener (e.g. a relay/peer dial TimeoutError surfacing through internal:streams/
@@ -42,25 +44,111 @@ const HEALTH_PORT = parseInt(process.env.FED_HEALTH_PORT || '8401', 10);
 // (law 1 — read the relay at use time, never freeze a stale multiaddr in env).
 // Prefer the hub discovery (a spoke's pointer); fall back to local discovery.
 const BOOTSTRAP_URL = (process.env.BOOTSTRAP_URL || process.env.HUB_DISCOVERY_URL || DISCOVERY).replace(/\/$/, '');
-if (!RELAY && BOOTSTRAP_URL) {
+const LOCAL_BOOTSTRAP_URL = DISCOVERY.replace(/\/$/, '');
+// Anchor lookup is ADVISORY, never fatal, and never one-shot.
+//
+// It has to be re-runnable because /bootstrap DERIVES relay_multiaddrs from the circuits
+// currently registered in that discovery — so the answer is empty until some transport in
+// the network holds a reservation, and becomes non-empty later, with no notification. A
+// single startup fetch can only ever see the bootstrap moment.
+async function fetchAnchor(url) {
+    if (!url)
+        return '';
     try {
-        const r = await fetch(`${BOOTSTRAP_URL}/bootstrap`, { signal: AbortSignal.timeout(5000) });
-        if (r.ok) {
-            const b = await r.json();
-            if (b.relay_multiaddrs?.length) {
-                RELAY = b.relay_multiaddrs[0];
-                console.log(`[fed-transport] relay from ${BOOTSTRAP_URL}/bootstrap: ${RELAY}`);
-            }
-        }
+        const r = await fetch(`${url}/bootstrap`, { signal: AbortSignal.timeout(5000) });
+        if (!r.ok)
+            return '';
+        const b = await r.json();
+        const ma = b.relay_multiaddrs?.find((m) => typeof m === 'string' && m) ?? '';
+        if (ma)
+            console.log(`[fed-transport] relay from ${url}/bootstrap: ${ma}`);
+        return ma;
     }
     catch (e) {
-        console.error(`[fed-transport] bootstrap fetch failed: ${e.message}`);
+        // An unreachable pointer is a HINT that missed, not an error condition. Observed
+        // 2026-09-12: a stale droplet IP pinned in a host workspace file (HTTP 000) timed out
+        // here, and the exit below then deleted this substrate's entire libp2p presence — 13
+        // of 13 registry rows with libp2p_multiaddr:null, a unit parked in `activating`
+        // forever (Restart=always ⇒ never `failed`, so nothing reported it). An address
+        // someone typed once must never be able to kill the node (law 11).
+        console.error(`[fed-transport] bootstrap fetch failed (${url}): ${e.message}`);
+        return '';
     }
 }
-if (!RELAY) {
-    console.error('[fed-transport] ERROR: set RELAY_MULTIADDR or point BOOTSTRAP_URL/HUB_DISCOVERY_URL at a discovery serving /bootstrap');
-    process.exit(1);
+// Prefer the pointed-at (hub) discovery; fall back to LOCAL discovery. The comment above
+// has claimed this fallback since the file was written — the code never had it, so a dead
+// hub pointer skipped the healthy local /bootstrap answering in 0.7ms in the same container.
+//
+// MULTIADDR-ONLY JOIN. A substrate handed only PEER_MULTIADDR has no HTTP endpoint to
+// fetch /bootstrap from — that is the entire point of the form: a multiaddr names a peer
+// IDENTITY, a URL names a host. So dial the peer over libp2p and ask it for
+// substrateBootstrap, which its ingress answers from its own discovery (see the DISCOVERY
+// OVER THE OVERLAY short-circuit in proxyToLocalOwner).
+//
+// This inverts the HTTP order deliberately. The URL path derives a relay FROM a discovery
+// endpoint; here the relay is learned THROUGH a peer that is already reachable, because
+// the multiaddr IS the reachability. Anchors learned this way are held in memory and
+// served at :8401/anchors — never written to /etc/substrate/env, which gen-env truncates
+// on every boot and which would freeze a value that changes.
+//
+// Tried FIRST when present, because an operator who supplied a multiaddr chose a peer,
+// not a host, and silently preferring an HTTP guess would discard that choice.
+const PEER_MULTIADDR = process.env.PEER_MULTIADDR || '';
+let LEARNED_ANCHORS = null;
+async function anchorFromPeer() {
+    if (!PEER_MULTIADDR)
+        return '';
+    let boot = null;
+    try {
+        // Derive the boot identity INLINE rather than referencing LIBP2P_IDENTITY: this runs
+        // during anchor resolution, which happens BEFORE that const is declared, and a
+        // temporal-dead-zone throw here was swallowed by the catch below and reported as
+        // "multiaddr bootstrap failed" — a real bug wearing the costume of an unreachable peer.
+        const bootId = `${VESSEL_ID}@${process.env.FED_SUBSTRATE_ID || hostname()}-boot`;
+        boot = await createVesselLibp2p({ vesselId: bootId, enableHttp: true });
+        const res = await resolveViaHttp(boot, PEER_MULTIADDR, { type: 'substrateBootstrap' });
+        const c = (res && typeof res === 'object' && 'content' in res) ? res.content : res;
+        LEARNED_ANCHORS = (c && typeof c === 'object') ? c : null;
+        const ma = String((c?.relay_multiaddrs ?? [])[0] ?? '');
+        if (ma)
+            console.log(`[fed-transport] relay learned from peer over libp2p: ${ma}`);
+        else
+            console.log('[fed-transport] peer answered substrateBootstrap with no relay anchor — continuing direct-only');
+        return ma;
+    }
+    catch (e) {
+        console.error(`[fed-transport] multiaddr bootstrap failed (continuing): ${String(e?.message ?? e)}`);
+        return '';
+    }
+    finally {
+        if (boot)
+            await boot.stop().catch(() => { });
+    }
 }
+async function resolveAnchor() {
+    return (await anchorFromPeer())
+        || (await fetchAnchor(BOOTSTRAP_URL))
+        || (BOOTSTRAP_URL === LOCAL_BOOTSTRAP_URL ? '' : await fetchAnchor(LOCAL_BOOTSTRAP_URL));
+}
+if (!RELAY)
+    RELAY = await resolveAnchor();
+// A RELAY-LESS TRANSPORT IS A HEALTHY TRANSPORT (operator-ratified 2026-07-19:
+// "the relay won't always be available due to networking conditions, so internally a
+// direct connection should be equivalent to a punchthrough").
+//
+// This used to be `process.exit(1)`, and that single line made the overlay bootstrap
+// CIRCULAR: discovery derives relay_multiaddrs from registered circuits, circuits exist
+// only once a transport reserves, and the transport refused to start without an anchor —
+// so a standalone substrate (the default inventory) could never originate an overlay, and
+// every substrate whose anchor went stale went dark in the same way. Worse, the direct-dial
+// machinery this file already implements (currentDirectAddrs / advertisedAddrs, "direct ≡
+// punchthrough") was unreachable code: the process exited before the node was constructed.
+//
+// Relay-less we still get /ip4/0.0.0.0/tcp/<ephemeral>, dcutr and autonat — i.e. every
+// same-host / same-LAN peer is fully reachable, which is the ENTIRE reachability surface of
+// a single-host deployment. The relay is the NAT fallback rung, not the entry condition.
+if (!RELAY)
+    console.warn('[fed-transport] no relay anchor yet — starting DIRECT-ONLY (direct ≡ punchthrough); an anchor is re-attempted on a backoff and adopted if one appears');
 // The libp2p keypair is derived deterministically from this id (seed =
 // sha256(id)), so it MUST be substrate-scoped: every substrate runs a transport
 // named `federation-transport-vessel`, and a bare id gives them all the SAME
@@ -76,7 +164,22 @@ const LIBP2P_IDENTITY = `${VESSEL_ID}@${process.env.FED_SUBSTRATE_ID || hostname
 // a silently-dead connection. Without this service every relay→vessel ping fails as
 // "unsupported protocol" (not "dead"), so the responder must be live on every vessel
 // BEFORE the relay keep-alive is enabled.
-const vl = await createVesselLibp2p({ vesselId: LIBP2P_IDENTITY, relayMultiaddr: RELAY, enableHttp: true, extraServices: { ping: ping() } });
+// `relayMultiaddr` is passed ONLY when we actually hold an anchor: createVesselLibp2p
+// branches on its presence (index.ts:257 pushes the generic '/p2p-circuit' listen addr,
+// :283 starts the reservation-refresh loop). Passing '' would be falsy-equivalent today but
+// the intent must be explicit — this is the switch between a relayed node and a direct-only
+// one, not an optional detail.
+const buildNode = (relay) => createVesselLibp2p({
+    vesselId: LIBP2P_IDENTITY,
+    ...(relay ? { relayMultiaddr: relay } : {}),
+    enableHttp: true,
+    extraServices: { ping: ping() },
+});
+// `let`, not `const`: adopting a relay anchor discovered AFTER startup requires replacing
+// the node (see adoptAnchor() at the bottom — the '/p2p-circuit' listen address can only be
+// set at construction). Every consumer below reads this binding at call time, so the swap is
+// invisible to them; the peer id is unchanged because the key is derived from LIBP2P_IDENTITY.
+let vl = await buildNode(RELAY);
 // Resolve handler (where the data lives). Probe shapes are answered inline; any OTHER
 // shape is proxied to the vessel that owns it on THIS substrate, found via the LOCAL
 // discovery (X-Discovery-Depth pinned high so the lookup can never fan back out to a
@@ -142,6 +245,74 @@ function isSelfCircuit(v) {
 async function proxyToLocalOwner(pointer) {
     const t = String(pointer?.type ?? '');
     const hop = Number(pointer?._fedHop ?? 0);
+    // ── DISCOVERY OVER THE OVERLAY ──────────────────────────────────────────────────
+    //
+    // The premise of a multiaddr-only join is that a substrate handed nothing but a peer
+    // multiaddr can find out where it has arrived. That requires asking the peer's DISCOVERY
+    // something, over libp2p, before it holds any HTTP endpoint at all.
+    //
+    // The generic passthrough below already forwards any shape to whichever local vessel owns
+    // it, so in principle discovery is already reachable this way. In practice it is not:
+    // DISCOVERY-VESSEL DOES NOT REGISTER ITSELF into its own registry (verified — there is no
+    // self-registration in repos/discovery-vessel/src/index.ts), so a vesselCapability lookup
+    // for `vesselRegistry` finds no owner and the proxy answers `unknown shape`. The one
+    // vessel every joiner must reach is the one vessel that cannot be found by the mechanism
+    // used to find vessels.
+    //
+    // Short-circuit rather than "fix" discovery to self-register: self-registration would put
+    // discovery in its own TTL/heartbeat cycle and make the registry's liveness depend on the
+    // registry, which is the circularity this whole subsystem keeps tripping over. Answering
+    // these four shapes directly is the smaller, non-circular change, and it lives in
+    // scripts/ rather than a gated vessel.
+    //
+    // substrateBootstrap is deliberately UNAUTHENTICATED, matching discovery's own
+    // PUBLIC_PATHS treatment of GET /bootstrap: a joiner has not yet been told the identity
+    // authority, so requiring a credential to learn where the identity authority lives is a
+    // chicken-and-egg. It returns routing anchors only — never registry contents.
+    const DISCOVERY_SHAPES = new Set(['vesselRegistry', 'vesselCapability', 'vesselEndpoint', 'vesselHealth']);
+    if (t === 'substrateBootstrap') {
+        try {
+            const r = await fetch(DISCOVERY + '/bootstrap', { signal: AbortSignal.timeout(5000) });
+            const b = await r.json();
+            return { shape: 'substrateBootstrap', produced_by: VESSEL_ID, ...b };
+        }
+        catch (e) {
+            return { error: 'substrateBootstrap unavailable: ' + String(e?.message ?? e) };
+        }
+    }
+    if (DISCOVERY_SHAPES.has(t)) {
+        // REGISTRY CONTENTS ARE NOT PUBLIC, AND THIS PATH IS THE NEWEST WAY TO REACH THEM.
+        //
+        // The libp2p ingress performs no authorization of its own and resolves remote requests
+        // with THIS transport's key, so anyone who can dial gets whatever the transport can
+        // reach. That is a pre-existing hole (peer ids are sha256 of a guessable vesselId, and
+        // Noise gives confidentiality, not authorization) — but exposing the registry over the
+        // overlay is something I added, and widening an exposure while leaving it unguarded is
+        // not acceptable just because the underlying hole predates me.
+        //
+        // The ingress cannot see request headers without a change to the gated transport
+        // package, so the credential travels in the POINTER envelope, which serveResolveHttp
+        // already forwards intact. A caller proves it belongs to this fleet by echoing the
+        // shared key as pointer._auth.
+        //
+        // FED_DISCOVERY_OVERLAY_AUTH=0 restores the previous behaviour. It exists because this
+        // is a fail-CLOSED change on a live fleet and a rollback must not require a redeploy —
+        // not as an invitation to leave it off.
+        if ((process.env.FED_DISCOVERY_OVERLAY_AUTH ?? '1') !== '0') {
+            const presented = String(pointer?._auth ?? '');
+            if (!API_KEY || presented !== API_KEY) {
+                console.log(`[fed-transport] refused uncredentialed overlay ${t} (registry contents are not public)`);
+                return { error: 'unauthorized', shape: t, note: 'registry shapes over the overlay require pointer._auth; substrateBootstrap is the public anchor-only alternative' };
+            }
+        }
+        try {
+            const rows = await localDiscoveryResolve(pointer);
+            return { shape: t, produced_by: VESSEL_ID, vessels: rows, found: rows.length > 0 };
+        }
+        catch (e) {
+            return { error: 'discovery short-circuit failed: ' + String(e?.message ?? e) };
+        }
+    }
     const forwardLibp2p = async (v) => {
         console.log('[fed-transport] ingress→libp2p forward ' + t + ' to ' + String(v.libp2p_multiaddr[0]).slice(-20));
         const res = await resolveOverLibp2p(String(v.libp2p_multiaddr[0]), { ...pointer, _fedHop: hop + 1 });
@@ -290,6 +461,128 @@ const resolveHandler = async (pointer) => {
         return { shape: 'federation_probe', produced_by: VESSEL_ID, value: 'hello-over-libp2p-http', note: 'resolved where the data lives, over libp2p' };
     if (EXTRA_SHAPE && t === EXTRA_SHAPE)
         return { shape: EXTRA_SHAPE, produced_by: VESSEL_ID, value: 'cross-substrate-resolve-ok', note: 'resolved on the PEER substrate over libp2p (genuine cross-substrate)' };
+    // PAYLOAD INTEGRITY. federation_probe above returns a CONSTANT — it echoes nothing, so
+    // it cannot detect a truncated frame, and a truncation is exactly the failure the
+    // lpStream framing (4-byte BE length + UTF-8 JSON, sendAll chunking at 1024B) can
+    // produce. This shape carries the caller's bytes back.
+    //
+    // Return the echo AND a SERVER-computed sha256 over the bytes actually received. Those
+    // are two independent witnesses: a corrupted echo and a hash taken over the wrong bytes
+    // are distinguishable, where a single field would let one defect mask the other. The
+    // caller asserts BOTH hash and byte-length — hash alone misses a re-canonicalization,
+    // length alone misses corruption that preserves size.
+    //
+    // `payload` is a string echoed verbatim (no re-encoding on this side). `payload_obj`
+    // exists for the nested-JSON class, where the point is to exercise the envelope parser
+    // rather than the framing; it is echoed as its serialization, which the caller compares
+    // against its own.
+    // THE SWEEP HAS TO BE A SHAPE, NOT A SCRIPT PATH IN PROSE.
+    //
+    // The federation-verification rhythm family fired correctly and its goal text named a
+    // raw file path — `execute … scripts/substrate/federation-relay/federation-probe-tick.ts`.
+    // goal-host has no capability that runs a script, so the walk reached for the nearest
+    // thing it did have and tried to FETCH the path as a URL:
+    //   "invalid URL: http://<peer>:18100/scripts/substrate/federation-relay/federation-probe-tick.ts"
+    // It then graded itself HOLLOW and reached:false, which is honest but useless. Every
+    // other entry in the rhythm registry names an activity; this one named a file, and law 2
+    // is explicit that a behaviour reachable only as an operator's command line is invisible
+    // to the learning loop. rhythm-conductor-tick's FAMILY_RESOLVERS exists for exactly this
+    // ("dispatch the resolver directly instead of enqueuing an NL goal that goal-host cannot
+    // walk into an invocation") but lives in a gated file, so the same end is reached here by
+    // making the sweep RESOLVABLE.
+    //
+    // WHY IT RETURNS A REPORT RATHER THAN BLOCKING ON A FRESH ONE. A sweep takes minutes;
+    // goal-host's per-iteration budget is 90s. A handler that blocked would time out and be
+    // graded hollow for a sweep that actually succeeded — the worst of both. So this reads
+    // the latest report the PROBE wrote, and starts a refresh when that report is stale. The
+    // caller always gets real measured content plus its age, and never a synthesised verdict.
+    //
+    // PROVENANCE: the transport serves this report; it does not author it. Every verdict
+    // inside was witnessed by the probe's own ephemeral peer. A transport summarising its own
+    // reachability would violate the rule this whole subsystem is built on — so the body is
+    // passed through untouched and carries its own witness fields.
+    if (t === 'federation_verification_report') {
+        const DEV_POOL_URL = (process.env.DEVELOPMENT_VESSEL_URL || 'http://127.0.0.1:8090') + '/v2/impulses/resolve';
+        const FRESH_MS = Number(process.env.FED_REPORT_FRESH_MS || 3_600_000);
+        let report = null;
+        try {
+            const r = await fetch(DEV_POOL_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
+                body: JSON.stringify({ impulse: { pointer: { type: 'poolImpulse', shape: 'federationVerificationReport', limit: 200 } } }),
+                signal: AbortSignal.timeout(8000),
+            });
+            const j = await r.json();
+            const rows = (j?.body?.impulses ?? []).filter((i) => i?.shape === 'federationVerificationReport');
+            rows.sort((a, b) => String(a?.body?.sweep_id ?? '').localeCompare(String(b?.body?.sweep_id ?? '')));
+            report = rows.length ? rows[rows.length - 1].body : null;
+            if (!report)
+                console.error(`[fed-transport] federation_verification_report: pool returned ${(j?.body?.impulses ?? []).length} impulse(s), 0 of shape federationVerificationReport`);
+        }
+        catch (e) {
+            // NOT SILENT. A swallowed read here is indistinguishable from "no sweep has ever
+            // run", so the shape would answer `report: null` forever and the only symptom would
+            // be an absence — the same failure class this subsystem keeps producing. Say which
+            // call failed and why.
+            console.error(`[fed-transport] federation_verification_report: pool read FAILED (${DEV_POOL_URL}): ${String(e?.message ?? e)}`);
+        }
+        const ts = report?.ts ?? (report?.sweep_id ? Date.parse(String(report.sweep_id).replace('sweep-', '')) : 0);
+        const ageMs = ts ? Date.now() - ts : Number.MAX_SAFE_INTEGER;
+        let refreshStarted = false;
+        if (ageMs > FRESH_MS) {
+            try {
+                // Detached: the sweep outlives this request by design. It writes its own report to
+                // the pool, which is where the next resolve will read it from.
+                Bun.spawn({
+                    // THE INSTRUMENT MUST NOT LIVE IN THE WORKSPACE IT MEASURES.
+                    //
+                    // This used to spawn the probe from a path relative to THIS file, i.e. from
+                    // /workspace/git/super-repo — the substrate's own working clone. That clone is
+                    // the substrate's development surface: it creates per-vessel branches and checks
+                    // them out. Observed: HEAD moved from a merge on `obsidian-episode-vessel` to
+                    // `development-vessel`, a branch on which federation-probe-tick.ts does not exist
+                    // at all (`git ls-tree HEAD` lists only the transport). The probe silently
+                    // vanished and no sweep could spawn — the oracle disabled by the routine activity
+                    // of the thing it was watching.
+                    //
+                    // So prefer a STABLE install path and keep the in-tree copy only as a fallback
+                    // for a dev checkout. FED_PROBE_PATH overrides both.
+                    cmd: [process.env.BUN_BIN || '/root/.bun/bin/bun', probeScriptPath()],
+                    cwd: new URL('.', import.meta.url).pathname,
+                    env: process.env,
+                    stdout: 'ignore', stderr: 'ignore',
+                }).unref();
+                refreshStarted = true;
+            }
+            catch (e) {
+                console.error('[fed-transport] sweep spawn failed:', String(e?.message ?? e));
+            }
+        }
+        return {
+            shape: 'federation_verification_report',
+            produced_by: VESSEL_ID,
+            report_age_ms: ageMs === Number.MAX_SAFE_INTEGER ? null : ageMs,
+            report_is_fresh: ageMs <= FRESH_MS,
+            refresh_started: refreshStarted,
+            report,
+            note: report
+                ? 'measured by federation-probe-tick from an independent ephemeral libp2p peer; this vessel serves the report, it does not author it'
+                : 'no federation verification report exists yet; a sweep has been started if possible',
+        };
+    }
+    if (t === 'federation_echo') {
+        const hasObj = Object.prototype.hasOwnProperty.call(pointer ?? {}, 'payload_obj');
+        const payload = hasObj ? JSON.stringify(pointer.payload_obj) : String(pointer?.payload ?? '');
+        const bytes = Buffer.from(payload, 'utf8');
+        return {
+            shape: 'federation_echo',
+            produced_by: VESSEL_ID,
+            len: bytes.length,
+            sha256: createHash('sha256').update(bytes).digest('hex'),
+            echo: payload,
+            source_field: hasObj ? 'payload_obj' : 'payload',
+        };
+    }
     try {
         return await proxyToLocalOwner(pointer);
     }
@@ -327,8 +620,13 @@ const currentCircuit = () => vl.advertiseMultiaddrs().find((m) => m.includes('p2
 const currentDirectAddrs = () => vl.advertiseMultiaddrs().filter((m) => !m.includes('p2p-circuit'));
 const advertisedAddrs = () => [currentCircuit(), ...currentDirectAddrs()].filter(Boolean);
 // Bounded startup wait so first registrations usually carry the circuit already.
-for (let i = 0; i < 40 && !currentCircuit(); i++) {
-    await new Promise((r) => setTimeout(r, 500));
+// Skipped entirely with no anchor: there is nothing to wait FOR, and spending 20s before
+// serving /health would make a perfectly healthy direct-only transport look slow to start
+// to the very self-recovery watchdog that probes it.
+if (RELAY) {
+    for (let i = 0; i < 40 && !currentCircuit(); i++) {
+        await new Promise((r) => setTimeout(r, 500));
+    }
 }
 const circuit = currentCircuit(); // legacy snapshot for startup logging only
 // Plain HTTP surface the substrate senses + the libp2p EGRESS front door.
@@ -351,8 +649,71 @@ Bun.serve({
             // The redial/egress-failure counters make the storm class OBSERVABLE as data a
             // health consumer can rate-check (signature: redial rate >1/min sustained), instead
             // of living only in journald where no shaped impulse can reach it.
-            const transport = { ...vl.health(), redialCount, egressNoReservationCount, lastRedialReason };
+            // Both numbers, deliberately. activeReservations counts LISTEN ADDRESSES and is
+            // what every existing consumer reads; reservationsHeld is what the relay actually
+            // granted. Reporting only the new one would silently change a field others depend
+            // on; reporting only the old one is what let a phantom look healthy. A disagreement
+            // between the two IS the phantom, now visible in the payload instead of discoverable
+            // only by an external dial.
+            const rt = reservationTruth();
+            const transport = {
+                ...vl.health(),
+                redialCount, egressNoReservationCount, lastRedialReason,
+                reservationsHeld: rt.held,
+                reservationRelays: rt.relays,
+                reservationExpiresInMs: rt.expiresInMs,
+                phantomSuspected: rt.held === 0 && !!currentCircuit(),
+            };
             return Response.json({ status: 'ok', service: VESSEL_ID, transport, libp2p_peer_id: vl.peerId, libp2p_multiaddr: currentCircuit() });
+        }
+        // ── IDENTITY OVER THE OVERLAY ────────────────────────────────────────────────
+        //
+        // Namespace inheritance today is structural and worth preserving exactly: role `spoke`
+        // excludes `control`, so the local identity-vessel is masked, the seeder skips via
+        // ExecCondition, no local org is ever created, and every vessel presents its
+        // hub-issued key to IDENTITY_VESSEL_URL — which resolves it to the HUB's org_id. The
+        // spoke lands in the hub's namespace by construction rather than by configuration.
+        //
+        // A multiaddr-joined substrate has no HTTP identity URL to point at. Rather than make
+        // identity a shape — key validation is a synchronous check on the hot path of every
+        // request, and resolving a shape requires a validated key, so that is both a latency
+        // disaster and a circularity — give the spoke a LOCAL ADDRESS for a REMOTE resolver.
+        // Set IDENTITY_VESSEL_URL=http://127.0.0.1:8401/identity and this route carries the
+        // call to the identity endpoint learned from the peer. Every local vessel keeps
+        // believing IDENTITY_VESSEL_URL is an HTTP URL that validates keys, which it is.
+        //
+        // Law 11: the resolver stays where its data lives (the hub); the spoke gets an address
+        // for it, not a copy of it.
+        if (u.pathname.startsWith('/identity/')) {
+            const base = String(LEARNED_ANCHORS?.identity_endpoint ?? process.env.IDENTITY_UPSTREAM_URL ?? '').replace(/\/$/, '');
+            if (!base)
+                return Response.json({ error: 'no identity endpoint learned yet — this substrate has not completed a peer bootstrap' }, { status: 503 });
+            const target = base + u.pathname.replace(/^\/identity/, '') + u.search;
+            try {
+                const r = await fetch(target, {
+                    method: req.method,
+                    headers: req.headers,
+                    body: req.method === 'GET' || req.method === 'HEAD' ? undefined : await req.text(),
+                    signal: AbortSignal.timeout(10_000),
+                });
+                return new Response(await r.text(), { status: r.status, headers: { 'Content-Type': r.headers.get('content-type') ?? 'application/json' } });
+            }
+            catch (e) {
+                // Named, not swallowed: an identity proxy that fails silently makes every
+                // downstream 401 look like a bad key rather than an unreachable validator.
+                return Response.json({ error: 'identity proxy failed', upstream: target, detail: String(e?.message ?? e) }, { status: 502 });
+            }
+        }
+        if (u.pathname === '/anchors' && req.method === 'GET') {
+            // What this substrate learned about where it joined, readable at use time. A
+            // URL-joined spoke freezes its anchors in env; a multiaddr-joined one holds them
+            // here, so nothing depends on a file that gen-env rewrites every boot.
+            return Response.json({
+                peer_multiaddr: PEER_MULTIADDR || null,
+                learned: LEARNED_ANCHORS,
+                relay: RELAY || null,
+                source: LEARNED_ANCHORS ? 'peer:substrateBootstrap over libp2p' : (RELAY ? 'http:/bootstrap or env' : 'none'),
+            });
         }
         if (u.pathname === '/egress/resolve' && req.method === 'POST') {
             try {
@@ -430,8 +791,39 @@ Bun.serve({
                     // Skip nested content-errors and keep trying so the call reaches the circuit whose
                     // substrate actually owns _fedTargetVessel and proxies to it locally — this is what
                     // makes cross-substrate LLM spill ("any funded arm in the network suffices") work.
-                    const isHollowErr = (r) => r?.content && typeof r.content === 'object' && r.content.error
-                        && !('shape' in r.content) && !('body' in r.content) && !('value' in r.content);
+                    // A NON-SERVING OWNER IS NOT A HIT EITHER.
+                    //
+                    // This predicate used to look only at content.error, and only when the envelope had
+                    // no shape/body/value. A peer that OWNS the named vessel but cannot serve answers
+                    // with a fully-formed envelope whose failure sits one level DOWN:
+                    //
+                    //   {content:{shape:'llm_completion',produced_by:'…@spoke-739b76f1',
+                    //             body:{resolved:false,error:'no llm arm is currently servable …'}}}
+                    //
+                    // content.error is undefined there, so isHollowErr was false, the loop took the
+                    // FAILURE as its hit and stopped — never trying the remaining circuits. Measured
+                    // 2026-08-18: a substrate on neither this host nor the hub had joined through the
+                    // public relay advertising llm arms it could not serve. Every llm_completion in the
+                    // fleet settled on it, the ReAct floor logged 'dispatch FAILED http=500' on all 8
+                    // iterations, and ordinary human goals failed while three WORKING arms sat on the
+                    // hub's circuit, later in the very list this loop was walking.
+                    //
+                    // Keeping the cross-substrate spill intact is the point ("any funded arm in the
+                    // network suffices"); a spill that settles on an arm which just said it cannot serve
+                    // is not spill, it is a stop. Recognising the nested refusal is what lets the loop
+                    // walk PAST a non-serving owner to one that answers.
+                    const nestedRefusal = (r) => {
+                        const c = r?.content;
+                        if (!c || typeof c !== 'object')
+                            return false;
+                        const b = c.body;
+                        if (!b || typeof b !== 'object')
+                            return false;
+                        return typeof b.error === 'string' || b.resolved === false;
+                    };
+                    const isHollowErr = (r) => (r?.content && typeof r.content === 'object' && r.content.error
+                        && !('shape' in r.content) && !('body' in r.content) && !('value' in r.content))
+                        || nestedRefusal(r);
                     let reached = false;
                     for (const a of circuits) {
                         const alt = await resolveOverLibp2p(a, pointer).catch(errOf);
@@ -494,7 +886,23 @@ async function register() {
             body: JSON.stringify({
                 vesselId: VESSEL_ID, vesselName: VESSEL_ID, version: '0.1.0',
                 endpoint: `http://127.0.0.1:${HEALTH_PORT}`, // HTTP surface (health + self-recovery probe)
-                shapes: ['federation_probe', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])],
+                // federation_echo is NOT advertised. It is a test instrument for the probe's
+                // payload matrix, which dials this transport DIRECTLY by multiaddr and gets it
+                // answered inline by resolveHandler — discovery was never on its path.
+                //
+                // Advertising it was actively harmful. The probe exercises federation_echo eight
+                // times per sweep (one per payload class), so its posterior climbed fast, and the
+                // walk began selecting `satisfier:federation_echo` for goals targeting
+                // federation_verification_report — both shapes live on this vessel and the echo arm
+                // simply looked better. Called with no payload it returns empty, grades HOLLOW
+                // ("the report was not successfully retrieved"), gets suppressed, and the walk drops
+                // to the ReAct floor where it improvises curl against a placeholder host. No sweep
+                // ever spawns, because nothing reaches this transport.
+                //
+                // The measuring instrument had earned enough credit to be mistaken for the thing it
+                // measures. Keeping it undiscoverable is the fix: it stays fully usable by direct
+                // dial, and stops competing for selection it should never have been eligible for.
+                shapes: ['federation_probe', 'federation_verification_report', 'substrateBootstrap', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])],
                 resolve_endpoint: '/v2/impulses/resolve', resolve_request_format: 'pointer', auth_scheme: 'none',
                 protocol: 'libp2p', // signals libp2p-overlay reachability
                 libp2p_peer_id: vl.peerId, // proper discovery-contract fields (not metadata —
@@ -603,6 +1011,40 @@ async function localVesselRows() {
 // outage persists — the tick fires every 120s and a warn-per-tick is log spam).
 let noCircuitWarnedAt = 0;
 const NO_CIRCUIT_WARN_WINDOW_MS = 600_000;
+// CROSS-BOUNDARY DE-ADVERTISE. The mirror was register-only, so a local vessel that went
+// away kept its `<vessel>@<substrate>` row on the HUB until discovery's 5-min TTL expired
+// it. For up to five minutes every peer in the network saw a producer that no longer
+// exists, selected it (a mirror row advertises the shape and a live circuit, so it wins
+// against nothing), dialled our circuit, and got 'no local or remote producer' from
+// proxyToLocalOwner — a hollow reach attributed to the WRONG substrate. Withdrawal must
+// cross the boundary as explicitly as advertisement does.
+//
+// The set is what we ACTUALLY registered on the previous tick, not what we think we own:
+// diffing against a recomputed expectation would delete rows we never created (e.g. another
+// substrate's identically-named vessel) if the two ever disagreed.
+let mirroredVesselIds = new Set();
+async function deadvertiseAtHub(gone) {
+    if (gone.length === 0)
+        return;
+    const results = await Promise.all(gone.map(async (id) => {
+        try {
+            const r = await fetch(`${HUB_DISCOVERY}/vessels/${encodeURIComponent(id)}`, {
+                method: 'DELETE',
+                headers: { Authorization: 'ApiKey ' + HUB_API_KEY },
+                signal: AbortSignal.timeout(5000),
+            });
+            // 404 is SUCCESS for a withdrawal: the row is already gone (TTL beat us, or a
+            // previous tick's DELETE landed). Treating it as failure would log an error every
+            // tick for a state that is exactly what we asked for.
+            return `${id}:${r.status}`;
+        }
+        catch (e) {
+            return `${id}:err:${String(e?.message ?? e)}`;
+        }
+    }));
+    const failed = results.filter((s) => !/:(200|202|204|404)$/.test(s));
+    console.log(`[fed-transport] hub-deadvertise (${results.length} rows) -> ${failed.length === 0 ? 'all ok' : 'FAILED ' + failed.join(', ')}`);
+}
 async function registerAtHub() {
     if (!HUB_DISCOVERY)
         return; // SELF_MIRROR (hub) now still runs: advertises hub-native vessels with the circuit for inbound peer dials (see per-vessel rows below; own anchor row skipped)
@@ -610,7 +1052,7 @@ async function registerAtHub() {
     if (!liveCircuit) {
         if (Date.now() - noCircuitWarnedAt >= NO_CIRCUIT_WARN_WINDOW_MS) {
             noCircuitWarnedAt = Date.now();
-            console.error('[federation] no relay reservation — remote visibility suspended (hub mirror skipped; refreshes immediately on reacquisition)');
+            console.error(`[federation] ${RELAY ? 'no relay reservation' : 'no relay anchor (direct-only)'} — remote visibility suspended (hub mirror skipped; refreshes immediately on reacquisition)`);
         }
         return;
     }
@@ -622,6 +1064,21 @@ async function registerAtHub() {
         // The transport's own row anchors the substrate ingress (probe shape only — shape
         // traffic belongs to the per-vessel rows below).
         const registrations = [
+            // federation_verification_report is DELIBERATELY NOT MIRRORED to the hub.
+            //
+            // It answers "what is THIS substrate's overlay state", so it is meaningful only from
+            // the substrate that measured it. Advertising it into the hub namespace made all
+            // three transports offer the same shape, and discovery has no reason to prefer the
+            // local one — every row is protocol:libp2p, so the prefer-direct rule cannot break
+            // the tie. Measured: the walk resolved it via EGRESS to a peer
+            // (`egress/resolve -> federation_verification_report via LM3t9…`), which returned
+            // that peer's view and spawned no sweep here. Cadence kept firing — alpha climbed
+            // 10.5 -> 19.5, roughly eighteen fires — while not one sweep landed, because every
+            // fire was answered by the wrong substrate.
+            //
+            // Kept in the LOCAL register() below, so a resolve on this substrate always reaches
+            // this substrate's own transport. A cross-substrate view is a separate question and
+            // would need a substrate-scoped pointer, not an ambiguous shared shape.
             ...(SELF_MIRROR ? [] : [{ vesselId: HUB_VESSEL_ID, shapes: ['federation_probe', ...(EXTRA_SHAPE ? [EXTRA_SHAPE] : [])] }]),
             ...rows.map((r) => ({ vesselId: `${r.vesselId}@${SUBSTRATE_ID}`, shapes: r.shapes })),
         ];
@@ -647,11 +1104,139 @@ async function registerAtHub() {
         console.log(`[fed-transport] hub-register per-vessel (${results.length} rows) -> ${failed.length === 0 ? 'all ok' : 'FAILED ' + failed.join(', ')}`);
         if (failed.some((s) => /:40[13]$/.test(s)))
             void emitJoinHealth('auth_rejected', 'hub /register FAILED ' + failed.join(', '));
+        // Withdraw what we advertised last tick and no longer advertise. Reached only AFTER
+        // both guards above, and that placement is the whole safety argument:
+        //   • no live circuit  -> early return. A dropped reservation is a US problem, not a
+        //     THEM problem: the vessels are all still there, we just can't be reached. Deleting
+        //     the fleet's hub rows on our own outage would turn a reachability blip into a
+        //     registry wipe that only a full re-register repairs.
+        //   • rows.length === 0 -> early return. The local registry repopulating (a discovery
+        //     restart empties an in-memory, 5-min-TTL registry) looks identical to "every
+        //     vessel left". The existing comment already chose to ride the hub TTL through it;
+        //     de-advertising there would amplify a local blip into a fleet-wide withdrawal.
+        // So a row is deleted only when we held a circuit, saw a NON-EMPTY local registry, and
+        // that vessel was absent from it — i.e. genuine departure, not instrument failure.
+        // SELF_MIRROR is respected implicitly: under it the anchor row is never registered, so
+        // it never enters the set and can never be deleted.
+        const currentIds = new Set(registrations.map((r) => r.vesselId));
+        await deadvertiseAtHub([...mirroredVesselIds].filter((id) => !currentIds.has(id)));
+        mirroredVesselIds = currentIds;
     }
     catch (e) {
         console.log('[fed-transport] hub-register err', String(e));
     }
 }
+// ── THE AUTHORITATIVE RESERVATION STATE ──────────────────────────────────────────────
+//
+// `activeReservations` in the transport-health snapshot counts /p2p-circuit LISTEN
+// ADDRESSES. A listen address is managed by the relay LISTENER and survives the relay
+// dropping the reservation behind it — so a transport reports a reservation it does not
+// hold and keeps advertising a circuit nobody can dial.
+//
+// Measured unattended by the federation oracle: peer-fixture-1 self-reported
+// `activeReservations: 1` with a circuit multiaddr, while a dial from an independent peer
+// got `NO_RESERVATION` from the relay, and seven of its rows were still served as fresh by
+// the hub. The health field was not stale — it was answering a different question than the
+// one being asked of it.
+//
+// The circuit-relay-v2 transport keeps the real thing: a ReservationStore whose
+// `reservations` Map holds one entry per relay that actually granted us one, each carrying
+// the reservation's `expire`, and the Map is emptied on `relay:removed`. So ask it.
+//
+// Access path verified empirically, not assumed:
+//   node.components.transportManager.getTransports() -> the entry carrying .reservationStore
+// The sibling node.transportManager is undefined; only the components path resolves.
+// Resolve the probe script from a location the substrate's own branch switching cannot
+// remove. existsSync rather than a try/catch on spawn: a missing file must be visible as a
+// named choice in the log, not as a spawn error attributed to the probe itself.
+function probeScriptPath() {
+    const candidates = [
+        process.env.FED_PROBE_PATH || '',
+        '/usr/local/lib/substrate/federation-probe-tick.ts',
+        new URL('./federation-probe-tick.ts', import.meta.url).pathname,
+    ].filter(Boolean);
+    // The catch USED to be silent, and that hid a real defect for a full cycle: `existsSync`
+    // was never imported, so every candidate threw ReferenceError, every throw was swallowed
+    // here, and the function fell through to the last candidate — the in-workspace copy this
+    // whole function exists to stop depending on. Nothing typechecks scripts/, so a bare
+    // undefined inside a silent catch is invisible to every gate we have. Say why a candidate
+    // was skipped: a probe that cannot be STAT'd and a probe that is ABSENT are different
+    // failures and must not read the same.
+    for (const c of candidates) {
+        try {
+            if (existsSync(c))
+                return c;
+        }
+        catch (e) {
+            console.error(`[fed-transport] probe candidate ${c} could not be checked: ${String(e?.message ?? e)}`);
+        }
+    }
+    console.error('[fed-transport] probe script not found in any of: ' + candidates.join(', '));
+    return candidates[candidates.length - 1];
+}
+function reservationTruth() {
+    try {
+        const ts = vl.node?.components?.transportManager?.getTransports?.() ?? [];
+        for (const t of ts) {
+            const map = t?.reservationStore?.reservations;
+            if (!map || typeof map.size !== 'number')
+                continue;
+            const relays = [];
+            let soonest = null;
+            for (const [k, v] of map) {
+                relays.push(String(k));
+                // `expire` is a protobuf uint64 and arrives as a BigInt. Number() it before any
+                // arithmetic or serialisation: JSON.stringify THROWS on BigInt, which would take
+                // the whole /health response down — turning an observability improvement into an
+                // outage of the thing being observed.
+                const exp = v?.reservation?.expire;
+                if (exp != null) {
+                    const ms = Number(exp) * 1000 - Date.now();
+                    if (soonest == null || ms < soonest)
+                        soonest = ms;
+                }
+            }
+            return { held: map.size, relays, expiresInMs: soonest };
+        }
+    }
+    catch { /* introspection is best-effort and must never break health */ }
+    return { held: -1, relays: [], expiresInMs: null }; // -1 = unreadable, distinct from 0 = none held
+}
+// ── GRACEFUL DEPARTURE ───────────────────────────────────────────────────────────────
+// A whole substrate leaving used to take its hub rows with it only via the 5-minute TTL.
+// registerAtHub's de-advertise covers a VESSEL that stops while the transport keeps
+// running; it cannot cover the transport itself going away, because the code that would
+// withdraw is the code that is exiting. Measured on a real departure: the hub kept
+// advertising all 8 rows of a stopped peer, and resolving one returned HTTP 502 in 29ms —
+// bounded, but a goal walk selects a dead producer for up to the TTL.
+//
+// So withdraw on the way out. This covers a GRACEFUL stop (systemctl stop, docker stop,
+// a redeploy). A kill -9 or a host loss still decays on TTL, which is the correct fallback
+// and is why the TTL exists — this narrows the window, it does not remove the need for one.
+//
+// Bounded, because shutdown must not hang: systemd will SIGKILL after TimeoutStopSec and a
+// withdraw that blocks would simply become the kill it was trying to avoid.
+let shuttingDown = false;
+async function withdrawAndExit(sig) {
+    if (shuttingDown)
+        return;
+    shuttingDown = true;
+    const ids = [...mirroredVesselIds];
+    console.log(`[fed-transport] ${sig}: withdrawing ${ids.length} mirrored row(s) from the hub before exit`);
+    try {
+        await Promise.race([
+            deadvertiseAtHub(ids),
+            new Promise((res) => setTimeout(res, 5000)),
+        ]);
+        console.log(`[fed-transport] ${sig}: withdrawal complete`);
+    }
+    catch (e) {
+        console.error(`[fed-transport] ${sig}: withdrawal failed (rows will decay on the hub TTL):`, String(e?.message ?? e));
+    }
+    process.exit(0);
+}
+process.on('SIGTERM', () => { void withdrawAndExit('SIGTERM'); });
+process.on('SIGINT', () => { void withdrawAndExit('SIGINT'); });
 await register();
 await registerAtHub();
 setInterval(register, 120_000); // refresh discovery TTL
@@ -682,8 +1267,15 @@ setInterval(() => {
 // reservation by CLOSE + RE-DIAL: reactively on circuit loss / observed NO_RESERVATION,
 // and proactively well inside the ~1h TTL, so the circuit never empties and hub egress
 // never sees NO_RESERVATION. Re-advertisement is handled by the transition watcher above.
-const RELAY_PEER = RELAY.match(/\/p2p\/([^/]+)/)?.[1] ?? '';
-const relayConnections = () => RELAY_PEER ? vl.node.getConnections().filter((c) => c.remotePeer.toString() === RELAY_PEER) : [];
+// Derived at CALL time, not captured once: RELAY is mutable now (adoptAnchor may set it
+// long after startup), and a const snapshot taken while relay-less would stay '' forever —
+// the watchdog would then treat an adopted relay's connections as absent and redial in a
+// loop. Same class as the currentCircuit() capture defect documented above.
+const relayPeer = () => RELAY.match(/\/p2p\/([^/]+)/)?.[1] ?? '';
+const relayConnections = () => {
+    const p = relayPeer();
+    return p ? vl.node.getConnections().filter((c) => c.remotePeer.toString() === p) : [];
+};
 let redialing = false;
 let lastReserveAt = Date.now();
 let lastRedialAttemptAt = 0;
@@ -693,6 +1285,12 @@ let lastEgressNoResLogAt = 0;
 let lastRedialReason = '';
 async function redialRelay(reason) {
     if (redialing)
+        return;
+    // No anchor ⇒ nothing to dial. Without this guard every caller below (the egress repair
+    // path, the phantom watchdog's `circuit empty` branch) would reach multiaddr('') and
+    // throw once per tick / per failing egress on a node that is working exactly as designed.
+    // Acquiring an anchor is adoptAnchor()'s job, not a re-dial's.
+    if (!RELAY)
         return;
     // Reactive (egress-triggered) redials are rate-limited so a burst of failing egress
     // calls collapses into ONE teardown, never one per request: closing the relay
@@ -736,11 +1334,47 @@ async function redialRelay(reason) {
 // instead of never.
 let phantomStrikes = 0;
 setInterval(() => {
+    // Direct-only is a healthy steady state, not a degraded one — there is no reservation to
+    // hold and no phantom to detect. Bail before the `circuit empty` branch so a relay-less
+    // node doesn't accumulate redial attempts against an anchor it does not have.
+    if (!RELAY)
+        return;
     const circuitUp = !!currentCircuit();
     const relayUp = relayConnections().length > 0;
     if (!circuitUp || !relayUp) {
         phantomStrikes = 0;
         void redialRelay(!circuitUp ? 'circuit empty' : 'relay connection gone');
+        return;
+    }
+    // A LISTEN ADDRESS WITH NO HELD RESERVATION IS A PHANTOM, AND IT IS KNOWABLE NOW —
+    // no strikes needed. This is not an inference from quiet traffic; it is the relay client's
+    // own bookkeeping saying it holds nothing. The strike-based branch below still covers the
+    // cases this cannot decide: the store being unreadable (held === -1), or a genuinely held
+    // reservation whose circuits stay quiet.
+    const truth = reservationTruth();
+    if (truth.held === 0) {
+        phantomStrikes = 0;
+        void redialRelay('PHANTOM CONFIRMED: a /p2p-circuit listen address is advertised while the reservation store holds 0 reservations');
+        return;
+    }
+    // A HELD RESERVATION MEANS THERE IS NO PHANTOM, WHATEVER THE TRAFFIC LOOKS LIKE.
+    //
+    // The traffic heuristic below reads "no inbound circuit connections for 2 ticks" as a
+    // lost reservation. That inference is wrong whenever peers reach us WITHOUT using the
+    // circuit — which is the normal case on a shared host or LAN, where DCUtR upgrades the
+    // connection to direct and the circuit legitimately carries nothing.
+    //
+    // Measured on this hub with two healthy federated peers: 14 `circuit=(pending)` redials
+    // in three hours and ZERO reservation re-acquisitions logged — the watchdog firing every
+    // 10 minutes against a reservation that was never lost. Each redial closes and re-dials
+    // the relay, opening a window where the circuit is empty and inbound dials fail with
+    // NO_RESERVATION. The detector was manufacturing the outage it existed to catch.
+    //
+    // So when the client's own store says a reservation is held, that settles it. The traffic
+    // heuristic survives only for the case the store cannot be read (held === -1), where an
+    // imperfect signal beats none.
+    if (truth.held > 0) {
+        phantomStrikes = 0;
         return;
     }
     const circuitConns = vl.node.getConnections().filter((c) => c.remoteAddr?.toString().includes('p2p-circuit'));
@@ -763,5 +1397,83 @@ setInterval(() => {
     // 10 min the peer-facing blind window ran 20+ min (872 failed hub egresses in one
     // night). 5 min halves it; the idle-node worst case stays bounded (1 redial/10 min).
 }, 300_000); // 5 min
-console.log(`[fed-transport] up id=${VESSEL_ID} peer=${vl.peerId} health=:${HEALTH_PORT} circuit=${circuit || '(none yet)'} hub=${HUB_DISCOVERY || '(no hub mirror)'}`);
+// ── ANCHOR RE-ACQUISITION (relay-less → relayed, without a restart) ─────────────────
+// The bootstrap is circular by construction: /bootstrap derives relay_multiaddrs from the
+// circuits registered in that discovery, so the anchor a joining substrate needs does not
+// exist until some transport already holds a reservation. Startup therefore cannot be the
+// only chance to see one — a substrate that boots first (or boots while the hub is down)
+// must be able to JOIN LATER, on its own, with no operator and no unit restart.
+//
+// THE API LIMITATION, STATED HONESTLY. createVesselLibp2p only pushes the generic
+// '/p2p-circuit' listen address when relayMultiaddr is set (index.ts:257), and js-libp2p
+// exposes no supported way to add a listen address to a started node. The circuit-relay
+// transport makes reservations from its LISTENER, so simply dialling the relay on the
+// existing node would open a connection and obtain NO reservation — a silent half-join
+// (connected to the relay, unreachable through it) that looks fine in the connection table.
+// Adoption therefore REPLACES the node. That is cheap and safe here:
+//   • the peer id is derived from LIBP2P_IDENTITY, so it is byte-identical across the swap
+//     — every hub row, every cached circuit target, every isSelfCircuit() check still holds;
+//   • the direct listeners are ephemeral ports (localTcpPort unset ⇒ :0), so the new node
+//     cannot collide with the old one, and the 120s re-register republishes the new addrs;
+//   • Bun.serve() and the HTTP surface are untouched — /health and /egress/resolve never
+//     stop answering.
+// The new node is built and its handlers registered BEFORE the old one is stopped, so a
+// construction failure leaves the working direct-only node in place and we simply retry.
+// In-flight resolves on the old node are lost at the swap; that is one bounded blip against
+// a substrate that would otherwise stay relay-less until a human noticed.
+let adopting = false;
+async function adoptAnchor(anchor) {
+    if (adopting || !anchor)
+        return;
+    adopting = true;
+    const previous = vl;
+    try {
+        console.log(`[fed-transport] relay anchor acquired (${anchor}) — rebuilding the libp2p node to adopt it (listen addrs are construction-time)`);
+        const next = await buildNode(anchor);
+        await serveResolve(next, resolveHandler);
+        await serveResolveHttp(next, resolveHandler);
+        RELAY = anchor; // must land before the swap: relayPeer()/redialRelay() read it
+        vl = next;
+        await previous.stop().catch(() => { });
+        // NOT re-registering here on purpose. The reservation lands asynchronously after the
+        // dial, so registering now would advertise a node with no circuit yet. The existing
+        // reservation-transition watcher polls currentCircuit() every 5s and fires register() +
+        // registerAtHub() the moment empty → non-empty — the same path a reacquisition after a
+        // relay bounce takes. One acquisition path, one refresh, no duplicate.
+    }
+    catch (e) {
+        console.error(`[fed-transport] relay adoption failed (staying direct-only, will retry): ${e?.message ?? String(e)}`);
+    }
+    finally {
+        adopting = false;
+    }
+}
+// Backoff, not a fixed interval: while no anchor exists anywhere in the network this poll
+// is pure futile traffic against discovery, and a hot 5s loop against a dead pinned host
+// (each attempt costing a 5s timeout) is the storm class this file already fights on the
+// egress path. Start at 15s, double to a 10-minute ceiling, reset on adoption.
+const ANCHOR_POLL_MIN_MS = 15_000;
+const ANCHOR_POLL_MAX_MS = 600_000;
+let anchorPollMs = ANCHOR_POLL_MIN_MS;
+const pollForAnchor = async () => {
+    if (!RELAY) {
+        const anchor = await resolveAnchor();
+        if (anchor) {
+            await adoptAnchor(anchor);
+            if (RELAY)
+                anchorPollMs = ANCHOR_POLL_MIN_MS;
+        }
+        else {
+            anchorPollMs = Math.min(anchorPollMs * 2, ANCHOR_POLL_MAX_MS);
+        }
+    }
+    // Keep the timer alive even once relayed: a relay we adopted can go away (the anchor is
+    // a hint checked at use time, law 1), and if a future path ever clears RELAY the poller
+    // is already running. Self-rescheduling rather than setInterval so the backoff is real —
+    // setInterval cannot change its own period, and the previous generation of this file's
+    // watchdogs learned that a fixed period is a floor on recovery latency, not a budget.
+    setTimeout(() => void pollForAnchor(), RELAY ? ANCHOR_POLL_MAX_MS : anchorPollMs);
+};
+setTimeout(() => void pollForAnchor(), anchorPollMs);
+console.log(`[fed-transport] up id=${VESSEL_ID} peer=${vl.peerId} health=:${HEALTH_PORT} circuit=${circuit || (RELAY ? '(none yet)' : '(direct-only, no relay anchor)')} hub=${HUB_DISCOVERY || '(no hub mirror)'}`);
 //# sourceMappingURL=federation-transport-server.js.map

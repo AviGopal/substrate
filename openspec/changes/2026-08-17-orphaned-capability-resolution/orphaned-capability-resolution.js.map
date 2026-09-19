@@ -1,0 +1,1 @@
+{"version":3,"file":"orphaned-capability-resolution.js","sourceRoot":"","sources":["orphaned-capability-resolution.ts"],"names":[],"mappings":";;;AACA,uEAA6E;AAEtE,KAAK;IACV,OAAO;QACL,OAAO,EAAE,IAAI;QACb,KAAK,EAAE,gCAAgC;QACvC,IAAI,EAAE;YACJ,OAAO,EAAE,6CAA6C;YACtD,QAAQ,EAAE,IAAI;YACd,SAAS,EAAE,IAAI,IAAI,EAAE,CAAC,WAAW,EAAE;SACpC;KACF,CAAC;AACJ,CAAC"}

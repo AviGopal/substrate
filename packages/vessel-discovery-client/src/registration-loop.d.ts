@@ -72,6 +72,26 @@ export declare class DiscoveryRegistrationLoop {
     private headers;
     private register;
     private heartbeat;
+    /**
+     * A VESSEL THAT CAN NEVER REGISTER IS ABSENT, NOT STALE — AND ABSENCE READS AS
+     * "NOT DEPLOYED" RATHER THAN "BROKEN".
+     *
+     * Measured on a live substrate: discovery logged a steady 2 rejected heartbeats per
+     * minute — 8,017 over a day — each `401 ... identity rejected the key`. Every vessel
+     * that WAS registered looked perfect (all rows fresh under 60s), so no freshness check,
+     * health probe or ActiveState check could see the ones that were not there. The only
+     * record was a journal line, and a journal line is not an escalation.
+     *
+     * So say it in a shape. This mirrors the transport's emitJoinHealth, which exists for
+     * exactly the same reason on the federation side, and it names the vesselId — the single
+     * fact absence cannot carry.
+     *
+     * Fail-open and rate-limited: this runs inside the heartbeat loop, so it must never
+     * throw, never block, and never turn a once-a-minute rejection into a once-a-minute
+     * write. A repeated condition is reported on a cadence, not on every occurrence.
+     */
+    private lastHealthEmitAt;
+    private emitRegistrationHealth;
     private deregister;
 }
 //# sourceMappingURL=registration-loop.d.ts.map

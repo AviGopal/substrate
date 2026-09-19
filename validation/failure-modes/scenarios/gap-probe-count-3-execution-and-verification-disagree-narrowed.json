@@ -1,0 +1,19 @@
+{
+  "id": "gap-probe-count-3-execution-and-verification-disagree-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed] Dispatch 7b684025 (goal: count the letters in the word stone and store the count in a memoryNote titled probe",
+  "description": "[narrowed] Dispatch 7b684025 (goal: count the letters in the word stone and store the count in a memoryNote titled probe-count-3) ended reached:false with reason 'deterministic:transform-mismatch - goal determines 6 for lettercount(stone) but produced content does not contain it', while the note probe-count-3 exists and stores a count of 5. Edit repos/goal-host-vessel/src/index.ts.",
+  "goal_text": "[narrowed] Dispatch 7b684025 (goal: count the letters in the word stone and store the count in a memoryNote titled probe-count-3) ended reached:false with reason 'deterministic:transform-mismatch - goal determines 6 for lettercount(stone) but produced content does not contain it', while the note probe-count-3 exists and stores a count of 5. Edit repos/goal-host-vessel/src/index.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-probe-count-3-execution-and-verification-disagree-narrowed",
+  "source_gap_source": "substrate_detected"
+}

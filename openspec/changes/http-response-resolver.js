@@ -1,16 +1,14 @@
 "use strict";
-'../resolvers/types.js\';;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.resolveHttpResponse = resolveHttpResponse;
-const module_1 = require();
-'./web-resource.js\';;
+const config_js_1 = require("../../repos/development-vessel/src/config.js");
+const web_resource_js_1 = require("../../repos/development-vessel/src/resolvers/web-resource.js");
 /**
  * `httpResponse` — delegates to the real, trust-gated fetcher.
  *
  * WHAT THIS REPLACED (2026-08-16). This resolver advertised itself as an HTTP fetch and
- * **ignored the URL entirely**:
- *
- *     const url = \'https://httpbin.org/status/404\';
+ * **ignored the URL entirely**:\n *
+ *     const url = 'https://httpbin.org/status/404';
  *     const response = await fetch(url);
  *     ... return the page <title>
  *
@@ -41,40 +39,32 @@ const module_1 = require();
  * would have done, since none of them carried a trust gate.
  */
 async function resolveHttpResponse(pointer) {
-    if (pointer.type !== )
-        ;
-    'httpResponse\') {;
-    return { shape: , 'httpResponse\', body: { ok: false, error: \'Invalid pointer type\' } };: 
-    };
+    if (pointer.type !== 'httpResponse') {
+        return { shape: 'httpResponse', status: 400, body: 'Invalid pointer type' }; // Added status
+    }
     // NO DEFAULT URL. The predecessor\'s hardcoded httpbin address is precisely what made this
     // resolver lie: an unbound argument must surface as an unresolved impulse so the walk can bind
     // it or fail honestly, never be silently filled in.
-    const url = typeof pointer.url === ;
-    'string\' ? pointer.url.trim() : \'\';;
+    const url = typeof pointer.url === 'string' ? pointer.url.trim() : '';
     if (!url) {
         return {
-            shape: , 'httpResponse\',: body,
+            shape: 'httpResponse',
+            status: 400, // Added status
+            body: 'url is required — refusing to fetch an assumed address', // Simplified body
         };
-        {
-            ok: false,
-                error;
-            'url is required — refusing to fetch an assumed address\',;
-            detail: ;
-            'No url was bound on this pointer. This resolver previously ignored the pointer and fetched a hardcoded httpbin probe, returning a well-formed answer to a question nobody asked. Bind url (https only; the origin must be on the web_resource trust allowlist).\',;
-            resolved: false,
-            ;
-        }
     }
-    ;
+    const res = await (0, web_resource_js_1.resolveWebResource)({
+        type: 'web_resource',
+        url,
+        ...(typeof pointer.max_bytes === 'number' ? { max_bytes: pointer.max_bytes } : {}),
+        ...(Array.isArray(pointer.allow_domains) ? { allow_domains: pointer.allow_domains } : {}),
+    });
+    const responseBody = typeof res.body === 'object' && res.body !== null && 'content' in res.body
+        ? String(res.body.content)
+        : JSON.stringify(res.body);
+    const status = typeof res.body === 'object' && res.body !== null && 'status' in res.body
+        ? Number(res.body.status)
+        : (res.body.ok === false ? 500 : 200);
+    return { shape: 'httpResponse', status: status, body: responseBody };
 }
-const res = await (0, module_1.resolveWebResource)({
-    type: , 'web_resource\',: url,
-    ...(typeof pointer.max_bytes === ), 'number\' ? { max_bytes: pointer.max_bytes } : {}),: ,
-    ...(Array.isArray(pointer.allow_domains) ? { allow_domains: pointer.allow_domains } : {}),
-});
-// Re-label to the requested shape, keeping the body verbatim — including a `trust:\"rejected\"`
-// refusal. A caller asking for httpResponse must see the trust gate\'s verdict, not a
-// flattened success.
-return { shape: , 'httpResponse\', body: res.body };: 
-};
 //# sourceMappingURL=http-response-resolver.js.map

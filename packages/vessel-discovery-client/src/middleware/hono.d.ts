@@ -15,5 +15,16 @@ import type { VesselClient } from "../vessel-client.js";
  * app.get("/health", createHonoHealthMiddleware(client))
  * ```
  */
-export declare function createHonoHealthMiddleware(client: VesselClient): (c: Context) => any;
+export declare function createHonoHealthMiddleware(client: VesselClient): (c: Context) => Response & import("hono").TypedResponse<{
+    status: "ok" | "degraded" | "unhealthy";
+    vessel: string;
+    version: string;
+    uptime: number;
+    heartbeat: {
+        lastSuccess: string | null;
+        consecutiveFailures: number;
+        isRunning: boolean;
+    };
+    shapes: string[];
+}, 200 | 503, "json">;
 //# sourceMappingURL=hono.d.ts.map

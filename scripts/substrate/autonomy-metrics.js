@@ -83,7 +83,17 @@ const count = async (q) => {
 // ── lift gate (from heartbeat — written by substrate-health-tick) ──
 let lift = { overall_passing: null, template_count: null, vessels_down: null, heartbeat_age_s: null };
 try {
-    const hb = JSON.parse(await Bun.file("/workspace/substrate-heartbeat.json").text());
+    // FOSSIL PATH. This read was hardcoded to /workspace/substrate-heartbeat.json while the
+    // WRITER, substrate-health-tick.ts, writes join(WORKSPACE_ROOT, "substrate-heartbeat.json")
+    // — and WORKSPACE_ROOT is /workspace/git/super-repo. Two different files. Measured
+    // 2026-09-05: the hardcoded path held an Aug 8 snapshot (overall_passing:false, naming three
+    // vessels down that were up), while the writer's path was current to the minute. The lift
+    // gate — the substrate's own "can this be left to develop itself" verdict, whose comment
+    // calls overall_passing "the single source of truth" — had been reading a 28-day-old file.
+    // Same fossil-vs-live-path class as the gaps.json defect. Resolve against WORKSPACE_ROOT so
+    // reader and writer cannot drift apart again; keep the literal only as a fallback.
+    const heartbeatPath = `${process.env["WORKSPACE_ROOT"] ?? "/workspace"}/substrate-heartbeat.json`;
+    const hb = JSON.parse(await Bun.file(heartbeatPath).text());
     lift = {
         overall_passing: hb.overall_passing ?? null,
         template_count: hb.template_count ?? null,
@@ -105,7 +115,7 @@ catch { /* heartbeat absent */ }
 try {
     const since = new Date(Date.now() - 3600_000).toISOString();
     // executed_at (indexed) not created_at (full-scan) — see throughput note below.
-    const runRows = await sql(`SELECT activity_id, count() AS c FROM activity_execution_traces WHERE executed_at >= type::datetime("${since}") GROUP BY activity_id;`);
+    const runRows = await sql(`SELECT activity_id, count() AS c FROM v_paradigm_execution_traces WHERE executed_at >= type::datetime("${since}") GROUP BY activity_id;`);
     const distinctRun = runRows.length;
     const aboveFloor = runRows.filter((r) => (r.c ?? 0) >= 8).length;
     const newTemplates = await tryNum(() => count(`SELECT count() FROM activity WHERE created_at >= type::datetime("${since}") GROUP ALL;`));
@@ -148,11 +158,11 @@ const comp_edges = await tryNum(() => count("SELECT count() FROM activity_compos
 let orphan_parent_rate = null;
 try {
     // sample 500 children, resolve parent activity_id presence
-    const kids = await sql("SELECT parent_execution_id FROM activity_execution_traces WHERE parent_execution_id != NONE LIMIT 500;");
+    const kids = await sql("SELECT parent_execution_id FROM v_paradigm_execution_traces WHERE parent_execution_id != NONE LIMIT 500;");
     if (kids.length) {
         let resolved = 0;
         for (const k of kids) {
-            const p = await sql(`SELECT count() AS c FROM activity_execution_traces WHERE execution_id = ${JSON.stringify(k.parent_execution_id)} GROUP ALL;`);
+            const p = await sql(`SELECT count() AS c FROM v_paradigm_execution_traces WHERE execution_id = ${JSON.stringify(k.parent_execution_id)} GROUP ALL;`);
             if (p[0]?.c)
                 resolved++;
         }
@@ -169,12 +179,12 @@ catch { /* leave null */ }
 let recent_orphan_rate = null;
 let recent_composition_count = null;
 try {
-    const rk = await sql("SELECT parent_execution_id FROM activity_execution_traces WHERE parent_execution_id != NONE AND executed_at > type::datetime(time::now() - 60m) LIMIT 400;");
+    const rk = await sql("SELECT parent_execution_id FROM v_paradigm_execution_traces WHERE parent_execution_id != NONE AND executed_at > type::datetime(time::now() - 60m) LIMIT 400;");
     recent_composition_count = rk.length;
     if (rk.length) {
         let resolved = 0;
         for (const k of rk) {
-            const p = await sql(`SELECT count() AS c FROM activity_execution_traces WHERE execution_id = ${JSON.stringify(k.parent_execution_id)} GROUP ALL;`);
+            const p = await sql(`SELECT count() AS c FROM v_paradigm_execution_traces WHERE execution_id = ${JSON.stringify(k.parent_execution_id)} GROUP ALL;`);
             if (p[0]?.c)
                 resolved++;
         }
@@ -265,7 +275,7 @@ catch { /* */ }
 // 2026-06-21 while real throughput was ~1300/hr. executed_at IS indexed
 // (idx_activity_executions_executed_at) and correctly populated on recent
 // traces: same window returns in ~195ms with the accurate count.
-const traces_per_hour = await tryNum(() => count("SELECT count() FROM activity_execution_traces WHERE executed_at > (time::now() - 1h) GROUP ALL;"));
+const traces_per_hour = await tryNum(() => count("SELECT count() FROM v_paradigm_execution_traces WHERE executed_at > (time::now() - 1h) GROUP ALL;"));
 let kappa_posterior_spread = { min: null, max: null, mean: null, n: null };
 try {
     const tpl = await apiGet("/v2/activities/templates?limit=100&offset=0");
@@ -335,7 +345,7 @@ catch { /* leave null */ }
 // captured in the learnable graph (currently ~0 due to the parent-trace write gap).
 let topology = { nested: null, depth1: null, depth2: null, depth3plus: null, edge_visibility: null };
 try {
-    const d = await sql(`SELECT array::len(composition_chain) AS depth, count() AS n FROM activity_execution_traces WHERE composition_chain != NONE GROUP BY depth;`);
+    const d = await sql(`SELECT array::len(composition_chain) AS depth, count() AS n FROM v_paradigm_execution_traces WHERE composition_chain != NONE GROUP BY depth;`);
     let d1 = 0, d2 = 0, d3 = 0, nested = 0;
     for (const r of d) {
         nested += r.n;
@@ -374,9 +384,9 @@ try {
     // vessel_id is trace-level (fixed in ias-executor-ts 4aa6ec4: the sink now stamps it
     // from VESSEL_ID). resolver_tier is per-TASK (tasks[].resolver_tier), not trace-level,
     // so attribution_coverage measures vessel_id presence — the per-vessel learning signal.
-    const tot = await tryNum(() => count("SELECT count() AS count FROM activity_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) GROUP ALL;"));
-    const attributed = await tryNum(() => count("SELECT count() AS count FROM activity_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) AND vessel_id != NONE GROUP ALL;"));
-    const vrows = await sql("SELECT vessel_id FROM activity_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) AND vessel_id != NONE GROUP BY vessel_id;");
+    const tot = await tryNum(() => count("SELECT count() AS count FROM v_paradigm_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) GROUP ALL;"));
+    const attributed = await tryNum(() => count("SELECT count() AS count FROM v_paradigm_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) AND vessel_id != NONE GROUP ALL;"));
+    const vrows = await sql("SELECT vessel_id FROM v_paradigm_execution_traces WHERE executed_at > type::datetime(time::now() - 2h) AND vessel_id != NONE GROUP BY vessel_id;");
     vessel_population = {
         active_vessels: vrows.length,
         attribution_coverage: (tot && attributed != null) ? Math.round((attributed / tot) * 1000) / 1000 : null,
@@ -399,7 +409,7 @@ const vesselOf = (id) => {
 };
 let capability = { distinct_exercised_24h: null, total_activities: totalActivities, exploration_breadth: null, cross_vessel_edges: null, total_edges: comp_edges, cross_vessel_frac: null, proposed_templates: null };
 try {
-    const distinct = await tryNum(() => count("SELECT count() AS count FROM (SELECT activity_id FROM activity_execution_traces WHERE executed_at > type::datetime(time::now() - 24h) GROUP BY activity_id) GROUP ALL;"));
+    const distinct = await tryNum(() => count("SELECT count() AS count FROM (SELECT activity_id FROM v_paradigm_execution_traces WHERE executed_at > type::datetime(time::now() - 24h) GROUP BY activity_id) GROUP ALL;"));
     const proposed = await tryNum(() => count("SELECT count() AS count FROM activity WHERE proposed = true GROUP ALL;"));
     const edges = await sql("SELECT parent_activity_id, child_activity_id FROM activity_composition_graph LIMIT 500;");
     const xv = edges.filter((e) => vesselOf(e.parent_activity_id) !== vesselOf(e.child_activity_id)).length;

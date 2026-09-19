@@ -1,0 +1,19 @@
+{
+  "id": "runtime-drift-uncovered-relevance-sink-vessel-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from runtime-drift-uncovered-relevance-sink-vessel] relevance-sink-vessel has a live src tree at /vessels/rele",
+  "description": "[narrowed from runtime-drift-uncovered-relevance-sink-vessel] relevance-sink-vessel has a live src tree at /vessels/relevance-sink-vessel/src and NO clone under /workspace/git/vessels, so it is outside the authority this tick, the self-recovery revert rung, and the sound-close oracle all read from — it can be neither verified nor repaired nor closed against by any of them. Its 1 live source file(s) parse, so this is a coverage gap rather than an imminent outage. A candidate authority EXISTS at /workspace/git/super-repo/repos/relevance-sink-vessel/src — an in-container git working tree, which no prescription forbids as a recovery source. Deciding whether it is authoritative (or whether this vessel must be given a clone under /workspace/git/vessels plus a last-good pin) is the fix; the three mechanisms above should then share that definition rather than each hardcoding one. ",
+  "goal_text": "[narrowed from runtime-drift-uncovered-relevance-sink-vessel] relevance-sink-vessel has a live src tree at /vessels/relevance-sink-vessel/src and NO clone under /workspace/git/vessels, so it is outside the authority this tick, the self-recovery revert rung, and the sound-close oracle all read from — it can be neither verified nor repaired nor closed against by any of them. Its 1 live source file(s) parse, so this is a coverage gap rather than an imminent outage. A candidate authority EXISTS at /workspace/git/super-repo/repos/relevance-sink-vessel/src — an in-container git working tree, which no prescription forbids as a recovery source. Deciding whether it is authoritative (or whether this vessel must be given a clone under /workspace/git/vessels plus a last-good pin) is the fix; the three mechanisms above should then share that definition rather than each hardcoding one. ",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "runtime-drift-uncovered-relevance-sink-vessel-narrowed",
+  "source_gap_source": "substrate_detected"
+}
