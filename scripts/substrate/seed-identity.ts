@@ -327,20 +327,31 @@ async function main() {
   console.log(`[seed-identity] issued self-admin key (substrate-admin): ${adminKey}`);
   console.log("[seed-identity] set SUBSTRATE_ADMIN_KEY in /etc/substrate/env and .substrate-secrets");
 
-  // Issue a dedicated key for local-tools-vessel (per D4 — per-vessel trace attribution)
+  // Issue dedicated per-vessel keys (per D4 — per-vessel trace attribution) and
+  // WRITE them. These stanzas previously only console.log'd an instruction to
+  // "set X in /etc/substrate/env" that nothing executed — while gen-env.sh had
+  // already frozen each per-vessel var as a copy of the PRE-seed bootstrap
+  // METABOB_API_KEY. Each vessel prefers its per-vessel var over METABOB_API_KEY,
+  // so on a fresh boot the stale bootstrap copy SHADOWED the newly minted key
+  // forever: goal-host's discovery registration and activity-api recommend calls
+  // 401'd on every cold boot and no goal could run (measured:
+  // validation/reports/coldboot-proof-2026-09-19, F2 FAIL). Warm volumes never
+  // showed it because the key never changes there. upsertEnvVar is the same
+  // helper the admin key above already uses.
   const localToolsKey = await issueKey(token, user_id, org_id, "local-tools-vessel");
-  console.log(`[seed-identity] issued API key (local-tools-vessel): ${localToolsKey}`);
-  console.log("[seed-identity] set LOCAL_TOOLS_VESSEL_API_KEY in /etc/substrate/env or vessel env file");
+  upsertEnvVar("/etc/substrate/env", "LOCAL_TOOLS_VESSEL_API_KEY", localToolsKey);
+  upsertEnvVar(SECRETS_FILE, "LOCAL_TOOLS_VESSEL_API_KEY", localToolsKey);
+  console.log(`[seed-identity] issued + wrote LOCAL_TOOLS_VESSEL_API_KEY (local-tools-vessel)`);
 
-  // Issue a dedicated key for goal-host-vessel (per D4 — per-vessel trace attribution)
   const goalHostKey = await issueKey(token, user_id, org_id, "goal-host-vessel");
-  console.log(`[seed-identity] issued API key (goal-host-vessel): ${goalHostKey}`);
-  console.log("[seed-identity] set GOAL_HOST_VESSEL_API_KEY in /etc/substrate/env or vessel env file");
+  upsertEnvVar("/etc/substrate/env", "GOAL_HOST_VESSEL_API_KEY", goalHostKey);
+  upsertEnvVar(SECRETS_FILE, "GOAL_HOST_VESSEL_API_KEY", goalHostKey);
+  console.log(`[seed-identity] issued + wrote GOAL_HOST_VESSEL_API_KEY (goal-host-vessel)`);
 
-  // Issue a dedicated key for concept-db (semantic layer)
   const conceptDbKey = await issueKey(token, user_id, org_id, "concept-db");
-  console.log(`[seed-identity] issued API key (concept-db): ${conceptDbKey}`);
-  console.log("[seed-identity] set CONCEPT_DB_API_KEY in /etc/substrate/env or concept-db.env");
+  upsertEnvVar("/etc/substrate/env", "CONCEPT_DB_API_KEY", conceptDbKey);
+  upsertEnvVar(SECRETS_FILE, "CONCEPT_DB_API_KEY", conceptDbKey);
+  console.log(`[seed-identity] issued + wrote CONCEPT_DB_API_KEY (concept-db)`);
 }
 
 main().catch(e => {
