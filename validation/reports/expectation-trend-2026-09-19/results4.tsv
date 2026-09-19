@@ -1,0 +1,7 @@
+run	dispatch	V20s	verdict_s	reached	reason	body_match
+1	96c768f5-081f-4800-b8fd-cc060e919cdb	PASS(exec=none,walkLog=5)	95	false/failed	deterministic:transform-mismatch — goal determines c0ed76c5e5a165d15d9f636cd12b03dbe6d5eee3c777658fff74bdf9ad18e644 fo	MATCH
+2	62956ae0-ce9a-40ec-b0d8-3cb9c5c8f4a7	PASS(exec=walk-satisfier-2-1789811295600,walkLog=10)	20	true/completed	deterministic:verified-compute-artifact — recomputed the arithmetic in-process (null) and resolved the named note "": 	MISMATCH(memoryNote_write{"title":"trend4-demo-2","content":"emordnil)
+3	d35b0768-07fd-4453-ab78-b26e08d45057	PASS(exec=none,walkLog=3)	96	false/failed	deterministic:transform-mismatch — goal determines 312131 for product(457*683) but produced content does not contain i	MATCH
+4	2b853045-e7b8-43c6-b2c4-8fe63eec9976	PASS(exec=none,walkLog=6)	80	false/failed	deterministic:transform-mismatch — goal determines dHJlbmQtaG9sZHM= for base64(trend-holds) but produced content does 	MATCH
+5	e36be45e-bd16-4317-b086-e760dfd33e70	PASS(exec=none,walkLog=5)	85	false/failed	deterministic:transform-mismatch — goal determines 13 for lettercount(perspicacious) but produced content does not con	MISMATCH(The word perspicacious has 13 letters. )
+6	2f394a0a-b2e2-423c-9854-b081b3b54da1	PASS(exec=none,walkLog=8)	85	false/failed	deterministic:transform-mismatch — goal determines echo for lowercase(ECHO) but produced content does not contain it	MATCH

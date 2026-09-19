@@ -1,0 +1,7 @@
+run	dispatch	V20s	verdict_s	reached	reason	body_match
+1	3b46ae8a-f016-4fb3-937b-7d8b49faad66	PASS(exec=none,walkLog=6)	80	false/failed	deterministic:transform-mismatch — goal determines c94e6e20072def1229f2a960ccab0542351eaa4e463e07815dcb070d9f4caefc fo	MISMATCH(5417d2b7c262b2e6f6bcc9151694ea407b54bc5584c4f02dad46584d40b4)
+2	c026195b-fe72-40d6-b278-5da7a7dc74b4	PASS(exec=universal-tool-fallback-24af29c0-1789812140075,walkLog=12)	20	true/completed	deterministic:verified-compute-artifact — recomputed the arithmetic in-process (null) and resolved the named note "": 	MATCH
+3	9dc406f4-cef9-44c2-8500-819616885faf	PASS(exec=none,walkLog=6)	55	true/completed	deterministic:transform-verified — product(523*769) = 402187 found in produced content	MATCH
+4	00d270dc-58d0-4412-bb22-53573b9fec92	PASS(exec=none,walkLog=6)	65	true/completed	deterministic:transform-verified — base64(replication) = cmVwbGljYXRpb24= found in produced content	MATCH
+5	56969763-521b-4033-8e8b-226c09ca2370	PASS(exec=universal-tool-fallback-9bfc639e-1789812284181,walkLog=12)	20	true/completed	deterministic:transform-verified — lettercount(serendipity) = 11 found in produced content	MATCH
+6	8de1f0a7-b5d1-412d-b711-efef56833652	PASS(exec=universal-tool-fallback-870d7070-1789812302657,walkLog=9)	20	true/completed	deterministic:transform-verified — lowercase(BEACON) = beacon found in produced content	MATCH

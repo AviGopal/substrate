@@ -1,0 +1,7 @@
+run	dispatch	V20s	verdict_s	reached	reason	body_match
+1	7a9e9021-6593-4d44-b387-d709d5574937	PASS(exec=none,walkLog=5)	30	true/completed	deterministic:transform-verified — sha256(trendtwo-demo-2026-09-19) = d2082007549d47c2f4e0f0a408f1966111f3550842cf2e42	MATCH
+2	800d251f-1fd0-4cf7-bdb3-aa2609ab07d4	PASS(exec=walk-satisfier-2-1789808740134,walkLog=10)	20	true/completed	deterministic:verified-compute-artifact — recomputed the arithmetic in-process (null) and resolved the named note "": 	MISMATCH({"title":"trend2-demo-2","content":"htilonom"} )
+3	08de9ee4-183b-40fd-8290-a2113760c9ca	PASS(exec=none,walkLog=6)	25	true/completed	deterministic:transform-verified — product(613*487) = 298531 found in produced content	MATCH
+4	292ed376-05ee-4e24-a16b-f2bfe6e5339a	PASS(exec=none,walkLog=7)	40	false/failed	deterministic:transform-mismatch — goal determines dmVyaWZpZWQ= for base64(verified) but produced content does not con	MISMATCH(ABSENT )
+5	54ffc663-70b4-43ae-b209-df38e365efdf	PASS(exec=walk-satisfier-1-1789808815969,walkLog=7)	20	true/completed	deterministic:transform-verified — lettercount(floccinaucinihilipilification) = 29 found in produced content	MISMATCH(ABSENT )
+6	ec261aef-2114-4aed-86c0-e0d444720b2a	PASS(exec=none,walkLog=7)	30	false/failed	deterministic:transform-mismatch — goal determines thunder for lowercase(THUNDER) but produced content does not contai	MISMATCH(ABSENT )

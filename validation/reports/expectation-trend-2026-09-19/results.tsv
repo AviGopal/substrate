@@ -1,0 +1,7 @@
+run	dispatch	V20s	artifact_s	verdict_s	reached	body_match
+1	df1f19b1-19a0-4044-b04a-7ef2df298e9d	FAIL(pre-measured)	none	91	true/completed	none
+2	b11f40a5-9cda-469a-ad6d-d63d09b5c602	FAIL	none	TIMEOUT	none/failed	none
+3	82707ece-4ecd-429d-8989-a5bc5f50b737	PASS(walk-satisfier-2-1789807387776)	none	20	true/completed	none
+4	07166192-2e3d-4c6d-a82a-504862b249f2	PASS(walk-satisfier-2-1789807407950)	none	20	true/completed	none
+5	1af91e78-335f-4fd5-9e18-7eb556af1191	FAIL	none	35	true/completed	none
+6	76e5ade1-a952-4f98-a21e-9787f8294053	PASS(universal-tool-fallback-62153cf8-1789807470136)	none	20	true/completed	none
