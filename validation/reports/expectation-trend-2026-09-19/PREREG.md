@@ -412,3 +412,27 @@ third with zero operator involvement after the commitment was stated.
 Scope honesty: the standing expectation covers the deterministic-transform
 class (the class the batteries measured). Broader-domain trend expectations
 await generality round 2 + the ReAct baseline arm.
+
+---
+
+# QUEUE CLOSE-OUT (items 3-4, 2026-09-19 ~23:55Z)
+
+Item 3 (satisfier-read-graded-as-store): CLOSED with falsifier evidence —
+the harmful mode is blocked twice (182dbf3d store-intent override as dormant
+backstop + oracle v2-v4 named-note byte-compare makes a storeless read grade
+false); fresh-title store goals verified byte-correct repeatedly, including
+3/3 by the autonomous trend checker. Residual idempotent-store edge recorded
+in the closure note.
+
+Item 4 (exact procedures executed, not generated): COMPOSED and LANDED
+7f206089 — the floor prompt now requires exact computations to be EXECUTED
+via shellResult with verbatim stdout and the command preserved for
+reproducibility. Falsifier held: lettercount(incomprehensibilities) reached
+with byte-correct 21 (the exact class that measured 17-for-16, 15-for-14,
+12-for-11 before).
+
+Recurrence note: the 0-byte-grounding dead-row class struck TWICE during
+this close-out (rows moved to ephemeral ports :26305 then :28353); filed
+sharpened as gap-something-re-registers-local-tools-grounding-shapes-on-
+ephemeral-ports with the port evidence. Operator restarts remain the
+workaround; this is now the most frequent operator intervention left.
