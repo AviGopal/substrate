@@ -1,0 +1,17 @@
+node_modules/
+*.log
+
+# Local schema-watch scan cache (sqlite + WAL/SHM) — runtime state this vessel
+# rewrites on every scan, not a file git should carry.
+data/
+
+# Container build debris — bun install cache when HOME is redirected into the repo.
+# Regenerable; 146MB of it. Never commit.
+.container-home/
+ui/.container-home/
+ui/node_modules/
+
+# NOT ui/dist/ — it is TRACKED on purpose. The substrate updates itself by
+# pulling this repo and nothing rebuilds on pull, so git is the only channel by
+# which a UI change reaches a running surface. See ui/.gitignore for the full
+# reasoning and the cost.

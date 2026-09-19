@@ -35,6 +35,21 @@
       "post_install": "L=/workspace/human-surface-ui-build.log; D=/workspace/git/super-repo/repos/human-surface-vessel/ui/dist; if [ -f \"$D/index.html\" ]; then echo \"UI_BUILD_SKIPPED (dist came from git — rebuilding would dirty tracked files and wedge pull-sync)\" > \"$L\"; else { export HOME=/root; export BUN_INSTALL_CACHE_DIR=/root/.bun/install/cache; set -x; cd /workspace/git/super-repo/repos/human-surface-vessel/ui && /root/.bun/bin/bun install && /root/.bun/bin/bun run build && test -d dist; } > \"$L\" 2>&1 && echo UI_BUILD_OK >> \"$L\" || echo UI_BUILD_FAILED >> \"$L\"; fi"
     },
     {
+      "name": "training-dojo-vessel",
+      "description": "Lessons/trace/schema-watch surface — give the agent a task, watch it think, watch what it does to the shared SurrealDB. Same manifest-vessel shape as human-surface-vessel; a second, independently-deployable UI-only spoke.",
+      "repo": "training-dojo-vessel",
+      "workdir": "$REPO_ROOT/repos/training-dojo-vessel",
+      "exec": "src/index.ts",
+      "_host_comment": "Same reasoning as human-surface-vessel's HOST comment above: 0.0.0.0 so the docker -p publish is not dead on arrival, harmless because registration uses SELF_ENDPOINT (loopback + PORT), not HOST.",
+      "env": { "PORT": "8320", "HOST": "0.0.0.0", "VESSEL_ID": "training-dojo-vessel" },
+      "secrets": [],
+      "restart": "always",
+      "health_port": 8320,
+      "self_recovery": true,
+      "_post_install_comment": "Identical skip-if-tracked logic to human-surface-vessel's, for the identical reason: ui/dist must be committed so a pull delivers a working bundle with no build step at boot. See that entry's comment above for the full rationale — not repeated here.",
+      "post_install": "L=/workspace/training-dojo-ui-build.log; D=/workspace/git/super-repo/repos/training-dojo-vessel/ui/dist; if [ -f \"$D/index.html\" ]; then echo \"UI_BUILD_SKIPPED (dist came from git — rebuilding would dirty tracked files and wedge pull-sync)\" > \"$L\"; else { export HOME=/root; export BUN_INSTALL_CACHE_DIR=/root/.bun/install/cache; set -x; cd /workspace/git/super-repo/repos/training-dojo-vessel/ui && /root/.bun/bin/bun install && /root/.bun/bin/bun run build && test -d dist; } > \"$L\" 2>&1 && echo UI_BUILD_OK >> \"$L\" || echo UI_BUILD_FAILED >> \"$L\"; fi"
+    },
+    {
       "name": "federation-relay",
       "description": "Public libp2p Circuit Relay v2 — the from-anywhere reachability anchor.",
       "workdir": "$REPO_ROOT/scripts/substrate/federation-relay",
