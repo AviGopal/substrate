@@ -1,0 +1,202 @@
+[
+  {
+    "id": "expectation-scan-heartbeat",
+    "type": "reference",
+    "title": "expectation-scan-heartbeat",
+    "body": "{\"at\":\"2026-09-20T07:10:35.286Z\",\"checked\":25,\"violations_found\":0}",
+    "created_at": "2026-09-19T20:00:55.942Z",
+    "updated_at": "2026-09-20T07:10:35.287Z"
+  },
+  {
+    "id": "expectation:compound-r4",
+    "type": "reference",
+    "title": "expectation:compound-r4",
+    "body": "{\"target_title\":\"compound-r4\",\"family\":\"base64\",\"operand\":\"cpd4x7500\",\"expected\":\"Y3BkNHg3NTAw\",\"verified_at\":\"2026-09-20T06:58:33.900Z\",\"violations\":0}",
+    "created_at": "2026-09-20T06:58:33.901Z",
+    "updated_at": "2026-09-20T06:58:33.901Z"
+  },
+  {
+    "id": "expectation-trend:deterministic-battery",
+    "type": "reference",
+    "title": "expectation-trend:deterministic-battery",
+    "body": "{\"bar_min_r\":2,\"n\":3,\"cadence_minutes\":45,\"commitment\":\"the deterministic-transform reach trend holds at >=2 of 3 freshly generated probes, byte-verified independently of dispatch verdicts\",\"committed_by\":\"operator 2026-09-19\",\"cadence_changed\":{\"at\":\"2026-09-20T03:20:00Z\",\"from_minutes\":240,\"to_minutes\":45,\"by\":\"claude-code-operator\",\"why\":\"one history point is a single attempt, not a trend; 240min yields 6 checks/day so a trend is not observable on a human timescale. ONE variable changed; bar_min_r and n deliberately UNCHANGED so scores before and after remain comparable.\",\"caveat\":\"the probe battery is deterministic transforms (product, reverse, uppercase) - a high score here is a FLOOR measurement and must NOT be quoted as evidence for the reach expectation on useful work\"},\"history\":[{\"at\":\"2026-09-19T23:39:47.134Z\",\"r\":3,\"n\":3},{\"at\":\"2026-09-20T03:23:27.807Z\",\"r\":0,\"n\":3},{\"at\":\"2026-09-20T04:23:32.496Z\",\"r\":3,\"n\":3},{\"at\":\"2026-09-20T05:16:45.328Z\",\"r\":2,\"n\":3},{\"at\":\"2026-09-20T06:04:26.014Z\",\"r\":1,\"n\":3},{\"at\":\"2026-09-20T06:52:05.437Z\",\"r\":0,\"n\":3}],\"last_run_at\":\"2026-09-20T06:52:05.494Z\",\"last_score\":\"0/3\",\"open_violation\":true,\"family\":\"product\"}",
+    "created_at": "2026-09-19T23:33:14.387Z",
+    "updated_at": "2026-09-20T06:52:05.495Z"
+  },
+  {
+    "id": "expectation:honest-c3",
+    "type": "reference",
+    "title": "expectation:honest-c3",
+    "body": "{\"target_title\":\"honest-c3\",\"family\":\"base64\",\"operand\":\"honest-c3-input\",\"expected\":\"aG9uZXN0LWMzLWlucHV0\",\"verified_at\":\"2026-09-20T06:17:38.855Z\",\"violations\":0}",
+    "created_at": "2026-09-20T06:17:38.859Z",
+    "updated_at": "2026-09-20T06:17:38.859Z"
+  },
+  {
+    "id": "expectation:quiet-b5",
+    "type": "reference",
+    "title": "expectation:quiet-b5",
+    "body": "{\"target_title\":\"quiet-b5\",\"family\":\"base64\",\"operand\":\"qprobe5\",\"expected\":\"cXByb2JlNQ==\",\"verified_at\":\"2026-09-20T05:39:01.027Z\",\"violations\":0}",
+    "created_at": "2026-09-20T05:39:01.028Z",
+    "updated_at": "2026-09-20T05:39:01.028Z"
+  },
+  {
+    "id": "expectation-trend:base64",
+    "type": "reference",
+    "title": "expectation-trend:base64",
+    "body": "{\"family\":\"base64\",\"bar_min_r\":2,\"n\":3,\"cadence_minutes\":1440,\"origin\":\"self-minted\",\"minted_because\":\"first verified reach of this transform family observed at 2026-09-20T05:35:53.151Z\",\"commitment\":\"the base64 reach trend holds at >=2 of 3 freshly generated probes, byte-verified independently of dispatch verdicts\",\"history\":[{\"at\":\"2026-09-20T05:37:55.350Z\",\"r\":3,\"n\":3}],\"last_run_at\":\"2026-09-20T05:37:55.350Z\",\"last_score\":\"3/3\",\"open_violation\":false}",
+    "created_at": "2026-09-20T05:35:53.153Z",
+    "updated_at": "2026-09-20T05:37:55.352Z"
+  },
+  {
+    "id": "expectation:trendcheck-base64-mu9dvtdb-2",
+    "type": "reference",
+    "title": "expectation:trendcheck-base64-mu9dvtdb-2",
+    "body": "{\"target_title\":\"trendcheck-base64-mu9dvtdb-2\",\"family\":\"base64\",\"operand\":\"trend-dvtdb2\",\"expected\":\"dHJlbmQtZHZ0ZGIy\",\"verified_at\":\"2026-09-20T05:37:48.573Z\",\"violations\":0}",
+    "created_at": "2026-09-20T05:37:48.573Z",
+    "updated_at": "2026-09-20T05:37:48.573Z"
+  },
+  {
+    "id": "expectation:trendcheck-base64-mu9dvtdb-1",
+    "type": "reference",
+    "title": "expectation:trendcheck-base64-mu9dvtdb-1",
+    "body": "{\"target_title\":\"trendcheck-base64-mu9dvtdb-1\",\"family\":\"base64\",\"operand\":\"trend-dvtdb1\",\"expected\":\"dHJlbmQtZHZ0ZGIx\",\"verified_at\":\"2026-09-20T05:37:29.348Z\",\"violations\":0}",
+    "created_at": "2026-09-20T05:37:29.349Z",
+    "updated_at": "2026-09-20T05:37:29.349Z"
+  },
+  {
+    "id": "expectation:trendcheck-base64-mu9dvtdb-0",
+    "type": "reference",
+    "title": "expectation:trendcheck-base64-mu9dvtdb-0",
+    "body": "{\"target_title\":\"trendcheck-base64-mu9dvtdb-0\",\"family\":\"base64\",\"operand\":\"trend-dvtdb0\",\"expected\":\"dHJlbmQtZHZ0ZGIw\",\"verified_at\":\"2026-09-20T05:37:08.292Z\",\"violations\":0}",
+    "created_at": "2026-09-20T05:37:08.292Z",
+    "updated_at": "2026-09-20T05:37:08.292Z"
+  },
+  {
+    "id": "expectation:quiet-b2",
+    "type": "reference",
+    "title": "expectation:quiet-b2",
+    "body": "{\"target_title\":\"quiet-b2\",\"family\":\"base64\",\"operand\":\"qprobe2\",\"expected\":\"cXByb2JlMg==\",\"verified_at\":\"2026-09-20T05:36:10.643Z\",\"violations\":0}",
+    "created_at": "2026-09-20T05:36:10.649Z",
+    "updated_at": "2026-09-20T05:36:10.649Z"
+  },
+  {
+    "id": "expectation:quiet-b1",
+    "type": "reference",
+    "title": "expectation:quiet-b1",
+    "body": "{\"target_title\":\"quiet-b1\",\"family\":\"base64\",\"operand\":\"qprobe1\",\"expected\":\"cXByb2JlMQ==\",\"verified_at\":\"2026-09-20T05:35:53.101Z\",\"violations\":0}",
+    "created_at": "2026-09-20T05:35:53.103Z",
+    "updated_at": "2026-09-20T05:35:53.103Z"
+  },
+  {
+    "id": "expectation:envfix-v1",
+    "type": "reference",
+    "title": "expectation:envfix-v1",
+    "body": "{\"target_title\":\"envfix-v1\",\"family\":\"product\",\"operand\":\"233*457\",\"expected\":\"106481\",\"verified_at\":\"2026-09-20T05:26:57.123Z\",\"violations\":0}",
+    "created_at": "2026-09-20T05:26:57.123Z",
+    "updated_at": "2026-09-20T05:26:57.123Z"
+  },
+  {
+    "id": "expectation:trendcheck-product-mu9d3iu6-1",
+    "type": "reference",
+    "title": "expectation:trendcheck-product-mu9d3iu6-1",
+    "body": "{\"target_title\":\"trendcheck-product-mu9d3iu6-1\",\"family\":\"product\",\"operand\":\"516*600\",\"expected\":\"309600\",\"verified_at\":\"2026-09-20T05:16:07.653Z\",\"violations\":0}",
+    "created_at": "2026-09-20T05:16:07.653Z",
+    "updated_at": "2026-09-20T05:16:07.653Z"
+  },
+  {
+    "id": "expectation:trendcheck-product-mu9d0y8m-2",
+    "type": "reference",
+    "title": "expectation:trendcheck-product-mu9d0y8m-2",
+    "body": "{\"target_title\":\"trendcheck-product-mu9d0y8m-2\",\"family\":\"product\",\"operand\":\"141*691\",\"expected\":\"97431\",\"verified_at\":\"2026-09-20T05:15:31.528Z\",\"violations\":0}",
+    "created_at": "2026-09-20T05:15:27.810Z",
+    "updated_at": "2026-09-20T05:15:31.529Z"
+  },
+  {
+    "id": "expectation:trendcheck-product-mu9d3iu6-0",
+    "type": "reference",
+    "title": "expectation:trendcheck-product-mu9d3iu6-0",
+    "body": "{\"target_title\":\"trendcheck-product-mu9d3iu6-0\",\"family\":\"product\",\"operand\":\"479*509\",\"expected\":\"243811\",\"verified_at\":\"2026-09-20T05:15:02.113Z\",\"violations\":0}",
+    "created_at": "2026-09-20T05:15:02.114Z",
+    "updated_at": "2026-09-20T05:15:02.114Z"
+  },
+  {
+    "id": "expectation:trendcheck-product-mu9d0y8m-1",
+    "type": "reference",
+    "title": "expectation:trendcheck-product-mu9d0y8m-1",
+    "body": "{\"target_title\":\"trendcheck-product-mu9d0y8m-1\",\"family\":\"product\",\"operand\":\"104*600\",\"expected\":\"62400\",\"verified_at\":\"2026-09-20T05:14:44.088Z\",\"violations\":0}",
+    "created_at": "2026-09-20T05:14:40.446Z",
+    "updated_at": "2026-09-20T05:14:44.098Z"
+  },
+  {
+    "id": "expectation:trendcheck-product-mu9d0y8m-0",
+    "type": "reference",
+    "title": "expectation:trendcheck-product-mu9d0y8m-0",
+    "body": "{\"target_title\":\"trendcheck-product-mu9d0y8m-0\",\"family\":\"product\",\"operand\":\"864*509\",\"expected\":\"439776\",\"verified_at\":\"2026-09-20T05:14:15.417Z\",\"violations\":0}",
+    "created_at": "2026-09-20T05:14:15.417Z",
+    "updated_at": "2026-09-20T05:14:15.417Z"
+  },
+  {
+    "id": "expectation:trendcheck-product-mu9b4xzy-2",
+    "type": "reference",
+    "title": "expectation:trendcheck-product-mu9b4xzy-2",
+    "body": "{\"target_title\":\"trendcheck-product-mu9b4xzy-2\",\"family\":\"product\",\"operand\":\"225*691\",\"expected\":\"155475\",\"verified_at\":\"2026-09-20T04:23:25.024Z\",\"violations\":0}",
+    "created_at": "2026-09-20T04:23:25.024Z",
+    "updated_at": "2026-09-20T04:23:25.024Z"
+  },
+  {
+    "id": "expectation:trendcheck-product-mu9b4xzy-1",
+    "type": "reference",
+    "title": "expectation:trendcheck-product-mu9b4xzy-1",
+    "body": "{\"target_title\":\"trendcheck-product-mu9b4xzy-1\",\"family\":\"product\",\"operand\":\"188*600\",\"expected\":\"112800\",\"verified_at\":\"2026-09-20T04:22:36.951Z\",\"violations\":0}",
+    "created_at": "2026-09-20T04:22:36.952Z",
+    "updated_at": "2026-09-20T04:22:36.952Z"
+  },
+  {
+    "id": "expectation:trendcheck-product-mu9b0lbn-2",
+    "type": "reference",
+    "title": "expectation:trendcheck-product-mu9b0lbn-2",
+    "body": "{\"target_title\":\"trendcheck-product-mu9b0lbn-2\",\"family\":\"product\",\"operand\":\"148*691\",\"expected\":\"102268\",\"verified_at\":\"2026-09-20T04:21:07.923Z\",\"violations\":0}",
+    "created_at": "2026-09-20T04:21:07.923Z",
+    "updated_at": "2026-09-20T04:21:07.923Z"
+  },
+  {
+    "id": "expectation:trendcheck-product-mu9b4xzy-0",
+    "type": "reference",
+    "title": "expectation:trendcheck-product-mu9b4xzy-0",
+    "body": "{\"target_title\":\"trendcheck-product-mu9b4xzy-0\",\"family\":\"product\",\"operand\":\"151*509\",\"expected\":\"76859\",\"verified_at\":\"2026-09-20T04:20:22.239Z\",\"violations\":0}",
+    "created_at": "2026-09-20T04:20:22.239Z",
+    "updated_at": "2026-09-20T04:20:22.239Z"
+  },
+  {
+    "id": "expectation-trend:product",
+    "type": "reference",
+    "title": "expectation-trend:product",
+    "body": "{\"family\":\"product\",\"bar_min_r\":2,\"n\":3,\"cadence_minutes\":1440,\"origin\":\"self-minted\",\"minted_because\":\"first verified reach of this transform family observed at 2026-09-20T04:10:19.250Z\",\"commitment\":\"the product reach trend holds at >=2 of 3 freshly generated probes, byte-verified independently of dispatch verdicts\",\"history\":[{\"at\":\"2026-09-20T04:19:42.226Z\",\"r\":3,\"n\":3}],\"last_run_at\":\"2026-09-20T04:19:42.226Z\",\"last_score\":\"3/3\",\"open_violation\":false}",
+    "created_at": "2026-09-20T04:10:19.250Z",
+    "updated_at": "2026-09-20T04:19:42.226Z"
+  },
+  {
+    "id": "expectation:trendcheck-product-mu9awx3l-2",
+    "type": "reference",
+    "title": "expectation:trendcheck-product-mu9awx3l-2",
+    "body": "{\"target_title\":\"trendcheck-product-mu9awx3l-2\",\"family\":\"product\",\"operand\":\"134*691\",\"expected\":\"92594\",\"verified_at\":\"2026-09-20T04:19:34.243Z\",\"violations\":0}",
+    "created_at": "2026-09-20T04:19:34.244Z",
+    "updated_at": "2026-09-20T04:19:34.244Z"
+  },
+  {
+    "id": "expectation:trendcheck-product-mu9b0lbn-1",
+    "type": "reference",
+    "title": "expectation:trendcheck-product-mu9b0lbn-1",
+    "body": "{\"target_title\":\"trendcheck-product-mu9b0lbn-1\",\"family\":\"product\",\"operand\":\"111*600\",\"expected\":\"66600\",\"verified_at\":\"2026-09-20T04:18:20.325Z\",\"violations\":0}",
+    "created_at": "2026-09-20T04:18:20.325Z",
+    "updated_at": "2026-09-20T04:18:20.325Z"
+  },
+  {
+    "id": "expectation:trendcheck-product-mu9azhoz-2",
+    "type": "reference",
+    "title": "expectation:trendcheck-product-mu9azhoz-2",
+    "body": "{\"target_title\":\"trendcheck-product-mu9azhoz-2\",\"family\":\"product\",\"operand\":\"232*691\",\"expected\":\"160312\",\"verified_at\":\"2026-09-20T04:17:49.281Z\",\"violations\":0}",
+    "created_at": "2026-09-20T04:17:49.281Z",
+    "updated_at": "2026-09-20T04:17:49.281Z"
+  }
+]
