@@ -66,11 +66,22 @@ the same receipt (journal shows one record); declining produces a distinct recor
 keyboard focus order covers the contribution flow; dark theme and narrow viewport
 render without loss; page errors fail the probe.
 
+## Pre-registered expectation for the first scored run
+
+On v1, scenarios **S1 and S5 are expected to fail at the presentation transition**:
+their fixtures are `kind:"gap_needs_human"` panels, which v1's `uiQuestion` read
+drops (filed gap `human-surface-uiquestion-read-drops-gap-needs-human-panels`).
+A zero-render there is the predicted baseline score, not an anomaly. That gap's
+closure is falsified by exactly these scenarios becoming runnable: seed the S1/S5
+fixtures, and the panels must appear in `/api/questions`. S2/S4/S7/S8 fixtures are
+`kind:"question"` and are expected to render.
+
 ## Known deficiencies carried into v1 (recorded, not hidden)
 
 - **Escalations invisible**: the `uiQuestion` read drops `kind:gap_needs_human`
   panels — the substrate's primary invitation. Filed:
-  `human-surface-uiquestion-read-drops-gap-needs-human-panels`.
+  `human-surface-uiquestion-read-drops-gap-needs-human-panels`. See the
+  pre-registered expectation above.
 - **Contributions unconsumable**: journal record format unreadable by both existing
   interactor-log consumers; the only uiQuestion consumer points at another vessel.
   Filed: `human-surface-participation-journal-records-unreadable-by-interactor-log-consumers`,
@@ -82,6 +93,9 @@ render without loss; page errors fail the probe.
 - Unsent drafts do not survive page reload (documented contract, candidate for a v2).
 - No accessibility conformance claim; the probe checks keyboard reach, not AT
   semantics.
+- **Probe coverage limit (named, per the silent-skip law):** the passing run and
+  screenshots exercise the probe's synthetic question, not the frozen fixtures;
+  zoom, long material, and interrupted connections are unexercised in v1.
 
 ## Versioning rules
 
