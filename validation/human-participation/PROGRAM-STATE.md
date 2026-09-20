@@ -10,7 +10,7 @@ trace, and the v1→v2 causal prereg. Dated status; supersedes nothing timeless.
 | 3 Repertoire | Versioned baseline | **DONE** | `repertoire/REPERTOIRE.md` v1+v2, probe evidence, screenshots (`4cfb4cbd`, `81f6394c`) |
 | 4 Observability | One replayable trace, missing links explicit | **DONE (5/9 links held)** | `stage4-trace.ts` + `TRACE-2026-09-20.md` (`f37a21f0`); the consumption row is the journal-format gap's falsifier run |
 | 5 Propagation | Two variants selectable, recorded assignment, confirmed exposure | **DONE** | `stage5-variants.ts` PASS (`c0addb25`); selection via renderPolicy impulse, adoption boundary held, v1 retained for recovery |
-| 6 Autonomous cycle | System-originated investigation → verified improvement or supported rejection | **IN PROGRESS** | See ledger below |
+| 6 Autonomous cycle | System-originated investigation → verified improvement or supported rejection | **DONE — supported rejection** (cycle A: substrate candidate refuted with the missing fact fed back; cycle B: two honest not-reached rounds, one system-filed capability gap, one destructive class defect caught and filed; re-entry precondition defined) | Ledger below |
 | 7 Causal evidence | Scoped claim with limits | **Q1 CONFIRMED; Q2/Q3 PENDING by prereg** | `CAUSAL-PREREG-v1v2.md` |
 | 8 Discovery | Changed understanding/reachability + age of unexercised structure | **PARTIAL** | See below |
 | 9 Adoption | Adopted baseline + improvement cycle + retained alternatives | **PARTIAL** | See below |
@@ -52,7 +52,26 @@ trace, and the v1→v2 causal prereg. Dated status; supersedes nothing timeless.
   `stateful-ui-panel-write-coerces-structured-body-to-object-object` (the
   replacement surface preserves structured bodies — this is the live vessel's
   defect, and it immediately triggered a compose nudge).
-- Round 2 dispatched with the information available: `e318c843-a508-4d7c-a7ae-498d36e26e58`.
+- Round 2 (`e318c843…`, information available): `reached false` again, honest
+  hollow verdict — and two findings worth more than a reach:
+  1. **The satisfier resolving the read shape `uiFeedback` issued a defaulted
+     `uiQuestion_write` that OVERWROTE the live handoff panel** (byte-verified:
+     body emptied, `updatedAt` advanced twice in step with the two walk rounds).
+     Filed: `walk-satisfier-resolves-a-read-shape-by-issuing-a-defaulted-write-destroying-live-panel-content`.
+     Panel restored afterward from the fixture.
+  2. The walk again named the missing producer→consumer edge and **filed a
+     capability gap itself** ("no template produces [uiFeedback_write, uiFeedback,
+     shellResult]; capability gap filed by the walk") — the system generating its
+     own demand signal, which is what the program wanted.
+  The feedback plane could not label round 2 (no template recorded — known
+  limitation for refusal/satisfier-only dispatches); the verdict lives in the gap.
+- **Cycle B outcome: supported rejection.** The current pathway cannot serve the
+  S6 activity; the causes are precise, filed, and partly system-detected. Standing
+  stop condition, evidence-based: **no further S6 re-dispatches until the
+  destructive-satisfier gap closes** — each dispatch risks clobbering live panels
+  a person may be reading. Round 3's precondition is that gap's closure, and its
+  falsifier is this exact scenario: seed the panel, dispatch, and the panel body
+  must survive the walk.
 
 ## Stage-8 record
 
