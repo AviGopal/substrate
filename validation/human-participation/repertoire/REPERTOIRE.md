@@ -97,6 +97,17 @@ fixtures, and the panels must appear in `/api/questions`. S2/S4/S7/S8 fixtures a
   screenshots exercise the probe's synthetic question, not the frozen fixtures;
   zoom, long material, and interrupted connections are unexercised in v1.
 
+## v2 — one-page workbench (parent: v1)
+
+| Field | Value |
+|---|---|
+| Source | super-repo `81f6394c`; bundle `index-DS9tAhiP.js` / `index-B0FxNuir.css` |
+| Author | Operator (human design contribution; substrate did not select or author it) |
+| What changed / target scenarios | At ≥1000px the surface is a single 100dvh grid — intent bar, questions+active detail (left), runs+run evidence (right), known-wrong strip (capped) — and only regions scroll, never the page. Targets S1 (orientation without navigation), S3 (verdict beside evidence), S7 (list and draft visible together). Below 1000px, v1's stacked narrow behavior is unchanged. |
+| Probe evidence | `test/one-page-probe.ts` PASS: zero page scroll at 1440×900, 1280×800, and their 125 %-zoom-equivalent viewports; all five region headings inside the viewport; long material overflows its own region (assertion non-vacuous); no JS errors. Behavioral probe + 20-test shape suite still pass. Dark scheme verified by computed color (`#161b1e` panels on `#0e1214`). |
+| Screenshots | `docs/assets/human-participation-repertoire/v2/substrate-onepage-1440{,-dark}.png` |
+| Design rationale | The one-page constraint is itself an expectation: everything a person needs to begin, decide, inspect, and complain is co-present; scrolling is demoted to within-region reading. The Ask region compresses to an entry bar because an empty text box does not deserve a quarter of the viewport. |
+
 ## Versioning rules
 
 A new version records: parent version, what changed and the scenario(s) it targets
