@@ -26,17 +26,44 @@ import { circuitRelayServer } from '@libp2p/circuit-relay-v2'
 import { autoNAT } from '@libp2p/autonat'
 import { ping } from '@libp2p/ping'
 import { generateKeyPair, privateKeyFromProtobuf, privateKeyToProtobuf } from '@libp2p/crypto/keys'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync, renameSync } from 'node:fs'
+import os from 'node:os'
 
-// REQUIRED — the VM's public IPv4. Accept FED_PUBLIC_IP too: vessels.manifest.json
+// The announce address. Accept FED_PUBLIC_IP too: vessels.manifest.json
 // declares the relay's env key as FED_PUBLIC_IP, so honor both to avoid a silent
 // "PUBLIC_IP unset -> exit" when the relay is installed via the manifest path.
-const PUBLIC_IP = process.env.PUBLIC_IP || process.env.FED_PUBLIC_IP || ''
+//
+// When neither is set, DERIVE the address of the default-route interface and
+// warn, instead of exiting 1. The refusal was written for the internet-facing
+// VM deployment, where announcing a wrong guess would strand every dialer —
+// but it also killed the relay on any hub whose reachability scope is a docker
+// bridge or a LAN, where the interface address IS the right announce address
+// (2026-09-16 network demo: role=hub's relay refused to boot over exactly
+// this). A derived private address is announced loudly so an internet-facing
+// operator can tell at a glance the env var is still required for them.
 const TCP_PORT = parseInt(process.env.RELAY_TCP_PORT || '30333', 10)
 const WS_PORT = parseInt(process.env.RELAY_WS_PORT || '0', 10) // set e.g. 443 to also offer browser-reachable WSS
 const RELAY_KEY_FILE = process.env.RELAY_KEY_FILE || './relay-key.protobuf'
 
-if (!PUBLIC_IP) { console.error('ERROR: set PUBLIC_IP=<vm public ipv4>'); process.exit(1) }
+function deriveInterfaceIp(): string {
+  const nets = os.networkInterfaces()
+  for (const rows of Object.values(nets)) {
+    for (const row of rows ?? []) {
+      if (row.family === 'IPv4' && !row.internal) return row.address
+    }
+  }
+  return ''
+}
+let PUBLIC_IP = process.env.PUBLIC_IP || process.env.FED_PUBLIC_IP || ''
+if (!PUBLIC_IP) {
+  PUBLIC_IP = deriveInterfaceIp()
+  if (PUBLIC_IP) {
+    console.warn(`[relay] PUBLIC_IP unset — derived ${PUBLIC_IP} from the first non-internal interface. Correct for a bridge/LAN hub; an INTERNET-facing relay must still set PUBLIC_IP=<vm public ipv4>.`)
+  } else {
+    console.error('ERROR: PUBLIC_IP unset and no non-internal IPv4 interface to derive it from — set PUBLIC_IP=<announce address>')
+    process.exit(1)
+  }
+}
 
 // Stable identity: load or mint+persist the relay private key.
 let privateKey
@@ -142,7 +169,36 @@ console.log(`[relay] reserved-peer keep-alive: ping every ${KEEPALIVE_MS}ms, clo
 for (const ma of node.getMultiaddrs()) console.log('[relay] listening:', ma.toString())
 // The line vessels need: set this as RELAY_MULTIADDR in each substrate's /etc/substrate/env.
 const pub = node.getMultiaddrs().map(m => m.toString()).filter(m => m.includes(PUBLIC_IP))
-console.log('\nRELAY_MULTIADDR=' + (pub[0] || `/ip4/${PUBLIC_IP}/tcp/${TCP_PORT}/p2p/${node.peerId.toString()}`))
+const relayMultiaddr = pub[0] || `/ip4/${PUBLIC_IP}/tcp/${TCP_PORT}/p2p/${node.peerId.toString()}`
+console.log('\nRELAY_MULTIADDR=' + relayMultiaddr)
+
+// Persist the anchor where the fleet reads it. Printing the multiaddr to the
+// journal made the OPERATOR the write path: in the 2026-09-16 network demo the
+// value had to be hand-copied into /etc/substrate/env and discovery restarted
+// before /bootstrap could advertise a relay. When the relay runs INSIDE a
+// substrate container (role=hub), it is the authority for this value — write it
+// to the env file itself (atomic replace, no duplicate lines) so units started
+// after it, and anything that reads the file at use time, see it without an
+// operator in the loop. Best-effort: on a bare VM deployment the file does not
+// exist and the printed line remains the contract.
+const ENV_FILE = process.env.SUBSTRATE_ENV_FILE || '/etc/substrate/env'
+try {
+  if (existsSync(ENV_FILE)) {
+    const line = `RELAY_MULTIADDR="${relayMultiaddr}"`
+    const content = readFileSync(ENV_FILE, 'utf-8')
+    const next = /^RELAY_MULTIADDR=/m.test(content)
+      ? content.replace(/^RELAY_MULTIADDR=.*$/m, line)
+      : content + (content.endsWith('\n') ? '' : '\n') + line + '\n'
+    if (next !== content) {
+      const tmp = `${ENV_FILE}.relay-tmp`
+      writeFileSync(tmp, next, { mode: 0o600 })
+      renameSync(tmp, ENV_FILE)
+      console.log(`[relay] persisted RELAY_MULTIADDR to ${ENV_FILE}`)
+    }
+  }
+} catch (err) {
+  console.warn(`[relay] could not persist RELAY_MULTIADDR to ${ENV_FILE}: ${(err as Error).message} — the printed line above is the fallback contract`)
+}
 
 process.on('SIGINT', async () => { await node.stop(); process.exit(0) })
 process.on('SIGTERM', async () => { await node.stop(); process.exit(0) })

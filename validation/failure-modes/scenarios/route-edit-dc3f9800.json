@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-dc3f9800",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose goal: Close substrate gap recommit-db-integrity-auto-repair-has-never-run-producer-omits-count",
+  "description": "investigate and decompose goal: Close substrate gap recommit-db-integrity-auto-repair-has-never-run-producer-omits-count-verify_failed: compose for gap db-integrity-auto-repair-has-never-run-producer-omits-count repeated already-recorded failure class verify_failed: == install ==\n== resolve ==\nDRYRUN_EXIT=0\n debug@4.4.3\n ts-api-utils@1.4.3\n uuid@13.0.0\n bun-types@1.3.10\n @types/node@25.5.0\n[6.00ms] done\n== typeche Edit repos/activity-api/src/routes/db-admin.ts. Edit repos/activity-api/src/routes/db-admin.ts.",
+  "goal_text": "investigate and decompose goal: Close substrate gap recommit-db-integrity-auto-repair-has-never-run-producer-omits-count-verify_failed: compose for gap db-integrity-auto-repair-has-never-run-producer-omits-count repeated already-recorded failure class verify_failed: == install ==\n== resolve ==\nDRYRUN_EXIT=0\n debug@4.4.3\n ts-api-utils@1.4.3\n uuid@13.0.0\n bun-types@1.3.10\n @types/node@25.5.0\n[6.00ms] done\n== typeche Edit repos/activity-api/src/routes/db-admin.ts. Edit repos/activity-api/src/routes/db-admin.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-dc3f9800",
+  "source_gap_source": "substrate_detected"
+}

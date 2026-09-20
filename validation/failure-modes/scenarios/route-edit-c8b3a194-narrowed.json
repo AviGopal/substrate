@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-c8b3a194-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-c8b3a194] investigate and decompose gap route-edit-8eddacbc: In repos/activity-api/src/routes/",
+  "description": "[narrowed from route-edit-c8b3a194] investigate and decompose gap route-edit-8eddacbc: In repos/activity-api/src/routes/execution-traces.ts, export the insertTraceDigest helper so a sibling route can reuse it instead of duplicating the digest write.\n\nReplace this line, which occurs exactly once in the file:\nasync function insertTraceDigest(trace: any, body: any, jwtToken?: string): Promise<void> {\n\nwith exactly this line:\nexport async function insertTraceDigest(trace: any, body:\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch exports `insertTraceDigest`, which is then imported and called in `activities.ts`.\n- semantic_reject: The patch correctly exports `insertTraceDigest`, allowing it to be reused without duplication, and this function is subsequently called in a live path.\n- semantic_reject: dead-code-only patch: every changed symbol (SystemTraceParams) has zero callers and is not an entrypoint — the change cannot execute\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-c8b3a194] investigate and decompose gap route-edit-8eddacbc: In repos/activity-api/src/routes/execution-traces.ts, export the insertTraceDigest helper so a sibling route can reuse it instead of duplicating the digest write.\n\nReplace this line, which occurs exactly once in the file:\nasync function insertTraceDigest(trace: any, body: any, jwtToken?: string): Promise<void> {\n\nwith exactly this line:\nexport async function insertTraceDigest(trace: any, body:\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch exports `insertTraceDigest`, which is then imported and called in `activities.ts`.\n- semantic_reject: The patch correctly exports `insertTraceDigest`, allowing it to be reused without duplication, and this function is subsequently called in a live path.\n- semantic_reject: dead-code-only patch: every changed symbol (SystemTraceParams) has zero callers and is not an entrypoint — the change cannot execute\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-c8b3a194-narrowed",
+  "source_gap_source": "substrate_detected"
+}

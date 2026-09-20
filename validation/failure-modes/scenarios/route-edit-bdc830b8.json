@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-bdc830b8",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-3f241142: In repos/development-vessel/src/resolvers/feature-compose.ts, report ",
+  "description": "investigate and decompose gap route-edit-3f241142: In repos/development-vessel/src/resolvers/feature-compose.ts, report each drafting model's outcome to the grading endpoint. THREE edits in this one file; all are required and together they are complete. A previous attempt was correctly refused for using globalThis to carry state, so this version uses two ordinary module-level variables instead.\n\nEdit 1 declares them. Replace this line, which",
+  "goal_text": "investigate and decompose gap route-edit-3f241142: In repos/development-vessel/src/resolvers/feature-compose.ts, report each drafting model's outcome to the grading endpoint. THREE edits in this one file; all are required and together they are complete. A previous attempt was correctly refused for using globalThis to carry state, so this version uses two ordinary module-level variables instead.\n\nEdit 1 declares them. Replace this line, which",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-bdc830b8",
+  "source_gap_source": "substrate_detected"
+}

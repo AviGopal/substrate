@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-5896de18",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/goal-host-vessel/src/index.ts, replace one line.\n\nThe file contains this exact line:\n\n  return m ? m[1]! : null",
+  "description": "In repos/goal-host-vessel/src/index.ts, replace one line.\n\nThe file contains this exact line:\n\n  return m ? m[1]! : null;\n\nReplace it with:\n\n  if (!m) return null;\n  const tok = m[1]!;\n  if (/[A-Z]/.test(tok) || tok.includes(\"_\") || tok.includes(\"$\") || tok.length >= 10) return tok;\n  return null;\n\nReplace only that line. Do not modify any other line or function.\n\nFacts, each stated positively:\n1. That line ends parseAddSymbol, which reads a goal and returns the code symbol the goal asked to add.\n2. The sibling function parseReplaceTargetSymbol already applies this same plausibility test to its own token, a few lines below.\n3. The test accepts identifiers such as TraceRow, completed_at and executionId.\n4. The test returns null for ordinary English words such as so and to.\n5. parseAddSymbol today returns the word so for a goal reading \"add two optional fields to the TraceRow interface so the audit can accept the timestamp key names\", and returns the word to for a goal reading \"add one optional field to the TraceRow interface\".\n6. When parseAddSymbol returns null, verifyEditPostState abstains and the landing is graded on its commit sha, which is the correct outcome for those goals.",
+  "goal_text": "In repos/goal-host-vessel/src/index.ts, replace one line.\n\nThe file contains this exact line:\n\n  return m ? m[1]! : null;\n\nReplace it with:\n\n  if (!m) return null;\n  const tok = m[1]!;\n  if (/[A-Z]/.test(tok) || tok.includes(\"_\") || tok.includes(\"$\") || tok.length >= 10) return tok;\n  return null;\n\nReplace only that line. Do not modify any other line or function.\n\nFacts, each stated positively:\n1. That line ends parseAddSymbol, which reads a goal and returns the code symbol the goal asked to add.\n2. The sibling function parseReplaceTargetSymbol already applies this same plausibility test to its own token, a few lines below.\n3. The test accepts identifiers such as TraceRow, completed_at and executionId.\n4. The test returns null for ordinary English words such as so and to.\n5. parseAddSymbol today returns the word so for a goal reading \"add two optional fields to the TraceRow interface so the audit can accept the timestamp key names\", and returns the word to for a goal reading \"add one optional field to the TraceRow interface\".\n6. When parseAddSymbol returns null, verifyEditPostState abstains and the landing is graded on its commit sha, which is the correct outcome for those goals.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-5896de18",
+  "source_gap_source": "substrate_detected"
+}

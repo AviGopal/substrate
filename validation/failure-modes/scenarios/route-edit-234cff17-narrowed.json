@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-234cff17-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-234cff17] investigate and decompose gap route-edit-9e67317b: …tion-join-broken-narrowed: [narr",
+  "description": "[narrowed from route-edit-234cff17] investigate and decompose gap route-edit-9e67317b: …tion-join-broken-narrowed: [narrowed] FALSIFIER (closure predicate): on a substrate with no relay and no reachable hub -- (a) federation-transport-vessel is `active` not `activating` for >10min; (b) GET /bootstrap returns a non-empty discovery_endpoint and a non-loopback identity_endpoint under a foreign Host header; (c) an unreachable HUB_DISCOVERY_URL does not exit the transport process; (d)\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/index.ts(91,106): error TS2339: Property 'discovery_endpoint' does not exist on type '{ vessels?: Record<string, unknown>[] | undefined; }'. | src/index.ts(91,159): error TS2339: Property 'identit\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- semantic_reject: semantic judge unavailable (llmCall to http://localhost:8220/resolve returned error in body: \"400 status code (no body)\"); deterministic floors passed — fail-open, unverified by judge\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-234cff17] investigate and decompose gap route-edit-9e67317b: …tion-join-broken-narrowed: [narrowed] FALSIFIER (closure predicate): on a substrate with no relay and no reachable hub -- (a) federation-transport-vessel is `active` not `activating` for >10min; (b) GET /bootstrap returns a non-empty discovery_endpoint and a non-loopback identity_endpoint under a foreign Host header; (c) an unreachable HUB_DISCOVERY_URL does not exit the transport process; (d)\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/index.ts(91,106): error TS2339: Property 'discovery_endpoint' does not exist on type '{ vessels?: Record<string, unknown>[] | undefined; }'. | src/index.ts(91,159): error TS2339: Property 'identit\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- semantic_reject: semantic judge unavailable (llmCall to http://localhost:8220/resolve returned error in body: \"400 status code (no body)\"); deterministic floors passed — fail-open, unverified by judge\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-234cff17-narrowed",
+  "source_gap_source": "substrate_detected"
+}

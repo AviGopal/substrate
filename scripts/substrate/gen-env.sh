@@ -68,6 +68,25 @@ esac
 # promise ("a docker rm + recreate *without* -e retains them"). The spoke
 # discrimination is computed here because the values it reads are inputs, but
 # the decision is deferred until the effective key is known.
+# PEER_MULTIADDR is the THIRD spoke signal, and it is the one this guard kept missing.
+# Same defect as the HUB_DISCOVERY_URL case documented directly above, one anchor later:
+# a container given exactly the contracted three inputs — API key + PEER_MULTIADDR +
+# PROFILE — was classified root/standalone and refused for having no LLM key, dying at
+# gen-env before a single unit started. MEASURED, not hypothetical.
+#
+# Any non-empty PEER_MULTIADDR means spoke, with NO host inspection. That is deliberate
+# and it is where this differs from the two checks above: a multiaddr names a peer
+# IDENTITY, not a host, so "is the host loopback?" is the wrong question to ask of it.
+# Dialling a peer at all means joining a network someone else already runs, and a joiner
+# inherits its arms from that network. A loopback multiaddr is still a peer.
+#
+# PEER_MULTIADDR is re-read further down for the join itself; this is the earliest point
+# the guard can see it, which is the whole point — the value was previously first parsed
+# 700+ lines below, long after the exit that this variable controls.
+case "${PEER_MULTIADDR:-}" in
+  "") : ;;
+  *) _is_spoke=1 ;;
+esac
 _llm_guard_needed="$_is_spoke"
 
 # Internal secrets — per-field precedence: explicit env > persisted volume
@@ -348,19 +367,30 @@ VLLM_ENDPOINTS="${VLLM_ENDPOINTS:-$(persisted_secret VLLM_ENDPOINTS)}"
 # `_llm_guard_needed` is computed above (0 = root/standalone, 1 = spoke),
 # because the spoke discrimination reads DISCOVERY_ENDPOINT / HUB_DISCOVERY_URL,
 # which are inputs. Only the DECISION is deferred.
+# DEMOTED FROM A BOOT GATE TO A WARNING, deliberately.
+#
+# A provider key is legitimately bootstrap-tier — secrets are the stated carve-out to
+# "everything behavioural is a shape". What was wrong is its ARITY: refusing to boot
+# without one made an otherwise two-input topology three-input, and the point-and-go
+# contract is {credential, anchor, selection} with no fourth slot for a provider key.
+#
+# Warning rather than exit is also the law-1-cleaner choice. A boot refusal is invisible
+# to traces: nothing ran, so nothing was recorded, and the only symptom is a dead
+# container. Booting without the key makes the absence observable THROUGH THE REGISTRY —
+# there is simply no llmCompletion producer, which the walk sees, a peer can satisfy over
+# federation, and the learner can grade. A root with no key is then just "a substrate that
+# peers with nothing", which is a describable state rather than an error.
+#
+# The keyless substrate is degraded, not broken: deterministic and pattern resolvers still
+# run, and every LLM-backed activity will fail honestly at resolve time with a missing
+# producer instead of being pre-empted at boot.
 if [[ "$_llm_guard_needed" = "0" && -z "${ANTHROPIC_API_KEY:-}" && -z "${OPENAI_API_KEY:-}" ]]; then
-  echo "[gen-env] ERROR: No LLM provider key found." >&2
-  echo "[gen-env]   A root/standalone substrate needs one; a spoke inherits LLM arms from its hub." >&2
-  echo "[gen-env]   Set ANTHROPIC_API_KEY (or OPENAI_API_KEY + OPENAI_BASE_URL) via -e / compose / make." >&2
+  echo "[gen-env] WARNING: no LLM provider key found; booting without local LLM arms." >&2
   echo "[gen-env]   Checked: the run environment AND persisted values in /workspace/.substrate-secrets." >&2
-  # Advise DISCOVERY_ENDPOINT, not HUB_DISCOVERY_URL. This guard waives the key
-  # on EITHER signal, but the derivation block below keys only on
-  # DISCOVERY_ENDPOINT — so an operator who followed the old advice got past this
-  # error into a STANDALONE with hub-shaped variables, no provider key and no
-  # local arms. The most confusing possible outcome, produced by this line.
-  echo "[gen-env]   To run as a spoke instead, set DISCOVERY_ENDPOINT to your hub's discovery endpoint" >&2
-  echo "[gen-env]   (HUB_DISCOVERY_URL alone is NOT enough — it does not trigger spoke derivation)." >&2
-  exit 1
+  echo "[gen-env]   Consequence: no llmCompletion producer registers. Shapes needing one will not" >&2
+  echo "[gen-env]   resolve locally — query the registry for llmCompletion to see this directly." >&2
+  echo "[gen-env]   Set ANTHROPIC_API_KEY (or OPENAI_API_KEY + OPENAI_BASE_URL) to add local arms," >&2
+  echo "[gen-env]   or join a network that already has them: DISCOVERY_ENDPOINT or PEER_MULTIADDR." >&2
 fi
 # RunPod Serverless. RUNPOD_ENDPOINT_ID is not a secret but must round-trip the
 # same way: llm-resolver-vessel registers the arm only when it is present, so
@@ -509,6 +539,25 @@ ACTIVITY_API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-http://127.0.0.1:8080}"
 ACTIVITY_API_URL="${ACTIVITY_API_URL:-$ACTIVITY_API_ENDPOINT}"
 PRODUCER_DISCOVERY_ENDPOINT="${PRODUCER_DISCOVERY_ENDPOINT:-$ACTIVITY_API_ENDPOINT}"
 METABOB_ENDPOINT="${METABOB_ENDPOINT:-$ACTIVITY_API_ENDPOINT}"
+# A multiaddr-only joiner has NO local identity-vessel: role spoke masks it, correctly,
+# because identity belongs on the hub. Defaulting it to loopback:8101 therefore points
+# every local vessel at a port nothing is listening on. MEASURED 2026-09-15: a spoke
+# booted with PEER_MULTIADDR + PROFILE=surface_node answered 000 on :8101, discovery
+# returned INVALID_API_KEY reason=identity_unreachable, the transport logged
+# "register -> 401", nothing registered, and there were no rows to mirror to the peer.
+# The substrate joined the overlay and then could not announce itself.
+#
+# The transport already serves /identity as a reverse proxy to the identity endpoint it
+# learned from the peer. Point at that instead: a LOCAL ADDRESS for a REMOTE resolver.
+# Every local vessel keeps believing IDENTITY_VESSEL_URL is an HTTP URL that validates
+# keys, which it is. Law 11 — the resolver stays where its data lives; the spoke gets an
+# address for it, not a copy of it.
+#
+# Only when the operator set neither this nor a discovery URL: an explicit value always
+# wins, and the URL-join path keeps its derived hub address (see the offset block above).
+if [ -n "${PEER_MULTIADDR:-}" ] && [ -z "${IDENTITY_VESSEL_URL:-}" ] && [ -z "${HUB_DISCOVERY_URL:-}" ]; then
+  IDENTITY_VESSEL_URL="http://127.0.0.1:8401/identity"
+fi
 IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL:-http://127.0.0.1:8101}"
 IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT:-$IDENTITY_VESSEL_URL}"
 # Federated-spoke identity (docs/FEDERATION.md): the hub discovery this
@@ -516,6 +565,23 @@ IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT:-$IDENTITY_VESSEL_URL}"
 # substrate id the federation-transport-vessel uses. Empty on a plain local
 # substrate; set by `make up DISCOVERY_ENDPOINT=<hub>` (spoke auto-derivation)
 # and consumed by vessel-ctl'd dynamic vessels via /etc/substrate/env.
+#
+# A HUB self-anchors. `ENABLED_ROLES=hub` promises "spokes can join me", which
+# needs the hub's own federation-transport up and pointed at its own discovery —
+# deploy-hub.sh:170 has hardcoded HUB_DISCOVERY_URL=http://localhost:8100 since
+# the role existed, so every hub launched WITHOUT that script (the raw
+# `docker run -e ENABLED_ROLES=hub` contract) came up unable to dial its own
+# spokes' circuits. Measured 2026-09-16 (validation/reports/network-demo): the
+# hub resolved a mirrored spoke row and then `forward_failed` on it; installing
+# the transport by hand was one of five interventions the role should have
+# owned. Only when the operator supplied no anchor of their own: an explicit
+# HUB_DISCOVERY_URL (or a spoke derivation above) always wins.
+if [[ -z "${HUB_DISCOVERY_URL:-}" && "$_is_spoke" != "1" ]]; then
+  case ",$(printf '%s' "${ENABLED_ROLES:-}" | tr -d '[:space:]')," in
+    *,hub,*) HUB_DISCOVERY_URL="http://localhost:8100"
+             prov HUB_DISCOVERY_URL derived ;;
+  esac
+fi
 HUB_DISCOVERY_URL="${HUB_DISCOVERY_URL:-}"
 FED_SUBSTRATE_ID="${FED_SUBSTRATE_ID:-}"
 RELAY_MULTIADDR="${RELAY_MULTIADDR:-}"

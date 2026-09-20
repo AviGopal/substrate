@@ -52,6 +52,23 @@ answers are different, and that difference is the entire design.
 | Durability group | Cross-container algebra | Operator / transport | Trust gate |
 |---|---|---|---|
 | **Authored-durable** | **Shareable by reference.** Identical-by-construction while every container runs the same images; *diverges* once a substrate authors its own code. Merge = git merge, review-gated. | container-side authenticated `git push` to a shared remote; peers pull + redeploy | code review / CI — the operator-or-substrate-authored boundary |
+
+> **The review-gated push is not the only way authored-durable state reaches a running
+> vessel.** The table above reads as though committed history is the sole channel. In
+> practice several mechanisms write a live vessel's tree directly — landing a change after
+> it is pushed, reverting one during recovery, and mirroring committed source into the
+> runtime all copy files into place without passing a review gate.
+>
+> The consequence is the part worth holding: **a running tree can contain bytes that exist in
+> no commit anywhere.** That the fleet maintains a watchdog for runtime-versus-committed
+> divergence is itself evidence the divergence this table excludes is ordinary rather than
+> exceptional — a guard is not built for something that cannot happen.
+>
+> This also breaks a health check's meaning. A vessel loads its source once at start, so it
+> can serve healthy indefinitely from what it loaded while the file on disk has since become
+> unloadable. Its next restart is the failure, and nothing before that restart reports a
+> fault. When the question is whether a vessel's code is sound, the honest test is whether
+> its current source loads — not whether the process is answering.
 | **Recorded** | **Union.** Append-only ⇒ commutative, associative. Trivial to combine, *hard to trust*. | substrate-state bundle (migration/backup); signed traces returned by peer-aware resolution | two-sided counterparty signatures + a foreign-provenance tag |
 | **Ephemeral** | **Never crosses.** A cross-container dispatch runs the Transient execution *in the remote container*; only a Recorded result returns. | n/a — reconstructable only from the trace | n/a (nothing in-flight is shipped) |
 | **Learned-durable** | **No single merge operator** — it is not homogeneous (see §2). Splits into a *structural* sublayer that merges and a *quantitative* sublayer that does not. | content-addressed keys (structural); signed evidence folded locally (quantitative) | content-addressed identity (keys); two-sided signatures (evidence) |

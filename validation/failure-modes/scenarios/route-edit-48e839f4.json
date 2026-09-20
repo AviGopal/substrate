@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-48e839f4",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-135df0f0: Wire the first half of drafting-model grading. This change spans TWO ",
+  "description": "investigate and decompose gap route-edit-135df0f0: Wire the first half of drafting-model grading. This change spans TWO files; apply BOTH edits.\n\nFILE 1 — repos/llm-resolver-vessel/src/index.ts. Replace this line, which occurs exactly once:\n  [\"llmQuotaState\", llmQuotaStateHandler as never],\n\nwith:\n  [\"llmArmOutcome_write\", (async (ctx: { body: unknown }) => {\n    const b = ctx.body as { model?: string; reached?: boolean; task_type?: string };",
+  "goal_text": "investigate and decompose gap route-edit-135df0f0: Wire the first half of drafting-model grading. This change spans TWO files; apply BOTH edits.\n\nFILE 1 — repos/llm-resolver-vessel/src/index.ts. Replace this line, which occurs exactly once:\n  [\"llmQuotaState\", llmQuotaStateHandler as never],\n\nwith:\n  [\"llmArmOutcome_write\", (async (ctx: { body: unknown }) => {\n    const b = ctx.body as { model?: string; reached?: boolean; task_type?: string };",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-48e839f4",
+  "source_gap_source": "substrate_detected"
+}

@@ -16,7 +16,7 @@
  * Run:
  *   bun /path/to/import-operator-memory.ts
  *   # or via make target after substrate is seeded:
- *   make -C scripts/substrate import-memory
+ *   bun run scripts/substrate/import-operator-memory.ts
  *
  * The script writes directly to WORKSPACE/memory/notes.json if
  * DEV_VESSEL_ENDPOINT is not set (offline import path).

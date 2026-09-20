@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-b234ff12-compose_execution_failure",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The gap store's row count dropped from 4,113 to 44 in a single day due to loadGaps() returning an empty array on any rea",
+  "description": "The gap store's row count dropped from 4,113 to 44 in a single day due to loadGaps() returning an empty array on any read or parse failure, resulting in a corrupt gaps.json file and leading to data loss. [RETRY CONTEXT — compose for gap route-edit-b234ff12 repeated already-recorded failure class compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occ. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "The gap store's row count dropped from 4,113 to 44 in a single day due to loadGaps() returning an empty array on any read or parse failure, resulting in a corrupt gaps.json file and leading to data loss. [RETRY CONTEXT — compose for gap route-edit-b234ff12 repeated already-recorded failure class compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occ. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-b234ff12-compose_execution_failure",
+  "source_gap_source": "substrate_detected"
+}

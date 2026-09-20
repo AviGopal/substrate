@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-6ac750b8",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts, the constant named structuralBreak is currently comp",
+  "description": "In repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts, the constant named structuralBreak is currently computed as: rhythms.length === 0 ? \"registry_empty\" : mappable === 0 ? \"registry_unmappable\" : null. The problem is that fetchJson returns null when the registry read fails or times out, and that null is converted into an empty rhythms array, so a FAILED READ is reported as an empty registry and wrongly re-opens a closed gap. Change that single expression so it first checks whether regResp is null and yields null in that case, before the existing rhythms.length === 0 check. Do not add any import. Do not modify any other line or any other function. The change must typecheck.",
+  "goal_text": "In repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts, the constant named structuralBreak is currently computed as: rhythms.length === 0 ? \"registry_empty\" : mappable === 0 ? \"registry_unmappable\" : null. The problem is that fetchJson returns null when the registry read fails or times out, and that null is converted into an empty rhythms array, so a FAILED READ is reported as an empty registry and wrongly re-opens a closed gap. Change that single expression so it first checks whether regResp is null and yields null in that case, before the existing rhythms.length === 0 check. Do not add any import. Do not modify any other line or any other function. The change must typecheck.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-6ac750b8",
+  "source_gap_source": "substrate_detected"
+}

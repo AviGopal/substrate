@@ -12,6 +12,50 @@ ENDPOINT="${OBSIDIAN_LEARN_ENDPOINT:-http://127.0.0.1:27182}"
 GRANT="${OBSIDIAN_LEARN_GRANT:-navigate}"
 MAX="${OBSIDIAN_LEARN_MAX:-10}"
 DEV_VESSEL="${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}"
+DISCOVERY="${DISCOVERY_ENDPOINT:-http://127.0.0.1:8100}"
+
+# ASK WHETHER THE HUMAN SURFACE IS THERE BEFORE DOING WORK THAT ONLY MAKES SENSE IF IT IS.
+#
+# The rhythm conductor already computes exactly this signal — it resolves who serves
+# `obsidian:note` and refuses to schedule a presence-axis family when nobody does — and that
+# gate is closed and correct right now. This tick runs on a systemd timer instead, so the
+# gate never applied to it. That is the two-plane split in one concrete instance: the
+# scheduling layer knows the surface is absent and the timer plane, which carries the actual
+# work, never asks.
+#
+# The cost of not asking, measured: a dispatch every thirty minutes since 2026-09-14, each
+# one reaching the goal gate, being judged hollow for an unreachable surface, and taking a
+# full penalty against the activity. The activity is fine. The vault is not connected. A
+# hundred-odd observations were recorded as evidence about an arm when they were evidence
+# about the environment, and the posterior decay has to be aggressive enough to survive that
+# kind of false blame — so it is paid for twice.
+#
+# ADVERTISEMENT IS NOT REACHABILITY, and this checks the weaker of the two on purpose: a
+# registry entry can outlive the thing it describes. It is still strictly better than not
+# asking, and when the registry says nobody serves the shape at all there is no ambiguity
+# left to resolve. Exit 0, not non-zero: an absent human is an ordinary idle state, not a
+# unit failure, and a red unit here would be its own false signal.
+#
+# Fail OPEN on an unreachable discovery: if we cannot tell, do the work. A guard that
+# silently stops the loop whenever its own probe is down would be worse than the problem.
+_surface_present() {
+  local body
+  body=$(curl -s -m 8 -X POST "${DISCOVERY}/resolve" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: ApiKey ${METABOB_API_KEY:-}" \
+    -d '{"pointer":{"type":"vesselCapability","shape":"obsidian:note"}}' 2>/dev/null) || return 0
+  [ -z "${body}" ] && return 0
+  case "${body}" in
+    *'"found":false'*) return 1 ;;
+    *'"vessels":[]'*)  return 1 ;;
+    *) return 0 ;;
+  esac
+}
+if ! _surface_present; then
+  echo "[obsidian-learn] SKIPPED: no vessel advertises obsidian:note — the human surface is not connected."
+  echo "[obsidian-learn] Dispatching anyway would fail at the reach gate and charge the activity for the environment."
+  exit 0
+fi
 
 # FIRST pass: INTAKE — pick up EXPLICIT operator requests written as unchecked
 # tasks in Substrate/Inbox.md, ack them on the Substrate/Now.md status board, and

@@ -1,0 +1,19 @@
+{
+  "id": "feedback-hydration-will-flood-the-panel-with-substrate-spillover",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Commit f555bed4 landed hydrateFeedbackFromLog() in repos/human-surface-vessel/src/store.ts. Edit repos/human-surface-ves",
+  "description": "Commit f555bed4 landed hydrateFeedbackFromLog() in repos/human-surface-vessel/src/store.ts. Edit repos/human-surface-vessel/src/store.ts.",
+  "goal_text": "Commit f555bed4 landed hydrateFeedbackFromLog() in repos/human-surface-vessel/src/store.ts. Edit repos/human-surface-vessel/src/store.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "feedback-hydration-will-flood-the-panel-with-substrate-spillover",
+  "source_gap_source": "substrate_detected"
+}

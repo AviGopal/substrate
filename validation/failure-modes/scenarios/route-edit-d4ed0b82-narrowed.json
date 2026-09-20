@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-d4ed0b82-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-d4ed0b82] …tion-join-broken-narrowed: [narrowed] FALSIFIER (closure predicate): on a substrate",
+  "description": "[narrowed from route-edit-d4ed0b82] …tion-join-broken-narrowed: [narrowed] FALSIFIER (closure predicate): on a substrate with no relay and no reachable hub -- (a) federation-transport-vessel is `active` not `activating` for >10min; (b) GET /bootstrap returns a non-empty discovery_endpoint and a non-loopback identity_endpoint under a foreign Host header; (c) an unreachable HUB_DISCOVERY_URL does not exit the transport process; (d) vesselRegistry shows >0 vessels carrying a libp2p_multiaddr. Edit repos/discovery-vessel/src/index.ts.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/index.ts(164,9): error TS1109: Expression expected. | src/index.ts(209,7): error TS1005: ',' expected. | src/index.ts(254,7): error TS1005: 'try' expected. | src/index.ts(258,3): error TS1128: Dec\n- syntax_break: src/index.ts(164,9): error TS1109: Expression expected. | src/index.ts(209,7): error TS1005: ',' expected. | src/index.ts(254,7): error TS1005: 'try' expected. | src/index.ts(258,3): error TS1128: Dec\n- syntax_break: src/index.ts(164,9): error TS1109: Expression expected. | src/index.ts(209,7): error TS1005: ',' expected. | src/index.ts(254,7): error TS1005: 'try' expected. | src/index.ts(258,3): error TS1128: Dec\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-d4ed0b82] …tion-join-broken-narrowed: [narrowed] FALSIFIER (closure predicate): on a substrate with no relay and no reachable hub -- (a) federation-transport-vessel is `active` not `activating` for >10min; (b) GET /bootstrap returns a non-empty discovery_endpoint and a non-loopback identity_endpoint under a foreign Host header; (c) an unreachable HUB_DISCOVERY_URL does not exit the transport process; (d) vesselRegistry shows >0 vessels carrying a libp2p_multiaddr. Edit repos/discovery-vessel/src/index.ts.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/index.ts(164,9): error TS1109: Expression expected. | src/index.ts(209,7): error TS1005: ',' expected. | src/index.ts(254,7): error TS1005: 'try' expected. | src/index.ts(258,3): error TS1128: Dec\n- syntax_break: src/index.ts(164,9): error TS1109: Expression expected. | src/index.ts(209,7): error TS1005: ',' expected. | src/index.ts(254,7): error TS1005: 'try' expected. | src/index.ts(258,3): error TS1128: Dec\n- syntax_break: src/index.ts(164,9): error TS1109: Expression expected. | src/index.ts(209,7): error TS1005: ',' expected. | src/index.ts(254,7): error TS1005: 'try' expected. | src/index.ts(258,3): error TS1128: Dec\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-d4ed0b82-narrowed",
+  "source_gap_source": "substrate_detected"
+}

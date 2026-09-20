@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-dd81e6bc",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap execute-validate-accepts-error-output-as-substantive-data: The plan execute-validate gate ",
+  "description": "investigate and decompose gap execute-validate-accepts-error-output-as-substantive-data: The plan execute-validate gate in author-composed-capability.ts cannot fail a broken command: hasSubstance treats ANY non-empty stdout as substantive data. Measured 2026-09-18: a minted bounded_shell task whose curl returns a 401 error body printed that body to stdout and the validator recorded validated:true. The gate distinguishes 'printed something' from 'printed nothing', not working from",
+  "goal_text": "investigate and decompose gap execute-validate-accepts-error-output-as-substantive-data: The plan execute-validate gate in author-composed-capability.ts cannot fail a broken command: hasSubstance treats ANY non-empty stdout as substantive data. Measured 2026-09-18: a minted bounded_shell task whose curl returns a 401 error body printed that body to stdout and the validator recorded validated:true. The gate distinguishes 'printed something' from 'printed nothing', not working from",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-dd81e6bc",
+  "source_gap_source": "substrate_detected"
+}

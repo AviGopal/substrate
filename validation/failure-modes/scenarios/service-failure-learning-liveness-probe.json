@@ -1,0 +1,19 @@
+{
+  "id": "service-failure-learning-liveness-probe",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "service_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "systemd unit learning-liveness-probe.service failed (Result=success, exit=2). Last log: Finished learning-liveness-probe",
+  "description": "systemd unit learning-liveness-probe.service failed (Result=success, exit=2). Last log: Finished learning-liveness-probe.service - Learning-liveness probe — proves credit still flows, by intervening rather than by reading a field.. Possible causes: configuration issue, missing dependencies, or a bug in the script or application.",
+  "goal_text": "systemd unit learning-liveness-probe.service failed (Result=success, exit=2). Last log: Finished learning-liveness-probe.service - Learning-liveness probe — proves credit still flows, by intervening rather than by reading a field.. Possible causes: configuration issue, missing dependencies, or a bug in the script or application.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": "a_maintenance_unit_that_fails_every_run_is_a_silent_learning_loss",
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "service-failure-learning-liveness-probe",
+  "source_gap_source": "substrate_detected"
+}

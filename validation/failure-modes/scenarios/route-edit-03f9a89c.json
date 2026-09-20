@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-03f9a89c",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/activity-api/src/routes/db-admin.ts, the helper `async function safeCount(table: string, where?: string): Promi",
+  "description": "In repos/activity-api/src/routes/db-admin.ts, the helper `async function safeCount(table: string, where?: string): Promise<number | null>` can never return a non-zero count when a where clause is passed. Edit repos/activity-api/src/routes/db-admin.ts.",
+  "goal_text": "In repos/activity-api/src/routes/db-admin.ts, the helper `async function safeCount(table: string, where?: string): Promise<number | null>` can never return a non-zero count when a where clause is passed. Edit repos/activity-api/src/routes/db-admin.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-03f9a89c",
+  "source_gap_source": "substrate_detected"
+}

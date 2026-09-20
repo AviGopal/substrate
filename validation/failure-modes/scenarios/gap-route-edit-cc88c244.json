@@ -1,0 +1,19 @@
+{
+  "id": "gap-route-edit-cc88c244",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "critical",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The gap store experienced a catastrophic reduction in rows, dropping from 4,113 to 44 due to loadGaps() returning an EMP",
+  "description": "The gap store experienced a catastrophic reduction in rows, dropping from 4,113 to 44 due to loadGaps() returning an EMPTY array on read or parse failures, leading to data loss in the repository.",
+  "goal_text": "The gap store experienced a catastrophic reduction in rows, dropping from 4,113 to 44 due to loadGaps() returning an EMPTY array on read or parse failures, leading to data loss in the repository.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-route-edit-cc88c244",
+  "source_gap_source": "substrate_detected"
+}

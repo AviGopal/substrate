@@ -1,5 +1,45 @@
 # Runtime Activity Tracing
 
+> **DECIDED: this instrument stays uninstalled until the trace working set is bounded.
+> This document describes a design, not a running subsystem.**
+>
+> The decision was not a deferral, and the reason is specific rather than general. The
+> instrument writes a trace per request. The trace store is currently the fleet's binding
+> resource constraint: it sits at its configured memory ceiling, in a throttle-and-reclaim
+> band where it stops answering even a trivial liveness query while never crossing the
+> hard limit that would trigger a restart — so the intended self-recovery never fires.
+> Installing a per-request tracer into that store would add load to the exact component
+> that is failing from load, and would do so in the name of observability.
+>
+> **Order of operations: bound retention first, install second.** The prerequisite is a
+> retention policy that holds the working set under the store's cache budget. Until that
+> exists, more instrumentation makes the system less observable rather than more, because
+> the store it reports into is the thing going dark.
+>
+> When that prerequisite is met, the sections below become implementable as written; none
+> of the design is wrong, and nothing here needs redesigning first.
+
+> **An instrument can be written, correct, and uninstalled at the same time, so confirm it
+> is running before treating anything below as a description of the live system.**
+>
+> Confirm it by its **effect**, not by its existence. Finding the code, or finding a call
+> that appears to install it, proves neither — an installation written inside an illustrative
+> example is indistinguishable from a real one to a search, and mounts nothing. The honest
+> evidence is traces appearing for request-time execution, because only a running instrument
+> can produce them.
+>
+> This matters more than it sounds, because **the failure is silent in the direction of
+> reassurance**. With no instrument running, the read paths described below still work and
+> simply return nothing. An empty result reads as "no runtime problems found", when it
+> actually means "nothing was ever recorded". Absence of the instrument and absence of
+> trouble are the same observation here, and only a freshness or population check
+> distinguishes them.
+>
+> The learnability minimum below carries the same hazard one level down: a field the writer
+> never populates makes its readers return empty rather than fail, so a consumer that depends
+> on it degrades quietly instead of erroring. Before depending on any field named here,
+> confirm something actually writes it.
+
 Runtime tracing applies the impulse/activity/trace model to request-time execution: an HTTP
 request handled by a vessel is an activity, the functions it calls are resolvers, and the
 record it leaves is an execution trace in the same store the development loop learns from.

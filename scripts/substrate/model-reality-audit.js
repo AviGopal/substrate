@@ -76,7 +76,7 @@ function flag(check, severity, detail, gap) {
 // model artifacts that are CURRENTLY poisoning Thompson, not historical ones).
 const C1_CUT = new Date(Date.now() - 30 * 24 * 3600_000).toISOString();
 console.log("C1 forward-model artifacts (success-rate pinned at extremes, high volume; last 30d)…");
-const byActStatus = await sql(`SELECT activity_id, status, count() AS n FROM activity_execution_traces WHERE executed_at >= type::datetime("${C1_CUT}") GROUP BY activity_id, status;`);
+const byActStatus = await sql(`SELECT activity_id, status, count() AS n FROM v_paradigm_execution_traces WHERE executed_at >= type::datetime("${C1_CUT}") GROUP BY activity_id, status;`);
 const acts = new Map();
 for (const r of byActStatus) {
     if (!r.activity_id)
@@ -93,7 +93,7 @@ for (const [act, { total, succ }] of [...acts].sort((x, y) => y[1].total - x[1].
     const rate = succ / total;
     if (rate <= 0.02) {
         // phantom_failure? confirm low error evidence (artifact, not real failure)
-        const errs = await sql(`SELECT count() AS n FROM activity_execution_traces WHERE activity_id = "${act.replace(/"/g, '\\"')}" AND status = "failure" AND error_message != NONE GROUP ALL;`);
+        const errs = await sql(`SELECT count() AS n FROM v_paradigm_execution_traces WHERE activity_id = "${act.replace(/"/g, '\\"')}" AND status = "failure" AND error_message != NONE GROUP ALL;`);
         const withErr = errs[0]?.n ?? 0;
         const artifact = withErr === 0;
         flag("C1.phantom_failure", artifact ? "HIGH" : "MED", `${act} — ${total} traces, ${(rate * 100).toFixed(1)}% success, ${withErr} carry a real error${artifact ? " (ARTIFACT: 0% success with NO errors → forward model poisoned; Thompson β-penalises a non-failing activity)" : ""}`, artifact ? {
@@ -110,13 +110,13 @@ for (const [act, { total, succ }] of [...acts].sort((x, y) => y[1].total - x[1].
 }
 // ── C2: reference integrity (orphan parent links) ──────────────────────────
 console.log("C2 reference integrity (orphan parent_execution_id)…");
-const childCount = (await sql("SELECT count() AS n FROM activity_execution_traces WHERE parent_execution_id != NONE AND parent_execution_id != '' GROUP ALL;"))[0]?.n ?? 0;
+const childCount = (await sql("SELECT count() AS n FROM v_paradigm_execution_traces WHERE parent_execution_id != NONE AND parent_execution_id != '' GROUP ALL;"))[0]?.n ?? 0;
 // sample 500 children, measure resolvable rate
-const sample = await sql("SELECT parent_execution_id FROM activity_execution_traces WHERE parent_execution_id != NONE LIMIT 500;");
+const sample = await sql("SELECT parent_execution_id FROM v_paradigm_execution_traces WHERE parent_execution_id != NONE LIMIT 500;");
 let resolved = 0;
 for (const s of sample) {
     const pid = String(s.parent_execution_id).replace(/^activity_execution_traces:/, "");
-    const hit = await sql(`SELECT count() AS n FROM activity_execution_traces WHERE execution_id = "${pid.replace(/"/g, '\\"')}" GROUP ALL;`);
+    const hit = await sql(`SELECT count() AS n FROM v_paradigm_execution_traces WHERE execution_id = "${pid.replace(/"/g, '\\"')}" GROUP ALL;`);
     if ((hit[0]?.n ?? 0) > 0)
         resolved++;
 }

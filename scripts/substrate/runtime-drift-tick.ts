@@ -66,6 +66,16 @@ import { join, relative } from "node:path";
 
 const RUNTIME_ROOT = process.env.RUNTIME_DRIFT_RUNTIME_ROOT ?? "/vessels";
 const CLONE_ROOT = process.env.RUNTIME_DRIFT_CLONE_ROOT ?? "/workspace/git/vessels";
+// SECOND AUTHORITY, FOR IN-TREE VESSELS ONLY — READ, NEVER WRITTEN BY THIS TICK.
+// Not every vessel is a submodule with a clone under CLONE_ROOT. An IN-TREE vessel lives
+// at <super-repo>/repos/<name> and has no CLONE_ROOT entry at all, so a definition of
+// "authoritative source" that names only CLONE_ROOT leaves it coverable by nobody. That is
+// not hypothetical: measured 2026-09-16, relevance-sink-vessel sat with a runtime file that
+// did not parse while a correct, committed copy of it was present at repos/<name>/src the
+// entire time, and this tick could only narrate its own blindness once every three minutes.
+// This constant exists so the gap below can NAME the candidate authority it found. Repair
+// still belongs to pull-sync / mirror-to-live (see the header); this tick reports.
+const SUPER_REPO_ROOT = process.env.RUNTIME_DRIFT_SUPER_REPO_ROOT ?? "/workspace/git/super-repo";
 // RESOLVE THE SLOT DIR THE WAY ITS OWNER DOES, NOT BY GUESSING THE PATH.
 // development-vessel/src/compose-slots.ts:30 is
 //   COMPOSE_SLOT_DIR ?? WORKSPACE_ROOT + "/compose-slots"
@@ -221,6 +231,89 @@ function syntacticallyBroken(path: string): boolean {
   }
 }
 
+/**
+ * A BLIND SPOT THAT ONLY WARNS READS AS A PASS — this file's own header already promised
+ * otherwise ("which live vessels have no clone and are therefore coverable by nobody — and
+ * it emits a substrateGap so the observation survives the journal"), and until now the
+ * uncovered set took a console.warn while only the COVERED set got a gap. The contract was
+ * stated in the header and implemented for one branch.
+ *
+ * Why it matters more than an ordinary coverage note: the uncovered vessel is exactly the
+ * one no other mechanism can see either. The revert rung (self-recovery-tick.sh: CLONE=...
+ * then exit 1 without a .git), this tick's drift compare, and the sound-close oracle
+ * (gap-to-feature landedCommitVerdict, scoped to the clone root) all inherited the same
+ * narrow reading of "the git clone", so an in-tree vessel is simultaneously un-reverted,
+ * un-compared and un-closable. One shared assumption, three silent mechanisms.
+ *
+ * The gap carries the load-bearing fact rather than the count: whether the live source
+ * PARSES. A vessel whose module is already in memory serves /health 200 with a broken file
+ * on disk and dies on its next restart — and self-recovery restarts vessels routinely, so
+ * "healthy" is a statement about the last load, not about the tree. It also names the
+ * candidate authority when one exists, because a report that says "uncoverable" without
+ * saying "and a good copy is sitting here" is a dead end rather than a lead.
+ */
+async function emitUncoveredGap(vessel: string) {
+  const runtimeSrc = join(RUNTIME_ROOT, vessel, "src");
+  let files: string[] = [];
+  try {
+    files = readdirSync(runtimeSrc, { recursive: true } as { recursive: true })
+      .map(String)
+      .filter((f) => /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f));
+  } catch {
+    /* unreadable tree: still worth a gap, just without the parse detail */
+  }
+  const broken = files.filter((f) => syntacticallyBroken(join(runtimeSrc, f)));
+  const candidate = join(SUPER_REPO_ROOT, "repos", vessel, "src");
+  const hasCandidate = existsSync(candidate);
+  const id = `runtime-drift-uncovered-${vessel.replace(/[^a-zA-Z0-9]+/g, "-")}`;
+  const summary =
+    `${vessel} has a live src tree at ${runtimeSrc} and NO clone under ${CLONE_ROOT}, so it is ` +
+    `outside the authority this tick, the self-recovery revert rung, and the sound-close oracle all ` +
+    `read from — it can be neither verified nor repaired nor closed against by any of them. ` +
+    (broken.length
+      ? `${broken.length} of its ${files.length} live source file(s) DO NOT PARSE (${broken.slice(0, 4).join(", ")}). ` +
+        `The unit may report healthy right now because the module is already in memory; it will FAIL TO LOAD on its next ` +
+        `restart, and self-recovery restarts vessels routinely. Treat a green /health here as a statement about the last load. `
+      : `Its ${files.length} live source file(s) parse, so this is a coverage gap rather than an imminent outage. `) +
+    (hasCandidate
+      ? `A candidate authority EXISTS at ${candidate} — an in-container git working tree, which no prescription forbids as a ` +
+        `recovery source. Deciding whether it is authoritative (or whether this vessel must be given a clone under ${CLONE_ROOT} ` +
+        `plus a last-good pin) is the fix; the three mechanisms above should then share that definition rather than each hardcoding one. `
+      : `No candidate authority was found at ${candidate}, so this vessel currently has NO committed source anywhere this tick can see. `);
+  try {
+    await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        impulse: {
+          type: "substrateGap_write",
+          gap: {
+            id,
+            category: "systematic_failure",
+            source: "substrate_detected",
+            summary,
+            detected_at: new Date().toISOString(),
+            status: "open",
+            classification_metadata: {
+              edit_site: "scripts/substrate/runtime-drift-tick.ts",
+              expected_literal: `existsSync(join(CLONE_ROOT, v, "src"))`,
+              falsifier_note:
+                `POLARITY: the literal must go ABSENT or be joined by a second authority. While the covered set is ` +
+                `defined solely as CLONE_ROOT, ${vessel} stays outside every mechanism that reads that definition.`,
+              uncovered_vessel: vessel,
+              live_parses: broken.length === 0,
+              broken_files: broken.slice(0, 8),
+              candidate_authority: hasCandidate ? candidate : null,
+            },
+          },
+        },
+      }),
+    });
+  } catch {
+    /* advisory, as above: the console.warn remains the durable record */
+  }
+}
+
 async function emitGap(vessel: string, d: Omit<Drift, "vessel">, broken: string[], repaired: boolean, why: string) {
   const id = `runtime-drift-${vessel.replace(/[^a-zA-Z0-9]+/g, "-")}`;
   const summary =
@@ -290,6 +383,11 @@ async function main() {
       `[runtime-drift] NOT COVERED (${unmonitored.length}): ${unmonitored.join(", ")} — ` +
         `a live src tree with no clone under ${CLONE_ROOT} cannot be verified or repaired by this tick`,
     );
+    // The warn above is the durable record; the gap is what gives it a READER. Emitted per
+    // vessel (not once for the set) so each carries its own parse state and candidate
+    // authority, and so a vessel leaving the blind spot stops refreshing its own gap
+    // instead of hiding inside an aggregate that never empties.
+    for (const v of unmonitored) await emitUncoveredGap(v);
   }
 
   // META-GUARD (same as joint-liveness): a check that silently examines nothing is

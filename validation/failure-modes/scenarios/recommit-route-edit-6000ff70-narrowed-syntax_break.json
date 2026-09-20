@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-6000ff70-narrowed-syntax_break",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-6000ff70] investigate and decompose gap route-edit-ea2332e0: repos/goal-host-vessel/src/index.",
+  "description": "[narrowed from route-edit-6000ff70] investigate and decompose gap route-edit-ea2332e0: repos/goal-host-vessel/src/index.ts\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/index.ts(12675,73): error TS1005: ',' expected. | src/index.ts(12675,118): error TS1127: Invalid character. | src/index.ts(12675,120): error TS1434: Unexpected keyword or identifier. | src/index.t\n- compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mtyu75yw-ill3oq/goal-host-vessel/src/index.ts\"}\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-6000ff70-narrowed repeated already-recorded failure class syntax_break: src/index.ts(1,5): error TS1128: Declaration or statement expected. | src/index.ts(1,7): error TS1005: 'try' expected. | src/index.ts(2,5): error TS11. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "[narrowed from route-edit-6000ff70] investigate and decompose gap route-edit-ea2332e0: repos/goal-host-vessel/src/index.ts\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/index.ts(12675,73): error TS1005: ',' expected. | src/index.ts(12675,118): error TS1127: Invalid character. | src/index.ts(12675,120): error TS1434: Unexpected keyword or identifier. | src/index.t\n- compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mtyu75yw-ill3oq/goal-host-vessel/src/index.ts\"}\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-6000ff70-narrowed repeated already-recorded failure class syntax_break: src/index.ts(1,5): error TS1128: Declaration or statement expected. | src/index.ts(1,7): error TS1005: 'try' expected. | src/index.ts(2,5): error TS11. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-6000ff70-narrowed-syntax_break",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-c610c764-syntax_break",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The gap store unexpectedly reduced from 4,113 rows to 44 due to loadGaps() returning an EMPTY array on read or parse fai",
+  "description": "The gap store unexpectedly reduced from 4,113 rows to 44 due to loadGaps() returning an EMPTY array on read or parse failures, risking silent data loss. [RETRY CONTEXT — compose for gap route-edit-c610c764 repeated already-recorded failure class syntax_break: src/resolvers/substrate-gap.ts(268,3): error TS1128: Declaration or statement expected. | src/resolvers/substrate-gap.ts(268,5): error TS1005: 'try' e. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "The gap store unexpectedly reduced from 4,113 rows to 44 due to loadGaps() returning an EMPTY array on read or parse failures, risking silent data loss. [RETRY CONTEXT — compose for gap route-edit-c610c764 repeated already-recorded failure class syntax_break: src/resolvers/substrate-gap.ts(268,3): error TS1128: Declaration or statement expected. | src/resolvers/substrate-gap.ts(268,5): error TS1005: 'try' e. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-c610c764-syntax_break",
+  "source_gap_source": "substrate_detected"
+}

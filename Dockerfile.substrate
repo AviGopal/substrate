@@ -48,6 +48,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # --- Bun ---
 RUN curl -fsSL https://bun.sh/install | bash
 ENV PATH=/root/.bun/bin:$PATH
+# Global tsc + a node→bun shim (tsc's shebang wants node; this is a bun-only
+# image). The compose verify gate runs each vessel's `typecheck` script in a
+# TRANSIENT checkout with no node_modules, so a repo-local typescript can never
+# serve it — a vessel without this was structurally un-editable through the
+# learning loop (every draft rolled back with exit 127, measured 2026-09-15).
+RUN bun install -g typescript && ln -sf /root/.bun/bin/bun /usr/local/bin/node
 
 # --- SurrealDB ---
 ARG SURREAL_VERSION=2.3.3
@@ -287,9 +293,28 @@ COPY repos/libp2p-federation-transport/package.json /vessels/libp2p-federation-t
 COPY repos/libp2p-federation-transport/src /vessels/libp2p-federation-transport/src
 COPY repos/libp2p-federation-transport/tsconfig.json /vessels/libp2p-federation-transport/
 RUN cd /vessels/libp2p-federation-transport && bun install
+
+# human-surface-vessel — the UI a human resolver talks to. Its unit expects
+# /vessels/human-surface-vessel (image convention), but no COPY ever baked it:
+# every fresh volume produced a unit that crash-looped on CHDIR until an
+# operator hand-seeded the source from another node. Bake it like its peers.
+COPY repos/human-surface-vessel/package.json /vessels/human-surface-vessel/
+COPY repos/human-surface-vessel/src /vessels/human-surface-vessel/src
+COPY repos/human-surface-vessel/tsconfig*.json /vessels/human-surface-vessel/
+RUN cd /vessels/human-surface-vessel && bun install || true
+# bun links a file: dep as a symlink STUB (three symlinks, no src), so the baked
+# relay dir could never resolve @avigopal/libp2p-federation-transport at runtime —
+# the exact crash the 2026-09-16 falsifier recorded. The install below therefore
+# MATERIALISES the real package over the stub, making the image copy self-contained.
 RUN cd /usr/local/share/substrate/super-repo/scripts/substrate/federation-relay && \
     sed -i 's|"@avigopal/libp2p-federation-transport": "[^"]*"|"@avigopal/libp2p-federation-transport": "file:/vessels/libp2p-federation-transport"|' package.json && \
-    rm -f bun.lock && bun install
+    rm -f bun.lock && bun install && \
+    rm -rf node_modules/@avigopal/libp2p-federation-transport && \
+    mkdir -p node_modules/@avigopal/libp2p-federation-transport && \
+    cp -a /vessels/libp2p-federation-transport/package.json /vessels/libp2p-federation-transport/src \
+      node_modules/@avigopal/libp2p-federation-transport/ && \
+    bun -e 'const p=JSON.parse(await Bun.file("package.json").text()); delete p.dependencies["@avigopal/libp2p-federation-transport"]; await Bun.write("package.json", JSON.stringify(p,null,2))' && \
+    rm -f bun.lock
 COPY scripts/substrate/spoke-federate.sh /usr/local/bin/spoke-federate
 RUN chmod +x /usr/local/bin/spoke-federate
 
@@ -326,6 +351,7 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         concept-db-seeder.service \
         analysis-vessel.service \
         stateful-ui-vessel.service \
+        human-surface-vessel.service \
         light-dispatch-vessel.service \
         relevance-sink-vessel.service \
         light-dispatch-healthcheck.timer \

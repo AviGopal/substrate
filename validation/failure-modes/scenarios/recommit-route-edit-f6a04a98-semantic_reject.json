@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-f6a04a98-semantic_reject",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/development-vessel/src/resolvers/env-gate-scan.ts to satisfy the following request. The relevant code is in t",
+  "description": "Edit repos/development-vessel/src/resolvers/env-gate-scan.ts to satisfy the following request. The relevant code is in the region \"env-gated capability\". If that file is the wrong target, say so rather than editing it.\n\nClose substrate gap gap-env-gated-doc-fix-autoland: env-gated capability: DOC_FIX_AUTOLAND is read by development-vessel, unset in the running environment, and its unset branch disables a capability or silently falls back (1 site(s), e.g. [RETRY CONTEXT — compose for gap route-edit-f6a04a98 repeated already-recorded failure class semantic_reject: The patch only updates detection logic in env-gate-scan.ts and does not fix the actual unset behavior of DOC_FIX_AUTOLAND in doc-drift-fix.ts.. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "Edit repos/development-vessel/src/resolvers/env-gate-scan.ts to satisfy the following request. The relevant code is in the region \"env-gated capability\". If that file is the wrong target, say so rather than editing it.\n\nClose substrate gap gap-env-gated-doc-fix-autoland: env-gated capability: DOC_FIX_AUTOLAND is read by development-vessel, unset in the running environment, and its unset branch disables a capability or silently falls back (1 site(s), e.g. [RETRY CONTEXT — compose for gap route-edit-f6a04a98 repeated already-recorded failure class semantic_reject: The patch only updates detection logic in env-gate-scan.ts and does not fix the actual unset behavior of DOC_FIX_AUTOLAND in doc-drift-fix.ts.. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-f6a04a98-semantic_reject",
+  "source_gap_source": "substrate_detected"
+}

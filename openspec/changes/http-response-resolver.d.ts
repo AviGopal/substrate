@@ -1,11 +1,10 @@
-import type { ResolverResult } from ;
+import { HttpResponse } from '../../repos/development-vessel/src/config.js';
 /**
  * `httpResponse` — delegates to the real, trust-gated fetcher.
  *
  * WHAT THIS REPLACED (2026-08-16). This resolver advertised itself as an HTTP fetch and
- * **ignored the URL entirely**:
- *
- *     const url = \'https://httpbin.org/status/404\';
+ * **ignored the URL entirely**:\n *
+ *     const url = 'https://httpbin.org/status/404';
  *     const response = await fetch(url);
  *     ... return the page <title>
  *
@@ -40,5 +39,5 @@ export declare function resolveHttpResponse(pointer: {
     url?: string;
     max_bytes?: number;
     allow_domains?: string[];
-}): Promise<ResolverResult>;
+}): Promise<HttpResponse>;
 //# sourceMappingURL=http-response-resolver.d.ts.map

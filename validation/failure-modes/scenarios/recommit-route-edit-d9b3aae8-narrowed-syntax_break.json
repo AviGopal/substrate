@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-d9b3aae8-narrowed-syntax_break",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-d9b3aae8] investigate and decompose gap route-edit-dcb8f22e: The gap store's row count dropped",
+  "description": "[narrowed from route-edit-d9b3aae8] investigate and decompose gap route-edit-dcb8f22e: The gap store's row count dropped from 4,113 to 44 in a single day due to loadGaps() returning an empty array on any read or parse failure, resulting in a corrupt gaps.json file and leading to data loss.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- syntax_break: src/resolvers/substrate-gap.ts(763,25): error TS1005: ',' expected. | src/resolvers/substrate-gap.ts(763,29): error TS1005: ',' expected. | src/resolvers/substrate-gap.ts(763,31): error TS1005: ',' ex\n- semantic_reject: compose adds top-level function gapFilePath with zero readers, not exported and not wired — a write-only hollow addition; wire it, export it for a real consumer, or drop it\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-d9b3aae8-narrowed repeated already-recorded failure class syntax_break: src/resolvers/substrate-gap.ts(776,5): error TS1128: Declaration or statement expected. | src/resolvers/substrate-gap.ts(1029,3): error TS1128: Declar. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "[narrowed from route-edit-d9b3aae8] investigate and decompose gap route-edit-dcb8f22e: The gap store's row count dropped from 4,113 to 44 in a single day due to loadGaps() returning an empty array on any read or parse failure, resulting in a corrupt gaps.json file and leading to data loss.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- syntax_break: src/resolvers/substrate-gap.ts(763,25): error TS1005: ',' expected. | src/resolvers/substrate-gap.ts(763,29): error TS1005: ',' expected. | src/resolvers/substrate-gap.ts(763,31): error TS1005: ',' ex\n- semantic_reject: compose adds top-level function gapFilePath with zero readers, not exported and not wired — a write-only hollow addition; wire it, export it for a real consumer, or drop it\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-d9b3aae8-narrowed repeated already-recorded failure class syntax_break: src/resolvers/substrate-gap.ts(776,5): error TS1128: Declaration or statement expected. | src/resolvers/substrate-gap.ts(1029,3): error TS1128: Declar. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-d9b3aae8-narrowed-syntax_break",
+  "source_gap_source": "substrate_detected"
+}

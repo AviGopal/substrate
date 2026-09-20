@@ -1,0 +1,19 @@
+{
+  "id": "baseline-typecheck-broken-repos-relevance-sink-vessel",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "feature_compose found the UNTOUCHED baseline of repos/relevance-sink-vessel failing typecheck BEFORE drafting (3 pre-exi",
+  "description": "feature_compose found the UNTOUCHED baseline of repos/relevance-sink-vessel failing typecheck BEFORE drafting (3 pre-existing tsc errors, e.g. src/index.ts: error TS1472: 'catch' or 'finally' expected. | src/index.ts: error TS1005: ',' expected. | src/index.ts: error TS1135: Argument expression expected.). Environment fault (stale runtime copy or missing module), not a drafter fault: re-sync this vessel source from its repo baseline. Draft verdicts on this vessel use baseline-delta blame until the baseline is clean.",
+  "goal_text": "feature_compose found the UNTOUCHED baseline of repos/relevance-sink-vessel failing typecheck BEFORE drafting (3 pre-existing tsc errors, e.g. src/index.ts: error TS1472: 'catch' or 'finally' expected. | src/index.ts: error TS1005: ',' expected. | src/index.ts: error TS1135: Argument expression expected.). Environment fault (stale runtime copy or missing module), not a drafter fault: re-sync this vessel source from its repo baseline. Draft verdicts on this vessel use baseline-delta blame until the baseline is clean.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "baseline-typecheck-broken-repos-relevance-sink-vessel",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-ca73164a-narrowed-verify_failed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap route-edit-ca73164a-narrowed repeated already-recorded failure class verify_failed: src/resolvers/patch-",
+  "description": "compose for gap route-edit-ca73164a-narrowed repeated already-recorded failure class verify_failed: src/resolvers/patch-with-tools.ts(1531,5): error TS1117: An object literal cannot have multiple properties with the same name.",
+  "goal_text": "compose for gap route-edit-ca73164a-narrowed repeated already-recorded failure class verify_failed: src/resolvers/patch-with-tools.ts(1531,5): error TS1117: An object literal cannot have multiple properties with the same name.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-ca73164a-narrowed-verify_failed",
+  "source_gap_source": "substrate_detected"
+}

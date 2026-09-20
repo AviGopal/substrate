@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-28d5113b",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/activity-api/src/routes/activities.ts, the conservation-audit-emit route's internal read of its own audit endpo",
+  "description": "In repos/activity-api/src/routes/activities.ts, the conservation-audit-emit route's internal read of its own audit endpoint is rejected with HTTP 401 because it sends no credentials; add the API key it already reads for the gap write.\n\nThe route calls its own conservation-audit endpoint over HTTP, but activity-api's auth middleware rejects that self-call because the fetch carries no Authorization header. The route already reads the key from the environment lower down for the gap-emit fetch; the read simply needs to move above the audit fetch and be applied to it.\n\nReplace these three consecutive lines:\n    const auditRes = await fetch('http://127.0.0.1:8080/v2/activities/conservation-audit?invariant=all', {\n      signal: AbortSignal.timeout(30000),\n    }).catch(() => null);\n\nwith exactly these lines:\n    const selfKey = process.env['METABOB_API_KEY'] ?? '';\n    const auditRes = await fetch('http://127.0.0.1:8080/v2/activities/conservation-audit?invariant=all', {\n      headers: selfKey ? { Authorization: `ApiKey ${selfKey}` } : {},\n      signal: AbortSignal.timeout(30000),\n    }).catch(() => null);\n\nThis authenticates the self-call with the same key the route already uses for emitting gaps. Nothing else changes; the later read of the key for the gap-emit fetch remains as it is.\n\nOne replacement, one file. Change nothing else.",
+  "goal_text": "In repos/activity-api/src/routes/activities.ts, the conservation-audit-emit route's internal read of its own audit endpoint is rejected with HTTP 401 because it sends no credentials; add the API key it already reads for the gap write.\n\nThe route calls its own conservation-audit endpoint over HTTP, but activity-api's auth middleware rejects that self-call because the fetch carries no Authorization header. The route already reads the key from the environment lower down for the gap-emit fetch; the read simply needs to move above the audit fetch and be applied to it.\n\nReplace these three consecutive lines:\n    const auditRes = await fetch('http://127.0.0.1:8080/v2/activities/conservation-audit?invariant=all', {\n      signal: AbortSignal.timeout(30000),\n    }).catch(() => null);\n\nwith exactly these lines:\n    const selfKey = process.env['METABOB_API_KEY'] ?? '';\n    const auditRes = await fetch('http://127.0.0.1:8080/v2/activities/conservation-audit?invariant=all', {\n      headers: selfKey ? { Authorization: `ApiKey ${selfKey}` } : {},\n      signal: AbortSignal.timeout(30000),\n    }).catch(() => null);\n\nThis authenticates the self-call with the same key the route already uses for emitting gaps. Nothing else changes; the later read of the key for the gap-emit fetch remains as it is.\n\nOne replacement, one file. Change nothing else.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-28d5113b",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-53eb44a0",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/relevance-sink-vessel/src/index.ts, region: the `if (req.method === \"GET\" && url.pathname === \"/health\")` block",
+  "description": "In repos/relevance-sink-vessel/src/index.ts, region: the `if (req.method === \"GET\" && url.pathname === \"/health\")` block inside Bun.serve's fetch handler (currently returns Response.json({ status: \"ok\", vessel: \"relevance-sink-vessel\" }) unconditionally). Change this block so it first verifies the SurrealDB dependency: await a fetch POST to `${SURREALDB_URL}/sql` with body `RETURN 1;` and headers Accept: application/json, surreal-ns: SURREALDB_NAMESPACE, surreal-db: SURREALDB_DATABASE, Authorization: basicAuth(SURREALDB_USERNAME, SURREALDB_PASSWORD) — the same header set applyPenalty builds — wrapped in a try/catch with AbortSignal.timeout(2000). If the response is ok, return the existing 200 body. If the fetch throws or the response is not ok, return Response.json({ status: \"degraded\", vessel: \"relevance-sink-vessel\", store: \"unreachable\" }, { status: 503 }). Reason: health currently reports ok while every write fails ConnectionRefused, so a miswired deployment passes every automatic check (proven 2026-09-15, validation/reports/wiring-green-vs-miswired-proof).",
+  "goal_text": "In repos/relevance-sink-vessel/src/index.ts, region: the `if (req.method === \"GET\" && url.pathname === \"/health\")` block inside Bun.serve's fetch handler (currently returns Response.json({ status: \"ok\", vessel: \"relevance-sink-vessel\" }) unconditionally). Change this block so it first verifies the SurrealDB dependency: await a fetch POST to `${SURREALDB_URL}/sql` with body `RETURN 1;` and headers Accept: application/json, surreal-ns: SURREALDB_NAMESPACE, surreal-db: SURREALDB_DATABASE, Authorization: basicAuth(SURREALDB_USERNAME, SURREALDB_PASSWORD) — the same header set applyPenalty builds — wrapped in a try/catch with AbortSignal.timeout(2000). If the response is ok, return the existing 200 body. If the fetch throws or the response is not ok, return Response.json({ status: \"degraded\", vessel: \"relevance-sink-vessel\", store: \"unreachable\" }, { status: 503 }). Reason: health currently reports ok while every write fails ConnectionRefused, so a miswired deployment passes every automatic check (proven 2026-09-15, validation/reports/wiring-green-vs-miswired-proof).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-53eb44a0",
+  "source_gap_source": "substrate_detected"
+}

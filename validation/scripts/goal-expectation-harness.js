@@ -1,0 +1,252 @@
+#!/usr/bin/env bun
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * Goal-Expectation Harness — systematized version of the ad-hoc "dispatch synthetic
+ * goals, narrate the trace, judge the output" experiment.
+ *
+ * For each goal in validation/fixtures/goal-expectations.json it:
+ *   1. dispatches to goal-host (POST /run-goal), polls GET /executions/:id to terminal,
+ *   2. records the SYSTEM's own verdict: reached + goalReachReason + the answer,
+ *   3. runs an INDEPENDENT oracle for correctness (never the system's reach verdict),
+ *   4. classifies the pair:
+ *        TRUE_POSITIVE  reached & correct
+ *        CONFABULATION  reached & NOT correct   <-- the load-bearing failure
+ *        FALSE_REJECT   NOT reached & correct
+ *        TRUE_NEGATIVE  NOT reached & NOT correct
+ *
+ * Headline metric: CONFABULATION RATE = confabulations / reached. It measures how often
+ * the reach gate passes an output that is actually wrong — the thing the audit predicts
+ * and the ad-hoc run reproduced (G1 named file paths as templates; G2 gave the wrong
+ * mechanism, both reached:true).
+ *
+ * Usage:  bun run validation/scripts/goal-expectation-harness.ts [--only <id>] [--json <out>]
+ * Env:    GOAL_HOST=http://localhost:18210  (default)   ANTHROPIC_API_KEY (for llm_judge;
+ *         falls back to ~/.metabob/config.json providers.anthropic.apiKey)
+ */
+const node_child_process_1 = require("node:child_process");
+const node_fs_1 = require("node:fs");
+const node_os_1 = require("node:os");
+const node_path_1 = require("node:path");
+const GOAL_HOST = process.env.GOAL_HOST ?? "http://localhost:18210";
+const POLL_TIMEOUT_MS = Number(process.env.POLL_TIMEOUT_MS ?? 320_000);
+const POLL_INTERVAL_MS = 5_000;
+const JUDGE_MODEL = process.env.JUDGE_MODEL ?? "claude-haiku-4-5-20251001";
+function anthropicKey() {
+    if (process.env.ANTHROPIC_API_KEY)
+        return process.env.ANTHROPIC_API_KEY;
+    try {
+        const cfg = JSON.parse((0, node_fs_1.readFileSync)((0, node_path_1.join)((0, node_os_1.homedir)(), ".metabob", "config.json"), "utf8"));
+        return cfg?.providers?.anthropic?.apiKey ?? null;
+    }
+    catch {
+        return null;
+    }
+}
+async function dispatch(goal) {
+    const r = await fetch(`${GOAL_HOST}/run-goal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal, tags: ["harness:goal-expectation"] }),
+    });
+    const j = (await r.json());
+    if (!j.dispatchId)
+        throw new Error(`dispatch returned no dispatchId: ${JSON.stringify(j).slice(0, 200)}`);
+    return j.dispatchId;
+}
+function storeRecord(dispatchId) {
+    // The dispatch store is authoritative and carries answerBody, which the /executions
+    // endpoint sometimes omits. Readable when the harness runs in-container.
+    const storePath = process.env.DISPATCH_STORE ?? "/workspace/goal-host-dispatches.json";
+    try {
+        const store = JSON.parse((0, node_fs_1.readFileSync)(storePath, "utf8"));
+        const recs = Array.isArray(store) ? store : (store.dispatches ?? Object.values(store));
+        return recs.find((r) => r && typeof r === "object" && r.dispatchId === dispatchId) ?? null;
+    }
+    catch {
+        return null;
+    }
+}
+async function poll(dispatchId) {
+    const deadline = Date.now() + POLL_TIMEOUT_MS;
+    let last = {};
+    while (Date.now() < deadline) {
+        try {
+            const r = await fetch(`${GOAL_HOST}/executions/${dispatchId}`);
+            last = (await r.json());
+            if (last.status && last.status !== "running")
+                break;
+        }
+        catch { /* transient — keep polling */ }
+        await new Promise((res) => setTimeout(res, POLL_INTERVAL_MS));
+    }
+    // Merge in the authoritative store record (has answerBody + final reached).
+    const sr = storeRecord(dispatchId);
+    if (sr)
+        last = { ...last, ...sr };
+    const answer = String(last.answerBody ?? last.finalText ?? last.answer ?? "");
+    return {
+        dispatchId,
+        status: String(last.status ?? "timeout"),
+        reached: typeof last.reached === "boolean" ? last.reached : null,
+        goalReachReason: last.goalReachReason,
+        executionId: last.executionId,
+        selectedTemplateId: last.selectedTemplateId,
+        completionShapes: last.completionShapes,
+        answer,
+    };
+}
+// Independent judge via the substrate's own llm-resolver (Thompson-selects a WORKING
+// provider — gemini/gpt/nemotron/etc. — so it does not depend on the operator's possibly-
+// invalid anthropic key, and is usually a different model than generated the answer).
+// Override the endpoint with LLM_RESOLVER; an anthropic path is kept only if ANTHROPIC_API_KEY
+// is explicitly set (for host runs with a real key).
+const LLM_RESOLVER = process.env.LLM_RESOLVER ?? "http://127.0.0.1:8220/resolve";
+async function llmJudge(goal, rubric, answer) {
+    const prompt = `You are an independent grader. Judge ONLY correctness against the rubric — ignore fluency and length.\n\nGOAL: ${goal}\n\nRUBRIC: ${rubric}\n\nANSWER UNDER TEST:\n"""${answer.slice(0, 4000)}"""\n\nReply with a single JSON object and nothing else: {"verdict":"CORRECT"|"INCORRECT","why":"<one sentence>"}. No prose, no fences.`;
+    try {
+        const r = await fetch(LLM_RESOLVER, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: "llm_completion", prompt }),
+        });
+        const j = (await r.json());
+        if (!j.resolved || typeof j.content !== "string") {
+            // A broken judge must NEVER fabricate a verdict — UNSCORED with the real cause.
+            return { correct: null, detail: `llm_judge UNSCORED: ${j.error ?? "no content"}` };
+        }
+        const m = j.content.match(/\{[\s\S]*\}/);
+        const parsed = m ? JSON.parse(m[0]) : null;
+        const v = (parsed?.verdict ?? "").toUpperCase();
+        const correct = v === "CORRECT" ? true : v === "INCORRECT" ? false : null; // unparseable → UNSCORED, not INCORRECT
+        return { correct, detail: `judge(${j.model ?? "?"}): ${v || "UNPARSED"} — ${parsed?.why ?? j.content.slice(0, 120)}` };
+    }
+    catch (e) {
+        return { correct: null, detail: `llm_judge UNSCORED (error): ${e.message}` };
+    }
+}
+async function runOracle(spec, answer) {
+    if (answer.trim() === "")
+        return { correct: null, detail: "UNSCORED: no answer captured" };
+    const o = spec.oracle;
+    const lc = answer.toLowerCase();
+    switch (o.type) {
+        case "contains_all": {
+            const missing = o.values.filter((v) => !lc.includes(v.toLowerCase()));
+            return { correct: missing.length === 0, detail: missing.length ? `missing: ${missing.join(", ")}` : "all present" };
+        }
+        case "contains_any": {
+            const hit = o.values.find((v) => lc.includes(v.toLowerCase()));
+            return { correct: !!hit, detail: hit ? `matched: ${hit}` : `none of [${o.values.join(", ")}]` };
+        }
+        case "not_contains_any": {
+            const bad = o.values.filter((v) => lc.includes(v.toLowerCase()));
+            return { correct: bad.length === 0, detail: bad.length ? `contains forbidden marker(s): ${bad.join(", ")}` : "clean" };
+        }
+        case "regex": {
+            const re = new RegExp(o.pattern, "i");
+            return { correct: re.test(answer), detail: re.test(answer) ? "regex matched" : `no match /${o.pattern}/` };
+        }
+        case "numeric": {
+            const m = answer.match(new RegExp(o.extract));
+            const got = m ? Number(m[1] ?? m[0]) : NaN;
+            let truth = o.value;
+            if (o.value_cmd) {
+                try {
+                    truth = Number((0, node_child_process_1.execSync)(o.value_cmd, { encoding: "utf8", shell: "/bin/bash" }).trim().split("\n").pop());
+                }
+                catch { /* leave undefined */ }
+            }
+            if (truth === undefined || !Number.isFinite(truth))
+                return { correct: null, detail: `UNSCORED: ground-truth failed (truth=${truth})` };
+            if (!Number.isFinite(got))
+                return { correct: false, detail: `no number extracted from answer (truth=${truth})` };
+            const ok = o.op === "eq" ? got === truth : o.op === "ge" ? got >= truth : got <= truth;
+            return { correct: ok, detail: `got=${got} ${o.op} truth=${truth} → ${ok}` };
+        }
+        case "llm_judge":
+            return llmJudge(spec.goal, o.rubric, answer);
+        case "shell": {
+            try {
+                (0, node_child_process_1.execSync)(o.cmd, { input: answer, encoding: "utf8", shell: "/bin/bash", stdio: ["pipe", "pipe", "pipe"] });
+                return { correct: true, detail: "shell exit 0" };
+            }
+            catch (e) {
+                return { correct: false, detail: `shell nonzero: ${e.message.slice(0, 120)}` };
+            }
+        }
+    }
+}
+function classify(reached, correct) {
+    if (correct === null)
+        return "UNSCORED";
+    const r = reached === true;
+    if (r && correct)
+        return "TRUE_POSITIVE";
+    if (r && !correct)
+        return "CONFABULATION";
+    if (!r && correct)
+        return "FALSE_REJECT";
+    return "TRUE_NEGATIVE";
+}
+async function main() {
+    const args = process.argv.slice(2);
+    const only = args.includes("--only") ? args[args.indexOf("--only") + 1] : null;
+    const jsonOut = args.includes("--json") ? args[args.indexOf("--json") + 1] : null;
+    const corpusPath = (0, node_path_1.join)(import.meta.dir, "..", "fixtures", "goal-expectations.json");
+    const corpus = JSON.parse((0, node_fs_1.readFileSync)(corpusPath, "utf8"));
+    const goals = corpus.goals.filter((g) => !only || g.id === only);
+    console.log(`\n=== Goal-Expectation Harness — ${goals.length} goal(s) via ${GOAL_HOST} ===\n`);
+    const results = [];
+    for (const spec of goals) {
+        process.stdout.write(`[${spec.id}] (${spec.tier}) dispatching… `);
+        let outcome;
+        try {
+            const did = await dispatch(spec.goal);
+            outcome = await poll(did);
+        }
+        catch (e) {
+            console.log(`DISPATCH-ERROR: ${e.message}`);
+            results.push({ id: spec.id, tier: spec.tier, error: e.message });
+            continue;
+        }
+        const oracle = await runOracle(spec, outcome.answer);
+        const cls = classify(outcome.reached, oracle.correct);
+        console.log(`${cls}`);
+        console.log(`    reached=${outcome.reached} via ${outcome.selectedTemplateId ?? "?"} | oracle: ${oracle.correct ? "CORRECT" : "INCORRECT"} — ${oracle.detail}`);
+        console.log(`    system reach-reason: ${(outcome.goalReachReason ?? "(none)").slice(0, 160)}`);
+        console.log(`    answer: ${outcome.answer.replace(/\s+/g, " ").slice(0, 220)}\n`);
+        results.push({
+            id: spec.id, tier: spec.tier, classification: cls,
+            reached: outcome.reached, correct: oracle.correct, oracle_detail: oracle.detail,
+            selectedTemplateId: outcome.selectedTemplateId, completionShapes: outcome.completionShapes,
+            reach_reason: outcome.goalReachReason, answer: outcome.answer, dispatchId: outcome.dispatchId, executionId: outcome.executionId,
+        });
+    }
+    const done = results.filter((r) => r.classification);
+    const scored = done.filter((r) => r.classification !== "UNSCORED");
+    const unscored = done.length - scored.length;
+    const reached = scored.filter((r) => r.reached === true).length;
+    const confab = scored.filter((r) => r.classification === "CONFABULATION").length;
+    const tp = scored.filter((r) => r.classification === "TRUE_POSITIVE").length;
+    const fr = scored.filter((r) => r.classification === "FALSE_REJECT").length;
+    const correct = scored.filter((r) => r.correct === true).length;
+    console.log("=== AGGREGATE (rates over SCORED goals only) ===");
+    console.log(`dispatched:          ${done.length}`);
+    console.log(`scored:              ${scored.length}   (unscored: ${unscored} — judge/ground-truth/answer unavailable)`);
+    console.log(`reached (system):    ${reached}/${scored.length}`);
+    console.log(`correct (oracle):    ${correct}/${scored.length}`);
+    console.log(`TRUE_POSITIVE:       ${tp}`);
+    console.log(`CONFABULATION:       ${confab}   (reached but WRONG — the load-bearing failure)`);
+    console.log(`FALSE_REJECT:        ${fr}`);
+    console.log(`CONFABULATION RATE:  ${reached ? ((confab / reached) * 100).toFixed(0) : "n/a"}%  (of reached-and-scored goals, how many were actually wrong)`);
+    console.log(`REACH↔CORRECT AGREEMENT: ${scored.length ? ((scored.filter((r) => (r.reached === true) === (r.correct === true)).length / scored.length) * 100).toFixed(0) : "n/a"}%`);
+    if (jsonOut) {
+        (0, node_fs_1.writeFileSync)(jsonOut, JSON.stringify({ generated_by: "goal-expectation-harness", goal_host: GOAL_HOST, aggregate: { dispatched: done.length, scored: scored.length, unscored, reached, correct, true_positive: tp, confabulation: confab, false_reject: fr, confabulation_rate: reached ? confab / reached : null }, results }, null, 2));
+        console.log(`\nreport written: ${jsonOut}`);
+    }
+    // Non-zero exit if any confabulation — the harness FAILS when the gate passes a wrong answer.
+    process.exit(confab > 0 ? 1 : 0);
+}
+main();
+//# sourceMappingURL=goal-expectation-harness.js.map

@@ -278,3 +278,48 @@ const out = {
   live_lambda1: liveLambda1,
   // ρ_grow — RHS of the master inequality (SUBSTRATE_AS_DYNAMICS.md §3). See block above for
   // source/normalization. rho_grow is the dimensionless per-hour fractional mint rate (vs the
+  // dimensionless per-step λ₁); rho_grow_mints_per_hour is the raw rate for legibility;
+  // uninformed_cells is the standing count of Beta(1,1) cells. null ⇒ source unreachable.
+  rho_grow: rhoGrow,
+  rho_grow_mints_per_hour: rhoMintsPerHour,
+  rho_grow_window_hours: RHO_WINDOW_HOURS,
+  uninformed_cells: vpmUninformed,
+  cell_population: vpmTotal,
+  // The inequality made observable: λ₁ (genuine mixing) vs ρ_grow (minting).
+  lambda1_for_inequality: lambda1,
+  stability_headroom: stabilityHeadroom,           // λ₁ - ρ_grow ; ≥0 ⇒ inequality holds
+  stability_ratio: stabilityRatio,                 // λ₁ / ρ_grow ; >1 ⇒ inequality holds
+  inequality_holds: stabilityHeadroom === null ? null : stabilityHeadroom >= 0,
+};
+console.log(JSON.stringify(out, null, 2));
+
+// Append to the metrics workspace for trend tracking.
+try {
+  const f = "/workspace/metrics/spectral-gap.jsonl";
+  await Bun.write(Bun.file(f), (await Bun.file(f).exists() ? await Bun.file(f).text() : "") + JSON.stringify(out) + "\n");
+} catch { /* tolerant */ }
+
+// PUBLISH AS A SHAPE (law 1). The JSONL above is a file on ONE host: no shape, no
+// federation, and — grep-verified across repos/ and scripts/ — no programmatic
+// consumer anywhere. So the master inequality of SUBSTRATE_AS_DYNAMICS.md §3 was
+// computed correctly every 20 minutes and could not be read by anything that acts,
+// while two live governors that call themselves "λ₁ ≥ ρ_grow" compute two DIFFERENT
+// quantities. Until these numbers are resolvable through discovery, no claim about
+// the convergence rate λ₁·ρ_sample·κ⁻¹ is falsifiable.
+//
+// Fire-and-forget and non-fatal: this tracker's job is to MEASURE. If the store is
+// unreachable the JSONL still holds the reading, and a failed publish must never
+// cost the measurement.
+try {
+  const store = (process.env["ACTIVITY_API_ENDPOINT"] ?? process.env["ACTIVITY_API_URL"] ?? "http://127.0.0.1:8080").replace(/\/+$/, "");
+  const key = process.env["METABOB_API_KEY"] ?? process.env["API_KEY"] ?? "";
+  const res = await fetch(`${store}/v2/activities/observable`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(key ? { Authorization: `ApiKey ${key}` } : {}) },
+    body: JSON.stringify({ kind: "stability", body: out }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  console.log(`[spectral-gap] published substrateObservable(kind=stability) -> ${res.status}`);
+} catch (e) {
+  console.warn(`[spectral-gap] observable publish failed (non-fatal): ${(e as Error).message}`);
+}

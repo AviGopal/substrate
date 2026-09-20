@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-72704996-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-72704996] In repos/relevance-sink-vessel/src/index.ts, make the GET /health handler verify the",
+  "description": "[narrowed from route-edit-72704996] In repos/relevance-sink-vessel/src/index.ts, make the GET /health handler verify the vessel's SurrealDB dependency instead of returning ok unconditionally. Perform a cheap authenticated probe to `${SURREALDB_URL}/sql` (body `RETURN 1;` with the same surreal-ns/surreal-db/Authorization headers applyPenalty already builds) with a timeout of about 2 seconds; when the probe succeeds return the existing 200 {status:\"ok\", vessel:\"relevance-sink-vessel\"}; when it fails return HTTP 503 with {status:\"degraded\", vessel:\"relevance-sink-vessel\", store:\"unreachable\"}. Reason: this vessel's health currently reports ok while every write fails ConnectionRefused — a miswired deployment (store absent or SURREALDB_URL pointing at nothing) passes every automatic health check; verified experimentally on 2026-09-15 (validation/reports/wiring-green-vs-miswired-proof). Health must reflect the one dependency the vessel exists to write to.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: error: script \"typecheck\" exited with code 127\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-72704996] In repos/relevance-sink-vessel/src/index.ts, make the GET /health handler verify the vessel's SurrealDB dependency instead of returning ok unconditionally. Perform a cheap authenticated probe to `${SURREALDB_URL}/sql` (body `RETURN 1;` with the same surreal-ns/surreal-db/Authorization headers applyPenalty already builds) with a timeout of about 2 seconds; when the probe succeeds return the existing 200 {status:\"ok\", vessel:\"relevance-sink-vessel\"}; when it fails return HTTP 503 with {status:\"degraded\", vessel:\"relevance-sink-vessel\", store:\"unreachable\"}. Reason: this vessel's health currently reports ok while every write fails ConnectionRefused — a miswired deployment (store absent or SURREALDB_URL pointing at nothing) passes every automatic health check; verified experimentally on 2026-09-15 (validation/reports/wiring-green-vs-miswired-proof). Health must reflect the one dependency the vessel exists to write to.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: error: script \"typecheck\" exited with code 127\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-72704996-narrowed",
+  "source_gap_source": "substrate_detected"
+}

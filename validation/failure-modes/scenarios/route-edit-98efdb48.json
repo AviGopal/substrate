@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-98efdb48",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/activity-api/src/routes/execution-traces.ts, the GET '/decision-calibration' route cannot be windowed by time. ",
+  "description": "In repos/activity-api/src/routes/execution-traces.ts, the GET '/decision-calibration' route cannot be windowed by time. It parses activity_id, source, min_decisions, limit and offset, then always runs a fixed bounded scan `ORDER BY created_at DESC LIMIT $decision_cap` with `const DECISION_CAP = 20000;` over the decision_outcome table. Add optional `start_date` and `end_date` query parameters to that one route. When present, push them into the existing `conds` array as `created_at >= type::datetime($start_date)` and `created_at <= type::datetime($end_date)` with matching entries in `params`, exactly like the sibling GET '/selection-outcomes' route already does for `sel.selected_at`. Echo the two bounds back in the existing `window` object of the JSON response alongside `decision_cap`. Leave the aggregation helper aggregateDecisionCalibration untouched — this is only about bounding which decision_outcome rows are scanned. The purpose is to make calibration-over-time computable: comparing actual_reach_rate in an early window against a later window is how the substrate can tell whether its own predictions are improving.",
+  "goal_text": "In repos/activity-api/src/routes/execution-traces.ts, the GET '/decision-calibration' route cannot be windowed by time. It parses activity_id, source, min_decisions, limit and offset, then always runs a fixed bounded scan `ORDER BY created_at DESC LIMIT $decision_cap` with `const DECISION_CAP = 20000;` over the decision_outcome table. Add optional `start_date` and `end_date` query parameters to that one route. When present, push them into the existing `conds` array as `created_at >= type::datetime($start_date)` and `created_at <= type::datetime($end_date)` with matching entries in `params`, exactly like the sibling GET '/selection-outcomes' route already does for `sel.selected_at`. Echo the two bounds back in the existing `window` object of the JSON response alongside `decision_cap`. Leave the aggregation helper aggregateDecisionCalibration untouched — this is only about bounding which decision_outcome rows are scanned. The purpose is to make calibration-over-time computable: comparing actual_reach_rate in an early window against a later window is how the substrate can tell whether its own predictions are improving.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-98efdb48",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "liveshapes-activity-union-is-dead-code-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from liveshapes-activity-union-is-dead-code] REOPENS liveshapes-ignores-activity-output-shapes, which auto-clo",
+  "description": "[narrowed from liveshapes-activity-union-is-dead-code] REOPENS liveshapes-ignores-activity-output-shapes, which auto-closed on false evidence. Edit repos/goal-host-vessel/src/index.ts.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 5732-5737 of 16391, VERBATIM:\\n5732:  * caller's verdict untouched. Strictly false-negative → true-positive, never the reverse.\\n\n- verify_failed: src/index.ts(7083,46): error TS2339: Property 'Shapes' does not exist on type 'Config'.\nSKIPPED_TYPECHECK_FAILED\nSKIPPED_TYPECHECK_FAILED\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from liveshapes-activity-union-is-dead-code] REOPENS liveshapes-ignores-activity-output-shapes, which auto-closed on false evidence. Edit repos/goal-host-vessel/src/index.ts.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 5732-5737 of 16391, VERBATIM:\\n5732:  * caller's verdict untouched. Strictly false-negative → true-positive, never the reverse.\\n\n- verify_failed: src/index.ts(7083,46): error TS2339: Property 'Shapes' does not exist on type 'Config'.\nSKIPPED_TYPECHECK_FAILED\nSKIPPED_TYPECHECK_FAILED\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "liveshapes-activity-union-is-dead-code-narrowed",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "a-deterministic-refusal-gate-no-longer-refuses-what-it-was-built-to-refuse",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "gate self-probe: 1 of 5 deterministic refusal rule(s) no longer behave as built. Each rule is exercised with an artifact",
+  "description": "gate self-probe: 1 of 5 deterministic refusal rule(s) no longer behave as built. Each rule is exercised with an artifact it MUST refuse and one it MUST NOT, using the exported function itself. [surqlBreakingFieldRefusal/ansi-dialect] WRONG REASON: refused, but did not cite \"ANSI/MySQL\" — got: [mitosis-surql] REFUSING sql/migrations/probe.surql: a DEFINE FIELD statement does not parse as one — expected `DEFINE FIELD [IF NOT EXISTS]",
+  "goal_text": "gate self-probe: 1 of 5 deterministic refusal rule(s) no longer behave as built. Each rule is exercised with an artifact it MUST refuse and one it MUST NOT, using the exported function itself. [surqlBreakingFieldRefusal/ansi-dialect] WRONG REASON: refused, but did not cite \"ANSI/MySQL\" — got: [mitosis-surql] REFUSING sql/migrations/probe.surql: a DEFINE FIELD statement does not parse as one — expected `DEFINE FIELD [IF NOT EXISTS]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "a-deterministic-refusal-gate-no-longer-refuses-what-it-was-built-to-refuse",
+  "source_gap_source": "substrate_detected"
+}

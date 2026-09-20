@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-2c366ef4",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap enumerated-anchor-choice-is-wired-only-to-the-path-the-failures-do-not-take: The enumerate",
+  "description": "investigate and decompose gap enumerated-anchor-choice-is-wired-only-to-the-path-the-failures-do-not-take: The enumerated-anchor mechanism that makes a fabricated anchor impossible exists in this file and is wired only to the path the failures do not take. Extending it to the primary drafting path is the single highest-leverage change available to the authoring lane.\n\nWHAT ALREADY EXISTS. In the re-derivation block, feature-compose.ts offers the model a numbered list of verified-unique anchors and",
+  "goal_text": "investigate and decompose gap enumerated-anchor-choice-is-wired-only-to-the-path-the-failures-do-not-take: The enumerated-anchor mechanism that makes a fabricated anchor impossible exists in this file and is wired only to the path the failures do not take. Extending it to the primary drafting path is the single highest-leverage change available to the authoring lane.\n\nWHAT ALREADY EXISTS. In the re-derivation block, feature-compose.ts offers the model a numbered list of verified-unique anchors and",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-2c366ef4",
+  "source_gap_source": "substrate_detected"
+}

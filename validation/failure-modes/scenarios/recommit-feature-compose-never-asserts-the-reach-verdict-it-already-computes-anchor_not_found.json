@@ -1,0 +1,19 @@
+{
+  "id": "recommit-feature-compose-never-asserts-the-reach-verdict-it-already-computes-anchor_not_found",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/development-vessel/src/resolvers/feature-compose.ts, replace one line.\n\nFind this exact text:\n\n```\n          la",
+  "description": "In repos/development-vessel/src/resolvers/feature-compose.ts, replace one line.\n\nFind this exact text:\n\n```\n          landed_vessels: landedVessels.filter((v) => v.length > 0),\n```\n\nReplace it with exactly this:\n\n```\n          reached: verdict === \"FAVORABLE\" && landedVessels.length > 0, landed_vessels: landedVessels.filter((v) => v.length > 0),\n```\n\nOne line becomes one line. Do not touch any neighbouring property.\n\nReason: activity-api now grades a posterior only when the caller asserts a boolean metadata.reached (landed 2026-09-08 as 2f01007, deployed, floor preserved for silent callers). Nothing sends it, so the path is live and inert. This resolver already computes the identical expression one screen above as its success value, and landedVessels is already in scope and already emitted here as landed_vessels. Measured: the feature_compose posterior is frozen at alpha 6.918 / beta 2.973, n=64 since 2026-09-06T10:42:06, implying 0.699 against a measured landing rate of 0.154. This field is what lets that arm converge.\n\nVerify with bun run lint in repos/development-vessel. [RETRY CONTEXT — compose for gap feature-compose-never-asserts-the-reach-verdict-it-already-computes repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 6463-6468 of 6553, VERBATIM:\\n6463:           effect_uncovered_targets: uncover. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "In repos/development-vessel/src/resolvers/feature-compose.ts, replace one line.\n\nFind this exact text:\n\n```\n          landed_vessels: landedVessels.filter((v) => v.length > 0),\n```\n\nReplace it with exactly this:\n\n```\n          reached: verdict === \"FAVORABLE\" && landedVessels.length > 0, landed_vessels: landedVessels.filter((v) => v.length > 0),\n```\n\nOne line becomes one line. Do not touch any neighbouring property.\n\nReason: activity-api now grades a posterior only when the caller asserts a boolean metadata.reached (landed 2026-09-08 as 2f01007, deployed, floor preserved for silent callers). Nothing sends it, so the path is live and inert. This resolver already computes the identical expression one screen above as its success value, and landedVessels is already in scope and already emitted here as landed_vessels. Measured: the feature_compose posterior is frozen at alpha 6.918 / beta 2.973, n=64 since 2026-09-06T10:42:06, implying 0.699 against a measured landing rate of 0.154. This field is what lets that arm converge.\n\nVerify with bun run lint in repos/development-vessel. [RETRY CONTEXT — compose for gap feature-compose-never-asserts-the-reach-verdict-it-already-computes repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 6463-6468 of 6553, VERBATIM:\\n6463:           effect_uncovered_targets: uncover. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-feature-compose-never-asserts-the-reach-verdict-it-already-computes-anchor_not_found",
+  "source_gap_source": "substrate_detected"
+}

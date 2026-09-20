@@ -1,0 +1,19 @@
+{
+  "id": "schema-declaration-drift-declared-fields-absent-from-the-live-schema",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "schema declaration drift: 2 declared field(s) absent from the live schema, 0 confirmed write-blocking hazard(s). Scanned",
+  "description": "schema declaration drift: 2 declared field(s) absent from the live schema, 0 confirmed write-blocking hazard(s). Scanned 1595 DEFINE FIELD declarations across 59 SCHEMAFULL of 97 tables. A write to a field a SCHEMAFULL table does not declare is DISCARDED silently (success:true, HTTP 200); a non-optional field with no DEFAULT on a populated table rejects every write omitting it. MISSING: execution_traces.org_id (declared in 068-complete-permissions-coverage.surql); execution_traces.ci_status (declared in 005-ci-integration.surql). ",
+  "goal_text": "schema declaration drift: 2 declared field(s) absent from the live schema, 0 confirmed write-blocking hazard(s). Scanned 1595 DEFINE FIELD declarations across 59 SCHEMAFULL of 97 tables. A write to a field a SCHEMAFULL table does not declare is DISCARDED silently (success:true, HTTP 200); a non-optional field with no DEFAULT on a populated table rejects every write omitting it. MISSING: execution_traces.org_id (declared in 068-complete-permissions-coverage.surql); execution_traces.ci_status (declared in 005-ci-integration.surql). ",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "schema-declaration-drift-declared-fields-absent-from-the-live-schema",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-3de1ac9c-narrowed-syntax_break",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-3de1ac9c] investigate and decompose gap route-edit-985a326a: In repos/goal-host-vessel/src/ind",
+  "description": "[narrowed from route-edit-3de1ac9c] investigate and decompose gap route-edit-985a326a: In repos/goal-host-vessel/src/index.ts, make exactly ONE edit.\n\nVerbatim anchor (a single line):\n              else if (editHollow) { opts.learningSink?.alphaBetaDelta.push(await penaliseHollowTemplate(\"feature_compose\", \"landed-edit-missing-requested-symbol\")); }\n\nInsert this single new line immediately AFTER that anchor line, verbatim:\n\n              recordDeterministicLabel(goal ?? \"\",\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/index.ts(11871,204): error TS1135: Argument expression expected.\nSKIPPED_TYPECHECK_FAILED\nSKIPPED_TYPECHECK_FAILED\n- syntax_break: src/index.ts(11873,314): error TS1005: ')' expected.\nSKIPPED_TYPECHECK_FAILED\nSKIPPED_TYPECHECK_FAILED\n- syntax_break: src/index.ts(12053,314): error TS1005: ')' expected.\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-3de1ac9c-narrowed repeated already-recorded failure class syntax_break: src/index.ts(12053,314): error TS1005: ')' expected.. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "[narrowed from route-edit-3de1ac9c] investigate and decompose gap route-edit-985a326a: In repos/goal-host-vessel/src/index.ts, make exactly ONE edit.\n\nVerbatim anchor (a single line):\n              else if (editHollow) { opts.learningSink?.alphaBetaDelta.push(await penaliseHollowTemplate(\"feature_compose\", \"landed-edit-missing-requested-symbol\")); }\n\nInsert this single new line immediately AFTER that anchor line, verbatim:\n\n              recordDeterministicLabel(goal ?? \"\",\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/index.ts(11871,204): error TS1135: Argument expression expected.\nSKIPPED_TYPECHECK_FAILED\nSKIPPED_TYPECHECK_FAILED\n- syntax_break: src/index.ts(11873,314): error TS1005: ')' expected.\nSKIPPED_TYPECHECK_FAILED\nSKIPPED_TYPECHECK_FAILED\n- syntax_break: src/index.ts(12053,314): error TS1005: ')' expected.\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-3de1ac9c-narrowed repeated already-recorded failure class syntax_break: src/index.ts(12053,314): error TS1005: ')' expected.. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-3de1ac9c-narrowed-syntax_break",
+  "source_gap_source": "substrate_detected"
+}

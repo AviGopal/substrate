@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-444af398-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-444af398] investigate and decompose gap route-edit-d1594350: Stop the gap store from silently ",
+  "description": "[narrowed from route-edit-444af398] investigate and decompose gap route-edit-d1594350: Stop the gap store from silently destroying itself in repos/development-vessel/src/resolvers/substrate-gap.ts.\n\nMeasured incident, 2026-09-09: the gap store went from 4,113 rows to 44 in a single day. Cause: loadGaps() returns an EMPTY array on ANY read or parse failure, and the store is a read-modify-write - load, mutate, save. So one corrupt or transiently unreadable gaps.json yields [], and\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- syntax_break: src/resolvers/substrate-gap.ts(770,5): error TS1128: Declaration or statement expected. | src/resolvers/substrate-gap.ts(782,9): error TS1005: '{' expected. | src/resolvers/substrate-gap.ts(828,3): er\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-444af398] investigate and decompose gap route-edit-d1594350: Stop the gap store from silently destroying itself in repos/development-vessel/src/resolvers/substrate-gap.ts.\n\nMeasured incident, 2026-09-09: the gap store went from 4,113 rows to 44 in a single day. Cause: loadGaps() returns an EMPTY array on ANY read or parse failure, and the store is a read-modify-write - load, mutate, save. So one corrupt or transiently unreadable gaps.json yields [], and\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- syntax_break: src/resolvers/substrate-gap.ts(770,5): error TS1128: Declaration or statement expected. | src/resolvers/substrate-gap.ts(782,9): error TS1005: '{' expected. | src/resolvers/substrate-gap.ts(828,3): er\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-444af398-narrowed",
+  "source_gap_source": "substrate_detected"
+}

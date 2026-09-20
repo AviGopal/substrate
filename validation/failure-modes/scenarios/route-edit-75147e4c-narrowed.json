@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-75147e4c-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-75147e4c] investigate and decompose gap gap-mu69n46n: The gap store is a single large JSON fil",
+  "description": "[narrowed from route-edit-75147e4c] investigate and decompose gap gap-mu69n46n: The gap store is a single large JSON file rewritten in place, so one ungraceful shutdown replaced all of it with NUL bytes and lost every gap written since the last surviving snapshot\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/resolvers/substrate-gap.ts(37,31): error TS2440: Import declaration conflicts with local declaration of 'rename'. | src/resolvers/substrate-gap.ts(257,15): error TS2440: Import declaration conflic\n- typecheck_dangling_reference: src/resolvers/substrate-gap.ts(95,16): error TS2393: Duplicate function implementation. | src/resolvers/substrate-gap.ts(100,20): error TS2304: Cannot find name 'runtimeRoot'. | src/resolvers/substrat\n- compose_execution_failure: replace_lines DRIFT-REFUSED for repos/development-vessel/src/resolvers/substrate-gap.ts 341-361: expected first/last [\"async function saveGaps(gaps: SubstrateGap[]): Promise<void> {\"/\"    return [];\"]\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-75147e4c] investigate and decompose gap gap-mu69n46n: The gap store is a single large JSON file rewritten in place, so one ungraceful shutdown replaced all of it with NUL bytes and lost every gap written since the last surviving snapshot\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/resolvers/substrate-gap.ts(37,31): error TS2440: Import declaration conflicts with local declaration of 'rename'. | src/resolvers/substrate-gap.ts(257,15): error TS2440: Import declaration conflic\n- typecheck_dangling_reference: src/resolvers/substrate-gap.ts(95,16): error TS2393: Duplicate function implementation. | src/resolvers/substrate-gap.ts(100,20): error TS2304: Cannot find name 'runtimeRoot'. | src/resolvers/substrat\n- compose_execution_failure: replace_lines DRIFT-REFUSED for repos/development-vessel/src/resolvers/substrate-gap.ts 341-361: expected first/last [\"async function saveGaps(gaps: SubstrateGap[]): Promise<void> {\"/\"    return [];\"]\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-75147e4c-narrowed",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-aebd74a0",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/activity-api/src/routes/execution-traces.ts, the GET '/selection-outcomes' route returns HTTP 500 on every sing",
+  "description": "In repos/activity-api/src/routes/execution-traces.ts, the GET '/selection-outcomes' route returns HTTP 500 on every single call and has never once served a response. Its `selectionsQuery` reads `FROM thompson_selection_log AS sel`, and SurrealDB does not support table aliases, so the statement fails to parse with \"Unexpected token `AS`, expected Eof\". The alias is also referenced in the WHERE conditions built above it as `sel.activity_id`, `sel.selected_at`, and in the `ORDER BY sel.selected_at DESC`. Remove the table alias from this one route: change the FROM clause to `FROM thompson_selection_log`, drop the `sel.` prefix from the three condition strings that build `selectionConditions`, and change the ORDER BY to `ORDER BY selected_at DESC`. The bare column names are correct because there is only one table in the statement. Do not restructure the handler otherwise — the two-fetch pattern it already uses (read selections, then read the execution table by correlation_id, then join in memory) is the same JOIN-free shape that commit 471febb established for the sibling route GET '/selection-calibration', which works today. Verify by curling the route and getting HTTP 200 instead of HTTP 500; an empty result array is the expected and correct outcome, because this route reads the legacy recommend-driven selection path that migration 202 superseded with universal per-execution capture.",
+  "goal_text": "In repos/activity-api/src/routes/execution-traces.ts, the GET '/selection-outcomes' route returns HTTP 500 on every single call and has never once served a response. Its `selectionsQuery` reads `FROM thompson_selection_log AS sel`, and SurrealDB does not support table aliases, so the statement fails to parse with \"Unexpected token `AS`, expected Eof\". The alias is also referenced in the WHERE conditions built above it as `sel.activity_id`, `sel.selected_at`, and in the `ORDER BY sel.selected_at DESC`. Remove the table alias from this one route: change the FROM clause to `FROM thompson_selection_log`, drop the `sel.` prefix from the three condition strings that build `selectionConditions`, and change the ORDER BY to `ORDER BY selected_at DESC`. The bare column names are correct because there is only one table in the statement. Do not restructure the handler otherwise — the two-fetch pattern it already uses (read selections, then read the execution table by correlation_id, then join in memory) is the same JOIN-free shape that commit 471febb established for the sibling route GET '/selection-calibration', which works today. Verify by curling the route and getting HTTP 200 instead of HTTP 500; an empty result array is the expected and correct outcome, because this route reads the legacy recommend-driven selection path that migration 202 superseded with universal per-execution capture.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-aebd74a0",
+  "source_gap_source": "substrate_detected"
+}

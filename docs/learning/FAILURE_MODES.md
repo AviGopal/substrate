@@ -1,4 +1,10 @@
-# Failure modes — the taxonomy the traces actually carry
+# Failure modes — the taxonomy the schema defines
+
+> **This document describes a schema, not a census.** It once claimed to describe "the
+> taxonomy the traces actually carry", which invited readers to treat it as evidence about
+> the running store; it is not. Read the tables below as the contract the schema is willing
+> to accept, and see *Check the census before reasoning from the taxonomy* for why the set
+> that actually arrives is reliably smaller and differently shaped.
 
 A failed execution is not one thing. The substrate records *how* it failed as a structured,
 discriminated object on the execution trace, and the posterior update reads that object to
@@ -11,11 +17,46 @@ The object is defined by `FailureModeSchema` in
 field of a trace written to `POST /v2/activities/execution-traces`. The step sizes it maps
 to live in `computeDeltas` in `repos/activity-api/src/lib/posterior-update.ts`.
 
+## Check the census before reasoning from the taxonomy
+
+**A schema defines what may be recorded; it does not cause anything to be recorded.** Count
+the store by type before using this taxonomy to explain anything. Expect three findings, all
+of which have held whenever anyone has looked:
+
+- **Some members have never been emitted at all.** A member with no producer is a name, not
+  a category, and reasoning that partitions failures across the full union silently assumes
+  a distribution that does not exist.
+- **The type that dominates real traffic may not be in the union.** When most failures arrive
+  under a type this document does not list, the members below describe a small minority of
+  what actually happens, and any conclusion drawn from them is scoped to that minority.
+- **The per-member fields are frequently unwritten.** This is the one that matters most,
+  because the whole claim of the taxonomy is that those fields make a record *actionable
+  rather than a label*. A record carrying only its type and a human-readable reason **is** a
+  label. Most consequentially, a failure typed as caused-by-an-upstream-task that does not
+  name the upstream task cannot be traced to its cause — which is the single fact a reader
+  opens that record to learn.
+
+When counting, run a positive control through the identical query shape — something you know
+exists. An empty result is not a zero until you have shown the query can return a non-zero.
+
+**Why this outranks fixing the prose.** A taxonomy nothing emits cannot condition anything
+downstream. Where a failure arrives unclassified, the posterior update falls through to its
+default penalty, so the carefully differentiated step sizes in *Outcome-conditional step
+sizes* are not consulted for the bulk of failures. The taxonomy's purpose — teaching the
+selector to distinguish a merely-interrupted arm from a genuinely-rejected one — is
+defeated by the emitting side, not by the mapping.
+
+One member deserves specific attention: the type meaning *an action was dispatched and the
+world did not change*. It carries before-and-after signatures for exactly that comparison,
+and it is the textbook description of a repair that re-runs forever without effect. If it
+has no rows while such repairs are observably happening, the detector for the most important
+failure class in a self-maintaining system exists and has never been reached.
+
 ## The six members
 
 The union discriminates on `type`. Every member carries a human-readable `reason`; the
-remaining fields are per-member and are what make the record actionable rather than a
-label.
+remaining fields are per-member and are **intended** to make the record actionable rather
+than a label — see *Measured state* above for how much of that is currently true.
 
 | `type` | Meaning | Fields beyond `reason` |
 |---|---|---|
@@ -59,7 +100,13 @@ and is penalised in full.
 |---|---|---|
 | Success (binary path) | 1 | 0 |
 | Success (graded-yield path) | *y* | 1 − *y* |
-| Failure with no `failure_mode` recorded | 0 | 1 (with a warning) |
+| Failure with no `failure_mode` recorded | 0 | 1 (warning — but see note) |
+
+> **Do not treat that warning as a signal until you find its reader.** A warning collected
+> into a structure the caller discards is computed correctly and observed by nobody. Before
+> relying on any "with a warning" behaviour described here, confirm something outside the
+> test suite consumes it — tests reading a value prove the value is produced, never that
+> anyone is listening.
 | `verifier_negative` | 0 | 1 |
 | `budget_exhausted` | 0 | 0.5 |
 | `safety_breach` | 0 | 1 |

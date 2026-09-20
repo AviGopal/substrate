@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-90975084-verify_failed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-2ece0b60: Edit repos/development-vessel/src/resolvers/substrate-gap.ts. Make ON",
+  "description": "investigate and decompose gap route-edit-2ece0b60: Edit repos/development-vessel/src/resolvers/substrate-gap.ts. Make ONE contiguous change inside resolveSubstrateGapWrite.\n\nImmediately after this exact existing line:\n\n      existingIdx = gaps.findIndex((g) => hasClassifiableId(g) && g.status !== \"closed\" && gapClassKey(g.id) === classKey);\n\nand after the closing brace of the `if` block that contains it, insert a guard that refuses an echoed [RETRY CONTEXT — compose for gap route-edit-90975084 repeated already-recorded failure class verify_failed: src/resolvers/substrate-gap.ts(784,100): error TS2693: 'FalsifierClass' only refers to a type, but is being used as a value here.. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "investigate and decompose gap route-edit-2ece0b60: Edit repos/development-vessel/src/resolvers/substrate-gap.ts. Make ONE contiguous change inside resolveSubstrateGapWrite.\n\nImmediately after this exact existing line:\n\n      existingIdx = gaps.findIndex((g) => hasClassifiableId(g) && g.status !== \"closed\" && gapClassKey(g.id) === classKey);\n\nand after the closing brace of the `if` block that contains it, insert a guard that refuses an echoed [RETRY CONTEXT — compose for gap route-edit-90975084 repeated already-recorded failure class verify_failed: src/resolvers/substrate-gap.ts(784,100): error TS2693: 'FalsifierClass' only refers to a type, but is being used as a value here.. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-90975084-verify_failed",
+  "source_gap_source": "substrate_detected"
+}

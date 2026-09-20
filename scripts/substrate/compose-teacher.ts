@@ -356,9 +356,35 @@ let star_ratio: number | null = null, headroom: number | null = null;
 try {
   const sg = (await Bun.file("/workspace/metrics/spectral-gap.jsonl").text()).trim().split("\n").filter(Boolean);
   const last = JSON.parse(sg[sg.length - 1]!);
-  star_ratio = last.star_ratio ?? null;
-  if (typeof last.fiedler_lambda2 === "number" && typeof last.star_ratio === "number") {
-    headroom = Math.round(last.fiedler_lambda2 * (1 - last.star_ratio) * 1e4) / 1e4;
+  // STALENESS MUST BE AS LOUD AS ABSENCE, and it was not. A missing file lands in the catch
+  // below and leaves these null — legibly unavailable. A file whose PRODUCER DIED simply
+  // keeps serving its final line, and the reading is indistinguishable from a fresh one.
+  //
+  // Measured 2026-09-16: spectral-gap.service had been `failed` since 2026-09-14 on a source
+  // file truncated mid-expression by an automated "vessel code drift detected and committed"
+  // commit (4e4170a8, which deleted 45 lines and added none, removing the JSONL append and
+  // the shape publish outright). The last line of this file was written 2026-09-07. Every
+  // consumer had been reading a NINE-DAY-OLD λ₂ as the current state of the composition
+  // graph, confidently, with nothing anywhere reporting a fault.
+  //
+  // One tick is 20 minutes; six hours is eighteen missed writes, which is a dead producer
+  // rather than a slow one. Past that, treat the reading as ABSENT — the same state a
+  // missing file produces — so the two failure modes converge on the safe one instead of
+  // diverging into "unavailable" and "quietly wrong".
+  const STALE_AFTER_MS = 6 * 60 * 60 * 1000;
+  const at = typeof last.at === "string" ? Date.parse(last.at) : NaN;
+  const ageMs = Number.isFinite(at) ? Date.now() - at : Number.POSITIVE_INFINITY;
+  if (ageMs > STALE_AFTER_MS) {
+    console.warn(
+      `[compose-teacher] spectral-gap reading is STALE (${Number.isFinite(ageMs) ? `${Math.round(ageMs / 3_600_000)}h old` : "no parseable 'at' field"}) — ` +
+        `treating star_ratio/headroom as ABSENT rather than current. The producer (spectral-gap.service) is not writing; ` +
+        `check its unit before trusting any λ₂-derived gate.`,
+    );
+  } else {
+    star_ratio = last.star_ratio ?? null;
+    if (typeof last.fiedler_lambda2 === "number" && typeof last.star_ratio === "number") {
+      headroom = Math.round(last.fiedler_lambda2 * (1 - last.star_ratio) * 1e4) / 1e4;
+    }
   }
 } catch { /* spectral not ready */ }
 

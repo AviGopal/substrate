@@ -182,7 +182,7 @@ if (fullMode) {
     let lastId = "";
     for (;;) {
         const where = lastId ? `WHERE id > ${lastId}` : "";
-        const [rows] = await sql(`SELECT ${TRACE_FIELDS} FROM activity_execution_traces ${where} LIMIT ${PAGE};`);
+        const [rows] = await sql(`SELECT ${TRACE_FIELDS} FROM v_paradigm_execution_traces ${where} LIMIT ${PAGE};`);
         if (!rows || rows.length === 0)
             break;
         for (const r of rows) {
@@ -201,7 +201,7 @@ else {
     const seenRowIds = new Set();
     let cursor = state.watermark;
     for (;;) {
-        const [rows] = await sql(`SELECT ${TRACE_FIELDS} FROM activity_execution_traces WHERE executed_at >= type::datetime(${JSON.stringify(cursor)}) LIMIT ${PAGE};`);
+        const [rows] = await sql(`SELECT ${TRACE_FIELDS} FROM v_paradigm_execution_traces WHERE executed_at >= type::datetime(${JSON.stringify(cursor)}) LIMIT ${PAGE};`);
         if (!rows || rows.length === 0)
             break;
         let progressed = false;
@@ -241,7 +241,7 @@ else {
     const ids = [...needed];
     for (let i = 0; i < ids.length; i += CHUNK) {
         const arr = JSON.stringify(ids.slice(i, i + CHUNK));
-        const [rows] = await sql(`SELECT ${TRACE_FIELDS} FROM activity_execution_traces WHERE execution_id INSIDE ${arr};`);
+        const [rows] = await sql(`SELECT ${TRACE_FIELDS} FROM v_paradigm_execution_traces WHERE execution_id INSIDE ${arr};`);
         for (const r of rows ?? []) {
             if (r.execution_id)
                 execShapes.set(r.execution_id, toShapeRec(r));

@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-a8acc4a0-anchor_not_found",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap liveshapes-activity-union-is-dead-code: REOPENS liveshapes-ignores-activity-output-shapes,",
+  "description": "investigate and decompose gap liveshapes-activity-union-is-dead-code: REOPENS liveshapes-ignores-activity-output-shapes, which auto-closed on false evidence. Edit repos/goal-host-vessel/src/index.ts. [RETRY CONTEXT — compose for gap route-edit-a8acc4a0 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 8946-8951 of 16620, VERBATIM:\\n8946:   }\\n8947: \\n8948:   const target = new Se. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "investigate and decompose gap liveshapes-activity-union-is-dead-code: REOPENS liveshapes-ignores-activity-output-shapes, which auto-closed on false evidence. Edit repos/goal-host-vessel/src/index.ts. [RETRY CONTEXT — compose for gap route-edit-a8acc4a0 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 8946-8951 of 16620, VERBATIM:\\n8946:   }\\n8947: \\n8948:   const target = new Se. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-a8acc4a0-anchor_not_found",
+  "source_gap_source": "substrate_detected"
+}

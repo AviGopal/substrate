@@ -1,0 +1,5 @@
+== hub registry stats + federated rows (spoke vessels mirrored as <vessel>@<substrate-id>) ==
+{"totalVessels":7,"totalShapes":91,"healthyCount":7}
+{"error":{"code":"INVALID_API_KEY","message":"Authorization header is required"}}
+== spoke transport log ==
+-- No entries --

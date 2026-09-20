@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-bb6865f8-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-bb6865f8] investigate and decompose gap route-edit-3dd710df: Edit repos/development-vessel/src",
+  "description": "[narrowed from route-edit-bb6865f8] investigate and decompose gap route-edit-3dd710df: Edit repos/development-vessel/src/resolvers/env-gate-scan.ts. On the single line that begins with the text \"const GUARD_RE\", append one additional alternative to the end of that regular expression, immediately before its closing slash, matching a nullish-coalescing operator written as two consecutive question mark characters. Replace only that one line. Do not touch any other line, do not remove\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: [fc-inert-regex] The only change in this patch is to a regex literal that behaves identically (matches 23 candidate strings equally) to its old version. Old source: 'if \\(!|return null|return FALLBACK\n- semantic_reject: [fc-inert-regex] The only change in this patch is to a regex literal that behaves identically (matches 23 candidate strings equally) to its old version. Old source: 'if \\(!|return null|return FALLBACK\n- semantic_reject: The patch claims to append an additional alternative for a nullish-coalescing operator to the `GUARD_RE` regex, but the provided unified diff shows the exact opposite: the patch removes the last two `\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-bb6865f8] investigate and decompose gap route-edit-3dd710df: Edit repos/development-vessel/src/resolvers/env-gate-scan.ts. On the single line that begins with the text \"const GUARD_RE\", append one additional alternative to the end of that regular expression, immediately before its closing slash, matching a nullish-coalescing operator written as two consecutive question mark characters. Replace only that one line. Do not touch any other line, do not remove\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: [fc-inert-regex] The only change in this patch is to a regex literal that behaves identically (matches 23 candidate strings equally) to its old version. Old source: 'if \\(!|return null|return FALLBACK\n- semantic_reject: [fc-inert-regex] The only change in this patch is to a regex literal that behaves identically (matches 23 candidate strings equally) to its old version. Old source: 'if \\(!|return null|return FALLBACK\n- semantic_reject: The patch claims to append an additional alternative for a nullish-coalescing operator to the `GUARD_RE` regex, but the provided unified diff shows the exact opposite: the patch removes the last two `\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-bb6865f8-narrowed",
+  "source_gap_source": "substrate_detected"
+}

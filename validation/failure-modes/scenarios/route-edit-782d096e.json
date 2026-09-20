@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-782d096e",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Create the file repos/activity-api/sql/migrations/205-restore-fields-lost-to-unapplied-migrations.surql containing exact",
+  "description": "Create the file repos/activity-api/sql/migrations/205-restore-fields-lost-to-unapplied-migrations.surql containing exactly six additive SurrealDB field declarations on the `activity` table, so that retirement can record why an arm was retired.\n\nThe `activity` table is SCHEMAFULL. A write to a field it does not declare is discarded silently — SurrealDB returns success:true and HTTP 200 and drops the value. Measured on the live store: 51 fields are declared across sql/, 54 exist live, and 6 are missing. Because of this, the deprecate UPDATE in src/routes/impulses.ts sets `retired_at = time::now(), retired_reason = 'deprecate_impulse'` and both columns stay null on the row.\n\nThe six missing declarations must be copied verbatim from their existing sources:\n- from sql/migrations/055-variant-tracking.surql: variant_reason, retired_at, retired_reason\n- from sql/schemas/048-goal-execution-alignment.surql: input_schema, output_schema, schema_confidence\n\nCopy only the DEFINE FIELD statements. Do not copy the DEFINE INDEX statements and do not copy any DEFINE TABLE ... AS view, because those view backfills have previously exceeded the 45 second startup budget in applySQLFile and caused a restart loop.\n\nEvery statement must keep its IF NOT EXISTS clause so the file is additive and idempotent. Do not remove, drop, or alter any existing field.",
+  "goal_text": "Create the file repos/activity-api/sql/migrations/205-restore-fields-lost-to-unapplied-migrations.surql containing exactly six additive SurrealDB field declarations on the `activity` table, so that retirement can record why an arm was retired.\n\nThe `activity` table is SCHEMAFULL. A write to a field it does not declare is discarded silently — SurrealDB returns success:true and HTTP 200 and drops the value. Measured on the live store: 51 fields are declared across sql/, 54 exist live, and 6 are missing. Because of this, the deprecate UPDATE in src/routes/impulses.ts sets `retired_at = time::now(), retired_reason = 'deprecate_impulse'` and both columns stay null on the row.\n\nThe six missing declarations must be copied verbatim from their existing sources:\n- from sql/migrations/055-variant-tracking.surql: variant_reason, retired_at, retired_reason\n- from sql/schemas/048-goal-execution-alignment.surql: input_schema, output_schema, schema_confidence\n\nCopy only the DEFINE FIELD statements. Do not copy the DEFINE INDEX statements and do not copy any DEFINE TABLE ... AS view, because those view backfills have previously exceeded the 45 second startup budget in applySQLFile and caused a restart loop.\n\nEvery statement must keep its IF NOT EXISTS clause so the file is additive and idempotent. Do not remove, drop, or alter any existing field.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-782d096e",
+  "source_gap_source": "substrate_detected"
+}

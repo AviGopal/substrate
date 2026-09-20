@@ -30,8 +30,8 @@ repos/user-vessel
 repos/activity-monitor
 repos/metabob-cli
 
-# Validation / test artifacts
-validation/results
+# Validation / test artifacts (reports, demo captures, harness evidence — never baked)
+validation
 *.png
 *.jpg
 *.pdf

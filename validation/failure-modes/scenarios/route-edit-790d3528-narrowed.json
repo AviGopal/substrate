@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-790d3528-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-790d3528] investigate and decompose gap route-edit-4cef58bb: Edit repos/discovery-vessel/src/i",
+  "description": "[narrowed from route-edit-790d3528] investigate and decompose gap route-edit-4cef58bb: Edit repos/discovery-vessel/src/index.ts to make the GET /bootstrap handler derive its anchors from the incoming request instead of returning host-dependent values. The relevant code is the app.get(\"/bootstrap\", ...) handler, in the block that computes identity_endpoint and discovery_endpoint from PUBLIC_IP. If that file is the wrong target, say so rather than editing it.\n\nMEASURED FAILURE. A\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: semantic judge unavailable (llmCall to http://localhost:8220/resolve returned error in body: \"400 status code (no body)\"); deterministic floors passed — fail-open, unverified by judge\n- semantic_reject: semantic judge unavailable (llmCall to http://localhost:8220/resolve returned error in body: \"400 status code (no body)\"); deterministic floors passed — fail-open, unverified by judge\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-790d3528] investigate and decompose gap route-edit-4cef58bb: Edit repos/discovery-vessel/src/index.ts to make the GET /bootstrap handler derive its anchors from the incoming request instead of returning host-dependent values. The relevant code is the app.get(\"/bootstrap\", ...) handler, in the block that computes identity_endpoint and discovery_endpoint from PUBLIC_IP. If that file is the wrong target, say so rather than editing it.\n\nMEASURED FAILURE. A\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: semantic judge unavailable (llmCall to http://localhost:8220/resolve returned error in body: \"400 status code (no body)\"); deterministic floors passed — fail-open, unverified by judge\n- semantic_reject: semantic judge unavailable (llmCall to http://localhost:8220/resolve returned error in body: \"400 status code (no body)\"); deterministic floors passed — fail-open, unverified by judge\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-790d3528-narrowed",
+  "source_gap_source": "substrate_detected"
+}

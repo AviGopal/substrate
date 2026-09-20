@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-9af9e6a0",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/development-vessel/src/resolvers/feature-compose.ts to await the compose trace emission and log the execution",
+  "description": "Edit repos/development-vessel/src/resolvers/feature-compose.ts to await the compose trace emission and log the execution id the trace store returns.\n\nThe emission currently throws its response away, so the row it creates has no reachable address and 894 of 899 compose rows are never graded. Both edits below are inside the same fetch statement.\n\nEdit one. Replace this exact line:\n    void fetch(`${traceEndpoint}/v2/activities/executions`, {\nwith this exact line:\n    const traceRes = await fetch(`${traceEndpoint}/v2/activities/executions`, {\n\nEdit two. Replace this exact line:\n    }).catch(() => { /* trace-store unreachable — never fail the compose */ });\nwith these exact lines:\n    }).catch(() => null);\n    if (traceRes && traceRes.ok) {\n      const traceBody = (await traceRes.json().catch(() => null)) as { data?: { execution_id?: string } } | null;\n      const emittedId = traceBody?.data?.execution_id;\n      if (typeof emittedId === \"string\" && emittedId.length > 0) {\n        console.log(`[feature-compose] trace emission persisted execution_id=${emittedId}`);\n      }\n    }\n\nThe enclosing function is already async, so awaiting is valid. The existing outer `catch` and the 5000ms AbortSignal timeout are both unchanged, so a trace-store failure still cannot fail or delay a compose: the catch yields null and the block is skipped.\n\nMake no other change and touch no other file.",
+  "goal_text": "Edit repos/development-vessel/src/resolvers/feature-compose.ts to await the compose trace emission and log the execution id the trace store returns.\n\nThe emission currently throws its response away, so the row it creates has no reachable address and 894 of 899 compose rows are never graded. Both edits below are inside the same fetch statement.\n\nEdit one. Replace this exact line:\n    void fetch(`${traceEndpoint}/v2/activities/executions`, {\nwith this exact line:\n    const traceRes = await fetch(`${traceEndpoint}/v2/activities/executions`, {\n\nEdit two. Replace this exact line:\n    }).catch(() => { /* trace-store unreachable — never fail the compose */ });\nwith these exact lines:\n    }).catch(() => null);\n    if (traceRes && traceRes.ok) {\n      const traceBody = (await traceRes.json().catch(() => null)) as { data?: { execution_id?: string } } | null;\n      const emittedId = traceBody?.data?.execution_id;\n      if (typeof emittedId === \"string\" && emittedId.length > 0) {\n        console.log(`[feature-compose] trace emission persisted execution_id=${emittedId}`);\n      }\n    }\n\nThe enclosing function is already async, so awaiting is valid. The existing outer `catch` and the 5000ms AbortSignal timeout are both unchanged, so a trace-store failure still cannot fail or delay a compose: the catch yields null and the block is skipped.\n\nMake no other change and touch no other file.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-9af9e6a0",
+  "source_gap_source": "substrate_detected"
+}

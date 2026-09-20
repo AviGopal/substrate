@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-53c38fac",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Restore observability to the response-parsing branch of the goal-target inference in repos/goal-host-vessel/src/goal-tar",
+  "description": "Restore observability to the response-parsing branch of the goal-target inference in repos/goal-host-vessel/src/goal-target-inference.ts.\n\nSingle operation. Locate this verbatim line:\n    if (!m) return empty;\nAdd the following statement on its own line directly ABOVE it, exactly as written:\n\n    if (!m) console.warn(`[goal-target-inference] the LLM answered but no JSON object could be parsed from ${String(text).length} char(s) — returning an EMPTY target, indistinguishable downstream from \"no target is inferable\"; first 120 chars: ${String(text).slice(0, 120) || \"(empty response body)\"}`);\n\nThe anchor line stays exactly as it is. Nothing else in the file changes. Preserve the template literal and both interpolations verbatim.\n\nWHY THIS MATTERS: this is the branch taken when the LLM responds successfully but its answer contains no parseable JSON object. It returns the same empty decision as a genuine 'no target is inferable' result, so a model that answered in prose, was truncated, or returned an empty body is indistinguishable from a goal that truly has no target. A sibling branch on the transport failure a few lines above was instrumented earlier today and proved to be the COLD path — a live 0-step walk was observed while that diagnostic stayed silent, which means failures are arriving through this parse branch or its neighbours instead. Recording the response length and its opening characters separates 'the model said nothing usable' from 'there is nothing to aim at', which is currently unknowable from any log.",
+  "goal_text": "Restore observability to the response-parsing branch of the goal-target inference in repos/goal-host-vessel/src/goal-target-inference.ts.\n\nSingle operation. Locate this verbatim line:\n    if (!m) return empty;\nAdd the following statement on its own line directly ABOVE it, exactly as written:\n\n    if (!m) console.warn(`[goal-target-inference] the LLM answered but no JSON object could be parsed from ${String(text).length} char(s) — returning an EMPTY target, indistinguishable downstream from \"no target is inferable\"; first 120 chars: ${String(text).slice(0, 120) || \"(empty response body)\"}`);\n\nThe anchor line stays exactly as it is. Nothing else in the file changes. Preserve the template literal and both interpolations verbatim.\n\nWHY THIS MATTERS: this is the branch taken when the LLM responds successfully but its answer contains no parseable JSON object. It returns the same empty decision as a genuine 'no target is inferable' result, so a model that answered in prose, was truncated, or returned an empty body is indistinguishable from a goal that truly has no target. A sibling branch on the transport failure a few lines above was instrumented earlier today and proved to be the COLD path — a live 0-step walk was observed while that diagnostic stayed silent, which means failures are arriving through this parse branch or its neighbours instead. Recording the response length and its opening characters separates 'the model said nothing usable' from 'there is nothing to aim at', which is currently unknowable from any log.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-53c38fac",
+  "source_gap_source": "substrate_detected"
+}

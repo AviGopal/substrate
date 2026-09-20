@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-84784c66",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Restore observability to the completion-callback branch of the goal-target inference in repos/goal-host-vessel/src/goal-",
+  "description": "Restore observability to the completion-callback branch of the goal-target inference in repos/goal-host-vessel/src/goal-target-inference.ts.\n\nSingle operation. Locate this verbatim line:\n      if (t == null) return empty;\nAdd the following statement on its own line directly ABOVE it, exactly as written:\n\n      if (t == null) console.warn(`[goal-target-inference] the completion callback returned ${t === null ? \"null\" : \"undefined\"} — returning an EMPTY target, which is indistinguishable downstream from \"no target is inferable\"`);\n\nThe anchor line stays exactly as it is and must remain immediately below the new line. Nothing else in the file changes. Preserve the ternary verbatim.\n\nWHY: this is the branch taken when an injected completion callback returns nothing. It returns the same empty decision as a successful inference that genuinely found no target, so a broken or missing completion provider is indistinguishable from a goal that has no target. Two sibling branches in this same function were instrumented earlier today — the transport-failure branch and the JSON-parse branch — and this is the last uninstrumented one. An empty target is not a harmless outcome: it makes the walk terminate in 0 steps, which produces no trace, no execution id, and therefore no reach verdict at all, so the failure is invisible at every downstream layer. Distinguishing null from undefined additionally separates 'the callback deliberately signalled no result' from 'the callback was never wired', which are different defects with different repairs.",
+  "goal_text": "Restore observability to the completion-callback branch of the goal-target inference in repos/goal-host-vessel/src/goal-target-inference.ts.\n\nSingle operation. Locate this verbatim line:\n      if (t == null) return empty;\nAdd the following statement on its own line directly ABOVE it, exactly as written:\n\n      if (t == null) console.warn(`[goal-target-inference] the completion callback returned ${t === null ? \"null\" : \"undefined\"} — returning an EMPTY target, which is indistinguishable downstream from \"no target is inferable\"`);\n\nThe anchor line stays exactly as it is and must remain immediately below the new line. Nothing else in the file changes. Preserve the ternary verbatim.\n\nWHY: this is the branch taken when an injected completion callback returns nothing. It returns the same empty decision as a successful inference that genuinely found no target, so a broken or missing completion provider is indistinguishable from a goal that has no target. Two sibling branches in this same function were instrumented earlier today — the transport-failure branch and the JSON-parse branch — and this is the last uninstrumented one. An empty target is not a harmless outcome: it makes the walk terminate in 0 steps, which produces no trace, no execution id, and therefore no reach verdict at all, so the failure is invisible at every downstream layer. Distinguishing null from undefined additionally separates 'the callback deliberately signalled no result' from 'the callback was never wired', which are different defects with different repairs.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-84784c66",
+  "source_gap_source": "substrate_detected"
+}

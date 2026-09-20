@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-830b02c0-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-830b02c0] investigate and decompose gap route-edit-21cb1c5c: Edit repos/development-vessel/src",
+  "description": "[narrowed from route-edit-830b02c0] investigate and decompose gap route-edit-21cb1c5c: Edit repos/development-vessel/src/resolvers/comprehensibility-check.ts to satisfy the following request. The relevant code is in the region \"without\". If that file is the wrong target, say so rather than editing it.\n\nRun the identical-failure-run check over the execution store: group recent failures by activity and failure class, and for any run that has continued without an open gap naming that\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds a new failure mode but doesn't implement the identical-failure-run check functionality described in the gap\n- semantic_reject: The patch only adds a new failure mode type but doesn't implement the required identical-failure-run check functionality\n- semantic_reject: The patch only adds new types and a constant, but doesn't implement the logic for the 'identical-failure-run check' as described in the gap.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-830b02c0] investigate and decompose gap route-edit-21cb1c5c: Edit repos/development-vessel/src/resolvers/comprehensibility-check.ts to satisfy the following request. The relevant code is in the region \"without\". If that file is the wrong target, say so rather than editing it.\n\nRun the identical-failure-run check over the execution store: group recent failures by activity and failure class, and for any run that has continued without an open gap naming that\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds a new failure mode but doesn't implement the identical-failure-run check functionality described in the gap\n- semantic_reject: The patch only adds a new failure mode type but doesn't implement the required identical-failure-run check functionality\n- semantic_reject: The patch only adds new types and a constant, but doesn't implement the logic for the 'identical-failure-run check' as described in the gap.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-830b02c0-narrowed",
+  "source_gap_source": "substrate_detected"
+}

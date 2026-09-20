@@ -40,3 +40,11 @@ paths = [
   # This rule file necessarily contains the patterns it matches.
   '''scripts/git-hooks/\.gitleaks\.toml$''',
 ]
+regexes = [
+  # The key-harvest proof (validation/reports/launch-contract-gaps-proof) plants
+  # a deliberately fake canary credential and prints it verbatim — that verbatim
+  # print IS the evidence. Never a real key; the literal CANARY marker is required.
+  '''sk-ant-CANARY-[A-Za-z0-9-]+''',
+  # Demo/placeholder Anthropic keys used by throwaway proof containers.
+  '''sk-ant-(?:demo|dummy)-[A-Za-z0-9-]+''',
+]

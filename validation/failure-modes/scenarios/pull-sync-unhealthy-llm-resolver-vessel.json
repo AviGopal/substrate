@@ -1,0 +1,19 @@
+{
+  "id": "pull-sync-unhealthy-llm-resolver-vessel",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "service_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "llm-resolver-vessel unhealthy after pull-sync to ae07375f8a; reverted to 700c70f832 and halted the sync run",
+  "description": "llm-resolver-vessel unhealthy after pull-sync to ae07375f8a; reverted to 700c70f832 and halted the sync run",
+  "goal_text": "llm-resolver-vessel unhealthy after pull-sync to ae07375f8a; reverted to 700c70f832 and halted the sync run",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "pull-sync-unhealthy-llm-resolver-vessel",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "identical-failure-run-auth-resolve-v1-unclassified",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "repair_not_failure_conditioned",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "auth_resolve_v1 has failed 2286 times in the last 24h under a single failure class (unclassified), and NO OPEN GAP NAMES",
+  "description": "auth_resolve_v1 has failed 2286 times in the last 24h under a single failure class (unclassified), and NO OPEN GAP NAMES IT. The count is not the defect — the defect is that the system observed the same fact 2286 times and changed nothing: it did not stop selecting the activity, did not open a gap against the cause, and did not try a different route. The class is UNCLASSIFIED, which compounds it: with no recorded failure mode these take the strict default penalty, so an activity is being blamed 2286 times for a cause nobody has named. If the cause is environmental, that blame is false and is paid for twice — once in the wrong penalty and again in a posterior decay aggressive enough to forget it, which discards real evidence too. First action is to classify the failure, not to suppress the count: identical failures should not be possible, and where they occur they remain independent samples.",
+  "goal_text": "auth_resolve_v1 has failed 2286 times in the last 24h under a single failure class (unclassified), and NO OPEN GAP NAMES IT. The count is not the defect — the defect is that the system observed the same fact 2286 times and changed nothing: it did not stop selecting the activity, did not open a gap against the cause, and did not try a different route. The class is UNCLASSIFIED, which compounds it: with no recorded failure mode these take the strict default penalty, so an activity is being blamed 2286 times for a cause nobody has named. If the cause is environmental, that blame is false and is paid for twice — once in the wrong penalty and again in a posterior decay aggressive enough to forget it, which discards real evidence too. First action is to classify the failure, not to suppress the count: identical failures should not be possible, and where they occur they remain independent samples.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "identical-failure-run-auth-resolve-v1-unclassified",
+  "source_gap_source": "substrate_detected"
+}

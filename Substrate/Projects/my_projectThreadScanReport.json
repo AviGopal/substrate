@@ -1,0 +1,43 @@
+{
+  "folder": "Substrate/Projects",
+  "execute": true,
+  "projects": [
+
+    {
+      "file": "MyNewProjectWithOpenTodo.md",
+      "notes": "Dispatched as goal"
+    },
+    {
+      "file": "NewProjectWithNewTodos.md.bak",
+      "notes": "Dispatched as goal"
+    },
+    {
+      "file": "NewProjectWithUndispatchedTodo.md",
+      "notes": "Dispatched as goal"
+    },
+    {
+      "file": "TemporaryNewProject.md.bak",
+      "notes": "Dispatched as goal"
+    },
+    {
+      "file": "file_list.txt",
+      "notes": "Dispatched as goal"
+    },
+    {
+      "file": "my_new_project_with_todos.md",
+      "notes": "Dispatched as goal"
+    },
+    {
+      "file": "project-thread-scan-modified.ts",
+      "notes": "Dispatched as goal"
+    },
+    {
+      "file": "test_basename.md",
+      "notes": "Dispatched as goal"
+    },
+    {
+      "file": "test_project_with_new_todo.md",
+      "notes": "Dispatched as goal"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-b234ff12-narrowed-compose_execution_failure",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-b234ff12] investigate and decompose gap route-edit-d9b3aae8: The gap store's row count dropped",
+  "description": "[narrowed from route-edit-b234ff12] investigate and decompose gap route-edit-d9b3aae8: The gap store's row count dropped from 4,113 to 44 in a single day due to loadGaps() returning an empty array on any read or parse failure, resulting in a corrupt gaps.json file and leading to data loss.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 793-798 of 1214, VERBATIM:\\n793:  * read/parse failure, which would lead to store destruction.\\n794:  */\\n795: async function loa\n- syntax_break: src/resolvers/substrate-gap.ts(775,7): error TS1109: Expression expected.\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-b234ff12-narrowed repeated already-recorded failure class compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mu01t8cv-0a9p3t/development-ves. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "[narrowed from route-edit-b234ff12] investigate and decompose gap route-edit-d9b3aae8: The gap store's row count dropped from 4,113 to 44 in a single day due to loadGaps() returning an empty array on any read or parse failure, resulting in a corrupt gaps.json file and leading to data loss.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 793-798 of 1214, VERBATIM:\\n793:  * read/parse failure, which would lead to store destruction.\\n794:  */\\n795: async function loa\n- syntax_break: src/resolvers/substrate-gap.ts(775,7): error TS1109: Expression expected.\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-b234ff12-narrowed repeated already-recorded failure class compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mu01t8cv-0a9p3t/development-ves. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-b234ff12-narrowed-compose_execution_failure",
+  "source_gap_source": "substrate_detected"
+}

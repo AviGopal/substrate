@@ -1,0 +1,19 @@
+{
+  "id": "ingest-docs-reap-permanently-refused",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "ingest-docs-as-concepts reap pass refuses on EVERY run in the retained journal (18 of 18, ~4-5 days at 6h cadence) with ",
+  "description": "ingest-docs-as-concepts reap pass refuses on EVERY run in the retained journal (18 of 18, ~4-5 days at 6h cadence) with byte-identical counts: reapCandidates 596 vs reapLimit 460 (= floor(1841 manifest keys * REAP_MAX_FRACTION 0.25)). Identical counts across runs mean a stable steady state, not a transient. Cause of the orphan set: 492 of the manifest's keys are under repos/, but only 4 repos/*/CLAUDE.md files exist in /workspace/git/super-repo, so those sections are never re-seen and land in the reap set every run. CONSEQUENCE, named in the script's own header: a stale section competes with its own replacement for the drafter's attention indefinitely -- ~596 stale doc sections sit in the concept-db dense-search pool that supplies the top-4 architecture principles to feature-compose consultPrinciples (feature-compose.ts:3770) at prompt-build. This is a law-8 information-at-the-right-time defect, now measured. FALSIFIER: any ingest-docs run reporting reap != 'refused', or reapCandidates < reapLimit. DO NOT simply raise REAP_MAX_FRACTION: that deletes the symptom without explaining why 492 repos/* keys reference files the walk cannot reach (unpopulated submodules vs a coverage/root change is UNVERIFIED).",
+  "goal_text": "ingest-docs-as-concepts reap pass refuses on EVERY run in the retained journal (18 of 18, ~4-5 days at 6h cadence) with byte-identical counts: reapCandidates 596 vs reapLimit 460 (= floor(1841 manifest keys * REAP_MAX_FRACTION 0.25)). Identical counts across runs mean a stable steady state, not a transient. Cause of the orphan set: 492 of the manifest's keys are under repos/, but only 4 repos/*/CLAUDE.md files exist in /workspace/git/super-repo, so those sections are never re-seen and land in the reap set every run. CONSEQUENCE, named in the script's own header: a stale section competes with its own replacement for the drafter's attention indefinitely -- ~596 stale doc sections sit in the concept-db dense-search pool that supplies the top-4 architecture principles to feature-compose consultPrinciples (feature-compose.ts:3770) at prompt-build. This is a law-8 information-at-the-right-time defect, now measured. FALSIFIER: any ingest-docs run reporting reap != 'refused', or reapCandidates < reapLimit. DO NOT simply raise REAP_MAX_FRACTION: that deletes the symptom without explaining why 492 repos/* keys reference files the walk cannot reach (unpopulated submodules vs a coverage/root change is UNVERIFIED).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "ingest-docs-reap-permanently-refused",
+  "source_gap_source": "operator_narration"
+}

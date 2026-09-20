@@ -12,6 +12,7 @@ import { createVesselLibp2p, serveResolve, serveResolveHttp, resolveViaLibp2p, r
 import { ping } from '@libp2p/ping'
 import { hostname } from 'node:os'
 import { createHash } from 'node:crypto'
+import { existsSync } from 'node:fs'
 import { multiaddr } from '@multiformats/multiaddr'
 
 // RESILIENCE: libp2p internals emit 'error' events on streams/sockets that have no
@@ -1114,7 +1115,18 @@ function probeScriptPath(): string {
     '/usr/local/lib/substrate/federation-probe-tick.ts',
     new URL('./federation-probe-tick.ts', import.meta.url).pathname,
   ].filter(Boolean)
-  for (const c of candidates) { try { if (existsSync(c)) return c } catch { /* next */ } }
+  // The catch USED to be silent, and that hid a real defect for a full cycle: `existsSync`
+  // was never imported, so every candidate threw ReferenceError, every throw was swallowed
+  // here, and the function fell through to the last candidate — the in-workspace copy this
+  // whole function exists to stop depending on. Nothing typechecks scripts/, so a bare
+  // undefined inside a silent catch is invisible to every gate we have. Say why a candidate
+  // was skipped: a probe that cannot be STAT'd and a probe that is ABSENT are different
+  // failures and must not read the same.
+  for (const c of candidates) {
+    try { if (existsSync(c)) return c } catch (e) {
+      console.error(`[fed-transport] probe candidate ${c} could not be checked: ${String((e as Error)?.message ?? e)}`)
+    }
+  }
   console.error('[fed-transport] probe script not found in any of: ' + candidates.join(', '))
   return candidates[candidates.length - 1]!
 }

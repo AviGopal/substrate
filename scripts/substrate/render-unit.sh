@@ -119,7 +119,17 @@ WorkingDirectory=$workdir
 #
 # \`-\` prefix on purpose: if this cannot run, degrade to today's behaviour
 # rather than turn a recoverable start into a hard failure.
-ExecStartPre=-/bin/sh -c 'cd $workdir 2>/dev/null || exit 0; [ -f package.json ] || exit 0; [ -n "\$(ls -A node_modules 2>/dev/null)" ] || { echo "[render-unit] node_modules absent in $workdir — resolving"; $BUN install --silent; }; for d in node_modules/@*/*; do [ -d "\$d" ] || continue; [ -f "\$d/package.json" ] && continue; b=/vessels/\$(basename "\$d"); [ -f "\$b/package.json" ] || continue; echo "[render-unit] \$d resolved EMPTY (file: dep into an uninitialised submodule) — populating from \$b"; cp -a "\$b/." "\$d/"; done'
+#
+# THE \`[ -L "\$d" ] && continue\` GUARD IS LOAD-BEARING. This heuristic was written
+# for the clone layout, where a \`file:\` dep can land as a REAL directory that is
+# empty because its submodule was never initialised. In the image layout the same
+# dep is a SYMLINK to /vessels/<name> — already correctly resolved — and \$b is its
+# own target, so \`cp -a "\$b/." "\$d/"\` copies a directory into itself and dies with
+# "Too many levels of symbolic links" for every file underneath. Measured: pointing
+# federation-transport-vessel at the image path put it in a 46-restart crash loop,
+# entirely inside this ExecStartPre, with the transport source itself untouched and
+# fine. A symlinked dep needs no populating; skip it before anything else is tested.
+ExecStartPre=-/bin/sh -c 'cd $workdir 2>/dev/null || exit 0; [ -f package.json ] || exit 0; [ -n "\$(ls -A node_modules 2>/dev/null)" ] || { echo "[render-unit] node_modules absent in $workdir — resolving"; $BUN install --silent; }; for d in node_modules/@*/*; do [ -L "\$d" ] && continue; [ -d "\$d" ] || continue; [ -f "\$d/package.json" ] && continue; b=/vessels/\$(basename "\$d"); [ -f "\$b/package.json" ] || continue; echo "[render-unit] \$d resolved EMPTY (file: dep into an uninitialised submodule) — populating from \$b"; cp -a "\$b/." "\$d/"; done'
 ExecStart=$BUN $workdir/$exec_ts
 # Graceful detach: any clean stop deregisters from discovery immediately
 # (best-effort; TTL expiry remains the crash backstop).

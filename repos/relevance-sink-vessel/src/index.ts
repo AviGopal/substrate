@@ -46,7 +46,12 @@ async function applyPenalty(impulse_ids: string[], org_id: string): Promise<numb
     const text = await res.text().catch(() => "");
     throw new Error(`SurrealDB error ${res.status}: ${text}`);
   }
-  return impulse_ids.length;
+  // Rows MATCHED, not the request length: {"written":N} used to echo
+  // impulse_ids.length even when the UPDATE matched nothing (2026-09-15
+  // wiring proof), so success was unfalsifiable from the response body.
+  const blocks = (await res.json().catch(() => [])) as Array<{ status?: string; result?: unknown }>;
+  const last = blocks[blocks.length - 1];
+  return Array.isArray(last?.result) ? last.result.length : 0;
 }
 
 async function handlePenalty(req: Request): Promise<Response> {
@@ -109,7 +114,28 @@ Bun.serve({
       }
 
       if (req.method === "GET" && url.pathname === "/health") {
-        return Response.json({ status: "ok", vessel: "relevance-sink-vessel" });
+        try {
+          const controller = new AbortController();
+          const res = await fetch(`${SURREALDB_URL}/sql`, {
+            method: "POST",
+            headers: {
+              "Accept": "application/json",
+              "surreal-ns": SURREALDB_NAMESPACE,
+              "surreal-db": SURREALDB_DATABASE,
+              "Authorization": basicAuth(SURREALDB_USERNAME, SURREALDB_PASSWORD),
+            },
+            body: "RETURN 1;",
+            signal: AbortSignal.timeout(2000),
+          });
+
+          if (!res.ok) {
+            throw new Error(`SurrealDB probe failed with status ${res.status}`);
+          }
+          return Response.json({ status: "ok", vessel: "relevance-sink-vessel" });
+        } catch (error) {
+          console.error("[relevance-sink] health check failed to reach SurrealDB", error);
+          return Response.json({ status: "degraded", vessel: "relevance-sink-vessel", store: "unreachable" }, { status: 503 });
+        }
       }
 
       return Response.json({ error: "not found" }, { status: 404 });

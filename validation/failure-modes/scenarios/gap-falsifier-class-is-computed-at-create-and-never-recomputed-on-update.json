@@ -1,0 +1,19 @@
+{
+  "id": "gap-falsifier-class-is-computed-at-create-and-never-recomputed-on-update",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "falsifier_class",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Gaps are armed only at creation (birth) and their falsifier class is never recomputed on update. Controlled comparisons ",
+  "description": "Gaps are armed only at creation (birth) and their falsifier class is never recomputed on update. Controlled comparisons on 2026‑09‑16 with the same writer, session, and metadata shape show that gaps created with classification_metadata containing expected_literal plus edit_site always read back falsifier class1 (satisfier‑suppression‑interlock‑has‑a‑removal‑condition‑and‑no‑owner, thompson‑dual‑write‑leg‑b‑targets‑a‑table‑the‑records‑are‑not‑in), indicating stale classification after edits.",
+  "goal_text": "Gaps are armed only at creation (birth) and their falsifier class is never recomputed on update. Controlled comparisons on 2026‑09‑16 with the same writer, session, and metadata shape show that gaps created with classification_metadata containing expected_literal plus edit_site always read back falsifier class1 (satisfier‑suppression‑interlock‑has‑a‑removal‑condition‑and‑no‑owner, thompson‑dual‑write‑leg‑b‑targets‑a‑table‑the‑records‑are‑not‑in), indicating stale classification after edits.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-falsifier-class-is-computed-at-create-and-never-recomputed-on-update",
+  "source_gap_source": "substrate_detected"
+}

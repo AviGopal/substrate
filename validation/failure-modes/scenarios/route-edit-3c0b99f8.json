@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-3c0b99f8",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap gap-mu6vqwfv: In repos/goal-host-vessel/src/index.ts, exact-repetition replay is inconsist",
+  "description": "investigate and decompose gap gap-mu6vqwfv: In repos/goal-host-vessel/src/index.ts, exact-repetition replay is inconsistent because the reachedCommandCache is consulted inside one executor branch rather than during branch selection; consult the existing reachedCommandCache Map by goal hash BEFORE branch choice and steer a hit toward the replaying branch. Do NOT add fields to the run-goal options type — a prior attempt invented a",
+  "goal_text": "investigate and decompose gap gap-mu6vqwfv: In repos/goal-host-vessel/src/index.ts, exact-repetition replay is inconsistent because the reachedCommandCache is consulted inside one executor branch rather than during branch selection; consult the existing reachedCommandCache Map by goal hash BEFORE branch choice and steer a hit toward the replaying branch. Do NOT add fields to the run-goal options type — a prior attempt invented a",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-3c0b99f8",
+  "source_gap_source": "substrate_detected"
+}

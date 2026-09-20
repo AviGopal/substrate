@@ -63,9 +63,33 @@ set -a; . /etc/substrate/env 2>/dev/null || true; set +a
 # multiaddr has no HUB_DISCOVERY_URL to gate on, but it needs the transport MORE than a
 # URL-joined spoke does — the transport is the only thing that can reach that peer at all,
 # because the anchor names a peer identity rather than a host with an HTTP endpoint.
-if { [ -n "${HUB_DISCOVERY_URL:-}" ] || [ -n "${PEER_MULTIADDR:-}" ]; } && [ -x /usr/local/bin/vessel-ctl ]; then
+# DISABLED_VESSELS outranks the auto-enable. This block used to run
+# unconditionally on every spoke, so a deployment that explicitly said
+# DISABLED_VESSELS=federation-transport-vessel.service got the unit anyway —
+# selection could not say no to it, because manifest units sit outside
+# apply-inventory's loop and this auto-enable ran after it. Measured
+# 2026-09-15 (validation/reports/wiring-green-vs-miswired-proof): the unit
+# came up, crash-looped against a hub with no relay, and was the only red on
+# an otherwise-green fleet the operator had deliberately composed without it.
+_ftv_disabled=0
+case ",$(echo "${DISABLED_VESSELS:-}" | tr -d '[:space:]')," in
+  *,federation-transport-vessel.service,*|*,federation-transport-vessel,*) _ftv_disabled=1 ;;
+esac
+if [ "$_ftv_disabled" = 1 ]; then
+  echo "[substrate] spoke federation: federation-transport-vessel is in DISABLED_VESSELS — auto-enable skipped"
+elif { [ -n "${HUB_DISCOVERY_URL:-}" ] || [ -n "${PEER_MULTIADDR:-}" ]; } && [ -x /usr/local/bin/vessel-ctl ]; then
   echo "[substrate] spoke federation: enabling federation-transport-vessel (hub=${HUB_DISCOVERY_URL:-none} peer_multiaddr=${PEER_MULTIADDR:-none})"
-  /usr/local/bin/vessel-ctl install federation-transport-vessel >/dev/null 2>&1 || true
+  # DO NOT DISCARD THIS OUTPUT. It used to be `>/dev/null 2>&1 || true`, and that
+  # redirect hid the single most useful line in the whole boot: the install failed
+  # with "WORKDIR ABSENT (/workspace/git/super-repo/scripts/substrate/federation-relay)
+  # — dependencies NOT installed", because the clone does not exist yet at this point.
+  # The operator-visible symptom was a container that booted healthy, reported
+  # substrate-ready, and federated with nobody — with the cause already computed and
+  # thrown away. The unit now runs from the image path so the race is gone, but the
+  # output stays: a swallowed install error is how this went unnoticed for an entire
+  # development arc, and `|| true` keeps boot non-fatal without keeping it silent.
+  /usr/local/bin/vessel-ctl install federation-transport-vessel || \
+    echo "[substrate] spoke federation: vessel-ctl install returned $? — transport may not start; see the line above for the reason"
   # vessel-ctl's `systemctl enable --now` no-ops pre-systemd; make boot-start deterministic
   # with an offline wants-symlink (the unit is WantedBy=multi-user.target).
   if [ -f /etc/systemd/system/federation-transport-vessel.service ]; then
@@ -74,6 +98,39 @@ if { [ -n "${HUB_DISCOVERY_URL:-}" ] || [ -n "${PEER_MULTIADDR:-}" ]; } && [ -x 
       /etc/systemd/system/multi-user.target.wants/federation-transport-vessel.service
   fi
 fi
+
+# Hub-side federation: ENABLED_ROLES=hub promises "spokes can join me", and that
+# promise has two runtime halves the role selection alone cannot deliver, because
+# both units are manifest-installed (outside apply-inventory's loop):
+#   - federation-relay: the reachability anchor every spoke circuit rides. Without
+#     it a joining spoke's transport has nothing to dial and /bootstrap advertises
+#     an empty relay list.
+#   - federation-transport-vessel: already auto-enabled by the block above, since
+#     gen-env now self-anchors a hub (HUB_DISCOVERY_URL=localhost) — without it the
+#     hub can SEE mirrored spoke rows and cannot dial them (forward_failed).
+# Both were manual interventions in the 2026-09-16 network demo
+# (validation/reports/network-demo); this block moves deploy-hub.sh's knowledge
+# into the boot path. DISABLED_VESSELS still outranks, same as the transport.
+_frl_disabled=0
+case ",$(echo "${DISABLED_VESSELS:-}" | tr -d '[:space:]')," in
+  *,federation-relay.service,*|*,federation-relay,*) _frl_disabled=1 ;;
+esac
+case ",$(echo "${ENABLED_ROLES:-}" | tr -d '[:space:]')," in
+  *,hub,*)
+    if [ "$_frl_disabled" = 1 ]; then
+      echo "[substrate] hub federation: federation-relay is in DISABLED_VESSELS — auto-enable skipped"
+    elif [ -x /usr/local/bin/vessel-ctl ]; then
+      echo "[substrate] hub federation: enabling federation-relay (the reachability anchor spokes dial)"
+      /usr/local/bin/vessel-ctl install federation-relay || \
+        echo "[substrate] hub federation: vessel-ctl install returned $? — relay may not start; see the line above for the reason"
+      if [ -f /etc/systemd/system/federation-relay.service ]; then
+        mkdir -p /etc/systemd/system/multi-user.target.wants
+        ln -sf ../federation-relay.service \
+          /etc/systemd/system/multi-user.target.wants/federation-relay.service
+      fi
+    fi
+    ;;
+esac
 
 # LLM arm fleet: render one unit per declared arm (llm-arms.json / LLM_ARMS env)
 # via render-llm-arms.sh, then boot-enable the rendered llm-<id>.service units.

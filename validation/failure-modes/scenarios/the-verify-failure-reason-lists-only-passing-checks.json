@@ -1,0 +1,19 @@
+{
+  "id": "the-verify-failure-reason-lists-only-passing-checks",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "observability",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "A compose that fails verification reports a reason that names only PASSING checks, so the failing check is never identif",
+  "description": "A compose that fails verification reports a reason that names only PASSING checks, so the failing check is never identified. Observed 2026-09-10 on five consecutive attempts of one edit (op_count=3, ops_applied=3, verify_ok=[False], rolled_back=true). The entire goalReachReason is 416 characters: it announces verify failed (repos/development-vessel): and then lists three (pass) entries and ends on (pass)). Nothing in the trace, the dispatch record, or the reason string names the check that failed. Consequence: a refusal cannot be acted on. The operator cannot tell a real regression from a flaky or environmental failure, so the only available responses are to re-dispatch blindly or to abandon a possibly-correct change. Measured context: the vessel suite is stably red at 37 pre-existing failures (identical failure-name sets across two consecutive runs at loadavg 3.87), and a compose landed at 17:42 with those same failures present, so a red suite is not itself the explanation. The proposed edit was independently measured to newly fail ZERO tests, by diffing sorted failing-test-name sets in both directions between a patched and an unpatched copy of the same tree. Predicate for closure: a compose whose verify step fails emits, in the trace metadata, the name of at least one FAILING check; verify that by finding a rolled-back compose whose reason or metadata contains a failing check name rather than only (pass) entries.",
+  "goal_text": "A compose that fails verification reports a reason that names only PASSING checks, so the failing check is never identified. Observed 2026-09-10 on five consecutive attempts of one edit (op_count=3, ops_applied=3, verify_ok=[False], rolled_back=true). The entire goalReachReason is 416 characters: it announces verify failed (repos/development-vessel): and then lists three (pass) entries and ends on (pass)). Nothing in the trace, the dispatch record, or the reason string names the check that failed. Consequence: a refusal cannot be acted on. The operator cannot tell a real regression from a flaky or environmental failure, so the only available responses are to re-dispatch blindly or to abandon a possibly-correct change. Measured context: the vessel suite is stably red at 37 pre-existing failures (identical failure-name sets across two consecutive runs at loadavg 3.87), and a compose landed at 17:42 with those same failures present, so a red suite is not itself the explanation. The proposed edit was independently measured to newly fail ZERO tests, by diffing sorted failing-test-name sets in both directions between a patched and an unpatched copy of the same tree. Predicate for closure: a compose whose verify step fails emits, in the trace metadata, the name of at least one FAILING check; verify that by finding a rolled-back compose whose reason or metadata contains a failing check name rather than only (pass) entries.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "the-verify-failure-reason-lists-only-passing-checks",
+  "source_gap_source": "substrate_detected"
+}

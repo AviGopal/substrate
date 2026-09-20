@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-e70dbd6e-syntax_break",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-36472886: The GET /conservation-audit route is registered TWICE in repos/activi",
+  "description": "investigate and decompose gap route-edit-36472886: The GET /conservation-audit route is registered TWICE in repos/activity-api/src/routes/activities.ts with byte-identical handler bodies (verified by diffing the two blocks: the only difference was a trailing brace from the slice boundary). The framework serves the FIRST registration, so the second is unreachable dead code.\n\nTWO CONSEQUENCES.\n1. Dead code: roughly 80 lines that can never execute.\n2 [RETRY CONTEXT — compose for gap route-edit-e70dbd6e repeated already-recorded failure class syntax_break: src/routes/activities.ts(5876,5): error TS1472: 'catch' or 'finally' expected. | src/routes/activities.ts(5939,5): error TS1005: ',' expected. | src/r. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "investigate and decompose gap route-edit-36472886: The GET /conservation-audit route is registered TWICE in repos/activity-api/src/routes/activities.ts with byte-identical handler bodies (verified by diffing the two blocks: the only difference was a trailing brace from the slice boundary). The framework serves the FIRST registration, so the second is unreachable dead code.\n\nTWO CONSEQUENCES.\n1. Dead code: roughly 80 lines that can never execute.\n2 [RETRY CONTEXT — compose for gap route-edit-e70dbd6e repeated already-recorded failure class syntax_break: src/routes/activities.ts(5876,5): error TS1472: 'catch' or 'finally' expected. | src/routes/activities.ts(5939,5): error TS1005: ',' expected. | src/r. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-e70dbd6e-syntax_break",
+  "source_gap_source": "substrate_detected"
+}

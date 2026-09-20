@@ -1,5 +1,27 @@
 # The substrate is a slow–fast dynamical system on a growing complex
 
+> **This is the intended model. Three things must hold before any quantity derived from it
+> means what the mathematics says it means, and none of them is guaranteed by the model
+> being correct.**
+>
+> 1. **Both sides of the stability inequality must be expressed on a common scale.** Where a
+>    quantity is approximated by a cheaper stand-in, the comparison silently becomes one
+>    between incomparable numbers — still arithmetically well-formed, no longer meaningful.
+>    Establish that the two sides share units before reading anything into their difference.
+> 2. **A detector described here is not thereby a detector that runs.** Confirm something
+>    invokes it, and that whatever history it needs is actually accumulating. A detector with
+>    no caller emits silence, and silence is read as "nothing is wrong" — so an unbuilt
+>    detector is worse than an absent one.
+> 3. **A measurement is not a governor until something acts on it.** Before treating any
+>    observable here as controlling behaviour, find the consumer that changes what the system
+>    does in response. A value nothing reads cannot gate anything, however correctly computed.
+>
+> **And check freshness, not merely presence.** These quantities come from periodic
+> producers, and a producer that has died keeps serving its final value indefinitely. A stale
+> reading is indistinguishable from a current one unless you compare the reading's own
+> timestamp against how often it should be produced. Staleness should be treated as loudly as
+> absence — absence is legible, whereas a stale number is confidently wrong.
+
 > Companion to the formal-lens documents, all reading one running system through
 > different coordinate charts: [`SUBSTRATE_AS_MDP.md`](SUBSTRATE_AS_MDP.md) (the
 > learning *rule* — factored-MDP Bayesian Q-learning),

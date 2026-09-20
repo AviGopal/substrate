@@ -1,1 +1,1 @@
-{"version":3,"file":"hono.d.ts","sourceRoot":"","sources":["hono.ts"],"names":[],"mappings":"AAAA;;GAEG;AAEH,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,MAAM,CAAA;AACnC,OAAO,KAAK,EAAE,YAAY,EAAE,MAAM,qBAAqB,CAAA;AAEvD;;;;;;;;;;;GAWG;AACH,wBAAgB,0BAA0B,CAAC,MAAM,EAAE,YAAY,OAClD,OAAO,SAOnB"}
+{"version":3,"file":"hono.d.ts","sourceRoot":"","sources":["hono.ts"],"names":[],"mappings":"AAAA;;GAEG;AAEH,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,MAAM,CAAA;AACnC,OAAO,KAAK,EAAE,YAAY,EAAE,MAAM,qBAAqB,CAAA;AAEvD;;;;;;;;;;;GAWG;AACH,wBAAgB,0BAA0B,CAAC,MAAM,EAAE,YAAY,OAClD,OAAO;;;;;;;;;;;sBAOnB"}
