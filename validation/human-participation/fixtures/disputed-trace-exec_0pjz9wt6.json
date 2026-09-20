@@ -1,0 +1,29 @@
+{
+  "frozen_at": "2026-09-20T04:58Z",
+  "source": "execution_trace exec_0pjz9wt6 (live substrate)",
+  "why_frozen": "Genuine verdict dissonance: the trace reports status success AND failure_mode execution_error on the same execution. The activity is the churn composition responsible for 92% of ui-named execution volume (368 fail / 36 success). Used by scenario S3-INSPECT: a person must identify which field the reach claim actually rests on.",
+  "trace": {
+    "execution_id": "exec_0pjz9wt6",
+    "status": "success",
+    "activity_template_id": "learned-composition-uifeedback-write-to-shellresult",
+    "composition_chain": "walk-satisfier-1-1787867966351",
+    "state_signature": "1fdc874f",
+    "failure_mode": "execution_error",
+    "tasks": [
+      { "n": 1, "ok": true, "step": "uiFeedback_write/pattern", "in": [], "out": ["uiFeedback_write"] },
+      { "n": 2, "ok": true, "step": "shellResult/pattern", "in": ["uiFeedback_write"], "out": ["shellResult"] }
+    ]
+  },
+  "sibling_failures_same_template": ["exec_080b06hj", "exec_080qlort"],
+  "assessment_key": {
+    "supported_by_this_trace": [
+      "Both tasks executed and each produced its declared output shape",
+      "The composition chain roots in a walk satisfier, i.e. the pathway origin was a fallback, not a learned producer"
+    ],
+    "not_supported_by_this_trace": [
+      "That the goal behind the dispatch was reached (no reached tag present)",
+      "That a human contribution was involved anywhere (uiFeedback_write was produced by a pattern resolver, not a person)",
+      "That 'status: success' means the outcome was useful (failure_mode contradicts it; 368 sibling failures)"
+    ]
+  }
+}

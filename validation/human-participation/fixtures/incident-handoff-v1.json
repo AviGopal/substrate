@@ -1,0 +1,52 @@
+{
+  "frozen_at": "2026-09-20",
+  "why_frozen": "S6-CONTRIBUTE task material: an incident handoff mixing supported conclusions with unresolved claims. Every statement is graded in the assessment key; the composition of the handoff is fixed forever so comprehension scores are comparable across interface versions. Facts derive from the real 2026-09-20 baseline audit; claims 3 and 5 are deliberately NOT supported by the cited evidence.",
+  "handoff": {
+    "title": "Incident handoff: ui feedback composition churn",
+    "sections": [
+      {
+        "id": "c1",
+        "claim": "The activity learned-composition-uifeedback-write-to-shellresult has executed about 404 times since July with roughly a 9% success rate and was still firing as of 2026-09-20.",
+        "cited_evidence": "variant_performance_metrics row: 404 executions, thompson_alpha 1.47, thompson_beta 54.4; latest execution timestamp 2026-09-20 04:22."
+      },
+      {
+        "id": "c2",
+        "claim": "The selection learner has already down-weighted this activity: its posterior across context buckets is strongly failure-dominated.",
+        "cited_evidence": "context_thompson_scores: 62 buckets, sum alpha 99 / sum beta 428."
+      },
+      {
+        "id": "c3",
+        "claim": "The churn is caused by users repeatedly submitting feedback through the browser panel, which re-triggers the composition.",
+        "cited_evidence": "interactor-log/uiFeedback_write.jsonl exists with 20 records."
+      },
+      {
+        "id": "c4",
+        "claim": "A pre-flight rejection gap for this activity is already open in the gap store.",
+        "cited_evidence": "gap id precondition-rejection-activity:(learned-composition-uifeedback-write-to-shellresult)-2026-09-18, status open."
+      },
+      {
+        "id": "c5",
+        "claim": "Retiring the activity is safe because nothing else produces shellResult.",
+        "cited_evidence": "None cited."
+      },
+      {
+        "id": "c6",
+        "claim": "One execution of this template (exec_0pjz9wt6) reports status success while simultaneously carrying failure_mode execution_error, so its status field alone cannot certify a useful outcome.",
+        "cited_evidence": "Frozen trace fixture disputed-trace-exec_0pjz9wt6.json."
+      }
+    ],
+    "requested_contribution": "Before we retire or repair this activity: which of the above conclusions are actually supported by their cited evidence? For any that are not, say what evidence would settle them or supply a correction."
+  },
+  "assessment_key": {
+    "supported": ["c1", "c2", "c4", "c6"],
+    "unsupported": {
+      "c3": "The journal's last record is 2026-07-22 and its content is machine-generated dispatch payloads; no human submission is in evidence. The cited file cannot carry the causal claim.",
+      "c5": "No evidence cited, and absence-of-other-producers was never established; a registry/template query would be required."
+    },
+    "usable_correction_examples": [
+      "c3: the journal has been silent since 2026-07-22 and contains machine payloads, so browser submissions cannot be the trigger; check what dispatches the template (walk satisfier chains).",
+      "c5: run a producers-of-shellResult query before claiming exclusivity."
+    ],
+    "scoring": "Per claim: correct support judgment = 1. A usable correction for an unsupported claim = 1 extra (usable = names the defect in the evidence relation, not mere disagreement). Max 8. Record time-to-first-correct-identification and any assistance given."
+  }
+}
