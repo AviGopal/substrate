@@ -107,6 +107,7 @@ fixtures, and the panels must appear in `/api/questions`. S2/S4/S7/S8 fixtures a
 | Probe evidence | `test/one-page-probe.ts` PASS: zero page scroll at 1440×900, 1280×800, and their 125 %-zoom-equivalent viewports; all five region headings inside the viewport; long material overflows its own region (assertion non-vacuous); no JS errors. Behavioral probe + 20-test shape suite still pass. Dark scheme verified by computed color (`#161b1e` panels on `#0e1214`). |
 | Screenshots | `docs/assets/human-participation-repertoire/v2/substrate-onepage-1440{,-dark}.png` |
 | Design rationale | The one-page constraint is itself an expectation: everything a person needs to begin, decide, inspect, and complain is co-present; scrolling is demoted to within-region reading. The Ask region compresses to an entry bar because an empty text box does not deserve a quarter of the viewport. |
+| Coverage limit (named) | Runs and Detail were exercised only in their empty states — no probe yet renders a populated verdict board or an open run inside the one-page grid; that is the first exploration-set candidate. Selection between v1/v2 is probe-verified through the renderPolicy impulse (stage-5 run). |
 
 ## Versioning rules
 
