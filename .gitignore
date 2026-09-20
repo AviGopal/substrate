@@ -279,3 +279,4 @@ scripts/substrate/workspace/
 # the Docker build context and shadow the real script.
 /scripts/substrate/mirror-to-live
 .config-probe.*
+validation/human-participation/witness-excluded/

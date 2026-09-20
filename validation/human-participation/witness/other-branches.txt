@@ -1,0 +1,25 @@
+=== dev
+24	0
+=== development-vessel
+24	4
+191afb00 Automated commit of vessel code changes
+f17a81a0 Merge origin/dev into development-vessel and resolve conflicts
+a6fbf4f4 Resolve merge conflicts for merging dev into discovery-vessel
+fdf197a2 Stash local changes before cutover to origin/dev
+=== discovery-vessel
+80	0
+=== obsidian-episode-vessel
+86	13
+6190136a Save local changes before checking out development-vessel
+8c9660b4 Merge branch 'dev' of https://github.com/AviGopal/substrate into obsidian-episode-vessel
+bd0b46a4 Merge branch 'dev' of https://github.com/AviGopal/substrate into obsidian-episode-vessel
+6c1af12c Merge branch 'dev' of https://github.com/AviGopal/substrate into obsidian-episode-vessel
+cf164447 Merge branch 'dev' of https://github.com/AviGopal/substrate into obsidian-episode-vessel
+b456c748 Merge branch 'dev' of https://github.com/AviGopal/substrate into obsidian-episode-vessel
+4377a647 Merge branch 'dev' of https://github.com/AviGopal/substrate into obsidian-episode-vessel
+ead5c892 Merge branch 'dev' of https://github.com/AviGopal/substrate into obsidian-episode-vessel
+1b121c19 Merge branch 'dev' of https://github.com/AviGopal/substrate into obsidian-episode-vessel
+21dd0d72 Merge remote-tracking branch 'origin/dev' into obsidian-episode-vessel
+66f8f8b1 Merge remote-tracking branch 'origin/dev' into obsidian-episode-vessel
+100fa7c3 Merge remote-tracking branch 'origin/dev' into obsidian-episode-vessel
+a858fc0a obsidian-episode-vessel: initial commit

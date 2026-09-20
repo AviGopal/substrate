@@ -1,0 +1,81 @@
+commit a6fbf4f48f5f512df7d21fc50b6dade189ec3a16
+Merge: fdf197a2 9f1d1c98
+Author:     Substrate Autonomous <substrate-autonomous@substrate.local>
+AuthorDate: Tue Sep 15 03:47:39 2026 +0000
+Commit:     Substrate Autonomous <substrate-autonomous@substrate.local>
+CommitDate: Tue Sep 15 03:47:39 2026 +0000
+
+    Resolve merge conflicts for merging dev into discovery-vessel
+
+ README.md                                          |     48 +-
+ Substrate/Projects/MyProject.md                    |      2 +
+ compose-slots/slot-0.slot                          |      2 +-
+ docs/FEDERATION.md                                 |    164 +-
+ docs/HUMAN_SURFACE.md                              |      8 +
+ docs/QUALIFICATION.md                              |     80 +
+ docs/SUBSTRATE.md                                  |     13 +-
+ docs/operations/CONFIGURATION_SURFACE.md           |     11 +-
+ docs/operations/FEDERATION_GENRES.md               |     25 +-
+ docs/validation/LEARNING_LOOP_SELFTEST.md          |     71 +
+ fix-gap-to-feature.patch                           |     11 +
+ history.txt                                        |      1 +
+ interactor-log/interactorAssertion_write.jsonl     |      6 +
+ leases/maintenance.json                            |      6 +
+ load-attribution/records.jsonl                     |     10 +
+ .../proposal.md                                    |    315 +
+ .../src/registration-loop.ts                       |     64 +-
+ path/to/the/file                                   |      1 +
+ probe.txt                                          |      1 +
+ product-383-457                                    |      1 +
+ repos/development-vessel                           |      2 +-
+ repos/human-surface-vessel/src/store.ts            |    108 +-
+ repos/human-surface-vessel/test/store.test.ts      |    116 +
+ repos/llm-resolver-vessel                          |      2 +-
+ scripts/substrate/bootstrap-remote-google-arm.sh   |     14 +-
+ scripts/substrate/compose-drift-tick.ts            |    253 +
+ scripts/substrate/deploy-hub-pull.sh               |     10 +-
+ scripts/substrate/entrypoint.sh                    |      8 +-
+ .../federation-relay/federation-probe-tick.ts      |   1420 +
+ scripts/substrate/gap-store-census-tick.ts         |    176 +
+ scripts/substrate/gen-env.sh                       |    131 +-
+ scripts/substrate/learning-loop-selftest-tick.ts   |    463 +
+ scripts/substrate/render-unit.sh                   |     14 +-
+ scripts/substrate/rhythm-conduct-tick.ts           |    190 +
+ scripts/substrate/rhythm-seed-tick.ts              |    314 +
+ scripts/substrate/runtime-drift-tick.ts            |    354 +
+ scripts/substrate/secrets.env.sh                   |     16 +
+ scripts/substrate/substrate-pull-sync.sh           |     26 +
+ scripts/substrate/units/compose-drift.service      |     28 +
+ scripts/substrate/units/compose-drift.timer        |     17 +
+ .../units/development-vessel-seed.service          |      6 +-
+ scripts/substrate/units/development-vessel.service |     13 +-
+ .../federation-peering.conf                        |     13 +-
+ .../units/federation-transport-vessel.service      |      9 +-
+ scripts/substrate/units/gap-store-census.service   |     29 +
+ scripts/substrate/units/gap-store-census.timer     |     18 +
+ scripts/substrate/units/git-push-setup.service     |      7 +-
+ .../substrate/units/learning-loop-selftest.service |     30 +
+ .../substrate/units/learning-loop-selftest.timer   |     18 +
+ scripts/substrate/units/rhythm-cadence.service     |     25 +
+ scripts/substrate/units/rhythm-cadence.timer       |     17 +
+ scripts/substrate/units/runtime-drift.service      |     19 +
+ scripts/substrate/units/runtime-drift.timer        |     16 +
+ scripts/substrate/units/validator-liveness.service |     21 +
+ scripts/substrate/units/validator-liveness.timer   |     12 +
+ scripts/substrate/validator-liveness-tick.ts       |    199 +
+ scripts/substrate/vessels.inventory.json           |      5 +
+ scripts/substrate/vessels.manifest.json            |      2 +-
+ selftest_output.txt                                |      6 +
+ state/learning-mode-state.json                     |      8 +-
+ task_a_output.txt                                  |      1 +
+ task_b_output.txt                                  |      1 +
+ task_c_output.txt                                  |      1 +
+ test_project_thread.md                             |      5 +
+ tmp_gaps.json                                      | 175104 ++++++++++++++++++
+ ...escalation-loop-saturates-development-vessel.md |     59 +
+ validation/generated/42-2026-09-13.json            |   1029 +
+ .../PREREG_gap_admission_grounding_2026-09-06.md   |    275 +
+ ...DUCER_INDEX_CANNOT_SEE_ACTIVITIES_2026-09-08.md |    147 +
+ .../arithmetic-outcome-repair-2026-09-11/REPORT.md |    290 +
+ .../ADDENDUM-2026-09-10-operational-evidence.md    |   4064 +
+ 71 files changed, 185870 insertions(+), 81 deletions(-)

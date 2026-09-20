@@ -1,0 +1,1554 @@
+191afb00 HEAD@{2026-09-20 02:36:13 +0000}: commit: Automated commit of vessel code changes
+f17a81a0 HEAD@{2026-09-20 02:23:39 +0000}: commit (merge): Merge origin/dev into development-vessel and resolve conflicts
+a6fbf4f4 HEAD@{2026-09-20 02:22:36 +0000}: checkout: moving from 93c70c5e2b9218fcafb4691c398318f36b7f12a7 to development-vessel
+93c70c5e HEAD@{2026-09-20 02:01:36 +0000}: checkout: moving from dev to origin/dev
+93c70c5e HEAD@{2026-09-20 00:47:32 +0000}: pull --ff-only origin dev: Fast-forward
+095bd692 HEAD@{2026-09-20 00:47:32 +0000}: checkout: moving from dev to dev
+095bd692 HEAD@{2026-09-19 23:44:49 +0000}: pull --ff-only origin dev: Fast-forward
+290a5c78 HEAD@{2026-09-19 23:44:49 +0000}: checkout: moving from dev to dev
+290a5c78 HEAD@{2026-09-19 23:34:27 +0000}: pull --ff-only origin dev: Fast-forward
+f2eb9a80 HEAD@{2026-09-19 23:34:26 +0000}: checkout: moving from dev to dev
+f2eb9a80 HEAD@{2026-09-19 23:13:45 +0000}: pull --ff-only origin dev: Fast-forward
+13ba9bf1 HEAD@{2026-09-19 23:13:45 +0000}: checkout: moving from dev to dev
+13ba9bf1 HEAD@{2026-09-19 21:12:27 +0000}: reset: moving to HEAD
+13ba9bf1 HEAD@{2026-09-19 21:12:24 +0000}: commit: chore: Update activity-api submodule to latest commit
+2cf1007f HEAD@{2026-09-19 21:12:21 +0000}: commit: vessel-code-commit-and-push ias-executor-ts
+0130e833 HEAD@{2026-09-19 21:12:20 +0000}: reset: moving to HEAD
+0130e833 HEAD@{2026-09-19 21:12:16 +0000}: commit: Update identity-vessel submodule
+d730b03c HEAD@{2026-09-19 21:12:15 +0000}: commit: vessel-code-commit-and-push llm-resolver-vessel
+0d238a73 HEAD@{2026-09-19 21:12:12 +0000}: commit: vessel-code-commit-and-push obsidian-vessel: update submodule
+0ac33bfb HEAD@{2026-09-19 21:12:08 +0000}: commit: vessel-code-commit-and-push light-dispatch-vessel
+bc86b6ba HEAD@{2026-09-19 21:12:07 +0000}: commit: Update local-tools-vessel submodule
+e6cfa635 HEAD@{2026-09-19 21:11:48 +0000}: commit: feat: Update boredom-vessel submodule
+796fac89 HEAD@{2026-09-19 21:11:33 +0000}: commit: vessel-code-commit-and-push cpg-inference-ts
+265156f8 HEAD@{2026-09-19 12:25:06 +0000}: pull --ff-only origin dev: Fast-forward
+97f8d935 HEAD@{2026-09-19 12:25:06 +0000}: checkout: moving from dev to dev
+97f8d935 HEAD@{2026-09-19 07:34:55 +0000}: reset: moving to origin/dev
+97f8d935 HEAD@{2026-09-19 07:34:55 +0000}: checkout: moving from dev to dev
+97f8d935 HEAD@{2026-09-18 18:23:15 +0000}: merge origin/dev: Fast-forward
+13c5d466 HEAD@{2026-09-18 16:31:28 +0000}: commit: vessel-code-commit-and-push
+8ca33fb9 HEAD@{2026-09-18 12:29:28 +0000}: pull --ff-only origin dev: Fast-forward
+120bca8a HEAD@{2026-09-18 12:29:28 +0000}: checkout: moving from dev to dev
+120bca8a HEAD@{2026-09-18 06:32:07 +0000}: pull --ff-only origin dev: Fast-forward
+9c39f411 HEAD@{2026-09-18 06:32:07 +0000}: checkout: moving from dev to dev
+9c39f411 HEAD@{2026-09-18 05:48:34 +0000}: pull --ff-only origin dev: Fast-forward
+efdc01aa HEAD@{2026-09-18 05:48:34 +0000}: checkout: moving from dev to dev
+efdc01aa HEAD@{2026-09-18 04:01:25 +0000}: pull --ff-only origin dev: Fast-forward
+937c54a6 HEAD@{2026-09-18 04:01:25 +0000}: checkout: moving from dev to dev
+937c54a6 HEAD@{2026-09-18 03:50:35 +0000}: pull --ff-only origin dev: Fast-forward
+33d60c3a HEAD@{2026-09-18 03:50:35 +0000}: checkout: moving from dev to dev
+33d60c3a HEAD@{2026-09-18 03:15:23 +0000}: reset: moving to origin/dev
+33d60c3a HEAD@{2026-09-18 03:15:23 +0000}: checkout: moving from dev to dev
+33d60c3a HEAD@{2026-09-18 01:03:07 +0000}: reset: moving to origin/dev
+33d60c3a HEAD@{2026-09-18 01:03:07 +0000}: checkout: moving from dev to dev
+33d60c3a HEAD@{2026-09-17 23:02:23 +0000}: reset: moving to origin/dev
+33d60c3a HEAD@{2026-09-17 23:02:23 +0000}: checkout: moving from dev to dev
+33d60c3a HEAD@{2026-09-17 22:16:48 +0000}: reset: moving to origin/dev
+33d60c3a HEAD@{2026-09-17 22:16:47 +0000}: checkout: moving from dev to dev
+33d60c3a HEAD@{2026-09-17 22:15:37 +0000}: reset: moving to origin/dev
+33d60c3a HEAD@{2026-09-17 22:15:37 +0000}: checkout: moving from dev to dev
+33d60c3a HEAD@{2026-09-17 22:13:56 +0000}: reset: moving to origin/dev
+33d60c3a HEAD@{2026-09-17 22:13:56 +0000}: checkout: moving from dev to dev
+33d60c3a HEAD@{2026-09-17 00:42:31 +0000}: pull --ff-only origin dev: Fast-forward
+edb11037 HEAD@{2026-09-17 00:42:30 +0000}: checkout: moving from dev to dev
+edb11037 HEAD@{2026-09-16 18:36:34 +0000}: reset: moving to HEAD
+edb11037 HEAD@{2026-09-16 18:22:41 +0000}: pull --ff-only origin dev: Fast-forward
+ad9da780 HEAD@{2026-09-16 18:22:40 +0000}: checkout: moving from dev to dev
+ad9da780 HEAD@{2026-09-16 16:46:17 +0000}: merge origin/dev: Fast-forward
+a9534445 HEAD@{2026-09-16 12:46:18 +0000}: merge origin/dev: Fast-forward
+a172e235 HEAD@{2026-09-16 12:03:17 +0000}: pull --ff-only origin dev: Fast-forward
+4735981d HEAD@{2026-09-16 12:03:17 +0000}: checkout: moving from dev to dev
+4735981d HEAD@{2026-09-16 10:15:44 +0000}: merge origin/dev: Fast-forward
+3c113703 HEAD@{2026-09-16 09:37:47 +0000}: pull --ff-only origin dev: Fast-forward
+d63eb56e HEAD@{2026-09-16 09:37:47 +0000}: checkout: moving from dev to dev
+d63eb56e HEAD@{2026-09-16 09:27:36 +0000}: pull --ff-only origin dev: Fast-forward
+4af5180b HEAD@{2026-09-16 09:27:36 +0000}: checkout: moving from dev to dev
+4af5180b HEAD@{2026-09-16 06:27:45 +0000}: pull --ff-only origin dev: Fast-forward
+aba286bd HEAD@{2026-09-16 06:27:44 +0000}: checkout: moving from dev to dev
+aba286bd HEAD@{2026-09-16 05:44:52 +0000}: pull --ff-only origin dev: Fast-forward
+27c99783 HEAD@{2026-09-16 05:44:51 +0000}: checkout: moving from dev to dev
+27c99783 HEAD@{2026-09-16 01:42:50 +0000}: pull --ff-only origin dev: Fast-forward
+d42910bc HEAD@{2026-09-16 01:42:49 +0000}: checkout: moving from dev to dev
+d42910bc HEAD@{2026-09-16 01:20:00 +0000}: commit: fix(relevance-sink): health probes the store; written reports rows matched
+a07ea8b7 HEAD@{2026-09-16 01:00:05 +0000}: pull --ff-only origin dev: Fast-forward
+a5dd4b24 HEAD@{2026-09-16 01:00:05 +0000}: checkout: moving from dev to dev
+a5dd4b24 HEAD@{2026-09-16 00:45:34 +0000}: pull --ff-only origin dev: Fast-forward
+16b541ee HEAD@{2026-09-16 00:44:35 +0000}: merge origin/dev: Fast-forward
+5cfe536e HEAD@{2026-09-15 18:20:53 +0000}: pull --ff-only origin dev: Fast-forward
+9f2a8994 HEAD@{2026-09-15 18:20:52 +0000}: checkout: moving from dev to dev
+9f2a8994 HEAD@{2026-09-15 12:26:24 +0000}: pull --ff-only origin dev: Fast-forward
+4c622e8e HEAD@{2026-09-15 12:26:24 +0000}: checkout: moving from dev to dev
+4c622e8e HEAD@{2026-09-15 11:01:02 +0000}: pull: Fast-forward
+a009e1d9 HEAD@{2026-09-15 11:00:59 +0000}: reset: moving to HEAD
+a009e1d9 HEAD@{2026-09-15 10:50:38 +0000}: checkout: moving from dev to dev
+a009e1d9 HEAD@{2026-09-15 10:39:36 +0000}: checkout: moving from dev to dev
+a009e1d9 HEAD@{2026-09-15 10:30:29 +0000}: checkout: moving from dev to dev
+a009e1d9 HEAD@{2026-09-15 10:18:35 +0000}: checkout: moving from dev to dev
+a009e1d9 HEAD@{2026-09-15 10:08:17 +0000}: checkout: moving from dev to dev
+a009e1d9 HEAD@{2026-09-15 09:58:06 +0000}: checkout: moving from dev to dev
+a009e1d9 HEAD@{2026-09-15 09:47:21 +0000}: checkout: moving from dev to dev
+a009e1d9 HEAD@{2026-09-15 09:37:14 +0000}: checkout: moving from dev to dev
+a009e1d9 HEAD@{2026-09-15 09:27:06 +0000}: checkout: moving from dev to dev
+a009e1d9 HEAD@{2026-09-15 09:16:18 +0000}: checkout: moving from dev to dev
+a009e1d9 HEAD@{2026-09-15 09:06:07 +0000}: checkout: moving from dev to dev
+a009e1d9 HEAD@{2026-09-15 08:55:17 +0000}: checkout: moving from dev to dev
+a009e1d9 HEAD@{2026-09-15 08:44:06 +0000}: checkout: moving from dev to dev
+a009e1d9 HEAD@{2026-09-15 08:34:05 +0000}: checkout: moving from dev to dev
+a009e1d9 HEAD@{2026-09-15 08:23:32 +0000}: checkout: moving from dev to dev
+a009e1d9 HEAD@{2026-09-15 07:32:08 +0000}: reset: moving to origin/dev
+a009e1d9 HEAD@{2026-09-15 07:31:18 +0000}: pull --ff-only origin dev: Fast-forward
+1520b4b3 HEAD@{2026-09-15 07:31:18 +0000}: checkout: moving from dev to dev
+1520b4b3 HEAD@{2026-09-15 07:12:57 +0000}: pull --ff-only origin dev: Fast-forward
+864a3a21 HEAD@{2026-09-15 07:12:56 +0000}: checkout: moving from dev to dev
+864a3a21 HEAD@{2026-09-15 06:38:47 +0000}: pull --ff-only origin dev: Fast-forward
+9f1d1c98 HEAD@{2026-09-15 06:38:47 +0000}: checkout: moving from discovery-vessel to dev
+2890af2a HEAD@{2026-09-15 05:54:22 +0000}: merge origin/dev: Fast-forward
+9f1d1c98 HEAD@{2026-09-15 05:47:54 +0000}: checkout: moving from discovery-vessel to discovery-vessel
+9f1d1c98 HEAD@{2026-09-15 05:38:20 +0000}: checkout: moving from dev to discovery-vessel
+9f1d1c98 HEAD@{2026-09-15 05:38:18 +0000}: pull origin dev: Fast-forward
+e72a7fc8 HEAD@{2026-09-15 05:38:15 +0000}: checkout: moving from discovery-vessel to dev
+9f1d1c98 HEAD@{2026-09-15 05:09:50 +0000}: checkout: moving from development-vessel to discovery-vessel
+a6fbf4f4 HEAD@{2026-09-15 05:09:48 +0000}: reset: moving to HEAD
+a6fbf4f4 HEAD@{2026-09-15 05:09:26 +0000}: checkout: moving from development-vessel to development-vessel
+a6fbf4f4 HEAD@{2026-09-15 03:47:39 +0000}: commit (merge): Resolve merge conflicts for merging dev into discovery-vessel
+fdf197a2 HEAD@{2026-09-15 03:00:29 +0000}: checkout: moving from 9f1d1c984bd90084a5117e78054e0153b6e9da91 to development-vessel
+9f1d1c98 HEAD@{2026-09-15 03:00:25 +0000}: checkout: moving from development-vessel to origin/dev
+fdf197a2 HEAD@{2026-09-15 03:00:24 +0000}: commit: Stash local changes before cutover to origin/dev
+0c1b27a8 HEAD@{2026-09-15 01:20:41 +0000}: checkout: moving from obsidian-episode-vessel to development-vessel
+6190136a HEAD@{2026-09-15 01:20:40 +0000}: commit: Save local changes before checking out development-vessel
+8c9660b4 HEAD@{2026-09-15 00:26:53 +0000}: merge bf58a72195957e962b74e9b36bc5b2d98e396052: Merge made by the 'ort' strategy.
+bd0b46a4 HEAD@{2026-09-15 00:22:24 +0000}: merge 3dbbbeff2577a1123d39604039c28692528baa51: Merge made by the 'ort' strategy.
+6c1af12c HEAD@{2026-09-14 22:01:56 +0000}: merge a0afaa989152e22854539f108941c1adfcf4a3b6: Merge made by the 'ort' strategy.
+cf164447 HEAD@{2026-09-14 21:43:23 +0000}: merge 02c17db20947eae25a5eac73c56e7a9ab44f300e: Merge made by the 'ort' strategy.
+b456c748 HEAD@{2026-09-14 20:15:18 +0000}: merge 6fd8b3ea990cee068911874eacd05dfda4aab208: Merge made by the 'ort' strategy.
+4377a647 HEAD@{2026-09-14 17:57:13 +0000}: merge 965901e1769f64968652e411c93142989b781393: Merge made by the 'ort' strategy.
+ead5c892 HEAD@{2026-09-14 07:17:56 +0000}: merge 128d46e897c0720f09ca31e8b11b09afe0a03694: Merge made by the 'ort' strategy.
+1b121c19 HEAD@{2026-09-14 07:15:20 +0000}: merge 015b31fa2be15b3721724ad1a060a7dd3d4477c7: Merge made by the 'ort' strategy.
+21dd0d72 HEAD@{2026-09-14 07:15:07 +0000}: merge origin/dev: updating HEAD
+21dd0d72 HEAD@{2026-09-14 02:31:42 +0000}: merge origin/dev: updating HEAD
+21dd0d72 HEAD@{2026-09-13 23:07:35 +0000}: merge origin/dev: Merge made by the 'ort' strategy.
+66f8f8b1 HEAD@{2026-09-13 22:58:06 +0000}: merge origin/dev: Merge made by the 'ort' strategy.
+100fa7c3 HEAD@{2026-09-13 22:52:52 +0000}: merge origin/dev: Merge made by the 'ort' strategy.
+a858fc0a HEAD@{2026-09-13 22:52:31 +0000}: reset: moving to HEAD
+a858fc0a HEAD@{2026-09-13 16:00:36 +0000}: commit: obsidian-episode-vessel: initial commit
+e72a7fc8 HEAD@{2026-09-13 16:00:34 +0000}: checkout: moving from dev to obsidian-episode-vessel
+e72a7fc8 HEAD@{2026-09-13 16:00:00 +0000}: commit: Committing changes for vessel2
+b3dd3e9f HEAD@{2026-09-13 12:23:43 +0000}: pull --ff-only origin dev: Fast-forward
+f7f4e769 HEAD@{2026-09-13 12:23:43 +0000}: checkout: moving from dev to dev
+f7f4e769 HEAD@{2026-09-13 06:38:05 +0000}: pull --ff-only origin dev: Fast-forward
+40541a46 HEAD@{2026-09-13 06:38:04 +0000}: checkout: moving from dev to dev
+40541a46 HEAD@{2026-09-13 00:48:04 +0000}: pull --ff-only origin dev: Fast-forward
+8b7d7a4e HEAD@{2026-09-13 00:48:04 +0000}: checkout: moving from dev to dev
+8b7d7a4e HEAD@{2026-09-12 18:26:41 +0000}: pull --ff-only origin dev: Fast-forward
+5ac13be0 HEAD@{2026-09-12 18:26:40 +0000}: checkout: moving from dev to dev
+5ac13be0 HEAD@{2026-09-12 12:23:40 +0000}: pull --ff-only origin dev: Fast-forward
+df6206e3 HEAD@{2026-09-12 12:23:40 +0000}: checkout: moving from dev to dev
+df6206e3 HEAD@{2026-09-12 10:29:50 +0000}: pull --ff-only origin dev: Fast-forward
+24354632 HEAD@{2026-09-12 10:28:41 +0000}: pull --ff-only origin dev: Fast-forward
+37650c2f HEAD@{2026-09-12 10:26:15 +0000}: pull --ff-only origin dev: Fast-forward
+d45dba49 HEAD@{2026-09-12 10:21:51 +0000}: pull --ff-only origin dev: Fast-forward
+3a5387c2 HEAD@{2026-09-12 09:58:41 +0000}: pull --ff-only origin dev: Fast-forward
+29027df2 HEAD@{2026-09-12 09:54:59 +0000}: pull --ff-only origin dev: Fast-forward
+1c5b73e5 HEAD@{2026-09-12 09:49:58 +0000}: pull --ff-only origin dev: Fast-forward
+5584bc3f HEAD@{2026-09-12 09:39:06 +0000}: pull --ff-only origin dev: Fast-forward
+78e4d583 HEAD@{2026-09-12 09:33:37 +0000}: pull --ff-only origin dev: Fast-forward
+320c3eec HEAD@{2026-09-12 09:32:31 +0000}: pull --ff-only origin dev: Fast-forward
+79eb9620 HEAD@{2026-09-12 07:51:16 +0000}: pull --ff-only origin dev: Fast-forward
+9b177190 HEAD@{2026-09-12 07:09:13 +0000}: pull --ff-only origin dev: Fast-forward
+42048377 HEAD@{2026-09-12 07:09:13 +0000}: checkout: moving from dev to dev
+42048377 HEAD@{2026-09-12 06:26:54 +0000}: pull --ff-only origin dev: Fast-forward
+a29653e4 HEAD@{2026-09-12 06:26:54 +0000}: checkout: moving from dev to dev
+a29653e4 HEAD@{2026-09-12 02:42:23 +0000}: pull --ff-only origin dev: Fast-forward
+56d5cfb1 HEAD@{2026-09-12 02:41:35 +0000}: pull --ff-only origin dev: Fast-forward
+26a53fe0 HEAD@{2026-09-12 02:39:26 +0000}: pull --ff-only origin dev: Fast-forward
+e26c1f9d HEAD@{2026-09-12 02:13:57 +0000}: merge origin/dev: Fast-forward
+d00ba03f HEAD@{2026-09-12 01:04:15 +0000}: pull --ff-only origin dev: Fast-forward
+17fd5341 HEAD@{2026-09-12 01:04:14 +0000}: checkout: moving from dev to dev
+17fd5341 HEAD@{2026-09-12 00:43:31 +0000}: pull --ff-only origin dev: Fast-forward
+2aa44664 HEAD@{2026-09-12 00:43:30 +0000}: checkout: moving from dev to dev
+2aa44664 HEAD@{2026-09-11 21:13:18 +0000}: pull --ff-only origin dev: Fast-forward
+19465ba7 HEAD@{2026-09-11 21:13:18 +0000}: checkout: moving from dev to dev
+19465ba7 HEAD@{2026-09-11 21:03:09 +0000}: pull --ff-only origin dev: Fast-forward
+60cb8594 HEAD@{2026-09-11 21:03:08 +0000}: checkout: moving from dev to dev
+60cb8594 HEAD@{2026-09-11 20:51:53 +0000}: commit: vessel-code-commit-and-push: Automated commit
+1c31d4e7 HEAD@{2026-09-11 18:30:43 +0000}: pull --ff-only origin dev: Fast-forward
+779b7ecc HEAD@{2026-09-11 18:30:42 +0000}: checkout: moving from dev to dev
+779b7ecc HEAD@{2026-09-11 18:21:12 +0000}: pull --ff-only origin dev: Fast-forward
+001cda60 HEAD@{2026-09-11 18:21:12 +0000}: checkout: moving from dev to dev
+001cda60 HEAD@{2026-09-11 18:08:54 +0000}: pull --ff-only origin dev: Fast-forward
+9a742842 HEAD@{2026-09-11 18:08:53 +0000}: checkout: moving from dev to dev
+9a742842 HEAD@{2026-09-11 17:58:25 +0000}: pull --ff-only origin dev: Fast-forward
+e8c42f7a HEAD@{2026-09-11 17:58:25 +0000}: checkout: moving from dev to dev
+e8c42f7a HEAD@{2026-09-11 17:22:55 +0000}: pull --ff-only origin dev: Fast-forward
+3d9a633c HEAD@{2026-09-11 17:22:55 +0000}: checkout: moving from dev to dev
+3d9a633c HEAD@{2026-09-11 16:55:27 +0000}: pull --ff-only origin dev: Fast-forward
+b0c1c9f3 HEAD@{2026-09-11 16:55:27 +0000}: checkout: moving from dev to dev
+b0c1c9f3 HEAD@{2026-09-11 16:43:42 +0000}: merge origin/dev: Fast-forward
+45bd9a0f HEAD@{2026-09-11 16:40:55 +0000}: pull --ff-only origin dev: Fast-forward
+799a2a4d HEAD@{2026-09-11 16:40:54 +0000}: checkout: moving from dev to dev
+799a2a4d HEAD@{2026-09-11 16:30:25 +0000}: pull --ff-only origin dev: Fast-forward
+b6b1b3bf HEAD@{2026-09-11 16:30:25 +0000}: checkout: moving from dev to dev
+b6b1b3bf HEAD@{2026-09-11 16:13:12 +0000}: pull --ff-only origin dev: Fast-forward
+610bba72 HEAD@{2026-09-11 16:13:12 +0000}: checkout: moving from dev to dev
+610bba72 HEAD@{2026-09-11 15:38:15 +0000}: pull --ff-only origin dev: Fast-forward
+cf4bbf8c HEAD@{2026-09-11 15:38:15 +0000}: checkout: moving from dev to dev
+cf4bbf8c HEAD@{2026-09-11 15:07:26 +0000}: pull --ff-only origin dev: Fast-forward
+8bf19af8 HEAD@{2026-09-11 15:07:25 +0000}: checkout: moving from dev to dev
+8bf19af8 HEAD@{2026-09-11 14:56:56 +0000}: pull --ff-only origin dev: Fast-forward
+1def6877 HEAD@{2026-09-11 14:56:56 +0000}: checkout: moving from dev to dev
+1def6877 HEAD@{2026-09-11 14:36:18 +0000}: pull --ff-only origin dev: Fast-forward
+7e0e79a8 HEAD@{2026-09-11 14:36:17 +0000}: checkout: moving from dev to dev
+7e0e79a8 HEAD@{2026-09-11 14:25:25 +0000}: pull --ff-only origin dev: Fast-forward
+6d5ded91 HEAD@{2026-09-11 14:25:24 +0000}: checkout: moving from dev to dev
+6d5ded91 HEAD@{2026-09-11 14:10:39 +0000}: pull --ff-only origin dev: Fast-forward
+908ca0d8 HEAD@{2026-09-11 14:10:38 +0000}: checkout: moving from dev to dev
+908ca0d8 HEAD@{2026-09-11 13:13:37 +0000}: merge origin/dev: Fast-forward
+4f21a3af HEAD@{2026-09-11 13:11:56 +0000}: pull --ff-only origin dev: Fast-forward
+f178f4cf HEAD@{2026-09-11 13:11:56 +0000}: checkout: moving from dev to dev
+f178f4cf HEAD@{2026-09-11 12:40:50 +0000}: pull --ff-only origin dev: Fast-forward
+1a61747d HEAD@{2026-09-11 12:40:50 +0000}: checkout: moving from dev to dev
+1a61747d HEAD@{2026-09-11 12:13:34 +0000}: merge origin/dev: Fast-forward
+aa21b38d HEAD@{2026-09-11 12:09:25 +0000}: pull --ff-only origin dev: Fast-forward
+15371e16 HEAD@{2026-09-11 12:09:25 +0000}: checkout: moving from dev to dev
+15371e16 HEAD@{2026-09-11 11:59:08 +0000}: pull --ff-only origin dev: Fast-forward
+a7667a33 HEAD@{2026-09-11 11:59:08 +0000}: checkout: moving from dev to dev
+a7667a33 HEAD@{2026-09-11 11:48:55 +0000}: pull --ff-only origin dev: Fast-forward
+39ef6266 HEAD@{2026-09-11 11:48:54 +0000}: checkout: moving from dev to dev
+39ef6266 HEAD@{2026-09-11 11:43:33 +0000}: merge origin/dev: Fast-forward
+65284eb1 HEAD@{2026-09-11 06:27:14 +0000}: pull --ff-only origin dev: Fast-forward
+6687d177 HEAD@{2026-09-11 06:27:14 +0000}: checkout: moving from dev to dev
+6687d177 HEAD@{2026-09-11 00:43:15 +0000}: merge origin/dev: Fast-forward
+71e2077e HEAD@{2026-09-11 00:12:56 +0000}: pull --ff-only origin dev: Fast-forward
+f8b49525 HEAD@{2026-09-11 00:12:55 +0000}: checkout: moving from dev to dev
+f8b49525 HEAD@{2026-09-10 18:18:03 +0000}: merge origin/dev: Fast-forward
+5fadb882 HEAD@{2026-09-10 16:37:18 +0000}: commit: Vessel code drift resolution
+d9898d2e HEAD@{2026-09-10 12:24:20 +0000}: pull --ff-only origin dev: Fast-forward
+7b489fbb HEAD@{2026-09-10 12:24:20 +0000}: checkout: moving from dev to dev
+7b489fbb HEAD@{2026-09-10 09:58:19 +0000}: pull --ff-only origin dev: Fast-forward
+87bf81b6 HEAD@{2026-09-10 09:58:18 +0000}: checkout: moving from dev to dev
+87bf81b6 HEAD@{2026-09-10 09:25:55 +0000}: pull --ff-only origin dev: Fast-forward
+fad17386 HEAD@{2026-09-10 09:25:55 +0000}: checkout: moving from dev to dev
+fad17386 HEAD@{2026-09-10 09:15:46 +0000}: pull --ff-only origin dev: Fast-forward
+f0e550ec HEAD@{2026-09-10 09:15:46 +0000}: checkout: moving from dev to dev
+f0e550ec HEAD@{2026-09-10 07:17:36 +0000}: merge origin/dev: Fast-forward
+d8a8a768 HEAD@{2026-09-10 06:27:37 +0000}: pull --ff-only origin dev: Fast-forward
+22146522 HEAD@{2026-09-10 06:27:37 +0000}: checkout: moving from dev to dev
+22146522 HEAD@{2026-09-10 06:17:26 +0000}: pull --ff-only origin dev: Fast-forward
+d055f18e HEAD@{2026-09-10 06:17:25 +0000}: checkout: moving from dev to dev
+d055f18e HEAD@{2026-09-10 06:16:35 +0000}: checkout: moving from dev to dev
+d055f18e HEAD@{2026-09-10 06:13:04 +0000}: checkout: moving from dev to dev
+d055f18e HEAD@{2026-09-10 06:02:39 +0000}: checkout: moving from dev to dev
+d055f18e HEAD@{2026-09-10 05:41:19 +0000}: pull --ff-only origin dev: Fast-forward
+13176c29 HEAD@{2026-09-10 05:41:18 +0000}: checkout: moving from dev to dev
+13176c29 HEAD@{2026-09-10 05:33:52 +0000}: pull --ff-only origin dev: Fast-forward
+b8963396 HEAD@{2026-09-10 05:33:52 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 05:33:13 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 05:22:45 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 05:12:44 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 05:02:32 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 04:52:07 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 04:41:27 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 04:31:12 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 04:20:15 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 04:09:29 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 03:59:17 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 03:49:09 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 03:38:41 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 03:28:17 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 03:17:41 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 03:07:25 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 02:57:12 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 02:46:16 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 02:35:59 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 02:25:18 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 02:15:11 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 02:04:19 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 01:53:43 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 01:43:13 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 01:32:46 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 01:22:11 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 01:11:39 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 01:01:12 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 00:50:37 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 00:40:29 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 00:30:13 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 00:20:02 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-10 00:09:19 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-09 23:58:58 +0000}: checkout: moving from dev to dev
+b8963396 HEAD@{2026-09-09 21:07:01 +0000}: reset: moving to origin/dev
+49cf38c4 HEAD@{2026-09-09 21:07:01 +0000}: checkout: moving from development-vessel to dev
+0c1b27a8 HEAD@{2026-09-09 16:07:23 +0000}: reset: moving to origin/dev
+4d2e4cfb HEAD@{2026-09-09 16:07:07 +0000}: reset: moving to HEAD
+4d2e4cfb HEAD@{2026-09-08 11:49:15 +0000}: pull origin development-vessel: Fast-forward
+d8f1e757 HEAD@{2026-09-08 11:49:11 +0000}: checkout: moving from dev to development-vessel
+49cf38c4 HEAD@{2026-09-08 11:49:10 +0000}: reset: moving to HEAD
+49cf38c4 HEAD@{2026-09-08 06:35:52 +0000}: pull --ff-only origin dev: Fast-forward
+5786a5f2 HEAD@{2026-09-08 06:35:52 +0000}: checkout: moving from dev to dev
+5786a5f2 HEAD@{2026-09-08 00:43:55 +0000}: merge origin/dev: Fast-forward
+fbcf5fd2 HEAD@{2026-09-07 18:27:28 +0000}: pull --ff-only origin dev: Fast-forward
+6ced94dc HEAD@{2026-09-07 18:27:27 +0000}: checkout: moving from dev to dev
+6ced94dc HEAD@{2026-09-07 14:44:44 +0000}: commit: Automated commit of vessel changes
+3aa05de8 HEAD@{2026-09-07 12:33:43 +0000}: pull --ff-only origin dev: Fast-forward
+02a20791 HEAD@{2026-09-07 12:33:43 +0000}: checkout: moving from dev to dev
+02a20791 HEAD@{2026-09-07 07:19:08 +0000}: pull --ff-only origin dev: Fast-forward
+fe53e1d7 HEAD@{2026-09-07 07:19:08 +0000}: checkout: moving from dev to dev
+fe53e1d7 HEAD@{2026-09-07 06:37:00 +0000}: pull --ff-only origin dev: Fast-forward
+fa1dbbc4 HEAD@{2026-09-07 06:37:00 +0000}: checkout: moving from dev to dev
+fa1dbbc4 HEAD@{2026-09-07 04:48:31 +0000}: commit: Automated commit by substrate for code drift
+e58a5986 HEAD@{2026-09-07 04:48:25 +0000}: commit: Automated commit by substrate for code drift
+e31413db HEAD@{2026-09-07 04:44:42 +0000}: commit: Auto-commit: code drift for goal-host-vessel
+b2b4ee94 HEAD@{2026-09-07 04:44:14 +0000}: commit: Auto-commit: code drift for analysis-vessel
+e0b0bd0b HEAD@{2026-09-07 04:36:00 +0000}: commit: feat: update vessel code and related files
+37a581a6 HEAD@{2026-09-07 04:33:10 +0000}: commit: Automated commit: vessel-code-drift scan
+c4a6c9e1 HEAD@{2026-09-07 04:24:24 +0000}: commit: Auto-commit: Sync live changes from relevance-sink-vessel
+0599ea34 HEAD@{2026-09-07 04:21:02 +0000}: commit: Automated commit: vessel code drift detected and committed.
+4e4170a8 HEAD@{2026-09-07 04:20:43 +0000}: commit: Automated commit: vessel code drift detected and committed.
+9333f0f7 HEAD@{2026-09-07 01:13:00 +0000}: pull --ff-only origin dev: Fast-forward
+6030a330 HEAD@{2026-09-07 01:12:59 +0000}: checkout: moving from dev to dev
+6030a330 HEAD@{2026-09-07 00:52:40 +0000}: pull --ff-only origin dev: Fast-forward
+a99a38ed HEAD@{2026-09-07 00:52:39 +0000}: checkout: moving from dev to dev
+a99a38ed HEAD@{2026-09-06 18:22:21 +0000}: pull --ff-only origin dev: Fast-forward
+94d1680c HEAD@{2026-09-06 18:22:21 +0000}: checkout: moving from dev to dev
+94d1680c HEAD@{2026-09-06 14:52:49 +0000}: pull --ff-only origin dev: Fast-forward
+3e3776dd HEAD@{2026-09-06 14:52:48 +0000}: checkout: moving from dev to dev
+3e3776dd HEAD@{2026-09-06 12:25:34 +0000}: pull --ff-only origin dev: Fast-forward
+16814991 HEAD@{2026-09-06 12:25:33 +0000}: checkout: moving from dev to dev
+16814991 HEAD@{2026-09-06 07:16:48 +0000}: pull --ff-only origin dev: Fast-forward
+525672f6 HEAD@{2026-09-06 07:16:48 +0000}: checkout: moving from dev to dev
+525672f6 HEAD@{2026-09-06 06:39:39 +0000}: pull --ff-only origin dev: Fast-forward
+ad6ee8f5 HEAD@{2026-09-06 06:39:38 +0000}: checkout: moving from dev to dev
+ad6ee8f5 HEAD@{2026-09-06 06:28:16 +0000}: merge origin/dev: Fast-forward
+977a05c2 HEAD@{2026-09-06 06:13:06 +0000}: pull --ff-only origin dev: Fast-forward
+d0a3472f HEAD@{2026-09-06 06:13:05 +0000}: checkout: moving from dev to dev
+d0a3472f HEAD@{2026-09-06 05:41:50 +0000}: pull --ff-only origin dev: Fast-forward
+afb48959 HEAD@{2026-09-06 05:41:49 +0000}: checkout: moving from dev to dev
+afb48959 HEAD@{2026-09-06 05:10:09 +0000}: pull --ff-only origin dev: Fast-forward
+5fdbf3bd HEAD@{2026-09-06 05:10:08 +0000}: checkout: moving from dev to dev
+5fdbf3bd HEAD@{2026-09-06 04:37:47 +0000}: pull --ff-only origin dev: Fast-forward
+7c2c50db HEAD@{2026-09-06 04:37:46 +0000}: checkout: moving from dev to dev
+7c2c50db HEAD@{2026-09-06 00:57:41 +0000}: merge origin/dev: Fast-forward
+72f58abc HEAD@{2026-09-05 22:16:48 +0000}: pull --ff-only origin dev: Fast-forward
+81ccdffd HEAD@{2026-09-05 22:16:47 +0000}: checkout: moving from dev to dev
+81ccdffd HEAD@{2026-09-05 18:19:38 +0000}: pull --ff-only origin dev: Fast-forward
+d99c69e7 HEAD@{2026-09-05 18:19:37 +0000}: checkout: moving from dev to dev
+d99c69e7 HEAD@{2026-09-05 12:23:38 +0000}: pull --ff-only origin dev: Fast-forward
+8e59ae6c HEAD@{2026-09-05 12:23:37 +0000}: checkout: moving from dev to dev
+8e59ae6c HEAD@{2026-09-05 08:42:53 +0000}: pull --ff-only origin dev: Fast-forward
+ec665182 HEAD@{2026-09-05 08:42:53 +0000}: checkout: moving from dev to dev
+ec665182 HEAD@{2026-09-05 07:30:06 +0000}: pull --ff-only origin dev: Fast-forward
+466f68b7 HEAD@{2026-09-05 07:30:05 +0000}: checkout: moving from dev to dev
+466f68b7 HEAD@{2026-09-05 07:08:54 +0000}: pull --ff-only origin dev: Fast-forward
+b2e2d576 HEAD@{2026-09-05 07:08:54 +0000}: checkout: moving from dev to dev
+b2e2d576 HEAD@{2026-09-05 06:25:11 +0000}: merge origin/dev: Fast-forward
+c71819af HEAD@{2026-09-05 03:51:34 +0000}: pull --ff-only origin dev: Fast-forward
+bf2897e9 HEAD@{2026-09-05 03:51:33 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 03:50:28 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 03:46:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 03:35:51 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 03:25:47 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 03:15:06 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 03:07:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 02:58:09 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 02:43:28 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 02:39:56 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 02:22:35 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 02:12:29 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 02:02:05 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 01:51:34 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 01:40:53 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 01:30:19 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 01:19:46 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 01:08:34 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 00:58:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 00:47:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 00:36:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 00:26:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 00:15:47 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-05 00:04:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 23:54:16 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 23:43:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 23:32:50 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 23:22:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 23:11:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 23:01:38 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 22:51:00 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 22:40:56 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 22:30:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 22:19:51 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 22:09:17 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 21:58:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 21:47:51 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 21:36:47 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 21:26:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 21:15:50 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 21:05:00 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 20:54:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 20:44:31 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 20:33:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 20:22:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 20:11:47 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 19:50:59 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 19:40:39 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 19:34:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 11:59:14 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 11:49:13 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 11:38:23 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 11:27:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 11:16:58 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 11:06:07 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 10:57:59 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 10:44:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 10:33:38 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 10:23:02 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 10:12:53 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 10:02:32 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 10:01:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 09:41:53 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 09:30:51 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 09:20:27 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 09:10:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 08:59:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 08:49:17 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 08:38:42 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 08:27:48 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 08:17:33 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 08:07:06 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 07:56:44 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 07:46:26 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 07:36:01 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 07:25:23 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 07:14:42 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 07:03:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 06:53:23 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 06:43:04 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 06:32:35 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 06:22:13 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 06:11:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 06:01:06 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 05:50:22 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 05:40:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 05:29:28 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 05:19:12 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 05:08:57 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 04:58:44 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 04:48:20 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 04:37:27 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 04:27:16 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 04:16:19 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 04:05:42 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 03:55:09 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 03:44:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 03:34:00 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 03:23:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 03:12:50 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 03:02:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 02:52:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 02:41:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 02:31:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 02:20:44 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 02:10:24 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 02:00:01 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 01:49:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 01:38:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 01:27:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 01:17:36 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 00:56:31 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 00:45:27 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 00:35:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 00:24:39 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 00:13:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-04 00:03:47 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 23:53:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 23:42:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 23:32:19 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 23:21:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 23:11:30 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 23:01:26 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 22:50:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 22:39:39 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 22:28:51 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 22:18:14 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 22:12:02 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 21:57:07 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 21:46:47 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 21:36:39 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 21:25:37 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 21:15:08 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 21:04:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 20:53:39 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 20:42:53 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 20:32:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 20:22:12 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 20:11:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 20:01:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 19:55:32 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 19:40:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 19:30:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 19:19:47 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 19:09:36 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 18:58:25 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 18:48:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 18:37:08 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 18:26:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 18:16:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 18:05:39 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 17:55:00 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 17:44:33 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 17:34:09 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 17:23:32 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 17:12:25 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 17:02:17 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 16:55:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 16:40:55 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 16:30:42 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 16:19:59 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 16:09:55 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 16:02:54 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 15:48:35 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 15:38:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 15:27:49 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 15:17:33 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 15:07:13 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 14:56:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 14:46:08 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 14:39:58 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 14:24:54 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 14:14:31 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 14:04:25 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 13:53:33 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 13:43:05 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 13:32:42 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 13:22:07 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 13:18:25 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 13:00:15 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 12:54:49 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 12:39:22 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 12:28:42 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 12:18:32 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 12:07:56 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 11:57:45 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 11:47:33 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 11:37:08 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 11:26:45 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 11:16:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 11:05:37 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 10:55:09 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 10:44:44 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 10:34:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 10:23:54 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 10:13:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 10:02:55 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 09:55:12 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 09:42:09 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 09:31:57 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 09:31:36 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 09:08:04 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 08:57:06 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 08:46:53 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 08:36:04 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 08:25:33 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 08:15:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 08:04:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 07:54:34 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 07:43:44 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 07:33:28 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 07:22:58 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 07:12:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 07:01:54 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 06:51:07 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 06:40:25 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 06:29:37 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 06:18:37 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 06:08:06 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 05:57:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 05:47:36 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 05:36:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 05:26:16 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 05:16:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 05:05:33 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 04:55:02 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 04:44:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 04:34:03 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 04:23:38 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 04:13:33 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 04:03:03 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 03:52:23 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 03:41:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 03:31:19 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 03:20:39 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 03:10:00 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 02:59:47 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 02:48:54 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 02:37:56 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 02:27:27 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 02:16:47 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 02:06:12 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 01:56:01 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 01:45:59 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 01:35:36 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 01:25:05 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 01:14:25 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 01:03:39 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 00:52:53 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 00:42:32 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 00:32:26 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 00:22:06 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 00:11:34 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-03 00:01:05 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 23:50:36 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 23:40:38 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 23:30:13 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 23:20:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 23:09:29 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 22:58:59 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 22:48:57 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 22:38:46 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 22:28:35 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 22:18:15 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 22:08:08 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 21:57:58 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 21:47:14 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 21:37:12 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 21:26:53 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 21:16:24 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 21:05:30 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 20:54:55 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 20:44:22 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 20:33:45 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 20:22:58 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 20:12:45 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 20:01:59 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 19:51:59 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 19:41:38 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 19:30:58 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 19:20:25 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 19:10:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 18:59:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 18:49:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 18:38:58 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 18:28:25 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 18:18:06 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 18:07:50 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 17:57:28 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 17:46:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 17:36:15 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 17:25:28 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 17:14:35 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 17:04:30 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 16:53:59 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 16:43:20 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 16:32:47 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 16:21:55 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 16:11:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 16:01:14 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 15:50:20 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 15:39:55 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 15:29:27 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 15:18:56 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 15:07:57 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 14:57:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 14:46:56 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 14:35:57 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 14:25:26 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 14:14:57 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 14:04:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 13:53:56 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 13:43:35 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 13:33:31 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 13:22:59 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 13:12:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 13:01:56 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 12:50:57 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 12:40:01 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 12:29:38 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 12:19:03 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 12:08:32 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 11:57:57 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 11:47:29 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 11:37:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 11:27:04 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 11:16:58 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 11:06:35 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 10:55:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 10:45:19 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 10:34:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 10:24:26 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 10:13:53 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 10:03:39 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 09:53:30 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 09:43:04 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 09:32:26 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 09:21:45 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 09:11:13 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 09:00:55 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 08:50:30 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 08:40:19 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 08:34:14 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 08:18:26 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 08:08:15 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 07:57:26 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 07:46:44 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 07:36:36 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 07:25:51 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 07:15:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 07:04:55 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 06:54:54 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 06:44:19 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 06:33:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 06:23:30 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 06:12:53 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 06:02:07 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 05:51:23 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 05:40:50 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 05:30:23 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 05:20:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 05:10:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 04:59:48 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 04:57:00 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 04:38:48 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 04:28:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 04:17:15 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 04:06:27 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 03:55:49 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 03:45:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 03:34:51 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 03:24:36 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 03:14:34 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 03:03:53 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 02:53:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 02:43:20 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 02:32:30 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 02:22:02 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 02:11:08 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 02:00:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 01:50:12 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 01:39:30 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 01:29:19 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 01:18:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 01:08:27 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 00:58:05 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 00:47:23 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 00:37:20 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 00:26:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 00:16:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-02 00:05:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 23:55:05 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 23:44:49 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 23:34:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 23:24:06 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 23:13:44 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 23:03:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 22:53:09 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 22:42:51 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 22:32:17 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 22:21:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 22:11:23 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 22:01:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 21:50:29 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 21:40:16 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 21:29:29 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 21:19:22 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 21:08:54 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 20:58:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 20:48:48 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 20:38:28 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 20:33:20 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 20:06:48 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 19:56:19 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 19:45:48 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 19:35:17 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 19:24:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 19:14:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 19:04:28 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 18:44:04 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 18:33:47 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 18:23:35 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 18:13:03 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 18:02:04 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 17:51:49 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 17:41:16 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 17:31:05 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 17:20:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 17:09:58 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 16:59:22 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 16:48:31 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 16:38:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 16:27:46 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 16:16:53 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 16:06:48 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 15:56:30 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 15:46:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 15:35:34 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 15:25:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 15:14:27 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 15:03:48 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 14:53:42 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 14:43:17 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 14:32:48 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 14:22:23 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 14:12:15 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 14:02:06 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 13:51:26 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 13:40:50 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 13:30:46 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 13:20:07 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 13:09:28 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 12:59:20 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 12:48:53 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 12:38:37 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 12:28:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 12:17:46 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 12:07:12 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 11:57:05 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 11:46:46 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 11:36:23 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 11:26:16 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 11:15:46 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 11:05:31 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 10:55:16 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 10:45:02 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 10:34:51 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 10:24:25 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 10:14:17 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 10:03:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 09:52:46 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 09:42:15 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 09:31:58 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 09:21:14 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 09:10:46 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 09:00:22 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 08:50:17 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 08:39:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 08:30:37 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 08:19:01 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 08:08:07 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 07:57:59 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 07:47:49 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 07:38:29 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 07:26:47 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 07:16:29 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 07:05:29 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 06:55:02 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 06:44:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 06:33:26 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 06:26:14 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 06:12:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 06:02:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 05:50:44 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 05:40:13 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 05:29:39 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 05:19:24 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 05:09:02 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 04:58:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 04:47:49 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 04:37:14 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 04:26:44 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 04:16:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 04:06:36 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 03:56:20 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 03:45:46 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 03:35:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 03:24:51 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 03:14:44 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 03:04:09 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 02:53:44 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 02:42:57 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 02:32:53 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 02:22:14 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 02:11:53 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 02:01:13 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 01:50:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 01:40:13 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 01:29:38 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 01:19:22 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 01:09:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 00:59:19 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 00:48:39 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 00:38:03 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 00:27:15 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 00:17:03 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-09-01 00:06:34 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 23:56:24 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 23:49:13 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 23:36:02 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 23:26:00 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 23:15:55 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 23:05:31 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 22:55:12 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 22:44:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 22:36:16 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 22:23:55 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 22:13:13 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 22:02:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 21:52:12 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 21:41:44 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 21:30:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 21:20:16 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 21:10:12 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 20:59:28 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 20:48:38 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 20:38:37 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 20:28:02 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 20:17:42 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 20:07:05 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 20:02:30 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 19:46:19 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 19:36:03 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 19:25:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 19:19:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 19:04:22 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 18:54:04 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 18:43:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 18:32:45 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 18:22:29 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 18:11:42 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 18:01:13 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 17:55:42 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 17:40:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 17:29:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 17:19:37 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 17:09:32 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 16:59:31 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 16:49:07 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 16:38:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 16:28:06 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 16:17:35 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 16:07:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 15:57:05 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 15:46:53 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 15:36:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 15:15:07 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 15:04:49 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 14:54:42 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 14:44:37 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 14:34:31 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 14:24:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 14:13:47 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 14:03:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 13:53:04 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 13:42:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 13:32:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 13:11:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 13:01:13 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 12:52:36 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 12:40:06 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 12:29:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 12:19:27 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 12:09:24 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 11:59:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 11:49:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 11:38:28 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 11:28:16 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 11:17:56 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 11:07:14 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 10:56:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 10:46:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 10:04:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 09:54:34 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 09:44:07 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 09:35:34 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 09:23:25 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 09:12:59 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 09:02:17 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 08:52:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 08:41:27 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 08:31:09 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 08:20:39 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 08:19:25 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 07:59:58 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 07:51:08 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 07:39:04 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 07:28:06 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 07:19:17 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 07:08:47 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 06:58:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 06:48:24 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 06:38:01 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 06:26:14 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 06:16:07 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 06:05:38 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 05:56:16 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 05:44:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 05:35:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 05:23:38 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 05:13:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 05:02:48 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 04:52:08 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 04:43:35 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 04:31:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 04:20:38 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 04:10:25 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 03:59:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 03:52:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 03:38:37 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 03:28:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 03:17:38 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 03:07:08 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 02:56:50 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 02:46:36 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 02:36:16 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 02:25:36 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 02:15:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 02:05:04 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 01:55:24 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 01:44:06 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 01:33:36 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 01:23:04 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 01:13:59 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 01:02:08 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 00:51:42 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 00:41:24 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 00:36:20 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 00:21:04 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 00:10:30 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-31 00:00:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 23:50:01 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 23:39:46 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 23:28:46 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 23:18:05 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 23:07:12 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 22:56:44 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 22:48:16 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 22:36:08 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 22:25:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 22:15:15 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 22:04:48 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 21:54:42 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 21:44:34 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 21:33:59 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 21:23:02 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 21:13:06 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 21:02:59 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 20:52:48 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 20:42:27 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 20:32:05 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 20:21:57 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 20:11:35 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 20:01:16 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 19:50:54 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 19:40:50 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 19:30:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 19:20:07 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 19:10:01 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 19:00:01 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 18:49:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 18:39:27 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 18:28:45 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 18:17:58 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 18:07:04 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 17:56:51 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 17:46:29 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 17:46:14 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 17:21:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 17:10:50 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 17:00:20 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 16:50:04 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 16:39:45 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 16:27:26 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 16:16:50 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 16:06:10 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 15:56:01 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 15:45:47 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 15:35:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 15:24:54 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 15:14:29 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 15:03:54 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 14:53:05 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 14:42:31 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 14:31:50 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 14:21:22 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 14:11:05 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 14:00:36 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 13:50:17 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 13:39:31 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 13:29:24 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 13:18:55 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 13:08:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 12:58:34 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 12:48:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 12:37:49 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 12:27:31 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 12:16:52 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 12:06:02 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 11:55:42 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 11:45:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 11:34:54 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 11:24:54 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 11:14:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 11:03:22 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 10:53:05 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 10:42:36 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 10:31:54 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 10:21:26 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 09:56:13 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 09:51:22 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 09:35:45 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 09:25:11 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 09:14:27 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 09:04:21 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 08:53:32 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 08:43:00 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 08:32:44 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 08:22:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 08:11:43 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 08:04:44 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 07:51:25 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 07:40:56 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 07:30:57 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 07:20:37 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 07:10:30 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 06:59:57 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 06:57:27 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 06:33:23 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 06:18:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 06:07:54 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 05:57:24 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 05:47:03 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 05:36:39 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 05:26:25 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 05:15:49 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 05:09:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 04:54:40 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 04:48:56 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 04:34:33 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 04:24:09 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 04:18:31 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 04:04:08 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 03:53:41 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 03:47:18 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 03:36:16 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 03:22:27 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 03:18:03 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 03:01:25 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 03:01:03 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 02:48:33 +0000}: checkout: moving from dev to dev
+bf2897e9 HEAD@{2026-08-30 00:51:29 +0000}: pull --ff-only origin dev: Fast-forward
+7c4eed77 HEAD@{2026-08-30 00:51:28 +0000}: checkout: moving from dev to dev
+7c4eed77 HEAD@{2026-08-29 18:24:13 +0000}: pull --ff-only origin dev: Fast-forward
+2c99231d HEAD@{2026-08-29 18:24:13 +0000}: checkout: moving from dev to dev
+2c99231d HEAD@{2026-08-29 12:26:08 +0000}: pull --ff-only origin dev: Fast-forward
+6485ce9d HEAD@{2026-08-29 12:26:07 +0000}: checkout: moving from dev to dev
+6485ce9d HEAD@{2026-08-29 07:12:36 +0000}: pull --ff-only origin dev: Fast-forward
+4d2e4cfb HEAD@{2026-08-29 07:12:35 +0000}: checkout: moving from dev to dev
+4d2e4cfb HEAD@{2026-08-29 06:27:41 +0000}: merge origin/dev: Fast-forward
+448a869c HEAD@{2026-08-29 00:46:38 +0000}: pull --ff-only origin dev: Fast-forward
+06be144a HEAD@{2026-08-29 00:46:37 +0000}: checkout: moving from dev to dev
+06be144a HEAD@{2026-08-29 00:15:37 +0000}: pull --ff-only origin dev: Fast-forward
+6c7c5b8a HEAD@{2026-08-29 00:15:37 +0000}: checkout: moving from dev to dev
+6c7c5b8a HEAD@{2026-08-28 22:57:28 +0000}: merge origin/dev: Fast-forward
+a2f101d9 HEAD@{2026-08-28 21:27:26 +0000}: merge origin/dev: Fast-forward
+9b61981a HEAD@{2026-08-28 16:16:19 +0000}: pull --ff-only origin dev: Fast-forward
+1c92e01b HEAD@{2026-08-28 16:16:19 +0000}: checkout: moving from dev to dev
+1c92e01b HEAD@{2026-08-28 10:40:06 +0000}: pull --ff-only origin dev: Fast-forward
+8c1d23d2 HEAD@{2026-08-28 10:40:06 +0000}: checkout: moving from dev to dev
+8c1d23d2 HEAD@{2026-08-28 09:27:19 +0000}: merge origin/dev: Fast-forward
+bb736313 HEAD@{2026-08-28 03:17:40 +0000}: pull --ff-only origin dev: Fast-forward
+c857cff3 HEAD@{2026-08-28 03:17:39 +0000}: checkout: moving from dev to dev
+c857cff3 HEAD@{2026-08-27 21:23:40 +0000}: pull --ff-only origin dev: Fast-forward
+9c9dafa8 HEAD@{2026-08-27 21:23:39 +0000}: checkout: moving from dev to dev
+9c9dafa8 HEAD@{2026-08-27 15:48:57 +0000}: pull --ff-only origin dev: Fast-forward
+910916aa HEAD@{2026-08-27 15:48:57 +0000}: checkout: moving from dev to dev
+910916aa HEAD@{2026-08-27 09:18:28 +0000}: pull --ff-only origin dev: Fast-forward
+9069838e HEAD@{2026-08-27 09:18:28 +0000}: checkout: moving from dev to dev
+9069838e HEAD@{2026-08-27 04:32:38 +0000}: pull --ff-only origin dev: Fast-forward
+ec66ffde HEAD@{2026-08-27 04:32:38 +0000}: checkout: moving from dev to dev
+ec66ffde HEAD@{2026-08-27 01:55:46 +0000}: pull --ff-only origin dev: Fast-forward
+0abdf69a HEAD@{2026-08-27 01:55:46 +0000}: checkout: moving from dev to dev
+0abdf69a HEAD@{2026-08-26 12:20:19 +0000}: merge origin/dev: Fast-forward
+5085b6d3 HEAD@{2026-08-26 07:07:46 +0000}: pull --ff-only origin dev: Fast-forward
+3fed381c HEAD@{2026-08-26 07:07:45 +0000}: checkout: moving from dev to dev
+3fed381c HEAD@{2026-08-26 06:57:21 +0000}: pull --ff-only origin dev: Fast-forward
+09c5a16b HEAD@{2026-08-26 06:57:21 +0000}: checkout: moving from dev to dev
+09c5a16b HEAD@{2026-08-26 05:44:42 +0000}: pull --ff-only origin dev: Fast-forward
+7e7cefcd HEAD@{2026-08-26 05:44:42 +0000}: checkout: moving from dev to dev
+7e7cefcd HEAD@{2026-08-26 05:33:42 +0000}: pull --ff-only origin dev: Fast-forward
+2e6c9651 HEAD@{2026-08-26 05:33:42 +0000}: checkout: moving from dev to dev
+2e6c9651 HEAD@{2026-08-26 05:02:43 +0000}: pull --ff-only origin dev: Fast-forward
+60d81bd8 HEAD@{2026-08-26 05:02:43 +0000}: checkout: moving from dev to dev
+60d81bd8 HEAD@{2026-08-26 04:31:14 +0000}: pull --ff-only origin dev: Fast-forward
+f17d3ba9 HEAD@{2026-08-26 04:31:14 +0000}: checkout: moving from dev to dev
+f17d3ba9 HEAD@{2026-08-26 01:38:09 +0000}: pull --ff-only origin dev: Fast-forward
+3e5a4a92 HEAD@{2026-08-26 01:38:08 +0000}: checkout: moving from dev to dev
+3e5a4a92 HEAD@{2026-08-26 00:20:10 +0000}: merge origin/dev: Fast-forward
+dcbadc96 HEAD@{2026-08-25 17:30:41 +0000}: pull --ff-only origin dev: Fast-forward
+70b17135 HEAD@{2026-08-25 17:30:41 +0000}: checkout: moving from dev to dev
+70b17135 HEAD@{2026-08-25 12:20:00 +0000}: merge origin/dev: Fast-forward
+35e7a30d HEAD@{2026-08-25 12:00:27 +0000}: pull --ff-only origin dev: Fast-forward
+daa2632c HEAD@{2026-08-25 12:00:26 +0000}: checkout: moving from dev to dev
+daa2632c HEAD@{2026-08-25 11:44:42 +0000}: merge origin/dev: Fast-forward
+1d3785de HEAD@{2026-08-25 11:30:00 +0000}: pull --ff-only origin dev: Fast-forward
+3c1bf965 HEAD@{2026-08-25 11:30:00 +0000}: checkout: moving from dev to dev
+3c1bf965 HEAD@{2026-08-25 10:05:41 +0000}: pull --ff-only origin dev: Fast-forward
+a5c68284 HEAD@{2026-08-25 10:05:40 +0000}: checkout: moving from dev to dev
+a5c68284 HEAD@{2026-08-25 07:27:18 +0000}: pull --ff-only origin dev: Fast-forward
+05aec1a3 HEAD@{2026-08-25 07:27:17 +0000}: checkout: moving from dev to dev
+05aec1a3 HEAD@{2026-08-25 06:14:39 +0000}: merge origin/dev: Fast-forward
+017b5e9a HEAD@{2026-08-25 05:36:00 +0000}: reset: moving to origin/dev
+017b5e9a HEAD@{2026-08-25 05:36:00 +0000}: checkout: moving from dev to dev
+017b5e9a HEAD@{2026-08-25 00:24:19 +0000}: pull --ff-only origin dev: Fast-forward
+d56ae849 HEAD@{2026-08-25 00:24:19 +0000}: checkout: moving from dev to dev
+d56ae849 HEAD@{2026-08-24 12:17:00 +0000}: merge origin/dev: Fast-forward
+b9fa3659 HEAD@{2026-08-24 09:11:31 +0000}: pull --ff-only origin dev: Fast-forward
+f6b8015d HEAD@{2026-08-24 09:11:31 +0000}: checkout: moving from dev to dev
+f6b8015d HEAD@{2026-08-24 07:58:54 +0000}: pull --ff-only origin dev: Fast-forward
+66ea5468 HEAD@{2026-08-24 07:58:54 +0000}: checkout: moving from dev to dev
+66ea5468 HEAD@{2026-08-24 07:02:15 +0000}: pull --ff-only origin dev: Fast-forward
+2952754e HEAD@{2026-08-24 07:02:14 +0000}: checkout: moving from dev to dev
+2952754e HEAD@{2026-08-24 06:20:53 +0000}: pull --ff-only origin dev: Fast-forward
+2128f428 HEAD@{2026-08-24 06:20:52 +0000}: checkout: moving from dev to dev
+2128f428 HEAD@{2026-08-24 06:01:05 +0000}: pull --ff-only origin dev: Fast-forward
+d0c23647 HEAD@{2026-08-24 06:01:04 +0000}: checkout: moving from dev to dev
+d0c23647 HEAD@{2026-08-24 05:34:05 +0000}: pull --ff-only origin dev: Fast-forward
+800878b3 HEAD@{2026-08-24 05:34:05 +0000}: checkout: moving from dev to dev
+800878b3 HEAD@{2026-08-24 04:32:03 +0000}: pull --ff-only origin dev: Fast-forward
+c2926448 HEAD@{2026-08-24 04:32:03 +0000}: checkout: moving from dev to dev
+c2926448 HEAD@{2026-08-24 04:11:11 +0000}: pull --ff-only origin dev: Fast-forward
+d246ac67 HEAD@{2026-08-24 04:11:11 +0000}: checkout: moving from dev to dev
+d246ac67 HEAD@{2026-08-24 04:00:15 +0000}: pull --ff-only origin dev: Fast-forward
+b89727db HEAD@{2026-08-24 04:00:15 +0000}: checkout: moving from dev to dev
+b89727db HEAD@{2026-08-24 03:41:32 +0000}: pull --ff-only origin dev: Fast-forward
+b6ef33b7 HEAD@{2026-08-24 03:41:32 +0000}: checkout: moving from dev to dev
+b6ef33b7 HEAD@{2026-08-24 03:04:54 +0000}: pull --ff-only origin dev: Fast-forward
+32dcb393 HEAD@{2026-08-24 03:04:54 +0000}: checkout: moving from dev to dev
+32dcb393 HEAD@{2026-08-24 02:54:16 +0000}: pull --ff-only origin dev: Fast-forward
+c80aa3c8 HEAD@{2026-08-24 02:54:16 +0000}: checkout: moving from dev to dev
+c80aa3c8 HEAD@{2026-08-24 02:43:43 +0000}: pull --ff-only origin dev: Fast-forward
+c81744f0 HEAD@{2026-08-24 02:43:42 +0000}: checkout: moving from dev to dev
+c81744f0 HEAD@{2026-08-24 00:27:24 +0000}: pull --ff-only origin dev: Fast-forward
+a10ad3b9 HEAD@{2026-08-24 00:27:23 +0000}: checkout: moving from dev to dev
+a10ad3b9 HEAD@{2026-08-23 12:15:02 +0000}: pull --ff-only origin dev: Fast-forward
+22423960 HEAD@{2026-08-23 12:15:02 +0000}: checkout: moving from dev to dev
+22423960 HEAD@{2026-08-23 10:19:25 +0000}: pull --ff-only origin dev: Fast-forward
+42148e82 HEAD@{2026-08-23 10:19:24 +0000}: checkout: moving from dev to dev
+42148e82 HEAD@{2026-08-23 10:16:08 +0000}: merge origin/dev: Fast-forward
+b89b887e HEAD@{2026-08-23 10:07:10 +0000}: pull --ff-only origin dev: Fast-forward
+f4188ed4 HEAD@{2026-08-23 10:07:10 +0000}: checkout: moving from dev to dev
+f4188ed4 HEAD@{2026-08-23 06:16:07 +0000}: merge origin/dev: Fast-forward
+5a490e2c HEAD@{2026-08-23 01:00:37 +0000}: reset: moving to origin/dev
+8b49f831 HEAD@{2026-08-23 01:00:37 +0000}: checkout: moving from dev to dev
+8b49f831 HEAD@{2026-08-22 22:49:39 +0000}: pull --ff-only origin dev: Fast-forward
+0806be25 HEAD@{2026-08-22 22:49:39 +0000}: checkout: moving from dev to dev
+0806be25 HEAD@{2026-08-22 17:00:10 +0000}: pull --ff-only origin dev: Fast-forward
+208253c1 HEAD@{2026-08-22 17:00:09 +0000}: checkout: moving from dev to dev
+208253c1 HEAD@{2026-08-22 16:52:07 +0000}: pull --ff-only origin dev: Fast-forward
+97720f4b HEAD@{2026-08-22 16:52:07 +0000}: checkout: moving from dev to dev
+97720f4b HEAD@{2026-08-22 10:51:23 +0000}: pull --ff-only origin dev: Fast-forward
+821b9154 HEAD@{2026-08-22 10:51:22 +0000}: checkout: moving from dev to dev
+821b9154 HEAD@{2026-08-22 10:41:04 +0000}: pull --ff-only origin dev: Fast-forward
+337b6e09 HEAD@{2026-08-22 10:41:03 +0000}: checkout: moving from dev to dev
+337b6e09 HEAD@{2026-08-22 10:33:20 +0000}: merge origin/dev: Fast-forward
+81e1f19d HEAD@{2026-08-22 10:27:08 +0000}: pull --ff-only origin dev: Fast-forward
+08f316b7 HEAD@{2026-08-22 10:27:08 +0000}: checkout: moving from dev to dev
+08f316b7 HEAD@{2026-08-22 10:16:49 +0000}: pull --ff-only origin dev: Fast-forward
+2697b71a HEAD@{2026-08-22 10:16:48 +0000}: checkout: moving from dev to dev
+2697b71a HEAD@{2026-08-22 09:52:53 +0000}: pull --ff-only origin dev: Fast-forward
+6079d1fb HEAD@{2026-08-22 09:52:52 +0000}: checkout: moving from dev to dev
+6079d1fb HEAD@{2026-08-22 09:42:16 +0000}: pull --ff-only origin dev: Fast-forward
+8ebcbb2a HEAD@{2026-08-22 09:42:16 +0000}: checkout: moving from dev to dev
+8ebcbb2a HEAD@{2026-08-22 09:33:03 +0000}: pull --ff-only origin dev: Fast-forward
+a765c376 HEAD@{2026-08-22 09:33:03 +0000}: checkout: moving from dev to dev
+a765c376 HEAD@{2026-08-22 09:18:21 +0000}: pull --ff-only origin dev: Fast-forward
+b66201d6 HEAD@{2026-08-22 09:18:20 +0000}: checkout: moving from dev to dev
+b66201d6 HEAD@{2026-08-22 09:13:27 +0000}: pull --ff-only origin dev: Fast-forward
+2078030d HEAD@{2026-08-22 09:13:27 +0000}: checkout: moving from dev to dev
+2078030d HEAD@{2026-08-22 09:02:52 +0000}: pull --ff-only origin dev: Fast-forward
+368b9c5c HEAD@{2026-08-22 09:02:52 +0000}: checkout: moving from dev to dev
+368b9c5c HEAD@{2026-08-22 08:52:58 +0000}: pull --ff-only origin dev: Fast-forward
+c1bd0da4 HEAD@{2026-08-22 08:52:58 +0000}: checkout: moving from dev to dev
+c1bd0da4 HEAD@{2026-08-22 08:33:20 +0000}: merge origin/dev: Fast-forward
+8cd59815 HEAD@{2026-08-22 08:18:40 +0000}: pull --ff-only origin dev: Fast-forward
+449a7a96 HEAD@{2026-08-22 08:18:39 +0000}: checkout: moving from dev to dev
+449a7a96 HEAD@{2026-08-22 06:14:17 +0000}: pull --ff-only origin dev: Fast-forward
+76ca2e37 HEAD@{2026-08-22 06:14:16 +0000}: checkout: moving from dev to dev
+76ca2e37 HEAD@{2026-08-22 05:41:48 +0000}: pull --ff-only origin dev: Fast-forward
+26ae3d94 HEAD@{2026-08-22 05:41:47 +0000}: checkout: moving from dev to dev
+26ae3d94 HEAD@{2026-08-22 05:31:18 +0000}: pull --ff-only origin dev: Fast-forward
+819ae1df HEAD@{2026-08-22 05:31:17 +0000}: checkout: moving from dev to dev
+819ae1df HEAD@{2026-08-22 02:53:21 +0000}: pull --ff-only origin dev: Fast-forward
+21041d89 HEAD@{2026-08-22 02:53:20 +0000}: checkout: moving from dev to dev
+21041d89 HEAD@{2026-08-22 02:42:48 +0000}: pull --ff-only origin dev: Fast-forward
+d5732234 HEAD@{2026-08-22 02:42:47 +0000}: checkout: moving from dev to dev
+d5732234 HEAD@{2026-08-22 02:32:13 +0000}: pull --ff-only origin dev: Fast-forward
+07fd07a3 HEAD@{2026-08-22 02:32:13 +0000}: checkout: moving from dev to dev
+07fd07a3 HEAD@{2026-08-22 02:26:52 +0000}: pull --ff-only origin dev: Fast-forward
+262d1473 HEAD@{2026-08-22 02:26:52 +0000}: checkout: moving from dev to dev
+262d1473 HEAD@{2026-08-22 02:11:20 +0000}: pull --ff-only origin dev: Fast-forward
+759d16ab HEAD@{2026-08-22 02:11:19 +0000}: checkout: moving from dev to dev
+759d16ab HEAD@{2026-08-22 02:03:14 +0000}: merge origin/dev: Fast-forward
+48c23384 HEAD@{2026-08-22 02:01:09 +0000}: pull --ff-only origin dev: Fast-forward
+7bdf427e HEAD@{2026-08-22 02:01:09 +0000}: checkout: moving from dev to dev
+7bdf427e HEAD@{2026-08-22 01:54:44 +0000}: pull --ff-only origin dev: Fast-forward
+62fd2b0a HEAD@{2026-08-22 01:54:43 +0000}: checkout: moving from dev to dev
+62fd2b0a HEAD@{2026-08-22 01:44:27 +0000}: pull --ff-only origin dev: Fast-forward
+57cf30a9 HEAD@{2026-08-22 01:44:27 +0000}: checkout: moving from dev to dev
+57cf30a9 HEAD@{2026-08-22 01:41:17 +0000}: pull --ff-only origin dev: Fast-forward
+895749c5 HEAD@{2026-08-22 01:41:16 +0000}: checkout: moving from dev to dev
+895749c5 HEAD@{2026-08-22 01:32:42 +0000}: pull --ff-only origin dev: Fast-forward
+3deea454 HEAD@{2026-08-22 01:32:42 +0000}: checkout: moving from dev to dev
+3deea454 HEAD@{2026-08-22 01:24:58 +0000}: pull --ff-only origin dev: Fast-forward
+2c3920eb HEAD@{2026-08-22 01:24:58 +0000}: checkout: moving from dev to dev
+2c3920eb HEAD@{2026-08-22 01:20:38 +0000}: pull --ff-only origin dev: Fast-forward
+54bf7ef9 HEAD@{2026-08-22 01:20:38 +0000}: checkout: moving from dev to dev
+54bf7ef9 HEAD@{2026-08-22 01:16:42 +0000}: pull --ff-only origin dev: Fast-forward
+e866d2c7 HEAD@{2026-08-22 01:16:41 +0000}: checkout: moving from dev to dev
+e866d2c7 HEAD@{2026-08-22 00:02:51 +0000}: pull --ff-only origin dev: Fast-forward
+b067bff5 HEAD@{2026-08-22 00:02:51 +0000}: checkout: moving from dev to dev
+b067bff5 HEAD@{2026-08-21 22:39:39 +0000}: pull --ff-only origin dev: Fast-forward
+3c161058 HEAD@{2026-08-21 22:39:39 +0000}: checkout: moving from dev to dev
+3c161058 HEAD@{2026-08-21 22:33:10 +0000}: merge origin/dev: Fast-forward
+4fb4f6c6 HEAD@{2026-08-21 15:14:16 +0000}: pull --ff-only origin dev: Fast-forward
+e63000f9 HEAD@{2026-08-21 15:14:15 +0000}: checkout: moving from dev to dev
+e63000f9 HEAD@{2026-08-21 15:02:53 +0000}: pull --ff-only origin dev: Fast-forward
+83dab0b4 HEAD@{2026-08-21 15:02:52 +0000}: checkout: moving from dev to dev
+83dab0b4 HEAD@{2026-08-21 14:24:31 +0000}: pull --ff-only origin dev: Fast-forward
+b689e907 HEAD@{2026-08-21 14:24:31 +0000}: checkout: moving from dev to dev
+b689e907 HEAD@{2026-08-21 14:02:54 +0000}: pull --ff-only origin dev: Fast-forward
+61dab025 HEAD@{2026-08-21 14:02:54 +0000}: checkout: moving from dev to dev
+61dab025 HEAD@{2026-08-21 13:55:26 +0000}: pull --ff-only origin dev: Fast-forward
+a54c56f9 HEAD@{2026-08-21 13:55:25 +0000}: checkout: moving from dev to dev
+a54c56f9 HEAD@{2026-08-21 13:47:13 +0000}: pull --ff-only origin dev: Fast-forward
+6171fa4f HEAD@{2026-08-21 13:47:13 +0000}: checkout: moving from dev to dev
+6171fa4f HEAD@{2026-08-21 13:33:04 +0000}: merge origin/dev: Fast-forward
+b9c80684 HEAD@{2026-08-21 13:10:27 +0000}: pull --ff-only origin dev: Fast-forward
+bca68e5d HEAD@{2026-08-21 13:10:26 +0000}: checkout: moving from dev to dev
+bca68e5d HEAD@{2026-08-21 12:33:03 +0000}: merge origin/dev: Fast-forward
+72d04022 HEAD@{2026-08-21 12:28:44 +0000}: pull --ff-only origin dev: Fast-forward
+71ea8311 HEAD@{2026-08-21 12:28:44 +0000}: checkout: moving from dev to dev
+71ea8311 HEAD@{2026-08-21 12:24:10 +0000}: reset: moving to origin/dev
+71ea8311 HEAD@{2026-08-21 12:24:10 +0000}: checkout: moving from dev to dev
+71ea8311 HEAD@{2026-08-21 12:16:52 +0000}: reset: moving to origin/dev
+931889e7 HEAD@{2026-08-21 12:16:52 +0000}: checkout: moving from dev to dev
+931889e7 HEAD@{2026-08-21 12:13:42 +0000}: pull --ff-only origin dev: Fast-forward
+496d6874 HEAD@{2026-08-21 12:13:42 +0000}: checkout: moving from dev to dev
+496d6874 HEAD@{2026-08-21 11:51:22 +0000}: pull --ff-only origin dev: Fast-forward
+33520eab HEAD@{2026-08-21 11:51:21 +0000}: checkout: moving from dev to dev
+33520eab HEAD@{2026-08-21 10:43:09 +0000}: reset: moving to origin/dev
+33520eab HEAD@{2026-08-21 10:43:09 +0000}: checkout: moving from dev to dev
+33520eab HEAD@{2026-08-21 10:36:21 +0000}: pull --ff-only origin dev: Fast-forward
+ba75265e HEAD@{2026-08-21 10:36:20 +0000}: checkout: moving from dev to dev
+ba75265e HEAD@{2026-08-21 10:30:54 +0000}: reset: moving to origin/dev
+5fc685fc HEAD@{2026-08-21 10:30:54 +0000}: checkout: moving from dev to dev
+5fc685fc HEAD@{2026-08-21 00:23:54 +0000}: pull --ff-only origin dev: Fast-forward
+008f3ab9 HEAD@{2026-08-21 00:23:54 +0000}: checkout: moving from dev to dev
+008f3ab9 HEAD@{2026-08-21 00:13:36 +0000}: pull --ff-only origin dev: Fast-forward
+cd0fa55c HEAD@{2026-08-21 00:13:35 +0000}: checkout: moving from dev to dev
+cd0fa55c HEAD@{2026-08-20 23:14:23 +0000}: merge origin/dev: Fast-forward
+6ebabec5 HEAD@{2026-08-20 22:39:29 +0000}: pull --ff-only origin dev: Fast-forward
+9512d4af HEAD@{2026-08-20 22:39:28 +0000}: checkout: moving from dev to dev
+9512d4af HEAD@{2026-08-20 22:14:22 +0000}: merge origin/dev: Fast-forward
+16536b37 HEAD@{2026-08-20 22:07:55 +0000}: pull --ff-only origin dev: Fast-forward
+7736ac2f HEAD@{2026-08-20 22:07:55 +0000}: checkout: moving from dev to dev
+7736ac2f HEAD@{2026-08-20 21:44:23 +0000}: merge origin/dev: Fast-forward
+bfdcb1a5 HEAD@{2026-08-20 21:37:15 +0000}: pull --ff-only origin dev: Fast-forward
+6d19c0a0 HEAD@{2026-08-20 21:37:14 +0000}: checkout: moving from dev to dev
+6d19c0a0 HEAD@{2026-08-20 21:27:05 +0000}: pull --ff-only origin dev: Fast-forward
+43ff7084 HEAD@{2026-08-20 21:27:05 +0000}: checkout: moving from dev to dev
+43ff7084 HEAD@{2026-08-20 09:44:07 +0000}: merge origin/dev: Fast-forward
+8de05562 HEAD@{2026-08-20 09:30:59 +0000}: reset: moving to origin/dev
+8de05562 HEAD@{2026-08-20 09:30:59 +0000}: checkout: moving from dev to dev
+8de05562 HEAD@{2026-08-20 09:28:38 +0000}: pull --ff-only origin dev: Fast-forward
+fe50f05f HEAD@{2026-08-20 09:28:36 +0000}: checkout: moving from dev to dev
+fe50f05f HEAD@{2026-08-20 08:53:03 +0000}: reset: moving to origin/dev
+1bd5bc11 HEAD@{2026-08-20 08:53:03 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 05:04:19 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 04:53:36 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 04:43:08 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 04:32:19 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 04:21:44 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 04:11:31 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 04:01:01 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 03:50:56 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 03:40:07 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 03:29:30 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 03:18:43 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 03:08:37 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 02:58:15 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 02:46:47 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 02:36:10 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 02:25:55 +0000}: checkout: moving from dev to dev
+1bd5bc11 HEAD@{2026-08-20 01:34:34 +0000}: pull --ff-only origin dev: Fast-forward
+cafe242c HEAD@{2026-08-20 01:34:34 +0000}: checkout: moving from dev to dev
+cafe242c HEAD@{2026-08-20 01:18:02 +0000}: merge origin/dev: Fast-forward
+6f4a6ded HEAD@{2026-08-20 01:14:09 +0000}: pull --ff-only origin dev: Fast-forward
+fe7a3317 HEAD@{2026-08-20 01:14:09 +0000}: checkout: moving from dev to dev
+fe7a3317 HEAD@{2026-08-20 00:38:04 +0000}: pull --ff-only origin dev: Fast-forward
+7f5208fb HEAD@{2026-08-20 00:38:04 +0000}: checkout: moving from dev to dev
+7f5208fb HEAD@{2026-08-19 20:58:50 +0000}: pull --ff-only origin dev: Fast-forward
+a72f78e4 HEAD@{2026-08-19 20:58:49 +0000}: checkout: moving from dev to dev
+a72f78e4 HEAD@{2026-08-19 19:04:17 +0000}: pull --ff-only origin dev: Fast-forward
+3d070d37 HEAD@{2026-08-19 19:04:16 +0000}: checkout: moving from dev to dev
+3d070d37 HEAD@{2026-08-19 18:43:03 +0000}: pull --ff-only origin dev: Fast-forward
+b97d160a HEAD@{2026-08-19 18:43:02 +0000}: checkout: moving from dev to dev
+b97d160a HEAD@{2026-08-19 18:01:47 +0000}: pull --ff-only origin dev: Fast-forward
+3b4f921a HEAD@{2026-08-19 18:01:46 +0000}: checkout: moving from dev to dev
+3b4f921a HEAD@{2026-08-19 16:59:23 +0000}: pull --ff-only origin dev: Fast-forward
+4e50f1fa HEAD@{2026-08-19 16:59:23 +0000}: checkout: moving from dev to dev
+4e50f1fa HEAD@{2026-08-19 16:46:34 +0000}: merge origin/dev: Fast-forward
+79cfbe9a HEAD@{2026-08-19 03:34:25 +0000}: pull --ff-only origin dev: Fast-forward
+a4941ee2 HEAD@{2026-08-19 03:34:25 +0000}: checkout: moving from dev to dev
+a4941ee2 HEAD@{2026-08-19 03:03:24 +0000}: pull --ff-only origin dev: Fast-forward
+2289f113 HEAD@{2026-08-19 03:03:24 +0000}: checkout: moving from dev to dev
+2289f113 HEAD@{2026-08-19 03:00:39 +0000}: pull --ff-only origin dev: Fast-forward
+d65a21e7 HEAD@{2026-08-19 03:00:39 +0000}: checkout: moving from dev to dev
+d65a21e7 HEAD@{2026-08-19 02:57:25 +0000}: pull --ff-only origin dev: Fast-forward
+11332590 HEAD@{2026-08-19 02:57:25 +0000}: checkout: moving from dev to dev
+11332590 HEAD@{2026-08-19 02:13:23 +0000}: merge origin/dev: Fast-forward
+4bd48042 HEAD@{2026-08-19 02:04:55 +0000}: pull --ff-only origin dev: Fast-forward
+42892a66 HEAD@{2026-08-19 02:04:54 +0000}: checkout: moving from dev to dev
+42892a66 HEAD@{2026-08-19 01:01:14 +0000}: pull --ff-only origin dev: Fast-forward
+aed294b3 HEAD@{2026-08-19 01:01:13 +0000}: checkout: moving from dev to dev
+aed294b3 HEAD@{2026-08-19 00:40:14 +0000}: pull --ff-only origin dev: Fast-forward
+11ba4b07 HEAD@{2026-08-19 00:40:14 +0000}: checkout: moving from dev to dev
+11ba4b07 HEAD@{2026-08-19 00:17:03 +0000}: pull --ff-only origin dev: Fast-forward
+37da463e HEAD@{2026-08-19 00:17:02 +0000}: checkout: moving from dev to dev
+37da463e HEAD@{2026-08-19 00:13:19 +0000}: merge origin/dev: Fast-forward
+9f803788 HEAD@{2026-08-18 20:09:17 +0000}: pull --ff-only origin dev: Fast-forward
+7e8deeba HEAD@{2026-08-18 20:09:16 +0000}: checkout: moving from dev to dev
+7e8deeba HEAD@{2026-08-18 16:29:36 +0000}: pull --ff-only origin dev: Fast-forward
+904eb902 HEAD@{2026-08-18 16:29:35 +0000}: checkout: moving from dev to dev
+904eb902 HEAD@{2026-08-18 15:56:45 +0000}: pull --ff-only origin dev: Fast-forward
+24877839 HEAD@{2026-08-18 15:56:44 +0000}: checkout: moving from dev to dev
+24877839 HEAD@{2026-08-18 12:11:53 +0000}: reset: moving to origin/dev
+71629583 HEAD@{2026-08-18 11:59:42 +0000}: pull --ff-only origin dev: Fast-forward
+f5613e1a HEAD@{2026-08-18 11:59:41 +0000}: checkout: moving from dev to dev
+f5613e1a HEAD@{2026-08-18 10:30:48 +0000}: pull --ff-only origin dev: Fast-forward
+6278a317 HEAD@{2026-08-18 10:30:48 +0000}: checkout: moving from dev to dev
+6278a317 HEAD@{2026-08-18 07:12:08 +0000}: reset: moving to origin/dev
+e92d2e1b HEAD@{2026-08-18 07:12:08 +0000}: checkout: moving from dev to dev
+e92d2e1b HEAD@{2026-08-18 05:36:51 +0000}: reset: moving to origin/dev
+c47f3843 HEAD@{2026-08-18 05:36:51 +0000}: checkout: moving from dev to dev
+c47f3843 HEAD@{2026-08-18 05:33:23 +0000}: checkout: moving from dev to dev
+c47f3843 HEAD@{2026-08-18 05:23:16 +0000}: checkout: moving from dev to dev
+c47f3843 HEAD@{2026-08-18 05:12:03 +0000}: checkout: moving from dev to dev
+c47f3843 HEAD@{2026-08-18 05:01:20 +0000}: checkout: moving from dev to dev
+c47f3843 HEAD@{2026-08-18 04:50:17 +0000}: checkout: moving from dev to dev
+c47f3843 HEAD@{2026-08-18 04:40:09 +0000}: checkout: moving from dev to dev
+c47f3843 HEAD@{2026-08-18 04:29:22 +0000}: checkout: moving from dev to dev
+c47f3843 HEAD@{2026-08-18 04:19:08 +0000}: checkout: moving from dev to dev
+c47f3843 HEAD@{2026-08-18 04:08:27 +0000}: checkout: moving from dev to dev
+c47f3843 HEAD@{2026-08-18 04:02:25 +0000}: merge origin/dev: Fast-forward
+d742cdef HEAD@{2026-08-18 02:47:01 +0000}: merge origin/dev: Fast-forward
+7a499337 HEAD@{2026-08-18 02:22:46 +0000}: pull --ff-only origin dev: Fast-forward
+337c3b81 HEAD@{2026-08-18 02:22:45 +0000}: checkout: moving from dev to dev
+337c3b81 HEAD@{2026-08-18 02:01:11 +0000}: pull --ff-only origin dev: Fast-forward
+9df01220 HEAD@{2026-08-18 02:01:11 +0000}: checkout: moving from dev to dev
+9df01220 HEAD@{2026-08-18 01:50:46 +0000}: pull --ff-only origin dev: Fast-forward
+b94fa5a4 HEAD@{2026-08-18 01:50:45 +0000}: checkout: moving from dev to dev
+b94fa5a4 HEAD@{2026-08-18 00:27:03 +0000}: pull --ff-only origin dev: Fast-forward
+f65556be HEAD@{2026-08-18 00:27:03 +0000}: checkout: moving from dev to dev
+f65556be HEAD@{2026-08-18 00:18:21 +0000}: pull --ff-only origin dev: Fast-forward
+8dbea1d7 HEAD@{2026-08-18 00:18:20 +0000}: checkout: moving from dev to dev
+8dbea1d7 HEAD@{2026-08-18 00:06:36 +0000}: pull --ff-only origin dev: Fast-forward
+5d486f85 HEAD@{2026-08-18 00:06:36 +0000}: checkout: moving from dev to dev
+5d486f85 HEAD@{2026-08-18 00:01:53 +0000}: merge origin/dev: Fast-forward
+2e2905b0 HEAD@{2026-08-17 23:01:36 +0000}: merge origin/dev: Fast-forward
+b6a33e23 HEAD@{2026-08-17 22:47:34 +0000}: pull --ff-only origin dev: Fast-forward
+58500c8c HEAD@{2026-08-17 22:47:34 +0000}: checkout: moving from dev to dev
+58500c8c HEAD@{2026-08-17 21:41:15 +0000}: pull --ff-only origin dev: Fast-forward
+3f3a5056 HEAD@{2026-08-17 21:41:15 +0000}: checkout: moving from dev to dev
+3f3a5056 HEAD@{2026-08-17 21:30:59 +0000}: pull --ff-only origin dev: Fast-forward
+d96304c4 HEAD@{2026-08-17 21:30:58 +0000}: checkout: moving from dev to dev
+d96304c4 HEAD@{2026-08-17 21:28:37 +0000}: merge origin/dev: Fast-forward
+a0e33562 HEAD@{2026-08-17 21:12:11 +0000}: pull --ff-only origin dev: Fast-forward
+95b1bf43 HEAD@{2026-08-17 21:12:10 +0000}: checkout: moving from dev to dev
+95b1bf43 HEAD@{2026-08-17 20:58:36 +0000}: merge origin/dev: Fast-forward
+a183983a HEAD@{2026-08-17 20:27:39 +0000}: pull --ff-only -q origin dev: Fast-forward
+0b89a4ef HEAD@{2026-08-17 20:27:39 +0000}: checkout: moving from dev to dev
+0b89a4ef HEAD@{2026-08-17 20:23:19 +0000}: pull --ff-only origin dev: Fast-forward
+c23558d9 HEAD@{2026-08-17 12:00:47 +0000}: pull --ff-only -q origin dev: Fast-forward
+d87a340b HEAD@{2026-08-17 12:00:46 +0000}: checkout: moving from dev to dev
+d87a340b HEAD@{2026-08-17 11:51:31 +0000}: pull --ff-only -q origin dev: Fast-forward
+30adb161 HEAD@{2026-08-17 11:51:31 +0000}: checkout: moving from dev to dev
+30adb161 HEAD@{2026-08-17 11:39:40 +0000}: pull --ff-only -q origin dev: Fast-forward
+560b9a6a HEAD@{2026-08-17 11:39:40 +0000}: checkout: moving from dev to dev
+560b9a6a HEAD@{2026-08-17 11:25:35 +0000}: merge origin/dev: Fast-forward
+73f010d7 HEAD@{2026-08-17 11:08:23 +0000}: pull --ff-only -q origin dev: Fast-forward
+8b6dc2f1 HEAD@{2026-08-17 11:08:23 +0000}: checkout: moving from dev to dev
+8b6dc2f1 HEAD@{2026-08-17 10:55:35 +0000}: merge origin/dev: Fast-forward
+d4e9b91f HEAD@{2026-08-17 10:47:18 +0000}: pull --ff-only -q origin dev: Fast-forward
+497910ba HEAD@{2026-08-17 10:47:17 +0000}: checkout: moving from dev to dev
+497910ba HEAD@{2026-08-17 10:24:06 +0000}: pull --ff-only -q origin dev: Fast-forward
+958917ca HEAD@{2026-08-17 10:24:06 +0000}: checkout: moving from dev to dev
+958917ca HEAD@{2026-08-17 10:03:34 +0000}: pull --ff-only -q origin dev: Fast-forward
+f344ac5f HEAD@{2026-08-17 10:03:34 +0000}: checkout: moving from dev to dev
+f344ac5f HEAD@{2026-08-17 09:44:41 +0000}: rebase (finish): returning to refs/heads/dev
+f344ac5f HEAD@{2026-08-17 09:44:41 +0000}: rebase (pick): feat: Register goal_summary in discovery-registration.ts to close orphaned-capability-goal_summary
+1bec4b88 HEAD@{2026-08-17 09:44:41 +0000}: rebase (pick): feat: Propose new activity to invoke interface_deploy_reach_check to close orphaned capability gap
+fe42f5db HEAD@{2026-08-17 09:44:41 +0000}: rebase (start): checkout origin/dev
+06bb37db HEAD@{2026-08-17 05:53:00 +0000}: commit: feat: Register goal_summary in discovery-registration.ts to close orphaned-capability-goal_summary
+354dc445 HEAD@{2026-08-17 05:46:26 +0000}: commit: feat: Propose new activity to invoke interface_deploy_reach_check to close orphaned capability gap
+0701ad0b HEAD@{2026-08-17 03:47:03 +0000}: pull --ff-only -q origin dev: Fast-forward
+94520814 HEAD@{2026-08-17 03:47:03 +0000}: checkout: moving from dev to dev
+94520814 HEAD@{2026-08-17 03:32:26 +0000}: merge origin/dev: Fast-forward
+ea1783a8 HEAD@{2026-08-17 03:26:03 +0000}: pull --ff-only -q origin dev: Fast-forward
+3df2f235 HEAD@{2026-08-17 03:26:03 +0000}: checkout: moving from dev to dev
+3df2f235 HEAD@{2026-08-17 03:15:23 +0000}: pull --ff-only -q origin dev: Fast-forward
+bcb5c0dd HEAD@{2026-08-17 03:15:23 +0000}: checkout: moving from dev to dev
+bcb5c0dd HEAD@{2026-08-17 03:02:16 +0000}: merge origin/dev: Fast-forward
+f9bd6379 HEAD@{2026-08-17 02:54:57 +0000}: pull --ff-only -q origin dev: Fast-forward
+daeb6ef5 HEAD@{2026-08-17 02:54:56 +0000}: checkout: moving from dev to dev
+daeb6ef5 HEAD@{2026-08-17 02:44:34 +0000}: pull --ff-only -q origin dev: Fast-forward
+2964496e HEAD@{2026-08-17 02:44:33 +0000}: checkout: moving from dev to dev
+2964496e HEAD@{2026-08-17 02:32:12 +0000}: merge origin/dev: Fast-forward
+e48c444b HEAD@{2026-08-17 02:01:46 +0000}: pull --ff-only -q origin dev: Fast-forward
+4dc28ea8 HEAD@{2026-08-17 02:01:45 +0000}: checkout: moving from dev to dev
+4dc28ea8 HEAD@{2026-08-17 01:51:07 +0000}: pull --ff-only -q origin dev: Fast-forward
+2db8c507 HEAD@{2026-08-17 01:51:06 +0000}: checkout: moving from dev to dev
+2db8c507 HEAD@{2026-08-17 01:31:56 +0000}: merge origin/dev: Fast-forward
+430f7d7e HEAD@{2026-08-17 01:17:20 +0000}: pull --ff-only -q origin dev: Fast-forward
+8e76b5cd HEAD@{2026-08-17 01:17:20 +0000}: checkout: moving from dev to dev
+8e76b5cd HEAD@{2026-08-17 01:01:56 +0000}: merge origin/dev: Fast-forward
+0a4723ab HEAD@{2026-08-17 00:56:26 +0000}: pull --ff-only -q origin dev: Fast-forward
+33924f92 HEAD@{2026-08-17 00:56:26 +0000}: checkout: moving from dev to dev
+33924f92 HEAD@{2026-08-17 00:35:34 +0000}: pull --ff-only -q origin dev: Fast-forward
+c6d2212a HEAD@{2026-08-17 00:35:34 +0000}: checkout: moving from dev to dev
+c6d2212a HEAD@{2026-08-17 00:31:54 +0000}: merge origin/dev: Fast-forward
+8bffa8bf HEAD@{2026-08-17 00:14:37 +0000}: pull --ff-only -q origin dev: Fast-forward
+fa2428f8 HEAD@{2026-08-17 00:14:36 +0000}: checkout: moving from dev to dev
+fa2428f8 HEAD@{2026-08-16 23:31:37 +0000}: merge origin/dev: Fast-forward
+215cfe5c HEAD@{2026-08-16 23:22:50 +0000}: pull --ff-only -q origin dev: Fast-forward
+b649e6f8 HEAD@{2026-08-16 23:22:50 +0000}: checkout: moving from dev to dev
+b649e6f8 HEAD@{2026-08-16 23:01:19 +0000}: merge origin/dev: Fast-forward
+9f100b35 HEAD@{2026-08-16 22:50:34 +0000}: pull --ff-only -q origin dev: Fast-forward
+236f304b HEAD@{2026-08-16 22:50:34 +0000}: checkout: moving from dev to dev
+236f304b HEAD@{2026-08-16 22:31:18 +0000}: merge origin/dev: Fast-forward
+0e5a4a2d HEAD@{2026-08-16 22:29:28 +0000}: pull --ff-only -q origin dev: Fast-forward
+59b1475a HEAD@{2026-08-16 22:29:28 +0000}: checkout: moving from dev to dev
+59b1475a HEAD@{2026-08-16 22:18:35 +0000}: pull --ff-only -q origin dev: Fast-forward
+f2ecd3ff HEAD@{2026-08-16 22:18:35 +0000}: checkout: moving from dev to dev
+f2ecd3ff HEAD@{2026-08-16 21:46:41 +0000}: pull --ff-only -q origin dev: Fast-forward
+2ade4268 HEAD@{2026-08-16 21:46:41 +0000}: checkout: moving from dev to dev
+2ade4268 HEAD@{2026-08-16 21:36:08 +0000}: pull --ff-only -q origin dev: Fast-forward
+f5133c4a HEAD@{2026-08-16 21:36:07 +0000}: checkout: moving from dev to dev
+f5133c4a HEAD@{2026-08-16 21:27:47 +0000}: pull --ff-only -q origin dev: Fast-forward
+be181156 HEAD@{2026-08-16 21:27:47 +0000}: checkout: moving from dev to dev
+be181156 HEAD@{2026-08-16 21:17:01 +0000}: pull --ff-only -q origin dev: Fast-forward
+66c678d7 HEAD@{2026-08-16 21:17:00 +0000}: checkout: moving from dev to dev
+66c678d7 HEAD@{2026-08-16 20:59:38 +0000}: pull --ff-only -q origin dev: Fast-forward
+9f1b56f0 HEAD@{2026-08-16 20:59:37 +0000}: checkout: moving from dev to dev
+9f1b56f0 HEAD@{2026-08-16 20:36:37 +0000}: pull --ff-only -q origin dev: Fast-forward
+b6163701 HEAD@{2026-08-16 20:36:37 +0000}: checkout: moving from dev to dev
+b6163701 HEAD@{2026-08-16 20:31:06 +0000}: merge origin/dev: Fast-forward
+ef77a637 HEAD@{2026-08-16 20:25:56 +0000}: pull --ff-only -q origin dev: Fast-forward
+614dea0a HEAD@{2026-08-16 20:25:56 +0000}: checkout: moving from dev to dev
+614dea0a HEAD@{2026-08-16 18:01:02 +0000}: merge origin/dev: Fast-forward
+40b79fb6 HEAD@{2026-08-16 17:44:53 +0000}: pull --ff-only -q origin dev: Fast-forward
+04624b44 HEAD@{2026-08-16 17:44:53 +0000}: checkout: moving from dev to dev
+04624b44 HEAD@{2026-08-16 17:34:44 +0000}: pull --ff-only -q origin dev: Fast-forward
+41786f16 HEAD@{2026-08-16 17:34:43 +0000}: checkout: moving from dev to dev
+41786f16 HEAD@{2026-08-16 17:31:01 +0000}: merge origin/dev: Fast-forward
+38c00a29 HEAD@{2026-08-16 17:24:30 +0000}: pull --ff-only -q origin dev: Fast-forward
+6e90c029 HEAD@{2026-08-16 17:24:30 +0000}: checkout: moving from dev to dev
+6e90c029 HEAD@{2026-08-16 14:14:48 +0000}: pull --ff-only -q origin dev: Fast-forward
+734e458b HEAD@{2026-08-16 14:14:47 +0000}: checkout: moving from dev to dev
+734e458b HEAD@{2026-08-16 14:00:53 +0000}: merge origin/dev: Fast-forward
+232e507a HEAD@{2026-08-16 13:50:59 +0000}: pull --ff-only -q origin dev: Fast-forward
+9f57c261 HEAD@{2026-08-16 13:50:59 +0000}: checkout: moving from dev to dev
+9f57c261 HEAD@{2026-08-16 13:41:33 +0000}: pull --ff-only -q origin dev: Fast-forward
+ef76c550 HEAD@{2026-08-16 13:41:33 +0000}: checkout: moving from dev to dev
+ef76c550 HEAD@{2026-08-16 13:30:19 +0000}: pull --ff-only -q origin dev: Fast-forward
+d8f1e757 HEAD@{2026-08-16 13:30:18 +0000}: checkout: moving from development-vessel to dev
+d8f1e757 HEAD@{2026-08-16 13:24:16 +0000}: reset: moving to dev
+24372106 HEAD@{2026-08-16 13:24:15 +0000}: checkout: moving from dev to development-vessel
+d8f1e757 HEAD@{2026-08-16 13:23:53 +0000}: reset: moving to origin/dev
+d8f1e757 HEAD@{2026-08-16 13:23:52 +0000}: checkout: moving from master to dev

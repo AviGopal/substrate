@@ -1,0 +1,103 @@
+ M Substrate/Projects/MyProject.md
+ M Substrate/Projects/my_temp_project.md
+ M Substrate/Projects/projectThreadScanReport.json
+ M Substrate/Projects/temp_test_open_todo.md
+ M repos/boredom-vessel
+ M repos/development-vessel
+ M repos/goal-host-vessel
+ M repos/stateful-ui-vessel
+ M state/learning-mode-state.json
+ M test_file.txt
+?? alphaprobe-u3
+?? compose-slots/
+?? docs/architecture/CONCURRENT_COMPOSE.md
+?? path/to/your/
+?? path_to_file
+?? runtime-drift-discovery-vessel
+?? trendcheck-mu98yrzr-0
+?? trendcheck-uppercase-mu99zhdy-1
+?? trendcheck-uppercase-mu9a21za-1
+?? trendcheck-uppercase-mu9a4mkq-0
+?? type-scale-values
+?? validation-grade-report.json
+?? validation/failure-modes/scenarios/docs-drift-docs-operations-FEDERATION-GENRES-md.json
+?? validation/failure-modes/scenarios/gap-trend-expectation-violated-product.json
+?? validation/failure-modes/scenarios/gap-trend-expectation-violated-uppercase.json
+?? validation/failure-modes/scenarios/goal_host_failing_direction-filePaths_llm_completion_result.json
+?? validation/failure-modes/scenarios/memorynote-write-stores-the-rendered-instruction-envelope-instead-of-the-content-value-narrowed.json
+?? validation/failure-modes/scenarios/reach-gap-bash.json
+?? validation/failure-modes/scenarios/reach-gap-shell.json
+?? validation/failure-modes/scenarios/recommit-credit-is-assigned-to-the-wrong-arm-and-the-withholding-claim-is-false-narrowed-semantic_reject.json
+?? validation/failure-modes/scenarios/recommit-credit-is-assigned-to-the-wrong-arm-and-the-withholding-claim-is-false-semantic_reject.json
+?? validation/failure-modes/scenarios/recommit-goal-host-cutover-restart-fires-blind-at-timer-time-killing-in-flight-dispatches-narrowed-syntax_break.json
+?? validation/failure-modes/scenarios/recommit-goal-host-cutover-restart-fires-blind-at-timer-time-killing-in-flight-dispatches-syntax_break.json
+?? validation/failure-modes/scenarios/recommit-learned-paths-record-no-domain-endpoint-for-most-goals-so-transfer-has-no-key-narrowed-semantic_reject.json
+?? validation/failure-modes/scenarios/recommit-learned-paths-record-no-domain-endpoint-for-most-goals-so-transfer-has-no-key-semantic_reject.json
+?? validation/failure-modes/scenarios/recommit-route-edit-436d46ac-semantic_reject.json
+?? validation/failure-modes/scenarios/recommit-route-edit-49136a8a-anchor_not_found.json
+?? validation/failure-modes/scenarios/recommit-route-edit-576b2d90-narrowed-semantic_reject.json
+?? validation/failure-modes/scenarios/recommit-route-edit-5c57d7b0-typecheck_dangling_reference.json
+?? validation/failure-modes/scenarios/recommit-route-edit-5cd11674-narrowed-typecheck_dangling_reference.json
+?? validation/failure-modes/scenarios/recommit-route-edit-60305968-semantic_reject.json
+?? validation/failure-modes/scenarios/recommit-route-edit-73e5250b-semantic_reject.json
+?? validation/failure-modes/scenarios/recommit-route-edit-7f975550-verify_failed.json
+?? validation/failure-modes/scenarios/recommit-route-edit-82dc3a52-syntax_break.json
+?? validation/failure-modes/scenarios/recommit-route-edit-85078fa4-semantic_reject.json
+?? validation/failure-modes/scenarios/recommit-route-edit-c3eddf54-semantic_reject.json
+?? validation/failure-modes/scenarios/recommit-route-edit-ea3ff330-semantic_reject.json
+?? validation/failure-modes/scenarios/recommit-route-edit-f187ef8c-semantic_reject.json
+?? validation/failure-modes/scenarios/recommit-route-edit-f80c0f3c-anchor_not_found.json
+?? validation/failure-modes/scenarios/recommit-route-edit-f80c0f3c-narrowed-anchor_not_found.json
+?? validation/failure-modes/scenarios/recommit-route-edit-ff275548-semantic_reject.json
+?? validation/failure-modes/scenarios/recommit-trend-expectation-scores-a-failed-dispatch-as-a-reach-miss-narrowed-semantic_reject.json
+?? validation/failure-modes/scenarios/route-edit-004042e8.json
+?? validation/failure-modes/scenarios/route-edit-166eea34.json
+?? validation/failure-modes/scenarios/route-edit-3adebbd0.json
+?? validation/failure-modes/scenarios/route-edit-42265768.json
+?? validation/failure-modes/scenarios/route-edit-436d46ac.json
+?? validation/failure-modes/scenarios/route-edit-49136a8a-narrowed.json
+?? validation/failure-modes/scenarios/route-edit-49136a8a.json
+?? validation/failure-modes/scenarios/route-edit-49a71549.json
+?? validation/failure-modes/scenarios/route-edit-5cd11674-narrowed.json
+?? validation/failure-modes/scenarios/route-edit-5cd11674.json
+?? validation/failure-modes/scenarios/route-edit-5f02d00a.json
+?? validation/failure-modes/scenarios/route-edit-60305968-narrowed.json
+?? validation/failure-modes/scenarios/route-edit-60305968.json
+?? validation/failure-modes/scenarios/route-edit-6293822f.json
+?? validation/failure-modes/scenarios/route-edit-656ed332.json
+?? validation/failure-modes/scenarios/route-edit-73e5250b-narrowed.json
+?? validation/failure-modes/scenarios/route-edit-73e5250b.json
+?? validation/failure-modes/scenarios/route-edit-7f975550.json
+?? validation/failure-modes/scenarios/route-edit-82dc3a52.json
+?? validation/failure-modes/scenarios/route-edit-85078fa4-narrowed.json
+?? validation/failure-modes/scenarios/route-edit-85078fa4.json
+?? validation/failure-modes/scenarios/route-edit-a7e9bc90-narrowed.json
+?? validation/failure-modes/scenarios/route-edit-a7e9bc90.json
+?? validation/failure-modes/scenarios/route-edit-bcc6e9b4-narrowed.json
+?? validation/failure-modes/scenarios/route-edit-bcc6e9b4.json
+?? validation/failure-modes/scenarios/route-edit-c3eddf54.json
+?? validation/failure-modes/scenarios/route-edit-db003616.json
+?? validation/failure-modes/scenarios/route-edit-df21e140.json
+?? validation/failure-modes/scenarios/route-edit-ea3ff330-narrowed.json
+?? validation/failure-modes/scenarios/route-edit-ea3ff330.json
+?? validation/failure-modes/scenarios/route-edit-f187ef8c-narrowed.json
+?? validation/failure-modes/scenarios/route-edit-f80c0f3c-narrowed.json
+?? validation/failure-modes/scenarios/route-edit-f80c0f3c.json
+?? validation/failure-modes/scenarios/route-edit-fa0029d8.json
+?? validation/failure-modes/scenarios/route-edit-ff275548-narrowed.json
+?? validation/failure-modes/scenarios/route-edit-ff275548.json
+?? validation/failure-modes/scenarios/satisfier-executions-record-zero-tokens-so-economic-efficiency-is-unmeasurable.json
+?? validation/failure-modes/scenarios/systematic-failure-auto-bridge-source_code-zero.json
+?? validation/failure-modes/vessel-scenarios/gap-architecture.json
+?? validation/failure-modes/vessel-scenarios/gap-candidate-improvement.json
+?? validation/failure-modes/vessel-scenarios/gap-detailed-health-check-report.json
+?? validation/failure-modes/vessel-scenarios/gap-dispatched-project-items-notes.json
+?? validation/failure-modes/vessel-scenarios/gap-failed-invariants-report.json
+?? validation/failure-modes/vessel-scenarios/gap-findings.json
+?? validation/failure-modes/vessel-scenarios/gap-full-audit-summary.json
+?? validation/failure-modes/vessel-scenarios/gap-health-check-status.json
+?? validation/failure-modes/vessel-scenarios/gap-substrate-health.json
+?? validation/failure-modes/vessel-scenarios/gap-system-description.json
+?? validation/failure-modes/vessel-scenarios/gap-vessel-health-condition.json
+?? validation/generated/42-2026-09-20.json
+?? validation/scripts/stage-harness.cjs

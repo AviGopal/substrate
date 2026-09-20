@@ -1,0 +1,369 @@
+93c70c5e dev@{2026-09-20 00:47:32 +0000}: pull --ff-only origin dev: Fast-forward
+095bd692 dev@{2026-09-19 23:44:49 +0000}: pull --ff-only origin dev: Fast-forward
+290a5c78 dev@{2026-09-19 23:34:27 +0000}: pull --ff-only origin dev: Fast-forward
+f2eb9a80 dev@{2026-09-19 23:13:45 +0000}: pull --ff-only origin dev: Fast-forward
+13ba9bf1 dev@{2026-09-19 21:12:24 +0000}: commit: chore: Update activity-api submodule to latest commit
+2cf1007f dev@{2026-09-19 21:12:21 +0000}: commit: vessel-code-commit-and-push ias-executor-ts
+0130e833 dev@{2026-09-19 21:12:16 +0000}: commit: Update identity-vessel submodule
+d730b03c dev@{2026-09-19 21:12:15 +0000}: commit: vessel-code-commit-and-push llm-resolver-vessel
+0d238a73 dev@{2026-09-19 21:12:12 +0000}: commit: vessel-code-commit-and-push obsidian-vessel: update submodule
+0ac33bfb dev@{2026-09-19 21:12:08 +0000}: commit: vessel-code-commit-and-push light-dispatch-vessel
+bc86b6ba dev@{2026-09-19 21:12:07 +0000}: commit: Update local-tools-vessel submodule
+e6cfa635 dev@{2026-09-19 21:11:48 +0000}: commit: feat: Update boredom-vessel submodule
+796fac89 dev@{2026-09-19 21:11:33 +0000}: commit: vessel-code-commit-and-push cpg-inference-ts
+265156f8 dev@{2026-09-19 12:25:06 +0000}: pull --ff-only origin dev: Fast-forward
+97f8d935 dev@{2026-09-18 18:23:15 +0000}: merge origin/dev: Fast-forward
+13c5d466 dev@{2026-09-18 16:31:28 +0000}: commit: vessel-code-commit-and-push
+8ca33fb9 dev@{2026-09-18 12:29:28 +0000}: pull --ff-only origin dev: Fast-forward
+120bca8a dev@{2026-09-18 06:32:07 +0000}: pull --ff-only origin dev: Fast-forward
+9c39f411 dev@{2026-09-18 05:48:34 +0000}: pull --ff-only origin dev: Fast-forward
+efdc01aa dev@{2026-09-18 04:01:25 +0000}: pull --ff-only origin dev: Fast-forward
+937c54a6 dev@{2026-09-18 03:50:35 +0000}: pull --ff-only origin dev: Fast-forward
+33d60c3a dev@{2026-09-17 00:42:31 +0000}: pull --ff-only origin dev: Fast-forward
+edb11037 dev@{2026-09-16 18:22:41 +0000}: pull --ff-only origin dev: Fast-forward
+ad9da780 dev@{2026-09-16 16:46:17 +0000}: merge origin/dev: Fast-forward
+a9534445 dev@{2026-09-16 12:46:18 +0000}: merge origin/dev: Fast-forward
+a172e235 dev@{2026-09-16 12:03:17 +0000}: pull --ff-only origin dev: Fast-forward
+4735981d dev@{2026-09-16 10:15:44 +0000}: merge origin/dev: Fast-forward
+3c113703 dev@{2026-09-16 09:37:47 +0000}: pull --ff-only origin dev: Fast-forward
+d63eb56e dev@{2026-09-16 09:27:36 +0000}: pull --ff-only origin dev: Fast-forward
+4af5180b dev@{2026-09-16 06:27:45 +0000}: pull --ff-only origin dev: Fast-forward
+aba286bd dev@{2026-09-16 05:44:52 +0000}: pull --ff-only origin dev: Fast-forward
+27c99783 dev@{2026-09-16 01:42:50 +0000}: pull --ff-only origin dev: Fast-forward
+d42910bc dev@{2026-09-16 01:20:00 +0000}: commit: fix(relevance-sink): health probes the store; written reports rows matched
+a07ea8b7 dev@{2026-09-16 01:00:05 +0000}: pull --ff-only origin dev: Fast-forward
+a5dd4b24 dev@{2026-09-16 00:45:34 +0000}: pull --ff-only origin dev: Fast-forward
+16b541ee dev@{2026-09-16 00:44:35 +0000}: merge origin/dev: Fast-forward
+5cfe536e dev@{2026-09-15 18:20:53 +0000}: pull --ff-only origin dev: Fast-forward
+9f2a8994 dev@{2026-09-15 12:26:24 +0000}: pull --ff-only origin dev: Fast-forward
+4c622e8e dev@{2026-09-15 11:01:02 +0000}: pull: Fast-forward
+a009e1d9 dev@{2026-09-15 07:31:18 +0000}: pull --ff-only origin dev: Fast-forward
+1520b4b3 dev@{2026-09-15 07:12:57 +0000}: pull --ff-only origin dev: Fast-forward
+864a3a21 dev@{2026-09-15 06:38:47 +0000}: pull --ff-only origin dev: Fast-forward
+9f1d1c98 dev@{2026-09-15 05:38:18 +0000}: pull origin dev: Fast-forward
+e72a7fc8 dev@{2026-09-13 16:00:00 +0000}: commit: Committing changes for vessel2
+b3dd3e9f dev@{2026-09-13 12:23:43 +0000}: pull --ff-only origin dev: Fast-forward
+f7f4e769 dev@{2026-09-13 06:38:05 +0000}: pull --ff-only origin dev: Fast-forward
+40541a46 dev@{2026-09-13 00:48:04 +0000}: pull --ff-only origin dev: Fast-forward
+8b7d7a4e dev@{2026-09-12 18:26:41 +0000}: pull --ff-only origin dev: Fast-forward
+5ac13be0 dev@{2026-09-12 12:23:40 +0000}: pull --ff-only origin dev: Fast-forward
+df6206e3 dev@{2026-09-12 10:29:50 +0000}: pull --ff-only origin dev: Fast-forward
+24354632 dev@{2026-09-12 10:28:41 +0000}: pull --ff-only origin dev: Fast-forward
+37650c2f dev@{2026-09-12 10:26:15 +0000}: pull --ff-only origin dev: Fast-forward
+d45dba49 dev@{2026-09-12 10:21:51 +0000}: pull --ff-only origin dev: Fast-forward
+3a5387c2 dev@{2026-09-12 09:58:41 +0000}: pull --ff-only origin dev: Fast-forward
+29027df2 dev@{2026-09-12 09:54:59 +0000}: pull --ff-only origin dev: Fast-forward
+1c5b73e5 dev@{2026-09-12 09:49:58 +0000}: pull --ff-only origin dev: Fast-forward
+5584bc3f dev@{2026-09-12 09:39:06 +0000}: pull --ff-only origin dev: Fast-forward
+78e4d583 dev@{2026-09-12 09:33:37 +0000}: pull --ff-only origin dev: Fast-forward
+320c3eec dev@{2026-09-12 09:32:31 +0000}: pull --ff-only origin dev: Fast-forward
+79eb9620 dev@{2026-09-12 07:51:16 +0000}: pull --ff-only origin dev: Fast-forward
+9b177190 dev@{2026-09-12 07:09:13 +0000}: pull --ff-only origin dev: Fast-forward
+42048377 dev@{2026-09-12 06:26:54 +0000}: pull --ff-only origin dev: Fast-forward
+a29653e4 dev@{2026-09-12 02:42:23 +0000}: pull --ff-only origin dev: Fast-forward
+56d5cfb1 dev@{2026-09-12 02:41:35 +0000}: pull --ff-only origin dev: Fast-forward
+26a53fe0 dev@{2026-09-12 02:39:26 +0000}: pull --ff-only origin dev: Fast-forward
+e26c1f9d dev@{2026-09-12 02:13:57 +0000}: merge origin/dev: Fast-forward
+d00ba03f dev@{2026-09-12 01:04:15 +0000}: pull --ff-only origin dev: Fast-forward
+17fd5341 dev@{2026-09-12 00:43:31 +0000}: pull --ff-only origin dev: Fast-forward
+2aa44664 dev@{2026-09-11 21:13:18 +0000}: pull --ff-only origin dev: Fast-forward
+19465ba7 dev@{2026-09-11 21:03:09 +0000}: pull --ff-only origin dev: Fast-forward
+60cb8594 dev@{2026-09-11 20:51:53 +0000}: commit: vessel-code-commit-and-push: Automated commit
+1c31d4e7 dev@{2026-09-11 18:30:43 +0000}: pull --ff-only origin dev: Fast-forward
+779b7ecc dev@{2026-09-11 18:21:12 +0000}: pull --ff-only origin dev: Fast-forward
+001cda60 dev@{2026-09-11 18:08:54 +0000}: pull --ff-only origin dev: Fast-forward
+9a742842 dev@{2026-09-11 17:58:25 +0000}: pull --ff-only origin dev: Fast-forward
+e8c42f7a dev@{2026-09-11 17:22:55 +0000}: pull --ff-only origin dev: Fast-forward
+3d9a633c dev@{2026-09-11 16:55:27 +0000}: pull --ff-only origin dev: Fast-forward
+b0c1c9f3 dev@{2026-09-11 16:43:42 +0000}: merge origin/dev: Fast-forward
+45bd9a0f dev@{2026-09-11 16:40:55 +0000}: pull --ff-only origin dev: Fast-forward
+799a2a4d dev@{2026-09-11 16:30:25 +0000}: pull --ff-only origin dev: Fast-forward
+b6b1b3bf dev@{2026-09-11 16:13:12 +0000}: pull --ff-only origin dev: Fast-forward
+610bba72 dev@{2026-09-11 15:38:15 +0000}: pull --ff-only origin dev: Fast-forward
+cf4bbf8c dev@{2026-09-11 15:07:26 +0000}: pull --ff-only origin dev: Fast-forward
+8bf19af8 dev@{2026-09-11 14:56:56 +0000}: pull --ff-only origin dev: Fast-forward
+1def6877 dev@{2026-09-11 14:36:18 +0000}: pull --ff-only origin dev: Fast-forward
+7e0e79a8 dev@{2026-09-11 14:25:25 +0000}: pull --ff-only origin dev: Fast-forward
+6d5ded91 dev@{2026-09-11 14:10:39 +0000}: pull --ff-only origin dev: Fast-forward
+908ca0d8 dev@{2026-09-11 13:13:37 +0000}: merge origin/dev: Fast-forward
+4f21a3af dev@{2026-09-11 13:11:56 +0000}: pull --ff-only origin dev: Fast-forward
+f178f4cf dev@{2026-09-11 12:40:50 +0000}: pull --ff-only origin dev: Fast-forward
+1a61747d dev@{2026-09-11 12:13:34 +0000}: merge origin/dev: Fast-forward
+aa21b38d dev@{2026-09-11 12:09:25 +0000}: pull --ff-only origin dev: Fast-forward
+15371e16 dev@{2026-09-11 11:59:08 +0000}: pull --ff-only origin dev: Fast-forward
+a7667a33 dev@{2026-09-11 11:48:55 +0000}: pull --ff-only origin dev: Fast-forward
+39ef6266 dev@{2026-09-11 11:43:33 +0000}: merge origin/dev: Fast-forward
+65284eb1 dev@{2026-09-11 06:27:14 +0000}: pull --ff-only origin dev: Fast-forward
+6687d177 dev@{2026-09-11 00:43:15 +0000}: merge origin/dev: Fast-forward
+71e2077e dev@{2026-09-11 00:12:56 +0000}: pull --ff-only origin dev: Fast-forward
+f8b49525 dev@{2026-09-10 18:18:03 +0000}: merge origin/dev: Fast-forward
+5fadb882 dev@{2026-09-10 16:37:18 +0000}: commit: Vessel code drift resolution
+d9898d2e dev@{2026-09-10 12:24:20 +0000}: pull --ff-only origin dev: Fast-forward
+7b489fbb dev@{2026-09-10 09:58:19 +0000}: pull --ff-only origin dev: Fast-forward
+87bf81b6 dev@{2026-09-10 09:25:55 +0000}: pull --ff-only origin dev: Fast-forward
+fad17386 dev@{2026-09-10 09:15:46 +0000}: pull --ff-only origin dev: Fast-forward
+f0e550ec dev@{2026-09-10 07:17:36 +0000}: merge origin/dev: Fast-forward
+d8a8a768 dev@{2026-09-10 06:27:37 +0000}: pull --ff-only origin dev: Fast-forward
+22146522 dev@{2026-09-10 06:17:26 +0000}: pull --ff-only origin dev: Fast-forward
+d055f18e dev@{2026-09-10 05:41:19 +0000}: pull --ff-only origin dev: Fast-forward
+13176c29 dev@{2026-09-10 05:33:52 +0000}: pull --ff-only origin dev: Fast-forward
+b8963396 dev@{2026-09-09 21:07:01 +0000}: reset: moving to origin/dev
+49cf38c4 dev@{2026-09-08 06:35:52 +0000}: pull --ff-only origin dev: Fast-forward
+5786a5f2 dev@{2026-09-08 00:43:55 +0000}: merge origin/dev: Fast-forward
+fbcf5fd2 dev@{2026-09-07 18:27:28 +0000}: pull --ff-only origin dev: Fast-forward
+6ced94dc dev@{2026-09-07 14:44:44 +0000}: commit: Automated commit of vessel changes
+3aa05de8 dev@{2026-09-07 12:33:43 +0000}: pull --ff-only origin dev: Fast-forward
+02a20791 dev@{2026-09-07 07:19:08 +0000}: pull --ff-only origin dev: Fast-forward
+fe53e1d7 dev@{2026-09-07 06:37:00 +0000}: pull --ff-only origin dev: Fast-forward
+fa1dbbc4 dev@{2026-09-07 04:48:31 +0000}: commit: Automated commit by substrate for code drift
+e58a5986 dev@{2026-09-07 04:48:25 +0000}: commit: Automated commit by substrate for code drift
+e31413db dev@{2026-09-07 04:44:42 +0000}: commit: Auto-commit: code drift for goal-host-vessel
+b2b4ee94 dev@{2026-09-07 04:44:14 +0000}: commit: Auto-commit: code drift for analysis-vessel
+e0b0bd0b dev@{2026-09-07 04:36:00 +0000}: commit: feat: update vessel code and related files
+37a581a6 dev@{2026-09-07 04:33:10 +0000}: commit: Automated commit: vessel-code-drift scan
+c4a6c9e1 dev@{2026-09-07 04:24:24 +0000}: commit: Auto-commit: Sync live changes from relevance-sink-vessel
+0599ea34 dev@{2026-09-07 04:21:02 +0000}: commit: Automated commit: vessel code drift detected and committed.
+4e4170a8 dev@{2026-09-07 04:20:43 +0000}: commit: Automated commit: vessel code drift detected and committed.
+9333f0f7 dev@{2026-09-07 01:13:00 +0000}: pull --ff-only origin dev: Fast-forward
+6030a330 dev@{2026-09-07 00:52:40 +0000}: pull --ff-only origin dev: Fast-forward
+a99a38ed dev@{2026-09-06 18:22:21 +0000}: pull --ff-only origin dev: Fast-forward
+94d1680c dev@{2026-09-06 14:52:49 +0000}: pull --ff-only origin dev: Fast-forward
+3e3776dd dev@{2026-09-06 12:25:34 +0000}: pull --ff-only origin dev: Fast-forward
+16814991 dev@{2026-09-06 07:16:48 +0000}: pull --ff-only origin dev: Fast-forward
+525672f6 dev@{2026-09-06 06:39:39 +0000}: pull --ff-only origin dev: Fast-forward
+ad6ee8f5 dev@{2026-09-06 06:28:16 +0000}: merge origin/dev: Fast-forward
+977a05c2 dev@{2026-09-06 06:13:06 +0000}: pull --ff-only origin dev: Fast-forward
+d0a3472f dev@{2026-09-06 05:41:50 +0000}: pull --ff-only origin dev: Fast-forward
+afb48959 dev@{2026-09-06 05:10:09 +0000}: pull --ff-only origin dev: Fast-forward
+5fdbf3bd dev@{2026-09-06 04:37:47 +0000}: pull --ff-only origin dev: Fast-forward
+7c2c50db dev@{2026-09-06 00:57:41 +0000}: merge origin/dev: Fast-forward
+72f58abc dev@{2026-09-05 22:16:48 +0000}: pull --ff-only origin dev: Fast-forward
+81ccdffd dev@{2026-09-05 18:19:38 +0000}: pull --ff-only origin dev: Fast-forward
+d99c69e7 dev@{2026-09-05 12:23:38 +0000}: pull --ff-only origin dev: Fast-forward
+8e59ae6c dev@{2026-09-05 08:42:53 +0000}: pull --ff-only origin dev: Fast-forward
+ec665182 dev@{2026-09-05 07:30:06 +0000}: pull --ff-only origin dev: Fast-forward
+466f68b7 dev@{2026-09-05 07:08:54 +0000}: pull --ff-only origin dev: Fast-forward
+b2e2d576 dev@{2026-09-05 06:25:11 +0000}: merge origin/dev: Fast-forward
+c71819af dev@{2026-09-05 03:51:34 +0000}: pull --ff-only origin dev: Fast-forward
+bf2897e9 dev@{2026-08-30 00:51:29 +0000}: pull --ff-only origin dev: Fast-forward
+7c4eed77 dev@{2026-08-29 18:24:13 +0000}: pull --ff-only origin dev: Fast-forward
+2c99231d dev@{2026-08-29 12:26:08 +0000}: pull --ff-only origin dev: Fast-forward
+6485ce9d dev@{2026-08-29 07:12:36 +0000}: pull --ff-only origin dev: Fast-forward
+4d2e4cfb dev@{2026-08-29 06:27:41 +0000}: merge origin/dev: Fast-forward
+448a869c dev@{2026-08-29 00:46:38 +0000}: pull --ff-only origin dev: Fast-forward
+06be144a dev@{2026-08-29 00:15:37 +0000}: pull --ff-only origin dev: Fast-forward
+6c7c5b8a dev@{2026-08-28 22:57:28 +0000}: merge origin/dev: Fast-forward
+a2f101d9 dev@{2026-08-28 21:27:26 +0000}: merge origin/dev: Fast-forward
+9b61981a dev@{2026-08-28 16:16:19 +0000}: pull --ff-only origin dev: Fast-forward
+1c92e01b dev@{2026-08-28 10:40:06 +0000}: pull --ff-only origin dev: Fast-forward
+8c1d23d2 dev@{2026-08-28 09:27:19 +0000}: merge origin/dev: Fast-forward
+bb736313 dev@{2026-08-28 03:17:40 +0000}: pull --ff-only origin dev: Fast-forward
+c857cff3 dev@{2026-08-27 21:23:40 +0000}: pull --ff-only origin dev: Fast-forward
+9c9dafa8 dev@{2026-08-27 15:48:57 +0000}: pull --ff-only origin dev: Fast-forward
+910916aa dev@{2026-08-27 09:18:28 +0000}: pull --ff-only origin dev: Fast-forward
+9069838e dev@{2026-08-27 04:32:38 +0000}: pull --ff-only origin dev: Fast-forward
+ec66ffde dev@{2026-08-27 01:55:46 +0000}: pull --ff-only origin dev: Fast-forward
+0abdf69a dev@{2026-08-26 12:20:19 +0000}: merge origin/dev: Fast-forward
+5085b6d3 dev@{2026-08-26 07:07:46 +0000}: pull --ff-only origin dev: Fast-forward
+3fed381c dev@{2026-08-26 06:57:21 +0000}: pull --ff-only origin dev: Fast-forward
+09c5a16b dev@{2026-08-26 05:44:42 +0000}: pull --ff-only origin dev: Fast-forward
+7e7cefcd dev@{2026-08-26 05:33:42 +0000}: pull --ff-only origin dev: Fast-forward
+2e6c9651 dev@{2026-08-26 05:02:43 +0000}: pull --ff-only origin dev: Fast-forward
+60d81bd8 dev@{2026-08-26 04:31:14 +0000}: pull --ff-only origin dev: Fast-forward
+f17d3ba9 dev@{2026-08-26 01:38:09 +0000}: pull --ff-only origin dev: Fast-forward
+3e5a4a92 dev@{2026-08-26 00:20:10 +0000}: merge origin/dev: Fast-forward
+dcbadc96 dev@{2026-08-25 17:30:41 +0000}: pull --ff-only origin dev: Fast-forward
+70b17135 dev@{2026-08-25 12:20:00 +0000}: merge origin/dev: Fast-forward
+35e7a30d dev@{2026-08-25 12:00:27 +0000}: pull --ff-only origin dev: Fast-forward
+daa2632c dev@{2026-08-25 11:44:42 +0000}: merge origin/dev: Fast-forward
+1d3785de dev@{2026-08-25 11:30:00 +0000}: pull --ff-only origin dev: Fast-forward
+3c1bf965 dev@{2026-08-25 10:05:41 +0000}: pull --ff-only origin dev: Fast-forward
+a5c68284 dev@{2026-08-25 07:27:18 +0000}: pull --ff-only origin dev: Fast-forward
+05aec1a3 dev@{2026-08-25 06:14:39 +0000}: merge origin/dev: Fast-forward
+017b5e9a dev@{2026-08-25 00:24:19 +0000}: pull --ff-only origin dev: Fast-forward
+d56ae849 dev@{2026-08-24 12:17:00 +0000}: merge origin/dev: Fast-forward
+b9fa3659 dev@{2026-08-24 09:11:31 +0000}: pull --ff-only origin dev: Fast-forward
+f6b8015d dev@{2026-08-24 07:58:54 +0000}: pull --ff-only origin dev: Fast-forward
+66ea5468 dev@{2026-08-24 07:02:15 +0000}: pull --ff-only origin dev: Fast-forward
+2952754e dev@{2026-08-24 06:20:53 +0000}: pull --ff-only origin dev: Fast-forward
+2128f428 dev@{2026-08-24 06:01:05 +0000}: pull --ff-only origin dev: Fast-forward
+d0c23647 dev@{2026-08-24 05:34:05 +0000}: pull --ff-only origin dev: Fast-forward
+800878b3 dev@{2026-08-24 04:32:03 +0000}: pull --ff-only origin dev: Fast-forward
+c2926448 dev@{2026-08-24 04:11:11 +0000}: pull --ff-only origin dev: Fast-forward
+d246ac67 dev@{2026-08-24 04:00:15 +0000}: pull --ff-only origin dev: Fast-forward
+b89727db dev@{2026-08-24 03:41:32 +0000}: pull --ff-only origin dev: Fast-forward
+b6ef33b7 dev@{2026-08-24 03:04:54 +0000}: pull --ff-only origin dev: Fast-forward
+32dcb393 dev@{2026-08-24 02:54:16 +0000}: pull --ff-only origin dev: Fast-forward
+c80aa3c8 dev@{2026-08-24 02:43:43 +0000}: pull --ff-only origin dev: Fast-forward
+c81744f0 dev@{2026-08-24 00:27:24 +0000}: pull --ff-only origin dev: Fast-forward
+a10ad3b9 dev@{2026-08-23 12:15:02 +0000}: pull --ff-only origin dev: Fast-forward
+22423960 dev@{2026-08-23 10:19:25 +0000}: pull --ff-only origin dev: Fast-forward
+42148e82 dev@{2026-08-23 10:16:08 +0000}: merge origin/dev: Fast-forward
+b89b887e dev@{2026-08-23 10:07:10 +0000}: pull --ff-only origin dev: Fast-forward
+f4188ed4 dev@{2026-08-23 06:16:07 +0000}: merge origin/dev: Fast-forward
+5a490e2c dev@{2026-08-23 01:00:37 +0000}: reset: moving to origin/dev
+8b49f831 dev@{2026-08-22 22:49:39 +0000}: pull --ff-only origin dev: Fast-forward
+0806be25 dev@{2026-08-22 17:00:10 +0000}: pull --ff-only origin dev: Fast-forward
+208253c1 dev@{2026-08-22 16:52:07 +0000}: pull --ff-only origin dev: Fast-forward
+97720f4b dev@{2026-08-22 10:51:23 +0000}: pull --ff-only origin dev: Fast-forward
+821b9154 dev@{2026-08-22 10:41:04 +0000}: pull --ff-only origin dev: Fast-forward
+337b6e09 dev@{2026-08-22 10:33:20 +0000}: merge origin/dev: Fast-forward
+81e1f19d dev@{2026-08-22 10:27:08 +0000}: pull --ff-only origin dev: Fast-forward
+08f316b7 dev@{2026-08-22 10:16:49 +0000}: pull --ff-only origin dev: Fast-forward
+2697b71a dev@{2026-08-22 09:52:53 +0000}: pull --ff-only origin dev: Fast-forward
+6079d1fb dev@{2026-08-22 09:42:16 +0000}: pull --ff-only origin dev: Fast-forward
+8ebcbb2a dev@{2026-08-22 09:33:03 +0000}: pull --ff-only origin dev: Fast-forward
+a765c376 dev@{2026-08-22 09:18:21 +0000}: pull --ff-only origin dev: Fast-forward
+b66201d6 dev@{2026-08-22 09:13:27 +0000}: pull --ff-only origin dev: Fast-forward
+2078030d dev@{2026-08-22 09:02:52 +0000}: pull --ff-only origin dev: Fast-forward
+368b9c5c dev@{2026-08-22 08:52:58 +0000}: pull --ff-only origin dev: Fast-forward
+c1bd0da4 dev@{2026-08-22 08:33:20 +0000}: merge origin/dev: Fast-forward
+8cd59815 dev@{2026-08-22 08:18:40 +0000}: pull --ff-only origin dev: Fast-forward
+449a7a96 dev@{2026-08-22 06:14:17 +0000}: pull --ff-only origin dev: Fast-forward
+76ca2e37 dev@{2026-08-22 05:41:48 +0000}: pull --ff-only origin dev: Fast-forward
+26ae3d94 dev@{2026-08-22 05:31:18 +0000}: pull --ff-only origin dev: Fast-forward
+819ae1df dev@{2026-08-22 02:53:21 +0000}: pull --ff-only origin dev: Fast-forward
+21041d89 dev@{2026-08-22 02:42:48 +0000}: pull --ff-only origin dev: Fast-forward
+d5732234 dev@{2026-08-22 02:32:13 +0000}: pull --ff-only origin dev: Fast-forward
+07fd07a3 dev@{2026-08-22 02:26:52 +0000}: pull --ff-only origin dev: Fast-forward
+262d1473 dev@{2026-08-22 02:11:20 +0000}: pull --ff-only origin dev: Fast-forward
+759d16ab dev@{2026-08-22 02:03:14 +0000}: merge origin/dev: Fast-forward
+48c23384 dev@{2026-08-22 02:01:09 +0000}: pull --ff-only origin dev: Fast-forward
+7bdf427e dev@{2026-08-22 01:54:44 +0000}: pull --ff-only origin dev: Fast-forward
+62fd2b0a dev@{2026-08-22 01:44:27 +0000}: pull --ff-only origin dev: Fast-forward
+57cf30a9 dev@{2026-08-22 01:41:17 +0000}: pull --ff-only origin dev: Fast-forward
+895749c5 dev@{2026-08-22 01:32:42 +0000}: pull --ff-only origin dev: Fast-forward
+3deea454 dev@{2026-08-22 01:24:58 +0000}: pull --ff-only origin dev: Fast-forward
+2c3920eb dev@{2026-08-22 01:20:38 +0000}: pull --ff-only origin dev: Fast-forward
+54bf7ef9 dev@{2026-08-22 01:16:42 +0000}: pull --ff-only origin dev: Fast-forward
+e866d2c7 dev@{2026-08-22 00:02:51 +0000}: pull --ff-only origin dev: Fast-forward
+b067bff5 dev@{2026-08-21 22:39:39 +0000}: pull --ff-only origin dev: Fast-forward
+3c161058 dev@{2026-08-21 22:33:10 +0000}: merge origin/dev: Fast-forward
+4fb4f6c6 dev@{2026-08-21 15:14:16 +0000}: pull --ff-only origin dev: Fast-forward
+e63000f9 dev@{2026-08-21 15:02:53 +0000}: pull --ff-only origin dev: Fast-forward
+83dab0b4 dev@{2026-08-21 14:24:31 +0000}: pull --ff-only origin dev: Fast-forward
+b689e907 dev@{2026-08-21 14:02:54 +0000}: pull --ff-only origin dev: Fast-forward
+61dab025 dev@{2026-08-21 13:55:26 +0000}: pull --ff-only origin dev: Fast-forward
+a54c56f9 dev@{2026-08-21 13:47:13 +0000}: pull --ff-only origin dev: Fast-forward
+6171fa4f dev@{2026-08-21 13:33:04 +0000}: merge origin/dev: Fast-forward
+b9c80684 dev@{2026-08-21 13:10:27 +0000}: pull --ff-only origin dev: Fast-forward
+bca68e5d dev@{2026-08-21 12:33:03 +0000}: merge origin/dev: Fast-forward
+72d04022 dev@{2026-08-21 12:28:44 +0000}: pull --ff-only origin dev: Fast-forward
+71ea8311 dev@{2026-08-21 12:16:52 +0000}: reset: moving to origin/dev
+931889e7 dev@{2026-08-21 12:13:42 +0000}: pull --ff-only origin dev: Fast-forward
+496d6874 dev@{2026-08-21 11:51:22 +0000}: pull --ff-only origin dev: Fast-forward
+33520eab dev@{2026-08-21 10:36:21 +0000}: pull --ff-only origin dev: Fast-forward
+ba75265e dev@{2026-08-21 10:30:54 +0000}: reset: moving to origin/dev
+5fc685fc dev@{2026-08-21 00:23:54 +0000}: pull --ff-only origin dev: Fast-forward
+008f3ab9 dev@{2026-08-21 00:13:36 +0000}: pull --ff-only origin dev: Fast-forward
+cd0fa55c dev@{2026-08-20 23:14:23 +0000}: merge origin/dev: Fast-forward
+6ebabec5 dev@{2026-08-20 22:39:29 +0000}: pull --ff-only origin dev: Fast-forward
+9512d4af dev@{2026-08-20 22:14:22 +0000}: merge origin/dev: Fast-forward
+16536b37 dev@{2026-08-20 22:07:55 +0000}: pull --ff-only origin dev: Fast-forward
+7736ac2f dev@{2026-08-20 21:44:23 +0000}: merge origin/dev: Fast-forward
+bfdcb1a5 dev@{2026-08-20 21:37:15 +0000}: pull --ff-only origin dev: Fast-forward
+6d19c0a0 dev@{2026-08-20 21:27:05 +0000}: pull --ff-only origin dev: Fast-forward
+43ff7084 dev@{2026-08-20 09:44:07 +0000}: merge origin/dev: Fast-forward
+8de05562 dev@{2026-08-20 09:28:38 +0000}: pull --ff-only origin dev: Fast-forward
+fe50f05f dev@{2026-08-20 08:53:03 +0000}: reset: moving to origin/dev
+1bd5bc11 dev@{2026-08-20 01:34:34 +0000}: pull --ff-only origin dev: Fast-forward
+cafe242c dev@{2026-08-20 01:18:02 +0000}: merge origin/dev: Fast-forward
+6f4a6ded dev@{2026-08-20 01:14:09 +0000}: pull --ff-only origin dev: Fast-forward
+fe7a3317 dev@{2026-08-20 00:38:04 +0000}: pull --ff-only origin dev: Fast-forward
+7f5208fb dev@{2026-08-19 20:58:50 +0000}: pull --ff-only origin dev: Fast-forward
+a72f78e4 dev@{2026-08-19 19:04:17 +0000}: pull --ff-only origin dev: Fast-forward
+3d070d37 dev@{2026-08-19 18:43:03 +0000}: pull --ff-only origin dev: Fast-forward
+b97d160a dev@{2026-08-19 18:01:47 +0000}: pull --ff-only origin dev: Fast-forward
+3b4f921a dev@{2026-08-19 16:59:23 +0000}: pull --ff-only origin dev: Fast-forward
+4e50f1fa dev@{2026-08-19 16:46:34 +0000}: merge origin/dev: Fast-forward
+79cfbe9a dev@{2026-08-19 03:34:25 +0000}: pull --ff-only origin dev: Fast-forward
+a4941ee2 dev@{2026-08-19 03:03:24 +0000}: pull --ff-only origin dev: Fast-forward
+2289f113 dev@{2026-08-19 03:00:39 +0000}: pull --ff-only origin dev: Fast-forward
+d65a21e7 dev@{2026-08-19 02:57:25 +0000}: pull --ff-only origin dev: Fast-forward
+11332590 dev@{2026-08-19 02:13:23 +0000}: merge origin/dev: Fast-forward
+4bd48042 dev@{2026-08-19 02:04:55 +0000}: pull --ff-only origin dev: Fast-forward
+42892a66 dev@{2026-08-19 01:01:14 +0000}: pull --ff-only origin dev: Fast-forward
+aed294b3 dev@{2026-08-19 00:40:14 +0000}: pull --ff-only origin dev: Fast-forward
+11ba4b07 dev@{2026-08-19 00:17:03 +0000}: pull --ff-only origin dev: Fast-forward
+37da463e dev@{2026-08-19 00:13:19 +0000}: merge origin/dev: Fast-forward
+9f803788 dev@{2026-08-18 20:09:17 +0000}: pull --ff-only origin dev: Fast-forward
+7e8deeba dev@{2026-08-18 16:29:36 +0000}: pull --ff-only origin dev: Fast-forward
+904eb902 dev@{2026-08-18 15:56:45 +0000}: pull --ff-only origin dev: Fast-forward
+24877839 dev@{2026-08-18 12:11:53 +0000}: reset: moving to origin/dev
+71629583 dev@{2026-08-18 11:59:42 +0000}: pull --ff-only origin dev: Fast-forward
+f5613e1a dev@{2026-08-18 10:30:48 +0000}: pull --ff-only origin dev: Fast-forward
+6278a317 dev@{2026-08-18 07:12:08 +0000}: reset: moving to origin/dev
+e92d2e1b dev@{2026-08-18 05:36:51 +0000}: reset: moving to origin/dev
+c47f3843 dev@{2026-08-18 04:02:25 +0000}: merge origin/dev: Fast-forward
+d742cdef dev@{2026-08-18 02:47:01 +0000}: merge origin/dev: Fast-forward
+7a499337 dev@{2026-08-18 02:22:46 +0000}: pull --ff-only origin dev: Fast-forward
+337c3b81 dev@{2026-08-18 02:01:11 +0000}: pull --ff-only origin dev: Fast-forward
+9df01220 dev@{2026-08-18 01:50:46 +0000}: pull --ff-only origin dev: Fast-forward
+b94fa5a4 dev@{2026-08-18 00:27:03 +0000}: pull --ff-only origin dev: Fast-forward
+f65556be dev@{2026-08-18 00:18:21 +0000}: pull --ff-only origin dev: Fast-forward
+8dbea1d7 dev@{2026-08-18 00:06:36 +0000}: pull --ff-only origin dev: Fast-forward
+5d486f85 dev@{2026-08-18 00:01:53 +0000}: merge origin/dev: Fast-forward
+2e2905b0 dev@{2026-08-17 23:01:36 +0000}: merge origin/dev: Fast-forward
+b6a33e23 dev@{2026-08-17 22:47:34 +0000}: pull --ff-only origin dev: Fast-forward
+58500c8c dev@{2026-08-17 21:41:15 +0000}: pull --ff-only origin dev: Fast-forward
+3f3a5056 dev@{2026-08-17 21:30:59 +0000}: pull --ff-only origin dev: Fast-forward
+d96304c4 dev@{2026-08-17 21:28:37 +0000}: merge origin/dev: Fast-forward
+a0e33562 dev@{2026-08-17 21:12:11 +0000}: pull --ff-only origin dev: Fast-forward
+95b1bf43 dev@{2026-08-17 20:58:36 +0000}: merge origin/dev: Fast-forward
+a183983a dev@{2026-08-17 20:27:39 +0000}: pull --ff-only -q origin dev: Fast-forward
+0b89a4ef dev@{2026-08-17 20:23:19 +0000}: pull --ff-only origin dev: Fast-forward
+c23558d9 dev@{2026-08-17 12:00:47 +0000}: pull --ff-only -q origin dev: Fast-forward
+d87a340b dev@{2026-08-17 11:51:31 +0000}: pull --ff-only -q origin dev: Fast-forward
+30adb161 dev@{2026-08-17 11:39:40 +0000}: pull --ff-only -q origin dev: Fast-forward
+560b9a6a dev@{2026-08-17 11:25:35 +0000}: merge origin/dev: Fast-forward
+73f010d7 dev@{2026-08-17 11:08:23 +0000}: pull --ff-only -q origin dev: Fast-forward
+8b6dc2f1 dev@{2026-08-17 10:55:35 +0000}: merge origin/dev: Fast-forward
+d4e9b91f dev@{2026-08-17 10:47:18 +0000}: pull --ff-only -q origin dev: Fast-forward
+497910ba dev@{2026-08-17 10:24:06 +0000}: pull --ff-only -q origin dev: Fast-forward
+958917ca dev@{2026-08-17 10:03:34 +0000}: pull --ff-only -q origin dev: Fast-forward
+f344ac5f dev@{2026-08-17 09:44:41 +0000}: rebase (finish): refs/heads/dev onto fe42f5dbbaae366b89b8a0875c9db8cdc20c8137
+06bb37db dev@{2026-08-17 05:53:00 +0000}: commit: feat: Register goal_summary in discovery-registration.ts to close orphaned-capability-goal_summary
+354dc445 dev@{2026-08-17 05:46:26 +0000}: commit: feat: Propose new activity to invoke interface_deploy_reach_check to close orphaned capability gap
+0701ad0b dev@{2026-08-17 03:47:03 +0000}: pull --ff-only -q origin dev: Fast-forward
+94520814 dev@{2026-08-17 03:32:26 +0000}: merge origin/dev: Fast-forward
+ea1783a8 dev@{2026-08-17 03:26:03 +0000}: pull --ff-only -q origin dev: Fast-forward
+3df2f235 dev@{2026-08-17 03:15:23 +0000}: pull --ff-only -q origin dev: Fast-forward
+bcb5c0dd dev@{2026-08-17 03:02:16 +0000}: merge origin/dev: Fast-forward
+f9bd6379 dev@{2026-08-17 02:54:57 +0000}: pull --ff-only -q origin dev: Fast-forward
+daeb6ef5 dev@{2026-08-17 02:44:34 +0000}: pull --ff-only -q origin dev: Fast-forward
+2964496e dev@{2026-08-17 02:32:12 +0000}: merge origin/dev: Fast-forward
+e48c444b dev@{2026-08-17 02:01:46 +0000}: pull --ff-only -q origin dev: Fast-forward
+4dc28ea8 dev@{2026-08-17 01:51:07 +0000}: pull --ff-only -q origin dev: Fast-forward
+2db8c507 dev@{2026-08-17 01:31:56 +0000}: merge origin/dev: Fast-forward
+430f7d7e dev@{2026-08-17 01:17:20 +0000}: pull --ff-only -q origin dev: Fast-forward
+8e76b5cd dev@{2026-08-17 01:01:56 +0000}: merge origin/dev: Fast-forward
+0a4723ab dev@{2026-08-17 00:56:26 +0000}: pull --ff-only -q origin dev: Fast-forward
+33924f92 dev@{2026-08-17 00:35:34 +0000}: pull --ff-only -q origin dev: Fast-forward
+c6d2212a dev@{2026-08-17 00:31:54 +0000}: merge origin/dev: Fast-forward
+8bffa8bf dev@{2026-08-17 00:14:37 +0000}: pull --ff-only -q origin dev: Fast-forward
+fa2428f8 dev@{2026-08-16 23:31:37 +0000}: merge origin/dev: Fast-forward
+215cfe5c dev@{2026-08-16 23:22:50 +0000}: pull --ff-only -q origin dev: Fast-forward
+b649e6f8 dev@{2026-08-16 23:01:19 +0000}: merge origin/dev: Fast-forward
+9f100b35 dev@{2026-08-16 22:50:34 +0000}: pull --ff-only -q origin dev: Fast-forward
+236f304b dev@{2026-08-16 22:31:18 +0000}: merge origin/dev: Fast-forward
+0e5a4a2d dev@{2026-08-16 22:29:28 +0000}: pull --ff-only -q origin dev: Fast-forward
+59b1475a dev@{2026-08-16 22:18:35 +0000}: pull --ff-only -q origin dev: Fast-forward
+f2ecd3ff dev@{2026-08-16 21:46:41 +0000}: pull --ff-only -q origin dev: Fast-forward
+2ade4268 dev@{2026-08-16 21:36:08 +0000}: pull --ff-only -q origin dev: Fast-forward
+f5133c4a dev@{2026-08-16 21:27:47 +0000}: pull --ff-only -q origin dev: Fast-forward
+be181156 dev@{2026-08-16 21:17:01 +0000}: pull --ff-only -q origin dev: Fast-forward
+66c678d7 dev@{2026-08-16 20:59:38 +0000}: pull --ff-only -q origin dev: Fast-forward
+9f1b56f0 dev@{2026-08-16 20:36:37 +0000}: pull --ff-only -q origin dev: Fast-forward
+b6163701 dev@{2026-08-16 20:31:06 +0000}: merge origin/dev: Fast-forward
+ef77a637 dev@{2026-08-16 20:25:56 +0000}: pull --ff-only -q origin dev: Fast-forward
+614dea0a dev@{2026-08-16 18:01:02 +0000}: merge origin/dev: Fast-forward
+40b79fb6 dev@{2026-08-16 17:44:53 +0000}: pull --ff-only -q origin dev: Fast-forward
+04624b44 dev@{2026-08-16 17:34:44 +0000}: pull --ff-only -q origin dev: Fast-forward
+41786f16 dev@{2026-08-16 17:31:01 +0000}: merge origin/dev: Fast-forward
+38c00a29 dev@{2026-08-16 17:24:30 +0000}: pull --ff-only -q origin dev: Fast-forward
+6e90c029 dev@{2026-08-16 14:14:48 +0000}: pull --ff-only -q origin dev: Fast-forward
+734e458b dev@{2026-08-16 14:00:53 +0000}: merge origin/dev: Fast-forward
+232e507a dev@{2026-08-16 13:50:59 +0000}: pull --ff-only -q origin dev: Fast-forward
+9f57c261 dev@{2026-08-16 13:41:33 +0000}: pull --ff-only -q origin dev: Fast-forward
+ef76c550 dev@{2026-08-16 13:30:19 +0000}: pull --ff-only -q origin dev: Fast-forward
+d8f1e757 dev@{2026-08-16 13:23:52 +0000}: branch: Created from refs/remotes/origin/dev

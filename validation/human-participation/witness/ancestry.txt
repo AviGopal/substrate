@@ -1,0 +1,15 @@
+# ancestry checks
+93c70c5e2b9218fcafb4691c398318f36b7f12a7
+-- is 0c1b27a8 ancestor of origin/dev:
+YES
+-- is 9f1d1c98 ancestor of origin/dev:
+YES
+-- is 93c70c5e ancestor of origin/dev:
+YES
+-- local-only commits (rev-list origin/dev..HEAD):
+191afb00 Automated commit of vessel code changes
+f17a81a0 Merge origin/dev into development-vessel and resolve conflicts
+a6fbf4f4 Resolve merge conflicts for merging dev into discovery-vessel
+fdf197a2 Stash local changes before cutover to origin/dev
+-- left-right count origin/dev...HEAD:
+24	4
