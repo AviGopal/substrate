@@ -16,7 +16,7 @@ they agree.
 |---|---|
 | Captured | 2026-09-19 21:43 PDT |
 | Super-repo HEAD | `a9d73eca54a21d372099af1357213674f691081d` (dev) |
-| human-surface-vessel | **in-tree** (not a submodule); participation slice uncommitted; unit exists in container but `disabled`/`inactive` — never run |
+| human-surface-vessel | **in-tree** (not a submodule); participation slice uncommitted; unit exists in container but `disabled`/`inactive` — never run (**superseded — see Amendment 1**) |
 | Registry shape count | 396 advertised shapes |
 | ui/human shapes advertised | uiFeedback, uiFeedback_write, uiPanel_write, uiQuestion, uiQuestion_write, ui_legibility_scan, obsidian:ui_screenshot, interaction_expectation_verify, human_input |
 | Live producer of uiQuestion/uiFeedback | stateful-ui-vessel @ :18270 (running 21 h, healthy, 434 panels) — but its discovery heartbeat 404s ("must register first") while `registry_query` still lists it. Inconsistent; unresolved. Walk-side `satisfier:` fallbacks for every ui read shape are consistent with routing not reaching it |
@@ -27,7 +27,214 @@ they agree.
 | Templates consuming a human/ui shape as INPUT | **0** (control: 82 templates output substrateGap) |
 | Thompson rows on ui/human arms | 126 in `context_thompson_scores` (14 keys), 12 in `variant_performance_metrics`; all grades say "rarely works" |
 | interactor-log journals | 5 files, last content 2026-07-22/23, machine-generated payloads — silent for two months |
-| Gap store | 1,402 gaps (337 open); substantive ui/human hits: open `docs-drift-docs-HUMAN-SURFACE-md`, open `precondition-rejection-activity:⟨learned-composition-uifeedback-write-to-shellresult⟩-2026-09-18`, closed `gap-oracle-label-disagreement-walk-satisfier-2-…`; **zero** gaps name participation or interface usefulness as a defect |
+| Gap store | 1,402 gaps (337 open) (**superseded — see Amendment 3**); substantive ui/human hits: open `docs-drift-docs-HUMAN-SURFACE-md`, open `precondition-rejection-activity:⟨learned-composition-uifeedback-write-to-shellresult⟩-2026-09-18`, closed `gap-oracle-label-disagreement-walk-satisfier-2-…`; **zero** gaps name participation or interface usefulness as a defect |
+
+## Amendments since snapshot
+
+Amended 2026-09-20 07:09 UTC (measurements taken 07:01–07:09 UTC), after the snapshot
+above was stamped. Each entry is
+labelled **SUPERSESSION** (the row was accurate when captured; the world moved) or
+**CORRECTION** (the row overstated its evidence). The two are not interchangeable: a
+supersession vindicates the dated-snapshot convention, a correction indicts the
+original claim. Method is unchanged — every count below was re-measured read-only
+this turn, and each is itself dated because counts drift.
+
+Measurement caveat that applies throughout: **`rg` does not exist inside
+`substrate-live`.** Container-side searches written with `rg` return nothing and exit
+non-zero, which reads as a clean negative. Two of this turn's journal negatives were
+that silent skip, not an absence; they were re-run with the container's `grep`. Any
+in-container search in a future amendment must name the tool it used.
+
+### Amendment 1 — SUPERSESSION: human-surface-vessel is deployed and the producer collision is live
+
+The snapshot row said the unit "exists in container but `disabled`/`inactive` — never
+run", captured **2026-09-19 21:43 PDT (2026-09-20 04:43 UTC)**. Verified this turn via
+`systemctl show`: `UnitFileState=enabled`, `ActiveState=active`,
+`ExecMainStartTimestamp=2026-09-20 06:12:04 UTC` — roughly 90 minutes *after* the
+stamp. `/health` on :8310 answers with 11 shapes (`uiPanel_write`, `uiQuestion_write`,
+`uiQuestion`, `uiFeedback`, `interactorObservation`, `interactorEvent`,
+`interactorAssertion`, `interactorAttachment`, `renderPolicy`, `renderPolicy_write`,
+`surfaceIntent`), discovery status `ok`, and a store holding `panels:0 feedback:0
+intents:2`. The row was right when written; the dated-snapshot convention did its job.
+
+**The consequence that matters: the "Producer collision (law 3)" item under Unresolved
+horizons is no longer a horizon — it is the current state.** `registry_query
+mode:vessels shape:uiQuestion` now returns two vessels, in this order:
+
+1. `stateful-ui-vessel` — endpoint `http://127.0.0.1:18270`, `resolve_endpoint: /resolve`
+2. `human-surface-vessel` — endpoint `http://127.0.0.1:18310`, `resolve_endpoint: http://127.0.0.1:8310/v2/impulses/resolve`
+
+So resolution order, not a decision, currently picks the reader — and stateful-ui is
+first. Two things follow, one verified and one static:
+
+- **Verified: walks still land in stateful-ui after human-surface went live.** Two
+  `uiQuestion_write` satisfier firings are journalled at 06:14:26 and 06:18:55 UTC —
+  after the 06:12:04 start — and two new auto-id panels exist in stateful-ui with
+  `createdAt` of exactly `2026-09-20T06:14:26Z` and `2026-09-20T06:18:55Z`.
+  human-surface still holds `panels:0`. The collision is not theoretical; the new
+  surface is being bypassed in practice.
+- **Static (not executed): the two `resolve_endpoint` formats differ** — a bare path
+  for stateful-ui, an absolute URL for human-surface. The known open
+  `asResolvePath`-class addressing defect reduces an absolute `resolve_endpoint` to its
+  pathname and re-attaches the row's `18xxx` endpoint, which has no container port
+  mapping. That makes human-surface's absolute form the suspect form for walk
+  reachability. Flagged as the existing gap, not re-confirmed here.
+
+The migration question the original horizon posed (move the accumulated panels, repoint
+`STATEFUL_UI_VESSEL_ENDPOINT`) is now due rather than pending, and the panel count to
+migrate is 446, not 434.
+
+### Amendment 2 — CORRECTION: the destructive-satisfier evidence, re-grounded
+
+The original citation for panel destruction was dispatch `e318c843…` (in
+PROGRAM-STATE.md; **not**, as reviewed, in TRACE-2026-09-20.md, which carries no such
+reference). That citation must not be leaned on, and the reason is more specific than
+"it 404s":
+
+- `GET http://localhost:8210/executions/e318c843` returns `404 {"error":"dispatch not
+  found"}`. **But a positive control at the same address refutes the obvious reading:**
+  7 of 8 full UUIDs harvested from the live goal-host journal return `200` on that exact
+  route. Dispatch ids are `crypto.randomUUID()` (goal-host `index.ts:15012`), and the
+  record cites only the first 8 hex characters — the endpoint keys on the whole UUID, so
+  a prefix lookup is *expected* to miss. The 404 is therefore not evidence of eviction
+  or of a lost record; it is evidence that **a truncated dispatch id is not a citation**.
+  No UUID beginning `e318c843` appears anywhere in the current journal window (which
+  does cover round 2's 05:25 UTC timestamp), so the full key is not recoverable and the
+  citation is unresolvable as written.
+
+**What replaces it is primary and stronger.** The goal-host journal (read with the
+container's `grep`, after the `rg` skip noted above) shows the satisfier substituting a
+write action for a read target nine times on 2026-09-20, all within 55 minutes:
+
+```
+05:24:01  satisfier action "uiQuestion_write" produced — re-reading target "uiFeedback"
+05:24:12  satisfier action "uiQuestion_write" produced — re-reading target "interactorAssertion"
+05:26:15  satisfier action "uiQuestion_write" produced — re-reading target "interactorObservation"
+05:29:03  satisfier action "uiQuestion_write" produced — re-reading target "uiFeedback"
+05:29:31  satisfier action "uiQuestion_write" produced — re-reading target "uiFeedback"
+05:30:10  satisfier action "uiQuestion_write" produced — re-reading target "interactorObservation"
+05:30:51  satisfier action "uiQuestion_write" produced — re-reading target "interactorObservation"
+06:14:26  satisfier action "uiQuestion_write" produced — re-reading target "uiFeedback"
+06:18:55  satisfier action "uiQuestion_write" produced — re-reading target "uiFeedback"
+```
+
+That is 5 aimed at `uiFeedback`, 3 at `interactorObservation`, 1 at
+`interactorAssertion` — the log string is `goal-host-vessel/src/index.ts:8911`. The
+class is also **not ui-specific**: the same journal holds 205 satisfier-produced lines
+overall, led by `memoryNote → memoryNote_write` (80) and `fs_write → shellResult` (26).
+Resolving a read shape by issuing a write is a general walk behaviour; ui is where it
+touches human-visible state.
+
+Two overstatements in the original record are corrected:
+
+**(a) The destruction was observed, not re-checkable.** The operator contemporaneously
+observed the handoff panel's body emptied and `updatedAt` advanced once per walk round.
+That observation stands as observed-then-restored. It is **no longer independently
+re-checkable**, and the limitation must be stated wherever it is cited: stateful-ui's
+store is a whole-snapshot overwrite with no revision history, so a restored panel
+retains no trace of the intervening clobber. Nothing in the live store can now confirm
+or refute it.
+
+**(b) The frequency was overstated; the class is real.** Most defaulted live writes
+**create** junk panels rather than overwrite one. Verified against the live panel list:
+32 panels carry auto-generated `panel-<epoch-ms>` ids, and **all 32 have
+`createdAt == updatedAt`** — never written twice. Their creation timestamps match the
+satisfier firings above to the second (05:24:12, 05:26:15, 06:14:26, 06:18:55), which
+ties firing to creation directly. Of the 32: 29 are defaulted and titleless (19 `info`,
+10 `question`) and 3 are the titled `code_change` panels treated under
+"Open questions requiring a decision" in PROGRAM-STATE.md — an unattributed producer,
+and the only asks-bearing panels in the store. Destructive *overwrite* therefore requires the model to
+emit an id that already exists, and its base rate is well under one per firing.
+
+Base-rate caveat, so this is not read the other way: 326 of 446 panels do have
+`updatedAt != createdAt`. That is overwhelmingly `gap-to-feature` re-posting escalations
+under deterministic ids, which is intended idempotent behaviour — **not** walk
+destruction. The two must not be summed.
+
+### Amendment 3 — CORRECTION: scale numbers, re-measured 2026-09-20
+
+| Quantity | Snapshot value | Verified this turn | How |
+|---|---|---|---|
+| Gap store entries | 1,402 | **1,650** | `jq length` on `/workspace/git/super-repo/gaps/gaps.json` |
+| stateful-ui panels held | 434 | **446** | `jq '.panels\|length'` on `:8270/api/state` |
+| Panels visible in the escalation view | — (see note) | **247** | the vessel's own filter, `stateful-ui-vessel/src/index.ts:343`, applied over the same list |
+| Panels **hidden** by that filter | not recorded | **199** | complement of the above |
+
+The snapshot's open-gap sub-count (337) was not re-measured; only the total was.
+
+The "240-question live view" figure this amendment was asked to correct **could not be
+located** — it appears in neither this matrix nor TRACE-2026-09-20.md (searched both for
+`240`). Recorded as unlocated rather than amended; correcting a figure that is not in
+the record would be inventing one.
+
+Note on the 247: there is **no `GET /api/questions` endpoint** on stateful-ui. The
+number was computed by applying the vessel's live filter predicate — `asks.length > 0
+|| kind === "question" || kind === "gap_needs_human"` (`index.ts:343`) — over the
+`/api/state` panel list. It is the count that filter admits, not a figure the vessel
+reports about itself.
+
+**The 199 hidden panels are the substantive finding, and they were not in the
+snapshot at all.** The allowlist hides, by kind:
+
+| Hidden kind | Count | Escalation? |
+|---|---|---|
+| `gap_pending_verification` | 100 | yes |
+| `gap_needs_localization` | 65 | yes |
+| `gap_reland_needs_human` | 14 | yes |
+| `info` | 19 | no |
+| `pulse` | 1 | no |
+
+179 of the 199 are escalations addressed to a human that the human's own surface does
+not display. Full live kind census across all 446 panels: `gap_needs_human` 233,
+`gap_pending_verification` 100, `gap_needs_localization` 65, `info` 19,
+`gap_reland_needs_human` 14, `question` 11, `code_change` 3, `pulse` 1.
+
+### Amendment 4 — CORRECTION: the kind vocabulary is open, so an allowlist is the wrong repair
+
+The matrix's stage-1 gap (a) and the filed gap
+`human-surface-uiquestion-read-drops-gap-needs-human-panels` both frame the visibility
+defect as *"the `gap_needs_human` kind is dropped"*. That framing is too narrow, and it
+points at the wrong fix.
+
+Verified: **four distinct `gap_*` escalation kinds exist in the live panel store** —
+`gap_needs_human` (233), `gap_pending_verification` (100), `gap_needs_localization`
+(65), `gap_reland_needs_human` (14) — and a static search finds all four written from
+one producer, `development-vessel/src/resolvers/gap-to-feature.ts`. stateful-ui's
+filter admits exactly two kinds by name; human-surface's
+(`src/routes/impulses.ts:219`) admits one (`kind === "question"`). So human-surface
+would hide all four, and stateful-ui already hides three of them.
+
+Discrepancy recorded rather than resolved: this amendment was asked to record **five**
+escalation kinds. Four `gap_*` kinds is what the live store supports. A fifth count is
+reachable only by including `question` (a solicitation, not an escalation) or the
+asks-bearing `code_change` (unattributed — see PROGRAM-STATE.md, "Open questions
+requiring a decision"). Neither count is
+adopted here; the census above is what was measured.
+
+**Why the repair must be a denylist.** A kind allowlist has now failed twice in
+production against the same class: stateful-ui's own comment at `index.ts:339-341`
+records that filtering on `kind === "question"` alone "missed every real escalation",
+and the widened allowlist it added still hides 179 escalations today (Amendment 3).
+The vocabulary is not closed at runtime: a write-path probe **this session** stored an
+invented kind, `escalation_kind_nobody_invented_yet`, uncoerced and unrejected. That
+probe was a write and **could not be re-run read-only under this turn's constraints**
+— it is cited as a workflow finding, not re-verified here. What *does* corroborate it
+read-only is that two live kinds have no writer anywhere in `repos/`: `code_change` (3
+panels; the only `repos/` hits for that token are `has_code_changes` in
+`activity-api/src/services/state-pattern-learner.ts`, an unrelated identifier) and
+`pulse` (1 panel, id `substrate-reach-pulse`; `substrate-reach-pulse` and `Reach Trend`
+have zero hits across `repos/` and `scripts/`). Kinds are reaching the store that the
+tree does not know how to produce, which is the same conclusion the probe reached by a
+different route.
+
+An allowlist therefore fails silently every time the vocabulary grows — the default for
+an unknown kind is invisibility, and invisibility of a human escalation is the exact
+defect. The fix is a **fail-visible denylist**: show every kind unless it is explicitly
+named as non-escalation, so a new kind's failure mode is a stray panel a human can see
+and complain about rather than a dropped escalation nobody learns about. This also
+satisfies the standing rule that an unobservable target must be a *failed* scan and not
+a clean one (`development-vessel/src/resolvers/ui-legibility-scan.ts:95-115`): an
+unrecognised kind is an inability to classify, and it must surface as such.
 
 ## Evidence typing
 
@@ -174,7 +381,8 @@ interaction contract (EXPLICABILITY_SURFACE.md:98) has no implementation.
 
 ## Unresolved horizons
 
-- **Producer collision (law 3):** human-surface-vessel inherits and replaces
+- **Producer collision (law 3)** — **no longer a horizon; live as of 2026-09-20
+  06:12:04 UTC. See Amendment 1.** human-surface-vessel inherits and replaces
   stateful-ui-vessel's vocabulary. Both are role `ui`; human-surface is a manifest vessel
   (never auto-selected; installed by vessel-ctl post-readiness). Replace/compose/retire —
   including migration of the 434 accumulated panels and repointing
@@ -219,7 +427,9 @@ scenarios. The four defects that block any exchange were verified and filed
 (source `human_reported`, no class1 literal predicates — all behavioral):
 
 - `human-surface-uiquestion-read-drops-gap-needs-human-panels` — verified by code
-  comparison of both filters.
+  comparison of both filters. **The gap's summary understates the defect: it names one
+  kind, and the live kind vocabulary is open. See Amendment 4 — the repair must be a
+  fail-visible denylist, not the kind allowlist this row's framing implies.**
 - `human-surface-participation-journal-records-unreadable-by-interactor-log-consumers` —
   **empirically confirmed**: the consumer's exact extraction logic run over a journal line
   produced by `recordFeedback` yields an empty answered-panel set.

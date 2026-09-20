@@ -37,6 +37,14 @@
     ],
     "requested_contribution": "Before we retire or repair this activity: which of the above conclusions are actually supported by their cited evidence? For any that are not, say what evidence would settle them or supply a correction."
   },
+  "asks": [
+    {
+      "id": "assess-claim-support",
+      "prompt": "Before we retire or repair this activity: which of the above conclusions are actually supported by their cited evidence? For any that are not, say what evidence would settle them or supply a correction.",
+      "type": "text"
+    }
+  ],
+  "asks_note": "The vessel's interaction contract is the TOP-LEVEL pointer field `asks` with `prompt` items (src/routes/impulses.ts asks()); `handoff` is the opaque task material and is seeded verbatim as the panel body. `handoff.requested_contribution` is retained byte-identical because the assessment key and comprehension scores are frozen against the handoff's exact composition.",
   "assessment_key": {
     "supported": ["c1", "c2", "c4", "c6"],
     "unsupported": {

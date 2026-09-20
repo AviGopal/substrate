@@ -1,6 +1,6 @@
 {
   "frozen_at": "2026-09-20",
-  "why_frozen": "Seedable uiPanel_write payloads for scenarios S2, S4, S7, S8. Seed through the vessel's shaped resolve path, never by editing stores. Panel ids are stable so journal assertions are deterministic.",
+  "why_frozen": "Seedable uiPanel_write payloads for scenarios S2, S4, S7, S8. Seed through the vessel's shaped resolve path, never by editing stores. Panel ids are stable so journal assertions are deterministic. Multi-part questions carry `asks` as a TOP-LEVEL pointer field whose items use `prompt` — that is the vessel's interaction contract (src/routes/impulses.ts asks()); `body` is opaque preserved content the vessel must never reinterpret as UI controls, so a nested `body.asks` produces zero parts.",
   "panels": [
     {
       "scenario": "S2",
@@ -10,12 +10,12 @@
         "kind": "question",
         "title": "Two decisions about the reachability gap family",
         "body": {
-          "context": "Shapes error_log and test_report are advertised but unreachable from cold: their producers' required input_shapes are not producible from the goal pool.",
-          "asks": [
-            { "id": "part-declare-optional", "text": "Should the gating inputs be declared optional_input_shapes where the resolver self-grounds?" },
-            { "id": "part-drop-or-keep", "text": "If a producer does consume the gating input, should the family be dropped or kept open awaiting a new producer?" }
-          ]
+          "context": "Shapes error_log and test_report are advertised but unreachable from cold: their producers' required input_shapes are not producible from the goal pool."
         },
+        "asks": [
+          { "id": "part-declare-optional", "prompt": "Should the gating inputs be declared optional_input_shapes where the resolver self-grounds?" },
+          { "id": "part-drop-or-keep", "prompt": "If a producer does consume the gating input, should the family be dropped or kept open awaiting a new producer?" }
+        ],
         "importance": "high"
       },
       "protocol_note": "Answer part-declare-optional in session 1, restart vessel, run session 2."
@@ -34,20 +34,20 @@
             "observed": { "resolve_endpoint_given": "http://vessel:8300/resolve", "address_used": "http://127.0.0.1:18300/resolve", "response": "no producer" },
             "counterfactual": { "direct_call_status": 200, "direct_call_bytes": 3056 },
             "detected_at": 1789840000000
-          },
-          "asks": [ { "id": "develop-question", "text": "What would you want to know about this record before anyone acts on it?" } ]
-        }
+          }
+        },
+        "asks": [ { "id": "develop-question", "prompt": "What would you want to know about this record before anyone acts on it?" } ]
       },
       "protocol_note": "Assessment: rendering must disclose any field it does not display; original JSON reachable byte-faithful."
     },
     {
       "scenario": "S7",
       "pointer_set": [
-        { "type": "uiQuestion_write", "id": "frozen-s7-a", "kind": "question", "title": "Name a retention policy for interaction journals", "body": { "asks": [{ "id": "a1", "text": "Propose a retention bound for interactor-log journals (currently unbounded)." }] } },
-        { "type": "uiQuestion_write", "id": "frozen-s7-b", "kind": "question", "title": "Choose a probe cadence", "body": { "asks": [{ "id": "b1", "text": "How often should the standing trend battery fire?" }] } },
-        { "type": "uiQuestion_write", "id": "frozen-s7-c", "kind": "question", "title": "Keep or retire the churn composition", "body": { "asks": [{ "id": "c1", "text": "learned-composition-uifeedback-write-to-shellresult: retire, repair, or observe longer?" }] } }
+        { "type": "uiQuestion_write", "id": "frozen-s7-a", "kind": "question", "title": "Name a retention policy for interaction journals", "body": {}, "asks": [{ "id": "a1", "prompt": "Propose a retention bound for interactor-log journals (currently unbounded)." }] },
+        { "type": "uiQuestion_write", "id": "frozen-s7-b", "kind": "question", "title": "Choose a probe cadence", "body": {}, "asks": [{ "id": "b1", "prompt": "How often should the standing trend battery fire?" }] },
+        { "type": "uiQuestion_write", "id": "frozen-s7-c", "kind": "question", "title": "Keep or retire the churn composition", "body": {}, "asks": [{ "id": "c1", "prompt": "learned-composition-uifeedback-write-to-shellresult: retire, repair, or observe longer?" }] }
       ],
-      "mid_session_revision": { "type": "uiQuestion_write", "id": "frozen-s7-b", "kind": "question", "title": "Choose a probe cadence AND a budget", "body": { "asks": [{ "id": "b1", "text": "How often should the standing trend battery fire, and what is its per-day dispatch budget?" }] } },
+      "mid_session_revision": { "type": "uiQuestion_write", "id": "frozen-s7-b", "kind": "question", "title": "Choose a probe cadence AND a budget", "body": {}, "asks": [{ "id": "b1", "prompt": "How often should the standing trend battery fire, and what is its per-day dispatch budget?" }] },
       "protocol_note": "Fire the revision while the participant drafts an answer to frozen-s7-c."
     },
     {
@@ -59,9 +59,9 @@
         "title": "Was the 09-19 rollback applied cleanly?",
         "body": {
           "context": "The disposition record cites diff artifact rollback-differential-84cd2f2, which the system cannot produce: the execution predates trace retention.",
-          "artifact_ref": { "id": "rollback-differential-84cd2f2", "status": "unavailable", "reason": "predates trace retention window" },
-          "asks": [ { "id": "supply-or-decline", "text": "If you observed this rollback, describe what you saw; otherwise decline and say what is missing." } ]
-        }
+          "artifact_ref": { "id": "rollback-differential-84cd2f2", "status": "unavailable", "reason": "predates trace retention window" }
+        },
+        "asks": [ { "id": "supply-or-decline", "prompt": "If you observed this rollback, describe what you saw; otherwise decline and say what is missing." } ]
       },
       "protocol_note": "The unavailable status must render as first-class; the key question afterward: 'Did you see the diff?' Correct answer is no."
     }
