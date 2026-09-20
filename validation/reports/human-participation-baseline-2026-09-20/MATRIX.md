@@ -214,8 +214,20 @@ experience exists for any mechanism to condition on. The program's stages 4 (obs
 and the consumption repairs above are therefore the critical path; presentation polish
 (stage 3) improves a surface whose output currently goes nowhere.
 
-Gap-filing intent: the matrix rows are held here un-filed until stage 2 freezes scenarios,
-except the three that block any exchange at all — (a) the `gap_needs_human` filter
-regression, (b) the journal-format mismatch, (c) the consumption port hardcode — which are
-concrete class-level defects suitable for filing now. None should carry a literal-match
-class1 predicate; all three are behavioral.
+Gap-filing status: the broad matrix rows are held un-filed until stage 2 freezes
+scenarios. The four defects that block any exchange were verified and filed
+(source `human_reported`, no class1 literal predicates — all behavioral):
+
+- `human-surface-uiquestion-read-drops-gap-needs-human-panels` — verified by code
+  comparison of both filters.
+- `human-surface-participation-journal-records-unreadable-by-interactor-log-consumers` —
+  **empirically confirmed**: the consumer's exact extraction logic run over a journal line
+  produced by `recordFeedback` yields an empty answered-panel set.
+- `solicitation-outcome-scan-pins-one-ui-endpoint-instead-of-discovery` — **empirically
+  confirmed**: `STATEFUL_UI_VESSEL_ENDPOINT` set nowhere in the live container's env or
+  unit drop-ins (positive control on the same grep: 5 SURREALDB lines), so the `:8270`
+  default governs.
+- `stateful-ui-heartbeat-rejected-while-registry-still-lists-it` — filed as an
+  investigation observation, no edit site named (root not localized).
+
+The local slice these rows cite is pinned at super-repo commit `36b9ffae`.
