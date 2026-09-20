@@ -1,0 +1,19 @@
+{
+  "id": "gap-route-edit-0cfa8cd0",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "route-edit-f3fa9300",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "memoryNote cycle-demo-3 is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that ",
+  "description": "memoryNote cycle-demo-3 is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.",
+  "goal_text": "memoryNote cycle-demo-3 is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-route-edit-0cfa8cd0",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "gap-artifact-expectation-violated-prior-exp-10",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "auto",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Observation loop found a verified artifact no longer valid: memoryNote prior-exp-10 was verified to byte-equal ZW1iZXIxM",
+  "description": "Observation loop found a verified artifact no longer valid: memoryNote prior-exp-10 was verified to byte-equal ZW1iZXIxMC1leHA= (goal determines ZW1iZXIxMC1leHA= for base64(ember10-exp)) but now stores ZW1iZXIxMC1leHAK — the artifact and its recorded verification disagree (violation #1). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
+  "goal_text": "Observation loop found a verified artifact no longer valid: memoryNote prior-exp-10 was verified to byte-equal ZW1iZXIxMC1leHA= (goal determines ZW1iZXIxMC1leHA= for base64(ember10-exp)) but now stores ZW1iZXIxMC1leHAK — the artifact and its recorded verification disagree (violation #1). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-artifact-expectation-violated-prior-exp-10",
+  "source_gap_source": "substrate_detected"
+}

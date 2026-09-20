@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-ac873224-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-ac873224] Edit repos/activity-api/src/routes/template-audit.ts to satisfy the following reques",
+  "description": "[narrowed from route-edit-ac873224] Edit repos/activity-api/src/routes/template-audit.ts to satisfy the following request. The relevant code is in the region \"hardcode\". If that file is the wrong target, say so rather than editing it.\n\nAdd TypeSafe's Jev as a decision provider for this substrate. The API key is already in the environment as TYPESAFE_API_KEY. Do not hardcode the endpoint, model name, request format, or credential anywhere.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 259-264 of 669, VERBATIM:\\n259: // the `g` flag is new each call to avoid stateful lastIndex issues.\\n260: \\n261: function extrac\n- typecheck_dangling_reference: src/routes/template-audit.ts(381,5): error TS2353: Object literal may only specify known properties, and 'jev_decision' does not exist in type 'TemplateDeficiencies'. | src/routes/template-audit.ts(60\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-ac873224] Edit repos/activity-api/src/routes/template-audit.ts to satisfy the following request. The relevant code is in the region \"hardcode\". If that file is the wrong target, say so rather than editing it.\n\nAdd TypeSafe's Jev as a decision provider for this substrate. The API key is already in the environment as TYPESAFE_API_KEY. Do not hardcode the endpoint, model name, request format, or credential anywhere.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 259-264 of 669, VERBATIM:\\n259: // the `g` flag is new each call to avoid stateful lastIndex issues.\\n260: \\n261: function extrac\n- typecheck_dangling_reference: src/routes/template-audit.ts(381,5): error TS2353: Object literal may only specify known properties, and 'jev_decision' does not exist in type 'TemplateDeficiencies'. | src/routes/template-audit.ts(60\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-ac873224-narrowed",
+  "source_gap_source": "substrate_detected"
+}

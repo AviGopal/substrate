@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-42ce3c84-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-42ce3c84] investigate and decompose gap route-edit-cda5d21c: The rebind cache's content-swap c",
+  "description": "[narrowed from route-edit-42ce3c84] investigate and decompose gap route-edit-cda5d21c: The rebind cache's content-swap can reuse a PRIOR goal's write command with its stale payload: on dispatch for gen-g5b (count active vessel units, store the number), cmdEvidence shows memoryNote_write 'produced by RUNNING: (no command field; resolve args) title=gen-g5b body=etartsbus' - etartsbus is the REVERSED-STRING payload from an earlier, unrelated goal (reverse the string substrate). The\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16790, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- syntax_break: src/index.ts(4682,5): error TS1005: 'try' expected. | src/index.ts(4807,1): error TS1472: 'catch' or 'finally' expected. | src/index.ts(16798,1): error TS1005: '}' expected.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-42ce3c84] investigate and decompose gap route-edit-cda5d21c: The rebind cache's content-swap can reuse a PRIOR goal's write command with its stale payload: on dispatch for gen-g5b (count active vessel units, store the number), cmdEvidence shows memoryNote_write 'produced by RUNNING: (no command field; resolve args) title=gen-g5b body=etartsbus' - etartsbus is the REVERSED-STRING payload from an earlier, unrelated goal (reverse the string substrate). The\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16790, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- syntax_break: src/index.ts(4682,5): error TS1005: 'try' expected. | src/index.ts(4807,1): error TS1472: 'catch' or 'finally' expected. | src/index.ts(16798,1): error TS1005: '}' expected.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-42ce3c84-narrowed",
+  "source_gap_source": "substrate_detected"
+}

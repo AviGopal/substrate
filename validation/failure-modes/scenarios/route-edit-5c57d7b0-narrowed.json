@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-5c57d7b0-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-5c57d7b0] Edit repos/local-tools-vessel/src/index.ts so that the /health endpoint's JSON respo",
+  "description": "[narrowed from route-edit-5c57d7b0] Edit repos/local-tools-vessel/src/index.ts so that the /health endpoint's JSON response includes an additional field probe_generality set to the boolean true.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds 'probe_generality: true' to the return object of fsEdit, but the gap specifies that the /health endpoint's JSON response should include this field. These are distinct functionalities.\n- typecheck_dangling_reference: src/index.ts(255,25): error TS2552: Cannot find name 'text'. Did you mean 'nText'? | src/index.ts(255,45): error TS2552: Cannot find name 'old_string'. Did you mean 'toString'? | src/index.ts(258,23):\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-5c57d7b0] Edit repos/local-tools-vessel/src/index.ts so that the /health endpoint's JSON response includes an additional field probe_generality set to the boolean true.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds 'probe_generality: true' to the return object of fsEdit, but the gap specifies that the /health endpoint's JSON response should include this field. These are distinct functionalities.\n- typecheck_dangling_reference: src/index.ts(255,25): error TS2552: Cannot find name 'text'. Did you mean 'nText'? | src/index.ts(255,45): error TS2552: Cannot find name 'old_string'. Did you mean 'toString'? | src/index.ts(258,23):\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-5c57d7b0-narrowed",
+  "source_gap_source": "substrate_detected"
+}

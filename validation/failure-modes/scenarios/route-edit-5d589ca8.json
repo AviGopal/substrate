@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-5d589ca8",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-ef265c48: The observation loop found a verified artifact (memoryNote cycle-demo",
+  "description": "investigate and decompose gap route-edit-ef265c48: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.",
+  "goal_text": "investigate and decompose gap route-edit-ef265c48: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-5d589ca8",
+  "source_gap_source": "substrate_detected"
+}
