@@ -32,13 +32,27 @@ trace, and the v1→v2 causal prereg. Dated status; supersedes nothing timeless.
   whose discovery query names the wrong shape — an agreeing-wrong pair between
   composer and gate; the gate had no way to check *what* the helper resolves.
 
-**Cycle B — the S6 comprehension goal (dispatched):**
-- Goal `7a51e940-9c3f-4c52-a2e4-638f5c93d2ae`, natural language, no file paths
-  (law 13); system owns decomposition. Observed so far: concept recall, target
-  inference to `uiFeedback`/`interactorAssertion`, and — significantly —
-  `uiFeedback` "produced" by a vessel-resolve satisfier, the same routing symptom
-  the heartbeat gap records. The walk's own behavior is generating evidence for
-  the stage-1 findings.
+**Cycle B — the S6 comprehension goal:**
+- Round 1: goal `7a51e940…`, natural language, no file paths (law 13). Terminal:
+  `status failed, reached false`, the system's own verdict honest ("does not
+  meaningfully distinguish supported conclusions from unresolved claims"). The
+  decision log is high quality: it labeled its own empty panels HOLLOW-CONTENT,
+  treated an unreadable `uiPanel_write` as non-persistence, withheld β where the
+  arm structurally could not win, and named "the missing producer→consumer edge"
+  itself. Operator verdict recorded to the oracle corpus
+  (`goal_verification_labels:d2vd1ql9wkrjqbwlljr8`, not_reached, 0.98): root
+  cause is **information starvation** — the handoff existed only as a git
+  fixture, never as a resolvable impulse; no walk step could read the claims it
+  was asked to help assess (law 8).
+- Operator assistance, attached to its stage (information supply only): the
+  handoff seeded as live panel `frozen-s6-incident-handoff-v1` (claims only,
+  scoring key withheld). In doing so the live vessel **coerced a structured body
+  to the string "[object Object]" while acknowledging success** — silent
+  destruction; filed as gap
+  `stateful-ui-panel-write-coerces-structured-body-to-object-object` (the
+  replacement surface preserves structured bodies — this is the live vessel's
+  defect, and it immediately triggered a compose nudge).
+- Round 2 dispatched with the information available: `e318c843-a508-4d7c-a7ae-498d36e26e58`.
 
 ## Stage-8 record
 
