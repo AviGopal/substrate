@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>Substrate · Goal and evidence prototype</title>
+<style>
+  :root { color-scheme: light; font: 16px/1.55 system-ui,sans-serif; color: #202d36; background: #f3f5f3; }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  header,main { max-width: 1200px; margin: auto; padding: 24px; }
+  header { padding-bottom: 0; }
+  h1 { font-size: 1.8rem; margin: 6px 0; } h2 { font-size: 1.15rem; margin-top: 0; }
+  h3 { font-size: 1rem; } p { margin: 8px 0 16px; }
+  .eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: .75rem; font-weight: 700; }
+  .notice { padding: 12px 16px; background: #fff1d2; border-left: 4px solid #8a650c; }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 20px; }
+  select,textarea,button { font: inherit; border: 1px solid #77848a; border-radius: 6px; padding: 9px 12px; }
+  select,textarea { background: white; color: #202d36; }
+  button { background: #244b44; color: white; cursor: pointer; }
+  :focus-visible { outline: 3px solid #985a13; outline-offset: 3px; }
+  .grid { display: grid; grid-template-columns: 1fr 1.35fr; gap: 20px; }
+  section { background: white; border: 1px solid #cdd5d2; border-radius: 12px; padding: 22px; margin-bottom: 20px; }
+  .tag { display: inline-block; border: 1px solid #9caeaa; border-radius: 5px; padding: 2px 8px; font-size: .85rem; }
+  .muted { color: #52636b; font-size: .9rem; }
+  .artifact { padding: 16px; background: #f0f5f3; border-radius: 6px; }
+  .criterion { border-top: 1px solid #dbe1df; padding: 12px 0; }
+  .criterion p { margin: 4px 0; }
+  details { margin: 16px 0; } summary { cursor: pointer; font-weight: 600; }
+  label { display: block; font-weight: 600; margin: 12px 0 6px; }
+  textarea { display: block; width: 100%; min-height: 90px; margin-bottom: 12px; }
+  dl { margin: 0; } dt { font-weight: 600; } dd { margin: 0 0 14px; }
+  .progress { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  [role=status] { min-height: 1.6em; }
+  @media(max-width: 760px) { .grid,.progress { grid-template-columns: 1fr; } header,main { padding: 16px; } }
+</style>
+<header>
+  <div class="eyebrow">Substrate / Human interface study</div>
+  <h1>A goal, its evidence, and what comes next</h1>
+  <p class="notice"><strong>Offline prototype · invented examples.</strong> No live system is connected. Drafts stay in this page and are lost on reload.</p>
+  <p class="muted">One candidate rendering of goals, impulses, evidence and human contributions. The system may learn better layouts and interaction procedures; this arrangement is not a fixed architecture.</p>
+  <div class="controls"><label for="scenario">Example</label><select id="scenario"><option value="verified">Reached with checks</option><option value="disputed">Completed with contradictory evidence</option><option value="waiting">Waiting for clarification</option></select></div>
+</header>
+<main>
+  <div class="grid">
+    <div>
+      <section aria-labelledby="goal-title">
+        <div class="eyebrow">01 / Intent</div><h2 id="goal-title">What you asked for</h2>
+        <p>Prepare a handoff note from the supplied incident report. Include the cause, recovery steps, and anything still unresolved.</p>
+        <h3>System interpretation <span class="tag">Proposed</span></h3>
+        <p>Produce a concise note grounded in the supplied report, retaining unresolved questions.</p>
+        <p class="muted">This interpretation has not been confirmed by the person who supplied the goal.</p>
+        <h3>Proposed success conditions</h3>
+        <ul><li>Cause is supported by the report.</li><li>Recovery steps match the report.</li><li>Unresolved questions remain explicit.</li></ul>
+      </section>
+      <section aria-labelledby="next-title">
+        <div class="eyebrow">03 / Communication</div><h2 id="next-title">What happens next</h2>
+        <p id="next"></p>
+        <label for="kind">Your contribution</label>
+        <select id="kind"><option>Reach assessment</option><option>Answer a question</option><option>Additional context</option><option>Revise the goal</option></select>
+        <label for="contribution">What should the system know?</label>
+        <textarea id="contribution" placeholder="Describe the evidence, correction, or missing context."></textarea>
+        <button id="draft" type="button">Keep a local draft</button>
+        <p id="receipt" role="status" class="muted"></p>
+        <details><summary>Has this changed the system?</summary><dl>
+          <dt>Received by system</dt><dd>No — this prototype cannot submit.</dd>
+          <dt>Consumed in a decision</dt><dd>No system record available.</dd>
+          <dt>Learned state updated</dt><dd>No system record available.</dd>
+          <dt>Reused successfully</dt><dd>No behavioral evidence available.</dd>
+        </dl></details>
+      </section>
+    </div>
+    <section aria-labelledby="outcome-title">
+      <div class="eyebrow">02 / Outcome</div><h2 id="outcome-title">What the evidence supports</h2>
+      <p><span id="execution" class="tag"></span></p>
+      <h3 id="claim"></h3><p id="assessment"></p>
+      <p class="muted">Source: illustrative snapshot, not a live observation. All checker records below are fictional.</p>
+      <h3>Produced note <span class="tag">Full example artifact</span></h3>
+      <div id="artifact" class="artifact"></div>
+      <h3>Checks against the goal</h3><div id="checks"></div>
+      <details><summary>Inspect the source report</summary><p>Cause: a queue worker stopped renewing its lease. Recovery: restart the worker and replay the pending batch. Unresolved: whether the renewal was delayed by resource contention; a load test is still needed.</p></details>
+      <details><summary>Why this pathway?</summary><p id="path"></p><p class="muted">Selection inputs were not included in this example. The route name alone does not explain why it was selected.</p></details>
+      <details><summary>Assessment scope and provenance</summary><p>Example goal revision: 1. Artifact and checks belong to the selected scenario. No human assessment is recorded. A separate checker is described in the fixture; its independence from the producer is unestablished.</p><p>Passing these checks supports this example outcome. It does not establish held-out reliability, transfer, or retained capability.</p></details>
+    </section>
+  </div>
+  <section aria-labelledby="learning-title"><div class="eyebrow">04 / Learning over time</div><h2 id="learning-title">Reliable behavior and new capability</h2>
+    <div class="progress"><div><h3>Convergence on a frozen task family</h3><p class="tag">Not measured in this prototype</p><p>Needs a fixed cohort, starting learned state, scoring rules, budgets and held-out thresholds.</p><p class="muted">Show graded trials, wall-clock time and total cost to sustained criterion. Include human effort and recovery after change.</p></div>
+    <div><h3>Demonstrated structural growth</h3><p class="tag">Not measured in this prototype</p><p>Needs versioned capabilities and compositions with witness runs, transfer and retention checks.</p><p class="muted">Show new reachability alongside regressions, retirements and the age of unexercised structure. Attribute human and autonomous contributions.</p></div></div>
+    <details><summary>Where learning may be waiting</summary><p>Detect → select → author → exercise → promote/prune → propagate learning.</p><p>No stage measurements are loaded. A bottleneck cannot be identified from this example.</p></details>
+  </section>
+</main>
+<script>
+  const scenarios = {
+    verified: {
+      execution: 'Execution completed', claim: 'Machine claim: reached',
+      assessment: 'All three recorded checks pass. Independent verification and a human assessment are not established.',
+      artifact: 'Cause: a worker stopped renewing its lease. Recovery: restart the worker and replay the pending batch. Still unresolved: possible resource contention; verify with a load test.',
+      results: ['Pass — matches the report.', 'Pass — both recovery steps retained.', 'Pass — resource contention remains an open question.'],
+      next: 'Next actor: human reviewer, if an assessment is needed. Inspect the note and source before giving a verdict.',
+      path: 'Recorded route: an existing summarization pathway. No new capability is established by this run.'
+    },
+    disputed: {
+      execution: 'Execution completed', claim: 'Machine claim: reached · contradicted by a check',
+      assessment: 'The unresolved question was presented as settled. The recorded checks do not support reaching the full goal.',
+      artifact: 'Cause: a worker stopped renewing its lease. Recovery: restart the worker and replay the pending batch. Resource contention has been ruled out; no questions remain.',
+      results: ['Pass — matches the report.', 'Pass — both recovery steps retained.', 'Fail — the report leaves resource contention unresolved.'],
+      next: 'Next actor: system, to correct the unsupported conclusion. A human can assess the discrepancy; no repair has been initiated in this prototype.',
+      path: 'Recorded route: an existing summarization pathway. Completion did not establish correctness.'
+    },
+    waiting: {
+      execution: 'Execution waiting for input', claim: 'Reach has not been assessed',
+      assessment: 'The system asks: “Should this handoff be written for the incident engineer or the customer support team?” This affects detail and wording.',
+      artifact: 'No note has been produced.',
+      results: ['Unknown — no artifact to check.', 'Unknown — no artifact to check.', 'Unknown — no artifact to check.'],
+      next: 'Next actor: human, to identify the audience. Answering supplies context; it does not assess whether the final note is correct.',
+      path: 'No pathway decision is recorded yet.'
+    }
+  };
+  const el = id => document.getElementById(id);
+  const drafts = new Map();
+  function render() {
+    const key = el('scenario').value;
+    const scenario = scenarios[key];
+    for (const field of ['execution','claim','assessment','artifact','next','path']) el(field).textContent = scenario[field];
+    el('checks').replaceChildren(...scenario.results.map((result, i) => {
+      const row = document.createElement('div'); row.className = 'criterion';
+      const title = document.createElement('strong'); title.textContent = ['Cause','Recovery steps','Unresolved questions'][i];
+      const value = document.createElement('p'); value.textContent = result;
+      const source = document.createElement('p'); source.className = 'muted';
+      source.textContent = key === 'waiting' ? 'No assessment recorded.' : 'Example checker: source comparison · independence unestablished';
+      row.append(title,value,source); return row;
+    }));
+    const draft = drafts.get(key);
+    el('contribution').value = draft?.text ?? '';
+    el('kind').value = draft?.kind ?? (key === 'waiting' ? 'Answer a question' : 'Reach assessment');
+    el('receipt').textContent = draft ? 'Local draft restored for this example. Nothing was submitted.' : '';
+  }
+  el('scenario').addEventListener('change', render);
+  el('draft').addEventListener('click', () => {
+    const text = el('contribution').value.trim();
+    if (!text) { el('receipt').textContent = 'Enter a contribution before keeping a draft.'; return; }
+    drafts.set(el('scenario').value, { text, kind: el('kind').value });
+    el('receipt').textContent = 'Draft kept in this page for this example. Nothing was submitted or learned. Reloading clears it.';
+  });
+  render();
+</script>
+</html>
