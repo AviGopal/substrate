@@ -1,0 +1,19 @@
+{
+  "id": "gap-trend-expectation-violated-product",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "auto",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Standing trend expectation VIOLATED for family product: independent check scored 0/3 against the committed bar 2/3 (in-p",
+  "description": "Standing trend expectation VIOLATED for family product: independent check scored 0/3 against the committed bar 2/3 (in-process byte-verification of freshly generated probes, not dispatch verdicts). History: [{\"at\":\"2026-09-19T23:39:47.134Z\",\"r\":3,\"n\":3},{\"at\":\"2026-09-20T03:23:27.807Z\",\"r\":0,\"n\":3}]. Determine which mechanism regressed and restore the bar; the commitment is the impulse expectation-trend:deterministic-battery.",
+  "goal_text": "Standing trend expectation VIOLATED for family product: independent check scored 0/3 against the committed bar 2/3 (in-process byte-verification of freshly generated probes, not dispatch verdicts). History: [{\"at\":\"2026-09-19T23:39:47.134Z\",\"r\":3,\"n\":3},{\"at\":\"2026-09-20T03:23:27.807Z\",\"r\":0,\"n\":3}]. Determine which mechanism regressed and restore the bar; the commitment is the impulse expectation-trend:deterministic-battery.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-trend-expectation-violated-product",
+  "source_gap_source": "substrate_detected"
+}

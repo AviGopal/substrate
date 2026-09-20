@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-166eea34",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap satisfier-action-then-read-invokes-mutating-siblings-without-consulting-the-write-classifi",
+  "description": "investigate and decompose gap satisfier-action-then-read-invokes-mutating-siblings-without-consulting-the-write-classification: goal-host ACTION-THEN-READ satisfier (goal-host-vessel/src/index.ts:8856-8884) invokes ANY co-located sibling as a producing action, so a walk asked for the READ shape uiFeedback calls uiQuestion_write (9 observed invocations 2026-09-20T05:24:01Z-06:18:55Z: uiFeedback x5, interactorObservation x3, interactorAssertion x1; 71 of 206 satisfier actions in the 24h window are mutating). The write",
+  "goal_text": "investigate and decompose gap satisfier-action-then-read-invokes-mutating-siblings-without-consulting-the-write-classification: goal-host ACTION-THEN-READ satisfier (goal-host-vessel/src/index.ts:8856-8884) invokes ANY co-located sibling as a producing action, so a walk asked for the READ shape uiFeedback calls uiQuestion_write (9 observed invocations 2026-09-20T05:24:01Z-06:18:55Z: uiFeedback x5, interactorObservation x3, interactorAssertion x1; 71 of 206 satisfier actions in the 24h window are mutating). The write",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-166eea34",
+  "source_gap_source": "substrate_detected"
+}

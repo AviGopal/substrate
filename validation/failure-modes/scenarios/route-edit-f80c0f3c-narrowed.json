@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-f80c0f3c-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-f80c0f3c] investigate and decompose gap landed-commit-was-never-parse-checked-syntactically-in",
+  "description": "[narrowed from route-edit-f80c0f3c] investigate and decompose gap landed-commit-was-never-parse-checked-syntactically-invalid-file-pushed: An autonomous commit landed and pushed a TypeScript file that does not parse. Commit 84cd2f2 (author Substrate Autonomous, 2026-09-19 21:11:40) inserted an array element one line ABOVE its own declaration in boredom-vessel/src/index.ts, producing 'error: Unexpected const' at :362. It reached origin/dev. The vessel then failed every start for ~4 hours (1404 restarts). Every gate below the draft\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: adversarial refuters agreed 2/2 (conf 0.90, 0.90): The patch adds a new configuration flag STRICT_SYNTAX_VERIFICATION (lines 49-56) but does not actually implement the syntax checking logic or show wh\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 14-19 of 6653, VERBATIM:\\n14:  * full ordered op list) then EXECUTES DETERMINISTICALLY — no per-step LLM\\n15:  * indecision. Veri\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 17-22 of 6661, VERBATIM:\\n17:  *\\n18:  * Flow: decompose(spec) -> [ops] -> apply each (fs_write/fs_edit) -> verify\\n19:  * (typec\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-f80c0f3c] investigate and decompose gap landed-commit-was-never-parse-checked-syntactically-invalid-file-pushed: An autonomous commit landed and pushed a TypeScript file that does not parse. Commit 84cd2f2 (author Substrate Autonomous, 2026-09-19 21:11:40) inserted an array element one line ABOVE its own declaration in boredom-vessel/src/index.ts, producing 'error: Unexpected const' at :362. It reached origin/dev. The vessel then failed every start for ~4 hours (1404 restarts). Every gate below the draft\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: adversarial refuters agreed 2/2 (conf 0.90, 0.90): The patch adds a new configuration flag STRICT_SYNTAX_VERIFICATION (lines 49-56) but does not actually implement the syntax checking logic or show wh\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 14-19 of 6653, VERBATIM:\\n14:  * full ordered op list) then EXECUTES DETERMINISTICALLY — no per-step LLM\\n15:  * indecision. Veri\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 17-22 of 6661, VERBATIM:\\n17:  *\\n18:  * Flow: decompose(spec) -> [ops] -> apply each (fs_write/fs_edit) -> verify\\n19:  * (typec\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-f80c0f3c-narrowed",
+  "source_gap_source": "substrate_detected"
+}

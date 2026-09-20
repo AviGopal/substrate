@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-436d46ac-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-436d46ac] investigate and decompose gap satisfier-executions-record-zero-tokens-so-economic-ef",
+  "description": "[narrowed from route-edit-436d46ac] investigate and decompose gap satisfier-executions-record-zero-tokens-so-economic-efficiency-is-unmeasurable: tokens_in and tokens_out are 0 on satisfier and walk execution rows, so the cost of reaching a goal cannot be computed from traces, and no claim about the system becoming MORE ECONOMICALLY EFFICIENT over time can be verified or falsified. Verified 2026-09-20 on fresh rows (e.g. execution exec_5y1hp1de and the universal-tool-fallback rows carry tokens_in: 0, tokens_out: 0 while their tasks\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: adversarial refuters agreed 2/2 (conf 0.90, 0.90): The patch adds token fields to the return type and extraction logic (lines 5623, 5641, 5643-5648), but there's no evidence these fields will be popul\n- semantic_reject: The patch adds token fields to the return type and extraction logic but doesn't ensure the API actually provides these values, defaulting to 0 which preserves the original gap\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-436d46ac] investigate and decompose gap satisfier-executions-record-zero-tokens-so-economic-efficiency-is-unmeasurable: tokens_in and tokens_out are 0 on satisfier and walk execution rows, so the cost of reaching a goal cannot be computed from traces, and no claim about the system becoming MORE ECONOMICALLY EFFICIENT over time can be verified or falsified. Verified 2026-09-20 on fresh rows (e.g. execution exec_5y1hp1de and the universal-tool-fallback rows carry tokens_in: 0, tokens_out: 0 while their tasks\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: adversarial refuters agreed 2/2 (conf 0.90, 0.90): The patch adds token fields to the return type and extraction logic (lines 5623, 5641, 5643-5648), but there's no evidence these fields will be popul\n- semantic_reject: The patch adds token fields to the return type and extraction logic but doesn't ensure the API actually provides these values, defaulting to 0 which preserves the original gap\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-436d46ac-narrowed",
+  "source_gap_source": "substrate_detected"
+}

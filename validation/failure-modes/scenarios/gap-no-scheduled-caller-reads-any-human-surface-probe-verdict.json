@@ -1,0 +1,19 @@
+{
+  "id": "gap-no-scheduled-caller-reads-any-human-surface-probe-verdict",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "other",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Five probes now produce honest verdicts and honest exit codes for the human surface — browser-participation, one-page-pr",
+  "description": "Five probes now produce honest verdicts and honest exit codes for the human surface — browser-participation, one-page-probe, stage4-trace, fidelity-probe, asks-contract-probe — and nothing invokes any of them on a schedule. Verified by search with a control: rg over .github/ and scripts/ returns zero hits for all five names; the only reference to stage4-trace outside its own directory is prose in",
+  "goal_text": "Five probes now produce honest verdicts and honest exit codes for the human surface — browser-participation, one-page-probe, stage4-trace, fidelity-probe, asks-contract-probe — and nothing invokes any of them on a schedule. Verified by search with a control: rg over .github/ and scripts/ returns zero hits for all five names; the only reference to stage4-trace outside its own directory is prose in",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-no-scheduled-caller-reads-any-human-surface-probe-verdict",
+  "source_gap_source": "operator_narration"
+}

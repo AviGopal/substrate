@@ -1,4 +1,5 @@
-# My Project\n\n- [x] Task 1\n- [x] Task 2
-- [x] Task 3 (Dispatched)
+# My Project
 
-## To do
+TODO: This is a new undispatched task
+- [ ] This is another undispatched task
+

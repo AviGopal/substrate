@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-7f4dea92",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-5ba5f764: Change repos/stateful-ui-vessel/src/index.ts so the uiPanel_write and",
+  "description": "investigate and decompose gap route-edit-5ba5f764: Change repos/stateful-ui-vessel/src/index.ts so the uiPanel_write and uiQuestion_write branch of its /resolve handler stops destroying live panels. Three changes in this order, because the first is a precondition for the second. First, replace the nullish-coalescing field defaults with Object.hasOwn checks: each of title, body, kind, importance, asks and visibility must be taken from the pointer",
+  "goal_text": "investigate and decompose gap route-edit-5ba5f764: Change repos/stateful-ui-vessel/src/index.ts so the uiPanel_write and uiQuestion_write branch of its /resolve handler stops destroying live panels. Three changes in this order, because the first is a precondition for the second. First, replace the nullish-coalescing field defaults with Object.hasOwn checks: each of title, body, kind, importance, asks and visibility must be taken from the pointer",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-7f4dea92",
+  "source_gap_source": "substrate_detected"
+}

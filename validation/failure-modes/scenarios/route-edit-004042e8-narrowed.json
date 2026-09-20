@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-004042e8-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-004042e8] investigate and decompose gap learned-paths-record-no-domain-endpoint-for-most-goals",
+  "description": "[narrowed from route-edit-004042e8] investigate and decompose gap learned-paths-record-no-domain-endpoint-for-most-goals-so-transfer-has-no-key: 56.1% of goal_execution_paths rows (8737 of 15572, measured 2026-09-20) record NO domain output shape: endpoint_output_shapes is empty or contains only tool/transport shapes (shellResult, fileContent, fs_*, web_search family, dispatch_id, goal). A path whose endpoint is only mechanism cannot be matched to any future goal, so the majority of learned paths are unkeyable regardless of how the store\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds logic to identify domain shapes within `verifyArtifactWrittenReach` which is called but the logic to return `domainShapes` is unreachable due to an immediate return statement. Moreover,\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-004042e8] investigate and decompose gap learned-paths-record-no-domain-endpoint-for-most-goals-so-transfer-has-no-key: 56.1% of goal_execution_paths rows (8737 of 15572, measured 2026-09-20) record NO domain output shape: endpoint_output_shapes is empty or contains only tool/transport shapes (shellResult, fileContent, fs_*, web_search family, dispatch_id, goal). A path whose endpoint is only mechanism cannot be matched to any future goal, so the majority of learned paths are unkeyable regardless of how the store\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds logic to identify domain shapes within `verifyArtifactWrittenReach` which is called but the logic to return `domainShapes` is unreachable due to an immediate return statement. Moreover,\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-004042e8-narrowed",
+  "source_gap_source": "substrate_detected"
+}

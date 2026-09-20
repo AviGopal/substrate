@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-656ed332",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap memorynote-write-stores-the-rendered-instruction-envelope-instead-of-the-content-value: A ",
+  "description": "investigate and decompose gap memorynote-write-stores-the-rendered-instruction-envelope-instead-of-the-content-value: A terminal memoryNote_write persists the RENDERED INSTRUCTION as the note body instead of the content value, causing stored answers to fail byte-equality checks. This was measured on 2026-09-20 with three deterministic probes dispatched in succession, each creating a note with the correct title and correct arithmetic wrapped.",
+  "goal_text": "investigate and decompose gap memorynote-write-stores-the-rendered-instruction-envelope-instead-of-the-content-value: A terminal memoryNote_write persists the RENDERED INSTRUCTION as the note body instead of the content value, causing stored answers to fail byte-equality checks. This was measured on 2026-09-20 with three deterministic probes dispatched in succession, each creating a note with the correct title and correct arithmetic wrapped.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-656ed332",
+  "source_gap_source": "substrate_detected"
+}

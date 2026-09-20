@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-6293822f",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-73e5250b: The [transform-oracle] VERDICT log line in repos/goal-host-vessel/src",
+  "description": "investigate and decompose gap route-edit-73e5250b: The [transform-oracle] VERDICT log line in repos/goal-host-vessel/src/index.ts reports reached and the expected value but not WHERE the check ran, which cost attribution time twice on 2026-09-19/20: during the settle-confirm diagnosis and the title-trailing-dot diagnosis the journal could not distinguish a named-note byte-compare from a digest-containment check. Change the console.log so the",
+  "goal_text": "investigate and decompose gap route-edit-73e5250b: The [transform-oracle] VERDICT log line in repos/goal-host-vessel/src/index.ts reports reached and the expected value but not WHERE the check ran, which cost attribution time twice on 2026-09-19/20: during the settle-confirm diagnosis and the title-trailing-dot diagnosis the journal could not distinguish a named-note byte-compare from a digest-containment check. Change the console.log so the",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-6293822f",
+  "source_gap_source": "substrate_detected"
+}

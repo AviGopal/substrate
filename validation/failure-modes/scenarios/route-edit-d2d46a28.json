@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-d2d46a28",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "route-edit-f3fa9300",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The route method 'forwardToPeers' discards every per-peer outcome when the response is not ok, resulting in a loss of me",
+  "description": "The route method 'forwardToPeers' discards every per-peer outcome when the response is not ok, resulting in a loss of meaningful HTTP status information for unreachable peers, and the catch block suppresses error details, making troubleshooting difficult. Furthermore, the union merge operation collapses three distinct causes of drops into one, obscuring specific issues.",
+  "goal_text": "The route method 'forwardToPeers' discards every per-peer outcome when the response is not ok, resulting in a loss of meaningful HTTP status information for unreachable peers, and the catch block suppresses error details, making troubleshooting difficult. Furthermore, the union merge operation collapses three distinct causes of drops into one, obscuring specific issues.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-d2d46a28",
+  "source_gap_source": "operator_narration"
+}

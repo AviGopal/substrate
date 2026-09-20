@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-76eb84e4-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-76eb84e4] investigate and decompose gap route-edit-fa0029d8: Edit repos/activity-api/src/route",
+  "description": "[narrowed from route-edit-76eb84e4] investigate and decompose gap route-edit-fa0029d8: Edit repos/activity-api/src/routes/template-audit.ts to satisfy the following request. The relevant code is in the region \"hardcode\". If that file is the wrong target, say so rather than editing it.\n\nAdd TypeSafe's Jev as a decision provider for this substrate. The API key is already in the environment as TYPESAFE_API_KEY. Do not hardcode the endpoint, model name, request format, or credential\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/routes/template-audit.ts(278,10): error TS18046: 'data' is of type 'unknown'.\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 43-48 of 679, VERBATIM:\\n43: // ---------------------------------------------------------------------------\\n44: \\n45: export typ\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-76eb84e4] investigate and decompose gap route-edit-fa0029d8: Edit repos/activity-api/src/routes/template-audit.ts to satisfy the following request. The relevant code is in the region \"hardcode\". If that file is the wrong target, say so rather than editing it.\n\nAdd TypeSafe's Jev as a decision provider for this substrate. The API key is already in the environment as TYPESAFE_API_KEY. Do not hardcode the endpoint, model name, request format, or credential\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/routes/template-audit.ts(278,10): error TS18046: 'data' is of type 'unknown'.\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 43-48 of 679, VERBATIM:\\n43: // ---------------------------------------------------------------------------\\n44: \\n45: export typ\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-76eb84e4-narrowed",
+  "source_gap_source": "substrate_detected"
+}

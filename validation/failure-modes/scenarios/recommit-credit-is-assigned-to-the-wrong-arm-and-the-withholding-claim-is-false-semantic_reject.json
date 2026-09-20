@@ -1,0 +1,19 @@
+{
+  "id": "recommit-credit-is-assigned-to-the-wrong-arm-and-the-withholding-claim-is-false-semantic_reject",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap credit-is-assigned-to-the-wrong-arm-and-the-withholding-claim-is-false repeated already-recorded failure",
+  "description": "compose for gap credit-is-assigned-to-the-wrong-arm-and-the-withholding-claim-is-false repeated already-recorded failure class semantic_reject: The patch modifies dBeta assignment in creditReachedTemplate but doesn't correct the beta penalty misassignment described in the gap's evidence",
+  "goal_text": "compose for gap credit-is-assigned-to-the-wrong-arm-and-the-withholding-claim-is-false repeated already-recorded failure class semantic_reject: The patch modifies dBeta assignment in creditReachedTemplate but doesn't correct the beta penalty misassignment described in the gap's evidence",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-credit-is-assigned-to-the-wrong-arm-and-the-withholding-claim-is-false-semantic_reject",
+  "source_gap_source": "substrate_detected"
+}

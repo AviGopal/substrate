@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-4ea0b4ea-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-4ea0b4ea] investigate and decompose gap route-edit-224be4d8: In repos/development-vessel/src/r",
+  "description": "[narrowed from route-edit-4ea0b4ea] investigate and decompose gap route-edit-224be4d8: In repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts, the goal-host restart branch drains at SCHEDULE time then fires blind: it polls goal-host /health in_flight down to <=1, then schedules a transient systemd-run unit that executes a BARE 'systemctl restart' ~30s later with no re-check - any dispatch that arrives or starts in that window is killed, and when the 90s bounded wait\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: compose adds top-level function verifyGoalHostHealthy with zero readers, not exported and not wired — a write-only hollow addition; wire it, export it for a real consumer, or drop it\n- syntax_break: src/resolvers/vessel-mitosis-cutover.ts(2595,18): error TS1005: ',' expected. | src/resolvers/vessel-mitosis-cutover.ts(2595,42): error TS1005: ';' expected. | src/resolvers/vessel-mitosis-cutover.ts(\n- typecheck_dangling_reference: 51 |     expect(res.shape).not.toBe(\"structuredError\"); | 54 |     expect(rows.some((r) => r[\"id\"] === \"some-real-gap\")).toBe(true); | error: expect(received).toBe(expected) | (fail) substrateGap_writ\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-4ea0b4ea] investigate and decompose gap route-edit-224be4d8: In repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts, the goal-host restart branch drains at SCHEDULE time then fires blind: it polls goal-host /health in_flight down to <=1, then schedules a transient systemd-run unit that executes a BARE 'systemctl restart' ~30s later with no re-check - any dispatch that arrives or starts in that window is killed, and when the 90s bounded wait\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: compose adds top-level function verifyGoalHostHealthy with zero readers, not exported and not wired — a write-only hollow addition; wire it, export it for a real consumer, or drop it\n- syntax_break: src/resolvers/vessel-mitosis-cutover.ts(2595,18): error TS1005: ',' expected. | src/resolvers/vessel-mitosis-cutover.ts(2595,42): error TS1005: ';' expected. | src/resolvers/vessel-mitosis-cutover.ts(\n- typecheck_dangling_reference: 51 |     expect(res.shape).not.toBe(\"structuredError\"); | 54 |     expect(rows.some((r) => r[\"id\"] === \"some-real-gap\")).toBe(true); | error: expect(received).toBe(expected) | (fail) substrateGap_writ\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-4ea0b4ea-narrowed",
+  "source_gap_source": "substrate_detected"
+}

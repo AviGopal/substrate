@@ -1,0 +1,1 @@
+Add TypeSafe's Jev as a decision provider for this substrate. The API key is already in the environment as TYPESAFE_API_KEY. Do not hardcode the endpoint, model name, request format, or

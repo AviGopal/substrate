@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-5ba5f764-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-5ba5f764] investigate and decompose gap route-edit-42265768: Change repos/stateful-ui-vessel/s",
+  "description": "[narrowed from route-edit-5ba5f764] investigate and decompose gap route-edit-42265768: Change repos/stateful-ui-vessel/src/index.ts so the uiPanel_write and uiQuestion_write branch of its /resolve handler stops destroying live panels. Three changes in this order, because the first is a precondition for the second. First, replace the nullish-coalescing field defaults with Object.hasOwn checks: each of title, body, kind, importance, asks and visibility must be taken from the pointer\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- wrong_location: adversarial refuters agreed 2/2 (conf 0.90, 0.90): The gap states that 'each of title, body, kind, importance, asks and visibility must be taken from the pointer'. However, lines 122-125 for 'body', '\n- wrong_location: The patch still uses default values ('Untitled', empty string, 'info', 'medium') when pointer fields are undefined, rather than strictly taking values from the pointer as required by the gap\n- wrong_location: The patch still uses default values when pointer fields are undefined, rather than strictly taking values from the pointer as required by the gap\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-5ba5f764] investigate and decompose gap route-edit-42265768: Change repos/stateful-ui-vessel/src/index.ts so the uiPanel_write and uiQuestion_write branch of its /resolve handler stops destroying live panels. Three changes in this order, because the first is a precondition for the second. First, replace the nullish-coalescing field defaults with Object.hasOwn checks: each of title, body, kind, importance, asks and visibility must be taken from the pointer\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- wrong_location: adversarial refuters agreed 2/2 (conf 0.90, 0.90): The gap states that 'each of title, body, kind, importance, asks and visibility must be taken from the pointer'. However, lines 122-125 for 'body', '\n- wrong_location: The patch still uses default values ('Untitled', empty string, 'info', 'medium') when pointer fields are undefined, rather than strictly taking values from the pointer as required by the gap\n- wrong_location: The patch still uses default values when pointer fields are undefined, rather than strictly taking values from the pointer as required by the gap\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-5ba5f764-narrowed",
+  "source_gap_source": "substrate_detected"
+}

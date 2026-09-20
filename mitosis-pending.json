@@ -1,0 +1,17 @@
+{
+  "vessel_name": "discovery-vessel",
+  "base_version_id": "v1",
+  "mitosis_version_id": "mitosis-2026-09-20T13-55-45-714Z",
+  "mitosis_root": "/vessels/discovery-vessel-mitosis-2026-09-20T13-55-45-714Z",
+  "base_sha": "f765bc215dd4",
+  "staged_at": "2026-09-20T13:56:34.172Z",
+  "authored_by": "patch_with_tools",
+  "gap_id": "pwt-discovery-vessel-index.ts-b919683c",
+  "proposal": "mitosis-2026-09-20T13-55-45-714Z",
+  "target_file": "repos/discovery-vessel/src/index.ts",
+  "staged_files": [
+    "src/index.ts"
+  ],
+  "plan_turns": 12,
+  "final_summary": "verified-green: code_replace_lines applied and typecheck clean (auto-done at turn 10)"
+}

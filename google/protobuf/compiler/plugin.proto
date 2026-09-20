@@ -1,0 +1,10 @@
+syntax = "proto2";
+
+package google.protobuf.compiler;
+
+import "google/protobuf/descriptor.proto";
+
+message CodeGeneratorResponse {
+  reserved 1000 to max;
+}
+

@@ -1,0 +1,19 @@
+{
+  "id": "memorynote-write-stores-the-rendered-instruction-envelope-instead-of-the-content-value-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "correctness",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from memorynote-write-stores-the-rendered-instruction-envelope-instead-of-the-content-value] A terminal memory",
+  "description": "[narrowed from memorynote-write-stores-the-rendered-instruction-envelope-instead-of-the-content-value] A terminal memoryNote_write persists the RENDERED INSTRUCTION as the note body instead of the content value, so a correct answer is stored in a form that fails every byte-equality check. Measured 2026-09-20 with three deterministic probes dispatched back to back. Each note was created within ~30s at the correct title, and each contained the CORRECT arithmetic, wrapped: priorprobe-p1 body = 'memoryNote_write: {\\n  \"title\": \"priorprobe-p1\",\\n  \"content\": 106481\\n}' where the goal asked for 233*457=106481. Same shape for p2 (71219, goal 311*229) and p3 (91337, goal 149*613). Capability is 3/3; the artifact is 0/3. goal-host's own transform-oracle (index.ts:3575) byte-checks a named note with nb.trim() === dtExpected and therefore CANNOT pass any of these, and the standing trend expectation uses the same comparison, so this defect alone pins the deterministic battery at 0/3 regardless of reach.",
+  "goal_text": "[narrowed from memorynote-write-stores-the-rendered-instruction-envelope-instead-of-the-content-value] A terminal memoryNote_write persists the RENDERED INSTRUCTION as the note body instead of the content value, so a correct answer is stored in a form that fails every byte-equality check. Measured 2026-09-20 with three deterministic probes dispatched back to back. Each note was created within ~30s at the correct title, and each contained the CORRECT arithmetic, wrapped: priorprobe-p1 body = 'memoryNote_write: {\\n  \"title\": \"priorprobe-p1\",\\n  \"content\": 106481\\n}' where the goal asked for 233*457=106481. Same shape for p2 (71219, goal 311*229) and p3 (91337, goal 149*613). Capability is 3/3; the artifact is 0/3. goal-host's own transform-oracle (index.ts:3575) byte-checks a named note with nb.trim() === dtExpected and therefore CANNOT pass any of these, and the standing trend expectation uses the same comparison, so this defect alone pins the deterministic battery at 0/3 regardless of reach.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "memorynote-write-stores-the-rendered-instruction-envelope-instead-of-the-content-value-narrowed",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,1 +1,1 @@
-Hello, learning loop selftest!
+This is a test file for the learning loop selftest.

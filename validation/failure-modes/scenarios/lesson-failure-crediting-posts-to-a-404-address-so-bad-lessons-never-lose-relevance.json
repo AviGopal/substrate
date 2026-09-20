@@ -1,0 +1,19 @@
+{
+  "id": "lesson-failure-crediting-posts-to-a-404-address-so-bad-lessons-never-lose-relevance",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "learning",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "feature-compose.ts appendComposeLesson's failure-recording branch (around :3124-3127) POSTs {type:conceptSearch, source_",
+  "description": "feature-compose.ts appendComposeLesson's failure-recording branch (around :3124-3127) POSTs {type:conceptSearch, source_type:compose_lesson, query:cls} to ${CONCEPT_DB_ENDPOINT}/impulses/resolve with X-Api-Key - and concept-db serves no such route: measured 2026-09-20, HTTP 404 body {\"error\":\"Not found\",\"path\":\"/impulses/resolve\"} (48 bytes) for BOTH a known-present class (typecheck_dangling_reference) and a fresh one. The correct routes are /concepts/search (GET) or /v2/impulses/resolve with an {impulse:{pointer:{...}}} envelope, both verified returning results for the same query. Consequence: the loop that records which lessons were loaded when a compose subsequently FAILED never executes, so lesson relevance/success counters never receive negative signal - a misleading lesson stays ranked forever. This is the identical wrong-hostname-silent-mirror class the long comment at :3224 documents fixing for the MINT path; the failure-credit sibling was left on the dead address. Falsifier: after the fix, a compose failure with lessons loaded must produce a concept usage/failure record (observable via concept_usage_stats or the concept row's metrics changing).",
+  "goal_text": "feature-compose.ts appendComposeLesson's failure-recording branch (around :3124-3127) POSTs {type:conceptSearch, source_type:compose_lesson, query:cls} to ${CONCEPT_DB_ENDPOINT}/impulses/resolve with X-Api-Key - and concept-db serves no such route: measured 2026-09-20, HTTP 404 body {\"error\":\"Not found\",\"path\":\"/impulses/resolve\"} (48 bytes) for BOTH a known-present class (typecheck_dangling_reference) and a fresh one. The correct routes are /concepts/search (GET) or /v2/impulses/resolve with an {impulse:{pointer:{...}}} envelope, both verified returning results for the same query. Consequence: the loop that records which lessons were loaded when a compose subsequently FAILED never executes, so lesson relevance/success counters never receive negative signal - a misleading lesson stays ranked forever. This is the identical wrong-hostname-silent-mirror class the long comment at :3224 documents fixing for the MINT path; the failure-credit sibling was left on the dead address. Falsifier: after the fix, a compose failure with lessons loaded must produce a concept usage/failure record (observable via concept_usage_stats or the concept row's metrics changing).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "lesson-failure-crediting-posts-to-a-404-address-so-bad-lessons-never-lose-relevance",
+  "source_gap_source": "substrate_detected"
+}

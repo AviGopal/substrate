@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-24505ab0-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-24505ab0] investigate and decompose gap route-edit-266c3a54: repos/discovery-vessel/src/index.",
+  "description": "[narrowed from route-edit-24505ab0] investigate and decompose gap route-edit-266c3a54: repos/discovery-vessel/src/index.ts forwardToPeers (:62-96) discards every per-peer outcome: `if (!res.ok) return` (:84) destroys the HTTP status and `catch { }` (:94) destroys the error class, so a misconfigured or unreachable peer produces a response BYTE-IDENTICAL to no peers configured. The union merge (:272-297, predicate :284-291) additionally collapses three distinct drop causes\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds proper error logging for both HTTP failure responses and unreachable peers, addressing the original issue where these cases were silently discarded.\n- semantic_reject: adversarial refuters agreed 2/2 (conf 0.90, 0.90): The patch adds metrics for tracking failures but still destroys the HTTP status and error class by returning early (line 84) and catching without ret\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-24505ab0] investigate and decompose gap route-edit-266c3a54: repos/discovery-vessel/src/index.ts forwardToPeers (:62-96) discards every per-peer outcome: `if (!res.ok) return` (:84) destroys the HTTP status and `catch { }` (:94) destroys the error class, so a misconfigured or unreachable peer produces a response BYTE-IDENTICAL to no peers configured. The union merge (:272-297, predicate :284-291) additionally collapses three distinct drop causes\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds proper error logging for both HTTP failure responses and unreachable peers, addressing the original issue where these cases were silently discarded.\n- semantic_reject: adversarial refuters agreed 2/2 (conf 0.90, 0.90): The patch adds metrics for tracking failures but still destroys the HTTP status and error class by returning early (line 84) and catching without ret\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-24505ab0-narrowed",
+  "source_gap_source": "substrate_detected"
+}

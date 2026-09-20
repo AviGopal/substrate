@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-99618334",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-d816e6c8: repos/discovery-vessel/src/index.ts forwardToPeers (:62-96) discards ",
+  "description": "investigate and decompose gap route-edit-d816e6c8: repos/discovery-vessel/src/index.ts forwardToPeers (:62-96) discards every per-peer outcome: `if (!res.ok) return` (:84) destroys the HTTP status and `catch { }` (:94) destroys the error class, so a misconfigured or unreachable peer produces a response BYTE-IDENTICAL to no peers configured. The union merge (:272-297, predicate :284-291) additionally collapses three distinct drop causes",
+  "goal_text": "investigate and decompose gap route-edit-d816e6c8: repos/discovery-vessel/src/index.ts forwardToPeers (:62-96) discards every per-peer outcome: `if (!res.ok) return` (:84) destroys the HTTP status and `catch { }` (:94) destroys the error class, so a misconfigured or unreachable peer produces a response BYTE-IDENTICAL to no peers configured. The union merge (:272-297, predicate :284-291) additionally collapses three distinct drop causes",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-99618334",
+  "source_gap_source": "substrate_detected"
+}

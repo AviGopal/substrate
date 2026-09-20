@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-d8ce5ca8-verify_failed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap route-edit-d8ce5ca8 repeated already-recorded failure class verify_failed: src/index.ts(290,28): error T",
+  "description": "compose for gap route-edit-d8ce5ca8 repeated already-recorded failure class verify_failed: src/index.ts(290,28): error TS2339: Property 'libp2p_multiaddr' does not exist on type 'Record<string, unknown> | { status: number; error: string; }'.",
+  "goal_text": "compose for gap route-edit-d8ce5ca8 repeated already-recorded failure class verify_failed: src/index.ts(290,28): error TS2339: Property 'libp2p_multiaddr' does not exist on type 'Record<string, unknown> | { status: number; error: string; }'.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-d8ce5ca8-verify_failed",
+  "source_gap_source": "substrate_detected"
+}

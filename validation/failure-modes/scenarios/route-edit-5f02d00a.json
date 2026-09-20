@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-5f02d00a",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Fix the vessel routing in repos/goal-host-vessel/src/index.ts. In the routeFor helper, the final local-vessel branch cal",
+  "description": "Fix the vessel routing in repos/goal-host-vessel/src/index.ts. In the routeFor helper, the final local-vessel branch calls asResolvePath on v.resolve_endpoint, which reduces an absolute URL to just its pathname, and then combines it with v.endpoint — so a vessel advertising a working absolute resolve_endpoint gets called at v.endpoint instead, which may be an unreachable host port. Change that final branch so that when v.resolve_endpoint is an absolute http:// or https:// URL, the route uses that URL's own origin as endpoint and its pathname plus search as resolvePath, instead of falling back to v.endpoint. Keep the existing behaviour unchanged when resolve_endpoint is relative or absent.",
+  "goal_text": "Fix the vessel routing in repos/goal-host-vessel/src/index.ts. In the routeFor helper, the final local-vessel branch calls asResolvePath on v.resolve_endpoint, which reduces an absolute URL to just its pathname, and then combines it with v.endpoint — so a vessel advertising a working absolute resolve_endpoint gets called at v.endpoint instead, which may be an unreachable host port. Change that final branch so that when v.resolve_endpoint is an absolute http:// or https:// URL, the route uses that URL's own origin as endpoint and its pathname plus search as resolvePath, instead of falling back to v.endpoint. Keep the existing behaviour unchanged when resolve_endpoint is relative or absent.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-5f02d00a",
+  "source_gap_source": "substrate_detected"
+}

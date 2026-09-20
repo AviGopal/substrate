@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-c3eddf54",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-ff275548: A goal naming no file was captured by the EARLY edit-intent detector ",
+  "description": "investigate and decompose gap route-edit-ff275548: A goal naming no file was captured by the EARLY edit-intent detector and routed to feature_compose against a file the goal never mentioned.",
+  "goal_text": "investigate and decompose gap route-edit-ff275548: A goal naming no file was captured by the EARLY edit-intent detector and routed to feature_compose against a file the goal never mentioned.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-c3eddf54",
+  "source_gap_source": "substrate_detected"
+}

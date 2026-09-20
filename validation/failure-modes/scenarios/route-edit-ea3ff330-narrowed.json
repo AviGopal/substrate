@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-ea3ff330-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-ea3ff330] investigate and decompose gap route-edit-60305968: A goal naming no file was capture",
+  "description": "[narrowed from route-edit-ea3ff330] investigate and decompose gap route-edit-60305968: A goal naming no file was captured by the EARLY edit-intent detector and routed to feature_compose against a file the goal never mentioned.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds debugging information to a `verifyWritePersisted` function, but does not modify the logic that incorrectly routes goals based on the 'EARLY edit-intent detector'.\n- semantic_reject: The patch modifies the walk termination message but doesn't change the actual EARLY edit-intent detection routing logic\n- semantic_reject: The patch modifies walk termination message formatting but doesn't change the EARLY edit-intent detection routing logic\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-ea3ff330] investigate and decompose gap route-edit-60305968: A goal naming no file was captured by the EARLY edit-intent detector and routed to feature_compose against a file the goal never mentioned.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds debugging information to a `verifyWritePersisted` function, but does not modify the logic that incorrectly routes goals based on the 'EARLY edit-intent detector'.\n- semantic_reject: The patch modifies the walk termination message but doesn't change the actual EARLY edit-intent detection routing logic\n- semantic_reject: The patch modifies walk termination message formatting but doesn't change the EARLY edit-intent detection routing logic\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-ea3ff330-narrowed",
+  "source_gap_source": "substrate_detected"
+}

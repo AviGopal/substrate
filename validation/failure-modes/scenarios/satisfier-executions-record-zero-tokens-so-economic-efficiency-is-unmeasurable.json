@@ -1,0 +1,19 @@
+{
+  "id": "satisfier-executions-record-zero-tokens-so-economic-efficiency-is-unmeasurable",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "measurement",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "tokens_in and tokens_out are 0 on satisfier and walk execution rows, so the cost of reaching a goal cannot be computed f",
+  "description": "tokens_in and tokens_out are 0 on satisfier and walk execution rows, so the cost of reaching a goal cannot be computed from traces, and no claim about the system becoming MORE ECONOMICALLY EFFICIENT over time can be verified or falsified. Verified 2026-09-20 on fresh rows (e.g. execution exec_5y1hp1de and the universal-tool-fallback rows carry tokens_in: 0, tokens_out: 0 while their tasks demonstrably ran LLM calls); the 2026-09-18 crystallization measurement already hit this and had to meter by counting journal lines instead, which does not survive log rotation and is invisible to any in-substrate consumer. cost_usd is likewise 0f. Without a cost denominator, reuse-vs-rederive decisions, arm cost posteriors (the boredom cost model V30 reads predicted-vs-validated cost), and any acceleration measurement are all starved of their input.",
+  "goal_text": "tokens_in and tokens_out are 0 on satisfier and walk execution rows, so the cost of reaching a goal cannot be computed from traces, and no claim about the system becoming MORE ECONOMICALLY EFFICIENT over time can be verified or falsified. Verified 2026-09-20 on fresh rows (e.g. execution exec_5y1hp1de and the universal-tool-fallback rows carry tokens_in: 0, tokens_out: 0 while their tasks demonstrably ran LLM calls); the 2026-09-18 crystallization measurement already hit this and had to meter by counting journal lines instead, which does not survive log rotation and is invisible to any in-substrate consumer. cost_usd is likewise 0f. Without a cost denominator, reuse-vs-rederive decisions, arm cost posteriors (the boredom cost model V30 reads predicted-vs-validated cost), and any acceleration measurement are all starved of their input.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "satisfier-executions-record-zero-tokens-so-economic-efficiency-is-unmeasurable",
+  "source_gap_source": "substrate_detected"
+}

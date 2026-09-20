@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-85ca2518",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/activity-api/src/models/schemas.ts to satisfy the following request. The relevant code is in the region \"dive",
+  "description": "Edit repos/activity-api/src/models/schemas.ts to satisfy the following request. The relevant code is in the region \"divergence\". If that file is the wrong target, say so rather than editing it.\n\nClose substrate gap the-super-repo-divergence-path-lacks-the-self-heal-its-vessel-clone-sibling-already-has: The repair for the stranded-cutover divergence ALREADY EXISTS in scripts/substrate/substrate-pull-sync.sh, at the wrong call site. Edit scripts/substrate/substrate-pull-sync.sh.",
+  "goal_text": "Edit repos/activity-api/src/models/schemas.ts to satisfy the following request. The relevant code is in the region \"divergence\". If that file is the wrong target, say so rather than editing it.\n\nClose substrate gap the-super-repo-divergence-path-lacks-the-self-heal-its-vessel-clone-sibling-already-has: The repair for the stranded-cutover divergence ALREADY EXISTS in scripts/substrate/substrate-pull-sync.sh, at the wrong call site. Edit scripts/substrate/substrate-pull-sync.sh.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-85ca2518",
+  "source_gap_source": "substrate_detected"
+}

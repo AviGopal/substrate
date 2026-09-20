@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-b86b2b14-verify_failed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap route-edit-b86b2b14 repeated already-recorded failure class verify_failed: src/resolvers/feature-compose",
+  "description": "compose for gap route-edit-b86b2b14 repeated already-recorded failure class verify_failed: src/resolvers/feature-compose.ts(28,10): error TS2305: Module '\"./substrate-gap.js\"' has no exported member 'investigateGapRoute'. | src/resolvers/fea",
+  "goal_text": "compose for gap route-edit-b86b2b14 repeated already-recorded failure class verify_failed: src/resolvers/feature-compose.ts(28,10): error TS2305: Module '\"./substrate-gap.js\"' has no exported member 'investigateGapRoute'. | src/resolvers/fea",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-b86b2b14-verify_failed",
+  "source_gap_source": "substrate_detected"
+}
