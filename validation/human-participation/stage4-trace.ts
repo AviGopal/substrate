@@ -63,11 +63,19 @@ const assignment = await resolveShape({
   type: "renderPolicy_write",
   policy: { presentation_version: "repertoire-v2-onepage", parent: "repertoire-v1", assigned_by: "operator:avi", reason: "stage-4 trace; v2 is the only deployed candidate — no experiment, no randomization" },
 });
-// The verdict is READ-BACK, never status 200. `renderPolicy_write` advances
-// `revision` unconditionally (store.ts:480) whatever it was handed, so a 200 plus
-// a bumped revision is exactly what made this link read HELD while recording
+// The verdict is READ-BACK, never a status code. `renderPolicy_write` USED to
+// advance `revision` unconditionally whatever it was handed, so a 200 plus a
+// bumped revision is exactly what made this link read HELD while recording
 // nothing. Match on the assignment's VALUES, not on field names, so this check
 // still passes whatever names the repair chooses.
+//
+// Since the durability/attribution/refusal repair landed, this same pointer is
+// REFUSED (422) instead: the handler still reads only top-level keys, and a write
+// that moves no field no longer advances the revision. The link is still MISSING
+// — the assignment is not recorded — but it now fails LOUDLY, which is the
+// difference the repair was for. `revisionBefore` is captured so the evidence can
+// state that the refusal left the revision alone rather than asserting it.
+const revisionBefore = (await resolveShape({ type: "renderPolicy" })).json?.body?.revision;
 const assignmentReadBack = await resolveShape({ type: "renderPolicy" });
 const assignmentState = JSON.stringify(assignmentReadBack.json?.body ?? {});
 const assignmentFields: Array<[string, string]> = [
@@ -79,9 +87,12 @@ const droppedFields = assignmentFields.filter(([, v]) => !assignmentState.includ
 record("presentation assignment", droppedFields.length === 0 ? "HELD" : "MISSING",
   droppedFields.length === 0
     ? `renderPolicy_write rev=${assignmentReadBack.json?.body?.revision}; assignment READ BACK intact via the renderPolicy read: ${assignmentState}`
-    : `renderPolicy_write returned ${assignment.status} and revision advanced to ${assignmentReadBack.json?.body?.revision}, but the assignment was NOT recorded: ${droppedFields.join(", ")} absent from the renderPolicy read-back. `
-      + `The handler (human-surface-vessel/src/routes/impulses.ts:369-403) reads only top-level keys tokenOverrides, formByShape, presentation ("onepage"|"stacked" only), maxPreviewChars, ledgerDefaultExpanded, note — a nested \`policy\` object is ignored entirely, and RenderPolicy (src/store.ts:395-404) has no field for presentation_version/parent/assigned_by/reason at all. `
-      + `Read-back: ${assignmentState}. Owned by Track B item B-5. This row flips to HELD only when a renderPolicy read returns these three values after this exact write pointer.`);
+    : `renderPolicy_write REFUSED this pointer with status ${assignment.status} (no longer a hollow 200), the revision stayed at ${assignmentReadBack.json?.body?.revision} `
+      + `(it was ${revisionBefore} before the attempt), and the assignment was NOT recorded: ${droppedFields.join(", ")} absent from the renderPolicy read-back. `
+      + `The refusal names what it could not read — accepted_keys=${JSON.stringify(assignment.json?.accepted_keys ?? null)} unread_keys=${JSON.stringify(assignment.json?.unread_keys ?? null)}. `
+      + `Two causes remain, and they are now different from each other: (1) the handler reads only TOP-LEVEL keys, so this nested \`policy\` object is refused rather than accepted — sending the same fields at top level is the working lane; `
+      + `(2) \`assignedBy\`/\`reason\` now EXIST on RenderPolicy and persist across a restart (src/store.ts, replayed from interactor-log/renderPolicy_write.jsonl), but \`presentation_version\`/\`parent\` do not, and \`presentation\` still enforces the "onepage"|"stacked" enum, so "repertoire-v2-onepage" cannot be expressed. `
+      + `Read-back: ${assignmentState}. Owned by Track B item B-5 (remaining scope: the per-scope presentation map — versioned variant id plus parent). This row flips to HELD only when a renderPolicy read returns these three values after this exact write pointer.`);
 
 // ── 3. Actual presentation (real browser) ────────────────────────────────────
 const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
