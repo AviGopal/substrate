@@ -169,6 +169,27 @@ done
 persisted_secret() {
   local _v=""
   [[ -f "$SECRETS_FILE" ]] && _v="$(grep -m1 "^$1=" "$SECRETS_FILE" | cut -d= -f2- || true)"
+  # Strip ONE matched pair of surrounding double quotes.
+  #
+  # `cut -d= -f2-` returns the stored bytes verbatim, quotes included, while
+  # every consumer below re-quotes when it renders the env file. A name stored
+  # as NAME="value" therefore reaches the vessel as `value""` — quote-doubled,
+  # deterministically, on every regeneration. Measured instance: the secrets
+  # store held PEER_DISCOVERY_ENDPOINTS="http://host:18100", the env file was
+  # rendered as ="" http://host:18100"" (no space), and the discovery process's
+  # /proc environ carried a trailing literal pair. `new URL()` throws on it, an
+  # empty catch swallowed the throw, and a configured peer became byte-identical
+  # to no peers configured — federation looked absent rather than misconfigured.
+  #
+  # Normalising on READ, not on write, is deliberate: it repairs stores that are
+  # ALREADY quoted without rewriting a live secrets file, and it fixes the class
+  # rather than the one name that happened to be noticed.
+  #
+  # Safe for the JSON-valued names: those are objects or arrays, so they do not
+  # both start and end with a quote. A value whose intended content is itself a
+  # quoted string literal would be changed by this, which is why exactly one
+  # pair is removed and never more.
+  if [[ ${#_v} -ge 2 && "$_v" == '"'*'"' ]]; then _v="${_v:1:${#_v}-2}"; fi
   # Attribute at the point of resolution: if this function is being consulted at
   # all, the caller's ${VAR:-…} found the environment empty.
   if [[ -n "$_v" ]]; then prov "$1" persisted; fi
