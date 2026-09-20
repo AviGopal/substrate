@@ -60,9 +60,14 @@ trace, and the v1→v2 causal prereg. Dated status; supersedes nothing timeless.
      Filed: `walk-satisfier-resolves-a-read-shape-by-issuing-a-defaulted-write-destroying-live-panel-content`.
      Panel restored afterward from the fixture.
   2. The walk again named the missing producer→consumer edge and **filed a
-     capability gap itself** ("no template produces [uiFeedback_write, uiFeedback,
-     shellResult]; capability gap filed by the walk") — the system generating its
-     own demand signal, which is what the program wanted.
+     capability gap itself — verified in the store, not taken from its own
+     report**: `gap-candidate-improvement` (source `substrate_detected`,
+     stamped 2026-09-20T05:25:51Z, inside the round-2 window) asks for a producer
+     of the shape `candidate_improvement`, which it inferred from the goal's
+     "author a candidate improvement". The system generating its own demand
+     signal is what the program wanted; that it chose a fresh shape name rather
+     than the existing ui vocabulary is itself stage-8 evidence (new-distinction
+     proposal, currently unexercised).
   The feedback plane could not label round 2 (no template recorded — known
   limitation for refusal/satisfier-only dispatches); the verdict lives in the gap.
 - **Cycle B outcome: supported rejection.** The current pathway cannot serve the
@@ -70,8 +75,9 @@ trace, and the v1→v2 causal prereg. Dated status; supersedes nothing timeless.
   stop condition, evidence-based: **no further S6 re-dispatches until the
   destructive-satisfier gap closes** — each dispatch risks clobbering live panels
   a person may be reading. Round 3's precondition is that gap's closure, and its
-  falsifier is this exact scenario: seed the panel, dispatch, and the panel body
-  must survive the walk.
+  falsifier is this exact scenario: **re-seed the panel from the fixture
+  immediately before dispatch** (the store copy must be assumed clobbered by any
+  intervening walk), dispatch, and the panel body must survive the walk.
 
 ## Stage-8 record
 
