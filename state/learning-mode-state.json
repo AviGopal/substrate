@@ -1,7 +1,7 @@
 {
   "mode": "develop",
-  "driver": "frontier(10 necessary-but-unavailable; top=goalDispatchResult)",
+  "driver": "frontier(9 necessary-but-unavailable; top=sql_schema)",
   "pending_driver": "develop",
   "pending_count": 0,
-  "updated_at": "2026-09-20T18:47:41.887Z"
+  "updated_at": "2026-09-21T16:16:45.362Z"
 }

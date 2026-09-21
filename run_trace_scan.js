@@ -5,7 +5,7 @@ async function main() {
     type: 'trace_recurring_pattern_scan',
     lookbackHours: 24,
     minRecurrence: 3,
-    limit: 2000,
+    limit: 500,
     patternsDir: '/workspace/patterns',
     dispatch: false
   };

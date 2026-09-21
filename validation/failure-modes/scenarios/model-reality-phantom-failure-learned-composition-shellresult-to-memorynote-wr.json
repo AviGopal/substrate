@@ -1,0 +1,19 @@
+{
+  "id": "model-reality-phantom-failure-learned-composition-shellresult-to-memorynote-wr",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "forward_model_artifact",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Forward-model artifact: learned-composition-shellresult-to-memorynote-write-to-concept-wri recorded 0.0% success over 50",
+  "description": "Forward-model artifact: learned-composition-shellresult-to-memorynote-write-to-concept-wri recorded 0.0% success over 502 traces with ZERO real errors. Recording marks correct runs as failure, β-penalising the activity and detaching P(success|activity) from reality.",
+  "goal_text": "Forward-model artifact: learned-composition-shellresult-to-memorynote-write-to-concept-wri recorded 0.0% success over 502 traces with ZERO real errors. Recording marks correct runs as failure, β-penalising the activity and detaching P(success|activity) from reality.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": "outcomes_must_reflect_substantive_work",
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "model-reality-phantom-failure-learned-composition-shellresult-to-memorynote-wr",
+  "source_gap_source": "substrate_detected"
+}

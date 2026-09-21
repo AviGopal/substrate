@@ -1,0 +1,19 @@
+{
+  "id": "lost-reached-verdict-walk-satisfier-3-1789972960658",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "extraction_eligibility",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "A REACHED verdict was lost: reach-patch matched no row for execution walk-satisfier-3-1789972960658 (walk-complete), so ",
+  "description": "A REACHED verdict was lost: reach-patch matched no row for execution walk-satisfier-3-1789972960658 (walk-complete), so the execution stays ungraded and the ribosome cannot extract from it. Successes are lost on this path while failures persist, which biases the learner pessimistic.",
+  "goal_text": "A REACHED verdict was lost: reach-patch matched no row for execution walk-satisfier-3-1789972960658 (walk-complete), so the execution stays ungraded and the ribosome cannot extract from it. Successes are lost on this path while failures persist, which biases the learner pessimistic.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "lost-reached-verdict-walk-satisfier-3-1789972960658",
+  "source_gap_source": "substrate_detected"
+}

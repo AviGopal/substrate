@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-acfe2254-semantic_reject",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap route-edit-acfe2254 repeated already-recorded failure class semantic_reject: The patch only hardcodes po",
+  "description": "compose for gap route-edit-acfe2254 repeated already-recorded failure class semantic_reject: The patch only hardcodes port replacements without addressing the root issue of dynamic port discovery",
+  "goal_text": "compose for gap route-edit-acfe2254 repeated already-recorded failure class semantic_reject: The patch only hardcodes port replacements without addressing the root issue of dynamic port discovery",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-acfe2254-semantic_reject",
+  "source_gap_source": "substrate_detected"
+}

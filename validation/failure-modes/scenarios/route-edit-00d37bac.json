@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-00d37bac",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-8fc9545c: REOPENED 2026-09-20T18:4xZ with recurrence evidence - the closure did",
+  "description": "investigate and decompose gap route-edit-8fc9545c: REOPENED 2026-09-20T18:4xZ with recurrence evidence - the closure did not hold (solution durability failure). Measured: discovery resolve for shape shellResult returns vesselId local-tools-vessel with endpoint http://127.0.0.1:28905 and resolve_endpoint http://localhost:28905/resolve; ss -tlnp shows NOTHING listens on 28905; curl 28905/health -> 000; the vessel actually serves on 8230 (health",
+  "goal_text": "investigate and decompose gap route-edit-8fc9545c: REOPENED 2026-09-20T18:4xZ with recurrence evidence - the closure did not hold (solution durability failure). Measured: discovery resolve for shape shellResult returns vesselId local-tools-vessel with endpoint http://127.0.0.1:28905 and resolve_endpoint http://localhost:28905/resolve; ss -tlnp shows NOTHING listens on 28905; curl 28905/health -> 000; the vessel actually serves on 8230 (health",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-00d37bac",
+  "source_gap_source": "substrate_detected"
+}

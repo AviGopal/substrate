@@ -1,6 +1,6 @@
 {
   "projectThreadScanReport": {
-    "execute": false,
+    "execute": true,
     "items": [
       {
         "project": "New To Do Test Project",
@@ -15,14 +15,6 @@
         "tasks": {
           "open": 0,
           "closed": 0,
-          "dispatched": 0
-        }
-      },
-      {
-        "project": "My Project",
-        "tasks": {
-          "open": 0,
-          "closed": 1,
           "dispatched": 0
         }
       },
@@ -103,14 +95,6 @@
         "tasks": {
           "open": 0,
           "closed": 1,
-          "dispatched": 0
-        }
-      },
-      {
-        "project": "My Project",
-        "tasks": {
-          "open": 2,
-          "closed": 0,
           "dispatched": 0
         }
       },
@@ -311,6 +295,22 @@
         "tasks": {
           "open": 0,
           "closed": 0,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My Project",
+        "tasks": {
+          "open": 0,
+          "closed": 2,
+          "dispatched": 0
+        }
+      },
+      {
+        "project": "My Project",
+        "tasks": {
+          "open": 0,
+          "closed": 1,
           "dispatched": 0
         }
       },

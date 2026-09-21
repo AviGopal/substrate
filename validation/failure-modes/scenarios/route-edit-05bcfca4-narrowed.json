@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-05bcfca4-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-05bcfca4] investigate and decompose gap route-edit-7deccd64: REOPENED 2026-09-20T18:4xZ with r",
+  "description": "[narrowed from route-edit-05bcfca4] investigate and decompose gap route-edit-7deccd64: REOPENED 2026-09-20T18:4xZ with recurrence evidence - the closure did not hold (solution durability failure). Measured: discovery resolve for shape shellResult returns vesselId local-tools-vessel with endpoint http://127.0.0.1:28905 and resolve_endpoint http://localhost:28905/resolve; ss -tlnp shows NOTHING listens on 28905; curl 28905/health -> 000; the vessel actually serves on 8230 (health\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-muazx9yi-90wnjn/discovery-vessel/src/registry.ts\"}\n- syntax_break: src/registry.ts(330,20): error TS1005: ',' expected. | src/registry.ts(330,38): error TS1109: Expression expected. | src/registry.ts(330,66): error TS1011: An element access expression should take an \n- syntax_break: src/registry.ts(330,20): error TS1005: ',' expected. | src/registry.ts(330,38): error TS1109: Expression expected. | src/registry.ts(330,66): error TS1011: An element access expression should take an \n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-05bcfca4] investigate and decompose gap route-edit-7deccd64: REOPENED 2026-09-20T18:4xZ with recurrence evidence - the closure did not hold (solution durability failure). Measured: discovery resolve for shape shellResult returns vesselId local-tools-vessel with endpoint http://127.0.0.1:28905 and resolve_endpoint http://localhost:28905/resolve; ss -tlnp shows NOTHING listens on 28905; curl 28905/health -> 000; the vessel actually serves on 8230 (health\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-muazx9yi-90wnjn/discovery-vessel/src/registry.ts\"}\n- syntax_break: src/registry.ts(330,20): error TS1005: ',' expected. | src/registry.ts(330,38): error TS1109: Expression expected. | src/registry.ts(330,66): error TS1011: An element access expression should take an \n- syntax_break: src/registry.ts(330,20): error TS1005: ',' expected. | src/registry.ts(330,38): error TS1109: Expression expected. | src/registry.ts(330,66): error TS1011: An element access expression should take an \n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-05bcfca4-narrowed",
+  "source_gap_source": "substrate_detected"
+}

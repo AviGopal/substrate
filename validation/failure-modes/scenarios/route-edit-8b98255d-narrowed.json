@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-8b98255d-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-8b98255d] investigate and decompose gap route-edit-d68e22a8: feature-compose.ts appendComposeL",
+  "description": "[narrowed from route-edit-8b98255d] investigate and decompose gap route-edit-d68e22a8: feature-compose.ts appendComposeLesson's failure-recording branch (around :3124-3127) POSTs {type:conceptSearch, source_type:compose_lesson, query:cls} to ${CONCEPT_DB_ENDPOINT}/impulses/resolve with X-Api-Key - and concept-db serves no such route: measured 2026-09-20, HTTP 404 body {\"error\":\"Not found\",\"path\":\"/impulses/resolve\"} (48 bytes) for BOTH a known-present class\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 3125-3130 of 6655, VERBATIM:\\n3125:             method: 'POST',\\n3126:             headers: { 'Content-Type': 'application/json',\n- semantic_reject: The patch only re-formats an existing line of code; it does not change the URL, method, or body of the fetch request that causes the 404.\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 188-193 of 6657, VERBATIM:\\n188:       Authorization: `ApiKey ${METABOB_API_KEY}`,\\n189:     },\\n190:     body: JSON.stringify({\\\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-8b98255d] investigate and decompose gap route-edit-d68e22a8: feature-compose.ts appendComposeLesson's failure-recording branch (around :3124-3127) POSTs {type:conceptSearch, source_type:compose_lesson, query:cls} to ${CONCEPT_DB_ENDPOINT}/impulses/resolve with X-Api-Key - and concept-db serves no such route: measured 2026-09-20, HTTP 404 body {\"error\":\"Not found\",\"path\":\"/impulses/resolve\"} (48 bytes) for BOTH a known-present class\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 3125-3130 of 6655, VERBATIM:\\n3125:             method: 'POST',\\n3126:             headers: { 'Content-Type': 'application/json',\n- semantic_reject: The patch only re-formats an existing line of code; it does not change the URL, method, or body of the fetch request that causes the 404.\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 188-193 of 6657, VERBATIM:\\n188:       Authorization: `ApiKey ${METABOB_API_KEY}`,\\n189:     },\\n190:     body: JSON.stringify({\\\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-8b98255d-narrowed",
+  "source_gap_source": "substrate_detected"
+}

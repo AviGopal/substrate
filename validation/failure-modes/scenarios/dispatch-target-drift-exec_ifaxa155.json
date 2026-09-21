@@ -1,0 +1,19 @@
+{
+  "id": "dispatch-target-drift-exec_ifaxa155",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "trace_quality",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Dispatch-target-drift on exec exec_ifaxa155: caller requested 'activity:⟨learned-composition-memorynote-write-to-shell⟩'",
+  "description": "Dispatch-target-drift on exec exec_ifaxa155: caller requested 'activity:⟨learned-composition-memorynote-write-to-shell⟩' but execution recorded selected template 'learned-composition-memorynote-write-to-shell'. The target_template_id parameter is decorative on this dispatch path — the caller's intent was silently overridden.",
+  "goal_text": "Dispatch-target-drift on exec exec_ifaxa155: caller requested 'activity:⟨learned-composition-memorynote-write-to-shell⟩' but execution recorded selected template 'learned-composition-memorynote-write-to-shell'. The target_template_id parameter is decorative on this dispatch path — the caller's intent was silently overridden.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "dispatch-target-drift-exec_ifaxa155",
+  "source_gap_source": "substrate_detected"
+}

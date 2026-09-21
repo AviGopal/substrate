@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-41cc271d",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap patch-with-tools-writes-the-live-runtime-copy-unleased-racing-operators-and-cutovers: patc",
+  "description": "investigate and decompose gap patch-with-tools-writes-the-live-runtime-copy-unleased-racing-operators-and-cutovers: patch_with_tools edits /vessels/<vessel>/src/** - the LIVE runtime copy - directly and without any lease or compare-and-swap, so it races every other writer of that path: operator bypass mirrors, cutover step-9 mirrors, and pull-sync. Measured collision 2026-09-20: at 22:47:33 an operator bypass wrote the fire-time-quiesce fix to the development-vessel clone (commit 0c1540e) and cp-mirrored it to",
+  "goal_text": "investigate and decompose gap patch-with-tools-writes-the-live-runtime-copy-unleased-racing-operators-and-cutovers: patch_with_tools edits /vessels/<vessel>/src/** - the LIVE runtime copy - directly and without any lease or compare-and-swap, so it races every other writer of that path: operator bypass mirrors, cutover step-9 mirrors, and pull-sync. Measured collision 2026-09-20: at 22:47:33 an operator bypass wrote the fire-time-quiesce fix to the development-vessel clone (commit 0c1540e) and cp-mirrored it to",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-41cc271d",
+  "source_gap_source": "substrate_detected"
+}

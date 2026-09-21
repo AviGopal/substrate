@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-fd20a3f8-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-fd20a3f8] investigate and decompose gap route-edit-29264124: REOPENED 2026-09-20T18:4xZ with r",
+  "description": "[narrowed from route-edit-fd20a3f8] investigate and decompose gap route-edit-29264124: REOPENED 2026-09-20T18:4xZ with recurrence evidence - the closure did not hold (solution durability failure). Measured: discovery resolve for shape shellResult returns vesselId local-tools-vessel with endpoint http://127.0.0.1:28905 and resolve_endpoint http://localhost:28905/resolve; ss -tlnp shows NOTHING listens on 28905; curl 28905/health -> 000; the vessel actually serves on 8230 (health\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch only removes a field from the VesselRegistration type but does not address the core issue of the non-listening endpoint on port 28905.\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- semantic_reject: The patch adds port verification but does not fix the non-listening endpoint on port 28905 for 'local-tools-vessel', which is the core issue described in the gap.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-fd20a3f8] investigate and decompose gap route-edit-29264124: REOPENED 2026-09-20T18:4xZ with recurrence evidence - the closure did not hold (solution durability failure). Measured: discovery resolve for shape shellResult returns vesselId local-tools-vessel with endpoint http://127.0.0.1:28905 and resolve_endpoint http://localhost:28905/resolve; ss -tlnp shows NOTHING listens on 28905; curl 28905/health -> 000; the vessel actually serves on 8230 (health\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch only removes a field from the VesselRegistration type but does not address the core issue of the non-listening endpoint on port 28905.\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- semantic_reject: The patch adds port verification but does not fix the non-listening endpoint on port 28905 for 'local-tools-vessel', which is the core issue described in the gap.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-fd20a3f8-narrowed",
+  "source_gap_source": "substrate_detected"
+}

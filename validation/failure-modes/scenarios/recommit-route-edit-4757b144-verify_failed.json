@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-4757b144-verify_failed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap route-edit-4757b144 repeated already-recorded failure class verify_failed: src/registry.ts(204,13): erro",
+  "description": "compose for gap route-edit-4757b144 repeated already-recorded failure class verify_failed: src/registry.ts(204,13): error TS2344: Type '\"resolve_endpoint\" | \"resolve_request_format\" | \"auth_scheme\" | \"resolve_timeout_ms\" | \"auth_token_source",
+  "goal_text": "compose for gap route-edit-4757b144 repeated already-recorded failure class verify_failed: src/registry.ts(204,13): error TS2344: Type '\"resolve_endpoint\" | \"resolve_request_format\" | \"auth_scheme\" | \"resolve_timeout_ms\" | \"auth_token_source",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-4757b144-verify_failed",
+  "source_gap_source": "substrate_detected"
+}

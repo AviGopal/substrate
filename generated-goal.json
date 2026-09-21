@@ -1,0 +1,53 @@
+{
+  "generator_version": "25.G1",
+  "generated_at": "2026-09-21T13:43:02.830Z",
+  "generator_seed": "42",
+  "held_out": false,
+  "count": 1,
+  "novelty_mix": {
+    "seen": 0.4,
+    "rare": 0.4,
+    "novel": 0.2
+  },
+  "depth_mix": {
+    "depth0": 0.5,
+    "depth1": 0.3,
+    "depth2+": 0.2
+  },
+  "scenario_mix": {
+    "A": 0.6,
+    "B": 0.2,
+    "C∪D": 0.2
+  },
+  "shape_registry_snapshot_hash": "8400495d2520e8ebe5bd113b6fdfe503ada98c19bbda7741587d053b73ca6b08",
+  "adversarial_fraction": 0,
+  "adversarial_count": 0,
+  "cell_distribution": {
+    "seen|depth2+|B": 1
+  },
+  "goals": [
+    {
+      "id": "gen-42-001",
+      "cell_id": "seen|depth2+|B",
+      "shape_signature": {
+        "input": [
+          "file"
+        ],
+        "output": [
+          "fileEdit"
+        ]
+      },
+      "goal_text": "Using file as the seed, construct a fileEdit through a rarely-exercised multi-hop composition.",
+      "expected_output_shapes": [
+        "fileEdit"
+      ],
+      "seed_impulse_pool": [
+        "file:seed"
+      ],
+      "adversarial": false,
+      "oracle_label_id": null,
+      "generator_seed": "42",
+      "shape_registry_snapshot_hash": "8400495d2520e8ebe5bd113b6fdfe503ada98c19bbda7741587d053b73ca6b08"
+    }
+  ]
+}

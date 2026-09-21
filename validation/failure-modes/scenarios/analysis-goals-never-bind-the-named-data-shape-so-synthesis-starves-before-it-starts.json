@@ -1,0 +1,19 @@
+{
+  "id": "analysis-goals-never-bind-the-named-data-shape-so-synthesis-starves-before-it-starts",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "routing",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "A goal that asks for analysis OVER a named substrate store never gets that store's shape bound into the walk, so the LLM",
+  "description": "A goal that asks for analysis OVER a named substrate store never gets that store's shape bound into the walk, so the LLM step receives the question but not the data. Controlled pair, 2026-09-21: (1) dispatch c75c5fbc ('cluster the open gaps in the substrate gap store...') - walk selected llmcompletion-to-memorynote-write plus an irrelevant federation_probe, never resolved any gap shape, and the terminal write stored THE GOAL TEXT ITSELF as the report body (instruction-as-artifact); honestly graded reached:false. (2) dispatch 1f1acbc0 - identical ask but with the ONE missing fact supplied explicitly ('First resolve the substrateGap shape to read the currently open gaps') - the walk STILL never produced or consumed substrateGap (produced shapes: filePaths, llm_completion_result via learned-auto-bridge-source-code), wrote no note, failed with the recurring signature: execution_error - fetch() URL is invalid. Both verdicts were honest, so this is purely an information-binding defect: target/intermediate inference does not map a shape named verbatim in the goal text onto its live producer for READ shapes, the mirror image of the write-side inference defects already on file. Consequence: every analyze/cluster/audit-my-own-state goal is structurally unreachable regardless of model quality - the system cannot originate synthesis over its own stores because the walk starves the synthesizer of the data it names.",
+  "goal_text": "A goal that asks for analysis OVER a named substrate store never gets that store's shape bound into the walk, so the LLM step receives the question but not the data. Controlled pair, 2026-09-21: (1) dispatch c75c5fbc ('cluster the open gaps in the substrate gap store...') - walk selected llmcompletion-to-memorynote-write plus an irrelevant federation_probe, never resolved any gap shape, and the terminal write stored THE GOAL TEXT ITSELF as the report body (instruction-as-artifact); honestly graded reached:false. (2) dispatch 1f1acbc0 - identical ask but with the ONE missing fact supplied explicitly ('First resolve the substrateGap shape to read the currently open gaps') - the walk STILL never produced or consumed substrateGap (produced shapes: filePaths, llm_completion_result via learned-auto-bridge-source-code), wrote no note, failed with the recurring signature: execution_error - fetch() URL is invalid. Both verdicts were honest, so this is purely an information-binding defect: target/intermediate inference does not map a shape named verbatim in the goal text onto its live producer for READ shapes, the mirror image of the write-side inference defects already on file. Consequence: every analyze/cluster/audit-my-own-state goal is structurally unreachable regardless of model quality - the system cannot originate synthesis over its own stores because the walk starves the synthesizer of the data it names.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "analysis-goals-never-bind-the-named-data-shape-so-synthesis-starves-before-it-starts",
+  "source_gap_source": "substrate_detected"
+}

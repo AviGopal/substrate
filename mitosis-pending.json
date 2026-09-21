@@ -1,17 +1,17 @@
 {
   "vessel_name": "discovery-vessel",
   "base_version_id": "v1",
-  "mitosis_version_id": "mitosis-2026-09-20T13-55-45-714Z",
-  "mitosis_root": "/vessels/discovery-vessel-mitosis-2026-09-20T13-55-45-714Z",
-  "base_sha": "f765bc215dd4",
-  "staged_at": "2026-09-20T13:56:34.172Z",
+  "mitosis_version_id": "mitosis-2026-09-21T08-18-01-328Z",
+  "mitosis_root": "/vessels/discovery-vessel-mitosis-2026-09-21T08-18-01-328Z",
+  "base_sha": "bc9898c18a04",
+  "staged_at": "2026-09-21T08:18:24.306Z",
   "authored_by": "patch_with_tools",
-  "gap_id": "pwt-discovery-vessel-index.ts-b919683c",
-  "proposal": "mitosis-2026-09-20T13-55-45-714Z",
-  "target_file": "repos/discovery-vessel/src/index.ts",
+  "gap_id": "route-edit-3b44815c-narrowed",
+  "proposal": "route-edit-3b44815c-narrowed",
+  "target_file": "repos/discovery-vessel/src/registry.ts",
   "staged_files": [
-    "src/index.ts"
+    "src/registry.ts"
   ],
-  "plan_turns": 12,
-  "final_summary": "verified-green: code_replace_lines applied and typecheck clean (auto-done at turn 10)"
+  "plan_turns": 5,
+  "final_summary": "verified-green: fs_edit applied and typecheck clean (auto-done at turn 5)"
 }

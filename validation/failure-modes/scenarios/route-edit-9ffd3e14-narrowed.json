@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-9ffd3e14-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-9ffd3e14] investigate and decompose gap route-edit-3b44815c: REOPENED 2026-09-20T18:4xZ with r",
+  "description": "[narrowed from route-edit-9ffd3e14] investigate and decompose gap route-edit-3b44815c: REOPENED 2026-09-20T18:4xZ with recurrence evidence - the closure did not hold (solution durability failure). Measured: discovery resolve for shape shellResult returns vesselId local-tools-vessel with endpoint http://127.0.0.1:28905 and resolve_endpoint http://localhost:28905/resolve; ss -tlnp shows NOTHING listens on 28905; curl 28905/health -> 000; the vessel actually serves on 8230 (health\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- wrong_location: The patch correctly modifies the endpoint and resolve_endpoint for 'local-tools-vessel' to use port 8230 instead of 28905, which matches the actual serving port observed.\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 229-234 of 623, VERBATIM:\\n229:       // Normalize resolve contract at write time so every consumer sees a\\n230:       // populat\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 229-234 of 623, VERBATIM:\\n229:       // Normalize resolve contract at write time so every consumer sees a\\n230:       // populat\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-9ffd3e14] investigate and decompose gap route-edit-3b44815c: REOPENED 2026-09-20T18:4xZ with recurrence evidence - the closure did not hold (solution durability failure). Measured: discovery resolve for shape shellResult returns vesselId local-tools-vessel with endpoint http://127.0.0.1:28905 and resolve_endpoint http://localhost:28905/resolve; ss -tlnp shows NOTHING listens on 28905; curl 28905/health -> 000; the vessel actually serves on 8230 (health\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- wrong_location: The patch correctly modifies the endpoint and resolve_endpoint for 'local-tools-vessel' to use port 8230 instead of 28905, which matches the actual serving port observed.\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 229-234 of 623, VERBATIM:\\n229:       // Normalize resolve contract at write time so every consumer sees a\\n230:       // populat\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 229-234 of 623, VERBATIM:\\n229:       // Normalize resolve contract at write time so every consumer sees a\\n230:       // populat\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-9ffd3e14-narrowed",
+  "source_gap_source": "substrate_detected"
+}

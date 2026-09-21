@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-775c6dc2",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap analysis-goals-never-bind-the-named-data-shape-so-synthesis-starves-before-it-starts: A go",
+  "description": "investigate and decompose gap analysis-goals-never-bind-the-named-data-shape-so-synthesis-starves-before-it-starts: A goal asking for analysis over a named substrate store never gets that store's shape bound into the walk, so the LLM step receives the question but not the data (controlled pair c75c5fbc / 1f1acbc0; both honestly reached:false). FIX, single additive insertion in repos/goal-host-vessel/src/index.ts, immediately above the derivation-split if-block: scan the advertised vocabulary (union of",
+  "goal_text": "investigate and decompose gap analysis-goals-never-bind-the-named-data-shape-so-synthesis-starves-before-it-starts: A goal asking for analysis over a named substrate store never gets that store's shape bound into the walk, so the LLM step receives the question but not the data (controlled pair c75c5fbc / 1f1acbc0; both honestly reached:false). FIX, single additive insertion in repos/goal-host-vessel/src/index.ts, immediately above the derivation-split if-block: scan the advertised vocabulary (union of",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-775c6dc2",
+  "source_gap_source": "substrate_detected"
+}
