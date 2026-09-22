@@ -15,7 +15,15 @@ NAME="slaf-accept-$(date +%H%M%S)"
 NET="$NAME-net"
 LABEL=substrate-lifecycle-fix-accept
 CORE='surrealdb,valkey,discovery-vessel,identity-vessel,activity-api,identity-seeder,local-tools-vessel,goal-host-vessel,development-vessel,concept-db,journald-stdout-forwarder'
-FIXED_SQL_SRC="${FIXED_SQL_SRC:?path to a checkout of activity-api at/after the landed fixes (needs sql/schemas/023-shape-conditioned-scores.surql and sql/migrations/055-variant-tracking.surql)}"
+# NO_OVERLAY=1: the image already carries the fixed schemas (a post-fix
+# rebuild) — skip the docker cp overlays and additionally assert the
+# human-surface UI and relay bring-up work out-of-box.
+NO_OVERLAY="${NO_OVERLAY:-0}"
+# The UI check needs the vessel unmasked by the selection.
+[ "$NO_OVERLAY" = 1 ] && CORE="$CORE,human-surface-vessel"
+if [ "$NO_OVERLAY" != 1 ]; then
+  FIXED_SQL_SRC="${FIXED_SQL_SRC:?path to a checkout of activity-api at/after the landed fixes (needs sql/schemas/023-shape-conditioned-scores.surql and sql/migrations/055-variant-tracking.surql)}"
+fi
 
 cleanup() {
   docker rm -f "$NAME" >/dev/null 2>&1 || true
@@ -40,14 +48,16 @@ docker create --name "$NAME" --hostname "$NAME" --label "$LABEL" --network "$NET
   -e ENABLED_VESSELS="$CORE" \
   "$IMAGE" >/dev/null
 
-# Overlay the landed fixes over the baked schema copies BEFORE first boot, so
-# init-database applies the fixed files exactly as a post-fix image would.
-docker cp "$FIXED_SQL_SRC/sql/schemas/023-shape-conditioned-scores.surql" \
-  "$NAME:/vessels/activity-api/sql/schemas/023-shape-conditioned-scores.surql"
-docker cp "$FIXED_SQL_SRC/sql/migrations/055-variant-tracking.surql" \
-  "$NAME:/vessels/activity-api/sql/migrations/055-variant-tracking.surql"
-docker cp "$FIXED_SQL_SRC/sql/schemas/045-emergent-shape-stats.surql" \
-  "$NAME:/vessels/activity-api/sql/schemas/045-emergent-shape-stats.surql"
+if [ "$NO_OVERLAY" != 1 ]; then
+  # Overlay the landed fixes over the baked schema copies BEFORE first boot, so
+  # init-database applies the fixed files exactly as a post-fix image would.
+  docker cp "$FIXED_SQL_SRC/sql/schemas/023-shape-conditioned-scores.surql" \
+    "$NAME:/vessels/activity-api/sql/schemas/023-shape-conditioned-scores.surql"
+  docker cp "$FIXED_SQL_SRC/sql/migrations/055-variant-tracking.surql" \
+    "$NAME:/vessels/activity-api/sql/migrations/055-variant-tracking.surql"
+  docker cp "$FIXED_SQL_SRC/sql/schemas/045-emergent-shape-stats.surql" \
+    "$NAME:/vessels/activity-api/sql/schemas/045-emergent-shape-stats.surql"
+fi
 
 docker start "$NAME" >/dev/null
 echo "[accept] booted $NAME; waiting for activity-api"
@@ -112,3 +122,16 @@ case "$r2" in
   2*exec_accept_1*|2*acceptance-probe*) echo "[accept] PASS: trace persisted and listed on a fresh datastore";;
   *) echo "[accept] FAIL: listing does not contain the written trace"; exit 1;;
 esac
+
+if [ "$NO_OVERLAY" = 1 ]; then
+  echo "[accept] out-of-box extras (post-fix image)"
+  # Human surface: vendor unit + baked ui/dist must answer / with 200.
+  docker exec "$NAME" sh -c 'systemctl start human-surface-vessel 2>/dev/null; sleep 3; curl -sm 3 -o /dev/null -w "%{http_code}" http://127.0.0.1:8310/' | grep -q 200 \
+    && echo "[accept] PASS: human surface / -> 200 out-of-box" \
+    || { echo "[accept] FAIL: human surface / not 200"; exit 1; }
+  # Relay: manifest workdir must exist in the image (no hand repoint needed).
+  wd=$(docker exec "$NAME" sh -c 'jq -r ".vessels[] | select(.name==\"federation-relay\") | .workdir" /usr/local/share/substrate/vessels.manifest.json')
+  docker exec "$NAME" test -f "$wd/relay.ts" \
+    && echo "[accept] PASS: relay workdir exists in-image ($wd)" \
+    || { echo "[accept] FAIL: relay workdir absent ($wd)"; exit 1; }
+fi

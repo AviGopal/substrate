@@ -1,4 +1,13 @@
-# Lifecycle-audit fix campaign — running log
+# Lifecycle-audit fix campaign — CLOSED
+
+**Final verdict: all five material failures from the 2026-09-21 audit are
+closed at the audit's own verification layer.** A rebuilt image (from the
+bumped submodule pointers, commit 254bf8c9) passes the full acceptance
+**out-of-box, no overlays** (`no-overlay-acceptance-PASS.log`): fresh-volume
+cold boot → execution-trace POST 200 + listed; human surface `/` → 200;
+relay workdir present in-image. Recreate-membership gate PASS
+(`membership-acceptance-PASS.log`); receipt contract observed live.
+
 
 Working the five material failures from
 `container-lifecycle-audit-2026-09-21/REPORT.md` to completion: solve, validate,
@@ -106,7 +115,17 @@ stateful-ui-vessel is deliberately not repaired: it is the replaced vessel
   receipt (same receivedAt) on an identical repeat.
 - **Task 5**: relay workdir now the baked image path (verified present with
   materialized deps in the current image); spoke-federate join verdict gates on
-  activeReservations ≥ 1.
+  activeReservations ≥ 1. **Not exercised:** the reservation gate was validated
+  against the live transport's real /health payload shape and syntax-checked,
+  but has not been driven through an actual spoke join — real WAN/NAT joins
+  are in the audit's own remaining-acceptance list. The audit's material
+  failure here was the install path, which the post-rebuild out-of-box check
+  covers.
+- **Known conflation (gap-worthy, non-blocking):** the federation auto-enable
+  path calls `vessel-ctl install`, which now records into installed.json — a
+  spoke that later drops HUB_DISCOVERY_URL keeps getting the transport
+  reinstalled by the boot reconcile until uninstalled or DISABLED. Auto-enabled
+  and operator-installed membership are not yet distinguished.
 - Also repaired live: the container super-repo checkout had 12 stranded
   unpushed autonomous commits (one with an unparseable store.ts — a
   crash-loop trap for the human surface) wedging pull-sync for 16h; preserved
