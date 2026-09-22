@@ -162,3 +162,58 @@ reaches, not by one gold-standard trace.
 3. reached-command cache persists recipes from unverified reaches (cache poison).
 4. goal-host does not re-register goal_execution with discovery after a single-vessel
    SIGKILL/restart -> external dispatch broken until a full-substrate reseed.
+
+---
+
+# Failure memory — the cross-dispatch feedback edge (2026-09-22, evening)
+
+## Why the within-dispatch edge was not enough
+
+The operator's observation from the human surface was cross-dispatch: a goal retried
+minutes later starts from zero. Code read confirmed why. The success side persists
+twice (reached-command cache, goal_execution_paths) and replays on the next dispatch
+of the same goal. The failure side persisted only a de-identified class label: the
+reach-gate lesson deliberately strips the verdict reason so content dedup holds, and
+it is recalled by goal keywords into the shape chooser and command synthesizer only,
+never the report synthesizer. So the system recorded THAT a goal was hollow, never
+WHY, and a cached recipe the judge had rejected was still replayed (one hollow is
+strike 1 of 2). The path store does write reached:false rows, but without a reason.
+
+## The fix (goal-host 9e23455 + cf8fd87)
+
+Symmetric store: at dispatch finalization, beside the reached-command eviction,
+persist {goal_hash, class token, verdict reason, failed pick, produced shapes, attempt
+count} to /workspace/.goal-host-failure-memory.jsonl (append-only, load-on-boot,
+fail-open). At dispatch start, recall by exact hash then class token, feed the
+reasons into attempt 1 via priorVerdictFeedback with reached-command replay disabled
+for that attempt; the in-dispatch FEEDBACK-RETRY carries prior-dispatch reasons plus
+the attempt just graded. A verified reach supersedes (does not erase) the history so a
+goal that now reaches gets its reuse back. Deterministic verdicts outrank LLM-judged
+ones. Structural terminations (no producer, walklog-capped, environment faults) are
+not remembered.
+
+## Pre-registered A/B on fresh goal text (hash f0e0a5f0) — result
+
+- A: hollow; `failure-memory: REMEMBERED hash=f0e0a5f0` with the reason "fails to
+  produce the required family details" and the failed producer. Record on disk. PASS.
+- B: `FAILURE-RECALL — 1 prior hollow verdict(s) for goal_hash=f0e0a5f0 … fed into
+  attempt 1, reached-command replay disabled`. PASS.
+- B attempt 1 did NOT repeat A's defect (it produced a real family note) and went
+  hollow on a different one: the probe's own count-consistency trap ("miscounts
+  families"). B then hill-climbed but did not reach. The "fewer attempts to reach"
+  criterion is NOT met on this probe. The trap needs a deterministic count check, not a
+  prompt; a reason alone cannot make the model count correctly over 72KB.
+- Bonus, from the fleet's own traffic: hash a30f61f0 went hollow at 21:30:23,
+  FEEDBACK-RETRY fired, alpha-credited at 21:30:46 — the single-walk
+  hollow→feedback→green trace, now attributable because the retry line carries
+  goal_hash.
+- Defect found and fixed in the same run: structural "no template produces … capability
+  gap filed" terminations were being remembered (cf8fd87 filters them).
+
+## What is now true
+
+The write→persist→recall→feed loop exists and runs on every dispatch, so a goal's
+next dispatch knows why the last one failed and does not replay the rejected recipe.
+What remains for reach on count-shaped goals is a deterministic oracle for the count,
+and for the counterfeit class a judge that verifies member ids against the consumed
+source. Both are filed above as gaps.
