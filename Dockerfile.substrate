@@ -301,6 +301,11 @@ RUN cd /vessels/libp2p-federation-transport && bun install
 COPY repos/human-surface-vessel/package.json /vessels/human-surface-vessel/
 COPY repos/human-surface-vessel/src /vessels/human-surface-vessel/src
 COPY repos/human-surface-vessel/tsconfig*.json /vessels/human-surface-vessel/
+# The server resolves its bundle as <workdir>/ui/dist relative to src/index.ts
+# (UI_DIST in src/index.ts) and answers 503 ui_not_built when index.html is
+# absent. ui/dist is git-tracked (git is the delivery channel), so baking it is
+# a plain COPY — without it every fresh image serves /health 200 and / 503.
+COPY repos/human-surface-vessel/ui/dist /vessels/human-surface-vessel/ui/dist
 RUN cd /vessels/human-surface-vessel && bun install || true
 # bun links a file: dep as a symlink STUB (three symlinks, no src), so the baked
 # relay dir could never resolve @avigopal/libp2p-federation-transport at runtime —
