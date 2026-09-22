@@ -1,0 +1,36 @@
+{
+  "dispatch": {
+    "status": 202,
+    "data": {
+      "dispatchId": "dc079161-adaf-4635-b25e-21180e9b4909",
+      "status": "running"
+    }
+  },
+  "terminal": {
+    "status": 200,
+    "data": {
+      "dispatchId": "dc079161-adaf-4635-b25e-21180e9b4909",
+      "status": "completed",
+      "reached": false,
+      "goalReachReason": null,
+      "operator": null,
+      "trigger": "run-goal",
+      "goal": "Run the genuine edge probe in the isolated audit, terminal-outcome verification.",
+      "executionId": "exec_mjgvo9ft",
+      "selectedTemplateId": "genuine-edge-probe-orchestrator",
+      "completionShapes": null,
+      "humanGraded": false,
+      "humanReachNotes": null,
+      "walkLog": [
+        "[dispatch] execution_path=fresh_derivation attempt_count=1"
+      ],
+      "learning": {
+        "alphaBetaDelta": [],
+        "gapsFiled": [],
+        "goalPathRecorded": false,
+        "oracleLabelWritten": false
+      },
+      "answerBody": null
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "health": {
+    "status": 200,
+    "data": {
+      "status": "ok",
+      "vessel": "audit-fixture-vessel"
+    }
+  },
+  "resolve": {
+    "status": 200,
+    "data": {
+      "resolved": true,
+      "shape": "audit_fixture",
+      "body": {
+        "value": "isolated-manifest-v1",
+        "vessel": "audit-fixture-vessel"
+      }
+    }
+  },
+  "discovery": {
+    "status": 200,
+    "data": {
+      "content": {
+        "shape": "audit_fixture",
+        "vessels": [
+          {
+            "vesselId": "audit-fixture-vessel",
+            "vesselName": "audit-fixture-vessel",
+            "endpoint": "http://127.0.0.1:8399",
+            "public_endpoint": "http://127.0.0.1:18399",
+            "confidence": 1,
+            "lastSeen": "2026-09-22T10:47:05.500Z",
+            "resolve_endpoint": "http://127.0.0.1:8399/resolve",
+            "resolve_request_format": "pointer",
+            "auth_scheme": "none",
+            "auth_token_source": "caller_identity",
+            "auth_delegation_mode": "forward",
+            "distribution_policy": "stateless"
+          }
+        ],
+        "found": true
+      },
+      "metadata": {
+        "shape": "vesselCapability",
+        "resolvedAt": "2026-09-22T10:47:11.975Z",
+        "cacheStatus": "miss"
+      }
+    }
+  }
+}

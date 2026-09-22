@@ -1,0 +1,15 @@
+{
+  "at": "2026-09-22T10:46:11.552675+00:00",
+  "argv": [
+    "docker",
+    "compose",
+    "-f",
+    "/home/avi/documents/work/substrate/validation/reports/container-lifecycle-audit-rerun-2026-09-22/compose-audit.json",
+    "-p",
+    "sla-0922r-80a33e-compose",
+    "stop"
+  ],
+  "rc": 0,
+  "stdout": "sla-0922r-80a33e-compose-individual\n",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n\u001b[4m>>>> Executing external compose provider \"/usr/bin/podman-compose\". Please see podman-compose(1) for how to disable this message. <<<<\n\n\u001b[0m"
+}

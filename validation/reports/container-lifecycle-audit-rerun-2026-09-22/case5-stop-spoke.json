@@ -1,0 +1,13 @@
+{
+  "at": "2026-09-22T10:45:38.471525+00:00",
+  "argv": [
+    "docker",
+    "kill",
+    "--signal",
+    "KILL",
+    "sla-0922r-80a33e-new-org-spoke"
+  ],
+  "rc": 0,
+  "stdout": "sla-0922r-80a33e-new-org-spoke\n",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

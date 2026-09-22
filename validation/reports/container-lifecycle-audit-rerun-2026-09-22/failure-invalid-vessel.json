@@ -1,0 +1,41 @@
+{
+  "state": {
+    "at": "2026-09-22T10:50:11.407784+00:00",
+    "argv": [
+      "docker",
+      "inspect",
+      "--format",
+      "{{json .State}}",
+      "sla-0922r-80a33e-invalid-vessel"
+    ],
+    "rc": 0,
+    "stdout": "{\"OciVersion\":\"1.3.0\",\"Status\":\"exited\",\"Running\":false,\"Paused\":false,\"Restarting\":false,\"OOMKilled\":false,\"Dead\":false,\"Pid\":0,\"ExitCode\":1,\"Error\":\"\",\"StartedAt\":\"2026-09-22T03:50:08.387613462-07:00\",\"FinishedAt\":\"2026-09-22T03:50:08.547148619-07:00\",\"CheckpointedAt\":\"0001-01-01T00:00:00Z\",\"RestoredAt\":\"0001-01-01T00:00:00Z\"}\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  "logs": {
+    "at": "2026-09-22T10:50:11.464312+00:00",
+    "argv": [
+      "docker",
+      "logs",
+      "--tail",
+      "30",
+      "sla-0922r-80a33e-invalid-vessel"
+    ],
+    "rc": 0,
+    "stdout": "[substrate] generating /etc/substrate/env\n[gen-env] wrote /etc/substrate/env\n[gen-env] wrote per-model llm-resolver env files (opus, haiku, google)\n[gen-env] persisted secrets to /workspace/.substrate-secrets\n[gen-env] wrote provenance to /etc/substrate/env.provenance\n[substrate] seeded /workspace/substrate/fleet/vessels.inventory.json from image default\n[substrate] seeded /workspace/substrate/fleet/vessels.manifest.json from image default\n[substrate] applying vessel inventory selection\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n/usr/local/bin/gen-env: line 775: docker: command not found\n[apply-inventory] FATAL: ENABLED_VESSELS names no unit in the inventory: audit_does_not_exist \n[apply-inventory]   known vessels: activity-api analysis-vessel auto-describe-resolvers autonomy-metrics bootstrap-seeder boredom-vessel coherence-metric coherence-recover compose-teacher composition-edge-reconcile concept-db concept-db-seeder db-contention-check db-maintenance development-vessel development-vessel-seed discovery-vessel efficiency-failure-tick federation-relay federation-transport-vessel funnel-drain gap-compose git-push-setup goal-host-behavior goal-host-vessel human-surface-vessel identity-seeder identity-vessel ingest-docs journald-stdout-forwarder learning-liveness-probe light-dispatch-healthcheck light-dispatch-vessel llm-resolver-vessel local-tools-vessel m1-trainer memory-budget-check model-reality-audit novnc observe-orthogonal-refresh obsidian-collaborate obsidian-desktop obsidian-intake obsidian-learn obsidian-xorg operator-goal-generator relevance-sink-vessel ribosome-vessel runtime-drift self-development-trend self-operational-health self-recovery self-repair-operational spectral-gap stateful-ui-vessel substrate-active-scripts-seed substrate-pull-sync substrate-ready surgical-gap-scan surrealdb trace-store-health-check typecheck-scenario-gen valkey \n[substrate] FATAL: apply-inventory failed while a vessel selection was requested.\n[substrate] FATAL: PROFILE='' ENABLED_ROLES='' ENABLED_VESSELS='audit_does_not_exist' ENABLED_EXTRA_VESSELS='' DISABLED_VESSELS=''\n[substrate] FATAL: refusing to boot the full baked fleet in place of the requested subset. Fix the selection (see the error above) and restart.\n"
+  },
+  "identity": {
+    "at": "2026-09-22T10:50:11.583424+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-invalid-vessel",
+      "substrate-key",
+      "whoami"
+    ],
+    "rc": 255,
+    "stdout": "",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\nError: can only create exec sessions on running containers: container state improper\n"
+  }
+}

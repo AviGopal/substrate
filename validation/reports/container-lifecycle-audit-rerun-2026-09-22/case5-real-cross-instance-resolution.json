@@ -1,0 +1,21 @@
+{
+  "status": 200,
+  "data": {
+    "content": {
+      "shape": "activeDispatches",
+      "produced_by": "goal-host-vessel@federation-transport-vessel@spoke-b3a3166c",
+      "body": {
+        "dispatches": [],
+        "total": 0,
+        "hasMore": false,
+        "nextOffset": null,
+        "limit": 50,
+        "offset": 0
+      },
+      "note": "proxied to the owning vessel on the peer substrate over libp2p"
+    },
+    "metadata": {
+      "shape": "activeDispatches"
+    }
+  }
+}

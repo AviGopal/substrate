@@ -1,0 +1,8 @@
+{
+  "status": 409,
+  "data": {
+    "resolved": false,
+    "success": false,
+    "error": "The question changed since you loaded it. Review the current version before responding; your draft has not been applied."
+  }
+}

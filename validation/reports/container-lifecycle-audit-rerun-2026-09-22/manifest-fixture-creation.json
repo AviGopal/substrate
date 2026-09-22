@@ -1,0 +1,16 @@
+{
+  "at": "2026-09-22T10:47:04.465615+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "bun",
+    "-e",
+    "await Bun.write('/workspace/audit-vessel/index.ts',process.argv[1]);await Bun.write('/workspace/audit-vessel/package.json','{\"name\":\"audit-fixture\",\"version\":\"0.0.0\"}');const p='/workspace/substrate/fleet/vessels.manifest.json';const d=await Bun.file(p).json();d.vessels=d.vessels.filter(v=>v.name!=='audit-fixture-vessel');d.vessels.push(JSON.parse(process.argv[2]));await Bun.write(p,JSON.stringify(d,null,2));",
+    "const port=8399;const id='audit-fixture-vessel';\nBun.serve({port,hostname:'0.0.0.0',fetch:async r=>Response.json(new URL(r.url).pathname==='/health'?{status:'ok',vessel:id}:{resolved:true,shape:'audit_fixture',body:{value:'isolated-manifest-v1',vessel:id}})});\nasync function register(){try{const r=await fetch('http://127.0.0.1:8100/register',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'ApiKey '+process.env.METABOB_API_KEY},body:JSON.stringify({vesselId:id,endpoint:'http://127.0.0.1:'+port,resolve_endpoint:'http://127.0.0.1:'+port+'/resolve',shapes:['audit_fixture'],version:'audit-fixture-v1'})});console.log('register',r.status)}catch(e){console.log(String(e))}}await register();setInterval(register,20000);",
+    "{\"name\": \"audit-fixture-vessel\", \"description\": \"Isolated audit fixture, not product capability\", \"workdir\": \"/workspace/audit-vessel\", \"exec\": \"index.ts\", \"env\": {\"PORT\": \"8399\"}, \"secrets\": [], \"restart\": \"always\", \"health_port\": 8399, \"self_recovery\": false}"
+  ],
+  "rc": 0,
+  "stdout": "",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

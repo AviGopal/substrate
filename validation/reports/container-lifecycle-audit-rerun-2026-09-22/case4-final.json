@@ -1,0 +1,103 @@
+{
+  "identity": {
+    "at": "2026-09-22T10:49:08.238302+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-compose-individual",
+      "substrate-key",
+      "whoami"
+    ],
+    "rc": 0,
+    "stdout": "{\n  \"valid\": true,\n  \"org_id\": \"organizations:substrate\",\n  \"user_id\": \"users:b04tmzwb9cplav7pwpv8\",\n  \"key_id\": \"key_ww3r7l4nrhZ7Dsip\",\n  \"scopes\": [\n    \"read\",\n    \"write\"\n  ],\n  \"role\": \"user\"\n}\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  "registry": {
+    "status": 200,
+    "data": {
+      "totalVessels": 7,
+      "totalShapes": 376,
+      "healthyCount": 7
+    }
+  },
+  "goalhost": {
+    "status": 200,
+    "data": {
+      "status": "healthy",
+      "in_flight": 0,
+      "drain_ms": 240000,
+      "vesselId": "goal-host-vessel",
+      "vesselName": "Goal Host Vessel",
+      "shapes": [
+        "goal_execution",
+        "activity_execution",
+        "activeDispatches",
+        "goalWalkState",
+        "poolImpulse_write",
+        "solicitationResponse_write",
+        "solicitationHeartbeat_write",
+        "goalDispatchAsync",
+        "fleetActivityFeed",
+        "bodyHonestyPolicy",
+        "walkBudget",
+        "lessonExecutionPolicy",
+        "extractionPolicy",
+        "pathwayReusePolicy"
+      ],
+      "version": "0.1.0",
+      "llm": "http-vessel:http://127.0.0.1:8220"
+    }
+  },
+  "transport": {
+    "status": 200,
+    "data": {
+      "status": "ok",
+      "service": "federation-transport-vessel@spoke-f4f05a70",
+      "transport": {
+        "peerId": "12D3KooWDALGNYQH2YikyXwt8szQF1bGJPz5nT7eQPbrvn8WsR2d",
+        "activeReservations": 1,
+        "reservationTtlRemainingMs": 3595951,
+        "connections": [
+          {
+            "peer": "12D3KooWMuYuRagN2jeir8MCaQFnMwUH7NoBnDduzcP3JYAfHkQ1",
+            "addr": "/ip4/10.89.0.2/tcp/30333/p2p/12D3KooWMuYuRagN2jeir8MCaQFnMwUH7NoBnDduzcP3JYAfHkQ1",
+            "limited": false,
+            "bytesRemaining": null,
+            "secondsRemaining": null
+          }
+        ],
+        "holePunchSuccess": 0,
+        "holePunchFail": 0,
+        "streamResets": 0,
+        "redialCount": 0,
+        "egressNoReservationCount": 0,
+        "lastRedialReason": "",
+        "reservationsHeld": 1,
+        "reservationRelays": [
+          "12D3KooWMuYuRagN2jeir8MCaQFnMwUH7NoBnDduzcP3JYAfHkQ1"
+        ],
+        "reservationExpiresInMs": 3595809,
+        "phantomSuspected": false
+      },
+      "libp2p_peer_id": "12D3KooWDALGNYQH2YikyXwt8szQF1bGJPz5nT7eQPbrvn8WsR2d",
+      "libp2p_multiaddr": "/ip4/10.89.0.2/tcp/30333/p2p/12D3KooWMuYuRagN2jeir8MCaQFnMwUH7NoBnDduzcP3JYAfHkQ1/p2p-circuit/p2p/12D3KooWDALGNYQH2YikyXwt8szQF1bGJPz5nT7eQPbrvn8WsR2d"
+    }
+  },
+  "units": {
+    "at": "2026-09-22T10:49:09.312778+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-compose-individual",
+      "systemctl",
+      "list-units",
+      "--type=service",
+      "--state=running",
+      "--no-pager",
+      "--plain"
+    ],
+    "rc": 0,
+    "stdout": "UNIT                                LOAD   ACTIVE SUB     DESCRIPTION\nactivity-api.service                loaded active running activity-api\nbootstrap-seeder.service            loaded active running bootstrap-seeder (seed shared activity templates)\nconcept-db.service                  loaded active running concept-db\ndbus.service                        loaded active running D-Bus System Message Bus\ndevelopment-vessel.service          loaded active running development-vessel\ndiscovery-vessel.service            loaded active running discovery-vessel\nfederation-transport-vessel.service loaded active running libp2p reachability + cross-substrate resolve-over-http + /health sensing surface.\ngoal-host-vessel.service            loaded active running goal-host-vessel\nhuman-surface-vessel.service        loaded active running human-surface-vessel\njournald-stdout-forwarder.service   loaded active running Forward all vessel logs to container stdout\nlocal-tools-vessel.service          loaded active running local-tools-vessel\nsurrealdb.service                   loaded active running SurrealDB\nsystemd-journald.service            loaded active running Journal Service\nsystemd-logind.service              loaded active running User Login Management\nvalkey.service                      loaded active running Valkey (Redis-compatible cache)\n\nLOAD   = Reflects whether the unit definition was properly loaded.\nACTIVE = The high-level unit activation state, i.e. generalization of SUB.\nSUB    = The low-level unit activation state, values depend on unit type.\n15 loaded units listed.\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  }
+}

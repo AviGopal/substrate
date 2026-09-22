@@ -1,0 +1,17 @@
+{
+  "status": 200,
+  "data": {
+    "content": {
+      "shape": "audit_fixture",
+      "produced_by": "audit-fixture-vessel@federation-transport-vessel@spoke-6828b72a",
+      "body": {
+        "value": "isolated-manifest-v1",
+        "vessel": "audit-fixture-vessel"
+      },
+      "note": "proxied to the owning vessel on the peer substrate over libp2p"
+    },
+    "metadata": {
+      "shape": "audit_fixture"
+    }
+  }
+}

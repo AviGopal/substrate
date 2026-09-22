@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-22T10:44:01.303510+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "vessel-ctl",
+    "install",
+    "federation-relay"
+  ],
+  "rc": 0,
+  "stdout": "{\"ok\":true,\"action\":\"installed\",\"vessel\":\"federation-relay\",\"container\":\"sla-0922r-80a33e-root-a\",\"active\":\"active\",\"self_recovery\":false,\"deps\":\"BUN INSTALL FAILED in /usr/local/share/substrate/super-repo/scripts/substrate/federation-relay\",\"post_install\":\"ok\"}\n",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n{\"warn\":\"federation-relay: BUN INSTALL FAILED in /usr/local/share/substrate/super-repo/scripts/substrate/federation-relay\"}\n"
+}

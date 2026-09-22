@@ -1,0 +1,60 @@
+{
+  "identity": {
+    "at": "2026-09-22T10:45:43.749158+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-new-network-existing-org",
+      "substrate-key",
+      "whoami"
+    ],
+    "rc": 0,
+    "stdout": "{\n  \"valid\": true,\n  \"org_id\": \"organizations:substrate\",\n  \"user_id\": \"users:b04tmzwb9cplav7pwpv8\",\n  \"key_id\": \"key_ww3r7l4nrhZ7Dsip\",\n  \"scopes\": [\n    \"read\",\n    \"write\"\n  ],\n  \"role\": \"user\"\n}\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  "registry": {
+    "status": 200,
+    "data": {
+      "totalVessels": 2,
+      "totalShapes": 15,
+      "healthyCount": 2
+    }
+  },
+  "bootstrap": {
+    "status": 200,
+    "data": {
+      "relay_multiaddrs": [],
+      "identity_endpoint": "http://sla-0922r-80a33e-root-a:8101",
+      "discovery_endpoint": "",
+      "prefer_transport": "libp2p"
+    }
+  },
+  "config": {
+    "at": "2026-09-22T10:45:44.483631+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-new-network-existing-org",
+      "substrate-config",
+      "--json",
+      "ENDPOINT"
+    ],
+    "rc": 0,
+    "stdout": "{\n  \"RUNPOD_ENDPOINT_ID\": {\"source\": \"unrecorded\", \"value\": \"(empty)\"},\n  \"VLLM_ENDPOINTS\": {\"source\": \"unrecorded\", \"value\": \"(empty)\"},\n  \"DISCOVERY_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://127.0.0.1:8100\"},\n  \"DISCOVERY_VESSEL_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://127.0.0.1:8100\"},\n  \"ACTIVITY_API_ENDPOINT\": {\"source\": \"env\", \"value\": \"http://127.0.0.1:8080\"},\n  \"PRODUCER_DISCOVERY_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://127.0.0.1:8080\"},\n  \"METABOB_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://127.0.0.1:8080\"},\n  \"IDENTITY_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://sla-0922r-80a33e-root-a:8101\"},\n  \"PEER_DISCOVERY_ENDPOINTS\": {\"source\": \"unrecorded\", \"value\": \"(empty)\"},\n  \"OBSIDIAN_PLUGIN_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://127.0.0.1:27182\"}\n}\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  "health": {
+    "at": "2026-09-22T10:45:44.852172+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-new-network-existing-org",
+      "sh",
+      "-c",
+      "systemctl is-system-running; systemctl --failed --no-pager; substrate-key whoami; curl -s --max-time 3 http://127.0.0.1:8210/health"
+    ],
+    "rc": 7,
+    "stdout": "starting\n  UNIT                              LOAD   ACTIVE SUB    DESCRIPTION\n\u25cf proc-sys-fs-binfmt_misc.automount loaded failed failed Arbitrary Executable File Formats File System Automount Point\n\u25cf sys-kernel-config.mount           loaded failed failed Kernel Configuration File System\n\u25cf sys-kernel-debug.mount            loaded failed failed Kernel Debug File System\n\u25cf sys-kernel-tracing.mount          loaded failed failed Kernel Trace File System\n\nLOAD   = Reflects whether the unit definition was properly loaded.\nACTIVE = The high-level unit activation state, i.e. generalization of SUB.\nSUB    = The low-level unit activation state, values depend on unit type.\n4 loaded units listed.\n{\n  \"valid\": true,\n  \"org_id\": \"organizations:substrate\",\n  \"user_id\": \"users:b04tmzwb9cplav7pwpv8\",\n  \"key_id\": \"key_ww3r7l4nrhZ7Dsip\",\n  \"scopes\": [\n    \"read\",\n    \"write\"\n  ],\n  \"role\": \"user\"\n}\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  }
+}

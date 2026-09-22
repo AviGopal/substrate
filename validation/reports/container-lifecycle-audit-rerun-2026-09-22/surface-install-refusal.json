@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-22T10:43:59.512335+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "vessel-ctl",
+    "install",
+    "human-surface-vessel"
+  ],
+  "rc": 1,
+  "stdout": "{\"ok\":false,\"action\":\"install\",\"vessel\":\"human-surface-vessel\",\"container\":\"sla-0922r-80a33e-root-a\",\"error\":\"WORKDIR ABSENT (/workspace/git/super-repo/repos/human-surface-vessel) \u2014 refusing to install a unit that cannot chdir; if a baked vendor unit exists it keeps serving. Create the workdir (clone the super-repo) or point the manifest workdir at a baked path.\"}\n",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

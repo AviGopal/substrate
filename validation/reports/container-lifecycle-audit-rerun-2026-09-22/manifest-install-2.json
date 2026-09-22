@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-22T10:47:08.353020+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "vessel-ctl",
+    "install",
+    "audit-fixture-vessel"
+  ],
+  "rc": 0,
+  "stdout": "{\"ok\":true,\"action\":\"installed\",\"vessel\":\"audit-fixture-vessel\",\"container\":\"sla-0922r-80a33e-root-a\",\"active\":\"active\",\"self_recovery\":false,\"deps\":\"dependencies installed\",\"post_install\":\"none\"}\n",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

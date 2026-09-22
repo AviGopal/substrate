@@ -1,0 +1,66 @@
+{
+  "status": 200,
+  "data": {
+    "templates": [
+      {
+        "category": "meta",
+        "created_at": "2026-09-22T10:44:01.516340607Z",
+        "deprecated": false,
+        "description": "Substrate-self-development template: given a modeled human interaction that the obsidian-vessel plugin does not yet support (an implicitVesselReport naming the needed capability), author a NEW Obsidian command or view into the plugin \u2014 NOT a note. Dispatches feature_compose to add a command to repos/obsidian-vessel/src/commands.ts (and, for a view, a registerView call in main.ts), keeping the change typecheck-clean. land is false: this authors + verifies; landing + plugin reload (scripts/substrate/obsidian-plugin-reload.sh) are the cutover step.",
+        "execution_type": "template",
+        "id": "activity:\u27e8author-obsidian-ui-flow\u27e9",
+        "input_shapes": [
+          "implicitVesselReport"
+        ],
+        "name": "Author new Obsidian UI (command or view)",
+        "org_id": "organizations:substrate",
+        "output_shapes": [
+          "featureComposeReport"
+        ],
+        "retired": false,
+        "scope": "global",
+        "tag_prefixes": [
+          "author",
+          "feature",
+          "feature.compose",
+          "obsidian",
+          "obsidian.ui",
+          "substrate",
+          "substrate.self",
+          "substrate.self.development"
+        ],
+        "tags": [
+          "substrate.self.development",
+          "obsidian.ui",
+          "feature.compose",
+          "author"
+        ],
+        "tasks": [
+          {
+            "config": {
+              "land": false,
+              "spec": "Add a new Obsidian UI capability to the obsidian-vessel plugin implementing: {{needed_capability}}.\n\nConcrete requirements:\n- Add a new command to repos/obsidian-vessel/src/commands.ts, following the existing command-registration pattern in that file exactly (id, name, callback/editorCallback). If the capability is better served by a persistent panel, also register a new view via addView/registerView in repos/obsidian-vessel/src/main.ts, mirroring how existing views are registered there.\n- The command/view MUST do real work: either call an existing obsidian-vessel resolver/dispatch path, or read/write inside the vault's Substrate/ namespace (create the folder if absent). Do NOT just open a note.\n- Keep the change surgical and typecheck-clean (bun x tsc --noEmit must pass); match the existing types, imports, and call signatures in those files. Do not invent APIs or file paths.",
+              "type": "feature_compose",
+              "verify_vessels": [
+                "obsidian-vessel"
+              ]
+            },
+            "description": "Dispatch feature_compose to author the new Obsidian command/view into obsidian-vessel, typecheck-verify it, and (land=false) leave it staged for the cutover. The spec instructs a surgical, typecheck-clean addition wired to an existing resolver or the Substrate/ vault namespace.",
+            "id": "compose_obsidian_ui",
+            "outputImpulses": [
+              "obsidian_ui_compose_report"
+            ],
+            "outputShapes": [
+              "featureComposeReport"
+            ],
+            "resolver": "feature_compose"
+          }
+        ],
+        "updated_at": "2026-09-22T10:51:22.660417249Z"
+      }
+    ],
+    "total": 450,
+    "limit": 1,
+    "offset": 0
+  }
+}

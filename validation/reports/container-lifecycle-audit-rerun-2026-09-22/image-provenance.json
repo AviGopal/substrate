@@ -1,0 +1,14 @@
+{
+  "image_id": "125775d713bcfb1011ff6516766f2bb807f1d50036aa678eb733f830b1bfb94e",
+  "image_ref": "ghcr.io/avigopal/substrate:dev",
+  "built_from_super_repo_commit": "254bf8c9",
+  "notable_included_fixes": [
+    "activity-api 41c9e89 (023/045/055 fresh-datastore schema fixes)",
+    "development-vessel 1a18944 (surql landing gate restoration)",
+    "super-repo 0bb3e9d4 (uiFeedback response_id required)",
+    "super-repo 86436189 (ui/dist baked)",
+    "super-repo 337c9226 (installed.json durable membership + workdir refusal)",
+    "super-repo e1c06f60 (relay baked workdir + reservation-gated join)"
+  ],
+  "rerun_started": "2026-09-22T10:43:13.383294+00:00"
+}

@@ -1,0 +1,192 @@
+{
+  "status": 200,
+  "data": {
+    "templates": [
+      {
+        "category": "meta",
+        "created_at": "2026-09-22T10:43:59.012470446Z",
+        "deprecated": false,
+        "description": "Activity-driven implementation of post-task validator dispatch per OpenSpec change 2026-04-26-validators-and-failure-modes (\u00a77). Subscribes to lifecycle:task:completed and chains five tasks: (1) discover_validators \u2014 find activities consuming the parent task's outputShapes AND producing validation_result via the canonical `discoverByShapesQuery` impulse-resolve shape (mode=backward + output_shapes=[validation_result]); (2) select_validator_per_shape \u2014 pick a validator from the activity envelope using composition_score and Thompson \u03b1/\u03b2; (3) dispatch_validators \u2014 execute the chosen validator with the parent task's outputs as inputs; (4) propagate_failure_mode \u2014 when validation_result.passed === false, emit a failure_mode_propagation impulse carrying the structured verifier_negative failure_mode for the dispatcher to stamp on the parent trace; (5) learning_signal_write \u2014 record impulse_relevance + tool_argument_pattern signals for the parent task, gating executionSucceeded on validator outcome. As of 2026-04-26 the template uses dotted-path interpolation (e.g. {{lifecycle.taskId}}, {{lifecycle.executionId}}) \u2014 the interpolate regex was extended to /\\{\\{([\\w]+(?:\\.[\\w]+)*)\\}\\}/g in iter 7 (activity.ts:6952). Task 1 uses the canonical `impulse-resolve` + `discoverByShapesQuery` pattern advertised by activity-api \u2014 zero minibob source changes (vessel-integration constraint).",
+        "execution_type": "template",
+        "id": "activity:\u27e8validator-dispatch\u27e9",
+        "input_shapes": [
+          "activity_metrics",
+          "activity_template",
+          "error",
+          "goal",
+          "source_code",
+          "trace"
+        ],
+        "name": "Validator Dispatch (validators-and-failure-modes)",
+        "org_id": "organizations:substrate",
+        "output_shapes": [
+          "validator_candidates",
+          "variant_selection_result",
+          "selected_validators",
+          "activityExecutionSummary",
+          "validation_result",
+          "validation_results",
+          "failure_mode_propagation",
+          "learning_signal_write_result"
+        ],
+        "retired": false,
+        "scope": "global",
+        "tag_prefixes": [
+          "failure",
+          "failure.mode",
+          "lifecycle",
+          "meta",
+          "validator",
+          "validator.dispatch",
+          "validators",
+          "validators.and",
+          "validators.and.failure",
+          "validators.and.failure.modes"
+        ],
+        "tags": [
+          "lifecycle",
+          "validator",
+          "meta",
+          "validator.dispatch",
+          "validators.and.failure.modes",
+          "failure.mode"
+        ],
+        "tasks": [
+          {
+            "config": {
+              "pointer": {
+                "limit": 10,
+                "mode": "backward",
+                "output_shapes": [
+                  "validation_result"
+                ],
+                "required_shapes": "{{lifecycle.outputShapes}}",
+                "type": "discoverByShapesQuery"
+              }
+            },
+            "description": "Find activities that can validate the just-completed task's outputs.",
+            "id": "discover_validators",
+            "inputShapes": [
+              "lifecycle:task:completed"
+            ],
+            "outputImpulses": [
+              "discover_validators_result"
+            ],
+            "outputShapes": [
+              "validator_candidates"
+            ],
+            "resolver": "impulse-resolve"
+          },
+          {
+            "dependencies": [
+              "discover_validators"
+            ],
+            "description": "Reshape the discoverByShapesQuery result (a plain {activities, total} envelope) into a variant_selection_result-formatted memo so the downstream `activity` resolver (task 3) can pi\u2026",
+            "id": "select_validator_per_shape",
+            "inputImpulses": [
+              "discover_validators_result"
+            ],
+            "outputImpulses": [
+              "select_validator_per_shape_result"
+            ],
+            "outputShapes": [
+              "variant_selection_result",
+              "selected_validators"
+            ],
+            "prompt": {
+              "maxTokens": 400,
+              "template": "You are converting a discoverByShapesQuery result into a variant_selection_result impulse for the downstream activity dispatcher.\n\nInput envelope (JSON): {{impulse:discover_validators_result}}\nThe envelope's `content` field (when delivered as the impulse-resolve response) is a JSON-stringified {activities: Activity[], total: number}. Each Activity has `id`, `name`, `output_shapes`, `input_shapes`, and may have `metrics` (Thompson \u03b1/\u03b2, success_rate) and `composition_score` ({alpha, beta} when mode=candidates_with_scores; null otherwise).\n\nIf total === 0 OR activities is empty, output: {\"selected\":null,\"unbindable\":true,\"reason\":\"no validator candidates returned by discoverByShapesQuery\"}\n\nOtherwise pick the BEST candidate by:\n1. If any candidate has composition_score (non-null), maximise composition_score.alpha / (composition_score.alpha + composition_score.beta).\n2. Else maximise metrics.thompson_alpha / (metrics.thompson_alpha + metrics.thompson_beta).\n3. Tie-break by metrics.total_executions DESC, then by `id` lexicographically.\n\nOutput EXACTLY (no markdown, no prose):\n{\"selected\":{\"activity_id\":\"<winner.id>\",\"template_id\":\"<winner.id>\"},\"runner_ups\":[{\"activity_id\":\"<id>\",\"template_id\":\"<id>\"}, ...],\"selection_method\":\"composition_score_or_thompson\",\"unbindable\":false}\n\nNo other fields. No commentary."
+            }
+          },
+          {
+            "config": {
+              "reason": "validator-dispatch (validators-and-failure-modes)",
+              "variables": {
+                "_dispatch_note": "Validator activity receives the parent task's outputs via the inherited impulse pool \u2014 the lifecycle subscriber merge path (activity.ts:1249-1273) already merges output impulses from the parent task's outputShapes into this nested execution's input pool. No explicit variable plumbing needed."
+              }
+            },
+            "dependencies": [
+              "select_validator_per_shape"
+            ],
+            "description": "Execute the chosen validator activity with the parent task's outputs as the validator's inputs.",
+            "id": "dispatch_validators",
+            "inputImpulses": [
+              "select_validator_per_shape_result"
+            ],
+            "outputImpulses": [
+              "dispatch_validators_result"
+            ],
+            "outputShapes": [
+              "activityExecutionSummary",
+              "validation_result",
+              "validation_results"
+            ],
+            "resolver": "activity"
+          },
+          {
+            "dependencies": [
+              "dispatch_validators"
+            ],
+            "description": "When the dispatched validator emitted at least one validation_result with passed=false, build a failure_mode of type 'verifier_negative' and emit a failure_mode_propagation impulse\u2026",
+            "id": "propagate_failure_mode",
+            "inputImpulses": [
+              "dispatch_validators_result"
+            ],
+            "outputImpulses": [
+              "propagate_failure_mode_result"
+            ],
+            "outputShapes": [
+              "failure_mode_propagation"
+            ],
+            "prompt": {
+              "maxTokens": 1500,
+              "template": "Build a structured failure_mode impulse from the dispatched validator's validation_result(s).\n\nValidator output (JSON): {{impulse:dispatch_validators_result}}\nParent task id: {{lifecycle.taskId}}\nParent execution id: {{lifecycle.executionId}}\n\nFor each validation_result in the validator output where passed === false, extract:\n- validator_id (from validation_result.validator_id)\n- failed_evidence (the evidence rows where passed === false)\n- reason (first failed evidence row's message, or a synthesized one)\n\nOutput EXACTLY this JSON object (no markdown, no prose):\n{\"failure_mode\":{\"type\":\"verifier_negative\",\"reason\":\"<aggregated reason>\",\"context\":{\"validator_id\":\"<first failed validator_id>\",\"failed_evidence\":[<all failed evidence rows>]}},\"parent_task_id\":\"{{lifecycle.taskId}}\",\"parent_execution_id\":\"{{lifecycle.executionId}}\"}\n\nIf NO validation_result has passed === false (the conditional should have prevented this branch but be defensive), output: {\"failure_mode\":null,\"parent_task_id\":\"{{lifecycle.taskId}}\",\"parent_execution_id\":\"{{lifecycle.executionId}}\"}\n\nNo other fields. No commentary."
+            }
+          },
+          {
+            "config": {
+              "_lifecycle_note": "taskId/templateId/executionId/allImpulseIds/loadedImpulseIds/toolCallRecords use dotted-path interpolation against the lifecycle:task:completed payload. The interpolator JSON-stringifies array values when embedded as string leaves of resolver config; the resolver tolerates JSON.parse-able string-form arrays so the chain wires end-to-end. templateId is in the lifecycle payload. The hardcoded 'executionSucceeded: false' is a deliberate conservative default \u2014 the meta-activity fires post-completion specifically when validation may have failed; the parent task's intrinsic success is irrelevant to the validation-success signal. A future cleanup wires this to the validator's pass/fail outcome.",
+              "allImpulseIds": "{{lifecycle.allImpulseIds}}",
+              "executionId": "{{lifecycle.executionId}}",
+              "executionSucceeded": false,
+              "loadedImpulseIds": "{{lifecycle.loadedImpulseIds}}",
+              "signals": [
+                "impulse_relevance",
+                "tool_argument_pattern"
+              ],
+              "taskId": "{{lifecycle.taskId}}",
+              "templateId": "{{lifecycle.templateId}}",
+              "toolCallRecords": "{{lifecycle.toolCallRecords}}"
+            },
+            "dependencies": [
+              "dispatch_validators",
+              "propagate_failure_mode"
+            ],
+            "description": "Record per-task learning signals (impulse_relevance + tool_argument_pattern) for the parent task that just completed.",
+            "id": "learning_signal_write",
+            "inputImpulses": [
+              "dispatch_validators_result",
+              "propagate_failure_mode_result"
+            ],
+            "optionalInputShapes": [
+              "validation_result",
+              "validation_results",
+              "failure_mode_propagation"
+            ],
+            "outputImpulses": [
+              "learning_signal_write_result"
+            ],
+            "outputShapes": [
+              "learning_signal_write_result"
+            ],
+            "resolver": "learning_signal_writer"
+          }
+        ],
+        "updated_at": "2026-09-22T10:43:59.012738836Z"
+      }
+    ],
+    "total": 365,
+    "limit": 1,
+    "offset": 0
+  }
+}

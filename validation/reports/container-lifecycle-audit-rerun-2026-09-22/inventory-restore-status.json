@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-22T10:47:02.632091+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "vessel-ctl",
+    "status",
+    "analysis-vessel"
+  ],
+  "rc": 0,
+  "stdout": "analysis-vessel.service                inactive     enabled    restarts=0\n",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

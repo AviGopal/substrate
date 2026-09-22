@@ -1,0 +1,35 @@
+{
+  "status": 200,
+  "data": {
+    "status": "ok",
+    "service": "federation-transport-vessel@spoke-f8e977d2",
+    "transport": {
+      "peerId": "12D3KooWKsB5GrCpP243ZXBDLM7r9s7qH73zcTVuv4mnVoRuBLUP",
+      "activeReservations": 1,
+      "reservationTtlRemainingMs": 3596307,
+      "connections": [
+        {
+          "peer": "12D3KooWMuYuRagN2jeir8MCaQFnMwUH7NoBnDduzcP3JYAfHkQ1",
+          "addr": "/ip4/10.89.0.2/tcp/30333/p2p/12D3KooWMuYuRagN2jeir8MCaQFnMwUH7NoBnDduzcP3JYAfHkQ1",
+          "limited": false,
+          "bytesRemaining": null,
+          "secondsRemaining": null
+        }
+      ],
+      "holePunchSuccess": 0,
+      "holePunchFail": 0,
+      "streamResets": 0,
+      "redialCount": 0,
+      "egressNoReservationCount": 0,
+      "lastRedialReason": "",
+      "reservationsHeld": 1,
+      "reservationRelays": [
+        "12D3KooWMuYuRagN2jeir8MCaQFnMwUH7NoBnDduzcP3JYAfHkQ1"
+      ],
+      "reservationExpiresInMs": 3595893,
+      "phantomSuspected": false
+    },
+    "libp2p_peer_id": "12D3KooWKsB5GrCpP243ZXBDLM7r9s7qH73zcTVuv4mnVoRuBLUP",
+    "libp2p_multiaddr": "/ip4/10.89.0.2/tcp/30333/p2p/12D3KooWMuYuRagN2jeir8MCaQFnMwUH7NoBnDduzcP3JYAfHkQ1/p2p-circuit/p2p/12D3KooWKsB5GrCpP243ZXBDLM7r9s7qH73zcTVuv4mnVoRuBLUP"
+  }
+}

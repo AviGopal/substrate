@@ -34,6 +34,10 @@ tags = ["key", "anthropic"]
 
 [allowlist]
 description = "Paths that legitimately carry credential-shaped example values"
+# Test allowlist regexes against the whole matched LINE, not just the captured
+# secret — the audit-evidence entries below discriminate on the field NAME
+# (<X>_sha256, key_id), which the secret capture alone does not contain.
+regexTarget = "line"
 paths = [
   # Example env templates ship placeholder values by design.
   '''\.env\..*\.example$''',
@@ -47,4 +51,13 @@ regexes = [
   '''sk-ant-CANARY-[A-Za-z0-9-]+''',
   # Demo/placeholder Anthropic keys used by throwaway proof containers.
   '''sk-ant-(?:demo|dummy)-[A-Za-z0-9-]+''',
+  # Audit-evidence non-secrets that trip the generic-api-key rule:
+  # (a) fingerprint files store SHA-256 HASHES of env secrets under
+  #     <NAME>_sha256 keys — the hash is the evidence (equality across
+  #     recreate), the preimage never appears;
+  # (b) identity payloads carry key_id, a public identifier of the form
+  #     key_<16 chars>, while the key VALUE itself is scrubbed to [redacted]
+  #     by the harness before anything is written.
+  '''[A-Z][A-Z_]*_sha256["']?\s*[:=]\s*["']?[0-9a-f]{64}''',
+  '''key_id["']?\s*[:=]\s*["']?key_[A-Za-z0-9]{8,24}["']?''',
 ]

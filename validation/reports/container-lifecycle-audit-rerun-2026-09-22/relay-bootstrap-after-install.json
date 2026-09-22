@@ -1,0 +1,11 @@
+{
+  "status": 200,
+  "data": {
+    "relay_multiaddrs": [
+      "/ip4/10.89.0.2/tcp/30333/p2p/12D3KooWMuYuRagN2jeir8MCaQFnMwUH7NoBnDduzcP3JYAfHkQ1"
+    ],
+    "identity_endpoint": "http://10.89.0.2:8101",
+    "discovery_endpoint": "http://10.89.0.2:8100",
+    "prefer_transport": "libp2p"
+  }
+}

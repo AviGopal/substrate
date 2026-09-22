@@ -1,0 +1,566 @@
+[
+  {
+    "at": "2026-09-22T10:51:24.446616+00:00",
+    "argv": [
+      "docker",
+      "rm",
+      "-f",
+      "sla-0922r-80a33e-backup-restored"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-backup-restored\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:24.688364+00:00",
+    "argv": [
+      "docker",
+      "rm",
+      "-f",
+      "sla-0922r-80a33e-wrong-key"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-wrong-key\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:24.898151+00:00",
+    "argv": [
+      "docker",
+      "rm",
+      "-f",
+      "sla-0922r-80a33e-unreachable-hub"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-unreachable-hub\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:25.099180+00:00",
+    "argv": [
+      "docker",
+      "rm",
+      "-f",
+      "sla-0922r-80a33e-invalid-vessel"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-invalid-vessel\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:25.313443+00:00",
+    "argv": [
+      "docker",
+      "rm",
+      "-f",
+      "sla-0922r-80a33e-invalid-profile"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-invalid-profile\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:25.538483+00:00",
+    "argv": [
+      "docker",
+      "rm",
+      "-f",
+      "sla-0922r-80a33e-no-provider"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-no-provider\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:25.763904+00:00",
+    "argv": [
+      "docker",
+      "rm",
+      "-f",
+      "sla-0922r-80a33e-individual-new-tenant"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-individual-new-tenant\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:25.977183+00:00",
+    "argv": [
+      "docker",
+      "rm",
+      "-f",
+      "sla-0922r-80a33e-spoke-two"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-spoke-two\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:26.210549+00:00",
+    "argv": [
+      "docker",
+      "rm",
+      "-f",
+      "sla-0922r-80a33e-compose-individual"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-compose-individual\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:26.437185+00:00",
+    "argv": [
+      "docker",
+      "rm",
+      "-f",
+      "sla-0922r-80a33e-new-network-existing-org"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-new-network-existing-org\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:26.652332+00:00",
+    "argv": [
+      "docker",
+      "rm",
+      "-f",
+      "sla-0922r-80a33e-new-org-spoke"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-new-org-spoke\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:26.862045+00:00",
+    "argv": [
+      "docker",
+      "rm",
+      "-f",
+      "sla-0922r-80a33e-new-org-hub"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-new-org-hub\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:27.091032+00:00",
+    "argv": [
+      "docker",
+      "rm",
+      "-f",
+      "sla-0922r-80a33e-spoke-existing-org"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-spoke-existing-org\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:27.336121+00:00",
+    "argv": [
+      "docker",
+      "rm",
+      "-f",
+      "sla-0922r-80a33e-individual-new-org"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-individual-new-org\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:27.538291+00:00",
+    "argv": [
+      "docker",
+      "rm",
+      "-f",
+      "sla-0922r-80a33e-root-a"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-root-a\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:27.751354+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-backup-restored-surreal"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-backup-restored-surreal\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:27.885458+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-backup-restored-workspace"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-backup-restored-workspace\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:28.013364+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-wrong-key-surreal"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-wrong-key-surreal\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:28.139003+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-wrong-key-workspace"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-wrong-key-workspace\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:28.274421+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-unreachable-hub-surreal"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-unreachable-hub-surreal\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:28.417300+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-unreachable-hub-workspace"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-unreachable-hub-workspace\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:28.556867+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-invalid-vessel-surreal"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-invalid-vessel-surreal\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:28.698051+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-invalid-vessel-workspace"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-invalid-vessel-workspace\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:28.824960+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-invalid-profile-surreal"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-invalid-profile-surreal\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:28.970221+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-invalid-profile-workspace"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-invalid-profile-workspace\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:29.098726+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-no-provider-surreal"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-no-provider-surreal\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:29.261492+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-no-provider-workspace"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-no-provider-workspace\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:29.392612+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-individual-new-tenant-surreal"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-individual-new-tenant-surreal\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:29.523170+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-individual-new-tenant-workspace"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-individual-new-tenant-workspace\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:29.650337+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-spoke-two-surreal"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-spoke-two-surreal\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:29.776307+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-spoke-two-workspace"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-spoke-two-workspace\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:29.895857+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-compose-individual-surreal"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-compose-individual-surreal\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:30.020989+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-compose-individual-workspace"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-compose-individual-workspace\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:30.145286+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-new-network-existing-org-surreal"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-new-network-existing-org-surreal\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:30.274503+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-new-network-existing-org-workspace"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-new-network-existing-org-workspace\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:30.403501+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-new-org-spoke-surreal"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-new-org-spoke-surreal\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:30.531195+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-new-org-spoke-workspace"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-new-org-spoke-workspace\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:30.669320+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-new-org-hub-surreal"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-new-org-hub-surreal\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:30.795789+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-new-org-hub-workspace"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-new-org-hub-workspace\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:30.922592+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-spoke-existing-org-surreal"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-spoke-existing-org-surreal\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:31.046243+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-spoke-existing-org-workspace"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-spoke-existing-org-workspace\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:31.169559+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-individual-new-org-surreal"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-individual-new-org-surreal\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:31.296620+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-individual-new-org-workspace"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-individual-new-org-workspace\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:31.420636+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-root-a-surreal"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-root-a-surreal\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:31.548455+00:00",
+    "argv": [
+      "docker",
+      "volume",
+      "rm",
+      "sla-0922r-80a33e-root-a-workspace"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-root-a-workspace\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:31.672611+00:00",
+    "argv": [
+      "docker",
+      "network",
+      "rm",
+      "sla-0922r-80a33e-net-b"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-net-b\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  {
+    "at": "2026-09-22T10:51:31.781938+00:00",
+    "argv": [
+      "docker",
+      "network",
+      "rm",
+      "sla-0922r-80a33e-net-a"
+    ],
+    "rc": 0,
+    "stdout": "sla-0922r-80a33e-net-a\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  }
+]

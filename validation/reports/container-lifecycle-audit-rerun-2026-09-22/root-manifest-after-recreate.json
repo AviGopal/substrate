@@ -1,0 +1,13 @@
+{
+  "at": "2026-09-22T10:50:49.882179+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "sha256sum",
+    "/workspace/substrate/fleet/vessels.manifest.json"
+  ],
+  "rc": 0,
+  "stdout": "75f40aa2549891a4a381abfe8b3c0bb19d1a3bc878f6a898713015f211fd5781  /workspace/substrate/fleet/vessels.manifest.json\n",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

@@ -1,0 +1,65 @@
+{
+  "identity": {
+    "valid": true,
+    "org_id": "organizations:substrate",
+    "user_id": "users:vtrijtc0xzkrmrsq4yol",
+    "key_id": "key_SI02W4cuzZi5IW0b",
+    "scopes": [
+      "read",
+      "write"
+    ],
+    "role": "user"
+  },
+  "registry": {
+    "status": 200,
+    "data": {
+      "totalVessels": 2,
+      "totalShapes": 68,
+      "healthyCount": 2
+    }
+  },
+  "bootstrap": {
+    "status": 200,
+    "data": {
+      "relay_multiaddrs": [],
+      "identity_endpoint": "http://sla-0922r-80a33e-individual-new-org:8101",
+      "discovery_endpoint": "http://sla-0922r-80a33e-individual-new-org:8100",
+      "prefer_transport": "libp2p"
+    }
+  },
+  "units": {
+    "at": "2026-09-22T10:44:50.383515+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-individual-new-org",
+      "systemctl",
+      "list-units",
+      "--type=service",
+      "--state=running",
+      "--no-pager",
+      "--plain"
+    ],
+    "rc": 0,
+    "stdout": "UNIT                              LOAD   ACTIVE SUB     DESCRIPTION\nactivity-api.service              loaded active running activity-api\nconcept-db.service                loaded active running concept-db\ndbus.service                      loaded active running D-Bus System Message Bus\ndevelopment-vessel.service        loaded active running development-vessel\ndiscovery-vessel.service          loaded active running discovery-vessel\ngoal-host-vessel.service          loaded active running goal-host-vessel\nhuman-surface-vessel.service      loaded active running human-surface-vessel\nidentity-vessel.service           loaded active running identity-vessel\njournald-stdout-forwarder.service loaded active running Forward all vessel logs to container stdout\nlocal-tools-vessel.service        loaded active running local-tools-vessel\nsurrealdb.service                 loaded active running SurrealDB\nsystemd-journald.service          loaded active running Journal Service\nsystemd-logind.service            loaded active running User Login Management\nvalkey.service                    loaded active running Valkey (Redis-compatible cache)\n\nLOAD   = Reflects whether the unit definition was properly loaded.\nACTIVE = The high-level unit activation state, i.e. generalization of SUB.\nSUB    = The low-level unit activation state, values depend on unit type.\n14 loaded units listed.\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  "config": {
+    "at": "2026-09-22T10:44:50.623082+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-individual-new-org",
+      "substrate-config",
+      "--json",
+      "ENDPOINT"
+    ],
+    "rc": 0,
+    "stdout": "{\n  \"RUNPOD_ENDPOINT_ID\": {\"source\": \"unrecorded\", \"value\": \"(empty)\"},\n  \"VLLM_ENDPOINTS\": {\"source\": \"unrecorded\", \"value\": \"(empty)\"},\n  \"DISCOVERY_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://127.0.0.1:8100\"},\n  \"DISCOVERY_VESSEL_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://127.0.0.1:8100\"},\n  \"ACTIVITY_API_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://127.0.0.1:8080\"},\n  \"PRODUCER_DISCOVERY_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://127.0.0.1:8080\"},\n  \"METABOB_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://127.0.0.1:8080\"},\n  \"IDENTITY_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://127.0.0.1:8101\"},\n  \"PEER_DISCOVERY_ENDPOINTS\": {\"source\": \"env\", \"value\": \"http://sla-0922r-80a33e-root-a:8100\"},\n  \"OBSIDIAN_PLUGIN_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://127.0.0.1:27182\"}\n}\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  "transport": {
+    "status": 0,
+    "error": "TypeError: Unable to connect. Is the computer able to access the url?"
+  }
+}

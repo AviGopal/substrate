@@ -1,0 +1,13 @@
+{
+  "at": "2026-09-22T10:50:20.435509+00:00",
+  "argv": [
+    "docker",
+    "stop",
+    "-t",
+    "15",
+    "sla-0922r-80a33e-root-a"
+  ],
+  "rc": 0,
+  "stdout": "sla-0922r-80a33e-root-a\n",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

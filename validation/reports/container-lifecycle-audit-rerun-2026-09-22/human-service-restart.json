@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-22T10:47:17.248757+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "vessel-ctl",
+    "restart",
+    "human-surface-vessel"
+  ],
+  "rc": 0,
+  "stdout": "{\"ok\":true,\"action\":\"restart\",\"vessel\":\"human-surface-vessel\",\"unit\":\"human-surface-vessel.service\",\"container\":\"sla-0922r-80a33e-root-a\",\"active\":\"active\",\"mainpid\":\"13145\",\"nrestarts\":\"0\"}\n",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

@@ -1,0 +1,17 @@
+{
+  "status": 200,
+  "data": {
+    "status": "healthy",
+    "vesselId": "analysis-vessel-local",
+    "vesselName": "Analysis Vessel",
+    "shapes": [
+      "source_code",
+      "error_log",
+      "problem_detection",
+      "code_quality",
+      "code_annotation",
+      "cpg_query_result"
+    ],
+    "version": "0.1.0"
+  }
+}

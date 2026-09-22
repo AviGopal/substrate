@@ -1,0 +1,55 @@
+{
+  "services": {
+    "substrate": {
+      "image": "125775d713bcfb1011ff6516766f2bb807f1d50036aa678eb733f830b1bfb94e",
+      "container_name": "sla-0922r-80a33e-compose-individual",
+      "hostname": "sla-0922r-80a33e-compose-individual",
+      "privileged": true,
+      "mem_limit": "4g",
+      "cpus": 2,
+      "pids_limit": 1024,
+      "stop_signal": "SIGRTMIN+3",
+      "stop_grace_period": "10s",
+      "labels": {
+        "substrate.lifecycle.audit": "sla-0922r-80a33e"
+      },
+      "tmpfs": [
+        "/run",
+        "/run/lock"
+      ],
+      "environment": {
+        "METABOB_API_KEY": "${AUDIT_JOIN_KEY}",
+        "DISCOVERY_ENDPOINT": "http://sla-0922r-80a33e-root-a:8100",
+        "HUB_DISCOVERY_URL": "http://sla-0922r-80a33e-root-a:8100",
+        "IDENTITY_VESSEL_URL": "http://sla-0922r-80a33e-root-a:8101",
+        "ACTIVITY_API_ENDPOINT": "http://127.0.0.1:8080",
+        "MITOSIS_DIRECT_PUSH": "0",
+        "ROUTE_EDIT_INTENT_TO_COMPOSE": "0",
+        "ENABLED_VESSELS": "surrealdb,valkey,discovery-vessel,activity-api,local-tools-vessel,goal-host-vessel,development-vessel,concept-db,journald-stdout-forwarder,bootstrap-seeder"
+      },
+      "volumes": [
+        "workspace:/workspace",
+        "surreal:/var/lib/surrealdb"
+      ],
+      "networks": [
+        "audit"
+      ]
+    }
+  },
+  "volumes": {
+    "workspace": {
+      "external": true,
+      "name": "sla-0922r-80a33e-compose-individual-workspace"
+    },
+    "surreal": {
+      "external": true,
+      "name": "sla-0922r-80a33e-compose-individual-surreal"
+    }
+  },
+  "networks": {
+    "audit": {
+      "external": true,
+      "name": "sla-0922r-80a33e-net-a"
+    }
+  }
+}

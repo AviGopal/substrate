@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-22T10:47:02.886052+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "vessel-ctl",
+    "install",
+    "audit-no-such-vessel"
+  ],
+  "rc": 1,
+  "stdout": "{\"ok\":false,\"error\":\"vessel 'audit-no-such-vessel' not in manifest\"}\n",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

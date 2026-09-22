@@ -1,0 +1,13 @@
+{
+  "at": "2026-09-22T10:50:54.761448+00:00",
+  "argv": [
+    "docker",
+    "volume",
+    "import",
+    "sla-0922r-80a33e-backup-restored-workspace",
+    "/tmp/sla-0922r-80a33e-backup-6j1kx149/workspace.tar"
+  ],
+  "rc": 0,
+  "stdout": "",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

@@ -1,0 +1,95 @@
+{
+  "status": 200,
+  "data": {
+    "resolved": true,
+    "success": true,
+    "shape": "uiQuestion",
+    "body": {
+      "questions": [
+        {
+          "id": "audit-required-question",
+          "title": "Audit: revised scope question",
+          "body": {
+            "text": "Synthetic test. No real deployment will be authorized."
+          },
+          "kind": "question",
+          "importance": "medium",
+          "asks": [
+            {
+              "id": "scope",
+              "prompt": "Choose a scope",
+              "type": "text"
+            }
+          ],
+          "visibility": "public",
+          "revision": 2,
+          "createdAt": 1790074035316,
+          "updatedAt": 1790074035986,
+          "responses": [
+            {
+              "id": "audit-response-accepted",
+              "panelRevision": 2,
+              "panelId": "audit-required-question",
+              "askId": "scope",
+              "value": "audit-only",
+              "kind": "answer",
+              "visibility": "public",
+              "receivedAt": 1790074036445
+            }
+          ],
+          "answers": [
+            {
+              "id": "audit-response-accepted",
+              "panelRevision": 2,
+              "panelId": "audit-required-question",
+              "askId": "scope",
+              "value": "audit-only",
+              "kind": "answer",
+              "visibility": "public",
+              "receivedAt": 1790074036445
+            }
+          ],
+          "answered": true,
+          "declined": false,
+          "rank": 1,
+          "because": [
+            "the system is asking you a direct question",
+            "the substrate declared importance \"medium\"",
+            "raised today",
+            "you already answered it"
+          ]
+        }
+      ],
+      "total": 1,
+      "unanswered": 0,
+      "ranking": {
+        "solicitations_total": 1,
+        "shown_count": 1,
+        "not_shown_count": 0,
+        "slice_size": 50,
+        "slice_source": "policy",
+        "policy_revision": 0,
+        "weights": {
+          "byKind": {
+            "gap_needs_human": 10,
+            "gap_reland_needs_human": 10,
+            "question": 8,
+            "code_change": 7,
+            "gap_needs_localization": 6,
+            "gap_pending_verification": 4,
+            "info": 1,
+            "pulse": 0.5
+          },
+          "agePerDay": 0.4,
+          "declaredImportance": {
+            "high": 3,
+            "medium": 1,
+            "low": 0
+          },
+          "unansweredBoost": 24
+        },
+        "explanation": "Showing 1 of 1 by importance; top: \"Audit: revised scope question\" \u2014 the system is asking you a direct question; nothing further is hidden."
+      }
+    }
+  }
+}

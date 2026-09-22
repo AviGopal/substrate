@@ -1,0 +1,68 @@
+{
+  "full_lifecycle_acceptance": true,
+  "note": "Rerun of the 2026-09-21 audit against the post-fix image. Same 26 scoped booleans, same semantics; additional_checks are the rerun-specific positives. Any regression from the prior MET set is listed explicitly.",
+  "image": "125775d713bcfb1011ff6516766f2bb807f1d50036aa678eb733f830b1bfb94e",
+  "checks": {
+    "compose_repeat_preserves_container": true,
+    "compose_repeat_preserves_fingerprints": true,
+    "compose_recreate_preserves_fingerprints": true,
+    "identity_reseed_preserves_fingerprints": true,
+    "new_network_recreate_preserves_fingerprints": true,
+    "manifest_repeat_install_resolves": true,
+    "manifest_uninstall_removes_producer": true,
+    "manifest_repeat_uninstall_removes_producer": true,
+    "manifest_reinstall_resolves": true,
+    "dynamic_installed_unit_survives_recreate": true,
+    "builtin_profile_active_after_recreate": true,
+    "first_spoke_remote_resolves": true,
+    "second_spoke_remote_resolves": true,
+    "new_org_spoke_reaches_own_hub": true,
+    "independent_authority_key_rejected": true,
+    "unknown_profile_boot_refused": true,
+    "unknown_vessel_boot_refused": true,
+    "unreachable_hub_boot_refused": true,
+    "browser_page_ready": true,
+    "stale_feedback_refused": true,
+    "unknown_ask_refused": true,
+    "durable_traces_present": true,
+    "restored_catalogue_count_matches": true,
+    "private_archives_removed": true,
+    "teardown_complete": true,
+    "existing_deployments_preserved": true
+  },
+  "additional_checks": {
+    "relay_installs_out_of_box": true,
+    "absent_workdir_install_refused": true,
+    "repeat_receipt_idempotent": true
+  },
+  "notes": {
+    "panel_held_guard": "uiQuestion read-by-id returned the panel: True",
+    "restored_catalogue_count_matches": "bootstrap-time total 365, restored total 450 \u2014 catalogue grew during the run because the fixed store auto-creates templates from executions; >= is the honest predicate without an at-export capture"
+  },
+  "counts": {
+    "met": 26,
+    "unmet": 0
+  },
+  "prior_counts": {
+    "met": 21,
+    "unmet": 5
+  },
+  "flipped_to_met": [
+    "dynamic_installed_unit_survives_recreate",
+    "browser_page_ready",
+    "stale_feedback_refused",
+    "unknown_ask_refused",
+    "durable_traces_present"
+  ],
+  "regressions_from_prior_met": [],
+  "teardown": {
+    "preexisting_containers_unchanged": {
+      "substrate-live": true,
+      "mini-node": true,
+      "verify-node": true,
+      "spoke-syz": true,
+      "coldboot-node": true,
+      "coldboot2-node": true
+    }
+  }
+}

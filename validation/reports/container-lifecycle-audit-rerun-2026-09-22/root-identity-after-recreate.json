@@ -1,0 +1,13 @@
+{
+  "at": "2026-09-22T10:50:49.148064+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "substrate-key",
+    "whoami"
+  ],
+  "rc": 0,
+  "stdout": "{\n  \"valid\": true,\n  \"org_id\": \"organizations:substrate\",\n  \"user_id\": \"users:b04tmzwb9cplav7pwpv8\",\n  \"key_id\": \"key_ww3r7l4nrhZ7Dsip\",\n  \"scopes\": [\n    \"read\",\n    \"write\"\n  ],\n  \"role\": \"user\"\n}\n",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

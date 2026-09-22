@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-22T10:47:03.363082+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "sh",
+    "-c",
+    "journalctl -u bootstrap-seeder -u development-vessel-seed -n 20 --no-pager"
+  ],
+  "rc": 0,
+  "stdout": "Sep 22 10:43:59 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 validator-dispatch\nSep 22 10:43:59 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 reliability:validate-task-output-v1\nSep 22 10:43:59 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 audit-test-report\nSep 22 10:43:59 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 run-sensitivity-probe\nSep 22 10:43:59 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 debug-failing-audit\nSep 22 10:43:59 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 ribosome-extract\nSep 22 10:44:00 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 create-shape-provider-goal\nSep 22 10:44:00 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 core-activity-audit\nSep 22 10:44:00 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 prune-activity\nSep 22 10:44:00 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 replace-activity\nSep 22 10:44:00 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 repair-failed-activity\nSep 22 10:44:00 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 evolve-activity-self-contained\nSep 22 10:44:00 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 genuine-edge-probe-producer\nSep 22 10:44:01 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 genuine-edge-probe-consumer\nSep 22 10:44:01 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 genuine-edge-probe-orchestrator\nSep 22 10:44:01 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 forge-vessel-for-shape\nSep 22 10:44:01 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 summarize-and-emit-concept\nSep 22 10:44:01 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder]   \u2713 author-obsidian-ui-flow\nSep 22 10:44:01 sla-0922r-80a33e-root-a bun[3362]: [bootstrap-seeder] Seeding complete: 19/19 templates present\nSep 22 10:44:01 sla-0922r-80a33e-root-a systemd[1]: bootstrap-seeder.service: Deactivated successfully.\n",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

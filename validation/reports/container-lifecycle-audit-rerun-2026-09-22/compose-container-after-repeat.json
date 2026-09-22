@@ -1,0 +1,13 @@
+{
+  "at": "2026-09-22T10:46:00.729566+00:00",
+  "argv": [
+    "docker",
+    "inspect",
+    "--format",
+    "{{.Id}} {{.State.StartedAt}}",
+    "sla-0922r-80a33e-compose-individual"
+  ],
+  "rc": 0,
+  "stdout": "9c8cbcc847b89ba0b3f26ea71f5cf65285bff43223a2b20237444ad209a17e08 2026-09-22 03:45:52.559345958 -0700 PDT\n",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

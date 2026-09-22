@@ -1,0 +1,41 @@
+{
+  "state": {
+    "at": "2026-09-22T10:50:02.337809+00:00",
+    "argv": [
+      "docker",
+      "inspect",
+      "--format",
+      "{{json .State}}",
+      "sla-0922r-80a33e-no-provider"
+    ],
+    "rc": 0,
+    "stdout": "{\"OciVersion\":\"1.3.0\",\"Status\":\"running\",\"Running\":true,\"Paused\":false,\"Restarting\":false,\"OOMKilled\":false,\"Dead\":false,\"Pid\":507581,\"ConmonPid\":507566,\"ExitCode\":0,\"Error\":\"\",\"StartedAt\":\"2026-09-22T03:49:59.315829031-07:00\",\"FinishedAt\":\"0001-01-01T00:00:00Z\",\"CgroupPath\":\"/user.slice/user-1000.slice/user@1000.service/user.slice/libpod-d3f69ce8b801c303a7dedd6147be22d521be6c1d77db9931327a143b7d08eb08.scope\",\"CheckpointedAt\":\"0001-01-01T00:00:00Z\",\"RestoredAt\":\"0001-01-01T00:00:00Z\"}\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  "logs": {
+    "at": "2026-09-22T10:50:02.402098+00:00",
+    "argv": [
+      "docker",
+      "logs",
+      "--tail",
+      "30",
+      "sla-0922r-80a33e-no-provider"
+    ],
+    "rc": 0,
+    "stdout": "[arms] rendering LLM arm units (/usr/local/share/substrate/super-repo/scripts/substrate/render-llm-arms.sh)\nrender-llm-arms: rendered arm 'opus' -> /etc/systemd/system/llm-opus.service (port 8221, gated on ANTHROPIC_API_KEY)\nrender-llm-arms: rendered arm 'haiku' -> /etc/systemd/system/llm-haiku.service (port 8223, gated on ANTHROPIC_API_KEY)\nrender-llm-arms: rendered arm 'google' -> /etc/systemd/system/llm-google.service (port 8225, gated on GOOGLE_API_KEY)\nrender-llm-arms: 3 arm(s) processed\n[arms] llm-google.service NOT enabled \u2014 role 'models' is not in this selection\n[arms] llm-haiku.service NOT enabled \u2014 role 'models' is not in this selection\n[arms] llm-opus.service NOT enabled \u2014 role 'models' is not in this selection\n[substrate] handing off to systemd\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n[apply-inventory] disabled+masked: funnel-drain.service\n[apply-inventory] disabled+masked: ingest-docs.service\n[apply-inventory] disabled+masked: light-dispatch-healthcheck.service\n[apply-inventory] disabled+masked: m1-trainer.service\n[apply-inventory] disabled+masked: model-reality-audit.service\n[apply-inventory] disabled+masked: observe-orthogonal-refresh.service\n[apply-inventory] disabled+masked: obsidian-collaborate.service\n[apply-inventory] disabled+masked: obsidian-intake.service\n[apply-inventory] disabled+masked: obsidian-learn.service\n[apply-inventory] disabled+masked: operator-goal-generator.service\n[apply-inventory] disabled+masked: self-operational-health.service\n[apply-inventory] disabled+masked: self-recovery.service\n[apply-inventory] disabled+masked: self-repair-operational.service\n[apply-inventory] disabled+masked: learning-liveness-probe.service\n[apply-inventory] disabled+masked: runtime-drift.service\n[apply-inventory] disabled+masked: spectral-gap.service\n[apply-inventory] disabled+masked: substrate-pull-sync.service\n[apply-inventory] disabled+masked: surgical-gap-scan.service\n[apply-inventory] done \u2014 83 unit(s)  disabled; the rest stay enabled\n[apply-inventory] warn: 1 shipped unit(s) absent from the inventory \u2014 ungoverned by ENABLED_ROLES, they run in every role:\n[apply-inventory] warn:   unmanaged: metric-collector-vessel.service\n"
+  },
+  "identity": {
+    "at": "2026-09-22T10:50:02.616411+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-no-provider",
+      "substrate-key",
+      "whoami"
+    ],
+    "rc": 0,
+    "stdout": "{\n  \"valid\": false,\n  \"error\": \"Invalid API key prefix (must start with mb-)\"\n}\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "before": {
+    "at": "2026-09-22T10:44:01.032471+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-root-a",
+      "sha256sum",
+      "/workspace/substrate/fleet/vessels.manifest.json"
+    ],
+    "rc": 0,
+    "stdout": "4275279f0ec54381fca6fcd90598eadc683576bd4a3786e05c20c0ec776a6f78  /workspace/substrate/fleet/vessels.manifest.json\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  "after": {
+    "at": "2026-09-22T10:44:22.492560+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-root-a",
+      "sha256sum",
+      "/workspace/substrate/fleet/vessels.manifest.json"
+    ],
+    "rc": 0,
+    "stdout": "4275279f0ec54381fca6fcd90598eadc683576bd4a3786e05c20c0ec776a6f78  /workspace/substrate/fleet/vessels.manifest.json\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  }
+}

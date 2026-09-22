@@ -1,0 +1,7 @@
+{
+  "status": 409,
+  "data": {
+    "error": "EMAIL_TAKEN",
+    "message": "email is already registered"
+  }
+}

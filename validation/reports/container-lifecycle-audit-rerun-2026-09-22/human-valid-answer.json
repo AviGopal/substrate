@@ -1,0 +1,18 @@
+{
+  "status": 200,
+  "data": {
+    "resolved": true,
+    "success": true,
+    "shape": "uiFeedback",
+    "body": {
+      "id": "audit-response-accepted",
+      "panelRevision": 2,
+      "panelId": "audit-required-question",
+      "askId": "scope",
+      "value": "audit-only",
+      "kind": "answer",
+      "visibility": "public",
+      "receivedAt": 1790074036445
+    }
+  }
+}

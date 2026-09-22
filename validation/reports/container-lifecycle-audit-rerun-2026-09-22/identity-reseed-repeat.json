@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-22T10:47:03.849070+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "systemctl",
+    "restart",
+    "identity-seeder"
+  ],
+  "rc": 0,
+  "stdout": "",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}
