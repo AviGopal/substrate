@@ -86,3 +86,9 @@ filed only after attempt 2 verifies, so its drafter binds to a contract that wor
 - 23:28Z the lane picked the directed-flag gap, took an anchor_not_found lesson on the
   first draft, and re-drafted via patch-with-tools (turns 2–22 visible). Both gaps are in
   the system's hands; the operator is watching, not editing.
+- 23:3xZ two more picks of the retire gap were refused for capacity (the directed-flag
+  compose holds the single autonomous slot). The lane then declared the gap
+  "chronically stuck" and emitted a NARROWED CHILD — which is a verbatim copy of the
+  parent (same edit_site, same summary with a "[narrowed from …]" prefix). No new
+  information, one more arm competing for the same slot (law 3: a duplicate mint is a
+  fresh uninformed cell). Filed below as an observation, not acted on.
