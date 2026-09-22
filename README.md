@@ -178,15 +178,19 @@ docker run -d --privileged --name substrate-live \
 
 That is **nine** ports, matching `docs/SUBSTRATE.md` and the root compose file.
 
-`18310` is `human-surface-vessel` — the vessel a human talks to — and
-**publishing the port is not the same as serving it.** The human surface is a
-*manifest* vessel, which a default boot leaves uninstalled, so `:18310` answers
-connection-refused while every other health signal is green. Install it once:
+`18310` is `human-surface-vessel` — the vessel a human talks to. The image
+bakes its vendor unit (enabled) and the built UI, so it serves out-of-box;
+verify with the page itself, not just the health probe:
 
 ```bash
-docker exec substrate-live vessel-ctl install human-surface-vessel
-curl -s -o /dev/null -w '%{http_code}\n' http://localhost:18310/health   # 200
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:18310/   # 200 — the UI itself
 ```
+
+To exclude it from a deployment, name it in `DISABLED_VESSELS` (masks the
+unit; stop the running one too, or recreate).
+(`vessel-ctl install human-surface-vessel` is the source-deployment path; on a
+pulled image with no super-repo checkout it refuses rather than replacing the
+working vendor unit with one that cannot chdir.)
 
 Omit the port mapping instead and the vessel runs but binds only inside the
 container, which looks identical from the host.

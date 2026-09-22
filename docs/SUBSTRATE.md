@@ -128,17 +128,25 @@ committed inventory change does reach a running fleet's volume without a rebuild
 > No command reconciles or reports this drift for you; `substrate-doctor` reads
 > the inventory but does not compare it against git or against the running set.
 
-> ⚠ **The human surface is a manifest vessel, not just the federation units.**
-> `human-surface-vessel` (`:8310` → host `:18310`) is `"manifest": true`, so a
-> default boot **publishes its port with nothing listening** — the port answers
-> connection-refused while every other health signal reads green. It is the one
-> vessel a human is meant to talk to, so a fleet that looks complete can have no
-> usable surface. Install it explicitly:
+> **The human surface serves out-of-box.** `human-surface-vessel` (`:8310` →
+> host `:18310`) ships as a baked, *enabled* vendor unit with the built UI in
+> the image, and it sits outside `apply-inventory`'s selection loop — so it is
+> up even under a restricted `ENABLED_VESSELS` roster, and `/` answers the UI
+> itself (200), not just `/health`. Verify with the page, not the health probe:
 >
 > ```bash
-> docker exec substrate-live vessel-ctl install human-surface-vessel
-> curl -s -o /dev/null -w '%{http_code}\n' http://localhost:18310/health   # expect 200
+> curl -s -o /dev/null -w '%{http_code}\n' http://localhost:18310/   # expect 200 — the UI itself
 > ```
+>
+> To exclude it from a deployment, name it in `DISABLED_VESSELS` — that masks
+> the unit (verified: selection alone does not touch it), but masking only
+> blocks future starts: on a live fleet also `systemctl stop` it, or recreate. `vessel-ctl install human-surface-vessel` is the
+> *source-deployment* path (its manifest workdir is the super-repo checkout,
+> and its rendered unit tracks that checkout instead of the image): on a pulled
+> image with no checkout the install **refuses** (`ok:false`, workdir absent)
+> rather than replacing the working vendor unit with one that dies
+> `status=200/CHDIR` on restart. A refusal there means: keep the vendor unit,
+> or clone the super-repo into the workspace first.
 >
 > The manifest units flagged in the inventory are `human-surface-vessel`,
 > `federation-relay` and `federation-transport-vessel`. The set `vessel-ctl`
@@ -318,9 +326,8 @@ host-mapped ports. Wait for
 <a id="the-equivalent-raw-invocation"></a>
 The equivalent raw invocation on **any** docker host, and the one path that needs
 **no checkout at all** — same nine published ports as compose, including the
-human surface. (Publishing `:18310` is not the same as
-serving it: the human surface is a manifest vessel and needs one install step
-before it answers — see [the manifest-vessel note](#topology-selection).)
+human surface, which serves its UI out-of-box from the baked vendor unit
+(see [the human-surface note](#topology-selection)).
 
 ```bash
 docker run -d --privileged --name substrate-live \
@@ -754,6 +761,20 @@ docker exec <container> vessel-ctl apply               # re-apply the selection 
 `status` always prints `restarts=` next to the state, because a unit in a
 `Restart=` loop reports `activating` forever and **never** `failed` — it is
 invisible to any states-only listing, and a climbing count is the cheap tell.
+
+> **Installed membership is durable across container recreation.** A rendered
+> unit lives in `/etc/systemd/system` — container filesystem, not a volume — so
+> on its own it would vanish with the container while the manifest and sources
+> (volumes) survived. `vessel-ctl install`/`uninstall` therefore record the
+> desired membership in `/workspace/substrate/fleet/installed.json` (volume),
+> and the entrypoint re-installs any recorded member whose unit file is missing
+> on every boot. `DISABLED_VESSELS` outranks the record. Two consequences:
+> a recreate on the same volumes brings installed dynamic vessels back without
+> operator hands, and an `uninstall` is only durable because it *removes* the
+> record — deleting the unit file alone would be undone at the next boot.
+> An install into an absent workdir **refuses** (`ok:false`) instead of writing
+> a unit that cannot start; the reply also carries `post_install: ok|failed`
+> rather than swallowing the hook's exit status.
 
 > **Most of the `disabled` rows are expected.** On a default fleet roughly half
 > the units read `disabled`, and every one of them is the `.service` half of a
