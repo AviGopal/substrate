@@ -127,3 +127,15 @@ Score so far for the self-repair demonstration: 4 substrate drafts, 2 gated out 
 typecheck with lessons the next draft partly heeded, 1 hollow-green caught only by the
 behavioural falsifier, 1 correct landing after the operator supplied a *constraint* (never
 a diff). Operator hands on code: zero.
+
+## Directed-flag gap — first landing is a hollow_write (23:55Z)
+
+bbb83ff (Substrate Autonomous) added `const isDirected = …` above the compose call and
+never passed it: `directed: isDirected` absent, typecheck green (an unused const is
+legal), verdict FAVORABLE. Exactly the hollow_write class (a write nothing reads). Fed back
+with `BEHAVIORAL VERIFICATION FAILED` + `regressed_by: bbb83ff` and the one-line fix
+location. Also: the lane auto-minted
+`recommit-the-memory-store-…-verify_failed` from the CLOSED retire gap's old lessons and
+picked it at 23:56Z — a recommit that does not check its parent's status. Closed as
+superseded_parent_landed (the pick may already be composing; the falsifier will grade
+whatever it lands).
