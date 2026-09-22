@@ -31,7 +31,23 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) 
   if (path === "/api/discovery/shapes") return Response.json({ shapes: [] });
   if (path === "/api/resolve") return Response.json({ resolved: true, body: { dispatches: [] } });
   if (path.startsWith("/api/")) return Response.json({ gaps: [] });
-  return new Response(Bun.file(repo + "/ui/dist" + (path === "/" ? "/index.html" : path)));
+  /*
+   * A MISSING STATIC FILE IS A 404, NOT A THROW.
+   *
+   * This handed `Bun.file(...)` straight to a Response without checking the
+   * file exists. The browser requests `/favicon.ico`, nothing serves it, and
+   * the unhandled ENOENT propagated far enough to make this probe EXIT 1 while
+   * still printing its own `PASS stage-5: ...` line on the way out.
+   *
+   * That combination is worse than either failure alone: CI reads the exit code
+   * and calls the harness broken, a person reads the output and calls it green,
+   * and the probe cannot serve as a gate for anything — which is exactly what
+   * it is needed for as the repertoire's variant-adoption check. A probe whose
+   * printed verdict and exit status disagree is not a probe.
+   */
+  const file = Bun.file(repo + "/ui/dist" + (path === "/" ? "/index.html" : path));
+  if (!(await file.exists())) return new Response("not found", { status: 404 });
+  return new Response(file);
 }});
 
 const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_EXECUTABLE, args: ["--no-sandbox"] });
