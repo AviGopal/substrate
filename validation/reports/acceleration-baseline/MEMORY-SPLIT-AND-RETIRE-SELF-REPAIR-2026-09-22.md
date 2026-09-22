@@ -92,3 +92,12 @@ filed only after attempt 2 verifies, so its drafter binds to a contract that wor
   parent (same edit_site, same summary with a "[narrowed from …]" prefix). No new
   information, one more arm competing for the same slot (law 3: a duplicate mint is a
   fresh uninformed cell). Filed below as an observation, not acted on.
+- Attempt 3 (23:38Z, lane's own pick) also failed verify — but differently: the
+  per-gap lesson block DID reach the drafter (priorAttemptFeedbackBlock, verbatim tsc
+  output) and it stopped redeclaring `nested`; it still redeclared `src`/`pickString`.
+  Root: the localizer anchors every draft on the existing retire block at the TOP of the
+  function, and the correct fix is a MOVE below the envelope normalisation — not
+  expressible as one in-place region edit — so each draft copies the normalisation upward
+  and collides. Operator contribution (a lesson, not an edit): the gap text now states the
+  constraint — stay inside the existing block, local `retireSrc`/`retireId`, no new
+  top-level declarations. Left for the lane's own next pick.
