@@ -112,3 +112,67 @@ distinctions, and before/after/disable/restore plus held-out and restart trials 
 structural growth. Keep presentation/procedure versions attached to the experiences
 they produced. A better-looking interface and a configurable rendering policy are
 candidate improvements, not proof of autonomous growth.
+
+## How a content form is chosen, and how that choice becomes learnable
+
+The shape vocabulary is open and ragged; content arrives in a small closed set of
+forms. So the surface dispatches on form, never on shape name, and the verbatim
+branch is the designed default rather than an error state. Two questions follow,
+and they have different oracles. Conflating them is what makes a "form learner"
+unfalsifiable.
+
+**Fidelity is machine-decidable and is a filter, not a ranking.** A form is wrong
+— no human needed — if rendering loses content. That is what the fidelity
+predicates decide, with a deliberately coercing fixture to prove the red state
+and a preserving one as positive control. It cuts the candidate set and cannot
+rank what survives: a byte-perfect rendering of an unreadable payload passes
+every predicate.
+
+**Preference among the survivors needs human evidence**, in three grades.
+Strongest is an explicit pin, which is a labelled preference on a (shape, form)
+pair. Next is a complaint, which is a negative label on whatever form was in
+force when someone looked. Weakest but highest-volume is revealed behaviour: a
+fold that gets expanded, a horizontal scroll, a value that gets copied.
+
+Neither oracle can be applied to a choice nobody recorded. The surface therefore
+records every form decision — the shape, a signature of the content, the chosen
+form, WHICH BRANCH chose it, and the policy revision in force — and publishes a
+measured census of those records on its own self-report, so the substrate's
+legibility detector can judge form as well as typography. A decision whose author
+is unrecorded cannot be graded: grading a pin and a guess of last resort as one
+row lets the heuristic take credit for instructions a person typed by hand.
+
+### The three tiers, and how a disposition is promoted
+
+Expected trajectory, strongest first:
+
+1. **Declared by the producer.** The resolver that emits a shape declares its
+   content form in the impulse metadata. No inference, and no shape name in the
+   surface at all. This is where a strongly-learned disposition retires to, and
+   the promotion criterion must be stated before it is built: a posterior above
+   threshold across distinct human encounters, with automatic demotion when a
+   complaint lands afterwards. Without demotion, a promoted mistake is permanent
+   — the irreversibility class the weight floor and the type-scale repair both
+   exist to prevent.
+2. **Learned policy.** The same `formByShape` field a person's instruction
+   writes, written instead by a learner. Still keyed by shape; the difference is
+   that no one typed those keys, and the policy is a shaped impulse read at use
+   time.
+3. **Inferred for a shape never seen.** A typed decision over the closed form
+   set, conditioned on observable content features rather than on the name —
+   which is what lets it generalise to a shape nobody has registered, and what
+   keeps its cache honest, since caching by shape name reintroduces the
+   hand-keyed table.
+
+Under all three sits the heuristic floor, and under that the verbatim default.
+Any external decision arm must be minted as an activity with its decision and
+confidence in the trace, so the junction is graded and the arm can LOSE to the
+floor on a measured family; must be wired fail-closed; and must never render a
+confidence number to a person, which is separately forbidden.
+
+Tier 3 is a trajectory and not a current component. The reason is a measurement:
+after the planner was repaired so that a bare single-line value reaches the value
+renderer, the misroute class on the live pool went to zero, and no remaining
+form on that pool is decided by a guess that a better guesser would improve.
+An inference arm is justified when the census says otherwise — which is what the
+census is for.
