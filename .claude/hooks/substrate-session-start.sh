@@ -15,6 +15,16 @@ resp="$(curl -s --max-time 4 -X POST "$EP/v2/impulses/resolve" \
   -d '{"impulse":{"type":"memoryNote","limit":500}}' 2>/dev/null)" || exit 0
 [ -z "$resp" ] && exit 0
 echo "$resp" | jq -e '.success and ((.body.notes | length) > 0)' >/dev/null 2>&1 || exit 0
+# Conventions are fetched by TYPE, not by recency. The default listing is the newest 500 by
+# updated_at; measured 2026-09-22 a flood of expectation-battery residue pushed every feedback
+# note out of that window and this hook reported 0 conventions while 91 existed. A filtered
+# read cannot be displaced by unrelated writes.
+fbresp="$(curl -s --max-time 4 -X POST "$EP/v2/impulses/resolve" \
+  -H 'Content-Type: application/json' \
+  -d '{"impulse":{"type":"memoryNote","note_type":"feedback","limit":60}}' 2>/dev/null)" || fbresp=""
+if [ -n "$fbresp" ] && echo "$fbresp" | jq -e '.success' >/dev/null 2>&1; then
+  resp="$(jq -cn --argjson a "$resp" --argjson b "$fbresp" '$a | .body.notes = (($b.body.notes // []) + [$a.body.notes[] | select(.type!="feedback")])')"
+fi
 
 ctx="$(echo "$resp" | jq -r --arg ep "$EP" '
   .body.total as $total
