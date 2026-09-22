@@ -145,6 +145,21 @@ entry() { manifest_json | jq -e --arg n "$VESSEL" '.vessels[] | select(.name==$n
 CLONE_DIR=/workspace/git/vessels
 RUNTIME_DIR=/vessels
 
+# Desired dynamic membership, volume-backed. The rendered unit lives in
+# /etc/systemd/system — container filesystem, NOT a volume — so a recreate
+# keeps the manifest and the source but silently drops every installed unit
+# (measured by the 2026-09-21 lifecycle audit: "manifest and source persist,
+# but generated service unit disappears"). install/uninstall maintain this
+# record; entrypoint.sh re-installs its members on every boot.
+INSTALLED_JSON=/workspace/substrate/fleet/installed.json
+record_installed() {
+  csh "mkdir -p /workspace/substrate/fleet; f='$INSTALLED_JSON'; [ -f \"\$f\" ] || echo '{\"installed\":[]}' > \"\$f\"; \
+       jq --arg n '$VESSEL' '.installed = ((.installed // []) + [\$n] | unique)' \"\$f\" > \"\$f.tmp\" && mv \"\$f.tmp\" \"\$f\"" || true
+}
+unrecord_installed() {
+  csh "f='$INSTALLED_JSON'; [ -f \"\$f\" ] && jq --arg n '$VESSEL' '.installed = ((.installed // []) - [\$n])' \"\$f\" > \"\$f.tmp\" && mv \"\$f.tmp\" \"\$f\"" || true
+}
+
 ensure_clone() { # vessel [repo] -> ensure /workspace/git/vessels/<v> exists (clone on demand)
   local v="$1" repo="${2:-$1}"
   csh "set -e
@@ -213,8 +228,13 @@ case "$ACTION" in
     if [ -z "$wd" ]; then
       install_note="render-unit produced no WorkingDirectory"
     elif ! csh "[ -d '$wd' ]"; then
-      install_note="WORKDIR ABSENT ($wd) — dependencies NOT installed; the unit will start with an empty node_modules"
-      echo "{\"warn\":\"$VESSEL: $install_note\"}" >&2
+      # REFUSE, don't warn-and-proceed. Writing the rendered unit would REPLACE a
+      # working vendor unit in /usr/lib with one whose WorkingDirectory does not
+      # exist, so the next restart dies with status=200/CHDIR — an install that
+      # returned ok:true broke a vessel that was serving before it ran (measured
+      # by the 2026-09-21 lifecycle audit: install "success", then 200/CHDIR).
+      echo "{\"ok\":false,\"action\":\"install\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"error\":\"WORKDIR ABSENT ($wd) — refusing to install a unit that cannot chdir; if a baked vendor unit exists it keeps serving. Create the workdir (clone the super-repo) or point the manifest workdir at a baked path.\"}"
+      exit 1
     elif ! csh "[ -f '$wd/package.json' ]"; then
       install_note="no package.json in $wd (nothing to install)"
     elif csh "cd '$wd' && /root/.bun/bin/bun install --silent >/dev/null 2>&1"; then
@@ -236,14 +256,24 @@ case "$ACTION" in
     csh "/usr/local/bin/render-unit '$VESSEL' > /etc/systemd/system/$VESSEL.service"
     csh "systemctl daemon-reload && systemctl enable --now $VESSEL.service" >/dev/null 2>&1 || true
 
-    # 4. Optional post-install hook.
+    # 4. Optional post-install hook. Output stays quiet (hooks write their own
+    # logs) but the EXIT STATUS is a verdict the caller must see: swallowing it
+    # let a failed UI build ride under ok:true, and the only evidence was a log
+    # sentinel nobody was told to read.
     post=$(echo "$e" | jq -r '.post_install // empty')
-    [[ -n "$post" ]] && csh "$post" >/dev/null 2>&1 || true
+    post_status="none"
+    if [[ -n "$post" ]]; then
+      if csh "$post" >/dev/null 2>&1; then post_status="ok"; else post_status="failed"; fi
+    fi
+
+    # Record desired membership on the volume so a container recreate can
+    # reconstruct the unit (entrypoint.sh reads this on every boot).
+    record_installed
 
     active=$(csh "systemctl is-active '$VESSEL.service' 2>/dev/null || true" 2>/dev/null | head -n1)
     active=${active:-unknown}
     self_rec=$(echo "$e" | jq -r '.self_recovery // false')
-    echo "{\"ok\":true,\"action\":\"installed\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"active\":\"$active\",\"self_recovery\":$self_rec,\"deps\":\"$install_note\"}"
+    echo "{\"ok\":true,\"action\":\"installed\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"active\":\"$active\",\"self_recovery\":$self_rec,\"deps\":\"$install_note\",\"post_install\":\"$post_status\"}"
     ;;
 
   sync)
@@ -299,6 +329,8 @@ case "$ACTION" in
     fi
     csh "systemctl disable --now $VESSEL.service 2>/dev/null || true; rm -f /etc/systemd/system/$VESSEL.service; systemctl daemon-reload" >/dev/null 2>&1 || true
     csh "/usr/local/bin/discovery-deregister '$VESSEL'" || true
+    # Drop it from the durable membership record, or the next boot reinstalls it.
+    unrecord_installed
     echo "{\"ok\":true,\"action\":\"uninstalled\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\"}"
     ;;
 
