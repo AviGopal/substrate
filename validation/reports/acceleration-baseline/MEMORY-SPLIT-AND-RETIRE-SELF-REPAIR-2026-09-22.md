@@ -101,3 +101,29 @@ filed only after attempt 2 verifies, so its drafter binds to a contract that wor
   and collides. Operator contribution (a lesson, not an edit): the gap text now states the
   constraint — stay inside the existing block, local `retireSrc`/`retireId`, no new
   top-level declarations. Left for the lane's own next pick.
+
+## Attempt 4 — LANDED AND VERIFIED (23:47–23:49Z)
+
+- After the gap text gained the in-place constraint, a goal hashed `0d323808` reached
+  goal-host with our gap record hydrated into it ("gap-hydration: injected record
+  the-memory-store-has-no-retire-primitive… cited file memory-note.ts"). It was NOT
+  dispatched by the operator (no operator tag; no operator goal named this file). Goal-host
+  routed it through EARLY EDIT-INTENT → feature_compose; the draft changed exactly two lines
+  inside the existing retire block (reads `pointer.note.retire` / `pointer.note.id` as
+  well as the flat pointer — the constraint was followed); verdict FAVORABLE; cutover;
+  pushed as **19ae84e (Substrate Autonomous)**. The commit is labelled with the synthesized
+  route-edit id, not the gap id — a provenance gap: the close-oracle cannot attribute this
+  landing to the gap it fixed.
+- **Falsifier on the live vessel (MainPID 1044575) — PASS 6/6:** nested retire of a present
+  note → `retired`, re-read absent; nested missing id → `not_found`; nested without id →
+  `missing_id`; flat missing → `not_found`; flat present → `retired`. Store size unchanged by
+  the rejections.
+- Gap 1 closed by measurement (closed_reason measured_by_operator, close_basis
+  operator_measured_behavioral, landed_sha 19ae84e). The duplicate "narrowed" child closed
+  as duplicate_of_closed_parent. Gap 2 (checker retires its probe notes; contract = nested
+  `{ note: { id, retire: true } }`) FILED for the lane.
+
+Score so far for the self-repair demonstration: 4 substrate drafts, 2 gated out by
+typecheck with lessons the next draft partly heeded, 1 hollow-green caught only by the
+behavioural falsifier, 1 correct landing after the operator supplied a *constraint* (never
+a diff). Operator hands on code: zero.
