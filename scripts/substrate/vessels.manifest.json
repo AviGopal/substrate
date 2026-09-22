@@ -37,7 +37,8 @@
     {
       "name": "federation-relay",
       "description": "Public libp2p Circuit Relay v2 — the from-anywhere reachability anchor.",
-      "workdir": "$REPO_ROOT/scripts/substrate/federation-relay",
+      "_workdir_comment": "IMAGE PATH, same trade as federation-transport-vessel below. The 2026-09-21 lifecycle audit's offline launch had no /workspace/git/super-repo (no credentials, and its image predated reliable seed-from-baked-copy), so the $REPO_ROOT form left the relay uninstallable out-of-box and the audit hand-repointed it to the baked source path to proceed. The baked copy is self-contained: Dockerfile.substrate materialises the real @avigopal/libp2p-federation-transport over bun's file: symlink stub at build time. Relay self-modification therefore requires an image rebuild — deliberate for the reachability anchor, per the transport-vessel rationale.",
+      "workdir": "/usr/local/share/substrate/super-repo/scripts/substrate/federation-relay",
       "exec": "relay.ts",
       "env": {
         "RELAY_KEY_FILE": "/workspace/fed-relay-key.pb"

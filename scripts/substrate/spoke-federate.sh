@@ -91,15 +91,27 @@ cexec "
 "$VESSEL_CTL" install federation-transport-vessel --container "$C"
 cexec 'systemctl restart federation-transport-vessel.service' || true
 
-h=""
+# A transport that answers /health with 200/ok can still have ZERO relay
+# reservations and an empty circuit multiaddr — that state has no remote
+# visibility at all, and treating it as joined is how the 2026-09-21 lifecycle
+# audit got a "healthy" spoke nothing could reach. Joined means a live relay
+# reservation, so gate on transport.activeReservations, not on the socket
+# answering.
+h=""; res=0
 for _ in $(seq 1 30); do
   h=$(cexec 'curl -sm 2 http://127.0.0.1:8401/health 2>/dev/null' || true)
-  [ -n "$h" ] && break
+  if [ -n "$h" ]; then
+    res=$(echo "$h" | jq -r '.transport.activeReservations // 0' 2>/dev/null || echo 0)
+    [ "${res:-0}" -ge 1 ] 2>/dev/null && break
+  fi
   sleep 2
 done
-if [ -n "$h" ]; then
-  echo "[spoke-federate] transport up: $(echo "$h" | head -c 300)"
+if [ -n "$h" ] && [ "${res:-0}" -ge 1 ] 2>/dev/null; then
+  echo "[spoke-federate] transport joined (activeReservations=$res): $(echo "$h" | head -c 300)"
   echo "[spoke-federate] this substrate now mirrors its local registry into $HUB as <vessel>@$SID"
+elif [ -n "$h" ]; then
+  echo "[spoke-federate] WARNING: transport answers /health but holds NO relay reservation (activeReservations=$res) — it is NOT remotely visible. Check the relay multiaddr and: docker exec $C journalctl -u federation-transport-vessel -n 50"
+  exit 1
 else
   echo "[spoke-federate] WARNING: transport health not answering yet — check: docker exec $C journalctl -u federation-transport-vessel -n 50"
   exit 1
