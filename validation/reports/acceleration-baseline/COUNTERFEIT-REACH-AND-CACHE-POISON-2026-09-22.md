@@ -148,8 +148,8 @@ Added the grade->next-attempt edge in goal-host-vessel/src/index.ts:
 A single-walk hollow->feedback->GREEN trace was strongly suggested (each clean reach had
 a FEEDBACK-RETRY moments before its alpha-credit) but NOT rigorously attributable from
 the journal: the "HOLLOW —" verdict lines carry no dispatch_id, and MCP goal_reasoning
-(which renders the clean per-walk log) was unavailable because goal-host did not
-re-register goal_execution with discovery after the SIGKILL restart. The mechanism is
+(which renders the clean per-walk log) was unavailable because the MCP client could not connect this session (npx missing
+on the host) and the one MCP dispatch fell inside a drain window (see gap 4, retracted). The mechanism is
 proven by the correction BEHAVIOR (visible verdict-incorporation) + the non-counterfeit
 reaches, not by one gold-standard trace.
 
@@ -160,8 +160,15 @@ reaches, not by one gold-standard trace.
 2. Judge does not verify member ids trace to real input records (how the counterfeit
    passed once).
 3. reached-command cache persists recipes from unverified reaches (cache poison).
-4. goal-host does not re-register goal_execution with discovery after a single-vessel
-   SIGKILL/restart -> external dispatch broken until a full-substrate reseed.
+4. RETRACTED — a measurement error, not a gap. goal-host re-registers on every boot
+   ("[DiscoveryRegistrationLoop] registered goal-host-vessel", discovery answers
+   POST /register 201). My discovery queries carried no API key; the registry answered
+   401 and I read the empty body as "not registered". With credentials,
+   goal_execution resolves to goal-host at confidence 1 while memoryNote (positive
+   control) resolves to development-vessel. The MCP dispatch that failed did so inside
+   the drain window, when the stopping instance had deliberately de-advertised.
+   Law re-learned: a negative is unattributed until a positive control shares its
+   address — and its credentials.
 
 ---
 
