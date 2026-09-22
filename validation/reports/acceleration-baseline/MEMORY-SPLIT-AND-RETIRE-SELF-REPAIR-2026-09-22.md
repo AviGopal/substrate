@@ -77,3 +77,12 @@ filed only after attempt 2 verifies, so its drafter binds to a contract that wor
   `gap-to-feature-drops-the-directed-flag-so-an-operator-dispatch-competes-as-autonomous-work`.
   The retire gap is left for the lane's own retry (no operator re-dispatch) — that retry IS
   the demonstration.
+- 23:26:35Z the lane picked the retire gap ON ITS OWN (no operator re-dispatch), drafted
+  against memory-note.ts, and FAILED VERIFY: `TS2451: Cannot redeclare block-scoped
+  variable 'nested'` (169, 173) — the drafter inserted a second envelope normalisation
+  above the existing one. Rolled back (running file == b5ed109), `failure_lessons` gained
+  class=verify_failed with the exact tsc error, failed_attempts=2. The gate caught it; the
+  lesson is now in the gap and mirrored to concept-db for the next draft.
+- 23:28Z the lane picked the directed-flag gap, took an anchor_not_found lesson on the
+  first draft, and re-drafted via patch-with-tools (turns 2–22 visible). Both gaps are in
+  the system's hands; the operator is watching, not editing.
