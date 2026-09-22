@@ -59,3 +59,21 @@ filed only after attempt 2 verifies, so its drafter binds to a contract that wor
 - Session start lists conventions (≥ 90 feedback).
 - Two substrate-authored commits on development-vessel origin/dev; gap 1 and gap 2
   closed by behaviour, and not reopened.
+
+## Attempt 2 — how a failed falsifier is fed back (the protocol, learned by reading the lane)
+
+- Re-dispatch after annotating the gap in prose ("FAILED ITS FALSIFIER") was REFUSED:
+  verdict `pending_verification`, "landed once but unmeasured — held pending
+  verification; not re-composed". Correct guard (§12.6: a second landing would read as a
+  manufactured re-land). The prose was not a measurement to the lane.
+- The lane's own vocabulary (verifyGapCondition, Class-3 branch): a landing is treated as
+  regressed when the summary carries the literal token **`BEHAVIORAL VERIFICATION FAILED`**
+  or classification_metadata names **`regressed_by: <sha>`**. Re-filed with both, cleared
+  `pending_outcome_verification`. Pick-time check then passed and the symbol grounded at
+  memory-note.ts:168 (the retire branch) — the lane aimed at the right lines on its own.
+- Then `[compose-cap] REFUSING autonomous compose: 1 in flight — retried when there is
+  capacity` (verdict BUSY). Root: gap_to_feature does not forward `directed` into
+  feature_compose, so an operator dispatch cannot take the reserved directed slot. Filed as
+  `gap-to-feature-drops-the-directed-flag-so-an-operator-dispatch-competes-as-autonomous-work`.
+  The retire gap is left for the lane's own retry (no operator re-dispatch) — that retry IS
+  the demonstration.
