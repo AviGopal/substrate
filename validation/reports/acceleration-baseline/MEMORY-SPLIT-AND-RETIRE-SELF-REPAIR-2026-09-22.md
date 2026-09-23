@@ -503,3 +503,13 @@ Is this the "provable architectural design flaw" stopping condition? Not yet. A 
 fleet change window serialising DB maintenance against code landings is a defensible
 design; discarding verified work on contention and letting a five-minute maintenance
 lease be re-acquired in bursts are implementation choices with filed, bounded fixes.
+- Cross-reference: the root side was already filed at 08:33Z by another operator session,
+  `a-failing-trace-store-reconcile-re-takes-the-single-global-change-window-faster-than-
+  its-ttl-so-cutovers-defer-forty-five-times-in-ninety-minutes` (edit_site
+  seed/trace-store-reconcile.ts): change_window is a single global mutex with no name
+  dimension; a failing reconcile re-acquires it continuously (holder continuous 08:04–
+  08:16, longer than its 5-min TTL). My gap is the downstream half (cutover must not
+  discard verified work on a held window). Together they describe the landing
+  bottleneck: one lock shared by maintenance and code landings, no persistence of
+  verified state across contention, and event-driven pickups that out-race any operator
+  poll for the released slot.
