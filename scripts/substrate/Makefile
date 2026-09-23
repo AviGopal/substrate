@@ -632,12 +632,13 @@ run-live:
 	    -p $(call hp,18260):8260 \
 	    -p $(call hp,18270):8270 \
 	    -p $(call hp,18310):8310 \
+	    -p $(call hp,18320):8320 \
 	    -v $(WORKSPACE_VOLUME):/workspace \
 	    -v $(SURREAL_VOLUME):/var/lib/surrealdb \
 	    --tmpfs /run \
 	    --tmpfs /run/lock \
 	    $(IMAGE):$(TAG)
-	@echo "[run-live] $(LIVE_NAME) started — activity-api on :$(call hp,18080), development-vessel on :$(call hp,18090), discovery-vessel on :$(call hp,18100), goal-host-vessel on :$(call hp,18210), analysis-vessel on :$(call hp,18250), concept-db on :$(call hp,18260), stateful-ui-vessel on :$(call hp,18270), human-surface-vessel on :$(call hp,18310)"
+	@echo "[run-live] $(LIVE_NAME) started — activity-api on :$(call hp,18080), development-vessel on :$(call hp,18090), discovery-vessel on :$(call hp,18100), goal-host-vessel on :$(call hp,18210), analysis-vessel on :$(call hp,18250), concept-db on :$(call hp,18260), stateful-ui-vessel on :$(call hp,18270), human-surface-vessel on :$(call hp,18310), training-dojo-vessel on :$(call hp,18320)"
 	@echo "[run-live] State on named volumes $(SURREAL_VOLUME) + $(WORKSPACE_VOLUME) (host-detached). NOTHING from the host is bind-mounted: an edit to repos/ on the host does not reach this container. Code arrives by git — see substrate-pull-sync and 'vessel-ctl sync <vessel>'."
 	@echo "[run-live] Internal secrets auto-generated and persisted to workspace/.substrate-secrets"
 	@echo "[run-live] Identity + templates seed in-container at boot; gate on: docker exec $(LIVE_NAME) substrate-key whoami"

@@ -1,0 +1,137 @@
+/*
+ * Training Dojo's own palette — a bamboo-grove retint of
+ * `@avigopal/design-tokens`, not a fork of it.
+ *
+ * WHY THIS FILE EXISTS RATHER THAN COLOUR LITERALS IN `styles.css`: the shared
+ * package's own contract (`packages/design-tokens/tokens.css`'s header
+ * comment) is "a colour literal written anywhere outside this file is a
+ * conformance violation (rule P11)". This vessel needs a different palette
+ * than human-surface without changing human-surface's — so this is a SECOND
+ * token source, imported after the shared one in `styles.css`, not a set of
+ * ad hoc colours sprinkled into component CSS. Every colour this surface
+ * renders with is still a `--sf-*` custom property; only the SOURCE of a
+ * handful of them differs from human-surface's.
+ *
+ * Deliberately unchanged (imported from the shared package and left alone):
+ * the six-state semantic palette (`reached`/`not-reached`/`running`/
+ * `waiting`/`accepted`/`stalled`), font stacks, spacing, radii, shadow. A
+ * reader who has learned "green means reached" on human-surface must not
+ * have to relearn it here — only the room this surface sits in should look
+ * different, not the verdicts it renders. The accent (a torii-gate red) is
+ * also unchanged for the same reason it survived the tatami retint: a red
+ * seal against green bamboo still reads as the one marked action, not a new
+ * thing to learn.
+ *
+ * The four `--sf-bamboo-*` tokens below are new and belong only to the
+ * bamboo motif (sidebar stalk stripes, the floating leaf layer in
+ * `styles.css`) — they are not part of the shared package's contract and
+ * nothing outside that motif should reach for them. `--sf-shape-marker` is
+ * separate again: the corner marker on a "this box is shape-related info"
+ * container (`NewShapesPanel`), deliberately outside both the bamboo motif
+ * and the reached/not-reached palette so it never reads as a verdict.
+ */
+
+:root {
+  /* ── ground — pale bamboo pith / rice paper with a green cast ─────────── */
+  --sf-paper:        #F2F5E9;
+  --sf-panel:        #E6ECD6;
+  --sf-panel-alt:    #D9E3C3;
+
+  --sf-ink:          #24301C;
+  --sf-ink-2:        #4C5D3C;
+  --sf-ink-3:        #74855F;
+
+  --sf-rule:         #C9D6AC;
+  --sf-rule-strong:  #A9BC81;
+
+  /* ── accent — a torii-gate red, kept as recessive as the base package's
+     blue: it must never compete with a state colour (reached/not-reached),
+     only mark the one primary action on a page (Scan now, Send lesson). */
+  --sf-accent:       #A8402F;
+  --sf-accent-soft:  #F1DDD4;
+  --sf-accent-ink:   #FBF4EA;
+
+  /* ── bamboo motif — stalk stripes and floating leaves only ────────────── */
+  --sf-bamboo-stalk:      #8FAE5D;
+  --sf-bamboo-stalk-dark: #5F7A3C;
+  --sf-bamboo-highlight:  #EEF3E0;
+  --sf-leaf:              #6C8F49;
+
+  /* ── shape-info marker — NewShapesPanel's corner square only ───────────── */
+  --sf-shape-marker: #6E85A6;
+}
+
+/* ── dark — a night grove, moonlight rather than daylight ─────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sf-paper:       #141C10;
+    --sf-panel:       #1B2515;
+    --sf-panel-alt:   #212D19;
+
+    --sf-ink:         #DCE6C9;
+    --sf-ink-2:       #AEBE93;
+    --sf-ink-3:       #7C8C68;
+
+    --sf-rule:        #29341F;
+    --sf-rule-strong: #3B4A29;
+
+    --sf-accent:      #D97B63;
+    --sf-accent-soft: #3A241D;
+    --sf-accent-ink:  #1C1712;
+
+    --sf-bamboo-stalk:      #35492A;
+    --sf-bamboo-stalk-dark: #212F19;
+    --sf-bamboo-highlight:  #4A5F38;
+    --sf-leaf:              #4C6636;
+
+    --sf-shape-marker: #7C93B3;
+  }
+}
+
+:root[data-theme="dark"] {
+  --sf-paper:       #141C10;
+  --sf-panel:       #1B2515;
+  --sf-panel-alt:   #212D19;
+
+  --sf-ink:         #DCE6C9;
+  --sf-ink-2:       #AEBE93;
+  --sf-ink-3:       #7C8C68;
+
+  --sf-rule:        #29341F;
+  --sf-rule-strong: #3B4A29;
+
+  --sf-accent:      #D97B63;
+  --sf-accent-soft: #3A241D;
+  --sf-accent-ink:  #1C1712;
+
+  --sf-bamboo-stalk:      #35492A;
+  --sf-bamboo-stalk-dark: #212F19;
+  --sf-bamboo-highlight:  #4A5F38;
+  --sf-leaf:              #4C6636;
+
+  --sf-shape-marker: #7C93B3;
+}
+
+:root[data-theme="light"] {
+  --sf-paper:       #F2F5E9;
+  --sf-panel:       #E6ECD6;
+  --sf-panel-alt:   #D9E3C3;
+
+  --sf-ink:         #24301C;
+  --sf-ink-2:       #4C5D3C;
+  --sf-ink-3:       #74855F;
+
+  --sf-rule:        #C9D6AC;
+  --sf-rule-strong:  #A9BC81;
+
+  --sf-accent:      #A8402F;
+  --sf-accent-soft: #F1DDD4;
+  --sf-accent-ink:  #FBF4EA;
+
+  --sf-bamboo-stalk:      #8FAE5D;
+  --sf-bamboo-stalk-dark: #5F7A3C;
+  --sf-bamboo-highlight:  #EEF3E0;
+  --sf-leaf:              #6C8F49;
+
+  --sf-shape-marker: #6E85A6;
+}
