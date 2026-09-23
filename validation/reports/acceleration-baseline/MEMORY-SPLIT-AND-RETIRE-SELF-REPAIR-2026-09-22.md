@@ -653,3 +653,12 @@ lease be re-acquired in bursts are implementation choices with filed, bounded fi
 ## 12:11Z — bindBody guard landed (401cee9)
 
 - `401cee9` on goal-host: the flat-branch overwrite now keeps an existing non-empty arg body that appears verbatim in `boundBody` and otherwise behaves as before. Final falsifier armed, gated on a goal-host process started after the landing with runtime identical to the commit: three product goals with per-second note polling; pass = each note's first persisted body is the product and each goal reaches on its first verdict.
+
+## 12:14–12:20Z — final measurement: accepted walks reach on the first verdict; closeout
+
+- goal-host restarted onto `401cee9` at 12:14:08Z. Three product goals at 12:14:34Z:
+  - pf-b (449*683): honoured; first write `body=306667` at 12:14:46; note created 12:14:45 and never updated; **reached=true on the first verdict** (12:14:49).
+  - pf-c (521*379): honoured; first write `body=197459`; note created 12:14:48, never updated; **reached=true on the first verdict** (12:14:51).
+  - pf-a (331*757): no pathway accepted this run; rebind wrote `etartsbus`, then 250747, reached on the fifth verdict via the floor. This is the acceptance intermittency, now filed as its own gap with four measured runs (2/3, 0/1, 3/3, 2/3) and a measure-first design.
+- Closed by exercised falsifier: `bindbody-overwrites…` (401cee9), `memory-note-write-rejects-a-numeric-body…` (dac3c2c), and the original `a-learned-pathway-whose-head-is-a-satisfier…` — its named defect (write before compute on a found pathway) is gone on every accepted walk, across five landings that were each verified live before the next was designed.
+- Session tally under the directive: **7 gaps closed by measured behaviour** (directed flag, consumption edge, recommender guard, path records, numeric body, bindBody overwrite, pathway head), 2 duplicates closed, **9 gaps filed from the debugging** (compose nudge capacity, pwt blind restore, per-gap in-flight guard, drain counter, vacuous-guard regex, trace-content duplicate inserts noted, acceptance intermittency, plus the two closed-on-the-way index diagnoses recorded as refuted attempts). Every landing was substrate-authored through its own gates; the operator's hands touched gap text, falsifiers, and the store's close records only.
