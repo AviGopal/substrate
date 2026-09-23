@@ -294,3 +294,8 @@ its own. Queue is moving again: credits + registry were the two blockers.
   `development-vessel-self-cutovers-restart-the-vessel-faster-than-a-compose-completes-…`
   (edit_site vessel-mitosis-cutover.ts; defer self-restart while composes are in flight).
 - Router: serving deepseek-chat-v3 again on its own. Credits: 1400.59/1500 at 03:25Z.
+- Correction to the lossy-cutover gap after reading the site: the fc cutover path already
+  quiesces (marker → wait on /health in_flight → breadcrumb); the LOSSY restart at 03:30
+  came from the proposal-apply path (`mitosis-<ts>` id), which has no quiesce/wait — the
+  journal shows none for it, and the code comment at the site names the class ("fixed one
+  call site, missed the sibling"). Gap text and region literal corrected accordingly.
