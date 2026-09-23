@@ -347,3 +347,22 @@ State: the retire loop is live end-to-end — landed twice by the substrate (d41
 + 3ed68a6), proven by behaviour. Remaining: second tick for the pre-registered two-tick
 criterion; the 451/153 legacy residue predates the fix and needs a one-time retirement
 (a walk goal using the new primitive, not a hand delete).
+
+## 04:41Z — two-tick criterion MET; gap 2 closed by measurement
+
+Second tick 04:41:05Z (deterministic-battery, r=0/3): residue 450 / 153 (the −1 is the
+operator's replay test), no note with the tick's seed remains, retire acceptances now 14.
+Across ticks 04:25Z and 04:41Z the battery residue did not grow; before tonight each tick
+added ~6. Gap 2 closed (closed_reason measured_by_operator, landed d4171b1 + 3ed68a6).
+
+Scorecard for the demonstration (all landings substrate-authored, all verified by
+running the new path, operator hands on code: zero):
+- retire primitive — 19ae84e, 6/6 falsifier ✔ (after one hollow landing + 2 gated drafts)
+- checker retires probe notes — d4171b1, effective once 3ed68a6 landed; two-tick ✔
+- resolver accepts bare pointer body — 3ed68a6, 3/3 falsifier ✔ (filed 04:00, landed 04:05)
+- auth transient labelled 503 not revoked — 4fc5f80, found and fixed by the substrate alone ✔
+- still open, in the lane: directed flag (1 hollow landing), recommit self-reopen loop,
+  trace-spool replayer, registry endpoint poisoning, activity-api event-loop starvation,
+  proposal-apply lossy self-restart, identity shared bucket.
+- operator interventions, none on code: memory-store merge, local-tools re-registration,
+  funding, gap text/region constraints, measured-failure write-backs.
