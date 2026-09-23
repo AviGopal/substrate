@@ -281,3 +281,16 @@ its own. Queue is moving again: credits + registry were the two blockers.
   slot. Gap 2 re-dispatched directed with retries at 03:26Z (directed still not forwarded
   — that gap is one of the six).
 - Residue 448 / 152 at 03:25Z (baseline 429 / 149).
+
+## 03:26–03:52Z — why directed retries saw 14 straight BUSY: contention plus self-restarts
+
+- Not a leaked counter: real composes held both slots (goal-host route-edit composes on the
+  directed slot; a 10-min autonomous compose on the other). Most of the "REFUSING" count
+  in that window was the operator's own retry loop — noted so the number is not misread.
+- development-vessel restarted ITSELF three times in 11 min (03:30 "observed 3 in flight,
+  LOSSY", 03:37, 03:41), each by its own landing cutover. Composes mid-draft at those
+  moments died silently (no verdict, no lesson). With ~16 self-landings per 30 min from
+  the proposal-apply lane, the vessel's restart cadence is shorter than a compose. Filed
+  `development-vessel-self-cutovers-restart-the-vessel-faster-than-a-compose-completes-…`
+  (edit_site vessel-mitosis-cutover.ts; defer self-restart while composes are in flight).
+- Router: serving deepseek-chat-v3 again on its own. Credits: 1400.59/1500 at 03:25Z.
