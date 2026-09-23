@@ -672,3 +672,9 @@ lease be re-acquired in bursts are implementation choices with filed, bounded fi
 ## 19:44Z — explore branch fixed (249ff89): exploration adds a candidate, never removes the best
 
 - `249ff89` on activity-api: the explore branch now returns `top_k-1` least-executed rows with the best exploit candidate prepended. Falsifier armed, gated on an activity-api process started after the landing with runtime identical to the commit: 20 product goals with distinct titles, six seconds apart; pass = at least 19 honoured, at least one explore-mode recommend accepted by the client, and first-verdict reach on the honoured walks.
+
+## 19:46–19:53Z — acceptance intermittency CLOSED: 20 of 20 goals reach on the first verdict
+
+- activity-api on `249ff89` (started 19:43:28Z, runtime diff 0). Twenty product goals with distinct titles dispatched 19:46:19–19:48:21Z: `honoured as a required first step` 20/20; client acceptance lines 21 accepted, 0 refused; server recommend modes 17 exploit and 4 explore, and every explore-mode recommend was accepted; transform-oracle verdicts 20 true, 0 false, each goal reaching on its first verdict.
+- Morning baseline for the same family: acceptance 2/3, 0/1, 3/3, 2/3; four to five verdicts per non-accepted goal; every first write carrying the donor's `etartsbus`. The family now runs the learned pathway end to end on the first attempt, which is the ceiling the execution expectation describes for a task the system has done before.
+- Closed `pathway-acceptance-is-intermittent…` as `landed_verified` / `operator_exercised_falsifier`. This closes the sixth and last layer under the original pathway gap: recommender borrowing, satisfier order, rebind refusal, store body type, bindBody overwrite, explore mode. Session tally: 8 gaps closed by measured behaviour, 8 filed for the substrate, 2 duplicates closed.
