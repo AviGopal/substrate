@@ -407,3 +407,24 @@ running the new path, operator hands on code: zero):
   `notes.json.pre-op-retire.*.bak`.
 - Store composition now: 567 reference / 297 finding / 282 project / 90 feedback. The
   session-start recall window can no longer be displaced by battery churn.
+
+# 07:10Z — the closure hour
+
+Measured the operator's principle (every activity must lead into another) against the
+trace store, last 24 h: 56,535 tasks, 15% declare any input; 916 of 15,700 executions
+contain an intra-execution consumption; 76% of produced impulse instances are never
+consumed; execution.input_impulses empty on all 150,421 rows ever. In goal-host the same
+day: 6 α, 89 β, 4,280 β-WITHHELD. The graph a consistency-maintaining walk would need
+does not exist in the durable record; goal-host's chain ledger knows the edges and the
+satisfier trace discards them (`inputImpulseIds: []` at the synthTrace). Filed
+`satisfier-traces-record-no-input-impulses-…` with region on the unique templateName
+line and the 15% / 76% / 4,280 as falsifier baselines.
+
+Plan for the hour (directed dispatch, verify by behaviour, close by measurement):
+1. directed flag (rewritten with a unique two-line anchor after two no_unique_anchor
+   deaths — one of them caused by my own "next to land:" instruction, which is 3×).
+2. consumption edges (goal-host).
+3. pathway head for the transform family (corrected to the initial pool-walk call; the
+   refuters had rightly rejected a partial patch and the second draft hit a non-existent
+   option on the recovery loop).
+Also rewritten: lesson-writer gap with a unique 3-line anchor for `status: "open"`.
