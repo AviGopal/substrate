@@ -388,3 +388,22 @@ running the new path, operator hands on code: zero):
   steered arithmetic: refuted (the failing walks never reached synthesis).
 - The residue-cleanup walk (def68ff1) retired nothing — it ran on the broken instance.
   Re-dispatch after the hardened instance passes a solo product probe.
+
+## 05:05–05:20Z — hardening verified, residue retired, product family handed back
+
+- Hardened goal-host (875e137): 0 `pool-walk error` on the new instance (the one seen was
+  the old PID). Solo product probe 421*659 reached (note body 277439) on attempt 3. Two
+  further controls did not reach within 4-5 hollow verdicts — the family is no longer
+  ABORTED, but still flaky: the walk writes the note before computing, and only reaches
+  shellResult via suppress-retry/re-framing when the budget allows. Filed
+  `a-learned-pathway-whose-head-is-a-satisfier-is-found-then-dropped-…` (goal-host;
+  region = the pseudo-id refusal line; falsifier: 3 fresh product goals reach on attempt
+  ≤2 with shellResult before memoryNote_write). Not hand-fixed.
+- The walk's own attempt at the residue cleanup wrote its PLAN as the report note
+  (pseudo-code with `{len(notes_to_retire)}` placeholders) — the counterfeit class again;
+  retired. Operator data action instead, through the substrate's own new primitive:
+  552 stale notes retired (0 rejected), store 1788 → 1236; invariants held — feedback 90,
+  finding 297, project 282, expectation-trend 4, non-battery expectations 30. Backup
+  `notes.json.pre-op-retire.*.bak`.
+- Store composition now: 567 reference / 297 finding / 282 project / 90 feedback. The
+  session-start recall window can no longer be displaced by battery churn.
