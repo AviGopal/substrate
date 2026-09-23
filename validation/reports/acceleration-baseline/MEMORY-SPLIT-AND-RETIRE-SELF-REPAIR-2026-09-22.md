@@ -139,3 +139,20 @@ location. Also: the lane auto-minted
 picked it at 23:56Z — a recommit that does not check its parent's status. Closed as
 superseded_parent_landed (the pick may already be composing; the falsifier will grade
 whatever it lands).
+
+## 00:13Z — the closed recommit reopened itself; a loop, and a gate inconsistency
+
+- `appendComposeLesson` (feature-compose.ts ~3180–3210) writes failure_lessons back with
+  `status: "open"` unconditionally and rewrites `source`; a failed compose on the CLOSED
+  recommit gap therefore reopened it (reopen_count 1) and the recommit mint never checks
+  whether the base gap is still open. With the parent landed and verified, every draft is a
+  no-op or duplicate → fails → reopens/re-mints itself. Filed
+  `the-compose-lesson-writer-force-reopens-closed-gaps-and-mints-recommits-for-landed-parents`.
+  Parked the looping gap through the lane's own candidate filter
+  (`pending_outcome_verification = 19ae84e`, which is TRUE), not by deleting it.
+- Directed-flag gap: the semantic gate REJECTED "adds isDirected but fails to pass it" at
+  23:37Z, then PASSED the same defect at 23:49Z (bbb83ff). Same-input opposite verdicts —
+  the judge-inconsistency class seen in goal-host earlier today.
+- Gap 2 first draft: anchor_not_found — the drafter anchored on the `expectation:`
+  violation scanner (lines 438–443) instead of the trendcheck grading loop (~529) the gap
+  quotes verbatim. Lane retrying on its own.
