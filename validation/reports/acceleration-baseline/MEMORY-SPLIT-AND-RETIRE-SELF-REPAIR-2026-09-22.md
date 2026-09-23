@@ -264,3 +264,20 @@ the right site; the next draft carries the lesson. The registry row for local-to
 already re-flipped to 8230 by the time the operator restart ran (harmless). The lane has
 since picked the trace-spool replayer gap (31 KB window) and the registry-poison gap on
 its own. Queue is moving again: credits + registry were the two blockers.
+
+## 02:45–03:25Z — slot starvation, router self-corrected, proposal lane busy
+
+- After the plane returned, the first three drafts (gap 2, spool replayer, registry
+  poison) all failed `syntax_break` — malformed TypeScript, a class that was rare
+  before (2 in 4 h) and jumped after the router fell to gemini-2.5-flash (its Chutes TEE
+  arms 402: a second, separately funded provider; OpenRouter free arms 429 per-day).
+  deepseek-chat-v3 and gpt-4o-mini were servable when pinned. NOT hand-tuned: by 03:25Z
+  the router was serving deepseek-chat-v3 on its own (graded off flash). Credit burn
+  02:31→03:25: ~0.7.
+- 02:55→03:25Z: 23 `compose-cap REFUSING` vs 1 autonomous pick; the proposal-apply
+  lane (mitosis-*) landed 16 FAVORABLE cutovers in the same window, incl. 57c759a
+  "development-vessel-is-absent-from-the-discovery-registry…" (the registry class,
+  found by the substrate independently). None of the six operator-filed gaps got the
+  slot. Gap 2 re-dispatched directed with retries at 03:26Z (directed still not forwarded
+  — that gap is one of the six).
+- Residue 448 / 152 at 03:25Z (baseline 429 / 149).
