@@ -299,3 +299,17 @@ its own. Queue is moving again: credits + registry were the two blockers.
   came from the proposal-apply path (`mitosis-<ts>` id), which has no quiesce/wait — the
   journal shows none for it, and the code comment at the site names the class ("fixed one
   call site, missed the sibling"). Gap text and region literal corrected accordingly.
+
+## 03:56Z — gap 2 LANDED (d4171b1) … and is a silent no-op
+
+Fifth attempt, region-pinned, landed as d4171b1 (Substrate Autonomous), verdict FAVORABLE,
+vessel restarted 03:56:07. Placement and shape match the contract exactly (after the
+`r++` grading line, nested `note: { id, retire: true }`, both notes, warn-on-throw). One
+detail differs from every sibling call in the same file: the request body is bare
+`{ type, note }` instead of `{ impulse: { pointer: … } }`. Executing the exact landed body
+against the live resolver: HTTP 400 `pointer.type is required`; fetch does not throw, the
+catch never fires, the note stays. Green diff, absent behaviour — the third hollow_write
+tonight, and the second caught only by RUNNING the landed request rather than reading it.
+Fed back with `BEHAVIORAL VERIFICATION FAILED` + `regressed_by: d4171b1`, the exact
+envelope from expWrite, and a required `rr.ok` check so a refused retire cannot be silent.
+Re-dispatched directed. The two-tick residue measurement continues as the falsifier.
