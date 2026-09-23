@@ -229,3 +229,26 @@ recommend calls were failing.
   region. Re-dispatched directed at 02:36Z. Pre-registered: the draft's op path must be
   index.ts with `old` containing `probe.expected`; then verify green; then residue count
   flat across two checker ticks (baseline 445 / 151 at 02:32Z).
+
+## 02:36–02:55Z — the fourth outage: a poisoned discovery row emptied every grounding window
+
+Gap 2's region literal was honoured ("region->line: found at 1 site … grounding on line
+529") and the compose still refused: `Grounding window (0 bytes)`. Every compose after
+02:33Z had a 0-byte window. `groundVesselFiles` reads files through
+`discover("shellResult")`, and discovery resolved that shape — and code_read_lines,
+code_search, codeReadResult — to `http://127.0.0.1:24892`, where nothing listens.
+The row belongs to `local-tools-vessel` (the real one is PID 1620 on 8230, up since
+20:06Z). `last_writer.at` = 02:36:54Z, fleet key, claimed_vessel_id local-tools-vessel;
+discovery took 6 POST /register in that 10 s window, while feature_compose was verifying
+an edit to repos/local-tools-vessel in an isolated checkout. A transient instance
+registered its ephemeral port under the live id and exited; the live vessel's heartbeats
+(keyed by vesselId) kept the poisoned endpoint alive with confidence 1. The liveness
+guard (ffd1d58, running) checks lastSeen, which the heartbeats refresh — it cannot see an
+endpoint swap. local-tools never re-registers unless a heartbeat 404s.
+
+Operator remedy (reversible, no code): drain-restart local-tools so it re-registers 8230.
+Filed `a-transient-verify-instance-registers-an-ephemeral-endpoint-under-the-live-vessel-
+id-and-heartbeats-keep-it-alive` (edit_site discovery registry.ts: probe a changed
+endpoint before storing it; a heartbeat must not keep alive an endpoint it does not come
+from). Method note: "no producer" / empty grounding after a compose on a TOOLS vessel →
+resolve the shape with the API key and compare the endpoint to the unit's PORT.
