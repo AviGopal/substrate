@@ -252,3 +252,15 @@ id-and-heartbeats-keep-it-alive` (edit_site discovery registry.ts: probe a chang
 endpoint before storing it; a heartbeat must not keep alive an endpoint it does not come
 from). Method note: "no producer" / empty grounding after a compose on a TOOLS vessel →
 resolve the shape with the API key and compare the endpoint to the unit's PORT.
+
+## 02:44Z — gap 2 finally drafts at the right line
+
+With the region literal honoured and a 54 KB window (`grounding_has_region: true`), the
+draft's op targets `if (live && …` at 529 — the first of five attempts to touch the
+grading loop. It failed verify with `TS1472 'catch' or 'finally' expected` (the
+replacement broke the enclosing try/catch); rolled back; lesson class `syntax_break`
+recorded with the exact tsc output. That is the gate doing its job and the lane holding
+the right site; the next draft carries the lesson. The registry row for local-tools had
+already re-flipped to 8230 by the time the operator restart ran (harmless). The lane has
+since picked the trace-spool replayer gap (31 KB window) and the registry-poison gap on
+its own. Queue is moving again: credits + registry were the two blockers.
