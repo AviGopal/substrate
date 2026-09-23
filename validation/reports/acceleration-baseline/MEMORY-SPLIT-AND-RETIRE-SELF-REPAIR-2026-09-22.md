@@ -213,3 +213,19 @@ recommend calls were failing.
 - Residue: 445 / 151 at 02:15Z (baseline 429 / 149) — will keep rising until gap 2 lands.
 - Substrate self-repair observed tonight without operator hands: 19ae84e (retire, via
   edit-intent), 4fc5f80 (auth labelling), plus f122f86 / 983ca92 / bbb83ff on its own gaps.
+
+## 02:31Z — funded; plane back; the anchor problem named
+
+- Operator topped up OpenRouter (1400 → 1500). First servable completion 02:31:53Z
+  (google/gemini-2.5-flash). No restart needed — the router re-probed on its own.
+- Gap 2's fourth attempt (02:32Z) failed the same way as the first three: the localizer
+  grounds on `EXPECTATION_SCAN_INTERVAL_MS` and every draft edits the `expectation:`
+  violation SCANNER (`if (liveBody === String(e.spec.expected))`, ~438–470) instead of
+  the trendcheck GRADING loop (`live.body.trim() === probe.expected`, line 529). The gap
+  prose quoted the right line; the localizer never read it. The lane then minted another
+  verbatim "narrowed" child (parked as duplicate).
+- Fix as information (law 8), not code: `classification_metadata.region` = the unique
+  grading line, which fc-scope reads as the grounding centre; plus an explicit forbidden
+  region. Re-dispatched directed at 02:36Z. Pre-registered: the draft's op path must be
+  index.ts with `old` containing `probe.expected`; then verify green; then residue count
+  flat across two checker ticks (baseline 445 / 151 at 02:32Z).
