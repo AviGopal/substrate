@@ -607,3 +607,8 @@ lease be re-acquired in bursts are implementation choices with filed, bounded fi
 ## 11:11Z — pathway design v2 landed (579f365) via the direct lane
 
 - `579f365` on goal-host: exactly the one-line replacement at the initial walk call (1 insertion, 1 deletion): when the split yields no terminal set and a pathway head satisfier is honoured, the pathway's other satisfier steps become `terminalOutputShapes`, so the walk's existing deferral rule holds the write. Falsifier armed to run only after the runtime file equals the commit on a fresh goal-host PID: three product goals, pass = `shellResult` produced before any `memoryNote_write` in the journal and ≤2 verdicts each.
+
+## 11:13–11:18Z — pathway v2 live: order fixed, attempts not yet; the last mile is the rebind body
+
+- goal-host restarted onto `579f365` at 11:12:20Z (runtime diff 0). Three product goals: all reached; `honoured` 3/3; **satisfier order now correct in every walk** — `shellResult` produced at 11:13:40/:43/:47, `memoryNote_write` at :42/:45/:48 (before v2 the write always came first). Verdicts per goal fell from 4–5 to 3–4, so the ≤2 criterion is not met and the gap stays open.
+- Why the note still lacks the product: the shell step is right (`bun -e 'console.log(521*379)'`), but the write is a lexical REBOUND from a similar goal (`src a6f6a46b`) that swaps the title and keeps the donor's body — `body=etartsbus` in the reach evidence. The write never binds the pool's fresh shellResult. That is the first/last-mile defect in one line: a rebound terminal write must bind its body from the intermediate this walk produced, not from the donor.
