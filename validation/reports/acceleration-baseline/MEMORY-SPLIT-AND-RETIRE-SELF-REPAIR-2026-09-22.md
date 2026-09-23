@@ -482,3 +482,24 @@ designs land where multi-op ones die.
   goal-host does: POST feature_compose directly with `directed: true` (feature-compose
   honours the flag today), same gap payload, land: true. This is the byte-exact operator
   lane; the drafter and every gate still do the work.
+
+## 09:26Z — the directed fix was correct, applied at 4149–4150, and thrown away by a lease
+
+Direct feature_compose (directed: true) took the reserved slot as designed (compose
+fc-mudw1ti7, `directed=true`, second slot while an autonomous compose held the first),
+grounded on the right region, applied the change at lines 4149–4150 inside
+resolveGapToFeature, and the semantic gate wrote: "adds the directed property to the
+correct resolveFeatureCompose call inside resolveGapToFeature". Then:
+`DEFERRED: change_window lease held by trace-store-reconcile after waiting 90000ms` →
+verdict UNFAVORABLE → rolled back → nothing staged. Last 3 h fleet-wide: 97 DEFERRED vs
+153 FAVORABLE — 39% of verified landings discarded and re-drafted. The holder is the
+trace-store DB-maintenance activity (5-min TTL, dispatched in bursts for the
+trace-store-cap gap class). Filed `a-verified-patch-is-rolled-back-when-the-change-
+window-lease-is-held-…` (cutover must keep the verified patch and re-run only the
+landing step when the lease frees). Re-dispatch of the directed fix is armed to fire the
+moment the lease is free and a slot is open.
+
+Is this the "provable architectural design flaw" stopping condition? Not yet. A single
+fleet change window serialising DB maintenance against code landings is a defensible
+design; discarding verified work on contention and letting a five-minute maintenance
+lease be re-acquired in bursts are implementation choices with filed, bounded fixes.
