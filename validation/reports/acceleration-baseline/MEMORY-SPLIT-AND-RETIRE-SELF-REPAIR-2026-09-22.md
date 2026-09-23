@@ -428,3 +428,25 @@ Plan for the hour (directed dispatch, verify by behaviour, close by measurement)
    refuters had rightly rejected a partial patch and the second draft hit a non-existent
    option on the recovery loop).
 Also rewritten: lesson-writer gap with a unique 3-line anchor for `status: "open"`.
+
+## 08:10Z — hour elapsed; state, and why it continues
+
+Nothing new landed in the hour. Every directed dispatch reached the drafter and died at
+one of three gates, each time for a nameable reason that was fed back:
+- directed flag: right site, then TS2353 — `directed` is not on FeatureComposePointer;
+  feature-compose reads it through a local cast. Lesson: build a widened pointer
+  variable, pass the variable. Re-dispatched.
+- consumption edges: TS (Set.filter, out-of-scope map), then no_unique_anchor twice —
+  the planner chose `inputImpulseIds: [],` (6×) and `const synthTrace…` (not in window)
+  despite unique anchors in the gap text. Redesigned as ONE insertion after the unique
+  ledgerStep line, mutating the still-unpersisted trace object. Re-dispatched.
+- pathway head: refuters rejected a partial patch (correct), then a non-existent option
+  on the recovery loop; rewritten to the initial walk call, both halves required. Its
+  second dispatch never got the slot (busy for 29 min). Re-dispatched.
+Slot contention is the throughput ceiling: one autonomous compose at a time, 5–12 min
+each, plus the operator lane's own retries competing because `directed` is not
+forwarded — which is the first gap in this list.
+The class behind two of the three: the planner ignores supplied anchors and picks the
+most-repeated line in the region. That is a lane defect (already on file as
+`patch-with-tools-fails-as-a-class-…`), and the reason single-op, unique-anchor gap
+designs land where multi-op ones die.
