@@ -330,3 +330,20 @@ Re-dispatched directed. The two-tick residue measurement continues as the falsif
   trace-store-reconcile and the vessel had restarted under it (3ed68a6's own cutover).
   Proposal staged in /workspace/proposals; the apply lane retries. Gap 2 will close by
   behaviour regardless once the second tick is flat.
+
+## 04:37Z — first tick verified with positive evidence (and one misread corrected)
+
+The 04:25Z uppercase tick used seed `mudllwm2` (goal-host handled
+trendcheck-uppercase-mudllwm2-0/-2). The store holds NO note with that seed and no
+uppercase product touched after 04:20Z; the newest uppercase product is dated
+2026-09-20. So the tick created its 3 products + 3 expectation records and the six
+bare-body retire calls at 04:24:14/04:24:34/04:25:04 removed them — net residue 451/153,
+unchanged. Replaying the exact landed retire body against a stale note: 200 `retired`.
+Misread corrected: six "surviving" notes I attributed to this tick carry a 09-20 seed and
+09-20 timestamps — I had printed only HH:MM:SS. Rule re-learned: print the date with the
+time when grading anything against a tick.
+
+State: the retire loop is live end-to-end — landed twice by the substrate (d4171b1
++ 3ed68a6), proven by behaviour. Remaining: second tick for the pre-registered two-tick
+criterion; the 451/153 legacy residue predates the fix and needs a one-time retirement
+(a walk goal using the new primitive, not a hand delete).
