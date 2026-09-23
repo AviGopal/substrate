@@ -450,3 +450,18 @@ The class behind two of the three: the planner ignores supplied anchors and pick
 most-repeated line in the region. That is a lane defect (already on file as
 `patch-with-tools-fails-as-a-class-…`), and the reason single-op, unique-anchor gap
 designs land where multi-op ones die.
+
+## 08:47Z — directed flag LANDED (5ec4719); falsifier needs a one-slot window
+
+- After six attempts the lane landed `directed: isDirected` inside the compose call
+  (2-line diff, typecheck+shape-dispatch+tests green; cutover 08:47:58). Attempt 6 had
+  been correct and was rejected by MY region literal (it named the untouched
+  `isDirected` line); moving the region into the call let the same ops land.
+- First falsifier run: directed POST → BUSY. Cause is contention, not the flag: both
+  slot files live (cap 2), slot-1 held by a `directed: true, land: false` compose that
+  did NOT come through gap_to_feature (pre-landing baseline already had 1 directed of 6).
+  Directed claims can use the full cap, so two directed lanes plus one autonomous
+  compose saturate it. The flag's own falsifier — a directed operator dispatch claims a
+  slot while exactly ONE autonomous compose holds the other — is armed as a window
+  watcher and fires automatically.
+- Not closed. Closure requires that observation.
