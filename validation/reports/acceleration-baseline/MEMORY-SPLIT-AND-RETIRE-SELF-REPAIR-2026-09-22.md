@@ -366,3 +366,25 @@ running the new path, operator hands on code: zero):
   proposal-apply lossy self-restart, identity shared bucket.
 - operator interventions, none on code: memory-store merge, local-tools re-registration,
   funding, gap text/region constraints, measured-failure write-backs.
+
+## 04:45–05:05Z — the product battery's real killer: a walk-aborting TypeError
+
+- Three fresh product controls with the plane healthy (deepseek serving): 0/3 reached.
+  So the family's decline was goal-host, not the model. A solo control's un-interleaved
+  trail showed it: 20 s in, right after the memoryNote_write satisfier,
+  `pool-walk error (undefined is not an object (evaluating 'c.slice')) — falling back to
+  single-template recovery loop`. The recovery loop tried learned compositions
+  (memorynote-write-to-shell, filecontent-to-memorynote-write) that cannot compute.
+- 91 such aborts since 2026-09-22 20:12:06Z (the first boot after the operator's
+  shutdown), every hour since. Seven digest builders share the latent flaw:
+  `try { c = JSON.stringify(imp.content) } catch { c = String(imp.content) }` — but
+  JSON.stringify(undefined) returns undefined without throwing, so `c.slice` throws. All
+  seven sites date from June–August; what is new since 20:12Z is an impulse with
+  undefined content in the pool. Root of THAT is still open; the hardening (normalise c
+  to "" at all seven sites + log the stack at the pool-walk catch) landed operator-authored
+  on goal-host, and the next occurrence will name the source impulse.
+- Earlier suspicion that my feedback retry displaced the suppress retry: refuted by
+  counts (suppress fired 3× in the control window). Suspicion that near-miss feedback
+  steered arithmetic: refuted (the failing walks never reached synthesis).
+- The residue-cleanup walk (def68ff1) retired nothing — it ran on the broken instance.
+  Re-dispatch after the hardened instance passes a solo product probe.
