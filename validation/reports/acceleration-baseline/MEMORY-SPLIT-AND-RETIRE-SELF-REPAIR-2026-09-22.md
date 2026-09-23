@@ -313,3 +313,20 @@ tonight, and the second caught only by RUNNING the landed request rather than re
 Fed back with `BEHAVIORAL VERIFICATION FAILED` + `regressed_by: d4171b1`, the exact
 envelope from expWrite, and a required `rr.ok` check so a refused retire cannot be silent.
 Re-dispatched directed. The two-tick residue measurement continues as the falsifier.
+
+## 04:05–04:32Z — the envelope fix landed first, and made the hollow retire real
+
+- Gap filed 04:00Z (`development-vessel-resolve-rejects-a-bare-type-body-…`, edit_site
+  src/routes/impulses.ts) LANDED 04:05Z as **3ed68a6 (Substrate Autonomous)**: tolerant
+  parse, deprecation log line. Falsifier on the live vessel: bare body 200 / `{}` 400 /
+  nested 200. **PASS.** Closed by measurement.
+- Consequence: the "silent no-op" retire calls from d4171b1 now succeed — 7 `bare pointer
+  body accepted` lines since 04:05Z. The checker tick at 04:25Z (uppercase, r=3/3) ran
+  three probes and the residue stayed **451 / 153**, identical to the 03:56Z baseline;
+  before tonight that tick added ~6 notes. One tick flat; the pre-registered criterion is
+  two — measurement running.
+- Gap 2's sixth attempt (correct envelope + `rr.ok` check) was judged correct by the
+  semantic gate and HELD: `env_change_window_held` — the change-window lease was held by
+  trace-store-reconcile and the vessel had restarted under it (3ed68a6's own cutover).
+  Proposal staged in /workspace/proposals; the apply lane retries. Gap 2 will close by
+  behaviour regardless once the second tick is flat.
