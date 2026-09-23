@@ -616,3 +616,8 @@ lease be re-acquired in bursts are implementation choices with filed, bounded fi
 ## 11:19Z — design v3 (rebind must not carry the donor body) fed back and dispatched
 
 - Gap updated with `BEHAVIORAL VERIFICATION PARTIAL after 579f365`, `attempt_landed_2.falsifier=PARTIAL`, a `behavioral_partial` lesson, and design v3: at the lexical-rebind line in `vesselResolveShape`, refuse the rebind for a terminal shape once this walk has produced a non-terminal intermediate, so the write falls through to the pool-variable binding path. Dispatched on the direct lane. Falsifier: reach evidence for memoryNote_write shows a body containing the product, ≤2 verdicts per goal, shellResult still first; control: a plain write goal with no intermediate still rebinds.
+
+## 11:19–11:24Z — design v3 refused by a broken gate; the gate defect measured and filed; v3b queued
+
+- The direct compose for design v3 was refused at the scope stage: `vacuous edit: every added line is a declaration whose binding is never used (_rebind)`. The guard's whole-file check strips string literals with `/'(?:[^'\\]|\\.)*'/g`; the class matches newlines, so one apostrophe in a comment opens a "string" that swallows code until the next apostrophe. Replicated on the real inputs: `_rebind` references raw 5, after stripping 0. Filed `the-vacuous-plan-guard-strips-string-literals-with-a-newline-crossing-regex…` with a one-character-class fix and a falsifier (count returns to 5; the refused op passes; a truly unused declaration is still refused). The sibling stripper in vacuous-edit.ts has the same shape.
+- Design v3b re-expresses the same semantics as a condition change on the `if (_rebind) {` line, which the gate cannot misread as a bare declaration; queued behind two autonomous composes.
