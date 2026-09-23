@@ -465,3 +465,20 @@ designs land where multi-op ones die.
   slot while exactly ONE autonomous compose holds the other — is armed as a window
   watcher and fires automatically.
 - Not closed. Closure requires that observation.
+
+## 09:15Z — the directed flag is a chicken-and-egg, and 5ec4719 hit the wrong function
+
+- One-slot-window falsifier (08:53:05Z, exactly one slot live, cap 2): a directed
+  gap_to_feature dispatch was still refused `verdict=BUSY stage=capacity`. Reading the
+  file: THREE resolveFeatureCompose calls; 5ec4719 added `directed` to the one in
+  `routeCapabilityGapToNewResolver` (~3391, where `isDirected` lives), while the
+  targeted `pointer.gap_id` path in `resolveGapToFeature` (starts 3463) calls compose at
+  ~4142 with no flag and no `isDirected` in scope. My region literal was unique — in the
+  wrong function. Fed back with `regressed_by: 5ec4719`, the correct function, and a
+  unique anchor inside the right literal (the spread line I first chose occurs twice).
+- Deadlock: the lane's event-driven pickups reclaim a released slot within seconds; my
+  15 s polls lost every race for 18 minutes (60+ refusals), and they lose BECAUSE the
+  targeted path still counts as autonomous — the defect under repair. Broke it the way
+  goal-host does: POST feature_compose directly with `directed: true` (feature-compose
+  honours the flag today), same gap payload, land: true. This is the byte-exact operator
+  lane; the drafter and every gate still do the work.
