@@ -156,3 +156,12 @@ whatever it lands).
 - Gap 2 first draft: anchor_not_found — the drafter anchored on the `expectation:`
   violation scanner (lines 438–443) instead of the trendcheck grading loop (~529) the gap
   quotes verbatim. Lane retrying on its own.
+
+## 01:0xZ — the lesson-writer gap reproduced its own defect
+
+First draft for `the-compose-lesson-writer-force-reopens-closed-gaps-…` failed
+anchor_not_found (drafter's old_string vs real text at 3159–3164), and appendComposeLesson
+immediately minted `recommit-the-compose-lesson-writer-…-anchor_not_found` — the loop the
+gap describes, now spawning from the gap that fixes it. Dominant failure class across all
+three open gaps tonight is anchor_not_found on the FIRST draft (2 of 3), then a corrected
+re-draft; the third landed hollow. Lane retrying all three on its own; no operator edits.
