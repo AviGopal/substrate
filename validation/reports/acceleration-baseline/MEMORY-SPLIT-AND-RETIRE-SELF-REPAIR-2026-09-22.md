@@ -165,3 +165,51 @@ immediately minted `recommit-the-compose-lesson-writer-…-anchor_not_found` —
 gap describes, now spawning from the gap that fixes it. Dominant failure class across all
 three open gaps tonight is anchor_not_found on the FIRST draft (2 of 3), then a corrected
 re-draft; the third landed hollow. Lane retrying all three on its own; no operator edits.
+
+# 02:00–02:30Z — why the lane stalled: three independent outages, one of them self-repaired
+
+Gap 2's directed compose died "BEFORE fc-plan: llmCall to :8220 returned error — no llm
+arm is currently servable". Working outward from that:
+
+1. **LLM plane — OpenRouter credits exhausted (operator blocker).** `/api/v1/credits`:
+   total_credits 1400, total_usage 1399.69. Paid models 402, free models
+   "429 free-models-per-day"; 3,901 "all completion providers cooling" events in 6 h;
+   first full outage 02:09:50Z. Only an OpenRouter key is configured (Anthropic/OpenAI/
+   Google/TypeSafe empty). Nothing the substrate can do; top-up or a second provider key.
+2. **Identity rate-limits the fleet as one bucket → activity-api called it a revoked key.**
+   identity `/v1/auth/resolve` limiter: 100/min per `ip:keyprefix`; every vessel is
+   127.0.0.1 with the same 8-char prefix → 6,505 429s in 30 min. activity-api
+   translated null verdicts into `INVALID_API_KEY`; goal-host's trace sink read that as
+   revocation and SPOOLED (bursts of 40/min). **The substrate diagnosed and fixed the
+   labelling itself**: gap `identity-rate-limit-on-a-fleet-shared-bucket-is-reported-by-
+   activity-api-as-a-revoked-api-key` → commit **4fc5f80 (Substrate Autonomous, 01:55Z)**
+   answers 503 IDENTITY_UNAVAILABLE for transient failures. Post-restart (02:21Z) goal-host
+   INVALID_API_KEY fell from ~40/min to 1. The identity bucket itself (edit_site
+   identity ratelimit.ts) is still open.
+3. **self-recovery restarts activity-api every 3 minutes.** 33 starts in 3 h, systemd
+   NRestarts=0 (all clean external stops), stops at 01:39:41 … 02:19:30 on a 3-min grid;
+   `self-recovery-tick`: "UNHEALTHY: activity-api (:8080) — restarting … recovered via
+   restart". Cause: 1,235 of 1,677 queries in 15 min took >10 s (recommend/FTS+dense over
+   919 templates, up to 40 s); bun is single-threaded so /health cannot answer during one;
+   the probe's budget is 10 s. /health answers in <10 ms when the loop is free. Each restart
+   kills in-flight work and opens a 401 warm-up window. Filed
+   `activity-api-recommend-queries-block-the-event-loop-…`.
+
+Collateral, measured: **17,587 traces (119 MB) spooled since 08-17 with no replayer** —
+4,500 on 09-16, 7,224 on 09-17, 3,256 on 09-23 — executions the learner never saw. Filed
+`the-trace-sink-spools-rejected-traces-to-disk-and-nothing-ever-replays-them`
+(edit_site ias-executor-ts trace sink; behavioural falsifier: spool count falls with
+activity-api up, never with it down).
+
+Also seen: `[human-surface] 1 vessel(s) advertise goal_execution; none answered a resolve
+call` during the churn — the human surface could not dispatch while goal-host's own
+recommend calls were failing.
+
+## Where the demonstration stands (02:30Z)
+
+- Retire primitive: landed 19ae84e, falsifier 6/6, gap closed by measurement. ✔
+- Gap 2 (checker retires probe notes), directed-flag, recommit-loop: open, in the lane's
+  queue; every draft now dies at the LLM call until credits return.
+- Residue: 445 / 151 at 02:15Z (baseline 429 / 149) — will keep rising until gap 2 lands.
+- Substrate self-repair observed tonight without operator hands: 19ae84e (retire, via
+  edit-intent), 4fc5f80 (auth labelling), plus f122f86 / 983ca92 / bbb83ff on its own gaps.
