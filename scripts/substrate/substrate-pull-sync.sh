@@ -585,25 +585,54 @@ for d in "$CLONE_DIR"/*/; do
   PENDING_FILE="$MARKER_DIR/$v.restart-pending"
   if [ "$(cat "$PENDING_FILE" 2>/dev/null || true)" = "$CLONE_HASH" ]; then
     P_UNIT="$(vessel_unit "$v")"; P_PORT="$(health_port "$v")"
-    P_INFLIGHT=""
+    P_INFLIGHT=""; P_OLDEST=""
     if [ -n "$P_PORT" ]; then
-      P_INFLIGHT="$(curl -s --max-time 5 "http://127.0.0.1:$P_PORT/health" 2>/dev/null \
+      P_HEALTH="$(curl -s --max-time 5 "http://127.0.0.1:$P_PORT/health" 2>/dev/null)"
+      P_INFLIGHT="$(printf '%s' "$P_HEALTH" \
         | sed -n 's/.*"in_flight"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -1)"
+      P_OLDEST="$(printf '%s' "$P_HEALTH" \
+        | sed -n 's/.*"in_flight_oldest_ms"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -1)"
     fi
+    # DEFER BY AGE, NOT BY COUNT. A count of busy observations breaks starvation against
+    # a lane that is never idle, not against a stuck request: three runs thirty minutes
+    # apart each saw a DIFFERENT young compose, and the third restart killed it anyway
+    # ("despite N in flight"). A vessel that publishes in_flight_oldest_ms is deferred
+    # until its OLDEST request outlives the compose ceiling — only then is it stuck.
+    # A vessel that does not publish the age keeps the old count bound, because without
+    # an age nothing distinguishes a busy lane from a wedged one.
+    P_CEILING_MS="${COMPOSE_CEILING_MS:-900000}"
     P_DEFER_FILE="$MARKER_DIR/$v.restart-deferrals"
     P_DEFERRED_N="$(cat "$P_DEFER_FILE" 2>/dev/null || echo 0)"
     case "$P_DEFERRED_N" in ''|*[!0-9]*) P_DEFERRED_N=0 ;; esac
-    if [ -n "$P_INFLIGHT" ] && [ "$P_INFLIGHT" -gt 0 ] 2>/dev/null \
-       && [ "$P_DEFERRED_N" -lt "${RESTART_DEFER_MAX:-3}" ]; then
+    P_DEFER=0
+    if [ -n "$P_INFLIGHT" ] && [ "$P_INFLIGHT" -gt 0 ] 2>/dev/null; then
+      if [ -n "$P_OLDEST" ]; then
+        [ "$P_OLDEST" -lt "$P_CEILING_MS" ] 2>/dev/null && P_DEFER=1
+      elif [ "$P_DEFERRED_N" -lt "${RESTART_DEFER_MAX:-3}" ]; then
+        P_DEFER=1
+      fi
+    fi
+    if [ "$P_DEFER" = 1 ]; then
       echo "$((P_DEFERRED_N + 1))" > "$P_DEFER_FILE" 2>/dev/null || true
-      log "$v: owed restart still deferred ($((P_DEFERRED_N + 1))/${RESTART_DEFER_MAX:-3}) — $P_INFLIGHT in flight"
+      if [ -n "$P_OLDEST" ]; then
+        log "$v: owed restart still deferred — $P_INFLIGHT in flight, oldest ${P_OLDEST}ms < ceiling ${P_CEILING_MS}ms"
+      else
+        log "$v: owed restart still deferred ($((P_DEFERRED_N + 1))/${RESTART_DEFER_MAX:-3}) — $P_INFLIGHT in flight (no in_flight_oldest_ms published)"
+      fi
     else
-      [ -n "$P_INFLIGHT" ] && [ "$P_INFLIGHT" -gt 0 ] 2>/dev/null \
-        && log "$v: owed restart proceeding after $P_DEFERRED_N deferral(s) despite $P_INFLIGHT in flight — convergence must not be starved"
+      P_REASON="owed restart after deferral"
+      if [ -n "$P_INFLIGHT" ] && [ "$P_INFLIGHT" -gt 0 ] 2>/dev/null; then
+        if [ -n "$P_OLDEST" ]; then
+          P_REASON="owed restart: oldest in-flight ${P_OLDEST}ms exceeded ceiling ${P_CEILING_MS}ms"
+          log "$v: owed restart proceeding — oldest of $P_INFLIGHT in-flight request(s) is ${P_OLDEST}ms, past the ${P_CEILING_MS}ms compose ceiling"
+        else
+          log "$v: owed restart proceeding after $P_DEFERRED_N deferral(s) despite $P_INFLIGHT in flight — convergence must not be starved"
+        fi
+      fi
       log "$v: taking OWED restart for already-mirrored content ${CLONE_HASH:0:10}"
       rm -f "$P_DEFER_FILE" "$PENDING_FILE" 2>/dev/null || true
       if [ -n "$P_UNIT" ] && systemctl is-active --quiet "$P_UNIT" 2>/dev/null; then
-        restart_breadcrumb "$v" "owed restart after deferral" "$P_INFLIGHT"
+        restart_breadcrumb "$v" "$P_REASON" "$P_INFLIGHT"
         systemctl restart "$P_UNIT" 2>/dev/null || true
         sleep "$STAGGER_SECONDS"
       fi
