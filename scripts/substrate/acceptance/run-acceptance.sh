@@ -538,6 +538,11 @@ if [ "$have_container" -eq 1 ]; then
   eng exec "$ACCEPTANCE_CONTAINER" substrate-ready --quick >"$RESULT_DIR/diag/substrate-ready.txt" 2>&1
   eng exec "$ACCEPTANCE_CONTAINER" substrate-key whoami >"$RESULT_DIR/diag/whoami.txt" 2>&1
   eng exec "$ACCEPTANCE_CONTAINER" systemctl --failed --no-legend --plain >"$RESULT_DIR/diag/failed-units.txt" 2>&1
+  # A failed unit's state says that it failed, not why. Keep each one's own journal
+  # (the fleet is throwaway, so nothing here outlives the run).
+  for _u in $(awk '{print $1}' "$RESULT_DIR/diag/failed-units.txt" 2>/dev/null | grep -E '\.(service|timer)$'); do
+    eng exec "$ACCEPTANCE_CONTAINER" journalctl -u "$_u" -n 80 --no-pager >"$RESULT_DIR/diag/unit-${_u%.*}.log" 2>&1 || true
+  done
   eng logs --tail 300 "$ACCEPTANCE_CONTAINER" >"$RESULT_DIR/diag/container.log" 2>&1
 else
   status_note="the install page launched no container named $ACCEPTANCE_CONTAINER"
