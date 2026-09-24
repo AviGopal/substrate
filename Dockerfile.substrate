@@ -4,17 +4,13 @@
 # All inter-vessel calls are localhost — no trust boundary to cross.
 #
 # Build:
-#   docker build -f Dockerfile.substrate -t metabob/substrate:dev .
+#   docker build -f Dockerfile.substrate --target base -t metabob/substrate:dev .
+#   (CI adds --build-arg IMAGE_REVISION/IMAGE_CREATED/IMAGE_SOURCE, which become the
+#   org.opencontainers.image.* labels and /etc/substrate/image-revision; build in
+#   Docker format so the HEALTHCHECK survives Podman)
 #
-# Run:
-#   docker run --rm -it \
-#     -e JWT_SECRET=<secret> \
-#     -e SURREAL_PASS=<pass> \
-#     -e METABOB_API_KEY=<key> \
-#     -e ANTHROPIC_API_KEY=<key> \
-#     -v $(pwd)/workspace:/workspace \
-#     --tmpfs /run --tmpfs /run/lock \
-#     metabob/substrate:dev
+# Run: the launch manifest this image runs under is baked in, and
+# `substrate-manifest` prints it; README § Installation is the install path.
 
 FROM debian:bookworm-slim AS base
 
@@ -225,6 +221,14 @@ COPY scripts/substrate/setup-git-push.sh /usr/local/bin/setup-git-push
 # no host-side make seed-live / "wait ~15s" / configure step is load-bearing.
 COPY scripts/substrate/substrate-ready.sh /usr/local/bin/substrate-ready
 COPY scripts/substrate/substrate-doctor.sh /usr/local/bin/substrate-doctor
+# The install verdict and the client hand-off. substrate-status is the one done
+# signal (five levels: live, seeded, served, usable, connected) — the HEALTHCHECK,
+# substrate-ready.service and every wrapper read it; substrate-connect prints the
+# client config once `seeded` passes; substrate-manifest prints the launch
+# manifest baked below, so a host with no checkout gets the same declaration.
+COPY scripts/substrate/substrate-status.sh /usr/local/bin/substrate-status
+COPY scripts/substrate/substrate-connect.sh /usr/local/bin/substrate-connect
+COPY scripts/substrate/substrate-manifest.sh /usr/local/bin/substrate-manifest
 COPY scripts/substrate/reseed-restart.sh /usr/local/bin/reseed-restart
 # Config provenance (`substrate-config`) answers the one question no other tool
 # could: WHERE a resolved value came from — the operator's env, a PRIOR boot's
@@ -327,8 +331,35 @@ COPY scripts/substrate/seed-identity.ts /vessels/seed-identity.ts
 COPY scripts/substrate/seed-concepts.ts /vessels/seed-concepts.ts
 COPY scripts/bootstrap-seeder.ts /scripts/bootstrap-seeder.ts
 
+# The launch manifest, baked. The repository's root docker-compose.yml is the single
+# source; this copy is what `substrate-manifest` prints and what the substrate's own
+# deploy activities read when they have no checkout. The build fails if what the
+# tool prints is not byte-identical to the tracked file, so the baked copy and the
+# printing path can never quietly diverge from the source.
+COPY docker-compose.yml /usr/local/share/substrate/docker-compose.yml
+COPY docker-compose.yml /tmp/docker-compose.source.yml
+RUN bash /usr/local/bin/substrate-manifest > /tmp/docker-compose.printed.yml \
+    && cmp /tmp/docker-compose.source.yml /tmp/docker-compose.printed.yml \
+    || { echo "substrate-manifest does not print the tracked docker-compose.yml byte for byte" >&2; exit 1; }; \
+    rm -f /tmp/docker-compose.source.yml /tmp/docker-compose.printed.yml
+
+# Per-vessel revision markers. substrate-status reports, per vessel, whether the
+# running /vessels/<v> is still the code this image baked or pull-sync has moved it.
+# The content hash is taken over each baked src tree with the same command the
+# status tool re-runs; VESSEL_REVISIONS (optional, "name=sha" pairs from the
+# builder's submodule table) names the baked commits when the builder knows them.
+ARG VESSEL_REVISIONS=""
+RUN set -e; \
+    for d in /vessels/*/; do \
+      v="$(basename "$d")"; [ -d "$d/src" ] || continue; \
+      h="$(cd "$d" && find src -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16)"; \
+      printf '%s %s\n' "$h" "$v"; \
+    done > /usr/local/share/substrate/vessel-src.sha256; \
+    { printf '%s\n' $VESSEL_REVISIONS | grep '=' || true; } > /usr/local/share/substrate/vessel-revisions
+
 RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/local/bin/setup-git-push \
         /usr/local/bin/substrate-ready /usr/local/bin/substrate-doctor /usr/local/bin/reseed-restart \
+        /usr/local/bin/substrate-status /usr/local/bin/substrate-connect /usr/local/bin/substrate-manifest \
         /usr/local/bin/substrate-config \
         /usr/local/bin/substrate-pull-sync /usr/local/bin/mirror-to-live \
         /usr/local/bin/vessel-ctl /usr/local/bin/apply-llm-arms \
@@ -385,17 +416,31 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
 
 # SurrealDB writes the learning state (traces, Thompson posteriors, concept
 # graph) to file:/var/lib/surrealdb/data.db. Declaring it a volume — like
-# /workspace — documents that it must be bind-mounted (see the Makefile run-live
-# targets); otherwise the state lands in the ephemeral container layer.
+# /workspace — documents that it must be backed by a volume (the launch manifest
+# names both); otherwise the state lands in the ephemeral container layer.
 VOLUME ["/workspace", "/var/lib/surrealdb"]
 
 STOPSIGNAL SIGRTMIN+3
 
-# Host-visible readiness: `docker inspect --format '{{.State.Health.Status}}'`
-# is the ONLY signal a host needs — the launch contract is just `docker run`.
-# --quick checks the core set (inventory "core": true) in-container.
+# Host-visible readiness: `docker inspect --format '{{.State.Health.Status}}'`.
+# The verdict at level `seeded`: the core units AND every unit serving a port are
+# up (one quick sample — the coverage this healthcheck has always had, so a dead
+# non-core vessel with a port still reads unhealthy), and the key a client would be
+# handed validates. The launch manifest does not override it. Higher levels are not
+# the healthcheck's to run — `usable` dispatches a goal.
 HEALTHCHECK --interval=30s --timeout=25s --start-period=240s --retries=3 \
-    CMD /usr/local/bin/substrate-ready --quick >/dev/null 2>&1 || exit 1
+    CMD /usr/local/bin/substrate-status --quick --level seeded >/dev/null 2>&1 || exit 1
+
+# Image identity, readable before running (labels) and after (the verdict prints
+# /etc/substrate/image-revision). Declared last so a new revision does not
+# invalidate any earlier layer's cache.
+ARG IMAGE_REVISION=unknown
+ARG IMAGE_CREATED=unknown
+ARG IMAGE_SOURCE=https://github.com/AviGopal/substrate
+LABEL org.opencontainers.image.revision="${IMAGE_REVISION}" \
+      org.opencontainers.image.created="${IMAGE_CREATED}" \
+      org.opencontainers.image.source="${IMAGE_SOURCE}"
+RUN printf '%s\n' "${IMAGE_REVISION}" > /etc/substrate/image-revision
 
 ENTRYPOINT ["/usr/local/bin/substrate-entrypoint"]
 
@@ -450,6 +495,11 @@ COPY repos/obsidian-vessel/esbuild.config.mjs \
      repos/obsidian-vessel/tsconfig.json \
      ./obsidian-vessel/
 RUN cd obsidian-vessel && bun esbuild.config.mjs production
+# The base stage took the per-vessel revision markers before this vessel existed;
+# add its line with the same command, so substrate-status can check it too.
+RUN d=/vessels/obsidian-vessel \
+    && h="$(cd "$d" && find src -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16)" \
+    && printf '%s %s\n' "$h" obsidian-vessel >> /usr/local/share/substrate/vessel-src.sha256
 
 # Build the vault from scratch — NO host-directory dependency. The vault is
 # reproducible from the built plugin alone: the three loadable files are

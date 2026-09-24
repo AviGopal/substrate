@@ -17,6 +17,10 @@ Environment=PORT=8310
 # be changed together or the stale side silently wins. VESSEL_ENDPOINT below stays
 # 127.0.0.1 on purpose — it is the self-address used for discovery registration,
 # independent of the bind.
+# Exposure is decided by the port mapping alone: a mapping with no address publishes
+# the surface on every host interface, and a 127.0.0.1: prefix on the mapping keeps
+# it on the local host. The surface proxies goals with this fleet's key and checks
+# no inbound credential, so publish it no wider than the people who may use that key.
 Environment=HOST=0.0.0.0
 Environment=VESSEL_ID=human-surface-vessel
 Environment=VESSEL_ENDPOINT=http://127.0.0.1:8310

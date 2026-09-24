@@ -9,8 +9,10 @@
 #   3. seeded-key auth          — METABOB_API_KEY authenticates against activity-api
 #   4. discovery registry       — registered-vessel count vs a sane floor
 #   5. failed systemd units     — catches silently-dead timers/crash-loops
-#   6. --smoke                  — dispatch a real goal via goal-host /run-goal and
-#                                 confirm the execution trace lands (end-to-end)
+#   6. --smoke                  — dispatch the known-answer goal substrate-status
+#                                 bakes, require reached:true (an execution id alone
+#                                 proves only that a walk started), and confirm the
+#                                 execution trace lands (end-to-end)
 #
 # Usage: substrate-doctor.sh [--smoke]
 # Exit 0 = all checks pass; 1 = at least one failure.
@@ -34,6 +36,18 @@ bad()  { printf '  \033[31mFAIL\033[0m %s\n' "$1"; FAIL=1; }
 note() { printf '       %s\n' "$1"; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# The LLM and goal probes live once, in substrate-status (--probe llm|goal), so the
+# doctor and the install verdict cannot drift apart. From the host, the checkout's
+# copy is streamed into the container, which works against images that predate it.
+status_probe() { # probe -> JSON line on stdout; exit 0 pass, 1 fail, 3 unknown
+  if [ "$IN_CONTAINER" = 1 ]; then
+    if [ -x /usr/local/bin/substrate-status ]; then /usr/local/bin/substrate-status --probe "$1" --json
+    else "$SCRIPT_DIR/substrate-status.sh" --probe "$1" --json; fi
+  else
+    docker exec -i "$CONTAINER" bash -s -- --probe "$1" --json < "$SCRIPT_DIR/substrate-status.sh"
+  fi
+}
 
 echo "== 1. fleet readiness =="
 if [ "$IN_CONTAINER" = 1 ] && [ -x /usr/local/bin/substrate-ready ]; then
@@ -357,61 +371,54 @@ echo "== 7. llm arms answer a real call =="
 # A paid dependency is only provably alive if a real, minimal, paid call
 # succeeds. 16 tokens costs a fraction of a cent and buys the one fact that
 # matters: can this substrate draft at all.
-LLM_OK=0; LLM_TRIED=0; LLM_WHY=""
-for LP in 8221 8223 8225; do
-  csh "curl -s -o /dev/null -w '' -m 3 http://127.0.0.1:$LP/health" >/dev/null 2>&1 || continue
-  LLM_TRIED=$((LLM_TRIED + 1))
-  LR="$(csh "K=\$(grep -m1 '^METABOB_API_KEY=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); curl -s -m 45 -X POST http://127.0.0.1:$LP/resolve -H 'Content-Type: application/json' -H \"Authorization: ApiKey \$K\" -d '{\"type\":\"llm_completion\",\"prompt\":\"reply with the single word ok\",\"max_tokens\":16,\"task_type\":\"doctor_probe\"}'" 2>/dev/null || true)"
-  case "$LR" in
-    *'"resolved":true'*) LLM_OK=$((LLM_OK + 1)) ;;
-    *) [ -z "$LLM_WHY" ] && LLM_WHY="$(printf '%s' "$LR" | tr -d '\n' | head -c 160)" ;;
-  esac
-done
-if [ "$LLM_TRIED" = 0 ]; then
-  note "no local llm arm is listening (expected on a role-subset node that resolves LLM on a peer)"
-elif [ "$LLM_OK" -gt 0 ]; then
-  ok "$LLM_OK/$LLM_TRIED llm arm(s) answered a real completion"
-else
-  bad "all $LLM_TRIED local llm arm(s) are up but CANNOT COMPLETE — the substrate cannot draft"
-  note "first error: $LLM_WHY"
-  note "credit/quota or key problem, not a code problem; /health cannot see it"
-fi
+LLM_OUT="$(status_probe llm 2>/dev/null)"; LLM_RC=$?
+LLM_EV="$(printf '%s' "$LLM_OUT" | jq -r '.evidence // empty' 2>/dev/null)"
+case "$LLM_RC" in
+  0) ok "${LLM_EV:-an llm arm answered a real completion}" ;;
+  1)
+    bad "no LLM arm can complete a real call — the substrate cannot draft"
+    note "${LLM_EV:-no evidence returned}"
+    note "credit/quota or key problem, not a code problem; /health cannot see it" ;;
+  *)
+    note "llm probe could not decide (${LLM_EV:-probe unavailable, exit $LLM_RC})"
+    note "expected on a role-subset node with no arm and no reachable federated one" ;;
+esac
 
 if [ "$SMOKE" = 1 ]; then
-  echo "== 8. smoke: goal dispatch -> trace lands =="
-  SMOKE_OUT="$(csh 'K=$(grep -m1 "^METABOB_API_KEY=" /etc/substrate/env | cut -d= -f2- | tr -d "\""); curl -s -m 60 -X POST http://127.0.0.1:8210/run-goal -H "Content-Type: application/json" -H "Authorization: ApiKey $K" -d "{\"goal\":\"substrate doctor smoke check: report the substrate is alive\"}"' 2>/dev/null || true)"
-  # /run-goal answers either synchronously ({executionId,...}) or async
-  # ({dispatchId, status:running} — poll GET /executions/:dispatchId).
-  EXEC_ID="$(echo "$SMOKE_OUT" | jq -r '.executionId // empty' 2>/dev/null || true)"
-  DISPATCH_ID="$(echo "$SMOKE_OUT" | jq -r '.dispatchId // empty' 2>/dev/null || true)"
-  if [ -z "$EXEC_ID" ] && [ -z "$DISPATCH_ID" ]; then
-    bad "goal dispatch returned neither executionId nor dispatchId"
-    note "response: $(echo "$SMOKE_OUT" | head -c 200)"
-  else
-    if [ -z "$EXEC_ID" ]; then
-      note "dispatched dispatchId=$DISPATCH_ID — polling for completion"
-      ST=""
-      for _ in $(seq 1 40); do
-        REC="$(csh "curl -s -m 8 http://127.0.0.1:8210/executions/$DISPATCH_ID" 2>/dev/null || true)"
-        ST="$(echo "$REC" | jq -r '.status // empty' 2>/dev/null || true)"
-        EXEC_ID="$(echo "$REC" | jq -r '.executionId // empty' 2>/dev/null || true)"
-        [ -n "$ST" ] && [ "$ST" != "running" ] && break
-        sleep 5
-      done
-      [ -n "$ST" ] && note "dispatch status: $ST"
-    fi
-    if [ -z "$EXEC_ID" ]; then
-      bad "no executionId materialized for the smoke goal"
+  echo "== 8. smoke: known-answer goal -> reached:true -> trace lands =="
+  # `reached`, not `status` and not an execution id: a hollow walk completes and
+  # still mints an id. The goal's answer is recomputed by goal-host's deterministic
+  # registry oracle, so a pass here is evidence rather than a judge's prose.
+  SMOKE_OUT="$(status_probe goal 2>/dev/null)"; SMOKE_RC=$?
+  SMOKE_EV="$(printf '%s' "$SMOKE_OUT" | jq -r '.evidence // empty' 2>/dev/null)"
+  # The probe names its dispatch, route and execution id as fields; nothing here
+  # parses them out of the evidence prose.
+  SMOKE_ROUTE="$(printf '%s' "$SMOKE_OUT" | jq -r '.route // empty' 2>/dev/null)"
+  EXEC_ID="$(printf '%s' "$SMOKE_OUT" | jq -r '.execution_id // empty' 2>/dev/null)"
+  if [ "$SMOKE_RC" = 0 ]; then
+    ok "known-answer goal reached"
+    note "$SMOKE_EV"
+    if [ -z "$EXEC_ID" ] && [ "$SMOKE_ROUTE" = "federated" ]; then
+      # A federated goal-host answers the poll through discovery, and not every
+      # one reports the execution id it minted; name the check that did not run.
+      note "SKIPPED trace check: the goal ran on a federated goal-host that reported no executionId"
+    elif [ -z "$EXEC_ID" ]; then
+      bad "the local goal-host reached the goal but recorded no executionId — a walk with no trace"
     else
-      note "executionId=$EXEC_ID — waiting for trace"
       TRACE_OK=0
       for _ in $(seq 1 20); do
-        CODE="$(csh "K=\$(grep -m1 '^METABOB_API_KEY=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); curl -s -o /dev/null -w '%{http_code}' -m 8 -H \"Authorization: ApiKey \$K\" http://127.0.0.1:8080/v2/activities/execution-traces/$EXEC_ID" 2>/dev/null || true)"
+        CODE="$(csh "K=\$(grep -m1 '^METABOB_API_KEY=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); curl -s -o /dev/null -w '%{http_code}' -m 8 -H \"Authorization: ApiKey \$K\" $ACTIVITY_EP/v2/activities/execution-traces/$EXEC_ID" 2>/dev/null || true)"
         [ "$CODE" = "200" ] && { TRACE_OK=1; break; }
         sleep 3
       done
       if [ "$TRACE_OK" = 1 ]; then ok "execution trace landed ($EXEC_ID)"; else bad "trace for $EXEC_ID not readable within 60s"; fi
     fi
+  elif [ "$SMOKE_RC" = 1 ]; then
+    bad "known-answer goal did NOT reach"
+    note "${SMOKE_EV:-no evidence returned}"
+    note "why: the cockpit's goal_reasoning on that dispatch, or GET :8210/executions/<dispatch id> in-container"
+  else
+    bad "smoke could not be decided (${SMOKE_EV:-probe unavailable, exit $SMOKE_RC}) — an undecided smoke is not a pass"
   fi
 fi
 

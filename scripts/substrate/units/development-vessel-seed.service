@@ -49,7 +49,30 @@ WorkingDirectory=/vessels/development-vessel
 # endpoint. ${METABOB_ENDPOINT} resolves to the local activity-api on a hub and
 # to the hub's on a spoke. The loop body deliberately does not reference its
 # index so no shell variable survives systemd's expansion pass.
-ExecStart=/bin/bash -c 'for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do curl -sf ${METABOB_ENDPOINT}/health >/dev/null 2>&1 && break || sleep 3; done; /root/.bun/bin/bun /vessels/development-vessel/src/cli.ts seed-templates'
+#
+# THEN WAIT FOR A KEY THE STORE ACCEPTS, read from the env file at that moment. On a
+# fresh volume identity-seeder mints the org and keys and rewrites /etc/substrate/env
+# after this unit has already loaded it; uploading with the key it started with
+# presents one that does not exist yet, and every template upload is refused 401 — on
+# a warm volume the old key still validates, so the race is invisible until a cold
+# boot loses every dev seed template. The wait is here and NOT an After= on
+# identity-seeder: identity-seeder restarts this unit itself once it has minted the
+# key, and a restart job ordered after the unit that issued it waits for that unit to
+# finish, which it cannot until the restart returns — a deadlock that holds identity-
+# seeder to its start timeout and leaves every later key consumer on the old key.
+#
+# So the wait is on two facts, read at run time: the key in the env file is one the
+# store accepts (the authenticated read substrate-doctor makes), and identity-seeder
+# is not mid-run. The second matters because identity-seeder restarts this unit
+# twice in quick succession once the key exists (development-vessel's restart
+# propagates here through Requires=, then the unit is restarted by name); an upload
+# begun between the two is killed a few seconds in, and the rerun then sees a
+# catalogue the bootstrap seeder has already filled and skips, stranding most of the
+# dev templates. Waiting out the seeder's run means only the last start uploads. The
+# key is filtered to the characters a key can hold, which also strips any quoting. A
+# key that never validates (a spoke that has not joined) falls through after the
+# bound and the uploads fail visibly, as before.
+ExecStart=/bin/bash -c 'for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do curl -sf ${METABOB_ENDPOINT}/health >/dev/null 2>&1 && break || sleep 3; done; for n in $$(seq 1 100); do K=$$(sed -n "s/^METABOB_API_KEY=//p" /etc/substrate/env | head -n1 | tr -cd "A-Za-z0-9._=+/-"); if [ "$$(systemctl show -p ActiveState --value identity-seeder.service 2>/dev/null)" != activating ] && [ -n "$$K" ] && [ "$$(curl -s -o /dev/null -w %%{http_code} -m 5 -H "Authorization: ApiKey $$K" "${METABOB_ENDPOINT}/v2/activities/templates?limit=1")" = 200 ]; then break; fi; [ "$$n" = 1 ] && echo "[dev-seed] waiting for identity seeding to finish and a key ${METABOB_ENDPOINT} accepts"; sleep 3; done; [ -n "$$K" ] && export METABOB_API_KEY="$$K"; exec /root/.bun/bin/bun /vessels/development-vessel/src/cli.ts seed-templates'
 # Same generous budget the start phase used to carry — the ~98 uploads are
 # genuinely slow. It is affordable here precisely because nothing waits on it.
 TimeoutStartSec=600

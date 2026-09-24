@@ -1,8 +1,20 @@
 [Unit]
 Description=substrate fleet readiness gate (boot-readiness as a systemd fact)
-# Oneshot that turns "the fleet is up" into a unit other units can order
-# After=. Exit-0-with-warning on timeout (a permanently-sick vessel must not
-# wedge boot — Restart=on-failure convergence continues regardless).
+# Oneshot that turns "the fleet is up" into a unit other units can order After=,
+# and whose result IS the boot verdict: `active` means the fleet reached `served`
+# (substrate-status: live, seeded, served), `failed` means it did not within the
+# bound, and the journal holds the per-level evidence either way.
+#
+# A failed gate never wedges boot. Every unit ordered after it (the ready-gate.conf
+# drop-ins) carries Wants=, not Requires=, so it still starts once this unit has
+# finished, pass or fail, and Restart=on-failure convergence continues regardless.
+# What a failure changes is honesty: `systemctl --failed`, substrate-doctor and the
+# image healthcheck's operator all see a fleet that is not ready, instead of an
+# unconditional success hiding it.
+#
+# `served`, not `usable`: a keyless spoke cannot pass `usable` by design, and the
+# boot gate must not fail on every correctly built spoke. `usable` dispatches a goal,
+# which is the operator's or the acceptance run's call to make, not boot's.
 After=identity-seeder.service goal-host-vessel.service development-vessel.service
 Wants=identity-seeder.service
 
@@ -12,8 +24,21 @@ RemainAfterExit=yes
 EnvironmentFile=/etc/substrate/env
 # --services-only: the ready-gated timers are After=THIS unit — counting them
 # would be a circular wait that burns the whole poll window every boot.
-ExecStart=/bin/sh -c '/usr/local/bin/substrate-ready --services-only --timeout 240 || echo "[substrate-ready] fleet not fully ready after 240s — continuing (Restart=on-failure converges)"'
-TimeoutStartSec=300
+#
+# The fallback keeps an image that predates substrate-status on exactly the gate it
+# shipped with: unit files reach running fleets through pull-sync before a new image
+# does, and an ExecStart naming a binary the image lacks would fail every boot for
+# the wrong reason. The verdict takes over when the image carries it.
+#
+# Only the first run of a boot waits. A failed oneshot is started again whenever a
+# unit that Wants= it is started — pull-sync enabling a newly converged timer does
+# exactly that, and would otherwise block on a second 240s wait on the very fleets
+# whose readiness is failing. So a later run in the same boot (the marker lives on
+# /run, which every boot starts empty) takes one verdict, without waiting, and ends,
+# pass or fail. Not --quick: that narrows the unit matrix to core and ported units, so
+# a rerun could pass while a failed seeder the first run caught still stands.
+ExecStart=/bin/sh -c 'if [ -x /usr/local/bin/substrate-status ]; then if [ -e /run/substrate-ready.ran ]; then exec /usr/local/bin/substrate-status --level served --services-only; fi; touch /run/substrate-ready.ran; exec /usr/local/bin/substrate-status --wait served --timeout 240 --services-only; fi; /usr/local/bin/substrate-ready --services-only --timeout 240 || echo "[substrate-ready] fleet not fully ready after 240s (image predates substrate-status; continuing)"'
+TimeoutStartSec=330
 StandardOutput=journal
 StandardError=journal
 

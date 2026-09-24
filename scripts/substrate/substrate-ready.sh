@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # substrate-ready.sh — fleet readiness, derived from vessels.inventory.json.
 #
-# The single answer to "is the substrate up?". Replaces the "wait ~15s" advice
-# and the per-unit ad-hoc ExecStartPre health polls. Three consumers:
-#   - substrate-ready.service (oneshot): boot-readiness as a systemd fact
-#   - Dockerfile HEALTHCHECK (--quick): host-visible readiness via docker inspect
+# The unit matrix behind "is the substrate up?". Replaces the "wait ~15s" advice
+# and the per-unit ad-hoc ExecStartPre health polls. Consumers:
+#   - substrate-status: its `live` level (core units) and the unit half of `served`
+#     read this matrix; the image HEALTHCHECK and substrate-ready.service reach it
+#     through substrate-status
+#   - substrate-ready.service (oneshot): directly, on an image that predates
+#     substrate-status
 #   - substrate-doctor.sh: the launch-verification matrix
 #
 # Usage: substrate-ready.sh [--timeout N] [--once] [--quick] [--json] [--services-only]
