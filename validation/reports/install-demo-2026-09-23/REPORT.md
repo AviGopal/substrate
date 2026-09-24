@@ -102,6 +102,14 @@ to `live` and `seeded` (a freshly minted key); `served` failed only on the self-
 units fixed in item 4. It ran report-only (no provider key secret), so `usable` was not
 evaluated there.
 
+The acceptance run on image `c6e9ab83` (run 35966314973), same cold runners, verbatim:
+**Podman** passed every level it judges in report-only mode — `live`, `seeded`, `served`
+(63 units up, all nine ports published and bound non-loopback). **Docker** passed `live` and
+`seeded` and failed `served` on one unit, `concept-db-seeder.service` (store role), which
+succeeded on every Podman launch here. Its cause is not in that run's artifacts; the
+acceptance diagnostics now keep each failed unit's journal (`405d99c2`), so the next run
+states it. Open: **concept-db-seeder fails on a fresh Docker standalone.**
+
 ## Re-running
 
 ```bash
