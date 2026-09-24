@@ -102,7 +102,7 @@ jobs:
             echo "- pointers moved: **${CHANGED:-0}**"
             echo "- build: **${BUILD_RESULT}**"
             if [ -n "${SHA}" ]; then
-              echo "- built commit: `${SHA}`"
+              printf -- '- built commit: `%s`\n' "${SHA}"
             fi
             if [ "${BUILD_RESULT}" = "skipped" ] && [ "${RECONCILE_RESULT}" = "success" ]; then
               echo ""

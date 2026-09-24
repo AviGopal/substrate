@@ -16,12 +16,28 @@ name: Build & publish substrate image
 on:
   push:
     branches: [dev]
+    # The image bakes the launch manifest (docker-compose.yml, printed by
+    # `substrate-manifest`), so a manifest edit must publish or the baked copy goes
+    # stale. README.md is the install page: install-acceptance.yml judges each published
+    # digest against the page at the commit it was built from, so an install page edit
+    # publishes too, and the edited page is judged with no later push needed.
     paths:
       - 'Dockerfile.substrate'
+      - 'docker-compose.yml'
+      - 'README.md'
       - 'repos/**'
       - 'scripts/substrate/**'
       - '.github/workflows/build-substrate-image.yml'
   workflow_dispatch: {}
+  # A scheduled submodule bump pushes its gitlink commit with the default GITHUB_TOKEN,
+  # and GitHub never fires `push:` for a GITHUB_TOKEN push, so a bump that moved pointers
+  # used to publish nothing until the next unrelated push or the nightly. Its completion
+  # is an ordinary event, though, so the build follows it here. The `gate` job below
+  # builds only when dev moved during that run; a bump called from the nightly is not a
+  # separate run and does not fire this (the nightly builds for itself).
+  workflow_run:
+    workflows: ["Bump submodule pointers"]
+    types: [completed]
   # Callable so the nightly build can reconcile branch heads first and then
   # build the reconciled commit in the same run. `ref` is required because a
   # bump pushed during that run is NEWER than the caller's github.sha; building
@@ -42,15 +58,63 @@ concurrency:
   # push event its own bump commit generates. Keyed on the run, not the ref,
   # when called — `cancel-in-progress` on a shared ref group would let the
   # push-triggered build kill the nightly mid-build.
+  #
+  # A run that follows a bump shares the dev group but never cancels: it arrives
+  # whether or not the bump moved anything, and a no-op bump must not kill a push
+  # build in flight. It waits its turn instead, and a later push still cancels it,
+  # so the newest dev head is the one that ends up as :dev.
   group: substrate-image-${{ github.workflow }}-${{ github.event_name == 'workflow_call' && github.run_id || github.ref }}
-  cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_call' && github.event_name != 'workflow_run' }}
 
 jobs:
+  # Decide whether there is anything to build. Every trigger builds, except a completed
+  # bump that pushed nothing: dev still sits where that run started, so the tree is one
+  # :dev was already built from. The commit is pinned here so the build publishes the
+  # tree this decision was made about, not whatever lands on dev in between.
+  gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      build: ${{ steps.decide.outputs.build }}
+      ref: ${{ steps.decide.outputs.ref }}
+    steps:
+      - name: Decide
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion || '' }}
+          RUN_HEAD: ${{ github.event.workflow_run.head_sha || '' }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" != "workflow_run" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"; echo "ref=" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [ "$RUN_CONCLUSION" != "success" ]; then
+            echo "build=false" >> "$GITHUB_OUTPUT"; echo "ref=" >> "$GITHUB_OUTPUT"
+            echo "The bump run did not succeed (${RUN_CONCLUSION}); nothing to build." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          head="$(gh api "repos/${GITHUB_REPOSITORY}/commits/dev" --jq .sha)"
+          if [ "$head" = "$RUN_HEAD" ]; then
+            echo "build=false" >> "$GITHUB_OUTPUT"; echo "ref=" >> "$GITHUB_OUTPUT"
+            echo "The bump moved no pointer (dev is still ${head:0:10}); nothing to build." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"; echo "ref=${head}" >> "$GITHUB_OUTPUT"
+            echo "dev moved ${RUN_HEAD:0:10} -> ${head:0:10} during the bump; building ${head:0:10}." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   build:
+    needs: gate
+    if: needs.gate.outputs.build == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    outputs:
+      digest: ${{ steps.push.outputs.digest }}
+      built_sha: ${{ steps.tags.outputs.built_sha }}
     env:
       # GitHub forbids secrets directly in step-level `if`, so mirror the presence of the
       # Docker Hub token into a non-secret env flag and gate the DH steps on it.
@@ -61,8 +125,9 @@ jobs:
         with:
           submodules: false
           # Empty string is falsy in this expression, so an uncalled run keeps
-          # checkout's default (the triggering ref) exactly as before.
-          ref: ${{ inputs.ref || '' }}
+          # checkout's default (the triggering ref) exactly as before. A build that
+          # follows a bump builds the commit the gate saw.
+          ref: ${{ inputs.ref || needs.gate.outputs.ref || '' }}
 
       - name: Init submodules (minus metabob-mcp — different org, not baked)
         env:
@@ -136,6 +201,8 @@ jobs:
         env:
           OWNER: ${{ steps.img.outputs.owner }}
           EXTRA_TAG: ${{ inputs.extra_tag || '' }}
+          GATES_DEV: ${{ vars.INSTALL_ACCEPTANCE_GATES_DEV || '' }}
+          HAS_ACCEPTANCE_KEY: ${{ secrets.ACCEPTANCE_PROVIDER_KEY != '' }}
         run: |
           set -euo pipefail
           # Tag with the CHECKED-OUT commit, not github.sha. On a workflow_call
@@ -144,16 +211,45 @@ jobs:
           # that was never built. Ask git what is actually in the working
           # directory instead of trusting the event context.
           SHA=$(git rev-parse HEAD)
-          echo "built_sha=${SHA}" >> "$GITHUB_OUTPUT"
+          {
+            echo "built_sha=${SHA}"
+            # The image's own record of what it was built from (OCI labels and
+            # /etc/substrate/image-revision, declared in Dockerfile.substrate). The
+            # date is the commit time, not the wall clock: the same commit yields the
+            # same value, so the build-arg does not defeat the layer cache on a rebuild.
+            echo "created=$(TZ=UTC git log -1 --format=%cd --date=format-local:%Y-%m-%dT%H:%M:%SZ HEAD)"
+            # The commit each vessel was baked from, as "name=sha" pairs, so the
+            # verdict can say which vessels pull-sync has since moved. Read from the
+            # gitlinks of the built commit, not from the checkouts.
+            echo "vessel_revisions=$(git ls-tree HEAD repos/ | awk '$2 == "commit" { sub(/^repos\//, "", $4); printf "%s=%s ", $4, $3 }')"
+          } >> "$GITHUB_OUTPUT"
+          # The publishing switch (install-acceptance.yml). When the acceptance run
+          # gates :dev, this build publishes only :<sha> and the acceptance workflow
+          # moves :dev to the digest it judged. Unset, :dev publishes here as always.
+          # The switch holds only while the acceptance run has its provider key: with
+          # no key no run can pass in gating mode, and :dev would never move again.
+          PUBLISH_DEV=true
+          if [ "${GATES_DEV}" = "true" ]; then
+            if [ "${HAS_ACCEPTANCE_KEY}" = "true" ]; then
+              PUBLISH_DEV=false
+              echo "::notice::dev is gated by install acceptance; this build publishes :${SHA} only."
+            else
+              echo "::warning::INSTALL_ACCEPTANCE_GATES_DEV is set but ACCEPTANCE_PROVIDER_KEY is not; publishing :dev ungated."
+            fi
+          fi
           {
             echo 'tags<<EOF'
-            echo "ghcr.io/${OWNER}/substrate:dev"
+            if [ "${PUBLISH_DEV}" = "true" ]; then
+              echo "ghcr.io/${OWNER}/substrate:dev"
+            fi
             echo "ghcr.io/${OWNER}/substrate:${SHA}"
             if [ -n "${EXTRA_TAG}" ]; then
               echo "ghcr.io/${OWNER}/substrate:${EXTRA_TAG}"
             fi
             if [ "${HAS_DH}" = "true" ]; then
-              echo "avigopal/substrate:dev"
+              if [ "${PUBLISH_DEV}" = "true" ]; then
+                echo "avigopal/substrate:dev"
+              fi
               echo "avigopal/substrate:${SHA}"
               if [ -n "${EXTRA_TAG}" ]; then
                 echo "avigopal/substrate:${EXTRA_TAG}"
@@ -166,6 +262,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build & push
+        id: push
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -183,7 +280,23 @@ jobs:
           # one that publishes. Naming the stage explicitly also stops a future
           # stage appended to the Dockerfile from silently becoming :dev.
           target: base
-          push: true
+          # ★ DOCKER-FORMAT MANIFESTS, SO THE HEALTHCHECK SURVIVES PODMAN.
+          # build-push-action attaches a provenance attestation by default, and an
+          # attestation forces an OCI image index with OCI manifests. Podman reads an
+          # OCI image's config through the OCI schema, which has no healthcheck field,
+          # so HEALTHCHECK is silently dropped: the config blob of the published :dev
+          # carries it, and `podman image inspect` of the same pull reports it null.
+          # Every Podman fleet has run with no healthcheck for that reason. So: no
+          # attestations, and the registry exporter with Docker media types. Docker
+          # reads both formats; only Podman needed the change.
+          provenance: false
+          sbom: false
+          outputs: type=registry,oci-mediatypes=false
+          build-args: |
+            IMAGE_REVISION=${{ steps.tags.outputs.built_sha }}
+            IMAGE_CREATED=${{ steps.tags.outputs.created }}
+            IMAGE_SOURCE=${{ github.server_url }}/${{ github.repository }}
+            VESSEL_REVISIONS=${{ steps.tags.outputs.vessel_revisions }}
           tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -201,7 +314,62 @@ jobs:
           context: .
           file: Dockerfile.substrate
           target: substrate-obsidian
-          push: true
+          # Same format and revision record as the base image, for the same reasons.
+          provenance: false
+          sbom: false
+          outputs: type=registry,oci-mediatypes=false
+          build-args: |
+            IMAGE_REVISION=${{ steps.tags.outputs.built_sha }}
+            IMAGE_CREATED=${{ steps.tags.outputs.created }}
+            IMAGE_SOURCE=${{ github.server_url }}/${{ github.repository }}
+            VESSEL_REVISIONS=${{ steps.tags.outputs.vessel_revisions }}
           tags: ghcr.io/${{ steps.img.outputs.owner }}/substrate:obsidian
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # THE BAKED MANIFEST IS THE TRACKED MANIFEST. The Dockerfile's own check only
+      # proves the printing path prints what was copied in; this one runs the
+      # published digest's `substrate-manifest` and compares it byte for byte with
+      # the docker-compose.yml of the commit it was built from. A difference fails
+      # the job before the digest is handed to the acceptance run. The printed
+      # manifest is attached to the run, so each digest's manifest can be fetched
+      # without pulling the image.
+      - name: Attach and check the baked launch manifest
+        env:
+          OWNER: ${{ steps.img.outputs.owner }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          set -euo pipefail
+          mkdir -p manifest
+          docker run --rm --entrypoint substrate-manifest "ghcr.io/${OWNER}/substrate@${DIGEST}" > manifest/docker-compose.yml
+          if ! cmp -s manifest/docker-compose.yml docker-compose.yml; then
+            echo "::error::substrate-manifest in ghcr.io/${OWNER}/substrate@${DIGEST} differs from the tracked docker-compose.yml"
+            diff -u docker-compose.yml manifest/docker-compose.yml || true
+            exit 1
+          fi
+          echo "The launch manifest baked into \`${DIGEST}\` is byte-identical to the tracked docker-compose.yml." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: launch-manifest
+          path: manifest/docker-compose.yml
+          retention-days: 90
+
+      # Hand the judged artifact to install-acceptance.yml, which follows this run
+      # (workflow_run) and needs the exact digest, not a tag that may have moved.
+      - name: Record the published digest
+        env:
+          OWNER: ${{ steps.img.outputs.owner }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+          SHA: ${{ steps.tags.outputs.built_sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p published
+          jq -n --arg repo "ghcr.io/${OWNER}/substrate" --arg digest "$DIGEST" --arg sha "$SHA" \
+            '{repository: $repo, digest: $digest, revision: $sha}' > published/published-image.json
+          cat published/published-image.json
+          echo "Published \`ghcr.io/${OWNER}/substrate@${DIGEST}\` from \`${SHA}\`." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: published-image
+          path: published/published-image.json
+          retention-days: 30

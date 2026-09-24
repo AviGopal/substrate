@@ -1,0 +1,419 @@
+name: Install acceptance
+
+# The judge of setup. For every published image, a fresh runner per container engine runs
+# README § Installation's `install` blocks verbatim (scripts/substrate/acceptance/
+# run-acceptance.sh) and records whether the result reached `connected` with a cockpit
+# that answers. Nothing the operator's host has — a local image, a warm volume, a client
+# config, a CLI login — is present, which is the advantage every earlier setup audit had
+# and none of them could see.
+#
+# CI judges; the substrate learns. Each result is posted to the reference hub as a
+# memoryNote through memoryNote_write, titled "installAcceptance …" so a title_prefix
+# read finds every result, and a judged failure files one gap per failing step through
+# substrateGap_write (scripts/substrate/acceptance/post-result.sh). The note asks for
+# note_type installAcceptance; post-result reads it back and reports a hub that stored
+# it under another type as a rejection, so a hub that does not know the type yet is
+# visible rather than silently mistyped. A result the hub could not take because it was
+# down (or had no producer for the shape) is carried to the next run as the
+# `install-acceptance-unposted` artifact, at most the newest few per case and engine,
+# and posted, oldest first and before that run's own results, when the hub answers
+# again. Posting never decides a publish.
+#
+# TRIGGERS
+#   workflow_run      after "Build & publish substrate image" or "Nightly dev build"
+#                     succeeds; the image is the digest that run published (its
+#                     `published-image` artifact) and the install page is read at the
+#                     commit that image was built from, so page and image always match
+#   workflow_dispatch judge any image by hand (defaults to :dev)
+#
+# SECRETS AND VARIABLES (all optional; absence degrades, never errors)
+#   ACCEPTANCE_PROVIDER_KEY  secret  a low-budget provider key for the run's own fleet.
+#                                    Without it the run is REPORT-ONLY: usable and
+#                                    connected need an LLM arm, so they are recorded and
+#                                    not judged, while live/seeded/served, the blocks that
+#                                    reach them and the image contract checks still fail
+#                                    the job. A fixture provider is not a substitute: it
+#                                    would make `usable` hollow.
+#   ACCEPTANCE_PROVIDER_VAR  var     the provider variable the install page asks for
+#                                    (default ANTHROPIC_API_KEY)
+#   ACCEPTANCE_HUB_URL       var     the reference hub's discovery endpoint
+#                                    (secret of the same name also accepted)
+#   ACCEPTANCE_HUB_KEY       secret  a hub API key, never root or admin. Keys carry only
+#                                    generic read/write scopes today, not per-shape ones,
+#                                    so this key is NOT limited to acceptance results and
+#                                    gap intake: it can write any memoryNote or gap the
+#                                    hub serves to its org. Before relying on a key from a
+#                                    separate org, confirm memoryNote_write and
+#                                    substrateGap_write resolve with it through the hub's
+#                                    discovery (discovery filters producers by org).
+#   INSTALL_ACCEPTANCE_GATES_DEV var the publishing switch, below
+#
+# THE PUBLISHING SWITCH
+#   Unset (the default): report-only. build-substrate-image.yml publishes :dev exactly as
+#   it always has, and this workflow judges the digest afterwards; a red run blocks
+#   nothing.
+#   `true`: gating. The build publishes only :<sha> (and any extra tag), and the
+#   `promote` job below moves :dev (and the Docker Hub :dev when its credentials exist)
+#   to the judged digest only when every engine passed in gating mode. The switch
+#   takes effect only while ACCEPTANCE_PROVIDER_KEY exists: without it no run can pass
+#   in gating mode, so the build keeps publishing :dev itself and warns. Unsetting the
+#   variable restores the previous behavior on the next build.
+#   :dev only moves forward: promotions run one at a time, and a judged digest whose
+#   revision is not at or ahead of the revision :dev already carries is not promoted,
+#   so a slow judgement of an older build cannot overwrite a newer one.
+
+on:
+  workflow_run:
+    workflows: ["Build & publish substrate image", "Nightly dev build"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      image:
+        description: 'Image to judge (a digest reference is best). Defaults to ghcr.io/<owner>/substrate:dev.'
+        type: string
+        required: false
+      ref:
+        description: 'Commit whose install page is the test input. Defaults to the dispatch ref.'
+        type: string
+        required: false
+      case:
+        description: 'Which `install:<case>` blocks to run.'
+        type: string
+        required: false
+        default: standalone
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  # One judgement per triggering build run. Keyed on the run, not its head_sha: a build
+  # that follows a bump, and the nightly, publish a commit other than their head_sha, so
+  # two different digests could share a sha-keyed group and the pending one be dropped
+  # unjudged. Each leg has its own runner, so parallel judgements share no ports.
+  group: install-acceptance-${{ github.event.workflow_run.id || inputs.image || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    # Only a run that actually published has an image to judge.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      found: ${{ steps.pick.outputs.found }}
+      image: ${{ steps.pick.outputs.image }}
+      ref: ${{ steps.pick.outputs.ref }}
+      case: ${{ steps.pick.outputs.case }}
+    steps:
+      - name: Fetch the published digest from the triggering run
+        id: fetch
+        if: github.event_name == 'workflow_run'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: published-image
+          path: published
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Choose the image and the install page revision
+        id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          IN_IMAGE: ${{ inputs.image || '' }}
+          IN_REF: ${{ inputs.ref || '' }}
+          IN_CASE: ${{ inputs.case || 'standalone' }}
+          FETCH_OUTCOME: ${{ steps.fetch.outcome }}
+          RUN_ID: ${{ github.event.workflow_run.id || '' }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "case=${IN_CASE}" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT" = "workflow_run" ]; then
+            f=published/published-image.json
+            if [ ! -s "$f" ]; then
+              # No record can mean the run built nothing, or that fetching the record
+              # failed. Only the first is quiet: when the triggering run's build job
+              # succeeded, an image was published and must be judged, so a failed fetch
+              # of its record fails this run instead of passing as "nothing to judge".
+              if [ "$FETCH_OUTCOME" = "failure" ]; then
+                built="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs?per_page=100" \
+                  --jq '[.jobs[] | select((.name == "build" or (.name | endswith("/ build"))) and .conclusion == "success")] | length')" \
+                  || { echo "::error::could not read the jobs of run ${RUN_ID} to tell a skipped build from a lost record"; exit 1; }
+                if [ "${built:-0}" -gt 0 ]; then
+                  echo "::error::run ${RUN_ID} published an image, but its published-image record could not be fetched; the image is unjudged"
+                  exit 1
+                fi
+              fi
+              # A nightly whose reconcile moved nothing builds nothing: that is a quiet
+              # outcome, not a failure, and there is nothing to judge.
+              echo "found=false" >> "$GITHUB_OUTPUT"
+              echo "The triggering run published no image; nothing to judge." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            jq . "$f"
+            echo "image=$(jq -r '.repository + "@" + .digest' "$f")" >> "$GITHUB_OUTPUT"
+            echo "ref=$(jq -r '.revision' "$f")" >> "$GITHUB_OUTPUT"
+          else
+            echo "image=${IN_IMAGE:-ghcr.io/${owner}/substrate:dev}" >> "$GITHUB_OUTPUT"
+            echo "ref=${IN_REF:-$GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+  accept:
+    needs: resolve
+    if: needs.resolve.outputs.found == 'true'
+    name: accept (${{ matrix.engine }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [docker, podman]
+    steps:
+      - name: Check out the install page at the image's commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.ref }}
+          submodules: false
+          # The fences must not inherit a git credential: a page step that only works
+          # with one is exactly what this run exists to catch.
+          persist-credentials: false
+
+      - name: Install the Podman compose implementation
+        if: matrix.engine == 'podman'
+        run: |
+          set -euo pipefail
+          pipx install 'podman-compose>=1.6'
+          podman version
+          podman-compose version
+
+      - name: Run the install page
+        env:
+          ENGINE: ${{ matrix.engine }}
+          IMAGE: ${{ needs.resolve.outputs.image }}
+          ACCEPTANCE_CASE: ${{ needs.resolve.outputs.case }}
+          ACCEPTANCE_PROVIDER_KEY: ${{ secrets.ACCEPTANCE_PROVIDER_KEY }}
+          ACCEPTANCE_PROVIDER_VAR: ${{ vars.ACCEPTANCE_PROVIDER_VAR || 'ANTHROPIC_API_KEY' }}
+          ACCEPTANCE_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESULT_DIR: ${{ runner.temp }}/acceptance/${{ matrix.engine }}
+        run: bash scripts/substrate/acceptance/run-acceptance.sh
+
+      - name: Keep the result and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-acceptance-result-${{ matrix.engine }}
+          path: ${{ runner.temp }}/acceptance/${{ matrix.engine }}
+          if-no-files-found: warn
+          retention-days: 30
+
+  report:
+    # Runs whatever the verdicts were: a failure is exactly what the hub must hear.
+    needs: [resolve, accept]
+    if: always() && needs.resolve.outputs.found == 'true'
+    runs-on: ubuntu-latest
+    env:
+      ACCEPTANCE_HUB_URL: ${{ vars.ACCEPTANCE_HUB_URL || secrets.ACCEPTANCE_HUB_URL }}
+      ACCEPTANCE_HUB_KEY: ${{ secrets.ACCEPTANCE_HUB_KEY }}
+    steps:
+      - name: Check out the posting script
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          persist-credentials: false
+          sparse-checkout: scripts/substrate/acceptance
+
+      - name: Collect this run's results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: install-acceptance-result-*
+          path: results
+
+      - name: Collect results an earlier run could not post
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p backlog
+          # The newest `install-acceptance-unposted` artifact is the whole backlog: every
+          # run re-uploads what it still could not deliver, including nothing.
+          run_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=install-acceptance-unposted&per_page=10" \
+            --jq "[.artifacts[] | select(.expired | not) | select(.workflow_run.id != ${GITHUB_RUN_ID})][0].workflow_run.id // empty")"
+          if [ -n "$run_id" ]; then
+            gh run download "$run_id" -n install-acceptance-unposted -D backlog || true
+          fi
+          find backlog -name '*.json' -print | sed 's/^/carried: /'
+
+      - name: Post to the reference hub
+        id: post
+        # Posting never fails the workflow; what is not delivered is carried forward.
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          # Oldest first, by when each result finished.
+          by_finished() {
+            local f
+            for f in "$@"; do printf '%s\t%s\n' "$(jq -r '.finished_at // ""' "$f" 2>/dev/null)" "$f"; done | sort | cut -f2-
+          }
+          mapfile -t found_current < <(find results -name result.json)
+          mapfile -t found_carried < <(find backlog -name '*.json' 2>/dev/null)
+          mapfile -t current < <(by_finished "${found_current[@]}")
+          mapfile -t carried < <(by_finished "${found_carried[@]}")
+          mkdir -p owed
+          : > owed/carried.txt; : > owed/current.txt
+          if [ "${#current[@]}" -eq 0 ] && [ "${#carried[@]}" -eq 0 ]; then
+            echo "0 0" > owed/done
+            echo "No results to post." >> "$GITHUB_STEP_SUMMARY"; exit 0
+          fi
+          close=()
+          # A full pass may close the case's install gaps only when every engine judged
+          # this image; a missing leg is not a pass.
+          if [ "${#current[@]}" -eq 2 ]; then close=(--close-on-pass); fi
+          # Carried results are older than this run's, so they are written first and this
+          # run's verdict is the last one the hub sees: an old failure posted after a new
+          # pass would reopen the gap that pass just closed. post-result prints each
+          # undelivered path as it happens, so a cancelled post still leaves its list.
+          rc_c=0; rc_n=0
+          if [ "${#carried[@]}" -gt 0 ]; then
+            bash scripts/substrate/acceptance/post-result.sh "${carried[@]}" > owed/carried.txt || rc_c=$?
+          fi
+          if [ "${#current[@]}" -gt 0 ]; then
+            bash scripts/substrate/acceptance/post-result.sh "${close[@]}" "${current[@]}" > owed/current.txt || rc_n=$?
+          fi
+          echo "$rc_c $rc_n" > owed/done
+          rc=$(( rc_n > rc_c ? rc_n : rc_c ))
+          {
+            echo "### Posting to the reference hub"
+            case "$rc" in
+              0) echo "Delivered every result." ;;
+              3) echo "Not posted: ACCEPTANCE_HUB_URL / ACCEPTANCE_HUB_KEY are not set. This run's results are not carried (no hub is owed them); an earlier backlog is kept." ;;
+              4) echo "The hub did not answer or had no producer; $(cat owed/*.txt | awk 'NF' | sort -u | wc -l) result(s) carried to the next run." ;;
+              5) echo "The hub rejected a write, or stored a note under a type other than installAcceptance; read this step's log (retrying will not help)." ;;
+              *) echo "post-result exited ${rc}." ;;
+            esac
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+
+      - name: Carry undelivered results forward
+        if: always()
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          mkdir -p unposted owed
+          if [ -s owed/done ]; then
+            read -r rc_c rc_n < owed/done
+            # With no hub configured this run's own results are owed to no one and are
+            # dropped; a backlog from an earlier outage stays owed.
+            {
+              cat owed/carried.txt 2>/dev/null
+              [ "$rc_n" = "3" ] || cat owed/current.txt 2>/dev/null
+            } > owed/candidates.txt
+          else
+            # The post never finished (cancelled or timed out): everything it was handed
+            # is still owed.
+            { find backlog -name '*.json' 2>/dev/null; find results -name result.json 2>/dev/null; } > owed/candidates.txt
+          fi
+          # One result per (case, engine, digest), the newest; at most three digests per
+          # (case, engine). Older verdicts for a case and engine add nothing the newer
+          # ones do not say, and an unbounded backlog costs a retry per file.
+          awk 'NF' owed/candidates.txt | sort -u | while IFS= read -r f; do
+            [ -s "$f" ] || continue
+            jq -r --arg f "$f" '[(.finished_at // ""),
+                ([.case, .engine, ((.digest // .image // "") | sub(".*sha256:"; "") | .[0:12])] | join("-")),
+                ([.case, .engine] | join("-")), $f] | @tsv' "$f" 2>/dev/null
+          done | sort -r | awk -F'\t' '!seen[$2]++ && ++per[$3] <= 3 { print $2 "\t" $4 }' |
+          while IFS=$'\t' read -r key f; do
+            cp "$f" "unposted/${key//[^A-Za-z0-9._-]/_}.json"
+          done
+          # Uploaded even when empty, so the newest backlog artifact always tells the
+          # truth about what is still owed.
+          find unposted -name '*.json' | sort | tee unposted/backlog.list | sed 's/^/owed: /'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: install-acceptance-unposted
+          path: unposted
+          retention-days: 90
+
+  promote:
+    # The publishing switch (see the header). Off unless the repository variable says so.
+    needs: [resolve, accept]
+    if: vars.INSTALL_ACCEPTANCE_GATES_DEV == 'true' && needs.resolve.outputs.found == 'true' && needs.accept.result == 'success'
+    runs-on: ubuntu-latest
+    # One promotion at a time across every judgement, so two runs finishing together
+    # cannot interleave their reads of :dev and their copies to it.
+    concurrency:
+      group: install-acceptance-promote
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+    env:
+      HAS_DH: ${{ secrets.DOCKERHUB_TOKEN != '' }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: install-acceptance-result-*
+          path: results
+
+      - name: Require a gating pass on every engine
+        run: |
+          set -euo pipefail
+          mapfile -t rs < <(find results -name result.json | sort)
+          [ "${#rs[@]}" -eq 2 ] || { echo "::error::expected a result per engine, found ${#rs[@]}; :dev not moved"; exit 1; }
+          for r in "${rs[@]}"; do
+            v="$(jq -r '.verdict + "/" + .mode' "$r")"
+            [ "$v" = "pass/gating" ] || { echo "::error::$(jq -r .engine "$r") is ${v}; :dev not moved"; exit 1; }
+          done
+
+      - name: Move :dev to the judged digest
+        env:
+          IMAGE: ${{ needs.resolve.outputs.image }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DH_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          case "$IMAGE" in *@sha256:*) ;; *) echo "::error::promotion needs a digest reference, got ${IMAGE}"; exit 1 ;; esac
+          repo="${IMAGE%@*}"
+          # :dev only moves forward. Judgements of different builds run in parallel and
+          # the slow one can finish last, so compare the revision each image carries
+          # (its own label, not this run's inputs) and copy only when the judged
+          # revision is the one :dev holds or a descendant of it.
+          label() {
+            skopeo inspect --creds "${GITHUB_ACTOR}:${GHCR_TOKEN}" "docker://$1" 2>/dev/null \
+              | jq -r '(.Labels // {})["org.opencontainers.image.revision"] // empty'
+          }
+          judged="$(label "$IMAGE" || true)"
+          current="$(label "${repo}:dev" || true)"
+          if [ -z "$judged" ] || [ "$judged" = "unknown" ]; then
+            echo "::error::${IMAGE} carries no revision label; :dev not moved"; exit 1
+          fi
+          if [ -n "$current" ] && [ "$current" != "unknown" ] && [ "$current" != "$judged" ]; then
+            rel="$(gh api "repos/${GITHUB_REPOSITORY}/compare/${current}...${judged}" --jq .status 2>/dev/null || true)"
+            case "$rel" in
+              ahead) ;;
+              *)
+                echo "::notice:::dev carries ${current:0:12}; the judged ${judged:0:12} is not ahead of it (${rel:-not comparable}); :dev not moved"
+                echo "Not promoted: \`${IMAGE}\` (${judged:0:12}) is not ahead of :dev (${current:0:12}, ${rel:-not comparable})." >> "$GITHUB_STEP_SUMMARY"
+                exit 0 ;;
+            esac
+          fi
+          # A registry-side copy keeps the manifest bytes, so the tag names exactly the
+          # digest that was judged (and keeps its Docker media types).
+          skopeo copy --all --preserve-digests \
+            --src-creds "${GITHUB_ACTOR}:${GHCR_TOKEN}" --dest-creds "${GITHUB_ACTOR}:${GHCR_TOKEN}" \
+            "docker://${IMAGE}" "docker://${repo}:dev"
+          if [ "$HAS_DH" = "true" ]; then
+            skopeo copy --all --preserve-digests \
+              --src-creds "${GITHUB_ACTOR}:${GHCR_TOKEN}" --dest-creds "${DH_USER}:${DH_TOKEN}" \
+              "docker://${IMAGE}" "docker://docker.io/avigopal/substrate:dev"
+          fi
+          echo "Promoted \`${IMAGE}\` to :dev." >> "$GITHUB_STEP_SUMMARY"

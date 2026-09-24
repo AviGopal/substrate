@@ -14,9 +14,27 @@ on:
   # Callable so the nightly dev build can reconcile branch heads and then build
   # the result IN ONE RUN. Chaining is not optional: this job pushes with the
   # default GITHUB_TOKEN, and GitHub's recursion guard means a GITHUB_TOKEN push
-  # never triggers another workflow's `push:` trigger. Without an explicit call,
-  # a bump that moves pointers produces no image.
-  workflow_call: {}
+  # never triggers another workflow's `push:` trigger.
+  #
+  # A scheduled or dispatched run is its own workflow run, and its COMPLETION is
+  # an ordinary event: build-substrate-image.yml follows it with `workflow_run`
+  # and publishes when dev moved, so every bump that moves pointers produces an
+  # image. A called run is part of the nightly and fires no such event; the
+  # nightly builds for itself. That trigger matches this workflow's `name:`
+  # above — renaming it silently disconnects the build.
+  #
+  # The outputs are declared here because a caller can read only what the
+  # workflow_call trigger declares: without them the nightly's
+  # `needs.reconcile.outputs.sha` was always empty, and it built its own
+  # pre-bump commit instead of the bump.
+  workflow_call:
+    outputs:
+      changed:
+        description: '1 when any gitlink moved, 0 otherwise.'
+        value: ${{ jobs.bump.outputs.changed }}
+      sha:
+        description: 'The pushed bump commit; empty when nothing moved.'
+        value: ${{ jobs.bump.outputs.sha }}
 
 concurrency:
   group: bump-submodules
