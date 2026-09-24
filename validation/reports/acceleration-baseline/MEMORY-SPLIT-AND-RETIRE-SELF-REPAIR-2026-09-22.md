@@ -769,3 +769,13 @@ Correction to the line above: two of the twelve closures rest on landings the su
 - Compose `fc-muf4oc06-3j7n86` landed `0874216` (06:12:47Z) byte-exact: one line becomes three, names harvested from the op's added lines only. Semantic gate `addresses:true`, no SPLIT and no agreed-refutation line. Runtime file equals the commit; process restarted onto it at 06:14:42Z.
 - Probes on the new process, through the live gate: the unreferenced insert after `const _rebind` is now `REFUSING plan (_unused_probe)` (baseline on `326a983`: admitting); the rewrite of the `const _rebind` line is still admitted. Neither probe landed anything.
 - Closed as `landed_verified`. Day tally: 16 gaps closed by measured behaviour. Three of today's landings (`326a983`, `212408a`, `0874216`) went through the lane's own gates end to end once the spec carried the byte-exact edit and the fact a refuter would otherwise confabulate against.
+
+## 06:20–06:26Z — refuter short-circuit dispatched; the lease-discard gap had lost its design
+
+- Dispatched the refuter-quorum fix byte-exact (`fc-muf57wf0-dtje12`): a spec-exact patch, every changed diff line quoted verbatim in the gap text, skips the refuter quorum and logs it. The semantic gate receives the full gap summary (`pointer.gap.summary`, untruncated), so the test can fire. Dry-run probes do not reach the semantic gate, so the falsifier is the next real byte-exact landing showing the log line.
+- The lease-discard gap's summary in the store had been reduced to a single sentence; the design and measurement were gone, and its eight failed attempts ran against that sentence. Re-measured from persisted compose reports: lease-held deferrals are 4 of 109 in 24 hours and 1 of 27 in the last 6 hours, down from two in five yesterday. Nothing consumes the cutover's `retry_after_ms`. Restored a two-edit design on the record (park the verified diff on deferral, re-apply it on the next pick) with a hand-held-lease falsifier. Not dispatched: low current rate, and it is not a one-op edit.
+
+## 06:24–06:28Z — refuter short-circuit LANDED
+
+- Compose `fc-muf57wf0-dtje12` landed `1746f5a` (06:27:00Z) byte-exact: a spec-exact patch (every changed diff line quoted verbatim in the gap text) skips the refuter quorum and logs `spec-exact patch: refuters not consulted`. Semantic gate `addresses:true`; runtime file equals the commit; pushed (push clone 0 ahead of origin). Restart onto it pending.
+- Falsifier: the next byte-exact landing after the restart must show that log line; an autonomous drafter landing must not. Closure waits for both observations.
