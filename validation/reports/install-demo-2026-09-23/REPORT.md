@@ -108,7 +108,15 @@ The acceptance run on image `c6e9ab83` (run 35966314973), same cold runners, ver
 `seeded` and failed `served` on one unit, `concept-db-seeder.service` (store role), which
 succeeded on every Podman launch here. Its cause is not in that run's artifacts; the
 acceptance diagnostics now keep each failed unit's journal (`405d99c2`), so the next run
-states it. Open: **concept-db-seeder fails on a fresh Docker standalone.**
+states it.
+
+That journal showed every refusal was `HTTP 401` from identity's fleet-shared rate limit
+during boot (20 writes accepted, then refused within a second), not a bad key. With the
+seeder pacing its writes and retrying transient refusals (`74cb240d`), the acceptance run on
+that image (run 35975790711) passed `live`, `seeded` and `served` on **both Docker and
+Podman**, 64 units up, all nine ports published: a fresh README standalone now reaches
+`served` on cold runners on both engines. `usable` there waits only on the provider-key
+secret the run does not have.
 
 ## Re-running
 
