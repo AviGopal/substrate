@@ -1,9 +1,9 @@
 ## ADDED Requirements
 
 ### Requirement: A verified patch is parked before its cutover
-When a `feature_compose` run has applied its plan, passed verify (typecheck, shape
-dispatch, test delta) and passed the semantic gate, it SHALL write a `parkedLanding`
-for the gap before invoking `vessel_mitosis_cutover`. The park SHALL carry `gap_id`,
+A `feature_compose` run SHALL write a `parkedLanding` for its gap before invoking
+`vessel_mitosis_cutover`, once it has applied its plan, passed verify (typecheck, shape
+dispatch, test delta) and passed the semantic gate. The park SHALL carry `gap_id`,
 `compose_id`, `base_sha`, the applied diff per file, the verify summary, the judge
 verdict and `parked_at`. A cutover that reports `push_status: pushed` SHALL delete the
 park; any other outcome SHALL leave it in place and log
@@ -20,9 +20,9 @@ park; any other outcome SHALL leave it in place and log
 - **THEN** no park file exists for the gap after the run
 
 ### Requirement: A fresh park is resumed instead of redrafted
-When `gap_to_feature` picks a gap that has a park younger than `parked_landing_ttl`
-(a shaped impulse, default 24 h), it SHALL dispatch `feature_compose` with
-`resume_from` set to that park. The compose SHALL skip drafting and the test suite,
+`gap_to_feature` SHALL dispatch `feature_compose` with `resume_from` set to the park
+whenever the picked gap has a park younger than `parked_landing_ttl` (a shaped impulse,
+default 24 h). The compose SHALL skip drafting and the test suite,
 re-apply the diff onto the current base, run typecheck, and proceed to the cutover.
 The journal SHALL show `[feature-compose] RESUMING parked landing for <gap_id>
 (parked <age>)`. A park whose diff no longer applies SHALL be deleted with a
