@@ -121,10 +121,18 @@ launchval() {
   printf '%s' "${v:-$d}"
 }
 
-KEY="$(envval METABOB_API_KEY)"
-IDENTITY_EP="$(envval IDENTITY_VESSEL_URL)"; IDENTITY_EP="${IDENTITY_EP:-http://127.0.0.1:8101}"
-DISCOVERY_EP="$(envval DISCOVERY_ENDPOINT)"; DISCOVERY_EP="${DISCOVERY_EP:-http://127.0.0.1:8100}"
-HUB_DISCOVERY="$(envval HUB_DISCOVERY_URL)"
+# Read on EVERY evaluation pass, not once. `--wait` is typically started straight
+# after `compose up`, before gen-env has written the env file and before seeding has
+# replaced the placeholder key; values read once at startup stayed at the loopback
+# defaults and the placeholder for the whole wait, so a spoke whose identity lives on
+# its hub reported `seeded: unknown` for twenty minutes while it was serving.
+load_endpoints() {
+  KEY="$(envval METABOB_API_KEY)"
+  IDENTITY_EP="$(envval IDENTITY_VESSEL_URL)"; IDENTITY_EP="${IDENTITY_EP:-http://127.0.0.1:8101}"
+  DISCOVERY_EP="$(envval DISCOVERY_ENDPOINT)"; DISCOVERY_EP="${DISCOVERY_EP:-http://127.0.0.1:8100}"
+  HUB_DISCOVERY="$(envval HUB_DISCOVERY_URL)"
+}
+load_endpoints
 PORT_PREFIX="$(launchval SUBSTRATE_PORT_PREFIX 18)"
 PREFIX_PASSED=0; [ -n "$(launchval SUBSTRATE_PORT_PREFIX)" ] && PREFIX_PASSED=1
 # The launch manifest forwards SUBSTRATE_PORT_PREFIX even when it is empty, so the
@@ -685,6 +693,7 @@ TIDX="$(level_index "$EVAL_TO")"
 declare -A VAL EVID
 FIRST_FAIL=""
 evaluate() {
+  load_endpoints
   local l i=0 gate=""
   KEY_ID=""; TERMINAL=""; FIRST_FAIL=""
   for l in $LEVELS; do
