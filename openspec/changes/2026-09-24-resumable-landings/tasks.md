@@ -33,7 +33,7 @@
 
 ## 3. Named change windows
 
-- [ ] 3.1 `maintenance-lease.ts`: `name` on acquire/renew/release/resolve; per-name files;
+- [x] 3.1 `maintenance-lease.ts`: `name` on acquire/renew/release/resolve; per-name files;
   union semantics. Falsifier: unit — two names coexist; unnamed excludes all.
   - [x] 3.1a-i acquire + read. Landed by the substrate as development-vessel `ace49c0` (earlier
     drafts anchored on `const existing = await readLease();`, which occurs three times; the
@@ -43,8 +43,13 @@
   - [x] 3.1a-ii renew + release honour `name`. Landed as development-vessel `e17ea38`; runtime
     equals the commit; falsifier passed: named renew moves only the named file's expiry, named
     release deletes only its own file, unnamed release unchanged.
-  - [ ] 3.1b unnamed acquire refused while any named hold exists; union read with `holds[]`
-    (`goals/3.1b-lease-union-semantics.txt`).
+  - [x] 3.1b unnamed acquire refused while any named hold exists; union read with `holds[]`;
+    unnamed release finds a named hold by token. Landed as development-vessel `4e40707`; the
+    landed file equals the version whose falsifier was run before dispatch (unnamed acquire
+    refused by a named hold, unnamed read lists it, unnamed release deletes it, empty-store
+    behaviour unchanged). Two earlier drafts were refused by gate defects, not by the patch:
+    the stub detector read `? {}` after a call as an empty function body, and the test gate
+    charged three failures that also fail on the unmodified base.
 - [x] 3.2 `vessel-mitosis-cutover.ts`: acquire with name `cutover` (both the soft-refuse check
   and the 90 s wait). Falsifier: cutover pushes while `trace_store` is held.
   Landed as development-vessel `0b06246`: all eight lease calls in the file (acquire, bounded
@@ -60,7 +65,8 @@
   `…-swap-timeout-15min` variant; and the executor has no failure-path task semantics
   (`ias-executor-ts/src/engine.ts` throws out of the task loop), so no template ordering can
   release on a reconcile failure.
-  - [ ] 3.3a `src/seed/trace-store-reconcile.ts`: acquire and release with `name: "trace_store"`,
+  - [ ] 3.3a `src/seed/trace-store-reconcile.ts` (split: 3.3a-i names acquire and release
+    `trace_store`; 3.3a-ii moves `verify` after `release_lease`): acquire and release with `name: "trace_store"`,
     reconcile `timeoutMs` ≥ the valve, `release_lease` marked to run on failure (3.3c).
   - [ ] 3.3b The seeder upserts a seed template whose body differs from the registered row
     (`POST /v2/activities/templates` upserts by id and keeps the posterior). Without it 3.3a is

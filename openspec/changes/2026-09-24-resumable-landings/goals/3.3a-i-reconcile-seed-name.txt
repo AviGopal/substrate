@@ -1,0 +1,20 @@
+In repos/development-vessel/src/seed/trace-store-reconcile.ts, name the reconcile's change_window lease `trace_store` on BOTH its acquire and its release (openspec 2026-09-24-resumable-landings task 3.3a-i). maintenanceLease_write keeps a named hold in its own file (maintenance-trace_store.json), a different name does not exclude it, and cutovers now take name "cutover" — but this template still acquires the UNNAMED global lease, which excludes every name, so every reconcile run still refuses verified cutovers. services/gap-drain-observer.ts already reads the lease with name "trace_store". The release MUST carry the same name or the named hold leaks to its TTL. Exactly two edits (each old text occurs once in the file), nothing else — do not move or change any task:
+EDIT 1 — old:
+        holder: "trace-store-reconcile",
+        // 5 min, not 15 — see "THE TTL IS A DEADLINE FOR OTHER WORK" above.
+        // This lease is the global change_window every cutover must take.
+new:
+        holder: "trace-store-reconcile",
+        // Named: a trace_store hold no longer excludes cutovers, which take "cutover".
+        name: "trace_store",
+        // 5 min, not 15 — see "THE TTL IS A DEADLINE FOR OTHER WORK" above.
+EDIT 2 — old (the release_lease task's config; all three lines):
+      config: {
+        type: "maintenanceLease_write",
+        op: "release",
+new:
+      config: {
+        type: "maintenanceLease_write",
+        op: "release",
+        name: "trace_store",
+Falsifier: the template's acquire_lease and release_lease configs both carry name "trace_store"; the task order is unchanged.

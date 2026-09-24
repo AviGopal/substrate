@@ -1,6 +1,71 @@
-In repos/development-vessel/src/seed/trace-store-reconcile.ts, give the reconcile's change_window lease its own name and release it before the post-swap check (openspec 2026-09-24-resumable-landings task 3.3a, spec change-window-names "Cutovers and the reconcile use their own names" and "The reconcile releases on failure and fits its work"). maintenanceLease_write accepts an optional `name`; a named hold does not exclude a different name, so a reconcile holding `trace_store` no longer refuses cutovers (which take `cutover`). services/gap-drain-observer.ts already reads the lease with name "trace_store".
-Changes, all in this one file:
-(1) In the `acquire_lease` task config add `name: "trace_store",` after `holder: "trace-store-reconcile",`, and update the comment "This lease is the global change_window every cutover must take." to say the lease is named trace_store so cutovers (name cutover) are not excluded by it.
-(2) In the `release_lease` task config add `name: "trace_store",` after `op: "release",`.
-(3) Move the whole `release_lease` task object so it comes immediately AFTER the `reconcile` task and BEFORE the `verify` task. `verify` is a dry_run read of the trace-store counters that does not need the lease, and it is the task that fails most often (forbiddenPatterns over_cap) — with release after it, every over-cap run left the lease held to its TTL.
-Keep `timeoutMs: 900_000` on the reconcile task unchanged. Update the header comment block that says "if the reconcile or verify task fails mid-run, release_lease is simply never reached" to say a verify failure no longer holds the lease, and a reconcile failure leaves only the trace_store name held (which no cutover takes). Falsifier: the registered template (once the seeder upserts changed seeds) acquires with name trace_store, and a run whose verify fails leaves no maintenance-trace_store.json behind.
+In repos/development-vessel/src/seed/trace-store-reconcile.ts, name the reconcile's change_window lease `trace_store` and run the release before the post-swap check (openspec 2026-09-24-resumable-landings task 3.3a; a previous draft's release edit was refused no_unique_anchor). maintenanceLease_write keeps named holds in their own files, a different name does not exclude it, and cutovers take name "cutover" (vessel-mitosis-cutover.ts) — but this template still acquires the UNNAMED global, which excludes every name, so every reconcile run still refuses verified cutovers. services/gap-drain-observer.ts already reads the lease with name "trace_store". Use exactly these five old->new edits (each old text occurs once in the file) and nothing else.
+EDIT 1 — old:
+        holder: "trace-store-reconcile",
+        // 5 min, not 15 — see "THE TTL IS A DEADLINE FOR OTHER WORK" above.
+        // This lease is the global change_window every cutover must take.
+new:
+        holder: "trace-store-reconcile",
+        // Named: a trace_store hold no longer excludes cutovers, which take "cutover".
+        name: "trace_store",
+        // 5 min, not 15 — see "THE TTL IS A DEADLINE FOR OTHER WORK" above.
+EDIT 2 — delete the `verify` task object from its current position (it moves to the end in EDIT 4). old:
+    {
+      id: "verify",
+      description:
+        "Re-read the traceStore counters (dry_run so this check itself never " +
+        "re-emits a gap) and assert row_count <= cap post-swap.",
+      resolver: "trace_store_health_observer",
+      config: {
+        type: "trace_store_health_observer",
+        dry_run: true,
+      },
+      outputShapes: ["traceStoreHealthReport"],
+      validation: {
+        forbiddenPatterns: ['"over_cap":true'],
+      },
+    },
+new: (nothing — remove these lines)
+EDIT 3 — old (the release_lease task config; quote all three lines — `op: "release",` alone is too short to anchor):
+      config: {
+        type: "maintenanceLease_write",
+        op: "release",
+new:
+      config: {
+        type: "maintenanceLease_write",
+        op: "release",
+        name: "trace_store",
+EDIT 4 — re-insert the identical `verify` task object as the LAST task, after release_lease. old:
+      outputShapes: ["maintenanceLeaseWriteResult"],
+    },
+  ],
+};
+new:
+      outputShapes: ["maintenanceLeaseWriteResult"],
+    },
+    {
+      id: "verify",
+      description:
+        "Re-read the traceStore counters (dry_run so this check itself never " +
+        "re-emits a gap) and assert row_count <= cap post-swap.",
+      resolver: "trace_store_health_observer",
+      config: {
+        type: "trace_store_health_observer",
+        dry_run: true,
+      },
+      outputShapes: ["traceStoreHealthReport"],
+      validation: {
+        forbiddenPatterns: ['"over_cap":true'],
+      },
+    },
+  ],
+};
+EDIT 5 — old:
+ * if the reconcile or verify task fails mid-run, `release_lease` is simply
+ * never reached and the lease is NOT explicitly released here.
+new:
+ * if the reconcile task fails mid-run, `release_lease` is never reached and the
+ * lease is NOT explicitly released here. `release_lease` now runs BEFORE `verify`
+ * (a dry-run read that needs no lease), so a verify failure no longer holds it, and
+ * the hold is named `trace_store`, so a leaked hold no longer excludes cutovers.
+Reviewer facts: `verify` is trace_store_health_observer with dry_run:true — a read that needs no lease — and it is the task that fails most (forbiddenPatterns over_cap), so with release after it every over-cap run held the lease to its TTL. release_lease's token comes from the extract task that runs before both; its token line is not edited.
+Falsifier: the template's task order becomes acquire_lease > extract_lease_token > reconcile > release_lease > verify, and both lease tasks carry name "trace_store". (Reaching the running catalogue needs task 3.3b.)

@@ -37,9 +37,9 @@ EDIT 4 — old:
 }
 new:
       expires_at: lease.expires_at,
-      ...(_pointer.name
-        ? {}
-        : { holds: (await listHolds()).map((h) => ({ name: h.name, holder: h.holder, acquired_at: h.acquired_at, expires_at: h.expires_at })) }),
+      holds: _pointer.name
+        ? undefined
+        : (await listHolds()).map((h) => ({ name: h.name, holder: h.holder, acquired_at: h.acquired_at, expires_at: h.expires_at })),
     },
   };
 }
