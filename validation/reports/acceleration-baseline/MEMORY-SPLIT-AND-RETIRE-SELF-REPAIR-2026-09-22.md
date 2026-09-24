@@ -779,3 +779,14 @@ Correction to the line above: two of the twelve closures rest on landings the su
 
 - Compose `fc-muf57wf0-dtje12` landed `1746f5a` (06:27:00Z) byte-exact: a spec-exact patch (every changed diff line quoted verbatim in the gap text) skips the refuter quorum and logs `spec-exact patch: refuters not consulted`. Semantic gate `addresses:true`; runtime file equals the commit; pushed (push clone 0 ahead of origin). Restart onto it pending.
 - Falsifier: the next byte-exact landing after the restart must show that log line; an autonomous drafter landing must not. Closure waits for both observations.
+
+## 06:29–06:41Z — per-gap in-flight guard: the reachability floor refused a caller-less export
+
+- First compose for the compose-slots half (`fc-muf5j5xe-ek8ixx`) was refused deterministically, before any judge: "dead-code-only patch: every changed symbol (liveSlotForGap) has zero callers". Correct refusal: the export's only caller was to arrive in the next goal. The refuter short-circuit did not run because the gate returned earlier, so `1746f5a` is still unfalsified.
+- Redesigned so the first half carries its own caller: `acquireComposeSlot` takes `opts.gapId`, records `gap_id` in the slot file, and refuses a duplicate holder with `duplicateOf`; the feature-compose half only passes the gap id and names the refusal. Dispatched as `fc-muf5xsgy-eqhqsb`.
+
+## 06:41–07:11Z — compose-slots half: verify rejected on baseline failures, then the retry was lost to a restart
+
+- `fc-muf5xsgy-eqhqsb` applied all five edits, typechecked, and was rejected by verify on three tests: the malformed-row `substrateGap_write` case, `inertRegexEditRefusal`, and `changesAreTestOnly`. All three fail deterministically on the untouched push clone, twice in a row, alongside 22 other baseline failures (2288 pass / 25 fail). The baseline-delta gate should have waived them; it did not, and the baseline suite output is not persisted, so the reason cannot be read after the fact.
+- The identical payload was re-dispatched at 06:57Z (`fc-muf6j282-z5aasa`, all five edits present in its workspace). At ~06:59Z a restart was requested; the drain counted the compose, waited its full 240 s budget, then logged `drain deadline — 1 long-running request(s) still in flight; they will be lost` and restarted at 07:03:20Z. The counter works; the budget is still shorter than a compose, as recorded at 01:45Z.
+- Re-dispatched a third time on the fresh process.
