@@ -1,48 +1,154 @@
-# Substrate — one pre-built image + this file + a .env is the ENTIRE surface.
+# Substrate launch manifest — the one declaration of how the image runs.
 #
-# From the repo root:
-#   cp -n scripts/substrate/.env.example .env   # -n: never clobber an existing .env
-#   $EDITOR .env                                # uncomment + set ANTHROPIC_API_KEY
-#   (no docker login needed — the ghcr package is public and pulls anonymously)
-#   docker compose up -d
-#   docker exec substrate-live substrate-key show   # operator API key, post-launch
+# Setup commands live in one place: README § Installation. This header names the
+# inputs; it does not restate the sequence.
 #
-# The image is pulled from GHCR (the canonical registry — build-substrate-image.yml
-# publishes ghcr.io/avigopal/substrate:{dev,<sha>} on every push to dev). Override
-# the tag with SUBSTRATE_IMAGE. There is no host repos/ mount and no docker cp
-# hot-reload; the Makefile builds+runs the SAME artifact for local development.
+# Install inputs, read from the .env beside this file or from the shell
+# environment (the shell wins over .env). No client config, credential cache or
+# other container's settings is ever read:
+#   SUBSTRATE_NAME          default `substrate` -> container substrate-live,
+#                           volumes substrate-workspace + substrate-surreal
+#   SUBSTRATE_PORT_PREFIX   default `18` -> host port = prefix followed by the
+#                           last three digits of the container port (8080 -> 18080)
+#   DISCOVERY_ENDPOINT + METABOB_API_KEY   join a hub (the image derives the role)
+#   one provider key (ANTHROPIC_API_KEY, OPENAI_API_KEY, …)
+#   PROFILE                 standalone | hub | hub-minimal | spoke | surface | compute
+#   PUBLIC_IP               the address a hub advertises to its spokes
+#   SUBSTRATE_GIT_PAT + SUBSTRATE_REPO_OWNER   push capability and its scope
+# Everything else below is advanced configuration, forwarded unchanged.
+#
+# Every derivation (role, endpoints, key requirement, alias checks) runs in the
+# image. This file only interpolates names and ports, and forwards inputs. Compose
+# cannot warn or refuse, so the deprecated names are forwarded as supplied and the
+# image's configuration funnel (gen-env) judges them: it warns on each, and
+# refuses a conflicting set, or a partial one on a new volume, before anything is
+# written.
+#
+# Deprecated exact-name aliases, still honoured so an existing fleet is adopted
+# with the same container, volumes and ports:
+#   SUBSTRATE_CONTAINER, WORKSPACE_VOLUME, SURREAL_VOLUME   -> SUBSTRATE_NAME
+#   ACTIVITY_API_PORT, DEV_VESSEL_PORT, DISCOVERY_PORT, IDENTITY_PORT,
+#   GOAL_HOST_PORT, ANALYSIS_PORT, CONCEPT_DB_PORT, STATEFUL_UI_PORT,
+#   HUMAN_SURFACE_PORT                                      -> SUBSTRATE_PORT_PREFIX
+# An alias outranks the name that replaces it (it is the nested default's outer
+# term), so an old .env resolves exactly as it did before the new names existed.
 #
 # The image is a fat single container: surrealdb + valkey + every vessel run as
 # systemd units inside it (hence privileged + tmpfs /run). Both named volumes
-# persist state — /workspace (learning state, memoryNotes) and /var/lib/surrealdb
-# (the datastore); DROPPING EITHER loses learned state on recreate.
-#
-# A standalone container needs only an LLM key. Setting the optional
-# identity/discovery-group vars below joins an existing group as a spoke.
+# persist state — /workspace (learning state, memoryNotes, secrets) and
+# /var/lib/surrealdb (the datastore); dropping either loses learned state.
+
+# No top-level `name:`: the compose project stays the directory's (or
+# COMPOSE_PROJECT_NAME), so a fleet created from an earlier copy of this file is
+# recreated in place rather than colliding with itself under a new project name.
+# Keep one directory per fleet.
 
 services:
   substrate:
     image: ${SUBSTRATE_IMAGE:-ghcr.io/avigopal/substrate:dev}
-    container_name: ${SUBSTRATE_CONTAINER:-substrate-live}
+    container_name: ${SUBSTRATE_CONTAINER:-${SUBSTRATE_NAME:-substrate}-live}
     privileged: true            # systemd as PID 1 inside the container
     stop_signal: SIGRTMIN+3     # systemd graceful shutdown
-    stop_grace_period: 30s
+    # SHUTDOWN IS A DRAIN, NOT A KILL. goal-host and development-vessel drain for
+    # up to 240s (GOAL_HOST_DRAIN_MS / VESSEL_DRAIN_MS), and surrealdb.service
+    # inherits systemd's 90s default stop timeout to flush RocksDB. The grace
+    # period covers both plus the shutdown of the remaining units; anything
+    # shorter SIGKILLs the datastore mid-flush on the volume that holds every
+    # trace and posterior. `docker compose stop` reads this value, so the engine's
+    # own stop is the correct stop.
+    stop_grace_period: 360s
     restart: unless-stopped
+    # No healthcheck here: the image's HEALTHCHECK applies. A second definition
+    # in this file is the drift the manifest exists to remove.
+    # Marks a container as created from this manifest, so a wrapper can tell it
+    # from one a plain `docker run` or another compose file created under the same
+    # name — and never recreate the latter by accident.
+    labels:
+      substrate.launch-manifest: "1"
     environment:
-      # NOT `:?` — that made compose REFUSE TO INTERPOLATE for a spoke, which
-      # three docs correctly promise needs no LLM key because it resolves models
-      # on its hub. A standalone/hub still needs one, but that requirement is
-      # role-dependent and compose cannot see the role; gen-env enforces it at
-      # boot, where the role is known.
+      # ── Install identity, forwarded so the image can judge it ────────────────
+      # Raw values (empty when unset): the image distinguishes "supplied" from
+      # "defaulted", which is what its alias warnings and refusals need, and it
+      # can only compute its own published address (substrate-connect,
+      # /bootstrap) from port inputs it can see.
+      SUBSTRATE_NAME: ${SUBSTRATE_NAME:-}
+      SUBSTRATE_PORT_PREFIX: ${SUBSTRATE_PORT_PREFIX:-}
+      SUBSTRATE_CONTAINER: ${SUBSTRATE_CONTAINER:-}
+      WORKSPACE_VOLUME: ${WORKSPACE_VOLUME:-}
+      SURREAL_VOLUME: ${SURREAL_VOLUME:-}
+      RELAY_PORT: ${RELAY_PORT:-}
+      # The port the relay ANNOUNCES is the host port this file publishes it on
+      # (the relay mapping below), so the address /bootstrap hands a spoke is one
+      # something actually listens on. Set RELAY_ANNOUNCE_PORT only when peers
+      # dial a different port than the published one (e.g. the container port,
+      # across a shared container network).
+      RELAY_ANNOUNCE_PORT: ${RELAY_ANNOUNCE_PORT:-${RELAY_PORT:-${SUBSTRATE_PORT_PREFIX:-18}333}}
+      ACTIVITY_API_PORT: ${ACTIVITY_API_PORT:-}
+      DEV_VESSEL_PORT: ${DEV_VESSEL_PORT:-}
+      DISCOVERY_PORT: ${DISCOVERY_PORT:-}
+      IDENTITY_PORT: ${IDENTITY_PORT:-}
+      GOAL_HOST_PORT: ${GOAL_HOST_PORT:-}
+      ANALYSIS_PORT: ${ANALYSIS_PORT:-}
+      CONCEPT_DB_PORT: ${CONCEPT_DB_PORT:-}
+      STATEFUL_UI_PORT: ${STATEFUL_UI_PORT:-}
+      HUMAN_SURFACE_PORT: ${HUMAN_SURFACE_PORT:-}
+      # ── Provider keys ────────────────────────────────────────────────────────
+      # NOT `:?`. A spoke needs no provider key, and compose cannot see the role;
+      # the image enforces the requirement at boot, where the role is known.
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      # Optional: autonomous git push (parent change Phase 1). Unset = no self-push.
-      SUBSTRATE_GIT_PAT: ${SUBSTRATE_GIT_PAT:-}
-      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
-      # Optional: join an existing identity/discovery group (spoke) + provider/self-dev overrides
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      LLM_DEFAULT_MODEL: ${LLM_DEFAULT_MODEL:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      CHUTES_API_KEY: ${CHUTES_API_KEY:-}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      # Self-hosted vLLM. Single instance: VLLM_BASE_URL + VLLM_MODELS
+      # (comma-separated served ids), VLLM_API_KEY only if the server runs with
+      # --api-key. Multiple: VLLM_ENDPOINTS='[{"id":..,"baseURL":..,"models":[..]}]'.
+      VLLM_BASE_URL: ${VLLM_BASE_URL:-}
+      VLLM_MODELS: ${VLLM_MODELS:-}
+      VLLM_API_KEY: ${VLLM_API_KEY:-}
+      VLLM_ENDPOINTS: ${VLLM_ENDPOINTS:-}
+      # RunPod Serverless (queue endpoint, OpenAI-compatible route). The resolver
+      # registers the arm only when RUNPOD_ENDPOINT_ID is set, and offers it only
+      # while a worker is warm.
+      RUNPOD_ENDPOINT_ID: ${RUNPOD_ENDPOINT_ID:-}
+      RUNPOD_API_KEY: ${RUNPOD_API_KEY:-}
+      RUNPOD_MODELS: ${RUNPOD_MODELS:-}
+      RUNPOD_COST_PER_MTOK: ${RUNPOD_COST_PER_MTOK:-}
+      # Replaces the whole LLM arm set without editing a tracked file. Read before
+      # systemd starts, so it needs no gen-env emission.
+      LLM_ARMS: ${LLM_ARMS:-}
+      # ── Join / federation ────────────────────────────────────────────────────
+      # DISCOVERY_ENDPOINT + METABOB_API_KEY are the whole join; the rest are
+      # overrides of what the image derives from them.
+      DISCOVERY_ENDPOINT: ${DISCOVERY_ENDPOINT:-}
       METABOB_API_KEY: ${METABOB_API_KEY:-}
-      # VESSEL SELECTION — the whole family, not just roles. All five knobs are
-      # forwarded here, so every selection lever docs/SUBSTRATE.md describes is
-      # reachable from this launch path.
+      HUB_DISCOVERY_URL: ${HUB_DISCOVERY_URL:-}
+      ACTIVITY_API_ENDPOINT: ${ACTIVITY_API_ENDPOINT:-}
+      METABOB_ENDPOINT: ${METABOB_ENDPOINT:-}
+      IDENTITY_VESSEL_URL: ${IDENTITY_VESSEL_URL:-}
+      IDENTITY_ENDPOINT: ${IDENTITY_ENDPOINT:-}
+      FED_SUBSTRATE_ID: ${FED_SUBSTRATE_ID:-}
+      FED_EXTRA_SHAPE: ${FED_EXTRA_SHAPE:-}
+      RELAY_MULTIADDR: ${RELAY_MULTIADDR:-}
+      PEER_MULTIADDR: ${PEER_MULTIADDR:-}
+      PEER_DISCOVERY_ENDPOINTS: ${PEER_DISCOVERY_ENDPOINTS:-}
+      MAX_PEER_DEPTH: ${MAX_PEER_DEPTH:-}
+      FEDERATION_PEER_AUTH_MODE: ${FEDERATION_PEER_AUTH_MODE:-}
+      FEDERATION_SIGNING_SECRET: ${FEDERATION_SIGNING_SECRET:-}
+      # Makes discovery's /bootstrap advertise a reachable address instead of
+      # loopback. The *_PUBLIC_URL / *_PUBLIC_PORT overrides are inert without it.
+      PUBLIC_IP: ${PUBLIC_IP:-}
+      FED_PUBLIC_IP: ${FED_PUBLIC_IP:-}
+      DISCOVERY_PUBLIC_URL: ${DISCOVERY_PUBLIC_URL:-}
+      IDENTITY_PUBLIC_URL: ${IDENTITY_PUBLIC_URL:-}
+      DISCOVERY_PUBLIC_PORT: ${DISCOVERY_PUBLIC_PORT:-}
+      IDENTITY_PUBLIC_PORT: ${IDENTITY_PUBLIC_PORT:-}
+      SUBSTRATE_BIND_HOST: ${SUBSTRATE_BIND_HOST:-}
+      # ── Vessel selection ─────────────────────────────────────────────────────
       # Precedence (highest first): PROFILE > ENABLED_VESSELS > ENABLED_ROLES,
       # then + ENABLED_EXTRA_VESSELS, then - DISABLED_VESSELS.
       PROFILE: ${PROFILE:-}
@@ -50,117 +156,68 @@ services:
       ENABLED_ROLES: ${ENABLED_ROLES:-}
       ENABLED_EXTRA_VESSELS: ${ENABLED_EXTRA_VESSELS:-}
       DISABLED_VESSELS: ${DISABLED_VESSELS:-}
-      # Replaces the whole LLM arm set without editing a tracked file. Read by
-      # render-llm-arms.sh BEFORE systemd starts, so it needs no gen-env emission.
-      LLM_ARMS: ${LLM_ARMS:-}
-      # Makes discovery's /bootstrap advertise a reachable address instead of
-      # loopback. The *_PUBLIC_URL / *_PUBLIC_PORT overrides are INERT without it.
-      PUBLIC_IP: ${PUBLIC_IP:-}
-      # Autonomous code landing: unset means ON (gen-env defaults it to 1) — the
-      # substrate commits and pushes to origin/dev. Set to 0 to hold it to
-      # intent-only. This is the kill switch; it belongs where you can see it.
+      # ── Push capability and autonomy ─────────────────────────────────────────
+      # SUBSTRATE_GIT_PAT grants push capability; SUBSTRATE_REPO_OWNER scopes it.
+      SUBSTRATE_GIT_PAT: ${SUBSTRATE_GIT_PAT:-}
+      SUBSTRATE_REPO_OWNER: ${SUBSTRATE_REPO_OWNER:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      # Emergency stop for autonomous landing: 0 = no commit, no push, no host-sync
+      # intent; unset or 1 = landings proceed as the capability and pushPolicy allow.
       MITOSIS_DIRECT_PUSH: ${MITOSIS_DIRECT_PUSH:-}
       ROUTE_EDIT_INTENT_TO_COMPOSE: ${ROUTE_EDIT_INTENT_TO_COMPOSE:-}
-      HUB_DISCOVERY_URL: ${HUB_DISCOVERY_URL:-}
-      DISCOVERY_ENDPOINT: ${DISCOVERY_ENDPOINT:-}
-      ACTIVITY_API_ENDPOINT: ${ACTIVITY_API_ENDPOINT:-}
-      IDENTITY_VESSEL_URL: ${IDENTITY_VESSEL_URL:-}
-      FED_SUBSTRATE_ID: ${FED_SUBSTRATE_ID:-}
-      RELAY_MULTIADDR: ${RELAY_MULTIADDR:-}
-      PEER_DISCOVERY_ENDPOINTS: ${PEER_DISCOVERY_ENDPOINTS:-}
-      SUBSTRATE_REPO_OWNER: ${SUBSTRATE_REPO_OWNER:-}
-      # Optional extra LLM providers (also readable from the host /etc/environment on a VM)
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
-      LLM_DEFAULT_MODEL: ${LLM_DEFAULT_MODEL:-}
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
-      # gen-env resolves, emits and round-trips both of these, and the Makefile
-      # forwards them — compose did not, so two of the eight supported providers
-      # were unusable on the compose path.
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      CHUTES_API_KEY: ${CHUTES_API_KEY:-}
-      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
-      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
-      # Self-hosted vLLM on Vast.ai / RunPod (Cloudflare-tunnel stable hostname).
-      # Single instance: VLLM_BASE_URL + VLLM_MODELS (comma-separated served ids),
-      # VLLM_API_KEY optional (only if the instance runs vllm serve --api-key).
-      # Multiple: VLLM_ENDPOINTS='[{"id":..,"baseURL":..,"models":[..]}]'.
-      VLLM_BASE_URL: ${VLLM_BASE_URL:-}
-      VLLM_MODELS: ${VLLM_MODELS:-}
-      VLLM_API_KEY: ${VLLM_API_KEY:-}
-      VLLM_ENDPOINTS: ${VLLM_ENDPOINTS:-}
-      # RunPod Serverless (queue endpoint, OpenAI-compatible route). Unlike the
-      # VLLM_* forms above this is a fixed vendor host, so only the endpoint id
-      # is needed — the resolver builds the URL. The lane SCALES TO ZERO and is
-      # offered to the policy only while a worker is already warm, so leaving it
-      # unset simply means no arm. RUNPOD_MODELS / RUNPOD_COST_PER_MTOK are
-      # optional overrides (served ids, and the warm per-Mtok price prior).
-      RUNPOD_ENDPOINT_ID: ${RUNPOD_ENDPOINT_ID:-}
-      RUNPOD_API_KEY: ${RUNPOD_API_KEY:-}
-      RUNPOD_MODELS: ${RUNPOD_MODELS:-}
-      RUNPOD_COST_PER_MTOK: ${RUNPOD_COST_PER_MTOK:-}
-      # Existing deployment on the legacy default signing secret? Set this to boot.
-      # The HMAC secret identity-vessel signs and verifies every mb- API key
-      # with. gen-env FAILS CLOSED without it on an existing datastore and names
-      # it in the error — but the compose lane forwarded only the insecure
-      # escape hatch below, so the remedy the error text prescribes was the one
-      # thing this lane could not deliver.
+      # ── Stores and roots ─────────────────────────────────────────────────────
+      SUBSTRATE_ROOT: ${SUBSTRATE_ROOT:-}
+      SURREALDB_URL: ${SURREALDB_URL:-}
+      REDIS_URL: ${REDIS_URL:-}
+      # ── API key signing secret ───────────────────────────────────────────────
+      # The HMAC secret identity-vessel signs and verifies every mb- key with. The
+      # image fails closed without it on an existing datastore and names it in the
+      # error; the escape hatch below keeps a legacy default (keys stay forgeable).
       API_KEY_SECRET: ${API_KEY_SECRET:-}
       API_KEY_SECRET_PREVIOUS: ${API_KEY_SECRET_PREVIOUS:-}
       ALLOW_INSECURE_API_KEY_SECRET: ${ALLOW_INSECURE_API_KEY_SECRET:-}
+    # One port set on every profile; a vessel the profile does not run simply does
+    # not answer. Each legacy *_PORT, when set, wins over the prefix.
+    #
+    # Exposure is decided here and only here, by the host address each port is
+    # published on (advanced; unset = every host interface, as always):
+    #   SUBSTRATE_PUBLISH_IP=127.0.0.1    every port on the local host only
+    #   <VESSEL>_PUBLISH_IP=<address>     one port, outranking the above; <VESSEL>
+    #                                     is the prefix of that port's *_PORT name
+    #                                     (HUMAN_SURFACE_PUBLISH_IP, RELAY_PUBLISH_IP, …)
+    # A compose override file cannot narrow a mapping: compose MERGES `ports`
+    # lists, so an override's 127.0.0.1 mapping is added beside the public one
+    # rather than replacing it. These variables are the supported way.
     ports:
-      - "${ACTIVITY_API_PORT:-18080}:8080"   # activity-api
-      - "${DEV_VESSEL_PORT:-18090}:8090"     # development-vessel
-      - "${DISCOVERY_PORT:-18100}:8100"      # discovery-vessel
-      - "${IDENTITY_PORT:-18101}:8101"       # identity-vessel
-      - "${GOAL_HOST_PORT:-18210}:8210"      # goal-host-vessel
-      - "${ANALYSIS_PORT:-18250}:8250"       # analysis-vessel
-      - "${CONCEPT_DB_PORT:-18260}:8260"     # concept-db
-      - "${STATEFUL_UI_PORT:-18270}:8270"    # stateful-ui-vessel
-      # THE HUMAN SURFACE WAS THE ONE VESSEL NEVER PUBLISHED. The Makefile's docker-run
-      # path has carried `-p 18310:8310` all along; this compose file did not, so a fleet
-      # brought up through compose ran human-surface-vessel healthy, enabled, bound to
-      # 0.0.0.0 — and unreachable from the host. Two declarations of one fleet, differing
-      # by one line, is the same producer/consumer drift this repo keeps paying for, and
-      # the vessel it silently dropped is the ONLY one a human is meant to talk to.
-      - "${HUMAN_SURFACE_PORT:-18310}:8310"  # human-surface-vessel
+      - "${ACTIVITY_API_PUBLISH_IP:-${SUBSTRATE_PUBLISH_IP:+${SUBSTRATE_PUBLISH_IP}:}}${ACTIVITY_API_PUBLISH_IP:+:}${ACTIVITY_API_PORT:-${SUBSTRATE_PORT_PREFIX:-18}080}:8080"   # activity-api
+      - "${DEV_VESSEL_PUBLISH_IP:-${SUBSTRATE_PUBLISH_IP:+${SUBSTRATE_PUBLISH_IP}:}}${DEV_VESSEL_PUBLISH_IP:+:}${DEV_VESSEL_PORT:-${SUBSTRATE_PORT_PREFIX:-18}090}:8090"     # development-vessel
+      - "${DISCOVERY_PUBLISH_IP:-${SUBSTRATE_PUBLISH_IP:+${SUBSTRATE_PUBLISH_IP}:}}${DISCOVERY_PUBLISH_IP:+:}${DISCOVERY_PORT:-${SUBSTRATE_PORT_PREFIX:-18}100}:8100"      # discovery-vessel
+      - "${IDENTITY_PUBLISH_IP:-${SUBSTRATE_PUBLISH_IP:+${SUBSTRATE_PUBLISH_IP}:}}${IDENTITY_PUBLISH_IP:+:}${IDENTITY_PORT:-${SUBSTRATE_PORT_PREFIX:-18}101}:8101"       # identity-vessel
+      - "${GOAL_HOST_PUBLISH_IP:-${SUBSTRATE_PUBLISH_IP:+${SUBSTRATE_PUBLISH_IP}:}}${GOAL_HOST_PUBLISH_IP:+:}${GOAL_HOST_PORT:-${SUBSTRATE_PORT_PREFIX:-18}210}:8210"      # goal-host-vessel
+      - "${ANALYSIS_PUBLISH_IP:-${SUBSTRATE_PUBLISH_IP:+${SUBSTRATE_PUBLISH_IP}:}}${ANALYSIS_PUBLISH_IP:+:}${ANALYSIS_PORT:-${SUBSTRATE_PORT_PREFIX:-18}250}:8250"       # analysis-vessel
+      - "${CONCEPT_DB_PUBLISH_IP:-${SUBSTRATE_PUBLISH_IP:+${SUBSTRATE_PUBLISH_IP}:}}${CONCEPT_DB_PUBLISH_IP:+:}${CONCEPT_DB_PORT:-${SUBSTRATE_PORT_PREFIX:-18}260}:8260"     # concept-db
+      - "${STATEFUL_UI_PUBLISH_IP:-${SUBSTRATE_PUBLISH_IP:+${SUBSTRATE_PUBLISH_IP}:}}${STATEFUL_UI_PUBLISH_IP:+:}${STATEFUL_UI_PORT:-${SUBSTRATE_PORT_PREFIX:-18}270}:8270"    # stateful-ui-vessel
+      - "${HUMAN_SURFACE_PUBLISH_IP:-${SUBSTRATE_PUBLISH_IP:+${SUBSTRATE_PUBLISH_IP}:}}${HUMAN_SURFACE_PUBLISH_IP:+:}${HUMAN_SURFACE_PORT:-${SUBSTRATE_PORT_PREFIX:-18}310}:8310"  # human-surface-vessel
+      # federation relay (libp2p), run in-container by the hub profiles.
+      # RELAY_PORT keeps an existing hub on the host port its spokes already dial.
+      - "${RELAY_PUBLISH_IP:-${SUBSTRATE_PUBLISH_IP:+${SUBSTRATE_PUBLISH_IP}:}}${RELAY_PUBLISH_IP:+:}${RELAY_PORT:-${SUBSTRATE_PORT_PREFIX:-18}333}:30333"
     volumes:
       - substrate-workspace:/workspace          # named volume — portable, not a host path
-      - substrate-surreal:/var/lib/surrealdb    # SurrealDB data — DROPPING THIS LOSES ALL LEARNING STATE
+      - substrate-surreal:/var/lib/surrealdb    # the datastore — dropping it loses all learning state
     tmpfs:
       - /run
       - /run/lock
-    healthcheck:
-      # Probe DISCOVERY, not activity-api. activity-api carries role `api`, which
-      # the `spoke` group excludes — so an activity-api probe can NEVER pass on a
-      # spoke, and the documented spoke launch reported `unhealthy` forever while
-      # the fleet was serving correctly. discovery-vessel carries role `registry`,
-      # which hub, spoke and full all include, so this probe is meaningful in
-      # every topology this file can launch.
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8100/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
 
 volumes:
-  # Explicitly NAMED, so compose attaches to the same volumes every other launch
-  # path uses instead of inventing project-prefixed ones.
+  # Explicitly NAMED, so compose attaches to the same volumes every launch uses
+  # instead of inventing project-prefixed ones. Without `name:`, compose prefixes
+  # volume names with the project, and `up` against a fleet started any other way
+  # creates EMPTY volumes and starts a healthy-looking container with no learned
+  # state, orphaning the real ones — silently.
   #
-  # Without `name:`, compose prefixes volume names with the project (the
-  # directory name), so these became `<project>_substrate-workspace` /
-  # `<project>_substrate-surreal`. Running `docker compose up` against a fleet
-  # started any other way therefore did not adopt it — it created EMPTY volumes
-  # and started a container that looked perfectly healthy with an empty SurrealDB
-  # and an empty workspace, orphaning the real ones. Nothing errored, and the
-  # loss stayed invisible until someone asked where the traces went. That was the
-  # single most dangerous behaviour in this file.
-  #
-  # The default names match the historical ones so existing installs are adopted
-  # as-is. A second fleet namespaces its state by setting both vars (the
-  # `<name>-workspace` / `<name>-surreal` convention), exactly as the container
-  # name is set by SUBSTRATE_CONTAINER.
+  # The defaults reproduce the historical names, so an existing install is
+  # adopted as-is; SUBSTRATE_NAME=<name> gives <name>-workspace / <name>-surreal.
   substrate-workspace:
-    name: ${WORKSPACE_VOLUME:-substrate-workspace}
+    name: ${WORKSPACE_VOLUME:-${SUBSTRATE_NAME:-substrate}-workspace}
   substrate-surreal:
-    name: ${SURREAL_VOLUME:-substrate-surreal}
+    name: ${SURREAL_VOLUME:-${SUBSTRATE_NAME:-substrate}-surreal}

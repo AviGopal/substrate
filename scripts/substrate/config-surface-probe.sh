@@ -21,6 +21,13 @@
 # Each was found by hand, months apart. This script is the check that finds the
 # class: same inputs, every lane, diff what comes out the other side.
 #
+# ONE LANE NOW. The launch manifest (the root docker-compose.yml) is the only
+# launch path: `make up` and every deploy script run compose against it. The
+# make recipes that used to re-declare their own `-e` lists are gone, so the
+# probe measures the manifest's forwarded names alone, and the cross-lane
+# differential below stays for the day a second lane is introduced (which is
+# itself the drift this file exists to catch).
+#
 # WHAT IT MEASURES, AND AT WHICH LAYER
 #
 # It does NOT launch fleets. It runs gen-env.sh inside a throwaway container,
@@ -119,27 +126,8 @@ PROBE_LLM_KEY="sk-${SENTINEL_PREFIX}-synthetic-not-a-credential"
 # A hand-maintained copy in this file would be a fifth enumeration of the same
 # thing — the exact defect the script exists to detect.
 
-lane_vars_makefile() {  # $1 = first line of recipe, $2 = last
-  awk -v s="$1" -v e="$2" 'NR>=s && NR<=e' "$HERE/Makefile" \
-    | grep -oE '\-e [A-Z_][A-Z0-9_]*' | awk '{print $2}' | sort -u
-}
-
-recipe_bounds() {  # $1 = target name -> "start end"
-  awk -v t="^$1:" '
-    $0 ~ t {start=NR; next}
-    start && /^[a-zA-Z0-9_.-]+:/ {print start", "NR-1; exit}
-    END {if (start && !done) print start", "NR}
-  ' "$HERE/Makefile" | head -1 | tr -d ' '
-}
-
 lane_names() {
   case "$1" in
-    run-live)
-      local b; b="$(recipe_bounds run-live)"
-      lane_vars_makefile "${b%,*}" "${b#*,}" ;;
-    run-live-obsidian)
-      local b; b="$(recipe_bounds run-live-obsidian)"
-      lane_vars_makefile "${b%,*}" "${b#*,}" ;;
     compose)
       # Root compose is canonical; scripts/substrate/docker-compose.yml symlinks it.
       grep -oE '^[[:space:]]+[A-Z_][A-Z0-9_]*:' "$HERE/../../docker-compose.yml" \
@@ -173,8 +161,27 @@ probe_lane() {  # $1 = lane name; writes $WORK/<lane>.{env,secrets,values}
       # Endpoints: a sentinel here is not merely unjudgeable, it is actively
       # misleading — a non-loopback DISCOVERY_ENDPOINT flips the whole run into
       # spoke mode and measures a different topology than the one requested.
+      # PEER_MULTIADDR belongs here for the same reason: without DISCOVERY_ENDPOINT
+      # a fresh volume refuses it as an ambiguous join, so a sentinel would make
+      # gen-env refuse the whole run.
       DISCOVERY_ENDPOINT|HUB_DISCOVERY_URL|ACTIVITY_API_ENDPOINT|IDENTITY_VESSEL_URL|\
-      IDENTITY_ENDPOINT|METABOB_ENDPOINT|SURREALDB_URL|REDIS_URL|PEER_DISCOVERY_ENDPOINTS)
+      IDENTITY_ENDPOINT|METABOB_ENDPOINT|SURREALDB_URL|REDIS_URL|PEER_DISCOVERY_ENDPOINTS|\
+      PEER_MULTIADDR)
+        echo "$n" >> "$WORK/$lane.unjudged" ;;
+      # Numeric install inputs: gen-env refuses a non-number, so a text sentinel
+      # would refuse the run. Supplied as one consistent second-fleet set, and not
+      # judged (a number carries no marker).
+      SUBSTRATE_PORT_PREFIX)
+        envargs+=( -e "$n=24" ); echo "$n" >> "$WORK/$lane.unjudged" ;;
+      RELAY_PORT|RELAY_ANNOUNCE_PORT)
+        envargs+=( -e "$n=24333" ); echo "$n" >> "$WORK/$lane.unjudged" ;;
+      # Deprecated aliases the manifest forwards only so gen-env can judge them
+      # (the name aliases against SUBSTRATE_NAME, the per-port names against the
+      # prefix). A sentinel would contradict SUBSTRATE_NAME's and the prefix's, and
+      # gen-env refuses a contradiction; they are consumed, never delivered.
+      SUBSTRATE_CONTAINER|WORKSPACE_VOLUME|SURREAL_VOLUME|LIVE_NAME|\
+      ACTIVITY_API_PORT|DEV_VESSEL_PORT|DISCOVERY_PORT|IDENTITY_PORT|GOAL_HOST_PORT|\
+      ANALYSIS_PORT|CONCEPT_DB_PORT|STATEFUL_UI_PORT|HUMAN_SURFACE_PORT)
         echo "$n" >> "$WORK/$lane.unjudged" ;;
       *) envargs+=( -e "$n=$(sentinel_for "$n")" ) ;;
     esac
@@ -255,8 +262,13 @@ report_lane() {
   # it from the container env) and ALLOW_INSECURE_API_KEY_SECRET (a gen-env branch
   # condition, never a delivered value). Listing them as defects every run trains
   # a reader to skim the section, which is how a real entry gets missed.
+  # The deprecated aliases are the same kind: gen-env reads them to warn or refuse,
+  # and emits their resolution (SUBSTRATE_CONTAINER_NAME, the prefix) rather than
+  # the alias itself. So are the public-address parts: FED_PUBLIC_IP is emitted as
+  # PUBLIC_IP, and the two *_PUBLIC_PORT names are folded into the
+  # DISCOVERY_PUBLIC_URL / IDENTITY_PUBLIC_URL gen-env derives and emits.
   dropped="$(comm -23 "$WORK/$lane.offered" "$WORK/$lane.env" \
-             | grep -vxE 'LLM_ARMS|ALLOW_INSECURE_API_KEY_SECRET')"
+             | grep -vxE 'LLM_ARMS|ALLOW_INSECURE_API_KEY_SECRET|FED_PUBLIC_IP|DISCOVERY_PUBLIC_PORT|IDENTITY_PUBLIC_PORT|SUBSTRATE_CONTAINER|WORKSPACE_VOLUME|SURREAL_VOLUME|LIVE_NAME|(ACTIVITY_API|DEV_VESSEL|DISCOVERY|IDENTITY|GOAL_HOST|ANALYSIS|CONCEPT_DB|STATEFUL_UI|HUMAN_SURFACE)_PORT')"
   # Persist for the baseline comparison, not just for the eye. These lists were
   # printed and then discarded: the compared summary held counts only, so a
   # value-replacement regression — a name that starts being overwritten by a
@@ -344,7 +356,7 @@ report_lane() {
   if [ -f "$envex" ]; then
     unoffered="$(comm -23 \
       <(grep -oE '^#? ?[A-Z_][A-Z0-9_]*=' "$envex" | sed 's/^# *//;s/=$//' \
-        | grep -vxE '.*_PORT|SUBSTRATE_CONTAINER|SUBSTRATE_IMAGE|WORKSPACE_VOLUME|SURREAL_VOLUME' | sort -u) \
+        | grep -vxE '.*_PORT|.*_PUBLISH_IP|SUBSTRATE_CONTAINER|SUBSTRATE_IMAGE|WORKSPACE_VOLUME|SURREAL_VOLUME' | sort -u) \
       "$WORK/$lane.offered")"
     printf '%s\n' $unoffered | grep -v '^$' | sort > "$WORK/$lane.unoffered" || true
     if [ -n "$unoffered" ]; then
@@ -361,7 +373,7 @@ echo "[probe] image: $IMAGE"
 echo "[probe] measuring at gen-env output — the layer a vessel actually reads"
 echo
 
-LANES="run-live run-live-obsidian compose"
+LANES="compose"
 for l in $LANES; do probe_lane "$l"; done
 for l in $LANES; do report_lane "$l"; done
 
@@ -384,8 +396,8 @@ echo
 # What survives `docker rm` + recreate. A name read from .substrate-secrets that
 # nothing writes there is a phantom: the code consults it forever and it is never
 # there.
-echo "## persistence (run-live lane)"
-persisted="$(cat "$WORK/run-live.secrets")"
+echo "## persistence (compose lane)"
+persisted="$(cat "$WORK/compose.secrets")"
 # Strip comments before extracting call sites: gen-env's own prose mentions
 # `$(persisted_secret X)` while explaining the subshell rule, and a naive grep
 # reports X as a phantom secret — a finding invented by the scanner.
@@ -397,7 +409,7 @@ if [ -n "$phantom" ]; then
   echo "   PHANTOM (gen-env reads it from .substrate-secrets; nothing writes it):"
   printf '     %s\n' $phantom
 fi
-notpersisted="$(comm -23 "$WORK/run-live.env" <(printf '%s\n' "$persisted"))"
+notpersisted="$(comm -23 "$WORK/compose.env" <(printf '%s\n' "$persisted"))"
 echo "   emitted but not persisted: $(printf '%s\n' "$notpersisted" | grep -c . || true) names"
 echo
 

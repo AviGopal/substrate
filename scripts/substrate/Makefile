@@ -1,319 +1,197 @@
-# Makefile — substrate container lifecycle
+# Makefile — developer wrapper over the launch manifest
 #
-# LLM provider — supply ONE of the following (or both; Anthropic is preferred):
+# Setup commands live in one place: README § Installation (sequence G is this
+# wrapper). This file is not a second lane. Target `up` runs that page's
+# sequence against a locally built tag: build (only when REBUILD=1 or the tag is
+# absent; needs host bun), compose against the root manifest and .env, the
+# in-container verdict at WAIT_LEVEL (non-zero unless it passes), then the client
+# config from substrate-connect (CONNECT_WRITE=1 writes it).
 #
-#   Anthropic (default):
-#     ANTHROPIC_API_KEY=sk-ant-...
-#     Auto-read from ~/.metabob/config.json (.providers.anthropic.apiKey) if set.
+# INPUTS are the manifest's install inputs (SUBSTRATE_NAME, SUBSTRATE_PORT_PREFIX,
+# DISCOVERY_ENDPOINT + METABOB_API_KEY, a provider key, PROFILE, PUBLIC_IP,
+# SUBSTRATE_GIT_PAT + SUBSTRATE_REPO_OWNER), read by compose itself from the root
+# .env, the make command line, or the environment. This file reads nothing else:
+# no client config file, no CLI credential cache, no other container's settings to
+# fill an unset input. Every derivation (role, endpoints, key requirement) runs in
+# the image; container, volume and port names come from the manifest's own
+# interpolation, which this file asks for (`compose config`) and never recomputes.
 #
-#   OpenAI-compatible (OpenAI, Ollama, Groq, Together AI, LM Studio, vLLM, …):
-#     OPENAI_API_KEY=sk-...          # or "ollama" / "lm-studio" / any placeholder
-#     OPENAI_BASE_URL=http://...     # omit for api.openai.com; required for local models
-#     LLM_DEFAULT_MODEL=gpt-4o      # optional — overrides claude-sonnet-4-6 default
-#     Auto-read from ~/.metabob/config.json (.providers.openai.{apiKey,baseUrl,model}).
+# Targets: up, stop, recreate (replaces the container, volumes kept; refuses a
+# changed identity, port or volume unless ADOPT=1, and a port check it cannot
+# run unless SKIP_PORT_CHECK=1). Knobs: REBUILD, WAIT_LEVEL (a keyless spoke
+# waits for `served`: `usable` needs an arm), CONNECT_WRITE, ADOPT, COMPOSE.
 #
-#   Examples:
-#     make run-live ANTHROPIC_API_KEY=sk-ant-...
-#     make run-live OPENAI_API_KEY=ollama OPENAI_BASE_URL=http://localhost:11434/v1 LLM_DEFAULT_MODEL=llama3.2
-#     make run-live OPENAI_API_KEY=sk-... LLM_DEFAULT_MODEL=gpt-4o
+# DEPRECATED, still honoured with a warning:
+#   LIVE_NAME=<n>     -> the exact-name aliases for container <n> and volumes
+#                        <n>-workspace/<n>-surreal (substrate-live keeps the
+#                        default volumes), so a fleet made by the old make lane is
+#                        adopted as-is. Replacement: SUBSTRATE_NAME.
+#   PORT_OFFSET=<n>   -> SUBSTRATE_PORT_PREFIX = 18 + n/1000 (n a multiple of 1000).
 #
-# All other secrets (JWT_SECRET, SURREAL_PASS, METABOB_API_KEY) are generated
-# automatically on first run and persisted to workspace/.substrate-secrets so
-# restarts reuse the same values without operator input.
+# Everything a RUNNING fleet does ships in the image and names its instance in
+# the command itself:
 #
-# Quick start (one command — build/start/seed/verify are all handled):
-#   make -C scripts/substrate up ANTHROPIC_API_KEY=sk-ant-...
-# The system itself needs only `docker run` (see the `up` target header for the
-# raw contract); seeding + readiness + diagnosis run in-container.
-#
-# ─────────────────────────────────────────────────────────────────────────────
-# THIS MAKEFILE IS THE BOOTSTRAP TIER ONLY: build, up, recreate, stop, clean —
-# the things that must happen BEFORE a container exists to be talked to.
-#
-# Everything a RUNNING fleet does is `vessel-ctl`, which ships in the image:
-#
+#   docker exec <container> substrate-status | substrate-connect | substrate-key …
 #   docker exec <container> vessel-ctl status | restart <v> | logs <v> | sync <v>
-#   docker exec <container> vessel-ctl install <v> | uninstall <v> | list
-#   docker exec <container> vessel-ctl apply | drift
-#   docker exec <container> substrate-doctor | substrate-ready | substrate-key …
+#   docker exec <container> vessel-ctl install <v> | uninstall <v> | list | apply
 #
-# This Makefile used to carry ~40 hand-enumerated restart-/logs-/sync-<vessel>
-# targets covering 11 of 65 units, plus wrappers around every in-image tool.
-# Two surfaces for one job is how they drift: `health` probed hardcoded 18xxx
-# ports while claiming to honour LIVE_NAME, so on a multi-instance host it
-# reported a DIFFERENT fleet than the one you named. They are deleted, not
-# deprecated. Do not reintroduce a wrapper here for something the image ships —
-# the in-image tool works over ssh, on a hub, and in a container you did not
-# build, and it names its instance in the command itself.
-# ─────────────────────────────────────────────────────────────────────────────
-#
-# Two container flavours:
-#   substrate       — interactive / ephemeral dev container (port 8080)
-#   substrate-live  — persistent development substrate (port 18080)
+# Do not reintroduce a wrapper here for something the image ships, and do not add
+# a recipe that declares a port, volume, grace period or healthcheck: those facts
+# live in the manifest, and every copy of them has drifted.
 
-IMAGE        := ghcr.io/avigopal/substrate
-TAG          := dev
-# State now lives in DOCKER-MANAGED NAMED VOLUMES, not host bind mounts, so the
-# substrate's filesystem is detached from this host (container-independent;
-# self-persistence increment). The two volumes carry all learning state:
-#   substrate-surreal   -> /var/lib/surrealdb  (traces, Thompson posteriors, concept graph)
-#   substrate-workspace -> /workspace          (memoryNote store, git clones, .substrate-secrets, snapshots)
-# The image declares VOLUME ["/workspace","/var/lib/surrealdb"]; we name them so
-# they survive `docker rm` and can be backed up / moved off-host independently.
-# Volumes follow the container name so a second substrate (e.g. a spoke next
-# to substrate-live) gets its own state; the default name keeps the historical
-# volume names for existing installs. (LIVE_NAME is defined here, before the
-# conditional, because ifeq evaluates at parse time.)
-LIVE_NAME ?= substrate-live
-ifeq ($(LIVE_NAME),substrate-live)
-SURREAL_VOLUME   := substrate-surreal
-WORKSPACE_VOLUME := substrate-workspace
-else
-SURREAL_VOLUME   := $(LIVE_NAME)-surreal
-WORKSPACE_VOLUME := $(LIVE_NAME)-workspace
-endif
-# Legacy HOST paths — retained only as the migration source / offline backup
-# (host-detach migrated their contents into the named volumes above). No longer
-# mounted into the live container.
-WORKSPACE    := $(shell pwd)/workspace
-SURREAL_DATA := $(shell pwd)/surreal-data
-
-
-# LLM provider credentials — read from environment first, then ~/.metabob/config.json.
-# A standalone or hub needs one local provider key.
-#
-# ⚠ THIS FALLBACK APPLIES TO EVERY TOPOLOGY, SPOKE INCLUDED. `?=` means a spoke
-# launched with no key on the command line still receives the OPERATOR'S key from
-# ~/.metabob/config.json, and gen-env then persists it into that fleet's
-# .substrate-secrets. Measured on a keyless spoke join: a 108-char sk-ant- key
-# present in the container and written to the volume. If you are handing a spoke
-# to someone else, pass `ANTHROPIC_API_KEY=` explicitly to suppress it.
-#
-# A federated spoke is DESIGNED to inherit its hub's LLM capability and so need
-# no local key — but that inheritance rides the federation transport and does not
-# yet work: a spoke whose transport is down resolves no llm_completion at all.
-# Do not read the design intent as a statement that the spoke has no key.
-ANTHROPIC_API_KEY ?= $(shell jq -r '.providers.anthropic.apiKey // empty' $(HOME)/.metabob/config.json 2>/dev/null || true)
-OPENAI_API_KEY    ?= $(shell jq -r '.providers.openai.apiKey // empty'    $(HOME)/.metabob/config.json 2>/dev/null || true)
-OPENAI_BASE_URL   ?= $(shell jq -r '.providers.openai.baseUrl // empty'   $(HOME)/.metabob/config.json 2>/dev/null || true)
-LLM_DEFAULT_MODEL ?= $(shell jq -r '.providers.openai.model // empty'     $(HOME)/.metabob/config.json 2>/dev/null || true)
-
-# OpenAI-wire completion providers (llm-resolver-vessel OPENAI_WIRE_PROVIDERS).
-# These are the failover ladder BELOW anthropic: when the anthropic key goes
-# credit-dead the resolver walks chutes -> groq -> mistral -> openrouter/gemini,
-# and de-advertises llm_completion entirely if every lane is cold. gen-env.sh
-# already resolves (:177-181), emits (:269-273) and persists (:494) all five —
-# the ONLY missing link was that the docker run recipes below never passed them,
-# so the ladder could never have a rung even when the operator supplied a key.
-# Declared with ?= so `make up GROQ_API_KEY=…` and a plain env var both work.
-CHUTES_API_KEY     ?=
-OPENROUTER_API_KEY ?=
-GOOGLE_API_KEY     ?=
-GROQ_API_KEY       ?=
-MISTRAL_API_KEY    ?=
-# RunPod Serverless — same ladder, same failure mode if a recipe forgets to pass
-# them. ENDPOINT_ID is not a secret but is load-bearing: llm-resolver-vessel
-# registers the arm only when it is set, so dropping it silently removes the lane.
-RUNPOD_API_KEY        ?=
-RUNPOD_ENDPOINT_ID    ?=
-RUNPOD_MODELS         ?=
-RUNPOD_COST_PER_MTOK  ?=
-
-# GITHUB_TOKEN — load from environment, fall back to gh CLI's cached auth.
-# Used by gh_repo_create resolver + gh_pr_create when authoring substrate-
-# authored repos and PRs. Optional — when absent, gh_repo_create returns
-# structuredError with detail "no GITHUB_TOKEN", and substrate can still
-# author into existing repos via SSH-key-backed git push (which doesn't
-# need this env var).
-GITHUB_TOKEN ?= $(shell gh auth token 2>/dev/null || true)
-
-# Vessel-subset topology + remote-endpoint overrides — durable support for
-# running any subset of vessels, within or between containers/hosts. Empty by
-# default: apply-inventory.sh treats unset/empty ENABLED_*/DISABLED_* as "keep
-# everything", and gen-env.sh treats unset/empty endpoint vars as "use this
-# container's own localhost vessel" — so nothing changes unless you set one.
-#   ENABLED_ROLES=hub|spoke|full (or a role-GROUP alias from vessels.inventory.json)
-#   ENABLED_VESSELS=unit,unit    explicit allow-list; overrides ENABLED_ROLES
-#   DISABLED_VESSELS=unit,unit   always off, even if selected above
-#   PEER_DISCOVERY_ENDPOINTS=http://host:18100[,http://host2:18100]  discovery peer fan-out
-#   DISCOVERY_ENDPOINT / ACTIVITY_API_ENDPOINT / IDENTITY_VESSEL_URL / IDENTITY_ENDPOINT
-#     point a compute-only spoke's control-plane calls at a remote hub instead
-#     of this container's own discovery-vessel/activity-api/identity-vessel
-#   SURREALDB_URL / REDIS_URL   point a compute-only spoke at a remote store
-#   METABOB_API_KEY             a hub-issued key so this substrate's vessels land
-#                                in the hub's org_id namespace instead of minting
-#                                their own bootstrap key (unset = auto-generated
-#                                locally, as before)
-#
-# Example — compute-only spoke joining a remote hub's namespace:
-#   make run-live ANTHROPIC_API_KEY=... ENABLED_ROLES=spoke \
-#     DISCOVERY_ENDPOINT=http://<hub-ip>:18100 ACTIVITY_API_ENDPOINT=http://<hub-ip>:18080 \
-#     IDENTITY_VESSEL_URL=http://<hub-ip>:18101 METABOB_API_KEY=<hub-issued-key>
-ENABLED_ROLES ?=
-ENABLED_VESSELS ?=
-DISABLED_VESSELS ?=
-# ENABLED_EXTRA_VESSELS and PROFILE were carried by RECREATE_CARRY and read by
-# apply-inventory, but declared nowhere and passed by no recipe — so the additive
-# selection knob had NO delivery path on the make lane at all, and `recreate`
-# carried them into a recipe that dropped them. Compose was the only lane that
-# ever delivered PROFILE. config-surface-probe.sh now reports both.
-ENABLED_EXTRA_VESSELS ?=
-PROFILE ?=
-PEER_DISCOVERY_ENDPOINTS ?=
-DISCOVERY_ENDPOINT ?=
-ACTIVITY_API_ENDPOINT ?=
-METABOB_ENDPOINT ?=
-METABOB_API_KEY ?=
-IDENTITY_VESSEL_URL ?=
-IDENTITY_ENDPOINT ?=
-SURREALDB_URL ?=
-REDIS_URL ?=
-
-# ── Point-and-go spoke UX ────────────────────────────────────────────────────
-# 1) make up API_KEY=<hub-issued> DISCOVERY_ENDPOINT=http://<hub>:18100
-#    That is the WHOLE second-command step: a spoke boot with HUB_DISCOVERY_URL
-#    set now AUTO-enables federation-transport-vessel at boot (entrypoint.sh) and
-#    gen-env.sh auto-assigns a unique FED_SUBSTRATE_ID + FED_VESSEL_ID.
-# 2) (OPTIONAL override) docker exec <container> spoke-federate <container> <unique-id> [<relay-multiaddr>]
-#    Only needed to PIN a specific substrate id or run the hub-side collision
-#    check (see spoke-federate.sh) — NOT a required step. The auto-enable at
-#    boot already stands the transport up.
-#
-# API_KEY is the operator-facing alias for METABOB_API_KEY. A hub
-# DISCOVERY_ENDPOINT with NO explicit ENABLED_ROLES implies a FEDERATED SPOKE:
-# local registry + compute here, hub store/identity derived from the discovery
-# host (fleet port convention 18080/18101). The hub URL reaches the container
-# as HUB_DISCOVERY_URL — deliberately NOT as DISCOVERY_ENDPOINT, which would
-# repoint every vessel's own registration away from the spoke's local registry
-# (the federation-transport-vessel mirrors local capability to the hub instead).
-# Passing ENABLED_ROLES explicitly keeps the old thin-spoke passthrough intact.
-API_KEY ?=
-ifneq ($(strip $(API_KEY)),)
-METABOB_API_KEY := $(API_KEY)
-endif
-HUB_DISCOVERY_URL ?=
-FED_SUBSTRATE_ID ?=
-RELAY_MULTIADDR ?=
-CONTAINER_DISCOVERY_ENDPOINT := $(DISCOVERY_ENDPOINT)
-ifneq ($(strip $(DISCOVERY_ENDPOINT)),)
-ifeq ($(strip $(ENABLED_ROLES)),)
-ENABLED_ROLES := spoke
-DISCOVERY_HOST := $(shell echo '$(DISCOVERY_ENDPOINT)' | sed -E 's#^[a-z]+://##; s#[:/].*##')
-# ★ KEEP THE PORT THE OPERATOR SUPPLIED. This block used to take only the HOST
-# and hardcode :18100/:18080/:18101, so a hub published on any other port was
-# unjoinable — and on a host running several substrates the spoke silently
-# joined whichever fleet occupied 18100, presenting later as an inexplicable
-# 401 from a key the "wrong" hub never issued. Measured: DISCOVERY_ENDPOINT
-# =http://172.17.0.1:23100 produced HUB_DISCOVERY_URL=http://172.17.0.1:18100.
-# A deployment shifts the whole 18xxx block by one PORT_OFFSET, so the offset is
-# recoverable from the discovery port: offset = port - 18100, applied to the
-# siblings. Below the block (a proxy on 443, a tunnel on 8443) is not offset
-# arithmetic — keep the supplied hub port, leave the siblings conventional, and
-# let the explicit ACTIVITY_API_ENDPOINT / IDENTITY_VESSEL_URL overrides win.
-# gen-env.sh carries the same rule for the raw `docker run` path; both layers
-# need it, because this one blanks CONTAINER_DISCOVERY_ENDPOINT and gen-env
-# therefore never sees the endpoint on the make path.
-# NOTE FOR EDITORS: keep `case`, `$$(( ))` and any bare `)` OUT of these $(shell)
-# bodies. Make parses parentheses before the shell ever sees them, so a `case`
-# arm silently truncates the command and the port comes out as fragments of the
-# case statement itself. Use sed | grep | expr with if/then/fi only.
-DISCOVERY_PORT := $(shell echo '$(DISCOVERY_ENDPOINT)' | sed -E 's#^[a-z]+://##; s#^[^:/]*##; s#^:##; s#/.*##' | grep -E '^[0-9]+$$' || echo 18100)
-# 47534 == 65535 - 18101, so the highest derived sibling still fits in a port.
-# This bound MUST match gen-env.sh's exactly — same rule, two launch paths. They
-# briefly disagreed (65535 vs 47534) and a discovery port above 47534 then
-# derived different siblings depending on which path you launched through.
-PORT_BLOCK_OFF := $(shell if [ '$(DISCOVERY_PORT)' -ge 18100 ] && [ '$(DISCOVERY_PORT)' -le 47534 ]; then expr '$(DISCOVERY_PORT)' - 18100; else echo 0; fi)
-# Preserve the scheme: hardcoding http:// silently downgraded a TLS-fronted hub,
-# keeping the port and losing the encryption — a failure that looks like success.
-DISCOVERY_SCHEME := $(shell echo '$(DISCOVERY_ENDPOINT)' | sed -nE 's#^([a-z]+)://.*#\1#p' | grep -E '^[a-z]+$$' || echo http)
-HUB_DISCOVERY_URL := $(DISCOVERY_SCHEME)://$(DISCOVERY_HOST):$(DISCOVERY_PORT)
-ACTIVITY_API_ENDPOINT := $(if $(strip $(ACTIVITY_API_ENDPOINT)),$(ACTIVITY_API_ENDPOINT),$(DISCOVERY_SCHEME)://$(DISCOVERY_HOST):$(shell expr 18080 + '$(PORT_BLOCK_OFF)'))
-IDENTITY_VESSEL_URL := $(if $(strip $(IDENTITY_VESSEL_URL)),$(IDENTITY_VESSEL_URL),$(DISCOVERY_SCHEME)://$(DISCOVERY_HOST):$(shell expr 18101 + '$(PORT_BLOCK_OFF)'))
-CONTAINER_DISCOVERY_ENDPOINT :=
-endif
-endif
-
-# A spoke inherits LLM capability from its hub, so it does not need a local
-# provider credential. Standalone containers retain the local-key requirement.
-FEDERATED_SPOKE := $(strip $(DISCOVERY_ENDPOINT) $(HUB_DISCOVERY_URL))
-# These inputs change a container's immutable Docker configuration. `up` may
-# safely resume a stopped container only when no such override was supplied.
-# EXPORTED, NOT INTERPOLATED.
-#
-# Every recipe below passes these with a bare `-e VAR` (docker reads the value
-# from the recipe's environment) instead of `-e VAR="$(VAR)"`. The interpolated
-# form expanded the operator's real 108-char Anthropic key and 40-char GitHub
-# token into the recipe TEXT, so `make -n up` printed both in cleartext — and an
-# `@` prefix does NOT fix that, because `make -n` prints @-prefixed lines too.
-# `export` keeps the delivered value identical, including when it is empty.
-export ANTHROPIC_API_KEY OPENAI_API_KEY CHUTES_API_KEY OPENROUTER_API_KEY
-export GOOGLE_API_KEY GROQ_API_KEY MISTRAL_API_KEY RUNPOD_API_KEY
-export GITHUB_TOKEN SUBSTRATE_GIT_PAT API_KEY_SECRET METABOB_API_KEY
-
-# Settings that only take effect when a container is CREATED. `up` refuses to
-# resume a stopped container when any of these was supplied, because `docker
-# start` reuses the original image, ports and env — the new value would be
-# silently ignored.
-#
-# PORT_OFFSET, TAG, ANTHROPIC_API_KEY, PROFILE and ENABLED_EXTRA_VESSELS were
-# missing from this list, so the guard never fired for them. The one that bites
-# is PORT_OFFSET, because docs/SUBSTRATE.md ends the RESTORE-FROM-BACKUP recipe
-# with `make up LIVE_NAME=… PORT_OFFSET=<the offset it was created with>` and
-# states that `up` carries it. Measured: created at offset 8000, stopped, then
-# resumed with PORT_OFFSET=9000 — no warning, ports stayed 26xxx. Harmless when
-# the values happen to match, silently wrong when they do not, on the single
-# command a restore ends with.
-#
-# The three with defaults must be counted ONLY when the operator supplied them:
-# `$(PORT_OFFSET)` is always non-empty (default 0) and `$(TAG)` is always `dev`,
-# so listing them plainly would make `up` refuse to resume ANY container.
-# `$(origin …)` distinguishes a command-line value from a default.
-_cli = $(if $(filter command line,$(origin $(1))),$($(1)),)
-
-LAUNCH_OVERRIDES := $(strip $(API_KEY) $(METABOB_API_KEY) $(DISCOVERY_ENDPOINT) $(HUB_DISCOVERY_URL) $(FED_SUBSTRATE_ID) $(RELAY_MULTIADDR) $(ENABLED_ROLES) $(ENABLED_VESSELS) $(DISABLED_VESSELS) $(PEER_DISCOVERY_ENDPOINTS) $(ACTIVITY_API_ENDPOINT) $(IDENTITY_VESSEL_URL) $(IDENTITY_ENDPOINT) $(SURREALDB_URL) $(REDIS_URL) $(PROFILE) $(ENABLED_EXTRA_VESSELS) $(call _cli,PORT_OFFSET) $(call _cli,TAG) $(call _cli,ANTHROPIC_API_KEY))
-
-# Host-port offset so a second substrate coexists with substrate-live
-# (e.g. PORT_OFFSET=10000 → 28080/28100/28210/…). 0 = historical defaults.
-PORT_OFFSET ?= 0
-hp = $(shell expr $(1) + $(PORT_OFFSET))
-
-# Vessel source roots (relative to repo root, two levels up)
+IMAGE := ghcr.io/avigopal/substrate
+TAG   := dev
 REPO_ROOT := $(abspath $(CURDIR)/../..)
-DEV_VESSEL_SRC := $(REPO_ROOT)/repos/development-vessel
-LOCAL_TOOLS_SRC := $(REPO_ROOT)/repos/local-tools-vessel
-LLM_VESSEL_SRC := $(REPO_ROOT)/repos/llm-resolver-vessel
-GOAL_HOST_SRC := $(REPO_ROOT)/repos/goal-host-vessel
-LIGHT_DISPATCH_SRC := $(REPO_ROOT)/repos/light-dispatch-vessel
-BOREDOM_VESSEL_SRC := $(REPO_ROOT)/repos/boredom-vessel
-RIBOSOME_VESSEL_SRC := $(REPO_ROOT)/repos/ribosome-vessel
-CONCEPT_DB_SRC := $(REPO_ROOT)/repos/concept-db
-ANALYSIS_VESSEL_SRC := $(REPO_ROOT)/repos/analysis-vessel
-STATEFUL_UI_VESSEL_SRC := $(REPO_ROOT)/repos/stateful-ui-vessel
-HUMAN_SURFACE_VESSEL_SRC := $(REPO_ROOT)/repos/human-surface-vessel
-OBSIDIAN_VESSEL_SRC := $(REPO_ROOT)/repos/obsidian-vessel
 
+# The compose implementation. `docker compose` (v2) and podman-compose both read
+# ./docker-compose.yml and ./.env from the working directory when run there, so
+# every compose call below runs IN the repo root — the same directory, the same
+# files, and therefore the same inputs as the install page.
+COMPOSE ?= docker compose
+COMPOSE_IN_ROOT = cd '$(REPO_ROOT)' && $(COMPOSE)
 
-# Submodule preflight: the Dockerfile `COPY repos/...` stages fail minutes into
-# the build if the git submodules were never checked out. Fail fast (<1s) with
-# the exact remedy instead. Grounded on a real submodule file (discovery-vessel's
-# package.json); its absence means `git submodule update --init` was never run.
-# Only REAL targets belong here. A deleted target left in .PHONY does not
-# error — make reports "Nothing to be done" and EXITS 0, so every removed
-# command silently SUCCEEDS doing nothing. `make doctor` on a broken fleet
-# would print nothing and return 0, which reads as a pass. Deleted names
-# must fail loudly with "No rule to make target".
-# Disable make's built-in suffix rules.
-#
-# Without this, `make vessel-ctl` matches the built-in `%: %.sh` rule against
-# vessel-ctl.sh, runs `cat vessel-ctl.sh >vessel-ctl`, and EXITS 0 — a
-# documented-but-nonexistent target silently succeeding, which is the same
-# defect class as the .PHONY names that used to print "Nothing to be done".
-# Verified: deleting the passthrough absorber alone does NOT close it; the bare
-# form `make -n vessel-ctl` still copies the script and returns 0.
+# The verdict level `up` waits for. usable = a baked known-answer goal reached.
+WAIT_LEVEL ?= usable
+
+# SHUTDOWN IS A DRAIN, NOT A KILL. Matches the manifest's stop_grace_period:
+# vessels drain for up to 240s, SurrealDB inherits systemd's 90s default to flush
+# RocksDB. Lower it deliberately, never by forgetting.
+STOP_TIMEOUT ?= 360
+
+# ── Deprecated inputs ─────────────────────────────────────────────────────────
+# Each maps onto the manifest's own names and is exported so compose interpolates
+# it. A deprecated name that contradicts its replacement stops here, before any
+# container is touched; the image's configuration funnel re-checks the names it
+# receives and refuses a partial or conflicting set before its first write.
+ifneq ($(strip $(LIVE_NAME)),)
+$(warning [substrate] LIVE_NAME is deprecated; SUBSTRATE_NAME replaces it (container <name>-live, volumes <name>-workspace, <name>-surreal))
+ifneq ($(strip $(SUBSTRATE_CONTAINER)),)
+ifneq ($(strip $(SUBSTRATE_CONTAINER)),$(strip $(LIVE_NAME)))
+$(error [substrate] LIVE_NAME=$(LIVE_NAME) conflicts with SUBSTRATE_CONTAINER=$(SUBSTRATE_CONTAINER); set only SUBSTRATE_NAME)
+endif
+endif
+# LIVE_NAME=<n> names volumes <n>-workspace/<n>-surreal (substrate-live: the
+# default fleet's), so the only SUBSTRATE_NAME consistent with it is <n> itself
+# (substrate, for substrate-live). The image refuses any other pair at boot —
+# after compose has created the container — so it stops here instead.
+ifneq ($(strip $(SUBSTRATE_NAME)),)
+ifneq ($(strip $(SUBSTRATE_NAME)),$(strip $(LIVE_NAME)))
+ifneq ($(strip $(SUBSTRATE_NAME))|$(strip $(LIVE_NAME)),substrate|substrate-live)
+$(error [substrate] LIVE_NAME=$(LIVE_NAME) conflicts with SUBSTRATE_NAME=$(SUBSTRATE_NAME); set only SUBSTRATE_NAME)
+endif
+endif
+endif
+export SUBSTRATE_CONTAINER := $(strip $(LIVE_NAME))
+ifeq ($(strip $(LIVE_NAME)),substrate-live)
+export WORKSPACE_VOLUME := substrate-workspace
+export SURREAL_VOLUME   := substrate-surreal
+else
+export WORKSPACE_VOLUME := $(strip $(LIVE_NAME))-workspace
+export SURREAL_VOLUME   := $(strip $(LIVE_NAME))-surreal
+endif
+endif
+
+ifneq ($(strip $(PORT_OFFSET)),)
+ifneq ($(strip $(PORT_OFFSET)),0)
+$(warning [substrate] PORT_OFFSET is deprecated; SUBSTRATE_PORT_PREFIX replaces it (PORT_OFFSET=n is prefix 18 + n/1000))
+ifeq ($(shell echo '$(PORT_OFFSET)' | grep -Ex '[0-9]+'),)
+$(error [substrate] PORT_OFFSET='$(PORT_OFFSET)' is not a non-negative integer)
+endif
+ifneq ($(shell expr '$(PORT_OFFSET)' % 1000),0)
+$(error [substrate] PORT_OFFSET=$(PORT_OFFSET) is not a multiple of 1000; set SUBSTRATE_PORT_PREFIX instead (prefix 24 publishes 24080, 24100, ...))
+endif
+_PREFIX_FROM_OFFSET := $(shell expr 18 + '$(PORT_OFFSET)' / 1000)
+ifneq ($(strip $(SUBSTRATE_PORT_PREFIX)),)
+ifneq ($(strip $(SUBSTRATE_PORT_PREFIX)),$(_PREFIX_FROM_OFFSET))
+$(error [substrate] PORT_OFFSET=$(PORT_OFFSET) (prefix $(_PREFIX_FROM_OFFSET)) conflicts with SUBSTRATE_PORT_PREFIX=$(SUBSTRATE_PORT_PREFIX); set only SUBSTRATE_PORT_PREFIX)
+endif
+endif
+export SUBSTRATE_PORT_PREFIX := $(_PREFIX_FROM_OFFSET)
+endif
+endif
+
+# A TAG given on the make command line builds a different local tag, so compose
+# must run that tag. Otherwise the local build tag IS the manifest's default image
+# and nothing needs to be passed.
+ifeq ($(origin TAG),command line)
+export SUBSTRATE_IMAGE := $(IMAGE):$(TAG)
+endif
+
+# ── Name resolution: ask the manifest ─────────────────────────────────────────
+# Sets C (container), WS and SR (the two volume names) from `compose config`, the
+# manifest's own interpolation of the current inputs. `cfg_env NAME` reads the
+# value the manifest will pass for NAME.
+RESOLVE = cfg=$$($(COMPOSE_IN_ROOT) config 2>/dev/null) || { \
+	    echo "[substrate] ERROR: '$(COMPOSE) config' failed in $(REPO_ROOT)." >&2; \
+	    echo "[substrate]   Run it there to see why (compose missing, or a malformed .env)." >&2; exit 1; }; \
+	  C=$$(printf '%s\n' "$$cfg" | sed -nE 's/^ +container_name: *//p' | head -1 | tr -d "\"'"); \
+	  WS=$$(printf '%s\n' "$$cfg" | awk '/^  substrate-workspace:/{f=1;next} f&&/^ +name:/{sub(/^ +name: */,"");print;exit}' | tr -d "\"'"); \
+	  SR=$$(printf '%s\n' "$$cfg" | awk '/^  substrate-surreal:/{f=1;next} f&&/^ +name:/{sub(/^ +name: */,"");print;exit}' | tr -d "\"'"); \
+	  cfg_env() { printf '%s\n' "$$cfg" | sed -nE "s/^ +$$1: *//p" | head -1 | sed -E "s/^'(.*)'$$/\1/; s/^\"(.*)\"$$/\1/"; }; \
+	  [ -n "$$C" ] || { echo "[substrate] ERROR: the manifest named no container_name." >&2; exit 1; }; \
+	  _ln='$(strip $(LIVE_NAME))'; _sn=$$(cfg_env SUBSTRATE_NAME); \
+	  if [ -n "$$_ln" ] && [ -n "$$_sn" ] && [ "$$_sn" != "$$_ln" ] && [ "$$_sn|$$_ln" != "substrate|substrate-live" ]; then \
+	    echo "[substrate] ERROR: LIVE_NAME=$$_ln conflicts with SUBSTRATE_NAME=$$_sn (from $(REPO_ROOT)/.env); set only SUBSTRATE_NAME. Nothing was touched." >&2; exit 1; \
+	  fi
+
+# A container the manifest created carries its `substrate.launch-manifest` label.
+# One without it — a plain `docker run`, or another compose file that happens to
+# use the same container or project name — was not created from this manifest,
+# and `up` must never let compose recreate it by accident.
+MANIFEST_OWNED = [ "$$(docker inspect -f '{{index .Config.Labels "substrate.launch-manifest"}}' "$$C" 2>/dev/null)" = "1" ]
+
+# "<container-port> <host-port>" per port: MANIFEST_PORTS from `compose config`
+# (the short `- [ip:]host:container` form podman-compose prints, or the long
+# form's `target:`/`published:` keys docker compose prints); CONTAINER_PORTS from
+# the bindings an existing container (running or stopped) was created with.
+MANIFEST_PORTS = printf '%s\n' "$$cfg" | tr -d "\"'" | awk ' \
+	  /^ +- / { t = "" } \
+	  /^ +- ([0-9.]+:)?[0-9]+:[0-9]+(\/[a-z]+)?$$/ { s = $$0; sub(/^ +- /, "", s); sub(/\/[a-z]+$$/, "", s); \
+	    n = split(s, a, ":"); print a[n], a[n-1]; next } \
+	  /^ +target: / { t = $$2 } \
+	  /^ +published: / { print t, $$2 }' | sort -u
+CONTAINER_PORTS = { docker inspect -f '{{range $$k, $$v := .HostConfig.PortBindings}}{{range $$v}}{{$$k}} {{.HostPort}}{{println}}{{end}}{{end}}' "$$C" 2>/dev/null || true; } \
+	  | awk 'NF == 2 { sub(/\/[a-z]+$$/, "", $$1); print $$1, $$2 }' | sort -u
+
+# Busy-port preflight: every host port the manifest publishes must be free,
+# apart from the ones $$C holds now, BEFORE the old container is removed — a bind
+# failure after the removal leaves the node down. A check that cannot run is not
+# a pass: without ss, netstat or lsof it refuses unless SKIP_PORT_CHECK=1.
+PORT_PREFLIGHT = held=$$($(CONTAINER_PORTS) | awk '{print $$2}'); \
+	  if command -v ss >/dev/null 2>&1; then listening=$$(ss -ltnH 2>/dev/null | awk '{print $$4}'); \
+	  elif command -v netstat >/dev/null 2>&1; then listening=$$(netstat -ltn 2>/dev/null | awk 'NR > 2 {print $$4}'); \
+	  elif command -v lsof >/dev/null 2>&1; then listening=$$(lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null | awk 'NR > 1 {print $$9}'); \
+	  elif [ "$(SKIP_PORT_CHECK)" = "1" ]; then listening=""; echo "[recreate] WARNING: no ss, netstat or lsof — only ports other containers publish were checked (SKIP_PORT_CHECK=1)" >&2; \
+	  else echo "[recreate] ERROR: no ss, netstat or lsof here, so the host-port check cannot run; install one or pass SKIP_PORT_CHECK=1. Nothing was stopped." >&2; exit 1; fi; \
+	  listening="$$listening $$(docker ps --format '{{.Names}} {{.Ports}}' 2>/dev/null | awk -v c="$$C" '$$1 != c' | grep -oE ':[0-9]+->' | tr -d ':>-')"; \
+	  listening=$$(printf '%s\n' $$listening | sed -E 's/.*[:.]([0-9]+)$$/\1/' | grep -E '^[0-9]+$$' | sort -u); \
+	  busy=""; for p in $$($(MANIFEST_PORTS) | awk '{print $$2}'); do \
+	    if printf '%s\n' $$listening | grep -qx "$$p" && ! printf '%s\n' $$held | grep -qx "$$p"; then busy="$$busy $$p"; fi; \
+	  done; \
+	  if [ -n "$$busy" ]; then echo "[recreate] ERROR: host port(s) already held by something else:$$busy. Set SUBSTRATE_PORT_PREFIX (or RELAY_PORT) in $(REPO_ROOT)/.env. Nothing was stopped." >&2; exit 1; fi
+
+# Launch identity that decides what a container IS: role, selection and anchor.
+# Adopting a container made outside the manifest re-creates it from the manifest's
+# inputs; any of these that differ would silently turn a spoke into a standalone
+# (or the reverse), so `recreate` refuses on a difference unless ADOPT=1.
+IDENTITY_NAMES := PROFILE ENABLED_ROLES ENABLED_VESSELS ENABLED_EXTRA_VESSELS DISABLED_VESSELS \
+                  DISCOVERY_ENDPOINT HUB_DISCOVERY_URL ACTIVITY_API_ENDPOINT IDENTITY_VESSEL_URL \
+                  PEER_DISCOVERY_ENDPOINTS FED_SUBSTRATE_ID RELAY_MULTIADDR PUBLIC_IP
+
+# Only REAL targets belong here. A deleted target left in .PHONY does not error —
+# make reports "Nothing to be done" and EXITS 0, so a removed command silently
+# SUCCEEDS doing nothing. Deleted names must fail loudly with "No rule to make
+# target".
+.PHONY: build build-obsidian clean clean-live image migrate-state-to-volumes preflight-submodules recreate stop stop-live up validate-build verdict
+
+# Disable make's built-in suffix rules. Without this, `make vessel-ctl` matches
+# the built-in `%: %.sh` rule against vessel-ctl.sh, runs `cat vessel-ctl.sh
+# >vessel-ctl`, and EXITS 0 — a nonexistent target silently succeeding.
 .SUFFIXES:
 
-.PHONY: build build-obsidian clean clean-live clone-vessel-repos migrate-state-to-volumes preflight-submodules recreate run run-detach run-live run-live-obsidian stop stop-live ui-bridge-down ui-bridge-status ui-bridge-up up validate-build
-
+# Submodule preflight: the Dockerfile `COPY repos/...` stages fail minutes into
+# the build if the git submodules were never checked out. Fail fast with the
+# remedy instead.
 preflight-submodules:
 	@if [ ! -f $(REPO_ROOT)/repos/discovery-vessel/package.json ]; then \
 	  echo "[preflight] ERROR: git submodules not checked out (repos/discovery-vessel/package.json missing)."; \
@@ -322,16 +200,13 @@ preflight-submodules:
 	fi
 
 # Fast preflight: assert every containerized vessel is build-valid (file: deps
-# resolve, frozen lockfiles are in sync, imports match dependency keys). Catches
-# the namespace-migration breakages that only surface inside the image build.
+# resolve, frozen lockfiles are in sync, imports match dependency keys).
 validate-build: preflight-submodules
 	@command -v bun >/dev/null 2>&1 || { \
 	  echo "[preflight] ERROR: bun is not on PATH — 'make build' needs it on the HOST."; \
 	  echo "[preflight] This step runs before docker, so the image's own bun cannot serve it."; \
 	  echo "[preflight] remedy: install bun (curl -fsSL https://bun.sh/install | bash),"; \
 	  echo "[preflight]          or add an existing one to PATH, then re-run."; \
-	  echo "[preflight] Without this the build died as 'bun: No such file or directory' (exit 127),"; \
-	  echo "[preflight] which names the symptom and not the remedy."; \
 	  exit 1; \
 	}
 	bun $(CURDIR)/validate-build.ts
@@ -345,7 +220,8 @@ build: validate-build
 	    $(CURDIR)/../..
 
 # substrate-obsidian flavour: base fleet + in-container Obsidian desktop served
-# over noVNC. Tagged ghcr.io/avigopal/substrate:obsidian.
+# over noVNC. It runs from the same manifest: SUBSTRATE_IMAGE=$(IMAGE):obsidian,
+# with the noVNC port and shm size in a compose override file.
 OBSIDIAN_TAG := obsidian
 build-obsidian:
 	docker build -f $(CURDIR)/../../Dockerfile.substrate \
@@ -353,637 +229,190 @@ build-obsidian:
 	    -t $(IMAGE):$(OBSIDIAN_TAG) \
 	    $(CURDIR)/../..
 
-run:
-	@if [ -z "$${ANTHROPIC_API_KEY}" ] && [ -z "$${OPENAI_API_KEY}" ]; then \
-	  echo "[substrate] ERROR: No LLM provider key found."; \
-	  echo "  Anthropic:  make run ANTHROPIC_API_KEY=sk-ant-..."; \
-	  echo "  OpenAI:     make run OPENAI_API_KEY=sk-..."; \
-	  echo "  Ollama:     make run OPENAI_API_KEY=ollama OPENAI_BASE_URL=http://localhost:11434/v1 LLM_DEFAULT_MODEL=llama3.2"; \
-	  echo "  Or set .providers.anthropic.apiKey / .providers.openai.apiKey in ~/.metabob/config.json"; \
-	  exit 1; \
+# Build only when asked, or when the local tag is absent.
+image:
+	@if [ "$(REBUILD)" = "1" ]; then $(MAKE) --no-print-directory build; \
+	elif ! docker image inspect $(IMAGE):$(TAG) >/dev/null 2>&1; then \
+	  echo "[up] $(IMAGE):$(TAG) is not present locally — building it (REBUILD=1 forces a rebuild)"; \
+	  $(MAKE) --no-print-directory build; \
 	fi
-	@mkdir -p $(WORKSPACE)
-	docker run --rm -it \
-	    --name substrate \
-	    --privileged \
-	    -e ANTHROPIC_API_KEY \
-	    -e OPENAI_API_KEY \
-	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
-	    -e CHUTES_API_KEY \
-	    -e OPENROUTER_API_KEY \
-	    -e GOOGLE_API_KEY \
-	    -e GROQ_API_KEY \
-	    -e MISTRAL_API_KEY \
-	    -e RUNPOD_API_KEY \
-	    -e RUNPOD_ENDPOINT_ID="$(RUNPOD_ENDPOINT_ID)" \
-	    -e RUNPOD_MODELS="$(RUNPOD_MODELS)" \
-	    -e RUNPOD_COST_PER_MTOK="$(RUNPOD_COST_PER_MTOK)" \
-	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
-	    -e GITHUB_TOKEN \
-	    -p 8080:8080 \
-	    -p 8090:8090 \
-	    -v $(WORKSPACE):/workspace \
-	    --tmpfs /run \
-	    --tmpfs /run/lock \
-	    $(IMAGE):$(TAG)
 
-run-detach:
-	@if [ -z "$${ANTHROPIC_API_KEY}" ] && [ -z "$${OPENAI_API_KEY}" ]; then \
-	  echo "[substrate] ERROR: No LLM provider key found."; \
-	  echo "  Anthropic:  make run-detach ANTHROPIC_API_KEY=sk-ant-..."; \
-	  echo "  OpenAI:     make run-detach OPENAI_API_KEY=sk-..."; \
-	  echo "  Or set .providers.anthropic.apiKey / .providers.openai.apiKey in ~/.metabob/config.json"; \
-	  exit 1; \
+# ── up: build-if-asked -> compose up -d -> verdict -> connect ─────────────────
+# A container the manifest did not create (a plain `docker run`, or another
+# compose project) is never replaced here: it is left running, or started if it
+# was stopped, and `make recreate` is how it is adopted into the manifest.
+up: image
+	@if [ -f '$(CURDIR)/.env' ] && ! cmp -s '$(CURDIR)/.env' '$(REPO_ROOT)/.env'; then \
+	  echo "[up] WARNING: $(CURDIR)/.env is NOT read — compose runs in $(REPO_ROOT) and reads $(REPO_ROOT)/.env only. Move its inputs there." >&2; \
 	fi
-	@mkdir -p $(WORKSPACE)
-	docker run -d \
-	    --name substrate \
-	    --privileged \
-	    -e ANTHROPIC_API_KEY \
-	    -e OPENAI_API_KEY \
-	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
-	    -e CHUTES_API_KEY \
-	    -e OPENROUTER_API_KEY \
-	    -e GOOGLE_API_KEY \
-	    -e GROQ_API_KEY \
-	    -e MISTRAL_API_KEY \
-	    -e RUNPOD_API_KEY \
-	    -e RUNPOD_ENDPOINT_ID="$(RUNPOD_ENDPOINT_ID)" \
-	    -e RUNPOD_MODELS="$(RUNPOD_MODELS)" \
-	    -e RUNPOD_COST_PER_MTOK="$(RUNPOD_COST_PER_MTOK)" \
-	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
-	    -e GITHUB_TOKEN \
-	    -p 8080:8080 \
-	    -p 8090:8090 \
-	    -v $(WORKSPACE):/workspace \
-	    --tmpfs /run \
-	    --tmpfs /run/lock \
-	    $(IMAGE):$(TAG)
+	@$(RESOLVE); \
+	if docker inspect "$$C" >/dev/null 2>&1 && ! $(MANIFEST_OWNED); then \
+	  if [ "$$(docker inspect -f '{{.State.Running}}' "$$C")" = "true" ]; then \
+	    echo "[up] $$C is running but was not created from the manifest — leaving it untouched."; \
+	  else \
+	    echo "[up] $$C exists, stopped, and was not created from the manifest — starting it unchanged."; \
+	    docker start "$$C" >/dev/null; \
+	  fi; \
+	  echo "[up]   Its settings are the ones it was created with; .env and command-line inputs do not reach it."; \
+	  echo "[up]   Adopt it (drain, remove, recreate from the manifest; volumes $$WS + $$SR kept): make -C scripts/substrate recreate"; \
+	else \
+	  echo "[up] $(COMPOSE) up -d  (container $$C, volumes $$WS + $$SR)"; \
+	  $(COMPOSE_IN_ROOT) up -d || exit $$?; \
+	fi
+	@$(MAKE) --no-print-directory verdict
 
-# ── One-command launch (convenience wrapper over the self-contained contract) ─
-# The SYSTEM's launch contract is just `docker run` — seeding
-# (identity-seeder.service), readiness (substrate-ready.service + image
-# HEALTHCHECK) and diagnosis (substrate-doctor) all run IN-CONTAINER; no host
-# step below is load-bearing. Equivalent raw contract on any docker host:
+# The verdict gates `up`. `unknown` never counts as a pass: an image without the
+# verdict command cannot say whether the fleet reached a goal, so `up` fails and
+# says so rather than reporting a readiness it never measured.
+verdict:
+	@$(RESOLVE); \
+	if ! docker exec "$$C" sh -c 'command -v substrate-status' >/dev/null 2>&1; then \
+	  echo "[up] ERROR: the image in $$C has no substrate-status — the readiness verdict is unknown, and unknown never passes." >&2; \
+	  echo "[up]   Pull or build an image that ships it (REBUILD=1). The legacy matrix is still available," >&2; \
+	  echo "[up]   as a diagnostic only: docker exec $$C substrate-ready" >&2; \
+	  exit 1; \
+	fi; \
+	docker exec "$$C" substrate-status --wait $(WAIT_LEVEL) || exit $$?; \
+	if [ "$(CONNECT_WRITE)" = "1" ]; then \
+	  dest="$${METABOB_CONFIG_PATH:-$$HOME/.metabob/config.json}"; \
+	  mkdir -p "$$(dirname "$$dest")"; \
+	  docker exec "$$C" substrate-connect > "$$dest.new" || { rm -f "$$dest.new"; exit 1; }; \
+	  if [ -f "$$dest" ]; then cp "$$dest" "$$dest.bak"; echo "[up] previous client config kept at $$dest.bak"; fi; \
+	  mv "$$dest.new" "$$dest"; echo "[up] client config written to $$dest"; \
+	else \
+	  docker exec "$$C" substrate-connect || exit $$?; \
+	  echo "[up] To install the client config above:  docker exec $$C substrate-connect > ~/.metabob/config.json"; \
+	  echo "[up]   (or re-run with CONNECT_WRITE=1; METABOB_CONFIG_PATH overrides the location)"; \
+	fi
+
+# Replace the container from the manifest, keeping both named volumes.
 #
-#   docker run -d --privileged --name substrate-live \
-#     -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
-#     -e ANTHROPIC_API_KEY=sk-ant-... \
-#     -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18210:8210 \
-#     -p 18250:8250 -p 18260:8260 -p 18270:8270 \
-#     --tmpfs /run --tmpfs /run/lock ghcr.io/avigopal/substrate:dev
-#
-# `make up` wraps that with: build-if-missing, start-or-create, readiness wait,
-# old-image seed fallback, IDE config, doctor. A stopped container can be resumed
-# only without new launch settings; use `make recreate` to apply changed settings
-# while retaining its named volumes. REBUILD=1 forces an image build.
-up:
-	@docker image inspect $(IMAGE):$(TAG) >/dev/null 2>&1 || $(MAKE) build
-	@if [ "$(REBUILD)" = "1" ]; then $(MAKE) build; fi
-	@if docker ps --format '{{.Names}}' | grep -qx "$(LIVE_NAME)"; then \
-	  echo "[up] $(LIVE_NAME) already running"; \
-	elif docker ps -a --format '{{.Names}}' | grep -qx "$(LIVE_NAME)"; then \
-	  if [ -n "$(LAUNCH_OVERRIDES)" ]; then \
-	    echo "[up] ERROR: $(LIVE_NAME) is stopped and supplied launch settings would be ignored."; \
-	    echo "[up] Recreate it without deleting named volumes:"; \
-	    echo "  make -C scripts/substrate recreate <the same settings>"; \
+# What must not change silently on a recreate, compared before anything is
+# stopped, each refused unless ADOPT=1 accepts it:
+#   - the launch identity (role, selection, anchor) of a container the manifest
+#     did not create — a recreate that forgets a spoke's role brings it back as
+#     a standalone that looks healthier than before;
+#   - a host port any container port is published on now — a fleet made with a
+#     port offset would otherwise come back on the default block;
+#   - the volumes mounted at /workspace and /var/lib/surrealdb — other names
+#     mean a fresh, empty learning state.
+# Then the host ports the new container publishes must be free (PORT_PREFLIGHT),
+# so a bind failure cannot follow the removal.
+recreate: image
+	@$(RESOLVE); \
+	if docker inspect "$$C" >/dev/null 2>&1; then \
+	  diffs=""; \
+	  if ! $(MANIFEST_OWNED); then \
+	    old=$$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$$C"); \
+	    for n in $(IDENTITY_NAMES); do \
+	      o=$$(printf '%s\n' "$$old" | sed -n "s/^$$n=//p" | head -1); m=$$(cfg_env "$$n"); \
+	      [ "$$o" = "$$m" ] || diffs="$$diffs\n  $$n: container='$$o' manifest='$$m'"; \
+	    done; \
+	  fi; \
+	  new_ports=$$($(MANIFEST_PORTS)); \
+	  for cport_hp in $$($(CONTAINER_PORTS) | tr ' ' '='); do \
+	    cport=$${cport_hp%%=*}; hp=$${cport_hp#*=}; \
+	    nhp=$$(printf '%s\n' "$$new_ports" | awk -v c="$$cport" '$$1 == c {print $$2; exit}'); \
+	    [ "$$hp" = "$$nhp" ] || diffs="$$diffs\n  port $$cport: container publishes host $$hp, manifest would publish '$$nhp'"; \
+	  done; \
+	  _dp=$$($(CONTAINER_PORTS) | awk '$$1 == "8100" {print $$2; exit}'); \
+	  case "$$_dp" in *100) [ "$$_dp" = "$$(printf '%s\n' "$$new_ports" | awk '$$1 == "8100" {print $$2; exit}')" ] \
+	    || diffs="$$diffs\n  (SUBSTRATE_PORT_PREFIX=$${_dp%100} reproduces this container's port block; RELAY_PORT keeps a relay port)";; esac; \
+	  for pair in /workspace=$$WS /var/lib/surrealdb=$$SR; do \
+	    dst=$${pair%%=*}; want=$${pair#*=}; \
+	    have=$$(docker inspect -f "{{range .Mounts}}{{if eq .Destination \"$$dst\"}}{{.Name}}{{end}}{{end}}" "$$C"); \
+	    [ "$$have" = "$$want" ] || diffs="$$diffs\n  volume at $$dst: container='$$have' manifest='$$want'"; \
+	  done; \
+	  if [ -n "$$diffs" ] && [ "$(ADOPT)" != "1" ]; then \
+	    echo "[recreate] ERROR: recreating $$C from the manifest would change it:" >&2; \
+	    printf '%b\n' "$$diffs" >&2; \
+	    echo "[recreate]   Put the container's values in $(REPO_ROOT)/.env (or on this command line), or pass ADOPT=1 to accept the change." >&2; \
+	    echo "[recreate]   Nothing was stopped or removed." >&2; \
 	    exit 1; \
 	  fi; \
-	  echo "[up] starting existing container $(LIVE_NAME)"; docker start $(LIVE_NAME) >/dev/null; \
+	  [ -z "$$diffs" ] || { echo "[recreate] ADOPT=1 — accepting:" >&2; printf '%b\n' "$$diffs" >&2; }; \
+	  $(PORT_PREFLIGHT); \
+	  echo "[recreate] draining $$C (up to $(STOP_TIMEOUT)s); volumes $$WS + $$SR are kept"; \
+	  docker stop -t $(STOP_TIMEOUT) "$$C" >/dev/null || exit $$?; \
+	  docker rm "$$C" >/dev/null || exit $$?; \
 	else \
-	  $(MAKE) run-live; \
-	fi
-	@echo "[up] waiting for fleet readiness (up to 240s)..."
-	@CONTAINER=$(LIVE_NAME) $(CURDIR)/substrate-ready.sh --timeout 240 || true
-	@if [ "$(LIVE_NAME)" = "substrate-live" ]; then \
-	  $(CURDIR)/configure-local.sh >/dev/null 2>&1 && echo "[up] ~/.metabob/config.json updated (operator IDE convenience)" || echo "[up] configure-local skipped"; \
-	else \
-	  echo "[up] secondary container ($(LIVE_NAME)) — leaving ~/.metabob/config.json untouched"; \
-	fi
-	@CONTAINER=$(LIVE_NAME) $(CURDIR)/substrate-doctor.sh
+	  $(PORT_PREFLIGHT); \
+	fi; \
+	$(COMPOSE_IN_ROOT) up -d --force-recreate || exit $$?
+	@$(MAKE) --no-print-directory verdict
 
-# Replace the container while preserving its named workspace and datastore
-# volumes, so supplied Docker launch settings are applied deterministically.
-# RECREATE MUST CARRY THE OLD CONTAINER'S IDENTITY FORWARD, OR IT CHANGES WHAT THE BOX IS.
-#
-# ENABLED_ROLES / DISABLED_VESSELS / PROFILE are launch-time arguments (`ENABLED_ROLES ?=`)
-# that nothing persists. They decide which units this deployment runs — i.e. whether it is a
-# hub, a spoke, or a full standalone. `recreate` removes the container and re-runs, so any of
-# them not re-supplied on the command line is silently dropped and the box comes back as the
-# documented default: every unit enabled.
-#
-# Measured 2026-08-18. A `make recreate` issued to add a port mapping converted a SPOKE into a
-# standalone substrate: ENABLED_ROLES went from "spoke" to empty, apply-inventory stopped
-# masking the store roles, surrealdb and activity-api un-masked, goal-host's endpoints moved
-# from the hub to 127.0.0.1, and federation-transport went inactive. The fleet looked HEALTHIER
-# afterwards — a local store answering in 8ms instead of a saturated hub — which is precisely
-# why the change went unnoticed. An unintended reconfiguration that improves the symptoms is
-# the hardest kind to catch.
-#
-# `up` already refuses to start a stopped container when LAUNCH_OVERRIDES would be ignored.
-# The same hazard on the recreate path had no guard at all: the settings were not ignored, they
-# were forgotten. So read them off the container BEFORE removing it and pass them back through.
-# Explicit values on the command line still win, so an intentional role change works as before.
-# The names `recreate` must carry forward. DERIVED FROM ONE LIST, deliberately:
-# an earlier version hand-enumerated three of them while LAUNCH_OVERRIDES
-# declared fifteen, and the two drifted. What that cost: recreating a SPOKE kept
-# ENABLED_ROLES=spoke (which masks surrealdb and activity-api) while silently
-# resetting DISCOVERY_ENDPOINT to loopback — leaving the container with no local
-# trace store AND no hub, looking healthy. PORT_OFFSET is included because port
-# mappings are immutable container config that a bare `up` cannot restore.
-RECREATE_CARRY := API_KEY METABOB_API_KEY DISCOVERY_ENDPOINT HUB_DISCOVERY_URL \
-                  FED_SUBSTRATE_ID RELAY_MULTIADDR ENABLED_ROLES ENABLED_VESSELS \
-                  DISABLED_VESSELS ENABLED_EXTRA_VESSELS PROFILE \
-                  PEER_DISCOVERY_ENDPOINTS ACTIVITY_API_ENDPOINT \
-                  IDENTITY_VESSEL_URL IDENTITY_ENDPOINT SURREALDB_URL REDIS_URL
-
-# Carried SEPARATELY, because for these the EMPTY value is the meaningful one.
-#
-# A UI-only spoke is launched with ANTHROPIC_API_KEY="" on purpose — it resolves
-# models on its hub and is documented to need no provider key. `recreate` then
-# refilled it from the operator's own ~/.metabob/config.json (via the `?=` at the
-# top of this file) and the real 108-char key landed in the spoke's PERSISTED
-# secrets file, surviving every later recreate. Measured on a UI-only spoke:
-# ANTHROPIC_API_KEY len=0 before recreate, len=108 after.
-#
-# The loop above cannot carry these, because it skips empty values — so the
-# deliberate blank looks identical to "not set" and the fallback wins. These are
-# carried by PRESENCE instead: if the old container had the variable at all, its
-# value is carried forward verbatim, empty included.
-RECREATE_CARRY_PRESENT := ANTHROPIC_API_KEY OPENAI_API_KEY OPENAI_BASE_URL \
-                          LLM_DEFAULT_MODEL CHUTES_API_KEY OPENROUTER_API_KEY \
-                          GOOGLE_API_KEY GROQ_API_KEY MISTRAL_API_KEY RUNPOD_API_KEY
-
-recreate:
-	@if docker ps -a --format '{{.Names}}' | grep -qx "$(LIVE_NAME)"; then \
-	  ENVDUMP=$$(docker inspect $(LIVE_NAME) --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null); \
-	  CARRY=""; SHOWN=""; \
-	  for _v in $(RECREATE_CARRY); do \
-	    _prev=$$(printf '%s\n' "$$ENVDUMP" | sed -n "s/^$$_v=//p" | head -1); \
-	    _cur=$$(eval printf '%s' "\$${$$_v}"); \
-	    _use="$${_cur:-$$_prev}"; \
-	    if [ -n "$$_use" ]; then \
-	      CARRY="$$CARRY $$_v=$$_use"; \
-	      case "$$_v" in *KEY*|*SECRET*|*PAT*) SHOWN="$$SHOWN $$_v=<set>";; *) SHOWN="$$SHOWN $$_v=$$_use";; esac; \
-	    fi; \
-	  done; \
-	  for _v in $(RECREATE_CARRY_PRESENT); do \
-	    _cur=$$(eval printf '%s' "\$${$$_v}"); \
-	    if [ -n "$$_cur" ]; then \
-	      CARRY="$$CARRY $$_v=$$_cur"; SHOWN="$$SHOWN $$_v=<set>"; \
-	    elif printf '%s\n' "$$ENVDUMP" | grep -q "^$$_v="; then \
-	      _prev=$$(printf '%s\n' "$$ENVDUMP" | sed -n "s/^$$_v=//p" | head -1); \
-	      CARRY="$$CARRY $$_v=$$_prev"; \
-	      if [ -n "$$_prev" ]; then SHOWN="$$SHOWN $$_v=<set>"; else SHOWN="$$SHOWN $$_v=<empty,carried>"; fi; \
-	    fi; \
-	  done; \
-	  PREV_8080=$$(docker inspect $(LIVE_NAME) --format '{{range $$p, $$c := .HostConfig.PortBindings}}{{$$p}}={{range $$c}}{{.HostPort}}{{end}} {{end}}' 2>/dev/null | tr ' ' '\n' | sed -n 's#^8080/tcp=##p' | head -1); \
-	  PREV_OFFSET=""; \
-	  if [ -n "$$PREV_8080" ]; then PREV_OFFSET=$$(expr $$PREV_8080 - 8080 - 10000 2>/dev/null || echo ""); fi; \
-	  if [ -n "$(PORT_OFFSET)" ] && [ "$(PORT_OFFSET)" != "0" ] && [ -n "$$PREV_OFFSET" ] && [ "$(PORT_OFFSET)" != "$$PREV_OFFSET" ]; then \
-	    echo "[recreate] ERROR: PORT_OFFSET=$(PORT_OFFSET) conflicts with the existing container's mapping (offset $$PREV_OFFSET, host 8080 -> $$PREV_8080)."; \
-	    echo "[recreate]   Port mappings are immutable container config. To change the offset, remove the container first:"; \
-	    echo "[recreate]     docker rm -f $(LIVE_NAME)    # volumes, and therefore learning state, are preserved"; \
-	    exit 1; \
-	  fi; \
-	  USE_OFFSET="$(PORT_OFFSET)"; \
-	  if [ "$$USE_OFFSET" = "0" ] && [ -n "$$PREV_OFFSET" ]; then USE_OFFSET="$$PREV_OFFSET"; fi; \
-	  if [ -n "$$SHOWN" ]; then echo "[recreate] carrying forward launch identity:$$SHOWN PORT_OFFSET=$$USE_OFFSET"; \
-	  else echo "[recreate] previous container carried no launch identity — recreating as the default (all units enabled)"; fi; \
-	  echo "[recreate] removing $(LIVE_NAME); named volumes are preserved"; \
-	  docker rm -f $(LIVE_NAME) >/dev/null; \
-	  $(MAKE) up PORT_OFFSET="$$USE_OFFSET" $$CARRY; \
-	else \
-	  $(MAKE) up; \
-	fi
-
-# Fleet readiness matrix (host wrapper; in-container: /usr/local/bin/substrate-ready)
-# Deep diagnosis incl. surreal-auth drift, seeded-key validity, hollow registry,
-# failed units. `docker exec <container> substrate-doctor` also dispatches a goal end-to-end.
-# ── substrate-live container (persistent, host ports 18080/18090/18100) ─────
-# Primary target for all local development iteration.
-# Run once; use `vessel-ctl sync|restart <vessel>` to hot-reload vessels without rebuild.
-
-run-live:
-	@if [ -z "$(FEDERATED_SPOKE)" ] && [ -z "$${ANTHROPIC_API_KEY}" ] && [ -z "$${OPENAI_API_KEY}" ]; then \
-	  echo "[substrate] ERROR: No LLM provider key found. Provide at least one:"; \
-	  echo "  Anthropic:  make run-live ANTHROPIC_API_KEY=sk-ant-..."; \
-	  echo "  OpenAI:     make run-live OPENAI_API_KEY=sk-..."; \
-	  echo "  Ollama:     make run-live OPENAI_API_KEY=ollama OPENAI_BASE_URL=http://localhost:11434/v1 LLM_DEFAULT_MODEL=llama3.2"; \
-	  echo "  Or set .providers.anthropic.apiKey / .providers.openai.apiKey in ~/.metabob/config.json"; \
-	  exit 1; \
-	fi
-	@docker volume create $(SURREAL_VOLUME) >/dev/null
-	@docker volume create $(WORKSPACE_VOLUME) >/dev/null
-	docker run -d \
-	    --name $(LIVE_NAME) \
-	    --privileged \
-	    -e ANTHROPIC_API_KEY \
-	    -e OPENAI_API_KEY \
-	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
-	    -e CHUTES_API_KEY \
-	    -e OPENROUTER_API_KEY \
-	    -e GOOGLE_API_KEY \
-	    -e GROQ_API_KEY \
-	    -e MISTRAL_API_KEY \
-	    -e RUNPOD_API_KEY \
-	    -e RUNPOD_ENDPOINT_ID="$(RUNPOD_ENDPOINT_ID)" \
-	    -e RUNPOD_MODELS="$(RUNPOD_MODELS)" \
-	    -e RUNPOD_COST_PER_MTOK="$(RUNPOD_COST_PER_MTOK)" \
-	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
-	    -e GITHUB_TOKEN \
-	    -e SUBSTRATE_GIT_PAT \
-	    -e SUBSTRATE_REPO_OWNER="$(SUBSTRATE_REPO_OWNER)" \
-	    -e API_KEY_SECRET \
-	    -e ALLOW_INSECURE_API_KEY_SECRET="$(ALLOW_INSECURE_API_KEY_SECRET)" \
-	    -e SUBSTRATE_ROOT="/workspace/git/super-repo" \
-	    -e ENABLED_ROLES="$(ENABLED_ROLES)" \
-	    -e ENABLED_VESSELS="$(ENABLED_VESSELS)" \
-	    -e DISABLED_VESSELS="$(DISABLED_VESSELS)" \
-	    -e ENABLED_EXTRA_VESSELS="$(ENABLED_EXTRA_VESSELS)" \
-	    -e PROFILE="$(PROFILE)" \
-	    -e PEER_DISCOVERY_ENDPOINTS="$(PEER_DISCOVERY_ENDPOINTS)" \
-	    -e DISCOVERY_ENDPOINT="$(CONTAINER_DISCOVERY_ENDPOINT)" \
-	    -e HUB_DISCOVERY_URL="$(HUB_DISCOVERY_URL)" \
-	    -e FED_SUBSTRATE_ID="$(FED_SUBSTRATE_ID)" \
-	    -e RELAY_MULTIADDR="$(RELAY_MULTIADDR)" \
-	    -e ACTIVITY_API_ENDPOINT="$(ACTIVITY_API_ENDPOINT)" \
-	    -e METABOB_ENDPOINT="$(METABOB_ENDPOINT)" \
-	    -e IDENTITY_VESSEL_URL="$(IDENTITY_VESSEL_URL)" \
-	    -e IDENTITY_ENDPOINT="$(IDENTITY_ENDPOINT)" \
-	    -e SURREALDB_URL="$(SURREALDB_URL)" \
-	    -e REDIS_URL="$(REDIS_URL)" \
-	    -e METABOB_API_KEY \
-	    -e MITOSIS_DIRECT_PUSH="$(MITOSIS_DIRECT_PUSH)" \
-	    -e ROUTE_EDIT_INTENT_TO_COMPOSE="$(ROUTE_EDIT_INTENT_TO_COMPOSE)" \
-	    -e PUBLIC_IP="$(PUBLIC_IP)" \
-	    -e API_KEY_SECRET_PREVIOUS="$(API_KEY_SECRET_PREVIOUS)" \
-	    -e VLLM_BASE_URL="$(VLLM_BASE_URL)" \
-	    -e VLLM_MODELS="$(VLLM_MODELS)" \
-	    -e VLLM_API_KEY="$(VLLM_API_KEY)" \
-	    -e LLM_ARMS='$(LLM_ARMS)' \
-	    -e VLLM_ENDPOINTS='$(VLLM_ENDPOINTS)' \
-	    -p $(call hp,18080):8080 \
-	    -p $(call hp,18090):8090 \
-	    -p $(call hp,18100):8100 \
-	    -p $(call hp,18101):8101 \
-	    -p $(call hp,18210):8210 \
-	    -p $(call hp,18250):8250 \
-	    -p $(call hp,18260):8260 \
-	    -p $(call hp,18270):8270 \
-	    -p $(call hp,18310):8310 \
-	    -v $(WORKSPACE_VOLUME):/workspace \
-	    -v $(SURREAL_VOLUME):/var/lib/surrealdb \
-	    --tmpfs /run \
-	    --tmpfs /run/lock \
-	    $(IMAGE):$(TAG)
-	@echo "[run-live] $(LIVE_NAME) started — activity-api on :$(call hp,18080), development-vessel on :$(call hp,18090), discovery-vessel on :$(call hp,18100), goal-host-vessel on :$(call hp,18210), analysis-vessel on :$(call hp,18250), concept-db on :$(call hp,18260), stateful-ui-vessel on :$(call hp,18270), human-surface-vessel on :$(call hp,18310)"
-	@echo "[run-live] State on named volumes $(SURREAL_VOLUME) + $(WORKSPACE_VOLUME) (host-detached). NOTHING from the host is bind-mounted: an edit to repos/ on the host does not reach this container. Code arrives by git — see substrate-pull-sync and 'vessel-ctl sync <vessel>'."
-	@echo "[run-live] Internal secrets auto-generated and persisted to workspace/.substrate-secrets"
-	@echo "[run-live] Identity + templates seed in-container at boot; gate on: docker exec $(LIVE_NAME) substrate-key whoami"
-
-# Same as run-live but boots the substrate-obsidian image: the full fleet PLUS
-# an in-container Obsidian desktop, with the GUI exposed over noVNC on host
-# :16080. Reuses the substrate-live container name so every sync-/restart-/
-# health- target keeps working unchanged. Requires `make build-obsidian` first.
-run-live-obsidian:
-	@if [ -z "$(FEDERATED_SPOKE)" ] && [ -z "$${ANTHROPIC_API_KEY}" ] && [ -z "$${OPENAI_API_KEY}" ]; then \
-	  echo "[substrate] ERROR: No LLM provider key found. Provide at least one:"; \
-	  echo "  Anthropic:  make run-live-obsidian ANTHROPIC_API_KEY=sk-ant-..."; \
-	  echo "  OpenAI:     make run-live-obsidian OPENAI_API_KEY=sk-..."; \
-	  echo "  Or set .providers.anthropic.apiKey / .providers.openai.apiKey in ~/.metabob/config.json"; \
-	  exit 1; \
-	fi
-	@docker volume create $(SURREAL_VOLUME) >/dev/null
-	@docker volume create $(WORKSPACE_VOLUME) >/dev/null
-	docker run -d \
-	    --name $(LIVE_NAME) \
-	    --privileged \
-	    -e ANTHROPIC_API_KEY \
-	    -e OPENAI_API_KEY \
-	    -e OPENAI_BASE_URL="$(OPENAI_BASE_URL)" \
-	    -e CHUTES_API_KEY \
-	    -e OPENROUTER_API_KEY \
-	    -e GOOGLE_API_KEY \
-	    -e GROQ_API_KEY \
-	    -e MISTRAL_API_KEY \
-	    -e RUNPOD_API_KEY \
-	    -e RUNPOD_ENDPOINT_ID="$(RUNPOD_ENDPOINT_ID)" \
-	    -e RUNPOD_MODELS="$(RUNPOD_MODELS)" \
-	    -e RUNPOD_COST_PER_MTOK="$(RUNPOD_COST_PER_MTOK)" \
-	    -e LLM_DEFAULT_MODEL="$(LLM_DEFAULT_MODEL)" \
-	    -e GITHUB_TOKEN \
-	    -e SUBSTRATE_GIT_PAT \
-	    -e SUBSTRATE_REPO_OWNER="$(SUBSTRATE_REPO_OWNER)" \
-	    -e API_KEY_SECRET \
-	    -e ALLOW_INSECURE_API_KEY_SECRET="$(ALLOW_INSECURE_API_KEY_SECRET)" \
-	    -e SUBSTRATE_ROOT="/workspace/git/super-repo" \
-	    -e ENABLED_ROLES="$(ENABLED_ROLES)" \
-	    -e ENABLED_VESSELS="$(ENABLED_VESSELS)" \
-	    -e DISABLED_VESSELS="$(DISABLED_VESSELS)" \
-	    -e ENABLED_EXTRA_VESSELS="$(ENABLED_EXTRA_VESSELS)" \
-	    -e PROFILE="$(PROFILE)" \
-	    -e PEER_DISCOVERY_ENDPOINTS="$(PEER_DISCOVERY_ENDPOINTS)" \
-	    -e DISCOVERY_ENDPOINT="$(CONTAINER_DISCOVERY_ENDPOINT)" \
-	    -e HUB_DISCOVERY_URL="$(HUB_DISCOVERY_URL)" \
-	    -e FED_SUBSTRATE_ID="$(FED_SUBSTRATE_ID)" \
-	    -e RELAY_MULTIADDR="$(RELAY_MULTIADDR)" \
-	    -e ACTIVITY_API_ENDPOINT="$(ACTIVITY_API_ENDPOINT)" \
-	    -e METABOB_ENDPOINT="$(METABOB_ENDPOINT)" \
-	    -e IDENTITY_VESSEL_URL="$(IDENTITY_VESSEL_URL)" \
-	    -e IDENTITY_ENDPOINT="$(IDENTITY_ENDPOINT)" \
-	    -e SURREALDB_URL="$(SURREALDB_URL)" \
-	    -e REDIS_URL="$(REDIS_URL)" \
-	    -e METABOB_API_KEY \
-	    -e MITOSIS_DIRECT_PUSH="$(MITOSIS_DIRECT_PUSH)" \
-	    -e ROUTE_EDIT_INTENT_TO_COMPOSE="$(ROUTE_EDIT_INTENT_TO_COMPOSE)" \
-	    -e PUBLIC_IP="$(PUBLIC_IP)" \
-	    -e API_KEY_SECRET_PREVIOUS="$(API_KEY_SECRET_PREVIOUS)" \
-	    -e VLLM_BASE_URL="$(VLLM_BASE_URL)" \
-	    -e VLLM_MODELS="$(VLLM_MODELS)" \
-	    -e VLLM_API_KEY="$(VLLM_API_KEY)" \
-	    -e LLM_ARMS='$(LLM_ARMS)' \
-	    -e VLLM_ENDPOINTS='$(VLLM_ENDPOINTS)' \
-	    -p 18080:8080 \
-	    -p 18090:8090 \
-	    -p 18100:8100 \
-	    -p 18101:8101 \
-	    -p 18210:8210 \
-	    -p 18250:8250 \
-	    -p 18260:8260 \
-	    -p 18270:8270 \
-	    -p 16080:6080 \
-	    -v $(WORKSPACE_VOLUME):/workspace \
-	    -v $(SURREAL_VOLUME):/var/lib/surrealdb \
-	    --tmpfs /run \
-	    --tmpfs /run/lock \
-	    --shm-size=512m \
-	    $(IMAGE):$(OBSIDIAN_TAG)
-	@echo "[run-live-obsidian] substrate-live (obsidian flavour) started."
-	@echo "[run-live-obsidian] Fleet ports as run-live; Obsidian GUI at http://localhost:16080/vnc.html"
-	@echo "[run-live-obsidian] Identity + templates seed in-container at boot; gate on: docker exec $(LIVE_NAME) substrate-key whoami"
-
-# One-time migration: copy legacy HOST state dirs into the named volumes. Run
-# this ONCE when moving an existing host-bind substrate onto detached volumes.
-# Stop the container first so SurrealDB has flushed; the host dirs are left
-# intact as a backup. Idempotent re-run wipes + recopies the volumes.
+# One-time migration: copy legacy HOST state dirs (./workspace, ./surreal-data
+# beside this file) into the named volumes the manifest resolves. Stop the
+# container first so SurrealDB has flushed; the host dirs are left intact as a
+# backup. Idempotent re-run wipes + recopies the volumes.
+WORKSPACE    := $(CURDIR)/workspace
+SURREAL_DATA := $(CURDIR)/surreal-data
 migrate-state-to-volumes:
-	@docker volume create $(SURREAL_VOLUME) >/dev/null
-	@docker volume create $(WORKSPACE_VOLUME) >/dev/null
-	@if docker ps --filter name=$(LIVE_NAME) --filter status=running -q | grep -q .; then \
-	  echo "[migrate] ERROR: stop $(LIVE_NAME) first (docker stop -t 30 $(LIVE_NAME)) so SurrealDB flushes"; exit 1; \
-	fi
+	@$(RESOLVE); \
+	if [ "$$(docker inspect -f '{{.State.Running}}' "$$C" 2>/dev/null)" = "true" ]; then \
+	  echo "[migrate] ERROR: stop $$C first (make -C scripts/substrate stop) so SurrealDB flushes"; exit 1; \
+	fi; \
+	docker volume create "$$SR" >/dev/null; docker volume create "$$WS" >/dev/null; \
 	docker run --rm --entrypoint bash \
 	    -v $(SURREAL_DATA):/src-surreal:ro \
 	    -v $(WORKSPACE):/src-workspace:ro \
-	    -v $(SURREAL_VOLUME):/dst-surreal \
-	    -v $(WORKSPACE_VOLUME):/dst-workspace \
+	    -v "$$SR":/dst-surreal \
+	    -v "$$WS":/dst-workspace \
 	    $(IMAGE):$(TAG) -c 'set -e; \
 	      find /dst-surreal -mindepth 1 -delete; find /dst-workspace -mindepth 1 -delete; \
 	      cp -a /src-surreal/. /dst-surreal/; cp -a /src-workspace/. /dst-workspace/; \
 	      echo "[migrate] surreal CURRENT=$$(cat /dst-surreal/data.db/CURRENT 2>/dev/null)"; \
 	      echo "[migrate] done — host dirs left intact as backup"'
 
-# Seed identity and API keys into a freshly started substrate-live container.
-# ── Key / token surface ─────────────────────────────────────────────────────
-# Key issuance runs INSIDE the container (identity-vessel is internal-only):
+# "Before restarting anything, check nothing is mid-flight": goal-host advertises
+# `in_flight` on /health, so report it; the drain below does the waiting. This is
+# a REPORT, not a gate — a busy substrate must still be stoppable.
 #
-#   docker exec <container> substrate-key show
-#   docker exec <container> substrate-key issue my-peer read,write 30
-#   docker exec <container> substrate-key list
-#   docker exec <container> substrate-key revoke <key-id>
+# Ask the engine which host port this container publishes for goal-host rather
+# than computing it: `docker port` knows the true mapping whichever way the
+# container was created.
 #
-# The make wrappers these six variables fed were deleted; the variables were
-# read by nothing else.
-
-# Every probe must describe the instance named by LIVE_NAME. The four
-# host-port probes below hardcoded 18080/18100/18090/18250, honouring neither
-# LIVE_NAME nor PORT_OFFSET — so on a host running more than one substrate this
-# target reported whichever fleet happened to own 18080, mixed line-by-line with
-# `docker exec $(LIVE_NAME)` output from the correct one. A health report naming
-# the wrong instance is worse than no report. $(call hp,…) applies PORT_OFFSET
-# exactly as run-live does when it publishes these same ports.
-# Autonomy KPI view. MUST run ON THE HOST. The collector writes the metrics JSONL
-# into the /workspace docker VOLUME (host filesystem can't see it directly), so
-# the viewer reaches it via `docker exec <container> cat /workspace/...`. That
-# docker-exec read only works where `docker` exists — i.e. the HOST. Running it
-# IN-CONTAINER (the prior approach) silently failed: `docker` isn't installed in
-# the container, the volume read errored, and the viewer fell back to the STALE
-# host bind-mount cache — falsely reporting STALE / 850m-old data while the
-# collector was healthy (root-caused 2026-06-19). The viewer is a pure renderer
-# (no DB/API creds needed); SUBSTRATE_CONTAINER points it at the live volume.
-# READ-ONLY performance view: honest reach (verification-label corpus) vs
-# self-reported reach (goal-host dispatches), the law-7 gap triple with the
-# expiry-vs-repair close decomposition, and a topology census (shapes, vessel
-# units, federated LLM arms, graded templates). Host-run: it curls the
-# host-mapped ports and shells into the container for the unit census.
-# SHUTDOWN IS A DRAIN, NOT A KILL.
-#
-# `docker stop` defaults to a 10-SECOND grace period, then SIGKILL. The fleet is
-# configured for far longer: goal-host and development-vessel drain for up to
-# 240s (GOAL_HOST_DRAIN_MS / VESSEL_DRAIN_MS), and surrealdb.service declares no
-# TimeoutStopSec at all, so it inherits systemd's 90s default to flush RocksDB.
-#
-# A bare `docker stop` therefore kills mid-flight work AND cuts the datastore off
-# before it flushes — on a volume that holds every trace, posterior, and gap the
-# system has ever learned. This file's own migrate-state-to-volumes target has
-# always said `docker stop -t 30`; the stop target it points operators at did not.
-#
-# STOP_TIMEOUT covers the longest drain (240s) plus systemd's own shutdown of the
-# remaining units. Lower it deliberately, never by forgetting.
-STOP_TIMEOUT ?= 300
-
-# "Before restarting anything, check nothing is mid-flight" was an instruction with
-# no way to carry it out: nothing reported in-flight work, so the operator guessed.
-# goal-host has advertised `in_flight` on /health all along — precisely so a
-# restarter does not have to. Report it; the drain below then does the waiting.
-# This is a REPORT, not a gate: a busy substrate must still be stoppable, and the
-# dispatch host is almost never idle under the autonomous loop.
-#
-# ASK DOCKER WHICH PORT THIS CONTAINER PUBLISHES; do not compute it. The probe
-# used $(call hp,18210), i.e. 18210 + PORT_OFFSET — correct only for a fleet this
-# Makefile launched. A COMPOSE fleet sets SUBSTRATE_CONTAINER and the nine *_PORT
-# variables and never sets PORT_OFFSET, so `make stop LIVE_NAME=<their-name>`
-# probed :18210 — ANOTHER fleet's goal-host, in the common case production's. It
-# then reported that fleet's in-flight count while draining this one: a number
-# that looks like an answer and describes a different machine. `docker port`
-# knows the true mapping regardless of which lane created it; the computed value
-# stays as the fallback for a container that is already gone.
+# `docker stop -t`, not `compose stop`: it drains a container the manifest did
+# not create exactly as it drains one it did.
 stop-live:
-	@_gp=$$(docker port $(LIVE_NAME) 8210/tcp 2>/dev/null | head -1 | sed -nE 's/.*:([0-9]+)$$/\1/p'); \
-	  [ -n "$$_gp" ] || _gp=$(call hp,18210); \
-	  _inflight=$$(curl -s --max-time 5 http://localhost:$$_gp/health 2>/dev/null \
+	@$(RESOLVE); \
+	_gp=$$(docker port "$$C" 8210/tcp 2>/dev/null | head -1 | sed -nE 's/.*:([0-9]+)$$/\1/p'); \
+	_inflight=""; \
+	[ -n "$$_gp" ] && _inflight=$$(curl -s --max-time 5 http://localhost:$$_gp/health 2>/dev/null \
 	    | sed -nE 's/.*"in_flight":([0-9]+).*/\1/p'); \
-	  if [ -n "$$_inflight" ] && [ "$$_inflight" -gt 0 ] 2>/dev/null; then \
-	    echo "[stop] $$_inflight execution(s) in flight — the drain below waits for them"; \
-	  elif [ -n "$$_inflight" ]; then \
-	    echo "[stop] nothing in flight"; \
-	  else \
-	    echo "[stop] could not read in-flight count (goal-host not answering) — proceeding"; \
-	  fi
-	@echo "[stop] draining $(LIVE_NAME) (up to $(STOP_TIMEOUT)s — vessels drain to 240s, SurrealDB flushes RocksDB)"
-	docker stop -t $(STOP_TIMEOUT) $(LIVE_NAME)
-	@echo "[stop] $(LIVE_NAME) stopped; named volumes retained"
+	if [ -n "$$_inflight" ] && [ "$$_inflight" -gt 0 ] 2>/dev/null; then \
+	  echo "[stop] $$_inflight execution(s) in flight — the drain below waits for them"; \
+	elif [ -n "$$_inflight" ]; then \
+	  echo "[stop] nothing in flight"; \
+	else \
+	  echo "[stop] could not read in-flight count (goal-host not answering) — proceeding"; \
+	fi; \
+	echo "[stop] draining $$C (up to $(STOP_TIMEOUT)s — vessels drain to 240s, SurrealDB flushes RocksDB)"; \
+	docker stop -t $(STOP_TIMEOUT) "$$C" || exit $$?; \
+	echo "[stop] $$C stopped; volumes $$WS + $$SR retained"
 
 # Removes the CONTAINER, never the volumes. `docker rm -f` sends SIGKILL with no
-# grace period whatsoever, so a running container must be drained first rather
-# than force-removed — the -f is for a container that is already stopped.
+# grace period, so a running container is drained first.
+#
+# NO $(MAKE) IN THIS RECIPE, deliberately. GNU make EXECUTES any recipe line that
+# references $(MAKE) even under `make -n`, so a sub-make call sharing a logical
+# line with `docker rm -f` turns a dry run into a SIGKILL of the running fleet.
+# The drain is therefore inline. The same rule holds for every recipe here: a
+# line that mutates a container never mentions $(MAKE).
 clean-live:
-	@if [ "$$(docker inspect -f '{{.State.Running}}' $(LIVE_NAME) 2>/dev/null)" = "true" ]; then \
-	  echo "[clean] $(LIVE_NAME) is running — draining first (docker rm -f would SIGKILL it)"; \
-	  $(MAKE) --no-print-directory stop-live; \
-	fi
-	docker rm -f $(LIVE_NAME) 2>/dev/null || true
-	@echo "[clean] container removed; volumes $(SURREAL_VOLUME) + $(WORKSPACE_VOLUME) retained"
+	@$(RESOLVE); \
+	if [ "$$(docker inspect -f '{{.State.Running}}' "$$C" 2>/dev/null)" = "true" ]; then \
+	  echo "[clean] $$C is running — draining first, up to $(STOP_TIMEOUT)s (docker rm -f would SIGKILL it)"; \
+	  docker stop -t $(STOP_TIMEOUT) "$$C" >/dev/null || exit $$?; \
+	fi; \
+	docker rm -f "$$C" 2>/dev/null || true; \
+	echo "[clean] container removed; volumes $$WS + $$SR retained"
 
-# ── ephemeral dev container (port 8080) ─────────────────────────────────────
-
-# Seed operator-side memory files into the substrate's memory store.
-# Run once the fleet is seeded and ready (`substrate-key whoami` reports valid);
-# there is no `seed-live` target — seeding happens in-container at boot.
-# Pass DEV_VESSEL_ENDPOINT to write via HTTP
-# (requires substrate running); omit to write directly to workspace/memory/.
-# health targets the substrate-live container (18080 ports).
 stop: stop-live
 
 clean: clean-live
 
-# ── Substrate-only iteration (substrate-live container) ──────────────────────
-
-# Sync development-vessel source into the running container then restart it.
-# Sync local-tools-vessel source into the running container then restart it.
-# Sync llm-resolver-vessel source into the running container then restart it.
-# Sync goal-host-vessel source into the running container then restart it.
-# Copies the whole src tree, not a single file. This target used to cp only
-# src/index.ts, so every module beside it was silently left at its old version
-# while the target still printed "source synced" and the restart reported
-# active. Measured 2026-08-09: a fix landed in src/goal-file-resolution.ts
-# deployed green and was verifiably absent from the live tree afterwards.
-# `docker cp <dir>/. <dest>` copies directory CONTENTS, so new files appear and
-# existing ones are overwritten in place.
-# Sync light-dispatch-vessel into the running container then restart it.
-# Stateless oneshot dispatcher (openspec 2026-06-03 Stage 2.B). Port 8250.
-# Sync boredom-vessel source into the running container then trigger a manual run.
-# Sync ribosome-vessel source into the running container then restart it.
-# Sync concept-db source into the running container then restart it.
-# `docker cp <src>/src <container>:/vessels/x/src` nests into x/src/src when
-# the destination exists. Wipe the target first so the copy lands cleanly.
-# Sync stateful-ui-vessel source into the running container.
-# Also installs the systemd unit on first sync (idempotent).
-# human-surface-vessel — the human-facing surface, port 8310 (host 18310).
-#
-# !! CLOBBER WARNING — READ BEFORE USING sync-/restart-* ON ANY VESSEL !!
-# `sync-` docker-cp's from the OPERATOR'S working tree. It has been observed
-# DESTROYING substrate-authored commits: the substrate lands a commit in its own
-# in-container clone, the operator runs `make restart-<vessel>`, and the copy
-# from the host tree overwrites the vessel's source with the operator's older
-# state. The SAFE source is the container's own clone, /workspace/git/vessels/
-# (or /workspace/git/super-repo for $REPO_ROOT-workdir vessels — which is where
-# this vessel's manifest workdir points). For a vessel-ctl-installed instance the
-# safe refresh is an in-container ff-pull of that clone plus a unit restart, never
-# a docker cp:
-#     docker exec $(LIVE_NAME) git -C /workspace/git/super-repo pull --ff-only
-#     docker exec $(LIVE_NAME) systemctl restart human-surface-vessel.service
-# Use the targets below only for a host-side edit you know is newer, and
-# md5-compare against the container copy first.
-#
-# Modelled on stateful-ui-vessel (NOT analysis-vessel): human-surface-vessel is
-# not baked into the image, so /vessels/human-surface-vessel does not exist and
-# a src-only copy would leave the unit with no package.json and no deps.
-# The static unit is installed only if nothing already occupies
-# /etc/systemd/system — a vessel-ctl install renders its own unit there (pointing
-# at the super-repo clone per the manifest workdir), and overwriting it would
-# silently repoint the running vessel at the docker-cp'd tree instead.
-# obsidian-vessel: the Obsidian plugin built IN the substrate (substrate-obsidian
-# flavour only). Dev loop is edit → sync → rebuild → reload Obsidian. The vault's
-# plugin files are symlinks to /vessels/obsidian-vessel build artifacts, so a
-# rebuild updates them in place. Restarting obsidian-desktop reloads the plugin
-# WITHOUT tearing down the display (obsidian-xorg), so the noVNC session survives.
-# `docker cp <src>/src <container>:/vessels/x/src` nests when the dest exists —
-# wipe first so the copy lands cleanly.
-# -----------------------------------------------------------------------------
-
-# -----------------------------------------------------------------------------
-# UI bridge: alpine/socat sidecar that publishes host port 18270 to the
-# substrate-live container's internal port 8270 (stateful-ui-vessel).
-#
-# Why a sidecar instead of `docker run -p`? Adding a published port to a
-# running container requires recreation, which destroys the in-memory state
-# the substrate has been accumulating. The sidecar attaches to the docker
-# bridge network, reaches substrate-live by its bridge IP, and publishes
-# 18270 to the host — without touching substrate-live itself.
-#
-# Runs with --restart unless-stopped, so it survives docker daemon restarts.
-# Operator opens http://localhost:18270/ — the substrate's face.
-BRIDGE_NAME := stateful-ui-bridge
-
-ui-bridge-up:
-	@docker rm -f $(BRIDGE_NAME) >/dev/null 2>&1 || true
-	@CONTAINER_IP=$$(docker inspect $(LIVE_NAME) --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'); \
-	if [ -z "$$CONTAINER_IP" ]; then echo "[ui-bridge-up] ERROR: substrate-live has no bridge IP — is it running?"; exit 1; fi; \
-	echo "[ui-bridge-up] target: $$CONTAINER_IP:8270"; \
-	docker run -d --name $(BRIDGE_NAME) --restart unless-stopped \
-	  -p 18270:18270 alpine/socat:latest \
-	  TCP-LISTEN:18270,reuseaddr,fork TCP:$$CONTAINER_IP:8270 >/dev/null
-	@sleep 2
-	@docker ps --filter name=$(BRIDGE_NAME) --format '[ui-bridge-up] {{.Names}} {{.Status}} {{.Ports}}'
-	@curl -sf --max-time 4 http://localhost:18270/health >/dev/null && echo "[ui-bridge-up] http://localhost:18270/ reachable" || echo "[ui-bridge-up] WARNING: bridge up but vessel not reachable"
-
-ui-bridge-down:
-	@docker rm -f $(BRIDGE_NAME) >/dev/null 2>&1 && echo "[ui-bridge-down] removed" || echo "[ui-bridge-down] not running"
-
-ui-bridge-status:
-	@docker ps -a --filter name=$(BRIDGE_NAME) --format '{{.Names}}\t{{.Status}}\t{{.Ports}}' || echo "(none)"
-	@curl -sf --max-time 3 http://localhost:18270/health 2>&1 | head -1 || echo "[ui-bridge-status] vessel unreachable via host:18270"
-
-# -----------------------------------------------------------------------------
-# Writable vessel repo clones for substrate-managed publication.
-#
-# The substrate publishes artifacts (commits + PRs) via the
-# `publish-substrate-authored-artifact` activity. The activity's variables
-# (`cwd`, `owner`, `repo`, `target_path`, …) are vessel-agnostic — only the
-# defaults change per repo. To author against an individual vessel repo
-# (e.g. AviGopal/development-vessel), the substrate needs a writable clone
-# with an HTTPS-with-token remote at /workspace/git/vessels/<vessel>/.
-#
-# These clones live under WORKSPACE (bind-mounted to /workspace inside the
-# substrate container) and are gitignored from the super-repo. Run once per
-# operator machine; re-running is a no-op if the clone already exists.
-#
-# Add a new vessel by appending another `if [ ! -d … ]; then git clone …; fi`
-# block below. Only vessels with their OWN GitHub remote need a clone;
-# vessels that live directly in the super-repo (e.g. goal-host-vessel,
-# llm-resolver-vessel) are reached via /workspace/git/super-repo/repos/<v>/.
-# -----------------------------------------------------------------------------
-# Fork override: set SUBSTRATE_REPO_OWNER=<your-org> to clone vessels from your fork.
-SUBSTRATE_REPO_OWNER ?= AviGopal
-clone-vessel-repos:
-	@command -v gh >/dev/null 2>&1 || { echo "ERROR: gh CLI required"; exit 1; }
-	@mkdir -p $(WORKSPACE)/git/vessels
-	@GH_TOKEN_VAL=$$(gh auth token); \
-	if [ ! -d $(WORKSPACE)/git/vessels/development-vessel/.git ]; then \
-	  echo "[clone] development-vessel → $(WORKSPACE)/git/vessels/development-vessel"; \
-	  git clone --no-recurse-submodules \
-	    "https://x-access-token:$$GH_TOKEN_VAL@github.com/$(SUBSTRATE_REPO_OWNER)/development-vessel.git" \
-	    $(WORKSPACE)/git/vessels/development-vessel; \
-	  git -C $(WORKSPACE)/git/vessels/development-vessel config user.email "substrate-live@substrate.local"; \
-	  git -C $(WORKSPACE)/git/vessels/development-vessel config user.name "substrate-live"; \
-	else \
-	  echo "[clone] development-vessel already present (skipping)"; \
-	fi
-	@echo "[clone] vessel-repo clones ready; substrate can publish via cwd=/workspace/git/vessels/<vessel>"
-
-# ── General vessel install / uninstall (driven by vessels.manifest.json) ──────
-# One method to add/remove a DYNAMIC vessel (federation, future) from the substrate
-# container, reusing the unit-install pattern + the single secrets place (secrets.env.sh).
-# Operator-runnable AND activity-dispatchable (the substrate calls vessel-ctl.sh via
-# local-tools-vessel's shell resolver). Works against any --container (basis for remote).
-# There is NO `make vessel-ctl` passthrough. Run the tool in the container:
+# There is NO `make vessel-ctl` passthrough, no sync-/restart-/logs- targets and
+# no UI bridge: run the in-image tools against the container by name, e.g.
 #   docker exec <container> vessel-ctl <verb> [args]
-# The absorber that used to live here advertised `vessel-ctl enable`, a verb
-# vessel-ctl does not have — and the command never reached it anyway: make's
-# built-in `%: %.sh` rule matched vessel-ctl.sh, copied it, and exited 0. See
-# the .SUFFIXES: below, which is what actually closes that.
-
-# Sync a dynamic vessel: ff-pull its in-container clone, mirror into the live
-# runtime, restart (all in-container; no host source involved).
+# The stateful UI is published by the manifest; it needs no sidecar.

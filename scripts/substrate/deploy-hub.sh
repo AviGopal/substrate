@@ -1,210 +1,78 @@
 #!/usr/bin/env bash
-# deploy-hub.sh — deploy the shared-namespace HUB to a VM by PULLING the repo and
-# building THERE (no local image ship). The hub runs the control plane + store + relay
-# (ENABLED_ROLES=hub → surrealdb, valkey, discovery, identity, activity-api, seed, infra),
-# seeds the single shared org (so every spoke that registers with a hub-issued key lands
-# in the same namespace), and stands up the libp2p relay for NAT traversal.
+# deploy-hub.sh — DEPRECATED. Use deploy.sh with PROFILE=hub in the .env (setup
+# commands: README § Installation).
 #
-# WHY pull-the-repo: dogfoods the 3-step bootstrap (clone → secrets → start), avoids a
-# multi-GB `docker save | ssh` transfer, and lets the VM self-update with `git pull`.
+# Kept so an existing invocation keeps working. It translates this script's
+# inputs into an .env describing the same hub it always launched, and runs
+# deploy.sh with it. The image is now PULLED on the target instead of built from
+# a clone there; REPO, BRANCH and GITHUB_PAT therefore have no effect.
 #
-# Usage:
-#   GITHUB_PAT=ghp_xxx  ANTHROPIC_API_KEY=sk-ant-xxx  SSH_KEY=~/.ssh/your_deploy_key \
-#     bash deploy-hub.sh root@<vm-ip> <vm-public-ip>
+#   deploy-hub.sh user@host <public-ip>
+#   == deploy.sh --env-file <generated .env> user@host
 #
-# Use a PLACEHOLDER here, never a real address. This example named a specific
-# droplet that has since been decommissioned — its HTTP plane is gone while its
-# libp2p daemon still accepts TCP, so a reader who pasted it verbatim reached a
-# host that half-answers, which is far harder to diagnose than one that refuses.
+# The same hub: the `hub` role group plus the six compute vessels this script
+# always ran (ENABLED_ROLES=hub + ENABLED_EXTRA_VESSELS — not PROFILE=hub, whose
+# composition also carries the autonomy role and boredom), and the same six
+# ports published beyond the host — 18080, 18090, 18100, 18101, 18210, 18260.
+# The manifest's other ports are published on 127.0.0.1 only.
 #
-# To point the clone at a fork: REPO=<owner>/substrate. SUBSTRATE_REPO_OWNER does
-# NOT reach this script — it is read by gen-env, the Makefile, vessel-ctl and
-# setup-git-push, and governs a RUNNING container's vessel clones.
+# The relay: a relay still running as a host process (managed unit or
+# ~/relay.log) keeps being the one relay — its multiaddr is threaded in and the
+# in-container relay is disabled. With none found, the relay runs in the
+# container on host port 30333, where spokes already dial; deploy.sh then reports
+# 30333 as newly published by the container, and ACCEPT_PORTS=1 accepts that.
 #
-# The PAT needs `repo` scope (to clone the private super-repo + submodules). It is used
-# transiently on the VM (insteadOf rewrite for the clone) and scrubbed from git config
-# after. VM needs ssh access; git + docker are auto-installed if absent.
+# Environment inputs: the provider keys, IMAGE, FED_SUBSTRATE_ID (default
+# hub-<public-ip>, as before), RELAY_MULTIADDR, ENABLED_EXTRA_VESSELS,
+# SUBSTRATE_ROOT, API_KEY_SECRET, ALLOW_INSECURE_API_KEY_SECRET, SSH_KEY;
+# ADOPT=1 and ACCEPT_PORTS=1 pass deploy.sh's --adopt and --accept-ports after
+# you have read the difference it reports. ~/.metabob is no longer consulted.
 set -euo pipefail
-
-TARGET="${1:?usage: deploy-hub.sh user@vm-ip public-ip}"
-PUBLIC_IP="${2:?usage: deploy-hub.sh user@vm-ip public-ip}"
-REPO="${REPO:-AviGopal/substrate}"
-BRANCH="${BRANCH:-dev}"
-# OPTIONAL. This was a hard `:?` stop justified as "needed to clone the private
-# repo", but the super-repo and every submodule are PUBLIC — verified with an
-# anonymous `git ls-remote`, and the README says so too. The gate turned a
-# public-repo deploy into a credential hunt for a credential it does not need.
-# Still honoured when supplied: a PAT raises the GitHub API rate limit and is
-# required if you point REPO at a fork that IS private.
-PAT="${GITHUB_PAT:-}"
-[ -n "$PAT" ] || echo "[deploy-hub] no GITHUB_PAT — cloning $REPO anonymously (it is public). Set GITHUB_PAT only for a private fork or to raise the rate limit."
-ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-$(jq -r '.providers.anthropic.apiKey // empty' "$HOME/.metabob/config.json" 2>/dev/null || true)}"
-[ -n "$ANTHROPIC_API_KEY" ] || { echo "ERROR: set ANTHROPIC_API_KEY"; exit 1; }
-SSH_KEY="${SSH_KEY:-}"
-SSH=(ssh -o StrictHostKeyChecking=accept-new); [ -n "$SSH_KEY" ] && SSH+=(-i "$SSH_KEY")
-# The image tag `make build` produces (Makefile: IMAGE:=ghcr.io/avigopal/substrate,
-# TAG:=dev). Build and run MUST reference the same tag, so it flows through to the
-# remote docker run below.
-IMAGE="${IMAGE:-ghcr.io/avigopal/substrate:dev}"
-
-echo "[deploy-hub] pulling $REPO@$BRANCH on $TARGET and building the hub there…"
-"${SSH[@]}" "$TARGET" \
-  PAT="$PAT" REPO="$REPO" BRANCH="$BRANCH" IMAGE="$IMAGE" \
-  ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" PUBLIC_IP="$PUBLIC_IP" \
-  'bash -s' <<'REMOTE'
-set -euo pipefail
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq || true
-command -v git    >/dev/null || apt-get install -y -qq git
-command -v make   >/dev/null || apt-get install -y -qq make          # fresh Ubuntu lacks make
-command -v jq     >/dev/null || apt-get install -y -qq jq
-command -v unzip  >/dev/null || apt-get install -y -qq unzip          # bun's installer needs unzip
-command -v docker >/dev/null || { curl -fsSL https://get.docker.com | sh; }
-
-# Token rewrite so HTTPS-form submodule URLs (https://github.com/...) clone with the PAT.
-# (The git@github.com: rewrite is kept as a harmless fallback for any legacy SSH-form URL.)
-REW="url.https://x-access-token:${PAT}@github.com/.insteadOf"
-# Idempotency: a prior run that died before its scrub leaves multiple values;
-# plain `git config` then fails "cannot overwrite multiple values". Clear first
-# (also scrub any stale-token variant of the same key). Runs unconditionally, so
-# a previous PAT-bearing deploy is scrubbed even on a PAT-less one.
-git config --global --unset-all "$REW" 2>/dev/null || true
-for k in $(git config --global --list --name-only 2>/dev/null | grep -iE "^url\..*x-access-token.*\.insteadof$" | sort -u); do
-  git config --global --unset-all "$k" 2>/dev/null || true
+TARGET="${1:?usage: deploy-hub.sh user@host <public-ip>   (deprecated — see deploy.sh --help)}"
+PUBLIC_IP="${2:?usage: deploy-hub.sh user@host <public-ip>}"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+[ -n "${ANTHROPIC_API_KEY:-}" ] || { echo "[deploy-hub] ERROR: set ANTHROPIC_API_KEY (as this script always required; ~/.metabob is no longer read)" >&2; exit 1; }
+for gone in REPO BRANCH GITHUB_PAT; do
+  [ -z "${!gone:-}" ] || echo "[deploy-hub] note: $gone is ignored — the hub now runs the published image" >&2
 done
-# Only install the rewrite when a token exists. With PAT empty the key becomes
-# `x-access-token:@github.com`, which rewrites EVERY github URL to a
-# credential-shaped one carrying no credential — turning working anonymous
-# clones into authentication failures.
-if [ -n "${PAT:-}" ]; then
-  git config --global "$REW" "git@github.com:"
-  git config --global --add "$REW" "https://github.com/"
+SSH=(ssh -o StrictHostKeyChecking=accept-new); [ -n "${SSH_KEY:-}" ] && SSH+=(-i "$SSH_KEY")
+if [ -z "${RELAY_MULTIADDR:-}" ]; then
+  RELAY_MULTIADDR="$("${SSH[@]}" "$TARGET" \
+    '{ journalctl -u federation-relay.service --no-pager 2>/dev/null; cat "$HOME/relay.log" 2>/dev/null; } \
+       | grep -oE "/ip4/[^ \"]*p2p/[A-Za-z0-9]+" | tail -1' </dev/null 2>/dev/null || true)"
 fi
-
-DIR="$HOME/substrate"
-if [ -d "$DIR/.git" ]; then
-  git -C "$DIR" fetch origin "$BRANCH" -q
-  git -C "$DIR" checkout -q "$BRANCH"
-  git -C "$DIR" pull --ff-only -q origin "$BRANCH"
+ENVF="$(mktemp)"; trap 'rm -f "$ENVF"' EXIT; chmod 600 "$ENVF"
+add() { if [ -n "${2:-}" ]; then printf '%s=%s\n' "$1" "$2" >> "$ENVF"; fi; }
+for k in ANTHROPIC_API_KEY OPENAI_API_KEY OPENAI_BASE_URL LLM_DEFAULT_MODEL GOOGLE_API_KEY GROQ_API_KEY \
+         MISTRAL_API_KEY CHUTES_API_KEY OPENROUTER_API_KEY API_KEY_SECRET ALLOW_INSECURE_API_KEY_SECRET \
+         RELAY_MULTIADDR; do
+  add "$k" "${!k:-}"
+done
+add SUBSTRATE_IMAGE "${IMAGE:-}"
+add ENABLED_ROLES hub
+# The compute vessels this hub has always run on top of the hub role group.
+add ENABLED_EXTRA_VESSELS "${ENABLED_EXTRA_VESSELS:-goal-host-vessel.service,development-vessel.service,local-tools-vessel.service,ribosome-vessel.service,analysis-vessel.service,light-dispatch-vessel.service}"
+add SUBSTRATE_BIND_HOST 0.0.0.0
+add SUBSTRATE_ROOT "${SUBSTRATE_ROOT:-/workspace/git/super-repo}"
+add PUBLIC_IP "$PUBLIC_IP"
+add FED_PUBLIC_IP "$PUBLIC_IP"
+add FED_SUBSTRATE_ID "${FED_SUBSTRATE_ID:-hub-$PUBLIC_IP}"
+add HUB_DISCOVERY_URL "http://localhost:8100"
+# The ports this hub never published stay on the host.
+for v in ANALYSIS STATEFUL_UI HUMAN_SURFACE; do add "${v}_PUBLISH_IP" 127.0.0.1; done
+if [ -n "${RELAY_MULTIADDR:-}" ]; then
+  # A host relay that is still serving stays the one relay: an in-container relay
+  # beside it would announce a second peer id while RELAY_MULTIADDR names the first.
+  add DISABLED_VESSELS federation-relay.service
+  add RELAY_PUBLISH_IP 127.0.0.1
 else
-  if [ -n "${PAT:-}" ]; then
-    git clone --branch "$BRANCH" -q "https://x-access-token:${PAT}@github.com/${REPO}.git" "$DIR"
-  else
-    git clone --branch "$BRANCH" -q "https://github.com/${REPO}.git" "$DIR"
-  fi
+  # No host relay: the in-container relay takes the port spokes already dial,
+  # published and announced alike.
+  add RELAY_PORT 30333
+  echo "[deploy-hub] no host relay found — the relay runs in the container on host port 30333" >&2
 fi
-cd "$DIR"
-# Init all submodules from the explicit path list (recursive-init aborts the whole run
-# on any single failure, so we init each recorded path independently).
-SUB_PATHS=$(git config -f .gitmodules --get-regexp '\.path$' | awk '{print $2}')
-git submodule update --init $SUB_PATHS 2>/dev/null || true
-# LOUD staleness check: a masked submodule-update failure bakes STALE vessel
-# source into the image (the hub shipped a discovery-vessel from weeks ago and
-# silently dropped the libp2p contract fields, 2026-07-02). '+' = checked-out
-# commit differs from the pointer this super-repo commit records.
-STALE=$(git submodule status $SUB_PATHS 2>/dev/null | grep '^+' || true)
-if [ -n "$STALE" ]; then
-  echo "[vm] WARNING: submodules NOT at recorded pointers (stale source will be baked):"
-  echo "$STALE"
-fi
-# Repair submodules whose working tree didn't materialize (checked-out commit but empty
-# tree — a checkout anomaly seen on fresh clones); reset --hard restores the files.
-git submodule foreach 'git reset --hard HEAD >/dev/null 2>&1 || true' >/dev/null 2>&1 || true
-
-# bun is needed by the Makefile's validate-build (host side); the image itself bundles bun.
-export PATH="$HOME/.bun/bin:$PATH"
-command -v bun >/dev/null || { curl -fsSL https://bun.sh/install | bash; export PATH="$HOME/.bun/bin:$PATH"; }
-
-echo "[vm] building the substrate image (first run: 20-30 min)…"
-make -C scripts/substrate build
-
-echo "[vm] starting the HUB subset (control plane + store + relay-ready)…"
-docker volume create substrate-surreal   >/dev/null 2>&1 || true
-docker volume create substrate-workspace >/dev/null 2>&1 || true
-# Drain before removing. `docker rm -f` sends SIGKILL with NO grace period, and a
-# redeploy lands on a machine where the previous fleet may be mid-execution: the
-# vessels drain for up to 240s and SurrealDB needs to flush RocksDB onto the very
-# volume this deploy is about to reuse. `docker stop -t` is a no-op when nothing
-# is running, so this is safe on a first deploy too.
-docker stop -t 300 substrate-live >/dev/null 2>&1 || true
-docker rm -f substrate-live >/dev/null 2>&1 || true
-# Federation egress env: the hub role runs federation-transport-vessel (:8401),
-# which dies without RELAY_MULTIADDR and leaves hub discovery advertising spoke
-# rows it cannot dial. The relay key file keeps the multiaddr stable, so a prior
-# deploy's relay.log is authoritative; on the very first deploy (no relay yet)
-# this stays empty — re-run the deploy once the relay is up to enable egress.
-RELAY_MULTIADDR="${RELAY_MULTIADDR:-$(grep -oE '/ip4/[^ "]*p2p/[A-Za-z0-9]+' "$HOME/relay.log" 2>/dev/null | tail -1 || true)}"
-[ -n "$RELAY_MULTIADDR" ] && echo "[vm] relay multiaddr: $RELAY_MULTIADDR" \
-  || echo "[vm] WARNING: no relay.log yet — hub federation egress disabled until a re-deploy after the relay starts"
-# Published ports. 18080/18100/18101/18210 are the federation contract (trace
-# store, discovery, identity, goal dispatch). 18090 (development-vessel) and
-# 18260 (concept-db) are published because a SPOKE reaches them over the host
-# network: the spoke masks its own concept-db (DISABLED_VESSELS) and resolves
-# memoryNote/compose_lesson/reach_gate_lesson against the hub. Without these two
-# the spoke's drafter reads no lessons and its recipe goal-generator (which is
-# fail-open on concept-db) mints nothing — silently, with no error anywhere.
-# Compute vessels the hub runs ON TOP of the `hub` role group. The hub role is
-# store/control/api/transport/seed/infra/registry and deliberately excludes
-# `compute` — but a hub still dispatches goals, so goal-host-vessel and its
-# neighbours have to be named here or they are masked.
-#
-# This list is what the hub was ACTUALLY running on 2026-08-08, recovered from
-# the live container. It had never been declared anywhere: the additive
-# ENABLED_EXTRA_VESSELS path did not exist in the deployed image, so these units
-# had been unmasked BY HAND inside the container. That state was invisible to
-# every config file and did not survive a recreate — the hub's own fleet was not
-# reproducible from its own deploy script, and nothing could detect that because
-# nothing ever recreated it.
-#
-# goal-host-vessel is the load-bearing entry: omit it and the hub answers no
-# dispatches at all, while still looking healthy on :18080/:18100.
-HUB_EXTRA_VESSELS="${HUB_EXTRA_VESSELS:-goal-host-vessel.service,development-vessel.service,local-tools-vessel.service,ribosome-vessel.service,analysis-vessel.service,light-dispatch-vessel.service}"
-
-docker run -d --name substrate-live --privileged \
-  -e ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
-  -e ENABLED_ROLES=hub -e ENABLED_EXTRA_VESSELS="${ENABLED_EXTRA_VESSELS:-$HUB_EXTRA_VESSELS}" -e SUBSTRATE_BIND_HOST=0.0.0.0 \
-  -e SUBSTRATE_ROOT="${SUBSTRATE_ROOT:-/workspace/git/super-repo}" \
-  -e PUBLIC_IP="$PUBLIC_IP" -e FED_PUBLIC_IP="$PUBLIC_IP" \
-  -e RELAY_MULTIADDR="$RELAY_MULTIADDR" \
-  -e FED_SUBSTRATE_ID="${FED_SUBSTRATE_ID:-hub-$PUBLIC_IP}" \
-  -e HUB_DISCOVERY_URL="http://localhost:8100" \
-  -p 18080:8080 -p 18100:8100 -p 18101:8101 -p 18210:8210 \
-  -p 18090:8090 -p 18260:8260 \
-  -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
-  --tmpfs /run --tmpfs /run/lock "$IMAGE"
-
-# Scrub the token from persistent git config now that the clone/build is done.
-git config --global --unset-all "$REW" 2>/dev/null || true
-
-echo "[vm] waiting for the control plane…"
-for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:18100/health 2>/dev/null && break; sleep 3; done
-echo "[vm] seeding the shared org (identity authority for the namespace)…"
-docker exec substrate-live bash -c 'set -a; source /etc/substrate/env 2>/dev/null; set +a; bun /vessels/seed-identity.ts' 2>&1 | grep -iE 'issued|org|key' | head -3 || true
-
-# Relay for NAT traversal: run it from the cloned federation-relay dir under nohup
-# (the VM has the public IP → it's the natural relay anchor). PUBLIC_IP is honored.
-export PATH="$HOME/.bun/bin:$PATH"
-command -v bun >/dev/null || { curl -fsSL https://bun.sh/install | bash; export PATH="$HOME/.bun/bin:$PATH"; }
-cd "$DIR/scripts/substrate/federation-relay"
-bun install >/dev/null 2>&1 || bun install
-# Stable identity: always use the SAME persisted key file so the relay's peer-id
-# survives restarts (a fresh/hand key mints a divergent id → stale relay.log →
-# undialable circuits). Prefer a managed systemd unit; NEVER pkill+clobber a relay
-# already serving :30333 (that races the port and can diverge the peer-id).
-RELAY_KEY_FILE="${RELAY_KEY_FILE:-$HOME/substrate-fed/relay-key.pb}"
-if command -v systemctl >/dev/null 2>&1 && systemctl is-enabled --quiet federation-relay.service 2>/dev/null; then
-  systemctl start federation-relay.service 2>/dev/null || true
-elif ! ss -ltn 2>/dev/null | grep -q ':30333 '; then
-  PUBLIC_IP="$PUBLIC_IP" RELAY_KEY_FILE="$RELAY_KEY_FILE" nohup bun relay.ts > "$HOME/relay.log" 2>&1 &
-fi
-sleep 6
-
-echo "[vm] === HUB status ==="
-echo -n "[vm] discovery: "; curl -s http://localhost:18100/health | head -c 120; echo
-echo -n "[vm] activity-api: "; curl -s http://localhost:18080/health | head -c 120; echo
-grep RELAY_MULTIADDR "$HOME/relay.log" | tail -1 || echo "[vm] relay multiaddr pending — check ~/relay.log"
-REMOTE
-
-echo "[deploy-hub] DONE. Hub at http://${TARGET#*@}:18100 (discovery) / :18080 (activity-api)."
-echo "[deploy-hub] Open the VM firewall: 18080, 18100, 18101, 18210 (TCP) + 30333/tcp (relay)."
-echo "[deploy-hub] Use the printed RELAY_MULTIADDR as RELAY_MULTIADDR for spoke sidecars."
+ARGS=(--env-file "$ENVF")
+[ "${ADOPT:-0}" = 1 ] && ARGS+=(--adopt)
+[ "${ACCEPT_PORTS:-0}" = 1 ] && ARGS+=(--accept-ports)
+echo "[deploy-hub] DEPRECATED — running deploy.sh ${ARGS[*]} $TARGET" >&2
+"$HERE/deploy.sh" "${ARGS[@]}" "$TARGET"   # not exec: the trap removes the generated .env
