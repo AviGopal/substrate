@@ -697,3 +697,8 @@ lease be re-acquired in bursts are implementation choices with filed, bounded fi
 ## 00:13–00:20Z — state_signature fix verified on the real failing class
 
 - activity-api restarted onto `c7c01ea` at 00:10:21Z (runtime diff 0). Request validation rejects an explicit `state_signature: null` with 400 before the CREATE, so the 202 daily failures were requests that *omit* the field, which the CREATE turned into NULL. Probe of that class (omitted field, required numeric fields supplied, `success:false`, probe-only shapes): HTTP 200, `success:true`. Control with a string signature: 200. `Found NULL for field state_signature` since the restart: 0. A 20-minute natural-traffic window is running before the gap is closed, per its falsifier.
+
+## 00:34Z — state_signature gap CLOSED
+
+- Natural traffic 00:13:45–00:34Z: 3 path records, all 200, `Found NULL for field state_signature` 0 (low traffic in the window; the class probe with the field omitted is the positive control, 200 where the pre-fix code path produced the NULL). Closed `goal-path-record-create-fails-when-state-signature…` as `landed_verified` / `operator_exercised_falsifier`.
+- Day's tally: 10 gaps closed by measured behaviour (one of them, the compose-nudge capacity check, landed by the substrate unprompted), 2 duplicates closed, 6 filed gaps still open for the substrate: pwt blind restore, per-gap in-flight guard, drain counter, vacuous-guard regex, lease discards a verified patch, trace-content duplicate inserts (unfiled note). Pathway learning for the deterministic-transform family runs end to end on the first attempt; both path-record loss classes are gone.
