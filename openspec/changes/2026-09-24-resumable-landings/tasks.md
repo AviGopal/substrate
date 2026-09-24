@@ -40,11 +40,18 @@
     landing goal quoted unique multi-line anchors). Runtime equals the commit; falsifier passed
     against the landed file: two names coexist in separate files, same name refused to another
     holder, named acquire refused during an unnamed hold, named read sees the global hold.
-  - [ ] 3.1a-ii renew + release honour `name` (`goals/3.1a-ii-lease-name-renew-release.txt`).
+  - [x] 3.1a-ii renew + release honour `name`. Landed as development-vessel `e17ea38`; runtime
+    equals the commit; falsifier passed: named renew moves only the named file's expiry, named
+    release deletes only its own file, unnamed release unchanged.
   - [ ] 3.1b unnamed acquire refused while any named hold exists; union read with `holds[]`
     (`goals/3.1b-lease-union-semantics.txt`).
-- [ ] 3.2 `vessel-mitosis-cutover.ts`: acquire with name `cutover` (both the soft-refuse check
+- [x] 3.2 `vessel-mitosis-cutover.ts`: acquire with name `cutover` (both the soft-refuse check
   and the 90 s wait). Falsifier: cutover pushes while `trace_store` is held.
+  Landed as development-vessel `0b06246`: all eight lease calls in the file (acquire, bounded
+  retry, git-aware acquire, proposal acquire and all four releases) carry `name: "cutover"`;
+  runtime equals the commit and the process restarted after it. The live half of the
+  falsifier (a push while `trace_store` is held) waits on 3.3a — until the reconcile takes its
+  own name it still holds the unnamed global, which excludes every name.
 - [ ] 3.3 Reconcile: name `trace_store`, failure-path release, fetch timeout ≥ valve. Measured
   facts that shape the path: the registered base template has no `timeoutMs` on its reconcile
   task (15 s `http_fetch` default) although the seed source carries 900 s — the seeder is
