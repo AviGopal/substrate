@@ -29,21 +29,31 @@
 - [ ] 3.1 `maintenance-lease.ts`: `name` on acquire/renew/release/resolve; per-name files;
   union semantics. Falsifier: unit — two names coexist; unnamed excludes all.
 - [ ] 3.2 `vessel-mitosis-cutover.ts`: acquire with name `cutover` (both the soft-refuse check
-  and the 90 s wait). Falsifier: cutover pushes while `trace-store` is held.
-- [ ] 3.3 Reconcile: name `trace-store`, failure-path release, fetch timeout ≥ valve. Path:
-  either (a) seeder upserts changed template bodies (gap
-  `a-landing-in-a-seed-template-file-is-inert…`) or (b) the family sampler pages the
-  templates listing so the `…-swap-timeout-15min` variant can be selected (gap
-  `the-trace-store-reconcile-remedy-pins-the-base-template-id…`). Falsifier: a reconcile
-  run without `fetch failed: The operation was aborted`; `maintenance.json` absent within a
-  minute of completion; cutovers no longer log `REFUSE: maintenance change_window lease held`.
-
+  and the 90 s wait). Falsifier: cutover pushes while `trace_store` is held.
+- [ ] 3.3 Reconcile: name `trace_store`, failure-path release, fetch timeout ≥ valve. Measured
+  facts that shape the path: the registered base template has no `timeoutMs` on its reconcile
+  task (15 s `http_fetch` default) although the seed source carries 900 s — the seeder is
+  SEED-IF-EMPTY (`cli.ts`) and never upserts a changed body; paging `/templates` is unstably
+  ordered (2771 rows, 2719 unique ids) so the family sampler never draws the
+  `…-swap-timeout-15min` variant; and the executor has no failure-path task semantics
+  (`ias-executor-ts/src/engine.ts` throws out of the task loop), so no template ordering can
+  release on a reconcile failure.
+  - [ ] 3.3a `src/seed/trace-store-reconcile.ts`: acquire and release with `name: "trace_store"`,
+    reconcile `timeoutMs` ≥ the valve, `release_lease` marked to run on failure (3.3c).
+  - [ ] 3.3b The seeder upserts a seed template whose body differs from the registered row
+    (`POST /v2/activities/templates` upserts by id and keeps the posterior). Without it 3.3a is
+    inert on every running substrate.
+  - [ ] 3.3c `repos/ias-executor-ts/src/engine.ts`: a task flagged `always: true` runs after an
+    earlier task throws, before the error propagates.
+  Falsifier: a reconcile run without `fetch failed: The operation was aborted`; no lease file
+  within a minute of completion; cutovers no longer log
+  `REFUSE: maintenance change_window lease held`.
 - [ ] 3.4 `repos/activity-api/src/routes/db-admin-reconcile.ts`: `validateMaintenanceLease` accepts a
   token carried by ANY unexpired lease file in the lease directory (`maintenance.json` or
   `maintenance-<name>.json`), not only the unnamed file. Without it a reconcile holding
-  `change_window:trace-store` is refused at the db_admin route (`maintenance lease not found`)
+  `change_window:trace_store` is refused at the db_admin route (`maintenance lease not found`)
   because activity-api reads the unnamed file directly. Must land before 3.3 names the
-  reconcile's lease. Falsifier: unit — a token held under `maintenance-trace-store.json`
+  reconcile's lease. Falsifier: unit — a token held under `maintenance-trace_store.json`
   validates; a token held nowhere is refused.
 
 ## Dispatch notes

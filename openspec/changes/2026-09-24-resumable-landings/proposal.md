@@ -47,7 +47,7 @@ operator or a sweep can exercise.
   the oldest in-flight request is older than the compose ceiling, instead of after a
   fixed number of busy observations. The mitosis quiesce is unchanged.
 - **Named maintenance windows.** `maintenanceLease_write` SHALL accept a `name`; a holder
-  of `change_window:trace-store` does not exclude a holder of `change_window:cutover`.
+  of `change_window:trace_store` does not exclude a holder of `change_window:cutover`.
   Cutovers and the reconcile take their own names; readers that want "any maintenance in
   progress" ask for the unnamed union. The reconcile template additionally SHALL release
   its lease on its failure path and set its fetch timeout to the valve's measured duration.
