@@ -745,7 +745,7 @@ Correction to the line above: two of the twelve closures rest on landings the su
 
 ## 05:39–05:45Z — vacuous-guard regex LANDED on the re-dispatch
 
-- Compose `fc-muf3q57h-i45684` on the fresh process: semantic gate `addresses:true`, no refuter line at all (the first judge passed and no refuter refuted once the executable counter-fact sat in the spec), cutover FAVORABLE, `326a983` (Substrate Autonomous, 05:44:48Z) on origin/dev. Diff is byte-exact to the design: the two character classes gain `\n` and nothing else. `/vessels` runtime file equals the commit.
+- Compose `fc-muf3q57h-i45684` on the fresh process: semantic gate `addresses:true`, no SPLIT line and no agreed-refutation line, so the first judge's pass stood (the code prints nothing when no refuter refutes), cutover FAVORABLE, `326a983` (Substrate Autonomous, 05:44:48Z) on origin/dev. Diff is byte-exact to the design: the two character classes gain `\n` and nothing else. `/vessels` runtime file equals the commit.
 - Falsifier (a) on the landed file: stripping `repos/goal-host-vessel/src/index.ts` with the regexes read out of the runtime source keeps 5 of 5 `_rebind` references (negative control at 05:22Z on the old runtime: 0 of 5).
 - Same patch, same lane, twice: rejected at 05:26Z on a false refuter claim, landed at 05:44Z with the fact in the spec. The information was the difference, not the code.
 - Behavioural probes (b) real rewrite must be admitted past the gate, (c) vacuous insert must still be refused: queued to run on the process that comes up after the pending mitosis self-restart.
