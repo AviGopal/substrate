@@ -719,3 +719,18 @@ lease be re-acquired in bursts are implementation choices with filed, bounded fi
 - Demonstration verdict: the system landed the fix unprompted, three hours after being told what and where; verification, the caveat, and the residual were operator work. Twelve closures today, three of them on landings the substrate produced without a directed dispatch.
 
 Correction to the line above: two of the twelve closures rest on landings the substrate produced without a directed dispatch (compose-nudge capacity `799bd58`, drain counter `404a89c`). A third unprompted landing, `49b884e` on the acceptance gap, added logging only and did not change behaviour.
+
+## 05:12–05:16Z — classifier residual CLOSED on an unprompted landing; a self-restart waited on an autonomous compose
+
+- The residual filed at 01:26Z (the long-running classifier read only `pointer.type`, so tick- and nudge-driven composes were uncounted) was landed by the substrate at 01:31:07Z as `bf74cc5` (Substrate Autonomous, four minutes after filing, no directed dispatch). The diff is exactly the one-op design: `?? b?.impulse?.type` plus its type annotation. On origin/dev; `/vessels` runtime file byte-equal to the commit; the process that ran the falsifier started 04:58:06Z.
+- Unit falsifier against the parent `404a89c` and `bf74cc5` with the real nudge body `{impulse:{type:"gap_to_feature",triggered_by:"substrate-gap-write",flow:"gap-compose"}}`: old = false, new = true; directed and bare-pointer bodies true in both.
+- Live falsifier: since the 04:58 restart only autonomous composes were admitted (`directed: false` at 05:07:59 and 05:09:06); `/health in_flight` read 2, then 1. Control: the `substrateGap_write` that closed the gap left `in_flight` at 2 before and after.
+- End-to-end observation, unplanned: the mitosis cutover for `route-edit-6d8d0a60` (`cd702a7`, an autonomous compose) started its quiesce timer at 05:13:23Z; the compose persisted its trace at 05:13:54Z; the restart fired at 05:13:58Z with `SIGTERM: drained (0 authoring runs, 0 requests in flight)`. Health answers in ~10 ms, so the 35 s wait was the quiesce loop holding for a counted autonomous request. Yesterday the same sequence restarted at once and killed the compose.
+- Closed `the-long-running-classifier-reads-only-pointer-type…` as `landed_verified` on `bf74cc5`. Three of the day's thirteen closures now rest on unprompted substrate landings.
+- Container note: `substrate-live` was recreated between 01:45Z and 05:12Z (journal host id changed); container `/tmp` scratch is gone, host scratchpad copies survive.
+
+## 05:17Z — vacuous-guard regex: byte-exact directed compose dispatched
+
+- The lane tried the gap twice on its own (04:39Z semantic gate: "patch is a no-op refactoring of code that strips line numbers"; 05:08Z a `-narrowed-syntax_break` child). The anchor in the gap design is still present and unique in the runtime file, so the failures are drafter choices, not a stale design.
+- Positive control before dispatch: stripping `repos/goal-host-vessel/src/index.ts` with the current regexes leaves 0 `_rebind` references of 5; with the single-line regexes, 5 of 5.
+- Directed compose `fc-muf2z8c9-nvqyha` admitted at 05:17:56Z with the two exact old/new lines in the spec. Waiting for the landing; falsifier is the 0→5 count on the landed file plus a genuinely vacuous op still refused.
