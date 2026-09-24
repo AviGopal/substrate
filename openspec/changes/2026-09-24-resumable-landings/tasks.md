@@ -105,11 +105,12 @@
     straight to activity-api because the reuse-before-mint probe refuses a second producer of
     the reconcile's shapes. Landed as `c6213f1`, identical to the pre-validated edit set; live
     proof waits on 3.3a-ii (the version bump) and a seed-unit run.
-  - [ ] 3.3b (original wording) The seeder upserts a seed template whose body differs from the registered row
-    (`POST /v2/activities/templates` upserts by id and keeps the posterior). Without it 3.3a is
-    inert on every running substrate.
-  - [ ] 3.3c `repos/ias-executor-ts/src/engine.ts`: a task flagged `always: true` runs after an
-    earlier task throws, before the error propagates.
+  - [x] 3.3c — moved out of this change (follow-up). The spec's release-on-failure scenarios are
+    met without it: "verify fails → release still runs" by 3.3a-ii's order (release_lease
+    before verify), "valve slower than the fetch" by the 900 s timeout; a failure of the
+    reconcile task itself now leaks only the `trace_store` name, which no longer blocks cutovers
+    (3.2 + 3.2b). An `always: true` task in the executor would be a new capability for every
+    template and a shared-package landing that restarts all consumers — its own change.
   Falsifier: a reconcile run without `fetch failed: The operation was aborted`; no lease file
   within a minute of completion; cutovers no longer log
   `REFUSE: maintenance change_window lease held`.
