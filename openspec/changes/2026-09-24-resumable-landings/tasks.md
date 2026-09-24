@@ -19,7 +19,8 @@
   Landed as development-vessel `6ab8271`; the landed file equals the pre-validated edit set
   except one line: the cutover committed a whole file staged before `a0ff3d3` and reverted
   that commit's one-line fix (anchor-band reader). Restore dispatched; the class is filed as a
-  gap (a cutover overwrites a newer committed landing on the same file).
+  gap (a cutover overwrites a newer committed landing on the same file). Restored as
+  `7994841` (exactly that line; no other commit to the file in between).
 - [ ] 1.4 `index.ts` SIGTERM handler: park post-gate composes; do not wait for pre-gate ones.
   Falsifier: restart during `bun test` → prompt drain, no park; restart after gate → park.
 - [ ] 1.5 Detector: `discardedLandingReport` sweep and the day-keyed gap. Falsifier: one
@@ -71,10 +72,11 @@
   runtime equals the commit and the process restarted after it. The live half of the
   falsifier (a push while `trace_store` is held) waits on 3.3a — until the reconcile takes its
   own name it still holds the unnamed global, which excludes every name.
-- [ ] 3.2b `vessel-mitosis-cutover.ts`: the early "change_window lease held — defer without
+- [x] 3.2b `vessel-mitosis-cutover.ts`: the early "change_window lease held — defer without
   rollback" check reads the lease with no name, which since 3.1b means the union of all holds,
   so a reconcile `trace_store` hold or another cutover's hold refuses every cutover again.
   Read with name `cutover` (`goals/3.2b-early-lease-check-reads-cutover-name.txt`).
+  Landed as `9ee5d9d`; the landed file equals its parent plus exactly this one edit.
 - [ ] 3.3 Reconcile: name `trace_store`, failure-path release, fetch timeout ≥ valve. Measured
   facts that shape the path: the registered base template has no `timeoutMs` on its reconcile
   task (15 s `http_fetch` default) although the seed source carries 900 s — the seeder is
