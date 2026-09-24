@@ -238,18 +238,16 @@ jobs:
             fi
           fi
           {
+            echo "promote_dev=${PUBLISH_DEV}"
+            # Only immutable tags are pushed by the build. :dev moves to the digest
+            # in a later step, after that digest has been run and checked, so a
+            # build that cannot start never becomes :dev.
             echo 'tags<<EOF'
-            if [ "${PUBLISH_DEV}" = "true" ]; then
-              echo "ghcr.io/${OWNER}/substrate:dev"
-            fi
             echo "ghcr.io/${OWNER}/substrate:${SHA}"
             if [ -n "${EXTRA_TAG}" ]; then
               echo "ghcr.io/${OWNER}/substrate:${EXTRA_TAG}"
             fi
             if [ "${HAS_DH}" = "true" ]; then
-              if [ "${PUBLISH_DEV}" = "true" ]; then
-                echo "avigopal/substrate:dev"
-              fi
               echo "avigopal/substrate:${SHA}"
               if [ -n "${EXTRA_TAG}" ]; then
                 echo "avigopal/substrate:${EXTRA_TAG}"
@@ -341,13 +339,34 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p manifest
-          docker run --rm --entrypoint substrate-manifest "ghcr.io/${OWNER}/substrate@${DIGEST}" > manifest/docker-compose.yml
+          IMG="ghcr.io/${OWNER}/substrate@${DIGEST}"
+          docker pull -q "$IMG" >/dev/null
+          # Docker refuses images deeper than about 125 layers; stay far below it.
+          LAYERS=$(docker image inspect --format '{{len .RootFS.Layers}}' "$IMG")
+          if [ "$LAYERS" -gt 100 ]; then
+            echo "::error::${IMG} has ${LAYERS} layers; Docker cannot run images deeper than about 125. Flatten the published stage."
+            exit 1
+          fi
+          echo "Layers: ${LAYERS}." >> "$GITHUB_STEP_SUMMARY"
+          docker run --rm --entrypoint substrate-manifest "$IMG" > manifest/docker-compose.yml
           if ! cmp -s manifest/docker-compose.yml docker-compose.yml; then
             echo "::error::substrate-manifest in ghcr.io/${OWNER}/substrate@${DIGEST} differs from the tracked docker-compose.yml"
             diff -u docker-compose.yml manifest/docker-compose.yml || true
             exit 1
           fi
           echo "The launch manifest baked into \`${DIGEST}\` is byte-identical to the tracked docker-compose.yml." >> "$GITHUB_STEP_SUMMARY"
+      - name: Promote the checked digest to :dev
+        if: steps.tags.outputs.promote_dev == 'true'
+        env:
+          OWNER: ${{ steps.img.outputs.owner }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create -t "ghcr.io/${OWNER}/substrate:dev" "ghcr.io/${OWNER}/substrate@${DIGEST}"
+          if [ "${HAS_DH}" = "true" ]; then
+            docker buildx imagetools create -t "avigopal/substrate:dev" "ghcr.io/${OWNER}/substrate@${DIGEST}"
+          fi
+          echo "Promoted \`${DIGEST}\` to :dev after it ran." >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           name: launch-manifest

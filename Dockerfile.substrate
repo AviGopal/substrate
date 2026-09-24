@@ -12,7 +12,7 @@
 # Run: the launch manifest this image runs under is baked in, and
 # `substrate-manifest` prints it; README § Installation is the install path.
 
-FROM debian:bookworm-slim AS base
+FROM debian:bookworm-slim AS base-build
 
 # systemd requires these
 ENV container=docker
@@ -442,6 +442,37 @@ LABEL org.opencontainers.image.revision="${IMAGE_REVISION}" \
       org.opencontainers.image.source="${IMAGE_SOURCE}"
 RUN printf '%s\n' "${IMAGE_REVISION}" > /etc/substrate/image-revision
 
+ENTRYPOINT ["/usr/local/bin/substrate-entrypoint"]
+
+# ──────────────────────────────────────────────────────────────────────────
+# base — the published fleet image: base-build's filesystem as ONE layer.
+#
+# Docker's overlay storage refuses an image deeper than about 125 layers
+# ("failed to register layer: max depth exceeded"), and base-build has well over
+# a hundred. Podman tolerates deeper stacks, so the image ran on every Podman host
+# while `docker run` failed on every Docker host. Copying the finished filesystem
+# into a scratch stage makes the depth independent of how many build steps
+# base-build has. The build steps stay above, where the layer cache works.
+#
+# COPY --from=… / / keeps no image config, so everything base-build declared is
+# declared again here; keep the two in step.
+# ──────────────────────────────────────────────────────────────────────────
+FROM scratch AS base
+COPY --from=base-build / /
+ENV container=docker \
+    DEBIAN_FRONTEND=noninteractive \
+    PATH=/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+WORKDIR /vessels
+VOLUME ["/workspace", "/var/lib/surrealdb"]
+STOPSIGNAL SIGRTMIN+3
+HEALTHCHECK --interval=30s --timeout=25s --start-period=240s --retries=3 \
+    CMD /usr/local/bin/substrate-status --quick --level seeded >/dev/null 2>&1 || exit 1
+ARG IMAGE_REVISION=unknown
+ARG IMAGE_CREATED=unknown
+ARG IMAGE_SOURCE=https://github.com/AviGopal/substrate
+LABEL org.opencontainers.image.revision="${IMAGE_REVISION}" \
+      org.opencontainers.image.created="${IMAGE_CREATED}" \
+      org.opencontainers.image.source="${IMAGE_SOURCE}"
 ENTRYPOINT ["/usr/local/bin/substrate-entrypoint"]
 
 # ──────────────────────────────────────────────────────────────────────────
