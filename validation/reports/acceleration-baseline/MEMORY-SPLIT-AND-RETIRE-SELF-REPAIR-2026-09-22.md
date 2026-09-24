@@ -756,3 +756,10 @@ Correction to the line above: two of the twelve closures rest on landings the su
 - Closed the parent as `landed_verified` on `326a983` with (a) 5/5, (b) admitted, (c) refused on the corrected control; closed its three narrowed/recommit children as superseded. Filed the Guard 2 name-harvest residual with a one-op design (harvest from added lines only) and a falsifier that already has a measured baseline.
 - Dry-run probes landed nothing: goal-host origin/dev head unchanged.
 - Day tally: 14 gaps closed by measured behaviour, three on unprompted substrate landings, one on a lane landing that first needed a false refuter claim corrected in the spec.
+
+## 05:56–06:05Z — sibling stripper in vacuous-edit.ts CLOSED first try; Guard 2 residual dispatched
+
+- With the regex fact stated in the spec from the start, compose `fc-muf4cac1-wseexy` landed `212408a` (06:01:29Z) byte-exact: semantic gate `addresses:true`, no SPLIT and no agreed-refutation line. Runtime file equals the commit.
+- Falsifier through the exported `vacuousEditReason` on the runtime file: the case with `walk's` and `don't` around two added declarations returns null (05:24Z baseline: vacuous reason naming both); the unreferenced `const _unused` control is still refused. Closed as `landed_verified`. Day tally 15.
+- The four closed records of the vacuous parent family were re-read ten minutes after closing: all still closed, none reopened by the lesson writer.
+- Guard 2 name-harvest residual dispatched byte-exact (one line becomes three: harvest declared names from the added lines only). Falsifier is the already-measured pair: insert after `const _rebind` must now be refused, rewrite of that line must still be admitted.
