@@ -1,5 +1,10 @@
 ## 1. Parked landings (development-vessel)
 
+End-to-end, observed live on 2026-09-24: `16:58:34 cutover did not land — verified patch
+parked for route-edit-5d6e8e96` (held lease) → `16:58:51 RESUMING parked landing for
+route-edit-5d6e8e96 (parked 0m ago)` → pushed as development-vessel `c1dd4c2` at 17:00:50, no
+redraft; `17:07:48` gap-to-feature picked a parked gap and the compose resumed it.
+
 - [x] 1.1 `feature-compose.ts`: write `/workspace/parked-landings/<gap>.json` after the semantic
   gate passes and before `resolveVesselMitosisCutover`; delete it on `push_status: pushed`;
   set `parked: true` in the report otherwise. Falsifier: hold the lease by hand for 3 min
@@ -33,8 +38,14 @@
   waited for)` at 16:48:22Z (the trivial case; a SIGTERM with work in flight not yet observed),
   where the process before it logged "1 long-running request(s) still in flight; they will be
   lost".
-- [ ] 1.5 Detector: `discardedLandingReport` sweep and the day-keyed gap. Falsifier: one
+- [x] 1.5 Detector: `discardedLandingReport` sweep and the day-keyed gap. Falsifier: one
   refused landing → count 1 and the gap open; a clean hour → no gap.
+  Landed as development-vessel `49b6b1c`, identical to the pre-validated edit set. Live: the
+  first scans logged `discarded landings: total=2 {"lease_refused":2,...}`, wrote
+  `discardedLandingReport` to the pool and opened `discarded-landings-2026-09-24`; both counted
+  reports are judge-approved patches refused for a held lease. Follow-up: it counts a patch that
+  was parked and then resumed (route-edit-5d6e8e96) as discarded — exclude gaps whose park was
+  resumed and pushed.
 
 ## 2. Restart budgets
 
