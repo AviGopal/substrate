@@ -22,7 +22,10 @@
 - [ ] 2.2 (operator tier) `scripts/substrate/substrate-pull-sync.sh`: defer by
   `in_flight_oldest_ms` vs `COMPOSE_CEILING_MS`; unit `TimeoutStopSec` ≥ drain. Falsifier:
   three busy runs with young work → no restart; oldest > ceiling → restart with age in the
-  breadcrumb.
+  breadcrumb. Status: both pull-sync restart sites now decide through one `restart_age_defer`
+  helper (installed in the container); stubbed scenarios pass; `TimeoutStopSec` is 5 min ≥ the
+  240 s drain. The live falsifier waits on 2.1 — until `/health` publishes `in_flight_oldest_ms`
+  the helper falls back to the old count bound.
 
 ## 3. Named change windows
 
@@ -48,13 +51,16 @@
   Falsifier: a reconcile run without `fetch failed: The operation was aborted`; no lease file
   within a minute of completion; cutovers no longer log
   `REFUSE: maintenance change_window lease held`.
-- [ ] 3.4 `repos/activity-api/src/routes/db-admin-reconcile.ts`: `validateMaintenanceLease` accepts a
+- [x] 3.4 `repos/activity-api/src/routes/db-admin-reconcile.ts`: `validateMaintenanceLease` accepts a
   token carried by ANY unexpired lease file in the lease directory (`maintenance.json` or
   `maintenance-<name>.json`), not only the unnamed file. Without it a reconcile holding
   `change_window:trace_store` is refused at the db_admin route (`maintenance lease not found`)
   because activity-api reads the unnamed file directly. Must land before 3.3 names the
   reconcile's lease. Falsifier: unit — a token held under `maintenance-trace_store.json`
   validates; a token held nowhere is refused.
+  Landed by the substrate as activity-api `1055cba`; runtime file equals the commit, the unit
+  restarted after it, and the falsifier passed in-container (named token valid with the primary
+  missing, mismatched or expired; unknown token returns the primary's original error).
 
 ## Dispatch notes
 
