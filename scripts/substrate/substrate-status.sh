@@ -535,7 +535,23 @@ bind_class() { # port -> "nonloopback" | "loopback" | "none"
 eval_served() {
   if [ -z "$READY_JSON" ]; then V=unknown; E="no unit matrix (live was not evaluated)"; return; fi
   local down n_ok
-  down="$(printf '%s' "$READY_JSON" | jq -r '[.vessels[] | select(.status == "down") | .unit] | join(" ")' 2>/dev/null)"
+  # `served` is about the vessels that serve. Self-maintenance units (inventory roles
+  # infra, autonomy and seed: pull-sync, recovery, ticks, seeders) can fail without
+  # the node serving any less — a self-update that cannot build one package keeps
+  # the live copy. Their failures are reported in the evidence, never hidden, but
+  # they do not fail this level.
+  local maint_roles='["infra","autonomy","seed"]' all_down maint_down=""
+  all_down="$(printf '%s' "$READY_JSON" | jq -r '[.vessels[] | select(.status == "down") | .unit] | join(" ")' 2>/dev/null)"
+  down=""
+  for u in $all_down; do
+    if jq -e --arg u "$u" --argjson m "$maint_roles" \
+         '[.vessels[] | select(.unit == $u) | .role] | any(. as $r | $m | index($r))' "$INV" >/dev/null 2>&1; then
+      maint_down="$maint_down $u"
+    else
+      down="$down $u"
+    fi
+  done
+  down="${down# }"
   n_ok="$(printf '%s' "$READY_JSON" | jq -r '[.vessels[] | select(.status == "ok")] | length' 2>/dev/null)"
   if [ -n "$down" ]; then V=fail; E="selected unit(s) not serving: $down"; return; fi
   local p u s b bad="" checked=""
@@ -573,6 +589,7 @@ eval_served() {
     V=fail; E="container port(s) the manifest publishes are unreachable from outside:$bad"
   else
     V=pass; E="${n_ok:-?} selected unit(s) up; container ports the manifest publishes bound non-loopback:${checked:- none selected} ($host_note)"
+    [ -n "$maint_down" ] && E="$E; self-maintenance unit(s) failing, not counted against serving:$maint_down"
   fi
 }
 
