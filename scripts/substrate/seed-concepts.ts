@@ -9,7 +9,44 @@
  */
 
 const CONCEPT_DB_URL = process.env.CONCEPT_DB_URL ?? "http://127.0.0.1:8260";
-const API_KEY = process.env.METABOB_API_KEY ?? process.env.CONCEPT_DB_API_KEY ?? "";
+let API_KEY: string = process.env.METABOB_API_KEY ?? process.env.CONCEPT_DB_API_KEY ?? "";
+const ENV_FILE = process.env.SUBSTRATE_ENV_FILE ?? "/etc/substrate/env";
+const AUTH_WAIT_MS = Number(process.env.SEED_AUTH_WAIT_S ?? "600") * 1000;
+
+// The key as the env file holds it NOW. identity-seeder rewrites the file after
+// minting, so a value read once at process start can be the pre-seed placeholder.
+function currentKey(): string {
+  try {
+    const line = require("node:fs").readFileSync(ENV_FILE, "utf8")
+      .split("\n").find((l: string) => l.startsWith("METABOB_API_KEY="));
+    if (line) return line.slice("METABOB_API_KEY=".length).replace(/^"(.*)"$/, "$1");
+  } catch { /* fall back to the process env */ }
+  return API_KEY;
+}
+
+// Wait until concept-db accepts our key. On a fresh volume concept-db starts before
+// identity-seeder mints the keys and is restarted onto them only near the end of
+// identity-seeder's staggered restarts; until then it answers 401 to a valid key.
+// Measured: 34 s locally, and longer than systemd's ten retries on a CI runner, which
+// left the seeder failed with every concept refused. 401/403 mean "not yet"; any other
+// answer means the store is judging requests with the real keys.
+async function waitForAcceptedKey(): Promise<boolean> {
+  const deadline = Date.now() + AUTH_WAIT_MS;
+  let said = false;
+  while (Date.now() < deadline) {
+    API_KEY = currentKey();
+    try {
+      const res = await fetch(`${CONCEPT_DB_URL}/concepts/search?source_type=vessel_construction_pattern&limit=1`, {
+        headers: { Authorization: `ApiKey ${API_KEY}` },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (res.status !== 401 && res.status !== 403) return true;
+      if (!said) { log.info(`concept-db does not accept the key yet (HTTP ${res.status}); waiting for identity-seeder to restart it`); said = true; }
+    } catch { /* not answering yet */ }
+    await new Promise((r) => setTimeout(r, 5_000));
+  }
+  return false;
+}
 
 const log = {
   info: (...a: unknown[]) => console.log("[seed-concepts]", ...a),
@@ -185,25 +222,38 @@ async function countConcepts(sourceType: string): Promise<number> {
 }
 
 async function seedConcept(concept: SeedConcept): Promise<boolean> {
-  const res = await fetch(`${CONCEPT_DB_URL}/concepts`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `ApiKey ${API_KEY}`,
-    },
-    body: JSON.stringify(concept),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (res.ok || res.status === 409) return true;
+  // Transient refusals are "later", not "failed". Every write is validated through
+  // identity, whose rate-limit bucket is shared by the whole fleet: during a boot,
+  // when every vessel is validating too, a burst of writes is refused mid-run
+  // (measured: 20 accepted, then 4 refused within one second as 401). Back off,
+  // re-read the key (identity-seeder may have just rewritten it), and retry.
+  const delays = [1, 2, 4, 8, 15, 30];
+  let res: Response | undefined;
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    API_KEY = currentKey();
+    res = await fetch(`${CONCEPT_DB_URL}/concepts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `ApiKey ${API_KEY}` },
+      body: JSON.stringify(concept),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.ok || res.status === 409) return true;
+    if (![401, 429, 503].includes(res.status) || attempt === delays.length) break;
+    await new Promise((r) => setTimeout(r, delays[attempt] * 1000));
+  }
   // Say why: a bare 'failed to seed' hid whether concept-db was warming up, rejecting
   // the payload or reporting a duplicate some other way than 409.
-  const detail = (await res.text().catch(() => "")).slice(0, 200);
-  log.warn(`POST /concepts ${concept.shape} -> HTTP ${res.status} ${detail}`);
+  const detail = (await res!.text().catch(() => "")).slice(0, 200);
+  log.warn(`POST /concepts ${concept.shape} -> HTTP ${res!.status} ${detail}`);
   return false;
 }
 
 async function main() {
   log.info(`seeding concepts to ${CONCEPT_DB_URL}`);
+  if (!(await waitForAcceptedKey())) {
+    log.error(`concept-db did not accept the key within ${AUTH_WAIT_MS / 1000}s`);
+    process.exit(1);
+  }
 
   // Check if already seeded
   const vcpCount = await countConcepts("vessel_construction_pattern");
@@ -217,13 +267,13 @@ async function main() {
   log.info(`seeding ${VESSEL_CONSTRUCTION_CONCEPTS.length} vessel-construction-pattern concepts`);
   let ok = 0;
   let fail = 0;
-  for (const c of VESSEL_CONSTRUCTION_CONCEPTS) {
+  for (const c of VESSEL_CONSTRUCTION_CONCEPTS) { await new Promise((r) => setTimeout(r, 250));
     const success = await seedConcept(c);
     if (success) { ok++; } else { fail++; log.warn(`failed to seed ${c.shape}`); }
   }
 
   log.info(`seeding ${IMPULSE_ACTIVITY_CONCEPTS.length} impulse-activity-pattern concepts`);
-  for (const c of IMPULSE_ACTIVITY_CONCEPTS) {
+  for (const c of IMPULSE_ACTIVITY_CONCEPTS) { await new Promise((r) => setTimeout(r, 250));
     const success = await seedConcept(c);
     if (success) { ok++; } else { fail++; log.warn(`failed to seed ${c.shape}`); }
   }
