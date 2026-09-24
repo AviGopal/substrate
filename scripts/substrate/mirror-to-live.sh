@@ -101,6 +101,9 @@ if [ -d "$SRC/sql" ]; then
 fi
 # scripts/ carries init-database.ts + apply-migration helpers the runtime runs;
 # mirror so changes to the migration runner itself also deploy.
+# The directories copied here (src/, sql/, scripts/) MUST equal the ones
+# substrate-pull-sync.sh's content_hash fingerprints; a directory copied here
+# but not hashed there never converges.
 if [ -d "$SRC/scripts" ]; then
   rm -rf "$DST/scripts"
   cp -r "$SRC/scripts" "$DST/scripts"

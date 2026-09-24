@@ -458,7 +458,7 @@ converge_fleet_defs() {
   done
 }
 
-content_hash() { # vessel-root -> md5 over sorted src/ + sql/ (.ts/.json/.surql); "none" if missing
+content_hash() { # vessel-root -> md5 over sorted src/ + sql/ + scripts/ (.ts/.json/.surql/.sh); "none" if missing
   [ -d "$1" ] || { echo none; return; }
   # .json included so pure-template/config edits (e.g. lifecycle *.json activity
   # templates like ribosome-extract) are detected — a .ts-only hash left a
@@ -467,7 +467,13 @@ content_hash() { # vessel-root -> md5 over sorted src/ + sql/ (.ts/.json/.surql)
   # DEFINE FIELD on a SCHEMAFULL table) is detected — migrations live in sql/,
   # outside src/, so a src-only hash left a migration-only commit invisible: it
   # never mirrored and the unit never restarted to apply it. Scan src + sql.
-  (cd "$1" && find src sql -type f \( -name '*.ts' -o -name '*.json' -o -name '*.surql' \) 2>/dev/null | sort | xargs -r md5sum | md5sum | cut -d' ' -f1)
+  # scripts/ included for the same reason, a third time: mirror-to-live copies
+  # scripts/ (activity-api's ExecStartPre runs scripts/init-database.ts from it),
+  # but a scripts-only commit hashed identically, so it was pulled into the clone
+  # and never mirrored or run on any fleet but the one that landed it.
+  # THE DIRECTORY LIST HERE MUST EQUAL THE ONE mirror-to-live.sh COPIES; a
+  # directory it copies but this hash omits can never converge.
+  (cd "$1" && find src sql scripts -type f \( -name '*.ts' -o -name '*.json' -o -name '*.surql' -o -name '*.sh' \) -not -path '*/node_modules/*' 2>/dev/null | sort | xargs -r md5sum | md5sum | cut -d' ' -f1)
 }
 
 synced=0; skipped=0; failed=0
@@ -639,6 +645,13 @@ for d in "$CLONE_DIR"/*/; do
   if [ "$CLONE_HASH" = "$RUNTIME_HASH" ]; then
     if [ -z "$DIST_RETRY" ]; then
       [ "$LAST" = "$CLONE_HASH" ] || echo "$CLONE_HASH" > "$MARKER"
+      # Say so when the clone moved but nothing mirrored changed: this branch used to
+      # skip in silence, which is how a scripts-only landing sat unrun for hours with
+      # `synced=0` and no line naming the vessel. Once per HEAD.
+      if [ "$(cat "$MARKER_DIR/$v.noop-head" 2>/dev/null)" != "$HEAD" ]; then
+        log "$v: clone at ${HEAD:0:10}, but the mirrored trees (src/ sql/ scripts/) already match the runtime — nothing to mirror"
+        echo "$HEAD" > "$MARKER_DIR/$v.noop-head" 2>/dev/null || true
+      fi
       continue
     fi
     log "$v: src converged but dist stale (last-good != ${HEAD:0:10}) — re-running fan-out"
