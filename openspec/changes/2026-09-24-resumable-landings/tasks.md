@@ -21,8 +21,14 @@
   that commit's one-line fix (anchor-band reader). Restore dispatched; the class is filed as a
   gap (a cutover overwrites a newer committed landing on the same file). Restored as
   `7994841` (exactly that line; no other commit to the file in between).
-- [ ] 1.4 `index.ts` SIGTERM handler: park post-gate composes; do not wait for pre-gate ones.
+- [x] 1.4 `index.ts` SIGTERM handler: park post-gate composes; do not wait for pre-gate ones.
   Falsifier: restart during `bun test` → prompt drain, no park; restart after gate → park.
+  Landed with 2.1b as development-vessel `b789d9c`, identical to the pre-validated edit set;
+  runtime equals the commit. Live: the first process on it logged `drained (0 cutovers in
+  progress; 0 request(s) and 0 authoring run(s) in draft/verify are parked or re-picked, not
+  waited for)` at 16:48:22Z (the trivial case; a SIGTERM with work in flight not yet observed),
+  where the process before it logged "1 long-running request(s) still in flight; they will be
+  lost".
 - [ ] 1.5 Detector: `discardedLandingReport` sweep and the day-keyed gap. Falsifier: one
   refused landing → count 1 and the gap open; a clean hour → no gap.
 
@@ -31,7 +37,7 @@
 - [x] 2.1a `index.ts`: `/health` gains `in_flight_oldest_ms`. Landed by the substrate as
   development-vessel `883640f`; runtime equals the commit, the process restarted after it, and
   `/health` reads `null` idle and a growing age (16688 → 40346 ms over 30 s) with two in flight.
-- [ ] 2.1b `index.ts`: drain deadline = cutover stage + 60 s — dispatched together with 1.4 (same
+- [x] 2.1b `index.ts`: drain deadline = cutover stage + 60 s — dispatched together with 1.4 (same
   file, same loop; see `goals/1.4-drain-waits-for-cutovers.txt`).
 - [ ] 2.2 (operator tier) `scripts/substrate/substrate-pull-sync.sh`: defer by
   `in_flight_oldest_ms` vs `COMPOSE_CEILING_MS`; unit `TimeoutStopSec` ≥ drain. Falsifier:
@@ -40,6 +46,10 @@
   helper (installed in the container); stubbed scenarios pass; `TimeoutStopSec` is 5 min ≥ the
   240 s drain. The live falsifier waits on 2.1 — until `/health` publishes `in_flight_oldest_ms`
   the helper falls back to the old count bound.
+  Live since 2.1a: at 15:24:19Z pull-sync logged `DEFERRING restart — 3 in flight, oldest
+  59735ms < ceiling 900000ms`. Open: at 16:44:20Z it restarted development-vessel with "4 in
+  flight ... no in_flight_oldest_ms published" although the field is published; 60 later
+  samples never showed in_flight > 0 with a null age, so the cause is not yet reproduced.
 
 ## 3. Named change windows
 
@@ -90,7 +100,12 @@
   - [ ] 3.3a `src/seed/trace-store-reconcile.ts` (split: 3.3a-i names acquire and release
     `trace_store`; 3.3a-ii moves `verify` after `release_lease`): acquire and release with `name: "trace_store"`,
     reconcile `timeoutMs` ≥ the valve, `release_lease` marked to run on failure (3.3c).
-  - [ ] 3.3b The seeder upserts a seed template whose body differs from the registered row
+  - [x] 3.3b The seeder upserts a seed whose `metadata.seed_version` exceeds the registered
+    row's (explicit opt-in; unversioned seeds and evolved rows untouched), POSTing by id
+    straight to activity-api because the reuse-before-mint probe refuses a second producer of
+    the reconcile's shapes. Landed as `c6213f1`, identical to the pre-validated edit set; live
+    proof waits on 3.3a-ii (the version bump) and a seed-unit run.
+  - [ ] 3.3b (original wording) The seeder upserts a seed template whose body differs from the registered row
     (`POST /v2/activities/templates` upserts by id and keeps the posterior). Without it 3.3a is
     inert on every running substrate.
   - [ ] 3.3c `repos/ias-executor-ts/src/engine.ts`: a task flagged `always: true` runs after an
