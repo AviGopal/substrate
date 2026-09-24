@@ -54,7 +54,7 @@ redraft; `17:07:48` gap-to-feature picked a parked gap and the compose resumed i
   `/health` reads `null` idle and a growing age (16688 → 40346 ms over 30 s) with two in flight.
 - [x] 2.1b `index.ts`: drain deadline = cutover stage + 60 s — dispatched together with 1.4 (same
   file, same loop; see `goals/1.4-drain-waits-for-cutovers.txt`).
-- [ ] 2.2 (operator tier) `scripts/substrate/substrate-pull-sync.sh`: defer by
+- [x] 2.2 (operator tier) `scripts/substrate/substrate-pull-sync.sh`: defer by
   `in_flight_oldest_ms` vs `COMPOSE_CEILING_MS`; unit `TimeoutStopSec` ≥ drain. Falsifier:
   three busy runs with young work → no restart; oldest > ceiling → restart with age in the
   breadcrumb. Status: both pull-sync restart sites now decide through one `restart_age_defer`
@@ -65,6 +65,12 @@ redraft; `17:07:48` gap-to-feature picked a parked gap and the compose resumed i
   59735ms < ceiling 900000ms`. Open: at 16:44:20Z it restarted development-vessel with "4 in
   flight ... no in_flight_oldest_ms published" although the field is published; 60 later
   samples never showed in_flight > 0 with a null age, so the cause is not yet reproduced.
+  Live falsifier (young work → no restart): 17:45–20:17Z, nine consecutive deferrals of one
+  owed development-vessel restart, each "oldest <N>ms < ceiling 900000ms" (5 s to 262 s),
+  then "drained to 0 in 80s under quiesce — converging with NOTHING in flight". The stuck-work
+  half (oldest > ceiling → restart with the age in the breadcrumb) is covered by the stubbed
+  scenarios only. Trade-off observed: a lane that is never idle held development-vessel on
+  pre-revert code for ~2.5 h; the old 3-deferral bound would have restarted into live work.
 
 ## 3. Named change windows
 
@@ -102,7 +108,7 @@ redraft; `17:07:48` gap-to-feature picked a parked gap and the compose resumed i
   so a reconcile `trace_store` hold or another cutover's hold refuses every cutover again.
   Read with name `cutover` (`goals/3.2b-early-lease-check-reads-cutover-name.txt`).
   Landed as `9ee5d9d`; the landed file equals its parent plus exactly this one edit.
-- [ ] 3.3 Reconcile: name `trace_store`, failure-path release, fetch timeout ≥ valve. Measured
+- [x] 3.3 Reconcile: name `trace_store`, failure-path release, fetch timeout ≥ valve. Measured
   facts that shape the path: the registered base template has no `timeoutMs` on its reconcile
   task (15 s `http_fetch` default) although the seed source carries 900 s — the seeder is
   SEED-IF-EMPTY (`cli.ts`) and never upserts a changed body; paging `/templates` is unstably
@@ -112,7 +118,10 @@ redraft; `17:07:48` gap-to-feature picked a parked gap and the compose resumed i
   release on a reconcile failure.
   - [x] 3.3a-i acquire and release named `trace_store` — development-vessel `a2f7542`, identical to
     the pre-validated file; inert in the catalogue until 3.3b + 3.3a-ii (seed_version bump).
-  - [ ] 3.3a `src/seed/trace-store-reconcile.ts` (split: 3.3a-i names acquire and release
+  - [x] 3.3a-ii release_lease before verify + `metadata.seed_version: 2` — development-vessel
+    `5475e11`, identical to the pre-validated file (its first cutover was refused by a
+    now-reverted drift check; the park then went stale and it redrafted).
+  - [x] 3.3a `src/seed/trace-store-reconcile.ts` (split: 3.3a-i names acquire and release
     `trace_store`; 3.3a-ii moves `verify` after `release_lease`): acquire and release with `name: "trace_store"`,
     reconcile `timeoutMs` ≥ the valve, `release_lease` marked to run on failure (3.3c).
   - [x] 3.3b The seeder upserts a seed whose `metadata.seed_version` exceeds the registered
@@ -120,12 +129,24 @@ redraft; `17:07:48` gap-to-feature picked a parked gap and the compose resumed i
     straight to activity-api because the reuse-before-mint probe refuses a second producer of
     the reconcile's shapes. Landed as `c6213f1`, identical to the pre-validated edit set; live
     proof waits on 3.3a-ii (the version bump) and a seed-unit run.
+  - [x] 3.3b-fix sanitise seed tags before the direct upsert (activity-api's TagSchema refused
+    "db.maintenance.trace-store" with HTTP 400) — development-vessel `0a8de60` (identical to the
+    pre-validated edit; it landed after a lease refusal, park, resume). Live: restarting
+    development-vessel-seed logged `[seed] upserted development-vessel:trace-store-reconcile:
+    seed_version 0 -> 2`; the registered template now has seed_version 2, order acquire >
+    extract > reconcile > release_lease > verify, both lease calls named trace_store, reconcile
+    timeoutMs 900000 (before: unnamed, verify before release, no timeout); a second seed run
+    reports "1 already current".
   - [x] 3.3c — moved out of this change (follow-up). The spec's release-on-failure scenarios are
     met without it: "verify fails → release still runs" by 3.3a-ii's order (release_lease
     before verify), "valve slower than the fetch" by the 900 s timeout; a failure of the
     reconcile task itself now leaks only the `trace_store` name, which no longer blocks cutovers
     (3.2 + 3.2b). An `always: true` task in the executor would be a new capability for every
     template and a shared-package landing that restarts all consumers — its own change.
+  Residual: the family sampler also draws three registered variants (…-swap-timeout-15min,
+  …-release-before-verify, …-lease-ttl-120s) that still take the unnamed lease — 5 of 45 draws
+  today. The base now subsumes the first two; retiring or re-minting them is a learning-state
+  decision left as a follow-up.
   Falsifier: a reconcile run without `fetch failed: The operation was aborted`; no lease file
   within a minute of completion; cutovers no longer log
   `REFUSE: maintenance change_window lease held`.
