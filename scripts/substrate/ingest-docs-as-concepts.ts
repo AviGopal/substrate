@@ -38,7 +38,14 @@
  *   - a file that could not be read this run keeps all of its sections;
  *   - a reap set exceeding REAP_MAX_FRACTION of the manifest is refused wholesale, which is
  *     what a truncated walk or an empty docs/ produces.
- * A refusal is reported as reap:"refused" with the count, never as a clean run.
+ * A refusal is reported as reap:"refused" with the count, never as a clean run, and is filed
+ * as a gap (substrateGap_write, stable id `docs-reap-refused`, so a timer that keeps refusing
+ * updates one gap rather than minting one per run). A refusal leaves stale sections live in
+ * the retrieval surface; a log line alone is read by no one, so the condition must land where
+ * gap disposition can act on it. The gap follows the condition: a later run whose reap goes
+ * through closes it. A run with nothing on record and nothing found (a volume whose checkout
+ * is not populated yet) is not a refusal worth a gap: there is nothing stale to retain.
+ * A gap write the gap store refuses is reported as reapGap:"failed", never as "filed".
  *
  * Env:
  *   INGEST_DOCS_ROOT   repo root to read docs from (default SUBSTRATE_ROOT | cwd)
@@ -47,6 +54,7 @@
  *   INGEST_MANIFEST    upsert manifest path (default /workspace/.docs-ingest-manifest.json)
  *   INGEST_DOCS        comma list of doc relpaths to force (default: watched-set discovery)
  *   INGEST_DRYRUN      =1 -> print plan (create/update/skip/reap counts), write nothing
+ *   DEV_VESSEL_ENDPOINT development-vessel, the gap store (default http://127.0.0.1:8090)
  */
 import { readFile, readdir, stat } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
@@ -58,6 +66,7 @@ const CONCEPT_DB = (process.env["CONCEPT_DB_ENDPOINT"] || "http://127.0.0.1:8260
 const API_KEY = process.env["METABOB_API_KEY"] ?? "";
 const MANIFEST_PATH = process.env["INGEST_MANIFEST"] ?? "/workspace/.docs-ingest-manifest.json";
 const DRYRUN = process.env["INGEST_DRYRUN"] === "1";
+const DEV_VESSEL = (process.env["DEV_VESSEL_ENDPOINT"] || process.env["DEVELOPMENT_VESSEL_URL"] || "http://127.0.0.1:8090").replace(/\/$/, "");
 const MIN_SECTION_CHARS = 200;
 const MAX_CONTENT_CHARS = 2400;
 // Above this share of the manifest, a reap set is treated as evidence that discovery failed
@@ -195,6 +204,109 @@ async function deleteConcept(id: string): Promise<boolean> {
   } catch { return false; }
 }
 
+// A refused reap is a condition to act on: stale sections stay retrievable until someone
+// reaps them. File it where gap disposition reads, not only in the journal.
+const REAP_GAP_ID = "docs-reap-refused";
+
+/**
+ * POST one gap write. "ok" only when the gap store accepted it: the resolve route answers
+ * HTTP 200 with success:false when the resolver refuses (validation and the like), so the
+ * status code alone would read a refusal as a filed gap.
+ */
+async function writeGap(gap: Record<string, unknown>): Promise<{ ok: true } | { ok: false; why: string }> {
+  try {
+    const res = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ impulse: { type: "substrateGap_write", gap } }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    let body: { success?: unknown; shape?: unknown; error?: unknown; body?: { detail?: unknown; error?: unknown } } = {};
+    try { body = await res.json() as typeof body; } catch { /* not JSON */ }
+    if (!res.ok || body.success !== true || body.shape === "structuredError") {
+      const detail = body.body?.detail ?? body.error ?? body.body?.error ?? "no detail";
+      return { ok: false, why: `http=${res.status} success=${String(body.success)} shape=${String(body.shape)}: ${String(detail).slice(0, 300)}` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, why: (e as Error).message };
+  }
+}
+
+async function fileReapRefusedGap(detail: {
+  candidates: string[]; limit: number; priorSize: number; docs: number; forced: boolean;
+}): Promise<"filed" | "failed"> {
+  const emptyWalk = detail.docs === 0;
+  const summary = emptyWalk
+    ? `ingest-docs refused its reap: the doc walk found no documents, so ${detail.candidates.length} manifest section(s) ` +
+      "could not be verified against anything; discovery failed and stale doc sections remain retrievable"
+    : `ingest-docs refused to reap ${detail.candidates.length} stale doc section(s): over the safety limit of ${detail.limit} ` +
+      `(${REAP_MAX_FRACTION * 100}% of ${detail.priorSize}); either the walk was truncated or the docs were restructured, ` +
+      "and until a supervised reap runs the removed sections keep being retrieved";
+  const r = await writeGap({
+    id: REAP_GAP_ID,
+    category: "documentation_drift",
+    source: "substrate_detected",
+    status: "open",
+    detected_at: new Date().toISOString(),
+    summary,
+    classification_metadata: {
+      detector: "ingest-docs-as-concepts",
+      cause: emptyWalk ? "empty_walk" : "over_limit",
+      reap_candidates: detail.candidates.length,
+      reap_limit: detail.limit,
+      manifest_size: detail.priorSize,
+      docs_walked: detail.docs,
+      forced: detail.forced,
+      sample_candidates: detail.candidates.slice(0, 20),
+      root: ROOT,
+      manifest: MANIFEST_PATH,
+    },
+  });
+  if (r.ok === false) {
+    console.error(`[ingest-docs] reap refused; gap filing FAILED (${r.why}) — the refusal is recorded only in this log`);
+    return "failed";
+  }
+  return "filed";
+}
+
+/** Close the refusal gap once a reap has gone through, if it is open. Reads first so a clean run writes nothing. */
+async function closeReapRefusedGap(reaped: number): Promise<"closed" | "none" | "failed"> {
+  let open: Record<string, unknown> | undefined;
+  try {
+    const res = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ impulse: { type: "substrateGap", id: REAP_GAP_ID, limit: 1 } }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    const body = await res.json() as { success?: unknown; body?: { gaps?: Array<Record<string, unknown>> } };
+    if (!res.ok || body.success !== true) {
+      console.error(`[ingest-docs] could not read gap ${REAP_GAP_ID} (http=${res.status}); it stays as it is`);
+      return "failed";
+    }
+    open = (body.body?.gaps ?? []).find((g) => g["id"] === REAP_GAP_ID && g["status"] === "open");
+  } catch (e) {
+    console.error(`[ingest-docs] could not read gap ${REAP_GAP_ID}: ${(e as Error).message}; it stays as it is`);
+    return "failed";
+  }
+  if (!open) return "none";
+  const r = await writeGap({
+    ...open,
+    status: "closed",
+    closed_reason: "violation_not_reproduced_on_rescan",
+    classification_metadata: {
+      ...((open["classification_metadata"] as Record<string, unknown> | undefined) ?? {}),
+      closed_by_run: { at: new Date().toISOString(), reaped },
+    },
+  });
+  if (r.ok === false) {
+    console.error(`[ingest-docs] reap went through but closing gap ${REAP_GAP_ID} FAILED (${r.why})`);
+    return "failed";
+  }
+  return "closed";
+}
+
 async function main(): Promise<void> {
   const docs = await watchedDocs();
   const forced = !!process.env["INGEST_DOCS"];
@@ -270,6 +382,15 @@ async function main(): Promise<void> {
 
   if (!DRYRUN) { try { await Bun.write(MANIFEST_PATH, JSON.stringify(manifest, null, 0)); } catch { /* best-effort */ } }
 
+  // Nothing on record and nothing found: a checkout not populated yet, with no stale
+  // section to retain. Refused (never a clean reap), but not a gap.
+  const nothingToVerify = candidates.length === 0 && priorSize === 0;
+  const reapGap = DRYRUN
+    ? null
+    : refused
+      ? (nothingToVerify ? "not_filed_nothing_on_record" : await fileReapRefusedGap({ candidates, limit, priorSize, docs: docs.length, forced }))
+      : await closeReapRefusedGap(reaped);
+
   console.log(JSON.stringify({
     ingest: "docs-as-concepts",
     root: ROOT,
@@ -282,6 +403,7 @@ async function main(): Promise<void> {
     reapCandidates: candidates.length,
     reapLimit: limit,
     reaped, reapFailed,
+    reapGap,
     manifest: MANIFEST_PATH,
     dryrun: DRYRUN,
   }, null, 2));
