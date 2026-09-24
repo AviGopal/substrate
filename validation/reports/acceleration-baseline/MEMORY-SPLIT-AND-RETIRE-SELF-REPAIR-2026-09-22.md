@@ -861,3 +861,8 @@ Correction to the line above: two of the twelve closures rest on landings the su
 
 - `97ff41d` (10:49:30Z, byte-exact `queryRaw` in the root branch) landed in the window; activity-api restarted onto it at 10:49:32Z. Falsifier with development-vessel's own key: total 4, the base with its real July creation time and the three variants with `variant_of` set; the no-variant control returns 1 with a real timestamp; the singleton-fallback warning has not fired since. Closed as `landed_verified` on `6a1b570` + `97ff41d`.
 - Recorded the failed falsifier for the paged sampler `2fd1dca` (unordered listing skips rows) and dispatched the last link of the chain: the sampler asks the family route instead of scanning the catalogue. Falsifier: "family sampled: 4 member(s)" and a variant execution within three ticks.
+
+## 10:53–11:50Z — the route-based sampler landed and is never read: the lane's own landing owns the loop
+
+- The sampler-to-route change reached the runtime (process 11:27:29Z). A direct trigger at 11:43:35Z still logged one member and activity-api saw no variants call. The lane's autonomous landing `a5b4772` had introduced a second family source, `familySample`, a paged read of the unordered listing with a three-minute cache, and pointed the posterior loop at it. The route-derived family is computed and never read. Two operator-visible lessons: a lane landing on a neighbouring gap can silently take over a code path, and "in the runtime file" is not "on the executed path".
+- Recorded the failed falsifier and dispatched a one-line correction: iterate the route family when it found variants, else the paged sample.
