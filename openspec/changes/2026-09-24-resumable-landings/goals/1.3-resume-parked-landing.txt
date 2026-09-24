@@ -1,12 +1,137 @@
-In repos/development-vessel/src/resolvers/feature-compose.ts, resume a parked landing instead of redrafting it (openspec 2026-09-24-resumable-landings task 1.3, spec parked-landing "A fresh park is resumed instead of redrafted"). The file already exports ParkedLanding, readParkedLanding, writeParkedLanding, deleteParkedLanding and parkedLandingPath (task 1.1): a park at /workspace/parked-landings/<gap>.json holds a patch that already passed typecheck, shape-dispatch, two suite runs and the semantic gate, then lost its cutover to a held lease or a restart.
-Changes, all in this one file:
-(1) Add `resume_from?: ParkedLanding` and `parked_landing_ttl_ms?: number` to FeatureComposePointer.
-(2) Add a module-level `async function resumeParkedLanding(pointer: FeatureComposePointer, park: ParkedLanding, toolsEndpoint: string): Promise<ResolverResult | null>` that:
-  a. STALENESS: for each park.files entry whose base_content is not null, read the push-clone file `/workspace/git/vessels/${park.vessel}/${f.path}` (callTool(toolsEndpoint, "fs_read", { path })); if its content !== f.base_content the base moved: `await deleteParkedLanding(park.gap_id)`, `await appendComposeLesson("park_stale", \`parked diff for ${f.path} no longer applies: base moved since ${park.parked_at}\`, park.vessel, pointer.gap)`, log `[feature-compose] park_stale for ${park.gap_id} — base moved, redrafting`, and return null (the caller falls through to a normal draft).
-  b. Log exactly `[feature-compose] RESUMING parked landing for ${park.gap_id} (parked ${Math.round(ageMs/60000)}m ago)`.
-  c. Snapshot each live file `${RUNTIME_ROOT}/${park.vessel}/${f.path}` (same RUNTIME_ROOT the landing loop uses), then write f.content to the live path and into a staging dir `${REPO_ROOT}/${park.vessel}-mitosis-resume-${ts}/${f.path}` (same REPO_ROOT/mitosis naming as the landing loop).
-  d. TYPECHECK ONLY (no drafter call, no bun test): callTool(toolsEndpoint, "shell", { command: `cd ${RUNTIME_ROOT}/${park.vessel} && timeout 300 bunx tsc --noEmit -p . 2>&1 | tail -20; echo TC_EXIT=\${PIPESTATUS[0]}` }). If TC_EXIT is not 0: restore the snapshots, delete the park, append a `park_stale` lesson with the tsc tail, return null.
-  e. Call resolveVesselMitosisCutover with the same fields the landing loop passes (vessel_name, base_version_id `${vessel}-live`, mitosis_version_id `${vessel}-resume-${ts}`, mitosis_root = the staging dir, staged_files = park paths, staged_base_sha = first 12 hex of sha256 of the first file's content, gap_id, proposal_id `${gap_id}-compose-report`, evaluation_evidence FAVORABLE citing ["typecheck (resume)", "parked: shape-dispatch", "parked: bun test (baseline-delta, flake-confirmed)"]).
-  f. If the result has push_status "pushed" and a new_git_sha: delete the park and return `{ shape: "featureComposeReport", body: { ok: true, verdict: "FAVORABLE", resumed_from: park.compose_id, parked: false, cutovers: [{ vessel, result }] } }`. Otherwise restore the live snapshots (an uncommitted live edit poisons the next baseline), keep the park, log `[feature-compose] cutover did not land — verified patch parked for ${gap_id}`, and return the same shape with ok:false, verdict "UNFAVORABLE", parked: true. Always rm -rf the staging dir.
-(3) In resolveFeatureCompose, immediately after the `if (llmEndpoints.length === 0 || !toolsEndpoint) { ... }` endpoint check and before "1. DECOMPOSE": if `pointer.land && pointer.gap?.id && !pointer.dry_run`, take `const park = pointer.resume_from ?? await readParkedLanding(pointer.gap.id)`; if park exists and `Date.now() - Date.parse(park.parked_at) < (pointer.parked_landing_ttl_ms ?? 86_400_000)`, `const resumed = await resumeParkedLanding(pointer, park, toolsEndpoint); if (resumed) return resumed;`. An expired park is deleted.
-Falsifier: with a park present from a lease refusal, the next compose for that gap logs the RESUMING line, makes no drafter call and runs no `bun test`, and lands a commit whose file content equals the park; landing an unrelated change to the same file first makes the park be dropped with a park_stale lesson and a normal draft run.
+In repos/development-vessel/src/resolvers/feature-compose.ts, resume a parked landing instead of redrafting it (openspec 2026-09-24-resumable-landings task 1.3). The file already writes /workspace/parked-landings/<gap>.json (ParkedLanding, readParkedLanding, deleteParkedLanding) when a verified patch loses its cutover; nothing reads it yet. Use exactly these four old->new edits (each old text occurs once in the file) and nothing else.
+EDIT 1 — old:
+export interface FeatureComposePointer {
+  produceFeatureCompose?: boolean;
+new:
+export interface FeatureComposePointer {
+  produceFeatureCompose?: boolean;
+  /** Resume this parked landing instead of drafting (resumable landings). */
+  resume_from?: ParkedLanding;
+  /** How old a park may be and still be resumed (default 24 h). */
+  parked_landing_ttl_ms?: number;
+EDIT 2 — old:
+import { mkdir as parkMkdir, writeFile as parkWriteFile, rename as parkRename, readFile as parkReadFile, unlink as parkUnlink } from "node:fs/promises";
+new:
+import { mkdir as parkMkdir, writeFile as parkWriteFile, rename as parkRename, readFile as parkReadFile, unlink as parkUnlink } from "node:fs/promises";
+import { createHash as parkHash } from "node:crypto";
+EDIT 3 — old:
+    if ((err as NodeJS.ErrnoException)?.code !== "ENOENT") console.warn(`[feature-compose] park delete failed for ${gapId}: ${(err as Error).message}`);
+  }
+}
+new:
+    if ((err as NodeJS.ErrnoException)?.code !== "ENOENT") console.warn(`[feature-compose] park delete failed for ${gapId}: ${(err as Error).message}`);
+  }
+}
+
+/**
+ * Finish a parked landing: re-check the base, sync the verified files into the live
+ * tree, typecheck ONLY (the park already passed the suite and the semantic gate), and
+ * cut over. Returns null when the park is stale or fails typecheck - the park is then
+ * dropped with a `park_stale` lesson and the caller drafts normally.
+ */
+async function resumeParkedLanding(pointer: FeatureComposePointer, park: ParkedLanding, toolsEndpoint: string): Promise<ResolverResult | null> {
+  const gapId = park.gap_id;
+  const cloneRoot = process.env["MITOSIS_PUSH_CLONE_DIR"] ?? "/workspace/git/vessels";
+  for (const f of park.files) {
+    if (f.base_content === null) continue;
+    const current = await parkReadFile(`${cloneRoot}/${park.vessel}/${f.path}`, "utf-8").catch(() => null);
+    if (current !== f.base_content) {
+      await deleteParkedLanding(gapId);
+      await appendComposeLesson("park_stale", `parked diff for ${f.path} no longer applies: base moved since ${park.parked_at}`, park.vessel, pointer.gap);
+      console.log(`[feature-compose] park_stale for ${gapId} - base moved, redrafting`);
+      return null;
+    }
+  }
+  const ageMin = Math.round((Date.now() - Date.parse(park.parked_at)) / 60000);
+  console.log(`[feature-compose] RESUMING parked landing for ${gapId} (parked ${ageMin}m ago)`);
+  const ts = new Date().toISOString().replace(/[:.]/g, "-");
+  const stagingRoot = `${REPO_ROOT}/${park.vessel}-mitosis-resume-${ts}`;
+  const snapshots = new Map<string, string | null>();
+  const restoreLive = async (): Promise<void> => {
+    for (const [abs, original] of snapshots) {
+      try {
+        if (original === null) await parkUnlink(abs).catch(() => undefined);
+        else await parkWriteFile(abs, original, "utf-8");
+      } catch (err) {
+        console.error(`[feature-compose] resume restore FAILED for ${abs}: ${(err as Error).message}`);
+      }
+    }
+  };
+  try {
+    for (const f of park.files) {
+      const liveAbs = `${RUNTIME_ROOT}/${park.vessel}/${f.path}`;
+      snapshots.set(liveAbs, await parkReadFile(liveAbs, "utf-8").catch(() => null));
+      const dir = f.path.split("/").slice(0, -1).join("/");
+      await parkMkdir(`${RUNTIME_ROOT}/${park.vessel}/${dir}`, { recursive: true });
+      await parkWriteFile(liveAbs, f.content, "utf-8");
+      await parkMkdir(`${stagingRoot}/${dir}`, { recursive: true });
+      await parkWriteFile(`${stagingRoot}/${f.path}`, f.content, "utf-8");
+    }
+    const tc = await callTool(toolsEndpoint, "shell", {
+      command: `cd ${JSON.stringify(`${RUNTIME_ROOT}/${park.vessel}`)} && timeout 300 bunx tsc --noEmit -p . 2>&1 | tail -20; echo TC_EXIT=\${PIPESTATUS[0]}`,
+      cwd: REPO_ROOT,
+    });
+    const tcOut = String((tc.body as { stdout?: unknown })?.stdout ?? "");
+    if (!/TC_EXIT=0\b/.test(tcOut)) {
+      await restoreLive();
+      await deleteParkedLanding(gapId);
+      await appendComposeLesson("park_stale", `parked patch no longer typechecks on the current base: ${tcOut.slice(-400)}`, park.vessel, pointer.gap);
+      console.log(`[feature-compose] park_stale for ${gapId} - typecheck failed on the current base, redrafting`);
+      return null;
+    }
+    const cut = await resolveVesselMitosisCutover({
+      type: "vessel_mitosis_cutover",
+      vessel_name: park.vessel,
+      base_version_id: `${park.vessel}-live`,
+      mitosis_version_id: `${park.vessel}-resume-${ts}`,
+      mitosis_root: stagingRoot,
+      staged_files: park.files.map((f) => f.path),
+      staged_base_sha: parkHash("sha256").update(park.files[0]!.content).digest("hex").slice(0, 12),
+      evaluation_evidence: { verdict: "FAVORABLE", base_success_rate: 1, mitosis_success_rate: 1, cited_trace_ids: [], cited_check_names: ["typecheck (resume)", "parked: shape-dispatch", "parked: bun test (baseline-delta, flake-confirmed)"] },
+      gap_id: gapId,
+      proposal_id: `${gapId}-compose-report`,
+      skip_push: pointer.skip_push ?? false,
+    } as never);
+    const r = (cut.body ?? {}) as Record<string, unknown>;
+    const pushed = r["push_status"] === "pushed" && typeof r["new_git_sha"] === "string" && String(r["new_git_sha"]).trim() !== "";
+    if (pushed) {
+      await deleteParkedLanding(gapId);
+    } else {
+      await restoreLive();
+      console.log(`[feature-compose] cutover did not land - verified patch parked for ${gapId}`);
+    }
+    return {
+      shape: "featureComposeReport",
+      body: { ok: pushed, verdict: pushed ? "FAVORABLE" : "UNFAVORABLE", resumed_from: park.compose_id, parked: !pushed, cutovers: [{ vessel: park.vessel, result: cut.body }] },
+    };
+  } catch (err) {
+    await restoreLive();
+    console.warn(`[feature-compose] resume of ${gapId} failed (${(err as Error).message}); park kept`);
+    return null;
+  } finally {
+    await callTool(toolsEndpoint, "shell", { command: `rm -rf ${JSON.stringify(stagingRoot)}`, cwd: REPO_ROOT }).catch(() => undefined);
+  }
+}
+EDIT 4 — old:
+  if (llmEndpoints.length === 0 || !toolsEndpoint) {
+    return { shape: "featureComposeReport", body: { ok: false, error: `endpoint discovery failed (llm=${llmEndpoints.length > 0}, tools=${!!toolsEndpoint})` } };
+  }
+new:
+  if (llmEndpoints.length === 0 || !toolsEndpoint) {
+    return { shape: "featureComposeReport", body: { ok: false, error: `endpoint discovery failed (llm=${llmEndpoints.length > 0}, tools=${!!toolsEndpoint})` } };
+  }
+  // RESUME A PARKED LANDING before drafting: a fresh park is a patch that already passed
+  // verify and the semantic gate and only lost its cutover.
+  if (pointer.land && pointer.gap?.id && !pointer.dry_run) {
+    const park = pointer.resume_from ?? (await readParkedLanding(String(pointer.gap.id)));
+    if (park) {
+      if (Date.now() - Date.parse(park.parked_at) < (pointer.parked_landing_ttl_ms ?? 86_400_000)) {
+        const resumed = await resumeParkedLanding(pointer, park, toolsEndpoint);
+        if (resumed) return resumed;
+      } else {
+        await deleteParkedLanding(park.gap_id);
+      }
+    }
+  }
+Reviewer facts: resolveFeatureCompose's outer wrapper releases the compose slot in a finally, so the early return is safe; callTool and appendComposeLesson are function declarations (hoisted); RUNTIME_ROOT and REPO_ROOT are imported from ../shape-vocabulary.js; the resumed landing runs typecheck only because the park already passed the suite and the semantic gate; a stale park (the push-clone file no longer equals the pre-edit content, or typecheck fails on the current base) is deleted with a park_stale lesson and the compose drafts normally.
+Falsifier: with a park present for a gap, the next compose for that gap logs "RESUMING parked landing for <gap>", makes no drafter call and runs no bun test, and lands a commit whose file content equals the park; if the target file changed on the base first, the park is dropped with a park_stale lesson and a normal draft runs.

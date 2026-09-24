@@ -1,11 +1,109 @@
-In repos/development-vessel/src/resolvers/feature-compose.ts, park a verified patch before its cutover so a refused, deferred or interrupted cutover no longer discards it (openspec 2026-09-24-resumable-landings task 1.1, spec parked-landing "A verified patch is parked before its cutover"). Measured: 7 verified landings refused for a held change_window lease were each followed by `live-sync rollback` and thrown away after passing typecheck, two suite runs and the semantic gate.
-Changes, all in this one file:
-(1) Add and EXPORT three helpers near the top-level helpers (gap-to-feature.ts will import them in a later goal):
-  - `export function parkedLandingPath(gapId: string): string` = join(process.env["PARKED_LANDINGS_DIR"] ?? "/workspace/parked-landings", `${gapId.replace(/[^A-Za-z0-9._-]/g, "_")}.json`).
-  - `export async function writeParkedLanding(park: ParkedLanding): Promise<void>` — mkdir -p the dir, write `${path}.tmp` then rename (atomic, same pattern as the gap store). Never throws (catch and console.warn).
-  - `export async function readParkedLanding(gapId: string): Promise<ParkedLanding | null>` and `export async function deleteParkedLanding(gapId: string): Promise<void>` (ENOENT is fine).
-  - `export interface ParkedLanding { gap_id: string; compose_id: string; vessel: string; files: Array<{ path: string; content: string; base_content: string | null }>; verify: { typecheck: boolean; shape_dispatch: boolean; tests: boolean }; judge: { addresses: boolean | null; reason: string | null }; parked_at: string; reason: string }` — `path` is the vessel-relative path (the `rel` in changedRel), `content` is the verified file content from `${vBase}/${rel}`, `base_content` is the pre-edit live content captured in preLiveSync (null if absent).
-(2) In the landing loop, immediately BEFORE `const cut = await resolveVesselMitosisCutover({`, when `pointer.gap?.id` is set, read each `${vBase}/${rel}` for rel in changedRel (fs_read via callTool like the surrounding code, or node:fs readFile) and `await writeParkedLanding({...})` with compose_id = `${vessel}-fc-${ts}`, verify all true (this point is only reached after tcOk && sdExit === 0 && testOk), judge from `semantic_gate` (addresses, reason), parked_at = new Date().toISOString(), reason = "pre-cutover".
-(3) In the `UNDO THE LAND-TIME SYNC WHEN NOTHING LANDED` block and after it: when the cutovers `landed` (push_status === "pushed" with a new_git_sha) and pointer.gap?.id is set, `await deleteParkedLanding(pointer.gap.id)`. When not landed and a park was written, keep it and log exactly `[feature-compose] cutover did not land — verified patch parked for ${gapId}`. The live-tree undo still runs unchanged.
-(4) Add `parked: boolean` to the returned featureComposeReport body — true when a park was written and no cutover pushed.
-Do not change the drafter, verify or the semantic gate. Falsifier: hold change_window by hand for 3 minutes during a compose — /workspace/parked-landings/<gap>.json exists with the verified file content and the report says parked:true; a normal landing leaves no park file.
+In repos/development-vessel/src/resolvers/feature-compose.ts, park a verified patch before its cutover so a refused, deferred or interrupted cutover no longer throws it away (openspec 2026-09-24-resumable-landings task 1.1; a previous draft passed every gate and was then refused at cutover for a held lease and discarded — the exact loss this change removes). Measured 2026-09-24: 7 verified landings refused for a held change_window lease were each rolled back and discarded after passing typecheck, two suite runs and the semantic gate. This goal only WRITES the park (and deletes it when the cutover pushes); resuming from it is a later goal. Use exactly these five old->new edits (each old text occurs once in the file) and nothing else.
+EDIT 1 — old:
+import { RUNTIME_ROOT, SUPER_REPO_ROOT, REPO_ROOT, loadFleetShapeVocabulary } from "../shape-vocabulary.js";
+new:
+import { RUNTIME_ROOT, SUPER_REPO_ROOT, REPO_ROOT, loadFleetShapeVocabulary } from "../shape-vocabulary.js";
+import { mkdir as parkMkdir, writeFile as parkWriteFile, rename as parkRename, readFile as parkReadFile, unlink as parkUnlink } from "node:fs/promises";
+
+// PARKED LANDINGS (openspec 2026-09-24-resumable-landings). A patch that passed verify
+// and the semantic gate is written here BEFORE its cutover, so a cutover that is refused
+// (held lease), deferred, or killed by a restart does not throw the verified work away:
+// the next compose for the same gap resumes it instead of redrafting.
+export interface ParkedLanding {
+  gap_id: string;
+  compose_id: string;
+  vessel: string;
+  /** path is vessel-relative; content is the verified file; base_content the pre-edit live file (null if absent). */
+  files: Array<{ path: string; content: string; base_content: string | null }>;
+  verify: { typecheck: boolean; shape_dispatch: boolean; tests: boolean };
+  judge: { addresses: boolean | null; reason: string | null };
+  parked_at: string;
+  reason: string;
+}
+
+function parkedLandingsDir(): string {
+  return process.env["PARKED_LANDINGS_DIR"] ?? "/workspace/parked-landings";
+}
+
+export function parkedLandingPath(gapId: string): string {
+  return `${parkedLandingsDir()}/${gapId.replace(/[^A-Za-z0-9._-]/g, "_")}.json`;
+}
+
+export async function writeParkedLanding(park: ParkedLanding): Promise<void> {
+  try {
+    await parkMkdir(parkedLandingsDir(), { recursive: true });
+    const path = parkedLandingPath(park.gap_id);
+    await parkWriteFile(`${path}.tmp`, JSON.stringify(park, null, 2), "utf-8");
+    await parkRename(`${path}.tmp`, path);
+  } catch (err) {
+    console.warn(`[feature-compose] park write failed for ${park.gap_id}: ${(err as Error).message}`);
+  }
+}
+
+export async function readParkedLanding(gapId: string): Promise<ParkedLanding | null> {
+  try {
+    const park = JSON.parse(await parkReadFile(parkedLandingPath(gapId), "utf-8")) as ParkedLanding;
+    return park && Array.isArray(park.files) && park.files.length > 0 ? park : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteParkedLanding(gapId: string): Promise<void> {
+  try {
+    await parkUnlink(parkedLandingPath(gapId));
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException)?.code !== "ENOENT") console.warn(`[feature-compose] park delete failed for ${gapId}: ${(err as Error).message}`);
+  }
+}
+EDIT 2 — old:
+  const preLiveSync = new Map<string, string | null>(); // abs live path -> bytes, or null if absent
+new:
+  const preLiveSync = new Map<string, string | null>(); // abs live path -> bytes, or null if absent
+  let parkedAny = false; // a verified patch was parked before its cutover (resumable landings)
+EDIT 3 — old:
+      const cut = await resolveVesselMitosisCutover({
+new:
+      // PARK BEFORE THE CUTOVER: everything up to here (verify + semantic gate) is the
+      // expensive part; if the cutover is refused or the process is restarted, the park
+      // is what survives and the next compose for this gap resumes it.
+      if (pointer.gap?.id) {
+        const parkFiles: ParkedLanding["files"] = [];
+        for (const rel of changedRel) {
+          const content = await parkReadFile(`${vBase}/${rel}`, "utf-8").catch(() => null);
+          if (content === null) break;
+          const liveAbs = `${RUNTIME_ROOT}/${vessel}/${rel}`;
+          parkFiles.push({ path: rel, content, base_content: preLiveSync.get(liveAbs) ?? null });
+        }
+        if (parkFiles.length > 0 && parkFiles.length === changedRel.length) {
+          await writeParkedLanding({
+            gap_id: String(pointer.gap.id),
+            compose_id: `${vessel}-fc-${ts}`,
+            vessel,
+            files: parkFiles,
+            verify: { typecheck: true, shape_dispatch: true, tests: true },
+            judge: { addresses: semantic_gate?.addresses ?? null, reason: semantic_gate?.reason ?? null },
+            parked_at: new Date().toISOString(),
+            reason: "pre-cutover",
+          });
+          parkedAny = true;
+        }
+      }
+      const cut = await resolveVesselMitosisCutover({
+EDIT 4 — old:
+  const allCutoversRefused = pointer.land && verdict === "FAVORABLE" && cutovers.length > 0 && !anyCutoverPushed;
+new:
+  if (parkedAny && pointer.gap?.id) {
+    if (anyCutoverPushed) await deleteParkedLanding(String(pointer.gap.id));
+    else console.log(`[feature-compose] cutover did not land — verified patch parked for ${pointer.gap.id}`);
+  }
+  const allCutoversRefused = pointer.land && verdict === "FAVORABLE" && cutovers.length > 0 && !anyCutoverPushed;
+EDIT 5 — old:
+      ok: effectiveVerdict === "FAVORABLE",
+      execution_id: emittedExecutionId,
+new:
+      ok: effectiveVerdict === "FAVORABLE",
+      execution_id: emittedExecutionId,
+      parked: parkedAny && !anyCutoverPushed,
+Reviewer facts: this code sits inside the existing `if (verdict === "FAVORABLE" && pointer.land)` landing loop, after verify and the semantic gate, where `vessel`, `vBase`, `changedRel`, `ts`, `preLiveSync` and `semantic_gate` are already in scope; the park is a plain JSON file under /workspace/parked-landings (atomic tmp+rename, like the gap store and the lease); failures to write it are logged and never fail the compose; the live-tree undo still runs unchanged.
+Falsifier: hold change_window by hand during a compose so its cutover is refused — /workspace/parked-landings/<gap>.json exists with the verified file content and the report has parked:true and the journal shows "cutover did not land — verified patch parked for <gap>"; a normal landing leaves no park file.

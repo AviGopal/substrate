@@ -1,10 +1,15 @@
 ## 1. Parked landings (development-vessel)
 
-- [ ] 1.1 `feature-compose.ts`: write `/workspace/parked-landings/<gap>.json` after the semantic
+- [x] 1.1 `feature-compose.ts`: write `/workspace/parked-landings/<gap>.json` after the semantic
   gate passes and before `resolveVesselMitosisCutover`; delete it on `push_status: pushed`;
   set `parked: true` in the report otherwise. Falsifier: hold the lease by hand for 3 min
   during a byte-exact compose; the park file exists with the diff; release; the next pick
   resumes and pushes an identical diff. Control: a normal landing leaves no park.
+  Landed as development-vessel `873fd81`; the landed file equals the pre-validated edit set
+  (0 differing lines), typecheck passed, runtime equals the commit. The first attempt passed
+  every gate and was then refused at cutover for a held lease and discarded — the loss this
+  task removes; a second broke a string literal while copying. Live half of the falsifier
+  (a refused cutover leaves a park file) pending the next refused cutover.
 - [ ] 1.2 `gap-to-feature.ts`: in the pick, if a park younger than `parked_landing_ttl` exists
   for the gap, dispatch `feature_compose` with `resume_from`. Falsifier: journal shows
   `RESUMING parked landing` and no drafter call for that compose.
@@ -57,6 +62,10 @@
   runtime equals the commit and the process restarted after it. The live half of the
   falsifier (a push while `trace_store` is held) waits on 3.3a — until the reconcile takes its
   own name it still holds the unnamed global, which excludes every name.
+- [ ] 3.2b `vessel-mitosis-cutover.ts`: the early "change_window lease held — defer without
+  rollback" check reads the lease with no name, which since 3.1b means the union of all holds,
+  so a reconcile `trace_store` hold or another cutover's hold refuses every cutover again.
+  Read with name `cutover` (`goals/3.2b-early-lease-check-reads-cutover-name.txt`).
 - [ ] 3.3 Reconcile: name `trace_store`, failure-path release, fetch timeout ≥ valve. Measured
   facts that shape the path: the registered base template has no `timeoutMs` on its reconcile
   task (15 s `http_fetch` default) although the seed source carries 900 s — the seeder is
@@ -65,6 +74,8 @@
   `…-swap-timeout-15min` variant; and the executor has no failure-path task semantics
   (`ias-executor-ts/src/engine.ts` throws out of the task loop), so no template ordering can
   release on a reconcile failure.
+  - [x] 3.3a-i acquire and release named `trace_store` — development-vessel `a2f7542`, identical to
+    the pre-validated file; inert in the catalogue until 3.3b + 3.3a-ii (seed_version bump).
   - [ ] 3.3a `src/seed/trace-store-reconcile.ts` (split: 3.3a-i names acquire and release
     `trace_store`; 3.3a-ii moves `verify` after `release_lease`): acquire and release with `name: "trace_store"`,
     reconcile `timeoutMs` ≥ the valve, `release_lease` marked to run on failure (3.3c).
