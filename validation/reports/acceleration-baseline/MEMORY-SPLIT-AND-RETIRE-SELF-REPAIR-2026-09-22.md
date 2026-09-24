@@ -702,3 +702,11 @@ lease be re-acquired in bursts are implementation choices with filed, bounded fi
 
 - Natural traffic 00:13:45–00:34Z: 3 path records, all 200, `Found NULL for field state_signature` 0 (low traffic in the window; the class probe with the field omitted is the positive control, 200 where the pre-fix code path produced the NULL). Closed `goal-path-record-create-fails-when-state-signature…` as `landed_verified` / `operator_exercised_falsifier`.
 - Day's tally: 10 gaps closed by measured behaviour (one of them, the compose-nudge capacity check, landed by the substrate unprompted), 2 duplicates closed, 6 filed gaps still open for the substrate: pwt blind restore, per-gap in-flight guard, drain counter, vacuous-guard regex, lease discards a verified patch, trace-content duplicate inserts (unfiled note). Pathway learning for the deterministic-transform family runs end to end on the first attempt; both path-record loss classes are gone.
+
+## 01:07–01:25Z — self-repair demonstration on the drain counter: the substrate had already landed it
+
+- Resolution stated in advance: the compose lands; `/health in_flight` ≥ 1 while a directed `gap_to_feature` compose runs; a drain during a compose logs `still in flight — continuing to drain`; the self-restart quiesce waits.
+- Step 1 was already done by the system: `404a89c` (14:43Z, Substrate Autonomous, unprompted, three hours after filing) added `"gap_to_feature"` to `LONG_RUNNING_TYPES`. Runtime carries it; the gap record was never stamped (zero attempts recorded), same stamping defect seen on the nudge gap.
+- Step 2 measured: baseline `in_flight 0`; a directed compose admitted at 01:20:37Z; `in_flight 1` for its whole run.
+- Step 3 not yet observable naturally: 18 drains since the landing, none overlapping a live compose. A controlled test is running: one directed compose alone on the lane, then a graceful restart.
+- Residual found and filed: the classifier reads only `pointer.type`; both autonomous entry points (the tick and the write nudge) post `impulse.type` with no pointer, so autonomous composes are still uncounted (observed slots 2, in_flight 1). One-op design: also read `impulse.type`, still gated by the set.
