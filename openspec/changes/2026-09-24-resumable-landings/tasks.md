@@ -18,7 +18,11 @@
 
 ## 2. Restart budgets
 
-- [ ] 2.1 `index.ts`: `/health` gains `in_flight_oldest_ms`; drain deadline = cutover stage + 60 s.
+- [x] 2.1a `index.ts`: `/health` gains `in_flight_oldest_ms`. Landed by the substrate as
+  development-vessel `883640f`; runtime equals the commit, the process restarted after it, and
+  `/health` reads `null` idle and a growing age (16688 → 40346 ms over 30 s) with two in flight.
+- [ ] 2.1b `index.ts`: drain deadline = cutover stage + 60 s — dispatched together with 1.4 (same
+  file, same loop; see `goals/1.4-drain-waits-for-cutovers.txt`).
 - [ ] 2.2 (operator tier) `scripts/substrate/substrate-pull-sync.sh`: defer by
   `in_flight_oldest_ms` vs `COMPOSE_CEILING_MS`; unit `TimeoutStopSec` ≥ drain. Falsifier:
   three busy runs with young work → no restart; oldest > ceiling → restart with age in the
