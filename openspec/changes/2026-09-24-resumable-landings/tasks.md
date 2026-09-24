@@ -10,9 +10,13 @@
   every gate and was then refused at cutover for a held lease and discarded — the loss this
   task removes; a second broke a string literal while copying. Live half of the falsifier
   (a refused cutover leaves a park file) pending the next refused cutover.
-- [ ] 1.2 `gap-to-feature.ts`: in the pick, if a park younger than `parked_landing_ttl` exists
+- [x] 1.2 `gap-to-feature.ts`: in the pick, if a park younger than `parked_landing_ttl` exists
   for the gap, dispatch `feature_compose` with `resume_from`. Falsifier: journal shows
   `RESUMING parked landing` and no drafter call for that compose.
+  Landed as development-vessel `c1dd4c2` (parent = the base the goal was built on; landed file
+  identical to the pre-validated edit set; runtime equals the commit). Note 1.3's compose also
+  reads a park by gap id on entry, so a directed dispatch resumes a park without passing
+  through the pick.
 - [x] 1.3 `feature-compose.ts`: `resume_from` path — re-apply, typecheck only, cutover; `park_stale`
   lesson when the diff does not apply. Falsifier: move the base under a park (land an
   unrelated change to the same file); the park is dropped with the lesson.
