@@ -184,7 +184,12 @@ async function seedConcept(concept) {
         body: JSON.stringify(concept),
         signal: AbortSignal.timeout(10_000),
     });
-    return res.ok || res.status === 409;
+    if (res.ok || res.status === 409) return true;
+    // Say why: a bare 'failed to seed' hid whether concept-db was warming up, rejecting
+    // the payload or reporting a duplicate some other way than 409.
+    const detail = (await res.text().catch(() => "")).slice(0, 200);
+    log.warn(`POST /concepts ${concept.shape} -> HTTP ${res.status} ${detail}`);
+    return false;
 }
 async function main() {
     log.info(`seeding concepts to ${CONCEPT_DB_URL}`);
