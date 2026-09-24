@@ -167,13 +167,14 @@ DISCOVERY_ENDPOINT=http://<hub-host>:18100
 METABOB_API_KEY=<key issued by the hub>
 EOF
 docker compose up -d
-docker exec substrate-live substrate-status --wait served
+docker exec substrate-live substrate-status --wait usable
 ```
 
-The role, the hub endpoints and the relay anchor are derived from the two inputs. The spoke
-waits for `served`: `usable` needs an LLM arm, and until federated arm inheritance lands a
-keyless spoke has none. Add a provider key to `.env` and wait for `usable` if the spoke must
-resolve models itself. Then connect as in A, steps 5–6.
+The role, the hub endpoints and the relay anchor are derived from the two inputs. A spoke
+needs no provider key: its `llm_completion` is answered by its hub's arms through discovery.
+A hub on the same host is addressed as `host.containers.internal` (Podman) or
+`host.docker.internal` (Docker), never the host's LAN address, which a container cannot reach
+on rootless Podman. Then connect as in A, steps 5–6.
 
 ### D. Surface (a human's local window)
 

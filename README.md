@@ -263,16 +263,23 @@ DISCOVERY_ENDPOINT=http://<hub-host>:18100
 METABOB_API_KEY=<key issued by the hub>
 EOF
 docker compose up -d
-docker exec substrate-live substrate-status --wait served
+docker exec substrate-live substrate-status --wait usable
 mkdir -p ~/.metabob
 docker exec substrate-live substrate-connect > ~/.metabob/config.json
 ```
 
-The role, the hub endpoints and the relay anchor are derived from the two inputs. The spoke
-waits for `served`: `usable` needs an LLM arm, and until federated arm inheritance lands a
-keyless spoke has none. Add a provider key to `.env` and wait for `usable` if the spoke must
-resolve models itself. The last two lines connect the cockpit as in A, step 5; run the
-`claude mcp add …` line `substrate-connect` printed.
+The role, the hub endpoints and the relay anchor are derived from the two inputs. A spoke
+needs no provider key: it runs no model resolver of its own, and its `llm_completion` is
+answered by its hub's arms through discovery, so it reaches `usable` like any other node. (A
+provider key in a spoke's `.env` is not used.) The last two lines connect the cockpit as in
+A, step 5; run the `claude mcp add …` line `substrate-connect` printed.
+
+**A hub on the same host.** From inside a container, the host's own LAN address is not
+reachable on rootless Podman, and the join is refused at boot ("derived IDENTITY_VESSEL_URL
+… is unreachable"). Address the hub by the engine's host name instead:
+`DISCOVERY_ENDPOINT=http://host.containers.internal:18100` on Podman, or
+`http://host.docker.internal:18100` on Docker (on Linux, add
+`extra_hosts: ["host.docker.internal:host-gateway"]` in a compose override).
 
 What joining means, and how to tell it happened:
 
