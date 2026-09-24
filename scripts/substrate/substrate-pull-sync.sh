@@ -157,6 +157,23 @@ health_port() { # vessel -> port or empty
   fi
 }
 
+restart_siblings() { # vessel primary-unit — restart every other active unit that runs this vessel's source
+  # One vessel's source can back several units: the rendered LLM arms (llm-google,
+  # llm-haiku, llm-opus, …) all run /vessels/llm-resolver-vessel. Restarting only
+  # the vessel's own unit left those arms serving code weeks older than the source
+  # on disk, with every health signal green. Any unit whose WorkingDirectory is the
+  # converged vessel's tree is restarted too, staggered like the primary.
+  local v="$1" primary="$2" u wd
+  for u in $(systemctl list-units --type=service --state=active --no-legend --plain 2>/dev/null | awk '{print $1}'); do
+    [ "$u" = "$primary" ] && continue
+    wd="$(systemctl show "$u" -p WorkingDirectory --value 2>/dev/null)"
+    case "$wd" in "/vessels/$v"|"/vessels/$v/") ;; *) continue ;; esac
+    restart_breadcrumb "$v" "sibling unit $u runs the same source"
+    log "$v: restarting $u, which runs the same source"
+    systemctl restart "$u" 2>/dev/null || true
+    sleep "$STAGGER_SECONDS"
+  done
+}
 healthy() { # port -> 0 if 200
   curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$1/health" 2>/dev/null | grep -q '^200$'
 }
@@ -1431,6 +1448,7 @@ EOF
         break
       fi
     fi
+    restart_siblings "$v" "$UNIT"
   fi
   echo "$HEAD" > "$LAST_GOOD_DIR/$v"
   synced=$((synced+1))
