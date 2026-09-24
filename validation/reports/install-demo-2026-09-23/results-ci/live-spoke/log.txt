@@ -1,0 +1,6 @@
+05:26:29 case=live-spoke prefix=25 image=ghcr.io/avigopal/substrate:421653ab75abfa91e9bc4ff863e91bb386e54f64
+05:26:31 up; waiting for usable
+05:27:38 verdict rc=0 after 69s: {"live":"pass","seeded":"pass","served":"pass","usable":"pass","connected":"unknown"}
+05:27:38 data-local dispatch=3fa40d81-119b-4bcd-9bde-e4fdffe3b7c3
+05:36:19 data-local status=failed reached=false answer_mentions_53=false
+05:37:11 done rc=0

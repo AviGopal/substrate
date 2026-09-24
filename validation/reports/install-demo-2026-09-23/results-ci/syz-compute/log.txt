@@ -1,0 +1,6 @@
+05:49:25 case=syz-compute prefix=22 image=ghcr.io/avigopal/substrate:421653ab75abfa91e9bc4ff863e91bb386e54f64
+05:49:28 up; waiting for usable
+06:10:06 verdict rc=3 after 1240s: {"live":"pass","seeded":"unknown","served":"unknown","usable":"unknown","connected":"unknown"}
+06:10:06 data-local dispatch=366a5ee8-1cfe-417f-86e2-915d3fb3b820
+06:12:16 data-local status=completed reached=true answer_mentions_53=true
+06:13:18 done rc=3

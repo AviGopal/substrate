@@ -1,0 +1,6 @@
+05:26:29 case=syz-spoke prefix=21 image=ghcr.io/avigopal/substrate:421653ab75abfa91e9bc4ff863e91bb386e54f64
+05:26:31 up; waiting for usable
+05:47:02 verdict rc=3 after 1233s: {"live":"pass","seeded":"unknown","served":"unknown","usable":"unknown","connected":"unknown"}
+05:47:02 data-local dispatch=ed3e7dac-9607-4b77-ab6e-0a9ee689c5a8
+05:52:33 data-local status=failed reached=false answer_mentions_53=false
+05:54:11 done rc=3
