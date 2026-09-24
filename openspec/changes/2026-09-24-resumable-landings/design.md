@@ -54,7 +54,10 @@ in-flight request reported by `/health` (`in_flight_oldest_ms`, new field) excee
 existing callers; a `name` writes `maintenance-<name>.json` beside the global file. A
 named acquire is refused if the *same* name is held or if the *unnamed* global is held
 (an unnamed hold still means "everything"); an unnamed acquire is refused if any named
-hold exists. Readers that skip trace-store cycles on "a lease is held" keep working.
+hold exists. Readers that skip trace-store cycles on "a lease is held" keep working. One reader
+bypasses the resolver: activity-api's `db_admin reconcile_trace_store` validates the
+caller's `lease_token` by reading `maintenance.json` directly, so it must learn the
+named files before the reconcile takes a name (task 3.4).
 
 **Seed caveat.** `development-vessel-seed` skips a populated catalogue, so an edit to
 `src/seed/trace-store-reconcile.ts` is inert on a running substrate (gap

@@ -38,6 +38,14 @@
   run without `fetch failed: The operation was aborted`; `maintenance.json` absent within a
   minute of completion; cutovers no longer log `REFUSE: maintenance change_window lease held`.
 
+- [ ] 3.4 `repos/activity-api/src/routes/db-admin-reconcile.ts`: `validateMaintenanceLease` accepts a
+  token carried by ANY unexpired lease file in the lease directory (`maintenance.json` or
+  `maintenance-<name>.json`), not only the unnamed file. Without it a reconcile holding
+  `change_window:trace-store` is refused at the db_admin route (`maintenance lease not found`)
+  because activity-api reads the unnamed file directly. Must land before 3.3 names the
+  reconcile's lease. Falsifier: unit — a token held under `maintenance-trace-store.json`
+  validates; a token held nowhere is refused.
+
 ## Dispatch notes
 
 One file per goal. Quote the exact old and new lines in the goal and state the fact a
