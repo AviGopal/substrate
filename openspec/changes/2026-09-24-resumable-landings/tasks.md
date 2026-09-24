@@ -148,6 +148,13 @@ redraft; `17:07:48` gap-to-feature picked a parked gap and the compose resumed i
     reconcile task itself now leaks only the `trace_store` name, which no longer blocks cutovers
     (3.2 + 3.2b). An `always: true` task in the executor would be a new capability for every
     template and a shared-package landing that restarts all consumers — its own change.
+  Live run on the upserted template (21:15:27Z, base template sampled): completion shapes
+  maintenanceLeaseWriteResult, json_extracted_value, httpResponse, traceStoreHealthReport — the
+  reconcile fetch returned (no "The operation was aborted"), release_lease ran before verify, the
+  maintenance-trace_store.json hold was released (file gone at 21:15:28) and the unnamed
+  maintenance.json was not taken (still the expired 20:37 hold). The run was graded HOLLOW
+  because the valve deleted no rows and verify still saw over_cap — pruning behaviour is a
+  stated non-goal of this change.
   Residual: the family sampler also draws three registered variants (…-swap-timeout-15min,
   …-release-before-verify, …-lease-ttl-120s) that still take the unnamed lease — 5 of 45 draws
   today. The base now subsumes the first two; retiring or re-minting them is a learning-state
