@@ -40,17 +40,21 @@
       "_workdir_comment": "IMAGE PATH, same trade as federation-transport-vessel below. The 2026-09-21 lifecycle audit's offline launch had no /workspace/git/super-repo (no credentials, and its image predated reliable seed-from-baked-copy), so the $REPO_ROOT form left the relay uninstallable out-of-box and the audit hand-repointed it to the baked source path to proceed. The baked copy is self-contained: Dockerfile.substrate materialises the real @avigopal/libp2p-federation-transport over bun's file: symlink stub at build time. Relay self-modification therefore requires an image rebuild — deliberate for the reachability anchor, per the transport-vessel rationale.",
       "workdir": "/usr/local/share/substrate/super-repo/scripts/substrate/federation-relay",
       "exec": "relay.ts",
+      "_listen_comment": "Listens on 30333 INSIDE the container; the launch manifest publishes it at host port <prefix>333 (RELAY_PORT overrides). relay.ts announces RELAY_ANNOUNCE_PORT, which gen-env derives from those same inputs, so the multiaddr it persists and /bootstrap advertises names the published address. An operator-supplied RELAY_MULTIADDR is never overwritten: gen-env records it as env-supplied in /etc/substrate/env.provenance, and both relay.ts and the post_install hook below leave it alone.",
       "env": {
-        "RELAY_KEY_FILE": "/workspace/fed-relay-key.pb"
+        "RELAY_KEY_FILE": "/workspace/fed-relay-key.pb",
+        "RELAY_TCP_PORT": "30333"
       },
       "env_from_file": [
-        "FED_PUBLIC_IP"
+        "FED_PUBLIC_IP",
+        "PUBLIC_IP",
+        "RELAY_ANNOUNCE_PORT"
       ],
       "secrets": [],
       "restart": "always",
       "health_port": null,
       "self_recovery": false,
-      "post_install": "for i in $(seq 1 20); do m=$(grep -m1 'RELAY_MULTIADDR=' /workspace/fed-relay.log 2>/dev/null | sed 's/RELAY_MULTIADDR=//'); [ -n \"$m\" ] && { grep -v '^RELAY_MULTIADDR=' /etc/substrate/env > /etc/substrate/env.tmp && mv /etc/substrate/env.tmp /etc/substrate/env; echo \"RELAY_MULTIADDR=$m\" >> /etc/substrate/env; echo \"captured RELAY_MULTIADDR=$m\"; break; }; sleep 1; done"
+      "post_install": "grep -qx 'RELAY_MULTIADDR=env' /etc/substrate/env.provenance 2>/dev/null && { echo 'RELAY_MULTIADDR supplied by the operator; leaving it'; exit 0; }; for i in $(seq 1 20); do m=$(grep -m1 'RELAY_MULTIADDR=' /workspace/fed-relay.log 2>/dev/null | sed 's/RELAY_MULTIADDR=//'); [ -n \"$m\" ] && { grep -v '^RELAY_MULTIADDR=' /etc/substrate/env > /etc/substrate/env.tmp && mv /etc/substrate/env.tmp /etc/substrate/env; echo \"RELAY_MULTIADDR=$m\" >> /etc/substrate/env; echo \"captured RELAY_MULTIADDR=$m\"; break; }; sleep 1; done"
     },
     {
       "name": "federation-transport-vessel",

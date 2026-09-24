@@ -35,6 +35,241 @@ probe_url() { # probe_url <URL> <DESCRIPTION>
 # METABOB_API_KEY is a bootstrap value replaced by identity-vessel after seeding.
 set -euo pipefail
 
+# ── INSTALL-INPUT GUARDS: refuse before anything is written ──────────────────
+#
+# Everything in this block reads inputs and, at most, exits. Nothing above it
+# writes a file, so a refusal leaves the volumes exactly as it found them. That
+# is the point of refusing HERE: the inputs these guards catch are the ones that
+# would attach this container to state it does not own, grant a capability with
+# no scope, or boot a role the inputs never asked for — and each of those is
+# cheapest to stop before the first write, not after it.
+#
+# FRESH VOLUME. The refusals that are new to the install contract apply only to
+# a volume no substrate has booted on. An install that already runs keeps
+# behaving as it did when it is restarted or recreated on its existing volumes;
+# for it the same inputs produce a warning that names the replacement input.
+# Any one of these means an earlier boot got at least as far as this script: the
+# persisted secrets it writes, the clones the substrate pushes from, or the
+# datastore.
+_fresh_volume=1
+for _fv in /workspace/.substrate-secrets /workspace/git/super-repo /workspace/git/vessels /var/lib/surrealdb/data.db; do
+  if [ -e "$_fv" ]; then _fresh_volume=0; break; fi
+done
+_refuse() { # _refuse <headline> [detail lines...] — print and exit 1
+  echo "[gen-env] ERROR: $1" >&2
+  shift
+  for _rl in "$@"; do echo "[gen-env]   $_rl" >&2; done
+  echo "[gen-env]   Refused before writing anything; the volumes are unchanged." >&2
+  exit 1
+}
+_is_loopback_host() { # _is_loopback_host <url-or-empty> — 0 for empty/loopback/self
+  local _h
+  _h="$(printf '%s' "${1:-}" | sed -E 's#^[a-z]+://##; s#[:/].*##')"
+  case "$_h" in
+    ""|127.0.0.1|localhost|0.0.0.0|::1|"$(hostname 2>/dev/null)") return 0 ;;
+  esac
+  return 1
+}
+
+# NAME ALIASES. The launch manifest names the container and both volumes from
+# SUBSTRATE_NAME (<name>-live, <name>-workspace, <name>-surreal) and still honours
+# the older exact names SUBSTRATE_CONTAINER, WORKSPACE_VOLUME and SURREAL_VOLUME,
+# passing all four in. Compose resolves each name on its own and cannot refuse a
+# bad combination, so the combination is checked here.
+#
+# An alias that does not belong to the effective name is safe only when the
+# aliases name EVERY resource. Set alone, the names left unset fall back to
+# another fleet's volumes: SUBSTRATE_CONTAINER=lab with the default volume names
+# is a second container writing the default fleet's datastore. Beside an explicit
+# SUBSTRATE_NAME, a non-matching alias is a contradiction the launch cannot
+# resolve by guessing which one was meant.
+#
+# LIVE_NAME is the make-lane spelling of the same legacy convention: it named the
+# container after the fleet itself (container "lab", volumes lab-*), so both
+# <name> and <name>-live are accepted as belonging to <name>. Its default,
+# substrate-live, was special-cased to the default fleet's volumes, so that one
+# value means the default fleet.
+#
+# SUBSTRATE_NAME gets no such special case. The manifest passes it through raw
+# (empty when unset) and applies the default itself, so any value that arrives
+# here was typed by someone, including the default's own spelling: an explicit
+# SUBSTRATE_NAME=substrate beside another fleet's exact-name aliases is the same
+# contradiction as any other name, and is refused.
+_name_in="${SUBSTRATE_NAME:-}"
+_live_name="${LIVE_NAME:-}"
+[ "$_live_name" = "substrate-live" ] && _live_name=""
+if [ -n "$_live_name" ]; then
+  if [ -n "$_name_in" ] && [ "$_name_in" != "$_live_name" ]; then
+    _refuse "LIVE_NAME='$_live_name' conflicts with SUBSTRATE_NAME='$_name_in'." \
+      "LIVE_NAME is deprecated; SUBSTRATE_NAME replaces it. Set only SUBSTRATE_NAME."
+  fi
+  echo "[gen-env] WARNING: LIVE_NAME is deprecated; SUBSTRATE_NAME replaces it" >&2
+  _name_in="${_name_in:-$_live_name}"
+fi
+_name_eff="${_name_in:-substrate}"
+case "$_name_eff" in
+  [!A-Za-z0-9]*|*[!A-Za-z0-9_.-]*)
+    _refuse "SUBSTRATE_NAME='$_name_eff' is not usable as a container and volume name prefix." \
+      "Use letters, digits, '.', '_' or '-', starting with a letter or digit." ;;
+esac
+_alias_ctr="${SUBSTRATE_CONTAINER:-}"
+_alias_ws="${WORKSPACE_VOLUME:-}"
+_alias_sr="${SURREAL_VOLUME:-}"
+_alias_bad=""
+if [ -n "$_alias_ctr" ] && [ "$_alias_ctr" != "$_name_eff-live" ] && [ "$_alias_ctr" != "$_name_eff" ]; then
+  _alias_bad="$_alias_bad SUBSTRATE_CONTAINER=$_alias_ctr"
+fi
+if [ -n "$_alias_ws" ] && [ "$_alias_ws" != "$_name_eff-workspace" ]; then
+  _alias_bad="$_alias_bad WORKSPACE_VOLUME=$_alias_ws"
+fi
+if [ -n "$_alias_sr" ] && [ "$_alias_sr" != "$_name_eff-surreal" ]; then
+  _alias_bad="$_alias_bad SURREAL_VOLUME=$_alias_sr"
+fi
+if [ -n "$_alias_bad" ]; then
+  if [ -n "$_name_in" ]; then
+    _refuse "deprecated name alias(es) conflict with SUBSTRATE_NAME='$_name_in':$_alias_bad" \
+      "SUBSTRATE_NAME=$_name_in names container $_name_in-live and volumes $_name_in-workspace and $_name_in-surreal." \
+      "Set only SUBSTRATE_NAME, or drop it and name all three resources with the exact-name aliases."
+  elif [ -z "$_alias_ctr" ] || [ -z "$_alias_ws" ] || [ -z "$_alias_sr" ]; then
+    # Refused only on a fresh volume, like the other contract refusals: a partial
+    # alias was a valid configuration before this check existed, and an install
+    # already running on these volumes keeps booting on them. A fresh volume has
+    # nothing to lose, so the launch stops before it writes a first byte there.
+    if [ "$_fresh_volume" = 1 ]; then
+      _refuse "partial deprecated name alias:$_alias_bad" \
+        "The names left unset default to the '$_name_eff' fleet's resources, so this container would attach to another fleet's volumes." \
+        "Set SUBSTRATE_NAME=<name> instead (container <name>-live, volumes <name>-workspace and <name>-surreal)," \
+        "or, to adopt an existing fleet by its exact names, set all three: SUBSTRATE_CONTAINER, WORKSPACE_VOLUME, SURREAL_VOLUME."
+    fi
+    echo "[gen-env] WARNING: partial deprecated name alias:$_alias_bad — the names left unset default to the '$_name_eff' fleet's resources." >&2
+    echo "[gen-env]   This existing volume keeps booting as before, but a fresh launch with these inputs is refused." >&2
+    echo "[gen-env]   Set SUBSTRATE_NAME=<name>, or name all three: SUBSTRATE_CONTAINER, WORKSPACE_VOLUME, SURREAL_VOLUME." >&2
+  fi
+fi
+for _an in SUBSTRATE_CONTAINER WORKSPACE_VOLUME SURREAL_VOLUME; do
+  if [ -n "${!_an:-}" ]; then echo "[gen-env] WARNING: $_an is deprecated; SUBSTRATE_NAME replaces it" >&2; fi
+done
+# The container's own name, for the tools that print `docker exec <container>`:
+# nothing inside a container can observe its name, so it is carried in.
+SUBSTRATE_CONTAINER_NAME="${_alias_ctr:-$_name_eff-live}"
+if [ -n "$_live_name" ] && [ -z "$_alias_ctr" ]; then SUBSTRATE_CONTAINER_NAME="$_live_name"; fi
+
+# PORT PREFIX AND RELAY PORT. Host port = prefix followed by the last three
+# digits of the container port, so the prefix must be a number whose largest
+# derived port still fits (65 -> 65333 for the relay). Validated here because a
+# malformed value would otherwise surface as an unreachable advertised address.
+if [ -n "${SUBSTRATE_PORT_PREFIX:-}" ]; then
+  case "$SUBSTRATE_PORT_PREFIX" in
+    *[!0-9]*) _refuse "SUBSTRATE_PORT_PREFIX='$SUBSTRATE_PORT_PREFIX' is not a number." \
+                "It is the leading digits of every published port (18 -> 18080, 18100, 18333)." ;;
+  esac
+  if [ "$SUBSTRATE_PORT_PREFIX" -lt 1 ] || [ "$SUBSTRATE_PORT_PREFIX" -gt 65 ]; then
+    _refuse "SUBSTRATE_PORT_PREFIX='$SUBSTRATE_PORT_PREFIX' is out of range (1-65)." \
+      "Prefixes 19-32 avoid the ephemeral port range."
+  fi
+  if [ "$SUBSTRATE_PORT_PREFIX" -ge 33 ]; then
+    echo "[gen-env] WARNING: SUBSTRATE_PORT_PREFIX=$SUBSTRATE_PORT_PREFIX puts published ports in the ephemeral range; 19-32 avoid it" >&2
+  fi
+fi
+for _pn in RELAY_PORT RELAY_ANNOUNCE_PORT; do
+  _pv="${!_pn:-}"
+  [ -n "$_pv" ] || continue
+  case "$_pv" in
+    *[!0-9]*) _refuse "$_pn='$_pv' is not a port number." ;;
+  esac
+  if [ "$_pv" -lt 1 ] || [ "$_pv" -gt 65535 ]; then
+    _refuse "$_pn='$_pv' is out of range (1-65535)."
+  fi
+done
+# The nine per-port names the manifest still forwards. Each outranks the prefix in
+# the manifest's own mapping, so an old .env publishes exactly what it did; this
+# only says so. Beside an explicit SUBSTRATE_PORT_PREFIX, a per-port value that is
+# not the port the prefix derives is a contradiction: the manifest would publish
+# the alias, while this container would advertise and report the prefix's port.
+# Only the digits after the last ':' are compared, since a legacy value may carry
+# a host address (127.0.0.1:18310).
+for _pp in ACTIVITY_API_PORT:8080 DEV_VESSEL_PORT:8090 DISCOVERY_PORT:8100 IDENTITY_PORT:8101 \
+           GOAL_HOST_PORT:8210 ANALYSIS_PORT:8250 CONCEPT_DB_PORT:8260 STATEFUL_UI_PORT:8270 \
+           HUMAN_SURFACE_PORT:8310; do
+  _pn="${_pp%%:*}"; _pc="${_pp##*:}"
+  _pv="${!_pn:-}"
+  [ -n "$_pv" ] || continue
+  if [ -n "${SUBSTRATE_PORT_PREFIX:-}" ] && [ "${_pv##*:}" != "${SUBSTRATE_PORT_PREFIX}${_pc: -3}" ]; then
+    _refuse "$_pn='$_pv' conflicts with SUBSTRATE_PORT_PREFIX='$SUBSTRATE_PORT_PREFIX', which derives host port ${SUBSTRATE_PORT_PREFIX}${_pc: -3} for container port $_pc." \
+      "$_pn is deprecated; SUBSTRATE_PORT_PREFIX replaces it. Set only SUBSTRATE_PORT_PREFIX."
+  fi
+  echo "[gen-env] WARNING: $_pn is deprecated; SUBSTRATE_PORT_PREFIX replaces it (host port = prefix followed by the last three digits of $_pc)" >&2
+done
+
+# AMBIGUOUS JOIN INPUTS. DISCOVERY_ENDPOINT is the join input: it alone lets
+# this script derive the role, the hub's sibling endpoints and the relay anchor.
+# A remote HUB_DISCOVERY_URL or a PEER_MULTIADDR with no DISCOVERY_ENDPOINT
+# leaves the role to a guess — the guesses this file used to make are the ones
+# its comments record as measured failures (a spoke classified as root, a joiner
+# pointed at an identity port nothing serves). Explicit identity or activity
+# endpoints do not settle it: they say where those resolvers are, not which
+# units this container runs, so with them a fresh volume still booted every unit,
+# local identity included, against a remote hub. The long form stays valid
+# because it states DISCOVERY_ENDPOINT: a loopback DISCOVERY_ENDPOINT beside
+# HUB_DISCOVERY_URL and explicit IDENTITY_VESSEL_URL / ACTIVITY_API_ENDPOINT fully
+# describes a spoke and never enters this guard. A loopback HUB_DISCOVERY_URL is a
+# hub anchoring itself, not a join, and is not ambiguous.
+_join_hint=""
+if ! _is_loopback_host "${HUB_DISCOVERY_URL:-}"; then _join_hint="HUB_DISCOVERY_URL"; fi
+if [ -n "${PEER_MULTIADDR:-}" ]; then _join_hint="${_join_hint:+$_join_hint and }PEER_MULTIADDR"; fi
+if [ -n "$_join_hint" ] && [ -z "${DISCOVERY_ENDPOINT:-}" ]; then
+  if [ "$_fresh_volume" = 1 ]; then
+    _refuse "$_join_hint is set but DISCOVERY_ENDPOINT is not." \
+      "DISCOVERY_ENDPOINT is the join input: set it to the hub's discovery URL (http://<hub-host>:<prefix>100)" \
+      "together with METABOB_API_KEY, and the role, hub endpoints and relay anchor are derived from it." \
+      "The system does not guess a role from $_join_hint alone."
+  fi
+  echo "[gen-env] WARNING: $_join_hint is set without DISCOVERY_ENDPOINT; this existing volume keeps booting as before," >&2
+  echo "[gen-env]   but a fresh launch with these inputs is refused. Set DISCOVERY_ENDPOINT to the hub's discovery URL." >&2
+fi
+
+# PROFILE AGAINST ANCHOR. A hub profile holds the network's identity and learning
+# state; a remote discovery anchor makes this container a spoke of someone else's.
+# Both at once has no coherent reading, so neither is picked.
+case "${PROFILE:-}" in
+  hub|hub-minimal)
+    if ! _is_loopback_host "${DISCOVERY_ENDPOINT:-}" || ! _is_loopback_host "${HUB_DISCOVERY_URL:-}"; then
+      _refuse "PROFILE=${PROFILE} conflicts with a remote anchor (DISCOVERY_ENDPOINT='${DISCOVERY_ENDPOINT:-}' HUB_DISCOVERY_URL='${HUB_DISCOVERY_URL:-}')." \
+        "A hub is the network's home and joins no one. Remove the anchor, or choose PROFILE=spoke to join that hub."
+    fi ;;
+esac
+
+# PUSH CAPABILITY NEEDS A SCOPE. SUBSTRATE_GIT_PAT grants the substrate the
+# ability to land its own commits; SUBSTRATE_REPO_OWNER says whose repositories
+# those landings go to. Every fleet converges its running code to the owner's
+# working branch, so a token with the owner left to a default would point a new
+# substrate's autonomy at a branch other fleets run. No default owner is assumed
+# for a new install.
+#
+# The exemption is keyed on the capability already being in use, not on the
+# volume existing. A volume that has already booted with a token has it in its
+# persisted secrets (every boot writes the effective token there), so it keeps
+# the owner it runs against: an explicit value, else the one persisted by an
+# earlier boot, else the historical default — its clones and prior pushes
+# already name that owner, and changing it under them on a restart is exactly
+# the silent re-pointing this guard exists to prevent. A volume that has never
+# held a token is granted the capability for the first time by this launch,
+# whether or not a token-less boot came first, and that grant needs its scope.
+# Read-only here: the checks grep the persisted file, and nothing is written
+# before the refusal.
+_persisted_has() { # _persisted_has <NAME> — 0 when the persisted secrets hold a non-empty NAME
+  # A quoted empty value ("") counts as empty, like an unquoted one.
+  [ -f /workspace/.substrate-secrets ] && grep -qE "^$1=(\"[^\"]|[^\"])" /workspace/.substrate-secrets 2>/dev/null
+}
+if [ -n "${SUBSTRATE_GIT_PAT:-}" ] && [ -z "${SUBSTRATE_REPO_OWNER:-}" ] \
+   && ! _persisted_has SUBSTRATE_REPO_OWNER && ! _persisted_has SUBSTRATE_GIT_PAT; then
+  _refuse "SUBSTRATE_GIT_PAT is set but SUBSTRATE_REPO_OWNER is not." \
+    "The token grants push capability; SUBSTRATE_REPO_OWNER scopes it to the owner whose repositories" \
+    "this substrate lands on (normally your own fork). Set SUBSTRATE_REPO_OWNER=<github owner>." \
+    "No default owner is assumed for a substrate gaining push capability."
+fi
+# ── end of install-input guards ──────────────────────────────────────────────
+
 # A SPOKE (DISCOVERY_ENDPOINT names a REMOTE hub) inherits LLM capability from the
 # hub's arms through discovery — it needs NO local provider key. Only a root/standalone
 # (self/loopback/unset discovery) requires one. This makes the point-and-go contract
@@ -156,6 +391,8 @@ for _n in ANTHROPIC_API_KEY OPENAI_API_KEY OPENAI_BASE_URL GOOGLE_API_KEY GROQ_A
           LLM_ARMS LLM_DEFAULT_MODEL MITOSIS_DIRECT_PUSH \
           ROUTE_EDIT_INTENT_TO_COMPOSE API_KEY_SECRET_PREVIOUS \
           SUBSTRATE_REPO_OWNER GITHUB_TOKEN SUBSTRATE_BIND_HOST \
+          SUBSTRATE_NAME SUBSTRATE_PORT_PREFIX RELAY_PORT RELAY_ANNOUNCE_PORT \
+          SUBSTRATE_CONTAINER WORKSPACE_VOLUME SURREAL_VOLUME LIVE_NAME \
           RUNPOD_ENDPOINT_ID RUNPOD_MODELS; do
   # BOTH autonomy switches belong here, not one. MITOSIS_DIRECT_PUSH was added
   # and ROUTE_EDIT_INTENT_TO_COMPOSE was not, so substrate-config attributed one
@@ -165,6 +402,11 @@ for _n in ANTHROPIC_API_KEY OPENAI_API_KEY OPENAI_BASE_URL GOOGLE_API_KEY GROQ_A
   # gates autonomous commits that difference is the whole question.
   if [[ -n "${!_n:-}" ]]; then _ENV_SUPPLIED="${_ENV_SUPPLIED} ${_n}"; fi
 done
+# Whether the operator chose the vessel selection, captured before the spoke
+# derivation below writes a derived ENABLED_ROLES. An explicit selection is kept
+# exactly as given; only an unchosen one gets a profile named for it.
+_sel_explicit=0
+if [[ -n "${PROFILE:-}${ENABLED_ROLES:-}${ENABLED_VESSELS:-}" ]]; then _sel_explicit=1; fi
 
 persisted_secret() {
   local _v=""
@@ -351,6 +593,23 @@ SUBSTRATE_ADMIN_KEY="${SUBSTRATE_ADMIN_KEY:-$(persisted_secret SUBSTRATE_ADMIN_K
 # a historical unquoted SUBSTRATE_GIT_AUTHOR_NAME) would run as a command here.
 SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-$(persisted_secret SUBSTRATE_GIT_PAT)}"
 SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-}"
+# The push capability's scope (see the guard at the top of this file). Precedence
+# is the file's usual one — explicit env > persisted > default — and the default
+# is reachable only on a volume that already held a token or on one with no
+# token, because a first token with no owner was refused before any write.
+# Only an explicit or already-persisted owner is persisted, so the default is
+# never frozen into the volume as if someone had chosen it.
+SUBSTRATE_REPO_OWNER="${SUBSTRATE_REPO_OWNER:-$(persisted_secret SUBSTRATE_REPO_OWNER)}"
+_owner_persist="$SUBSTRATE_REPO_OWNER"
+if [[ -z "$SUBSTRATE_REPO_OWNER" ]]; then
+  SUBSTRATE_REPO_OWNER="AviGopal"
+  prov SUBSTRATE_REPO_OWNER hardcoded
+  if [[ -n "$SUBSTRATE_GIT_PAT" ]]; then
+    echo "[gen-env] WARNING: push capability is scoped to the default owner AviGopal because SUBSTRATE_REPO_OWNER is unset." >&2
+    echo "[gen-env]   This volume already held a token, so it keeps that owner; a first token with no owner is refused." >&2
+    echo "[gen-env]   Set SUBSTRATE_REPO_OWNER explicitly to make the scope a decision rather than a default." >&2
+  fi
+fi
 SUBSTRATE_GIT_AUTHOR_NAME="${SUBSTRATE_GIT_AUTHOR_NAME:-Substrate Autonomous}"
 SUBSTRATE_GIT_AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL:-substrate-autonomous@substrate.local}"
 
@@ -555,6 +814,50 @@ case "$_disc_host" in
     DISCOVERY_ENDPOINT="http://127.0.0.1:8100"
     ;;
 esac
+
+# ── THE PROFILE THIS CONTAINER RUNS ──────────────────────────────────────────
+# PROFILE names a deployable composition in vessels.inventory.json (standalone,
+# hub, hub-minimal, spoke, surface, compute), and apply-inventory is the one
+# place that expands it into units. When the operator names none, the default is
+# derived from the anchor: standalone for a root, spoke for a remote anchor.
+#
+# The DERIVED default is expressed through the selection variables that already
+# mean it, not by writing PROFILE: a root with no selection already runs every
+# unit (which is what standalone is), and the remote-anchor branch above already
+# derives ENABLED_ROLES=spoke (which is what the spoke profile expands to).
+# Writing PROFILE for them would change more than the vessel set: several boot
+# and runtime readers treat any PROFILE as a hand-written allow-list (the LLM arm
+# pass, the fail-closed selection check, readiness's masked-core rule), so a
+# derived PROFILE would alter an existing install that never asked for one.
+#
+# An EXPLICIT selection (PROFILE, ENABLED_ROLES or ENABLED_VESSELS) is kept
+# exactly as given. PROFILE_EFFECTIVE records the outcome for status and
+# connection tools; `custom` means an explicit ENABLED_* selection.
+#
+# The spoke label follows every remote-anchor signal the key guard above reads
+# (a remote DISCOVERY_ENDPOINT, a remote HUB_DISCOVERY_URL, any PEER_MULTIADDR),
+# not only the ENABLED_ROLES=spoke the discovery derivation writes: status and
+# connection tools read this value to decide what the container is anchored to.
+# On a fresh volume the two can only differ when DISCOVERY_ENDPOINT is stated
+# (the ambiguous-join guard refused the rest); an existing volume anchored by
+# the other signals keeps the unit set it has always booted, and the label says
+# so rather than calling it standalone.
+if [[ -n "${PROFILE:-}" ]]; then
+  PROFILE_EFFECTIVE="$PROFILE"; _profile_why="PROFILE"
+elif [[ "$_sel_explicit" = 1 ]]; then
+  PROFILE_EFFECTIVE="custom"; _profile_why="explicit ENABLED_* selection"
+elif [[ "${ENABLED_ROLES:-}" = "spoke" ]]; then
+  PROFILE_EFFECTIVE="spoke"; _profile_why="derived: remote anchor"
+  prov PROFILE_EFFECTIVE derived
+elif [[ "$_is_spoke" = 1 ]]; then
+  PROFILE_EFFECTIVE="spoke"
+  _profile_why="derived: remote anchor; unit selection unchanged, so every unit this image enables still runs"
+  prov PROFILE_EFFECTIVE derived
+else
+  PROFILE_EFFECTIVE="standalone"; _profile_why="derived: no remote anchor"
+  prov PROFILE_EFFECTIVE derived
+fi
+echo "[gen-env] profile: ${PROFILE_EFFECTIVE} (${_profile_why})" >&2
 DISCOVERY_VESSEL_ENDPOINT="${DISCOVERY_VESSEL_ENDPOINT:-$DISCOVERY_ENDPOINT}"
 ACTIVITY_API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-http://127.0.0.1:8080}"
 ACTIVITY_API_URL="${ACTIVITY_API_URL:-$ACTIVITY_API_ENDPOINT}"
@@ -597,9 +900,13 @@ IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT:-$IDENTITY_VESSEL_URL}"
 # the transport by hand was one of five interventions the role should have
 # owned. Only when the operator supplied no anchor of their own: an explicit
 # HUB_DISCOVERY_URL (or a spoke derivation above) always wins.
+#
+# PROFILE=hub and PROFILE=hub-minimal make the same promise as ENABLED_ROLES=hub,
+# so they self-anchor the same way.
 if [[ -z "${HUB_DISCOVERY_URL:-}" && "$_is_spoke" != "1" ]]; then
-  case ",$(printf '%s' "${ENABLED_ROLES:-}" | tr -d '[:space:]')," in
-    *,hub,*) HUB_DISCOVERY_URL="http://localhost:8100"
+  case ",$(printf '%s' "${ENABLED_ROLES:-}" | tr -d '[:space:]'),:${PROFILE:-}" in
+    *,hub,*|*:hub|*:hub-minimal)
+             HUB_DISCOVERY_URL="http://localhost:8100"
              prov HUB_DISCOVERY_URL derived ;;
   esac
 fi
@@ -667,7 +974,114 @@ for _pinned in \
   echo "[gen-env]       To change it, edit gen-env.sh — it is not settable through -e/compose." >&2
 done
 
+# ── THE LANDING KILL SWITCH ──────────────────────────────────────────────────
+# MITOSIS_DIRECT_PUSH is an emergency stop, not the autonomy switch. Push
+# capability comes from holding SUBSTRATE_GIT_PAT, scoped by SUBSTRATE_REPO_OWNER,
+# and where a landing may go is runtime policy (the pushPolicy impulse the
+# landing route reads at use time). This variable only says whether landings may
+# be pushed at all:
+#   unset or 1  landings proceed as the capability and policy allow (the default)
+#   0           the kill switch: no commit, no push, no host-sync intent — every
+#               landing route refuses with kind push_kill_switch, whatever the
+#               pushPolicy says. Engage it by setting 0 and recreating the
+#               container; clear it the same way.
+# Any other value is passed through unchanged and warned about, keeping what it
+# has always meant. The landing route compares the direct-push gate to "1"
+# exactly and the emergency stop to "0" exactly, so an unrecognised value turns
+# direct push off but engages no stop: host-sync intents are still recorded.
+# Rewriting it to 0 would silently widen a typo into a full stop; the warning
+# makes the half-state visible instead.
+case "${MITOSIS_DIRECT_PUSH:-}" in
+  ""|1) : ;;
+  0) echo "[gen-env] landing kill switch ENGAGED (MITOSIS_DIRECT_PUSH=0): no autonomous landing is committed, pushed or handed to host sync" >&2 ;;
+  *) echo "[gen-env] WARNING: MITOSIS_DIRECT_PUSH='${MITOSIS_DIRECT_PUSH}' is neither 0 nor 1: direct push is off, but the kill switch is NOT engaged (host-sync intents are still recorded)." >&2
+     echo "[gen-env]   Set 0 to stop every landing, or 1 (or unset) to let landings proceed." >&2 ;;
+esac
+
+# ── Relay advertisement ──────────────────────────────────────────────────────
+# The in-container federation relay listens on 30333 inside the container, and
+# the launch manifest publishes that at host port <prefix>333 (RELAY_PORT
+# overrides the host port, e.g. to keep an existing hub on 30333). The relay
+# must ANNOUNCE the host port, because that is the address a spoke can dial;
+# announcing the container port would advertise an address nothing publishes.
+#
+# Precedence: an announce port the manifest states outright, then RELAY_PORT,
+# then the prefix. A launch through the manifest announces the port the
+# manifest publishes even when the prefix is left to its default: the manifest
+# always passes SUBSTRATE_PORT_PREFIX through (empty when unset) and publishes
+# the relay at the default prefix, so a variable that is present but empty means
+# 18333, whatever selected the hub (PROFILE or the older ENABLED_ROLES=hub). A
+# hub PROFILE with no prefix at all is a launch under the install contract too,
+# so it announces 18333 as well. A launch that names none of these and did not
+# come through the manifest predates the contract (a hand-run hub with
+# ENABLED_ROLES=hub); it keeps announcing the container port exactly as before,
+# since whatever published its relay was arranged outside any manifest.
+# An explicit RELAY_MULTIADDR still outranks all of this: the relay does not
+# overwrite an operator-supplied anchor.
+_manifest_launch=0
+[[ -n "${SUBSTRATE_PORT_PREFIX+present}" ]] && _manifest_launch=1
+_hub_selected=0
+case ",$(printf '%s' "${ENABLED_ROLES:-}" | tr -d '[:space:]'),:${PROFILE:-}" in
+  *,hub,*|*:hub|*:hub-minimal) _hub_selected=1 ;;
+esac
+if [[ -n "${RELAY_ANNOUNCE_PORT:-}" ]]; then
+  :  # validated with the other port inputs at the top of this file
+elif [[ -n "${RELAY_PORT:-}" ]]; then
+  RELAY_ANNOUNCE_PORT="$RELAY_PORT"; prov RELAY_ANNOUNCE_PORT derived
+elif [[ -n "${SUBSTRATE_PORT_PREFIX:-}" ]]; then
+  RELAY_ANNOUNCE_PORT="${SUBSTRATE_PORT_PREFIX}333"; prov RELAY_ANNOUNCE_PORT derived
+elif [[ "$_manifest_launch" = 1 && "$_hub_selected" = 1 ]]; then
+  RELAY_ANNOUNCE_PORT="18333"; prov RELAY_ANNOUNCE_PORT derived
+else
+  case "${PROFILE:-}" in
+    hub|hub-minimal) RELAY_ANNOUNCE_PORT="18333"; prov RELAY_ANNOUNCE_PORT derived ;;
+    *)               RELAY_ANNOUNCE_PORT="" ;;
+  esac
+fi
+# Say when the address a hub hands its spokes may not be one they can dial.
+# Warnings, not refusals: a hub whose spokes share its container network (a
+# local test, a compose project) dials the container address directly and is
+# correct as it stands, and a hand-run hub's relay publishing is not visible
+# from in here.
+if [[ "$_hub_selected" = 1 ]]; then
+  if [[ -z "${RELAY_ANNOUNCE_PORT:-}" ]]; then
+    echo "[gen-env] WARNING: this hub's relay announces its container port 30333 (no RELAY_PORT, SUBSTRATE_PORT_PREFIX or manifest launch to derive the published port from)." >&2
+    echo "[gen-env]   Spokes on other hosts reach it only if 30333 is published 1:1; otherwise set RELAY_PORT to the published host port." >&2
+  elif [[ -z "${PUBLIC_IP:-}${FED_PUBLIC_IP:-}" ]]; then
+    echo "[gen-env] WARNING: this hub has no PUBLIC_IP, so its relay announces its container interface address on 30333 and ignores RELAY_ANNOUNCE_PORT=${RELAY_ANNOUNCE_PORT}." >&2
+    echo "[gen-env]   /bootstrap hands that address to spokes; only spokes on the same container network can dial it." >&2
+    echo "[gen-env]   Set PUBLIC_IP to the address spokes on other hosts reach, and the published port is announced." >&2
+  fi
+fi
+
 mkdir -p /workspace
+
+# ── THE PUSH POLICY A NEW INSTALL STARTS UNDER ───────────────────────────────
+# The landing route (development-vessel's pushPolicy) decides its regime by one
+# volume fact: whether /workspace/push-policy.json exists. With no file a volume
+# is grandfathered and lands wherever its push clone points, exactly as installs
+# that predate the policy always have. With a file it is scoped: a landing within
+# SUBSTRATE_REPO_OWNER proceeds, and one onto another owner's branch, or onto a
+# target the policy declares shared, needs an evidence-cited promotion.
+#
+# So the scoped regime is entered here, once, on a volume no substrate has booted
+# on, by writing the initial policy: no promotion, no own-owner shared targets.
+# It is never written on a volume that already booted, which is what keeps every
+# existing install landing as it does today, and a file already present is never
+# replaced — after the first boot the policy is runtime state, changed only
+# through pushPolicy_write, which the landing route reads at use time.
+if [[ "$_fresh_volume" = 1 && ! -e /workspace/push-policy.json ]]; then
+  _pp_tmp="/workspace/push-policy.json.$$.tmp"
+  jq -n --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
+      promotion: {granted: false},
+      shared_targets: [],
+      set_by: "bootstrap",
+      set_at: $at,
+      reason: "initial policy of a new install: landings are scoped to SUBSTRATE_REPO_OWNER until a promotion is earned"
+    }' > "$_pp_tmp" && mv "$_pp_tmp" /workspace/push-policy.json \
+    && echo "[gen-env] new install: wrote the initial pushPolicy (landings scoped to the repo owner; no promotion)" >&2 \
+    || { rm -f "$_pp_tmp"; echo "[gen-env] WARNING: could not write /workspace/push-policy.json; this volume stays grandfathered until a pushPolicy is recorded" >&2; }
+fi
 
 # ESCAPE VALUES THAT CAN CONTAIN QUOTES, BEFORE THEY REACH THE HEREDOC.
 #
@@ -793,12 +1207,14 @@ SUBSTRATE_GIT_AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL}"
 # /vessels/<vessel> runtime and restarts the unit. Without these three knobs
 # the cutover only records an intent that nothing here consumes (the host repo
 # bind mount is read-only) — i.e. authored fixes never land.
-#   MITOSIS_DIRECT_PUSH=1        — enable commit+push+mirror instead of intent
+#   MITOSIS_DIRECT_PUSH          — the landing KILL SWITCH (see the block above
+#                                  the heredoc): unset/1 = landings proceed as
+#                                  capability and policy allow, 0 = none pushed
 #   MITOSIS_RUNTIME_DIR=/vessels — live runtime: also the freshness-check root,
 #                                  so the gate hashes the same file apply-proposal
 #                                  patched (kills the base_sha path-mismatch livelock)
 #   MITOSIS_PUSH_CLONE_DIR       — where setup-git-push put the per-vessel clones
-MITOSIS_DIRECT_PUSH=${MITOSIS_DIRECT_PUSH:-1}
+MITOSIS_DIRECT_PUSH="${MITOSIS_DIRECT_PUSH:-1}"
 MITOSIS_RUNTIME_DIR=${MITOSIS_RUNTIME_DIR:-/vessels}
 MITOSIS_PUSH_CLONE_DIR=${MITOSIS_PUSH_CLONE_DIR:-/workspace/git/vessels}
 LOCAL_TOOLS_VESSEL_API_KEY=${LOCAL_TOOLS_VESSEL_API_KEY}
@@ -859,7 +1275,7 @@ RELAY_MULTIADDR="${RELAY_MULTIADDR}"
 # It is emitted rather than merely accepted because units inherit nothing from the
 # container environment — 53 units carry EnvironmentFile=/etc/substrate/env and none
 # carries PassEnvironment, so an operator input that gen-env does not write can never
-# reach the vessel it configures. Measured: FED_EXTRA_SHAPE was passed via `docker run -e`,
+# reach the vessel it configures. Measured: FED_EXTRA_SHAPE was passed via docker run -e,
 # accepted by docker, and never seen by the transport, because it was missing from this
 # list. Both are now emitted.
 PEER_MULTIADDR="${PEER_MULTIADDR:-}"
@@ -1029,13 +1445,37 @@ echo "[gen-env] wrote per-model llm-resolver env files (opus, haiku, google)"
   [ -n "${MAX_PEER_DEPTH:-}" ]             && echo "MAX_PEER_DEPTH=\"$(_env_escape "${MAX_PEER_DEPTH}")\""
   [ -n "${FEDERATION_PEER_AUTH_MODE:-}" ]  && echo "FEDERATION_PEER_AUTH_MODE=\"$(_env_escape "${FEDERATION_PEER_AUTH_MODE}")\""
   [ -n "${FEDERATION_SIGNING_SECRET:-}" ]  && echo "FEDERATION_SIGNING_SECRET=\"$(_env_escape "${FEDERATION_SIGNING_SECRET}")\""
+  # The effective composition (see "THE PROFILE THIS CONTAINER RUNS"). Named
+  # PROFILE_EFFECTIVE, never PROFILE: it is a report of the outcome, and readers
+  # that key on PROFILE treat it as an operator's hand-written allow-list.
+  echo "PROFILE_EFFECTIVE=\"$(_env_escape "${PROFILE_EFFECTIVE}")\""
+  # Install identity carried in by the launch manifest: the fleet name, the
+  # container's own name (unobservable from inside), and the port prefix every
+  # published port derives from. Emitted only when the launch supplied them, so a
+  # launch that predates the manifest is not told a name that is not its own.
+  # A fleet adopted by its exact-name aliases has no SUBSTRATE_NAME of its own,
+  # so none is claimed for it; its container name is still known and emitted.
+  _name_out="$_name_in"
+  if [ -z "$_name_out" ] && [ -n "${SUBSTRATE_NAME:-}" ] && [ -z "$_alias_ctr$_alias_ws$_alias_sr" ]; then
+    _name_out="$SUBSTRATE_NAME"
+  fi
+  [ -n "$_name_out" ] && echo "SUBSTRATE_NAME=\"$(_env_escape "${_name_out}")\""
+  if [ -n "${SUBSTRATE_NAME:-}${LIVE_NAME:-}${SUBSTRATE_CONTAINER:-}${WORKSPACE_VOLUME:-}${SURREAL_VOLUME:-}" ]; then
+    echo "SUBSTRATE_CONTAINER_NAME=\"$(_env_escape "${SUBSTRATE_CONTAINER_NAME}")\""
+  fi
+  [ -n "${SUBSTRATE_PORT_PREFIX:-}" ] && echo "SUBSTRATE_PORT_PREFIX=\"${SUBSTRATE_PORT_PREFIX}\""
+  [ -n "${RELAY_PORT:-}" ]            && echo "RELAY_PORT=\"${RELAY_PORT}\""
+  [ -n "${RELAY_ANNOUNCE_PORT:-}" ]   && echo "RELAY_ANNOUNCE_PORT=\"${RELAY_ANNOUNCE_PORT}\""
   # Public reachability, threaded through so discovery's GET /bootstrap can hand a
-  # client the PUBLIC identity + discovery URLs (not loopback) to point at.
+  # client the PUBLIC identity + discovery URLs (not loopback) to point at. The
+  # ports are the PUBLISHED ones, derived from the prefix like every other host
+  # port; with no prefix supplied they are the conventional 18xxx block.
   PUB="${PUBLIC_IP:-${FED_PUBLIC_IP:-}}"
+  _pub_prefix="${SUBSTRATE_PORT_PREFIX:-18}"
   if [ -n "$PUB" ]; then
     echo "PUBLIC_IP=\"$(_env_escape "${PUB}")\""
-    echo "DISCOVERY_PUBLIC_URL=${DISCOVERY_PUBLIC_URL:-http://${PUB}:${DISCOVERY_PUBLIC_PORT:-18100}}"
-    echo "IDENTITY_PUBLIC_URL=${IDENTITY_PUBLIC_URL:-http://${PUB}:${IDENTITY_PUBLIC_PORT:-18101}}"
+    echo "DISCOVERY_PUBLIC_URL=${DISCOVERY_PUBLIC_URL:-http://${PUB}:${DISCOVERY_PUBLIC_PORT:-${_pub_prefix}100}}"
+    echo "IDENTITY_PUBLIC_URL=${IDENTITY_PUBLIC_URL:-http://${PUB}:${IDENTITY_PUBLIC_PORT:-${_pub_prefix}101}}"
   fi
 } >> /etc/substrate/env
 
@@ -1165,6 +1605,12 @@ MAX_PEER_DEPTH=${MAX_PEER_DEPTH:-}
 FEDERATION_PEER_AUTH_MODE=${FEDERATION_PEER_AUTH_MODE:-}
 FEDERATION_SIGNING_SECRET=${FEDERATION_SIGNING_SECRET:-}
 SECRETS
+# The push scope, only once someone chose it (explicitly, or on an earlier boot).
+# Written outside the heredoc so an unchosen owner never appears as an empty line
+# that a later EnvironmentFile read could mistake for a deliberate blank.
+if [[ -n "${_owner_persist:-}" ]]; then
+  printf 'SUBSTRATE_REPO_OWNER=%s\n' "$_owner_persist" >> "$_SECRETS_TMP"
+fi
 
 # Merge: carry through any key the OLD file has that this revision never emits,
 # so a secret written by a different revision of the list above survives. Keys

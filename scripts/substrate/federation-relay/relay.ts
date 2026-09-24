@@ -11,7 +11,11 @@
 // IDENTITY: the relay persists its keypair (RELAY_KEY_FILE) so its peerId — and thus
 // the RELAY_MULTIADDR vessels are configured with — is STABLE across restarts.
 //
-// Run on the VM:
+// In a substrate container (the hub and hub-minimal profiles) the entrypoint
+// installs it as a unit; it listens on 30333 inside the container and announces
+// the host port the launch manifest publishes (RELAY_ANNOUNCE_PORT).
+//
+// Standalone on a VM:
 //   cd scripts/substrate/federation-relay && bun install
 //   PUBLIC_IP=<vm-public-ip> bun relay.ts
 //   # prints RELAY_MULTIADDR=/ip4/<ip>/tcp/30333/p2p/<peerId> and a /wss variant
@@ -44,6 +48,15 @@ import os from 'node:os'
 const TCP_PORT = parseInt(process.env.RELAY_TCP_PORT || '30333', 10)
 const WS_PORT = parseInt(process.env.RELAY_WS_PORT || '0', 10) // set e.g. 443 to also offer browser-reachable WSS
 const RELAY_KEY_FILE = process.env.RELAY_KEY_FILE || './relay-key.protobuf'
+// LISTEN PORT AND ANNOUNCE PORT ARE DIFFERENT FACTS inside a container. The relay
+// listens on TCP_PORT in its own network namespace; the launch manifest publishes
+// that on a host port (<prefix>333, or RELAY_PORT), and a spoke can only dial the
+// host port. Announcing TCP_PORT there advertises an address nothing publishes,
+// and /bootstrap hands that address to every joining spoke. gen-env derives
+// RELAY_ANNOUNCE_PORT from the same inputs the manifest publishes with.
+// It applies only to an explicitly supplied PUBLIC_IP: a derived interface address
+// is the container's own, which is reached on the listen port, not a host port.
+const ANNOUNCE_PORT_OVERRIDE = parseInt(process.env.RELAY_ANNOUNCE_PORT || '0', 10)
 
 function deriveInterfaceIp(): string {
   const nets = os.networkInterfaces()
@@ -55,6 +68,7 @@ function deriveInterfaceIp(): string {
   return ''
 }
 let PUBLIC_IP = process.env.PUBLIC_IP || process.env.FED_PUBLIC_IP || ''
+const PUBLIC_IP_EXPLICIT = PUBLIC_IP !== ''
 if (!PUBLIC_IP) {
   PUBLIC_IP = deriveInterfaceIp()
   if (PUBLIC_IP) {
@@ -75,8 +89,17 @@ if (existsSync(RELAY_KEY_FILE)) {
   console.log('[relay] minted + persisted new identity ->', RELAY_KEY_FILE)
 }
 
+let ANNOUNCE_PORT = TCP_PORT
+if (ANNOUNCE_PORT_OVERRIDE > 0) {
+  if (PUBLIC_IP_EXPLICIT) {
+    ANNOUNCE_PORT = ANNOUNCE_PORT_OVERRIDE
+    console.log(`[relay] listening on ${TCP_PORT}, announcing the published port ${PUBLIC_IP}:${ANNOUNCE_PORT}`)
+  } else {
+    console.warn(`[relay] RELAY_ANNOUNCE_PORT=${ANNOUNCE_PORT_OVERRIDE} ignored: PUBLIC_IP was derived from an interface, whose address is reached on the listen port ${TCP_PORT}. Set PUBLIC_IP to the address spokes reach for the published port to be announced.`)
+  }
+}
 const listen = [`/ip4/0.0.0.0/tcp/${TCP_PORT}`]
-const announce = [`/ip4/${PUBLIC_IP}/tcp/${TCP_PORT}`]
+const announce = [`/ip4/${PUBLIC_IP}/tcp/${ANNOUNCE_PORT}`]
 if (WS_PORT > 0) { listen.push(`/ip4/0.0.0.0/tcp/${WS_PORT}/ws`); announce.push(`/ip4/${PUBLIC_IP}/tcp/${WS_PORT}/ws`) }
 
 const node = await createLibp2p({
@@ -169,7 +192,7 @@ console.log(`[relay] reserved-peer keep-alive: ping every ${KEEPALIVE_MS}ms, clo
 for (const ma of node.getMultiaddrs()) console.log('[relay] listening:', ma.toString())
 // The line vessels need: set this as RELAY_MULTIADDR in each substrate's /etc/substrate/env.
 const pub = node.getMultiaddrs().map(m => m.toString()).filter(m => m.includes(PUBLIC_IP))
-const relayMultiaddr = pub[0] || `/ip4/${PUBLIC_IP}/tcp/${TCP_PORT}/p2p/${node.peerId.toString()}`
+const relayMultiaddr = pub.find(m => m.includes(`/tcp/${ANNOUNCE_PORT}/`)) || pub[0] || `/ip4/${PUBLIC_IP}/tcp/${ANNOUNCE_PORT}/p2p/${node.peerId.toString()}`
 console.log('\nRELAY_MULTIADDR=' + relayMultiaddr)
 
 // Persist the anchor where the fleet reads it. Printing the multiaddr to the
@@ -181,9 +204,23 @@ console.log('\nRELAY_MULTIADDR=' + relayMultiaddr)
 // after it, and anything that reads the file at use time, see it without an
 // operator in the loop. Best-effort: on a bare VM deployment the file does not
 // exist and the printed line remains the contract.
+//
+// AN OPERATOR-SUPPLIED ANCHOR WINS. When RELAY_MULTIADDR reached gen-env from the
+// launch environment (an existing hub fronted by a relay outside the container),
+// that value is the one spokes already dial, and replacing it with this relay's
+// own address would re-point every joining spoke at a peer nobody published.
+// gen-env records the value's origin in the provenance file beside the env file.
 const ENV_FILE = process.env.SUBSTRATE_ENV_FILE || '/etc/substrate/env'
+const PROVENANCE_FILE = process.env.SUBSTRATE_PROVENANCE_FILE || `${ENV_FILE}.provenance`
+let anchorIsOperators = false
 try {
-  if (existsSync(ENV_FILE)) {
+  anchorIsOperators = existsSync(PROVENANCE_FILE) &&
+    /^RELAY_MULTIADDR=env$/m.test(readFileSync(PROVENANCE_FILE, 'utf-8'))
+} catch { /* unreadable provenance: treat the anchor as ours to write */ }
+try {
+  if (anchorIsOperators) {
+    console.log(`[relay] RELAY_MULTIADDR was supplied by the operator; leaving ${ENV_FILE} unchanged (this relay: ${relayMultiaddr})`)
+  } else if (existsSync(ENV_FILE)) {
     const line = `RELAY_MULTIADDR="${relayMultiaddr}"`
     const content = readFileSync(ENV_FILE, 'utf-8')
     const next = /^RELAY_MULTIADDR=/m.test(content)

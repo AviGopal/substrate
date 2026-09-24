@@ -1,5 +1,5 @@
 {
-  "_comment": "Declarative vessel inventory for the substrate image. apply-inventory.sh reads this at boot (before systemd) to select which units run, so one image runs any SUBSET: a full local substrate, a minimal hub (store+control+api+transport), or a compute-only spoke. DEFAULT (no ENABLED_ROLES/ENABLED_VESSELS env) = every unit enabled, identical to today. Selection env: ENABLED_ROLES=comma,roles | ENABLED_VESSELS=comma,units (explicit, overrides roles) | DISABLED_VESSELS=comma,units (always off). Per-vessel fork remotes: repo_owner_default (or per-vessel repo_owner) + the `repo` field feed setup-git-push.sh / clone-vessel-repos so a fork can point vessels at its own GitHub org. NAMED PROFILE 'analysis-backend' (the minimum backend a white-labelled metabob-mcp client attaches to = discovery + concept-db + analysis-vessel + activity-api + store/identity/seed/infra deps) is not a role-group here because concept-db/analysis-vessel share the coarse 'compute' role; it is expressed as an explicit ENABLED_VESSELS list in scripts/substrate/deploy-analysis-backend.sh \u2014 keep that list in sync with the units below.",
+  "_comment": "Declarative vessel inventory for the substrate image. apply-inventory.sh reads this at boot (before systemd) to select which units run, so one image runs any SUBSET: a full local substrate, a minimal hub (store+control+api+transport), or a compute-only spoke. DEFAULT (no ENABLED_ROLES/ENABLED_VESSELS env) = every unit enabled, identical to today. Selection env: ENABLED_ROLES=comma,roles | ENABLED_VESSELS=comma,units (explicit, overrides roles) | DISABLED_VESSELS=comma,units (always off). Per-vessel fork remotes: repo_owner_default (or per-vessel repo_owner) + the `repo` field feed setup-git-push.sh so a fork can point vessels at its own GitHub org. NAMED PROFILE 'analysis-backend' (the minimum backend a white-labelled metabob-mcp client attaches to = discovery + concept-db + analysis-vessel + activity-api + store/identity/seed/infra deps) is not a role-group here because concept-db/analysis-vessel share the coarse 'compute' role; it is expressed as an explicit ENABLED_VESSELS list in scripts/substrate/deploy-analysis-backend.sh \u2014 keep that list in sync with the units below.",
   "repo_owner_default": "AviGopal",
   "branch_default": "dev",
   "roles": {
@@ -35,12 +35,64 @@
       "desktop"
     ]
   },
-  "_profiles_comment": "Named per-container rosters as EXPLICIT unit lists. Roles are coarse — 'compute' names goal-host, development, light-dispatch, boredom, analysis, ribosome, relevance-sink and local-tools together, so no role expression selects a subset of them. (The LLM resolvers used to be in that list too, which is why a spoke — whose whole premise is resolving models on its hub — enabled four local arms; they now carry role 'models', which 'spoke' excludes and 'hub'/'full' include.) That is why ui-only-up.sh had to bypass roles with a hand-written ENABLED_VESSELS list. A profile is that list, named and kept next to the units it selects. PROFILE=<name> wins over ENABLED_VESSELS and ENABLED_ROLES; DISABLED_VESSELS still subtracts afterwards. human-surface-vessel is deliberately absent from surface_node: it is a manifest vessel, which apply-inventory never selects or masks, and vessel-ctl installs it after readiness. CAVEAT (the reason a profile is not yet a guarantee): apply-inventory can only govern units this file names, so a shipped unit absent from `vessels` below runs regardless of the profile — that is how a UI-only box ends up running LLM resolvers. See the ungoverned-units warning apply-inventory emits at boot.",
+  "_profiles_comment": "PROFILE=<name> selects one of these deployable compositions; apply-inventory is the only place a profile is expanded into units. PROFILE outranks ENABLED_VESSELS and ENABLED_ROLES; ENABLED_EXTRA_VESSELS adds to it and DISABLED_VESSELS subtracts from it afterwards. Two forms, one namespace. composed_profiles compose from role groups exactly as ENABLED_ROLES would, plus the units no role expression can select by itself: 'compute' names goal-host, development, light-dispatch, boredom, analysis, ribosome and local-tools together, so a profile that needs some of them names them. Composing from roles keeps a profile right as units are added, since a new unit joins every profile whose roles include its role. profiles holds explicit unit lists, for compositions that cut across roles. They are separate keys so a selector that predates composition finds no entry for a composed name and refuses loudly, instead of reading the object as a unit list and masking nearly everything. A profile is a named data locality, not a size: standalone holds everything; hub holds the network's learning state and dispatches and self-develops next to it (goal-host, the compute vessels it walks with, the autonomy role and boredom-vessel, the law-5 selector, and the learning-liveness and runtime-drift probes that detect a stalled learning loop or drifted running code where that state lives), because the walk reads posteriors every step and the self-development loop turns the gap store into commits; hub-minimal is the bare hub role for a control-plane or relay node; spoke runs the host's own data and tools and resolves identity, traces and models on its hub; surface and compute are the explicit rosters for a human's window and a worker. The default when PROFILE is unset is derived by gen-env from the anchor (standalone for a root, spoke for a remote anchor) and is expressed through the selection it already implies rather than by setting PROFILE. Manifest vessels (\"manifest\": true) are never selected or masked here: the federation relay and transport are enabled by the entrypoint for hub profiles and anchored spokes, and human-surface-vessel is installed by vessel-ctl. CAVEAT: apply-inventory can only govern units this file names, so a shipped unit absent from `vessels` below runs regardless of the profile; apply-inventory warns about any at boot.",
+  "composed_profiles": {
+    "standalone": {
+      "roles": ["full"]
+    },
+    "hub": {
+      "roles": ["hub", "autonomy"],
+      "vessels": [
+        "goal-host-vessel.service",
+        "development-vessel.service",
+        "local-tools-vessel.service",
+        "ribosome-vessel.service",
+        "analysis-vessel.service",
+        "light-dispatch-vessel.service",
+        "boredom-vessel.service",
+        "boredom-vessel.timer",
+        "learning-liveness-probe.service",
+        "learning-liveness-probe.timer",
+        "runtime-drift.service",
+        "runtime-drift.timer"
+      ]
+    },
+    "hub-minimal": {
+      "roles": ["hub"]
+    },
+    "spoke": {
+      "roles": ["spoke"]
+    }
+  },
   "profiles": {
+    "surface": [
+      "discovery-vessel.service",
+      "light-dispatch-vessel.service",
+      "federation-transport-vessel.service",
+      "substrate-ready.service",
+      "journald-stdout-forwarder.service",
+      "git-push-setup.service"
+    ],
+    "compute": [
+      "discovery-vessel.service",
+      "goal-host-vessel.service",
+      "development-vessel.service",
+      "local-tools-vessel.service",
+      "analysis-vessel.service",
+      "light-dispatch-vessel.service",
+      "boredom-vessel.service",
+      "boredom-vessel.timer",
+      "federation-transport-vessel.service",
+      "substrate-ready.service",
+      "journald-stdout-forwarder.service",
+      "git-push-setup.service"
+    ],
     "compute_node": [
       "discovery-vessel.service",
       "goal-host-vessel.service",
       "development-vessel.service",
+      "local-tools-vessel.service",
+      "analysis-vessel.service",
       "light-dispatch-vessel.service",
       "boredom-vessel.service",
       "boredom-vessel.timer",
@@ -57,6 +109,11 @@
       "journald-stdout-forwarder.service",
       "git-push-setup.service"
     ]
+  },
+  "_profile_aliases_comment": "surface_node and compute_node in profiles are the deprecated names of surface and compute, kept as unit lists identical to them so a selector that predates profile_aliases still reads the same roster. compute carries analysis-vessel and local-tools-vessel, the host's files and tools a worker exists to serve, and compute_node carries them too. A current apply-inventory follows profile_aliases instead, uses the replacement's definition, and reports the old name.",
+  "profile_aliases": {
+    "surface_node": "surface",
+    "compute_node": "compute"
   },
   "vessels": [
     {

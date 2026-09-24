@@ -74,9 +74,27 @@ if [ -n "${ENABLED_ROLES:-}" ] && [ -x /usr/local/bin/apply-inventory ]; then
     *) : ;;
   esac
 fi
-# An explicit PROFILE or ENABLED_VESSELS is a hand-written allow-list; the
-# rendered arms are not on it unless named there.
-if [ -n "${PROFILE:-}" ] || [ -n "${ENABLED_VESSELS:-}" ]; then
+# A PROFILE composed from role groups (standalone, hub, hub-minimal, spoke) is
+# decided by its roles, exactly as ENABLED_ROLES is above: the same expander
+# answers whether `models` is among them. Read as a hand-written allow-list, a
+# composed profile ran only the base resolver, so a hub launched with PROFILE=hub
+# could not reach `usable` on arms of its own.
+_pr=""
+if [ -n "${PROFILE:-}" ] && [ -x /usr/local/bin/apply-inventory ]; then
+  _pr="$(/usr/local/bin/apply-inventory --profile-roles 2>/dev/null || true)"
+fi
+if [ -n "$_pr" ]; then
+  # Capture first, then match (the SIGPIPE note above applies here too).
+  _expansion="$(DRY_RUN=1 PROFILE= ENABLED_VESSELS= ENABLED_ROLES="$_pr" /usr/local/bin/apply-inventory 2>&1 || true)"
+  case "$_expansion" in
+    *"expands to:"*)
+      _models_wanted=1
+      printf '%s' "$_expansion" | grep -Eq 'expands to:.*(^| )models( |$)' || _models_wanted=0 ;;
+    *) : ;;
+  esac
+# A unit-list PROFILE (surface, compute) or an explicit ENABLED_VESSELS is a
+# hand-written allow-list; the rendered arms are not on it unless named there.
+elif [ -n "${PROFILE:-}" ] || [ -n "${ENABLED_VESSELS:-}" ]; then
   _models_wanted=0
   case ",${ENABLED_VESSELS:-}," in *,llm-*) _models_wanted=1 ;; esac
 fi

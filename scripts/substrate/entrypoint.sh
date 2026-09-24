@@ -1,7 +1,29 @@
 #!/bin/bash
 # entrypoint.sh — substrate container entry point
 # Generates env file from container env vars, then execs systemd as PID 1.
+#
+# With a tool name as its first argument it runs that tool instead and exits,
+# so the image itself answers `docker run --rm <image> manifest` without an
+# --entrypoint override:
+#   manifest  print the launch manifest (substrate-manifest)
+#   status    the readiness verdict (substrate-status)
+#   connect   the client configuration (substrate-connect)
+# Nothing else is touched on that path: no env file, no volume, no systemd.
+# Any other argument, or none, boots the fleet exactly as before.
 set -euo pipefail
+
+case "${1:-}" in
+  manifest|status|connect)
+    _cmd="$1"
+    _tool="/usr/local/bin/substrate-$_cmd"
+    shift
+    if [ ! -x "$_tool" ]; then
+      echo "[substrate] $(basename "$_tool") is not in this image revision; pull a newer image to use '$_cmd'." >&2
+      exit 127
+    fi
+    exec "$_tool" "$@"
+    ;;
+esac
 
 echo "[substrate] generating /etc/substrate/env"
 /usr/local/bin/gen-env
@@ -145,12 +167,18 @@ fi
 # Both were manual interventions in the 2026-09-16 network demo
 # (validation/reports/network-demo); this block moves deploy-hub.sh's knowledge
 # into the boot path. DISABLED_VESSELS still outranks, same as the transport.
+#
+# PROFILE=hub and PROFILE=hub-minimal carry the same promise, and are the form
+# the install contract uses: the relay runs in the container, listens on 30333
+# there, and announces the host port the launch manifest publishes it on
+# (RELAY_ANNOUNCE_PORT, derived by gen-env) — so /bootstrap advertises an address
+# a spoke can actually dial, with no relay process on the host.
 _frl_disabled=0
 case ",$(echo "${DISABLED_VESSELS:-}" | tr -d '[:space:]')," in
   *,federation-relay.service,*|*,federation-relay,*) _frl_disabled=1 ;;
 esac
-case ",$(echo "${ENABLED_ROLES:-}" | tr -d '[:space:]')," in
-  *,hub,*)
+case ",$(echo "${ENABLED_ROLES:-}" | tr -d '[:space:]'),:${PROFILE:-}" in
+  *,hub,*|*:hub|*:hub-minimal)
     if [ "$_frl_disabled" = 1 ]; then
       echo "[substrate] hub federation: federation-relay is in DISABLED_VESSELS — auto-enable skipped"
     elif [ -x /usr/local/bin/vessel-ctl ]; then

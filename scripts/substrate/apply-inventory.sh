@@ -6,12 +6,30 @@
 # created). The image bakes the FULL enable-list; this trims it down to a subset.
 #
 # Selection (env, highest precedence first):
+#   PROFILE=name                a named composition from the inventory (below);
+#                               outranks every other selection variable
 #   ENABLED_VESSELS=unit,unit   explicit allow-list (exact unit names); overrides roles
 #   ENABLED_ROLES=role,role     roles to keep (role-GROUP aliases hub/spoke/full expand
 #                               via inventory.roles); everything else is disabled
 #   DISABLED_VESSELS=unit,unit  always disabled, even if selected above
 # DEFAULT (neither ENABLED_* set) = keep everything = identical to today (no-op).
 # DRY_RUN=1 prints the plan without changing anything.
+#
+# A profile name resolves in one namespace across two keys of the inventory:
+#   profiles.<name>          ["unit", ...]  an explicit unit list
+#   composed_profiles.<name> {"roles": [...], "vessels": [...]}  role groups /
+#                            roles expanded exactly as ENABLED_ROLES would, plus
+#                            named units
+# The keys are separate on purpose: a selector that predates composition looks
+# only in `profiles`, finds no entry for a composed name, and refuses loudly —
+# rather than iterating the object as if it were a unit list.
+# inventory.profile_aliases maps a deprecated profile name to its replacement;
+# the replacement's definition is used and the old name is reported.
+#
+# `apply-inventory --profile-roles` prints the role list of the PROFILE in the
+# environment when it is role-composed (nothing for a unit-list profile) and
+# exits, changing nothing. Callers that decide by role — whether the LLM arms
+# belong to this selection, for one — ask this instead of re-reading the file.
 #
 # Manifest-installed units (federation-*: "manifest":true) are NOT baked-enabled, so
 # they are never disabled here — they're installed on demand via vessel-ctl.sh.
@@ -52,7 +70,12 @@ if ! command -v jq >/dev/null 2>&1; then log "jq missing — keeping all units (
 # Falling through costs one loop over the inventory and reaches both passes:
 # DESIRED becomes every manageable unit (the else-branch below), DISABLED_EXPLICIT
 # is empty, so nothing is disabled and everything masked is restored.
-if [ -z "${PROFILE:-}" ] && [ -z "${ENABLED_VESSELS:-}" ] && [ -z "${ENABLED_ROLES:-}" ] && [ -z "${DISABLED_VESSELS:-}" ]; then
+QUERY="${1:-}"
+case "$QUERY" in
+  ""|--profile-roles) ;;
+  *) log "FATAL: unknown argument '$QUERY' (the only one accepted is --profile-roles)"; exit 2 ;;
+esac
+if [ -z "$QUERY" ] && [ -z "${PROFILE:-}" ] && [ -z "${ENABLED_VESSELS:-}" ] && [ -z "${ENABLED_ROLES:-}" ] && [ -z "${DISABLED_VESSELS:-}" ]; then
   log "no ENABLED_ROLES/ENABLED_VESSELS/DISABLED_VESSELS set — all units enabled (default)"
 fi
 
@@ -67,10 +90,10 @@ csv() { echo "$1" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | gr
 # ENABLED_ROLES=spok booted a container with almost every vessel masked and said
 # nothing. That is the same failure PROFILE guards against fatally two functions
 # below; roles were the gap in the same rule.
-expand_roles() {
-  local out="" known_roles
+expand_roles() { # expand_roles [csv] — defaults to ENABLED_ROLES
+  local out="" known_roles src="${1-${ENABLED_ROLES:-}}"
   known_roles="$(jq -r '[.vessels[].role] | unique | .[]' "$INV" 2>/dev/null)"
-  for tok in $(csv "${ENABLED_ROLES:-}"); do
+  for tok in $(csv "$src"); do
     local grp
     grp="$(jq -r --arg t "$tok" '.roles[$t] // empty | .[]?' "$INV" 2>/dev/null || true)"
     if [ -n "$grp" ]; then
@@ -161,20 +184,92 @@ fatal_if_unresolved() {
   exit 1
 }
 
-# PROFILE names an explicit unit list in inventory.profiles. It outranks both
+# PROFILE names a composition in the inventory. It outranks both
 # ENABLED_VESSELS and ENABLED_ROLES: a profile IS the hand-written allow-list
 # those deploy scripts used to carry inline, so nothing should be able to widen
 # it silently. An unknown name is FATAL rather than a fall-through — falling
 # through would boot the coarse role group, which is the whole failure a profile
 # exists to prevent, and it would do so looking like a success.
+#
+# Two forms (see the header). A unit list is the whole desired set. A composed
+# profile names role groups the same way ENABLED_ROLES does, plus the units no
+# role expression can select on its own — the compute vessels a hub needs share
+# the coarse 'compute' role with everything else, so they are named. Composing
+# from roles, not listing units, is what keeps a profile correct as units are
+# added: a new store-role unit joins every profile whose roles include store.
+profile_canonical() { # profile_canonical <name> — follow profile_aliases one step
+  local a
+  a="$(jq -r --arg p "$1" '.profile_aliases[$p] // empty' "$INV" 2>/dev/null || true)"
+  if [ -n "$a" ]; then echo "$a"; else echo "$1"; fi
+}
+profile_kind() { # profile_kind <name> -> list | composed | ambiguous | none
+  jq -r --arg p "$1" '(.profiles // {})[$p] as $l | (.composed_profiles // {})[$p] as $c
+    | if $l != null and $c != null then "ambiguous"
+      elif ($l | type) == "array" then "list"
+      elif ($c | type) == "object" then "composed"
+      else "none" end' "$INV" 2>/dev/null || echo none
+}
+profile_field_csv() { # profile_field_csv <name> <roles|vessels>
+  jq -r --arg p "$1" --arg f "$2" '.composed_profiles[$p][$f] // [] | join(",")' "$INV" 2>/dev/null || true
+}
+unknown_profile() {
+  log "FATAL: PROFILE='$1' names no entry in .profiles or .composed_profiles — known: $(jq -r '[(.profiles // {} | keys[]), (.composed_profiles // {} | keys[]), (.profile_aliases // {} | keys[])] | unique | join(", ")' "$INV" 2>/dev/null)"
+  exit 1
+}
+ambiguous_profile() {
+  log "FATAL: PROFILE='$1' is defined in both .profiles and .composed_profiles; one name must mean one composition"
+  exit 1
+}
+
+if [ "$QUERY" = "--profile-roles" ]; then
+  [ -n "${PROFILE:-}" ] || exit 0
+  _qp="$(profile_canonical "$PROFILE")"
+  case "$(profile_kind "$_qp")" in
+    composed) profile_field_csv "$_qp" roles ;;
+    list) : ;;
+    ambiguous) ambiguous_profile "$_qp" ;;
+    *) unknown_profile "$PROFILE" ;;
+  esac
+  exit 0
+fi
+
 DESIRED=""
 if [ -n "${PROFILE:-}" ]; then
-  DESIRED="$(jq -r --arg p "$PROFILE" '.profiles[$p] // empty | .[]?' "$INV" 2>/dev/null || true)"
-  if [ -z "$DESIRED" ]; then
-    log "FATAL: PROFILE='$PROFILE' names no entry in .profiles — known: $(jq -r '.profiles // {} | keys | join(", ")' "$INV" 2>/dev/null)"
-    exit 1
+  _profile="$(profile_canonical "$PROFILE")"
+  if [ "$_profile" != "$PROFILE" ]; then
+    log "PROFILE '$PROFILE' is a deprecated name; using its replacement '$_profile'"
   fi
-  log "explicit PROFILE '$PROFILE': $(echo $DESIRED | tr '\n' ' ')"
+  case "$(profile_kind "$_profile")" in
+    list)
+      DESIRED="$(jq -r --arg p "$_profile" '.profiles[$p][]?' "$INV" 2>/dev/null || true)"
+      [ -n "$DESIRED" ] || unknown_profile "$PROFILE"
+      log "explicit PROFILE '$_profile': $(echo $DESIRED | tr '\n' ' ')"
+      ;;
+    composed)
+      _p_roles="$(profile_field_csv "$_profile" roles)"
+      _p_units="$(profile_field_csv "$_profile" vessels)"
+      if [ -z "$_p_roles$_p_units" ]; then unknown_profile "$PROFILE"; fi
+      ROLES="$(expand_roles "$_p_roles")"
+      if echo "$ROLES" | grep -q '^__INVALID_ROLE__:'; then
+        log "FATAL: PROFILE '$_profile' names unknown role token(s): $(echo "$ROLES" | sed -n 's/^__INVALID_ROLE__://p' | tr '\n' ' ')"
+        exit 1
+      fi
+      for u in $(manageable_units); do
+        r="$(role_of "$u")"
+        if echo "$ROLES" | grep -qx "$r"; then DESIRED="$DESIRED
+$u"; fi
+      done
+      if [ -n "$_p_units" ]; then
+        _p_named="$(resolve_list "$_p_units")"
+        fatal_if_unresolved "PROFILE '$_profile' vessels" "$_p_named"
+        DESIRED="$DESIRED
+$_p_named"
+      fi
+      log "PROFILE '$_profile' expands to roles: $(echo $ROLES | tr '\n' ' ')${_p_units:+ plus units: $(echo "$_p_units" | tr ',' ' ')}"
+      ;;
+    ambiguous) ambiguous_profile "$_profile" ;;
+    *) unknown_profile "$PROFILE" ;;
+  esac
 elif [ -n "${ENABLED_VESSELS:-}" ]; then
   DESIRED="$(resolve_list "${ENABLED_VESSELS}")"
   fatal_if_unresolved "ENABLED_VESSELS" "$DESIRED"
