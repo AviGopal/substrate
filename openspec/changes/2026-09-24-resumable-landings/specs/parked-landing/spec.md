@@ -38,9 +38,10 @@ The journal SHALL show `[feature-compose] RESUMING parked landing for <gap_id>
 - **THEN** the park is removed, a `park_stale` lesson is written, and a normal draft runs
 
 ### Requirement: Interrupted composes park what they have
-On SIGTERM, a compose that has passed the semantic gate SHALL park before the process
-exits; a compose earlier than the gate SHALL exit without parking. The drain loop
-SHALL count only cutovers in progress as work worth waiting for.
+A compose SHALL write its park before it calls the cutover, so a verified patch is
+already parked when a restart arrives, and the SIGTERM drain SHALL count only cutovers in
+progress (a `cutover`-named lease hold) as work worth waiting for. A compose earlier than
+the semantic gate has nothing parked and is re-picked later.
 
 #### Scenario: Restart during verify
 - **WHEN** a restart is requested while a compose is in `bun test`
@@ -48,7 +49,8 @@ SHALL count only cutovers in progress as work worth waiting for.
 
 #### Scenario: Restart after the gate
 - **WHEN** a restart is requested after the semantic gate passed and before push
-- **THEN** a park is written and the next pick resumes it
+- **THEN** the park written before the cutover survives, and the next compose for the gap
+  resumes it
 
 ### Requirement: Discarded landings are detected without an operator
 A scheduled sweep SHALL emit a `discardedLandingReport` counting, per hour, composes

@@ -29,16 +29,19 @@ SHALL NOT cause a cutover to be deferred or refused.
 - **WHEN** the reconcile holds its named lease and a FAVORABLE compose reaches cutover
 - **THEN** the cutover is not refused for the lease and pushes
 
-### Requirement: The reconcile releases on failure and fits its work
-The reconcile activity SHALL release its lease when any task after `acquire_lease`
-fails, and its fetch to the pruning valve SHALL have a timeout no shorter than the
-valve's measured duration. A run that fails SHALL NOT leave the lease held to its TTL.
+### Requirement: The reconcile releases before it verifies and fits its work
+The reconcile activity SHALL release its lease before its post-swap verify, and its
+fetch to the pruning valve SHALL have a timeout no shorter than the valve's measured
+duration. Verify is a dry-run read that needs no lease and is the task that fails most,
+so a failing verify SHALL NOT leave the lease held. A failure of the reconcile task
+itself leaves only the `trace_store` hold until its TTL, which does not exclude cutovers.
+The template body reaches a running catalogue by raising `metadata.seed_version`.
 
 #### Scenario: Valve slower than the fetch
 - **WHEN** the valve takes 6 minutes
 - **THEN** the run completes (no `fetch failed: The operation was aborted`) and the lease
   is released within one minute of completion
 
-#### Scenario: A task fails mid-run
+#### Scenario: Verify fails after the swap
 - **WHEN** the verify task fails
-- **THEN** the release task still runs and `maintenance.json` is absent within 30 s
+- **THEN** `release_lease` has already run and no `trace_store` lease file remains

@@ -30,6 +30,11 @@ redraft; `17:07:48` gap-to-feature picked a parked gap and the compose resumed i
   that commit's one-line fix (anchor-band reader). Restore dispatched; the class is filed as a
   gap (a cutover overwrites a newer committed landing on the same file). Restored as
   `7994841` (exactly that line; no other commit to the file in between).
+  Live: resumes at 16:58 (route-edit-5d6e8e96 -> c1dd4c2) and 17:07 pushed under their own
+  labels. Open (gap filed): at 20:51 a resume's cutover answered `noop: already_applied`
+  (freshness saw live e236d8dd vs the resume's staged sha 1e4380ab, 17 s after the resume
+  wrote live); the resume reported "did not land", kept an orphaned park, and the same content
+  was committed two minutes later by another staging (0a8de60).
 - [x] 1.4 `index.ts` SIGTERM handler: park post-gate composes; do not wait for pre-gate ones.
   Falsifier: restart during `bun test` → prompt drain, no park; restart after gate → park.
   Landed with 2.1b as development-vessel `b789d9c`, identical to the pre-validated edit set;
