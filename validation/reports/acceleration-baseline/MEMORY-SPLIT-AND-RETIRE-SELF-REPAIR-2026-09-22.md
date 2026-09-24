@@ -763,3 +763,9 @@ Correction to the line above: two of the twelve closures rest on landings the su
 - Falsifier through the exported `vacuousEditReason` on the runtime file: the case with `walk's` and `don't` around two added declarations returns null (05:24Z baseline: vacuous reason naming both); the unreferenced `const _unused` control is still refused. Closed as `landed_verified`. Day tally 15.
 - The four closed records of the vacuous parent family were re-read ten minutes after closing: all still closed, none reopened by the lesson writer.
 - Guard 2 name-harvest residual dispatched byte-exact (one line becomes three: harvest declared names from the added lines only). Falsifier is the already-measured pair: insert after `const _rebind` must now be refused, rewrite of that line must still be admitted.
+
+## 06:05–06:18Z — Guard 2 name-harvest residual CLOSED
+
+- Compose `fc-muf4oc06-3j7n86` landed `0874216` (06:12:47Z) byte-exact: one line becomes three, names harvested from the op's added lines only. Semantic gate `addresses:true`, no SPLIT and no agreed-refutation line. Runtime file equals the commit; process restarted onto it at 06:14:42Z.
+- Probes on the new process, through the live gate: the unreferenced insert after `const _rebind` is now `REFUSING plan (_unused_probe)` (baseline on `326a983`: admitting); the rewrite of the `const _rebind` line is still admitted. Neither probe landed anything.
+- Closed as `landed_verified`. Day tally: 16 gaps closed by measured behaviour. Three of today's landings (`326a983`, `212408a`, `0874216`) went through the lane's own gates end to end once the spec carried the byte-exact edit and the fact a refuter would otherwise confabulate against.
