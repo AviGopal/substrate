@@ -35,6 +35,14 @@
 
 - [ ] 3.1 `maintenance-lease.ts`: `name` on acquire/renew/release/resolve; per-name files;
   union semantics. Falsifier: unit — two names coexist; unnamed excludes all.
+  - [x] 3.1a-i acquire + read. Landed by the substrate as development-vessel `ace49c0` (earlier
+    drafts anchored on `const existing = await readLease();`, which occurs three times; the
+    landing goal quoted unique multi-line anchors). Runtime equals the commit; falsifier passed
+    against the landed file: two names coexist in separate files, same name refused to another
+    holder, named acquire refused during an unnamed hold, named read sees the global hold.
+  - [ ] 3.1a-ii renew + release honour `name` (`goals/3.1a-ii-lease-name-renew-release.txt`).
+  - [ ] 3.1b unnamed acquire refused while any named hold exists; union read with `holds[]`
+    (`goals/3.1b-lease-union-semantics.txt`).
 - [ ] 3.2 `vessel-mitosis-cutover.ts`: acquire with name `cutover` (both the soft-refuse check
   and the 90 s wait). Falsifier: cutover pushes while `trace_store` is held.
 - [ ] 3.3 Reconcile: name `trace_store`, failure-path release, fetch timeout ≥ valve. Measured
