@@ -693,3 +693,7 @@ lease be re-acquired in bursts are implementation choices with filed, bounded fi
 ## 00:12Z — state_signature fix landed (c7c01ea) on the second, lease-free dispatch
 
 - `c7c01ea` on activity-api: the CREATE parameter now reads `validated.state_signature ?? undefined`, matching UPDATE; exactly the one-token change. Falsifier armed on runtime parity after the activity-api restart: a record posted with `state_signature: null` must return 200 (success false, probe-only shapes, so it cannot become an eligible pathway), a string signature must still store, and natural traffic over 20 minutes must show zero `Found NULL` errors.
+
+## 00:13–00:20Z — state_signature fix verified on the real failing class
+
+- activity-api restarted onto `c7c01ea` at 00:10:21Z (runtime diff 0). Request validation rejects an explicit `state_signature: null` with 400 before the CREATE, so the 202 daily failures were requests that *omit* the field, which the CREATE turned into NULL. Probe of that class (omitted field, required numeric fields supplied, `success:false`, probe-only shapes): HTTP 200, `success:true`. Control with a string signature: 200. `Found NULL for field state_signature` since the restart: 0. A 20-minute natural-traffic window is running before the gap is closed, per its falsifier.
