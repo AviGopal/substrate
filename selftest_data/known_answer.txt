@@ -1,1 +1,0 @@
-This is the known answer for the learning loop self-test.

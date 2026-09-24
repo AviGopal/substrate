@@ -1,1 +1,0 @@
-Analyze the systematic failure of the 'analyze-source-to-concept' capability. Identify the execution_error and propose solutions to ensure the capability successfully completes tasks in the future, targeting specific improvement areas.

@@ -1,1 +1,0 @@
-Closed: pull-sync test gate accepted a DEGRADED baseline for development-vessel (10 test(s) that passed at baseline now fail in BOTH runs, e.g.

@@ -58,6 +58,8 @@ ROOT_ALLOWLIST=(
   .eslintignore
   .dockerignore
   .env.example
+  Dockerfile.substrate
+  docker-compose.yml
   package.json
   bun.lock
   package-lock.json
@@ -369,9 +371,12 @@ fi
 # for a full day (2026-08-08).
 #
 # Deliberately narrow: it only asks whether dist was rebuilt alongside src, not
-# whether the bundle is byte-correct. It cannot cover a commit path that skips
-# hooks — substrate-authored commits included — which is a real remaining hole
-# and is named as such rather than papered over.
+# whether the bundle is byte-correct. Where it runs is split by workspace volume,
+# not by author: a container's super-repo clone made on a fresh volume runs this
+# hook through setup-git-push's wrapper, so a substrate-authored UI change without
+# its bundle is refused there and filed as a gap; a clone that predates that
+# wrapper, and any commit path that skips hooks, is not covered. That remaining
+# hole is named as such rather than papered over.
 mapfile -t UI_SRC_STAGED < <(
   git diff --cached --name-only --diff-filter=ACMR \
     | grep -E '^repos/human-surface-vessel/ui/(src/|index\.html$|vite\.config|package\.json$)' || true

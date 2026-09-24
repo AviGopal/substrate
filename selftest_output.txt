@@ -1,6 +1,0 @@
-[selftest] GREEN trace_write: 16 probe execution row(s) in the authoritative store
-[selftest] GREEN verdict_delivery: 16 probe row(s) carry a grading marker, measured at the receiver
-[selftest] RED   posterior_delta: probe arm posterior did not move, but its verdict WAS delivered — consistent with the structural skip in posterior-update.ts, which declines to write a belief when the arm has no stochastic choice OR the trace's information_yield is 'idle'. Both hold for this probe, so the skip is double-determined. This link is UNTESTED by this probe, not severed; grading it needs an arm that is BOTH stochastic-tier AND non-idle — satisfying either one alone still skips.
-[selftest] GREEN goal_path: 28 goal-path row(s) for the probe's goal
-[selftest] GREEN confinement: 0 of 25 sampled non-probe arms moved
-[selftest] 1 RED link(s): posterior_delta

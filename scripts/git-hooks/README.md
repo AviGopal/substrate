@@ -8,6 +8,10 @@ scripts/git-hooks/install.sh
 
 This sets `core.hooksPath` to `scripts/git-hooks/` so updates to the hooks land via `git pull`, not by re-copying files into `.git/hooks/`.
 
+Inside a container, the substrate's own super-repo clone gets the same gate from `setup-git-push` when the boot creates that clone (a fresh workspace volume, or a baked seed upgraded into a clone): it writes a small `.git/hooks/pre-commit` wrapper that runs the hook as committed at `HEAD`, so a commit that deletes or empties the hook is still judged by the gate it is changing. A refused commit fails as it would for an operator, and the wrapper also files the hook's findings as a gap (`substrateGap_write`), so refusals on a fleet are measured rather than silent. A clone that already existed before that boot is left as it was.
+
+The wrapper lives in `.git/hooks`, and git reads `.git/hooks` only when no `core.hooksPath` is in effect. A container-wide hooks path (for example one that records every commit) shadows the wrapper unless that directory carries its own `pre-commit` that runs the repository's `.git/hooks/pre-commit` and passes its exit status through. Without one the gate is inert; `setup-git-push` prints `placement gate INERT` naming the hooks path, so a skipped gate is not read as an installed one.
+
 ## Philosophy
 
 The super-repo is a thin coordinator over:
@@ -49,7 +53,7 @@ If the placement check fails the secrets scan does not run — fix placement fir
 
 A commit is rejected when it adds (or renames into) a file that violates any of these rules. Modifying existing tracked files is never blocked.
 
-1. **Files at the super-repo root** are limited to a small allowlist (project metadata: `CLAUDE.md`, `README.md`, `.gitignore`, `.gitmodules`, lockfiles, dotfile configs). Everything else needs a home under `repos/`, `docs/`, `openspec/`, `scripts/`, `packages/`, `.claude/`, `.github/`, or `.githooks/`.
+1. **Files at the super-repo root** are limited to a small allowlist (project metadata: `CLAUDE.md`, `README.md`, `.gitignore`, `.gitmodules`, lockfiles, dotfile configs, and the launch manifest `docker-compose.yml` with its image recipe `Dockerfile.substrate`). Everything else needs a home under `repos/`, `docs/`, `openspec/`, `scripts/`, `packages/`, `.claude/`, `.github/`, or `.githooks/`.
 2. **No new top-level markdown** outside `docs/` or `openspec/`. If you wrote a writeup that only matters for the current commit, put it in the commit message instead.
 3. **No new test files at root or in non-test areas**. Tests live alongside the code under `repos/<vessel>/test{,s}/`. The super-repo never holds tests.
 4. **No new image / video / archive files outside `repos/*` and `docs/assets/`**. Screenshots and playwright output should be gitignored, not committed.

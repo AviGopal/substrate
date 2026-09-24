@@ -1,7 +1,0 @@
-{
-  "dispatch_id": "e8f0d065-ed9c-48ca-88ba-824f0188837a",
-  "current_status": "running",
-  "goal": "Close substrate gap runtime-drift-ias-executor-ts: The live runtime tree of ias-executor-ts diverges from its committed source.",
-  "dispatched": true,
-  "awaited": false
-}

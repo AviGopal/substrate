@@ -1,1 +1,0 @@
-Vessel goal-host-vessel health report: Healthy. Discovery registry advertises 0 shapes in total.

@@ -1,5 +1,0 @@
-/workspace/git/super-repo/Substrate/Projects/TemporaryNewProject.md.bak
-/workspace/git/super-repo/Substrate/Projects/my_new_project_with_todos.md
-/workspace/git/super-repo/Substrate/Projects/my_project_with_todo.md
-/workspace/git/super-repo/Substrate/Projects/test_project_for_dispatch.md
-/workspace/git/super-repo/Substrate/Projects/test_project_with_undispatched_todo.md

@@ -148,6 +148,8 @@ if [ -d "$SUPER_REPO_DIR" ] && [ ! -d "$SUPER_REPO_DIR/.git" ] && [ -n "$(ls -A 
   # and let the fetch+reset path below converge the tree onto origin/dev.
   # Self-alteration (pull AND push) requires a real clone, not the seed.
   if git -C "$SUPER_REPO_DIR" init -q 2>/dev/null && git -C "$SUPER_REPO_DIR" remote add origin "$super_url" 2>/dev/null; then
+    # A seed has never been a clone, so it has never committed: gate it like a fresh one.
+    SUPER_CLONED_THIS_BOOT=1
     echo "[setup-git-push] upgrading baked super-repo seed to a live clone"
   fi
 fi
@@ -163,6 +165,7 @@ if [ -d "$SUPER_REPO_DIR/.git" ]; then
   fi
 else
   if git clone -q --no-recurse-submodules --branch dev "$super_url" "$SUPER_REPO_DIR"; then
+    SUPER_CLONED_THIS_BOOT=1
     echo "[setup-git-push] cloned super-repo (${SUPER_REPO})"
   elif [ -d /usr/local/share/substrate/super-repo ]; then
     # Pulled image with no repo credentials: seed the working tree from the
@@ -173,6 +176,99 @@ else
     echo "[setup-git-push] clone unavailable — seeded super-repo working tree from baked image copy"
   else
     echo "[setup-git-push] WARN clone failed for super-repo"
+  fi
+fi
+
+# 4. Placement gate on the super-repo clone. A substrate-authored commit that adds
+#    a file outside the tracked layout (walk scratch swept up by a drift commit,
+#    template placeholders written as literal paths) is refused by the same
+#    versioned pre-commit hook an operator clone runs, so the super-repo root stays
+#    a thin coordinator.
+#
+#    WHICH VOLUMES. The gate is installed only when this boot turned the directory
+#    into a clone: a fresh `git clone`, or a baked seed upgraded in place (a seed has
+#    never been a clone, so it has never committed; a spoke that booted without
+#    credentials holds exactly such a seed and is gated from the boot that first
+#    gives it one). A clone that existed before this boot keeps committing as it
+#    did. A wrapper already present from an earlier gated boot is refreshed; a
+#    foreign hook (no marker) is never overwritten.
+#
+#    WHAT RUNS. The wrapper runs the hook as COMMITTED at HEAD, not the working-tree
+#    copy, so a commit that deletes or empties the hook is still judged by the gate
+#    as it stood before that commit (a hook change takes effect one commit later).
+#    It fails open only when there is no HEAD yet or HEAD carries no hook, and says
+#    so on stderr.
+#
+#    A REFUSAL IS FILED. A refused commit fails the committing route; the wrapper
+#    also files the hook's findings through substrateGap_write, keyed by the
+#    violation set, so refused landings on a gated fleet are measured, not silent.
+#
+#    WHERE IT CAN BE INERT. git runs .git/hooks only when no core.hooksPath is in
+#    effect. A container-wide hooks path shadows the wrapper unless that directory
+#    carries a pre-commit that chains to the repository's own; the check below
+#    names that case instead of reporting the gate as installed.
+PLACEMENT_HOOK_MARKER="substrate-placement-gate"
+if [ -d "$SUPER_REPO_DIR/.git" ]; then
+  _ph="$SUPER_REPO_DIR/.git/hooks/pre-commit"
+  _ph_ours=0
+  [ -f "$_ph" ] && grep -q "$PLACEMENT_HOOK_MARKER" "$_ph" 2>/dev/null && _ph_ours=1
+  if [ "$_ph_ours" = 1 ] || { [ "${SUPER_CLONED_THIS_BOOT:-0}" = 1 ] && [ ! -e "$_ph" ]; }; then
+    mkdir -p "$SUPER_REPO_DIR/.git/hooks"
+    cat > "$_ph" <<'HOOK'
+#!/usr/bin/env bash
+# substrate-placement-gate: written by setup-git-push. Runs the super-repo's
+# committed placement hook and files a gap when it refuses a commit.
+set -u
+rel=scripts/git-hooks/pre-commit
+# No commit yet: there is no committed gate to run.
+git rev-parse -q --verify HEAD >/dev/null 2>&1 || exit 0
+d="$(mktemp -d 2>/dev/null)" || { echo "[placement-gate] WARN no temp dir; this commit is not gated" >&2; exit 0; }
+trap 'rm -rf "$d"' EXIT
+# The committed hook, never the working-tree copy: a commit that deletes or empties
+# the hook is still judged by the gate as it stood before that commit.
+if ! git show "HEAD:$rel" >"$d/pre-commit" 2>/dev/null || [ ! -s "$d/pre-commit" ]; then
+  echo "[placement-gate] WARN HEAD carries no $rel; this commit is not gated" >&2
+  exit 0
+fi
+git show "HEAD:scripts/git-hooks/.gitleaks.toml" >"$d/.gitleaks.toml" 2>/dev/null || rm -f "$d/.gitleaks.toml"
+bash "$d/pre-commit" "$@" >"$d/out" 2>&1
+rc=$?
+cat "$d/out" >&2
+[ "$rc" -eq 0 ] && exit 0
+# A refusal is information: file it so refused landings are measured, not silent.
+# Filing never changes the verdict and never blocks on the network.
+(
+  command -v jq >/dev/null 2>&1 && command -v curl >/dev/null 2>&1 || exit 0
+  if [ -z "${METABOB_API_KEY:-}" ] && [ -r /etc/substrate/env ]; then . /etc/substrate/env 2>/dev/null; fi
+  report="$(sed 's/\x1b\[[0-9;]*m//g' "$d/out" | head -c 3000)"
+  key="$(printf '%s\n' "$report" | grep -E '✗|━━━' | sort -u | sha1sum | cut -c1-12)"
+  staged="$(git diff --cached --name-only --diff-filter=ACMR | head -50 | jq -R . | jq -sc .)"
+  top="$(git rev-parse --show-toplevel 2>/dev/null)"
+  body="$(jq -nc --arg id "super-repo-commit-refused-$key" --arg r "$report" --arg top "$top" \
+      --argjson staged "$staged" --argjson rc "$rc" \
+    '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"systematic_failure",
+      source:"substrate_detected",status:"open",
+      summary:("A commit to the super-repo clone was refused by the placement gate (scripts/git-hooks/pre-commit). The route that made it either wrote outside the tracked layout or changed human-surface UI source without its rebuilt bundle; the landing did not happen. Findings:\n" + $r),
+      classification_metadata:{repo:$top, hook:"scripts/git-hooks/pre-commit", exit_status:$rc, staged:$staged}}}}}')" || exit 0
+  auth=()
+  [ -n "${METABOB_API_KEY:-}" ] && auth=(-H "Authorization: ApiKey ${METABOB_API_KEY}")
+  curl -s --max-time 8 -o /dev/null -X POST "${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}/v2/impulses/resolve" \
+    -H 'Content-Type: application/json' "${auth[@]}" -d "$body" \
+    || echo "[placement-gate] WARN could not file the refusal as a gap" >&2
+)
+exit "$rc"
+HOOK
+    chmod +x "$_ph"
+    echo "[setup-git-push] super-repo placement gate installed (.git/hooks/pre-commit runs the committed scripts/git-hooks/pre-commit)"
+  elif [ -e "$_ph" ]; then
+    echo "[setup-git-push] super-repo has its own pre-commit hook; placement gate not installed"
+  else
+    echo "[setup-git-push] super-repo clone predates this boot; placement gate not installed (an existing volume keeps its commit behaviour)"
+  fi
+  # A hooks path in effect (system, global or local) replaces .git/hooks entirely.
+  _hp="$(git -C "$SUPER_REPO_DIR" config --get core.hooksPath 2>/dev/null || true)"
+  if [ -n "$_hp" ] && [ -f "$_ph" ] && grep -q "$PLACEMENT_HOOK_MARKER" "$_ph" 2>/dev/null && [ ! -x "$_hp/pre-commit" ]; then
+    echo "[setup-git-push] WARN placement gate INERT: core.hooksPath=$_hp has no pre-commit chaining to .git/hooks/pre-commit, so git never runs the gate"
   fi
 fi
 echo "[setup-git-push] done"
