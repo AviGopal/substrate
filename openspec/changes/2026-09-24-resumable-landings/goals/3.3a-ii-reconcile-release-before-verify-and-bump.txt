@@ -1,4 +1,4 @@
-In repos/development-vessel/src/seed/trace-store-reconcile.ts, run release_lease before verify and version-bump the seed so it reaches the running catalogue (openspec 2026-09-24-resumable-landings task 3.3a-ii). verify is trace_store_health_observer with dry_run:true — a read that needs no lease — and it is the task that fails most (forbiddenPatterns over_cap), so with release after it every over-cap run held the lease to its TTL. The seeder now re-uploads a seed whose metadata.seed_version exceeds the registered row's; without the bump this file's changes (named lease, 900 s timeout) stay inert. Use exactly these four old->new edits (each old text occurs once) and nothing else.
+In repos/development-vessel/src/seed/trace-store-reconcile.ts, run release_lease before verify and version-bump the seed so it reaches the running catalogue (openspec 2026-09-24-resumable-landings task 3.3a-ii; a previous draft left the original verify task in place because its delete edit did not apply — EDIT 2 below replaces the verify block TOGETHER WITH the first two lines of release_lease, so its replacement is not empty). verify is trace_store_health_observer with dry_run:true — a read that needs no lease — and it fails most often (forbiddenPatterns over_cap), so with release after it every over-cap run held the lease to its TTL. The seeder re-uploads a seed whose metadata.seed_version exceeds the registered row's; without the bump this file's changes (named lease, 900 s timeout) stay inert. Exactly these four old->new edits (each old text occurs once), nothing else.
 EDIT 1 — old:
   id: "development-vessel:trace-store-reconcile",
 new:
@@ -7,7 +7,7 @@ new:
   // its seed_version exceeds the registered row's (see upsertVersionBumpedSeeds in cli.ts).
   // 2 = lease named trace_store, release before verify, 900 s reconcile timeout.
   metadata: { seed_version: 2 },
-EDIT 2 — delete the `verify` task object from its current position (EDIT 3 re-inserts it, unchanged, as the last task). old:
+EDIT 2 — old:
     {
       id: "verify",
       description:
@@ -23,7 +23,11 @@ EDIT 2 — delete the `verify` task object from its current position (EDIT 3 re-
         forbiddenPatterns: ['"over_cap":true'],
       },
     },
-new: (nothing — remove these lines)
+    {
+      id: "release_lease",
+new:
+    {
+      id: "release_lease",
 EDIT 3 — old:
       outputShapes: ["maintenanceLeaseWriteResult"],
     },
@@ -56,4 +60,4 @@ new:
  * if the reconcile task fails mid-run, `release_lease` is never reached and the
  * lease is NOT explicitly released here. `release_lease` runs BEFORE `verify` (a dry-run
  * read that needs no lease), so a verify failure no longer holds it.
-Falsifier: the task order becomes acquire_lease > extract_lease_token > reconcile > release_lease > verify, the template carries metadata.seed_version 2, and after development-vessel-seed runs, GET /v2/activities/templates/development-vessel:trace-store-reconcile shows that order and the named lease.
+Falsifier: the task order becomes acquire_lease > extract_lease_token > reconcile > release_lease > verify with exactly ONE verify task, and the template carries metadata.seed_version 2.

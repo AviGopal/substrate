@@ -1,6 +1,42 @@
-In repos/development-vessel/src/index.ts, size the SIGTERM drain to the stage it protects and wait only for cutovers in progress (openspec 2026-09-24-resumable-landings tasks 1.4 and 2.1-drain, specs restart-budgets "The drain outlives the stage it protects" and parked-landing "Interrupted composes park what they have"). A verified compose now writes its park (/workspace/parked-landings/<gap>.json, feature-compose.ts) BEFORE calling the cutover, and every cutover holds the change_window maintenance lease under name "cutover" for its whole commit+push. So the only work a restart can still destroy is a cutover mid-push; draft/verify stages are either parked or cheap to redo, and waiting 240 s for them only delays the restart and still kills them at the deadline ("they will be lost", 4 composes on 2026-09-24).
-Changes, all in this one file:
-(1) Replace the fixed drain budget with a derived one: `const CUTOVER_STAGE_MS = Number(process.env["DEV_VESSEL_CUTOVER_STAGE_MS"] ?? 180_000); const DRAIN_MS = CUTOVER_STAGE_MS + 60_000;` defined once near the top, and use DRAIN_MS both in the /health `drain_ms:` field (replacing `Number(process.env["DEV_VESSEL_DRAIN_MS"] ?? process.env["VESSEL_DRAIN_MS"] ?? 240000)`) and for `const deadline = Date.now() + ...` in developmentVesselDrain. Update the comment above the deadline: the invariant drain (240 s) < TimeoutStopSec (300 s) still holds.
-(2) In developmentVesselDrain's loop, decide "work worth waiting for" by cutovers in progress only: each iteration `const { resolveMaintenanceLease } = await import("./resolvers/maintenance-lease.js"); const lease = (await resolveMaintenanceLease({ type: "maintenanceLease", name: "cutover" } as never)).body as { holds?: Array<{ name: string | null; holder: string }> ; held?: boolean; holder?: string };` and count `cutoversLive` = holds with name "cutover" (fall back to `held && String(holder).startsWith("cutover:")` if holds is absent). Break with `[development-vessel] ${sig}: drained (0 cutovers in progress; ${inFlightRequests} request(s) and ${live} authoring run(s) in draft/verify are parked or re-picked, not waited for)` when cutoversLive === 0. While cutoversLive > 0 log `${sig}: ${cutoversLive} cutover(s) in progress — waiting for push`. At the deadline keep the existing "will be lost" warning but report cutoversLive as well. Keep the authoring-marker scan only for the log line.
-(3) Do not change admission (the devDraining 503) or in_flight_oldest_ms.
-Falsifier: restart while a compose is in `bun test` -> the drain exits within a few seconds logging the drained line and no park is written; restart while a cutover holds the "cutover" lease -> the drain waits until the push completes, then logs drained; /health reports drain_ms 240000 derived from the cutover stage.
+In repos/development-vessel/src/index.ts, size the SIGTERM drain to the stage it protects and wait only for cutovers in progress (openspec 2026-09-24-resumable-landings tasks 1.4 and 2.1b). A compose that passes its gates now parks its patch (/workspace/parked-landings, feature-compose.ts) BEFORE calling the cutover, and every cutover holds the change_window lease under name "cutover" for its commit+push; an unnamed maintenanceLease read returns `holds: [{ name, ... }]`. So the only work a restart can still destroy is a cutover mid-push. Use exactly these four old->new edits (each old text occurs once) and nothing else.
+EDIT 1 — old:
+let readInFlight: () => number = () => 0;
+new:
+// DRAIN BUDGET SIZED TO THE STAGE IT PROTECTS (resumable landings 2.1b): the only work a
+// drain must outwait is a cutover's commit+push; everything before it is parked or cheap
+// to redo. Stays below the unit's 300 s TimeoutStopSec so the drain always finishes first.
+const CUTOVER_STAGE_MS = Number(process.env["DEV_VESSEL_CUTOVER_STAGE_MS"] ?? 180_000);
+const DEV_VESSEL_DRAIN_MS = CUTOVER_STAGE_MS + 60_000;
+let readInFlight: () => number = () => 0;
+EDIT 2 — old:
+    drain_ms: Number(process.env["DEV_VESSEL_DRAIN_MS"] ?? process.env["VESSEL_DRAIN_MS"] ?? 240000),
+new:
+    drain_ms: DEV_VESSEL_DRAIN_MS,
+EDIT 3 — old:
+const deadline = Date.now() + Number(process.env["DEV_VESSEL_DRAIN_MS"] ?? process.env["VESSEL_DRAIN_MS"] ?? 240000);
+new:
+const deadline = Date.now() + DEV_VESSEL_DRAIN_MS;
+EDIT 4 — old:
+      // Both signals must be quiet: a marker-free vessel can still be mid-compose.
+      if (live === 0 && inFlightRequests === 0) { console.log(`[development-vessel] ${sig}: drained (0 authoring runs, 0 requests in flight)`); break; }
+new:
+      // WAIT ONLY FOR CUTOVERS IN PROGRESS (resumable landings). A compose that passed its
+      // gates has already parked its patch (/workspace/parked-landings) before calling the
+      // cutover, and a draft/verify stage is cheap to redo, so neither is worth holding a
+      // restart for. A cutover mid commit+push holds the change_window lease under name
+      // "cutover" - that is the one stage a restart can still destroy.
+      let cutoversLive = 0;
+      try {
+        const { resolveMaintenanceLease } = await import("./resolvers/maintenance-lease.js");
+        const lease = (await resolveMaintenanceLease({ type: "maintenanceLease" })).body as { holds?: Array<{ name: string | null }> };
+        cutoversLive = (lease.holds ?? []).filter((h) => h.name === "cutover").length;
+      } catch { /* lease unreadable: fall through to the request/marker signals below */ }
+      if (cutoversLive === 0) {
+        console.log(`[development-vessel] ${sig}: drained (0 cutovers in progress; ${inFlightRequests} request(s) and ${live} authoring run(s) in draft/verify are parked or re-picked, not waited for)`);
+        break;
+      }
+      console.log(`[development-vessel] ${sig}: ${cutoversLive} cutover(s) in progress - waiting for push`);
+      // Both signals must be quiet: a marker-free vessel can still be mid-compose.
+      if (live === 0 && inFlightRequests === 0) { console.log(`[development-vessel] ${sig}: drained (0 authoring runs, 0 requests in flight)`); break; }
+Reviewer facts: pull-sync and the cutover's self-restart both quiesce and wait for in-flight work BEFORE sending SIGTERM, so this drain only decides the case where that wait already timed out; the derived budget is 240 s (unchanged number, now derived from the cutover stage) and stays below TimeoutStopSec 300 s; the old marker/request loop still runs while a cutover is in progress.
+Falsifier: SIGTERM while a compose is in bun test -> the drain exits within a few seconds logging "drained (0 cutovers in progress; ...)"; SIGTERM while maintenance-cutover.json is held -> it logs "cutover(s) in progress - waiting for push" until the push completes; /health still reports drain_ms 240000.

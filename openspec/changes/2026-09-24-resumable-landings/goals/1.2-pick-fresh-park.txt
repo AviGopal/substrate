@@ -1,3 +1,23 @@
-In repos/development-vessel/src/resolvers/gap-to-feature.ts, prefer a fresh parked landing over a redraft when picking a gap (openspec 2026-09-24-resumable-landings task 1.2, spec parked-landing "A fresh park is resumed instead of redrafted"). feature-compose.ts exports `readParkedLanding(gapId)` returning the ParkedLanding (gap_id, compose_id, vessel, files, parked_at, ...) written when a verified patch lost its cutover, and resolveFeatureCompose accepts `resume_from` and `parked_landing_ttl_ms`.
-Change, in this one file: extend the existing import `import { resolveFeatureCompose, priorAttemptFeedbackBlock } from "./feature-compose.js";` with `readParkedLanding`. In resolveGapToFeature, immediately before the main `const compose = await resolveFeatureCompose({ type: "feature_compose", spec, ...` call, read `const park = await readParkedLanding(String(gap.id ?? "")).catch(() => null);` and compute `const parkTtlMs = Number((pointer as { parked_landing_ttl_ms?: number }).parked_landing_ttl_ms ?? 86_400_000);` and `const freshPark = park && Date.now() - Date.parse(park.parked_at) < parkTtlMs ? park : null;`. When freshPark is set log `[gap-to-feature] picked ${gap.id} has a fresh parked landing (${freshPark.compose_id}) — dispatching feature_compose with resume_from` and add `...(freshPark ? { resume_from: freshPark, parked_landing_ttl_ms: parkTtlMs } : {})` to that resolveFeatureCompose pointer. No other behaviour changes.
-Falsifier: with /workspace/parked-landings/<gap>.json present and younger than the TTL, a pick of that gap logs the fresh-park line and the compose logs `RESUMING parked landing` with no drafter call.
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, prefer a fresh parked landing over a redraft when the picked gap has one (openspec 2026-09-24-resumable-landings task 1.2). feature-compose.ts exports readParkedLanding(gapId) (the patch a compose parked when its cutover was refused or interrupted) and resolveFeatureCompose accepts resume_from and parked_landing_ttl_ms. Use exactly these two old->new edits (each old text occurs once in the file) and nothing else.
+EDIT 1 — old:
+import { resolveFeatureCompose, priorAttemptFeedbackBlock } from "./feature-compose.js";
+new:
+import { resolveFeatureCompose, priorAttemptFeedbackBlock, readParkedLanding } from "./feature-compose.js";
+EDIT 2 — old:
+  const compose = await resolveFeatureCompose({
+    type: "feature_compose",
+    spec,
+    ...(verifyVessels.length ? { verify_vessels: verifyVessels } : {}),
+new:
+  // PREFER A FRESH PARK OVER A REDRAFT (resumable landings): a park is a patch for this
+  // gap that already passed verify and the semantic gate and only lost its cutover.
+  const parkTtlMs = Number((pointer as { parked_landing_ttl_ms?: number }).parked_landing_ttl_ms ?? 86_400_000);
+  const park = await readParkedLanding(String(gap.id ?? "")).catch(() => null);
+  const freshPark = park && Date.now() - Date.parse(park.parked_at) < parkTtlMs ? park : null;
+  if (freshPark) console.log(`[gap-to-feature] picked ${String(gap.id)} has a fresh parked landing (${freshPark.compose_id}) - dispatching feature_compose with resume_from`);
+  const compose = await resolveFeatureCompose({
+    type: "feature_compose",
+    spec,
+    ...(freshPark ? { resume_from: freshPark, parked_landing_ttl_ms: parkTtlMs } : {}),
+    ...(verifyVessels.length ? { verify_vessels: verifyVessels } : {}),
+Falsifier: with /workspace/parked-landings/<gap>.json present and younger than the TTL, a pick of that gap logs "has a fresh parked landing" and the compose logs "RESUMING parked landing" with no drafter call.

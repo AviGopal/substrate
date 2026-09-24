@@ -13,9 +13,13 @@
 - [ ] 1.2 `gap-to-feature.ts`: in the pick, if a park younger than `parked_landing_ttl` exists
   for the gap, dispatch `feature_compose` with `resume_from`. Falsifier: journal shows
   `RESUMING parked landing` and no drafter call for that compose.
-- [ ] 1.3 `feature-compose.ts`: `resume_from` path — re-apply, typecheck only, cutover; `park_stale`
+- [x] 1.3 `feature-compose.ts`: `resume_from` path — re-apply, typecheck only, cutover; `park_stale`
   lesson when the diff does not apply. Falsifier: move the base under a park (land an
   unrelated change to the same file); the park is dropped with the lesson.
+  Landed as development-vessel `6ab8271`; the landed file equals the pre-validated edit set
+  except one line: the cutover committed a whole file staged before `a0ff3d3` and reverted
+  that commit's one-line fix (anchor-band reader). Restore dispatched; the class is filed as a
+  gap (a cutover overwrites a newer committed landing on the same file).
 - [ ] 1.4 `index.ts` SIGTERM handler: park post-gate composes; do not wait for pre-gate ones.
   Falsifier: restart during `bun test` → prompt drain, no park; restart after gate → park.
 - [ ] 1.5 Detector: `discardedLandingReport` sweep and the day-keyed gap. Falsifier: one
@@ -48,6 +52,11 @@
   - [x] 3.1a-ii renew + release honour `name`. Landed as development-vessel `e17ea38`; runtime
     equals the commit; falsifier passed: named renew moves only the named file's expiry, named
     release deletes only its own file, unnamed release unchanged.
+  - [x] 3.1c named lease files follow the lease file's own stem (`<stem>-<name>.json`), so a
+    test's MAINTENANCE_LEASE_PATH in the shared /tmp no longer leaks a cutover hold into every
+    other test (it made each compose's gate charge 16-24 lease-test failures to unrelated
+    drafts). Landed as `80e168f`; identical to the pre-validated file; the real lease test with
+    a decoy hold goes 2/12 on the old code to 14/0 on the landed code.
   - [x] 3.1b unnamed acquire refused while any named hold exists; union read with `holds[]`;
     unnamed release finds a named hold by token. Landed as development-vessel `4e40707`; the
     landed file equals the version whose falsifier was run before dispatch (unnamed acquire

@@ -1,0 +1,36 @@
+In repos/development-vessel/src/resolvers/maintenance-lease.ts, keep named lease files private to the lease file they belong to (openspec 2026-09-24-resumable-landings task 3.1c). Named holds are written beside the lease file as maintenance-<name>.json whatever MAINTENANCE_LEASE_PATH says; tests set that variable to a unique file in the shared /tmp, so a cutover test's "cutover" hold lands in /tmp/maintenance-cutover.json and listHolds() in every OTHER test reads it (measured 15:10Z: test/resolvers/maintenance-lease.test.ts fails 8 cases with holder "cutover:development-vessel"; the compose test gate charged 16-19 of these to unrelated drafts). Name the files from the lease file's own stem instead: for the default path the stem is "maintenance", so production files (maintenance-trace_store.json, maintenance-cutover.json — which activity-api's db-admin route matches) are unchanged. Use exactly these three old->new edits (each old text occurs once) and nothing else.
+EDIT 1 — old:
+import { join, dirname } from "node:path";
+new:
+import { join, dirname, basename } from "node:path";
+EDIT 2 — old:
+export function namedLeasePath(name?: string): string {
+  return name ? `${dirname(leasePath())}/maintenance-${name.replace(/[^a-z0-9_-]/gi, "_")}.json` : leasePath();
+}
+new:
+/**
+ * The lease file's own stem ("maintenance" for the default path). Named holds live beside
+ * it as `<stem>-<name>.json`, so a non-default MAINTENANCE_LEASE_PATH keeps its named holds
+ * private: tests point it into the shared /tmp, and a stem-less `maintenance-<name>.json`
+ * there leaked one test's cutover hold into every other test's view of the lease.
+ */
+function leaseStem(): string {
+  return basename(leasePath()).replace(/\.json$/, "");
+}
+
+export function namedLeasePath(name?: string): string {
+  return name ? `${dirname(leasePath())}/${leaseStem()}-${name.replace(/[^a-z0-9_-]/gi, "_")}.json` : leasePath();
+}
+EDIT 3 — old:
+  for (const f of files) {
+    const m = /^maintenance(?:-(.+))?\.json$/.exec(f);
+    if (!m) continue;
+    const name = m[1] ?? null;
+new:
+  const stem = leaseStem();
+  for (const f of files) {
+    if (!f.startsWith(stem) || !f.endsWith(".json")) continue;
+    const rest = f.slice(stem.length, -".json".length);
+    if (rest !== "" && !rest.startsWith("-")) continue;
+    const name = rest === "" ? null : rest.slice(1);
+Falsifier: with an unexpired maintenance-cutover.json decoy in the test's tmpdir, test/resolvers/maintenance-lease.test.ts fails on the old code and passes on the new; with the default path, named holds are still maintenance-<name>.json.
