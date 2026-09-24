@@ -98,7 +98,7 @@ compatible: a shape served on another substrate resolves through the same
 capability-addressed query, so vessel location stops mattering to a caller — but the data
 does not move, and duplicating a vessel means duplicating access to its data.
 
-- [Federation](FEDERATION.md) — topologies, the relay, joining as a spoke, and the operational space.
+- [Federation](FEDERATION.md) — topologies, the relay, what joining as a spoke means and how to confirm it, and the operational space.
 - [Federation genres](operations/FEDERATION_GENRES.md) — the distribution-policy taxonomy that decides which of N producers of a shape a caller gets, and the identity-secret namespace boundary.
 - [The substrate as a fleet](architecture/SUBSTRATE_AS_FLEET.md) — durability across containers, and what may cross the boundary.
 - [The substrate as a network](architecture/SUBSTRATE_AS_NETWORK.md) — how work, identity, trust, and the system itself cross the boundary.
@@ -130,7 +130,7 @@ substrate, never preprocessors for it — if a goal
 only works after someone rewrites it into paths and shapes, that rewriting is a gap. The
 cockpit's tool surface is enumerated in the root `CLAUDE.md` linked at the top of this page.
 
-- [Running a human surface](HUMAN_SURFACE.md) — five steps to put a page in front of a person: config, image, launch, open, ask. What runs locally versus on the hub, and why a surface that loads but cannot dispatch is a hub-link problem.
+- [Running a human surface](HUMAN_SURFACE.md) — what a surface needs (a relayed hub and a hub-issued key; the launch is sequence D of the install page), what runs locally versus on the hub, and why a surface that loads but cannot dispatch is a hub-link problem.
 - [Workbench Chain-Based UX Design](architecture/WORKBENCH_CHAIN_UX_DESIGN.md) — the chain vocabulary of the workbench surface.
 - [Interactive Activities and the Human Resolver](guides/INTERACTIVE_ACTIVITIES_AND_HUMAN_RESOLVER.md) — dispatching a task to a human as a resolver and waiting on the answer.
 - [Substrate-Narration Protocol](SUBSTRATE_NARRATION_PROTOCOL.md) — the operator-side narration and gap-accumulation methodology.
@@ -141,12 +141,16 @@ cockpit's tool surface is enumerated in the root `CLAUDE.md` linked at the top o
 **Purpose:** a substrate boots and manages itself from an image plus environment plus
 volumes; nothing may depend on a particular host machine or host workspace. Learning state
 persists in the container volume, so anything destructive has to account for it. The
-documents here cover standing the fleet up, iterating on a vessel against a running
-substrate, and authoring a new vessel that satisfies the shape-dispatch contract.
+documents here cover operating a running fleet, iterating on a vessel against a running
+substrate, and authoring a new vessel that satisfies the shape-dispatch contract. Standing
+a fleet up is not among them: setup (profiles, ports, install inputs, the setup sequences,
+backup and teardown) lives only in [README § Installation](../README.md#installation),
+which the acceptance run executes, and every document here links there rather than
+restating a launch.
 
-- [Local single-container substrate](SUBSTRATE.md) — bootstrap, the vessel fleet, port conventions, and troubleshooting.
-- [Configuration surface](operations/CONFIGURATION_SURFACE.md) — every variable by the channel that delivers it and the moment it is read; the precedence chain, and which values are bootstrap rather than shape-able.
-- [Live Development Guide](LIVE_DEVELOPMENT.md) — hot-reload iteration against a running vessel.
+- [Local single-container substrate](SUBSTRATE.md) — the operating reference: inventory and topology selection, `vessel-ctl`, the iteration loop, retention, and troubleshooting.
+- [Advanced configuration](operations/CONFIGURATION_SURFACE.md) — every variable beyond the install inputs, by tier; the channel that delivers each and the moment it is read; the precedence chain; the migration table for retired names.
+- [Live Development Guide](LIVE_DEVELOPMENT.md) — developer-only: hot-reload iteration on one vessel's source, not a way to run the fleet.
 - [TypeScript Vessel Template](architecture/TYPESCRIPT_VESSEL_TEMPLATE.md) — the invariants a new vessel must satisfy, including shape-dispatch agreement.
 
 ## 9. Gap management and measurement
@@ -161,4 +165,4 @@ so can never be trusted when it passes.
 - [Shape→Action→Evidence Expectations](architecture/SHAPE_ACTION_EVIDENCE_EXPECTATIONS.md) — falsifiable expectations with named metrics and floors.
 - [External Validation](guides/EXTERNAL_VALIDATION.md) — validation as a resolver, and the error-type taxonomy it applies.
 - [Testing documentation](testing/README.md) — index of the verification material.
-- [Quick Verification Guide](testing/QUICK_VERIFICATION_GUIDE.md) — the short path to confirming a running substrate behaves.
+- [Quick Verification Guide](testing/QUICK_VERIFICATION_GUIDE.md) — the short path to confirming a running substrate behaves, starting from the five-level `substrate-status` verdict.

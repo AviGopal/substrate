@@ -11,12 +11,14 @@ CONTAINER="${SUBSTRATE_CONTAINER:-substrate-live}"
 REPO_ROOT="${REPO_ROOT:-$(git -C "$(dirname "$0")" rev-parse --show-toplevel)}"
 SCRIPT_PATH="$REPO_ROOT/scripts/concept-seed/seed-claudemd.ts"
 
-# Repo is bind-mounted into the container read-only at the same absolute path
-# (see scripts/substrate/Makefile run-live target). The seed script reads
-# CLAUDE.md files via REPO_ROOT.
+# The seed script must exist at REPO_ROOT inside the container, and it reads
+# CLAUDE.md files via REPO_ROOT. The launch manifest mounts no host checkout, so
+# point REPO_ROOT at the substrate's own super-repo clone
+# (REPO_ROOT=/workspace/git/super-repo) unless a checkout is mounted at the same
+# absolute path.
 if ! docker exec "$CONTAINER" test -f "$SCRIPT_PATH"; then
   echo "Seed script not present at $SCRIPT_PATH inside $CONTAINER."
-  echo "Ensure the repo bind-mount is active (-v REPO_ROOT:REPO_ROOT:ro)."
+  echo "Set REPO_ROOT=/workspace/git/super-repo (the in-container clone), or mount a checkout at REPO_ROOT."
   exit 1
 fi
 

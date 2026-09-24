@@ -61,523 +61,336 @@ Conscious one-off direct edits to vessel source are gated by a PreToolUse hook a
 
 ## Installation
 
-The whole system runs as **one container** (`substrate-live`) hosting the vessel fleet as systemd units — no Kubernetes, no orchestration on the host. The host contract is a single `docker run`: one privileged container, one LLM-provider env var, two named volumes (workspace + datastore). Everything load-bearing — seeding, readiness, diagnosis — happens inside the container at boot; the Makefile is a convenience wrapper over exactly that contract.
+This section is the only place setup commands appear; every other document links here.
+The command blocks of sequences A, B and C are fenced `install:standalone`, `install:hub`
+and `install:spoke`: the acceptance run executes one case's blocks verbatim on a fresh host
+for every published image, on Docker and on Podman, so this page is tested rather than
+trusted. Values a reader types in place of a placeholder reach the run through the
+environment, which the manifest reads ahead of `.env`: the provider key in every case, and
+for the hub and spoke cases the address the hub advertises, its discovery endpoint and the
+key it issued, without which those cases cannot run.
 
-### Quick start from the published image (few commands, from repo root)
-
-The canonical image is `ghcr.io/avigopal/substrate:dev` (fleet), published by
-`.github/workflows/build-substrate-image.yml` on every push to `dev`. It is
-**public** and pulls anonymously — no `docker login` and no PAT.
+The whole system runs as **one privileged container** hosting the vessel fleet as systemd
+units, from the public image `ghcr.io/avigopal/substrate:dev` (it pulls anonymously; no
+login, no token, no checkout). The image is the installer: every derivation (role,
+endpoints, secrets, seeding, readiness) runs inside it, and the host holds only a
+declaration, the launch manifest `docker-compose.yml` and a `.env` of install inputs.
 (`ghcr.io/avigopal/substrate:obsidian` adds an in-container Obsidian over noVNC.)
-A pulled image needs no submodules.
 
-> To check the package's visibility yourself:
-> `curl -s "https://ghcr.io/token?scope=repository:avigopal/substrate:pull"`
-> returns a usable token with no credentials, and a manifest fetch with that
-> token returns `200`. A bare manifest request answering `401` is **not**
-> evidence of a private package — that is the first step of the standard
-> anonymous OCI token flow, which `docker pull` performs for you.
-Requirements: Docker with Linux x86_64 semantics and `--privileged` (native
-Linux, or Docker Desktop with the WSL2 backend on Windows).
+**Prerequisites:** a container engine that allows privileged containers, with compose:
+Docker with `docker compose`, or Podman with `podman compose` (rootless supported).
+`docker` below works identically with `podman`. Nothing else is needed on the host for the
+substrate itself; the cockpit adds node/npx.
 
-**Standalone substrate** — the canonical root-level `docker-compose.yml` reduces
-launch to a few commands; every secret but the one LLM key auto-generates on
-first boot and persists to the volumes.
+### Where things run
 
-This path needs a **checkout** (for the compose file and `.env.example`), though
-not its submodules — a pulled image contains the vessel source already:
+| Plane | What lives there | Written by | Survives |
+|---|---|---|---|
+| **Host** | the container engine; `docker-compose.yml`; `.env` (install inputs only) | the operator, once | the host |
+| **Container** | systemd + the vessel fleet; `/etc/substrate/env` (generated each boot) | the image, at boot | nothing: regenerated every boot |
+| **Workspace volume** `<name>-workspace` | `.substrate-secrets`, git clones, the memoryNote store, the dynamic-vessel registry (`installed.json`), gap store, snapshots | the substrate | recreate and upgrade |
+| **Datastore volume** `<name>-surreal` | traces, posteriors, concept graph, identity | the substrate | recreate and upgrade |
+| **Hub** | the network's identity, trace store, learner, gap store, concept graph | the hub fleet | independently of spokes |
+| **Git origin** (`SUBSTRATE_REPO_OWNER`) | the code every fleet converges to at boot | substrates with push capability, operators | always |
+| **Client** | `~/.metabob/config.json` and the cockpit registration | `substrate-connect` output | until teardown |
+| **CI** | acceptance runs: judge only, no state | the workflow | per run |
 
-> **Already running a substrate on this host?** Read this *before* running the
-> block below, which uses the default names and the default `18xxx` ports.
-> `SUB=substrate-live` below is the container name; on the compose lane a second
-> fleet needs `SUBSTRATE_CONTAINER`, **both** of `WORKSPACE_VOLUME` /
-> `SURREAL_VOLUME`, and all nine `*_PORT` values (`.env.example` TIER 2b). On the
-> make lane it is `LIVE_NAME` + `PORT_OFFSET`. **The two lanes do not translate
-> each other.** Reusing the default volume names does not fail — it silently
-> attaches the new fleet to the first one's learning state, and two substrates
-> writing one datastore corrupts both.
+### Profiles: what runs where, and why
 
-```bash
-git clone https://github.com/AviGopal/substrate.git && cd substrate
-SUB=substrate-live                         # a second fleet: set this AND the vars above
+| Profile | Runs | Local data | Resolves remotely | Use it for |
+|---|---|---|---|---|
+| `standalone` (root default) | everything: store, control, api, models, compute, ui, transport, autonomy | all of it | nothing | one self-contained substrate |
+| `hub` | registry, identity, trace store + learner, stores, models, transport + relay, plus goal-host, development, local-tools, ribosome, analysis, light-dispatch, and the self-development loop (autonomy + boredom) | the network's learning state and gap store | nothing | the network's home; it dispatches and self-develops next to its posteriors (its landings still need push capability) |
+| `hub-minimal` | the `hub` role without compute | as `hub` | goal execution (a spoke) | a control-plane or relay-only node |
+| `spoke` (remote-anchor default) | registry (local), compute, ui, transport | the host's files and tools (why the spoke exists) | identity, traces, learning, lessons, LLM arms, from the hub | adding compute or local data to a network |
+| `surface` | registry, transport, human surface | none | everything | a human's local window onto a network |
+| `compute` | registry, transport, compute | the host's files and tools | everything else | a worker next to some data |
 
-cp -n scripts/substrate/.env.example .env  # -n: never clobber an .env you already have
-                                           # (silent when it skips — check the file is yours)
-$EDITOR .env                               # uncomment ANTHROPIC_API_KEY (or OPENAI_API_KEY) and set it
-docker compose pull                        # `up` alone reuses a local tag; this fetches the current one
-docker compose up -d                       # run from repo root — root compose is canonical
+The rule behind the table (data locality): a spoke exists because some data lives on its
+host (files, tools, a vault). Everything learned lives with the learner on the hub, so a
+spoke never carries its own trace store or identity.
 
-# CHECK IT DID NOT CRASH-LOOP. `up -d` prints "Started" and exits 0 even when the
-# container dies immediately, because compose reports that it launched, not that
-# it lived — and `restart: unless-stopped` then retries forever. The commonest
-# cause is an unedited .env: gen-env refuses to boot without a provider key, which
-# is deliberate, but the refusal is only visible here.
-sleep 15; docker ps --filter "name=$SUB" --format '{{.Status}}'   # "Restarting" => read the logs:
-docker logs --tail 20 "$SUB"
+### Ports
 
-# `healthy` means the container is live, NOT that identity is seeded. Until the
-# seeder finishes, `substrate-key show` prints a pre-seed placeholder that every
-# call rejects with 401 — and it prints it without any error. Gate on a check
-# that actually validates the key. `whoami` works on every topology, because it
-# asks whichever identity-vessel this fleet uses — its own, or its hub's.
-#
-# Bounded on purpose: an unbounded `until` turns a genuine seed failure into a
-# silent forever-loop. The container's own identity-seeder gives up after 300s.
-for i in $(seq 1 30); do
-  docker exec "$SUB" substrate-key whoami 2>/dev/null | grep -q '"valid": *true' && break
-  [ "$i" = 30 ] && { echo "identity never seeded. Check BOTH — the container may never have started:"; \
-                     echo "  docker logs --tail 50 $SUB"; \
-                     echo "  docker exec $SUB journalctl -u identity-seeder -n 50"; }
-  sleep 10
-done
-docker exec "$SUB" substrate-key show
+The manifest publishes one set of ports on every profile, each derived from
+`SUBSTRATE_PORT_PREFIX` (`P`, default `18`) as `P` followed by the last three digits of the
+container port. A vessel the profile does not run does not answer, and the verdict checks
+only the vessels the profile selects.
+
+| Host port | Vessel | Must be reachable by | Profiles serving it |
+|---|---|---|---|
+| `P080` | activity-api (trace store) | clients, spokes | standalone, hub, hub-minimal |
+| `P090` | development-vessel (memory, lessons) | clients, spokes | standalone, hub, spoke, compute |
+| `P100` | discovery | clients, spokes, peers | all |
+| `P101` | identity | clients, spokes | standalone, hub, hub-minimal |
+| `P210` | goal-host | clients | standalone, hub, spoke, compute |
+| `P250` | analysis | clients | standalone, hub, spoke, compute |
+| `P260` | concept-db | spokes (lessons) | standalone, hub, hub-minimal |
+| `P270` | stateful UI | humans | standalone, spoke |
+| `P310` | human surface | humans | standalone, spoke, surface |
+| `P333` | federation relay | spokes (libp2p) | hub, hub-minimal |
+
+A hub's firewall list is this table filtered by "spokes". Exposure is decided only by the
+manifest's port mapping: `127.0.0.1:P310:8310` keeps the surface on the local host.
+
+### Configuration
+
+| Tier | What | Where it lives | Read | Learnable? |
+|---|---|---|---|---|
+| **Install inputs** | the eight below | host `.env` | at boot, by gen-env | no (bootstrap, by design) |
+| **Advanced bootstrap** | extra providers, `LLM_ARMS`, retention, federation overrides, `DISABLED_VESSELS`, `RELAY_PORT`, the `MITOSIS_DIRECT_PUSH` kill switch | host `.env`, forwarded by the manifest; documented only in [`docs/operations/CONFIGURATION_SURFACE.md`](docs/operations/CONFIGURATION_SURFACE.md) | at boot | no |
+| **Generated secrets** | `JWT_SECRET`, `SURREAL_PASS`, API-key signing secret, the operator key | workspace `.substrate-secrets` | at boot | n/a (never hand-edited) |
+| **Runtime policy** | vessel additions (`vessel-ctl install`), `pushPolicy`, `llmModelPolicy`, rhythms | impulses in the substrate | at use time | **yes** |
+| **Client** | endpoint + key | `~/.metabob/config.json` (override: `METABOB_CONFIG_PATH`; a project-local `.metabob/config.json` shadows it) | by the cockpit | n/a |
+
+**The install inputs**
+
+| Input | Default | Required for |
+|---|---|---|
+| `SUBSTRATE_NAME` | `substrate` → `substrate-live`, `substrate-workspace`, `substrate-surreal` | — |
+| `SUBSTRATE_PORT_PREFIX` | `18` | — |
+| `PROFILE` | `standalone` (no anchor) / `spoke` (remote anchor) | hub, surface, compute |
+| `DISCOVERY_ENDPOINT` + `METABOB_API_KEY` | unset | spoke, surface, compute |
+| provider key (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, …) | unset | standalone, hub |
+| `PUBLIC_IP` | unset | hub (the address spokes reach; `/bootstrap` advertises it) |
+| `SUBSTRATE_GIT_PAT` + `SUBSTRATE_REPO_OWNER` | unset / unset (a token without an owner fails the launch) | self-development (push capability) |
+
+Required inputs per profile: **standalone 1** (provider key); **spoke, surface, compute 2**
+(the anchor + key pair); **hub 3** (`PROFILE`, provider key, `PUBLIC_IP`).
+
+Rules:
+
+- Nothing ambient: no launcher reads `~/.metabob`, `gh`, or another container's environment.
+- Precedence at boot: explicit env > `.env` > persisted secret > default. An input that
+  conflicts with its deprecated alias fails the launch.
+- `HUB_DISCOVERY_URL` or `PEER_MULTIADDR` without `DISCOVERY_ENDPOINT` fails the launch; the
+  system does not guess a role.
+- A deprecated name alias that conflicts with `SUBSTRATE_NAME` fails at boot, before
+  anything is written. On a new volume, so does a partial one (for example
+  `SUBSTRATE_CONTAINER=lab` without both volume names), so a new container can never attach
+  to another fleet's volumes; an install already running on its volumes is warned instead. The old names and their
+  replacements are listed in the [configuration reference's migration table](docs/operations/CONFIGURATION_SURFACE.md#migration-retired-names).
+- Changing an install input means `docker compose up -d` (recreate, volumes kept). Changing
+  runtime policy never needs a restart.
+
+### Setup sequences
+
+Every sequence ends at a verdict level. `substrate-status` reports five ordered levels,
+`live`, `seeded`, `served`, `usable` and `connected`, each `pass`, `fail` or `unknown`;
+`--wait <level>` exits non-zero and prints the failing level unless that level passes.
+
+#### A. Standalone (the default)
+
+These are the default names: container `substrate-live`, volumes `substrate-workspace` and
+`substrate-surreal`, ports `18xxx`. If `docker ps -a` already lists `substrate-live` or
+`docker volume ls` lists `substrate-workspace` on this host, a fleet (however it was made)
+already owns them: add sequence E's two inputs before step 3, or the new container attaches
+to that fleet's volumes.
+
+```bash install:standalone
+# 1. Get the manifest (no checkout needed; or clone the repo and use its root file)
+docker run --rm --entrypoint substrate-manifest ghcr.io/avigopal/substrate:dev > docker-compose.yml
+
+# 2. Configure: one required input
+echo 'ANTHROPIC_API_KEY=sk-ant-…' > .env
+
+# 3. Launch
+docker compose up -d
+
+# 4. Wait for a reached goal (exits non-zero and prints the failing level otherwise)
+docker exec substrate-live substrate-status --wait usable
+
+# 5. Connect the cockpit. stdout is the config JSON only; the registration line and any
+#    shadowing warning go to stderr, so the redirect is safe.
+mkdir -p ~/.metabob
+docker exec substrate-live substrate-connect > ~/.metabob/config.json
+#    then run the `claude mcp add …` line it printed (node/npx required for the cockpit)
 ```
 
-When you are done with it, tear it down — `docker rm` alone leaves the volumes,
-and a later "clean" install silently inherits them:
+Step 5 writes the whole client configuration file; if `~/.metabob/config.json` already
+points at another fleet, redirect to a different path and select it with
+`METABOB_CONFIG_PATH` instead. Then make a first cockpit call (for example
+`registry_query`), and read the full verdict:
 
-```bash
-docker compose down          # stop and remove the container, KEEP the learning state
-docker compose down -v       # …and DESTROY both volumes: posteriors, traces, concept graph
+```bash install:standalone
+# 6. Print the full verdict. The exit status reflects `usable`; `connected` passes once
+#    a cockpit call has reached the fleet, and reads `unknown` before that.
+docker exec substrate-live substrate-status
 ```
 
-First boot takes a few minutes to converge. Running `substrate-doctor` before
-then shows failures that clear on their own — a young substrate looks like a
-broken one. Confirm a key works before using it:
-`docker exec <container> substrate-key whoami` should report your `org_id` and scopes.
+`OPENAI_API_KEY` works in place of `ANTHROPIC_API_KEY`; exactly one provider key is
+required, and every other secret is generated on first boot and persisted to the
+workspace volume. The human surface is at `http://localhost:18310/`.
 
-> **If the key gate passes but goals fail, check the LLM arm first.** A fleet
-> with an absent or invalid provider key boots clean, reports `healthy`, passes
-> the gate above and almost every doctor check — and cannot draft a token. The
-> dispatch failure names template ids, not authentication, so it does not point
-> at the cause. The one check that does is `substrate-doctor`, which POSTs a
-> real completion to each arm:
-> `docker exec substrate-live substrate-doctor` — look for the `llm arm` line.
+A fleet with no valid provider key boots, passes `live`, `seeded` and `served`, and fails
+`usable` naming the missing key: health without usability is reported as such, not as
+green.
 
-The raw `docker run` below hardcodes the same default names and ports; a second
-fleet needs its own, per the callout above.
+#### B. Hub
 
-To launch with **no checkout at all**, use the raw `docker run` below — it needs
-nothing from this repo.
+As A, with `PROFILE=hub` and `PUBLIC_IP=<address spokes reach>` in `.env`:
 
-`scripts/substrate/docker-compose.yml` is a symlink to the root file, so
-either directory works. `OPENAI_API_KEY` works in place of `ANTHROPIC_API_KEY` —
-exactly one LLM key is required; every other secret auto-generates on first boot
-to `/workspace/.substrate-secrets`.
-
-**Raw `docker run`** — the same image, without compose:
-
-```bash
-docker run -d --privileged --name substrate-live \
-  -v substrate-workspace:/workspace -v substrate-surreal:/var/lib/surrealdb \
-  -e ANTHROPIC_API_KEY=sk-ant-... \
-  -p 18080:8080 -p 18090:8090 -p 18100:8100 -p 18101:8101 -p 18210:8210 \
-  -p 18250:8250 -p 18260:8260 -p 18270:8270 -p 18310:8310 \
-  --tmpfs /run --tmpfs /run/lock ghcr.io/avigopal/substrate:dev
+```bash install:hub
+docker run --rm --entrypoint substrate-manifest ghcr.io/avigopal/substrate:dev > docker-compose.yml
+cat > .env <<'EOF'
+PROFILE=hub
+PUBLIC_IP=<address spokes reach>
+ANTHROPIC_API_KEY=sk-ant-…
+EOF
+docker compose up -d
+docker exec substrate-live substrate-status --wait usable
+mkdir -p ~/.metabob
+docker exec substrate-live substrate-connect > ~/.metabob/config.json
 ```
 
-That is **nine** ports, matching `docs/SUBSTRATE.md` and the root compose file.
+Open the ports the table marks "spokes". Issue a key per spoke:
+`docker exec substrate-live substrate-key issue <spoke-name>` (the full key is printed once
+and never stored). The hub reaches `usable` on its own because it dispatches: the `hub`
+profile carries goal-host and the compute vessels next to the posteriors. `hub-minimal`
+leaves compute out for a control-plane or relay-only node. The federation relay runs inside
+the container on `P333`, and `/bootstrap` advertises it at `PUBLIC_IP`, which is why the
+hub cannot omit that input.
 
-`18310` is `human-surface-vessel` — the vessel a human talks to. The image
-bakes its vendor unit (enabled) and the built UI, so it serves out-of-box;
-verify with the page itself, not just the health probe:
+To run a hub or any other node on a remote machine, copy the manifest and `.env` to it and
+run the same sequence there.
 
-```bash
-curl -s -o /dev/null -w '%{http_code}\n' http://localhost:18310/   # 200 — the UI itself
+#### C. Spoke
+
+```bash install:spoke
+docker run --rm --entrypoint substrate-manifest ghcr.io/avigopal/substrate:dev > docker-compose.yml
+cat > .env <<'EOF'
+DISCOVERY_ENDPOINT=http://<hub-host>:18100
+METABOB_API_KEY=<key issued by the hub>
+EOF
+docker compose up -d
+docker exec substrate-live substrate-status --wait served
+mkdir -p ~/.metabob
+docker exec substrate-live substrate-connect > ~/.metabob/config.json
 ```
 
-To exclude it from a deployment, name it in `DISABLED_VESSELS` (masks the
-unit; stop the running one too, or recreate).
-(`vessel-ctl install human-surface-vessel` is the source-deployment path; on a
-pulled image with no super-repo checkout it refuses rather than replacing the
-working vendor unit with one that cannot chdir.)
-
-Omit the port mapping instead and the vessel runs but binds only inside the
-container, which looks identical from the host.
-
-Once the fleet has converged (see the key gate above), dispatch a goal against
-goal-host and poll it:
-
-```bash
-curl -X POST http://localhost:18210/run-goal -H 'Content-Type: application/json' \
-  -d '{"goal":"list the running units"}'        # 202 {"dispatchId":"…","status":"running"}
-
-curl http://localhost:18210/executions/<dispatchId>
-```
-
-Read **`reached`**, not `status`: `status` is only the template's exit code, and a
-run can complete without reaching the goal. Identical goal text coalesces onto the
-existing dispatch rather than starting a second one.
-
-Traces live on activity-api at `http://localhost:18080` — an **authenticated JSON
-API, not a web page** (`GET /` returns 404):
-
-```bash
-curl -H "Authorization: ApiKey $(docker exec substrate-live substrate-key show)" \
-  'http://localhost:18080/v2/activities/execution-traces?limit=5'
-```
-
-Retrieve your operator API key straight from the running container (the tool is
-baked into the image — no repo checkout needed):
-
-```bash
-docker exec substrate-live substrate-key show
-```
-
-`healthy` is a liveness signal, not a correctness one — it can report healthy
-while the datastore credentials are broken and every request that touches the
-store fails. Before trusting a boot, run the fuller check:
-
-```bash
-docker exec substrate-live substrate-doctor
-```
-
-Optional: add `-e SUBSTRATE_GIT_PAT=<github-pat>` so the
-substrate can pull + push the source repos it is built from (self-alteration);
-without it, self-authored commits stay local. Full config matrix:
-[`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) § *Container config matrix*; every
-variable by delivery channel and read point:
-[`docs/operations/CONFIGURATION_SURFACE.md`](docs/operations/CONFIGURATION_SURFACE.md);
-federation details: [`docs/FEDERATION.md`](docs/FEDERATION.md).
-
-### Join an existing identity / discovery group (spoke)
-
-A spoke contributes a local registry + compute while identity, traces, and
-learning state live on the hub. Joining is **point-and-go**: pointing
-`DISCOVERY_ENDPOINT` at the hub's discovery and presenting a hub-issued
-`METABOB_API_KEY` is sufficient — the role, identity endpoint, trace store, and
-relay anchor are all derived from those two, the last of them from
-`<discovery-endpoint>/bootstrap`.
-
-> **It must be `DISCOVERY_ENDPOINT`.** Setting `HUB_DISCOVERY_URL` instead looks
-> equivalent and is not: the derivation block keys on `DISCOVERY_ENDPOINT`, so
-> with it empty nothing is inferred and you get a standalone wearing hub-shaped
-> variables — no `ENABLED_ROLES=spoke`, endpoints left on loopback. The
-> provider-key guard *does* read `HUB_DISCOVERY_URL` and waives the local LLM key
-> on that signal, so the result is a standalone with no key and no local arms.
-> The same trap is described again under the compose example below.
-
-**Check the target is joinable first.** A reachable discovery is not necessarily
-a hub: a standalone substrate answers `/bootstrap` with `200` and an empty body,
-so "reachable" and "joinable" look identical — and the spoke will not tell you
-either. An anchorless transport does not fail: it starts **direct-only**, logs a
-throttled direct-only warning, and polls for an anchor on a widening backoff,
-adopting one that appears later without a unit restart. So the spoke boots clean,
-reports `active`, and federates nothing. Unit state is not evidence of a join.
-
-```bash
-curl -s http://<hub-host>:18100/bootstrap | jq '.relay_multiaddrs'
-# []  => not a hub: no relay. Deploy it with deploy-hub.sh, or pass RELAY_MULTIADDR.
-```
-
-**Read the address, not just the count.** A non-empty answer means the hub is
-*advertising* a relay, not that the relay is alive: the handler builds that array
-from configuration and registry rows and never dials anything. Measured against a
-live hub — a populated array pointing at a host that had been decommissioned,
-whose HTTP plane was gone while its libp2p daemon still accepted TCP, and whose
-own advertised relay port was closed on the hub itself.
-
-So the count cannot distinguish dead from alive, and neither can a TCP dial — the
-dead host accepted the connection. There is no one-liner for this. The signal
-that actually settles it is the transport's own reservation, read after boot:
-
-```bash
-docker exec <spoke> curl -s http://127.0.0.1:8401/health | jq '.transport.activeReservations, .libp2p_multiaddr'
-# 0 and ""  => running, but direct-only: no circuit, nothing mirrored to the hub
-docker exec <spoke> journalctl -u federation-transport-vessel -n 30
-# look for a circuit reservation against the advertised relay, not just "up"
-```
-
-The transport's health port is container-internal and not host-mapped, so that
-first check is a `docker exec`, not a call to an `18xxx` port.
-
-Two things worth checking in that same payload: an address on a *different host*
-than the hub you are joining is a sign the advertisement has outlived its relay,
-and a loopback `identity_endpoint` only means the hub has no `PUBLIC_IP` set — it
-is inert, since a spoke derives identity from the discovery host and port offset.
-
-See [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) § *Join an existing identity/discovery
-group* for the rest.
-
-> **A joining spoke writes to the hub.** The `spoke` role group includes `seed`,
-> and the seeder targets the *derived hub* store — so a join registers the shared
-> activity templates into the hub's activity-api using your issued key. The writes
-> are idempotent upserts of templates a hub already has, but a spoke you do not
-> fully trust should get a read-scoped key or `DISABLED_VESSELS=bootstrap-seeder`.
-`METABOB_API_KEY` is the credential the hub operator issues you (minted on the
-hub with `docker exec <container> substrate-key issue <you>`). The same variables
-attach a spoke however you launch — `docker compose`, `make up`, or the raw
-`docker run` above; `ACTIVITY_API_ENDPOINT` and `IDENTITY_VESSEL_URL` are
-optional explicit overrides for values `/bootstrap` otherwise supplies.
-
-> ⚠ **The two launch lanes name a second instance differently, and neither
-> translates the other.** `make up` takes `LIVE_NAME=<name>` (which also renames
-> both volumes) and `PORT_OFFSET=<n>` (which shifts the whole `18xxx` block at
-> once). **Compose has no `PORT_OFFSET` and no `LIVE_NAME`**: relocating there
-> means setting `SUBSTRATE_CONTAINER`, `WORKSPACE_VOLUME`, `SURREAL_VOLUME` and
-> the nine individual `*_PORT` variables. A reader who learned the make lane and
-> switches to compose gets a container named `substrate-live` on the unprefixed
-> production volumes — which, on a host already running one, either collides or
-> adopts the existing fleet. `scripts/substrate/.env.example` TIER 2b lists the
-> compose-side names.
-
-**Docker Compose** — put the join vars in the root `.env` (the root
-`docker-compose.yml` and its [`scripts/substrate/docker-compose.yml`](scripts/substrate/docker-compose.yml)
-symlink pull the same GHCR image), then bring it up:
-
-```bash
-# .env
-METABOB_API_KEY=<hub-issued-key>            # required: the hub-issued credential
-DISCOVERY_ENDPOINT=http://<hub-host>:18100  # required: this is what makes it a spoke
-# optional overrides — otherwise derived from the discovery host and its port offset:
-# ACTIVITY_API_ENDPOINT=http://<hub-host>:18080
-# IDENTITY_VESSEL_URL=http://<hub-host>:18101
-```
-
-Those two are the whole join. `DISCOVERY_ENDPOINT` naming a **remote** host is the
-signal that this container is a spoke: `gen-env` infers `ENABLED_ROLES=spoke` from
-it, derives the hub, trace store and identity endpoints, and then **rewrites
-`DISCOVERY_ENDPOINT` itself to the spoke's own local registry** — a spoke's vessels
-register locally and the transport mirrors them to the hub. So the value you set
-is not the value the vessels end up using, and that is intended. Setting
-`HUB_DISCOVERY_URL` *instead* does not work: with `DISCOVERY_ENDPOINT` empty the
-inference never fires and you get a standalone with hub-shaped variables.
-
-```bash
-docker compose up -d                       # from repo root — compose auto-loads `.env`
-docker exec substrate-live substrate-key show
-```
-
-**`make up` / raw `docker run`** — the identical vars work as `-e VAR=value`
-flags on the standalone `docker run` above, or as `VAR=value` arguments to
-`make -C scripts/substrate up`.
-
-> ⚠ **A spoke is *designed* to inherit the hub's LLM arms, and that inheritance
-> does not yet work.** Measured on a live join: the spoke's walk fails with
-> `No vessel advertising llm_completion found in discovery`, because arm
-> inheritance rides the federation transport's **circuit** — so a spoke whose
-> transport holds no reservation (see the relay pre-flight above; a direct-only
-> transport reports `active` and still holds none) has no model access at all, and loses
-> `concept-db` with it. Identity and the trace store keep working, because those
-> are reached by direct HTTP, which is why the fleet looks healthy. Until the
-> transport is confirmed carrying, give a spoke its own provider key.
-
-> ⚠ **On the `make` lane a spoke is never actually keyless — it gets *yours*.**
-> `ANTHROPIC_API_KEY` (and `OPENAI_API_KEY`) default from
-> `~/.metabob/config.json`, on every topology, so the command below with no key
-> argument still ships the operator's provider key into the container, and
-> `gen-env` persists it to that fleet's `/workspace/.substrate-secrets`. Measured
-> on a keyless join: a 108-character `sk-ant-…` key present in a spoke launched
-> without one. **If the spoke is for someone else, suppress it explicitly:**
->
-> ```bash
-> make -C scripts/substrate up API_KEY=<hub-issued-key> \
->   DISCOVERY_ENDPOINT=http://<hub-host>:18100 ANTHROPIC_API_KEY= OPENAI_API_KEY=
-> ```
-
-```bash
-make -C scripts/substrate up API_KEY=<hub-issued-key> \
-  DISCOVERY_ENDPOINT=http://<hub-host>:18100
-```
-
-> `make up` exits non-zero when any doctor check fails — so read the checks, not
-> the exit code. Note the inverse too: a spoke joined against a hub that serves no
-> relay no longer trips the restart-loop check, because the transport treats a
-> missing anchor as survivable and comes up direct-only instead of restarting —
-> and doctor has no reservation or circuit check to replace it. A green boot is
-> not a federated boot; see the transport note above for what an uncircuited
-> transport costs you, and confirm the join below.
-
-To apply changed launch settings to a stopped or running spoke without removing
-its named volumes, use `make -C scripts/substrate recreate` with the same
-arguments. To make the spoke hub-dialable behind NAT
-(relay reservation + per-vessel capability mirror; the id must be unique in the
-hub namespace), run once after boot:
-
-```bash
-docker exec substrate-live spoke-federate substrate-live <unique-id>
-```
-
-Your vessels then appear in the hub registry as `<vessel>@<unique-id>`.
-
-**Confirming the join** — most signals cannot tell "joined" from "running but
-isolated", so check the two that can:
-
-```bash
-# 1. Identity: a spoke runs no local identity-vessel, so a valid answer here can
-#    only have come from the hub. This is the discriminator.
-docker exec <spoke> substrate-key whoami          # "valid": true + the hub's org_id
-
-# 2. Transport: the plane that actually mirrors your vessels to the hub.
-#    Read the RESERVATION, not the unit state — a transport with no anchor runs
-#    direct-only and mirrors nothing, while reporting `active` with NRestarts=0.
-docker exec <spoke> curl -s http://127.0.0.1:8401/health | jq '.transport.activeReservations'
-docker exec <spoke> systemctl show federation-transport-vessel -p NRestarts --value
-```
-
-`activeReservations` of `0` means not federated, whatever the unit says. The
-restart counter is still worth reading, but only in one direction: a climbing
-`NRestarts` means the transport is crash-looping for some *other* reason, even
-though `systemctl is-active` intermittently reports `active` — it catches the gap
-between restarts, and `docker exec <container> substrate-doctor` names it
-honestly. A flat `NRestarts` proves the process is alive and nothing more.
-
-**The loss is in both directions, not just outbound.** The obvious half is that
-nothing is being mirrored *to* the hub. The half that surprises people is
-inbound: the transport is also how the spoke resolves shapes the hub serves, so
-without a circuit the spoke loses `llm_completion` and `concept-db` outright — a
-walk fails with `No vessel advertising llm_completion found in discovery`.
-Identity and the trace store keep answering because they are reached by direct
-HTTP, so the fleet reports healthy and a goal fails for reasons that look
-unrelated. A spoke whose transport holds no reservation is not "isolated but
-working"; it is degraded at both ends — and because that transport now stays up
-rather than restarting, nothing about the unit says so.
-
-What will *not* tell you: the container's `healthy` state, and `substrate-key
-show` (prints a key whether or not the hub accepts it).
-
-`substrate-doctor` now names an unjoined spoke directly — it probes the hub
-rather than loopback, and reports `METABOB_API_KEY rejected by the hub's
-activity-api (401) — THIS SPOKE HAS NOT JOINED`, plus a separate check that
-validates the credential against the issuing identity. On an image predating
-that, doctor is not a reliable join signal: it reported four failures on a spoke
-that had not joined and named the credential in none of them. Its registry check
-in particular counts *local* vessels, so it says nothing about the hub either
-way.
-
-A local Obsidian plugin connects to the spoke with its normal two inputs (API key
-+ `discoveryVesselEndpoint=http://127.0.0.1:18100`). Optional transport
-overrides (`FED_SUBSTRATE_ID`, `RELAY_MULTIADDR`, `PEER_DISCOVERY_ENDPOINTS`)
-are consumed the same way. Full guide: [`docs/FEDERATION.md`](docs/FEDERATION.md).
-
-### Building from source
-
-**Prerequisites:** Docker (must allow `--privileged`; native Linux or WSL2), GNU make, git (submodule access), bun, jq, curl.
-
-**1. Clone** — submodules are mandatory; the image build copies each vessel's source from `repos/<vessel>`:
-
-```bash
-git clone --recurse-submodules https://github.com/AviGopal/substrate
-cd substrate
-git submodule update --init --recursive     # if you cloned without --recurse-submodules
-```
-
-`.gitmodules` pins each vessel by a URL **relative** to the superproject
-(`../<vessel>.git`), so the submodules resolve against whatever origin you cloned
-from — a fork works with no rewrite rule and no edit to `.gitmodules`.
-
-All eighteen are public today, so the clone above needs no credential: verify
-rather than take it on trust, with
-`git config -f .gitmodules --get-regexp url`, and for any one of them
-`git ls-remote <url>`.
-
-If you fork into an org where some vessels are private, supply the credential
-through the URL you clone from, or configure a rewrite **scoped to that org**:
-
-```bash
-# scoped to one org — leaves anonymous cloning of every other GitHub repo intact
-git config --global url."git@github.com:your-org/".insteadOf "https://github.com/your-org/"
-```
-
-> Avoid the unscoped form (`url."git@github.com:".insteadOf "https://github.com/"`).
-> It rewrites **every** GitHub HTTPS URL to SSH for your whole account, so a
-> reader with no SSH key — the newcomer most likely to reach for it — loses
-> anonymous cloning everywhere, including this repo.
-
-**2. Start** — one command:
-
-```bash
-make -C scripts/substrate up ANTHROPIC_API_KEY=sk-ant-...
-```
-
-`up` builds the image if needed, starts the container, seeds identity + templates in-container, waits for fleet readiness, points `~/.metabob/config.json` at the substrate, and runs a doctor check.
-
-> **"If needed" means the tag is absent, not that the source changed.** `up`
-> builds only when `docker image inspect $(IMAGE):$(TAG)` fails — so on a host
-> that already holds the published `ghcr.io/avigopal/substrate:dev`, this
-> command starts *that* image and your working tree is never compiled. To
-> actually build from source, force it with `REBUILD=1`, or build under your own
-> tag (`TAG=<name>`) so you do not overwrite the `:dev` tag other containers on
-> the host resolve.
-
-> **The command above puts a live secret in `argv`**, where any local user can
-> read it with `ps`. Prefer exporting the variable, or putting it in the repo
-> root `.env`, and let `make` pick it up from the environment. `OPENAI_API_KEY` (with optional `OPENAI_BASE_URL` for Ollama/local models and `LLM_DEFAULT_MODEL`) works in place of Anthropic; at least one LLM provider key is required. All other secrets (JWT signing, datastore password, the bootstrap API key) are generated on first boot and persisted to the workspace volume.
-
-**3. Verify:**
-
-```bash
-docker exec <container> substrate-ready            # fleet readiness matrix
-docker exec <container> substrate-doctor   # deep diagnosis + end-to-end goal dispatch
-```
-
-> **`make up` runs doctor at the end and exits non-zero if any check fails**, so
-> a red `make: *** [up] Error 1` after `[ready] fleet ready` means the fleet is
-> running and one check failed — read the failure rather than the exit code. The
-> common first-boot case is the LLM arm check: with no valid provider key, every
-> arm reports `up but CANNOT COMPLETE … 401`. That one is fatal to doing any
-> work but not to the fleet. Rerun `substrate-doctor` alone to see the current
-> state without re-running the bring-up.
-
-**4. Get your credentials.** identity-vessel is internal-only, so a human obtains or mints keys through the Makefile — no raw API calls:
-
-```bash
-docker exec <container> substrate-key show                 # the operator API key
-docker exec <container> substrate-key issue my-peer   # mint a key (spoke / external peer / new vessel)
-docker exec <container> substrate-key list                # list issued keys
-docker exec <container> substrate-key revoke key_x  # revoke one
-```
-
-The full key is printed once and never stored. See [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) § *Keys and tokens*.
-
-**5. Install the human interface (Obsidian plugin)** — one command, into an existing or new vault.
-
-The installer lives in a **submodule**, which the image-based quick start above
-does not initialise. Fetch just that one first (a full `--recursive` init is not
-needed):
+The role, the hub endpoints and the relay anchor are derived from the two inputs. The spoke
+waits for `served`: `usable` needs an LLM arm, and until federated arm inheritance lands a
+keyless spoke has none. Add a provider key to `.env` and wait for `usable` if the spoke must
+resolve models itself. The last two lines connect the cockpit as in A, step 5; run the
+`claude mcp add …` line `substrate-connect` printed.
+
+What joining means, and how to tell it happened:
+
+- **It must be `DISCOVERY_ENDPOINT`.** That variable naming a remote host is what makes the
+  container a spoke; `HUB_DISCOVERY_URL` alone is refused rather than guessed.
+- **Reachable is not joinable.** A standalone substrate answers `/bootstrap` too, with an
+  empty relay list. `curl -s http://<hub-host>:18100/bootstrap` should list a relay address
+  on the hub's own host; an address on another host is an advertisement that outlived its
+  relay.
+- **A running transport is not a joined one.** An anchorless transport runs direct-only and
+  reports `active` while mirroring nothing, and without a circuit the spoke also loses the
+  hub's `llm_completion` and concept-db. The evidence is the reservation, read inside the
+  container (the transport's health port is not published):
+  `docker exec substrate-live curl -s http://127.0.0.1:8401/health`, where
+  `.transport.activeReservations` of `0` means not federated. Identity is the other
+  discriminator: a spoke runs no identity-vessel, so a valid
+  `docker exec substrate-live substrate-key whoami` can only have come from the hub.
+- **A joining spoke writes to the hub.** Its seeder registers the shared activity templates
+  into the hub's trace store with the issued key (idempotent upserts). A spoke you do not
+  fully trust should get a read-scoped key, or `DISABLED_VESSELS=bootstrap-seeder`.
+- To make the spoke's vessels dialable from the hub behind NAT, give it a unique id once
+  after boot: `docker exec substrate-live spoke-federate substrate-live <unique-id>`; its
+  vessels then appear in the hub registry as `<vessel>@<unique-id>`.
+
+Protocol and concepts: [`docs/FEDERATION.md`](docs/FEDERATION.md).
+
+#### D. Surface (a human's local window)
+
+As C, with `PROFILE=surface`. To keep the surface on the local host, map
+`127.0.0.1:P310:8310` in a compose override. `served` passes when the surface answers.
+
+A human can also work from an Obsidian vault. The plugin installer lives in a submodule and
+needs only the two inputs the plugin reads, an API key and the discovery endpoint:
 
 ```bash
 git submodule update --init repos/obsidian-vessel
-
 bash repos/obsidian-vessel/install.sh --local            # same-machine substrate
 bash repos/obsidian-vessel/install.sh                    # interactive: vault → host → key
 ```
 
-If you would rather not add a submodule, the fleet already ships a browser-based
-human surface on `:18310` — install it with `vessel-ctl` as shown above.
+At start the plugin's federation sidecar reads `<discovery-endpoint>/bootstrap` for the
+relay anchor. See [`repos/obsidian-vessel/README.md`](repos/obsidian-vessel/README.md) and
+[`docs/HUMAN_SURFACE.md`](docs/HUMAN_SURFACE.md).
 
-The installer selects or creates the vault, installs the plugin, and writes the two inputs the plugin needs — `{discoveryVesselEndpoint, apiKey}`. At start the federation sidecar fetches `<discovery-endpoint>/bootstrap` for the relay anchor (point-and-go) and reserves a libp2p circuit; the relay multiaddr is an optional advanced override, not something the installer derives or pins. See [`repos/obsidian-vessel/README.md`](repos/obsidian-vessel/README.md).
+#### E. A second fleet on one host
 
-### Running your own hub or remote substrate
+Required whenever this host already runs a fleet under the default names (see A). Add
+`SUBSTRATE_NAME=lab` and `SUBSTRATE_PORT_PREFIX=24` to the `.env` of any sequence above.
+This gives container `lab-live`, volumes `lab-*` and ports `24xxx`; replace `substrate-live`
+with `lab-live` in the `docker exec` commands. Prefixes 19–32 avoid the ephemeral range.
+Keep each fleet's manifest and `.env` in its own directory.
 
-The spoke join above works against **any** hub — substitute the hub's host in `DISCOVERY_ENDPOINT` (the variable that makes it a spoke; see the warning above — `HUB_DISCOVERY_URL` alone does not) and optionally in the `ACTIVITY_API_ENDPOINT` / `IDENTITY_VESSEL_URL` overrides, then use a key that hub issued (`docker exec <container> substrate-key issue …` on the hub).
+#### F. Enabling self-development
 
-One image serves every role: a full local substrate, a minimal hub (control plane + store + relay), or a compute-only spoke — selection is declarative via `ENABLED_ROLES` / `ENABLED_VESSELS` (`scripts/substrate/vessels.inventory.json`, applied at boot). Vessels behind NAT join over the libp2p relay via a sidecar. To stand up your own remote substrate or hub on a VM: `scripts/substrate/deploy-remote.sh` (ships the local image over SSH, no registry) or `scripts/substrate/deploy-hub.sh` (the VM pulls the repo, builds there, and runs the relay).
+Add `SUBSTRATE_GIT_PAT` (write access to your repos) and `SUBSTRATE_REPO_OWNER=<your fork
+owner>`. The substrate is then autonomous against your fork. Landing on a branch other fleets
+converge to requires a `pushPolicy` promotion earned by settled, verified landings. The
+emergency stop is `MITOSIS_DIRECT_PUSH=0` followed by `docker compose up -d`. Without a
+token the substrate runs and learns, and its self-authored commits stay local.
 
-`deploy-hub.sh` takes **two positional arguments**:
+A new install starts under an initial `pushPolicy` with no promotion, written on its first
+boot. The policy is runtime state, read at every landing, so changing it needs no restart.
+Through the cockpit's `resolve_impulse`:
+
+| To | Resolve |
+|---|---|
+| read it | `{type: "pushPolicy"}` |
+| record a promotion | `{type: "pushPolicy_write", promotion: {granted: true, targets: ["<owner>[/<repo>][@<branch>]"], evidence: {attempt_ids: [...], trace_ids: [...]}}, shared_targets: [...], set_by, reason}`; every cited attempt must be settled `held` and every trace graded `reached`, or nothing is written |
+| withdraw it | the same write with `promotion: {granted: false}` |
+
+`targets` and `shared_targets` are optional: no `targets` covers every shared target, and
+`shared_targets` marks branches of your own owner that other fleets converge to.
+
+#### G. From source (developers)
 
 ```bash
-ANTHROPIC_API_KEY=<key> [SSH_KEY=~/.ssh/your_deploy_key] [GITHUB_PAT=<pat>] \
-  scripts/substrate/deploy-hub.sh user@vm-ip <public-ip>
+git clone --recurse-submodules https://github.com/AviGopal/substrate.git && cd substrate
+make -C scripts/substrate up REBUILD=1    # build (needs bun) → the same compose → status → connect
 ```
 
-The public IP is not optional and is not derived — the federation relay hard-exits without it, under `Restart=always`, so the symptom is a permanent crash-loop reporting `activating` and never `failed`. `deploy-remote.sh` wants `PUBLIC_IP` plus `RUN_RELAY=1` for the relay case.
+`make up` is a wrapper: it runs exactly sequence A against a locally built tag, with the same
+`.env`, and exits non-zero unless the verdict reaches `usable`. Building needs git with
+submodule access and bun in addition to the engine.
 
-`GITHUB_PAT` is **optional**: this repo and every submodule are public, so the clone is anonymous by default. Supply one only for a private fork or to raise the API rate limit. `SSH_KEY` selects a non-default identity.
+`.gitmodules` pins each vessel by a URL relative to the superproject (`../<vessel>.git`), so
+a fork resolves its own submodules with no rewrite rule. The vessel repos are public; verify
+with `git config -f .gitmodules --get-regexp url` and `git ls-remote <url>`. For a fork
+whose vessels are private, scope any URL rewrite to that one org
+(`git config --global url."git@github.com:your-org/".insteadOf "https://github.com/your-org/"`);
+the unscoped form rewrites every GitHub URL and breaks anonymous cloning everywhere.
 
-> **Before you point it at a VM, three things the script does that you should expect:**
->
-> - **It runs `docker stop -t 300` then `docker rm -f substrate-live` on the target**, unconditionally. On a machine already running a substrate, that is a drain-and-destroy of the container (the named volumes, and so the learning state, survive).
-> - **The relay needs two runs.** The first deploy has no relay yet, so `RELAY_MULTIADDR` stays empty and hub federation egress is disabled — `/bootstrap` will still return `relay_multiaddrs: []`, i.e. it will still fail the "is this a hub" pre-flight above. Re-run the same command once the relay is up. The script warns when this happens; the warning is the expected first-deploy path, not a fault.
-> - **The relay runs on the VM host**, as a `nohup bun` process outside the container (bun is installed if absent) — so it is not covered by the container's restart policy or its healthcheck.
->
-> Both deploy scripts fall back to `~/.metabob/config.json` (`providers.anthropic.apiKey`) when `ANTHROPIC_API_KEY` is unset, and pass the key on the remote **ssh command line**, where it is visible in the VM's process table. Set it explicitly, and prefer a VM you control.
+### Usage patterns
 
-`SUBSTRATE_REPO_OWNER=<your-org>` points a **running container's** vessel clones at your fork; it is read by `gen-env` and the Makefile. **Neither deploy script consumes it** — `deploy-hub.sh` clones `REPO`, which defaults to `AviGopal/substrate` and is overridden with `REPO=<owner>/substrate`. Full guide: [`docs/FEDERATION.md`](docs/FEDERATION.md).
+| Want | Do | Notes |
+|---|---|---|
+| Give the substrate work | the cockpit: `run_goal_async` → `goal_status` (read `reached`) → `goal_reasoning` → `provide_feedback` | humans: the surface on `P310` |
+| Know whether it is healthy | `docker exec <c> substrate-status` | five levels; image revision, and each vessel's running revision where pull-sync moved it |
+| Report a failed install | `docker exec <c> substrate-status --report` | posts a human-reported `installAcceptance` to the anchor; files a gap |
+| Stop / start | `docker compose stop` / `docker compose start` | the grace period covers the drain and the datastore flush |
+| Upgrade the image | `docker compose pull && docker compose up -d` | volumes kept; code also converges to origin at boot |
+| Change an install input or profile | edit `.env`, then `docker compose up -d` | recreate; volumes, installed vessels and secrets kept |
+| Add or remove one vessel at runtime | `docker exec <c> vessel-ctl install <v>` / `uninstall <v>` | persisted in the workspace; survives recreate |
+| Issue or revoke keys | `docker exec <c> substrate-key issue <name>` / `revoke <id>` | hub-issued keys join spokes |
+| Point a client elsewhere | re-run `substrate-connect` against that fleet | one config path, one override variable |
+| Back up | `docker compose stop`, then archive both volumes | restore volumes, then `docker compose up -d` |
+| Leave a network | remove the anchor pair from `.env`, then `docker compose up -d` | becomes standalone and needs a provider key |
+| Tear down, keep state | `docker compose down` | |
+| Tear down, destroy state | `docker compose down -v`; remove the fleet's entry from `~/.metabob/config.json`; `claude mcp remove metabob` | destroys all learning state: posteriors, traces, concept graph, memory. It removes the volumes this directory's `SUBSTRATE_NAME` names, whichever fleet created them: with the default name that is any `substrate-*` fleet on the host |
+| Know setup works for everyone | the acceptance run on each published digest (Docker and Podman) | CI judges and gates `:dev`; results and gaps land in the hub |
+
+`docker rm` alone leaves both volumes, so a later install with the same `SUBSTRATE_NAME`
+silently inherits the old fleet's learning state; `down -v` is the destructive form.
 
 ## Working with the substrate
 
-Each vessel is reached on a host-mapped port (`18xxx → 8xxx`); a few vessels are internal-only and reached via discovery.
+Setup, stop/start, upgrade, backup and teardown are in *Installation → Usage patterns*
+above; the ports are in *Installation → Ports*. This section is the development loop on a
+running fleet.
 
 **Iterate:**
 
@@ -595,58 +408,32 @@ docker exec <container> substrate-pull-sync
 # a single vessel, without waiting for the periodic sync:
 docker exec <container> vessel-ctl sync <vessel>     # git pull --ff-only + mirror + restart
 
-# validate against the local substrate (localhost:18080):
+# validate against the local substrate:
 bun run validation/scripts/failure-mode-harness.ts
 mcp__metabob__run_goal  goal="verify the change works"
 ```
 
-**Day-two operations.** Each verb below is documented in
-[`docs/SUBSTRATE.md`](docs/SUBSTRATE.md); this table exists so you know the verb
-exists at all.
+Scripting against HTTP instead of the cockpit: `POST /run-goal` on goal-host (`P210`)
+returns a `dispatchId`, and `GET /executions/<dispatchId>` reports it. Read **`reached`**,
+not `status`: `status` is only the template's exit code. Traces live on activity-api
+(`P080`), an authenticated JSON API rather than a web page.
+
+**Day-two operations.** Each verb is documented in [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md);
+this table exists so you know the verb exists at all.
 
 | Need | Command |
 |---|---|
-| Is it healthy? | `docker exec <c> substrate-ready` — per-unit, and the honest not-ready count. **`docker ps` and the container HEALTHCHECK are not sufficient**: they answer on core units only. |
-| Is it *correct*? | `docker exec <c> substrate-doctor` — auth, registry, restart loops, and whether an LLM arm can actually complete. Costs a real completion per arm; don't loop it. |
+| Is it *correct*? | `docker exec <c> substrate-doctor`: auth, registry, restart loops, and whether an LLM arm can actually complete. Costs a real completion per arm; don't loop it. |
 | What's running / restarting? | `docker exec <c> vessel-ctl status` (services; `restarts=` is the cheap tell) · `systemctl list-timers` for the timer half |
-| Preview a selection change | `docker exec <c> env DRY_RUN=1 ENABLED_ROLES=<roles> apply-inventory` — read-only, and the one instrument that reports honestly on every selection variable |
+| Preview a selection change | `docker exec <c> env DRY_RUN=1 ENABLED_ROLES=<roles> apply-inventory`: read-only, and the one instrument that reports honestly on every selection variable |
 | Inventory vs reality | `vessel-ctl drift` (read-only) → `vessel-ctl apply` (converges; **no action lines = converged**) |
 | Add / remove a capability | `vessel-ctl list` · `install <v>` · `uninstall <v>` · `deregister <v>` (registry only, leaves the unit alone) |
-| Update the code | `substrate-pull-sync` — converges vessels *and* the fleet tooling from git |
-| Where did this setting come from? | `docker exec <c> substrate-config` — but see `.env.example`: `unrecorded` means "this tool cannot answer", not "your value won" |
-| Stop it safely | `make -C scripts/substrate stop LIVE_NAME=<name>` — reports in-flight executions and drains rather than killing |
-| Back it up | Both named volumes, after a `stop`. They hold **all** learning state; the container holds none. Recipe and restore verification: `docs/SUBSTRATE.md`. |
+| Update the code | `substrate-pull-sync`: converges vessels *and* the fleet tooling from git |
+| Where did this setting come from? | `docker exec <c> substrate-config`: `unrecorded` means "this tool cannot answer", not "your value won" |
 
-**Tear it down.** `docker rm` does *not* remove the volumes, which is why a
-"clean" reinstall can silently inherit the old fleet's learning state:
-
-```bash
-make -C scripts/substrate stop LIVE_NAME=<name>   # drain first
-docker rm -f <name>
-# THIS DESTROYS ALL LEARNING STATE — posteriors, traces, concept graph, memory.
-# Back up first if you might want it. Check the names before you type them:
-docker inspect <name> --format '{{range .Mounts}}{{.Name}} {{end}}'
-docker volume rm <name>-workspace <name>-surreal
-```
-
-For the default fleet those volumes are `substrate-workspace` and
-`substrate-surreal`. **Resource footprint:** the image is ~0.7 GB; a fleet that
-has been learning for a while carries a workspace volume in the high hundreds of
-MB and grows with trace retention (`TRACE_STORE_CAP`).
-
-**Key endpoints** (host-mapped on a full standalone substrate; see CLAUDE.md → *Reference: the running substrate*, and discover the live fleet rather than trusting any table — a spoke masks the units its hub serves):
-
-| Host port | Vessel | Role |
-|---|---|---|
-| `localhost:18080` | activity-api | trace store + Thompson learner + activity-shape resolver |
-| `localhost:18090` | development-vessel | `memoryNote` resolver + dev meta-activities |
-| `localhost:18100` | discovery-vessel | vessel registry / routing fixed-point |
-| `localhost:18210` | goal-host-vessel | `POST /run-goal` (goal dispatch), `POST /resolve` |
-| `localhost:18250` | analysis-vessel | code-analysis resolver (source_code, problem_detection, …) |
-| `localhost:18260` | concept-db | concept-graph shapes + dense (MiniLM) search |
-| `localhost:18270` | stateful-ui-vessel | substrate UI panels |
-
-Optional environment for the substrate's self-development loop: a GitHub credential (`SUBSTRATE_GIT_PAT`) lets the substrate land its own commits — without one it runs and learns but cannot push. Full guide: [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md).
+**Resource footprint:** the image is ~0.7 GB; a fleet that has been learning for a while
+carries a workspace volume in the high hundreds of MB and grows with trace retention
+(`TRACE_STORE_CAP`).
 
 ## Keeping submodule pointers current
 
@@ -707,7 +494,7 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 
 - [`CLAUDE.md`](CLAUDE.md) — authoritative working guide (the laws, the dispatch loop, the operator role, fleet anchors).
 - [`docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md`](docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md) — canonical system definition.
-- [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) — local single-container substrate: quick-start, iteration, backing up learning state.
+- [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md) — operating reference for the single-container substrate: inventory and profiles, `vessel-ctl`, the iteration loop, troubleshooting.
 - [`docs/architecture/`](docs/architecture/) — the `SUBSTRATE_AS_*` lenses (dynamics, MDP, network, representation, DEC, fleet, software) and supporting design docs.
 - [`docs/RBAC_GUIDE.md`](docs/RBAC_GUIDE.md), [`docs/AUTH_JWT_CLAIMS.md`](docs/AUTH_JWT_CLAIMS.md) — multi-tenant isolation and auth claims.
 - [`openspec/changes/`](openspec/changes/) — future-change proposals, designs, and tasks.

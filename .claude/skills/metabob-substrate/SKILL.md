@@ -181,8 +181,10 @@ resort, in order:
 2. Vessel `/health` endpoints from the host.
 3. `docker exec substrate-live systemctl status <unit>` /
    `journalctl -u <unit>` — read-only diagnosis.
-4. `make -C scripts/substrate restart-<vessel>` — only after confirming nothing
-   is mid-flight.
+4. `docker exec substrate-live vessel-ctl restart <vessel>` (or `vessel-ctl sync
+   <vessel>` to pull a landed change) — only after confirming nothing is
+   mid-flight. `docker exec substrate-live substrate-status` is the readiness
+   verdict to read before and after.
 5. Direct source edit with `SUBSTRATE_ALLOW_DIRECT_EDIT=1` — conscious,
    exceptional, and only for things structurally outside the system's reach
    (its own bootstrap, a wedged store). Ask afterward: what activity would have
@@ -192,5 +194,7 @@ resort, in order:
 
 - `CLAUDE.md` — the laws, the execution expectation, the operator role
 - `docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md` — the ontology
-- `docs/SUBSTRATE.md` — bootstrap, iteration, backup
-- `repos/metabob-mcp/docs/SPEC.md` — cockpit tool contracts
+- `README.md` § Installation — setup, client connection, profiles, ports, backup,
+  teardown (the only place setup commands appear)
+- `docs/SUBSTRATE.md` — operating reference: inventory, `vessel-ctl`, iteration,
+  troubleshooting

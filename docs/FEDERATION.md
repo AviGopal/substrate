@@ -3,6 +3,10 @@
 How substrate instances share a namespace or federate as peers, and how a vessel
 (local or behind NAT) joins over the libp2p relay.
 
+This document holds the protocol and the concepts. The commands that launch a hub, a
+spoke or a surface are in [README § Installation](../README.md#installation) (sequences
+B, C and D), the only place setup commands appear.
+
 ## Point-and-go (the default join)
 
 A spoke or vessel joins by pointing at **one** endpoint — a **discovery
@@ -61,7 +65,7 @@ identity-vessel.
                  <hub-host> (public)  =  HUB
         ┌──────────────────────────────────────────────┐
         │  discovery + identity + activity-api + relay  │
-        │  ENABLED_ROLES=hub                            │
+        │  PROFILE=hub                                  │
         └──────▲───────────────▲──────────────▲─────────┘
                │ register       │ register     │ relay reservation
         ┌──────┴──────┐  ┌──────┴──────┐  ┌────┴─────────────┐
@@ -92,8 +96,8 @@ tags peer results `discoveredVia:"peer"`, and goal-host routes those over the re
 
 - **Hub-registration (spoke)** — one vessel or a small *trusted* set joining an
   existing substrate: same org, same learning state, same trust domain, lowest
-  latency. `ENABLED_ROLES=spoke` + hub endpoints + a hub-issued
-  `METABOB_API_KEY`. The spoke's vessels are made reachable by the spoke's **own
+  latency. `DISCOVERY_ENDPOINT` naming the hub + a hub-issued
+  `METABOB_API_KEY` (the `spoke` profile follows from them). The spoke's vessels are made reachable by the spoke's **own
   federation transport**, which mirrors each of them into the hub as a
   `<vessel>@<substrate>` row carrying that transport's libp2p peer id and circuit
   — reachability is the substrate's one overlay identity, not a host address
@@ -110,7 +114,7 @@ by geography.
 ## Three-location operational space
 
 The full topology this repo demonstrates: **hub** (a public VM) runs the shared
-activity/learning surface (`ENABLED_ROLES=hub`: activity-api + discovery +
+activity/learning surface (the `hub` profile: activity-api + discovery +
 identity + relay); the **spoke** (local `substrate-live`) runs goal-host and
 the compute fleet, with its discovery peer-fanning-out to the hub
 (`PEER_DISCOVERY_ENDPOINTS`) and goal-host's trace/learning writes pointed at
@@ -134,65 +138,25 @@ peering (discovery fan-out) at once.
 ## The relay (NAT traversal)
 
 A vessel behind NAT can't be dialed directly. The **libp2p Circuit Relay v2** relay runs
-on a public IP (the hub) and brokers connections; DCUtR then tries a direct hole-punch,
-falling back to permanently-relayed for symmetric NAT. Noise encrypts end-to-end — the
-relay never sees plaintext. Run it with the VM's public IP:
+on a public address (the hub) and brokers connections; DCUtR then tries a direct
+hole-punch, falling back to permanently-relayed for symmetric NAT. Noise encrypts
+end-to-end — the relay never sees plaintext.
 
-```
-PUBLIC_IP=<vm-ip> RELAY_KEY_FILE=~/relay-key.pb bun scripts/substrate/federation-relay/relay.ts
-# → prints RELAY_MULTIADDR=/ip4/<ip>/tcp/30333/p2p/<relay-peerid>
-```
+In the `hub` and `hub-minimal` profiles the relay runs **inside the container**, is
+published at the prefix-derived port `P333`, and is advertised by `/bootstrap` at the
+hub's `PUBLIC_IP`. That is why a hub cannot omit `PUBLIC_IP`: it is the address spokes
+reach, and the relay announces nothing without it. `RELAY_PORT` (advanced) keeps an
+existing hub on the relay port its spokes already use.
 
-## Deploying a hub
+## Running a hub
 
-```
-GITHUB_PAT=<repo-scope>  ANTHROPIC_API_KEY=sk-ant-...  SSH_KEY=~/.ssh/<key> \
-  bash scripts/substrate/deploy-hub.sh root@<vm-ip> <vm-public-ip>
-```
+A hub is sequence B of the install page: `PROFILE=hub`, a provider key and `PUBLIC_IP`.
+The profile carries the control plane, the stores and the relay, plus the compute a hub
+needs to dispatch next to its posteriors; `hub-minimal` omits the compute.
 
-`deploy-hub.sh` **pulls the repo and builds on the VM** (no multi-GB image ship): clones
-`AviGopal/substrate` (+ submodules), builds, runs `ENABLED_ROLES=hub`,
-seeds the shared org, and starts the relay. Bare-Ubuntu deps (make/bun/unzip) are
-auto-installed.
-
-**Open the firewall** on the hub VM: TCP `18080` (activity-api), `18100` (discovery),
-`18101` (identity), `18210` (goal-host), and `30333` (relay). On DigitalOcean this is the
-**cloud firewall** (the droplet's ufw/iptables are not the gate).
-
-### A hub that is not on a VM
-
-`deploy-hub.sh` is the only *packaged* hub path, but it is not the only hub. A
-local container works, and `ENABLED_ROLES=hub` is a real selection — it is just
-not sufficient on its own, because the relay is a **manifest** vessel and is
-therefore never baked or auto-installed. A `roles=hub` container answers
-`/health` on every port and still serves an empty `/bootstrap`, which by this
-document's own pre-flight test means "not a hub".
-
-Four steps, in order. The first is what the role selection gives you; the other
-three the relay needs and nothing supplies automatically:
-
-```bash
-make -C scripts/substrate up LIVE_NAME=<hub> PORT_OFFSET=<n> ENABLED_ROLES=hub \
-     ANTHROPIC_API_KEY=sk-ant-...
-
-docker exec <hub> vessel-ctl install federation-relay
-
-# The relay hard-exits without PUBLIC_IP, under Restart=always — so it fails as a
-# permanent crash-loop reporting `activating`, never `failed`. (This is the relay
-# unit. The federation *transport* no longer exits when it has no anchor — it
-# starts direct-only and keeps polling.) No launch path passes PUBLIC_IP, so set
-# it on the container and restart the unit:
-docker exec <hub> sh -c 'echo PUBLIC_IP=<address-spokes-can-reach> >> /etc/substrate/env'
-docker exec <hub> systemctl restart federation-relay
-
-# The relay prints its RELAY_MULTIADDR to the journal. Discovery reads that value
-# from /etc/substrate/env, and the install hook that was meant to copy it across
-# reads a log file nothing writes — so carry it over by hand, then restart
-# discovery, which is the only thing that re-reads the env:
-docker exec <hub> journalctl -u federation-relay | grep -o 'RELAY_MULTIADDR=.*'
-docker exec <hub> sh -c 'echo RELAY_MULTIADDR=<that value> >> /etc/substrate/env'
-docker exec <hub> systemctl restart discovery-vessel
-```
+**Open the firewall** on the hub for the ports the install page's port table marks
+"spokes" (trace store, development-vessel, discovery, identity, concept-db, relay). On a
+cloud VM the cloud firewall is usually the gate, not the host's own packet filter.
 
 Verify before pointing a spoke at it — an empty array here is the whole failure,
 and it looks identical to a healthy hub from every other angle:
@@ -215,13 +179,9 @@ The supported spoke topology is the **federated spoke**: a local registry
 trace store and identity. Vessels register **locally**; the
 federation-transport-vessel mirrors the local capability surface into the hub
 as `<vessel>@<substrate-id>` rows dialable over the relay. This is what keeps a
-NAT'd machine reachable and its Obsidian surface local-first. Setup is **one
-command** — point-and-go:
-
-```bash
-make -C scripts/substrate up API_KEY=<hub-issued-key> \
-  DISCOVERY_ENDPOINT=http://<hub-host>:18100
-```
+NAT'd machine reachable and its Obsidian surface local-first. Setup is
+point-and-go: two install inputs, `DISCOVERY_ENDPOINT` and a hub-issued
+`METABOB_API_KEY` (install page, sequence C).
 
 A remote `DISCOVERY_ENDPOINT` is what makes this container a spoke: `gen-env.sh`
 infers `role=spoke` from the remote host, derives the hub discovery, activity
@@ -243,14 +203,9 @@ hub's LLM arms through discovery.
 > its own federation transport over a live relay circuit, and that the fix is
 > **not** an advertised host address per vessel.
 
-`up` resumes a stopped container only when no launch settings are supplied. To
-change its hub, credential, role selection, or federation overrides, preserve
-the named volumes and recreate the container with the new inputs:
-
-```bash
-make -C scripts/substrate recreate API_KEY=<hub-issued-key> \
-  DISCOVERY_ENDPOINT=http://<hub-host>:18100
-```
+To change a spoke's hub, credential, profile or federation overrides, edit its `.env`
+and recreate it through the manifest (install page, usage patterns); the named volumes,
+and with them the learning state and the persisted federation id, are kept.
 
 **Optional override — pin a specific id or relay.** The auto-generated
 `FED_SUBSTRATE_ID` is unique per substrate: it names the mirror rows AND salts
@@ -258,13 +213,12 @@ the transport's libp2p key — two substrates sharing an id derive the same peer
 id and fight over the relay reservation. To pin a chosen id (or a specific
 relay), enable the transport explicitly instead of relying on the boot default:
 
+`FED_SUBSTRATE_ID` is generated and persisted on first boot, so a spoke needs nothing
+here. To pin it (a stable mirror-row name across recreates), set `FED_SUBSTRATE_ID`, and
+optionally `RELAY_MULTIADDR`, in the `.env` as advanced configuration; gen-env reads them
+before systemd starts. Read the value a running spoke settled on:
+
 ```bash
-# FED_SUBSTRATE_ID is generated and persisted on first boot, so a spoke needs
-# nothing here. To PIN it (a stable mirror-row name across recreates), supply it
-# at container creation — it is read by gen-env before systemd starts:
-#   docker run … -e FED_SUBSTRATE_ID=<unique-id> [-e RELAY_MULTIADDR=<addr>] …
-# or set FED_SUBSTRATE_ID / RELAY_MULTIADDR in the compose .env.
-# Read the value a running spoke settled on:
 docker exec <container> substrate-config | grep FED_SUBSTRATE_ID
 ```
 
@@ -313,13 +267,14 @@ then resolves those shapes over the relay — the vessel never learns libp2p is 
 
 ## Joining by multiaddr
 
-A substrate can join knowing only a peer multiaddr and a key — no discovery URL.
-The distinction is the point: **a multiaddr names a peer identity, a URL names a
-host**, so an anchor that survives a re-IP has to be the former.
+A peer multiaddr is the anchor the transport prefers, because it survives a re-IP:
+**a multiaddr names a peer identity, a URL names a host**. A launch still names
+`DISCOVERY_ENDPOINT`: the image accepts `PEER_MULTIADDR` only alongside it and refuses the
+launch otherwise, so a container's role is never guessed from an overlay address.
 
-```bash
-docker run -e METABOB_API_KEY=<key> -e PEER_MULTIADDR=/dns4/<peer>/tcp/4001/p2p/<peerId> ...
-```
+The join inputs are `DISCOVERY_ENDPOINT`, `METABOB_API_KEY` and
+`PEER_MULTIADDR=/dns4/<peer>/tcp/4001/p2p/<peerId>`; the multiaddr is the anchor the
+transport tries first.
 
 The transport dials that peer over libp2p and asks it for `substrateBootstrap`,
 which the peer answers from its own discovery. The relay anchor, identity endpoint
@@ -434,7 +389,6 @@ shape **through the public relay**. Run it with `RELAY_MULTIADDR`, `DISCOVERY_UR
 | Piece | Where | Role |
 |---|---|---|
 | `@avigopal/libp2p-federation-transport` | `repos/libp2p-federation-transport` | the libp2p primitive + ingress sidecar |
-| relay | `scripts/substrate/federation-relay/relay.ts` | Circuit Relay v2 on a public IP |
+| relay | `scripts/substrate/federation-relay/relay.ts` | Circuit Relay v2 on a public IP; runs in-container in the `hub` and `hub-minimal` profiles |
 | discovery federation | `repos/discovery-vessel` | peer fan-out + libp2p multiaddr echo |
 | goal-host egress | `repos/goal-host-vessel` | routes `protocol:libp2p` resolves via the transport egress |
-| `deploy-hub.sh` | `scripts/substrate` | pull-the-repo hub deploy |

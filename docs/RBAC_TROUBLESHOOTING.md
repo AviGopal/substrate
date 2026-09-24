@@ -177,8 +177,9 @@ curl -X POST http://localhost:18101/v1/keys/validate   # identity-vessel is the 
   -d '{"api_key": "<your-key>"}'
 ```
 
-If the key is not valid, re-run `scripts/substrate/configure-local.sh` to
-regenerate and register a fresh key.
+If the key is not valid, re-emit the client configuration from the fleet with
+`substrate-connect` (README § Installation), which prints a key that passes the
+`seeded` check.
 
 #### B. Activity-API Reachability
 

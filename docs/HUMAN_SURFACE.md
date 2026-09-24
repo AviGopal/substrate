@@ -4,24 +4,23 @@ The human surface is the page a person talks to the substrate through: they type
 what they want done, and the answer comes back drawn — a table as a table, a
 command's output as terminal text — rather than as JSON on a screen.
 
-This document is how to put one in front of a person. Five steps.
+This document explains what a surface is and how it behaves. Putting one in front
+of a person is sequence D of [README § Installation](../README.md#installation), the
+only place setup commands appear: the `surface` profile, pointed at a hub with the
+two join inputs, waiting for the `served` verdict.
 
 A surface does not need a substrate of its own. It runs as a **UI-only
-federated spoke**: a container holding just a discovery registry and the surface
-itself, pointed at a hub that already has the compute, the trace store, and the
-identity plane. Everything the surface needs but does not serve —
-`goal_execution`, `goalWalkState`, the activity and trace shapes, identity, LLM
-resolution — is resolved on the hub through discovery fan-out over the
+federated spoke**: a container holding just a discovery registry, the federation
+transport and the surface itself, pointed at a hub that already has the compute,
+the trace store, and the identity plane. Everything the surface needs but does not
+serve — `goal_execution`, `goalWalkState`, the activity and trace shapes, identity,
+LLM resolution — is resolved on the hub through discovery fan-out over the
 federation transport.
 
 ---
 
-## Before you start
+## What a surface needs
 
-These are prerequisites, not steps — a machine that has them once never needs
-them again.
-
-- **Docker**, privileged-capable.
 - **A hub that actually serves federation.** Not merely a substrate with the
   compute and the trace store: the surface joins over the relay, so the hub must
   advertise one. Check before you start, because an unrelayed hub is
@@ -31,115 +30,22 @@ them again.
   curl -s http://<hub-host>:18100/bootstrap | jq '.relay_multiaddrs | length'   # must be > 0
   ```
 
-  A container launched with `ENABLED_ROLES=hub` does **not** satisfy this on its
-  own — the relay is a manifest vessel and has to be installed and given a
-  `PUBLIC_IP`. See [`FEDERATION.md`](FEDERATION.md) § *A hub that is not on a VM*.
-- **A checkout of the super-repo** (`git submodule update --init --recursive`).
-  The launcher lives in it, and the surface's own workdir is a clone of it.
-  Confirm the submodules are actually populated rather than trusting the exit
-  code — `git submodule status --recursive | grep '^-'` lists any that are not.
-- **`jq`** — the launcher reads your config with it.
-- **No credential for the image.** `ghcr.io/avigopal/substrate` is a **public**
-  package and pulls anonymously — no `docker login`, no `read:packages` PAT.
-- **A credential for the repo**, *while the super-repo is private*:
-  `gh auth login`, or a PAT with read access. The surface's workdir is a clone
-  of the super-repo — it runs its server straight out of it — so with no
-  credential the clone 401s and there is nothing to run. This is the one
-  prerequisite that disappears entirely if the repo is made public.
+  A hub launched with the `hub` profile runs its relay in-container and
+  advertises it at its `PUBLIC_IP`; see [`FEDERATION.md`](FEDERATION.md).
+- **A key issued by that hub** as the surface's `METABOB_API_KEY`. A key minted
+  locally is not valid there and every hub-facing call answers 401, which
+  surfaces later as a page that loads and then cannot dispatch anything.
+- **No credential for the image, and no checkout.** `ghcr.io/avigopal/substrate`
+  is a public package, and the surface and its built UI are baked into it.
 
-  It is **no longer needed in order to build**. `ui/dist` is committed, so a
-  clone already carries a working bundle and the install skips the build.
+The surface answers on `P310` (`http://127.0.0.1:18310` by default). To keep it on
+the local host, map `127.0.0.1:P310:8310` in a compose override; the manifest's
+port mapping is the only exposure decision.
 
-## The five steps
+## Using it
 
-### 1. Point your config at the hub
-
-`~/.metabob/config.json` — the same file the rest of the tooling reads. Two
-values matter:
-
-```json
-{
-  "metabob": {
-    "hubDiscovery": "http://<hub-host>:18100",
-    "apiKey": "<hub-issued key>"
-  }
-}
-```
-
-Set **`hubDiscovery`**, not `endpoint`. The two are not interchangeable and the
-key is overloaded: `configure-local.sh` writes `metabob.endpoint` as the **trace
-store** (activity-api, `:18080`), which is what general tooling reads, while the
-surface launcher falls back to `endpoint` when `hubDiscovery` is absent.
-
-⚠ **That fallback is verbatim — port and all.** It does not rewrite `:18080` to
-`:18100`; it hands the trace-store URL to the surface as its hub discovery
-endpoint, and the only validation is a scheme check. The result is a surface
-pointed at the wrong vessel with nothing saying so. Setting `hubDiscovery`
-explicitly states which you mean and survives anyone re-running
-`configure-local.sh`.
-
-If the launcher refuses for want of a hub, its error text suggests setting
-`.metabob.endpoint` — ignore that and set `.metabob.hubDiscovery`, for the
-reason just given. To point at a different config file entirely without touching
-your own, set `METABOB_CONFIG=/path/to/config.json`.
-
-`apiKey` must be **issued by that hub**. A key minted locally is not valid there
-and every hub-facing call answers 401 — which surfaces later as a page that loads
-and then cannot dispatch anything.
-
-To pin a git credential here instead of using `gh auth token`, add
-`metabob.gitPat`.
-
-### 2. Get the image
-
-```bash
-docker pull ghcr.io/avigopal/substrate:dev
-```
-
-Skippable if the image is already local. The launcher builds from source when
-the image is missing, which works but is much slower and needs every submodule
-initialised.
-
-### 3. Launch the surface
-
-```bash
-scripts/substrate/ui-only-up.sh
-```
-
-No flags. Hub, key and git credential come from step 1 and from `gh auth token`;
-the script prints which values it filled and from where. Flags override config
-when you need a second surface against a different hub:
-
-```bash
-scripts/substrate/ui-only-up.sh --hub http://<other-host>:18100 \
-    --name substrate-ui-b --port-offset 1000
-```
-
-`DRY_RUN=1` prints the full plan and the exact container command — secrets
-redacted — and touches nothing.
-
-The script refuses rather than damages: it will not reuse an existing container
-name, will not take an occupied host port, and will not stop or reconfigure a
-substrate that is already running. Both `--name` and `--port-offset` are needed
-to put a second surface on a host that already has one.
-
-It ends in a verdict block. It asserts the container is up, that `ui/dist` was
-actually built, that the surface answers `/health` **from the host**, and that
-its shapes reached the hub's registry as `<vessel>@<substrate-id>` — the last is
-the only real proof federation worked, so read it rather than the exit code.
-
-### 4. Open it
-
-```
-http://127.0.0.1:18310
-```
-
-Plus your `--port-offset` if you passed one; the launcher prints the exact URL.
-
-### 5. Ask for something
-
-Type it in the box in plain language — "list the running units", "how many
-TypeScript files are under repos/identity-vessel/src". The system owns the
+Type what you want in the box in plain language — "list the running units", "how
+many TypeScript files are under repos/identity-vessel/src". The system owns the
 decomposition. If a goal only works once you have rewritten it with file paths
 and expected shapes, that rewriting is a gap in the system, not a workflow to
 adopt.
@@ -169,13 +75,13 @@ so each goal travels to the hub and back. A surface that loads but cannot
 dispatch is nearly always the hub link — a key the hub did not issue, or a hub
 that is not reachable — not the page.
 
-**The hub URL must work from two positions.** The launcher's registration check
-runs `curl` on the *host*, while the container needs the same URL to resolve from
-*inside* the bridge network. On a same-host hub/surface pair those differ:
-`127.0.0.1` answers only from the host, the docker bridge gateway only from the
-container. Use the machine's LAN IP, which answers from both. A hub URL that is
-unreachable from the host reports `HTTP 000`, which reads like a federation
-failure and is not one.
+**The hub URL must work from inside the container.** A check you run with `curl`
+on the *host* and the surface's own calls from *inside* the bridge network see
+different addresses. On a same-host hub/surface pair those differ: `127.0.0.1`
+answers only from the host, the docker bridge gateway only from the container.
+Use the machine's LAN IP, which answers from both. A hub URL that is unreachable
+from the host reports `HTTP 000`, which reads like a federation failure and is
+not one.
 
 **A local port may legitimately answer nothing.** The container publishes the
 usual `18xxx` range, but the units behind most of those ports are not running
@@ -243,34 +149,20 @@ bundle.
 The reliable check is the bundle, not the commit: compare the
 `assets/index-*.js` the page references against what is on disk.
 
-## Recreating one — what you lose
+## Recreating one
 
-A surface container survives `docker stop` / `docker start` cleanly (below). It
-does **not** survive `make recreate`, and the docs used to prescribe recreate
-without saying so.
+The surface unit and its built UI are baked into the image and enabled there, so a
+recreate through the manifest (install page, usage patterns) keeps the surface: the
+volumes survive, and nothing the surface needs lives outside them or the image.
 
-`ui/dist` survives, because it lives on the volume. What is destroyed is the
-*install*: the `human-surface-vessel.service` unit and the `HOST=0.0.0.0` drop-in
-that `ui-only-up.sh` writes so a published port answers at all. Both live in
-`/etc/systemd/system`, outside the volume. After a recreate the unit reports
-`loaded / inactive / disabled`, its files are gone, and the host port returns
-nothing. Re-running the launcher is the fix, but it refuses an existing container
-name — so remove the container first, or re-install by hand.
+One hazard on the same path is worth knowing:
 
-Two related hazards on the same path, both measured:
-
-- **`recreate` re-injects the operator's provider key.** The ui-only lane
-  deliberately launches with `ANTHROPIC_API_KEY=""`; `recreate` refills it from
-  `~/.metabob/config.json` and it lands in the spoke's *persisted* secrets file,
-  where it outlives every later recreate. (Fixed by carrying provider keys
-  forward by presence rather than by value — but check `.substrate-secrets` on
-  any surface recreated before that landed.)
 - **A federation transport in a restart loop reports `activating`, never
-  `failed`.** It is invisible to `--state=failed` and to `substrate-doctor`'s
-  failed-unit check, which passed on a surface whose transport had restarted 222
-  times. Read `restarts=` in `vessel-ctl status`.
+  `failed`.** It is invisible to `--state=failed`; read `restarts=` in
+  `vessel-ctl status`, and read `live` in `substrate-status`, which fails a unit
+  whose restart count rises during evaluation.
 
-  **That tell no longer covers the commonest case.** A transport that finds no
+  **That tell does not cover the commonest case.** A transport that finds no
   relay anchor does not restart at all — it starts direct-only and polls for one —
   so a surface that never reached the relay looks identical to a federated one
   under both `--state=failed` and `restarts=`. The signal that separates them is
@@ -303,14 +195,13 @@ the record was refreshed *after* the restart.
 **The page loads, goals never complete.** The hub link. Confirm the key was
 issued by the hub in your config, and that the hub's discovery endpoint answers.
 
-**The launcher refuses immediately.** By design — an existing container name, an
-occupied port, or an image whose baked manifest has no surface entry. The
-message names which.
+**The launch refuses immediately.** By design — a partial or conflicting set of
+install inputs, or a join variable without `DISCOVERY_ENDPOINT`. The message names
+the input to set. An occupied host port is reported by the container engine; a
+second surface on one host takes its own `SUBSTRATE_NAME` and port prefix.
 
-**The install reports success and the page is blank.** `ui/dist` was not built.
-The build hook's output is swallowed by the installer, so its own exit status
-proves nothing; the launcher asserts the directory separately for this reason.
-The build log inside the container is the evidence.
+**`served` fails.** The verdict names the unit or port: the surface must answer on
+its published port from outside the container, not only on loopback.
 
 **A shape resolves to a vessel that does not answer.** Registry records outlive
 the process that wrote them. A record's presence is not proof of capability —
@@ -318,7 +209,9 @@ call the shape rather than trusting the listing.
 
 ## Related
 
-- [`SUBSTRATE.md`](SUBSTRATE.md) — the image, topology selection, and the full
-  launch paths for a hub or a complete local substrate.
+- [README § Installation](../README.md#installation) — setup for a surface, a
+  hub, or a complete local substrate.
+- [`SUBSTRATE.md`](SUBSTRATE.md) — the image, topology selection, and operating a
+  running fleet.
 - [`FEDERATION.md`](FEDERATION.md) — how a spoke reaches shapes it does not
   serve.

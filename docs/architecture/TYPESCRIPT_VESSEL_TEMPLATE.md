@@ -453,7 +453,7 @@ Notes:
   (`http://127.0.0.1:8100`, `http://127.0.0.1:8080`); see `repos/analysis-vessel/src/index.ts`
   for the `process.env.… ?? "http://127.0.0.1:…"` pattern.
 
-To activate the new unit, add it to the `run-live` enabled-unit list and register
+To activate the new unit, add it to the fleet inventory (`scripts/substrate/vessels.inventory.json`) and register
 `vessel-ctl sync` / `vessel-ctl restart`, which ship in the image (mirror the
 analysis-vessel block — `vessel-ctl sync <vessel>` mirrors the vessel's
 in-container clone into `/vessels/<vessel>` and restarts the unit).
@@ -567,7 +567,7 @@ Before cutting the first release:
 - [ ] `/health` returns 503 only on DB failure, not on discovery failure
 - [ ] WebSocket observer (if used) reconnects with backoff and never throws out of handlers
 - [ ] **Substrate unit** at `scripts/substrate/units/<vessel>.service` (`After=`/`Wants=` discovery-vessel + identity-vessel; `EnvironmentFile=/etc/substrate/env`; fixed `PORT`/`VESSEL_ID`)
-- [ ] **Host-port mapping** added to the fleet declaration (`docker-compose.yml` ports, and `run-live` in `scripts/substrate/Makefile`); vessel reachable at `http://localhost:18xxx/health`
+- [ ] **Host-port mapping** added to the fleet declaration (`docker-compose.yml` ports, derived from `SUBSTRATE_PORT_PREFIX`, and the port table in README § Installation); vessel reachable at `http://localhost:18xxx/health`
 - [ ] Validated against the local substrate (`http://localhost:18080`) via `docker exec <container> vessel-ctl restart <vessel>` + a confirming dispatch
 - [ ] *(downstream only)* Helm chart mounts `METABOB_API_KEY` via `secretKeyRef` and `POD_NAME` via `fieldRef`; helmfile `needs:` includes `activity-system/discovery-vessel`; secret provisioning documented in the vessel's `CLAUDE.md` (no API keys in values.yaml)
 
@@ -578,6 +578,6 @@ Before cutting the first release:
 - [`IMPULSE_ACTIVITY_FOUNDATION.md`](IMPULSE_ACTIVITY_FOUNDATION.md) — the conceptual model, including discovery-vessel integration. Read first.
 - [`RESOLVER_TRACKING.md`](RESOLVER_TRACKING.md) — per-impulse resolution tracking for learning.
 - [`GOAL_EXECUTION_PATHS_SCHEMA.md`](GOAL_EXECUTION_PATHS_SCHEMA.md) — how a dispatched goal's path and reach verdict are recorded.
-- [`../SUBSTRATE.md`](../SUBSTRATE.md) — bootstrapping and operating the single-container substrate your vessel runs in.
+- [`../SUBSTRATE.md`](../SUBSTRATE.md) — operating the single-container substrate your vessel runs in (setup is README § Installation).
 - [`../guides/CONCEPT_INTEGRATION_TEMPLATES.md`](../guides/CONCEPT_INTEGRATION_TEMPLATES.md) — example activity templates that consume a vessel's shapes.
 - `packages/shape-dispatch-check/README.md` — the shape-dispatch checker's own contract and suppression syntax.

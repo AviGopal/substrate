@@ -249,47 +249,34 @@ structurally non-load-bearing.
 
 ## Reference: the running substrate
 
-One container (`substrate-live`) runs every vessel as a systemd unit. Vessels
-bind internal ports; the host maps them by convention `18xxx → 8xxx`. Discover
-the live fleet rather than trusting a table: `docker ps --filter name=substrate`,
-`registry_query`, or per-vessel `/health`.
+One container (`<name>-live`, `substrate-live` by default) runs every vessel as
+a systemd unit, selected by a **profile** that names a data locality:
+`standalone` (everything), `hub` (the network's learning state, and the compute
+that dispatches next to it), `hub-minimal`, `spoke`, `surface`, `compute`.
+Vessels bind internal ports `8xxx`; the manifest publishes each as
+`<SUBSTRATE_PORT_PREFIX>xxx` (`18xxx` by default). Discover the live fleet rather
+than trusting a table: `docker ps --filter name=substrate`, `registry_query`,
+`substrate-status`, or per-vessel `/health`.
 
-These are **fleet-wide anchors**, not a promise about any one deployment. The
-port is where the vessel binds *when it runs locally*; whether it runs locally
-depends on the substrate's role. A standalone substrate serves all of them. A
-spoke's role group (`roles.spoke` in `scripts/substrate/vessels.inventory.json`)
-leaves out units the hub owns — the trace store (`activity-api`, role `api`) and
-identity (role `control`) among them — and resolves those shapes on the hub
-through discovery, so a local `:18080` may legitimately answer nothing. A
-deployment can also mask individual units by name on top of its role selection
-(`DISABLED_VESSELS`), so any port may be dark for that reason too. Route by shape
-through discovery and let it place the call; reach for a host port only when
-you are deliberately talking to one machine's copy, and confirm first that the
-unit is unmasked there.
+These are **fleet-wide anchors**, not a promise about any one deployment. A port
+answers only where its vessel runs, and whether it runs locally depends on the
+profile. A standalone substrate serves all of them. A spoke leaves out units the
+hub owns (the trace store and identity among them) and resolves those shapes on
+the hub through discovery, so a local `:18080` may legitimately answer nothing.
+A deployment can also mask individual units by name (`DISABLED_VESSELS`), so any
+port may be dark for that reason too. Route by shape through discovery and let
+it place the call; reach for a host port only when you are deliberately talking
+to one machine's copy, and confirm first that the unit is unmasked there. The
+anchors most work touches (`P` is the port prefix): activity-api `P080` (trace store + learner),
+development-vessel `P090` (memoryNote + dev meta-activities), discovery `P100`
+(the routing fixed point), goal-host `P210` (dispatch), concept-db `P260`.
 
-| Endpoint | Vessel | Role |
-|---|---|---|
-| `:18080` | activity-api | trace store + Thompson learner + activity shapes |
-| `:18090` | development-vessel | memoryNote resolver + dev meta-activities |
-| `:18100` | discovery-vessel | registry / routing fixed point |
-| `:18210` | goal-host-vessel | goal dispatch (`/run-goal`, `/resolve`) |
-| `:18260` | concept-db | concept graph + prose knowledge |
-
-Other vessels (LLM resolvers, local tools, identity, relevance sink, light
-dispatch, analysis, UI, ribosome, boredom, …) are internal-only or discovered
-via the registry.
-
-**Bootstrap:** `make -C scripts/substrate up ANTHROPIC_API_KEY=...` — one
-command; build, start, in-container seed, readiness, doctor. Remote:
-`scripts/substrate/deploy-remote.sh` (ship image over SSH) or `deploy-hub.sh`
-(hub + federation relay). A federated spoke is two commands: `make up` pointed
-at the hub's discovery endpoint, then enabling the federation transport.
-Details: [`docs/SUBSTRATE.md`](docs/SUBSTRATE.md).
-
-**Client config:** `~/.metabob/config.json` needs `metabob.endpoint`
-(`http://localhost:18080` for a local substrate) and a valid `apiKey`; all
-tooling reads this config, nothing hardcodes an endpoint. Goal-host is resolved
-via discovery, never pinned.
+**Setup, client config, profiles and the full port table** live in one place:
+[README § Installation](README.md#installation). It is the only document with
+setup commands (the acceptance run executes it), so link to it rather than
+restating a launch. The client config is emitted by the image
+(`substrate-connect`), all tooling reads it, and nothing hardcodes an endpoint;
+goal-host is resolved via discovery, never pinned.
 
 **Auth:** identity-vessel is the single validator — every vessel checks
 credentials against it (API keys service-to-service, JWTs for browser surfaces).
@@ -324,7 +311,11 @@ dispatch whose trace you inspect.
   The authoritative list is `ALLOWED_TOPLEVEL_DIRS` in
   `scripts/git-hooks/pre-commit`; that hook rejects root-level additions
   outside it, and it only enforces once installed — run
-  `scripts/git-hooks/install.sh` in every clone. Runtime state (the pool, the
+  `scripts/git-hooks/install.sh` in every operator clone. The substrate's own
+  super-repo clone gets it from `setup-git-push` when a boot creates that clone;
+  there a refused commit is also filed as a gap, and a container-wide
+  `core.hooksPath` without a chaining `pre-commit` leaves the gate inert (the
+  boot log says so). Runtime state (the pool, the
   gap store, memory, policies) belongs in the container volume and is
   gitignored: a file the substrate rewrites is not a file git should carry.
   Tests live in each vessel's repo, never in the super-repo.

@@ -1,31 +1,50 @@
 # Quick Verification Guide
 
-> **Purpose**: Fast, practical verification for developers
-> **Audience**: Developers making changes, CI/CD pipelines
-> **Updated**: 2026-05-27
+> **Purpose**: fast, practical verification for developers and CI.
+> **Setup is elsewhere**: launching a substrate and connecting a client are in
+> [README § Installation](../../README.md#installation). This guide starts from a running
+> fleet.
 
 ---
 
-## Substrate Endpoints
+## Is the fleet ready? Read the verdict
 
-Configure your substrate in `~/.metabob/config.json`. All verification commands below use `$ACTIVITY_API_URL`:
+`substrate-status` is the one readiness answer. It reports five ordered levels, each
+`pass`, `fail` or `unknown`, with the evidence for each; a level never passes unless every
+lower level does, and a check that cannot run reports `unknown`, never `pass`.
+
+| Level | Passes only when |
+|---|---|
+| `live` | every selected core unit is active and no restart count rose during evaluation |
+| `seeded` | the key the client connection carries validates |
+| `served` | every vessel the profile selects is active and every published port answers off loopback |
+| `usable` | an LLM completion succeeds on some arm, local or federated, and the baked known-answer goal returns `reached:true` in time |
+| `connected` | an authenticated request with the emitted key has arrived through a published port from outside the container |
 
 ```bash
-# Local substrate (Phase 26+, primary development target)
-export ACTIVITY_API_URL="http://localhost:18080"
+docker exec <container> substrate-status                 # all five levels, plus image and running revisions
+docker exec <container> substrate-status --wait usable   # block until a level passes; non-zero exit names the failing level
+```
 
-# Canary / pre-prod
-export ACTIVITY_API_URL="https://activity.metabob.com"
+`docker ps` health and a unit's `active` state are not readiness: the image healthcheck
+is the verdict at `seeded` only, and a fleet can be `served` while no goal can be reached.
+
+The commands below read the target from the client configuration the fleet emitted:
+
+```bash
+CFG="${METABOB_CONFIG_PATH:-$HOME/.metabob/config.json}"
+export ACTIVITY_API_URL="$(jq -r .metabob.endpoint "$CFG")"
+export METABOB_API_KEY="$(jq -r .metabob.apiKey "$CFG")"
 ```
 
 ---
 
 ## The Primary Validation Harnesses
 
-These are the current, authoritative test entry points (as of Phase 26+):
+These are the authoritative test entry points:
 
 ```bash
-# Failure-mode harness — validates all 63 failure-mode classifications
+# Failure-mode harness — validates the failure-mode classifications
 bun run validation/scripts/failure-mode-harness.ts
 
 # Stratified harness — measures Thompson learning + MRR
@@ -97,7 +116,7 @@ kill %1
 cd repos/activity-api
 
 # Hot-reload in substrate:
-docker exec <container> vessel-ctl restart development-vessel   # per-vessel restart targets; there is none for activity-api
+docker exec <container> vessel-ctl restart activity-api   # migrations apply on unit start
 
 # Verify migration applied:
 curl -sf $ACTIVITY_API_URL/health | jq .
@@ -169,7 +188,7 @@ curl -H "Authorization: ApiKey $METABOB_API_KEY" \
 
 # Run the stratified harness to get MRR:
 bun run validation/scripts/stratified-harness.ts
-# Baseline MRR should be >= 0.2361 (post-F-V58-fix)
+# Compare MRR against the last recorded baseline, not against a number in a doc
 ```
 
 ---
@@ -241,53 +260,17 @@ done | sort | uniq -c
 
 ---
 
-## Canary / Production Deployment Verification
-
-### After canary deployment
-
-```bash
-# Health
-curl -f https://activity.metabob.com/health
-
-# Auth
-curl -f -H "Authorization: ApiKey $METABOB_API_KEY" \
-  https://activity.metabob.com/v2/activities/templates
-
-# Recent execution traces (confirms traces are landing)
-curl -H "Authorization: ApiKey $METABOB_API_KEY" \
-  "https://activity.metabob.com/v2/activities/execution-traces?limit=5" \
-  | jq '.executions[] | {id, status, created}'
-
-# End-to-end goal
-# mcp__metabob__run_goal_async { goal: "verify the deployment is working" }
-```
-
-### Promote canary to production
-
-After canary validation passes:
-
-```bash
-cd repos/deployment
-scripts/substrate/deploy-remote.sh   # ship the built image to a remote host
-```
-
----
-
 ## Troubleshooting
 
 ### "Connection refused" / "unhealthy"
 
 ```bash
-# Local substrate
-docker ps | grep substrate-live
-make -C scripts/substrate up ANTHROPIC_API_KEY=...   # if not running
-docker logs substrate-live --tail=50
-
-# Canary
-curl https://activity.metabob.com/health
-# Or check unit status inside the container:
-docker exec substrate-live systemctl status activity-api
+docker exec <container> substrate-status          # which level fails, and why
+docker logs <container> --tail=50                 # a container that never started
+docker exec <container> systemctl status activity-api
 ```
+
+A container that is not running at all is a setup question: see README § Installation.
 
 ### "401 Unauthorized"
 
@@ -297,8 +280,8 @@ echo $METABOB_API_KEY   # Must be set
 # `docker exec <container> substrate-key show`. A short value is a pre-seed
 # placeholder, not a key — it reads without error and 401s on every call.
 
-# Configure via file:
-cat ~/.metabob/config.json | jq .metabob
+# The client configuration (re-emit with substrate-connect if it is stale):
+jq .metabob "${METABOB_CONFIG_PATH:-$HOME/.metabob/config.json}"
 ```
 
 ### "Template not found"
@@ -322,7 +305,7 @@ docker exec substrate-live bun /vessels/seed-identity.ts   # ensure auth seeded
 
 ### Dense search disabled (embedding.status=disabled)
 
-This indicates the `EMBEDDING_MODEL_DIR` env var is missing (F-V58). Check:
+This indicates the `EMBEDDING_MODEL_DIR` env var is missing. Check:
 
 ```bash
 docker exec substrate-live env | grep EMBEDDING
@@ -366,19 +349,9 @@ bun run validation/scripts/stratified-harness.ts
 |----------|---------|---------|
 | `METABOB_API_KEY` | Authentication | `mb-<base64>-<hex>` (~160 chars) |
 | `ACTIVITY_API_URL` | Backend endpoint | `http://localhost:18080` |
-| `ANTHROPIC_API_KEY` | LLM access | `sk-ant-...` |
 | `SURREALDB_URL` | Database | `ws://localhost:8000` |
 
-Preferred configuration via `~/.metabob/config.json`:
-
-```json
-{
-  "metabob": {
-    "apiKey": "your-key",
-    "endpoint": "http://localhost:18080"
-  },
-  "providers": {
-    "anthropic": { "apiKey": "sk-ant-..." }
-  }
-}
-```
+Client tooling reads the client configuration file (`~/.metabob/config.json`, or the file
+`METABOB_CONFIG_PATH` names; a project-local `.metabob/config.json` shadows both). The
+fleet emits it with `substrate-connect`; nothing on the host fills an unset value from it at
+launch.

@@ -1,4 +1,95 @@
-# The configuration surface — channels, precedence, and what can be verified
+# Advanced configuration — tiers, channels, precedence, and what can be verified
+
+This is the advanced-configuration reference. A launch needs only the **install inputs**,
+listed with their defaults and the profiles that require them in
+[README § Installation](../../README.md#installation); that page is also the only place
+setup commands appear. Everything in this document is optional: set it in the same host
+`.env`, and the launch manifest forwards it to the image unchanged.
+
+## The tiers
+
+| Tier | What | Where it lives | Read | Learnable? |
+|---|---|---|---|---|
+| **Install inputs** | `SUBSTRATE_NAME`, `SUBSTRATE_PORT_PREFIX`, `PROFILE`, `DISCOVERY_ENDPOINT` + `METABOB_API_KEY`, one provider key, `PUBLIC_IP`, `SUBSTRATE_GIT_PAT` + `SUBSTRATE_REPO_OWNER` | host `.env` | at boot, by gen-env | no (bootstrap, by design) |
+| **Advanced bootstrap** | the variables below | host `.env`, forwarded by the manifest | at boot | no |
+| **Generated secrets** | `JWT_SECRET`, `SURREAL_PASS`, API-key signing secret, the operator key | workspace `.substrate-secrets` | at boot | n/a (never hand-edited) |
+| **Runtime policy** | vessel additions (`vessel-ctl install`), `pushPolicy`, `llmModelPolicy`, rhythms | impulses in the substrate | at use time | **yes** |
+| **Client** | endpoint + key | `~/.metabob/config.json` (override: `METABOB_CONFIG_PATH`; a project-local `.metabob/config.json` shadows it) | by the cockpit | n/a |
+
+Anything the system should learn or change at runtime belongs in the runtime-policy tier
+as a shaped impulse (law 1), not here. The size of the advanced tier is a measure of
+unfinished shaping (see §3 below).
+
+## Advanced bootstrap variables
+
+| Group | Variables | Notes |
+|---|---|---|
+| Extra LLM providers | `OPENAI_API_KEY` (+ `OPENAI_BASE_URL`, `LLM_DEFAULT_MODEL` for an OpenAI-compatible local server), `GOOGLE_API_KEY`, `GROQ_API_KEY`, `MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, `CHUTES_API_KEY` | one resolver arm per key present; an arm whose key is absent is skipped cleanly |
+| Self-hosted models | `VLLM_BASE_URL`, `VLLM_MODELS`, `VLLM_API_KEY`, `VLLM_ENDPOINTS`; `RUNPOD_ENDPOINT_ID`, `RUNPOD_API_KEY`, `RUNPOD_MODELS`, `RUNPOD_COST_PER_MTOK` | `VLLM_ENDPOINTS` takes a JSON array for several servers; a RunPod arm is offered only while a worker is warm |
+| LLM arms | `LLM_ARMS` | a JSON array of `{id, model, provider, port}` that replaces the whole arm list in `scripts/substrate/llm-arms.json` |
+| Vessel selection | `ENABLED_VESSELS`, `ENABLED_ROLES`, `ENABLED_EXTRA_VESSELS`, `DISABLED_VESSELS` | refine the unit set `PROFILE` selects; precedence and grammar in [`docs/SUBSTRATE.md`](../SUBSTRATE.md#topology-selection); preview with `apply-inventory` under `DRY_RUN=1` |
+| Federation overrides | `ACTIVITY_API_ENDPOINT`, `IDENTITY_VESSEL_URL`, `FED_SUBSTRATE_ID`, `RELAY_MULTIADDR`, `PEER_MULTIADDR`, `PEER_DISCOVERY_ENDPOINTS`, `FEDERATION_SIGNING_SECRET` | endpoints and the relay anchor are otherwise derived from `DISCOVERY_ENDPOINT` and `/bootstrap`; `PEER_MULTIADDR` is accepted only alongside `DISCOVERY_ENDPOINT` |
+| Relay ports | `RELAY_PORT`, `RELAY_ANNOUNCE_PORT` | `RELAY_PORT` is the host port the manifest publishes the in-container relay on instead of `<prefix>333`, e.g. to keep an existing hub on `30333`. `RELAY_ANNOUNCE_PORT` is the port the relay advertises; the manifest derives it from the published port, so set it only when peers dial a different port (the container port across a shared container network) |
+| Retention | `TRACE_STORE_CAP` and the `TRACE_*` family | trace-store retention; see [`docs/SUBSTRATE.md`](../SUBSTRATE.md#trace-store-retention-and-the-maintenance-lease) |
+| Safety switches | `MITOSIS_DIRECT_PUSH`, `ROUTE_EDIT_INTENT_TO_COMPOSE` | `MITOSIS_DIRECT_PUSH` is the emergency kill switch for autonomous landing: `0` = no commit, no push, no host-sync intent (refusal kind `push_kill_switch`); unset or `1` = landings proceed, scoped by `SUBSTRATE_REPO_OWNER` and the `pushPolicy` impulse. It takes effect on recreate. A new install starts under an initial `pushPolicy` (no promotion) written on its first boot; an install that predates the policy keeps landing where its push clone points until a `pushPolicy` is recorded |
+| Image | `SUBSTRATE_IMAGE` | the tag the manifest runs; the published image is public |
+| Key signing | `API_KEY_SECRET`, `API_KEY_SECRET_PREVIOUS`, `ALLOW_INSECURE_API_KEY_SECRET` | generated and persisted on a fresh datastore; set explicitly only for a deliberate rotation or an existing deployment's migration |
+
+### What the image reports back
+
+gen-env writes these into `/etc/substrate/env` as a report of the outcome, for tools to
+read (`substrate-status`, `substrate-connect`, `substrate-config`); they are not inputs:
+
+| Name | Meaning |
+|---|---|
+| `PROFILE_EFFECTIVE` | the composition this container runs: `standalone`, `spoke`, `hub`, `hub-minimal`, `surface`, `compute`, or `custom` for an explicit `ENABLED_*` selection |
+| `SUBSTRATE_NAME` | the fleet name, present only when the launch supplied one |
+| `SUBSTRATE_CONTAINER_NAME` | the container's own name, present only when the launch supplied a name input |
+| `SUBSTRATE_PORT_PREFIX` | the port prefix, present only when the launch supplied one |
+| `RELAY_ANNOUNCE_PORT` | the port the relay advertises, when one was stated or derived |
+
+Verify that a value arrived at the process that consumes it, not at the file:
+`docker exec <c> substrate-config` reports provenance for what gen-env emitted, and §1
+below explains what it cannot see.
+
+## Migration: retired names
+
+Retired names fall into three groups, and only the first still does anything.
+
+**Aliases still honoured.** These take effect during migration. A name alias that
+conflicts with its replacement fails the launch before anything is written, and so does a
+partial set of the exact-name aliases on a new volume; on a volume an earlier boot already
+used, a partial set is warned about and boots as before.
+
+| Retired | Replacement | What happens when it is set |
+|---|---|---|
+| `SUBSTRATE_CONTAINER`, `WORKSPACE_VOLUME`, `SURREAL_VOLUME` | `SUBSTRATE_NAME` | honoured as exact names; gen-env warns on each |
+| `LIVE_NAME` | `SUBSTRATE_NAME` | honoured; `make up` and gen-env warn |
+| `PORT_OFFSET` | `SUBSTRATE_PORT_PREFIX` | translated to prefix `18 + n/1000` by `make up` (with a warning) and by `ui-only-up.sh` |
+| `ACTIVITY_API_PORT`, `DEV_VESSEL_PORT`, `DISCOVERY_PORT`, `IDENTITY_PORT`, `GOAL_HOST_PORT`, `ANALYSIS_PORT`, `CONCEPT_DB_PORT`, `STATEFUL_UI_PORT`, `HUMAN_SURFACE_PORT` | `SUBSTRATE_PORT_PREFIX` | honoured by the manifest as a per-port override; gen-env warns on each, and refuses one that contradicts an explicit `SUBSTRATE_PORT_PREFIX` |
+| `ENABLED_ROLES=hub` + a hand-listed `ENABLED_EXTRA_VESSELS` | `PROFILE=hub` | honoured: both still refine the unit set |
+| `MITOSIS_DIRECT_PUSH` as the autonomy switch | push capability (`SUBSTRATE_GIT_PAT` + `SUBSTRATE_REPO_OWNER`) + `pushPolicy` | honoured only as the kill switch (`0` stops autonomous landing) |
+
+**Names already ignored.** Setting these changes nothing; the launcher that used to read
+them says so.
+
+| Retired | Replacement |
+|---|---|
+| `METABOB_CONFIG` | `METABOB_CONFIG_PATH` (`ui-only-up.sh` prints a note that the old name is ignored) |
+
+**Lanes removed.** These are commands and processes, not names; nothing warns about them.
+
+| Retired | Replacement |
+|---|---|
+| `make run-live`, `run`, `run-detach`, `run-live-obsidian`, raw `docker run` recipes, `configure-local.sh`, the host deploy scripts | the install page's sequences |
+| a host relay process on its own port | the in-container relay on `P333` (`RELAY_PORT` keeps an existing hub's port) |
+
+---
+
+The rest of this document is the method: which channel delivers a value, what beats what,
+and which assertions can be re-measured rather than believed.
+
+## Why configuration needs a method
 
 Configuration is the one region of this system with **no learning loop**. Environment is
 frozen at process start, invisible to traces and to the walk, so no activity selects over it
@@ -133,9 +224,8 @@ halves are required, and the probe checks for the mismatch:
 
 **Known limit, shared by all ~20 persisted names:** `${VAR:-…}` cannot distinguish *unset*
 from *explicitly emptied*, so `-e VAR=` does not clear a persisted value. Clearing one means
-editing `/workspace/.substrate-secrets`. The Makefile solved this for provider keys with
-`RECREATE_CARRY_PRESENT` (carry by presence, not by value); the same treatment has not been
-applied inside gen-env.
+editing `/workspace/.substrate-secrets`. Carrying a value by presence rather than by value
+would fix it; gen-env does not do that yet.
 
 ---
 
@@ -170,7 +260,7 @@ documents why*.
 | Dimension | Count | How |
 |---|---|---|
 | Names emitted into `/etc/substrate/env` | **72–80 — conditional, not a constant** | `grep -cE '^[A-Z_]' /etc/substrate/env` after a boot. **Emission depends on what you supplied** (an absent provider key emits no arm), so this is a range and the command cannot reproduce a single number. A fixed count was carried here once and disagreed with `config-surface-baseline.txt` in the same repo. |
-| Names offered by `run-live` / `run-live-obsidian` / compose | 45 / 45 / 40 | `config-surface-probe.sh` |
+| Names offered by each launch lane | per lane | `config-surface-probe.sh` (the cross-lane differential) |
 | Distinct names read across vessels and packages | ~451 | dot + bracket + helper forms, `sort -u` |
 | Names in unit `Environment=` lines | 52 (48 unique to that channel) | §1 |
 | `.service.d` drop-in files | 34 total, 10 carrying `Environment=` | `grep -l Environment= …/*.service.d/*.conf` |

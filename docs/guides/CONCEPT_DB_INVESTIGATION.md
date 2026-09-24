@@ -15,7 +15,7 @@ Harness: `scripts/substrate/concept-db-bench.ts` (phases are subcommands;
   without corpus size, index inventory, and upkeep-arm posteriors recorded
   alongside it. The `vitals` phase is the first and last step of every run.
 - **Probe on an isolated instance, read on live.** A full substrate boots from
-  the image with its own volumes (`make up LIVE_NAME=<probe> PORT_OFFSET=<n>`);
+  the image with its own volumes (a second fleet: README § Installation, sequence E);
   seeding, upkeep triggering, and restart experiments happen there. The live
   system gets only read-only phases (`vitals`, `shapes`, read benchmarks) — the
   database is memory-fragile and ad-hoc write load is how outages start.

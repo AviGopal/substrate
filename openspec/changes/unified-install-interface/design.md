@@ -197,13 +197,11 @@ store, so the walk that reads posteriors on every step, and the self-development
 turns gaps into commits, belong next to them. A hub without goal-host holds all the learning
 state and can act on none of it.
 
-**Pending ratification: the self-development loop.** The list above makes a hub *dispatch*;
-it does not make it *self-develop*. That loop is the `autonomy` role (gap-compose,
+**Ratified: the self-development loop is in `hub`.** The list above makes a hub *dispatch*;
+the `hub` profile also makes it *self-develop*: the `autonomy` role (gap-compose,
 compose-teacher, funnel-drain and their timers) plus `boredom-vessel` (the law-5 selector),
-and none of them are in `HUB_EXTRA_VESSELS`. No deployed hub runs them today; the operator's
-standalone does. By the same data-locality argument (the gap store lives on the hub), they
-belong in `hub`. Recommendation: include them in `hub`. The loop's pushes are still bounded
-by Decision 11, since autonomy follows push capability, not the profile. `hub-minimal` (the bare role: registry, identity, trace store,
+by the same data-locality argument (the gap store lives on the hub). The loop's pushes are
+still bounded by Decision 11, since autonomy follows push capability, not the profile. `hub-minimal` (the bare role: registry, identity, trace store,
 models, transport) remains for a relay or control-plane node with no data of its own. The
 `surface` and `compute` profiles replace the inventory's `surface_node`/`compute_node`.
 
@@ -290,7 +288,7 @@ against the same volumes.
 
 ## Resolved decisions
 1. Manifest location → Decision 2 (B, baked, per-digest, nested-default naming).
-2. Hub composition → Decision 10 (`hub` dispatches; `hub-minimal` opt-out).
+2. Hub composition → Decision 10 (`hub` dispatches and self-develops; `hub-minimal` opt-out).
 3. Push default → Decision 11 (capability scoped by owner; shared-branch promotion earned;
    env var is a kill switch only).
 4. Engines → Decision 12 (Docker and Podman, each acceptance-tested).
@@ -298,8 +296,6 @@ against the same volumes.
    narrow CI key; human installs report too).
 
 ## Open Questions
-- Decision 10: include the `autonomy` role and boredom in `hub` (recommended), or leave hub
-  self-development to a separate profile.
 - The `installAcceptance` and `pushPolicy` shapes are new names. Before minting, task 0.2
   checks the registry for an existing producer of an equivalent shape (law 3).
 - Federated LLM inheritance for keyless spokes is outside this change; until it lands, the

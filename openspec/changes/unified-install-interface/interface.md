@@ -39,7 +39,7 @@ until then, this is the reference. It describes behavior after the change lands,
 | Profile | Runs | Local data | Resolves remotely | Use it for |
 |---|---|---|---|---|
 | `standalone` (root default) | everything: store, control, api, models, compute, ui, transport, autonomy | all of it | nothing | one self-contained substrate |
-| `hub` | registry, identity, trace store + learner, stores, models, transport + relay, plus goal-host, development, local-tools, ribosome, analysis, light-dispatch | the network's learning state and gap store | nothing | the network's home; it dispatches next to its posteriors. Whether it also runs the self-development loop (`autonomy` + boredom) is **pending ratification** (design Decision 10) |
+| `hub` | registry, identity, trace store + learner, stores, models, transport + relay, plus goal-host, development, local-tools, ribosome, analysis, light-dispatch | the network's learning state and gap store | nothing | the network's home; it dispatches next to its posteriors and runs the self-development loop (`autonomy` + boredom), whose pushes push capability bounds (design Decisions 10, 11) |
 | `hub-minimal` | the `hub` role without compute | as `hub` | goal execution (a spoke) | a control-plane or relay-only node |
 | `spoke` (remote-anchor default) | registry (local), compute, ui, transport | the host's files and tools (why the spoke exists) | identity, traces, learning, lessons, LLM arms, from the hub | adding compute or local data to a network |
 | `surface` | registry, transport, human surface | none | everything | a human's local window onto a network |
@@ -110,7 +110,9 @@ Required inputs per profile: **standalone 1** (provider key); **spoke, surface, 
   system does not guess a role.
 - A deprecated name alias that is partial (e.g. `SUBSTRATE_CONTAINER=lab` without both volume
   names) or conflicts with `SUBSTRATE_NAME` fails at boot, before anything is written. This
-  prevents attaching a new container to another fleet's volumes. Compose cannot refuse this
+  prevents attaching a new container to another fleet's volumes. The partial case is refused
+  on a new volume only; an install already running on its volumes is warned, since a partial
+  alias was a valid configuration before this rule. Compose cannot refuse this
   itself, so gen-env checks the names the manifest passes in.
 - Changing an install input means `docker compose up -d` (recreate, volumes kept). Changing
   runtime policy never needs a restart.
@@ -236,3 +238,34 @@ make -C scripts/substrate up REBUILD=1    # build (needs bun) → the same compo
 | a host relay on `30333` | the in-container relay on `P333` |
 | `MITOSIS_DIRECT_PUSH` as the autonomy switch | push capability + `pushPolicy`; the variable stays only as a kill switch |
 | setup text in ≥8 documents | README § Installation, linked from everywhere else |
+
+---
+
+## 6. Documentation after the change
+
+README § Installation is the only place setup commands appear. Every other document keeps
+its concepts and links there for commands. Tasks 5.1–5.6 apply this table.
+
+| Document | Disposition |
+|---|---|
+| README § Installation | **Rewrite** from §§ 1–4 of this document; command blocks fenced `install` (the acceptance run executes them) |
+| README § Join, § Building from source, § Running your own hub | **Fold** into the install page's sequences C, G, B; keep the concepts |
+| `CLAUDE.md` § Reference: the running substrate | **Keep** the role statement and troubleshooting; **replace** bootstrap, client config and the port table with a link |
+| `docs/SUBSTRATE.md` | **Delete** § Launch (two canonical paths), § Container config matrix, § Join, § Second substrate, § Deploy paths, § Backing up; **keep** the single-container rationale, inventory, `vessel-ctl`, iteration loop and troubleshooting as the operating reference |
+| `docs/FEDERATION.md` | **Keep** protocol and concepts; **replace** hub and spoke commands with links |
+| `docs/operations/CONFIGURATION_SURFACE.md` | **Rewrite** as the advanced-configuration reference, organised by the § 2 tiers |
+| `docs/HUMAN_SURFACE.md` | **Replace** the `ui-only-up.sh` path with sequence D |
+| `docs/guides/CONTAINER_NETWORK_LIFECYCLE.md` | **Fold** unique content into `docs/SUBSTRATE.md`, then **delete** |
+| `docs/guides/SYZYGY_LOCAL_SURFACE.md` | **Move** to `validation/reports/` (dated evidence, not a guide) |
+| `docs/guides/HUMAN_PROJECT_LIFECYCLE.md` | **Repoint** its setup link to the install page |
+| `docs/testing/QUICK_VERIFICATION_GUIDE.md` | **Rewrite** around `substrate-status`, or delete |
+| `docs/LIVE_DEVELOPMENT.md`, vessel READMEs' `bun run dev` | **Label** developer-only |
+| `repos/deployment/README.md`, cloud-dashboard Helm docs | **Banner**: Kubernetes retired |
+| `.claude/skills/deploy`, `metabob-substrate` | **Remove** deleted make targets and the missing spec link; point to the install page and `vessel-ctl` |
+| `.env.example`, compose header, Makefile header | **Reduce** to the install inputs and a pointer |
+| root `.env.devbob*.example` | **Move** to their own tool, or delete |
+| `docs/README.md` | **Update** the index |
+
+The substrate's copy of the old text (concept-db sections, `memoryNote` entries, drafter
+lessons) is purged by tasks 5b.1–5b.3. New drift is caught by the acceptance run and by
+`docs_align_tick` checks for restated commands and unread variable names (5c.1–5c.5).

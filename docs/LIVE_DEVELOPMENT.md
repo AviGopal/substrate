@@ -2,6 +2,12 @@
 
 Get a vessel running with hot reload in under 5 minutes.
 
+> **Developer-only.** Everything here runs one vessel's source on your own machine for
+> fast iteration. It is not a way to run the fleet: a substrate (standalone, hub, spoke
+> or surface) is launched from the image as described in
+> [README § Installation](../README.md#installation), and a change reaches a running
+> fleet only by landing on `origin/dev`.
+
 ---
 
 ## The Development Loop
