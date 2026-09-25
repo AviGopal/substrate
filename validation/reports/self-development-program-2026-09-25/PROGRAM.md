@@ -80,11 +80,17 @@ gap-drain 2/55. The misses are three classes, not a capability ceiling:
 
 ## Decisions only the operator can make
 
-1. **Trace-store rebuild.** 42 GB → ~1.5 GB (last export size). Needs the
-   store offline; recipe exists from 2026-08-12 (`/workspace/surreal-rebuild`).
-   Also whether to set `SURREAL_ROCKSDB_ENABLE_BLOB_FILES=false` going forward
-   or upgrade SurrealDB to a build that runs blob GC. Gap (held):
-   `the-trace-store-is-42gb-of-unreclaimed-rocksdb-blobs-…`.
+1. **Trace-store fix** (see `TRACE-STORE-GROWTH.md`). ~89% of 41 GB of blobs is
+   garbage from activity-api's 30-min `REBUILD INDEX` on `activity` (every
+   ~20 KB row rewritten, blob GC off); live data is ~5.2 GB. Code fixes are
+   filed held for the post-run-10 window: rebuild only on invalidation, expire
+   `cluster_shadow_decision` impulses, drop the dead `activity_template`
+   UPDATE, and make `context_thompson_scores` writes conflict-safe. Reclaiming
+   the garbage needs the surrealdb unit stopped in a window (after run 12
+   ~12:15Z, or after a failed graded run): a forced blob-GC compaction on a
+   backup first, which needs a Rust toolchain not present on host or in
+   container, or export/import as the fallback (the 08-12 attempt ended
+   `ok=3 fail=6`). Not riding on the cold boot (law 12).
 2. **Cockpit key.** `~/.metabob/config.json` holds a key identity rejects
    (401); the live operator key differs. One line fixes it (see report).
 3. **Browser in the image**, so the substrate can check its own surface.
