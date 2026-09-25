@@ -187,6 +187,7 @@ development-vessel changes go first, then activity-api or other vessels.
 | 13 | The system authors exact-edit goals (verified anchors + scratch tsc before a compose slot) | development-vessel | S R | autonomous first-try landing rate toward the operator rate (4/4) |
 | 14 | Gap disposition (close / merge / defer / drop on evidence) | new change | S | closed ≥ opened per 24h |
 | 14b | Settled `regressed` debits the Thompson β of the template that produced the landing (ledger's first slice records lessons and withholds extraction but defers any α/β write) | development-vessel / activity-api learning state; separate change, alone (law 12) | R S | withheld-β share falls (34 withheld vs 7 applied per hour today); posteriors of regressing templates drop |
+| 14c | Rhythm-conductor drain dispatches reach 1/8 (and 1/4 before): find what they ask for and why it misses; stop minting drains that cannot reach | development-vessel rhythm conductor | R L | drain reach > 50% or drain volume cut to what reaches |
 | 15 | Node 2 and per-repo cutover leases | ownership change + ops | D S | two cutovers in parallel; compose BUSY refusals fall |
 
 Items 1–3 go first after run 12 because they change how every later item
