@@ -155,10 +155,12 @@ redraft; `17:07:48` gap-to-feature picked a parked gap and the compose resumed i
   maintenance.json was not taken (still the expired 20:37 hold). The run was graded HOLLOW
   because the valve deleted no rows and verify still saw over_cap — pruning behaviour is a
   stated non-goal of this change.
-  Residual: the family sampler also draws three registered variants (…-swap-timeout-15min,
-  …-release-before-verify, …-lease-ttl-120s) that still take the unnamed lease — 5 of 45 draws
-  today. The base now subsumes the first two; retiring or re-minting them is a learning-state
-  decision left as a follow-up.
+  Variants: the family sampler also drew three registered variants (…-swap-timeout-15min,
+  …-release-before-verify, …-lease-ttl-120s) that still took the unnamed lease — 5 of 16 draws
+  by 23:58Z, and one held maintenance.json at 23:57. Operator upsert by id (00:0xZ on 09-25)
+  added `name: "trace_store"` to each variant's acquire and release, changing nothing else
+  (order, category, variant_of and posteriors re-read unchanged); every family member now
+  takes the named lease.
   Falsifier: a reconcile run without `fetch failed: The operation was aborted`; no lease file
   within a minute of completion; cutovers no longer log
   `REFUSE: maintenance change_window lease held`.
