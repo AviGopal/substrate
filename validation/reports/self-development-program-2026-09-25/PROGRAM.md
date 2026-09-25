@@ -108,24 +108,23 @@ shapes 402/402; data routes all 2xx; **questions header 43 vs 178 unanswered
 (fail)**; runs list shows 3.8% of its rows without scrolling; 39 of 50 runs
 have no goal text (lever 0).
 
-## Goal parity (first sample)
+## Goal parity: human surface vs direct goal-host (03:20Z; cockpit out of scope)
 
-Same goal text, 02:52Z: "Compute the product 4217*38 and store the numeric
-answer in a memoryNote titled parity-<entry>-0925a."
+Four goal classes, each sent through the surface's Ask box in a real browser
+and straight to goal-host `/run-goal`:
 
-| Entry | Dispatch | Result |
-|---|---|---|
-| Human surface (typed in the Ask box, real browser) | `73511ecf` | reached — deterministic: 160246 found |
-| Direct goal-host `/run-goal` | `f449f02c` | reached — deterministic: 160246 found (slower path, shell satisfier) |
-| Cockpit `run_goal_async` | — | not dispatched: identity rejects the configured key (401), reported as "could not find goal-host-vessel via discovery" |
+| Goal | Surface | Direct | Reading |
+|---|---|---|---|
+| Arithmetic, store in memoryNote | `73511ecf` reached (160246 verified) | `f449f02c` reached (verified) | parity |
+| Count open gaps | coalesced onto the direct run | `71d2f2c7` reached (1659 verified) | one execution by design |
+| Where is `leaseStem` defined | `6bba16ee` failed after 3 attempts | `8ecbc7b6` reached, 1 attempt | **control:** the surface's exact text sent direct (`911ac586`) inferred the same extra target and needed 2 attempts; direct text again (`7da13b99`) reached in 1. Text sensitivity, not entry point |
+| development-vessel `in_flight` | `439b8aa3` failed, 11 attempts | `7d58ab22` failed, 14 attempts | parity in failure: inference picked `shellResult` over the advertised `vesselHealth` |
+| Any goal while goal-host drains | "ingress proxy failed … NO_RESERVATION", no retry | "draining for restart — retry" | **surface worse**: routes to an unreachable federated peer |
 
-A second goal (open-gap count) sent by the surface was coalesced onto the
-identical direct dispatch (`71d2f2c7`, reached, 1659 verified), so it is one
-execution, not a comparison. n=1 on a trivial goal shows admission and
-tagging parity (`operator: human-surface` vs `operator:claude-avi`, no
-operator-keyed admission in goal-host), not reach parity. A matched
-edit-intent pair is the test that matters; it costs two lane slots and waits
-for a free window.
+Verdict: goals sent through the surface behave as goals sent directly,
+except during a goal-host drain, where the surface names the wrong cause
+and offers no retry. Gaps filed: `while-goal-host-drains-the-surface-routes-…`
+and `goal-target-inference-picks-shellresult-over-the-advertised-vesselhealth-…`.
 
 ## Evidence (re-derivation)
 
