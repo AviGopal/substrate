@@ -71,7 +71,11 @@ gap-drain 2/55. The misses are three classes, not a capability ceiling:
 4. live-self-view (substrate-30) and compose ownership (391b83) dispatch in the
    gaps between those windows; ownership moves in 75-minute windows and will
    not bring up node 2 during a graded-run window.
-5. Unheld substrate gaps from this audit (levers 0, 4, 9 and the phantom
+5. **File freeze (ledger ruling, 05:25Z):** development-vessel `attempt-register.ts`
+   and `attempt-checks.ts` are frozen from a passing run 9 through run 11. If
+   run 9 fails, compose-ownership 3.1 may land on `attempt-register.ts` before
+   the next run.
+6. Unheld substrate gaps from this audit (levers 0, 4, 9 and the phantom
    remedy) are left to the substrate's own gap drain.
 
 ## Decisions only the operator can make
