@@ -153,3 +153,42 @@ and `goal-target-inference-picks-shellresult-over-the-advertised-vesselhealth-�
 - Gap flow: `/workspace/git/super-repo/gaps/gaps.json`, `detected_at` and
   `closed_at` windows.
 - CPU per process: 10 s `/proc/<pid>/stat` utime+stime delta, attributed by cgroup.
+
+## Integrated sequence (from 11:00Z, 2026-09-25)
+
+Aims: **L** latency, **R** reach, **S** development speed (drafts that land,
+discovery→landing ratio), **D** decentralization. One change per slot, landed
+from a pre-validated exact edit, measured before the next (law 12). A
+development-vessel landing restarts the composer, so within a slot
+development-vessel changes go first, then activity-api or other vessels.
+
+**Window after run 10 (10:56–~12:11), already agreed:**
+- ownership: 5.1a, 5.2, 5.2b on development-vessel (**D**)
+- coordinator: m1-trainer concept-search fallback removal (**L**; 624 dead searches per 15 min)
+
+**Runs 11 → cold boot → 12:** no machine changes (the cold boot must be the only change).
+
+**After run 12 (the lane is open), in order:**
+
+| # | Change | Where | Aims | Falsifier |
+|---|---|---|---|---|
+| 1 | Retry targets the gate's corrected site (suspected_real_location before edit_site) | development-vessel gap-to-feature.ts | S R | wrong-site refusals/24h fall (35 of 123 today) |
+| 2 | Stop redrafting after two same-class failures; reframe or escalate | development-vessel gap-to-feature.ts | S L | same-class retries fall from ~40% of retries |
+| 3 | Vacuous guard allows level demotions, then SQL logging to debug | development-vessel vacuous-edit.ts → activity-api db/surreal.ts | L | activity-api log bytes −90% |
+| 4 | Learning writes off the request path; conflict-safe posteriors | activity-api execution-traces.ts, posterior-aggregator | L R | posterior observations == outcomes; 0 conflicts |
+| 5 | concept-db lexical recall fixed (alone: changes ranking) | concept-db concept.ts | R S L | lexical matches > 0; search p50 < 40 ms |
+| 6 | boredom caches its fixed concept query | boredom-vessel | L | ≤ 1 search / 15 min |
+| 7 | Pre-admission refusals recorded as refused, with caller; find the pinned scaffold dispatcher | goal-host | R (honest denominator) | 0 "refusing pinned target" failures |
+| 8 | Surface: awaiting count; drain routing; no federated fallback for local state | human-surface-vessel | parity | surface-state-probe all pass |
+| 9 | Trace sender: idempotency key, backoff, timeout above server p99; then 202 + queue | ias-executor-ts, activity-api | L | 0 duplicate deliveries; POST p99 < 20 ms |
+| 10 | Pooled query path runs its own SQL; then enable the pool | activity-api db/surreal.ts | L | no connection per query |
+| 11 | Classifier stops rewriting activity rows; shadow impulses expire | activity-api | L, storage | no whole-table rewrites; store growth ~0 |
+| 12 | Trace-store compaction window (method: operator decision) | surrealdb | L, storage | data.db < 5 GB; surreal RSS < 8 GB |
+| 13 | The system authors exact-edit goals (verified anchors + scratch tsc before a compose slot) | development-vessel | S R | autonomous first-try landing rate toward the operator rate (4/4) |
+| 14 | Gap disposition (close / merge / defer / drop on evidence) | new change | S | closed ≥ opened per 24h |
+| 15 | Node 2 and per-repo cutover leases | ownership change + ops | D S | two cutovers in parallel; compose BUSY refusals fall |
+
+Items 1–3 go first after run 12 because they change how every later item
+lands: fewer wasted drafts and a guard that allows log-cost fixes. Item 13 is
+the structural version of what made today's four landings first-try, and
+item 15 raises lane capacity for everything after it.
