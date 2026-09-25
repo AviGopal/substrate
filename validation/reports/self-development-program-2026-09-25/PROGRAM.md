@@ -131,6 +131,13 @@ and straight to goal-host `/run-goal`:
 | development-vessel `in_flight` | `439b8aa3` failed, 11 attempts | `7d58ab22` failed, 14 attempts | parity in failure: inference picked `shellResult` over the advertised `vesselHealth` |
 | Any goal while goal-host drains | "ingress proxy failed … NO_RESERVATION", no retry | "draining for restart — retry" | **surface worse**: routes to an unreachable federated peer |
 
+**Re-run on the healthy system (08:52Z, after the container restart):** three
+matched pairs, 6/6 reached, identical inferred target shapes per pair, all
+deterministic verifiers passing (174793; the leaseStem path; 1803 open gaps).
+Wall times direct/surface: 92/82 s, 43/55 s, 7/29 s: no systematic penalty for
+the surface. The earlier `leaseStem` miss was text sensitivity under load, not
+the entry point.
+
 Verdict: goals sent through the surface behave as goals sent directly,
 except during a goal-host drain, where the surface names the wrong cause
 and offers no retry. Gaps filed: `while-goal-host-drains-the-surface-routes-…`
