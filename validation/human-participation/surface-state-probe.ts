@@ -160,9 +160,13 @@ for (const r of regions) {
 const runRows = await page.evaluate(() => {
   const reg = document.querySelector(".sf-runs");
   if (!reg) return null;
-  const rows = [...reg.querySelectorAll("li,[role=row],tr,button,a")].filter(e => /running|reached|failed|completed/i.test((e as HTMLElement).innerText || ""));
-  const texts = rows.map(e => (e as HTMLElement).innerText.replace(/\s+/g, " "));
-  return { total: texts.length, running: texts.filter(t => /running/i.test(t)).length, goalless: texts.filter(t => /goal text not recorded/i.test(t)).length };
+  // One row per `.sf-run-goal` (the board's own row marker). A generic
+  // li/button/state-word selector missed rows whose state is "accepted".
+  const rows = [...reg.querySelectorAll(".sf-run-goal")].map(e => e.parentElement as HTMLElement);
+  const texts = rows.map(e => e.innerText.replace(/\s+/g, " "));
+  // In flight = "running" plus "accepted" (admitted, walk not yet started);
+  // goal-host's in_flight counts both.
+  return { total: texts.length, running: texts.filter(t => /\b(running|accepted)\b/i.test(t)).length, goalless: texts.filter(t => /goal text not recorded/i.test(t)).length };
 });
 const after = inContainer(TRUTH_JS);
 await browser.close();
