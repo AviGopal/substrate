@@ -106,8 +106,8 @@ redraft; `17:07:48` gap-to-feature picked a parked gap and the compose resumed i
   Landed as development-vessel `0b06246`: all eight lease calls in the file (acquire, bounded
   retry, git-aware acquire, proposal acquire and all four releases) carry `name: "cutover"`;
   runtime equals the commit and the process restarted after it. The live half of the
-  falsifier (a push while `trace_store` is held) waits on 3.3a — until the reconcile takes its
-  own name it still holds the unnamed global, which excludes every name.
+  falsifier (a push while `trace_store` is held) was observed on 09-25: 2992a23 pushed at 00:07:41
+  during a trace_store hold (see 3.3).
 - [x] 3.2b `vessel-mitosis-cutover.ts`: the early "change_window lease held — defer without
   rollback" check reads the lease with no name, which since 3.1b means the union of all holds,
   so a reconcile `trace_store` hold or another cutover's hold refuses every cutover again.
@@ -161,6 +161,11 @@ redraft; `17:07:48` gap-to-feature picked a parked gap and the compose resumed i
   added `name: "trace_store"` to each variant's acquire and release, changing nothing else
   (order, category, variant_of and posteriors re-read unchanged); every family member now
   takes the named lease.
+  Live after the variant fix (09-25): 00:06:43 the sampler drew …-lease-ttl-120s, which took
+  maintenance-trace_store.json at 00:06:45 (maintenance.json untouched since 23:57); its fetch
+  failed on that variant's 15 s timeout, leaking the named hold to its TTL — and at 00:07:10 a
+  cutover acquired "cutover" during that hold and pushed as development-vessel 2992a23 at
+  00:07:41. That is 3.2's live falsifier: a trace_store hold no longer refuses a cutover.
   Falsifier: a reconcile run without `fetch failed: The operation was aborted`; no lease file
   within a minute of completion; cutovers no longer log
   `REFUSE: maintenance change_window lease held`.
