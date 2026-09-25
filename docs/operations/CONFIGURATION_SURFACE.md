@@ -174,6 +174,33 @@ Channel 3 is the exception that *does* override, because drop-ins are applied af
 unit. It is also the least visible, and it carries live behavioural decisions: peer endpoints,
 route preferences, and boredom pacing overrides of 240×–300× the in-code default.
 
+### Where a unit property lives
+
+One property, one file. Deciding which file:
+
+- **The unit file** (`scripts/substrate/units/<unit>`) carries every property the unit needs
+  to run correctly on any deployment: its sandbox (`ReadOnlyPaths=`, `ProtectSystem=`), working
+  directory, restart policy. Someone reading the unit file sees the whole contract, and a
+  sandbox that lives anywhere else is a sandbox nobody knows is there.
+- **A drop-in** (`scripts/substrate/units/<unit>.d/<name>.conf`) is an additive overlay that
+  can be removed independently: a run-dir repoint, a watchdog, a drain timeout, a
+  deployment-specific peer setting. Its header says what it changes and how to revert it
+  (delete the file, `daemon-reload`).
+- **Never both.** The same property in the unit file and in a drop-in is two sources of truth.
+  The drop-in is applied later, so it silently wins for single-valued properties and doubles
+  list-valued ones. Nothing reports the duplication.
+- **`/etc/systemd/system/**` is never a source of truth.** It outranks every vendor file and is
+  not in git. A live fix written there is a stopgap: land the tracked form in
+  `scripts/substrate/units/`, confirm it has converged, then delete the `/etc` copy.
+
+Both tracked forms reach a running container the same way. The image copies
+`scripts/substrate/units/` into `/usr/lib/systemd/system`, and pull-sync's unit convergence
+mirrors it on every tick. To check which files a unit is actually built from:
+
+```bash
+systemctl show <unit> -p FragmentPath -p DropInPaths
+```
+
 ---
 
 ## 2. Precedence, end to end
