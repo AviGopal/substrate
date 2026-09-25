@@ -68,3 +68,20 @@ Post-run-10 window (activity-api/goal-host allowed): stopgap drop-in, then
 changing what selection picks. Measure the same breakdown after each (law 12).
 After run 12: #2 and #4 (cross-vessel), #7 alone (changes selection),
 #8, #10, and the trace-store compaction.
+
+## Status (09:55Z)
+
+Landed through the substrate from pre-validated exact edits, each verified
+byte-equal to parent + edit and against its falsifier:
+
+| Fix | Commit | Result |
+|---|---|---|
+| #1 duplicate-first | activity-api `b56623a` | duplicate POST 200 in ~1 ms (was 15–22 s) |
+| #6a no scheduled FTS rebuild | activity-api `9387ca7` | no rebuild since 09:15; stopgap drop-in removed |
+| #5 dense in-process | activity-api `bf3f0bf` | 0 full-table dense scans; in-process cosine == SurrealDB to full precision |
+| #7 score-read ids | activity-api `53d8e77` | legacy read 406 rows (was 0, 59/59); shape-conditioned path active |
+| ledger aggregate-on-change | development-vessel `cbdb432` | 0 aggregate gap rewrites (was ~86/min) |
+
+Blocked: #9 (SQL logging) refused by the vacuous-edit guard (gap filed).
+Held for windows: #3 learning writes off-path, #2/#4 sender and 202-queue,
+#8 pooled query, #10 classifier, the three concept-db fixes (perf-6).
