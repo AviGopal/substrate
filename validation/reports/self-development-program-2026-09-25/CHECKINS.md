@@ -8,6 +8,7 @@ One row per hourly check. Reach (adj) excludes pre-admission pinned refusals and
 | 04:30 | ~5 cores / 21.6 GB | 43 GB (+1 GB in ~2h) | 52 | 100, 20% (34 pinned refusals, 15 empty) | 62/6, 1678 | 3·3 | R1 pass after probe fix; R2 fail; runs visible 3.7% | 4 substrate attempts: 3 lane BUSY, 1 inferred shellResult |
 | 05:30 | ~5 cores / 22.8 GB | 43 GB | 66 | 134, 63% (43 admitted; 42 pinned refusals) | 57/1, 1681 | 6·0 | R1 pass; R2 fail; runs visible 3.8%, 36/50 goalless | hold-pick falsifier: 9 picks since 04:51, 0 held picked; autonomous gap work 0/5 |
 | 06:30 | ~5 cores / 22.1 GB | 43 GB | 61 | 108, 25% (57 admitted; 38 pinned refusals) | 78/7, 1700 | dev 4 · gh 3 · lt 1 | R1 pass; R2 fail; 34/50 goalless | hold-pick: 17 picks since 04:51, 0 held; gap work 1/18; residue watcher quiet since C2 (06:06). pull-sync test gate converged dev-vessel UNGATED 06:13 after refusing 792a9cd at 06:09 (9 blind in 26h) — gap filed, held |
+| 07:32 | ~5.3 cores / 22.2 GB | 44 GB | 45 | 86, 38% (39 admitted; 34 pinned refusals) | 75/6, 1715 | dev 3 | R1 pass; R2 fail; **R3 fail (0 shown vs 10): /api/gaps fell back to development-vessel-local@syzygy-hub during a dev-vessel restart and showed another substrate's empty findings**; R5 fail (502×2) | hold-pick 25 picks, 0 held; phantom-remedy fix live (stored remedy now impulse_type); 6 held trace/gap-store gaps present; residue watcher MTIME 06:34 (pull-sync advancing, expected). 07:35 development-vessel saturated (69 conns, /health >30 s) inside run-10 window — ledger told |
 
 ## Landing verifications
 
