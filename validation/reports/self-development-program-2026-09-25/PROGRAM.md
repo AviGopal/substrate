@@ -40,15 +40,39 @@ dispatches of its own.
 | # | Lever | Owner | Falsifier (closes it) | Lane cost | Depends on |
 |---|---|---|---|---|---|
 | 0 | **Honest denominator**: pre-admission refusals recorded as `refused` with a caller, not as failed runs | substrate (gap `a-pre-admission-refusal-is-recorded-as-a-failed-run-…`) | no `failed` record starting "refusing pinned target" for 1h; every refused record names its caller | 1 | — |
-| 1 | **live-self-view**: gates read the push clone, not the stale checkout (tasks 2.2, 5.2 left) | Documentation self-management assessment [2d8b97] | the change's own falsifiers; unexplained refusals ("no failure detail") fall | 2 | — |
+| 1 | **live-self-view**: gates read the push clone, not the stale checkout (6.1 in flight; 2.2 operator-tier; 5.2 waits on a trigger; 3.1 one landing left) | substrate-30 [2876f5] (confirmed) | the change's own falsifiers; unexplained refusals ("no failure detail") fall | 2 | — |
 | 2 | **causal-attempt-ledger**: every landing registered, settled `held`/`regressed`, credit deferred | ledger lead [aac97f] + runner [f076b8] | 3 consecutive passing graded runs | runs + #53 fixes | 0 (honest counts) |
 | 3 | **Gap aggregation** for per-event detectors (done for unaccounted landings: b6f0d14, 617b12a) | ledger lead [aac97f] | route-closes predicate lands; no detector files > 1 gap per class per hour | 1 | — |
 | 4 | **Escalation dedupe**: one human question per hopeless gap across restarts | substrate (gap `hopeless-gap-escalation-dedupes-in-process-memory-…`) | ≤ 1 accepted escalation per gap id per 24h | 1 | — |
-| 5 | **Gap-closing diagnosis**: why autonomous gap-closing reaches 0/32 | this session (read-only: traces + walk logs) | a named failure class per miss, each filed as one gap | 0 | 0 |
-| 6 | **Arm bad-satisfier suppression** ("would be PROVEN-BAD … suppression is HELD") | ledger lead [aac97f] (touches credit) | walks stop selecting satisfiers with a decisively negative posterior; reach on those goals rises | 1–2 | 2 |
-| 7 | **Decentralized compose ownership** + per-repo cutover leases | compose-ownership [391b83] | a second node composes its owned repos while node 1 self-lands; per-repo leases let two repos cut over in parallel | tasks 3.x | operator: second node |
+| 5 | **Gap-closing diagnosis**: why autonomous gap-closing reaches 0/32 | this session (done 03:10Z, see below) | each miss class named and filed as one gap | 0 | 0 |
+| 6 | **Arm bad-satisfier suppression** ("would be PROVEN-BAD … suppression is HELD"); accepted for after graded run 11, behind a re-baseline that strips composes killed by the drift/freshness gates from β | ledger lead [aac97f] (accepted, conditional) | walks stop selecting satisfiers with a decisively negative posterior; reach on those goals rises | 1–2 | 2 |
+| 7 | **Decentralized compose ownership**; per-repo cutover leases recorded in its design.md as a separate follow-up change | compose-ownership [391b83] | a second node composes its owned repos while node 1 self-lands; per-repo leases let two repos cut over in parallel | tasks 3.x | operator: second node |
 | 8 | **Gap disposition** (close / merge / defer / drop on evidence) | unowned: new change after 3 and 5 | closed ≥ opened over 24h without closing live defects | new change | 3, 5 |
 | 9 | **Human surface truthfulness**: awaiting count; substrate-run surface check | substrate (gap `the-surface-awaiting-count-…`); image decision for a browser | `surface-state-probe.ts` all predicates pass; a substrate-run check exists | 1 | operator: browser |
+
+## Lever 5 finding — why autonomous gap closing fails (24h to 03:10Z)
+
+149 autonomous gap dispatches: gap-decompose 15/60 reached, gap-closing 0/34,
+gap-drain 2/55. The misses are three classes, not a capability ceiling:
+
+| Class | Misses | Filed |
+|---|---|---|
+| gap-drain pins a remedy template that has never existed (`development-vessel:db_performance_slow_queries`, minted hourly by trace-store-health-observer) | 39 | `the-slow-query-detector-names-a-remedy-template-that-does-not-exist-…` |
+| compose lane at capacity (BUSY) | 44 across the three triggers | lane capacity: levers 7 and 0 |
+| edit accepted but no landing evidence (hollow) | 14 gap-closing | measured by lever 2 once attempts settle |
+
+## Lane schedule (as agreed 03:10Z)
+
+1. Ledger graded run 8 finishes.
+2. Ledger landings, sequential: development-vessel `attempt-register.ts` (#53),
+   then `feature-compose.ts` (#53, **held until live-self-view 6.1 settles** —
+   same file), then goal-host `g-retrycap`.
+3. Ledger graded runs 9, 10, cold boot, 11.
+4. live-self-view (substrate-30) and compose ownership (391b83) dispatch in the
+   gaps between those windows; ownership moves in 75-minute windows and will
+   not bring up node 2 during a graded-run window.
+5. Unheld substrate gaps from this audit (levers 0, 4, 9 and the phantom
+   remedy) are left to the substrate's own gap drain.
 
 ## Decisions only the operator can make
 
