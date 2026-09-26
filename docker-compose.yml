@@ -155,6 +155,10 @@ services:
       ENABLED_VESSELS: ${ENABLED_VESSELS:-}
       ENABLED_ROLES: ${ENABLED_ROLES:-}
       ENABLED_EXTRA_VESSELS: ${ENABLED_EXTRA_VESSELS:-}
+      # Which repos this node lands; gen-env carries it to setup-git-push (ownership = push clones).
+      SUBSTRATE_PUSH_VESSELS: ${SUBSTRATE_PUSH_VESSELS:-}
+      # Resolve URL of the node that holds the gap store; empty on the holder itself.
+      GAP_STORE_ENDPOINT: ${GAP_STORE_ENDPOINT:-}
       DISABLED_VESSELS: ${DISABLED_VESSELS:-}
       # ── Push capability and autonomy ─────────────────────────────────────────
       # SUBSTRATE_GIT_PAT grants push capability; SUBSTRATE_REPO_OWNER scopes it.

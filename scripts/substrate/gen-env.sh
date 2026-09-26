@@ -1440,6 +1440,13 @@ echo "[gen-env] wrote per-model llm-resolver env files (opus, haiku, google)"
   [ -n "${ENABLED_VESSELS:-}" ]     && echo "ENABLED_VESSELS=\"$(_env_escape "${ENABLED_VESSELS}")\""
   [ -n "${DISABLED_VESSELS:-}" ]    && echo "DISABLED_VESSELS=\"$(_env_escape "${DISABLED_VESSELS}")\""
   [ -n "${SUBSTRATE_BIND_HOST:-}" ] && echo "SUBSTRATE_BIND_HOST=\"$(_env_escape "${SUBSTRATE_BIND_HOST}")\""
+  # Which repos this node lands (its push clones). setup-git-push.service reads it from this
+  # file; without the carry the setting given at launch was dropped and every node cloned, and
+  # therefore owned, every repo (decentralized compose ownership: ownership = push clones).
+  [ -n "${SUBSTRATE_PUSH_VESSELS:-}" ] && echo "SUBSTRATE_PUSH_VESSELS=\"$(_env_escape "${SUBSTRATE_PUSH_VESSELS}")\""
+  # Where the gap store lives when this node does not hold it (a placement fact, like
+  # IDENTITY_VESSEL_URL): development-vessel forwards substrateGap reads and writes there.
+  [ -n "${GAP_STORE_ENDPOINT:-}" ] && echo "GAP_STORE_ENDPOINT=\"$(_env_escape "${GAP_STORE_ENDPOINT}")\""
   # Peering (see the resolution block above). Conditional, so a substrate that
   # was never peered stays unpeered and discovery keeps its own defaults.
   [ -n "${MAX_PEER_DEPTH:-}" ]             && echo "MAX_PEER_DEPTH=\"$(_env_escape "${MAX_PEER_DEPTH}")\""
