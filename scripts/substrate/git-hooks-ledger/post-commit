@@ -1,0 +1,4 @@
+#!/bin/sh
+. "$(dirname "$0")/_record.sh"
+sha=$(git rev-parse HEAD 2>/dev/null) && ledger_emit commit "$(ledger_commit_fields "$sha")"
+ledger_chain post-commit "$@"
