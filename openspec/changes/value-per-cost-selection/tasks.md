@@ -33,7 +33,7 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   a per-compose accumulator sums `{input_tokens, output_tokens, calls, cost_usd}` by stage;
   the compose report (`:6899-6900`) and `attemptOutcome` carry the totals. Falsifier: the
   next compose report has non-zero tokens equal to its `llmSpend` sum.
-- [ ] 1.3 goal-host `llm-router.ts` + `index.ts`: key usage by dispatch id via
+- [x] 1.3 LANDED goal-host `4eaad89` (1.3a llm-router.ts, 23:55:51) and `44e5615` (1.3b index.ts, 23:57:5x), both byte-equal; 1.3b (6 edits on the 17k-line index.ts) landed in ~1 min with 9 'accepted goal-supplied unique anchor' lines, i.e. 2.6 verified on the largest file. Falsifier pending node-1 goal-host restart. — goal-host `llm-router.ts` + `index.ts`: key usage by dispatch id via
   `dispatchContext`, count calls, stamp `record.cost` before `flushRouterFeedback`, pass
   real tokens/cost to `recordGoalPath` and `persistSatisfierTrace`, replace `costUsd: 0`.
   Falsifier: a walk that called the LLM writes an execution row with non-zero `tokens_in`
