@@ -11,10 +11,12 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
 
 - [x] 0.1 Autonomous picks held on both nodes (node 1: `autonomous_pick` lease renewed from
   the operator session; node 2: the Documentation session's renew loop). Directed work only.
-- [ ] 0.2 Record baselines with the queries in design.md §Measures: verified closures per
-  day (gaps.json jq), feature_compose landed share over 7 d (baseline 297/1,826 = 16%),
-  walk yield (152/713 = 21% on 2026-09-26), structural-refusal share of autonomous picks
-  (≈60% on node 1, 2026-09-26). Cost cannot be measured until phase 1.
+- [x] 0.2 Baselines recorded 2026-09-26 23:5xZ (queries in design.md §Measures):
+  verified closures (closed with a passed falsifier) per day 14 (09-23), 13 (09-24), 7 (09-26);
+  feature_compose landed 297/1,828 = 16.2% over 7 d and 56/455 = 12.3% over the last day;
+  walk yield 152/713 = 21% (09-26); structural-refusal share of node-1 autonomous picks
+  ≈60% (09-26). Recorded execution cost over the last day: $0.52 across 38,845 rows and
+  30.8 M input tokens, i.e. cost accounting is effectively absent until phase 1.
 
 ## 1. Spend accounting (measure before changing behaviour)
 
