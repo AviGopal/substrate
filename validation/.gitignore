@@ -1,2 +1,4 @@
 # Run outputs are never committed.
 runs/
+# Runtime-state snapshots (activity templates backed up during runs) belong in the container volume, not git.
+reports/*/backup-*/
