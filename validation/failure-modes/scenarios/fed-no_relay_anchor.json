@@ -1,0 +1,19 @@
+{
+  "id": "fed-no_relay_anchor",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architecture",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "FALSIFIER (closure predicate — carried here because substrateGap_write discards a free-text falsifier): GET /bootstrap r",
+  "description": "FALSIFIER (closure predicate — carried here because substrateGap_write discards a free-text falsifier): GET /bootstrap returns a non-empty relay_multiaddrs, OR the transport holds a reservation with no relay anchor configured (direct-only overlay is a valid answer). || DETECTED BY: federation-probe-tick, an independent ephemeral-peer oracle; witnessed by static , never by the transport's own health report. || CONFIRMED OVER 2 consecutive QUIESCENT sweeps (no unit changed MainPID or NRestarts during them), so this is not a cutover artefact. || EVIDENCE (sweep-2026-09-26T08:40:20.210Z): I2_relay_anchor: {\"note\":\"relay_multiaddrs is empty and is derived from REGISTERED CIRCUITS — circuits need a transport, and the transport refuses to start without an anchor. The bootstrap is circular.\"} || CONTEXT: part of the federation overlay break tracked as host-independent-federation-join-broken and specified in openspec/changes/2026-09-12-host-independent-federation-join/proposal.md. This row is the re-measured, self-detected form — it closes when the probe says so, not when someone says it landed.",
+  "goal_text": "FALSIFIER (closure predicate — carried here because substrateGap_write discards a free-text falsifier): GET /bootstrap returns a non-empty relay_multiaddrs, OR the transport holds a reservation with no relay anchor configured (direct-only overlay is a valid answer). || DETECTED BY: federation-probe-tick, an independent ephemeral-peer oracle; witnessed by static , never by the transport's own health report. || CONFIRMED OVER 2 consecutive QUIESCENT sweeps (no unit changed MainPID or NRestarts during them), so this is not a cutover artefact. || EVIDENCE (sweep-2026-09-26T08:40:20.210Z): I2_relay_anchor: {\"note\":\"relay_multiaddrs is empty and is derived from REGISTERED CIRCUITS — circuits need a transport, and the transport refuses to start without an anchor. The bootstrap is circular.\"} || CONTEXT: part of the federation overlay break tracked as host-independent-federation-join-broken and specified in openspec/changes/2026-09-12-host-independent-federation-join/proposal.md. This row is the re-measured, self-detected form — it closes when the probe says so, not when someone says it landed.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "fed:no_relay_anchor",
+  "source_gap_source": "substrate_detected"
+}
