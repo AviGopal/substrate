@@ -34,9 +34,14 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   real tokens/cost to `recordGoalPath` and `persistSatisfierTrace`, replace `costUsd: 0`.
   Falsifier: a walk that called the LLM writes an execution row with non-zero `tokens_in`
   and `cost_usd`.
-- [ ] 1.4 ias-executor-ts `src/hosts/vessel-daemon.ts:315`: pass `usage.cost_usd` through
-  instead of `0`. Falsifier: `SELECT math::sum(cost_usd) FROM execution WHERE created_at >
-  time::now()-1h` is > 0 after 1.1–1.4.
+- [ ] 1.4 ias-executor-ts `src/hosts/vessel-daemon.ts:315`: pass `usage.cost_usd` (and tokens)
+  through instead of `0`. Pre-validated (goals/1.4-executor-cost.txt). CORRECTED scope: this
+  site only publishes the `task.completed` event (`/v2/events/publish`), it does not write the
+  `execution` table, so it cannot satisfy the execution-cost falsifier (that is 1.1–1.3's).
+  Land AFTER 1.1 (no `cost_usd` exists until then). Consumers import a copied `dist`, so the
+  change needs a rebuild and re-propagation to take effect. Falsifier: a `task.completed`
+  event for an LLM-resolving task carries non-zero `cost_usd`. Phase-1 execution falsifier:
+  `SELECT math::sum(cost_usd) FROM execution WHERE created_at > time::now()-1h` rises after 1.1–1.3.
 
 ## 2. Feasibility at admission (stop the structural waste)
 
