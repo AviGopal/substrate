@@ -179,6 +179,38 @@ else
   fi
 fi
 
+# 3b. What a composer node needs to compose the repos it lands. feature_compose grounds
+#     each target from $SUPER_REPO_DIR/repos/<v> (cloned --no-recurse-submodules above,
+#     so those checkouts start empty and grounding reads 0 bytes), and a compose worktree
+#     links node_modules to the push clone's, where a `file:../<dep>` dependency is a COPY
+#     of the sibling clone made at install time: a dep that was never built (its dist/ is
+#     gitignored) installs without its entry points and every file importing it fails
+#     TS2307. Measured on a second composer node: both failures refused every compose on
+#     its owned repos until fixed by hand. So, per landed vessel: initialise its super-repo
+#     checkout, clone and build each file: dependency, then install the vessel's clone.
+if [ -d "$SUPER_REPO_DIR/.git" ]; then
+  for v in $VESSELS; do
+    git -C "$SUPER_REPO_DIR" submodule update --init -q "repos/$v" 2>/dev/null \
+      || echo "[setup-git-push] WARN super-repo checkout of repos/$v not initialised"
+    pj="$CLONE_DIR/$v/package.json"
+    [ -f "$pj" ] || continue
+    deps=$(grep -oE '"file:\.\./[A-Za-z0-9._-]+"' "$pj" | sed -E 's#"file:\.\./([^"]+)"#\1#')
+    [ -n "$deps" ] || continue
+    for dep in $deps; do
+      dd="$CLONE_DIR/$dep"
+      [ -d "$dd/.git" ] || git clone -q --branch dev "https://github.com/${REPO_OWNER}/$dep.git" "$dd" \
+        || { echo "[setup-git-push] WARN clone failed for $dep (file: dependency of $v)"; continue; }
+      if [ ! -d "$dd/dist" ]; then
+        (cd "$dd" && bun install >/dev/null 2>&1 && bun run build >/dev/null 2>&1) \
+          && echo "[setup-git-push] built $dep (file: dependency of $v)" \
+          || echo "[setup-git-push] WARN build failed for $dep (file: dependency of $v)"
+      fi
+    done
+    (cd "$CLONE_DIR/$v" && bun install >/dev/null 2>&1) \
+      || echo "[setup-git-push] WARN install failed in the $v clone"
+  done
+fi
+
 # 4. Placement gate on the super-repo clone. A substrate-authored commit that adds
 #    a file outside the tracked layout (walk scratch swept up by a drift commit,
 #    template placeholders written as literal paths) is refused by the same
