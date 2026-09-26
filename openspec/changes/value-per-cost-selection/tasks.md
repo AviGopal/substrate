@@ -20,7 +20,7 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
 
 ## 1. Spend accounting (measure before changing behaviour)
 
-- [ ] 1.1 llm-resolver `src/index.ts`: return `usage.cost_usd` on every completion
+- [x] 1.1 LANDED llm-resolver `7d7bf0a` (23:45:23; byte-equal except one cosmetic space). Falsifier PASSED 23:47: a 12-token completion reported `usage.cost_usd` 4.2e-06 and `llmSpendSummary.since_start` rose by exactly 1 call / 10 in / 2 out / $4.2e-06. — llm-resolver `src/index.ts`: return `usage.cost_usd` on every completion
   (provider-reported cost when present, else tokens × arm `cost_per_mtok`); add usage to the
   credit-fallback path (`:616-619`); accept `execution_id`/`dispatch_id`/`caller` on the
   request; aggregate spend IN MEMORY per 3600 s window (no per-call I/O: a per-call pool
@@ -29,7 +29,7 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   Pre-validated (goals/1.1-llm-resolver-cost.txt, 6 edits). Falsifier: one completion →
   `usage.cost_usd > 0` for a paid model with a policy arm, and `llmSpendSummary.current`
   rises by exactly that completion's tokens and cost.
-- [ ] 1.2 development-vessel `feature-compose.ts`: `llmCall` (`:366-445`) returns usage;
+- [x] 1.2 LANDED `98bc2b5` (23:33:37; re-drafted, cosmetic quote change) — but it SILENTLY REVERTED 2.6 (coalesced retry inherited a stale-base compose; gap filed); falsifier (non-zero compose-report tokens) pending the next compose. — development-vessel `feature-compose.ts`: `llmCall` (`:366-445`) returns usage;
   a per-compose accumulator sums `{input_tokens, output_tokens, calls, cost_usd}` by stage;
   the compose report (`:6899-6900`) and `attemptOutcome` carry the totals. Falsifier: the
   next compose report has non-zero tokens equal to its `llmSpend` sum.
@@ -49,7 +49,7 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
 
 ## 2. Feasibility at admission (stop the structural waste)
 
-- [ ] 2.6 (FIRST in phase 2; blocks landing on large files) `feature-compose.ts` anchor
+- [x] 2.6 LANDED `afc7d6d` (23:26:50), reverted by 98bc2b5, RE-LANDED `c10e74a` (23:39:00), byte-equal both times. (FIRST in phase 2; blocks landing on large files) `feature-compose.ts` anchor
   provenance (~:40, log ~:4444): accept a goal-supplied old text that occurs exactly once in
   the target file even when it lies outside the grounding window; still reject drafter-invented
   anchors. Measured: 1.2 (4 correct edits on the 6k-line file) and the human-surface store.ts
