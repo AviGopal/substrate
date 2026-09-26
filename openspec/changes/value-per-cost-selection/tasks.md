@@ -22,9 +22,13 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
 
 - [ ] 1.1 llm-resolver `src/index.ts`: return `usage.cost_usd` on every completion
   (provider-reported cost when present, else tokens × arm `cost_per_mtok`); add usage to the
-  credit-fallback path (`:616-619`); accept `execution_id`/`dispatch_id` on the request;
-  emit one `llmSpend` impulse per call. Falsifier: one completion → `usage.cost_usd > 0`
-  for a paid model and exactly one `llmSpend` with matching tokens.
+  credit-fallback path (`:616-619`); accept `execution_id`/`dispatch_id`/`caller` on the
+  request; aggregate spend IN MEMORY per 3600 s window (no per-call I/O: a per-call pool
+  write would rewrite `pool/standing.json` on every completion) and serve it as the read
+  shape `llmSpendSummary` (current / previous window, since start), one log line per window.
+  Pre-validated (goals/1.1-llm-resolver-cost.txt, 6 edits). Falsifier: one completion →
+  `usage.cost_usd > 0` for a paid model with a policy arm, and `llmSpendSummary.current`
+  rises by exactly that completion's tokens and cost.
 - [ ] 1.2 development-vessel `feature-compose.ts`: `llmCall` (`:366-445`) returns usage;
   a per-compose accumulator sums `{input_tokens, output_tokens, calls, cost_usd}` by stage;
   the compose report (`:6899-6900`) and `attemptOutcome` carry the totals. Falsifier: the
@@ -45,6 +49,13 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
 
 ## 2. Feasibility at admission (stop the structural waste)
 
+- [ ] 2.6 (FIRST in phase 2; blocks landing on large files) `feature-compose.ts` anchor
+  provenance (~:40, log ~:4444): accept a goal-supplied old text that occurs exactly once in
+  the target file even when it lies outside the grounding window; still reject drafter-invented
+  anchors. Measured: 1.2 (4 correct edits on the 6k-line file) and the human-surface store.ts
+  goal were both discarded as "anchor not in window", then re-drafted at LLM cost and
+  rejected (119 re-drafts on 2026-09-26). Falsifier: the 1.2 goal lands byte-equal with no
+  re-draft line in the compose log.
 - [ ] 2.1 `gap-to-feature.ts` `admitActionableGaps`: push-scope gate after the protected
   check, memoised per vessel per pass, using `gateLanding` on the push clone's remote
   (same directory as the cutover's `hostRepoRoot`); replace the literal protected set at
@@ -87,7 +98,7 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
 ## 4. Budget and breaker
 
 - [ ] 4.1 `spendEnvelope` + `spendEnvelope_debit` resolvers on one owner (hub), registered
-  `unique_authoritative`, debited from `llmSpend`. Falsifier: two nodes resolve the same
+  `unique_authoritative`, debited from each node's `llmSpendSummary` window deltas (not per-call writes). Falsifier: two nodes resolve the same
   envelope and its `spent_usd` rises with their combined spend.
 - [ ] 4.2 Auto-pick reads the envelope via discovery in the pre-selection block; exhausted
   or paused → non-attempt `stage:budget`; unreachable → no compose. Falsifier: set

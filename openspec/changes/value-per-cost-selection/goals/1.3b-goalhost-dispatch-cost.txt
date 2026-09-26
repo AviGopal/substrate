@@ -1,0 +1,52 @@
+In repos/goal-host-vessel/src/index.ts, register the dispatch-id reader with the LLM router, stamp record.cost with tokens_in, tokens_out, llm_calls, cost_usd and wall_ms before router usage is flushed, attribute real tokens and cost to persisted execution traces and goal paths, and surface cost on GET /executions. Apply exactly these 6 edits; each old text occurs exactly once:
+EDIT 1
+old:
+import { routedComplete, routedText, flushRouterFeedback, unwrapLlmContent, peekRouterUsage } from "./llm-router";
+new:
+import { routedComplete, routedText, flushRouterFeedback, unwrapLlmContent, peekRouterUsage, setRouterDispatchIdReader, peekDispatchUsage, takeDispatchUsageDelta } from "./llm-router";
+EDIT 2
+old:
+const dispatchContext = new AsyncLocalStorage<{ dispatchId: string }>();
+new:
+const dispatchContext = new AsyncLocalStorage<{ dispatchId: string }>();
+// The LLM router keys usage (tokens, calls, cost) by the dispatch id it reads from this same context.
+setRouterDispatchIdReader(() => dispatchContext.getStore()?.dispatchId);
+EDIT 3
+old:
+        cost_usd: costUsd || 0,
+new:
+        cost_usd: costUsd || peekDispatchUsage(dispatchContext.getStore()?.dispatchId).costUsd || 0,
+EDIT 4
+old:
+async function persistSatisfierTrace(trace: ExecutionTrace): Promise<void> {
+  try {
+new:
+async function persistSatisfierTrace(trace: ExecutionTrace): Promise<void> {
+  // SPEND ACCOUNTING: every trace persisted here used to carry costUsd 0 and, off the floor,
+  // tokens 0. Attribute the LLM usage this dispatch made since its previous persisted trace,
+  // so each execution row carries real tokens/cost and a dispatch's rows sum to its total.
+  const _spend = takeDispatchUsageDelta(dispatchContext.getStore()?.dispatchId);
+  if (!trace.costUsd && _spend.costUsd > 0) trace.costUsd = _spend.costUsd;
+  if (!trace.tokensInput && _spend.tokensIn > 0) trace.tokensInput = _spend.tokensIn;
+  if (!trace.tokensOutput && _spend.tokensOut > 0) trace.tokensOutput = _spend.tokensOut;
+  try {
+EDIT 5
+old:
+      if (learningMode !== "observe") void flushRouterFeedback(goalHashOf(String(goal ?? "")), seek.reached === true);
+new:
+      // SPEND ACCOUNTING: stamp this dispatch's LLM cost on its record before router usage is
+      // flushed, keyed by the explicit dispatch id (not the goal hash, which concurrent
+      // dispatches of one goal share). Re-entering the context lets the failed-walk trace
+      // persisted below attribute the same dispatch's usage.
+      const _costDid = typeof variables.dispatch_id === "string" && variables.dispatch_id.length > 0 ? variables.dispatch_id : dispatchId;
+      dispatchContext.enterWith({ dispatchId: _costDid });
+      const _spend = peekDispatchUsage(_costDid);
+      (record as { cost?: { tokens_in: number; tokens_out: number; llm_calls: number; cost_usd: number; wall_ms: number } }).cost = { tokens_in: _spend.tokensIn, tokens_out: _spend.tokensOut, llm_calls: _spend.calls, cost_usd: _spend.costUsd, wall_ms: (record.endedAt ?? Date.now()) - record.startedAt };
+      if (learningMode !== "observe") void flushRouterFeedback(goalHashOf(String(goal ?? "")), seek.reached === true);
+EDIT 6
+old:
+        learning: record.learning ?? null,
+new:
+        learning: record.learning ?? null,
+        cost: (record as { cost?: unknown }).cost ?? null,
+Done when: all 6 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.
