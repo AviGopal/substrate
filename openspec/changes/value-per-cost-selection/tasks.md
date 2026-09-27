@@ -98,6 +98,19 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   Value: cheaper (no plan/draft tokens) and reliable (the pre-validated bytes land). Falsifier: 4b.2's goal
   lands byte-equal with 0 LLM calls in its compose report (tokens from 1.2's accounting).
 
+- [ ] 2.8 Refuse a free-text (no gap context) compose before the planning call. EVIDENCE
+  2026-09-27: `adhoc` composes landed 0 of 122 over the week; each drafted, applied and
+  typechecked, then the semantic gate refused "no gap context (free-text spec)". That gate has
+  failed closed on purpose since 575514d (07-19); the comment above it still says PASS and is
+  stale. Senders: the walk's `auto-bridge-feature_compose` step (binds no gap; today's 6 were
+  goal b6b6c771 falling through after its early compose timed out at 313 s, the cause 3.3
+  removed), apply-proposal-as-patch's free-text route, and perf-canary's live attempts (which
+  therefore never stage either). A human-surface goal enters the same `/run-goal` path, so the
+  exposure is shared, not a parity difference. The refusal sits beside the ungrounded refusal;
+  dry runs return before the gate and are exempt. PRE-VALIDATED on f70160f+4.0a: tsc 0/0;
+  feature-compose tests: the same 2 fail on the parent, no new failure. Falsifier: a gapless
+  non-dry compose logs `[fc-no-gap] REFUSED` with zero llm-resolver completions for it, and
+  `adhoc` rows with nonzero tokens stop appearing. Goal: goals/2.8-refuse-no-gap-compose.txt.
 ## 3. Termination and negative knowledge
 
 PRIORITY RAISED 2026-09-27 01:20: non-terminating dispatches caused, in one session, a false 'failed'
