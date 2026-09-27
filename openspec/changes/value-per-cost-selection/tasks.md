@@ -252,7 +252,7 @@ metrics lookup (variant_performance_metrics by activity_id/variant_id) with no i
   `context_thompson_scores`; `tokens_sum` on `variant_performance_metrics`; increment at
   `posterior-update.ts:1238-1260` and `:1164`. Falsifier: fields rise with executions.
 - [ ] 5.2 Remove cost from `successYield` (`posterior-update.ts:327-346`); record the change
-  and compare posteriors a day before/after (law 12). IN FLIGHT 2026-09-27 (goal
+  and compare posteriors a day before/after (law 12). LANDED activity-api `97adc04` 2026-09-27 07:31 (BYTE-EQUAL; goal
   goals/5.1a-success-yield-without-cost.txt): `quality = 0.5 + 0.5·productivity`. Cost entered the
   yield only once phase 1 populated `cost_usd` (before, every cost was 0 → costScore 1), so for
   cost-free rows this is byte-for-byte the pre-phase-1 update; costed successes stop being
@@ -274,8 +274,8 @@ metrics lookup (variant_performance_metrics by activity_id/variant_id) with no i
   (`/workspace/gap-class-posteriors.json`, read by the rerank at gap-to-feature.ts:1219) has
   α = 1 on essentially every class (node 1 `route-edit` α1/β195): β+1 on every non-infrastructure
   compose failure, α+1 only at `closeLandedGap` and the sweep, and operator-verified closes never
-  credit it. (i) `closeLandedGap` records `closed_reason: landed_verified` + `landed_sha` (goal
-  goals/5.1b-close-landed-gap-reason.txt, queued; tests 245 pass / 4 fail on both). (ii)/(iii)
+  credit it. (i) LANDED `febc7da` (BYTE-EQUAL): `closeLandedGap` records `closed_reason: landed_verified` + `landed_sha` (goal
+  goals/5.1b-close-landed-gap-reason.txt; tests 245 pass / 4 fail on both). (ii)/(iii)
   DEFERRED: a close hook in substrate-gap.ts would credit whichever node serves
   `substrateGap_write` (operator closes arrive on node 1), but the file is node-local and the
   rerank for autonomous picks runs where compose selection runs; needs a discovery-routed write,
