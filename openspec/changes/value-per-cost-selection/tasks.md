@@ -98,7 +98,7 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   Value: cheaper (no plan/draft tokens) and reliable (the pre-validated bytes land). Falsifier: 4b.2's goal
   lands byte-equal with 0 LLM calls in its compose report (tokens from 1.2's accounting).
 
-- [ ] 1.5d Default the caller in development-vessel `llm-completion-dispatch.ts`. EVIDENCE
+- [ ] 1.5d LANDED `67a25ea` (06:51:44, BYTE-EQUAL, one file); falsifier read in the first full hour after the node restarts. Default the caller in development-vessel `llm-completion-dispatch.ts`. EVIDENCE
   2026-09-27 (investigation of the ledger): llm-resolver keys spend on body `caller`/`task_type`
   only (`index.ts:1504-1507`); the $5.24 deepseek `unknown|unknown` was mostly goal-host tool
   loops before the 04:31/04:46 restarts picked up 1.5a–c, but ~37 calls/h remain, mostly
