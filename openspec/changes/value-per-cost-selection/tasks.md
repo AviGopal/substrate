@@ -98,6 +98,17 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   Value: cheaper (no plan/draft tokens) and reliable (the pre-validated bytes land). Falsifier: 4b.2's goal
   lands byte-equal with 0 LLM calls in its compose report (tokens from 1.2's accounting).
 
+- [ ] 1.5d Default the caller in development-vessel `llm-completion-dispatch.ts`. EVIDENCE
+  2026-09-27 (investigation of the ledger): llm-resolver keys spend on body `caller`/`task_type`
+  only (`index.ts:1504-1507`); the $5.24 deepseek `unknown|unknown` was mostly goal-host tool
+  loops before the 04:31/04:46 restarts picked up 1.5a–c, but ~37 calls/h remain, mostly
+  activity-template tasks reaching this dispatcher through ias-executor's `vessel-resolver.ts`
+  (loaded from `dist/`, so fixing it there needs the rebuild 1.4 is waiting on). An explicit
+  caller wins; otherwise `development-vessel:llm_completion_dispatch:<system-prompt slug>`.
+  task_type is deliberately NOT defaulted: a new task_type starts every arm at 1/1 and would
+  explore expensive arms. PRE-VALIDATED: tsc 0/0; dispatch tests 26/26 on parent and patched.
+  Falsifier: in the hour after landing, node 1's `unknown` caller share of spend falls from
+  ~57% ($0.089 of $0.156) to under 10%. Goal: goals/1.5d-dispatch-caller-default.txt.
 - [ ] 2.8 Refuse a free-text (no gap context) compose before the planning call. EVIDENCE
   2026-09-27: `adhoc` composes landed 0 of 122 over the week; each drafted, applied and
   typechecked, then the semantic gate refused "no gap context (free-text spec)". That gate has
@@ -149,7 +160,7 @@ file's latest commit).
   STAYS OPEN (2026-09-27): publishing P220 means recreating both containers (neither node
   publishes 8220; the manifest publishes a fixed port list), a lifecycle action that is the
   user's decision. Bootstrap path 4.0a below gets the cross-node sum without it.
-- [ ] 4.0a Cross-node spend via a relay. development-vessel already advertises a routable
+- [ ] 4.0a LANDED (06:37–06:44, all three BYTE-EQUAL, one file each, no other commits): (1) `e6f07a0`, (2) `55c0649`, (3) `c3c4041`. Node 2 restarted 06:45:05 and advertises the relay; node 1 converges on its next pull-sync. Falsifier pending. NOTE: seqland's `runtime==clone` compares against the node-1 clone WORKING TREE, which pull-sync advances; on a node that has not synced yet it compares two stale files. Cross-node spend via a relay. development-vessel already advertises a routable
   endpoint on each node (`host.containers.internal:18090` / `:26090`; both pools are visible from
   both nodes), so it relays its OWN node's llm-resolver summary under a distinct shape
   `llmSpendSummaryNode` (read at use time, nothing written, a distinct name so nothing is

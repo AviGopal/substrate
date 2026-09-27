@@ -1,0 +1,16 @@
+In repos/development-vessel/src/resolvers/llm-completion-dispatch.ts, always send a caller to llm-resolver: keep an explicit pointer.caller, otherwise default it to development-vessel:llm_completion_dispatch plus a slug of the system prompt, so activity-template LLM spend stops being recorded as caller unknown. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+    ...(typeof (pointer as { caller?: unknown }).caller === "string" ? { caller: (pointer as { caller?: string }).caller } : {}),
+new:
+    // CALLER DEFAULT (value-per-cost-selection 1.5d). Activity-template tasks reach this
+    // resolver through ias-executor's vessel-resolver with no caller, so on 2026-09-27 most of
+    // the ledger's `caller: unknown` spend was untraceable. A caller that names itself wins;
+    // otherwise name this dispatcher plus a slug of the (static, per-template) system prompt,
+    // which tells templates apart without touching the executor.
+    caller: typeof (pointer as { caller?: unknown }).caller === "string" && (pointer as { caller?: string }).caller
+      ? (pointer as { caller?: string }).caller
+      : "development-vessel:llm_completion_dispatch" + (typeof pointer.system_prompt === "string" && pointer.system_prompt.trim()
+        ? ":" + pointer.system_prompt.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40).replace(/-+$/, "")
+        : ""),
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.
