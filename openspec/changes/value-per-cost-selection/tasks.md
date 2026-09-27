@@ -77,7 +77,7 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   `:1534` with `PROTECTED_VESSELS`. Falsifier: with a vessel whose remote is a local bare
   repo, the admission log shows `push_scope_refused(<vessel>)` and no fc-plan for it; a
   control vessel with an owner/repo remote is still admitted.
-- [ ] 2.2 (ROLLED BACK by the lane's test gate 00:16/00:21: the admission test encoded the old "proposal-backed: always admit" policy (operator test update pre-verified: fails before, passes after), and the first G2 also excluded typecheck-class gaps before the phantom-typecheck path (2 tests); G2 is being revised to reuse that path's predicate, then 2.5/2.4 re-chained) Actionable-only admission: no edit site and falsifier not class1/class2 →
+- [x] 2.2 LANDED `c23b601` (00:53:12, revised G2 + operator test update 9bf8512) — then DOUBLE-APPLIED by the same non-terminating dispatch as `194df79` (01:19:17); duplicate block inert but must be removed. (earlier: ROLLED BACK by the lane's test gate 00:16/00:21: the admission test encoded the old "proposal-backed: always admit" policy (operator test update pre-verified: fails before, passes after), and the first G2 also excluded typecheck-class gaps before the phantom-typecheck path (2 tests); G2 is being revised to reuse that path's predicate, then 2.5/2.4 re-chained) Actionable-only admission: no edit site and falsifier not class1/class2 →
   `needs_information`, regardless of proposal report (`:1668`) and on every pick (drop the
   one-shot `alreadyInvestigated` bypass for these). Falsifier: 0 fc-plans for `(no-target)`
   gaps over a day of picks.
@@ -88,10 +88,16 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
 - [ ] 2.4 LLM-availability probe in the pre-selection capacity block (`~:3673`), short-TTL
   cached. Falsifier: with `llm_completion` de-advertised, selection returns a non-attempt
   without acquiring a slot.
-- [ ] 2.5 Landability floor before the Thompson rerank (`:1215`). Falsifier: a score-0
+- [x] 2.5 LANDED `96bf098` (00:58:47, byte-equal). Landability floor before the Thompson rerank (`:1215`). Falsifier: a score-0
   candidate is never picked over a ≥0.5 candidate.
 
 ## 3. Termination and negative knowledge
+
+PRIORITY RAISED 2026-09-27 01:20: non-terminating dispatches caused, in one session, a false 'failed'
+verdict (ec38999d), a silent revert (98bc2b5 over afc7d6d), live-source writes (11:57, 13:02) and a double
+apply (194df79 over c23b601). 3.1–3.3 land before anything else that edits gap-to-feature.ts. 3.1 also
+skips a retry when ANY commit for the goal hash landed since dispatch start (not only when it is the
+file's latest commit).
 
 - [ ] 3.1 goal-host early edit-intent (`index.ts:12660-12770`): on timeout, exception or
   non-favourable return, bounded git probe on `origin/dev` for a commit carrying the goal's
