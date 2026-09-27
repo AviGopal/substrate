@@ -99,15 +99,15 @@ apply (194df79 over c23b601). 3.1–3.3 land before anything else that edits gap
 skips a retry when ANY commit for the goal hash landed since dispatch start (not only when it is the
 file's latest commit).
 
-- [ ] 3.1 goal-host early edit-intent (`index.ts:12660-12770`): on timeout, exception or
+- [x] 3.1 LANDED `f3ffd7d` (02:06, byte-equal). goal-host early edit-intent (`index.ts:12660-12770`): on timeout, exception or
   non-favourable return, bounded git probe on `origin/dev` for a commit carrying the goal's
   route-edit id (do not require the report sha to match) before falling back. Falsifier:
   replay of the fe700129 / 6b6d93e2 shape ends `reached:true` citing the commit, with no
   walk steps after it.
-- [ ] 3.2 Landed-verdict latch in `runGoalWithRecovery`; every later return preserves it;
+- [x] 3.2 LANDED `f9001e9` (02:08; one equivalent regex-escape difference). Landed-verdict latch in `runGoalWithRecovery`; every later return preserves it;
   skip the post-walk compose (`:13141+`) when latched or probed-landed. Falsifier: a BUSY
   refusal after a landing leaves the final verdict landed.
-- [ ] 3.3 Find what cuts the early edit-intent fetch at 220–360 s (the AbortSignal is 900 s)
+- [x] 3.3 LANDED `1942eaf` (02:12; comment whitespace only). ROOT CAUSE: Bun's default fetch idle timeout (~300 s, fires 300–360 s) ignores the 900 s AbortSignal; fix `timeout: false` on both compose fetches. Also found: the post-walk compose routes to node 1 instead of the owner, so the double-compose guard missed node 2's report (194df79). Find what cuts the early edit-intent fetch at 220–360 s (the AbortSignal is 900 s)
   and fix it or align the budgets. Falsifier: the caller receives the compose's own report
   for composes that finish within 900 s.
 - [ ] 3.4 Negative facts: persist deterministic refusals with invalidation conditions (in
