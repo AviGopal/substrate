@@ -85,7 +85,7 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   cap only for admitted gaps (fix the increment at `:1557`); collapse the triplicated
   repeated-failure block (`:1566/:1588/:1610`). Falsifier: admission log order and counts;
   pick latency does not regress.
-- [ ] 2.4 LLM-availability probe in the pre-selection capacity block (`~:3673`), short-TTL
+- [x] 2.4 LANDED `bea12ec` (01:22:22; byte-equal to the chain end; its cutover also removed 194df79's duplicate 2.2 block). LLM-availability probe in the pre-selection capacity block (`~:3673`), short-TTL
   cached. Falsifier: with `llm_completion` de-advertised, selection returns a non-attempt
   without acquiring a slot.
 - [x] 2.5 LANDED `96bf098` (00:58:47, byte-equal). Landability floor before the Thompson rerank (`:1215`). Falsifier: a score-0
@@ -121,7 +121,7 @@ file's latest commit).
 - [ ] 4.1 `spendEnvelope` + `spendEnvelope_debit` resolvers on one owner (hub), registered
   `unique_authoritative`, debited from each node's `llmSpendSummary` window deltas (not per-call writes). Falsifier: two nodes resolve the same
   envelope and its `spent_usd` rises with their combined spend.
-- [ ] 4.2 Auto-pick reads the envelope via discovery in the pre-selection block; exhausted
+- [ ] 4.2 (EVIDENCE 2026-09-27: the event-driven gap-compose NUDGE (substrate-gap.ts ~1207/1219 → gap-compose.service) bypasses the autonomous_pick lease. One siteless gap family (db_performance_slow_queries_2026-09-18…) was re-walked 17×/h as "investigate and decompose" (~10k-token deepseek floor calls), about $3.8/h with autonomy held. An operator_hold on the 3 gaps at 01:31:45 cut total LLM spend from ≈ $5.2/h to ≈ $2.1/h over the next 10 min (remaining: mostly directed composes). The nudge path and the investigation route MUST read the same envelope/lease as auto-pick.) Auto-pick reads the envelope via discovery in the pre-selection block; exhausted
   or paused → non-attempt `stage:budget`; unreachable → no compose. Falsifier: set
   `usd_cap` to the spent value → 0 fc-plans on both nodes.
 - [ ] 4.3 Rhythm conductor and boredom resolve pause/budget via discovery, not their own
