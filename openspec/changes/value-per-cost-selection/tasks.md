@@ -49,6 +49,17 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   event for an LLM-resolving task carries non-zero `cost_usd`. Phase-1 execution falsifier:
   `SELECT math::sum(cost_usd) FROM execution WHERE created_at > time::now()-1h` rises after 1.1–1.3.
 
+- [ ] 1.5 Caller attribution: every LLM caller (goal-host floor / universal tool fallback, arg
+  synthesis, reach judge, target inference; development-vessel compose stages) passes `caller`
+  and `task_type` so `llmSpendSummary` keys name the spender. Measured 00:00–00:30Z: 57–72% of
+  spend was keyed `unknown|unknown`. Falsifier: `unknown` keys < 5% of window cost.
+- [ ] 1.6 Prompt-size ceiling: llm-resolver refuses (and logs, with caller) any single call whose
+  input tokens exceed a ceiling read from a shaped impulse (default e.g. 200k), instead of
+  serving it. Measured 00:15–00:26Z: 5 `gemini-2.5-flash` fallback calls took 3.99 M input
+  tokens (~800k each, $1.20 = 72% of spend since 23:45), coinciding with goal-host floor
+  (universal tool fallback) runs whose tool-output context grows per iteration. Falsifier: no
+  served call above the ceiling; refusals are logged with caller.
+
 ## 2. Feasibility at admission (stop the structural waste)
 
 - [x] 2.6 LANDED `afc7d6d` (23:26:50), reverted by 98bc2b5, RE-LANDED `c10e74a` (23:39:00), byte-equal both times. (FIRST in phase 2; blocks landing on large files) `feature-compose.ts` anchor
@@ -58,7 +69,7 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   goal were both discarded as "anchor not in window", then re-drafted at LLM cost and
   rejected (119 re-drafts on 2026-09-26). Falsifier: the 1.2 goal lands byte-equal with no
   re-draft line in the compose log.
-- [ ] 2.1 `gap-to-feature.ts` `admitActionableGaps`: push-scope gate after the protected
+- [x] 2.1 LANDED `3cbf979` (00:10:2x, byte-equal; routed to node 2). — `gap-to-feature.ts` `admitActionableGaps`: push-scope gate after the protected
   check, memoised per vessel per pass, using `gateLanding` on the push clone's remote
   (same directory as the cutover's `hostRepoRoot`); replace the literal protected set at
   `:1534` with `PROTECTED_VESSELS`. Falsifier: with a vessel whose remote is a local bare
