@@ -91,7 +91,7 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
 - [x] 2.5 LANDED `96bf098` (00:58:47, byte-equal). Landability floor before the Thompson rerank (`:1215`). Falsifier: a score-0
   candidate is never picked over a ≥0.5 candidate.
 
-- [ ] 2.7 Deterministic application of goal-supplied EDIT blocks. A goal carrying `EDIT i / old: / new:` blocks
+- [x] 2.7 LANDED development-vessel `f70160f` (04:28:51, BYTE-EQUAL to the pre-validated file) through the lane: the early compose was mangled by the planner (TS1127 at 2757, rolled back), the post-walk compose, routed to the owner by the Documentation session's 4.7 (fbb2fab), applied it exactly. The user approved an operator hand-land as a bootstrap exception; it was NOT needed. Falsifier (reworded: the semantic judge still runs for gap-context goals): the held 4b.2 and the fbb2fab cleanup (4.7b) land byte-equal with an `[fc-exact]` line and no plan/draft LLM calls. Deterministic application of goal-supplied EDIT blocks. A goal carrying `EDIT i / old: / new:` blocks
   whose old texts each occur exactly once in the target is applied VERBATIM by a deterministic path (splice,
   then the existing verify gates), with no LLM plan or draft. Measured: large exact edits are re-drafted by the
   planner (4b.2, 04:11), and every exact-edit goal tonight still paid for an LLM plan it did not need.
