@@ -1,0 +1,19 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, make the spend envelope reader discover and read llmSpendSummaryNode (one producer per node, relayed by development-vessel) instead of llmSpendSummary (loopback-only, so each node saw only itself), so a spend cap sums spend across nodes. Apply exactly these 3 edits; each old text occurs exactly once:
+EDIT 1
+old:
+discoverResolveUrls("poolImpulse"), discoverResolveUrls("llmSpendSummary")]);
+new:
+discoverResolveUrls("poolImpulse"), discoverResolveUrls("llmSpendSummaryNode")]);
+EDIT 2
+old:
+reason: "envelope unreadable: no llmSpendSummary producer discovered" };
+new:
+reason: "envelope unreadable: no llmSpendSummaryNode producer discovered" };
+EDIT 3
+old:
+  const sums = await Promise.all(spendUrls.map((u) => postEnvelopeRead(u, { impulse: { pointer: { type: "llmSpendSummary" } } })));
+new:
+  // One llmSpendSummaryNode producer per node (development-vessel relays its own node's
+  // llm-resolver, whose own endpoint is loopback-only), so the sum covers every node (4.0a).
+  const sums = await Promise.all(spendUrls.map((u) => postEnvelopeRead(u, { impulse: { pointer: { type: "llmSpendSummaryNode" } } })));
+Done when: all 3 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

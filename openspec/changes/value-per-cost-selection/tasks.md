@@ -133,6 +133,25 @@ file's latest commit).
 ## 4. Budget and breaker
 
 - [ ] 4.0 (prerequisite, found by the 4.x design) Each node's llm-resolver needs its own vessel id, a routable endpoint and a published P220, so discovery lists both `llmSpendSummary` producers. Today both register the same id with a loopback endpoint and compose2 does not publish P220, so each node sees only its own spend and a global cap is effectively 2× until this lands.
+  STAYS OPEN (2026-09-27): publishing P220 means recreating both containers (neither node
+  publishes 8220; the manifest publishes a fixed port list), a lifecycle action that is the
+  user's decision. Bootstrap path 4.0a below gets the cross-node sum without it.
+- [ ] 4.0a Cross-node spend via a relay. development-vessel already advertises a routable
+  endpoint on each node (`host.containers.internal:18090` / `:26090`; both pools are visible from
+  both nodes), so it relays its OWN node's llm-resolver summary under a distinct shape
+  `llmSpendSummaryNode` (read at use time, nothing written, a distinct name so nothing is
+  counted twice), and the 4.1 reader sums that shape. Three one-file goals, in order:
+  (1) `routes/impulses.ts` dispatch case, marked `@shape-dispatch:private` until (2);
+  (2) `config.ts` advertises it; (3) `gap-to-feature.ts` reader switches shape. A refused
+  connection reports zero with `unavailable:true`; a timeout or malformed answer carries no
+  `current`, so the reader treats that node as unreadable rather than undercounting.
+  PRE-VALIDATED on f70160f: tsc 0/0; shape-dispatch-check agrees (259→260 shapes, 262→263
+  cases); covering tests 445/445 (router) and 245/249 on gap-to-feature (the same 4 fail on the
+  parent). Falsifier: `vesselCapability` for `llmSpendSummaryNode` lists two producers from
+  either node, each answers; with a generous `spendEnvelope` record, the verdict's `spent_usd`
+  ≈ node-1 window + node-2 window read directly from each 8220. Measured motive: on
+  2026-09-27 node 1 billed $9.53 and node 2 $2.78 between ~00:40 and 06:00 UTC, and the check-in
+  read only node 1.
 - [x] 4.1 LANDED `292aff1` (03:31:01, byte-equal) and 4.2 LANDED `054de6f` (03:35:14, byte-equal): the envelope gate is in auto-pick pre-selection, the investigate-and-decompose dispatch (the lease bypass) and the event-driven nudge; no envelope record yet, so behaviour is unchanged until one is written. DESIGN (goals/4.x-design.md): envelope = pool impulse `spendEnvelope` {usd_cap_per_hour, paused, reason}, newest across all poolImpulse producers via discovery; spent = Σ llmSpendSummary (current + unexpired share of previous) across producers, cached 30 s; no record → no cap (safe to land first); unreadable after a record was seen → block. PRE-VALIDATED: 4.1 gap-to-feature.ts (3 edits: helper, pre-selection gate `stage:budget`, and the investigate-and-decompose dispatch in bumpFailedAttempts gated by envelope + autonomous_pick lease, the real bypass), 4.2 substrate-gap.ts nudge (1 edit, depends on 4.1); tsc 0/0; 29 test files, no new failure. ORIGINAL: `spendEnvelope` + `spendEnvelope_debit` resolvers on one owner (hub), registered
   `unique_authoritative`, debited from each node's `llmSpendSummary` window deltas (not per-call writes). Falsifier: two nodes resolve the same
   envelope and its `spent_usd` rises with their combined spend.
