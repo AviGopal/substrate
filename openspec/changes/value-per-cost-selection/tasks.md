@@ -91,6 +91,13 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
 - [x] 2.5 LANDED `96bf098` (00:58:47, byte-equal). Landability floor before the Thompson rerank (`:1215`). Falsifier: a score-0
   candidate is never picked over a ≥0.5 candidate.
 
+- [ ] 2.7 Deterministic application of goal-supplied EDIT blocks. A goal carrying `EDIT i / old: / new:` blocks
+  whose old texts each occur exactly once in the target is applied VERBATIM by a deterministic path (splice,
+  then the existing verify gates), with no LLM plan or draft. Measured: large exact edits are re-drafted by the
+  planner (4b.2, 04:11), and every exact-edit goal tonight still paid for an LLM plan it did not need.
+  Value: cheaper (no plan/draft tokens) and reliable (the pre-validated bytes land). Falsifier: 4b.2's goal
+  lands byte-equal with 0 LLM calls in its compose report (tokens from 1.2's accounting).
+
 ## 3. Termination and negative knowledge
 
 PRIORITY RAISED 2026-09-27 01:20: non-terminating dispatches caused, in one session, a false 'failed'
@@ -144,9 +151,9 @@ offset, so 19/20 pages repeat page 0; the rhythm-driven "refresh the substrate r
 /variants already filled the family. Per page ~1–2 s: `activity ORDER BY created_at` with no index,
 metrics lookup (variant_performance_metrics by activity_id/variant_id) with no index, run twice per page.
 
-- [ ] 4b.1 activity-api: the FTS listing path honours `offset` (or returns an empty page for
+- [x] 4b.1 LANDED activity-api `626eb63` (03:53:10, byte-equal). The FTS listing path honours `offset` (or returns an empty page for
   offset > 0). Falsifier: boredom's cycle issues ≤ 2 listing requests, not ~20.
-- [ ] 4b.2 activity-api: in-process cache of the full enriched catalogue (TTL from a shaped impulse,
+- [ ] 4b.2 NOT LANDED (04:11): the compose did NOT apply the pre-validated edits verbatim. The planner drafted its own 2-line edits (spans 31-32/47-48/68-69 against ~100-line EDIT blocks), which the semantic gate rightly rejected (unused import, recursive invalidate). Blocked on 2.7. activity-api: in-process cache of the full enriched catalogue (TTL from a shaped impulse,
   default 60 s), keyed by (orgId, projectId, accountId, scope, executionType), invalidated by the
   create/retire/promote handlers; every limit/offset slice served from it. Falsifier: DB-backed
   listings fall from ~49/min to ≤ 2/min; SurrealDB CPU falls.
