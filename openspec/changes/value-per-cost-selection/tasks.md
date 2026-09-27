@@ -51,7 +51,7 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   event for an LLM-resolving task carries non-zero `cost_usd`. Phase-1 execution falsifier:
   `SELECT math::sum(cost_usd) FROM execution WHERE created_at > time::now()-1h` rises after 1.1–1.3.
 
-- [ ] 1.5 Caller attribution: every LLM caller (goal-host floor / universal tool fallback, arg
+- [~] 1.5 PARTIAL: 1.5c LANDED `e8c58ce` (02:20, byte-equal; llm_completion_dispatch forwards caller/task_type/dispatch_id). 1.5a/1.5b (goal-host llm-router.ts/index.ts) pending rebase onto 1942eaf. Caller attribution: every LLM caller (goal-host floor / universal tool fallback, arg
   synthesis, reach judge, target inference; development-vessel compose stages) passes `caller`
   and `task_type` so `llmSpendSummary` keys name the spender. Measured 00:00–00:30Z: 57–72% of
   spend was keyed `unknown|unknown`. Falsifier: `unknown` keys < 5% of window cost.
@@ -85,7 +85,7 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   cap only for admitted gaps (fix the increment at `:1557`); collapse the triplicated
   repeated-failure block (`:1566/:1588/:1610`). Falsifier: admission log order and counts;
   pick latency does not regress.
-- [x] 2.4 LANDED `bea12ec` (01:22:22; byte-equal to the chain end; its cutover also removed 194df79's duplicate 2.2 block). LLM-availability probe in the pre-selection capacity block (`~:3673`), short-TTL
+- [x] 2.4 LANDED `bea12ec`; a second, drafted landing of the same gap (7eae3a0, 01:41, likely via the gap-closing path before 3.1) added a config-based duplicate probe in the capability-gap route; removed by `a30959a` (02:33, pre-validated; one extra blank line) (01:22:22; byte-equal to the chain end; its cutover also removed 194df79's duplicate 2.2 block). LLM-availability probe in the pre-selection capacity block (`~:3673`), short-TTL
   cached. Falsifier: with `llm_completion` de-advertised, selection returns a non-attempt
   without acquiring a slot.
 - [x] 2.5 LANDED `96bf098` (00:58:47, byte-equal). Landability floor before the Thompson rerank (`:1215`). Falsifier: a score-0
