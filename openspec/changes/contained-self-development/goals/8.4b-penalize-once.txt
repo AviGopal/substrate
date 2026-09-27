@@ -1,0 +1,16 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, make recordFalsifiedAutonomousLanding penalize a falsified landing only once: if the attempt's `#2` regressed settlement already exists in the local ledger, re-stamp the gap but skip the outcome, posterior and settlement, because the gap store can silently drop the regressed_by write and the next sweep would otherwise penalize the same landing again. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+  joinDecisionOutcome(meta, { landed: true, verdict: "UNFAVORABLE", commit: sha, falsified_after_restart: true });
+  updateClassPosterior(gapClassOf(g), false);
+  await appendRecord("attemptSettlement", `${attemptId}#2`, { attempt_id: attemptId, settlement_seq: 2, verdict: "regressed", credit_eligible: false, shas: [sha], gap_id: String(g.id), source: "falsified_after_restart", at });
+new:
+  // The gap store can drop the stamp above (lost-update race, filed), so the next sweep may land here
+  // again for the same landing. The local ledger is durable: its #2 settlement is the once-only marker.
+  const alreadySettled = (await readRecords("attemptSettlement", { key: `${attemptId}#2` })).length > 0;
+  if (!alreadySettled) {
+    joinDecisionOutcome(meta, { landed: true, verdict: "UNFAVORABLE", commit: sha, falsified_after_restart: true });
+    updateClassPosterior(gapClassOf(g), false);
+    await appendRecord("attemptSettlement", `${attemptId}#2`, { attempt_id: attemptId, settlement_seq: 2, verdict: "regressed", credit_eligible: false, shas: [sha], gap_id: String(g.id), source: "falsified_after_restart", at });
+  }
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.
