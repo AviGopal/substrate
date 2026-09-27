@@ -65,6 +65,9 @@
 - [ ] 8.4 (deferred) Sweep auto-revert on the present branch: measurement predicate, autonomous intent, the EDITED vessel's unit restarted after the commit, no owed self-restart. Write `regressed_by {sha, at, revert_status: pending}`, UNFAVORABLE outcome, class posterior and settlement BEFORE calling the cutover (the revert restarts the sweep's own vessel). Awaiting-restart gaps keep the sweep re-running. Falsifier: fixture cases A (autonomous, evidence_resolve present ⇒ revert), B (directed ⇒ none), C (restart pending ⇒ none, sweep re-runs).
 - [x] 8.7 LANDED `00b7ab0`: decomposed shape-checked steps must carry zero_field/defect_field (15 live step/probe predicates were field-less and read 'unknown' forever).
 - [x] 8.4b LANDED `01304ad`: a falsified landing is penalized once — the local ledger's `#2` settlement is the marker, so a regressed_by stamp lost by the gap store re-stamps without a second posterior miss (probe: 2 calls → 1 settlement, β 2).
+- [x] 8.8 LANDED `6c86595`: no undirected landing compose starts while the envelope refuses (a named-gap caller had bypassed it every 10 min).
+- [x] 8.9 LANDED `f08df07`: an undirected compose of an operator_hold gap is refused BUSY (stopped a 4-second compose/narrow loop).
+- [x] 8.10 LANDED `59bfc4c`: contained admission requires a class2 check to name a measured field (49 of 60 open class2 gaps had none and could never be judged).
 - [ ] 8.5 Class detector (gap filed, operator_hold): a Class-2 predicate must read 'present' at birth or be marked `predicate_suspect` and kept unclosable.
 - [ ] 8.6 Strike limit: two auto-reverts on one gap ⇒ operator_hold / needs_information (no ping-pong).
 
