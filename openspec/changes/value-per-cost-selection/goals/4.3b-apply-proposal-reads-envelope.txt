@@ -1,0 +1,24 @@
+In repos/development-vessel/src/resolvers/apply-proposal-as-patch.ts, make an untargeted, non-dry apply_proposal_as_patch run (the autonomous funnel drain) read the fleet-wide spend envelope first and refuse with a terminal structuredError when it is paused, exhausted or unreadable; proposal_id-targeted and dry runs are not gated. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+export async function resolveApplyProposalAsPatch(pointer: ApplyProposalAsPatchPointer): Promise<ResolverResult> {
+new:
+export async function resolveApplyProposalAsPatch(pointer: ApplyProposalAsPatchPointer): Promise<ResolverResult> {
+  // SPEND ENVELOPE (value-per-cost-selection 4.3). An UNTARGETED run is the autonomous drain
+  // (funnel-drain's watchdog restart impulse, boredom), and each attempt spends LLM calls in
+  // patch_with_tools, so it obeys the fleet-wide envelope: paused, exhausted or unreadable
+  // refuses before any attempt. A proposal_id-targeted apply is directed work and a dry run
+  // spends nothing, so neither is gated. A refusal names no proposal, so it is terminal.
+  if (!pointer.proposal_id && !pointer.dry_run) {
+    let envelope: { allow: boolean; reason: string; paused?: boolean };
+    try {
+      envelope = await (await import("./gap-to-feature.js")).spendEnvelopeAllows();
+    } catch (err) {
+      envelope = { allow: false, reason: "envelope check failed: " + String(err) };
+    }
+    if (!envelope.allow) {
+      console.log(`[apply-proposal-as-patch] untargeted apply NOT started: spend envelope ${envelope.reason}`);
+      return structuredError("spend envelope: " + envelope.reason, { reason: envelope.paused ? "budget_paused" : "budget_exhausted" });
+    }
+  }
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

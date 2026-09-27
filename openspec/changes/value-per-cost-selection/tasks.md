@@ -147,6 +147,15 @@ file's latest commit).
   Falsifier: a second dispatch of a known-refused goal returns the refusal with 0 LLM
   calls; changing the invalidating condition lets it proceed.
 
+- [ ] 3.5 ROOT CAUSE FOUND (2026-09-27): all three evidence landings carry `apply_failed:true`
+  in their own compose reports (3cced35 and 24a64a8 applied 1 of 3 ops, f49d02e 4 of 5), yet the
+  verdict was FAVORABLE: `feature-compose.ts` sets `applyFailed` in the apply loop but the verdict
+  is `typecheckPass ? FAVORABLE : UNFAVORABLE`, and only the report reads the flag. Fix
+  (goals/3.5-all-edits-floor.txt): an ALL-EDITS FLOOR after the target-touched floor withholds
+  FAVORABLE when `applyFailed`, logging the failed ops; rollback and the cutover follow the
+  verdict. The repair loop never runs once applyFailed is set, so a failed op is never repaired
+  later. tsc 0/0; compose tests 240 pass, same 2 fail on the parent. Second, unfixed drop:
+  `if (ops.length > maxOps) ops.length = maxOps` truncates a plan silently.
 - [ ] 3.5 No partial reach. When a goal names N edits (strict EDIT blocks or prose "replace … with …"), the
   compose verdict and the goal's reach count how many of the requested new texts are present in the landed file
   and how many old texts are gone; below N the result is UNFAVORABLE / not reached, and the landing is not
@@ -182,9 +191,35 @@ file's latest commit).
 - [ ] 4.2 (EVIDENCE 2026-09-27: the event-driven gap-compose NUDGE (substrate-gap.ts ~1207/1219 → gap-compose.service) bypasses the autonomous_pick lease. One siteless gap family (db_performance_slow_queries_2026-09-18…) was re-walked 17×/h as "investigate and decompose" (~10k-token deepseek floor calls), about $3.8/h with autonomy held. An operator_hold on the 3 gaps at 01:31:45 cut total LLM spend from ≈ $5.2/h to ≈ $2.1/h over the next 10 min (remaining: mostly directed composes). The nudge path and the investigation route MUST read the same envelope/lease as auto-pick.) Auto-pick reads the envelope via discovery in the pre-selection block; exhausted
   or paused → non-attempt `stage:budget`; unreachable → no compose. Falsifier: set
   `usd_cap` to the spent value → 0 fc-plans on both nodes.
+- [ ] 4.3 SPLIT (2026-09-27) into three one-file goals after locating every spender. Node 2 runs
+  no boredom, no rhythm timer, funnel-drain masked; its only spenders are inside
+  development-vessel and already envelope-gated. Node 1's ungated spenders:
+  - 4.3a LANDED `c313227` (07:00:51, BYTE-EQUAL): `rhythm-conductor-tick.ts` reads the envelope
+    once per non-dry tick; not allowed → no family selected, queue not drained, reason in the
+    report (`spend_envelope`). Tests 22/22 parent and patched.
+  - 4.3b `apply-proposal-as-patch.ts`: an untargeted non-dry run (funnel-drain's watchdog restart
+    impulse, boredom) refuses with a terminal structuredError when not allowed; proposal_id and
+    dry runs ungated. This also makes the self-repair watchdog's re-enabling of funnel-drain
+    harmless (the timer can run; it cannot spend). Tests: same 1 failure on parent.
+  - 4.3c boredom-vessel `src/index.ts`: its own discovery read (boredom cannot import
+    development-vessel), identical rules (newest record across pools, spend summed over
+    `llmSpendSummaryNode`, 30 s cache, fail closed only after a record was seen); the daemon pool
+    loop dispatches nothing while not allowed. tsc 0/0; its single test passes both ways.
+  Falsifier (all three): set `spend-envelope` paused:true; within a tick the conductor reports
+  `spend_envelope: paused`, an untargeted apply refuses, boredom logs `not dispatching`; unpause.
+  NOT DONE: the self-repair script still re-enables timers that are merely stopped or disabled
+  (only `mask` survives it and pull-sync); with 4.3b that no longer spends.
 - [ ] 4.3 Rhythm conductor and boredom resolve pause/budget via discovery, not their own
   node; `paused:true` replaces budget>1. Falsifier: a pause set on the owner stops drains on
   both nodes (node 2 included).
+- [ ] 4.4 PRE-VALIDATED (goals/4.4-spend-rate-breaker.txt, 3 edits in goal-host `index.ts`):
+  in-process per-hash and global timestamp windows; thresholds from shaped policy
+  `dispatchRatePolicy` {window_s, per_hash_max, global_max}, defaults 3600/6/240; /run-goal
+  refuses right after the raw goal is read (before `resolvePathlessCodeChangeGoal`, the first LLM
+  call) with 429 and a `spend-rate-refused` record; /resolve refuses after the RECURSION guard.
+  Refusals are not counted. tsc 0/0; full goal-host suite 865 pass, the same 3 fail + 1 error on
+  the parent. Would catch the trace-store reconcile re-dispatch (constant goal text, one hash).
+  Counts reset on restart (not seeded from the dispatch store).
 - [ ] 4.4 Spend-rate breaker in `handleRunGoal` (after the draining check, on the raw goal)
   and `/resolve`: per-hash and global counts over a window from `executionStore`, thresholds
   from a shaped impulse. Falsifier: a synthetic burst of one goal is refused after the

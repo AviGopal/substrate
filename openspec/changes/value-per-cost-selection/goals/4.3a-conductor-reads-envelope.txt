@@ -1,0 +1,41 @@
+In repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts, make the rhythm conductor read the fleet-wide spend envelope (spendEnvelopeAllows from ./gap-to-feature.js) once per non-dry tick and, when it is paused, exhausted or unreadable, select no family and not drain the boredom queue, reporting the envelope reason. Apply exactly these 3 edits; each old text occurs exactly once:
+EDIT 1
+old:
+  // 3. Select top affordable-due families.
+  const candidates = scored
+    .filter((r) => r.affordable && r.due_score >= dueThreshold)
+new:
+  // SPEND ENVELOPE (value-per-cost-selection 4.3). The conductor dispatches spending work
+  // (family goals to goal-host, gap_lifecycle_scan, the boredom-queue drain), so it obeys the
+  // same fleet-wide envelope as auto-pick: read at use time across every node's pool, paused
+  // or exhausted or unreadable means no family is selected and the queue is not drained. This
+  // replaces "budget > 1" as the way to pause rhythms. The settlement pass above still runs.
+  let envelope: { allow: boolean; reason: string } = { allow: true, reason: "dry run" };
+  if (pointer.dry_run !== true) {
+    try {
+      envelope = await (await import("./gap-to-feature.js")).spendEnvelopeAllows();
+    } catch (err) {
+      envelope = { allow: false, reason: "envelope check failed: " + String(err) };
+    }
+    if (!envelope.allow) console.log(`[rhythm-conductor] no family selected and the queue not drained: spend envelope ${envelope.reason}`);
+  }
+
+  // 3. Select top affordable-due families.
+  const candidates = scored
+    .filter((r) => envelope.allow && r.affordable && r.due_score >= dueThreshold)
+EDIT 2
+old:
+  const drained = pointer.dry_run === true
+    ? 0
+new:
+  const drained = pointer.dry_run === true || !envelope.allow
+    ? 0
+EDIT 3
+old:
+      skipped,
+      drained,
+new:
+      skipped,
+      drained,
+      spend_envelope: envelope.reason,
+Done when: all 3 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.
