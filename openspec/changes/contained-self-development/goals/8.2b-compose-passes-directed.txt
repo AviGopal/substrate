@@ -1,0 +1,10 @@
+In repos/development-vessel/src/resolvers/feature-compose.ts, pass the compose pointer's `directed` flag into registerAttempt, so the attempt intent records whether this landing was operator-directed. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+          dispatch_id: (pointer as { authoring_execution_id?: string }).authoring_execution_id ?? null,
+        }).catch(() => ({ attempt_id: null as string | null })),
+new:
+          dispatch_id: (pointer as { authoring_execution_id?: string }).authoring_execution_id ?? null,
+          directed: (pointer as { directed?: boolean }).directed === true,
+        }).catch(() => ({ attempt_id: null as string | null })),
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

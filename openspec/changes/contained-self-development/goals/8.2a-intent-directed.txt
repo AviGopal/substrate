@@ -1,0 +1,18 @@
+In repos/development-vessel/src/resolvers/attempt-register.ts, make registerAttempt accept and record a `directed` boolean on the attempt intent, so the closure sweep can tell an operator-directed landing from an autonomous one. Apply exactly these 2 edits; each old text occurs exactly once:
+EDIT 1
+old:
+dispatch_id?: string | null; attempt_id?: string; prediction?: Partial<Prediction> }): Promise<{ attempt_id: string | null; registered: boolean; error?: string }> {
+new:
+dispatch_id?: string | null; directed?: boolean; attempt_id?: string; prediction?: Partial<Prediction> }): Promise<{ attempt_id: string | null; registered: boolean; error?: string }> {
+EDIT 2
+old:
+      dispatch_id: input.dispatch_id ?? null,
+      node: process.env["SUBSTRATE_NAME"] ?? "substrate",
+new:
+      dispatch_id: input.dispatch_id ?? null,
+      // Operator-directed vs autonomous. The commit message cannot say (every landing reads
+      // "Applied autonomously"); the sweep reads this through the Attempt-Id trailer and judges only an
+      // explicit false. A caller that does not say records null (unknown), never false.
+      directed: typeof input.directed === "boolean" ? input.directed : null,
+      node: process.env["SUBSTRATE_NAME"] ?? "substrate",
+Done when: all 2 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.
