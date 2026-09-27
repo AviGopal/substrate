@@ -1,0 +1,25 @@
+In repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts, make the gap_falsify pass skip gaps whose edit site the autonomyScope excludes (read through autonomyScope and autonomyScopeExcludes from ./gap-to-feature.js), so its per-run quota goes to gaps autonomy can take. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+    for (const g of open) {
+      if (falsified.length >= maxFalsify) break;
+      const meta = metaOf(g);
+      const cls = classOf(meta);
+      if (!g.id || (cls !== "" && cls !== "none")) continue;
+new:
+    // Spend the quota where autonomy can use it: a gap whose edit site the autonomyScope excludes
+    // can never be autonomous work (the first run gave 9 of its 10 falsifiers to such gaps).
+    let inAutonomyScope: (site: string) => boolean = () => false;
+    try {
+      const { autonomyScope, autonomyScopeExcludes } = await import("./gap-to-feature.js");
+      const scope = await autonomyScope();
+      inAutonomyScope = (site) => autonomyScopeExcludes(scope, site) !== null;
+    } catch { /* scope unreadable: falsify everywhere */ }
+    for (const g of open) {
+      if (falsified.length >= maxFalsify) break;
+      const meta = metaOf(g);
+      const cls = classOf(meta);
+      if (!g.id || (cls !== "" && cls !== "none")) continue;
+      const scopeSite = String(meta["edit_site"] ?? "");
+      if (scopeSite && inAutonomyScope(scopeSite)) continue;
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

@@ -1,0 +1,36 @@
+In repos/development-vessel/src/resolvers/feature-compose.ts, make groundVesselFiles fall back to the local filesystem when local-tools is unavailable: when the shell listing is empty, ground the spec-named target files that exist on disk, and when fs_read fails, read the file with node:fs, so a local-tools restart no longer yields a 0-byte grounding refusal. Apply exactly these 2 edits; each old text occurs exactly once:
+EDIT 1
+old:
+      const raw = String((sh.body as { stdout?: unknown })?.stdout ?? "").trim();
+      if (!raw) continue;
+      const files = raw.split("\n").filter(Boolean);
+new:
+      const raw = String((sh.body as { stdout?: unknown })?.stdout ?? "").trim();
+      const files = raw ? raw.split("\n").filter(Boolean) : [];
+      // LOCAL-TOOLS OUTAGE FALLBACK (contained-self-development, drafting reliability). Every
+      // "(0 bytes)" grounding refusal in a week fell within ~30 s of a local-tools restart: the
+      // listing came back empty and the vessel was skipped, so the drafter was refused as blind.
+      // This process shares the filesystem, so ground the spec-named targets from disk instead.
+      if (!raw) {
+        const nodeFs = await import("node:fs");
+        for (const t of targetFiles) {
+          const pfx = `repos/${vRel}/`;
+          if (t.startsWith(pfx) && nodeFs.existsSync(`${vAbs}/${t.slice(pfx.length)}`)) files.push(t.slice(pfx.length));
+        }
+        if (files.length === 0) continue;
+        console.warn(`[fc-grounding] local-tools listing empty for repos/${vRel}; grounding ${files.length} target file(s) from disk`);
+      }
+EDIT 2
+old:
+          const rd = await callTool(toolsEndpoint, "fs_read", { path: `${vAbs}/${f}` });
+          const content = (rd.body as { content?: unknown })?.content;
+          if (rd.ok && typeof content === "string") {
+new:
+          const rd = await callTool(toolsEndpoint, "fs_read", { path: `${vAbs}/${f}` });
+          let content = (rd.body as { content?: unknown })?.content;
+          if (!(rd.ok && typeof content === "string")) {
+            // Same outage fallback for the read itself.
+            try { content = (await import("node:fs")).readFileSync(`${vAbs}/${f}`, "utf-8"); } catch { content = undefined; }
+          }
+          if (typeof content === "string") {
+Done when: all 2 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

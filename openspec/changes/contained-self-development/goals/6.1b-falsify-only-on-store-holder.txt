@@ -1,0 +1,10 @@
+In repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts, run the gap_falsify pass only on the node that holds the gap store: skip it when GAP_STORE_ENDPOINT is set, because such a node reads a possibly stale local copy while writing to the authoritative store, and a falsify write could reopen a gap closed there. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+  if (!dryRun && p.falsify !== false) {
+new:
+  // A node whose gap store is remote (GAP_STORE_ENDPOINT set) reads a LOCAL copy that can be days
+  // stale but writes to the authoritative store, so a falsify write (status "open") could reopen a
+  // gap that is closed there. Only the node that holds the store falsifies.
+  if (!dryRun && p.falsify !== false && !process.env["GAP_STORE_ENDPOINT"]) {
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

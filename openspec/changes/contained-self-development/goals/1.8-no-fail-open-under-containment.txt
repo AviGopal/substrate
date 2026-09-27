@@ -1,0 +1,13 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, do not fail open onto ungroundable (target-less) gaps when the autonomyScope record requires falsifier classes; record them as no_groundable_target instead. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+  if (admitted.length === 0) {
+    for (const g of ungroundable) admitted.push(g);
+new:
+  // Under containment (the autonomyScope record requires falsifier classes) a target-less gap is
+  // never autonomous work: failing open onto them spent node 1's only slot on leaked test-fixture
+  // gaps (falsifier-merge/pair/c2/heal-*), each refusal minting another -narrowed child.
+  const containedAdmission = ((await autonomyScope()).requireFalsifierClasses ?? []).length > 0;
+  if (admitted.length === 0 && !containedAdmission) {
+    for (const g of ungroundable) admitted.push(g);
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

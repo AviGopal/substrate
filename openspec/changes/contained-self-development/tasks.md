@@ -42,11 +42,22 @@
 - [ ] 4.2 Falsifier: the first autonomously authored commit promoted to `origin/dev` with no
   operator action.
 
+- [x] 1.6b LANDED `00c0e5f`: the typecheck-class exemption holds only while the vessel fails typecheck now.
+- [x] 1.8 LANDED `bb51374`: under containment admission no longer fails open onto target-less gaps (it had spent node 1's slot on leaked test-fixture gaps from substrate-gap-falsifier.test.ts, whose module-load race writes the live store during in-container test runs).
+
+## 7. Drafting reliability (diagnosis 2026-09-27: 7 days of autonomous composes — semantic-gate addresses:false 107, ungrounded refusals 89, apply/verify mechanics 87)
+
+- [x] 7.1 LANDED `6cb5042`: verbatim-replacement synthesis only for directed composes (gap prose had been synthesized into TS1005 11 of 14 times on one gap); replace_lines records post-edit bytes (spurious ROLLBACK CONFLICT).
+- [x] 7.2 LANDED `b0782f8`: grounding falls back to the local filesystem when local-tools is restarting (all 13 '(0 bytes)' refusals in 7 days).
+- [x] 7.3 LANDED `87d673d`: the gap's falsifier is stated to the drafter as its SUCCESS CRITERION (law 8).
+- [ ] 7.4 Stage-A pre-typecheck loop (plan dry-run → EDIT blocks → splice check → scratch tsc → retry, then verbatim apply), keeping gap.summary untouched so refuters still run.
+- [ ] 7.5 A grounding/guard refusal does not bump failed_attempts (isInfraRefusalBody already exempts the class posterior).
+
 ## 6. Supply: the system makes gaps verifiable (gap_falsify)
 
 Measured 2026-09-27: 286 open gaps outside the scope have an edit site but no class1/class2
 falsifier; the verifiable autonomous pool is 9. No detector writes a predicate before compose.
-- [ ] 6.1 `gap_falsify` resolver + seeded tick activity (development-vessel), graded by whether a
+- [x] 6.1 LANDED as a pass inside gap_lifecycle_scan (reuse, law 3): `0259b8c`, `c5f0081` (only the gap-store holder falsifies), `b5df9c2` (skip in-scope gaps). First run falsified 10 (9 in scope, before 6.1c), second 0: the deterministic rules are exhausted outside the scope. `gap_falsify` resolver + seeded tick activity (development-vessel), graded by whether a
   gap it falsified later closes by that predicate after a landing (a predicate true before any
   landing is a miss). Deterministic v1 rules: (a) a `-narrowed` child inherits its parent's
   class1/class2 predicate fields (narrowing strips them today; 2 gaps); (b) a backtick-quoted
