@@ -1,0 +1,37 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, make verifyGapConditionAsync read a Class-2 `zero_field` as a DEFECT count (>0 means the defect stands, exactly 0 means it is gone, anything else is unknown), because `nonzero_field` is a HEALTH field and defect counts written there closed a live divergence as fixed. Apply exactly these 4 edits; each old text occurs exactly once:
+EDIT 1
+old:
+    //   evidence_resolve: { shape: string, input?: Record<string,unknown>, defect_field?: string, nonzero_field?: string }
+new:
+    //   evidence_resolve: { shape: string, input?: Record<string,unknown>, defect_field?: string, nonzero_field?: string, zero_field?: string }
+    //   nonzero_field is a HEALTH field (0 = defect); zero_field is a DEFECT count (>0 = defect).
+EDIT 2
+old:
+    let nonzeroField: string | null = null;
+    if (evidenceResolveRaw
+new:
+    let nonzeroField: string | null = null;
+    let zeroField: string | null = null;
+    if (evidenceResolveRaw
+EDIT 3
+old:
+      nonzeroField = typeof er['nonzero_field'] === 'string' ? er['nonzero_field'] : null;
+new:
+      nonzeroField = typeof er['nonzero_field'] === 'string' ? er['nonzero_field'] : null;
+      zeroField = typeof er['zero_field'] === 'string' ? er['zero_field'] : null;
+EDIT 4
+old:
+    // Defect heuristic 2: explicit nonzero_field should be >0 but is 0 / null / undefined
+new:
+    // Defect heuristic 1b: zero_field is a DEFECT count — >0 the defect stands, exactly 0 it is gone,
+    // anything non-numeric is unmeasured. It exists because defect counts were written as
+    // nonzero_field (below, a HEALTH field): self_fact_reconcile's divergence_count=1 read as fixed and
+    // closed a live divergence landed_verified for a landing that was then reverted. Twice-seen class.
+    if (zeroField !== null) {
+      const zv = inner[zeroField];
+      if (typeof zv === 'number' && zv > 0) return 'present';
+      if (zv === 0) return 'absent';
+      return 'unknown';
+    }
+    // Defect heuristic 2: explicit nonzero_field should be >0 but is 0 / null / undefined
+Done when: all 4 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

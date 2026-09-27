@@ -52,6 +52,18 @@
 - [x] 7.3 LANDED `87d673d`: the gap's falsifier is stated to the drafter as its SUCCESS CRITERION (law 8).
 - [ ] 7.4 Stage-A pre-typecheck loop (plan dry-run → EDIT blocks → splice check → scratch tsc → retry, then verbatim apply), keeping gap.summary untouched so refuters still run.
 - [ ] 7.5 A grounding/guard refusal does not bump failed_attempts (isInfraRefusalBody already exempts the class posterior).
+- [x] 7.6 LANDED `f26494b`: a gate-named symbol (`suspected_real_location`) resolves to its resolver file, so retries stop returning to the rejected edit_site.
+- [x] 7.7 FABRICATE-TO-SATISFY lens for refuters and the drafter's closure criterion (after b585a03 created the tree its falsifier checks for).
+- [x] 6.3c LANDED `375ec90`: decomposeGap refuses a step whose falsifier is the parent's own check (one step cannot flip it, so it cannot be verified alone).
+
+## 8. System-side verification of autonomous landings (autonomy paused until 8.1–8.4 hold)
+
+- [ ] 8.1 Predicate polarity: `zero_field` (DEFECT count) in verifyGapConditionAsync; self_fact_reconcile writes it. `nonzero_field` is a HEALTH field and read divergence_count=1 as fixed, closing a live divergence `landed_verified` on a reverted landing. 21 store rows migrated; obsidian gap reopened.
+- [ ] 8.2 Record `directed` in the attempt intent (attempt-register + feature-compose) so the sweep can tell autonomous landings from directed ones via the `Attempt-Id:` trailer; no intent ⇒ treated as directed, never auto-reverted.
+- [ ] 8.3 Cutover `revert_of` mode: `git revert --no-edit <sha>` in the push clone under the same lease/push/restart path; conflict ⇒ abort + escalate; no behavioral verification or pending stamp; attempt registered `route: auto_revert`.
+- [ ] 8.4 Sweep auto-revert on the present branch: measurement predicate, autonomous intent, the EDITED vessel's unit restarted after the commit, no owed self-restart. Write `regressed_by {sha, at, revert_status: pending}`, UNFAVORABLE outcome, class posterior and settlement BEFORE calling the cutover (the revert restarts the sweep's own vessel). Awaiting-restart gaps keep the sweep re-running. Falsifier: fixture cases A (autonomous, evidence_resolve present ⇒ revert), B (directed ⇒ none), C (restart pending ⇒ none, sweep re-runs).
+- [ ] 8.5 Class detector (gap filed, operator_hold): a Class-2 predicate must read 'present' at birth or be marked `predicate_suspect` and kept unclosable.
+- [ ] 8.6 Strike limit: two auto-reverts on one gap ⇒ operator_hold / needs_information (no ping-pong).
 
 ## 6. Supply: the system makes gaps verifiable (gap_falsify)
 

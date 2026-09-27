@@ -1,0 +1,15 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, make decomposeGap refuse a step whose shape falsifier is the parent's own check (same verify_shape, or same evidence_resolve shape and input), because one step will not flip it and the step cannot be verified alone. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+      if (typeof f.verify_shape === "string") childPredicate.verify_shape = f.verify_shape; else childPredicate.evidence_resolve = f.evidence_resolve;
+new:
+      // A step whose predicate is the PARENT's own check cannot be verified alone: one step will not
+      // flip it, so a generic step "satisfied" it in prose while the parent's check stayed failing
+      // (the relevance-sink step landed a size check, 04b3e9c, with divergence still 1).
+      const parentEr = meta.evidence_resolve as { shape?: unknown; input?: unknown } | undefined;
+      const childEr = f.evidence_resolve as { shape?: unknown; input?: unknown } | undefined;
+      const sameAsParent = (typeof f.verify_shape === "string" && f.verify_shape === meta.verify_shape)
+        || (!!parentEr && !!childEr && parentEr.shape === childEr.shape && JSON.stringify(parentEr.input ?? {}) === JSON.stringify(childEr.input ?? {}));
+      if (sameAsParent) { refusals.push(`step ${k}: its falsifier is the parent's own check, which one step will not flip`); continue; }
+      if (typeof f.verify_shape === "string") childPredicate.verify_shape = f.verify_shape; else childPredicate.evidence_resolve = f.evidence_resolve;
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

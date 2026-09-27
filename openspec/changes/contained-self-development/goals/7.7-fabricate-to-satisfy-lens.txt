@@ -1,0 +1,14 @@
+In repos/development-vessel/src/resolvers/feature-compose.ts, add a FABRICATE-TO-SATISFY lens to the adversarial refuters and to the drafter's closure criterion: creating the thing a check looks for (an empty directory, placeholder file or stub at the checked path) so the check passes is rejected. Apply exactly these 2 edits; each old text occurs exactly once:
+EDIT 1
+old:
+- DESTROY-TO-SATISFY: blanking, zeroing, hiding, or removing the value the gap wanted made correct.
+new:
+- DESTROY-TO-SATISFY: blanking, zeroing, hiding, or removing the value the gap wanted made correct.
+- FABRICATE-TO-SATISFY: creating, at runtime, the very thing the gap's check looks for (an empty directory, placeholder file, stub record or default value at the checked path) so an existence or presence check passes while the real source of the divergence is untouched. (A real case: a gap 'no live authoring tree for obsidian-vessel' was "fixed" by mkdir -p /vessels/<vessel>/src inside an unrelated resolver.)
+EDIT 2
+old:
+- DESTROY-TO-SATISFY is rejected: blanking, zeroing, hiding, emptying, or removing the value the gap wanted made correct. The surface must READ CORRECTLY after the fix, not be removed.
+new:
+- DESTROY-TO-SATISFY is rejected: blanking, zeroing, hiding, emptying, or removing the value the gap wanted made correct. The surface must READ CORRECTLY after the fix, not be removed.
+- FABRICATE-TO-SATISFY is rejected: creating the checked thing itself (an empty directory, placeholder file or stub record at the path a check looks for) so the check passes while the divergence's real source is untouched. Reconcile the SOURCE the gap names, not the check's observation of it.
+Done when: all 2 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.
