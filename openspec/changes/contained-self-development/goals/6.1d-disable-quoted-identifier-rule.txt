@@ -1,0 +1,22 @@
+In repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts, disable the gap_falsify quoted_identifier rule by default (only when falsifyQuoted is true): a word the fix would contain is not a behaviour and invited a hollow write; inherited predicates are still written. Apply exactly these 2 edits; each old text occurs exactly once:
+EDIT 1
+old:
+  maxFalsify?: number;        // gaps given a falsifier per run. default 10
+new:
+  maxFalsify?: number;        // gaps given a falsifier per run. default 10
+  falsifyQuoted?: boolean;    // re-enable the quoted_identifier rule (weak; default off)
+EDIT 2
+old:
+      if (!predicate) {
+        const site = String(meta["edit_site"] ?? "");
+        const text = site ? readEditSite(site) : null;
+new:
+      // quoted_identifier is DISABLED (contained-self-development 6.1d): a word the fix would contain
+      // is not a behaviour, and the first autonomous draft against one satisfied it with a hollow
+      // observation of `tracePersistencePolicy` that the refuters correctly rejected. Only inherited
+      // (operator- or detector-authored) predicates are written; behavioural falsifiers come from
+      // decomposition, not from summary words.
+      if (!predicate && p.falsifyQuoted === true) {
+        const site = String(meta["edit_site"] ?? "");
+        const text = site ? readEditSite(site) : null;
+Done when: all 2 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

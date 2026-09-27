@@ -67,7 +67,22 @@ falsifier; the verifiable autonomous pool is 9. No detector writes a predicate b
 - [ ] 6.2 v2: LLM-proposed predicate (reusing `rankWithLlm`/localization) for the remaining ~250,
   validated deterministically (literal absent now for expected_literal; present now for
   hardcoded_url; shape advertised for class2) before writing.
-- [ ] 6.3 Replace the investigation `/run-goal` dispatches (bumpFailedAttempts, pre-compose) with
+- [ ] 6.3 DECOMPOSITION CONTRACT (the supply lever; evidence 2026-09-27 11:00–11:25, all refusals examined: an
+  incomplete multi-part draft (route-edit-ec962628, 1 of 3 parts), a wrong-file draft (self-fact relevance-sink: edit
+  site patch-with-tools.ts, judge points at self_fact_reconcile), a DESTROY-TO-SATISFY draft silencing a detector
+  (refuters 2/2, conf 1.00/0.82), and a hollow literal write (tracePersistencePolicy). The verifier caught all four;
+  the drafter cannot do design-sized gaps in one single-file draft, and no vessel outside the protected set fails
+  typecheck, so there is no atomic supply. Every verifiable gap left is design-sized.) Give the existing
+  investigation step a structured output instead of a free-text walk: for a verifiable parent that has failed ≥ 2
+  attempts, one LLM call reads the parent summary, its falsifier, the refusal reasons and the edit-site window, and
+  proposes 1–3 child steps, each {edit_site (one existing source file), change (one sentence), falsifier}. Each
+  child is validated deterministically before it is written: the file exists and is outside the autonomy scope; a
+  class2 child names a shape that discovery advertises (evidence_resolve/verify_shape) and that currently reports
+  the defect; a class1 child's literal is absent now and comes with a named live-path reader. Children are written
+  as `<parent>-step-<k>` with `parent_gap_id`, and the parent is closed only when its own falsifier passes. Graded
+  by child closure (a child closed by its falsifier after an autonomous landing is the first decomposition
+  success). A parent whose steps cannot be given a behavioural falsifier is recorded `cannot_falsify` (a finding
+  about missing observables, not a failure). Replace the investigation `/run-goal` dispatches (bumpFailedAttempts, pre-compose) with
   a `gap_falsify` call on the parent, so investigation spend produces fields, not gaps.
 - [ ] 6.4 Narrowing keeps pre-compose predicates (strip only `removed_line_of_landing_commit`).
 
