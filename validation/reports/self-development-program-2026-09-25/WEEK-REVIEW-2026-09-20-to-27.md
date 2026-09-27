@@ -22,10 +22,12 @@ logs on node 1, and llm-resolver `llmSpendSummary` on both nodes.
   tokens 27k → 5k (n = 4 after 04:28 UTC; mean cost $0.072 → $0.053).
 - **Autonomous selection never got good.** Autonomous drafted composes landed at 0–23% on
   every day it ran, and the `adhoc` class landed **0 of 122** all week.
-- **Resources went from redline to idle, but spend is not yet small.** Database CPU from
-  ~12 cores to idle, template-listing work ~49/min → ~8/min. LLM spend averaged
-  **$1.83/h since 00:37 UTC today** ($9.53 on node 1; node 2 ≈ 0), with the last hour at
-  $0.16. **$8.09 of the $9.53 has no caller attached.**
+- **Compute went from redline to idle; storage did not move; spend is not yet small.**
+  Database CPU ~12 cores → idle, template-listing work ~49/min → ~8/min. The trace store
+  grew 42 → 44 GB over the program and the container holds ~20 GB of memory; the trace-store
+  rebuild is still a pending user decision. LLM spend since ~00:40 UTC today is **$12.31
+  ≈ $2.3/h** ($9.53 on node 1, $2.78 on node 2), with node 1's last hour at $0.16.
+  **$8.09 of node 1's $9.53 has no caller attached.**
 - **The human surface was repaired, not continuously verified.** It showed another
   substrate's findings on 09-25, was restored on 09-26, and answers in ~8 ms now; the
   image segmentation and parity pair ran twice, not on a schedule.
@@ -100,11 +102,16 @@ measurable: anything autonomous, since picks are held.
 
 ## Seams found by this review
 
-- **Spend reporting was wrong in state.** The 05:30 check-in said "≈ $0.18/h"; that was the
-  quietest hour. The day's average is $1.83/h, and 85% is unattributed (`caller: unknown`).
-  Correction row appended to CHECKINS.md.
-- **`adhoc` composes: 0 of 122 landed all week.** A dispatch class that never lands is the
-  first candidate for a pre-draft refusal (the spec's negative-knowledge task 3.4).
+- **Spend reporting was wrong in state, twice.** The 05:30 check-in said "≈ $0.18/h" (the
+  quietest hour, node 1 only). The day so far is $12.31 across both nodes (≈ $2.3/h), and
+  85% of node 1's share is unattributed. Summing across nodes by hand is exactly what task
+  4.0 is for. Correction rows appended to CHECKINS.md.
+- **`adhoc` composes: 0 of 122 landed all week, by construction.** They are free-text compose
+  specs with no gap context: they draft, apply, typecheck, then the semantic gate refuses
+  "no gap context (free-text spec)" and rolls back — full draft cost, zero chance of landing.
+  The check belongs before drafting (attach context or refuse). Identify the dispatcher
+  first: if it is a retry or post-walk path, refuse at admission; if it is a human entry
+  point, the 0/122 is a surface-parity failure, not waste.
 - **The watchdog undid the operator hold 55 times.** Every `resolved` gap on 09-25/26 is
   "re-enabled 1 inactive allowlisted timer: funnel-drain": self-repair and the hold undid
   each other. The hold has no shape the watchdog reads.
