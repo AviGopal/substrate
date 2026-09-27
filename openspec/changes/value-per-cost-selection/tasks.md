@@ -147,7 +147,7 @@ file's latest commit).
   Falsifier: a second dispatch of a known-refused goal returns the refusal with 0 LLM
   calls; changing the invalidating condition lets it proceed.
 
-- [ ] 3.5 ROOT CAUSE FOUND (2026-09-27): all three evidence landings carry `apply_failed:true`
+- [ ] 3.5 LANDED `b9537eb` (07:09:13, BYTE-EQUAL, +13); falsifier waits for a compose with a failed op (expect `all-edits floor: WITHHELD FAVORABLE` and a rollback). ROOT CAUSE FOUND (2026-09-27): all three evidence landings carry `apply_failed:true`
   in their own compose reports (3cced35 and 24a64a8 applied 1 of 3 ops, f49d02e 4 of 5), yet the
   verdict was FAVORABLE: `feature-compose.ts` sets `applyFailed` in the apply loop but the verdict
   is `typecheckPass ? FAVORABLE : UNFAVORABLE`, and only the report reads the flag. Fix
@@ -191,7 +191,7 @@ file's latest commit).
 - [ ] 4.2 (EVIDENCE 2026-09-27: the event-driven gap-compose NUDGE (substrate-gap.ts ~1207/1219 → gap-compose.service) bypasses the autonomous_pick lease. One siteless gap family (db_performance_slow_queries_2026-09-18…) was re-walked 17×/h as "investigate and decompose" (~10k-token deepseek floor calls), about $3.8/h with autonomy held. An operator_hold on the 3 gaps at 01:31:45 cut total LLM spend from ≈ $5.2/h to ≈ $2.1/h over the next 10 min (remaining: mostly directed composes). The nudge path and the investigation route MUST read the same envelope/lease as auto-pick.) Auto-pick reads the envelope via discovery in the pre-selection block; exhausted
   or paused → non-attempt `stage:budget`; unreachable → no compose. Falsifier: set
   `usd_cap` to the spent value → 0 fc-plans on both nodes.
-- [ ] 4.3 SPLIT (2026-09-27) into three one-file goals after locating every spender. Node 2 runs
+- [x] 4.3 FALSIFIER PASSED 07:15 (pause 07:11:41–07:15:13, envelope `paused:true`): a non-dry `rhythm_conductor_tick` reported `spend_envelope: paused …`, enqueued 0, drained 0 (and the timer's own tick logged `no family selected and the queue not drained`); an untargeted `apply_proposal_as_patch` returned structuredError `budget_paused` before any attempt; boredom logged `[pool] not dispatching: spend envelope paused`. 4.3b LANDED `baa64cc` (07:04:10), 4.3c LANDED boredom-vessel `f28bc06` (07:06:05), both BYTE-EQUAL. SPLIT (2026-09-27) into three one-file goals after locating every spender. Node 2 runs
   no boredom, no rhythm timer, funnel-drain masked; its only spenders are inside
   development-vessel and already envelope-gated. Node 1's ungated spenders:
   - 4.3a LANDED `c313227` (07:00:51, BYTE-EQUAL): `rhythm-conductor-tick.ts` reads the envelope
@@ -212,7 +212,7 @@ file's latest commit).
 - [ ] 4.3 Rhythm conductor and boredom resolve pause/budget via discovery, not their own
   node; `paused:true` replaces budget>1. Falsifier: a pause set on the owner stops drains on
   both nodes (node 2 included).
-- [ ] 4.4 PRE-VALIDATED (goals/4.4-spend-rate-breaker.txt, 3 edits in goal-host `index.ts`):
+- [x] 4.4 LANDED goal-host `76c8e60` (07:10:13, BYTE-EQUAL, +61, via fc-exact). FALSIFIER PASSED 07:16 on node 2 with a temporary `dispatchRatePolicy` {window_s 300, per_hash_max 1}: dispatch 1 of one goal → 202; dispatch 2 → 429 `deterministic:spend-rate-refused - 1 dispatches of goal a175be1c in the last 300 s`, log `SPEND-RATE REFUSED at handler entry (no LLM call)`; policy removed (defaults 3600/6/240). Node 1's goal-host picks it up on its next pull-sync. PRE-VALIDATED (goals/4.4-spend-rate-breaker.txt, 3 edits in goal-host `index.ts`):
   in-process per-hash and global timestamp windows; thresholds from shaped policy
   `dispatchRatePolicy` {window_s, per_hash_max, global_max}, defaults 3600/6/240; /run-goal
   refuses right after the raw goal is read (before `resolvePathlessCodeChangeGoal`, the first LLM
