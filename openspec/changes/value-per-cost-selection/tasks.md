@@ -1,6 +1,8 @@
 How to follow along: every task under `repos/<vessel>/src` lands as a pre-validated
 exact-edit goal (unique byte-exact anchors, `tsc` identical before/after on a scratch copy
-of the push clone, no `$'` `` $` `` `$&` `$$` in new text, "done when" names no shapes and
+of the push clone, the vessel's tests covering the file show no NEW failure versus the base (run with
+`WORKSPACE_ROOT=$(mktemp -d)` so tests never touch live state; added after 2.2 passed tsc but
+failed the lane's test gate), no `$'` `` $` `` `$&` `$$` in new text, "done when" names no shapes and
 ends "This is a source edit only; do not perform any other action"). Goal text lives in
 `goals/<task>.txt`. A task is done when: the landed file on `origin/dev` is byte-equal to
 the pre-validated file; the vessel restarted after it (pull-sync may defer; see the
@@ -53,7 +55,7 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   synthesis, reach judge, target inference; development-vessel compose stages) passes `caller`
   and `task_type` so `llmSpendSummary` keys name the spender. Measured 00:00–00:30Z: 57–72% of
   spend was keyed `unknown|unknown`. Falsifier: `unknown` keys < 5% of window cost.
-- [ ] 1.6 Prompt-size ceiling: llm-resolver refuses (and logs, with caller) any single call whose
+- [x] 1.6 LANDED llm-resolver `3c83a33` (00:37:14, byte-equal; entry check plus every tool-loop turn; the fallback walk stops on a ceiling refusal). Prompt-size ceiling: llm-resolver refuses (and logs, with caller) any single call whose
   input tokens exceed a ceiling read from a shaped impulse (default e.g. 200k), instead of
   serving it. Measured 00:15–00:26Z: 5 `gemini-2.5-flash` fallback calls took 3.99 M input
   tokens (~800k each, $1.20 = 72% of spend since 23:45), coinciding with goal-host floor
@@ -75,7 +77,7 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   `:1534` with `PROTECTED_VESSELS`. Falsifier: with a vessel whose remote is a local bare
   repo, the admission log shows `push_scope_refused(<vessel>)` and no fc-plan for it; a
   control vessel with an owner/repo remote is still admitted.
-- [ ] 2.2 Actionable-only admission: no edit site and falsifier not class1/class2 →
+- [ ] 2.2 (ROLLED BACK by the lane's test gate 00:16/00:21: the admission test encoded the old "proposal-backed: always admit" policy (operator test update pre-verified: fails before, passes after), and the first G2 also excluded typecheck-class gaps before the phantom-typecheck path (2 tests); G2 is being revised to reuse that path's predicate, then 2.5/2.4 re-chained) Actionable-only admission: no edit site and falsifier not class1/class2 →
   `needs_information`, regardless of proposal report (`:1668`) and on every pick (drop the
   one-shot `alreadyInvestigated` bypass for these). Falsifier: 0 fc-plans for `(no-target)`
   gaps over a day of picks.
