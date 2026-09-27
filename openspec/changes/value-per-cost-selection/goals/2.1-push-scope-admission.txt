@@ -1,0 +1,51 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, add a push-scope gate to admitActionableGaps right after the protected-vessel check that asks push-policy gateLanding once per vessel per admission pass, on the same push clone the cutover pushes from, and excludes a gap whose landing it refuses with reason push_scope_refused(<vessel>). Apply exactly these 3 edits; each old text occurs exactly once:
+EDIT 1
+old:
+import { peekComposeCapacity } from "../compose-slots.js";
+new:
+import { peekComposeCapacity } from "../compose-slots.js";
+import { gateLanding } from "./push-policy.js";
+EDIT 2
+old:
+  const admittedPerEditSite = new Map<string, number>();
+new:
+  const admittedPerEditSite = new Map<string, number>();
+  // vessel -> push_scope_refused reason, or null when the landing gate allows it (this pass only).
+  const pushScopeRefusalByVessel = new Map<string, string | null>();
+EDIT 3
+old:
+      excluded.push({ id, reason: `protected_vessel(${ownedVessel})` });
+      continue;
+    }
+new:
+      excluded.push({ id, reason: `protected_vessel(${ownedVessel})` });
+      continue;
+    }
+    // PUSH SCOPE AT ADMISSION (value-per-cost-selection 2.1). The cutover refuses a landing
+    // whose push remote is out of scope (vessel-mitosis-cutover.ts gateLanding), but only
+    // after the draft was paid for. Ask the same gate here, once per vessel per pass, on the
+    // clone the cutover pushes from (MITOSIS_PUSH_CLONE_DIR/<vessel> in direct-push mode).
+    // The cutover stays the final authority and owns the kill switch. Fail-open on any error.
+    if (ownedVessel) {
+      if (!pushScopeRefusalByVessel.has(ownedVessel)) {
+        let refusal: string | null = null;
+        try {
+          const pushCloneRoot = process.env["MITOSIS_PUSH_CLONE_DIR"];
+          if (pushCloneRoot && process.env["MITOSIS_DIRECT_PUSH"] === "1") {
+            const proc = Bun.spawnSync(["git", "-C", join(pushCloneRoot, ownedVessel), "remote", "get-url", "--push", "origin"], { stdout: "pipe", stderr: "pipe", timeout: 5_000 });
+            const landingGate = gateLanding({
+              remoteUrl: proc.exitCode === 0 ? new TextDecoder().decode(proc.stdout).trim() : null,
+              branch: "dev",
+            });
+            if (landingGate.kind === "push_scope_refused") refusal = landingGate.reason;
+          }
+        } catch { refusal = null; }
+        pushScopeRefusalByVessel.set(ownedVessel, refusal);
+        if (refusal) console.log(`[gap-admission] push_scope_refused vessel=${ownedVessel} reason=${refusal}`);
+      }
+      if (pushScopeRefusalByVessel.get(ownedVessel)) {
+        excluded.push({ id, reason: `push_scope_refused(${ownedVessel})` });
+        continue;
+      }
+    }
+Done when: all 3 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

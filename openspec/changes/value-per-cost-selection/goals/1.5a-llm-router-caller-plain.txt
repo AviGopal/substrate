@@ -1,0 +1,32 @@
+In repos/goal-host-vessel/src/llm-router.ts, stamp every routed llm_completion request with `caller: "goal-host:<task_type>"` and the current `dispatch_id` so llm-resolver's spend summary names the spender instead of `unknown`. Apply exactly these 3 edits; each old text occurs exactly once:
+
+EDIT 1
+old:
+export function setRouterDispatchIdReader(reader: () => string | undefined): void {
+  readDispatchId = reader;
+}
+new:
+export function setRouterDispatchIdReader(reader: () => string | undefined): void {
+  readDispatchId = reader;
+}
+// SPEND ATTRIBUTION (value-per-cost-selection 1.5): llm-resolver keys its spend summary by
+// model|provider|task_type|caller, so every routed completion names its caller and dispatch.
+function attributionFields(taskType: string): Record<string, string> {
+  let did: string | undefined;
+  try { did = readDispatchId(); } catch { did = undefined; }
+  return { caller: `goal-host:${taskType}`, ...(did ? { dispatch_id: did } : {}) };
+}
+
+EDIT 2
+old:
+const payload: Record<string, unknown> = { type: "llm_completion", prompt: body.prompt, task_type: taskType };
+new:
+const payload: Record<string, unknown> = { type: "llm_completion", prompt: body.prompt, task_type: taskType, ...attributionFields(taskType) };
+
+EDIT 3
+old:
+...(body.model ? { model: body.model } : {}), task_type: taskType }),
+new:
+...(body.model ? { model: body.model } : {}), task_type: taskType, ...attributionFields(taskType) }),
+
+Done when: all 3 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

@@ -1,0 +1,23 @@
+In repos/development-vessel/src/resolvers/substrate-gap.ts, make the event-driven gap-compose nudge (the gap-compose.service start and the in-process compose) ask spendEnvelopeAllows() from ./gap-to-feature.js first and start neither when the spend envelope is paused, exhausted or unreadable; with no envelope record behaviour is unchanged. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+    if (!g.__gapComposeLastTrigger || nowMs - g.__gapComposeLastTrigger > 60_000) {
+      g.__gapComposeLastTrigger = nowMs;
+new:
+    // SPEND ENVELOPE (value-per-cost-selection 4.2). The nudge starts gap-compose.service and an
+    // in-process compose, so it obeys the same envelope as auto-pick: exhausted, paused or
+    // unreadable means neither starts. The throttle is not stamped, so the next write re-asks
+    // (the helper caches its read for 30 s).
+    let nudgeEnvelope: { allow: boolean; reason: string } = { allow: true, reason: "" };
+    if (!g.__gapComposeLastTrigger || nowMs - g.__gapComposeLastTrigger > 60_000) {
+      try {
+        const { spendEnvelopeAllows } = await import("./gap-to-feature.js");
+        nudgeEnvelope = await spendEnvelopeAllows();
+      } catch (err) {
+        nudgeEnvelope = { allow: false, reason: "envelope check failed: " + String(err) };
+      }
+      if (!nudgeEnvelope.allow) console.log(`[substrate-gap] gap-compose nudge NOT started for ${gap.id}: spend envelope ${nudgeEnvelope.reason}`);
+    }
+    if ((!g.__gapComposeLastTrigger || nowMs - g.__gapComposeLastTrigger > 60_000) && nudgeEnvelope.allow) {
+      g.__gapComposeLastTrigger = nowMs;
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

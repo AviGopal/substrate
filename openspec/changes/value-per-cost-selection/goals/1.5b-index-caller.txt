@@ -1,0 +1,33 @@
+In repos/goal-host-vessel/src/index.ts, make the LLM requests that bypass the router (the floor tool loop, the walk's raw llm_completion resolve, and llm_completion_dispatch tool calls) carry `caller`, `task_type` and the dispatch id so llm-resolver's spend summary names the spender. Apply exactly these 3 edits; each old text occurs exactly once:
+
+EDIT 1
+old:
+```
+prompt: iterPrompt, max_tokens: 4096, tools, ...(dispatchContext.getStore()?.dispatchId ? { execution_id: dispatchContext.getStore()!.dispatchId } : {}) }
+```
+new:
+```
+prompt: iterPrompt, max_tokens: 4096, tools, caller: "goal-host:floor_tool_loop", task_type: "floor_tool_loop", ...(dispatchContext.getStore()?.dispatchId ? { execution_id: dispatchContext.getStore()!.dispatchId, dispatch_id: dispatchContext.getStore()!.dispatchId } : {}) }
+```
+
+EDIT 2
+old:
+```
+? { impulse: { pointer }, prompt: pointer.prompt }
+```
+new:
+```
+? { impulse: { pointer }, prompt: pointer.prompt, caller: "goal-host:walk_llm_completion", task_type: "walk_llm_completion", ...(dispatchContext.getStore()?.dispatchId ? { dispatch_id: dispatchContext.getStore()!.dispatchId } : {}) }
+```
+
+EDIT 3
+old:
+```
+body: JSON.stringify({ impulse: { pointer: { type: name, ...args, 
+```
+new:
+```
+body: JSON.stringify({ impulse: { pointer: { type: name, ...(name === "llm_completion_dispatch" ? { caller: "goal-host:uf_tool", task_type: "uf_tool_llm_completion" } : {}), ...args, 
+```
+
+Done when: all 3 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.
