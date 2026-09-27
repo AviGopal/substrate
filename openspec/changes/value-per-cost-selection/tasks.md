@@ -123,6 +123,13 @@ file's latest commit).
   Falsifier: a second dispatch of a known-refused goal returns the refusal with 0 LLM
   calls; changing the invalidating condition lets it proceed.
 
+- [ ] 3.5 No partial reach. When a goal names N edits (strict EDIT blocks or prose "replace … with …"), the
+  compose verdict and the goal's reach count how many of the requested new texts are present in the landed file
+  and how many old texts are gone; below N the result is UNFAVORABLE / not reached, and the landing is not
+  counted as closure. Measured: three FAVORABLE/reached landings tonight applied only part of their goal
+  (f49d02e 4/5, 24a64a8 1/3, 3cced35 1/3). Gap: an-exact-edit-goal-can-land-with-some-of-its-edits-silently-
+  dropped-…. Falsifier: a 3-edit goal whose compose applies 1 edit ends not reached, naming the missing edits.
+
 ## 4. Budget and breaker
 
 - [ ] 4.0 (prerequisite, found by the 4.x design) Each node's llm-resolver needs its own vessel id, a routable endpoint and a published P220, so discovery lists both `llmSpendSummary` producers. Today both register the same id with a loopback endpoint and compose2 does not publish P220, so each node sees only its own spend and a global cap is effectively 2× until this lands.
