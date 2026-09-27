@@ -1,0 +1,16 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, make decomposeGap give every shape-checked step a measured field (zero_field for a count of the defect) and refuse a step whose shape check names no field, because an unfielded shape check reads 'unknown' in the closure sweep forever, so neither closure nor the falsified-landing record can ever judge that step. Apply exactly these 2 edits; each old text occurs exactly once:
+EDIT 1
+old:
+"falsifier":{"verify_shape":"<shape that answers only after the change>"} OR {"evidence_resolve":{"shape":"<shape>","input":{}}} OR 
+new:
+"falsifier":{"evidence_resolve":{"shape":"<shape>","input":{},"zero_field":"<numeric field in its answer that counts this defect: above 0 today, 0 after the change>"}} OR 
+EDIT 2
+old:
+      if (sameAsParent) { refusals.push(`step ${k}: its falsifier is the parent's own check, which one step will not flip`); continue; }
+new:
+      if (sameAsParent) { refusals.push(`step ${k}: its falsifier is the parent's own check, which one step will not flip`); continue; }
+      // A shape check with no measured field reads 'unknown' in the closure sweep forever: the step can
+      // be neither closed nor recorded as falsified. 15 live step/probe predicates were born that way.
+      const measured = !!childEr && ["zero_field", "nonzero_field", "defect_field"].some((fk) => typeof (childEr as Record<string, unknown>)[fk] === "string");
+      if (!measured) { refusals.push(`step ${k}: its shape check names no zero_field/defect_field, so it could never be judged`); continue; }
+Done when: all 2 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

@@ -14,10 +14,12 @@ new:
 // vessel's — says whether the change is running.
 let sweepAwaitingRestart = false;
 function sweepGitOut(cloneDir: string, args: string[]): string | null {
+  let out: string | null = null;
   try {
     const p = Bun.spawnSync(["git", "-C", cloneDir, ...args], { stdout: "pipe", stderr: "pipe", timeout: 10_000 });
-    return p.exitCode === 0 ? new TextDecoder().decode(p.stdout).trim() : null;
-  } catch { return null; }
+    if (p.exitCode === 0) out = new TextDecoder().decode(p.stdout).trim();
+  } catch { /* spawn failed: no output */ }
+  return out;
 }
 async function recordFalsifiedAutonomousLanding(g: Record<string, unknown>, meta: Record<string, unknown>, sha: string): Promise<"recorded" | "awaiting_restart" | "not_applicable"> {
   if (meta.regressed_by !== undefined && meta.regressed_by !== null) return "not_applicable";
