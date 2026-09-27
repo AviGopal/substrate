@@ -1,0 +1,10 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, make closeLandedGap record closed_reason landed_verified and the landed_sha in the closed gap's metadata, as the sweep already does, so gaps closed on this path count as verified landings. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+    const closedMeta = { ...((gap.classification_metadata ?? gap.metadata ?? {}) as Record<string, unknown>), resolution, closed_at: new Date().toISOString() };
+new:
+    // closed_reason + landed_sha (value-per-cost-selection 5.1): this close is a landing whose outcome
+    // was verified above, the same fact the sweep records as `landed_verified`. Without the reason
+    // the terminal measure (gaps closed by a verified landing) could not count this path at all.
+    const closedMeta = { ...((gap.classification_metadata ?? gap.metadata ?? {}) as Record<string, unknown>), resolution, closed_reason: "landed_verified", ...(land.commit_sha ? { landed_sha: land.commit_sha } : {}), closed_at: new Date().toISOString() };
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

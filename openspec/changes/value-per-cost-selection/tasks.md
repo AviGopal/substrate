@@ -252,14 +252,55 @@ metrics lookup (variant_performance_metrics by activity_id/variant_id) with no i
   `context_thompson_scores`; `tokens_sum` on `variant_performance_metrics`; increment at
   `posterior-update.ts:1238-1260` and `:1164`. Falsifier: fields rise with executions.
 - [ ] 5.2 Remove cost from `successYield` (`posterior-update.ts:327-346`); record the change
-  and compare posteriors a day before/after (law 12).
+  and compare posteriors a day before/after (law 12). IN FLIGHT 2026-09-27 (goal
+  goals/5.1a-success-yield-without-cost.txt): `quality = 0.5 + 0.5·productivity`. Cost entered the
+  yield only once phase 1 populated `cost_usd` (before, every cost was 0 → costScore 1), so for
+  cost-free rows this is byte-for-byte the pre-phase-1 update; costed successes stop being
+  discounted. Test inverted first as an operator test-only commit (activity-api `1b3a3f7`, the
+  9bf8512 precedent). tsc 0/0; posterior tests 68 pass / 27 fail on both parent and patched (the
+  27 need a DB); graded-yield 6/6. LAW 12 SNAPSHOT taken 07:20 before landing:
+  substrate-live:/workspace/validation-snapshots/posterior-snapshot-2026-09-27T0720Z.json.gz (container volume; binary artefacts are refused in the super-repo)
+  (6,397 variant rows, 27,204 context rows). Blast radius: feature_compose's variant row does not
+  decide anything (goal-host calls it directly); the live effect is on walk producers costed
+  since 1.3. Falsifier: a reached, costed execution moves its variant by exactly α+0.75/β+0.25
+  (no tasks) regardless of cost_usd.
 - [ ] 5.3 Selector score = sampled p / max(E[cost], ε). Falsifier: equal-success producers
   at 10× cost → the cheaper one wins in the large majority of samples.
 - [ ] 5.4 Per-(edit site, category) calibrated landability, updated where
   `updateClassPosterior` is called, read in `pickMostLandable` (`:1201`). Falsifier: a site
   with repeated failures and no landings loses rank below sites that land.
 
+- [ ] 5.5 Credit closures. FOUND 2026-09-27: the gap-class posterior that ranks compose work
+  (`/workspace/gap-class-posteriors.json`, read by the rerank at gap-to-feature.ts:1219) has
+  α = 1 on essentially every class (node 1 `route-edit` α1/β195): β+1 on every non-infrastructure
+  compose failure, α+1 only at `closeLandedGap` and the sweep, and operator-verified closes never
+  credit it. (i) `closeLandedGap` records `closed_reason: landed_verified` + `landed_sha` (goal
+  goals/5.1b-close-landed-gap-reason.txt, queued; tests 245 pass / 4 fail on both). (ii)/(iii)
+  DEFERRED: a close hook in substrate-gap.ts would credit whichever node serves
+  `substrateGap_write` (operator closes arrive on node 1), but the file is node-local and the
+  rerank for autonomous picks runs where compose selection runs; needs a discovery-routed write,
+  and the two direct α+1 calls removed first so nothing is double-counted. The cost mean (5.1)
+  needs a migration on SCHEMAFULL tables (not a one-file lane edit); `avg_cost_usd` on
+  `variant_performance_metrics` already exists but averages the pre-phase-1 zeros.
+
 ## 6. Reopen and observe
+
+ADMISSIBLE WORK (2026-09-27 07:25, gap store): 61 of 2,340 open gaps (2.6%) have an edit site and a
+class1/class2 falsifier and no operator hold; 59 target vessels (development-vessel 29, goal-host
+24, discovery 4 = protected, refused at admission; human-surface 2 = not authorable), so ~53 are
+workable. Enough for a 24–48 h reopen test; and 97% of open gaps are not fixable as filed, which
+is the step-5 bottleneck (the system writing gaps it can act on).
+
+REOPEN CHECKLIST (6.1; needs the user's approval):
+  1. Write `spend-envelope` with `usd_cap_per_hour` ≈ 1 (paused false, reason names the approval).
+  2. Stop the node-1 lease renewal loop and release the node-1 `autonomous_pick` token
+     (tmp/lease-spec.json) with maintenanceLease_write op release.
+  3. Ask the Documentation session to stop its node-2 renew loop (pid 4125526) and release.
+  4. Decide whether node-2 boredom/rhythm stay off (they are envelope-gated now either way).
+  5. Record the intervention and time in CHECKINS.md (law 12), then observe 6.2 for 24 h:
+     autonomous drafted-landing ≥ 40 %, ≥ 5 substrate-detected verified closures/day, cost per
+     verified closure, no reverts, CPU and DB calm.
+
 
 - [ ] 6.1 Set an initial envelope (small `usd_cap` per hour), release the node-1 lease and
   ask the Documentation session to stop the node-2 renew loop.
