@@ -160,7 +160,7 @@ metrics lookup (variant_performance_metrics by activity_id/variant_id) with no i
 
 - [x] 4b.1 LANDED activity-api `626eb63` (03:53:10, byte-equal). The FTS listing path honours `offset` (or returns an empty page for
   offset > 0). Falsifier: boredom's cycle issues ≤ 2 listing requests, not ~20.
-- [ ] 4b.2 NOT LANDED (04:11): the compose did NOT apply the pre-validated edits verbatim. The planner drafted its own 2-line edits (spans 31-32/47-48/68-69 against ~100-line EDIT blocks), which the semantic gate rightly rejected (unused import, recursive invalidate). Blocked on 2.7. activity-api: in-process cache of the full enriched catalogue (TTL from a shaped impulse,
+- [x] 4b.2 LANDED activity-api `ba3408b` (04:45:52) and 4b.2b `79eaaef` (04:49:49), both BYTE-EQUAL via 2.7's verbatim path (`[fc-exact] applying 3 / 4 goal-supplied edits … (no LLM plan)`, spec-refine skipped). Falsifier pending the activity-api restart onto 79eaaef: DB-backed listings ≤ 2/min. (Earlier: NOT LANDED (04:11): the compose did NOT apply the pre-validated edits verbatim. The planner drafted its own 2-line edits (spans 31-32/47-48/68-69 against ~100-line EDIT blocks), which the semantic gate rightly rejected (unused import, recursive invalidate). Blocked on 2.7. activity-api: in-process cache of the full enriched catalogue (TTL from a shaped impulse,
   default 60 s), keyed by (orgId, projectId, accountId, scope, executionType), invalidated by the
   create/retire/promote handlers; every limit/offset slice served from it. Falsifier: DB-backed
   listings fall from ~49/min to ≤ 2/min; SurrealDB CPU falls.
