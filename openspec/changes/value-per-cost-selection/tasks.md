@@ -133,6 +133,27 @@ file's latest commit).
   from a shaped impulse. Falsifier: a synthetic burst of one goal is refused after the
   threshold with 0 LLM calls.
 
+## 4b. Database load from template listing (efficiency; found 2026-09-27 03:10, SurrealDB ~12 cores, CPU 3–6% idle)
+
+Measured (15 min): 1,013 /v2/activities/templates requests, 739 listings (49/min), all hitting the DB
+(paginated requests skip the Redis list cache). Callers: boredom-vessel fetchShapeDrivenCandidates
+(index.ts:2757) pages 20× but the FTS path (activity-api routes/activities.ts:1363-1374) ignores
+offset, so 19/20 pages repeat page 0; the rhythm-driven "refresh the substrate reality model" walk
+(substrate-health-tick.ts:159 full scan, learned-topology-snapshot.ts:39) runs cold each time
+(reuse suppressed by forceFloor); gap-to-feature familySample (:4168-4205) full-scans even when
+/variants already filled the family. Per page ~1–2 s: `activity ORDER BY created_at` with no index,
+metrics lookup (variant_performance_metrics by activity_id/variant_id) with no index, run twice per page.
+
+- [ ] 4b.1 activity-api: the FTS listing path honours `offset` (or returns an empty page for
+  offset > 0). Falsifier: boredom's cycle issues ≤ 2 listing requests, not ~20.
+- [ ] 4b.2 activity-api: in-process cache of the full enriched catalogue (TTL from a shaped impulse,
+  default 60 s), keyed by (orgId, projectId, accountId, scope, executionType), invalidated by the
+  create/retire/promote handlers; every limit/offset slice served from it. Falsifier: DB-backed
+  listings fall from ~49/min to ≤ 2/min; SurrealDB CPU falls.
+- [ ] 4b.3 (follow-up) Indexes: `activity.created_at`; `variant_performance_metrics.activity_id` and
+  `.variant_id` (migration); drop the second per-page enrichment; skip familySample when the family
+  is already known; activity-api logs a caller id per request (the detector for this class).
+
 ## 5. Value per cost in selection
 
 - [ ] 5.1 activity-api migration: `cost_n`, `cost_sum_usd`, `cost_sum_tokens` on
