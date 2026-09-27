@@ -1,0 +1,37 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, let the autonomyScope record require falsifier classes: parse require_falsifier_classes in autonomyScope() and, at admission, refuse an autonomous gap whose falsifier is not one of them (typecheck-class gaps keep their own check); with no field behaviour is unchanged. Apply exactly these 3 edits; each old text occurs exactly once:
+EDIT 1
+old:
+export type AutonomyScope = { excluded: string[]; readable: boolean; reason: string };
+new:
+export type AutonomyScope = { excluded: string[]; readable: boolean; reason: string; requireFalsifierClasses?: string[] };
+EDIT 2
+old:
+        v = { excluded, readable: true, reason: newest ? `autonomyScope: ${excluded.length} excluded path(s)` : "no autonomyScope record" };
+new:
+        // require_falsifier_classes: autonomous admission takes only gaps a pre-existing,
+        // machine-checkable falsifier can verify (a post-landing removed-line predicate is true by
+        // construction, so a landing without one cannot be credited as an improvement).
+        const reqRaw = (newest?.body as { require_falsifier_classes?: unknown } | undefined)?.require_falsifier_classes;
+        const requireFalsifierClasses = Array.isArray(reqRaw) ? reqRaw.filter((e): e is string => typeof e === "string" && e.trim().length > 0).map((e) => e.trim().toLowerCase()) : undefined;
+        v = { excluded, readable: true, reason: newest ? `autonomyScope: ${excluded.length} excluded path(s)` : "no autonomyScope record", ...(requireFalsifierClasses ? { requireFalsifierClasses } : {}) };
+EDIT 3
+old:
+    // Increment child gap count if this is an auto-minted child gap.
+new:
+    // FALSIFIER REQUIRED (contained-self-development). When the autonomyScope record names
+    // require_falsifier_classes, an autonomous gap is admitted only if its falsifier is one of them;
+    // otherwise it needs information, whatever its edit site. A typecheck-class gap keeps its own
+    // machine check (tsc). No field: unchanged.
+    {
+      const requiredClasses = (await autonomyScope()).requireFalsifierClasses;
+      if (requiredClasses && requiredClasses.length > 0 && !typecheckClassOf(g)) {
+        const rawFalsifier = meta.falsifier as unknown;
+        const gapFalsifierClass = String((rawFalsifier && typeof rawFalsifier === "object" ? (rawFalsifier as { class?: unknown }).class : rawFalsifier) ?? "").toLowerCase();
+        if (!requiredClasses.includes(gapFalsifierClass)) {
+          excluded.push({ id, reason: `needs_information(falsifier=${gapFalsifierClass || "unset"}; autonomyScope requires ${requiredClasses.join("/")})` });
+          continue;
+        }
+      }
+    }
+    // Increment child gap count if this is an auto-minted child gap.
+Done when: all 3 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

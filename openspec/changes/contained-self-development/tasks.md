@@ -16,6 +16,9 @@
   call; a directed goal on the same file lands; a synthetic autonomous compose straying onto an
   excluded file is withheld.
 
+- [x] 1.6 LANDED `d7ec192` (09:14:05, BYTE-EQUAL): `autonomyScope.require_falsifier_classes` (class1/class2) read at admission; with it, 2,343 open → 9 admitted, all with a pre-existing falsifier outside the core. Reason: the first autonomous landing (bb5d6b9, falsifier none) was a live regression that nothing could have refuted.
+- [x] 1.7 goal-host `abedf81` (step 0): investigation goals attributed to their parent gap (gapIdOfGoal) instead of minting route-edit gaps.
+
 ## 2. Reopen under containment (user approval)
 
 - [ ] 2.1 Envelope ≈ $1/h; release the node-1 lease; the Documentation session releases node 2.
@@ -38,6 +41,24 @@
 - [ ] 4.1 Evidence shape and promotion activity; durability grading.
 - [ ] 4.2 Falsifier: the first autonomously authored commit promoted to `origin/dev` with no
   operator action.
+
+## 6. Supply: the system makes gaps verifiable (gap_falsify)
+
+Measured 2026-09-27: 286 open gaps outside the scope have an edit site but no class1/class2
+falsifier; the verifiable autonomous pool is 9. No detector writes a predicate before compose.
+- [ ] 6.1 `gap_falsify` resolver + seeded tick activity (development-vessel), graded by whether a
+  gap it falsified later closes by that predicate after a landing (a predicate true before any
+  landing is a miss). Deterministic v1 rules: (a) a `-narrowed` child inherits its parent's
+  class1/class2 predicate fields (narrowing strips them today; 2 gaps); (b) a backtick-quoted
+  identifier in the summary that is absent from the edit-site file becomes `expected_literal`,
+  skipping non-source files (canary .json etc.) (31 gaps, mixed quality). Writes via
+  substrateGap_write with `predicate_source: "gap_falsify:<rule>"`; the classifier re-stamps.
+- [ ] 6.2 v2: LLM-proposed predicate (reusing `rankWithLlm`/localization) for the remaining ~250,
+  validated deterministically (literal absent now for expected_literal; present now for
+  hardcoded_url; shape advertised for class2) before writing.
+- [ ] 6.3 Replace the investigation `/run-goal` dispatches (bumpFailedAttempts, pre-compose) with
+  a `gap_falsify` call on the parent, so investigation spend produces fields, not gaps.
+- [ ] 6.4 Narrowing keeps pre-compose predicates (strip only `removed_line_of_landing_commit`).
 
 ## 5. Demonstration and debt
 
