@@ -37,7 +37,9 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   `dispatchContext`, count calls, stamp `record.cost` before `flushRouterFeedback`, pass
   real tokens/cost to `recordGoalPath` and `persistSatisfierTrace`, replace `costUsd: 0`.
   Falsifier: a walk that called the LLM writes an execution row with non-zero `tokens_in`
-  and `cost_usd`.
+  and `cost_usd`. **Execution-level PASSED 00:01Z (with 1.1 + 1.3a live):** last 10 min, 209 rows,
+  245,800 tokens_in, $0.149 recorded (the hour before: 148k tokens, $0). Dispatch-level
+  `record.cost` pending 1.3b reaching node 1 (goal-host restarted 00:00:34 on 4eaad89 only).
 - [ ] 1.4 ias-executor-ts `src/hosts/vessel-daemon.ts:315`: pass `usage.cost_usd` (and tokens)
   through instead of `0`. Pre-validated (goals/1.4-executor-cost.txt). CORRECTED scope: this
   site only publishes the `task.completed` event (`/v2/events/publish`), it does not write the
