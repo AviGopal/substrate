@@ -51,7 +51,7 @@ time per vessel. Autonomous picks stay held on every node until phase 4 is live.
   event for an LLM-resolving task carries non-zero `cost_usd`. Phase-1 execution falsifier:
   `SELECT math::sum(cost_usd) FROM execution WHERE created_at > time::now()-1h` rises after 1.1–1.3.
 
-- [~] 1.5 PARTIAL: 1.5c LANDED `e8c58ce` (02:20, byte-equal; llm_completion_dispatch forwards caller/task_type/dispatch_id). 1.5a/1.5b (goal-host llm-router.ts/index.ts) pending rebase onto 1942eaf. Caller attribution: every LLM caller (goal-host floor / universal tool fallback, arg
+- [x] 1.5 LANDED: 1.5c `e8c58ce` (development-vessel llm_completion_dispatch forwards caller/task_type/dispatch_id), 1.5a `b880497` (goal-host llm-router stamps caller `goal-host:<task_type>` + dispatch_id; one blank line), 1.5b `b7bda9c` (goal-host floor tool loop / walk llm_completion / uf tool calls; byte-equal; phase-3 code intact). Falsifier pending node-1 goal-host restart. Caller attribution: every LLM caller (goal-host floor / universal tool fallback, arg
   synthesis, reach judge, target inference; development-vessel compose stages) passes `caller`
   and `task_type` so `llmSpendSummary` keys name the spender. Measured 00:00–00:30Z: 57–72% of
   spend was keyed `unknown|unknown`. Falsifier: `unknown` keys < 5% of window cost.
