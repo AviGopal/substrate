@@ -1,0 +1,7 @@
+In repos/development-vessel/src/resolvers/test-suite.ts, run the suite with discovery pointed at a dead address, because a local-tools test run in the live container registered a phantom endpoint (127.0.0.1:20236) in live discovery and broke every compose on the node for about twenty minutes. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+[ -d node_modules ] || timeout 120 bun install >/dev/null 2>&1; timeout ${budgetSec} bun test${testFile
+new:
+[ -d node_modules ] || timeout 120 bun install >/dev/null 2>&1; DISCOVERY_ENDPOINT=http://127.0.0.1:9 DISCOVERY_VESSEL_ENDPOINT=http://127.0.0.1:9 timeout ${budgetSec} bun test${testFile
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.
