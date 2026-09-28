@@ -282,6 +282,30 @@ metrics lookup (variant_performance_metrics by activity_id/variant_id) with no i
   and the two direct α+1 calls removed first so nothing is double-counted. The cost mean (5.1)
   needs a migration on SCHEMAFULL tables (not a one-file lane edit); `avg_cost_usd` on
   `variant_performance_metrics` already exists but averages the pre-phase-1 zeros.
+  (iv) 2026-09-28, CATEGORY CALIBRATION (the hopeless() seal) moved to the gap-store holder,
+  no new shape. Found: node 2's young node-local `/workspace/expectation-calibration.json`
+  sealed systematic_failure 8/0, edit_intent_route 21/0, self_development 15/0 and excluded
+  126 of 128 admitted gaps (pool 1-2, no autonomous landing since 10:19) while node 1's file
+  showed the same categories landing (61/1195, 99/2656); against the live store, network
+  evidence unseals 1,250 open gaps, 91 of them landable (site + class1/2 predicate).
+  LANDED 76bf256 (BYTE-EQUAL; tsc 0; suite 2298/33 = parent): substrate-gap.ts credits the
+  table where the store is held — an attempt on a failed_attempts rise, a land on a
+  transition into closed with an INCOMING closed_reason landed_verified (operator
+  hand-closes are not counted, per the 08-28 ruling) — and returns it on a read with
+  `include_calibration`. Behavioural probe (fixture paths): rise → attempt; no rise → none;
+  landed_verified close → attempt+land; expiry close of a row once carrying landed_verified
+  → none; flagless read omits the table; live file untouched by the suite.
+  THEN gap-to-feature.ts: the three local credits removed; readCalibration reads the held
+  table, refreshed before each auto-pick, local file only when the holder cannot be read
+  (logged). Double-count window: node 1 credited both locally and as holder between the two
+  landings — do not quote node 1 calibration deltas from that window.
+  Falsifier (pre-registered): node 2's first auto-pick after it runs both changes shows
+  hopeless_excluded well below 126 and pool > 2, picks leave the goal-target-inference
+  family; negative control: orphaned_capability, unreachable_producer,
+  trace_store_reconciliation (0 lands fleet-wide) stay excluded. Expectation: this restores
+  node 2's denominator, not a landing rate — at the measured low single-digit autonomous
+  land rate and a compose-lane cap of 1, expect fractions of a landing per hour.
+  The gap-class posterior (`gap-class-posteriors.json`) is still node-local — remains open.
 
 ## 6. Reopen and observe
 
