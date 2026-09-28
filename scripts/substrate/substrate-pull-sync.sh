@@ -918,7 +918,7 @@ EOF
         # this script already reasons this way — the test gate carries a 420s per-tick budget for
         # exactly this reason — and this wait was the one step that did not.
         QWAIT="${QUIESCE_WAIT_S:-900}"; QSTEP=10; QSPENT=0
-        : "${GATE_T0:=$(date +%s)}"
+        : "${GATE_T0:=$(date +%s)}" ; GATE_BUDGET_SECONDS="${GATE_BUDGET_SECONDS:-1000}"
         _Q_LEFT=$(( ${UNIT_TIMEOUT_S:-900} - ( $(date +%s) - GATE_T0 ) - ${QUIESCE_MARGIN_S:-120} ))
         [ "$_Q_LEFT" -lt 0 ] && _Q_LEFT=0
         if [ "$QWAIT" -gt "$_Q_LEFT" ]; then
@@ -1001,17 +1001,17 @@ EOF
   # unbounded step has already wedged the sibling host loop for 56 minutes once;
   # bound it. Past the budget the gate converges UNGATED and says so, because a
   # stalled deploy channel is a worse failure than an unmeasured convergence.
-  : "${GATE_T0:=$(date +%s)}"
+  : "${GATE_T0:=$(date +%s)}" ; GATE_BUDGET_SECONDS="${GATE_BUDGET_SECONDS:-1000}"
   GATE_ELAPSED=$(( $(date +%s) - GATE_T0 ))
-  if [ "$GATE_ELAPSED" -ge "${GATE_BUDGET_SECONDS:-420}" ]; then
-    log "$v: !!! TEST GATE SKIPPED — per-tick budget ${GATE_BUDGET_SECONDS:-420}s exhausted (${GATE_ELAPSED}s elapsed); converging UNGATED rather than risk a SIGTERM mid-convergence"
+  if [ "$GATE_ELAPSED" -ge "${GATE_BUDGET_SECONDS:-900}" ]; then
+    log "$v: !!! TEST GATE SKIPPED — per-tick budget ${GATE_BUDGET_SECONDS:-900}s exhausted (${GATE_ELAPSED}s elapsed); converging UNGATED rather than risk a SIGTERM mid-convergence"
     # FILE IT, do not merely log it. A test REGRESSION emits a gap (below); the gate
     # DISABLING ITSELF did not — and that is the more serious condition, because a
     # regression means the gate ran and objected while this means no gate ran at all.
     # Reporting the worse condition through the weaker channel is how it stayed invisible:
     # a loud line nobody queries is a silent failure. Measured 2026-08-17: several changes
     # converged under this branch and the only trace was a log line.
-    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-testgate-skipped-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"Repair needed: pull-sync converged $v to ${HEAD:0:10} with NO test gate — the per-tick budget (${GATE_BUDGET_SECONDS:-420}s) was exhausted after ${GATE_ELAPSED}s, so the suite never ran. This is not a passing gate, it is an absent one, and it is absent precisely when a tick is slow, which is when convergence is riskiest. Repair the capability by raising the budget, sharding the gate across ticks, or running the suite before the tick's other work.\",\"status\":\"open\"}}}}"
+    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-testgate-skipped-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"Repair needed: pull-sync converged $v to ${HEAD:0:10} with NO test gate — the per-tick budget (${GATE_BUDGET_SECONDS:-900}s) was exhausted after ${GATE_ELAPSED}s, so the suite never ran. This is not a passing gate, it is an absent one, and it is absent precisely when a tick is slow, which is when convergence is riskiest. Repair the capability by raising the budget, sharding the gate across ticks, or running the suite before the tick's other work.\",\"status\":\"open\"}}}}"
     BUN_BIN=""
   fi
   count_pf() { printf '%s' "$1" | grep -oE "^ *[0-9]+ $2" | grep -oE '[0-9]+' | tail -1 || true; }
@@ -1093,7 +1093,7 @@ EOF
     # Only file when the runner is genuinely missing. When the budget branch above cleared
     # BUN_BIN it already filed, and two gaps for one cause would double-count the demand
     # the gap picker reads.
-    if [ "$GATE_ELAPSED" -lt "${GATE_BUDGET_SECONDS:-420}" ]; then
+    if [ "$GATE_ELAPSED" -lt "${GATE_BUDGET_SECONDS:-900}" ]; then
       emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-testgate-no-runner-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"Repair needed: pull-sync converged $v to ${HEAD:0:10} with no test runner present, so the gate could not execute a single test. This is no instrument rather than no tests — the vessel's suite was never consulted. Repair the capability by ensuring bun is on PATH in the convergence environment.\",\"status\":\"open\"}}}}"
     fi
   else
@@ -1275,7 +1275,19 @@ EOF
     if [ -n "$CONSUMERS" ]; then
       log "$v: shared package changed -- rebuilding dist for consumers: $(echo $CONSUMERS | tr '\n' ' ')"
       STAGE="$RUNTIME_DIR/$v/.dist.stage"; rm -rf "$STAGE"
-      if ! (cd "$RUNTIME_DIR/$v" && /root/.bun/bin/bun run tsc --project tsconfig.build.json --outDir "$STAGE") || [ ! -s "$STAGE/index.js" ]; then
+      # A package whose tsconfig.build.json is declarations-only (cpg-inference-ts: `bun build`
+      # emits the JS, tsc only the .d.ts) can never yield index.js from tsc alone, so this check
+      # failed every tick and the package never converged. Fall back to the package's OWN build
+      # script, run in a scratch copy so its hardcoded `dist` output never touches the live dist.
+      (cd "$RUNTIME_DIR/$v" && /root/.bun/bin/bun run tsc --project tsconfig.build.json --outDir "$STAGE") || true
+      if [ ! -s "$STAGE/index.js" ]; then
+        BUILD_TMP="$RUNTIME_DIR/$v/.build.tmp"; rm -rf "$BUILD_TMP" "$STAGE"; mkdir -p "$BUILD_TMP"
+        (cd "$RUNTIME_DIR/$v" && tar --exclude=./node_modules --exclude=./dist --exclude=./.dist.stage --exclude=./.dist.prev --exclude=./.build.tmp -cf - .) | (cd "$BUILD_TMP" && tar -xf -) \
+          && ln -s "$RUNTIME_DIR/$v/node_modules" "$BUILD_TMP/node_modules" \
+          && (cd "$BUILD_TMP" && /root/.bun/bin/bun run build) && mv "$BUILD_TMP/dist" "$STAGE" || true
+        rm -rf "$BUILD_TMP"
+      fi
+      if [ ! -s "$STAGE/index.js" ]; then
         log "$v: BUILD FAILED -- keeping live dist, no consumer touched"; rm -rf "$STAGE"
         emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-build-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$v build failed at ${HEAD:0:10}; live dist kept, no consumer touched\",\"status\":\"open\"}}}}"
         failed=$((failed+1)); continue
