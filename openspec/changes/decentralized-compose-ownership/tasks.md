@@ -551,7 +551,9 @@ sequence for another change is running on the node.
   declarations only, so the shared-package fan-out's tsc-only build never produced `dist/index.js`. `31f15baf` falls
   back to the package's own build script in a scratch copy, and folds in node 2's uncommitted local gate-budget patch
   (420 s → 900/1000 s) so the self-update does not revert it. Verification pending: node 2's next ticks self-update and
-  log a clean cpg-inference-ts fan-out with `failed=0`.
+  log a clean cpg-inference-ts fan-out with `failed=0`. VERIFIED 08:11: after `4bb21141` (the package build
+  script calls bare `bun`, absent from the unit's PATH) node 2 logged "fan-out healthy AND propagated", `failed=0`,
+  analysis-vessel active; 08:21 tick also `failed=0`.
 - [ ] 6.3 Class: a node whose glue-layer fast-forward fails logs it every tick but files nothing. Pull-sync should
   file one gap per node when the super-repo stays behind origin across N ticks, naming the blocking paths.
 - [ ] 6.4 Class: runtime files still tracked in the super-repo on node 2 (`leases/*.json`, `Substrate/Projects/*`,
