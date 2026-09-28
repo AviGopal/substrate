@@ -1,0 +1,28 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, make autonomous admission also refuse a gap whose semantic-gate suspected_real_location lies in an autonomy-excluded path, because the gate has said the real fix is somewhere autonomy may not edit, so every draft at the gap's own edit_site is refused (33 semantic refusals on 09-27, 20 naming another location). Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+        if (scopeHit) {
+          excluded.push({ id, reason: `autonomy_scope(${scopeHit})` });
+          continue;
+        }
+      }
+    }
+new:
+        if (scopeHit) {
+          excluded.push({ id, reason: `autonomy_scope(${scopeHit})` });
+          continue;
+        }
+      }
+      // The semantic gate writes where the fix really belongs. When that is an excluded path, every draft
+      // at the gap's own edit_site is refused as not addressing it (obsidian authoring-root: 6 refusals on
+      // 09-27, each naming self-fact-reconcile.ts), so the gap is out of autonomous reach.
+      const suspectedSite = String(meta.suspected_real_location ?? "").replace(/:[^/]*$/, "");
+      if (suspectedSite && suspectedSite !== siteForScope) {
+        const suspectedHit = autonomyScopeExcludes(await autonomyScope(), suspectedSite);
+        if (suspectedHit) {
+          excluded.push({ id, reason: `autonomy_scope(suspected_real_location ${suspectedHit})` });
+          continue;
+        }
+      }
+    }
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.
