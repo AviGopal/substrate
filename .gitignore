@@ -238,6 +238,9 @@ scripts/substrate/workspace/
 /gaps/
 /memory/
 /memory_notes/
+# development-vessel's learning-mode resolver writes $WORKSPACE_ROOT/state/ at runtime; a tracked copy
+# blocks every super-repo fast-forward on a node where WORKSPACE_ROOT is this clone.
+/state/
 /policies/
 /data/
 /notes/
