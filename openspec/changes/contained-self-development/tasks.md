@@ -68,6 +68,10 @@
 - [x] 8.8 LANDED `6c86595`: no undirected landing compose starts while the envelope refuses (a named-gap caller had bypassed it every 10 min).
 - [x] 8.9 LANDED `f08df07`: an undirected compose of an operator_hold gap is refused BUSY (stopped a 4-second compose/narrow loop).
 - [x] 8.10 LANDED `59bfc4c`: contained admission requires a class2 check to name a measured field (49 of 60 open class2 gaps had none and could never be judged).
+- [x] 8.11 LANDED `28a69cf`: admission refuses a gap whose semantic-gate suspected_real_location is in an excluded path.
+- [x] 8.12 LANDED `4d3381c`: advertised_shape_coverage_scan answers one shape's live producer_count (null when the registry is unreachable). It also removes a guard that refused the real discovery endpoint, which had left the scan blind (0 advertised shapes; now 325).
+- [x] 8.13 LANDED `36b82b8`: nonzero_field reads a finite number only; null/missing/non-numeric is unknown, so an outage can neither close a gap nor falsify a landing.
+- [ ] 8.14 Supply (operator decision pending): backfill the 367 missing_capability gaps with evidence_resolve {advertised_shape_coverage_scan, input {shape}, nonzero_field producer_count}; the capability filer (goal-host fileCapabilityGap) attaches it at birth; admission routes capability gaps (no single edit site) through routeCapabilityGapToNewResolver. Known weakness: a stub producer satisfies producer_count, guarded only by the stub detector and semantic gate.
 - [ ] 8.5 Class detector (gap filed, operator_hold): a Class-2 predicate must read 'present' at birth or be marked `predicate_suspect` and kept unclosable.
 - [ ] 8.6 Strike limit: two auto-reverts on one gap ⇒ operator_hold / needs_information (no ping-pong).
 
