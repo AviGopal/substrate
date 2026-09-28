@@ -10,8 +10,8 @@ correct its own code landings. This corrects my 09-28 claims that several were "
 Every mechanism has been built at least once. The failure mode is **decay without detection**: a mechanism passes
 its acceptance once, is marked done, and later stops firing on real traffic because an input stops being filled,
 a key stops matching, a policy is left at a test value, or its reader is deferred. Nothing watches whether a built
-mechanism still fires; the watchdogs meant to (joint-liveness, validator-liveness) are themselves in `failed` state
-on node 2.
+*self-correction* mechanism still fires on real traffic. (The existing liveness watchdogs — joint-liveness,
+validator-liveness — are healthy on the hub; they watch joints and validators, not these mechanisms.)
 
 ## Per mechanism (built → state now → why tonight's landings slipped through)
 
