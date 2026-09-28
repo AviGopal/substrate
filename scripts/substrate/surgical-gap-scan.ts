@@ -100,15 +100,6 @@ const PORT_ROLE: Record<string, { role: string; constName: string; envVar: strin
 //   - lines with a `?? ` env fallback on the SAME line — already env-driven.
 const FETCH_LITERAL = /fetch\(\s*(["'`])((?:https?|ws):\/\/(?:localhost|127\.0\.0\.1):(\d{4,5})[^"'`]*)\1/;
 
-// ENDPOINT JOINED TO A POSSIBLY-ABSOLUTE RESOLVE PATH. asResolvePath returns a full URL when a
-// vessel's discovery row carries an absolute resolve_endpoint, so `${endpoint}${resolvePath}` builds
-// "http://h:phttp://h:p/..." and fetch throws "fetch() URL is invalid" (goal-host 2026-09-22..28: tens
-// of failed tool steps an hour until 5ca51be guarded two sites inline; the rest stayed broken). A line
-// that already guards with startsWith("http...") is the fixed form and is not a hit.
-const RESOLVE_JOIN = /\$\{[^}]*endpoint[^}]*\}\$\{\s*(?:asResolvePath\([^)]*\)|[\w.]*resolvePath)\s*\}/i;
-// The same join written as concatenation: endpoint.replace(...) + (asResolvePath(...)).
-const RESOLVE_JOIN_CONCAT = /endpoint\b[^;]*?\)?\s*\+\s*\(?\s*asResolvePath\(/i;
-
 interface Hit {
   vessel: string;
   repoRel: string;      // repos/<vessel>/src/...
@@ -117,22 +108,6 @@ interface Hit {
   url: string;
   lineText: string;
   existingConst?: string;  // name of an env-defaulted const in the SAME file for this port, if any
-  pattern?: "hardcoded_fetch_endpoint" | "resolve_path_join";
-  literal?: string;        // resolve_path_join: verbatim text unique in the file (line, or previous line + line)
-}
-
-// The verbatim text that identifies a join site uniquely in its file: the raw line, or the previous
-// raw line plus it when the line has an identical twin elsewhere. Undefined when neither is unique,
-// because a non-unique literal cannot tell this site's fix apart from its twin's.
-function uniqueSiteLiteral(content: string, lines: string[], i: number): string | undefined {
-  const count = (s: string) => content.split(s).length - 1;
-  const one = lines[i]!.trim();
-  if (one && count(one) === 1) return one;
-  if (i > 0) {
-    const two = `${lines[i - 1]!}\n${lines[i]!}`;
-    if (count(two) === 1) return two;
-  }
-  return undefined;
 }
 
 // In a file, find a `const NAME = process.env... ?? "http(s)://host:<port>"` (or
@@ -172,17 +147,6 @@ function scanVessel(vessel: string): Hit[] {
   for (const abs of walk(srcAbs)) {
     let content: string;
     try { content = readFileSync(abs, "utf8"); } catch { continue; }
-    const rel0 = ("repos/" + vessel + abs.slice(join(REPOS_ROOT, vessel).length)).replace(/\\/g, "/");
-    if (/resolvePath/i.test(content)) {
-      const jl = content.split("\n");
-      for (let i = 0; i < jl.length; i++) {
-        const text = jl[i]!;
-        if (!(RESOLVE_JOIN.test(text) || RESOLVE_JOIN_CONCAT.test(text)) || /startsWith\(/.test(text)) continue;
-        const literal = uniqueSiteLiteral(content, jl, i);
-        if (!literal) continue;
-        hits.push({ vessel, repoRel: rel0, line: i + 1, port: "", url: "", lineText: text.trim().slice(0, 200), pattern: "resolve_path_join", literal });
-      }
-    }
     if (!content.includes("fetch(")) continue;
     const lines = content.split("\n");
     for (let i = 0; i < lines.length; i++) {
@@ -213,36 +177,6 @@ function scanVessel(vessel: string): Hit[] {
 }
 
 function gapFromHit(h: Hit) {
-  if (h.pattern === "resolve_path_join") {
-    const hash = createHash("sha256").update(`${h.repoRel}|${h.literal}`).digest("hex").slice(0, 10);
-    const proposed_fix =
-      `On line ${h.line} of ${h.repoRel}, guard the join inline the way goal-host's rawResolve does: use the resolve path ` +
-      `as-is when it already starts with http:// or https://, otherwise prefix the endpoint (e.g. ` +
-      `\`rp.startsWith("http://") || rp.startsWith("https://") ? rp : \`\${endpoint}\${rp}\`\`). Change only this site; do not add a helper.`;
-    return {
-      id: `surgical-resolve-join-${h.vessel}-${hash}`,
-      category: "systematic_failure" as const,
-      source: "substrate_detected" as const,
-      summary:
-        `Endpoint joined to a possibly-absolute resolve path in ${h.repoRel}:${h.line} (\`${h.lineText.slice(0, 120)}\`). ` +
-        `asResolvePath returns a full URL for vessels whose discovery row has an absolute resolve_endpoint, so this join ` +
-        `builds an invalid URL and the fetch throws "URL is invalid". Fix: guard this one site inline.`,
-      detected_at: new Date().toISOString(),
-      status: "open" as const,
-      classification_metadata: {
-        detector: "surgical-gap-scan",
-        pattern: "resolve_path_join",
-        vessel: h.vessel,
-        file_path: h.repoRel,
-        edit_site: `${h.repoRel}:${h.line}`,
-        suspected_real_location: `${h.repoRel}:${h.line}`,
-        single_file: true,
-        line: h.line,
-        hardcoded_url: h.literal,
-        proposed_fix,
-      },
-    };
-  }
   // Deterministic id: hex hash of the stable locus (vessel+file+port+url). Hex avoids
   // gapClassKey's 10/13-digit stripping that would collapse distinct gaps onto one row.
   const hash = createHash("sha256").update(`${h.repoRel}|${h.line}|${h.port}|${h.url}`).digest("hex").slice(0, 10);
@@ -314,7 +248,7 @@ async function main(): Promise<void> {
   for (const h of selected) {
     const gap = gapFromHit(h);
     if (DRYRUN) {
-      emitted.push({ id: gap.id, edit_site: gap.classification_metadata.edit_site, dryrun: true, gap });
+      emitted.push({ id: gap.id, edit_site: gap.classification_metadata.edit_site, dryrun: true });
       continue;
     }
     const res = await writeGap(gap);
@@ -323,10 +257,9 @@ async function main(): Promise<void> {
 
   console.log(JSON.stringify({
     detector: "surgical-gap-scan",
-    patterns: ["hardcoded_fetch_endpoint", "resolve_path_join"],
+    pattern: "hardcoded_fetch_endpoint",
     vessels: VESSELS,
     total_hits: allHits.length,
-    hits_by_pattern: allHits.reduce((acc: Record<string, number>, h) => { const k = h.pattern ?? "hardcoded_fetch_endpoint"; acc[k] = (acc[k] ?? 0) + 1; return acc; }, {}),
     cap: CAP,
     emitted_count: emitted.length,
     dryrun: DRYRUN,
