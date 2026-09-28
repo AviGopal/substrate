@@ -1,0 +1,23 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, make admission respect repo ownership. Measured: this node composes for every vessel although it can only push repos it holds a push clone for; a second composer node would race it. Two edits in this one file:
+
+(1) Directly below the existing line `const vesselsCloneRoot = (): string => process.env["VESSELS_CLONE_ROOT"] ?? "/workspace/git/vessels";` add:
+
+export function ownedVessels(): Set<string> {
+  try {
+    return new Set(readdirSync(vesselsCloneRoot()).filter((d) => existsSync(join(vesselsCloneRoot(), d, ".git"))));
+  } catch {
+    return new Set();
+  }
+}
+
+(readdirSync, existsSync and join are already imported at the top of the file.)
+
+(2) In admitActionableGaps, inside `for (const g of gaps) {`, immediately after the line `const failedAttempts = Number(meta.failed_attempts ?? 0);` insert:
+
+    const ownedVessel = identifyVessel(g, meta);
+    if (ownedVessel && !ownedVessels().has(ownedVessel)) {
+      excluded.push({ id, reason: `not owned here(${ownedVessel})` });
+      continue;
+    }
+
+This follows the loop's existing exclusion idiom (excluded.push then continue), so it does not touch the gap's backoff or failed_attempts. Do not reference editSite in the inserted code. Do not use vesselDirExists: it reads the image layer, present on every node. Change nothing else.

@@ -1,0 +1,13 @@
+In repos/goal-host-vessel/src/index.ts, route an edit-intent compose to the node that owns the target repo. Replace exactly this one line (it occurs once in the file):
+
+            const earlyV = pickSatisfierProducer((earlyDj?.content?.vessels ?? []) as import("./satisfier-pick.js").SatisfierProducer[]);
+
+with:
+
+            const earlyRows = (earlyDj?.content?.vessels ?? []) as Array<import("./satisfier-pick.js").SatisfierProducer & { owned_repos?: string[]; vesselId?: string }>;
+            const earlyTargetVessel = /^repos\/([^/]+)\//.exec(earlyEditFile)?.[1] ?? "";
+            const earlyOwners = earlyRows.filter((r) => Array.isArray(r.owned_repos) && r.owned_repos.includes(earlyTargetVessel));
+            const earlyV = earlyOwners.length === 1 ? earlyOwners[0] : pickSatisfierProducer(earlyRows);
+            tap(`[goal-host-vessel] ${opts.surface}: EARLY EDIT-INTENT ${earlyOwners.length === 1 ? `routed by ownership → ${earlyOwners[0]!.vesselId}` : "routed by pick"}`);
+
+Measured: discovery returns every feature_compose producer, but nothing chooses the one that owns the edit target, so two composer nodes would race to push the same repo. With one node its row lists every vessel, so routing is unchanged. Change nothing else.

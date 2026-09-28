@@ -1,0 +1,26 @@
+In repos/development-vessel/src/resolvers/substrate-gap.ts, let a node that does not hold the gap store use the one that does. Measured: each node kept its own gaps.json, so a second composer node's autonomous lane only saw gaps it had filed itself and never the backlog for the repos it owns. The holder's address is a placement fact set at boot (like IDENTITY_VESSEL_URL): GAP_STORE_ENDPOINT, the full resolve URL of the holder's development-vessel. Three edits in this one file:
+
+(1) Directly after the line `import { join } from "node:path";` add:
+
+async function forwardToGapStore(pointer: Record<string, unknown>): Promise<ResolverResult | null> {
+  const ep = process.env["GAP_STORE_ENDPOINT"];
+  if (!ep) return null;
+  const key = process.env["METABOB_API_KEY"] ?? process.env["API_KEY"];
+  try {
+    const r = await fetch(ep, { method: "POST", headers: { "Content-Type": "application/json", ...(key ? { Authorization: `ApiKey ${key}` } : {}) }, body: JSON.stringify({ impulse: { pointer } }), signal: AbortSignal.timeout(15_000) });
+    const j = await r.json() as { shape?: string; body?: unknown };
+    return { shape: String(j.shape ?? "structuredError"), body: j.body ?? { detail: `gap store at ${ep} answered HTTP ${r.status}` } } as ResolverResult;
+  } catch (e) {
+    return { shape: "structuredError", body: { resolver: "substrateGap", detail: `gap store at ${ep} unreachable: ${(e as Error).message}` } } as ResolverResult;
+  }
+}
+
+(2) In resolveSubstrateGap (the function whose parameter line is exactly `  pointer: SubstrateGapReadPointer,`, which occurs once), make this the first statement of its body, directly above that function's `const gaps = await loadGaps();` (the same text also appears elsewhere in the file; edit only this function):
+
+  { const fwd = await forwardToGapStore(pointer as unknown as Record<string, unknown>); if (fwd) return fwd; }
+
+(3) In resolveSubstrateGapWrite, make its first statement (before `const flat = coerceFlatGapPointer(`):
+
+  { const fwd = await forwardToGapStore(pointer as Record<string, unknown>); if (fwd) return fwd; }
+
+When GAP_STORE_ENDPOINT is unset, behaviour is unchanged (the holder and every single-node substrate). An unreachable store returns a structuredError; it never falls back to the local file, which would split the store. Change nothing else.

@@ -1,0 +1,10 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, replace exactly the line (it occurs once)
+
+    if (ownedVessel && !ownedVessels().has(ownedVessel)) {
+
+with
+
+    const ownedSet = ownedVessels();
+    if (ownedVessel && ownedSet.size > 0 && !ownedSet.has(ownedVessel)) {
+
+Measured: when the push clone root is missing or empty (a test worktree, or a node whose clones have not been set up), ownedVessels() returns an empty set and admission excludes every gap as "not owned here". pull-sync is refusing to converge development-vessel because test/resolvers/gap-to-feature-admission.test.ts "EXCLUDES a no-producer orphan and admits the proven-landable + fresh-orphan paths" newly fails in its candidate run. An empty owned set means ownership is unknown, not that nothing is owned. Change nothing else.

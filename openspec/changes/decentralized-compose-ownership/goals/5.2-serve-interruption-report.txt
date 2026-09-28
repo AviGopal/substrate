@@ -1,0 +1,8 @@
+In repos/development-vessel/src/routes/impulses.ts, serve the `composerInterruptionReport` shape. Immediately before the existing line `    case "composeOwnership": {` add:
+
+    case "composerInterruptionReport": {
+      const { resolveComposerInterruptionSweep } = await import("../resolvers/composer-interruption-sweep.js");
+      return resolveComposerInterruptionSweep(p as Parameters<typeof resolveComposerInterruptionSweep>[0]);
+    }
+
+Measured: the sweep resolver exists but a resolver nothing routes to is an archive. Change nothing else.

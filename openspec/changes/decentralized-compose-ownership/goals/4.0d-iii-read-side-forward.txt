@@ -1,0 +1,5 @@
+In repos/development-vessel/src/resolvers/substrate-gap.ts, forward gap reads too. Measured: commit 516bc18 added `forwardToGapStore` and calls it at the top of resolveSubstrateGapWrite, but resolveSubstrateGap (the read resolver) never calls it, so a node with GAP_STORE_ENDPOINT set would write to the shared store but read its own empty local file. In resolveSubstrateGap, the function whose parameter line is exactly `  pointer: SubstrateGapReadPointer,` (it occurs once), insert as the first statement of its body, directly above that function's `const gaps = await loadGaps();` (the same text appears elsewhere in the file; edit only this function):
+
+  { const fwd = await forwardToGapStore(pointer as unknown as Record<string, unknown>); if (fwd) return fwd; }
+
+Change nothing else.
