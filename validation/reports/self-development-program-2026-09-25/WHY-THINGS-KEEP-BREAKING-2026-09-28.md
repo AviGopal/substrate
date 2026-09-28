@@ -60,6 +60,21 @@ is how long until a human audits that corner.
 3. **Landing gate on registered joints** — a staged change must not silence or corrupt a registered joint;
    aimed at A and F.
 
-Open question under investigation: the user confirms the system was working on 2026-09-26. A separate sweep is
-diffing every change since then (including this session's own containment rules and directed landings) to see
-whether the current breakage was introduced after that date.
+## What changed since the 09-26 working state (diff sweep)
+
+- **What "working on 09-26" measured:** the causal-attempt-ledger acceptance (3 consecutive runs, incl. a cold boot),
+  run with every autonomous path deliberately held quiet. It certified that the ledger records attempts consistently —
+  not that autonomous landings were good. 09-26 itself had ≥17 autonomous landings (57 substrate-authored commits),
+  several of them regressions nobody judged (bf8e48c, 329fc5c, 6c33870/47171d1, ac71a86).
+- **Existed before 09-26** (not introduced by the last two days): check-satisfying regressions (a); weak-predicate
+  landed_verified closes (b, incl. `removed_line_of_landing_commit`, 14 such closes 09-24/25); ribosome 100% error +
+  register 400 (d, since ≤09-25); tests touching live state (f); lost gap writes (g, gap filed 09-25); behavioural
+  verification ran:false (h, since 07-12).
+- **Introduced after 09-26:**
+  - Node-2 DB-watchdog failures — node-2 pull-sync auto-enabled never-fired timers on a DB-less node at 09-26 12:56Z (behaviour from 7f97df70, 09-10).
+  - Node-2 pull-sync failure — 13 vessel clones created on node 2 at 09-26 08:20Z without node_modules; cpg-inference-ts can never build there.
+  - Node-1 gap-compose.timer dead since 09-26 07:51Z — residue of the recursion-storm containment restart (masked, unmasked, never restarted).
+  - **Admissible supply collapse — caused by this session's containment**: combined admitted ~235–255 on 09-26 → 5+12 after 1.6 (falsifier class required, 09-27 09:14Z) → 0–3 + 2 after 8.10 / class2-only / operator_hold / suspected-location rules. Landings also fell with the lease, the 1–2 USD/h envelope, the 13:00–21:47 pause, and node-2 boredom/rhythm off since 09-27 02:10Z.
+- **Trade made:** from ~17+ unjudged landings/day (several regressions) to few landings, every one verified from both sides (8 since, all reverted; one caught by the system itself).
+
+Corrections to earlier rows: the sweep DID close ec962628-step-1 `landed_verified` at 09-27 22:06:21Z on a predicate derived from the landing commit itself (CHECKINS 22:20 said it could not judge it); node 2's learning-loop-selftest fails on 'Unable to connect', not a missing script; node 2's pull-sync still refreshes the super-repo (synced=1, failed=1).
