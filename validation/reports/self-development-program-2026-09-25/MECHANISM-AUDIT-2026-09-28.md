@@ -26,9 +26,9 @@ on node 2.
 
 ## Operational findings (live, 09-28 ~05:00)
 
-- Node 2: `substrate-pull-sync`, `joint-liveness`, `validator-liveness`, `learning-loop-selftest`, `compose-drift` in `failed` state; boredom and rhythm inactive.
-- Node 1: `boredom-vessel.timer` and `gap-compose.timer` have no next run.
-- ribosome-vessel: discovery registration 400 every minute; every extract errors.
+- **Correction (05:20, read-only diagnosis):** node 1 (the hub, which holds the DB) runs joint-liveness, validator-liveness, compose-drift, learning-loop-selftest and pull-sync successfully, with next runs scheduled; boredom-vessel runs as an active service (the timer is unused); gap-compose was masked deliberately for the quiet window. The watchdogs are NOT broken where the data lives.
+- Node 2's failures are a profile mismatch plus one real build problem: the three DB watchdogs fail 'Unable to connect' because node 2 has no DB (law 11: they belong on the hub only); learning-loop-selftest's script is missing from node 2's super-repo clone (clone behind, at ce1e4c5d); **pull-sync fails because cpg-inference-ts's build fails on node 2** ('BUILD FAILED — keeping live dist', synced=0), so node 2 converges nothing while it persists.
+- ribosome-vessel: registers with `shapes: []` (it owns no shapes); discovery's later security-audit validation rejects an empty shapes array → 400 every minute (contract drift; functionally minor). Its extraction dispatch pins `targetTemplateId: ribosome-extract`, which is absent from the template catalogue (first 500 checked), so goal-host derives a fresh walk that ends hollow ('missing activityTemplate, learningSummary') — all 1,788 'errors'. Per its own code comment, extraction was subsumed by goal-host's in-process `mintReachedTrace`; the ribosome dispatch is a redundant path to a retired template. The real question is why `mintReachedTrace` has produced no template since 09-22.
 - Settle window on node 1 is `window_ms: 120000` — the 2-minute acceptance-run value, never reset (code default 15 min). Settlement `#1` seals before an operator can judge.
 - e059a98: settlement `#2 regressed` at 04:09, then `#1 held` appended at 04:13 (`credit_eligible:true`). Readers that take the highest seq see `regressed`; any reader that takes `#1` sees `held`.
 - n2 concept-db lesson mirror failed 17× tonight (n2 lessons stay local).
@@ -45,7 +45,7 @@ live-self-view 4.1 "MET" verified in the diff only; checkboxes out of step in �
 
 ## Reconnect before building (priority)
 
-1. **Operational**: restore node 2's failed units (pull-sync, liveness watchdogs), node 1's dead timers, ribosome registration and extraction. These are the recovery and learning loops themselves.
+1. **Operational**: fix cpg-inference-ts's build on node 2 so node 2's pull-sync converges; stop scheduling the DB watchdogs on DB-less nodes (profile); retire ribosome-vessel's redundant dispatch (or give it the retired template back) and register it with its real consumer role; find why goal-host's `mintReachedTrace` has extracted nothing since 09-22.
 2. **Settle window** back to its 15-min default; settlements revisited when a `regressed_by` lands later.
 3. **Revert recognisability**: directed revert goals and operator reverts carry `reverts <sha>` so `shaWasRevertedInAnyClone` sees them.
 4. **Operator `regressed_by` → the existing lesson/settlement path** (`writeLesson`, `#2` settlement, posterior miss), and decomposition reads `regressed_by`.
