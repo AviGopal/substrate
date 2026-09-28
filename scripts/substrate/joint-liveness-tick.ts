@@ -82,6 +82,111 @@ async function emitGap(id: string, category: string, summary: string): Promise<v
   else console.log(`[joint-liveness] gap filed: ${id}`);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// REGISTERED JOINTS (09-28). The hardcoded BINDINGS list above kept this detector at ONE binding from
+// 08-25 to 09-28 while ~180 mechanism breaks went by (validation/reports/self-development-program-
+// 2026-09-25/WHY-THINGS-KEEP-BREAKING-2026-09-28.md): coverage depended on someone editing this file.
+// So joints are shaped records now (law 1): `jointBinding` pool impulses, read at every tick, so a
+// mechanism can register its own joint and coverage is data, not operator discipline. Kinds:
+//   sql_newest           { sql, maxLagSec }       — sql returns [{t: <epoch seconds>}]; newest must keep
+//                                                    pace with `execution` like a table binding
+//   gap_count            { where, min?, max? }    — open gaps matching every condition; count bounded
+//   discovery_registered { vesselIds }            — each named vessel must be in the discovery registry
+//   discovery_health     {}                       — every registered endpoint must answer /health
+type Cond = { path: string; op: "exists" | "missing" | "older_than_sec"; value?: number };
+type JointBinding =
+  | { name: string; kind: "sql_newest"; sql: string; maxLagSec: number; reader: string }
+  | { name: string; kind: "gap_count"; where: Cond[]; min?: number; max?: number; reader: string }
+  | { name: string; kind: "discovery_registered"; vesselIds: string[]; reader: string }
+  | { name: string; kind: "discovery_health"; reader: string };
+
+async function resolveShape(pointer: Record<string, unknown>): Promise<any> {
+  const r = await fetch(`${DEV}/v2/impulses/resolve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
+    body: JSON.stringify({ impulse: { pointer } }),
+    signal: AbortSignal.timeout(60_000),
+  });
+  if (!r.ok) throw new Error(`resolve ${String(pointer.type)} http=${r.status}`);
+  return r.json();
+}
+
+async function registeredBindings(): Promise<JointBinding[]> {
+  const j = await resolveShape({ type: "poolImpulse", shape: "jointBinding" });
+  const imps = (j?.body?.impulses ?? j?.content?.impulses ?? []) as Array<{ body?: unknown; status?: string }>;
+  return imps.filter((i) => i && i.status !== "closed").map((i) => i.body as JointBinding).filter((b) => b && typeof b === "object" && typeof (b as { name?: unknown }).name === "string");
+}
+
+function atPath(o: unknown, path: string): unknown {
+  let cur: unknown = o;
+  for (const k of path.split(".")) { if (cur == null || typeof cur !== "object") return undefined; cur = (cur as Record<string, unknown>)[k]; }
+  return cur;
+}
+
+let openGapsCache: Array<Record<string, unknown>> | null = null;
+async function openGaps(): Promise<Array<Record<string, unknown>>> {
+  if (openGapsCache) return openGapsCache;
+  const j = await resolveShape({ type: "substrateGap", status: "open", limit: 8000 });
+  openGapsCache = (j?.body?.gaps ?? []) as Array<Record<string, unknown>>;
+  return openGapsCache;
+}
+
+let registryCache: Array<{ vesselId?: string; endpoint?: string }> | null = null;
+async function registry(): Promise<Array<{ vesselId?: string; endpoint?: string }>> {
+  if (registryCache) return registryCache;
+  const disc = (process.env.DISCOVERY_VESSEL_ENDPOINT || "http://127.0.0.1:8100").replace(/\/$/, "");
+  const r = await fetch(`${disc}/resolve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
+    body: JSON.stringify({ pointer: { type: "vesselRegistry" } }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!r.ok) throw new Error(`vesselRegistry http=${r.status}`);
+  const j = (await r.json()) as { content?: { vessels?: Array<{ vesselId?: string; endpoint?: string }> } };
+  registryCache = j?.content?.vessels ?? [];
+  return registryCache;
+}
+
+/** Evaluate one registered joint. Returns null when healthy, else the severed detail. Throws if unreadable. */
+async function evaluate(b: JointBinding, newestExec: number, nowMs: number): Promise<string | null> {
+  if (b.kind === "sql_newest") {
+    const rows = await sql<{ t?: number }>(b.sql);
+    const t = typeof rows?.[0]?.t === "number" ? (rows[0]!.t as number) * 1000 : null;
+    const lagSec = t == null ? Infinity : (newestExec - t) / 1000;
+    return lagSec > b.maxLagSec ? `newest record lags the newest execution by ${t == null ? "∞ (none)" : Math.round(lagSec) + "s"} (allowed ${b.maxLagSec}s)` : null;
+  }
+  if (b.kind === "gap_count") {
+    const gaps = await openGaps();
+    const n = gaps.filter((g) => b.where.every((c) => {
+      const v = atPath(g, c.path);
+      if (c.op === "exists") return v !== undefined && v !== null && v !== "";
+      if (c.op === "missing") return v === undefined || v === null || v === "";
+      const t = Date.parse(String(v ?? ""));
+      return !Number.isNaN(t) && (nowMs - t) / 1000 > (c.value ?? 0);
+    })).length;
+    if (typeof b.min === "number" && n < b.min) return `${n} open gaps match (expected at least ${b.min})`;
+    if (typeof b.max === "number" && n > b.max) return `${n} open gaps match (expected at most ${b.max})`;
+    return null;
+  }
+  if (b.kind === "discovery_registered") {
+    const ids = new Set((await registry()).map((v) => String(v.vesselId ?? "")));
+    const missing = b.vesselIds.filter((id) => !ids.has(id));
+    return missing.length ? `not registered in discovery: ${missing.join(", ")}` : null;
+  }
+  if (b.kind === "discovery_health") {
+    const dead: string[] = [];
+    for (const v of await registry()) {
+      if (!v.endpoint) continue;
+      try {
+        const r = await fetch(`${String(v.endpoint).replace(/\/$/, "")}/health`, { signal: AbortSignal.timeout(5_000) });
+        if (!r.ok) dead.push(`${v.vesselId}@${v.endpoint} (http ${r.status})`);
+      } catch { dead.push(`${v.vesselId}@${v.endpoint} (no answer)`); }
+    }
+    return dead.length ? `registered endpoints that do not answer /health: ${dead.join("; ")}` : null;
+  }
+  throw new Error(`unknown joint kind ${(b as { kind?: unknown }).kind}`);
+}
+
 async function main() {
   // NOWMS must not come from Date.now() semantics we can't trust across hosts; use
   // the DB clock so the comparison is against the same time source that stamps rows.
@@ -131,16 +236,44 @@ async function main() {
     }
   }
 
-  // META-GUARD: fleet is active but the detector checked nothing -> it cannot fail.
-  if (checked === 0) {
+  // Registered joints (jointBinding pool records).
+  let registered: JointBinding[] = [];
+  let registryReadable = true;
+  try { registered = await registeredBindings(); } catch (e) {
+    registryReadable = false;
+    console.error(`[joint-liveness] jointBinding records unreadable: ${(e as Error)?.message ?? e}`);
+  }
+  for (const b of registered) {
+    let detail: string | null;
+    try { detail = await evaluate(b, newestExec, nowMs); } catch (e) {
+      console.error(`[joint-liveness] joint ${b.name} (${b.kind}) unreadable: ${(e as Error)?.message ?? e}`);
+      continue; // not "checked"
+    }
+    checked++;
+    if (detail) {
+      severed++;
+      await emitGap(
+        `severed-joint-${b.name}`,
+        "systematic_failure",
+        `Registered joint SEVERED: ${b.name} (${b.kind}; read by ${b.reader}) — ${detail}. Fleet active (last execution ${Math.round(fleetIdleSec)}s ago). Repair the writer that stopped or the reader that lost its input, then this joint reads healthy on the next tick.`,
+      );
+    } else {
+      console.log(`[joint-liveness] ok: ${b.name} (${b.kind})`);
+    }
+  }
+
+  // META-GUARD: every registered joint must be checked. "Checked more than zero" let one binding stand in
+  // for the whole mechanism graph for a month; an unreadable registry is the same failure.
+  const expected = BINDINGS.length + registered.length;
+  if (checked < expected || !registryReadable) {
     await emitGap(
       "joint-liveness-detector-checks-nothing",
       "systematic_failure",
-      `joint-liveness detector ran with the fleet ACTIVE (last execution ${Math.round(fleetIdleSec)}s ago) but successfully checked 0 of ${BINDINGS.length} bindings — every binding query errored or the binding list is empty. A detector that checks nothing is the newest check-that-cannot-fail; it must gap on itself.`,
+      `joint-liveness detector ran with the fleet ACTIVE (last execution ${Math.round(fleetIdleSec)}s ago) but checked ${checked} of ${expected} bindings${registryReadable ? "" : " and could not read the jointBinding registry"}. Every joint it cannot check is a joint that can go silent unseen; it must gap on itself.`,
     );
   }
 
-  console.log(`[joint-liveness] done: fleet_active newest_exec_lag=${Math.round(fleetIdleSec)}s bindings=${BINDINGS.length} checked=${checked} severed=${severed}`);
+  console.log(`[joint-liveness] done: fleet_active newest_exec_lag=${Math.round(fleetIdleSec)}s bindings=${expected} (seed ${BINDINGS.length} + registered ${registered.length}) checked=${checked} severed=${severed}`);
 }
 
 main().catch((e) => {
