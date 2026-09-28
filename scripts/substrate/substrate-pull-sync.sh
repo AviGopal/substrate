@@ -1284,7 +1284,7 @@ EOF
         BUILD_TMP="$RUNTIME_DIR/$v/.build.tmp"; rm -rf "$BUILD_TMP" "$STAGE"; mkdir -p "$BUILD_TMP"
         (cd "$RUNTIME_DIR/$v" && tar --exclude=./node_modules --exclude=./dist --exclude=./.dist.stage --exclude=./.dist.prev --exclude=./.build.tmp -cf - .) | (cd "$BUILD_TMP" && tar -xf -) \
           && ln -s "$RUNTIME_DIR/$v/node_modules" "$BUILD_TMP/node_modules" \
-          && (cd "$BUILD_TMP" && /root/.bun/bin/bun run build) && mv "$BUILD_TMP/dist" "$STAGE" || true
+          && (cd "$BUILD_TMP" && PATH="/root/.bun/bin:$PATH" /root/.bun/bin/bun run build) && mv "$BUILD_TMP/dist" "$STAGE" || true
         rm -rf "$BUILD_TMP"
       fi
       if [ ! -s "$STAGE/index.js" ]; then
