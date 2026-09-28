@@ -1,5 +1,11 @@
 # Consumer-side landing probes
 
+> **Superseded — do not build (operator ruling: reuse before minting).** Two existing mechanisms already cover
+> this: the standing-expectation loops in development-vessel (`expectation:*` / `expectation-trend:*`, live and
+> self-closing) and the cutover's `runBehavioralVerification` (`{resolve, expect}` specs; a failure withholds
+> `landed_verified`). The work is to register production expectations into those readers, not to add a probe runner.
+> See `contained-self-development` tasks for the reuse plan.
+
 ## Why
 
 Every verdict on a landing today grades it against the check that motivated it: the gap's own predicate, its test,
