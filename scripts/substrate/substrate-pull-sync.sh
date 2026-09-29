@@ -1049,7 +1049,7 @@ EOF
   # heal-probe, flat-*-probe, …) in the live store. It now runs under a scrubbed environment
   # with a throwaway WORKSPACE_ROOT, like the compose (d8891ed) and post-land (53b4993) runners;
   # parent and candidate are both measured this way, so the gate still compares like with like.
-  run_suite() { (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && env -i PATH="$PATH" HOME="$HOME" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test 2>&1; rm -rf "$_rs_root" 2>/dev/null) || true; }
+  run_suite() { (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test 2>&1; rm -rf "$_rs_root" 2>/dev/null) || true; }
   # Run the suite at an arbitrary ref, NOW, under this tick's conditions.
   #
   # The stored baseline is a snapshot taken at some earlier tick; test outcomes here depend on
@@ -1079,7 +1079,7 @@ EOF
       rm -rf "$_rsa_wt" 2>/dev/null || true; return 1
     fi
     [ -d "$d/node_modules" ] && ln -s "$d/node_modules" "$_rsa_wt/node_modules" 2>/dev/null || true
-    _rsa_out="$( (cd "$_rsa_wt" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && env -i PATH="$PATH" HOME="$HOME" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test 2>&1; rm -rf "$_rs_root" 2>/dev/null) || true )"
+    _rsa_out="$( (cd "$_rsa_wt" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test 2>&1; rm -rf "$_rs_root" 2>/dev/null) || true )"
     git -C "$d" worktree remove --force "$_rsa_wt" >/dev/null 2>&1 || rm -rf "$_rsa_wt" 2>/dev/null || true
     git -C "$d" worktree prune >/dev/null 2>&1 || true
     printf '%s' "$_rsa_out"
