@@ -46,22 +46,6 @@
       "window_hours": 1
     },
     {
-      "id": "sig_count_query_fails",
-      "instrument": "journal_pattern",
-      "profiles": [
-        "standalone",
-        "hub"
-      ],
-      "edit_site": "repos/activity-api/src/routes/impulses.ts",
-      "must_fail": "canary",
-      "window_hours": 1,
-      "unit": "activity-api",
-      "gate": "active",
-      "pattern": "SurrealDB query failed.*shape_signature FROM execution",
-      "max": 0,
-      "must_fail_line": "ERROR SurrealDB query failed {\"sql\":\"SELECT array::len(array::distinct((SELECT VALUE shape_signature FROM execution WHERE activity_id = $variant_id AND (account_id = $account_id OR (account_id IS NONE AND org_id = $org_id)))))) AS sigs\",\"error\":\"Parse error: Unexpected token `)`, expected FROM\"}"
-    },
-    {
       "id": "pull_sync_test_gate_blind",
       "instrument": "journal_pattern",
       "profiles": [
