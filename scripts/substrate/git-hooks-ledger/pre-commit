@@ -1,0 +1,9 @@
+#!/bin/sh
+# pre-commit — chain only (causal-attempt-ledger; REALIGNMENT 2026-09-29 §2.1 item 2 precondition).
+# Installed as the container-wide core.hooksPath, this directory shadows every
+# repository's .git/hooks. Without this file a repository's own pre-commit (the
+# super-repo placement gate, the leak scan) would silently stop running: a fail-open
+# regression. It records nothing and returns the chained hook's status, so a gate
+# that refuses a commit still refuses it.
+. "$(dirname "$0")/_record.sh"
+ledger_chain pre-commit "$@"

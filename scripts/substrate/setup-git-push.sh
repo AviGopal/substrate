@@ -49,6 +49,18 @@ git config --system user.name  "$AUTHOR_NAME"
 git config --system user.email "$AUTHOR_EMAIL"
 echo "[setup-git-push] system git identity configured"
 
+# Attempt-ledger sensing (causal-attempt-ledger). Every commit, rewrite and local
+# branch update made anywhere in the container is spooled for the ledger, whichever
+# route made it. The hooks record and never refuse, and chain to each repository's
+# own hook of the same name (core.hooksPath would otherwise disable .git/hooks).
+LEDGER_HOOKS="${SUBSTRATE_LEDGER_HOOKS_DIR:-/usr/local/share/substrate/git-hooks-ledger}"
+if [ -x "$LEDGER_HOOKS/post-commit" ]; then
+  git config --system core.hooksPath "$LEDGER_HOOKS"
+  echo "[setup-git-push] attempt-ledger git hooks installed ($LEDGER_HOOKS)"
+else
+  echo "[setup-git-push] WARN attempt-ledger hooks missing at $LEDGER_HOOKS — commits will not be spooled"
+fi
+
 # PAT validation (2026-06-19). The in-container push is an HTTPS PAT path. When
 # the PAT is invalid/missing, EVERY `git push` fails with "Invalid username or
 # token. Password authentication is not supported." — and the cutover would spew
