@@ -1,0 +1,850 @@
+{
+ "area": "goal-host-vessel",
+ "items": [
+  {
+   "name": "goal-host failure memory",
+   "location": "/workspace/.goal-host-failure-memory.jsonl (9e23455, cf8fd87)",
+   "purpose": "feed prior failure reason into attempt 1",
+   "status": "live-used",
+   "general": true,
+   "evidence": "A/B recall confirmed 09-22",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "Reached-command cache",
+   "location": "/workspace/.goal-host-reached-commands.jsonl (goal-host)",
+   "purpose": "Replay verified commands for similar goals",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Replayed a false reach (628300000 literal). No eviction on reach override; operator evicted 2 entries by hand 08-16",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "verifier-recipe triangulation store",
+   "location": "/workspace/state/verifier-recipes.jsonl; goal-host _useRecipe index.ts:4183",
+   "purpose": "Mint grounded oracles for new countable families from two agreeing derivations",
+   "status": "broken",
+   "general": true,
+   "evidence": "08-27: 34 recipes minted, 0/4 reused; candidates never mature",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "goal-host reach-to-mint ribosome chain",
+   "location": "892c342b",
+   "purpose": "mint templates from reached traces",
+   "status": "unknown",
+   "general": true,
+   "evidence": "06-30",
+   "duplicates_of": "ribosome-vessel",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "goal_verification_labels corpus + label read/write shapes",
+   "location": "activity-api src/routes/impulses.ts ~2842-3000; goal-host-vessel src/index.ts:3929; feature-compose.ts:4560",
+   "purpose": "Designed intake for independent or late verdicts (oracle corpus).",
+   "status": "live-used",
+   "general": true,
+   "evidence": "14,100 rows; read by goal-host's deterministic label feed but not by posterior-update.ts, so there is no credit revision.",
+   "source": "openspec-6",
+   "mentions": 1,
+   "sources": [
+    "openspec-6"
+   ]
+  },
+  {
+   "name": "auto-bridge author_producer + mintGovernorAllows",
+   "location": "author-producer.ts; goal-host :9726, :5373",
+   "purpose": "validated on-demand producer mint",
+   "status": "live-used",
+   "general": true,
+   "evidence": "44 arms 9,450 execs",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "reuse-before-mint shadow + mint governor",
+   "location": "dev-vessel activity-create-variant; goal-host b45a2aa",
+   "purpose": "refuse duplicate producers",
+   "status": "unknown",
+   "general": true,
+   "evidence": "REUSE_BEFORE_MINT=shadow default (env-gated)",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "Expectation observation loop + cross-vessel watchdog",
+   "location": "dev-vessel c6f4c9ca/84ca65088/b7aa62d3; goal-host 810c660d",
+   "purpose": "Re-check live artifacts vs persisted expectations; self-file/close gaps; detect own stall",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Cases A-D 09-19; instance limited to titled transforms",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "drain-before-restart + durable dispatch records",
+   "location": "dev-vessel f6ff0c34; goal-host c130755/71a2cca/a78e73a/dc2e337",
+   "purpose": "non-disruptive cutovers, attributable interrupted dispatches",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-04 three-part probe passed",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "Ownership routing (composeOwnership)",
+   "location": "dev-vessel/goal-host/discovery 2c0aad9, 8645ead, fbb2fab, c293bb6",
+   "purpose": "Route composes to owning node",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Node 2 landed 77ee9b9, 6bfbe4b, 61b4812, 766f68d",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "distribution_policy",
+   "location": "discovery 6ab2e24, transport 24ac13e2, goal-host 9225c54",
+   "purpose": "Vessels set their own routing/duplicate rules",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-31 on 3 pick paths; fan-out path missing",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "focusedSlice / siteCenteredWindow / verbatimExcerptBlock / refuseRederivedEdit",
+   "location": "feature-compose.ts, goal-host",
+   "purpose": "drafter grounding windows",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "overlapping fixes; blind repair relocates (09-03)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "LATE-LANDING detection by route-edit gap id",
+   "location": "goal-host",
+   "purpose": "Credit a late compose landing to its dispatch",
+   "status": "broken",
+   "general": false,
+   "evidence": "#37: credits old commits of the same goal text",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "Lexical rebind (tryLexicalRebind)",
+   "location": "goal-host",
+   "purpose": "First/last-mile adaptation of donor commands",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-08 banks poisoned donors; 09-18 rebind 0/146",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "SATISFIER_PROVEN_BAD_ARMED suppression",
+   "location": "goal-host",
+   "purpose": "suppress proven-bad satisfiers",
+   "status": "dormant",
+   "general": false,
+   "evidence": "env unset (09-10)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "Satisfier filesystem-write refusal",
+   "location": "goal-host",
+   "purpose": "Block walks from writing vessel source",
+   "status": "broken",
+   "general": false,
+   "evidence": "#33 refused then claimed success; #35: the shell route is uncovered",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "Tier-2 rebind (LCS scaffold + slot gate)",
+   "location": "goal-host",
+   "purpose": "First-mile adaptation of cached commands",
+   "status": "live-used",
+   "general": false,
+   "evidence": "refuses when slot literal absent (Io vs COMMAND=501); workaround for missing typed parameters",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "citation oracle",
+   "location": "goal-host",
+   "purpose": "grade investigation answers by re-reading cited file",
+   "status": "live-used",
+   "general": true,
+   "evidence": "ab7074b1 reached cited; accepts coincidental fixtures",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "deterministic:verified-* oracles",
+   "location": "goal-host",
+   "purpose": "Deterministic reach verification",
+   "status": "dormant",
+   "general": false,
+   "evidence": "0 firings in 10h (08-03).",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "dispatch-as-resolve goalDispatchAsync/goalWalkState",
+   "location": "goal-host",
+   "purpose": "Dispatch over overlay",
+   "status": "live-used",
+   "general": true,
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "first-mile rebind adaptation",
+   "location": "goal-host",
+   "purpose": "reuse pathway with different entry",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "fired once 09-06; reuse rate unchanged",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "goal-host mintReachedTrace / pathway reuse",
+   "location": "goal-host",
+   "purpose": "Crystallise reached walks and reuse them",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1,227 reuse accepts; 0 templates since 09-22; never for edit-intent",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "hollow_walklog_capped gate",
+   "location": "goal-host",
+   "purpose": "Skip judge when walk log shows nothing was done",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Does not fire on universal-tool-fallback path -> fd259bc3 doc summary graded reached (08-21)",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "isPathlessCodeChangeGoal admitter",
+   "location": "goal-host",
+   "purpose": "Admit pathless edit goals (law 13)",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Regex conjunction admitted 1/4 natural phrasings",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "parallel sibling dispatch",
+   "location": "goal-host",
+   "purpose": "fan-out",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0/108,563; credit rule sums instead of averaging",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "reached-command cache",
+   "location": "goal-host",
+   "purpose": "Replay verified commands",
+   "status": "live-used",
+   "general": false,
+   "evidence": "08-08 98.5% shellResult; stale-count replay gap 07-28",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "selectActivityForGoal.ts",
+   "location": "goal-host",
+   "purpose": "Direct OpenAI activity selection",
+   "status": "fossil",
+   "general": false,
+   "evidence": "No caller (PROCESS_MEANT 08-13)",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "slot-binding",
+   "location": "goal-host",
+   "purpose": "Bind data flow shape to shape",
+   "status": "live-used",
+   "general": true,
+   "evidence": "9,772 runs/5d",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "tryLexicalRebind",
+   "location": "goal-host",
+   "purpose": "Near-miss command adaptation",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "08-10 0 fires/12h, scaffold 0/112 above 0.15; 08-08 3/3 on jq family",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "universal-tool-fallback",
+   "location": "goal-host",
+   "purpose": "ReAct floor",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1,918 runs/5d, 318 ok",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "verified-registry-count / verified-compute-artifact oracles",
+   "location": "goal-host",
+   "purpose": "Recompute a fact independently for the verdict",
+   "status": "live-used",
+   "general": false,
+   "evidence": "08-21 totalVessels=15 recomputed; 09-19 run 2",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "{{shape}} reference interpolation",
+   "location": "goal-host",
+   "purpose": "deterministic operand threading",
+   "status": "dormant",
+   "general": true,
+   "evidence": "zero uses in journal (09-03)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "pathway reuse via shape_signature",
+   "location": "goal-host 'pathway reuse: accepted'",
+   "purpose": "Ceiling/middle-tier reuse of learned pathways incl. partial cover",
+   "status": "live-used",
+   "general": true,
+   "evidence": "23 acceptances; donor record frozen 10/12 across 11 reuses (no write-back)",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "grounded ReAct loop (runGroundedToolLoop / universalToolFallback / a.5)",
+   "location": "goal-host (43247db, f44b27b, 6cba611)",
+   "purpose": "ReAct parity floor with groundedOk gate and command evidence",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Deployed but unexercised: 0 live firings; the primary satisfier path reaches first.",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "Evidence-supply instruments (command log, body re-fetch, request URL log, data-centred window, HOLLOW-CONTENT log)",
+   "location": "goal-host (50448be, 32b5c04, cb03dfc, 21314ec, 1fee66f)",
+   "purpose": "Put load-bearing facts in the model/operator window",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Worked on first contact every time (operator ledger 6/6)",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "/resolve recursion guard",
+   "location": "goal-host (b192b726)",
+   "purpose": "Stop goal_execution recursion storms",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Operator-landed 09-26",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "Reached-command cache with tombstone",
+   "location": "goal-host (f9057a1)",
+   "purpose": "Replay verified commands; evict on false reach",
+   "status": "live-used",
+   "general": true,
+   "evidence": "poisoned by counterfeit reach 09-22",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "auto_draft_* rows in gap store",
+   "location": "goal-host (pre-3d4aa60)",
+   "purpose": "Decision telemetry misfiled as gaps",
+   "status": "fossil",
+   "general": false,
+   "evidence": "3372 closed rows (54%) of the live store; inflates close_rate",
+   "source": "gap-history",
+   "mentions": 1,
+   "sources": [
+    "gap-history"
+   ]
+  },
+  {
+   "name": "pathway reuse by shape_signature",
+   "location": "goal-host + goal_execution_paths.endpoint_output_shapes",
+   "purpose": "Learned-pathway ceiling reuse",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Backfill proven load-bearing 09-06; consultation had been dead 07-20.",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "Failure memory",
+   "location": "goal-host .goal-host-failure-memory.jsonl",
+   "purpose": "Replay prior failure verdicts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Filters deterministic refusals; prompt-only, never gates spend",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "targetTemplateId selection bypass",
+   "location": "goal-host / boredom (c8e48cb2)",
+   "purpose": "force named template",
+   "status": "unknown",
+   "general": false,
+   "evidence": "routes around Thompson; caused alpha=beta=1 after 199 executions (efa25a46)",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "Recursion guard",
+   "location": "goal-host /resolve 7f0425d",
+   "purpose": "Refuse goal already being walked",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Refused 11 self-resolves 09-26 15:54; hand-landed operator identity",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "FAILURE-RECALL in walk",
+   "location": "goal-host /run-goal",
+   "purpose": "Feed prior failures into attempt 1",
+   "status": "live-used",
+   "general": true,
+   "evidence": "4803 walk bookkeeping rows",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "ablation:disableReuse + learning_mode observe",
+   "location": "goal-host /run-goal (6273bf6)",
+   "purpose": "Held-out cold-derivation floor arm for the counterfactual",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Tags made observable 09-06; the reuse-vs-floor cost A/B was never run",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "reached-command bank with tail replay",
+   "location": "goal-host /workspace/.goal-host-reached-commands.jsonl; REACHED_CMD_CACHE_MAX_LOAD=2000",
+   "purpose": "Procedural memory of reached commands that survives restart, with tombstones",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Full replay gives 1,012 entries; the tail window keeps 108. Forgetting is driven by log traffic.",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "gracefulShutdown drain",
+   "location": "goal-host 015d1ae/53cce0b",
+   "purpose": "drain walks on restart",
+   "status": "broken",
+   "general": false,
+   "evidence": "drain 80s > live TimeoutStopSec 60s; 9706f440 never deployed (08-05)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "goal-host /run-goal coalesce dedup",
+   "location": "goal-host 055406c/7e121c4 (index.ts:5743)",
+   "purpose": "Deduplicate identical in-flight goals",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Pool 50->3",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "threaded compositional routes",
+   "location": "goal-host 06b66d8, e874a19",
+   "purpose": "Deterministic rank-aggregate/two-source/ratio",
+   "status": "live-used",
+   "general": false,
+   "evidence": "emitted==truth by construction; per-class hand-built",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "Failed-walk trace persistence",
+   "location": "goal-host 07a6c7c",
+   "purpose": "Durable walk_log for unreached walks",
+   "status": "live-used",
+   "general": true,
+   "evidence": "readable via execution_trace 09-22",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "responsibility cycle (expectation-trend self-mint + observation loop)",
+   "location": "goal-host 0fbfcaac/c6f4c9ca; dev-vessel 84ca65088/707dd248/b7aa62d3/810c660d",
+   "purpose": "The system states and keeps its own promises.",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Self-minted uppercase family 09-20",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "per-dispatch ablation/learning_mode",
+   "location": "goal-host 0fe201f",
+   "purpose": "Interventional arms (forceFloor, observe).",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Used only by the operator-run eval-ablation-harness.py",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "Store-intent override",
+   "location": "goal-host 182dbf3d",
+   "purpose": "Store goals must include memoryNote_write",
+   "status": "dormant",
+   "general": false,
+   "evidence": "0 fires in battery 7/8",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "Replay strike eviction + exact-hit selection",
+   "location": "goal-host 2e8b4cc (substrate-authored), 6eed100",
+   "purpose": "Keep good cache entries against prose false-negatives",
+   "status": "live-used",
+   "general": true,
+   "evidence": "09-18 converged, pow RETAINED strike 1/2",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "evidence ledger contentPreview",
+   "location": "goal-host 3cf2bdf; obsidian 95adc43",
+   "purpose": "Show produced values so humans can grade the grader.",
+   "status": "live-used",
+   "general": true,
+   "evidence": "DOM verified 07-27",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "Demand-counting capability filer",
+   "location": "goal-host 4361247",
+   "purpose": "Open capability gaps only on repeated demand",
+   "status": "live-used",
+   "general": true,
+   "evidence": "693 one-off gaps closed as walk artifacts",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "correlation_id selection-to-outcome join",
+   "location": "goal-host 547383a; v_selection_outcomes",
+   "purpose": "Grade decisions as decisions (law 12)",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Never observed live; the view has no outcome field",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "deterministic:no-oracle-for-goal-class",
+   "location": "goal-host 57cd2c3",
+   "purpose": "Honest ungraded refusal without beta",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-07 hollow 68%->0 on cold families",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "Satisfier consumption edges",
+   "location": "goal-host 69fe835",
+   "purpose": "Record input/output impulse ids on satisfier traces",
+   "status": "live-used",
+   "general": true,
+   "evidence": "first edge 09-23 10:26Z",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "partial-coverage guard + composition-preference probe",
+   "location": "goal-host 6d64e62",
+   "purpose": "Reject subset reaches, prefer covering composition",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-24 guard fired; probe not observed",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "/resolve recursion guard",
+   "location": "goal-host 7f0425d",
+   "purpose": "Refuse self-recursive goal_execution walks",
+   "status": "live-used",
+   "general": true,
+   "evidence": "11 RECURSION REFUSED 09-26; hand-landed after the substrate could not land it (llm=false)",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "selector drift gate / route-as-data ClassRows",
+   "location": "goal-host 8478bc6, 5fa3fc8",
+   "purpose": "Drift-proof self-authored classes",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Stalled at 3 ClassRows (07-31)",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "goal-host failure memory",
+   "location": "goal-host 9e23455",
+   "purpose": "Recall prior failure verdicts by goal_hash",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Feeds the walk only, not feature_compose; missed its A/B criterion",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "Failure memory + priorVerdictFeedback + FEEDBACK-RETRY",
+   "location": "goal-host 9e23455 cf8fd87 64ce0ac; /workspace/.goal-host-failure-memory.jsonl",
+   "purpose": "Cross-dispatch failure lessons",
+   "status": "live-used",
+   "general": true,
+   "evidence": "A/B f0e0a5f0 recall PASS 09-22",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "failure memory keyed by goal_hash",
+   "location": "goal-host 9e23455/cf8fd87",
+   "purpose": "Carry rejection reasons to the next dispatch",
+   "status": "live-used",
+   "general": true,
+   "evidence": "f9033212, 27815bb3",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "Satisfier plane (vesselResolveShape)",
+   "location": "goal-host :8929-9260",
+   "purpose": "resolve missing shapes directly",
+   "status": "live-used",
+   "general": true,
+   "evidence": "349 arms, 24,810 execs",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  }
+ ]
+}

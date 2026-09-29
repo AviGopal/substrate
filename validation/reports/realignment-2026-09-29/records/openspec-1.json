@@ -1,0 +1,511 @@
+{
+ "source": "openspec-1",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/openspec-1.md",
+ "coverage": "First 18 entries of openspec/changes (non-archive): all 18 are dated change dirs 2026-04-26..2026-05-23; this shard contains no stray .json/.ts files (those sort later). Read proposal.md for all 18 (design.md for single-container); task done/open counts for all; open-task lists; IAL tasks.md gates/Phase 27 sections (skimmed phases 8-26 by header), IAL blocker-analysis head, IAL findings/dev.md D-IAL-001..004, findings/validation-2026-05-24 (F1,F4,summary), validation-2026-05-25 (full); substrate-explicit-vessels findings/audit.md F4,F9-F24 (full) and validation.md F3 update. All 3 openspec/specs read in full. Skipped: most design.md bodies, per-change specs/ subdirs, IAL tasks phases 13-26 detail, audit F1-F3/F5-F8. Live checks: vessel clone greps in substrate-live, SurrealDB counts (context_thompson_scores, cost_usd/tokens, failure_mode, draft-gap-closing outcomes), validation/state/lift-status.json and closure-status.json.",
+ "attempts": [
+  {
+   "key": "false-verification",
+   "title": "Lift S1->S2 declared",
+   "where": "validation/state/lift-status.json (as_of 2026-05-26); IAL tasks 27.S; findings/dev.md D-IAL-003",
+   "tried": "Lift on coverage_progress (rl windows strictly increasing) + health + operator hand-over",
+   "outcome": "failed",
+   "date": "2026-05-26",
+   "evidence": "method: operator-judgment; only 1 natural fire exec_ckg0w923; 3 cited execs were operator probes (withdrawn); agent self-approved before criteria met 07:23Z; D-IAL-003 operator staggered template runs 1h apart to make rl increase (metric engineered)"
+  },
+  {
+   "key": "false-verification",
+   "title": "Closure audit 6/6 green",
+   "where": "findings/validation-2026-05-25.md; validation/state/closure-status.json",
+   "tried": "closure-audit.ts across six --without options",
+   "outcome": "reverted",
+   "date": "2026-05-25",
+   "evidence": "claimed all 6 closed 05-25; last run 2026-09-07 all_closed=false"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Boredom templateId direct dispatch",
+   "where": "commit 14e23e95; substrate-explicit-vessels findings/validation.md F3 update",
+   "tried": "Bypass goal-processing by dispatching templates by id",
+   "outcome": "partial",
+   "date": "2026-05-24",
+   "evidence": "199 executions succeed but total_selections=0, alpha/beta 1/1: execution green, learning dead; recurs 09-25 as autonomous_pick bypass"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Autonomous gap-closing template authoring",
+   "where": "development-vessel seed draft-gap-closing-activity; commit 4e55f95b; audit F10,F11,F13,F15,F24",
+   "tried": "LLM drafts closing templates from failure-mode report and registers variants",
+   "outcome": "failed",
+   "date": "2026-05-28",
+   "evidence": "templates land proposed:false, reference nonexistent activity_fetch, execute with all err_* outputs as success, win recommend for unrelated goals; live 09-21..28: 457 failure/73 success, duplicate variant -1783049075304"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Thompson normalize activity_id",
+   "where": "activity-api b972fd2 posterior-update.ts",
+   "tried": "normalizeActivityId before WHERE on variant_performance_metrics",
+   "outcome": "worked",
+   "date": "2026-05-25",
+   "evidence": "alpha 1->2, beta 2->3 verified after fix"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "TraceSink strips execution_error failure type",
+   "where": "ias-executor-ts activity-api-trace-sink.ts:138-148; audit F19",
+   "tried": "Add execution_error to FailureModeSchema",
+   "outcome": "partial",
+   "date": "2026-05-29",
+   "evidence": "schemas.ts:1141-1153 has execution_error now; but only 1219/4764 failure traces since 09-27 carry non-null failure_mode"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Cost accounting on traces",
+   "where": "ias-executor-ts engine.ts, goal-host.ts HttpLLMPort; audit F21",
+   "tried": "Capture LLM usage and propagate costUsd",
+   "outcome": "failed",
+   "date": "2026-05-29",
+   "evidence": "goal-host.ts:391,405 now read usage, yet 18,135 traces since 2026-09-27 have sum(cost_usd)=0 and zero with tokens_input>0"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Cost-weighted posteriors",
+   "where": "openspec/changes/2026-05-23-cost-weighted-posteriors",
+   "tried": "Joint (success,cost) Thompson with policy bandit",
+   "outcome": "dormant",
+   "date": "2026-05-23",
+   "evidence": "0/26 tasks; superseded by value-per-cost-selection 09-20; cost signal never existed"
+  },
+  {
+   "key": "selection-learning",
+   "title": "LLM model MAB",
+   "where": "openspec/changes/2026-05-23-llm-resolver-model-mab",
+   "tried": "Per-model sub-resolvers with Thompson selection",
+   "outcome": "dormant",
+   "date": "2026-05-23",
+   "evidence": "0/33 tasks; no llmProviderConfig/model-mab in any src"
+  },
+  {
+   "key": "selection-learning",
+   "title": "State-space signature conditional Thompson keying",
+   "where": "openspec/changes/2026-05-17-state-space-signature-thompson-keying; activity-api session-context.ts",
+   "tried": "v1 signature hash, conditional read with sampling floor, dual write",
+   "outcome": "partial",
+   "date": "2026-05-19",
+   "evidence": "29,178 context_thompson_scores rows, 9,809 v1; S2-S6 acceptance (discrimination p<0.05) never measured; v0 reaper not done"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Chain credit ancestor bucket fix",
+   "where": "openspec/changes/2026-05-18-chain-credit-ancestor-signature-fix; posterior-update.ts",
+   "tried": "Recompute per-ancestor bucket instead of leaf bucket",
+   "outcome": "worked",
+   "date": "2026-05-18",
+   "evidence": "12/16 tasks; production audit script deferred"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "SurrealDB RL layer (atomic, COMPUTED ev, beta_sample, RELATE, HNSW)",
+   "where": "openspec/changes/2026-04-29-surrealdb-rl-layer",
+   "tried": "Push RL primitives into SurrealDB",
+   "outcome": "partial",
+   "date": "2026-05-18",
+   "evidence": "fn::beta_sample live and used in routes/activities.ts; RELATE composes table never created; HNSW dropped by migration 110 (CPU storm)"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Shape-dispatch agreement check",
+   "where": "openspec/changes/2026-05-17-shape-dispatch-agreement; scripts/check-shape-dispatch.ts",
+   "tried": "Build-time lint + runtime self-trace",
+   "outcome": "partial",
+   "date": "2026-05-18",
+   "evidence": "lint wired into activity-api, concept-db, development-vessel; runtime verifier_negative self-trace never built; discovery/identity blocked"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Forge goal completion test / forge path",
+   "where": "openspec/changes/2026-05-18-forge-goal-completion-test; audit F20",
+   "tried": "End-to-end forge via slot-binding escalation",
+   "outcome": "dormant",
+   "date": "2026-05-21",
+   "evidence": "T8.1 never met; forge resolvers only registered in ias-executor-ts/src/examples/vessel-forge-host.ts; no VesselForgeHost in goal-host-vessel/src today"
+  },
+  {
+   "key": "false-verification",
+   "title": "Test-audit loop",
+   "where": "openspec/changes/2026-05-18-test-audit-loop",
+   "tried": "test_report + audit-test-report + sensitivity probes",
+   "outcome": "dormant",
+   "date": "2026-05-20",
+   "evidence": "10/35 tasks; no audit-test-report in any src; same concern recurs in Sept (falsifier none, count ran=false)"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "ias-executor as canonical host / minibob removal",
+   "where": "openspec/changes/2026-05-19-ias-executor-as-canonical-host",
+   "tried": "Deprecate minibob god-object in favor of GoalHost",
+   "outcome": "superseded",
+   "date": "2026-05-21",
+   "evidence": "minibob absent from repos/ and .gitmodules; achieved via substrate-explicit-vessels; parity gates S.1-S.5 never measured"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Substrate explicit vessels + VesselDaemon toolkit",
+   "where": "openspec/changes/2026-05-23-substrate-explicit-vessels; commit daf81ce4",
+   "tried": "goal-host, llm-resolver, local-tools, ribosome, boredom vessels as systemd units",
+   "outcome": "worked",
+   "date": "2026-05-24",
+   "evidence": "48/53 tasks; vessels live in substrate-live"
+  },
+  {
+   "key": "node-locality",
+   "title": "Single-container substrate",
+   "where": "openspec/changes/2026-05-23-single-container-substrate",
+   "tried": "Collapse fleet into one container trust boundary",
+   "outcome": "worked",
+   "date": "2026-05-23",
+   "evidence": "substrate-live runs; tasks.md stale (19/36, lists minibob unit)"
+  },
+  {
+   "key": "gap-content",
+   "title": "Failure-mode autonomous loop",
+   "where": "openspec/changes/2026-05-22-failure-mode-autonomous-loop",
+   "tried": "Reduce manual_intervention_debt by drafting templates per gap",
+   "outcome": "failed",
+   "date": "2026-05-23",
+   "evidence": "debt metric satisfiable by drafting; drafts hollow (audit F10-F24); drafter still 86% failure in Sept"
+  },
+  {
+   "key": "env-gating",
+   "title": "Substrate identity resolution",
+   "where": "openspec/changes/2026-05-23-substrate-identity-resolution",
+   "tried": "Replace hardcoded identity.metabob.com/k8s defaults with substrateIdentity shape",
+   "outcome": "dormant",
+   "date": "2026-05-23",
+   "evidence": "0/50 tasks; no substrateIdentity or VESSEL_BOOTSTRAP_KEY in src"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Security hardening H1-H5",
+   "where": "openspec/changes/2026-04-26-security-hardening-findings",
+   "tried": "Two-sided traces, pubkey vessel id, scope attestations, authority keys, immutable baselines",
+   "outcome": "partial",
+   "date": "2026-07-04",
+   "evidence": "2/67 tasks: advisory pubkey identity_status landed (discovery-vessel 3685439, 5fe6fb8, dev-vessel 3a9ea4c); nothing gates on it"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Intervention tracking",
+   "where": "openspec/changes/2026-05-23-intervention-tracking; development-vessel/src/resolvers/intervention-evaluate.ts",
+   "tried": "operatorIntervention / interventionRefused shapes + audit workflow",
+   "outcome": "unknown",
+   "date": "2026-05-23",
+   "evidence": "tasks 0/43 but code exists; emission in practice not verified"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Queue flooding by TaskGenerator",
+   "where": "findings/validation-2026-05-24.md F1",
+   "tried": "Proposed TASK_GENERATION_ENABLED=false env",
+   "outcome": "unknown",
+   "date": "2026-05-24",
+   "evidence": "1232 critical + 619 medium queued; fill 10/5min vs drain 1/8-10min; env read still at activity-api/src/index.ts:916"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Lifecycle emits without subscribers",
+   "where": "audit F4; commits 41382521, 31eeeb2f",
+   "tried": "Proposed convention: default subscriber per emit + check-lifecycle-channels.sh",
+   "outcome": "unknown",
+   "date": "2026-05-27",
+   "evidence": "llm:dispatched to NoopEventSink; gap:classified 0 subscribers"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Cross-execution pool contamination",
+   "where": "audit F23; ias-executor-ts engine.ts",
+   "tried": "Proposed visibleImpulseIds per-execution filter",
+   "outcome": "unknown",
+   "date": "2026-05-30",
+   "evidence": "engine.ts:363,372,577 still call runtime.store.all(); visibleImpulseIds absent"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Parked landings + restart budgets + named change window",
+   "where": "openspec/specs/{parked-landing,restart-budgets,change-window-names}",
+   "tried": "Park verified patch before cutover, resume; drain by age; named leases",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "feature-compose.ts parkedLanding, gap-drain-observer.ts:349 discardedLandingReport live; restart-budgets in_flight_oldest_ms not found by grep (unverified)"
+  },
+  {
+   "key": "false-verification",
+   "title": "Merge gate refusal-with-reason",
+   "where": "IAL tasks pre-lift detectors; commit dbd0b8f",
+   "tried": "Traceable refusal-with-reason",
+   "outcome": "failed",
+   "date": "2026-06-01",
+   "evidence": "post-deploy traces still show 5ms F25 sink with failure_mode null"
+  }
+ ],
+ "problems": [
+  {
+   "key": "hollow-landing",
+   "symptom": "Executions/tasks report success while outputs are err_* tombstones or no artifacts; posteriors credit them",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "root_cause": "success predicate reads process/task exit, not artifact at consumer; proxy-catch converts errors to impulses; trace sink strips failure types"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Lift, closure, and coverage metrics declared met on engineered or operator-judged evidence; later found open",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-09-07",
+   "recurrences": 3,
+   "root_cause": "metric satisfiable without capability (window-staggered runs, operator-dispatched probes, drafting templates reduces debt)"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Thompson posteriors do not move (total_selections=0) or are polluted; new zero-evidence templates win recommend for unrelated goals",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-09-25",
+   "recurrences": 4,
+   "root_cause": "dispatch paths that bypass selection; id normalization mismatch; silent success crediting alpha"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "cost_usd and tokens zero on all traces; cost-aware selection specs built on missing signal",
+   "first_seen": "2026-05-29",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "root_cause": "engine only sets cost in compose branch; usage dropped at LLMPort; still 0 on 18,135 traces 09-27..28"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "LLM-authored templates reference nonexistent resolvers (activity_fetch 2/2), abstract config strings",
+   "first_seen": "2026-05-28",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "root_cause": "no registry of valid resolvers available at draft time; no companion validator"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Lifecycle emits with zero subscribers; forge resolvers only in examples; specs with 0% tasks",
+   "first_seen": "2026-05-27",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "capacity shipped without consumer; no check that a writer has a reader"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Failure-mode gaps closed by drafting templates rather than code edits with machine checks",
+   "first_seen": "2026-05-22",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "root_cause": "gap carries no edit site or falsifier; debt metric counts drafts"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour steered by env flags (TASK_GENERATION_ENABLED, DB_POOL_ENABLED, HNSW, GOAL_RUNTIME, FEATURE_ACTIVITY_DRIVEN_BINDING); hardcoded identity endpoints",
+   "first_seen": "2026-04-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "root_cause": "identity-resolution spec never built; flags used as fixes"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "IAL tasks 2,301 lines, spec itself says further iteration is doc drift; tasks.md files unchecked though code exists or superseded",
+   "first_seen": "2026-05-02",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "specs not archived or reconciled with live system"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "13 of 18 old changes unarchived; duplicate activity ids for draft-gap-closing; examples folder holds production resolvers",
+   "first_seen": "2026-05-21",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "root_cause": "no retirement step for specs/variants"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Posterior WHERE never matched un-normalized ids; trace sink filtered failure types; chain credit used leaf bucket; validator failure_mode impulse had no write endpoint",
+   "first_seen": "2026-05-09",
+   "last_seen": "2026-05-30",
+   "recurrences": 4,
+   "root_cause": "format/contract mismatch at producer-consumer seams"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Fixes validated against stale images; restarts drop in-flight landings; shared GoalHost store across executions",
+   "first_seen": "2026-05-01",
+   "last_seen": "2026-09-24",
+   "recurrences": 3,
+   "root_cause": "runtime differs from source; no park or age-based drain until 09-24 specs"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Fix deployed but executed path never exercises it (GOAL_RUNTIME vs SearchFirst); zero shape-provider escalations; improvise fallthrough",
+   "first_seen": "2026-05-09",
+   "last_seen": "2026-05-25",
+   "recurrences": 2,
+   "root_cause": "branch exists but is not reachable from the real dispatch path"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "fn::beta_sample + atomic alpha/beta",
+   "location": "SurrealDB DEFINE FUNCTION; activity-api/src/routes/activities.ts",
+   "purpose": "DB-side Thompson sampling, lossless updates",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "State-space signature v1 conditional keying",
+   "location": "activity-api/src/utils/session-context.ts, lib/posterior-aggregator.ts, lib/cluster-posterior.ts",
+   "purpose": "context-conditional posteriors",
+   "status": "live-used",
+   "general": true,
+   "evidence": "9,809 v1 rows of 29,178; acceptance never measured"
+  },
+  {
+   "name": "Shape-dispatch agreement lint",
+   "location": "scripts/check-shape-dispatch.ts in activity-api, concept-db, development-vessel",
+   "purpose": "advertised shapes match dispatch cases",
+   "status": "live-used",
+   "general": true,
+   "evidence": "wired into lint; runtime self-trace never built"
+  },
+  {
+   "name": "Advisory pubkey vessel identity",
+   "location": "discovery-vessel/src/registry.ts:259",
+   "purpose": "identity_status verified/unverified/mismatch",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "nothing gates on it"
+  },
+  {
+   "name": "execution_error failure type",
+   "location": "activity-api/src/models/schemas.ts:1141",
+   "purpose": "keep engine failure attribution",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "VesselDaemon/ResolverServer/DiscoveryRegistrationLoop/GoalHost",
+   "location": "ias-executor-ts/src/hosts/",
+   "purpose": "vessel glue toolkit",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "parkedLanding resume",
+   "location": "development-vessel/src/resolvers/feature-compose.ts",
+   "purpose": "do not discard verified patches on refused cutover",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "discardedLandingReport sweep",
+   "location": "development-vessel/src/services/gap-drain-observer.ts:349",
+   "purpose": "count FAVORABLE-not-pushed composes as a gap",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "draft-gap-closing-activity",
+   "location": "development-vessel seed; activity ids draft-gap-closing-activity, -1783049075304, activity:\u27e8\u2026\u27e9",
+   "purpose": "LLM-draft closing templates for failure-mode gaps",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "530 runs 09-21..28, 86% failure; three ids for one behavior"
+  },
+  {
+   "name": "Forge (VesselForgeHost + 6 resolvers)",
+   "location": "ias-executor-ts/src/examples/vessel-forge-host.ts",
+   "purpose": "create vessel for missing shape",
+   "status": "broken",
+   "general": false,
+   "evidence": "not registered in goal-host-vessel production host"
+  },
+  {
+   "name": "closure-audit / lift-status / closure-status",
+   "location": "validation/scripts/closure-audit.ts, validation/state/*.json",
+   "purpose": "lift gate evidence",
+   "status": "fossil",
+   "general": false,
+   "evidence": "lift 05-26 operator-judgment; closure last run 09-07 all_closed=false"
+  },
+  {
+   "name": "Failure-mode harness + progression-driver",
+   "location": "validation/scripts/failure-mode-harness.ts, progression-driver.ts",
+   "purpose": "count gaps and manual_intervention_debt",
+   "status": "unknown",
+   "general": false,
+   "evidence": "CLAUDE.md names it validation tool; its debt metric was gameable"
+  },
+  {
+   "name": "TaskGenerator debug/optimize tasks",
+   "location": "activity-api/src/index.ts:916",
+   "purpose": "generate debug tasks for low-success templates",
+   "status": "unknown",
+   "general": false,
+   "evidence": "flooded queue May; env-gated"
+  },
+  {
+   "name": "Proposed-first template discipline",
+   "location": "activity-api/src/models/schemas.ts:253",
+   "purpose": "new templates not selectable until promoted",
+   "status": "broken",
+   "general": true,
+   "evidence": "proposed default(false) still"
+  },
+  {
+   "name": "Trace cost/tokens accounting",
+   "location": "ias-executor-ts engine.ts, hosts/goal-host.ts",
+   "purpose": "cost per execution",
+   "status": "broken",
+   "general": true,
+   "evidence": "0 cost, 0 tokens on 18,135 traces since 09-27"
+  },
+  {
+   "name": "intervention-evaluate",
+   "location": "development-vessel/src/resolvers/intervention-evaluate.ts",
+   "purpose": "operatorIntervention/interventionRefused",
+   "status": "unknown",
+   "general": false
+  },
+  {
+   "name": "Auth session pool",
+   "location": "activity-api/src/db/auth-session-pool.ts",
+   "purpose": "avoid connect/auth per query",
+   "status": "live-used",
+   "general": true,
+   "evidence": "env DB_POOL_ENABLED"
+  },
+  {
+   "name": "RELATE composes graph / HNSW / cost-weighted / model-MAB / substrateIdentity / test-audit / H1,H3,H4,H5",
+   "location": "openspec proposals only",
+   "purpose": "various",
+   "status": "dormant",
+   "general": true,
+   "evidence": "never built"
+  }
+ ],
+ "principles": [
+  "Topology is the residue of the learning loop; loop quality determines topology quality (IAL proposal)",
+  "The substrate must not write the lift file itself (IAL 27.3.c.4); it did (lift-status.json authored by agent)",
+  "S3 must not be a gate: a gate makes the substrate optimize for appearing ready (IAL tasks 27.S.6)",
+  "Tractable from this spec alone: none; more iteration is documentation drift (IAL tasks 2026-05-02)",
+  "Three layers, no smuggling: deterministic code, activities constrain, LLM only where needed (ias-executor-as-canonical-host)",
+  "Activities ARE tests; traces ARE test results (harness-as-lifecycle-participant)",
+  "Every lifecycle emit ships with a default subscriber (audit F4)",
+  "Audit filters must report total_pre_filter with the filtered count (audit F14)",
+  "One container is one substrate; a container is a valid trust boundary (single-container design)",
+  "Closure: every lift property derives from substrate-resident vessels alone (substrate-closure-properties via IAL)",
+  "Fail loud with a typed failure_mode; no silent fall-through to a defunct deployment (identity-resolution)",
+  "A verified patch is parked, not discarded; recurrence is a gap event, not a journal grep (specs/parked-landing)",
+  "Restart by age of in-flight work, not count of busy observations (specs/restart-budgets)"
+ ]
+}

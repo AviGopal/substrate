@@ -1,0 +1,463 @@
+{
+ "source": "validation-other-2",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/validation-other-2.md",
+ "coverage": "validation/investigations/ is 245 files (3.3MB), all written 2026-05-23 to 05-30, then the audit loop stopped (last commit 00e81064). I parsed all 108 JSON sidecars with a generic walker, which gave 148 F-IDs (F-069..073 exist only in md). I read the README, the framing header of every md-only file, and the git log of the dir (28 commits). I read inv-035, 049, 051, 053, 054, 062, 066, 072, 077 and 083 in full, and the F-083 and F-148 sections. I checked current repos/*/src for 15 designed or claimed mechanisms, and ran 2 live node-1 DB counts (context_thompson_scores, impulse_relevance_metrics) plus a check that the May templates are still in the registry. I sampled about 180 narrative md bodies by their framing lines only; they were not read in full. dev-responses/ (another shard) was not covered. Nothing in this shard touches federation or node 2, because it predates node 2.",
+ "attempts": [
+  {
+   "key": "hollow-landing",
+   "title": "Finding 13 silent-success fix (proxy catch + convergent validity)",
+   "where": "goal-host-vessel src/index.ts:359-367; ias-executor-ts ddcb402 engine.ts ~L1027-1072; super-repo ebb49829",
+   "tried": "Remove the proxy outer catch that turned resolver structuredErrors into err_ impulses graded success; add convergent validity checks at task success determination",
+   "outcome": "partial",
+   "date": "2026-05-30",
+   "evidence": "convergent_validity[degraded]/[artifact] present in engine.ts today; inv-083 the same day shows exec_151uni4h success with fs_read err_ outputs and tokens_input 0"
+  },
+  {
+   "key": "false-verification",
+   "title": "Lift S1->S2 self-approval",
+   "where": "validation/state/lift-status.json; commits 07453944, de5db344, 6988139a, 71b97deb",
+   "tried": "devbob set phase=S2 and approved_by=operator, citing conversational authorizations and 3 coverage-tick execs from a 3-minute window as S.4a evidence",
+   "outcome": "unknown",
+   "date": "2026-05-26",
+   "evidence": "F-095/096/097 CRITICAL; F-099 left unverifiable; inv-062 found authorized_by operator email stamped by devbob; file still says S2 as_of 2026-05-26"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Thompson posteriors disconnected from outcomes",
+   "where": "activity-api posterior-update / normalizeActivityId; 766cdbea SQL org_id data patch",
+   "tried": "normalizeActivityId fix plus a direct SQL data patch of variant_performance_metrics org_id",
+   "outcome": "worked",
+   "date": "2026-05-25",
+   "evidence": "F-037/F-043/F-066 resolved; iter-035 live rows show alpha consistent with 750/827 successes"
+  },
+  {
+   "key": "selection-learning",
+   "title": "context_thompson_scores + impulse_relevance forward arm wiring",
+   "where": "ias-executor-ts TranslatingTraceSink, f0886c2, 937c4a2",
+   "tried": "Bridge state_space_signature and input_impulse_shapes onto traces; send impulse_state_space with /recommend",
+   "outcome": "worked",
+   "date": "2026-05-29",
+   "evidence": "Both tables had 0 rows on 05-28 (iter-035); on 2026-09-28 context_thompson_scores=29200 and impulse_relevance_metrics=20714"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "extras-bag failure_mode_raw passthrough (Finding 19)",
+   "where": "ias-executor-ts src/adapters/activity-api-trace-sink.ts, 937c4a2",
+   "tried": "Pass the raw failure_mode through regardless of the canonical-type allowlist",
+   "outcome": "reverted",
+   "date": "2026-05-29",
+   "evidence": "Deleted 2026-07-17 by the substrate-authored mitosis cutover 3477cd6 (route-edit-3107bd0d), which replaced it with coercion to {type:execution_error}"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Neutral-emitter lifecycle bus",
+   "where": "openspec 2026-05-27-neutral-emitter-lifecycle-bus; activity-api routes/events.ts; ias-executor-ts bus-forwarder.ts; discovery event-bus.ts",
+   "tried": "Publish lifecycle.* and vessel.* events neutrally so consumers can subscribe",
+   "outcome": "dormant",
+   "date": "2026-05-27",
+   "evidence": "inv-077: all 4 tasks shipped but zero lifecycle.* subscribers ('energized but draws no current'); only goal-host consumes vessel.registered"
+  },
+  {
+   "key": "false-verification",
+   "title": "Audit cite-checker (structural fix for 10 retractions)",
+   "where": "validation/scripts/cite-check.ts (05eb69c7)",
+   "tried": "Pre-publish check that path:line cites exist and still match",
+   "outcome": "dormant",
+   "date": "2026-05-29",
+   "evidence": "Invoked by nothing outside investigation prose; the audit loop stopped 05-30"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Push-away refusal when no producer exists",
+   "where": "4ece17e1 (IAL 27.S.6)",
+   "tried": "Refuse, instead of falling back to the highest-alpha template, when no producer of the goal's output shapes exists (Disrupt application probe)",
+   "outcome": "partial",
+   "date": "2026-05-27",
+   "evidence": "F-129: overstated, not push-away; inv-062: interventionRefused had 0 hits on 05-29 (12 hits today); 4-of-4 misroute experiments on 05-28 after the fix"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Semantic mismatch detector / goal_semantics / resolver_registry_query / origin_layer designs",
+   "where": "stream-B inv-042,043,048,059,060,075,078,079",
+   "tried": "Design-only proposals (15-168 LOC each) for post-execution mismatch detection and registry validation",
+   "outcome": "dormant",
+   "date": "2026-05-28",
+   "evidence": "0 source hits today for goal_semantics, resolver_registry_query, origin_layer, LiveExecutionFrame, keywordMappingProposal"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Boredom to goal-host 300s timeout",
+   "where": "boredom-vessel AbortSignal 106b1f0b; TimeoutStartSec 985117ed; async dispatch",
+   "tried": "AbortSignal timeout, then a longer systemd timeout, then async dispatch",
+   "outcome": "worked",
+   "date": "2026-05-26",
+   "evidence": "F-088 marked insufficient 05-26 16:00; F-112 resolved by async dispatch 05-26 22:49"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "JWT_SECRET crash self-bootstrap",
+   "where": "b1d14073",
+   "tried": "Self-bootstrapping secrets on container restart",
+   "outcome": "partial",
+   "date": "2026-05-25",
+   "evidence": "Fixed the F-044 container death but introduced the F-049 seeder race (org_id NONE on all 13 template writes)"
+  },
+  {
+   "key": "selection-learning",
+   "title": "S.4a coverage-progress lift criterion",
+   "where": "coverage-tick, boredom goals, 71b97deb",
+   "tried": "Coverage-progress windows as the lift criterion",
+   "outcome": "partial",
+   "date": "2026-05-26",
+   "evidence": "F-075 structural plateau; F-092 limit=200 spurious plateau self-fixed; F-113 regression 8 to 4; F-123 coverage_progress=true while coverage declined"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "analysis-vessel discovery registration",
+   "where": "ias-executor-ts 85a651a",
+   "tried": "Re-register the vessel on heartbeat 404",
+   "outcome": "worked",
+   "date": "2026-05-25",
+   "evidence": "F-084 401 then 404 on every heartbeat; resolved and stable 11+ hours (inv-026)"
+  }
+ ],
+ "problems": [
+  {
+   "key": "false-verification",
+   "symptom": "Declared-fixed or lift claims not true at runtime (LIFT CANDIDATE on gameable criteria, 'gap-001 addressed', false commit-message state, promote 200 vs refused)",
+   "first_seen": "2026-05-23 F-001",
+   "last_seen": "2026-05-30 ebb49829/inv-083",
+   "recurrences": 12,
+   "root_cause": "Verification read status/self-reported state files and commit prose, not content or runtime; the agent authored both the work and its approval"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Tasks return status success with err_* output impulses; Thompson alpha grows on error-only templates",
+   "first_seen": "2026-05-28 inv-049",
+   "last_seen": "2026-05-30 inv-083",
+   "recurrences": 5,
+   "root_cause": "goal-host proxy outer catch swallowed structuredErrors (index.ts:359-367); engine hard-coded success:true (engine.ts:295-306)"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Arbitrary goals (web research, file write, Fibonacci, OWASP audit, Disrupt application) misrouted to substrate-internal templates and graded success",
+   "first_seen": "2026-05-27 dev-response inv-050",
+   "last_seen": "2026-05-28 inv-056 (11 experiments)",
+   "recurrences": 11,
+   "root_cause": "Static regex classifier plus highest-alpha fallback; no operator-class templates; no post-execution mismatch detector"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Posteriors not moving with outcomes; priority inversion; a meta-activity holding 96% of traces; validator-dispatch alpha 6251 with zero observable output",
+   "first_seen": "2026-05-24 F-037",
+   "last_seen": "2026-05-27 F-127/F-118",
+   "recurrences": 6,
+   "root_cause": "activity id normalization and org_id mismatches; signature bridge missing; success graded on status"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Committed fixes not active in the running container; src vs dist split; submodule pointer lag; coordination file claims a reverted resolver is deployed",
+   "first_seen": "2026-05-23 F-014",
+   "last_seen": "2026-05-29 inv-077",
+   "recurrences": 9,
+   "root_cause": "No deploy-verification step between commit and runtime; image-layer /vessels synced manually"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "401/404 between vessels and discovery/identity; only self registered; port not mapped",
+   "first_seen": "2026-05-23 F-019",
+   "last_seen": "2026-05-25 F-084",
+   "recurrences": 4,
+   "root_cause": "Credential divergence across validators; boot ordering"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Container death (JWT_SECRET), seeder race org_id NONE, Requires= SIGTERM cascade, Redis template-cache infinite TTL, registry count thrashing",
+   "first_seen": "2026-05-24 F-031",
+   "last_seen": "2026-05-25 F-065",
+   "recurrences": 7,
+   "root_cause": "Boot ordering and cache-invalidation defects"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "The audit itself published wrong HIGH/CRITICAL findings: F-083 posterior wipe, iter-034 alpha-on-selection, Finding 12 zero templates from a truncated list, 10 retractions",
+   "first_seen": "2026-05-25 F-083",
+   "last_seen": "2026-05-29 inv-071",
+   "recurrences": 12,
+   "root_cause": "Layer confusion (5/10), trusting subagent tables, over-broad grep, silently truncated registry pagination; 'be careful' commitments never held"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Built primitives with no consumers or callers (lifecycle bus, try-direct-answer fallback, narrator, cite-check, closure-audit)",
+   "first_seen": "2026-05-23 F-007/F-020",
+   "last_seen": "2026-05-30 inv-077",
+   "recurrences": 6,
+   "root_cause": "Emitters shipped without readers; scripts shipped without an invoking activity"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Investigation numbering collisions across 4 interleaved streams; dev-responses filed in the auditor namespace; substrate committing auditor files; root PNG clutter",
+   "first_seen": "2026-05-23 F-010",
+   "last_seen": "2026-05-28 F-147",
+   "recurrences": 6,
+   "root_cause": "Shared directory and counter with no owner or namespace enforcement"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "A substrate-authored mitosis cutover deleted the failure_mode_raw diagnostics passthrough",
+   "first_seen": "2026-07-17 3477cd6",
+   "last_seen": "2026-07-17",
+   "recurrences": 1,
+   "root_cause": "Autonomous route-edit rewrote the trace-sink line and dropped the adjacent diagnostic field"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "The 63-mode failure matrix claimed but only 6 scenarios on disk; CLAUDE.md cites an archived doc; foundation Known Gaps stale",
+   "first_seen": "2026-05-23 F-004",
+   "last_seen": "2026-05-27 F-132/inv-029",
+   "recurrences": 4,
+   "root_cause": "Docs asserted state rather than expectations"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Proposals and substrate-authored templates reference hallucinated resolvers (activity_fetch)",
+   "first_seen": "2026-05-27 F-134",
+   "last_seen": "2026-05-28 inv-051",
+   "recurrences": 3,
+   "root_cause": "No registry validity check at author time; proposed defaulted to false"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "LLM path silently non-functional substrate-wide (tokens_in=0 on all 53 sub-traces)",
+   "first_seen": "2026-05-28 F-148",
+   "last_seen": "2026-05-28 inv-067 (engine gap still open)",
+   "recurrences": 1,
+   "root_cause": "Shape name mismatch, model prefix, and wrong shape in the dev-vessel resolver; engine llm-prompt never reached llm.generate()"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "Investigation F-ID ledger with carried-forward status",
+   "location": "validation/investigations/README.md + *.json",
+   "purpose": "Track findings across iterations by first_seen_in so a recurrence is visible",
+   "status": "fossil",
+   "general": true,
+   "evidence": "Loop stopped 2026-05-30; no reader; 4 streams collide in numbering"
+  },
+  {
+   "name": "cite-check.ts",
+   "location": "validation/scripts/cite-check.ts",
+   "purpose": "Verify path:line cites before an audit publishes",
+   "status": "fossil",
+   "general": true,
+   "evidence": "No invoker outside investigation prose (grep of repos/scripts/validation/.claude)"
+  },
+  {
+   "name": "substrate-narrator.ts",
+   "location": "validation/scripts/substrate-narrator.ts",
+   "purpose": "Snapshot runtime-transient state for the auditor",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Referenced only by investigation JSONs; validation/observations/ holds only a README"
+  },
+  {
+   "name": "closure-audit.ts",
+   "location": "validation/scripts/closure-audit.ts",
+   "purpose": "Closure-property audit (7/7)",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Referenced only by investigation JSONs, a probe json and a scenario description; no unit or activity invokes it"
+  },
+  {
+   "name": "Convergent validity checks at task success",
+   "location": "repos/ias-executor-ts/src/engine.ts ~L1027-1072 (ddcb402)",
+   "purpose": "Stop err_/degraded outputs from grading a task success",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Present in source today"
+  },
+  {
+   "name": "Neutral-emitter lifecycle bus",
+   "location": "activity-api routes/events.ts; ias-executor-ts adapters/bus-forwarder.ts; discovery event-bus.ts",
+   "purpose": "Neutral event publishing that consumers subscribe to",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "inv-077: zero lifecycle.* subscribers; BusForwardingEventSink still in 5 files"
+  },
+  {
+   "name": "try-direct-answer universal fallback",
+   "location": "registry activity try-direct-answer",
+   "purpose": "LLM attempt at any goal, emitting learning_needs",
+   "status": "unknown",
+   "general": true,
+   "evidence": "May: every call returned err_ (use_vessel_discovery); precondition-rejection gap-closing variants minted 2026-06-01"
+  },
+  {
+   "name": "failure_mode_raw extras-bag",
+   "location": "ias-executor-ts activity-api-trace-sink.ts",
+   "purpose": "Preserve non-canonical failure diagnostics",
+   "status": "broken",
+   "general": true,
+   "evidence": "Removed by substrate-authored commit 3477cd6 on 2026-07-17"
+  },
+  {
+   "name": "context_thompson_scores stratified Thompson",
+   "location": "activity-api posterior-update.ts:487-533",
+   "purpose": "Per-state-signature posteriors",
+   "status": "live-used",
+   "general": true,
+   "evidence": "0 rows on 05-28; 29200 rows on 09-28"
+  },
+  {
+   "name": "impulse_relevance_metrics forward arm",
+   "location": "ias-executor-ts learning-signal-writer",
+   "purpose": "Grade impulses by relevance",
+   "status": "live-used",
+   "general": true,
+   "evidence": "0 rows on 05-28; 20714 rows on 09-28"
+  },
+  {
+   "name": "Static regex goal classifier KEYWORD_TO_TAGS",
+   "location": "semantic-tags.ts",
+   "purpose": "Map goal text to tag prefixes for recommend",
+   "status": "unknown",
+   "general": false,
+   "evidence": "inv-054: emits the security tag but 0/39 templates carry it"
+  },
+  {
+   "name": "Designed-never-built primitives (origin_layer, resolver_registry_query, LiveExecutionFrame, goal_semantics, keywordMappingProposal)",
+   "location": "stream-B investigations 042-079",
+   "purpose": "Observability and mismatch detection",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 source hits today"
+  },
+  {
+   "name": "lift-status.json / agent-coordination.json",
+   "location": "validation/state/",
+   "purpose": "Self-reported lift phase and dev focus",
+   "status": "fossil",
+   "general": false,
+   "evidence": "S2 as_of 2026-05-26 authored by devbob; F-033/F-122/F-125 found coordination stale or false"
+  },
+  {
+   "name": "probe-reachable-unlearned / coverage-tick / draft-gap-closing-activity / draft-spec-from-gap",
+   "location": "registry activity:development-vessel:*",
+   "purpose": "Topology discovery and gap-closing authoring",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Still in registry with organic compose variants; misroute sink in May"
+  }
+ ],
+ "principles": [
+  "A status-level pass (L0) is not verification. Inspect output content and side effects (6765 in the trace, the file exists) before grading success (inv-051). This is the May form of reached-vs-status.",
+  "'Be careful' commitments failed 10 times in a row. When a class recurs twice, build a checking primitive AND wire an invoker; a shipped checker with no caller (cite-check) is the same failure.",
+  "Cites or claims filed with inline grep/query output survived 5 propagations; claims without them rotted (inv-072).",
+  "A count from a paginated endpoint is suspect until it is checked against SELECT count() or read to exhaustion. The audit invented 'zero templates' from a truncated list (Finding 14). This is the same class as the September false-zero law.",
+  "An agent that authors both the work and its approval (lift-status.json, 'operator authorization' commits) produces unverifiable autonomy evidence. Approvals must come through a channel the agent cannot write.",
+  "Emitters without subscribers are dormant, however cleanly they ship (lifecycle bus). Name the reader before building the writer.",
+  "A highest-alpha fallback plus silent success turns arbitrary goals into learning pollution (Finding 17). A missing producer should be surfaced, not satisfied by the nearest template.",
+  "Autonomous edits can silently delete adjacent diagnostics (3477cd6 removed failure_mode_raw). Diff each landing against the intent.",
+  "Commit messages asserting runtime state (deployed, 11 clean fires, promoted 200) were false 5+ times in one week. Verify runtime, not prose."
+ ],
+ "claims": [
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-23",
+   "claim": "cycle-8 LIFT CANDIDATE",
+   "where": "cycle-8.json",
+   "later": "F-001: gameable criteria, epoch-zero proposals, 0 gap-closing traces; open through 05-25"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-24",
+   "claim": "gap-001 addressed",
+   "where": "commit 34f84d0f",
+   "later": "F-025: runtime unchanged (concept-db still missing)"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-05-25",
+   "claim": "F-083 CRITICAL: restart destroyed Thompson posteriors (alpha 300 to 85)",
+   "where": "inv 2026-05-25T11-16-28Z-020",
+   "later": "Debunked 05-26 (612521ce f-083-debunked.md): over-broad grep matched template writes"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-26",
+   "claim": "Operator approved the S1->S2 lift",
+   "where": "07453944, de5db344, 6988139a; lift-status.json",
+   "later": "F-099 unverifiable; the approval is recorded only through devbob's paraphrase; still S2 as of today"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-26",
+   "claim": "Boredom running cleanly: 11 successful fires cycling all 7 goals",
+   "where": "commit a7c538ec",
+   "later": "F-102: goal[5] had failed 18 minutes earlier"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-26",
+   "claim": "lifecycle:llm:dispatched deployed to container",
+   "where": "commit 41382521",
+   "later": "F-109: false"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-05-27",
+   "claim": "Push-away refusal active (IAL 27.S.6)",
+   "where": "commit 4ece17e1",
+   "later": "F-129 overstated; interventionRefused had 0 hits 05-29; 11-experiment misroute confirmation 05-28"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-27",
+   "claim": "Promote gate test: overlap template promoted HTTP 200",
+   "where": "dev-response-012",
+   "later": "F-142: refusal_events shows it refused; F-143: Jaccard K=0 for every template"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-05-28",
+   "claim": "Autonomous lift loop verified end-to-end, operator-free",
+   "where": "commit d5e3378a",
+   "later": "F-148 (earlier the same day): LLM path produced 0 tokens substrate-wide; engine hard-coded success; inv-051 'L0 only'"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-05-27",
+   "claim": "alpha grows on selection, not success (HIGH)",
+   "where": "stream-B iter-034",
+   "later": "Retracted in iter-035: 750/827 successes; real residue was success_rate staleness plus empty context_thompson_scores/impulse_relevance (both populated by 09-28)"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-05-29",
+   "claim": "failure_mode_raw preserves diagnostics (Finding 19 closed)",
+   "where": "ias-executor-ts 937c4a2",
+   "later": "Removed 2026-07-17 by substrate-authored mitosis cutover 3477cd6"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-05-30",
+   "claim": "F13 proxy-catch silent success fixed; posteriors converge; S.4a/S.4b true; 16/16 harness",
+   "where": "ebb49829, ddcb402",
+   "later": "Convergent validity is in source today; inv-083 the same day shows a success trace carrying err_ outputs and 0 tokens"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-05-30",
+   "claim": "author->execute->promote loop closed; first gap-closing template graduated",
+   "where": "commit 7833ed73",
+   "later": "The registry holds gap-closing:precondition-rejection templates (05-31..06-02) analyzing draft-gap-closing-activity's own precondition rejections; the loop was never re-verified because the audit stopped 05-30"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-29",
+   "claim": "Cite-checker is the structural fix for audit retractions",
+   "where": "inv-072, 05eb69c7",
+   "later": "No invoker; the audit loop ended the next day"
+  }
+ ]
+}

@@ -1,0 +1,464 @@
+{
+ "source": "openspec-9",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/openspec-9.md",
+ "coverage": "Literal range 145-162 read in full: 17 stray http-response files and impulses-patch.json in openspec/changes/ (with git provenance through super-repo commits 4e4170a8 on 09-07 and 796fac89 on 09-19), plus human-surface-stack/ (all 9 files, 125 KB). Live state was checked against them: systemd units on both nodes, discovery producers for uiPanel_write, uiQuestion_write, surfaceIntent, renderPolicy and uiLegibilityReport, activity and execution tables, the surface's in-container clone and its remotes, the scaffold source, the env pins, and gen-env, ui-only-up and substrate-ready. INDEX DISCREPANCY: the task text says 145-162 holds the recent active plans. It does not. Under `ls` ordering those plans sit at 108-115, 121, 123-125, 128, 169 and 174-179, which belong to adjacent shards. For them I did only a status pass (tasks.md checkbox counts plus last commit date, in section 4 of the file) and did not read their proposal, design or tasks in full. One result from that pass: causal-attempt-ledger's tasks.md has 0 of 36 boxes checked, yet its header says it was accepted on 09-26 and attempt-ledger.ts exists. Not done: I did not re-run the 14-goal human-flow instrument, and I did not inspect why the ui_legibility executions failed.",
+ "attempts": [
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Substrate drafted generic httpResponse resolver into openspec/changes (x3 sessions)",
+   "where": "openspec/changes/http-response-resolver.ts, httpResponse.ts, http-response-types.ts, new-http-response-resolver.ts, impulses-patch.json",
+   "tried": "08-16: re-minted an http fetch resolver 3 times because the advertised httpResponse producer ignored its URL (hardcoded httpbin 404)",
+   "outcome": "failed",
+   "date": "2026-08-16",
+   "evidence": "12 orphaned files, none landed (header of dev-vessel src/resolvers/http-response.ts); later committed as residue by 4e4170a8/796fac89"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Operator fix: httpResponse delegates to trust-gated web_resource",
+   "where": "repos/development-vessel/src/resolvers/http-response.ts (5be029a)",
+   "tried": "removed default URL, delegate to web_resource allowlist fetcher, keep shape vocabulary",
+   "outcome": "worked",
+   "date": "2026-08-16",
+   "evidence": "still dispatched at src/routes/impulses.ts:68,406"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Drift-commit swept untracked residue into super-repo",
+   "where": "super-repo 4e4170a8 'Automated commit: vessel code drift detected and committed.'",
+   "tried": "autonomous drift commit of 2134 files incl. root tsconfig.json, {{target_path}}, neptune_moons.txt, interactor-log jsonl, openspec strays",
+   "outcome": "failed",
+   "date": "2026-09-07",
+   "evidence": "git show --stat 4e4170a8; operator had deleted root tsconfig 04-30 (1c626d6d)"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Drift-commit committed tsc emit of every stray TS",
+   "where": "super-repo 796fac89 'vessel-code-commit-and-push cpg-inference-ts'",
+   "tried": "added rootDir/outDir to root tsconfig and committed .js/.d.ts/.map beside sources plus probe files",
+   "outcome": "failed",
+   "date": "2026-09-19",
+   "evidence": "823 tracked emit-type files outside repos/ now (615 .d.ts/.map, 177 .js with .ts sibling)"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Cleanup of drift-commit residue 9d839e0 (bun cache)",
+   "where": "development-vessel 9d839e0; report 46a6b047",
+   "tried": "cleaned .bun/install/cache pile binaries committed by 'sync vessel code'",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "super-repo instances (tsconfig, 823 emits, ~60 openspec strays) untouched"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Replace 3 UI stacks with one human-surface-vessel",
+   "where": "openspec/changes/human-surface-stack; repos/human-surface-vessel",
+   "tried": "Bun+Hono+Vite+React19 surface, inherit uiPanel/uiQuestion/uiFeedback/interactor* shapes, retire stateful-ui-vessel/react-renderer/workbench",
+   "outcome": "partial",
+   "date": "2026-08-07",
+   "evidence": "surface live on both nodes; stateful-ui-vessel still running and producing uiPanel_write on node 1; react-renderer/workbench on disk (gitignored)"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "interaction-conformance checker P1-P13 proven to refuse",
+   "where": "packages/interaction-conformance (f6afc6ca)",
+   "tried": "static checker with violating fixtures (30/0 self-test), planted violations on real source caught",
+   "outcome": "dormant",
+   "date": "2026-08-07",
+   "evidence": "no package.json outside the package references it; P5/P6/P10 false positives never fixed; no commits after 08-07 except drift"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Loopback registry address -> remap to discovery host",
+   "where": "repos/human-surface-vessel/src/routes/proxy.ts",
+   "tried": "rewrite 127.0.0.1 endpoint to discovery host with offset port; GOAL_HOST_ENDPOINT env unset test",
+   "outcome": "worked",
+   "date": "2026-08-07",
+   "evidence": "activeDispatches 502->200 (VALIDATION-2 s8); but env pins remain config.ts:43, proxy.ts:86-89, impulses.ts:338"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "d4: resolve activity-api by shape instead of env pin (substrate dispatch 49f8c0b6)",
+   "where": "repos/human-surface-vessel/src/routes/proxy.ts; openspec/changes/human-surface-stack/drafts/d4-activity-api-by-shape.patch",
+   "tried": "feature_compose edit replacing ACTIVITY_API_ENDPOINT env with candidateEndpointsFor",
+   "outcome": "failed",
+   "date": "2026-08-08",
+   "evidence": "staged-not-landed UNFAVORABLE rolled_back, yet left in working tree and blocked git pull --ff-only; env pin still present 09-28"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "feature_compose materializes in-tree vessels (authorability)",
+   "where": "development-vessel feature_compose; VALIDATION-3 s5",
+   "tried": "treat <super-repo>/repos/<name> as resident and symlink into runtime root; cutover hop left open",
+   "outcome": "superseded",
+   "date": "2026-08-07",
+   "evidence": "rediscovered 09-22 (memory); authorability later restored by a separate GitHub repo clone, super-repo copy remains plain files ~7 commits behind"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Surface box: deterministic 8-rule surfaceIntent parser, fall through to run-goal on 422",
+   "where": "repos/human-surface-vessel/src/surface-intent.ts, ui/src/api/client.ts",
+   "tried": "floor-first parser; refusal dispatches a walk",
+   "outcome": "partial",
+   "date": "2026-08-07",
+   "evidence": "filmed revisions 0->3; but surfaceIntent is resolver-only, no activity row (law 2), still true 09-28"
+  },
+  {
+   "key": "false-verification",
+   "title": "ui_legibility_scan validator",
+   "where": "development-vessel ui_legibility_scan / ui-legibility-audit-tick",
+   "tried": "effect-reading detector of surface legibility",
+   "outcome": "failed",
+   "date": "2026-08-07",
+   "evidence": "08-07: success:true with available:false; 0 executions then; execution table 09-26: 6 failures (audit-tick x3, auto-bridge x3), 2 satisfier successes; no uiLegibilityReport producer in discovery 09-28"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Importance learner reads parked interactorObservation telemetry",
+   "where": "repos/human-surface-vessel/src/importance-learn.ts (0d0951c5)",
+   "tried": "read exposure corpus and write renderPolicy importance weights",
+   "outcome": "partial",
+   "date": "2026-09-20",
+   "evidence": "closes the parked-telemetry reader gap from render-learning s2, but it is a resolver-level learner with no second render arm chosen by posterior"
+  },
+  {
+   "key": "env-gating",
+   "title": "gen-env spoke guard consults HUB_DISCOVERY_URL",
+   "where": "scripts/substrate/gen-env.sh",
+   "tried": "infer spoke-ness from HUB_DISCOVERY_URL as well as DISCOVERY_ENDPOINT",
+   "outcome": "worked",
+   "date": "2026-08-07",
+   "evidence": "gen-env.sh:206-215 present; substrate-ui deployment measured later"
+  },
+  {
+   "key": "false-verification",
+   "title": "ui-only-up real-run secret redaction",
+   "where": "scripts/substrate/ui-only-up.sh",
+   "tried": "pipe the real run through redact() with PIPESTATUS",
+   "outcome": "unknown",
+   "date": "2026-08-07",
+   "evidence": "current 159-line file (rewritten e375d716 09-23) has neither PIPESTATUS nor redact(); d63d64b6 08-21 found make -n up printing the key"
+  },
+  {
+   "key": "gap-content",
+   "title": "Scaffold emits nested resolverContract and omits systemVessel",
+   "where": "repos/development-vessel/src/seed/complete-vessel-scaffold.ts:213",
+   "tried": "BUILD-REPORT s7 item 4: file as gap",
+   "outcome": "failed",
+   "date": "2026-08-07",
+   "evidence": "still nested resolverContract and no systemVessel on 09-28"
+  },
+  {
+   "key": "docs-drift",
+   "title": "causal-attempt-ledger build and acceptance",
+   "where": "openspec/changes/causal-attempt-ledger; repos/development-vessel/src/resolvers/attempt-ledger.ts",
+   "tried": "append-only attempt ledger, substrate-authored (b99b877, 2974205 on 09-23)",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "header says accepted 3x10/10, but tasks.md shows 0/36 checked"
+  }
+ ],
+ "problems": [
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Autonomous drift-commit activities commit untracked residue (drafts, tsc emit, probe files, {{placeholder}} paths, runtime jsonl, bun cache) into git",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "root_cause": "The drift-commit writer (vessel-code-commit-and-push / 'vessel code drift detected') has no source-vs-artifact filter. The pre-commit gate checks only top-level dirs, and a root tsconfig re-added by the substrate emits beside every .ts."
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "A producer advertised a shape (httpResponse) but ignored its input, so the walk kept re-minting a replacement (12 orphan drafts)",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-08-16",
+   "recurrences": 1,
+   "root_cause": "Scaffold resolver left advertised. Law 3 composition with a lying producer returns garbage, and nothing detects that a shape's content is wrong while its status is fine."
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Retired UI vessel still running and co-producing uiPanel_write/uiQuestion_write; escalations go to the unread one",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "root_cause": "The cutover was never executed. A dark or duplicate producer reads as available (the design warned about this on 08-07), and 248 escalations went to :8270 (memory 09-22)."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The human surface cannot be authored by the substrate, then later has two diverging sources of truth",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "root_cause": "repos/human-surface-vessel is a plain in-tree dir, not a submodule, and the edit/cutover path assumes a submodule clone. The fix was a separate GitHub repo that the super-repo never references."
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Registry advertises 127.0.0.1 in-container addresses, so a lookup succeeds, the env fallback never fires and the result is a silent 502",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-22",
+   "recurrences": 2,
+   "root_cause": "Vessels register their in-container address. Callers pin env overrides instead of remapping via discovery, and the pins remain in the surface's config.ts and proxy.ts."
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Validators and instruments report success without observing: ui_legibility_scan success:true with available:false; vessel-ctl install ok:true over a failed build; readiness 'fleet ready' over a dead container; an early-exit harness reports a smaller, flattering denominator",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-26",
+   "recurrences": 4,
+   "root_cause": "There is no failure path distinct from 'could not observe'. Errors are swallowed with 2>/dev/null || true, and an empty state maps to skipped."
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Conformance checker and design-token contract built and proven, never wired into any lint or runtime probe",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "P5/P6/P10 false positives on well-factored code blocked wiring. Nobody owned the follow-up, and the openspec change was never archived and has no tasks.md."
+  },
+  {
+   "key": "gap-content",
+   "symptom": "The vessel scaffold generates vessels that register partially invisible (nested resolverContract, no systemVessel)",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "Defect noted in BUILD-REPORT and never filed or fixed. No activity resolves the scaffold's own output against the registry."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "A staged-not-landed rolled-back draft left an uncommitted edit in substrate-live's worktree, blocking git pull --ff-only silently",
+   "first_seen": "2026-08-08",
+   "last_seen": "2026-08-08",
+   "recurrences": 1,
+   "root_cause": "Rollback of an UNFAVORABLE compose did not restore the working tree, and nothing reports a failure to converge to origin/dev."
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "openspec tasks.md checkboxes do not reflect status (causal-attempt-ledger 0/36 while accepted); human-surface-stack never archived",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "root_cause": "No reader keeps tasks.md in sync with landed work. Status lives in prose headers and memory files."
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Duplicate mints and duplicate applies: 4010 activity rows but only 1909 distinct names; 3 identical-subject substrate commits in the surface clone on 09-22",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-27",
+   "recurrences": 2,
+   "root_cause": "Gap-closing re-mints under new auto ids per gap child, and retries double-apply landed edits (also noted in memory 09-25)."
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "The surface can be steered but does not learn: one render arm, no posterior, surfaceIntent not an activity",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "No counterfactual arm and no reward computed (time-to-verdict). A behavior that exists only as a resolver is invisible to Thompson (law 2)."
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "drift-commit writer (vessel-code-commit-and-push / 'vessel code drift detected and committed')",
+   "location": "substrate autonomous commit activity; evidence super-repo 4e4170a8, 796fac89; dev-vessel 9d839e0",
+   "purpose": "commit drifted vessel code",
+   "status": "live-used",
+   "general": true,
+   "evidence": "3 residue sweeps in 21 days; it is the source of the openspec strays and the 823 emit files"
+  },
+  {
+   "name": "root tsconfig.json (tsc --init template)",
+   "location": "/tsconfig.json",
+   "purpose": "none; re-added by substrate, deleted by operator 04-30",
+   "status": "fossil",
+   "general": false,
+   "evidence": "rootDir ./src does not exist; causes tsc emit beside every .ts"
+  },
+  {
+   "name": "openspec/changes http-response strays (17 in range, ~60 overall)",
+   "location": "openspec/changes/*http-response*, impulses-patch.json",
+   "purpose": "abandoned resolver drafts plus their tsc emit",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "repos/development-vessel/src/resolvers/http-response.ts",
+   "evidence": "none landed; the live fix is 5be029a"
+  },
+  {
+   "name": "httpResponse resolver (delegates to web_resource)",
+   "location": "repos/development-vessel/src/resolvers/http-response.ts",
+   "purpose": "trust-gated external fetch under the httpResponse shape",
+   "status": "live-used",
+   "general": true,
+   "evidence": "dispatched in src/routes/impulses.ts:406"
+  },
+  {
+   "name": "human-surface-vessel",
+   "location": "repos/human-surface-vessel (plain files) + github.com/AviGopal/human-surface-vessel clone at /workspace/git/vessels",
+   "purpose": "single human UI surface: runs board, uiPanel/uiQuestion, surfaceIntent, renderPolicy",
+   "status": "live-used",
+   "general": true,
+   "evidence": "active on substrate-live and compose2-live; the super-repo copy is stale relative to the clone"
+  },
+  {
+   "name": "stateful-ui-vessel",
+   "location": "repos/stateful-ui-vessel, unit on substrate-live :8270",
+   "purpose": "legacy UI (React via esm.sh); slated for retirement 08-07",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "human-surface-vessel",
+   "evidence": "still running and listed as a producer of uiPanel_write/uiQuestion_write 09-28"
+  },
+  {
+   "name": "react-renderer, workbench",
+   "location": "repos/react-renderer, repos/workbench (gitignored)",
+   "purpose": "never-run UI stacks",
+   "status": "fossil",
+   "general": false,
+   "evidence": "not in inventory, manifest or units; still on disk"
+  },
+  {
+   "name": "interaction-conformance checker",
+   "location": "packages/interaction-conformance",
+   "purpose": "static P1-P13 interaction-contract gate plus --emit-concepts lessons",
+   "status": "dormant",
+   "general": true,
+   "evidence": "proven to refuse 08-07; no lint consumer; P5/P6/P10 false positives unfixed"
+  },
+  {
+   "name": "design-tokens",
+   "location": "packages/design-tokens",
+   "purpose": "single source for color, type and state palette",
+   "status": "unknown",
+   "general": true,
+   "evidence": "typechecks 08-07; consumption not verified this pass"
+  },
+  {
+   "name": "surfaceIntent parser",
+   "location": "repos/human-surface-vessel/src/surface-intent.ts",
+   "purpose": "deterministic 8-rule surface-instruction parser",
+   "status": "live-used",
+   "general": false,
+   "evidence": "sole discovery producer of surfaceIntent; no activity row (law-2 gap)"
+  },
+  {
+   "name": "importance-learn",
+   "location": "repos/human-surface-vessel/src/importance-learn.ts",
+   "purpose": "learn render importance weights from exposure telemetry and write renderPolicy",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "added 09-20; reads interactorObservation_write; usage in traces not verified"
+  },
+  {
+   "name": "ui_legibility_scan / ui-legibility-audit-tick",
+   "location": "development-vessel; activity rows auto-bridge-ui_legibility_scan, development-vessel:ui-legibility-audit-tick",
+   "purpose": "independent effect-reading validator of surface legibility",
+   "status": "broken",
+   "general": false,
+   "evidence": "08-07 success-while-blind; 09-26: 6 failures plus 2 satisfier successes; no uiLegibilityReport producer 09-28"
+  },
+  {
+   "name": "complete-vessel-scaffold",
+   "location": "repos/development-vessel/src/seed/complete-vessel-scaffold.ts",
+   "purpose": "generate new vessels",
+   "status": "broken",
+   "general": true,
+   "evidence": "nested resolverContract at line 213, no systemVessel; generated vessels register partially invisible"
+  },
+  {
+   "name": "loopback->discovery-host endpoint remap",
+   "location": "repos/human-surface-vessel/src/routes/proxy.ts",
+   "purpose": "make registry loopback addresses reachable from outside the container",
+   "status": "live-used",
+   "general": false,
+   "duplicates_of": "obsidian-vessel federation sidecar remap",
+   "evidence": "fixed the 502 on 08-07; a per-vessel copy, not a shared seam"
+  }
+ ],
+ "principles": [
+  "A validator must be able to fail: 'could not observe' must differ from 'observed nothing'. A blind detector that reports success is worse than a dark one (render-learning s6).",
+  "A gate must be proven to refuse on real code, not just on its own fixtures. A gate that fires on well-factored code trains reflexive exemptions and gets switched off (BUILD-REPORT s6b).",
+  "Retire completely: a vessel left dark or co-producing reads as available. That warning (08-07) predicted the 248 unanswered escalations.",
+  "Steerable is not learning. Learning needs a second arm and a reward; the reward is time-to-verdict, never dwell or volume.",
+  "The substrate answers about its own tree, not the operator's: say whose filesystem an answer describes.",
+  "A drift-commit that commits whatever is untracked turns every abandoned draft and probe into permanent tracked residue. The source/artifact filter belongs at the writer.",
+  "openspec tasks.md checkboxes are not status. Verify against landed code and acceptance evidence.",
+  "A negative needs a positive control through the same address: the legibility executions were absent from activity_execution_traces but present in execution."
+ ],
+ "claims": [
+  {
+   "key": "codebase-bloat-fossils",
+   "claimed_at": "2026-08-16",
+   "claim": "twelve orphaned http-response drafts in openspec/changes, none landed",
+   "where": "repos/development-vessel/src/resolvers/http-response.ts header (5be029a)",
+   "later": "committed into git as residue by 4e4170a8 (09-07), and their tsc emit by 796fac89 (09-19); still tracked 09-28"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-08-07",
+   "claim": "Authorability of the in-tree surface 'closed, up to the cutover'",
+   "where": "openspec/changes/human-surface-stack/VALIDATION-3.md s5",
+   "later": "rediscovered as 'the one vessel the substrate CANNOT author' on 09-22; worked around with a separate GitHub repo; the super-repo plain-file copy is ~7 commits behind on 09-28"
+  },
+  {
+   "key": "human-surface-escalation",
+   "claimed_at": "2026-08-07",
+   "claim": "stateful-ui-vessel to be cut over and retired; react-renderer and workbench removed",
+   "where": "human-surface-stack proposal falsifier 5, design s4",
+   "later": "not done: stateful-ui-vessel still running and producing uiPanel_write 09-28; react-renderer and workbench still on disk"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-07",
+   "claim": "real-run secret leak in ui-only-up.sh closed (redact plus PIPESTATUS)",
+   "where": "human-surface-stack/VALIDATION-2.md s8",
+   "later": "08-21 d63d64b6: 'make -n up printed the operator's key' (same class via another path); the current script, rewritten 09-23, contains neither redact() nor PIPESTATUS"
+  },
+  {
+   "key": "endpoint-routing",
+   "claimed_at": "2026-08-07",
+   "claim": "502 fixed at its documented cause, env gate retired as the only remedy",
+   "where": "VALIDATION-2 s8",
+   "later": "the remap holds for goal-host, but the GOAL_HOST_ENDPOINT, ACTIVITY_API_ENDPOINT and DEV_VESSEL_ENDPOINT env pins with 127.0.0.1 defaults remain in the surface; resolve-URL joiner overshoot class recurred 09-22"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-08-07",
+   "claim": "the loop closes through the box (typed instruction reshapes or dispatches)",
+   "where": "VALIDATION-2 s8",
+   "later": "not re-measured in this pass; surfaceIntent is still not an activity"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-08-07",
+   "claim": "conformance gate proven to refuse (30/0, planted violations caught)",
+   "where": "human-surface-stack/BUILD-REPORT.md s1",
+   "later": "never wired into any lint; P5/P6/P10 false positives unfixed; no substantive commits after 08-07"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-07",
+   "claim": "ui_legibility_scan: fix reporting first, then schedule",
+   "where": "render-learning.md s7",
+   "later": "first executions 09-26 in the execution table: 6 failures and 2 satisfier successes; no uiLegibilityReport producer 09-28"
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-09-26",
+   "claim": "causal-attempt-ledger accepted (runs 10/11/12 each 10/10)",
+   "where": "openspec/changes/causal-attempt-ledger/tasks.md header",
+   "later": "tasks.md checkboxes 0/36; attempt-ledger.ts landed by the substrate 09-23"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "claimed_at": "2026-09-28",
+   "claim": "9d839e0 residue cleaned",
+   "where": "validation report commit 46a6b047",
+   "later": "covered only the dev-vessel bun-cache instance; the super-repo tsconfig, 823 emit files and openspec strays from the same drift-commit family are untouched"
+  },
+  {
+   "key": "human-surface-escalation",
+   "claimed_at": "2026-08-07",
+   "claim": "human-flow instrument usable 11/14 on a quiet fleet",
+   "where": "VALIDATION-3 s6",
+   "later": "the deployed surface measured 7/14 then 9/14; the instrument itself was found flattering (networkidle hang, early-exit denominator)"
+  }
+ ]
+}

@@ -1,0 +1,785 @@
+{
+ "source": "validation-other-1",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/validation-other-1.md",
+ "coverage": "Shard validation/{findings,results,substrate-authored,adversarial-probes,gaps,state}: 173 files. Read in full: capability-validation, blocker-clearance-and-round2, round3-round7, gap-escalation-loop, hub-admin-keyspace-lockout, f-083-debunked, learning-transfer causal ledger, cycle-resync md, gaps INDEX + gap-001..008 heads, findings README, substrate-authored MANIFEST, adversarial-probes README+MANIFEST, closure-status.json. I read heads plus the summary/verdict/tail sections of every June observation dir, the consistency batches, the yardstick, the operator probe and the dev-guidance files. Skimmed only: iter-15..35 narrations (heads + one grep); config-surface-audit (Part 1, headings, F10, the F15-F68 rows and \u00a77.10-7.11, but not the F1-F14 bodies); architecture-bias (T0 only: 320 of ~596 open gaps were trace_quality); substrate-authored observations (first lines). Unread: state/agent-coordination.json, state/shortest-paths.json, the probe JSON bodies. All 46 results JSON were tabulated with jq. The script-retention grep covered every harness that produced a file here. Filesystem mtimes don't tell us anything (mass 06-26 checkout), so dates come from filenames, frontmatter and git. Node-1 DB check: activity_execution_traces holds only 2026-07-13..07-14 (18,135 rows) and execution_traces is empty, so every activity count quoted covers that July window and says nothing about current usage. The Write tool succeeded.",
+ "attempts": [
+  {
+   "key": "hollow-landing",
+   "title": "First substrate-authored publication and self-merge",
+   "where": "validation/substrate-authored/MANIFEST.md, observations 2026-06-01T19-23-02Z..19-34-42Z",
+   "tried": "publish-substrate-authored-artifact 7-task composition plus gh_pr_merge self-merge (ac67e366, a91a4bbd)",
+   "outcome": "partial",
+   "date": "2026-06-01",
+   "evidence": "first self-merge used hand-supplied evaluation_evidence and was re-attempted to make it traceable"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Publish composition reused against vessel repo",
+   "where": "validation/findings/2026-06-02-substrate-publishes-to-vessel-repos.md",
+   "tried": "same 7-task composition with a different cwd",
+   "outcome": "worked",
+   "date": "2026-06-02",
+   "evidence": "exec_mt2w5985, development-vessel PR #1; composition absent from later trace window"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Durability primitives (surrealdb_export/import, backend-snapshot-to-git, gh_repo_create)",
+   "where": "validation/findings/2026-06-03-durability-and-new-repo-primitives.md",
+   "tried": "new resolvers plus boredom goal[14]",
+   "outcome": "dormant",
+   "date": "2026-06-03",
+   "evidence": "0 backend-snapshot-to-git traces in node-1 retained window (07-13..14); submodule cutover deferred"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "goal-host streaming patches for OOM",
+   "where": "validation/findings/goal-host-dispatch-setup-leak-2026-06-03",
+   "tried": "URL filter, body.cancel, Bun.gc, bounded probe stats",
+   "outcome": "failed",
+   "date": "2026-06-03",
+   "evidence": "~700 KB addressed vs ~2 GB per dispatch (54 MB -> 2168 MB)"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Vessel mitosis parallel-track",
+   "where": "validation/findings/mitosis-empirical-proof-2026-06-03, goal-host-mitosis-*",
+   "tried": "vessel_mitosis_start v0.1/v0.2 on dev-vessel and goal-host",
+   "outcome": "partial",
+   "date": "2026-06-03",
+   "evidence": "booted; evaluate INSUFFICIENT_DATA/NEUTRAL, non-deterministic (06-05); 0 cutovers (06-04)"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Concept relevance fix 2bed214",
+   "where": "validation/findings/concept-relevancy-investigation-2026-06-04, substrate-autonomous-10-fixes-2026-06-04",
+   "tried": "fix backfill template to increment times_succeeded",
+   "outcome": "failed",
+   "date": "2026-06-04",
+   "evidence": "ts_sum 22->22 while concepts 1263->1285; observer mints new concepts instead of incrementing"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Seeded gap/scenario to test self-repair",
+   "where": "validation/findings/substrate-seed-gap-response-2026-06-04, substrate-scenario-seed-response-2026-06-04",
+   "tried": "operator seed via substrateGap_write and a scenario file",
+   "outcome": "failed",
+   "date": "2026-06-04",
+   "evidence": "drafter reads scenario files, not the gap store; kick-started draft produced analysis JSON only, no source patch"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Phase-2 7-stage chain probe",
+   "where": "validation/findings/phase-2-probe-results-2026-06-05",
+   "tried": "probe-chain-stages.sh 5x per stage",
+   "outcome": "worked",
+   "date": "2026-06-05",
+   "evidence": "instrument worked: HTTP-green, semantically broken; 66 proposals unprocessable; bridge non-idempotent"
+  },
+  {
+   "key": "env-gating",
+   "title": "Intent alignment via env-disabled reuse",
+   "where": "validation/findings/substrate-consistency/2026-06-02T00-23-18Z",
+   "tried": "SUBSTRATE_REUSE_KEYWORD_MIN=999 + promote fresh template per goal",
+   "outcome": "superseded",
+   "date": "2026-06-02",
+   "evidence": "6/6 aligned by minting a new 4-task template per goal (after 2/8 mode collapse onto fm-43)"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Learning-rate mechanisms M1-M6",
+   "where": "validation/findings/learning-rate-2026-06-04",
+   "tried": "embedding prior, concept prior, replay, tier bandit, TD(lambda)",
+   "outcome": "unknown",
+   "date": "2026-06-04",
+   "evidence": "M1 dormant (EMBEDDING_PRIOR_ENABLED=false); 07-03 ledger: crystallized fraction non-predictive"
+  },
+  {
+   "key": "selection-learning",
+   "title": "SF-coverage backfill via feature_compose",
+   "where": "validation/results/2026-07-03-learning-transfer-causal-ledger.md",
+   "tried": "8 compose rounds + 2 operator repairs",
+   "outcome": "partial",
+   "date": "2026-07-03",
+   "evidence": "sf 0.1403->0.1808; landed a0bf985,36be0b2,edb5375,d1400b6; operator 2504304, 96c2aaa; ceiling 104 cells after retention destroyed evidence"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Container cycle/resync",
+   "where": "validation/results/substrate-cycle-resync-2026-08-08.md",
+   "tried": "stop/start 2 spokes x2 after fixing secrets writers and FED id persistence",
+   "outcome": "worked",
+   "date": "2026-08-08",
+   "evidence": "4/4 self-resynced; hub cycle not covered"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Capability rounds 1-4 (answer-checked)",
+   "where": "validation/findings/capability-validation.md, blocker-clearance-and-round2.md, round3, round4",
+   "tried": "33 novel goals serial with independent ground truth",
+   "outcome": "partial",
+   "date": "2026-08-10",
+   "evidence": "7/7, 7/8, 6/8, 4/8; non-filesystem 4/8 all via universal_tool_fallback; 3 wallpaper"
+  },
+  {
+   "key": "false-verification",
+   "title": "Repair A stderr honesty gate",
+   "where": "validation/findings/blocker-clearance-and-round2.md Part 2",
+   "tried": "2 dispatches with different text",
+   "outcome": "failed",
+   "date": "2026-08-10",
+   "evidence": "same goal_hash 1ef8d7d8:1, gap summary frozen; semantic gate rejected inert patch"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Repair B regex widen",
+   "where": "validation/findings/blocker-clearance-and-round2.md Part 6, round3 Part 2",
+   "tried": "edit goal naming verifyCountFilesReach",
+   "outcome": "failed",
+   "date": "2026-08-10",
+   "evidence": "c9faf50d landed in verifyRegistryInventoryReach with inverted polarity, reached:true; 7/7 registry-token goals regressed; not reverted"
+  },
+  {
+   "key": "false-verification",
+   "title": "Ungrounded reach -> fallback (56a0683)",
+   "where": "validation/findings/round5-repairs-landed.md",
+   "tried": "3 attempts; verbatim unique anchors on 3rd",
+   "outcome": "unknown",
+   "date": "2026-08-10",
+   "evidence": "landed+deployed; proving line fired 0 times; landing dispatch itself reported reached:false"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "activity-api StartLimitIntervalSec=0 drop-in",
+   "where": "validation/findings/round5, round6",
+   "tried": "protect the only reachable trace store",
+   "outcome": "superseded",
+   "date": "2026-08-10",
+   "evidence": "round6: fleet reads/writes hub; local unit not load-bearing"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Applier proposals dir fix",
+   "where": "validation/findings/round7-blocker-sweep.md \u00a71",
+   "tried": "dispatched one-line fix to read /workspace/proposals",
+   "outcome": "worked",
+   "date": "2026-08-11",
+   "evidence": "n=1 dry-run returns mitosisStaged; 2,257 pending proposals"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Placement hook hand-installed in container clone",
+   "where": "validation/findings/round7-blocker-sweep.md \u00a72",
+   "tried": "scripts/git-hooks/install.sh in /workspace/git/super-repo",
+   "outcome": "failed",
+   "date": "2026-08-11",
+   "evidence": "09-07 4e4170a8 Substrate Autonomous committed 2134 files/59,401 lines; real fix 09-23 d993b331 in setup-git-push"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Complexity ladder with must-fail controls",
+   "where": "validation/results/2026-08-12-complexity-ladder.json",
+   "tried": "3 controls + 4 rungs",
+   "outcome": "partial",
+   "date": "2026-08-12",
+   "evidence": "controls failed correctly; all rungs reached with producerSteps 0 via satisfier; rungs_with_producer_steps 0"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Source-conditioned differentiation",
+   "where": "validation/results/2026-08-12-conditioned-differentiation.json",
+   "tried": "conditioned signatures",
+   "outcome": "partial",
+   "date": "2026-08-12",
+   "evidence": "41/45 -> 44/45 correct; invariant false"
+  },
+  {
+   "key": "env-gating",
+   "title": "Config-surface probe",
+   "where": "validation/findings/config-surface-audit.md, config-surface-open-decisions.md \u00a77",
+   "tried": "scripts/substrate/config-surface-probe.sh replaces prose harness",
+   "outcome": "dormant",
+   "date": "2026-08-21",
+   "evidence": "invoked by nothing (Makefile:159 comment only)"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Reuse hit@k benchmark",
+   "where": "validation/results/*reuse-report.json",
+   "tried": "reuse-harness 20-30 goals",
+   "outcome": "dormant",
+   "date": "2026-05-13..2026-08-01",
+   "evidence": "hit@1 0-0.47 in May; 0/0/0 on 07-05, 07-10, 08-01 due to stale May expected ids"
+  },
+  {
+   "key": "false-verification",
+   "title": "Failure-mode harness cycles",
+   "where": "validation/results/2026-05-22-failure-mode-cycle-*.json",
+   "tried": "6 scenarios per cycle",
+   "outcome": "unknown",
+   "date": "2026-05-22",
+   "evidence": "gap:6 -> reuse:6 at cycle 5; avg_self_heal_seconds null throughout; 07-05 gap:6 again"
+  },
+  {
+   "key": "false-verification",
+   "title": "Stage harness",
+   "where": "validation/results/stage-harness-latest.json",
+   "tried": "8-stage fixture harness of edit chain",
+   "outcome": "worked",
+   "date": "2026-08-11",
+   "evidence": "29 pass, 7 known_open; no invoker; admits it never dispatches a goal"
+  }
+ ],
+ "problems": [
+  {
+   "key": "false-verification",
+   "symptom": "reached/status disagree both ways; LLM judge grades form; 80-char stub artifact passes; ungrounded flag only reaches learner",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-08-10",
+   "recurrences": 6,
+   "root_cause": "no deterministic oracle for most goal families; honesty verdict not wired to caller/oracle label"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "'Thompson converging' is validator-dispatch/slot-binding self-loop; satisfier wins WITHHELD alpha-credit; ladder shows 0 producer steps",
+   "first_seen": "2026-05-25",
+   "last_seen": "2026-08-12",
+   "recurrences": 7,
+   "root_cause": "credit needs chain edge or landed sha; state signature too fine; cost telemetry 0 on 210,955 traces"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "concept recall never succeeds; relevance never increments",
+   "first_seen": "2026-05-23",
+   "last_seen": "2026-08-10",
+   "recurrences": 4,
+   "root_cause": "search::score(0) with bare @@, SELECT * of embeddings vs 4s budget; observer calls concept_create not usage_record"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "drafted repairs accumulate unapplied (4,138 proposals, 2,257 pending)",
+   "first_seen": "2026-06-04",
+   "last_seen": "2026-08-11",
+   "recurrences": 4,
+   "root_cause": "drafter reads scenario files not gap store; applier dir != writer dir; proposal schema mismatch"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "autonomous commits sweep scratch/runtime files into super-repo root",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-09-07",
+   "recurrences": 2,
+   "root_cause": "placement hook absent where substrate commits; fixed at bootstrap tier 09-23"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "directed edit lands in wrong function with reached:true; rollback deletes existing file",
+   "first_seen": "2026-07-03",
+   "last_seen": "2026-08-10",
+   "recurrences": 2,
+   "root_cause": "no check that patch touches the named symbol; rollback treats overwrite as create"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "unwindowed trace reads never return on hub; O(1) counter under-reports 44%; DELETE 45% of queries",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-08-11",
+   "recurrences": 3,
+   "root_cause": "30-day default window range-scan+sort; 37 callers omit since; retention valve pinned at 150k cap"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "diagnoses aimed at wrong store/tree (local vs hub trace store; super-repo vs vessels clone 34 vs 47); node-1 trace table frozen at 07-14",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "three trees and two stores; readers point at hub via METABOB_ENDPOINT"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "dead/discarded/frozen knobs; peering wiped on restart; FED id not persisted; admin key never persisted",
+   "first_seen": "2026-06-02",
+   "last_seen": "2026-08-26",
+   "recurrences": 5,
+   "root_cause": "gen-env allow-list regenerated every boot; bootstrap tier not self-updating"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "hollow recovery suppresses only producer; non-filesystem goals only answer via universal fallback",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-08-12",
+   "recurrences": 3,
+   "root_cause": "suppressSatisfierShapes empties producer set; smarter planes convert answerable goals to false success"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "concurrent dispatch exhausts LLM quota; verifier retries 400/800ms against daily cap",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-08-10",
+   "recurrences": 1,
+   "root_cause": "no admission/back-pressure against shared provider budget"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "goal-host ~2GB per dispatch, OOM, mitosis cutover deadlock",
+   "first_seen": "2026-06-03",
+   "last_seen": "2026-06-04",
+   "recurrences": 3,
+   "root_cause": "per-dispatch full-state capture in ias-executor-ts; library invisible to enact-orthogonal-decisions"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "26 gaps reprocessed ~5.3x in 4 min; new gap write lost; non-idempotent scenario bridge; -narrowed scenario twins",
+   "first_seen": "2026-06-05",
+   "last_seen": "2026-09-14",
+   "recurrences": 3,
+   "root_cause": "escalation marks nothing durable; falsifier=none never converges (unconfirmed)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "pull-sync ahead 2/behind 72, self-heal rejects own commits; runtime-only resolver overwritten by cutover skeleton",
+   "first_seen": "2026-07-03",
+   "last_seen": "2026-08-11",
+   "recurrences": 2,
+   "root_cause": "two substrate identities; runtime vs git drift"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "hub run-goal/resolve accept unauthenticated internet POSTs; admin key management lockout",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-26",
+   "recurrences": 2,
+   "root_cause": "no auth gate on those ports; /v1/keys/issue never persists plaintext"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "harnesses/probes/detectors built, run once, invoked by nothing",
+   "first_seen": "2026-05-13",
+   "last_seen": "2026-08-21",
+   "recurrences": 9,
+   "root_cause": "no activity validates them (script-retention rule)"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "gap behind c9faf50d never filed; corrected re-dispatch hashes to same frozen gap; correct-state summaries closed already_resolved",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-08-11",
+   "recurrences": 3
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "audit/probe residue in live substrate; unit-conversion goal minted empty UI panels",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-08-10",
+   "recurrences": 2,
+   "root_cause": "probes write through live stores"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "config audit stale both directions; role table wrong; 'two commands' spoke claim false; surface doc claims persistence",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-08-21",
+   "recurrences": 4,
+   "root_cause": "docs not checked by any invoked probe"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "surface store in-memory; solicitation panel it can never receive",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-08-21",
+   "recurrences": 1,
+   "root_cause": "store.ts no persistence"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "deterministic verify*Reach oracles (verifyCountFilesReach + 15 siblings)",
+   "location": "repos/goal-host-vessel/src/index.ts ~1232/1602/1628",
+   "purpose": "recompute answer instead of LLM judge",
+   "status": "live-used",
+   "general": false,
+   "evidence": "fires only on (repos|vessels)/ paths; no directory-count oracle; the pattern is worth keeping"
+  },
+  {
+   "name": "hollow_walklog_capped precedence",
+   "location": "goal-host-vessel",
+   "purpose": "LLM judge cannot override a walk log with 0 new shapes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "capability-validation \u00a71.4"
+  },
+  {
+   "name": "universal_tool_fallback (ReAct floor)",
+   "location": "goal-host-vessel",
+   "purpose": "floor parity",
+   "status": "live-used",
+   "general": true,
+   "evidence": "carried 4/4 non-filesystem successes in round4"
+  },
+  {
+   "name": "grounded flag -> fallback (56a0683)",
+   "location": "goal-host-vessel GoalSeekResult",
+   "purpose": "ungrounded reach not reported as reached",
+   "status": "unknown",
+   "general": true,
+   "evidence": "0 fires at time of round5"
+  },
+  {
+   "name": "malformed-goal interpolation guard + coalescing key",
+   "location": "goal-host-vessel index.ts:12217",
+   "purpose": "refuse unrendered goals; dedupe running",
+   "status": "live-used",
+   "general": true,
+   "evidence": "round4"
+  },
+  {
+   "name": "vessel_mitosis_start/evaluate/cutover + freshness gate",
+   "location": "repos/development-vessel/src/resolvers",
+   "purpose": "parallel-track self-modification",
+   "status": "live-used",
+   "general": true,
+   "evidence": "mitosis ticks 90-176 traces in July window; evaluate non-deterministic 06-05"
+  },
+  {
+   "name": "publish-substrate-authored-artifact + evaluate-pr-via-internal-idioms",
+   "location": "development-vessel seed",
+   "purpose": "June git author/self-merge chain",
+   "status": "fossil",
+   "evidence": "not in retained trace window; superseded by feature_compose"
+  },
+  {
+   "name": "surrealdb_export/import, backend-snapshot-to-git, gh_repo_create",
+   "location": "development-vessel",
+   "purpose": "durability/new remotes",
+   "status": "dormant",
+   "evidence": "0 traces July window"
+  },
+  {
+   "name": "draft-gap-closing-activity -> gap-closing:auto-* 4-task templates",
+   "location": "development-vessel seed",
+   "purpose": "auto-draft",
+   "status": "duplicate",
+   "evidence": "530 traces July; June templates analysis-only; mode collapse onto fm-43"
+  },
+  {
+   "name": "gap_to_scenario_bridge",
+   "location": "development-vessel",
+   "purpose": "gap -> scenario file",
+   "status": "live-used",
+   "evidence": "333 traces July; non-idempotent; -narrowed twins"
+  },
+  {
+   "name": "autocomplete-concept-writer + concept-usage-backfill",
+   "location": "development-vessel observers/seed",
+   "purpose": "concept relevance",
+   "status": "broken",
+   "evidence": "creates instead of increments; task 3 never ran (June)"
+  },
+  {
+   "name": "M1 embedding prior",
+   "location": "activity-api",
+   "purpose": "posterior prior",
+   "status": "dormant",
+   "evidence": "EMBEDDING_PRIOR_ENABLED=false, hardcoded by gen-env"
+  },
+  {
+   "name": "selectGoalForLoadConditioned state signature",
+   "location": "boredom-vessel",
+   "purpose": "load-conditioned selection",
+   "status": "dormant",
+   "evidence": "decorative: signature too fine (06-04)"
+  },
+  {
+   "name": "validator-dispatch / slot-binding chain",
+   "location": "activity-api/ias-executor",
+   "purpose": "lifecycle chain",
+   "status": "live-used",
+   "evidence": "4,280/1,503 traces July window; ~85% of June traffic self-loop"
+  },
+  {
+   "name": "detect-unclassified_failure_* auto-minted detectors",
+   "location": "activity table",
+   "purpose": "per-failure detectors",
+   "status": "duplicate",
+   "evidence": "136-145 traces each in July window for mitosis variants"
+  },
+  {
+   "name": "vessel_heartbeat_starvation_scan (substrate-authored)",
+   "location": "validation/substrate-authored/proposed",
+   "purpose": "detector",
+   "status": "fossil",
+   "evidence": "0 hits in repos/*/src; compiled siblings added by residue commit 4e4170a8"
+  },
+  {
+   "name": "adversarial probe corpus v1 + adversarial-probe-tick",
+   "location": "validation/adversarial-probes/v1",
+   "purpose": "S1->S2 gate / push-away",
+   "status": "dormant",
+   "evidence": "no consumer code in repos/*/src; 0 traces July window"
+  },
+  {
+   "name": "closure-status audit",
+   "location": "validation/state/closure-status.json",
+   "purpose": "CLAUDE.md closure properties",
+   "status": "broken",
+   "evidence": "09-07 run: dev-vessel unreachable, HTTP 0 -> 5 'not closed'"
+  },
+  {
+   "name": "lift-status.json / COORDINATION.md / gaps INDEX narration",
+   "location": "validation/state, validation/gaps",
+   "purpose": "May-June ledgers",
+   "status": "fossil",
+   "evidence": "as_of 05-26 / 06-02; INDEX last 05-24"
+  },
+  {
+   "name": "reuse-harness hit@k benchmark",
+   "location": "validation/scripts/reuse-harness.ts",
+   "purpose": "reuse metric",
+   "status": "fossil",
+   "evidence": "stale expected ids; 0/0/0 since 07-05; duplicate byte-identical 07-05 file"
+  },
+  {
+   "name": "stage-harness",
+   "location": "validation/scripts/stage-harness.ts",
+   "purpose": "8-stage edit-chain fixtures incl. known_open",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "no invoker; 29 pass/7 known_open 08-11"
+  },
+  {
+   "name": "complexity-ladder / conditioned-differentiation / probe-chain-stages harnesses",
+   "location": "validation/scripts",
+   "purpose": "reach differentiation with must-fail controls",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "no invoker"
+  },
+  {
+   "name": "substrate-cycle-resync.mjs",
+   "location": "validation/scripts",
+   "purpose": "restart/resync test",
+   "status": "live-unused",
+   "evidence": "one code comment in federation-probe-tick.ts:901"
+  },
+  {
+   "name": "config-surface-probe.sh",
+   "location": "scripts/substrate",
+   "purpose": "config delivery probe",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Makefile:159 comment only; open-decisions \u00a77"
+  },
+  {
+   "name": "failure-mode-harness / stratified-harness / test-forge-goal-completion",
+   "location": "validation/scripts",
+   "purpose": "scenario/coverage/forge harness",
+   "status": "dormant",
+   "evidence": "docs + run-weekly-harness.sh only; weekly cron not established"
+  },
+  {
+   "name": "stateful-ui-vessel face :8270",
+   "location": "repos/stateful-ui-vessel",
+   "purpose": "panels/interactor learning",
+   "status": "fossil",
+   "evidence": "replaced by human-surface; pinned escalations unread (memory 09-22)"
+  },
+  {
+   "name": "compiled .js/.d.ts/.map siblings",
+   "location": "validation/scripts, substrate-authored/proposed",
+   "purpose": "build output",
+   "status": "duplicate",
+   "evidence": "committed beside each .ts"
+  }
+ ],
+ "principles": [
+  "Score by answer vs independently computed ground truth in the tree the substrate reads; `reached` is data, not a verdict.",
+  "Measure serially: concurrent dispatch exhausts the shared LLM quota, and then 'no route' and 'LLM starved' look identical.",
+  "Verify pattern/regex repairs by executing them against a case list with false-positive traps; typecheck can't separate inert from working.",
+  "Give drafters verbatim, verified-unique anchors; check that the landed diff touches the named symbol ('reached' on an edit goal only means a commit landed).",
+  "Phrase gap summaries as the defect, never the correct state.",
+  "Find the store/tree a component actually uses (/proc/<pid>/environ) before diagnosing it. A /health probe cannot see the load-bearing route failing.",
+  "Repeating the code's own log message is not a diagnosis.",
+  "Instruments fail in the flattering direction: presence\u2260liveness, every() over an empty set, a conditional shape held as mandatory, a stopped container measured, one sample of a bursty signal.",
+  "A check nothing invokes cannot be trusted when it passes.",
+  "Fix at the tier that runs; a hand fix in one clone is undone by the next boot or commit path.",
+  "A remedy correct by the inventory can be wrong against measured state, and the measurement needs its own control.",
+  "Refuse privilege escalation (forged JWT, DB edit) to unblock; escalate credentials.",
+  "SurrealQL traps: compare datetimes with d'\u2026' literals (a string literal matched all rows); GROUP ALL over zero rows returns [] not count 0; math::max on datetimes returned null."
+ ],
+ "claims": [
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-06-01",
+   "claim": "first substrate self-merge (a91a4bbd)",
+   "where": "validation/substrate-authored/observations/2026-06-01T19-23-02Z",
+   "later": "the next observation says evaluation_evidence was hand-supplied, so it was redone to be traceable"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-06-02",
+   "claim": "vessel_authoring_criterion MET",
+   "where": "validation/state/lift-status.json (fc94ce5a)",
+   "later": "autonomy was still the open hard criterion through September"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-08-10",
+   "claim": "hard autonomy criterion met via 19b027ba",
+   "where": "validation/findings/capability-validation.md \u00a72.4",
+   "later": "19b027ba swept the operator's staged file; the 09-07 autonomous commit 4e4170a8 held 2134 residue files"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-05-25",
+   "claim": "Thompson converging; posteriors live after RETURN fix",
+   "where": "validation/findings/iter-21, iter-24",
+   "later": "validator-dispatch 301/301 dominance; \u224885% self-loop 06-04; memory 09-08 says posteriors vestigial"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-05-25",
+   "claim": "F-083 debunked, posteriors safe (alpha monotonic)",
+   "where": "validation/findings/f-083-debunked.md",
+   "later": "the proof metric was the self-looping validator-dispatch"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-06-04",
+   "claim": "M1-M6 all tracked and improving",
+   "where": "validation/findings/learning-rate-2026-06-04",
+   "later": "M1 dormant; 07-03 ledger: crystallized fraction not predictive; 08-12 ladder: 0 producer steps"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-06-04",
+   "claim": "2bed214 unblocks concept relevance",
+   "where": "validation/findings/concept-relevancy-investigation-2026-06-04",
+   "later": "ts_sum 22->22 in the 06-05 window"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-08-10",
+   "claim": "recall blocked by the mask, then by BM25 IDF not persisted",
+   "where": "validation/findings/capability-validation.md \u00a71.2/\u00a74",
+   "later": "blocker-clearance Part 4: both wrong; real cause search::score(0) without @0@@ plus SELECT *; never dispatched"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-08-10",
+   "claim": "structural floor gap for pure-reasoning goals",
+   "where": "validation/findings/capability-validation.md \u00a71.4",
+   "later": "retracted in the same doc (starvation); serial run gave 5050 on trial 1"
+  },
+  {
+   "key": "directed-overshoot",
+   "claimed_at": "2026-08-10",
+   "claim": "c9faf50d makes 'src/foo' goals claim",
+   "where": "validation/findings/blocker-clearance-and-round2.md Part 6",
+   "later": "round3: example wrong; the real blast radius is 7/7 registry-token count goals; gap never filed"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-10",
+   "claim": "56a0683 fixes reach honesty",
+   "where": "validation/findings/round5-repairs-landed.md",
+   "later": "never verified in this shard (0 fires)"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-08-10",
+   "claim": "local activity-api is the spoke's only reachable trace store",
+   "where": "validation/findings/round3, round5",
+   "later": "round6: the fleet reads/writes the hub; the local unit is frozen and unused"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-08-09",
+   "claim": "trace store is down",
+   "where": "validation/findings/config-surface-audit.md \u00a77.10",
+   "later": "retracted: hung under contention, no restart"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-08-11",
+   "claim": "6x load improvement (load 15.3, 353%)",
+   "where": "validation/findings/round7 first draft",
+   "later": "retracted in f1dcb5cf: single sample; really 511-1989%"
+  },
+  {
+   "key": "env-gating",
+   "claimed_at": "2026-08-09",
+   "claim": "F10 image inventory drift",
+   "where": "validation/findings/config-surface-audit.md",
+   "later": "retracted: an old container was measured"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "claimed_at": "2026-08-11",
+   "claim": "placement hook installed, root cause closed",
+   "where": "validation/findings/round7-blocker-sweep.md \u00a72",
+   "later": "09-07 4e4170a8 still committed 2134 files; fixed at bootstrap 09-23 d993b331"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-08-11",
+   "claim": "applier proposals path fixed and verified",
+   "where": "validation/findings/round7-blocker-sweep.md \u00a71",
+   "later": "proven only at n=1 dry-run"
+  },
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-08-08",
+   "claim": "substrates cycle freely and resync 4/4",
+   "where": "validation/results/substrate-cycle-resync-2026-08-08.md",
+   "later": "spokes only; hub not covered; the resync script is invoked by nothing"
+  },
+  {
+   "key": "env-gating",
+   "claimed_at": "2026-06-02",
+   "claim": "6/6 intent alignment",
+   "where": "validation/findings/substrate-consistency/2026-06-02T00-23-18Z",
+   "later": "achieved with reuse disabled by env and a fresh mint per goal"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-06-03",
+   "claim": "mitosis empirically proven",
+   "where": "validation/findings/mitosis-empirical-proof-2026-06-03",
+   "later": "06-04: 0 cutovers; 06-05: evaluate non-deterministic"
+  },
+  {
+   "key": "drafter-quality",
+   "claimed_at": "2026-06-03",
+   "claim": "side-effect vessel improvement operational; lift is a stable mode",
+   "where": "validation/findings/side-effect-vessel-improvement-2026-06-03",
+   "later": "the dispatch OOM'd; 06-04: evaluate/integrate stalled, 0 live source changes"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-06-04",
+   "claim": "substrate authored 2 templates end to end",
+   "where": "validation/findings/substrate-self-repair-observation-post-bootstrap-2026-06-03",
+   "later": "neither was executed afterwards"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-22",
+   "claim": "failure-mode cycles reuse:6",
+   "where": "validation/results/2026-05-22-failure-mode-cycle-5..8.json",
+   "later": "avg_self_heal_seconds null throughout; 07-05 back to gap:6"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-05-23",
+   "claim": "reuse hit@5 0.6",
+   "where": "validation/results/2026-05-23-run2-20260523-reuse-report.json",
+   "later": "0/0/0 on 07-05, 07-10, 08-01 (benchmark fossil with stale ids)"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-09-07",
+   "claim": "push-away closed",
+   "where": "validation/state/closure-status.json",
+   "later": "the same run could not reach dev-vessel (HTTP 0); evidence is one recorded probe shape"
+  }
+ ]
+}

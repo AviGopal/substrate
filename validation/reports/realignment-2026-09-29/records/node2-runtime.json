@@ -1,0 +1,510 @@
+{
+ "source": "node2-runtime",
+ "coverage": "Node 2 (compose2-live, PROFILE=compute, local image localhost/substrate:compose-ownership, image-revision unknown) surveyed read-only 2026-09-29 ~03:40-04:30 UTC: systemctl --failed, 102 masked unit files (4 hand-masked 09-28 05:56 in container layer), all timers and whether they fire, journals of development-vessel, goal-host, boredom, local-tools, discovery, federation-transport, substrate-pull-sync (full history since 09-26), gap-compose, gap-store-census, rhythm-cadence and the 4 failed detectors. Local stores under /workspace compared side by side with node 1 (gap-class-posteriors, close-oracle-calibration, expectation-calibration, goal-host failure memory + reached-command cache, boredom selector state, memory/notes.json, gaps.json, db-backups, /tmp, restart-requests, .last-good), super-repo clone tree state and submodule status on both nodes, runtime vs clone source hashes for 5 vessels, node-2 reflog landings, and CHECKINS/MECHANISM-AUDIT claims about node 2. NOT covered: the discovery registry contents (the /vessels endpoint returned 404 with ApiKey auth, so only /health count 8 plus vessel-arrival-snapshot), a diff of the spendEnvelope/autonomy-scope pool records between the nodes (tmp/unpause.sh not found), whether a dispatch started on node 2 is visible to goal_status on the hub, the analysis/light-dispatch/llm-resolver/human-surface journals in depth, and who wrote the truncated inventory, who deleted learning-loop-selftest-tick.ts and who sends the scaffold-and-publish-vessel pin. The identity 401s are unattributed because no positive control was run.",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/node2-runtime.md",
+ "attempts": [
+  {
+   "key": "node-locality",
+   "title": "Hand-mask DB watchdogs on node 2",
+   "where": "compose2-live /etc/systemd/system/{compose-drift,joint-liveness,validator-liveness,learning-loop-selftest}.{service,timer} -> /dev/null",
+   "tried": "After 6-hourly/30-min 'Unable to connect' failures (SURREALDB_URL 127.0.0.1:8000, surrealdb masked) and a missing script, the four detectors were masked by hand on 09-28 05:56",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "Units still listed failed. The symlinks are in the container layer and die on recreate. The pull-sync unit auto-enable that armed them on 09-26 12:56Z ('ENABLED validator-liveness.timer \u2014 it was converged but disabled') is profile-blind and still live."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "31f15baf pull-sync fix for the cpg-inference-ts build loop",
+   "where": "scripts/substrate/substrate-pull-sync.sh; node 2 pull-sync journal",
+   "tried": "Build declarations-only shared packages with their own build script. The loop had run 174 'dist stale \u2014 re-running fan-out' ticks and 42 BUILD FAILED (exit 127) over ~43h",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "Last BUILD FAILED 08:00:08 and last 'dist stale' 08:11:15; failed=0 on every tick since. The fix was blocked at 07:27 by a locally modified pull-sync.sh in node 2's clone (ff-only pull FAILED)."
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Hand-staged pull-sync.sh wedged its own delivery",
+   "where": "node 2 super-repo clone; pull-sync 09-28 07:27",
+   "tried": "Operator staged the pull-sync fix locally before it landed on origin",
+   "outcome": "failed",
+   "date": "2026-09-28",
+   "evidence": "'ff-only pull FAILED \u2014 glue layer stays at 6f329e2e while origin is 31f15bafdf; local changes \u2026 scripts/substrate/substrate-pull-sync.sh state/learning-mode-state.json'. Cleared by 08:11."
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Unseal node 2 pool via holder-held calibration",
+   "where": "development-vessel gap-to-feature.ts (76bf256, 094c230); /workspace/*calibration*.json on node 2",
+   "tried": "Holder-held calibration so node 2's admission would stop sealing (2 -> 59 admitted)",
+   "outcome": "failed",
+   "date": "2026-09-28",
+   "evidence": "09-29 04:xx node 2 log: '863 candidates \u2192 0 admitted {needs_information 436, autonomy_scope 271, not owned here 129, operator_hold 24}'. The node-local expectation-calibration still reads trace_store_reconciliation 400/0."
+  },
+  {
+   "key": "node-locality",
+   "title": "Cross-node spend envelope reader",
+   "where": "repos/development-vessel/src/resolvers/gap-to-feature.ts:4084",
+   "tried": "Sum spendEnvelope across every poolImpulse producer discovery lists, so a record written on either node binds both (replacing the 09-27 hand-mirroring into node 2's pool)",
+   "outcome": "worked",
+   "date": "2026-09-27",
+   "evidence": "Node 2 logs 'spend envelope exhausted: spent 2.x USD of 2 USD/h over 2 spend source(s)' 73x/24h, so both nodes are read. The records themselves were not diffed."
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Decentralized compose ownership (node 2 owns dev-vessel/goal-host/activity-api composes)",
+   "where": "openspec/changes/decentralized-compose-ownership; dev-vessel drop-in VESSEL_ID=development-vessel-compose2",
+   "tried": "Route edit-intent by ownership to node 2's development-vessel",
+   "outcome": "partial",
+   "date": "2026-09-26",
+   "evidence": "Node 2 reflog: 98 dev-vessel, 15 goal-host and 10 activity-api substrate-authored landings. But node 2 cannot verify them ('class2 check abstained on this node: the gap store is held elsewhere'), its escalations throw (2873), and its config is a boot-transient drop-in."
+  },
+  {
+   "key": "false-verification",
+   "title": "MECHANISM-AUDIT diagnosis 'learning-loop-selftest script missing because clone behind at ce1e4c5d'",
+   "where": "validation/reports/self-development-program-2026-09-25/MECHANISM-AUDIT-2026-09-28.md line 30",
+   "tried": "Diagnosed the Module not found as a stale clone",
+   "outcome": "failed",
+   "date": "2026-09-28",
+   "evidence": "Clone now at HEAD 9c967329 and the file is still deleted in the worktree (git status ' D scripts/substrate/learning-loop-selftest-tick.ts', 463 lines). The unit never ran successfully once on node 2 (first run 09-27 04:43)."
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "gap-compose watchdog restarts gap_to_feature on stall",
+   "where": "scripts/substrate/gap-compose-tick.ts; gap-compose.timer on both nodes",
+   "tried": "Fire a gap_to_feature impulse when open intents have stalled",
+   "outcome": "failed",
+   "evidence": "The only action ever logged is watchdog_restart: 1417 on node 1 since 09-25 and 36 on node 2, all ok:true http:200. stalled_min keeps climbing (node 1 210->230). The stall is admission starvation, which a restart cannot fix."
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "db-admin-repair test rail assertion rewrite",
+   "where": "repos/activity-api/src/routes/db-admin-repair.test.ts",
+   "tried": "Test asserts the backup SELECT, relying on the snapshot dying on ENOENT",
+   "outcome": "failed",
+   "evidence": "On substrate boxes /workspace/db-backups exists, so every suite run writes fake backups: 391/391 files on node 2 (a node with no DB) and 1766/1769 on node 1, all affected_count 7 rows [{c:7}]."
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Narrowed child emission for chronically stuck gaps",
+   "where": "gap-to-feature.ts on both nodes",
+   "tried": "Emit a -narrowed child for trace-store-reconcile-2026-09-24T11",
+   "outcome": "failed",
+   "evidence": "Re-emitted 178x/24h on node 1 plus 117x on node 2. Parent and child are both open with edit_site null. The decomposer invents 'repos/vessel/src/trace-store-reconcile.ts'. Node 2 calibration: 400 attempts, 0 lands."
+  }
+ ],
+ "problems": [
+  {
+   "key": "node-locality",
+   "symptom": "Hub-only detectors (joint-liveness, validator-liveness, compose-drift, learning-loop-selftest) scheduled on the DB-less compute node and failing every run",
+   "root_cause": "pull-sync unit convergence auto-enables timers without consulting profile/data locality; masks applied by hand in the container layer",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 20
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Learned state forks per node: gap-class-posteriors, close-oracle-calibration (landed_commit false_closes 2149 vs 31), expectation-calibration, goal-host failure memory (1772 vs 277), reached-commands (10624 vs 451), memory notes (59 vs 3)",
+   "root_cause": "Stores are local JSON files at process.env[X] ?? '/workspace/...' constants rather than shaped impulses served where the data lives",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Node 2 lessons and concept usage never reach concept-db: 115 'compose-lessons concept-db mirror failed' and ~1300 'concept-bridge usage record failed' per 24h, while lesson READS succeed",
+   "root_cause": "CONCEPT_DB_ENDPOINT unset on node 2 so it defaults to 127.0.0.1:8260 (config.ts:41); writers pin a local port while readers route elsewhere",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "goal-host concept recall skipped on every node-2 walk: 2686 'recall SKIPPED \u2014 discovery named no concept-db row' since boot",
+   "root_cause": "Node 2 discovery lists 8 local vessels; federation reports 'no relay anchor \u2014 hub mirror skipped' (144x); federation-relay unit not-found on node 2 and MainPID=0 on node 1",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 2686
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "2873 needs-human escalations from node 2 throw 'Unable to connect' since 09-26; no human ever sees a node-2-owned gap's question",
+   "root_cause": "resolveUiWritePassthrough posts to STATEFUL_UI_ENDPOINT defaulting to local :8270; stateful-ui-vessel masked on compute (same class as the 09-22 '248 escalations to a vessel no human reads')",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 2873
+  },
+  {
+   "key": "false-verification",
+   "symptom": "pull-sync reports 'done \u2014 synced=N failed=0' while a tracked script is deleted, 14 submodules are uninitialized and the inventory is truncated",
+   "root_cause": "Success is measured as HEAD convergence, not tree-matches-HEAD; the log mislabels uninitialized submodules as 'uncommitted work \u2014 NOT discarded'",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Both vessels.inventory.json copies on node 2 truncated to one obsidian-vessel entry; self-fact-reconcile fleet_inventory_copy sees them agree",
+   "root_cause": "The reconcile check compares two copies to each other rather than to an independent truth, so it is blind to shared corruption. Writer unknown.",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Node 2 lands (98 dev-vessel commits) but cannot verify: 'class2 check abstained on this node: the gap store is held elsewhere'",
+   "root_cause": "The verification sweep runs only where the gap store is held; landing and verification are split across nodes",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Fixture backups in /workspace/db-backups (391/391 node 2, 1766/1769 node 1); 50,766 /tmp entries on node 2 (46,159 / 4.8 GB on node 1); node 2 fossil gaps.json full of probe rows; /tmp/probe-ws 9.5 MB gap store; 68 tracked Substrate/Projects test files rewritten at runtime",
+   "root_cause": "Suites run on live boxes (verify/post-land gates about 260 dev-vessel runs/day) write to real /workspace paths and never clean their tmp dirs",
+   "first_seen": "2026-09-06",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Node 2 not reproducible from image+env+volumes: local image with unknown revision, boot-transient dev-vessel drop-in (VESSEL_ID, advertise endpoint), hand masks in /etc/systemd/system",
+   "root_cause": "Operator interventions applied to the container layer instead of image/profile/volume",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": ".last-good rollback anchors disagree with running code on both nodes (e.g. node 2 dev-vessel last-good 9c86aff while running f451e42)",
+   "root_cause": "The last-good marker is not advanced on mitosis-cutover landings",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "cpg-inference-ts build retry loop: 174 re-runs and 42 BUILD FAILED over ~43h; 241 failed=1 pull-sync ticks",
+   "root_cause": "Clones without node_modules / declarations-only package build (fixed 31f15baf/4bb21141)",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 241
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Something pins development-vessel:scaffold-and-publish-vessel 1036x/24h at posterior alpha 5.59 beta 7823 (7829 observations)",
+   "root_cause": "The caller ignores the posterior and pins a target; unattributed (boredom attribution retracted 09-26 10:00); the refusal holds but the loop never stops",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 1036
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Node 1 boredom selector: 5 sampled templates, distinct_means 1, variance 0 (all at prior 0.2); node 2 picks dozens of cold one-off detect-unclassified_failure_* templates with picks=0",
+   "root_cause": "Posterior not compounding; minting of one-shot detector templates splits traffic (law 3)",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "2545/2545 local-tools shell requests in 24h lack execution_id, including the mitosis staging copies into /vessels",
+   "root_cause": "Callers of the shellResult path do not propagate execution_id; the landing's file writes are untraced",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-29",
+   "recurrences": 2545
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "trace-store-reconcile-2026-09-24T11 -narrowed child re-emitted by both nodes on every pass (178 + 117 per 24h)",
+   "root_cause": "Two owners run gap-to-feature on the same hub store with no emission idempotence in the log/decision; the gap has no edit_site",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "gap-decompose invents 'repos/vessel/src/trace-store-reconcile.ts' (89 no-valid-step lines/24h); composer scaffolds new files for db_performance gaps (85)",
+   "root_cause": "The gap is born with classification_metadata.edit_site null, so the decomposer fills in a placeholder path",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Node 2 admits 0 of 863 hours after claims of 7 and 59 admitted",
+   "root_cause": "Node-local calibration plus scope/needs_information exclusions; the gap-compose watchdog cannot tell starvation from a hang",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "6844 discovery 'identity rejected the key (HTTP 401)' and 1194 goal-host 'Failed to resolve SHA \u2026 401' on node 2; 211 walkBudget 404 fallbacks; 241 goal_execution 4xx 'goal or target_template_id is required'",
+   "root_cause": "Unattributed, load-correlated key rejections by hub identity; walkBudget has no producer on node 2; callers bind the wrong payload",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "48 tracked .js build outputs in scripts/substrate, 6 in boredom-vessel src; leftover /vessels/*mitosis* dirs (4 node 2, 11 node 1); memory .bak files holding 1788 notes nobody reads; /workspace/state/learning-mode-state.json stale since 07-29; 4 orphaned gaps.json .tmp files on node 1; leases/*.json tracked in git",
+   "root_cause": "No retention or cleanup; runtime state committed to git",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-29"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "substrate-pull-sync",
+   "location": "scripts/substrate/substrate-pull-sync.sh -> /usr/local/bin/substrate-pull-sync; timer ~11 min",
+   "purpose": "Converge super-repo glue and vessels to origin/dev with a test gate",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Fires every ~11 min on node 2. Its success line ignores tree state, and its unit auto-enable is profile-blind."
+  },
+  {
+   "name": "gap-compose watchdog",
+   "location": "scripts/substrate/gap-compose-tick.ts; gap-compose.timer both nodes",
+   "purpose": "Restart the gap_to_feature lane when open intents stall",
+   "status": "broken",
+   "general": false,
+   "evidence": "The only action ever logged is watchdog_restart: 1417 on node 1 and 36 on node 2. Every one returns ok:true, yet the stall persists."
+  },
+  {
+   "name": "gap-store-census",
+   "location": "scripts/substrate/gap-store-census-tick.ts",
+   "purpose": "Flag gap store collapse against its 14-day high-water mark",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Hourly on node 2, reads 6278 gaps through dev-vessel resolve (hub store)."
+  },
+  {
+   "name": "rhythm-cadence conductor",
+   "location": "scripts/substrate/rhythm-seed-tick.ts + rhythm-conduct-tick.ts",
+   "purpose": "Time-shaped rhythm impulses drive cadence (law 5)",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Node 2 logged 56 of ~70 runs as 'nothing enqueued and nothing recorded as skipped'. There is no per-family reason, and concept-management has no_goal_mapping."
+  },
+  {
+   "name": "joint-liveness / validator-liveness / compose-drift detectors",
+   "location": "scripts/substrate/*-tick.ts",
+   "purpose": "Detect severed write->read joints, stalled validators and composer drift",
+   "status": "broken",
+   "general": true,
+   "evidence": "Healthy on node 1 per the audit. On node 2 they failed 'Unable to connect' every run and were hand-masked 09-28 05:56."
+  },
+  {
+   "name": "learning-loop-selftest",
+   "location": "scripts/substrate/learning-loop-selftest-tick.ts",
+   "purpose": "Check that the execution->learning chain conducts",
+   "status": "broken",
+   "general": true,
+   "evidence": "The script is deleted in node 2's worktree and every run since 09-27 04:43 hit Module not found; the unit is now masked."
+  },
+  {
+   "name": "mitosis cutover landing",
+   "location": "development-vessel vessel-mitosis-*; /vessels/<v>-mitosis-*",
+   "purpose": "Stage, evaluate and cut over a landed compose into the runtime",
+   "status": "live-used",
+   "general": true,
+   "evidence": "98 dev-vessel landings in node 2's reflog, 113 restarts since 09-26. It leaves mitosis dirs behind, and its copies run through untraced local-tools shell calls."
+  },
+  {
+   "name": "decentralized compose ownership",
+   "location": "openspec/changes/decentralized-compose-ownership; dev-vessel drop-in",
+   "purpose": "Route edit-intent composes to the owning node",
+   "status": "live-used",
+   "general": true,
+   "evidence": "'owner':'compose2' 93 picks/24h and 129 'not owned here' exclusions. Its config lives in a boot-transient drop-in."
+  },
+  {
+   "name": "cross-node spendEnvelope reader",
+   "location": "repos/development-vessel/src/resolvers/gap-to-feature.ts:4084",
+   "purpose": "One envelope binds all nodes by summing over every discovered pool producer",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Log line 'over 2 spend source(s)'."
+  },
+  {
+   "name": "per-node calibration stores",
+   "location": "gap-to-feature.ts:2745/2775/2845 (/workspace/expectation-calibration.json, gap-class-posteriors.json, close-oracle-calibration.json)",
+   "purpose": "Class posteriors and close-oracle calibration that gate admission and closes",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Values diverge between the nodes (e.g. landed_commit false_closes 2149 vs 31). The paths are env-default constants."
+  },
+  {
+   "name": "goal-host failure memory / reached-command cache",
+   "location": "goal-host-vessel src/index.ts:3827,3904",
+   "purpose": "Remember failure reasons and reached commands across dispatches",
+   "status": "live-used",
+   "general": false,
+   "evidence": "1772/10624 lines on node 1 vs 277/451 on node 2; nothing shared between them."
+  },
+  {
+   "name": "memoryNote store",
+   "location": "development-vessel memory-note.ts -> WORKSPACE_ROOT/memory/notes.json",
+   "purpose": "System-authoritative memory (law 10)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "59 notes on node 1 (1788 are in .bak files nothing reads), 3 on node 2."
+  },
+  {
+   "name": "self-fact-reconcile fleet_inventory_copy",
+   "location": "repos/development-vessel/src/resolvers/self-fact-reconcile.ts:146",
+   "purpose": "Detect divergence between source and deploy inventory copies",
+   "status": "broken",
+   "general": false,
+   "evidence": "Both node-2 copies were truncated to one identical obsidian entry, so the check sees them agree."
+  },
+  {
+   "name": "concept-bridge observer",
+   "location": "repos/development-vessel/src/observers/concept-bridge-observer.ts",
+   "purpose": "Record concept usage and upsert concepts from executions",
+   "status": "broken",
+   "general": true,
+   "evidence": "On node 2 it posts to default 127.0.0.1:8260 and gets ~1300 connection failures/24h."
+  },
+  {
+   "name": "needs-human escalation passthrough",
+   "location": "repos/development-vessel/src/resolvers/ui-write-passthrough.ts; gap-to-feature.ts:1238,2913",
+   "purpose": "Ask a human resolver when a gap fails repeatedly",
+   "status": "broken",
+   "general": true,
+   "evidence": "2873 THREW on node 2 because the local stateful-ui is masked."
+  },
+  {
+   "name": "db-admin-repair backup rail",
+   "location": "repos/activity-api/src/routes/db-admin-repair.ts:408",
+   "purpose": "Snapshot rows before a repair mutation",
+   "status": "live-used",
+   "general": true,
+   "evidence": "The code works, but its test writes fixture backups into live /workspace/db-backups (391 on node 2, 1766 on node 1)."
+  },
+  {
+   "name": "walk-concepts recall",
+   "location": "goal-host-vessel",
+   "purpose": "Recall concepts for a walk from concept-db",
+   "status": "broken",
+   "general": true,
+   "evidence": "Skipped 2686x on node 2 since boot because no concept-db row is reachable."
+  },
+  {
+   "name": "federation relay",
+   "location": "federation-relay.service",
+   "purpose": "Relay anchor for cross-substrate visibility",
+   "status": "broken",
+   "general": true,
+   "evidence": "Unit not-found on node 2 and MainPID=0 on node 1. 144 'no relay anchor \u2014 hub mirror skipped'."
+  },
+  {
+   "name": "pinned-target posterior refusal",
+   "location": "goal-host-vessel src/index.ts:692",
+   "purpose": "Refuse pinned targets whose learned posterior is decisively negative",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1036 refusals/24h of scaffold-and-publish-vessel. It works, but the caller is unattributed and never stops."
+  },
+  {
+   "name": "boredom-vessel.timer",
+   "location": "/lib/systemd/system/boredom-vessel.timer",
+   "purpose": "Periodic boredom trigger",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Boredom runs as a daemon. The timer has no NEXT; its last trigger was 09-28 15:51."
+  },
+  {
+   "name": "node-2 local gaps.json",
+   "location": "compose2 /workspace/git/super-repo/gaps/gaps.json",
+   "purpose": "Former local gap store",
+   "status": "fossil",
+   "general": false,
+   "evidence": "70 entries frozen 09-26 12:07, including probe rows; the dev-vessel env points GAP_STORE_ENDPOINT at the hub."
+  }
+ ],
+ "principles": [
+  "A node-local JSON file holding learned state is a fork, not a replica: every posterior, calibration, failure memory and memory store must be a shaped impulse served where the data lives, or the nodes learn different things from the same work.",
+  "A default endpoint of 127.0.0.1:<port> is a silent write sink on any profile that masks that vessel; writers must route by shape through discovery exactly as readers do.",
+  "Converged HEAD is not a converged tree: a sync's success line must check that the worktree matches HEAD (deletions, submodule init, runtime-modified tracked files).",
+  "A reconcile check that compares two copies of the same artifact is blind to shared corruption; compare against an independent source.",
+  "Profile/data locality must gate unit enablement at the mechanism (pull-sync / apply-inventory), not by hand-masks in a container layer that disappear on recreate.",
+  "A watchdog that only ever reports its own action (ok:true) without the stalled metric moving is a metronome; grade it on the effect.",
+  "The node that lands must be able to verify, or credit and evidence split across nodes.",
+  "Tests that assume a directory is absent will write real artifacts on a box where it exists; fixtures must use a temp root.",
+  "A refusal that holds is not a fix while the caller is unattributed: log the caller so the loop can be stopped.",
+  "Record hourly 'admits N' / 'unsealed' claims only with the store and node they were read from; node-local numbers flip within hours."
+ ],
+ "claims": [
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-09-26 14:54",
+   "claim": "routed landing works end to end (node 1 -> ownership -> node 2)",
+   "where": "CHECKINS.md self-development-program-2026-09-25",
+   "later": "Mechanism still lands (98 node-2 dev-vessel commits), but node 2 cannot verify its landings and all 2873 of its escalations are lost."
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-09-27 06:05",
+   "claim": "node 2 resolver spend \u2248 0",
+   "where": "CHECKINS.md",
+   "later": "Retracted 06:15 the same day: node 2 spent $2.78 over 649 calls."
+  },
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-27 22:11",
+   "claim": "hub watchdogs healthy; node 2 is profile mismatch + cpg build failure; selftest missing because clone behind at ce1e4c5d",
+   "where": "debc3da3; MECHANISM-AUDIT-2026-09-28.md line 30",
+   "later": "The cpg fix is confirmed (08:11). The profile mismatch was only hand-masked 09-28 05:56 and the enabler is still live. The selftest file is still deleted at HEAD 9c967329, so the 'clone behind' diagnosis was wrong."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-28 00:19",
+   "claim": "31f15baf pull-sync fix: build declarations-only shared packages",
+   "where": "git super-repo",
+   "later": "It worked from 08:11, but first wedged its own delivery at 07:27 because a locally modified pull-sync.sh blocked the ff-only pull."
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-28 08:31",
+   "claim": "node 2 pull-sync failed=0 \u2014 first clean ticks since 09-26",
+   "where": "CHECKINS.md / beb19924",
+   "later": "True for the counter. The tree is still not clean: deleted tracked script, 14 uninitialized submodules, truncated inventory."
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-09-28 16:00",
+   "claim": "node 2 gap-compose restored",
+   "where": "3b0ca6d9",
+   "later": "gap-compose on node 2 logs only watchdog_restart (36), never a compose action."
+  },
+  {
+   "key": "calibration-seal",
+   "claimed_at": "2026-09-28 18:30",
+   "claim": "node 2 pool unsealed 2 -> 59 via holder-held calibration (76bf256, 094c230)",
+   "where": "a50d1196 CHECKINS",
+   "later": "09-29 ~04:00 node 2 admits 0 of 863."
+  },
+  {
+   "key": "calibration-seal",
+   "claimed_at": "2026-09-28 23:40",
+   "claim": "node 2 admits 7 verifiable gaps under class1/class2",
+   "where": "7c1ffc8e CHECKINS",
+   "later": "0 of 863 admitted a few hours later."
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-26 10:00",
+   "claim": "boredom attribution of the scaffold pin retracted; sender unattributed until goal-host origin logging lands",
+   "where": "CHECKINS.md",
+   "later": "Still unattributed 09-29: 1036 refusals per 24h at posterior alpha 5.59 / beta 7823."
+  },
+  {
+   "key": "human-surface-escalation",
+   "claimed_at": "2026-09-22",
+   "claim": "248 escalations were asked of a vessel no human reads (:8270)",
+   "where": "operator memory index",
+   "later": "On node 2 the same channel now fails before reaching any vessel: 2873 uiQuestion_write THREW since 09-26. Same class, worse hat."
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-28",
+   "claim": "post-land suite dead since 08-31 fixed by 5e9a0b2",
+   "where": "operator memory index",
+   "later": "Node 2 dev-vessel HEAD f451e42 contains 5e9a0b2 (ancestor verified). Effect on node 2 not measured."
+  },
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-27 08:56",
+   "claim": "node 2 reopened after mirroring autonomy-scope and spend-envelope into its own pool",
+   "where": "CHECKINS / 5ac90e4a",
+   "later": "Superseded by a general cross-node envelope reader (gap-to-feature.ts:4084) that sums every discovered pool producer."
+  }
+ ]
+}

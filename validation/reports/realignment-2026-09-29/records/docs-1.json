@@ -1,0 +1,596 @@
+{
+ "source": "docs-1",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/docs-1.md",
+ "coverage": "Shard: first 23 docs/*.md (API_V2_ACTIVITY + docs/architecture/* incl. sequences/01-05+README, SUBSTRATE_AS_{DEC,DYNAMICS,FLEET,MDP,NETWORK,REPRESENTATION}, LITERATURE_COMPARISON) plus CLAUDE.md and README.md. Read fully: IMPULSE_ACTIVITY_FOUNDATION, CONFORMANCE_LEDGER, SHAPE_ACTION_EVIDENCE_EXPECTATIONS, CLAUDE.md; substantial parts of HUMAN_PARTICIPATION, EXPLICABILITY, RESOLVER_TRACKING, RUNTIME_TRACING, seq/04, seq/05, DYNAMICS (header+\u00a76-7), DEC (\u00a72, \u00a74.4), NETWORK \u00a711, FLEET \u00a77, README (install l.1-200 + Learning loop + principles). Heading-only skim: MDP, REPRESENTATION, LITERATURE (\u00a79 headlines), STATE_SPACE_SPEC (\u00a77), GOAL_PATHS_SCHEMA, seq/01-03/README, API_V2 endpoint list. Checked against live clones in substrate-live (/workspace/git/vessels, HEADs mostly 09-28), 436 doc-named identifiers + 52 doc-cited src paths grepped, SurrealDB row counts/recency (read-only), gap store copy (6276 gaps), journals, units, env var names/ids on both nodes. NOT verified: HTTP liveness of API_V2 endpoints (probes 401'd on wrong header form; existence is from route greps); image-build vs Dockerfile-commit ordering; per-author split of reach numbers (window mixes ticks/autonomous with operator goals).",
+ "attempts": [
+  {
+   "key": "docs-drift",
+   "title": "docs-align loop (law 9) as the drift detector",
+   "where": "development-vessel/src/resolvers/docs-align-tick.ts:578, docs-align-scan.ts:320; gaps docs-drift-* (24, opened 2026-09-18)",
+   "tried": "Automated scan of docs against live_truth to file doc-drift gaps and fix via doc_drift_fix",
+   "outcome": "failed",
+   "evidence": "existing_paths walks only scripts/ so validation/scripts/* (which exist) flagged missing in CLAUDE.md, SHAPE_ACTION, README gaps; 33/35 doc gaps open, all falsifier=none; docs_align_bridge resolver invoked by 0 activities; real drift (API_V2 k8s URL, 'resolve all pointer types', GOAL_PATHS dated headings) unflagged; tick invoked via deprecated bare-pointer envelope 09-28",
+   "date": "2026-09-18..2026-09-29"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Operator hand-aligned docs after docs-align missed a refused command",
+   "where": "commit 37b18ec0; gap docs-prescribed-a-command-the-tooling-now-refuses-and-the-docs-align-loop-never-noticed(+ -narrowed)",
+   "tried": "Operator verified claims and fixed docs/SUBSTRATE.md + README by hand, filed gap against docs-align-tick.ts",
+   "outcome": "partial",
+   "evidence": "docs fixed but generator gap still open, re-spawned as -narrowed 2026-09-28 with falsifier=none",
+   "date": "2026-09-22"
+  },
+  {
+   "key": "memory-recall",
+   "title": "ingest-docs reap of stale doc sections",
+   "where": "gap docs-reap-refused",
+   "tried": "Reap removed doc sections from the architecturePrinciple concept store",
+   "outcome": "failed",
+   "evidence": "refused to reap 606 stale sections (limit 472 of 1890) incl. CLAUDE.md#current-implementation-status-known-issues, deprecated three-state names; stale sections keep being retrieved into drafter prompts",
+   "date": "2026-09-29"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Learner self-tuning via learning_policy_writeback",
+   "where": "development-vessel/src/resolvers/learning-policy-writeback.ts; table substrate_tuning_param",
+   "tried": "Recompute TD_LAMBDA/YIELD_FLOOR from posterior stats and write via /v2/tuning-params",
+   "outcome": "dormant",
+   "evidence": "TD_LAMBDA=0.6 written 2026-09-16 with evidence templates_fetched:0,total_sample_volume:0,kappa_spread:0; no learning_policy executions in 14d; SHAPE_ACTION still lists it as a standing invariant",
+   "date": "2026-09-16"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome as the template extractor",
+   "where": "ribosome-vessel (HEAD 5a374df 09-02); activity ribosome-extract",
+   "tried": "Extract reached traces into templates",
+   "outcome": "dormant",
+   "evidence": "README: applyExtraction defaults false, nothing registered; live 1459 ribosome-extract + 620 compose-auto-bridge-...-to-ribosome-extract executions in 14d; CLAUDE.md/foundation still describe it as the minting path",
+   "date": "2026-09-28"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Execution-level resolver tracking (migration 067)",
+   "where": "activity-api/src/routes/execution-traces.ts; sql/migrations/067-add-resolver-tracking.surql; RESOLVER_TRACKING.md",
+   "tried": "Store resolver_tier, resolved_by_vessel_id, impulse_resolutions[] on execution for resolver selection learning",
+   "outcome": "failed",
+   "evidence": "85,720 executions in 3d: resolver_tier null on all, 0 with impulse_resolutions, 0 with resolved_by_vessel_id; tier only inside trace.tasks[]; impulse_resolution_metrics, llm_resolution_log, routing_trace tables 0 rows",
+   "date": "2026-09-28"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Tool-usage / tool-argument pattern learning",
+   "where": "ias-executor-ts/src/resolvers/learning-signal-writer.ts:154 -> activity-api activities.ts:10019",
+   "tried": "POST /v2/activities/tool-usage per tool_argument_pattern to learn argument patterns",
+   "outcome": "failed",
+   "evidence": "tool_usage, tool_usage_patterns, tool_argument_pattern all 0 rows despite a live writer: silent learning-signal path",
+   "date": "2026-09-28"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Impulse conformance migrations (seams 1,2,5,6,7)",
+   "where": "docs/architecture/IMPULSE_CONFORMANCE_LEDGER.md",
+   "tried": "Migrate bespoke REST hops (/run-goal, recommend REST, goal-paths) to typed impulses after a dual-parse fix",
+   "outcome": "dormant",
+   "evidence": "seams 1-2 'scheduled' since <=2026-08-05; 34 boredom/dev-vessel files still call /run-goal; goal-host index.ts has 7 /v2/activities/recommend refs; no dual-parse identifier; seams 3-4 done",
+   "date": "2026-08-05..2026-09-28"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "thompson_posterior shape (class-(b) repair)",
+   "where": "activity-api/src/routes/impulses.ts",
+   "tried": "Give REST-only posterior data a shape resolvable via /v2/impulses/resolve reading the durable posterior",
+   "outcome": "worked",
+   "evidence": "shape advertised and code present in 8 files; foundation keeps it as worked repair pattern (use volume not measured)"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "ReAct floor universalToolFallback/runGroundedToolLoop",
+   "where": "goal-host-vessel/src/index.ts",
+   "tried": "Bounded grounded tool loop (4 iter x 8 calls) so no goal is structurally unreachable",
+   "outcome": "partial",
+   "evidence": "7d goal_execution_paths: universal_tool_fallback 9274 executions, success_count 187 (2.0%) / successful_executions 455 (4.9%) - far from ~90% contract (mixed population)",
+   "date": "2026-09-21..28"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Learned pathway replay recommendReachingPath",
+   "where": "goal-host-vessel/src/pathway-head.ts, pathway-rank.ts; goal_execution_paths",
+   "tried": "Replay prior reaching path keyed by goal_hash",
+   "outcome": "partial",
+   "evidence": "7d learned_pathway 901 executions, 461 success_count (51%) - the only tier near half; fresh_derivation 0.8%, satisfier 1.7%, feature_compose 0/54",
+   "date": "2026-09-21..28"
+  },
+  {
+   "key": "false-verification",
+   "title": "lambda1 >= rho_grow master-inequality measurement",
+   "where": "development-vessel/src/resolvers/learning-transfer-report.ts:235",
+   "tried": "Report lambda1_inequality_ok",
+   "outcome": "failed",
+   "evidence": "implemented as density >= fraction proxy; 0 hits for spectral_gap/hodge/harmonic/kappa_posterior_spread in live src; DYNAMICS header itself warns incomparable scales"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Stratified harness / coverage-matrix claims",
+   "where": "validation/scripts/stratified-harness.ts, compare-reports.ts, scripts/substrate/autonomy-status.ts",
+   "tried": "Run-over-run coverage fill and kappa limiter per SHAPE_ACTION Claims 4-5",
+   "outcome": "dormant",
+   "evidence": "latest baseline 2026-07-01, latest result 2026-08-12; autonomy-status.ts last commit 1cdd58b9 2026-07-05, only 'callers' are its compiled .js/.d.ts siblings"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Human participation exchange pathway",
+   "where": "human-surface-vessel; docs/architecture/HUMAN_PARTICIPATION.md",
+   "tried": "uiQuestion_write -> journaled question -> browser -> uiFeedback -> read by activity",
+   "outcome": "partial",
+   "evidence": "journals split: /workspace/interactor-log (last 09-22, ends in probe-panel/ghost-ask residue) vs /workspace/git/super-repo/interactor-log (last 09-27); doc says Learn 'not established'; unit runs from /vessels image layer",
+   "date": "2026-09-21..27"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Runtime activity tracing middleware",
+   "where": "activity-api/src/middleware/runtime-tracing.ts",
+   "tried": "Per-request tracing into execution store",
+   "outcome": "dormant",
+   "evidence": "DECIDED uninstalled until retention bounded (doc); 0 call sites - honest; meanwhile ticks write ~28.5k executions/day",
+   "date": "2026-09-17"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Variant creation / retirement",
+   "where": "activity-api shouldCreateVariant, checkAndRetireTemplate",
+   "tried": "3 consecutive failures -> variant; 20 runs <30% -> retire",
+   "outcome": "worked",
+   "evidence": "1228 of 4010 activity rows retired"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Honest-status doc patterns (retractions, DECIDED, specified-not-implemented)",
+   "where": "seq/04 (improvise_solution retracted), RUNTIME_TRACING header, foundation observe-detect-resolve status box, DYNAMICS header",
+   "tried": "State in-doc what is design vs running and how to confirm by effect",
+   "outcome": "worked",
+   "evidence": "these docs' identifiers all resolve in live code or are explicitly marked absent; only 10 of 436 named identifiers absent, mostly retracted ones"
+  }
+ ],
+ "problems": [
+  {
+   "key": "docs-drift",
+   "symptom": "Docs-align detector files false drift (paths outside scripts/ deemed missing) and misses real drift; 24 doc-drift gaps open since 09-18, falsifier=none",
+   "root_cause": "docs-align-tick.ts:578 existing_paths = walkScripts(scriptsDir) only; gaps have no machine falsifier so they can never close",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 24
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Top-level docs contradict each other on the ribosome: CLAUDE.md/foundation say it mints templates; README says applyExtraction=false and nothing registers",
+   "root_cause": "CLAUDE.md ontology sentence not re-verified against README correction; ribosome runs proposal-only",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "API_V2_ACTIVITY.md: k8s cluster URL, 'resolve all impulse pointer types' (contradicts backend-not-universal-resolver), fossil routes (execution-sequences, boredom queue, vessel registry)",
+   "root_cause": "doc touched once since June (2026-08-02); detector only flagged a dated version marker",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "README/CLAUDE.md name obsidian-vessel as the human interface; obsidian-vessel unit inactive, human-surface-vessel :8310 is the served surface; SHAPE_ACTION Claim 7 keyed on obsidian",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "SHAPE_ACTION 'standing invariant' learner self-tunes; last writeback 09-16 on zero evidence",
+   "root_cause": "expectation not re-verified; detector checks paths not behaviour",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Lens docs (MDP/DEC/DYNAMICS/NETWORK/FLEET/REPRESENTATION ~4.9k lines) promise mechanisms (spectral gap, harmonic livelock detector, CRDT, foreign_provenance, survey-environment, budget-grant) with 0 code hits, yet are ingested as architecturePrinciple drafter context",
+   "root_cause": "theory docs not separated from operational expectations",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "606 stale doc sections (incl. retired CLAUDE.md sections) retained and retrievable by drafter",
+   "root_cause": "ingest-docs reap safety limit (25%) exceeded after doc restructuring; no supervised reap",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Execution-level resolver_tier/impulse_resolutions/resolved_by_vessel_id empty on all 85,720 recent executions",
+   "root_cause": "writers put tier in trace.tasks[]; documented rollup fields never populated",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Tool-usage pattern tables empty though learning-signal-writer posts /tool-usage",
+   "root_cause": "silent best-effort learning-signal path (foundation F-39 residue class)",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Human-surface journals split across /workspace/interactor-log (stale 09-22) and /workspace/git/super-repo/interactor-log (09-27)",
+   "root_cause": "EnvironmentFile WORKSPACE_ROOT=/workspace/git/super-repo overrides doc's /workspace default (same class as 09-22 two-memory-stores)",
+   "last_seen": "2026-09-27"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "goal_execution_paths carries three divergent success counters (success_count, successful_executions, thompson_alpha) on the same rows",
+   "root_cause": "multiple writers/aggregators; no single reach counter",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "lambda1>=rho_grow reported via density>=fraction proxy",
+   "root_cause": "proxy on incomparable scales; no spectral computation exists",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Node 1 ('hub') runs PROFILE_EFFECTIVE=standalone with FED_SUBSTRATE_ID=local-dev-spoke; node 2 compute spoke-66684ac4; 20,766/21,044 executions/day tagged local-dev-spoke",
+   "root_cause": "deployment identity/profile diverged from README hub/spoke model",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Live uiFeedback journal ends with probe-panel/ghost-ask record; 12 gaps with literal '{{status}}'-style template statuses; container super-repo has 1629 dirty status lines",
+   "root_cause": "probes/templates write into live stores without isolation",
+   "last_seen": "2026-09-22..28"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "~28.5k execution rows/day dominated by ticks (gap-to-scenario-bridge-tick 3706/d, auth_resolve_v1 2568/d, mitosis-tick 1395/d) and ~100/day proposal-only ribosome runs",
+   "root_cause": "periodic ticks and auth checks traced as executions while runtime tracing is withheld 'to protect the store'",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "17 of 100 DB tables have 0 rows; duplicate-name tables (activity/activity_template/activity_templates, execution/execution_traces/activity_execution_traces, goal_execution_path/paths, migrations/init_migrations)",
+   "root_cause": "schema fossils never dropped",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "150 of 323 live resolvers never invoked; 4010 activity rows all with 0 counted executions, 1228 retired; monolith files (goal-host index.ts 17,910 lines, activities.ts 11,766)",
+   "root_cause": "minting outpaces use (master-inequality livelock symptom); no retirement of uninvoked resolvers",
+   "last_seen": "2026-09-26"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "activity-api has its own vessel registry and boredom queue duplicating discovery-vessel and boredom-vessel",
+   "root_cause": "legacy SPEC-004 routes retained",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "480 -narrowed gaps (458 open); chains like boredom-re-runs-... -> -narrowed -> recommit-...-narrowed-compose_e",
+   "root_cause": "narrowing spawns children instead of closing parent; no falsifier",
+   "last_seen": "2026-09-28",
+   "recurrences": 480
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Running image lacks substrate-status/-connect/-manifest that README install requires; human-surface unit runs /vessels image layer not the live clone",
+   "root_cause": "image vs HEAD Dockerfile (227ac65e 09-23) divergence; ordering unknown",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Doc-promised dev-vessel loops with 0 activity executions in 14d: doc_drift_fix, learning_policy(+writeback), selection-entropy, implicit-vessel-scan, obsidian-behavior-scan, interaction-expectation-verify, learning_mode, shape_closure_demand",
+   "root_cause": "resolvers registered but no rhythm/activity invokes them",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Reach by tier 7d (success_count/execution_count): learned_pathway 51%, satisfier 1.7%, fresh_derivation 0.8%, universal_tool_fallback 2.0%, feature_compose 0/54 vs ~90% contract",
+   "root_cause": "not determined in this shard; population mixes autonomous/tick goals",
+   "last_seen": "2026-09-28"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "verifyGoalReached reach gate + hollow beta-penalty",
+   "location": "goal-host-vessel/src/index.ts",
+   "purpose": "Grade reach, not exit status",
+   "status": "live-used",
+   "general": true,
+   "evidence": "runs on every walk; reached field populated on 37k of 85k recent executions"
+  },
+  {
+   "name": "recommendExcluding in-flight recovery",
+   "location": "goal-host-vessel/src/index.ts",
+   "purpose": "Retry with a different producer on reached:false",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "recommendReachingPath/recordGoalPath learned pathway",
+   "location": "goal-host pathway-head.ts, pathway-rank.ts; activity-api goal_execution_paths",
+   "purpose": "Replay prior reaching path by goal_hash (ceiling)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "901 learned_pathway executions/7d, 51% success_count"
+  },
+  {
+   "name": "universalToolFallback/runGroundedToolLoop",
+   "location": "goal-host-vessel/src/index.ts",
+   "purpose": "ReAct floor",
+   "status": "live-used",
+   "general": true,
+   "evidence": "9274 executions/7d, ~2-5% success"
+  },
+  {
+   "name": "goal-target-inference",
+   "location": "goal-host-vessel/src/goal-target-inference.ts",
+   "purpose": "Infer target shapes from NL goal",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "thompson_posterior shape",
+   "location": "activity-api/src/routes/impulses.ts",
+   "purpose": "Posterior readable as impulse",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "advertised; readers not counted"
+  },
+  {
+   "name": "forward arm validator-dispatch -> learning_signal_writer -> impulse-relevance",
+   "location": "ias-executor-ts resolvers/learning-signal-writer.ts; activity-api",
+   "purpose": "P(success|activity,shape) credit",
+   "status": "live-used",
+   "general": true,
+   "evidence": "validator-dispatch 5520/day; impulse_relevance_metrics 20,714 rows"
+  },
+  {
+   "name": "tool-usage / tool-argument pattern learning",
+   "location": "learning-signal-writer.ts:154; activities.ts:10019",
+   "purpose": "Learn tool argument patterns",
+   "status": "broken",
+   "general": false,
+   "evidence": "3 tables 0 rows"
+  },
+  {
+   "name": "execution-level resolver tracking (migration 067)",
+   "location": "activity-api execution-traces.ts",
+   "purpose": "Resolver/vessel selection learning",
+   "status": "broken",
+   "general": true,
+   "evidence": "0 of 85,720 rows populated; tier only in trace.tasks"
+  },
+  {
+   "name": "execution-sequences routes",
+   "location": "activity-api activities.ts:10238",
+   "purpose": "Sequence pattern learning",
+   "status": "fossil",
+   "general": false,
+   "evidence": "no callers, 0 rows"
+  },
+  {
+   "name": "activity-api boredom queue",
+   "location": "activity-api routes/boredom.ts",
+   "purpose": "Queue autonomous tasks",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "boredom-vessel",
+   "evidence": "no external callers"
+  },
+  {
+   "name": "activity-api vessel registry (SPEC-004)",
+   "location": "activity-api routes/vessels, vessel-registry",
+   "purpose": "Register vessels",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "discovery-vessel",
+   "evidence": "callers: boredom vessel-addition-scaffold-dispatch.ts, concept-db index.ts"
+  },
+  {
+   "name": "ribosome-extract",
+   "location": "ribosome-vessel; activity-api /v2/ribosome",
+   "purpose": "Extract reached traces into templates",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "~100 runs/day with applyExtraction=false, nothing registered"
+  },
+  {
+   "name": "shouldCreateVariant / checkAndRetireTemplate",
+   "location": "activity-api",
+   "purpose": "Variant on 3 consecutive failures; retire at 20 runs <30%",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1228 retired"
+  },
+  {
+   "name": "REUSE_BEFORE_MINT chokepoint",
+   "location": "development-vessel/src/resolvers/activity-create-variant.ts",
+   "purpose": "Prefer existing producer over mint",
+   "status": "unknown",
+   "general": true,
+   "evidence": "present; 150/323 resolvers uninvoked suggests minting still outpaces use"
+  },
+  {
+   "name": "lifecycle subscription + BusForwardingEventSink",
+   "location": "ias-executor-ts engine.ts, adapters/bus-forwarder.ts",
+   "purpose": "Reactive behaviour as activities",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "unified execution path",
+   "location": "goal-host runTemplate (index.ts, ias-executor hosts/goal-host.ts)",
+   "purpose": "Top-level execution via impulse->resolver dispatch",
+   "status": "dormant",
+   "general": true,
+   "evidence": "foundation Known Gaps 'Open'"
+  },
+  {
+   "name": "runtime-tracing middleware",
+   "location": "activity-api/src/middleware/runtime-tracing.ts",
+   "purpose": "Per-request traces",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 call sites by decision"
+  },
+  {
+   "name": "docs-align-tick / docs-align-scan / doc_drift_fix / docs_align_bridge",
+   "location": "development-vessel/src/resolvers/docs-align-*.ts, doc-drift-fix.ts",
+   "purpose": "Docs-as-expectation drift loop (law 9)",
+   "status": "broken",
+   "general": true,
+   "evidence": "existing_paths from scripts/ only -> false gaps; 0 closes; docs_align_bridge 0 invocations"
+  },
+  {
+   "name": "ingest-docs architecturePrinciple concepts",
+   "location": "development-vessel / concept-db",
+   "purpose": "Feed doc sections to drafter",
+   "status": "live-used",
+   "general": true,
+   "evidence": "606 stale sections unreaped (docs-reap-refused)"
+  },
+  {
+   "name": "learning_policy + learning_policy_writeback",
+   "location": "development-vessel/src/resolvers/learning-policy-writeback.ts; substrate_tuning_param",
+   "purpose": "Self-tune TD_LAMBDA/YIELD_FLOOR",
+   "status": "dormant",
+   "general": true,
+   "evidence": "last write 09-16 on zero evidence"
+  },
+  {
+   "name": "signature clusters",
+   "location": "activity-api lib/signature-cluster.ts, cluster-posterior.ts",
+   "purpose": "Cold-leaf posterior pooling",
+   "status": "live-used",
+   "general": true,
+   "evidence": "2005 assignments"
+  },
+  {
+   "name": "successor features",
+   "location": "activity-api lib/successor-features.ts",
+   "purpose": "psi blend into recommend",
+   "status": "live-used",
+   "general": true,
+   "evidence": "2681 rows; SF_BLEND=1.0 set 09-25"
+  },
+  {
+   "name": "staged-not-landed refusal + preEditContent restore + hard-fail detectors",
+   "location": "development-vessel feature-compose.ts",
+   "purpose": "Never grade staged change as reached; revert on unfavorable",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "stratified harness / compare-reports / autonomy-status kappa",
+   "location": "validation/scripts, scripts/substrate/autonomy-status.ts",
+   "purpose": "Coverage-matrix and limiter measurement",
+   "status": "dormant",
+   "general": false,
+   "evidence": "last run 08-12; autonomy-status last commit 07-05"
+  },
+  {
+   "name": "lambda1_inequality_ok proxy",
+   "location": "development-vessel/src/resolvers/learning-transfer-report.ts:235",
+   "purpose": "Master inequality readout",
+   "status": "broken",
+   "general": false,
+   "evidence": "density>=fraction on incomparable scales"
+  },
+  {
+   "name": "human participation journals",
+   "location": "human-surface-vessel (runs from /vessels image layer)",
+   "purpose": "Question/response exchange",
+   "status": "live-used",
+   "general": false,
+   "evidence": "split across two dirs; stale copy ends with probe residue"
+  },
+  {
+   "name": "implicit-vessel-scan / obsidian-behavior-scan / interaction-expectation-verify / selection-entropy / learning_mode / shape_closure_demand",
+   "location": "development-vessel routes/impulses.ts + resolvers",
+   "purpose": "SHAPE_ACTION claim instruments",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "0 activity executions in 14d"
+  },
+  {
+   "name": "interventionRefused ledger / push-away",
+   "location": "development-vessel intervention-evaluate.ts",
+   "purpose": "S3 resistance with cited evidence",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "0 pushAway hits"
+  },
+  {
+   "name": "observe-detect-resolve (guardian vessels, findings, resolution tiers)",
+   "location": "openspec only",
+   "purpose": "Security immune loop",
+   "status": "fossil",
+   "general": true,
+   "evidence": "9/10 shapes absent; doc says specified-not-implemented"
+  },
+  {
+   "name": "codebase-as-vessel npm:/make: introspection and external resolver vesselization",
+   "location": "foundation only",
+   "purpose": "Discover local resolvers / vesselize endpoints",
+   "status": "fossil",
+   "general": true,
+   "evidence": "0 code hits"
+  },
+  {
+   "name": "federation evidence fold (origin_substrate_id, replication-pull)",
+   "location": "activity-api routes/replication-pull.ts",
+   "purpose": "Share evidence not weights",
+   "status": "unknown",
+   "general": true,
+   "evidence": "foreign_provenance absent; CRDT/survey-environment/budget-grant absent"
+  },
+  {
+   "name": "CLAUDE.md hooks (vessel-edit gate, memory start/end/mirror)",
+   "location": ".claude/settings.json, .claude/hooks/*",
+   "purpose": "Gate direct edits, sync memory",
+   "status": "live-used",
+   "general": false
+  }
+ ],
+ "principles": [
+  "END GOAL (CLAUDE.md execution expectation): floor = ReAct parity for any task via walk + tool-enabled fallback, every step traced; ceiling = learned-pathway reuse; middle = first/last-mile adaptation over an existing pathway; full re-derivation on near-miss means nothing was learned",
+  "CLAUDE.md: reach ~90% on arbitrary useful goals regardless of priors is mechanism correctness, not a metric; reach failures are information-availability failures; high reach on trivial goals is gamed",
+  "CLAUDE.md operator role: autonomy success = substrate-authored commit on remote working branch with no operator hands; operator becomes structurally non-load-bearing (S1->S2->S3)",
+  "Foundation Core Premise: progressively convert workflow stages into routable programmatic components; convergence = recall reliably succeeds without new structure for known goal classes",
+  "Law 1 (CLAUDE.md): everything behavioral is a shape; env/config are bootstrap-only",
+  "Law 2: behaviors are activities (selectable, graded, retirable)",
+  "Law 3 / foundation Reuse Before Mint: find an existing producer before minting; a wrong mint is negative value; enforced at mint chokepoint and selection",
+  "Law 4: activities are earned by doing (ribosome extraction), not declared",
+  "Law 5: pace is rhythm impulses; boredom = condition-driven selection",
+  "Law 6: don't rob self-maintenance; every bug class -> patch instance, detector for class, generator goal",
+  "Law 7: measure by gap triple (close rate, latency, durability - no reappearance in a different hat); learned disposition",
+  "Law 8: information at the right time - confabulation is information starvation",
+  "Law 9: docs are timeless expectations; alignment is substrate work (docs-align loop)",
+  "Law 10: memory belongs to the system (memoryNote authoritative)",
+  "Law 11: location independence with data locality",
+  "Law 12: causal discipline - decision-time counterfactuals, change one thing",
+  "Law 13: humans are resolvers, not preprocessors",
+  "Foundation Pointer-as-Shape: the pointer is the shape; all resolution and learning keyed on it",
+  "Foundation Minimum Self-Stable Set: impulse, pointer, resolver, vessel (hypothesis under test); each implicit side channel is evidence",
+  "Foundation data-plane invariant: every vessel-to-vessel data exchange is a typed impulse to a discovery-advertised resolve_endpoint; control-plane exempt (also IMPULSE_CONFORMANCE_LEDGER)",
+  "Foundation Design Principles 1-8: impulses universal; activities constrain search; resolvers live where data lives; metadata first; record everything; learn from traces; reserve improvisation (recorded); LLMs are tools not controllers",
+  "Foundation Backend's Role: activity-api is trace store + pattern learner, not a universal resolver",
+  "Foundation Reachable subgraph: advertised is a claim, demonstrated is a fact; coverage must separate never-attempted / never-succeeded / succeeded-then-stopped",
+  "Foundation Topology Discovery step 5: reward attaches to reaching the goal, not exiting cleanly",
+  "Foundation F-39 residue: learning-signal paths need instrumentation that makes their absence observable",
+  "Foundation thompson_posterior repair: a shape returning a plausible-but-different value is worse than no shape",
+  "Foundation Known Gaps: keep closed entries as reusable repair patterns",
+  "SUBSTRATE_AS_DYNAMICS header: common scale on both sides; a described detector is not a running one; a measurement is not a governor until something acts on it; check freshness not presence",
+  "SUBSTRATE_AS_DEC 4.4 / DYNAMICS 3: master inequality lambda1(L(t)) >~ rho_grow - drafting or vessel-spawning without raising throughput is self-defeating; livelock = looks busy, not learning (conjecture)",
+  "SUBSTRATE_AS_DEC 2: resolvers-where-data-lives = sparsity of L; orthogonality is the moat = block-diagonal metric over shape x signature x tier x scope",
+  "SUBSTRATE_AS_FLEET 3 / NETWORK 5: share evidence, not weights; fold signed foreign evidence into local posterior under conservative prior; ephemeral never crosses",
+  "FLEET 0 / foundation: nothing above discovery sees a substrate",
+  "NETWORK 6: converge by default (CRDT/gossip), agree only where forced",
+  "RESOLVER_TRACKING: resolver tier = binned directional certainty; LLM->deterministic distillation is additive, LLM never removed",
+  "RUNTIME_ACTIVITY_TRACING: bound retention first, install instruments second; confirm an instrument by its effect; a wrapper row must never absorb a failure belonging to what it wrapped",
+  "SHAPE_ACTION_EVIDENCE header: docs hold expectations, not readings; numbers in docs get fed to the drafter as current truth",
+  "sequences/04: failure is graded not merely detected (canonical taxonomy); a staged change is never graded as done",
+  "sequences/05: reactive behaviour is an activity (subscription block), never a process-start callback",
+  "HUMAN_PARTICIPATION / EXPLICABILITY: receipt != consumption != learning, each transition needs a linked record; unanswered question is not agreement; a variant that hides evidence to reduce objections is a regression"
+ ]
+}

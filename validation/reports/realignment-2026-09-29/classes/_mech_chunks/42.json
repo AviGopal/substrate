@@ -1,0 +1,70 @@
+{
+ "area": "gap-store",
+ "items": [
+  {
+   "name": "node-2 local gaps.json",
+   "location": "compose2 /workspace/git/super-repo/gaps/gaps.json",
+   "purpose": "Former local gap store",
+   "status": "fossil",
+   "general": false,
+   "evidence": "70 entries frozen 09-26 12:07, including probe rows; the dev-vessel env points GAP_STORE_ENDPOINT at the hub.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "Node-2 local gap store",
+   "location": "compose2-live /workspace/git/super-repo/gaps/gaps.json",
+   "purpose": "local view",
+   "status": "fossil",
+   "general": false,
+   "evidence": "70 rows, last written 09-26; reads do not forward",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  },
+  {
+   "name": "/workspace/gaps/gaps.json and activity_templates table",
+   "location": "container /workspace/gaps; SurrealDB activity_templates",
+   "purpose": "Legacy stores",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Decoys hit 3 times; live = /workspace/git/super-repo/gaps/gaps.json and `activity` table",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "/workspace/gaps/gaps.json",
+   "location": "node-1 container volume",
+   "purpose": "legacy gap store",
+   "status": "duplicate",
+   "duplicates_of": "/workspace/git/super-repo/gaps/gaps.json",
+   "evidence": "830 rows, last written 09-26",
+   "source": "openspec-10",
+   "mentions": 1,
+   "sources": [
+    "openspec-10"
+   ]
+  },
+  {
+   "name": "fossil gap store /workspace/gaps/gaps.json",
+   "location": "node1 /workspace/gaps/",
+   "purpose": "Pre-08-08 live store",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Frozen 08-08, but typecheck-scenario-gen still writes to it via its GAPS_PATH default (20 rows 09-11..09-26)",
+   "source": "gap-history",
+   "mentions": 1,
+   "sources": [
+    "gap-history"
+   ]
+  }
+ ]
+}

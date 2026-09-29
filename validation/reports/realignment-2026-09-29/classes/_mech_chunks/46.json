@@ -1,0 +1,31 @@
+{
+ "area": "deployment",
+ "items": [
+  {
+   "name": "PR-based self-deployment (gitOpenPR/gitMergePR/author-pr)",
+   "location": "none",
+   "purpose": "Substrate merges its own PRs",
+   "status": "fossil",
+   "general": true,
+   "evidence": "Never built; superseded by mitosis cutover direct landing",
+   "source": "openspec-2",
+   "mentions": 1,
+   "sources": [
+    "openspec-2"
+   ]
+  },
+  {
+   "name": "repos/deployment helm/k8s lineage",
+   "location": "repos/deployment (gitignored)",
+   "purpose": "Pre-substrate Kubernetes deployment",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Last commit 06-25; superseded by the single-container image fe7dd493",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  }
+ ]
+}

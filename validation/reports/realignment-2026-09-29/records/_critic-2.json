@@ -1,0 +1,112 @@
+{
+ "closed": [
+  "openspec entries 109-176 (all non-stray dirs >=100 referenced by openspec-7/8/9/10, incl. all 7 active Sept changes and stray http-response/json fossils)",
+  "openspec archive (4 entries, openspec-10; resumable-landings design.md unread, minor)",
+  "49 session transcripts (every jsonl id covered by transcripts-1..4; text only, tool_results/sidechains not mined)",
+  "predecessor/adjacent operator memory (devbob, substrate-utils, metabob-mcp, metabob-dashboard, exp-repo) - mostly",
+  "syzygy-local-surface/inventory (local side; hub via SSH still open)",
+  "node-2 journals (node2-runtime)",
+  "federation relay live state (federation-relay; relay-pub-key is a private key)",
+  "validation/ outside reports/ (findings, results, investigations, failure-modes, scripts, gaps, state) - mostly",
+  "vessel-repo docs and .claude tooling (vessel-docs-tooling)",
+  "concept-db content and other DB tables (concept-db-db)",
+  "pre-09-18 gap history (gap-history; 08-16..09-07 only in operator job snapshots)",
+  "timer outputs without readers (timers-readers, 46+16 timers)",
+  "reports-2..8 durability PARTIAL: records/reports-{2..8}.json exist, no raw md - synthesis must read records/*.json"
+ ],
+ "remaining": [
+  "SYNTHESIS: cross-shard claimed-fixed-then-broken timeline keyed on (class key, identifier) - inputs exist in transcripts-1..4, memory-1..10, gap-history, reports-5; join not built",
+  "SYNTHESIS: keep/fossil join (activity/resolver/template/timer/script -> recent executions -> reader exists -> replaced-by) - pieces in live-activities, live-resolvers, git-devvessel-2, timers-readers, openspec-8/9/10, validation-other-3",
+  "947+ non-md evidence receipts under validation/reports subdirs (container-lifecycle-audit 227, substrate-live-integration 214, lifecycle rerun 190, install-demo 133, self-care-evidence 49, ...) - receipts behind 26/26 MET / PASS claims never audited",
+  "NEW: human surface unit now runs from /vessels/human-surface-vessel (image layer); /workspace/git/human-surface-release is a stale super-repo clone frozen at da2515d8 09-22, unreferenced; MEMORY claim stale; unverified whether a push clone for human-surface-vessel exists (authorability may have regressed)",
+  "Gap-triple denominator: 3,372 born-closed auto_draft pseudo-gaps in 6,278-row live store; no shard recomputed close rate excluding them",
+  "Security remediation (operator action): relay private key untracked in working tree; hub admin API key (no expiry) printed in transcript f37f1a1a 09-03 - rotation status unknown",
+  "Node-2: discovery registry contents (404) and whether node-2 dispatches are visible to hub goal_status",
+  "Hub-side syzygy.host journals/relay/registry (needs SSH)",
+  "01-30..04-22 history hole; metabob-mcp/dashboard transcripts (~20MB) unmined",
+  "validation/dev-responses, state/agent-coordination.json, state/shortest-paths.json, probe JSON bodies unread",
+  "pool orphan tmp snapshots (17/21), trace-spool, mitosis-applied.jsonl; causal-attempt-ledger/backup-trace-store-reconcile; uncommitted diffs of soak-log.tsv and GAPS_OBSERVED.md",
+  "do-anything falsifiers 1,2,5 never measured; metric-collector port collision unverified",
+  "test residue: /workspace/git/ledger-u-probe fixture repo (c410578, 09-26) in live workspace; /workspace/git/{compose,universal-tool-fallback,remotes} provenance unknown",
+  "Rows whose 'later' evidence is sourced only from MEMORY.md (transcripts-1/2/3) need live re-verification (law 10: cache is derived)"
+ ],
+ "key_merge_map": [
+  {
+   "from": "install",
+   "to": "sync-deploy-drift"
+  },
+  {
+   "from": "goal-vocabulary-regex",
+   "to": "goal-walk-floor"
+  },
+  {
+   "from": "operator-authorship-recursion",
+   "to": "gap-content"
+  },
+  {
+   "from": "gap-store-integrity",
+   "to": "trace-store-db"
+  },
+  {
+   "from": "schema-ownership",
+   "to": "trace-store-db"
+  },
+  {
+   "from": "runaway-amplification",
+   "to": "spend-envelope-throughput"
+  },
+  {
+   "from": "llm-plane-availability",
+   "to": "spend-envelope-throughput"
+  },
+  {
+   "from": "llm-provider-plane",
+   "to": "spend-envelope-throughput"
+  },
+  {
+   "from": "llm-plane-misdiagnosis",
+   "to": "operator-instrument-fault"
+  },
+  {
+   "from": "failure-as-absence",
+   "to": "false-verification"
+  },
+  {
+   "from": "shell-exec-bounds",
+   "to": "false-verification"
+  },
+  {
+   "from": "landing-attribution",
+   "to": "false-verification"
+  },
+  {
+   "from": "failure-reason-dropped",
+   "to": "write-read-mismatch"
+  },
+  {
+   "from": "path-root-ambiguity",
+   "to": "write-read-mismatch"
+  },
+  {
+   "from": "auth-credential-plumbing",
+   "to": "endpoint-routing"
+  },
+  {
+   "from": "edit-primitive-safety",
+   "to": "drafter-quality"
+  },
+  {
+   "from": "stale-whole-rewrite",
+   "to": "autonomous-regression"
+  },
+  {
+   "from": "self-repair-conflict",
+   "to": "autonomous-regression"
+  },
+  {
+   "from": "concurrent-operator-sessions",
+   "to": "test-residue-live-state"
+  }
+ ],
+ "notes": "Full notes: /home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/critic-2.md. All 13 non-synthesis round-1 gaps are closed or mostly closed; reports-2..8 are durable only as records/*.json (synthesis must read them). Load-bearing still open: (1) the two synthesis joins (recurrence timeline, keep/fossil) - inputs now exist, join does not; (2) 947+ evidence receipts behind PASS/MET claims unaudited; (3) new live finding: human-surface unit runs from image-layer /vessels, human-surface-release clone is a stale 09-22 fossil, authorability of the human surface needs re-check; (4) 3,372 born-closed pseudo-gaps inflate any gap-triple metric; (5) leaked relay private key + hub admin key need operator rotation. Key-map changes vs round 1: llm-plane-misdiagnosis now -> operator-instrument-fault (kept as distinct key: operator's own probe faults, 40+ instances; boundary vs false-verification = system judge); llm-provider-plane folds with llm-plane-availability into spend-envelope-throughput; credential-hygiene deliberately NOT merged into endpoint-routing (security-remediation class). Openspec shard index labels did not match ls ordering; all dirs still covered."
+}

@@ -1,0 +1,457 @@
+{
+ "source": "gap-history",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/gap-history.md",
+ "coverage": "I read the gap history as it survives in the snapshots listed here. Host: validation/gaps (05-23..25), 4 git versions of super-repo gaps/gaps.json (07-25, untracked 8f8e87e7 08-02), and the operator job snapshots ~/.claude/jobs/af312d72 and 074acb94 (08-16..09-07). These job snapshots are the only surviving copies of that era's live store. Node 1: /workspace/gaps/ fossil store and backups (.bak-preclassdedup 06-13/14 at 4522 rows, .backup 07-22, .pre-halt-backup and resweep 08-30, current 830 rows still being written 09-26), the 2 truncated 08-07 temps (unparseable), the live super-repo store (6279 rows, 09-18..29), 14 orphan .tmp files (census of 2 parseable ones), auto-draft-decisions.jsonl (4506 lines), landability_predictions.log (66,866 lines, summarized), funnel-history (both series), and /workspace/parked-landings (47). Node 2: its store (70 rows). I classified themes with keyword regex, which gives rough counts. The recurrence families were built by hand from operator-filed gap ids across eras. I did not analyse audit-findings-batch.json or gap-conceptgraph.json. I did not query SurrealDB, and the advisor was unavailable (rate-limited).",
+ "attempts": [
+  {
+   "key": "narrowing-duplicates",
+   "title": "Class dedup of substrateGap by volatile-stripped id",
+   "where": "development-vessel c8be5b1 / c214385",
+   "date": "2026-06-14",
+   "tried": "Dedup the 4522-gap detector flood by class id",
+   "outcome": "partial",
+   "evidence": "The flood was cleared, the store was reset on 07-22 anyway, and new floods followed (1724/day on 09-20), because new ids are minted per failure or goal (route-edit-<hash>, recommit-<parent>-<class>)."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Untrack runtime state (gaps, pool, memory, policies) from the super-repo",
+   "where": "super-repo 8f8e87e7",
+   "date": "2026-08-02",
+   "tried": "Stop git add -A committing the gap store. Verified WORKSPACE_ROOT was absent, so readers used /workspace",
+   "outcome": "partial",
+   "evidence": "The untracking held. WORKSPACE_ROOT was set to the super-repo by 08-08, which produced the split brain."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Move auto_draft decision telemetry out of the gap store",
+   "where": "goal-host-vessel 3d4aa60",
+   "date": "2026-09-22",
+   "tried": "Append auto_draft decisions to auto-draft-decisions.jsonl instead of the substrateGap store",
+   "outcome": "worked",
+   "evidence": "No auto_draft rows created after 09-22 (before that: 635-1337 per day). But the JSONL has no reader anywhere."
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Log landability predictions for later validation",
+   "where": "development-vessel 418d80d (substrate-authored) gap-lifecycle-scan.ts:404-414",
+   "date": "2026-09-26",
+   "tried": "Write per-gap landability predictions to landability_predictions.log for later validation",
+   "outcome": "dormant",
+   "evidence": "No reader. 10.5MB and 66,866 lines in 3 days. About 12 discrete score values, so not per-gap discriminative."
+  },
+  {
+   "key": "memory-recall",
+   "title": "Restore gap store after 97% loss at restart",
+   "where": "node1 super-repo gaps (ADDENDUM-2026-09-10 \u00a7F)",
+   "date": "2026-09-09",
+   "tried": "Recover from orphaned .tmp files and a pre-merge backup, going from 44 to 4187 rows",
+   "outcome": "superseded",
+   "evidence": "The whole store was lost again when the super-repo clone was rebuilt on 09-18. Only 256 of 3548 ids from 09-07 survive, and 0 of the real operator gaps."
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Bulk close missing_capability backlog as single-goal demand",
+   "where": "live store classification_metadata.resolution",
+   "date": "2026-09-28",
+   "tried": "Operator audit closed 734 missing_capability gaps (697 shapes, 0 demanded by 2+ goals)",
+   "outcome": "partial",
+   "evidence": "The backlog was cleared by hand. The filer that mints them was not changed. The same pattern appeared on 06-14 and 09-05 (82% expire, 4% ever composed)."
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Hopeless/capacity seal fixes (multiple)",
+   "where": "gap ids 08-26..08-29 in the 09-07 snapshot",
+   "date": "2026-08-26",
+   "tried": "Close the triage-only-hopeless, hopeless-continue and busy-capacity-counted-as-failure gaps",
+   "outcome": "failed",
+   "evidence": "Recurred 08-31 (autonomous cleanup deleted the busy-requeue mechanism), 09-05 (hopeless seals at 8 attempts), 09-23, 09-24 (parked directed-gap FA penalty) and 09-28 (directed:true WITHHELD)."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Stale-base cutover silent revert fix",
+   "where": "gap mitosis-cutover-lands-a-stale-base-patch-as-a-silent-revert",
+   "date": "2026-08-28",
+   "tried": "Closed the gap as fixed",
+   "outcome": "failed",
+   "evidence": "Recurred 09-24 (6ab8271 undid a0ff3d3; staged_base_sha deadlock) and 09-26 (a-coalesced-retry-inherits-a-stale-base-compose..., open)."
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Tests calling live services fix",
+   "where": "gap vessel-tests-call-live-services-so-the-suite-failure-count-tracks-substrate-load",
+   "date": "2026-08-29",
+   "tried": "Closed as fixed",
+   "outcome": "failed",
+   "evidence": "The same fixture gap ids (some-real-gap, flat-*-probe, placeholder-scrub-probe, heal-probe, gap-001, ...) appear in the 09-07, live (09-19) and node-2 (09-25) stores. Re-filed 09-05, 09-26 and 09-28."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Merge-not-replace for substrateGap_write",
+   "where": "gap substrategap-write-replaces-instead-of-merging-destroying-omitted-fields",
+   "date": "2026-09-05",
+   "tried": "Closed; the writer now merges omitted keys",
+   "outcome": "partial",
+   "evidence": "The fix overshot: omitted keys carry forward, so a cleared pending_outcome_verification does not stick (memory notes 09-23 and 09-26)."
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Parked landing resume",
+   "where": "feature-compose.ts:114-133, gap-to-feature.ts:5257, /workspace/parked-landings",
+   "date": "2026-09-24",
+   "tried": "Park verified patches before cutover so they can resume",
+   "outcome": "partial",
+   "evidence": "47 parks, all verify=true and judge.addresses=true. 41 of their gaps are still open. 25 of the 47 target human-surface proxy.ts (an unauthorable vessel), duplicated per route-edit id and -narrowed copy."
+  },
+  {
+   "key": "memory-recall",
+   "title": "Narration gap records (validation/gaps)",
+   "where": "validation/gaps/*.md, validator iterations e9257033..fcf4c4e5",
+   "date": "2026-05-23",
+   "tried": "Hand-written gap records with recurrence counts and an INDEX",
+   "outcome": "superseded",
+   "evidence": "No commits after 05-24. The runtime store replaced them. gap-007 (hollow completion) is the origin of a class that is still open."
+  }
+ ],
+ "problems": [
+  {
+   "key": "memory-recall",
+   "symptom": "The gap store is reborn every 4-6 weeks and loses its history: 06-14 dedup, 07-22 restart, 08-08 path move, 09-09 97% loss, 09-18 clone rebuild (256/3548 ids survive; 0 of 264 operator gaps except test fixtures)",
+   "first_seen": "2026-06-14",
+   "last_seen": "2026-09-18",
+   "recurrences": 5,
+   "root_cause": "File-backed JSON store lives inside a git clone or an env-selected path. No durable DB-backed store and no migration on rebuild."
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Writers and readers of gaps/state use different WORKSPACE_ROOT/GAPS_PATH; typecheck-scenario-gen still writes typecheck_error gaps to the fossil /workspace/gaps/gaps.json (20 rows 09-11..09-26)",
+   "first_seen": "2026-08-08",
+   "last_seen": "2026-09-26",
+   "recurrences": 7,
+   "root_cause": "State addressed by env-var path with a hard-coded /workspace fallback instead of by shape"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Capacity or busy refusals counted as failed attempts; hopeless categories sealed; landability < 0.25 auto-close",
+   "first_seen": "2026-08-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "root_cause": "Attempt accounting does not separate lane refusal from drafter failure. Category priors are consulted before per-gap evidence."
+  },
+  {
+   "key": "false-verification",
+   "symptom": "About 78% of closes are attrition/expiry/bulk and about 6% are landed or verified, in every era (07-22..08-08: 1077/1365; 08-16..09-07: 934/1176; live: 734/937)",
+   "first_seen": "2026-07-22",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Closure paths do not require a land or measurement signal. The close_rate metric mixes telemetry and administrative closes."
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "recommit-/-narrowed children grow 17 \u2192 104 \u2192 433 \u2192 746 and close at about 4%",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "root_cause": "A failed compose forks a new gap id instead of enriching the parent"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Fixed set of test-probe gaps written into every live store on both nodes, plus the attempt-ledger canary in parked landings",
+   "first_seen": "2026-08-03",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "The test suite inherits live WORKSPACE_ROOT and endpoints; no hermetic default"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Detector or auto-mint floods: 4522 in 2 days in June, 1724/day on 09-20, 763 missing_capability of which 734 had single-goal demand",
+   "first_seen": "2026-06-13",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "No demand or admission check at filing time; cleanup is always a manual bulk close"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Uninterpolated {{template}} placeholders stored as gap status/source (23 live); a TypeScript code block written as line 1 of the funnel-history data file",
+   "first_seen": "2026-06-14",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "root_cause": "The gap write path accepts LLM output without schema or placeholder validation. The 09-05 gap filing this was lost at the reset."
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "A stale-base cutover silently reverts a landed commit",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-26",
+   "recurrences": 3,
+   "root_cause": "Retried or coalesced compose reuses a base captured before the prior landing"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Restart or drain kills in-flight compose or dispatches",
+   "first_seen": "2026-09-05",
+   "last_seen": "2026-09-24",
+   "recurrences": 4,
+   "root_cause": "Restart and quiesce do not count all in-flight lanes. Filed, rejected, then re-filed after the reset."
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour steered by env vars (authoring emit, concept-db upkeep, trace retention, compose lane cap, GAPS_PATH, PARKED_LANDINGS_DIR)",
+   "first_seen": "2026-08-18",
+   "last_seen": "2026-09-28",
+   "recurrences": 7,
+   "root_cause": "Bootstrap config used for runtime behaviour, against law 1"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Inert or vacuous landings pass the gate; the vacuous guard then over-refuses",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-09-27",
+   "recurrences": 8,
+   "root_cause": "The gate reads the diff, not the consuming reader or effect"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Write-only logs: landability_predictions.log (10.5MB/3d), auto-draft-decisions.jsonl (1MB/7d); funnel median_latency_ms=0 and expired=0 on all 47 live runs",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Instrumentation added without a reader activity. The lifecycle expiry path is dormant on the live store."
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Same remedy re-dispatched forever: 'reconcile the trace store back under its configured cap' decided 518 times 09-24..28",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "No failure memory or backoff on the auto-draft remedy path"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Orphan gaps.json.*.tmp files (~98MB live dir, ~300MB on 09-10), fossil /workspace/gaps store, stale validation/gaps narration dir",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-26",
+   "recurrences": 3,
+   "root_cause": "Atomic write whose rename fails leaves a temp file; nothing reaps them"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "25 of 47 verified parked patches target human-surface proxy.ts and can never land",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-26",
+   "recurrences": 1,
+   "root_cause": "human-surface-vessel has no gitlink or push clone (unauthorable). The park has no exit or escalation for it."
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "substrateGap store at ${WORKSPACE_ROOT}/gaps/gaps.json",
+   "location": "development-vessel substrate-gap.ts; node1 /workspace/git/super-repo/gaps/gaps.json",
+   "purpose": "Authoritative gap store",
+   "status": "live-used",
+   "general": true,
+   "evidence": "6279 rows, written 09-29. Lives inside a git clone that was rebuilt 09-18 and lost all prior rows."
+  },
+  {
+   "name": "fossil gap store /workspace/gaps/gaps.json",
+   "location": "node1 /workspace/gaps/",
+   "purpose": "Pre-08-08 live store",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Frozen 08-08, but typecheck-scenario-gen still writes to it via its GAPS_PATH default (20 rows 09-11..09-26)"
+  },
+  {
+   "name": "typecheck-scenario-gen timer",
+   "location": "scripts/substrate/typecheck-scenario-gen.ts:27; unit typecheck-scenario-gen.timer",
+   "purpose": "Turn tsc errors into gaps and scenarios",
+   "status": "broken",
+   "general": false,
+   "evidence": "GAPS_PATH is unset in /etc/substrate/env, so it writes the fossil store; the live lane never sees typecheck gaps"
+  },
+  {
+   "name": "landability_predictions.log",
+   "location": "gap-lifecycle-scan.ts:404-414 (418d80d)",
+   "purpose": "Log predictions for later validation",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "No reader in repos or /vessels; 66,866 lines in 3 days"
+  },
+  {
+   "name": "gap-landability-model auto-close",
+   "location": "development-vessel gap-landability-model.ts:39,151",
+   "purpose": "Auto-close gaps scored below 0.25",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Scores take about 12 discrete category-level values; same class as the hopeless/calibration seals"
+  },
+  {
+   "name": "auto-draft-decisions.jsonl",
+   "location": "goal-host-vessel index.ts:16822,16877 (3d4aa60)",
+   "purpose": "Auto-draft decision telemetry",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "Append-only, no reader; shows a 518x repeat of the trace-store reconcile remedy"
+  },
+  {
+   "name": "auto_draft_* rows in gap store",
+   "location": "goal-host (pre-3d4aa60)",
+   "purpose": "Decision telemetry misfiled as gaps",
+   "status": "fossil",
+   "general": false,
+   "evidence": "3372 closed rows (54%) of the live store; inflates close_rate"
+  },
+  {
+   "name": "funnel-history.jsonl",
+   "location": "gap-lifecycle-scan.ts:661-742",
+   "purpose": "Gap-triple series (close rate, latency, durability)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Reads the last 12 runs. Two series (old one orphaned 08-08, its line 1 is a TS code block). Live median_latency_ms=0 and expired=0 on all 47 runs."
+  },
+  {
+   "name": "parked-landings resume",
+   "location": "feature-compose.ts:114-133; gap-to-feature.ts:5257; /workspace/parked-landings",
+   "purpose": "Persist verified patches across cutover failures",
+   "status": "live-used",
+   "general": true,
+   "evidence": "47 parks all verified; 41 gaps still open; 25 on unauthorable human-surface proxy.ts"
+  },
+  {
+   "name": "class dedup by volatile-stripped id",
+   "location": "development-vessel c8be5b1, c214385",
+   "purpose": "Collapse detector floods",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Defeated by per-failure/per-goal ids (route-edit-<hash>, recommit-*, resolver-dist-orphans-<ts>)"
+  },
+  {
+   "name": "recommit/narrowed child minting",
+   "location": "compose failure path (gap_to_feature)",
+   "purpose": "Retry a failed gap",
+   "status": "live-used",
+   "general": false,
+   "evidence": "746 live children, 29 closed; forks instead of enriching the parent"
+  },
+  {
+   "name": "narration gap records",
+   "location": "validation/gaps/*.md + INDEX.md; docs/SUBSTRATE_NARRATION_PROTOCOL.md",
+   "purpose": "Hand-authored recurrence-ranked gap list",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Last commit 05-24; INDEX refers to .yaml files that are actually .md"
+  },
+  {
+   "name": "expiry closer (autoCloseStaleGaps)",
+   "location": "gap-lifecycle-scan",
+   "purpose": "TTL-close stale gaps",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Live funnel shows expired=0 on every run while stale_open rose 0 to 1434; in earlier eras it produced 79% of closes"
+  },
+  {
+   "name": "test probe fixture gaps",
+   "location": "development-vessel test suite",
+   "purpose": "Test gap write paths",
+   "status": "broken",
+   "general": false,
+   "evidence": "Same fixture ids in the 09-07, live and node-2 stores; tests write to the live store"
+  },
+  {
+   "name": "gaps.json atomic write (tmp+rename)",
+   "location": "development-vessel substrate-gap.ts",
+   "purpose": "Crash-safe store writes",
+   "status": "broken",
+   "general": true,
+   "evidence": "14 orphan .tmp files (~98MB) in the live dir 09-20..26, 2 from 08-07, about 50 on 09-10"
+  }
+ ],
+ "principles": [
+  "A gap store reborn every 4-6 weeks cannot measure durability; losing it erases the recurrence evidence that would falsify a 'newly resolved' claim.",
+  "State addressed by an env-var path with a hard-coded fallback forks silently whenever the path moves; address stores by shape. This shard found seven hats of the WORKSPACE_ROOT split.",
+  "A log with no reader is disk growth, not instrumentation; every new log needs a named reader activity at creation.",
+  "A retry that mints a new gap id defeats id-based dedup, recurrence counting and closure credit; enrich the parent instead.",
+  "Split every close-rate by basis. About 78% attrition and about 6% landed or verified held in all three eras, while the headline close_rate of 0.57-0.75 was mostly telemetry and administrative closes.",
+  "Category-level priors (hopeless, calibration, landability) must never bury an individual gap without per-gap evidence. Declared fixed three times; recurred every time.",
+  "Separate 'the lane refused' from 'the attempt failed' at a single accounting seam.",
+  "Tests must be hermetic by default; otherwise fixtures land in every live store on every node.",
+  "Detector or auto-mint output needs admission control (demand of 2+ goals, dedup by family) at filing time, or the operator bulk-closes by hand every era."
+ ],
+ "claims": [
+  {
+   "key": "narrowing-duplicates",
+   "claimed_at": "2026-06-14",
+   "claim": "dedup substrateGap by CLASS fixes the detector flood",
+   "where": "development-vessel c8be5b1",
+   "later": "Store reset 07-22; floods of 808/1724/1403 per day on 09-19..21; 734-row manual bulk close on 09-28"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-08-02",
+   "claim": "Runtime state untracked; live readers take /workspace since WORKSPACE_ROOT is absent",
+   "where": "super-repo 8f8e87e7",
+   "later": "WORKSPACE_ROOT set by 08-08 caused the split brain (08-09); fossil still written 09-26"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-08-28",
+   "claim": "mitosis-cutover stale-base silent revert closed",
+   "where": "gap mitosis-cutover-lands-a-stale-base-patch-as-a-silent-revert (09-07 snapshot)",
+   "later": "Recurred 09-24 (6ab8271 undid a0ff3d3) and 09-26 (coalesced retry stale-base revert, open)"
+  },
+  {
+   "key": "calibration-seal",
+   "claimed_at": "2026-08-29",
+   "claim": "a busy capacity refusal counted as failed attempt and sealing the category: closed",
+   "where": "gap a-busy-capacity-refusal-is-counted-as-a-failed-attempt-and-seals-the-category",
+   "later": "08-31 busy-requeue mechanism deleted by autonomous cleanup; 09-23, 09-24 parked FA-penalty gap, 09-28 directed:true WITHHELD"
+  },
+  {
+   "key": "test-residue-live-state",
+   "claimed_at": "2026-08-29",
+   "claim": "vessel tests calling live services: closed",
+   "where": "gap vessel-tests-call-live-services-so-the-suite-failure-count-tracks-substrate-load",
+   "later": "Fixture gaps re-written into live (09-19) and node 2 (09-25); re-filed 09-05, 09-26, 09-28"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-09-05",
+   "claim": "substrategap-write replaces instead of merging: closed",
+   "where": "gap substrategap-write-replaces-instead-of-merging-destroying-omitted-fields",
+   "later": "Overshoot: omitted keys carried forward, so cleared flags do not stick (09-23, 09-26)"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-09-10",
+   "claim": "Gap store restored to 4,187 rows with 0 missing",
+   "where": "ADDENDUM-2026-09-10-operational-evidence.md \u00a7F",
+   "later": "Entire store lost at the 09-18 clone rebuild; 256/3548 ids survive; 116 open operator gaps gone"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-09-22",
+   "claim": "auto_draft decisions go to JSONL, not the gap store",
+   "where": "goal-host-vessel 3d4aa60",
+   "later": "Held (no auto_draft rows after 09-22), but the JSONL is write-only with no reader"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-09-26",
+   "claim": "Landability predictions logged for later validation",
+   "where": "development-vessel 418d80d gap-lifecycle-scan.ts:404",
+   "later": "Never validated; no reader; 10.5MB by 09-29"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-29",
+   "claim": "Funnel close_rate 0.57-0.75 (live)",
+   "where": "super-repo gaps/funnel-history.jsonl",
+   "later": "3372/4253 closed rows are telemetry and 734 an administrative bulk close; landed/verified closes are 52"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-05-24",
+   "claim": "gap-004 name-to-template binding partially closed after embedding/cache fixes",
+   "where": "validation/gaps gap-007 (f5429063)",
+   "later": "gap-007 found the named template succeeded while the goal still failed; hollow completion is still an open class in 09-27 gaps"
+  }
+ ]
+}

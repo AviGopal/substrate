@@ -1,0 +1,635 @@
+{
+ "source": "reports-5",
+ "raw_file": "NOT WRITTEN \u2014 the harness refused the Write to /home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/reports-5.md (\"Subagents should return findings as text\"). I did not work around the refusal. The full notes are folded into this structured record, and the coverage field lists the key recurrences.",
+ "coverage": "I read all 23 files in shard 93..115 in full. Two outputs were truncated in the tool results and I re-read them.\n- jev-one-goal-probe/*: FIRSTTRY-PREREG 1-7 (PREREG-5 is embedded in PREREG-4), FIRSTTRY-RESULTS, GOODBEHAVIOUR-PREREG, LIVE-JEV, PREREGISTRATION, PROVIDER-PREREG, REQUIREMENTS, RESULTS. All dated 2026-09-18.\n- launch-contract-gaps-proof/REPORT.md (09-15).\n- LEARNING_ARCHITECTURE_REVIEW (08-16).\n- LOOP_CLOSURE_VALIDATION (08-18).\n- LEARNING_AUDIT_ROUND2 (08-19/20).\n- LEARNING_MECHANISM_AUDIT and _RUN2 (08-19).\n- LEARNING_DB_ARCHITECTURE_AUDIT_2026-08-22 (08-21..24, 10 addenda).\n- NEEDLE_MOVERS_2026-08-22.\n- lifecycle-audit-fixes-2026-09-22/{01-trace-persistence-diagnosis, CAMPAIGN}.\n\nOn 2026-09-28 I spot-checked these against substrate-live clones (/workspace/git/vessels) and the DB, read-only. Results are marked [LIVE 09-28]. What they found:\n- Beta sampler fixed (goal-host src/beta-sample.ts).\n- success_rate float-cast fixed (execution-traces.ts:3890).\n- SIGNATURE_CLUSTER_N_MIN still env (activities.ts:189).\n- SATISFIER_PROVEN_BAD_ARMED still env (goal-host index.ts:9753).\n- validator-dispatch.json:169 executionSucceeded still hardcoded false.\n- checkAndRetireTemplate's only caller is still POST /executions (activities.ts:2655).\n- paradigm.ts:606 and :2205 still SELECT FROM v_activity_score, a view the 09-22 sweep showed exists on no deployment.\n- hasSubstance got 3 more autonomous commits after 70bb485 (06864d6 09-19, d4456d9 09-25, d0e9e82 09-26 'recommit-recommit-hassubstance-...').\n- vesselDirOf still emits repos/<name>, but consumers now strip the prefix.\n- The jev attempt-5 hollow template composed-cap-produce-a-jev-typed-decision-impulse-by- is still retired:false. The 3 hand-authored jev-* templates are still live. There are 125 composed-cap-* activities, many with one-off composedDeliverable_* shapes.\n\nNot done: I did not re-run the audit queries. I did not check whether paradigm.ts:606 has a working fallback. I did not confirm goal_execution_paths eviction.\n\nKey recurrences, same issue under a new name:\n1. A missing view or table reads as empty/OK: v_activity_score 08-22 \u2192 execution_traces 08-19 \u2192 22 dead migrations 09-22 \u2192 still read on 09-28.\n2. Fixes that are not running: f2857fc \u2192 tier fixes not loaded 08-20 \u2192 fixes on the 5% path 08-22 \u2192 stranded commits 09-22.\n3. A green flag over a broken artifact: ribosome, validator-dispatch, hasSubstance, typecheck of a gate deletion.\n4. alphaBetaDelta reporting that misstates what was learned.\n5. Goals captured onto a victim file, \u00d73 on 09-18.\n6. Lessons written to channels the consumer never reads.\n7. Probe artifacts that are never retired.",
+ "attempts": [
+  {
+   "key": "write-read-mismatch",
+   "title": "Templates endpoint read nonexistent v_activity_score; fallback never ran",
+   "where": "activity-api GET /v2/activities/templates (NEEDLE_MOVERS_2026-08-22)",
+   "tried": "Switch the read to variant_performance_metrics with a counted template_metrics_fetched log",
+   "outcome": "partial",
+   "date": "2026-08-22",
+   "evidence": "Log shows matched:50 where it was 0 before. [LIVE 09-28] paradigm.ts:606/2205 still read v_activity_score, and activities.ts:4978 has a comment 'THIS READ ANSWERED ZEROS FOR THE WHOLE CORPUS'. The class recurs site by site."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Counterfeit Beta draw (rand^(1/a))/(rand^(1/b)) granted reuse bonus to failing arms",
+   "where": "goal-host index.ts:5636 \u2192 src/beta-sample.ts",
+   "tried": "Replace with a real Beta sample",
+   "outcome": "worked",
+   "date": "2026-08-16",
+   "evidence": "P(draw>0.5)=99.8% for a mean-0.142 arm. [LIVE 09-28] beta-sample.ts documents the old bug as fixed."
+  },
+  {
+   "key": "hollow-landing",
+   "title": "f2857fc repaired retirement UPDATE on a route the fleet never calls",
+   "where": "activity-api variant-creator.ts:368; caller activities.ts POST /executions",
+   "tried": "Fix checkAndRetireTemplate's UPDATE",
+   "outcome": "dormant",
+   "date": "2026-08-16",
+   "evidence": "0/100 retired. An arm at mean 0.0087 over 395 executions is still live. [LIVE 09-28] the only caller is still activities.ts:2655 inside app.post('/executions')."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Tier 0-4 learning fixes landed but goal-host kept running 5be4cfa",
+   "where": "substrate-pull-sync.sh:1040/:519/~1204 (LEARNING_AUDIT_ROUND2)",
+   "tried": "Tier 0-4 fixes (3691ee7 alphaBetaDelta, b5e4b56 satellite, posterior_source guard)",
+   "outcome": "failed",
+   "date": "2026-08-19",
+   "evidence": "The marker is written before the restart, so the next tick short-circuits. The deferral counter is frozen at 1/3. A trace 38 min after the fix still carried reached:false."
+  },
+  {
+   "key": "false-verification",
+   "title": "success_rate integer division made every arm 0 or 1; task-generator minted critical '0% success' goals",
+   "where": "activity-api execution-traces.ts:3277 + services/task-generator.ts:209-255",
+   "tried": "Float cast",
+   "outcome": "worked",
+   "date": "2026-08-19",
+   "evidence": "928 zeros / 588 ones / 0 fractional across 1516 rows. [LIVE 09-28] a <float> cast is at :3890."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Non-terminal satisfier satellites graded reached:false permanently",
+   "where": "goal-host index.ts:8628; reach-classify.ts:52-54",
+   "tried": "d95a615 insert guard, reverted by 3e7e8e0 the same day; eca7c8a stamped the terminal trace only; b5e4b56 satellite:non_terminal",
+   "outcome": "partial",
+   "date": "2026-08-19",
+   "evidence": "satisfier:webSearchResult \u03b1=2.12/\u03b2=185.22 with 167/189 successes. b5e4b56 was not loaded as of 08-20."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Admission cap truncated candidates by recency before the Thompson draw",
+   "where": "activity-api paradigm.ts computeAdmissionLimit (a7182c9)",
+   "tried": "Admit max(limit,1000)",
+   "outcome": "worked",
+   "date": "2026-08-24",
+   "evidence": "Shape-fetch logs count:680 and count:822, above the old ceiling of 150."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Selection\u2192outcome join (law 12) severed at 4 joints",
+   "where": "execution-traces.ts (755dca9 ingest), 471febb/7413367 reader, lib/decision-credit.ts + migration 201",
+   "tried": "Ingest lifts the correlation tag; JOIN-free reader; additive decision_outcome consumer",
+   "outcome": "partial",
+   "date": "2026-08-24",
+   "evidence": "Claimed 'resolved', retracted to 1 of 3 joints, then 1 of 4. Finally joined on real data, but the producer fires only on the rare recommend-draw path: 0/9614 rows tagged. No credit path consumes it."
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Auth storm filled 150k execution ring; boolean composite indexes made retention delete nothing",
+   "where": "activity-api migrations 198 (db667c1), 199 (ffd75d0)",
+   "tried": "Substrate removed the boolean indexes",
+   "outcome": "worked",
+   "date": "2026-08-22",
+   "evidence": "The ring drained from 150k to 9,242 and the stratified sweep is live. Substrate self-fixed."
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "validator-dispatch runs 1 of 5 tasks; no validators discoverable",
+   "where": "ias-executor-ts validator-dispatch.json; operator-registered reliability:validate-task-output-v1",
+   "tried": "Filed a gap; dispatched a coax goal 15300e0f; the operator hand-registered a validator via POST /templates",
+   "outcome": "partial",
+   "date": "2026-08-24",
+   "evidence": "discover total goes from 0 to 1 for a content parent. The validator lives only in the DB volume, not in SHARED_TEMPLATES. [LIVE 09-28] executionSucceeded is still hardcoded false."
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Authoring planner designed a secrets-exfiltration plan from a wrong LLM-generated shape description",
+   "where": "discovery POST /registry/shape-descriptions (bounded_shell); author-composed-capability",
+   "tried": "Correct one sentence of the bounded_shell description",
+   "outcome": "partial",
+   "date": "2026-09-18",
+   "evidence": "The planner chose bounded_shell in 5 consecutive runs. The description is volatile and in-memory. The durable fix, an advertised description in local-tools-vessel index.ts:705, never landed."
+  },
+  {
+   "key": "false-verification",
+   "title": "hasSubstance accepted error stdout, so a template that always 401s was validated:true",
+   "where": "development-vessel author-composed-capability.ts:331 (70bb485, 06864d6, d4456d9, d0e9e82)",
+   "tried": "Substrate-autonomous keyword regex, followed by 3 narrowing recommits",
+   "outcome": "partial",
+   "date": "2026-09-18",
+   "evidence": "The gap went from filed to deployed in 46 min. The regex introduced an over-rejection class and 3 more autonomous commits followed through 09-26."
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Natural-language capability goals captured onto victim files by early edit-intent",
+   "where": "goal-host createIntent regex index.ts:12464; early edit-intent detector",
+   "tried": "Rephrasing; direct resolve bypass; a report-shaped goal (PROVIDER attempt 2)",
+   "outcome": "failed",
+   "date": "2026-09-18",
+   "evidence": "Dispatches 5af332e4 (apply-migration-066.sh), aa1ef6e5 (goal-host index.ts), d12205d6 (template-audit.ts, fs_edit at 0.98). The dispatch record's goal text was overwritten."
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Jev activity authoring first try (7 pre-registered attempts)",
+   "where": "validation/reports/jev-one-goal-probe/FIRSTTRY-*",
+   "tried": "Concept seeding, then direct resolve, description fix, validator rule, literal subject, then information-complete (schema in goal plus idiom in description)",
+   "outcome": "partial",
+   "date": "2026-09-18",
+   "evidence": "Unaided 0/5. Information-complete 2/2 first try (jev_decision_v2, gap_triage_decision, about $0.000019 each). No compounding between the two, the output has no consumer, and the probe templates are unretired [LIVE 09-28]."
+  },
+  {
+   "key": "memory-recall",
+   "title": "Seeded concepts to steer the authoring planner",
+   "where": "concept-db concept_s4FEj0mG3duk, concept_ZJErt8PLLFJE",
+   "tried": "Operator-seeded external_api_contract and pattern concepts",
+   "outcome": "failed",
+   "date": "2026-09-18",
+   "evidence": "They rank #1/#2 on the walk's recall, but author_composed_capability never reads concept-db (R4b falsified)."
+  },
+  {
+   "key": "gap-content",
+   "title": "Gap-driven compose for the bounded_shell description refused at 0-byte grounding",
+   "where": "dev-vessel feature-compose.ts vesselDirOf:593 \u2192 verify_vessels",
+   "tried": "Filed class2 gap verify-vessels-derivation-emits-a-directory-where-a-vessel-name-is-expected",
+   "outcome": "unknown",
+   "date": "2026-09-18",
+   "evidence": "[LIVE 09-28] vesselDirOf still returns repos/<name>, but consumers strip the prefix at :3107 and :3967. Probably closed at the consumer; not verified end to end."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Substrate commit 54b7762 deleted 39 lines of the surql gate, wedging all .surql landings 09-16..09-22",
+   "where": "development-vessel vessel-mitosis-evaluate.ts surqlBreakingFieldRefusal; fix 1a18944",
+   "tried": "Byte-exact restoration via a pre-validated goal (dispatch c5fe1475)",
+   "outcome": "worked",
+   "date": "2026-09-22",
+   "evidence": "The gate accepts the unmodified corpus. The substrate-authored fix landed and was pushed. The detector gap is filed but not built."
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Reader-less views poison every execution insert on cold boot",
+   "where": "activity-api sql 023 (v_shape_pattern_performance), 055 (50946be), 045 (41c9e89)",
+   "tried": "Retire the views via REMOVE TABLE IF EXISTS",
+   "outcome": "worked",
+   "date": "2026-09-22",
+   "evidence": "Fresh-volume acceptance passes: POST execution-traces 200 and listed. The rebuilt image 254bf8c9 passes with no overlays."
+  },
+  {
+   "key": "trace-store-db",
+   "title": "22 migration files fail to parse on cold boot and nothing records it",
+   "where": "activity-api scripts/init-database.ts applySQLFile",
+   "tried": "Filed gap cold-boot-silently-skips-twenty-two-unparseable-migration-files",
+   "outcome": "unknown",
+   "date": "2026-09-22",
+   "evidence": "Sweep sql-sweep-2026-09-22.txt. Both 021 variants fail, so v_activity_score exists nowhere."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "12 stranded unpushed autonomous commits wedged super-repo pull-sync for 16h",
+   "where": "container super-repo; branch stranded-autonomous-2026-09-22",
+   "tried": "Preserved the commits on a branch and reset to origin/dev",
+   "outcome": "worked",
+   "date": "2026-09-22",
+   "evidence": "One commit had an unparseable store.ts, a crash-loop trap. Gap filed."
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Spoke could not reach hub LLMs: 4 defects in series",
+   "where": "llm-resolver 3ea2136; dev-vessel f8a2ede; inventory 7886d3a5; transport install",
+   "tried": "Fixed each defect: invalid-key cooling, by-name egress loopback, concept-db role, manual transport install",
+   "outcome": "worked",
+   "date": "2026-08-18",
+   "evidence": "The 5d29f1f autonomous landing then ran over the federation path. The manifest-vessel install gap stayed open until installed.json on 09-22."
+  },
+  {
+   "key": "node-locality",
+   "title": "Launch-contract anchor split-brain HUB_DISCOVERY_URL vs DISCOVERY_ENDPOINT; operator key harvested into fleets",
+   "where": "gen-env.sh:423-428; Makefile ANTHROPIC_API_KEY ?= jq $(HOME)/.metabob",
+   "tried": "Proof only: canary key plus matched-pair arms",
+   "outcome": "unknown",
+   "date": "2026-09-15",
+   "evidence": "Arm 2 built standalone with loopback and no warning. The canary sk-ant-CANARY was persisted into /etc/substrate/env."
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Lifecycle audit fixes: UI packaging, receipts, membership, relay",
+   "where": "Dockerfile.substrate, vessel-ctl.sh installed.json, entrypoint.sh, spoke-federate.sh",
+   "tried": "Operator edits plus one dispatched receipt fix",
+   "outcome": "worked",
+   "date": "2026-09-22",
+   "evidence": "membership-acceptance-PASS, no-overlay-acceptance-PASS. The relay join was never driven through a real spoke."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Law-1 remediation shipped readers for walkBudget/lessonExecutionPolicy with no producer",
+   "where": "goal-host index.ts:1092-1125",
+   "tried": "Shaped-impulse read channel",
+   "outcome": "dormant",
+   "date": "2026-08-16",
+   "evidence": "Verbatim lesson execution fails closed and is off in every deployment. The author admits 'the reader shipped; the producer did not'."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Previous-round fixes (blame reason, correlation_id, 30d decay) live but inert",
+   "where": "NEEDLE_MOVERS \u00a71",
+   "tried": "Deployed to the goal-walk path",
+   "outcome": "dormant",
+   "date": "2026-08-22",
+   "evidence": "0/96, 0/96 and 0/358 confirmations. About 95% of traffic is boredom housekeeping that bypasses /recommend."
+  },
+  {
+   "key": "false-verification",
+   "title": "POSTERIOR_DIVERGENCE.md claims a _betaApplied fix that does not exist",
+   "where": "validation/reports/POSTERIOR_DIVERGENCE.md:56; goal-host index.ts:5196",
+   "tried": "Report claimed a repair in 5be4cfa",
+   "outcome": "failed",
+   "date": "2026-08-19",
+   "evidence": "No _betaApplied anywhere in the tree."
+  }
+ ],
+ "problems": [
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Fields are written with no reader, or read with no writer. Missing views and tables read as empty with status OK, so fallbacks never fire and learning signals vanish silently.",
+   "root_cause": "No producer/consumer parity check exists. SurrealDB returns empty/OK for a missing table and NULL for a phantom column. Every audit proposed a written-with-no-reader detector and none was built.",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 25
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Green flags (validated, reached, completed, success_rate, typecheck) sit over broken artifacts",
+   "root_cause": "Gates check that the output is present, parses or typechecks, not that it works. Producer and verifier share the same rule.",
+   "first_seen": "2026-08-18",
+   "last_seen": "2026-09-22",
+   "recurrences": 9
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Fixes land in git but the running process is older code, and every health signal stays green",
+   "root_cause": "Pull-sync writes its marker before the restart; converge_units never enables timers; stranded commits wedge the pull; IF NOT EXISTS schema divergence",
+   "first_seen": "2026-08-19",
+   "last_seen": "2026-09-22",
+   "recurrences": 5
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Blame is annihilated or misdirected: the counterfeit Beta, satellites stamped reached:false, UCB on exit status, recommend dropping \u03b1/\u03b2, env-armed interlocks",
+   "root_cause": "Multiple posterior stores and several transit paths, each with its own key and semantics. The instrument (alphaBetaDelta) misreports.",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 8
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Pathless natural-language goals are captured onto victim files by regex edit-intent, and the dispatch record gets rewritten",
+   "root_cause": "A lexical createIntent/early edit-intent regex; target inference returns empty or fs_edit; head-of-line producer scan at missingNow[0]",
+   "first_seen": "2026-09-15",
+   "last_seen": "2026-09-18",
+   "recurrences": 4
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Fixes are correct but inert: no caller, a minority path, interface-only partials, a probe template never retired",
+   "root_cause": "Landing is verified at the edited layer rather than where the change is consumed, and the traffic denominator is not measured",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 6
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Lessons are placed in channels the consumer never reads (concept-db vs the author planner; verbatim lessons fail closed)",
+   "root_cause": "Lessons are written before the runtime reader is named",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-18",
+   "recurrences": 3
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Extraction yield ~0.1%; the middle tier never fires; mints don't compound; activities are 76% duplicate families with 1.2% provenance",
+   "root_cause": "Ribosome eligibility is a literal list naming 1-of-5-task templates; extraction outputs a trace description; proposal minting outpaces earned minting",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 4
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "The trace store is flushed by an auth storm, cold boot poisons inserts, 22 migrations are dead, full-view scans pin the DB",
+   "root_cause": "Retention indexes on boolean fields; reader-less computed views; applySQLFile skips failures silently; unbounded default window",
+   "first_seen": "2026-08-18",
+   "last_seen": "2026-09-22",
+   "recurrences": 4
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "A substrate commit deletes gate logic (54b7762) or misplaces a regex (1268a11), and nothing detects it",
+   "root_cause": "The typecheck gate passes deletions, and there is no corpus self-check of gates",
+   "first_seen": "2026-08-18",
+   "last_seen": "2026-09-22",
+   "recurrences": 2
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "The planner makes a secrets-exfiltration plan, shell prefix-assignment bugs, and wrong request schemas",
+   "root_cause": "LLM-generated registry descriptions are semantically wrong and volatile; the planner reads only the goal text and those descriptions",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-18",
+   "recurrences": 1
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Selection-critical hyperparameters and interlocks are frozen from process.env",
+   "root_cause": "SIGNATURE_CLUSTER_N_MIN and SATISFIER_PROVEN_BAD_ARMED are still env [LIVE 09-28], along with many *_INTERVAL_MS and learning-plane flags",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 3
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Audits run on a spoke with activity-api masked; the spectral gate is dead on the spoke; concept-db crashlooped on the spoke; split-brain anchor",
+   "root_cause": "Role/profile masking combined with per-node measurement; ambiguous join anchors",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-15",
+   "recurrences": 4
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Fossil tables, shadowed routes, unreachable selector framework, 125 composed-cap templates with one-off shapes, unretired probe templates",
+   "root_cause": "No retirement path; per-goal shape naming",
+   "first_seen": "2026-08-19",
+   "last_seen": "2026-09-28",
+   "recurrences": 3
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Docs and schema say \u03b1=successes+1 while practice is a graded, decayed accumulator; docs say the transport auto-starts; a report claims a nonexistent fix",
+   "root_cause": "Docs and comments assert rather than get verified",
+   "first_seen": "2026-08-19",
+   "last_seen": "2026-09-15",
+   "recurrences": 4
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "The hasSubstance fix spawned narrowed/recommit/recommit-recommit chains; narrowed children drop parent severity; failing gaps get refreshed updated_at",
+   "root_cause": "gap-to-feature rewrites the parent on failure and children lose priority",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-26",
+   "recurrences": 2
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "Graded fractional yield posterior update",
+   "location": "activity-api src/lib/posterior-update.ts:280-315",
+   "purpose": "\u03b1\u0394=y, \u03b2\u0394=1\u2212y credit from cost and productivity",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Bracketed reads sum to 1.0000 (RUN2 08-19)"
+  },
+  {
+   "name": "/reach sole VPM grader + honest-reach gate",
+   "location": "activity-api execution-traces.ts, posterior-update.ts:815-828",
+   "purpose": "Credit on reached, not exit status",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "discover-by-shapes server-side Thompson draw",
+   "location": "activity-api services/discover-by-shapes.ts:269,295-299",
+   "purpose": "Primary producer selection for the walk",
+   "status": "live-used",
+   "general": true,
+   "evidence": "The admission widening a7182c9 is verified live"
+  },
+  {
+   "name": "/recommend fallback selection",
+   "location": "activity-api routes/activities.ts",
+   "purpose": "Fallback candidates when discover returns 0",
+   "status": "broken",
+   "general": true,
+   "evidence": "SEL-3 UCB runs on exit status. [LIVE] top-level sampled_score is now emitted at :7150, so SEL-1 is likely closed."
+  },
+  {
+   "name": "beta-sample (replaced the counterfeit draw)",
+   "location": "goal-host src/beta-sample.ts",
+   "purpose": "Real Beta sample for readCandidateShapes",
+   "status": "live-used",
+   "general": false
+  },
+  {
+   "name": "reached-command tombstone store",
+   "location": "goal-host src/reached-command-store.ts",
+   "purpose": "Durable eviction of false reaches",
+   "status": "live-used",
+   "general": false,
+   "evidence": "The pattern for 'stop selecting this'. The goal_execution_paths equivalent is unverified."
+  },
+  {
+   "name": "checkAndRetireTemplate",
+   "location": "activity-api services/variant-creator.ts:368",
+   "purpose": "Retire templates with success<0.3 over a 20-run window",
+   "status": "dormant",
+   "general": true,
+   "evidence": "[LIVE 09-28] the only caller is POST /executions, which the fleet does not use"
+  },
+  {
+   "name": "reuse-before-mint enforce",
+   "location": "development-vessel activity-create-variant.ts:769-935",
+   "purpose": "Refuse duplicate mint",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "mint dedup gate",
+   "location": "activity-api activities.ts:145,792-800",
+   "purpose": "Merge timestamp-suffixed duplicates",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "131 groups / 1,012 duplicate rows remain"
+  },
+  {
+   "name": "alphaBetaDelta / penaliseHollowTemplate / creditReachedTemplate",
+   "location": "goal-host index.ts:4896,5196,5325; obsidian panel-narrative.ts:628",
+   "purpose": "Report the learning consequence of each dispatch",
+   "status": "broken",
+   "general": false,
+   "evidence": "Hardcoded constants, 6 discard sites, writes a table nothing reads"
+  },
+  {
+   "name": "impulse_shape_activity_score",
+   "location": "activity-api migrations 097/103",
+   "purpose": "Feedback-plane shape-conditioned score",
+   "status": "fossil",
+   "general": false,
+   "evidence": "No selector reads it; a designed split with /reach"
+  },
+  {
+   "name": "concept-db prompt-build recall",
+   "location": "goal-host index.ts:10136-10231; concept-db concept.ts:449-531",
+   "purpose": "Law-8 information delivery",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Not read by author_composed_capability or universalToolFallback"
+  },
+  {
+   "name": "verbatim lesson execution",
+   "location": "goal-host index.ts:6038-6052, lessonVerbatimAllowed:1092-1125",
+   "purpose": "Run earned commands deterministically",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Fails closed; no producer of lessonExecutionPolicy"
+  },
+  {
+   "name": "author_composed_capability",
+   "location": "development-vessel resolvers/author-composed-capability.ts",
+   "purpose": "Plan a chain of existing resolvers, execute-validate, mint a template",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Works only information-complete (n=2 on 09-18); hasSubstance churn continued to 09-26"
+  },
+  {
+   "name": "learned shape-description channel",
+   "location": "discovery-vessel src/index.ts:505 setLearnedDescription",
+   "purpose": "Correct the catalogue text planners read",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Volatile, in-memory; the advertised-description durability fix never landed"
+  },
+  {
+   "name": "honest grounding refusal",
+   "location": "development-vessel feature-compose.ts fc-grounding",
+   "purpose": "Refuse before paying for a blind LLM plan",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Principled refusals on 09-18 (P5 falsified, B5 held)"
+  },
+  {
+   "name": "createIntent regex lane",
+   "location": "goal-host index.ts:12464",
+   "purpose": "Route create-a-file goals",
+   "status": "live-used",
+   "general": false,
+   "evidence": "The brittle regex is defeated by one word; it is itself a typed decision"
+  },
+  {
+   "name": "apply_proposal_as_patch + vessel_mitosis_cutover",
+   "location": "development-vessel",
+   "purpose": "Autonomous landing lane",
+   "status": "live-used",
+   "general": true,
+   "evidence": "70bb485, 1a18944, 50946be"
+  },
+  {
+   "name": "surqlBreakingFieldRefusal",
+   "location": "development-vessel vessel-mitosis-evaluate.ts",
+   "purpose": "Gate breaking .surql edits",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Broken 09-16..22 by 54b7762, restored in 1a18944"
+  },
+  {
+   "name": "selection\u2192outcome correlation + decision_outcome",
+   "location": "activity-api execution-traces.ts deriveCorrelationIdFromTags, lib/decision-credit.ts, migration 201",
+   "purpose": "Law-12 decision-level credit record",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "The producer rarely fires (0/9614 rows) and no credit path consumes it"
+  },
+  {
+   "name": "validator-dispatch meta-activity",
+   "location": "ias-executor-ts templates/lifecycle/validator-dispatch.json",
+   "purpose": "Post-task validation plus learning signals",
+   "status": "broken",
+   "general": true,
+   "evidence": "Runs 1 of 5 tasks; [LIVE] executionSucceeded hardcoded false at :169"
+  },
+  {
+   "name": "spectral-gap inequality",
+   "location": "scripts/substrate/spectral-gap.ts:280-300",
+   "purpose": "The \u03bb\u2081\u2265\u03c1_grow stability governor",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "JSONL only, no actuator, role store (dead on a spoke)"
+  },
+  {
+   "name": "learning_transfer_report lambda1_inequality_ok",
+   "location": "development-vessel learning-transfer-report.ts:112,156",
+   "purpose": "Mint governor",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "spectral-gap inequality (mislabelled; computes counts)"
+  },
+  {
+   "name": "lib/selection/choice.ts Choice/Selector",
+   "location": "activity-api lib/selection/choice.ts",
+   "purpose": "Composable selectors",
+   "status": "fossil",
+   "general": true,
+   "evidence": "Unreachable; no caller sends a selector"
+  },
+  {
+   "name": "ribosome extraction",
+   "location": "ribosome-vessel; ribosome-extract.json; impulses.ts:2630",
+   "purpose": "Mint templates from reached executions (law 4)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Yield ~0.1% on 08-22, resumed 08-23; eligibility is a literal list and extractionPolicy is unresolved"
+  },
+  {
+   "name": "task-generator repair goals",
+   "location": "activity-api services/task-generator.ts",
+   "purpose": "Emit repair goals for weak arms",
+   "status": "broken",
+   "general": false,
+   "evidence": "Reads the 0-row execution_traces table, so repair goals say 'Unknown errors'"
+  },
+  {
+   "name": "installed.json membership reconcile",
+   "location": "scripts/substrate/vessel-ctl.sh, entrypoint.sh",
+   "purpose": "Durable dynamic vessel membership",
+   "status": "live-used",
+   "general": true,
+   "evidence": "membership-acceptance-PASS on 09-22; conflates auto-enable with operator install"
+  },
+  {
+   "name": "retention stratified sweep",
+   "location": "activity-api migrations 198/199",
+   "purpose": "Keep the execution ring from filling with noise",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "activity_templates / activity_template / execution_traces tables",
+   "location": "activity-api sql",
+   "purpose": "Legacy template and trace stores",
+   "status": "fossil",
+   "general": false,
+   "evidence": "0-2 rows; readers or writers on only one side"
+  },
+  {
+   "name": "pre-registration probe protocol",
+   "location": "validation/reports/jev-one-goal-probe",
+   "purpose": "Frozen falsifiable predictions per dispatch",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Seven attempts with single-variable changes; honest separate unaided and informed verdicts"
+  }
+ ],
+ "principles": [
+  "Name the runtime reader before writing a lesson. Recallable (R4a) is not the same as injected at the consumer (R4b). (jev FIRSTTRY-RESULTS 09-18)",
+  "One true fact at the point of use moved a planner off a secrets-exfiltration design. Information beats guardrails (law 8). (FIRSTTRY-RESULTS attempt 3)",
+  "Pre-register predictions with falsifiers, change one variable per attempt, never judge by the reach flag, and read the bytes. (jev PREREGs)",
+  "Report the unaided and information-complete verdicts separately. A pass with no compounding between attempts is two independent first tries, not learning. (PREREG-6, FIRSTTRY-RESULTS)",
+  "A produced shape with no consumer is IMPLEMENTED_DORMANT. (FIRSTTRY-RESULTS)",
+  "For every field a resolver writes, assert that at least one non-test, non-self read exists. Without that detector the half-wired class regenerates. (LEARNING_ARCHITECTURE_REVIEW \u00a77)",
+  "Fix grading and attribution instruments before throttling minting, and fix the instruments before the fixes they verify. (LEARNING_MECHANISM_AUDIT, RUN2)",
+  "Measure the denominator first: what the traffic actually executes and what that path reads. Architecture-diagram-driven fixes optimised a 5% path. (NEEDLE_MOVERS \u00a75)",
+  "The system cannot tell absent, empty and zero apart. Put a counted requested-vs-matched log at every cross-component read. (NEEDLE_MOVERS \u00a74)",
+  "Read one full row before aggregating over a named field. Phantom columns return NULL, a missing table returns OK/empty, and GROUP BY LIMIT drops groups. (DB audit method notes)",
+  "A retention window is not a history. State the denominator with every reach number. (DB audit)",
+  "If the adversarial pass refutes the causal leg while the observational leg reproduces, the audit was reaching for impact. (DB audit, 6 of 7 refuted)",
+  "Verify at the consuming layer. A synthetic POST tests only the edited layer. (DB audit Addendum 3)",
+  "Additive changes to a NEW surface are safe to land. Blind changes that mutate posteriors or ribosome input are negative value. (DB audit Addenda 5/7)",
+  "If a gate refuses your edit, run it on the unmodified file. If that also refuses, the gate is the finding. (lifecycle 01, 09-22)",
+  "IF NOT EXISTS schema makes warm and cold stores silently diverge. Test cold boot. (lifecycle 01)",
+  "A rejection whose subject you cannot read is absence of evidence. (LOOP_CLOSURE 08-18)",
+  "Several defects in series, each sufficient alone, explain why fixing any one changes nothing. (LOOP_CLOSURE)",
+  "A guard that crosses a threshold can become a no-op while its comment still asserts the bound. (LOOP_CLOSURE)",
+  "Comments that assert measurements are not measurements, and a comment describing a defect may have been written by whoever fixed it. (RUN2, DB audit)",
+  "Use git grep. The ugrep shim silently misses matches after NUL bytes. (ROUND2)",
+  "Launch contract: one anchor with a loud refusal on ambiguity; cause-naming boot dependency checks; the inventory as sole authority over units; never harvest the operator's key. (launch-contract 09-15)",
+  "Kill switches stay env, outside the substrate's authoring reach. Behavioural hyperparameters go through shaped tuning params. (RUN2)",
+  "A failing self-repair is training signal. Don't hand-complete it; file the one-line cause. (GOODBEHAVIOUR 09-18)"
+ ]
+}

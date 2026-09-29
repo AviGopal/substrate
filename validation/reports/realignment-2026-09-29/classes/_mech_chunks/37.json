@@ -1,0 +1,149 @@
+{
+ "area": "operator-tooling",
+ "items": [
+  {
+   "name": "opsx commands",
+   "location": ".claude/commands/opsx/*",
+   "purpose": "openspec propose/apply/archive/explore",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": ".claude/skills/openspec-*",
+   "evidence": "4 commands mirror 4 skills",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "substrate-session-end hook",
+   "location": ".claude/hooks/substrate-session-end.sh",
+   "purpose": "Dispatch memory consolidation at session end",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "171 dispatches, all hollow or floor reaches. No consolidation achieved.",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "substrate-session-start hook",
+   "location": ".claude/hooks/substrate-session-start.sh",
+   "purpose": "Inject substrate memoryNotes and concept priors into each operator session",
+   "status": "broken",
+   "general": true,
+   "evidence": "0 bytes with default localhost endpoints. Works with 127.0.0.1.",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "substrate-vessel-edit-gate hook",
+   "location": ".claude/hooks/substrate-vessel-edit-gate.sh",
+   "purpose": "Force code changes through run_goal; S3 push-away via intervention_evaluate",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Bypassed by settings.local.json env =1. The S3 branch has never reached dev-vessel (0 calls).",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "deploy skill / vessel-ctl",
+   "location": ".claude/skills/deploy; /usr/local/bin/vessel-ctl",
+   "purpose": "Reload, sync and install vessels",
+   "status": "live-used",
+   "general": true,
+   "evidence": "All verbs present on node 1. The substrate-status verify step is missing on node 1.",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "metamorphic gate probe",
+   "location": "/home/avi/.claude/jobs/35537c7e/tmp/metamorphic-probe.ts",
+   "purpose": "generative hostile inputs for gate_self_probe",
+   "status": "fossil",
+   "general": false,
+   "evidence": "deferred 09-10, never dispatched",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "placement pre-commit hook + gitleaks",
+   "location": "ab4af9bd, 0d435388",
+   "purpose": "stop root cruft and secrets",
+   "status": "unknown",
+   "general": true,
+   "evidence": "added after leaked credentials 09c0fa74",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "Commit-hook committer attribution (committer_unit, committer_cmd)",
+   "location": "container git hooks _record.sh",
+   "purpose": "Identify which unit made each commit",
+   "status": "live-used",
+   "general": true,
+   "evidence": "RUN10-FAIL-1600 diagnosis",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "placement pre-commit hook",
+   "location": "scripts/git-hooks/pre-commit (ALLOWED_TOPLEVEL_DIRS)",
+   "purpose": "Reject root-level additions",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Installed in-container 09-23 (d993b331); 5 autonomous root residues survived at HEAD",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "pre-commit placement hook",
+   "location": "scripts/git-hooks/pre-commit (installed by setup-git-push, d993b331)",
+   "purpose": "Reject root-level additions outside ALLOWED_TOPLEVEL_DIRS",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Blocks root files only; edc68d49 on 09-26 still committed leases/ and state/, and openspec/changes strays remain",
+   "source": "openspec-8",
+   "mentions": 1,
+   "sources": [
+    "openspec-8"
+   ]
+  },
+  {
+   "name": "placement gate",
+   "location": "scripts/git-hooks/pre-commit installed by setup-git-push.sh",
+   "purpose": "Refuse root-level/runtime files in super-repo commits",
+   "status": "broken",
+   "general": true,
+   "evidence": "Inert: system core.hooksPath=git-hooks-ledger (no pre-commit); edc68d49 committed root leases/ afterwards",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  }
+ ]
+}

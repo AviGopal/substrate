@@ -1,0 +1,775 @@
+{
+ "attempts": [
+  {
+   "key": "directed-overshoot",
+   "title": "Concept credit decontaminate vs concept_usage retention",
+   "where": "concept-db/src/resolvers/decontaminate.ts (07-03); activity-api/src/services/trace-retention.ts:666-670",
+   "tried": "Recompute concept counters from concept_usage; later, reap concept_usage beyond the hot window",
+   "outcome": "unknown",
+   "evidence": "concept_usage holds only today (3,641 rows since 02:11 UTC); a non-dry decontaminate run would zero counters for up to 500 concepts",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Operator reverted a correct autonomous landing on inference",
+   "where": "b8671c9 -> 23abbf4 -> 89f04fb (09-28)",
+   "tried": "Revert reading execution directly, citing 08-21 PERMISSIONS evidence",
+   "outcome": "reverted",
+   "date": "2026-09-28",
+   "evidence": "Pre-validation had used root credentials, which bypass PERMISSIONS; a live measurement refuted the revert within an hour.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Satellite reach-verdict strip",
+   "where": "d95a615 -> 3e7e8e0 (08-08)",
+   "tried": "Stop satellites inheriting the walk verdict",
+   "outcome": "reverted",
+   "date": "2026-08-08",
+   "evidence": "It would have destroyed the most independent (recompute-agrees) reach verdict. The real defect was N-fold counting.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "org_id widening silently lost in a refactor",
+   "where": "baca870 -> 3fb33b6 (08-22)",
+   "tried": "Match both stored org_id forms",
+   "outcome": "worked",
+   "date": "2026-08-22",
+   "evidence": "The posterior lookup had matched zero rows; the second widening was lost and restored the same day.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "SurrealDB memory cap lowered fleet-wide",
+   "where": "e2ba1a69 \u2192 9df01220 (units/surrealdb.service)",
+   "tried": "MemoryHigh/Max 22G/26G \u2192 10G/12G",
+   "outcome": "reverted",
+   "date": "2026-08-17",
+   "evidence": "pull-sync converged the cap onto the hub and the kernel OOM-killed the production DB ('the cap WAS the OOM'); the sizing came from a workstation",
+   "source": "git-deployment"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Operator fixes reverted or oscillated",
+   "where": "6c3448e->9e99f11; cc00663->467360b; b4e3d77->05829d6; c0b665e->f3b427b; compose-lessons 89a7f31/90c585f/d274763/8236895/6137257 (08-10); semantic gate 575514d vs ff416d4; region gate 973b7f6/6712946/4645bf8/a71e9a8",
+   "tried": "Directed patches landed without a pre-registered falsifier.",
+   "outcome": "reverted",
+   "date": "2026-05-26..2026-08-10",
+   "evidence": "Five compose-lessons commits in one day. Four commits exist only to retract the mechanism claimed in an earlier commit (271228e, 2500b30, 6d3074d, 7c23983).",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Operator 'one-flag' commit removed 12 autonomous landings",
+   "where": "ca53600 substrate-gap.ts +30/-122",
+   "tried": "--no-block fix; the diff also removed 8-hex gapClassKey normalisation, gaps.json salvage and a classification_metadata copy",
+   "outcome": "partial",
+   "date": "2026-09-14",
+   "evidence": "8-hex rule absent from current gapClassKey (:313-323); stale-base cause plausible only",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Operator 'logging only' commit undid 7 autonomous landings",
+   "where": "5598853 feature-compose.ts +40/-63",
+   "tried": "Log inside the grounding catch",
+   "outcome": "partial",
+   "date": "2026-09-15",
+   "evidence": "Removed RETRY CONTEXT, directed verdict, recommit-depth and test-target grounding",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Closure predicate at birth",
+   "where": "be26a6b+196e755 reverted by 8a5223c",
+   "tried": "Derive the Class-1 predicate at gap creation",
+   "outcome": "reverted",
+   "date": "2026-08-31",
+   "evidence": "Derivation after the land can never read 'absent'; manufactured re-lands",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Prefer line-addressed edit",
+   "where": "fee458e reverted by 91b11fe",
+   "tried": "Steer the drafter to replace_lines",
+   "outcome": "reverted",
+   "date": "2026-08-31",
+   "evidence": "apply_failed rose 0% -> 66%",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Seven federation cascade corrections in one day",
+   "where": "afde30b, 4a57cfa, 79b0b9c, 01ab865, 659cb35, c35af84, 2371bb2",
+   "tried": "Successive routing fixes, each correcting the previous one's overshoot",
+   "outcome": "unknown",
+   "date": "2026-08-18",
+   "evidence": "Untouched since",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "discovery register validation rejects ribosome shapes:[]",
+   "where": "discovery-vessel 7cc9da4 (09-19, operator-landed)",
+   "tried": "type/emptiness/size validation of /register for security-audit tests",
+   "outcome": "partial",
+   "date": "2026-09-19",
+   "evidence": "ribosome 'register failed: 400' 5,208 times in 7 days; discovery ~1,499 /register 400 per day",
+   "source": "git-small"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "operator reverted the correct autonomous 30s\u2192300s shell fix",
+   "where": "local-tools e1ffa50 \u2192 a699887 (08-15); re-derived as e4d604c (08-29)",
+   "tried": "raise the shell kill timeout",
+   "outcome": "reverted",
+   "date": "2026-08-15",
+   "evidence": "revert recorded no reason; 14 days of verify killed; 30s default later killed the post-land suite for a month",
+   "source": "git-small"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "ribosome reach tag-vs-column flip-flop",
+   "where": "ribosome 86aebdf \u2192 5a374df (09-02)",
+   "tried": "trust the reached:true tag over the column",
+   "outcome": "reverted",
+   "date": "2026-09-02",
+   "evidence": "the write path deliberately downgrades execution_error; real defect = two reach writers with different rules, left unfixed",
+   "source": "git-small"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "llm_completion advertisement policy flip-flop",
+   "where": "llm-resolver 9c17905 (07-17) vs 1f14a69 (07-19) vs 3ea2136 (08-18)",
+   "tried": "never un-advertise, then quota-gated de-advertise, then refusal closes the gate",
+   "outcome": "partial",
+   "evidence": "opposite policies two days apart",
+   "source": "git-small"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "last-resort guard blackholed a live plane",
+   "where": "llm-resolver 272edbd (08-09) \u2192 04b2e8f (08-10)",
+   "tried": "refuse to dial an unwilling default",
+   "outcome": "superseded",
+   "evidence": "refused while a pinned gemini model answered first try",
+   "source": "git-small"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Autonomous template promotion: remove the operator gate",
+   "where": "2dc56ed5, 99a30d12, 4d0c305e, 93a6cb42",
+   "date": "2026-05-27..28",
+   "tried": "iter-22 auto-promote; reverted for F-144 fabricated authorization; operator-authorized; revert of the revert",
+   "outcome": "reverted",
+   "evidence": "flip-flop in one day; duplicate 'authorize S2 lift' commits ce457fdd/4c60b0a1",
+   "source": "git-super-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Compose-topology cadence timer",
+   "where": "06c48140, f1348751",
+   "date": "2026-06-22",
+   "tried": "a 4-min timer dispatching compose_topology_tick directly",
+   "outcome": "reverted",
+   "evidence": "reverted the same day with no reason in the body; replaced by compose-teacher",
+   "source": "git-super-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "scenario_id-encoded mitosis dirs",
+   "where": "9fcc87b4, 486918b6",
+   "date": "2026-06-04",
+   "tried": "dev-vessel bump applying scenario_id encoding",
+   "outcome": "reverted",
+   "evidence": "reverted within hours",
+   "source": "git-super-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Drop operator gates + self-recovery immune system",
+   "where": "6f5e1bdd",
+   "date": "2026-06-20",
+   "tried": "gap-compose autonomous by default; self-recovery reverts vessels to host source via docker cp",
+   "outcome": "unknown",
+   "evidence": "host source becomes the authority (law 11 risk)",
+   "source": "git-super-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "operator SurrealDB memory cap OOM-killed prod",
+   "where": "e2ba1a69 -> 9df01220",
+   "tried": "Lower MemoryHigh/Max 22/26G to 10/12G fleet-wide",
+   "outcome": "reverted",
+   "date": "2026-08-17",
+   "evidence": "Arithmetic came from a 60.6G workstation, but the hub has 32.8G; the kernel killed surreal inside the cap write",
+   "source": "git-super-2"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "operator fixes that regressed",
+   "where": "86491fec, 24877839, 6bd4e1d0, 7736ac2f, 8de05562, 30ebe24b, 25ee2162, a600a8b9, f212b93c, 940dbfb7, abf60661, c47f3843",
+   "tried": "Direct operator edits to glue and units",
+   "outcome": "failed",
+   "date": "2026-07-29..2026-08-22",
+   "evidence": "f212b93c: 'six of the findings are damage the round-1 fixes did'. 940dbfb7: a landed fix hung every shell call for ~3h. The 2ca586ba census counts 28 category-F cases",
+   "source": "git-super-2"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "asResolvePath fix overshot; resolve-URL joins recurred across 4 hats",
+   "where": "repos/goal-host-vessel/src/index.ts; gaps asresolvepath-discards..., rawresolve-concatenates..., seven-more-resolve-url-sites..., resolve-url-walk-path-sites-7457-15128",
+   "tried": "landed_verified 09-20; then per-site patches; steps 1-3 closed superseded_hollow_decomposition 09-28; resolve-url-walk-path-sites landed 09-28",
+   "outcome": "partial",
+   "date": "2026-09-20..2026-09-28",
+   "evidence": "seven-more-resolve-url-sites still open",
+   "source": "live-gaps"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "gap-to-feature directed flag",
+   "where": "gap-to-feature.ts; 5ec4719 then 112e194",
+   "tried": "5ec4719 failed behavioural verification; one-op redesign landed via mitosis cutover",
+   "outcome": "worked",
+   "date": "2026-09-22..2026-09-23",
+   "evidence": "closed measured: directed POST at 1 in flight admitted",
+   "source": "live-gaps"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Discovery register payload validation",
+   "where": "discovery-vessel 7cc9da4 (2026-09-19, operator) src/index.ts:336",
+   "tried": "Reject empty shapes arrays, long ids, etc. (audit tests expected 400/413) and evict dead rows at resolve time",
+   "outcome": "partial",
+   "date": "2026-09-19",
+   "evidence": "ribosome-vessel registers shapes:[] by design (index.ts:697). 'register failed: 400' logged 4560 times since 09-26 (first seen in journal 09-25 13:11), so ribosome cannot be discovered. identity-vessel is also unregistered (21 initial-registration failures; cause unconfirmed)",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Unconditional bun install in compose verify",
+   "where": "f38f1a3 (reverted b90d6c4); substrate reland 0797af4 (reverted 49f4c06)",
+   "date": "2026-08-10",
+   "tried": "Make install unconditional to catch broken manifests",
+   "outcome": "reverted",
+   "evidence": "Pruned shared node_modules, broke all composes; open gap re-derived same fix; teaching moved to call-site comment + gap",
+   "source": "memory-10"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Raise init-database migration timeout to 300s",
+   "where": "activity-api c0246f7",
+   "tried": "Let DEFINE TABLE AS backfill finish",
+   "outcome": "reverted",
+   "date": "2026-08-03",
+   "evidence": "Hub activity-api never became active; reverted 8fbc032, which did not converge while the vessel was down",
+   "source": "memory-2"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Operator exclusion filter turned ambiguous localization into a unique wrong one",
+   "where": "goal-host dd1195b -> reverted 88b212a",
+   "tried": "Dropped own-vessel hits for prose terms.",
+   "outcome": "reverted",
+   "date": "2026-08-11",
+   "evidence": "Caused a misroute one dispatch later; the fix's own test file added phantom candidates.",
+   "source": "memory-3"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Operator-dispatched repair landed in wrong function, displaced abstention",
+   "where": "goal-host c9faf50d",
+   "tried": "Repair B for verifyCountFilesReach.",
+   "outcome": "failed",
+   "date": "2026-08-10",
+   "evidence": "Landed in verifyRegistryInventoryReach with inverted polarity: a live regression. Revert recommended, not performed.",
+   "source": "memory-3"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Operator replacement posterior guard",
+   "where": "boredom-vessel 4e17f86",
+   "tried": "Control-matrix-tested by-id posterior guard in vesselAdditionScaffoldDispatch",
+   "outcome": "failed",
+   "date": "2026-09-05",
+   "evidence": "The resolver logged 0 times in 6h and trace rows kept rising 2338\u21922340: the guard sat on a door nothing walks through. The real seam is dispatchTargetTemplateId in ias-executor goal-host.ts:~897.",
+   "source": "memory-4"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Region containment gate",
+   "where": "feature-compose 973b7f6 \u2192 e04764c",
+   "tried": "Require a touched line to contain the region literal",
+   "outcome": "partial",
+   "date": "2026-08-07",
+   "evidence": "It rejected the only correct fix twice and admitted two wrong patches. It was widened one hop, and its suspected_real_location write was removed.",
+   "source": "memory-4"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Quota-gated de-advertisement of llm_completion",
+   "where": "llm-resolver syncCompletionAdvertisement (07-15)",
+   "date": "2026-07-15",
+   "tried": "de-advertise when no provider available",
+   "outcome": "reverted",
+   "evidence": "07-18 deadlocked completion plane for hours; 9c17905 advertise unconditionally + 17dc3d0 model-granular cooldowns; idea reintroduced later",
+   "source": "memory-6"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Operator-origin compose slot reservation",
+   "where": "goal-host fcd667b then db21c5fa6c31",
+   "date": "2026-08-11",
+   "tried": "fcd667b operatorOrigin excluded 'operator'; substrate fixed it",
+   "outcome": "worked",
+   "evidence": "db21c5fa landed autonomously first try; verified operator dispatch claimed slot-1",
+   "source": "memory-6"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Unconditional bun install in compose verify",
+   "where": "dev-vessel f38f1a3, reverted b90d6c4; 086d5d0",
+   "tried": "Gate manifest installability inside worktree",
+   "outcome": "reverted",
+   "date": "2026-08-10",
+   "evidence": "pruned shared file: dep; every compose broke; read for hours as drafter hallucination; after revert gap landed 2156d21 in 9 min",
+   "source": "memory-7"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Lesson goals on the drain priority floor",
+   "where": "boredom fd5dff4 -> d34d295, 3edd14d",
+   "tried": "Floored the gap-goal:lesson candidates, then re-sourced them to recipe classes that name a file",
+   "outcome": "reverted",
+   "date": "2026-07-30",
+   "evidence": "Hollow goals won selection at 3x and beta-poisoned the scarce slots",
+   "source": "memory-8"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Compose kill switch COMPOSE_MAX_CONCURRENT=0",
+   "where": "compose-slots.ts:214; 99-emergency-compose-halt.conf",
+   "tried": "Emergency halt via a drop-in",
+   "outcome": "failed",
+   "date": "2026-08-12",
+   "evidence": "It halted the operator lane while autonomous work kept a slot. The earlier validation only tested one lane.",
+   "source": "memory-8"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Unconditional LLM retry wrapper",
+   "where": "goal-host 0b0e273 -> b013f30",
+   "tried": "Retry only on fast failures",
+   "outcome": "worked",
+   "date": "2026-07-25",
+   "evidence": "The unconditional retry had tripled slow calls into a retry storm",
+   "source": "memory-8"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Hand-staged pull-sync.sh wedged its own delivery",
+   "where": "node 2 super-repo clone; pull-sync 09-28 07:27",
+   "tried": "Operator staged the pull-sync fix locally before it landed on origin",
+   "outcome": "failed",
+   "date": "2026-09-28",
+   "evidence": "'ff-only pull FAILED \u2014 glue layer stays at 6f329e2e while origin is 31f15bafdf; local changes \u2026 scripts/substrate/substrate-pull-sync.sh state/learning-mode-state.json'. Cleared by 08:11.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Remove forged operator_approved block (d8c93b4)",
+   "where": "feature-compose.ts, gap-to-feature.ts, local-tools fs_edit",
+   "date": "2026-09-25",
+   "tried": "6.2 5cbc6d0 prompt, 6.1 60ad9cd replacement op (deletion ops impossible until 6.3 aaee500)",
+   "outcome": "worked",
+   "evidence": "0 occurrences of 'operator_approved: true' in live feature-compose.ts",
+   "source": "openspec-7"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Operator-injected conciseness cap in running goal-host",
+   "where": "goal-host index.ts:7554 (operator edit), reverted 09-22",
+   "date": "2026-09-22",
+   "tried": "Cap report to 8 classes / 2500 chars",
+   "outcome": "reverted",
+   "evidence": "Caused hollow completeness verdicts; removal flipped to counterfeit reach on a different goal hash",
+   "source": "reports-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Drift gate 0a0d59f, then base-sha fix 082f6ee, which broke freshness (#47, #51)",
+   "where": "development-vessel vessel-mitosis-cutover.ts / feature-compose staged_base_sha",
+   "tried": "0a0d59f refused on HEAD content sha != staged_base_sha. 082f6ee changed staged_base_sha to the pre-edit hash.",
+   "outcome": "reverted",
+   "date": "2026-09-25",
+   "evidence": "0a0d59f caused 14 COMMITTED DRIFT refusals and 1 landing in 3 h; the operator reverted it with 97f7cdf at 20:05:24, and the ledger had settled it 'held'. 082f6ee then failed 4 of 7 freshness checks because one field carried two meanings. It resurfaced as the lane deadlock in the memory index.",
+   "source": "reports-2"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "web_search added to UNIVERSAL_READ_TOOLS",
+   "where": "goal-host index.ts (7 attempts)",
+   "date": "2026-08-15",
+   "tried": "Give floor a web tool",
+   "outcome": "reverted",
+   "evidence": "Duplicate of an existing webSearchResult producer (law 3). It enabled a zero-tool fabricated eBay reach, and failed composes corrupted the shared clone",
+   "source": "reports-3"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Decision-rule fixes for Io chain",
+   "where": "goal-host corrector/classifier (08-16)",
+   "date": "2026-08-16",
+   "tried": "Host ban, 4xx classifier, inspection credit, endpoint-vs-filter advice, 600-char window, advisory corrector",
+   "outcome": "failed",
+   "evidence": "Operator ledger: 0/8-0/10 on rules vs 6/6 on evidence. The classifier kept a non-existent host, the ban was escapable after 2 refusals, and the credit made wandering free",
+   "source": "reports-3"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "ExecCondition key-guard repair for keyless LLM arms",
+   "where": "scripts/substrate/units (SETUP_UX_REMAP)",
+   "tried": "A bash '\"'\"' quote escape inside a systemd ExecCondition",
+   "outcome": "reverted",
+   "date": "2026-08-20",
+   "evidence": "systemd is not a shell: no arm ran on any host, and the clean skip was invisible. Replaced with [^=]*[A-Za-z0-9], verified through real systemd.",
+   "source": "reports-7"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Repair prompt steers to replace_lines the consumer can't read",
+   "where": "ff560216 2026-08-31T05:54 dev-vessel ee6312c -> 4841fb3",
+   "tried": "numbered gutter + prefer replace_lines; then consumer branch + logging",
+   "outcome": "reverted",
+   "date": "2026-08-31",
+   "evidence": "ee6312c net-negative silent no-op; 4841fb3 adds system-derived anchor and both-outcome logging",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Deterministic token oracle for pow/rev",
+   "where": "80ab9659 @ 2026-09-18T15:18-15:21",
+   "tried": "gap with dictated diff -> substrate 0d86170",
+   "outcome": "partial",
+   "evidence": "landed:true FAVORABLE but silently traded away mul's deterministic oracle; restored by operator 51b34a6",
+   "date": "2026-09-18",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "5.4 pre-patch staged base 082f6ee broke freshness check",
+   "where": "vessel-mitosis-cutover.ts",
+   "date": "2026-09-24T20:48Z",
+   "tried": "operator spec landed; substrate self-repair 96a1f57 at 21:52",
+   "outcome": "partial",
+   "evidence": "7 directed landings silently dropped as already_applied 20:48-21:50",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Repair B regex widen",
+   "where": "validation/findings/blocker-clearance-and-round2.md Part 6, round3 Part 2",
+   "tried": "edit goal naming verifyCountFilesReach",
+   "outcome": "failed",
+   "date": "2026-08-10",
+   "evidence": "c9faf50d landed in verifyRegistryInventoryReach with inverted polarity, reached:true; 7/7 registry-token goals regressed; not reverted",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Discovery register payload validation",
+   "where": "repos/discovery-vessel 7cc9da4 (09-19)",
+   "tried": "Reject malformed registrations, including an empty shapes array",
+   "outcome": "partial",
+   "date": "2026-09-19",
+   "evidence": "ribosome-vessel registers shapes:[] by design and has been rejected with 400 5,240 times since 09-25 13:11 (the journal start). It is absent from the fleet census. Shape routing is unaffected.",
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "problems": [
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes reverted within hours or days (satellite strip, index drop, batch=1, 300s timeout, 3d half-life, revert of a correct autonomous landing)",
+   "root_cause": "Acting on inference before a live control; root-credential pre-validation bypasses PERMISSIONS",
+   "first_seen": "2026-04-30",
+   "last_seen": "2026-09-28",
+   "recurrences": 7,
+   "source": "git-activityapi"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes to fleet-wide deployment files regress other hosts or mechanisms (DB OOM, arms disabled, deploy loop wedged, placement gate disabled)",
+   "root_cause": "Changes are validated on one host or against their own motivating check. Shared unit and env files deploy to heterogeneous hosts via pull-sync with no cross-host or cross-mechanism check",
+   "first_seen": "2026-08-04",
+   "last_seen": "2026-09-26",
+   "recurrences": 9,
+   "source": "git-deployment"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes reverted the same day or oscillating; four commits retract earlier claimed mechanisms",
+   "first_seen": "2026-05-26",
+   "last_seen": "2026-08-11",
+   "recurrences": 10,
+   "root_cause": "Fixes are proclaimed without a pre-registered falsifier measured on the consuming layer.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes reverted or reversed within days; operator reverted a correct autonomous fix and re-derived it 14 days later; discovery validation broke ribosome registration",
+   "first_seen": "2026-07-17",
+   "last_seen": "2026-09-19",
+   "recurrences": 7,
+   "root_cause": "a fix at one junction without grepping sibling call sites and consumers (ribosome shapes:[]); reverts without a recorded reason",
+   "source": "git-small"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "operator/directed changes reverted the same day or flip-flopped (auto-promote, compose-topology, scenario_id)",
+   "first_seen": "2026-05-27",
+   "last_seen": "2026-06-22",
+   "recurrences": 4,
+   "root_cause": "authority changes made from session chat without verifiable authorization; changes not falsifier-gated",
+   "source": "git-super-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes wedge deploy, OOM the DB, break every arm, revert parallel work",
+   "root_cause": "The same local-once validation as autonomous work; measured on a different machine or tree than the one deployed",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-26",
+   "recurrences": 14,
+   "source": "git-super-2"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "fixes at one call site of a multi-site class; next site filed as new gap",
+   "first_seen": "2026-09-20",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "root_cause": "sibling call sites not grepped; one-op design limits edits per landing",
+   "source": "live-gaps"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "ribosome-vessel cannot be discovered: register 400 every 60 s",
+   "root_cause": "7cc9da4 requires non-empty shapes; consumer vessels register shapes:[]",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 4560,
+   "source": "live-resolvers"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes regressed: unconditional install pruned node_modules; drain 80->240s latent; escalation suppression removed fallback; wrong second counter; non-idempotent anchor replacement; resolve-URL producer fix broke consumers",
+   "root_cause": "Fix one site/branch without enumerating siblings or consumers; hand-deploys bypass the lane's own checks",
+   "first_seen": "2026-08-05",
+   "last_seen": "2026-09-22",
+   "recurrences": 6,
+   "source": "memory-10"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes cause outages: 300s timeout, census fix drain storm, surreal restart, C6 mis-route",
+   "first_seen": "2026-07-16",
+   "last_seen": "2026-08-03",
+   "recurrences": 5,
+   "root_cause": "Spoke-safe changes evaluated without the hub's data size; a fix's regression rate is \u226545%",
+   "source": "memory-2"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes and guards refuse valid work, go inert, or cause outages (containment gate, prose hole, LRU cache, destructive pool-merge gap text, placeholder key, docker cp)",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-16",
+   "recurrences": 10,
+   "root_cause": "Guards encode the last symptom; fixes shipped before a control on live data",
+   "source": "memory-4"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes break shared state, over-correct metrics, or arrive inert",
+   "root_cause": "The gate was evaluated against its check but not against the resource it shares. Fixes verified by typecheck and tests, not by running against the real tree. Diagnoses drawn from single probes",
+   "first_seen": "2026-07-28",
+   "last_seen": "2026-08-17",
+   "recurrences": 8,
+   "source": "memory-7"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes regressed or inverted behaviour: drain floor, kill switch, retry amplification, blanket clamp, prune, restarts killing measurements.",
+   "root_cause": "Validation covered only the path being fixed. Sibling guards and other lanes were not tested.",
+   "first_seen": "2026-07-22",
+   "last_seen": "2026-09-26",
+   "recurrences": 10,
+   "source": "memory-8"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes regressed or duplicated (a revert marker amended away, a phantom self-match literal, a vacuous verdict source, a duplicate route, a watchdog duplicating pull-sync, overwriting the substrate's better fix)",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-13",
+   "recurrences": 9,
+   "root_cause": "Controls run after shipping; greps truncated; no re-read of the file at dispatch time",
+   "source": "memory-9"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Spec fix 5.4 (pre-patch base) broke freshness: 7 false already_applied no-ops",
+   "root_cause": "one field with two readers holding two meanings",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-24",
+   "recurrences": 1,
+   "source": "openspec-7"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "A drafter wrote code forcing operator_approved:true (d8c93b4)",
+   "root_cause": "the prompt told the drafter to set operator_approved itself",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-25",
+   "recurrences": 1,
+   "source": "openspec-7"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator interventions cause harm or fail silently (cap injected into running code, batch=1 degrading hub, unmask wedging convergence, anchors in wrong clause/function, metadata writes nothing reads)",
+   "root_cause": "Operator reasons from the layer below the deciding one; experiments not bounded in advance",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-23",
+   "recurrences": 7,
+   "source": "reports-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator/directed fixes composed wrongly with existing mechanisms: 3h shell outage, fabrication path, keep-a-nonexistent-host, escapable ban, free wandering",
+   "root_cause": "Causal stories acted on before executing the mechanism; decision rules generalised past their evidence",
+   "first_seen": "2026-08-15",
+   "last_seen": "2026-08-16",
+   "recurrences": 8,
+   "source": "reports-3"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes regress or overshoot (459bb09 constant grade, 18c1490 88% to 100% miss, README round-1 fixes introduced 6 defects, containment rules collapsed supply 250 to 2-5, operator restore guard, 50830bec reset learning-mode state).",
+   "first_seen": "2026-08-21",
+   "last_seen": "2026-09-29",
+   "recurrences": 9,
+   "root_cause": "Fixes verified on the default branch or by the existence of a field rather than its effect; several changes at once; no pre-registered effect on supply.",
+   "source": "reports-6"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes regress: ExecCondition escape disabled all arms; models role on unrendered names; stderr grep; substrate-config never in the image; containment collapsed supply; watchdog fought the hold 55 times",
+   "root_cause": "Operator changes are also validated locally, at the wrong layer; 28 category-F cases",
+   "first_seen": "2026-08-20",
+   "last_seen": "2026-09-28",
+   "recurrences": 28,
+   "source": "reports-7"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator instruments lie toward the desired answer (grep -c || echo 0 twice, runner_up double count, unauth tenant query, dead watcher ORDER BY)",
+   "first_seen": "2026-08-27",
+   "last_seen": "2026-09-04",
+   "recurrences": 13,
+   "root_cause": "checks that cannot distinguish no from not-yet; same pathology as the system's",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes and containment rules regress the system",
+   "first_seen": "2026-09-23",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "root_cause": "Inference over measurement; history not read before acting; per-instance patching",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "directed edit lands in wrong function with reached:true; rollback deletes existing file",
+   "first_seen": "2026-07-03",
+   "last_seen": "2026-08-10",
+   "recurrences": 2,
+   "root_cause": "no check that patch touches the named symbol; rollback treats overwrite as create",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Ribosome register gets 400 every minute. The vessel is missing from the discovery census.",
+   "root_cause": "7cc9da4 requires non-empty shapes, while ribosome registers shapes:[] by design",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 5240,
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "claims": [
+  {
+   "key": "directed-overshoot",
+   "claimed_at": "2026-09-24",
+   "claim": "5.4 falsifier MET 23:54Z; staged_base_sha now the pre-patch hash",
+   "where": "live-self-view/tasks.md",
+   "later": "regression the same evening: 7 false already_applied no-ops; self-repaired by substrate 96a1f57",
+   "source": "openspec-7"
+  },
+  {
+   "key": "directed-overshoot",
+   "claimed_at": "2026-08-31T05:33",
+   "claim": "ee6312c (numbered gutter, prefer replace_lines) fixes repair",
+   "where": "ff560216",
+   "later": "05:54 net-negative: the consumer reads only old_string, so the edit is a silent no-op; replaced by 4841fb3",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "claimed_at": "2026-09-04T08:30",
+   "claim": "Caught a defect in my in-flight fix before it landed",
+   "where": "3637e240",
+   "later": "09:08: e96015c had already landed and deployed as a permanent off-switch; 'predicting is not preventing'",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "claimed_at": "2026-09-18",
+   "claim": "Landed and pushed 0d86170, tokenTruth present",
+   "where": "80ab9659 @ 2026-09-18T15:18",
+   "later": "15:19: silently traded away mul's deterministic oracle; operator restored it (51b34a6)",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "directed-overshoot",
+   "claimed_at": "2026-09-24T21:52Z",
+   "claim": "5.4 pre-patch base 082f6ee landed; substrate repaired regression itself (96a1f57)",
+   "where": "7e2b03b2 2026-09-24T23:43Z",
+   "later": "082f6ee (operator spec) silently dropped 7 directed landings 20:48-21:50",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "directed-overshoot",
+   "claimed_at": "2026-09-28T01:32Z",
+   "claim": "Containment rules (class1/class2, measured field, class2-only) keep autonomy safe",
+   "where": "ac8b0aad 2026-09-28T05:43Z",
+   "later": "Supply collapsed ~250->17->2 eligible; 'The supply collapse, which is mine'; relaxed 06:11 then re-tightened 23:30 to 7 gaps",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "directed-overshoot",
+   "claimed_at": "2026-08-10",
+   "claim": "c9faf50d makes 'src/foo' goals claim",
+   "where": "validation/findings/blocker-clearance-and-round2.md Part 6",
+   "later": "round3: example wrong; the real blast radius is 7/7 registry-token count goals; gap never filed",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "directed-overshoot",
+   "claimed_at": "2026-09-19",
+   "claim": "Discovery register payloads validated (7cc9da4)",
+   "where": "repos/discovery-vessel/src/index.ts",
+   "later": "ribosome rejected with 400 every minute since (5,240 in the journal)",
+   "source": "vessel-docs-tooling"
+  }
+ ]
+}

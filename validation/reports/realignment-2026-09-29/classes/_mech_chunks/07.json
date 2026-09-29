@@ -1,0 +1,849 @@
+{
+ "area": "other",
+ "items": [
+  {
+   "name": "LLM spill chain",
+   "location": "dd13b69, 6815f82e, cc192274, 2e10fde9, 46b3304d/af8a79e2",
+   "purpose": "Any funded LLM in the network suffices",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-31 12/12 spill; storm window clean",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "posterior CRDT vpm_partition",
+   "location": "design 2026-07-14 (project-trace-sync-lockfree-priors)",
+   "purpose": "Lock-free cross-instance priors",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Held; never built.",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "env_gate_scan",
+   "location": "detector",
+   "purpose": "Find env-gated behaviour",
+   "status": "dormant",
+   "general": false,
+   "evidence": "8 landed Jul-Aug",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "detector-yield registry",
+   "location": "detector-yield-registry(-tick).ts",
+   "purpose": "Retire detectors by yield",
+   "status": "live-used",
+   "general": true,
+   "evidence": "41 execs",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "Unregistered dev resolvers",
+   "location": "dev behavioral-verification.ts, causal-adjudication.ts, region-probe.ts, gap-to-feature.ts, doc-drift-fix.ts",
+   "purpose": "Verification and adjudication",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "0 resolver_id traces in 30 days; not registered",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "launch manifest + profiles",
+   "location": "docker-compose.yml, gen-env.sh, entrypoint.sh, apply-inventory.sh, deploy.sh",
+   "purpose": "One launch path; role/profile derivation",
+   "status": "live-used",
+   "general": true,
+   "evidence": "d8fed96f/e375d716 09-23; host working-tree Makefile regresses it (uncommitted)",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "resolutionProposal/Action/Refused channel",
+   "location": "docs only",
+   "purpose": "resolution channel",
+   "status": "fossil",
+   "general": true,
+   "evidence": "0 source files (09-17)",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "docs-align family",
+   "location": "docs-align-*, doc-*, docs-decision-* (8 resolvers)",
+   "purpose": "Docs vs reality",
+   "status": "dormant",
+   "general": false,
+   "evidence": "0 execs in the retained window",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "launch manifest + role derivation + image readiness",
+   "location": "e375d716, d8fed96f, 76d548d1",
+   "purpose": "One install contract; image reports readiness",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Install acceptance CI fa7e9189; cold Docker/Podman served 831dbf69",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "pull_cutover resolver",
+   "location": "edb4ba3",
+   "purpose": "Re-sync a vessel runtime to origin/dev (the operator's deploy step)",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "Output-shape mismatch pull_cutover vs pullCutoverReport",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "state_signature contextual key",
+   "location": "execution rows",
+   "purpose": "contextual Thompson",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 of 96,747 rows (09-16)",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "producer_count scan",
+   "location": "existing scan 4d3381c",
+   "purpose": "Per-gap measurable check for capability gaps",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "No gaps use it after demand filer",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "jev typed decision arm",
+   "location": "external /api/alpha/decisions via bounded_shell / escalation-disposition-apply (uncommitted)",
+   "purpose": "Typed junction decisions with regex floor",
+   "status": "dormant",
+   "general": true,
+   "evidence": "8/8, median 207ms (09-19); not wired",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "Class1 arming guard",
+   "location": "falsify classifier 48fb8b6",
+   "purpose": "Refuse born-closable literal gaps",
+   "status": "live-used",
+   "general": false,
+   "evidence": "26/26 tests; fixed fail-open",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "semantic gate / adversarial refuters",
+   "location": "feature-compose",
+   "purpose": "judge patch addresses gap",
+   "status": "live-used",
+   "general": true,
+   "evidence": "PASSED fail-open uninterpretable (09-10); fails closed without gap context (09-16); self-retracted refutation counted (08-28)",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "[fc-exact] verbatim goal-supplied edits",
+   "location": "feature-compose (value-per-cost 2.7)",
+   "purpose": "apply pre-validated EDIT blocks with no LLM plan",
+   "status": "live-used",
+   "general": true,
+   "evidence": "96 applications on node2 in 72h",
+   "source": "openspec-7",
+   "mentions": 1,
+   "sources": [
+    "openspec-7"
+   ]
+  },
+  {
+   "name": "compose/cutover execution traces",
+   "location": "feature-compose 4afd4c1; vessel-mitosis-cutover e8e3fec softRefuse",
+   "purpose": "Make self-development queryable and gradeable",
+   "status": "live-used",
+   "general": true,
+   "evidence": "route gated|escalation, linked_to_gap fields; op_count==ops_applied (requested count missing)",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "Anchor-provenance gate (line-number strip)",
+   "location": "feature-compose assertAnchorInWindow 2f2ba0f",
+   "purpose": "Keep verified anchors",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Multi-line op passed without re-draft",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "architecture-conformance advisory",
+   "location": "feature-compose detectArchitectureViolation fb9b1e1",
+   "purpose": "Flag law-1 env branches and inline LLM calls",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Advisory only; behaviour never reproduced",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "Semantic/dead-code/dead-store/vacuous gates",
+   "location": "feature-compose gates",
+   "purpose": "Refuse hollow drafts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "False positives on log demotion (fixed ed313f2), timer scripts, set/clear; caught hollow helper and wrong-file drafts",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "consultPrinciples architectural grounding",
+   "location": "feature-compose.ts",
+   "purpose": "Inject architecture principles into drafts.",
+   "status": "broken",
+   "general": true,
+   "evidence": "Loopback CONCEPT_DB_ENDPOINT, HTTP 000, returns empty; shape-name mismatch with seeder (08-04)",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "fc-coverage",
+   "location": "feature-compose.ts",
+   "purpose": "no auto-land without a test",
+   "status": "live-used",
+   "general": true,
+   "evidence": "211287b6 parked correct fix (08-26)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "semantic gate (adversarial refuters)",
+   "location": "feature-compose.ts",
+   "purpose": "LLM judgement of goal satisfaction",
+   "status": "live-used",
+   "general": true,
+   "evidence": "refused correct fix 2/2; passed inert commits",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "targetFileOnDisk",
+   "location": "feature-compose.ts (20a668b)",
+   "purpose": "Resolve target file from push clone first",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Built after 8 call-site fixes",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "detectArchitectureViolation",
+   "location": "feature-compose.ts (fb9b1e1, 33381f1)",
+   "purpose": "Flag env-gating, inline LLM and external URLs in added lines",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Advisory only; INLINE_LLM branch can never hard-fail (08-03)",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "anchor_index enumerated anchor choice",
+   "location": "feature-compose.ts 4880-4891",
+   "purpose": "model picks anchors from a verified list instead of transcribing",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "only in the re-derivation block; primary prompt still free text",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "resumable/parked landings",
+   "location": "feature-compose.ts 873fd81, 6ab8271",
+   "purpose": "Resume verified patches refused at cutover",
+   "status": "live-used",
+   "general": true,
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "typecheck repair loop",
+   "location": "feature-compose.ts MAX_REPAIR=4",
+   "purpose": "Surgically repair failing typecheck",
+   "status": "live-used",
+   "general": true,
+   "evidence": "~2 applied/24h vs 67 failures; outcomes lit 09-12; dies on drafter output quality",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "semantic cutover gate + deterministic floors",
+   "location": "feature-compose.ts SEMANTIC_CUTOVER_GATE (detectZeroBehaviorDelta de0a3b0, detectEffectlessHeaderOnlyDiff 33b7d9e, hollow-stub 1b5e7c9, edit-provenance 6060ab7)",
+   "purpose": "Refuse inert or off-target diffs",
+   "status": "live-used",
+   "general": true,
+   "evidence": "On measured cases its verdicts were anti-correlated with effect (09-04). vacuousEditReason is scoped to the snippet (09-06).",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "compose report preservation sibling",
+   "location": "feature-compose.ts ce10c8b",
+   "purpose": "retry cannot overwrite a FAVORABLE landed report",
+   "status": "live-used",
+   "general": true,
+   "evidence": "7/7 fixtures; fired naturally 09-04",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "Exact-edit verbatim path + goal-supplied anchors",
+   "location": "feature-compose.ts f70160f, c10e74a",
+   "purpose": "Apply EDIT blocks without LLM plan",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Used only by operator-authored goals; law-13 concern",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "feature_compose region-scoped grounding",
+   "location": "feature-compose.ts focusedSlice/regionCandidatesFromText 11f10af",
+   "purpose": "Window the drafter's grounding on the edit site.",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Was gated behind an English incantation until 08-10",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "semantic gate / adversarial refuter panel",
+   "location": "feature-compose.ts semantic judge",
+   "purpose": "Judge whether patch addresses gap",
+   "status": "live-used",
+   "general": true,
+   "evidence": "4-5/5 sampled rejections sound (09-12); confabulated approval then flipped (08-11); fooled by vocabulary (3f861b6)",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "LLM-free verbatim edit floor",
+   "location": "feature-compose.ts synthesizeVerbatimEditOps (27b944a)",
+   "purpose": "deterministic edit ops",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "defeated again by edit-intent route (09-16 index)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "appendComposeLesson / failure_lessons",
+   "location": "feature-compose.ts ~3180",
+   "purpose": "Feed failures to next draft",
+   "status": "live-used",
+   "general": true,
+   "evidence": "force-reopens closed gaps and mints recommits for landed parents",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "fc-coverage no-test warning",
+   "location": "feature-compose.ts ~3610",
+   "purpose": "Warn that FAVORABLE means reviewed, not executed",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "09-02 nothing gates on it; 08-28 misreports suffixed test files",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "Target-touched floor",
+   "location": "feature-compose.ts ~L2247 (9caa43c)",
+   "purpose": "Refuse FAVORABLE when the intended file is untouched",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-29 stops package.json-only landings",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "narrowing/recommit minter",
+   "location": "feature-compose.ts, gap-to-feature.ts",
+   "purpose": "Spawn child gaps on compose failure",
+   "status": "live-used",
+   "general": false,
+   "evidence": "130 narrowed/recommit landings; churned 7 times",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "parked-landings resume",
+   "location": "feature-compose.ts:114-133; gap-to-feature.ts:5257; /workspace/parked-landings",
+   "purpose": "Persist verified patches across cutover failures",
+   "status": "live-used",
+   "general": true,
+   "evidence": "47 parks all verified; 41 gaps still open; 25 on unauthorable human-surface proxy.ts",
+   "source": "gap-history",
+   "mentions": 1,
+   "sources": [
+    "gap-history"
+   ]
+  },
+  {
+   "name": "synthesizeVerbatimEditOps LLM-free floor",
+   "location": "feature-compose.ts:1263",
+   "purpose": "deterministic edit application",
+   "status": "dormant",
+   "general": false,
+   "evidence": "0 firings as of 08-05 (3-fence mismatch)",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "deterministic verbatim edit floor",
+   "location": "feature-compose.ts:1945 synthesizeVerbatimEditOps",
+   "purpose": "Bypass LLM planner for explicit old->new edits",
+   "status": "live-used",
+   "general": true,
+   "evidence": "4458130 landed via it; goal-host edit-intent route transforms spec so it never fires (gap-mu3f0s5a, 09-16); direct resolve_impulse works",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "fail-open judge path",
+   "location": "feature-compose.ts:2068",
+   "purpose": "Continue when the judge is unreachable",
+   "status": "broken",
+   "general": false,
+   "evidence": "Approved 68fe034 unverified",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "consultPrinciples",
+   "location": "feature-compose.ts:2544-2650",
+   "purpose": "Inject architecture principles into drafts",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Unfiltered after 08-09; local endpoint fails on node 2",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "compose-lesson usage credit",
+   "location": "feature-compose.ts:3150-3175",
+   "purpose": "Credit or blame the lessons injected into the drafter",
+   "status": "unknown",
+   "general": false,
+   "evidence": "Fail-only POST to /usage/{id}/fail with swallowed errors. The array-vs-envelope parse is possibly hollow.",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "lesson failure write-back",
+   "location": "feature-compose.ts:3151-3170",
+   "purpose": "Grade lessons on failure",
+   "status": "broken",
+   "general": false,
+   "evidence": "Nonexistent route /usage/:id/fail; errors swallowed",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "TARGET-HAS-NO-TEST-FILE",
+   "location": "feature-compose.ts:3438",
+   "purpose": "Flag changes no gate executes",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "console.warn only, so inert commits land FAVORABLE",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "enumerated anchor choice (anchor_index)",
+   "location": "feature-compose.ts:5096/5104",
+   "purpose": "Let the model choose from verified-unique anchors so it cannot invent one",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Used only in re-derivation. Primary drafting still asks for verbatim anchors, and 28.2% of attempts die on anchors.",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "codebase-as-vessel npm:/make: introspection and external resolver vesselization",
+   "location": "foundation only",
+   "purpose": "Discover local resolvers / vesselize endpoints",
+   "status": "fossil",
+   "general": true,
+   "evidence": "0 code hits",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "failing-test lane",
+   "location": "gap ids failing-test-<vessel>-tests-*",
+   "purpose": "Repair failing tests",
+   "status": "live-used",
+   "general": true,
+   "evidence": "af2c737 lowered a documented timeout to match a stale test (reverted d4eee29); e059a98 reverted in 4 minutes",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "pwt-* post-write mitosis",
+   "location": "gap ids pwt-<vessel>-<file>",
+   "purpose": "Post-write repair/revert",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Reverted 1bf4fee; oscillated concept-db /health x3",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "Aggregate unaccounted-landings-<repo> gaps",
+   "location": "gap store",
+   "purpose": "Replace per-commit gap flooding",
+   "status": "live-used",
+   "general": true,
+   "evidence": "114 superseded, 14 open; the close predicate has closed none",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "remedy-livelock gaps",
+   "location": "gap store",
+   "purpose": "Break a redispatch livelock",
+   "status": "broken",
+   "general": false,
+   "evidence": "Livelock peaked 09-28 after they were filed 09-25",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "chronically-stuck narrowed child",
+   "location": "gap-to-feature",
+   "purpose": "Narrow stuck gaps",
+   "status": "duplicate",
+   "general": true,
+   "evidence": "produces verbatim parent copies 09-22/23",
+   "duplicates_of": "parent gap",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "requeueAfterNonAttempt",
+   "location": "gap-to-feature",
+   "purpose": "requeue on capacity non-attempt",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "three call sites (08-31)",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "solicitedHumanGaps throttle",
+   "location": "gap-to-feature",
+   "purpose": "ask once per gap",
+   "status": "broken",
+   "general": false,
+   "evidence": "in-memory; cleared ~15x/day",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "verifiabilityCredit selection term",
+   "location": "gap-to-feature (4e5a603)",
+   "purpose": "Prefer gaps that can be verified closed",
+   "status": "live-used",
+   "general": false,
+   "evidence": "class1 share 0->43%",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "Narrowed-child field denylist + lesson requirement",
+   "location": "gap-to-feature a57dc30",
+   "purpose": "Stop verbatim duplicate children and inherited closure state",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Probes A/B 09-23; recommit minter still leaks recommit-recommit chains",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "Family sampler + variant minting at remedy dispatch",
+   "location": "gap-to-feature a8f457a, c598f1d; trace-store-health-observer 2bccc64",
+   "purpose": "Thompson among activity variants",
+   "status": "live-used",
+   "general": false,
+   "evidence": "family sampled: 4 member(s) 12:23:42 09-24",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "seal escape loop",
+   "location": "gap-to-feature hopeless() -> uiFeedback_write -> solicitation_outcome_scan -> escalation_disposition_apply",
+   "purpose": "Human verb unseals a sealed gap with bounded exemption",
+   "status": "broken",
+   "general": true,
+   "evidence": "Built 08-28; 09-14 175 asks 3 answered; 09-22 escalations pinned to replaced :8270, 248 unanswered",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "Hopeless seal plus :8270 escalation",
+   "location": "gap-to-feature hopeless(), resolveUiWritePassthrough",
+   "purpose": "route stuck gaps to humans",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "248 asks, 0 answers",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  },
+  {
+   "name": "Containment readers (autonomyScope, spendEnvelope)",
+   "location": "gap-to-feature.ts",
+   "purpose": "bound autonomous work",
+   "status": "live-used",
+   "general": true,
+   "evidence": "fail open when holding node missing from discovery",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  },
+  {
+   "name": "admitActionableGaps",
+   "location": "gap-to-feature.ts (76f44ca)",
+   "purpose": "Admit only proposal-backed or cited-file gaps",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-30 loop unstarved",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "revert-aware history check (shaWasRevertedInAnyClone)",
+   "location": "gap-to-feature.ts (77cf692, 271228e)",
+   "purpose": "A reverted land is not a land",
+   "status": "live-used",
+   "general": true,
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "sweepPendingLandVerifications",
+   "location": "gap-to-feature.ts (ff04a17 07-30)",
+   "purpose": "Close deferred self-cutover landings",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Memory 09-26: the pending_outcome_verification clear does not stick.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "autonomous_pick lease gate",
+   "location": "gap-to-feature.ts 128f51f (maintenanceLease shape)",
+   "purpose": "Stop in-process autonomous picks during windows",
+   "status": "live-used",
+   "general": true,
+   "evidence": "21-34 skips per graded window; not in-flight composes",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  }
+ ]
+}

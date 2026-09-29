@@ -1,0 +1,885 @@
+{
+ "source": "git-small",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/git-small.md",
+ "coverage": "Read the full git log of all 16 small repos on the host (546 commits). Read the bodies and diffs of every revert, every operator \"fix\" commit, and every autonomous commit in llm-resolver, local-tools, stateful-ui, light-dispatch, ribosome, libp2p, metric-collector and analysis. Host submodules lag the live clones: llm-resolver +6, local-tools +9, stateful-ui +2. I read those 17 live-only commits in substrate-live, for 131 autonomous commits in total. Journals: substrate-live only, from the 09-25 horizon (ribosome, light-dispatch, discovery, register failures). Unit active-state checked on both nodes; compose2-live journals not inspected. SurrealDB queried once, read-only (515 learned- activity rows). HTTP probes: template listing with the Bearer vs ApiKey scheme (401 vs 200), and a nonsense-route control (404). One POST to /v2/activities/execution-traces/reach with a nonexistent execution id, to prove the route exists (200); it touched no real row. conversation-vessel, user-vessel, metabob-cloud-dashboard, react-renderer and terminal were classified by log, gitignore and deployment status only, not read in depth. git log -G was used for the shell-timeout identifiers and the impulse.*pointer envelope unwrapping; duplicate_policy was checked with grep.",
+ "attempts": [
+  {
+   "key": "hollow-landing",
+   "title": "String.prototype.replace 'restore' injected into webSearch",
+   "where": "local-tools-vessel 85b4c01 (live-only, 09-28)",
+   "tried": "recommit child of the $-pattern fs_edit gap added 19 lines in the webSearch handler to undo a 'prior global replace override'",
+   "outcome": "failed",
+   "date": "2026-09-28",
+   "evidence": "fleet grep finds no String.prototype.replace override; the real fix was already landed in 6b0d86a on 09-26"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "resolved.error assigned then overwritten",
+   "where": "light-dispatch-vessel ad86ffc (08-31)",
+   "tried": "catch sets resolved.error = err.message",
+   "outcome": "failed",
+   "date": "2026-08-31",
+   "evidence": "the next statement unconditionally reassigns resolved.error when !okJson"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "gap-id suffix written into a reason string",
+   "where": "light-dispatch-vessel e4b20b1 (08-29)",
+   "tried": "prefixed the retirement reason with 'semantic_reject:'",
+   "outcome": "failed",
+   "date": "2026-08-29",
+   "evidence": "only change is a literal string prefix equal to the gap id suffix; no behavior change"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "comment-only and cosmetic landings",
+   "where": "local-tools 286a318 (06-17), 348b79e (08-08)",
+   "tried": "header comments; const extraction of a 30000 literal",
+   "outcome": "failed",
+   "evidence": "0 code lines; behavior identical"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "route-edit-e05aabcc landed twice as a duplicate Map key",
+   "where": "llm-resolver 9ac885c, 1a83502 (08-28); re-created by 7d7bf0a (09-26)",
+   "tried": "add a llmCompletion resolver alias",
+   "outcome": "failed",
+   "evidence": "live src/index.ts:1528-1529 has a duplicate llmCompletion entry"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "missing-key gap landed 3x",
+   "where": "llm-resolver de3223d, 8e952f7, 0f9a160 (09-11/12), f4bae3c (09-15)",
+   "tried": "reportMissingKey, then duplicate warn+report lines, then a re-report loop, then removal of continue",
+   "outcome": "reverted",
+   "date": "2026-09-12",
+   "evidence": "duplicate lines; the re-report loop flooded the gap store; operator fixed it in 789853a"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "stateful-ui panel overwrite: 5 landings on 7 lines",
+   "where": "stateful-ui bfccbaf, 4670c72, 1b447c6 (09-20), 48493bb (09-23), b9b5d8d (09-28)",
+   "tried": "fixed /api/panels only, then three guard re-shapes (hasOwn, null checks, typeof) on /resolve, then an existing-merge",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "only b9b5d8d reads existing; the middle three left the defaults that overwrite panels; sibling-call-site miss in landing 1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "unguarded choices[0] fixed twice",
+   "where": "llm-resolver 873b597, ae07375 (09-15)",
+   "tried": "throw on empty choices, then a guarded return, stacked",
+   "outcome": "superseded",
+   "evidence": "live code has throw + return + break on the same condition"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "hardcoded 30s AbortSignal introduced in sh()",
+   "where": "local-tools 6fb9282 (07-22 SA)",
+   "tried": "bound shell spawn",
+   "outcome": "failed",
+   "date": "2026-07-22",
+   "evidence": "origin of the 30s cap; e4d604c (08-29) 'every code-class compose failed verification'; post-land suite dead 08-31\u219209-28"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "second shell spawn site boundedShellResolver",
+   "where": "local-tools c709850 (07-22 SA)",
+   "tried": "new bounded_shell resolver bypassing sh()",
+   "outcome": "partial",
+   "evidence": "every later fix duplicated: 44c2b21 governor, fa603a0+9eb4808 execution_id, 11636e6 cwd"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "fs_edit rejects empty new_string",
+   "where": "local-tools b34e37a (09-24) \u2192 repaired by aaee500 (09-25)",
+   "tried": "!new_string guard",
+   "outcome": "reverted",
+   "date": "2026-09-24",
+   "evidence": "the lane could not express deletions; repaired autonomously in 24h via its own gap"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "bounded-shell timeout rewrites auto-reverted",
+   "where": "local-tools 925d160/7d11ded \u2192 1a796aa/b646ee2 (07-22)",
+   "tried": "AbortController + hardcoded 30s",
+   "outcome": "reverted",
+   "evidence": "the only substrate-authored reverts in the shard"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "discovery register validation rejects ribosome shapes:[]",
+   "where": "discovery-vessel 7cc9da4 (09-19, operator-landed)",
+   "tried": "type/emptiness/size validation of /register for security-audit tests",
+   "outcome": "partial",
+   "date": "2026-09-19",
+   "evidence": "ribosome 'register failed: 400' 5,208 times in 7 days; discovery ~1,499 /register 400 per day"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "operator reverted the correct autonomous 30s\u2192300s shell fix",
+   "where": "local-tools e1ffa50 \u2192 a699887 (08-15); re-derived as e4d604c (08-29)",
+   "tried": "raise the shell kill timeout",
+   "outcome": "reverted",
+   "date": "2026-08-15",
+   "evidence": "revert recorded no reason; 14 days of verify killed; 30s default later killed the post-land suite for a month"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "ribosome reach tag-vs-column flip-flop",
+   "where": "ribosome 86aebdf \u2192 5a374df (09-02)",
+   "tried": "trust the reached:true tag over the column",
+   "outcome": "reverted",
+   "date": "2026-09-02",
+   "evidence": "the write path deliberately downgrades execution_error; real defect = two reach writers with different rules, left unfixed"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "llm_completion advertisement policy flip-flop",
+   "where": "llm-resolver 9c17905 (07-17) vs 1f14a69 (07-19) vs 3ea2136 (08-18)",
+   "tried": "never un-advertise, then quota-gated de-advertise, then refusal closes the gate",
+   "outcome": "partial",
+   "evidence": "opposite policies two days apart"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "last-resort guard blackholed a live plane",
+   "where": "llm-resolver 272edbd (08-09) \u2192 04b2e8f (08-10)",
+   "tried": "refuse to dial an unwilling default",
+   "outcome": "superseded",
+   "evidence": "refused while a pinned gemini model answered first try"
+  },
+  {
+   "key": "false-verification",
+   "title": "mirrored tests that could not fail",
+   "where": "local-tools 44375c6\u21927a38f37, analysis 5a890c3\u2192afb6955 (08-09)",
+   "tried": "test copies of mapPath/resolveFilePath",
+   "outcome": "reverted",
+   "date": "2026-08-09",
+   "evidence": "sabotaged source still 0 fail; used as an acceptance probe, which led to a wrong retraction"
+  },
+  {
+   "key": "false-verification",
+   "title": "typecheck error_count always 0",
+   "where": "local-tools 31a102e (06-23)",
+   "tried": "scan stdout as well as stderr",
+   "outcome": "worked",
+   "evidence": "tsc writes to stdout; typecheck-broken edits had landed via cutover"
+  },
+  {
+   "key": "false-verification",
+   "title": "ghost-template sweep to a nonexistent route",
+   "where": "light-dispatch 5e75c6e/6d036d8/ed6458b (07-13 SA) \u2192 7f3a81f (08-04)",
+   "tried": "deprecate 2 hardcoded ghost ids at startup",
+   "outcome": "failed",
+   "date": "2026-07-13",
+   "evidence": "POST /v2/activityTemplates/{id}/deprecate unrouted; status logged, never checked; 3 weeks of false success"
+  },
+  {
+   "key": "auth-credential-plumbing",
+   "title": "retire-sweep lists templates with the Bearer scheme",
+   "where": "light-dispatch src/index.ts:165 (retireNeverSucceededTemplates)",
+   "tried": "hourly paginated listing",
+   "outcome": "failed",
+   "evidence": "live probe Bearer\u2192401, ApiKey\u2192200; 'covered 0/0 templates \u2026 no never-succeeded arms' \u00d789 since \u226509-25; candidate cause identity 0a89ebc (08-25) PLAUSIBLE"
+  },
+  {
+   "key": "auth-credential-plumbing",
+   "title": "discovery\u2194identity validation churn",
+   "where": "discovery fb57b02 (05-03), 5a0abb3 (05-05), db639cf (07-09), 7978682+3f0edc9 (08-19)",
+   "tried": "route change, timeout, cache+grace, reason-bearing 401s",
+   "outcome": "partial",
+   "evidence": "1,215 spurious 401s in 30 min (07-09); 169 in 37 min (08-19); still ~32 identity-rejected 401s per day"
+  },
+  {
+   "key": "auth-credential-plumbing",
+   "title": "SurrealDB 3.x bind/function flip-flop",
+   "where": "identity ab82e23, 1fad1f3 (04-29); 8eae04e, c3aca84, 4047cc8 (05-21)",
+   "tried": "type::thing\u2192type::record\u2192direct bind\u2192<string> cast",
+   "outcome": "worked",
+   "evidence": "5 commits on one bind"
+  },
+  {
+   "key": "auth-credential-plumbing",
+   "title": "unauthenticated JWT mint",
+   "where": "identity 352deab (08-04), a9db360/0a89ebc (08-25), bcbcc18 (08-26)",
+   "tried": "authenticate the mint, SEC-5 role gate, admin recovery path",
+   "outcome": "worked",
+   "evidence": "any caller could mint an admin JWT for any org; SEC-5 then locked the substrate out of its own admin key"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "revoked key listed as active: 4 fixes",
+   "where": "user-vessel 4f71df7, dashboard e092dd4+654aef1 (05-28), identity c8bf5d9 (08-22)",
+   "tried": "three reader-side filters, then the write/read store split",
+   "outcome": "worked",
+   "date": "2026-08-22",
+   "evidence": "revoke wrote redis; the listing read surreal is_active"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "auth traces dropped or ungraded: 3 fixes",
+   "where": "identity 13a4d79 (04-20), ff3194d (07-31), 01af799 (08-09)",
+   "tried": "status values; X-Internal-Api-Key header; reached:false tags",
+   "outcome": "worked",
+   "evidence": "every auth trace dropped by 401 every ~2 min; then 'third construction site with the same defect'"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "impulse/pointer envelope unwrapping per resolver",
+   "where": "local-tools a559094 (06-19), 1b88738 (07-04 SA), 8bf69ea+befef71 (07-14), 3ae3fe8/9eb4808 (09-24/25); llm-resolver db8af1d (09-23)",
+   "tried": "per-handler str(body,'impulse','pointer',\u2026) fallbacks; pointer-body.ts",
+   "outcome": "partial",
+   "evidence": "a spoke could never complete through a peer's arm until 09-23; discovery has advertised resolve_request_format since 07-07, unused"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "ribosome reach gate re-fixed 6x",
+   "where": "ribosome 7118506, 2279760 (07-13); 572cd6c, 7a688be (08-02); a54691d (08-05); 7f142af (09-02)",
+   "tried": "status, then success field, then task census, then terminal tasks, then honest verdict, then reach column",
+   "outcome": "partial",
+   "evidence": "94% false reach (a54691d); 0 extractions in 12h (572cd6c); now 17,188 ALLOWED / 505 dispatched in 7 days"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "ENOENT returned as success-shaped analysis content",
+   "where": "analysis-vessel f6af48e (08-02)",
+   "tried": "refuse instead of returning ENOENT as problems[]",
+   "outcome": "worked",
+   "evidence": "LLM-narrated root-cause notes about a nonexistent file persisted to the memory store"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "light-dispatch writes its own reach verdict",
+   "where": "light-dispatch 59732fd (09-08 SA)",
+   "tried": "POST execution-traces/reach from light dispatch",
+   "outcome": "unknown",
+   "evidence": "route exists (200 vs 404 control); a third writer of reached with its own rule"
+  },
+  {
+   "key": "gap-content",
+   "title": "missing-key detector flooded the gap store",
+   "where": "llm-resolver 0f9a160 (09-12) \u2192 789853a (09-16)",
+   "tried": "re-report missing keys on every advertisement sync",
+   "outcome": "reverted",
+   "date": "2026-09-16",
+   "evidence": "472/474 gap writes in 5 min; external gap writes timed out at 45-110s; ~3GB RSS; bootstrap-tier gap with no edit site"
+  },
+  {
+   "key": "shell-exec-bounds",
+   "title": "shell kill/timeout/concurrency series",
+   "where": "local-tools a999128 (06-25), b4766ff (08-11), e4d604c (08-29), 44c2b21+791051e (08-30)",
+   "tried": "PATH, group kill, caller timeout \u2264900s, slot governor, /proc descendant kill",
+   "outcome": "worked",
+   "evidence": "5.5h orphaned find|xargs, load 40+; 10-14 concurrent bun test; Tctl ~100C"
+  },
+  {
+   "key": "path-root-ambiguity",
+   "title": "path root mapping fixed 6x in 2 vessels",
+   "where": "analysis aba168a (07-09 SA), 5a890c3 (08-09); local-tools 8bf69ea (07-14), 2aaa834 (07-21), 44375c6 (08-09), 11636e6 (09-25 SA)",
+   "tried": "repos/\u2192/vessels, bare\u2192workspace, cwd from envelope, bounded-shell tmp cwd",
+   "outcome": "partial",
+   "evidence": "shadow garbage tree at /vessels/local-tools-vessel/repos; confabulated filenames; aba168a shipped a dead candidate"
+  },
+  {
+   "key": "edit-primitive-safety",
+   "title": "fs_edit/fs_write guards",
+   "where": "local-tools b42db41, 67a9e71, dded800, 52928b8 (08-02); 6b0d86a (09-26 SA)",
+   "tried": "empty anchor, truncation, identity edit, re-grounding, function replacer",
+   "outcome": "worked",
+   "evidence": "feature-compose.ts truncated 190,111\u219238 bytes twice; 44 empty-anchor ops/24h; 120 confabulated anchors/24h"
+  },
+  {
+   "key": "edit-primitive-safety",
+   "title": "code_search first-match blindness",
+   "where": "local-tools 71cfc74 (06-17)",
+   "tried": "force the g flag",
+   "outcome": "worked",
+   "evidence": "match_count 1\u219250; the patcher was blind"
+  },
+  {
+   "key": "llm-plane-availability",
+   "title": "LLM plane dark, repeatedly",
+   "where": "llm-resolver d327b2d..b712872 (07-14), 17dc3d0 (07-17), 5b199b3 (07-22), 3fa37f0/cbf029a (07-24), b9b68d8/3839090 (07-31), 0768990 (08-07), c5e49d3/3068940/dd9d886 (08-10), d508933 (08-12), 3ea2136 (08-18)",
+   "tried": "fallback walks, model cooldowns, pin-as-preference, seeded arms, NaN fix, dark-plane gap, invalid-key failover",
+   "outcome": "partial",
+   "evidence": "43h fleet dry on an invalid key while openrouter was funded; the policy behaved as a single point of failure"
+  },
+  {
+   "key": "llm-plane-availability",
+   "title": "savePolicy tmp-file race",
+   "where": "llm-resolver fce8203 (09-26 SA, live-only)",
+   "tried": "serialise saves with unique tmp paths",
+   "outcome": "worked",
+   "evidence": "157 arm outcomes lost in 2 min before"
+  },
+  {
+   "key": "selection-learning",
+   "title": "NaN maxCost made selection deterministic",
+   "where": "llm-resolver 3839090 (07-31)",
+   "tried": "guard cost ?? 0; stop grading drafting on resolved===true",
+   "outcome": "worked",
+   "evidence": "every score NaN \u2192 arms[0] always"
+  },
+  {
+   "key": "selection-learning",
+   "title": "retire keyed on the lying success_rate",
+   "where": "light-dispatch 66b95e1 (08-04)",
+   "tried": "count successes instead",
+   "outcome": "worked",
+   "evidence": "398 rows rate=0 with successes>0; 21 working arms wrongly retired"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "ribosome self-extraction recursion",
+   "where": "ribosome b6a430f (08-05)",
+   "tried": "depth bound from the learned- prefix count",
+   "outcome": "worked",
+   "evidence": "learned-learned-learned-auto-bridge-shellresult selected by a live walk"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "ribosome extraction dispatch storms/dead path",
+   "where": "ribosome 43a6d0b (07-30), 079c160, f0322c3 (08-02)",
+   "tried": "route probe, dedup, recursion safety, remove drain dispatch",
+   "outcome": "partial",
+   "evidence": "3,746/3,746 failed over 27 days; 906/934 at 0% success; goal-host mintReachedTrace duplicates the path"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "peer-identity dedup collapsed spoke rows",
+   "where": "discovery 586b738 \u2192 dcead52 (07-17)",
+   "tried": "dedup on libp2p_peer_id, then peer+base name",
+   "outcome": "worked",
+   "evidence": "1 of 12 spoke rows visible; every Obsidian panel 502'd"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "libp2p frame truncation and silent reservation lapse",
+   "where": "libp2p 7f2b6c9 (07-07), c68b54b (07-11)",
+   "tried": "sendAll chunking; forced re-reservation",
+   "outcome": "worked",
+   "evidence": ">=1KB payloads failed; inbound died ~1h after start while /health said activeReservations:1"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "verify-suite ephemeral registrations blind compose",
+   "where": "discovery 7cc9da4 (09-19), ffd1d58 (09-22)",
+   "tried": "evict dead rows at resolve; registration liveness guard",
+   "outcome": "partial",
+   "evidence": "4 incidents 09-19/20 needing a manual local-tools restart; symptom-side fix"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "dashboard 5s poll on an O(table) sort",
+   "where": "metabob-cloud-dashboard 3f5e35e (08-17)",
+   "tried": "disable the poll for that query only",
+   "outcome": "partial",
+   "evidence": "473,176-row view; 8 workers at 96%; 30s fleet latency; reach/credit writes lost; narrow projection never done"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "key_session unbounded growth",
+   "where": "identity bfad5ca (07-29)",
+   "tried": "amortized reaper",
+   "outcome": "worked",
+   "evidence": "1.34M rows thrashed the host; 99.4% expired"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "running-copy drift landed after the fact",
+   "where": "discovery 586b738 (07-17); identity c0692b9/14cada5 (07-19)",
+   "tried": "reconcile hot-cutover features into git; fix self-issuer 401 that pull-sync kept reverting",
+   "outcome": "worked",
+   "evidence": "features deployed but never committed; pull-sync reverted the vessel as unhealthy"
+  },
+  {
+   "key": "landing-attribution",
+   "title": "operator work under the Substrate Autonomous identity",
+   "where": "discovery 586b738/5e8b193/db639cf, identity bfad5ca, llm-resolver cc11aac/df5acb7",
+   "tried": "operator-landed commits authored as SA",
+   "outcome": "failed",
+   "evidence": "Co-Authored-By Claude / 'operator-landed' in SA-authored bodies; inflates the autonomy count"
+  },
+  {
+   "key": "landing-attribution",
+   "title": "unattributable autonomous landings",
+   "where": "llm-resolver 07-03..07-11 x8, local-tools c0afa0f/286a318 and others (20 total)",
+   "tried": "mitosis cutover with an empty or unknown gap",
+   "outcome": "failed",
+   "evidence": "Gap: unknown-gap or blank"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "compiled artefacts committed",
+   "where": "libp2p 542e712 (09-19 'vessel-code-commit-and-push')",
+   "tried": "script sweep commit",
+   "outcome": "failed",
+   "evidence": "12 .js/.d.ts/.map files, now stale vs .ts"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "surgical hardcoded-endpoint fix only wrapped the literal",
+   "where": "ribosome e052535 (07-05 SA)",
+   "tried": "process.env.X ?? 'http://127.0.0.1:8210'",
+   "outcome": "partial",
+   "evidence": "ribosome still has 8 hardcoded loopback fallbacks and a raw :8210/run-goal URL"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "landing on a disabled vessel",
+   "where": "metric-collector a885631 (08-21), 6a93e22 (09-07)",
+   "tried": "PORT default 8280\u21928300; bun.lock",
+   "outcome": "unknown",
+   "evidence": "unit disabled on both nodes; unverifiable"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "5 landings repairing a replaced surface",
+   "where": "stateful-ui 09-20..09-28",
+   "tried": "panel overwrite fixes on :8270",
+   "outcome": "partial",
+   "evidence": ":8270 panels 480 (09-22) \u2192 794 now; no human reader per operator memory"
+  }
+ ],
+ "problems": [
+  {
+   "key": "hollow-landing",
+   "symptom": "Autonomous commits that are comment-only, cosmetic, overwritten before read, duplicated Map keys, gap-id literals written into strings, or narrative code at the wrong site",
+   "first_seen": "2026-06-17 (286a318)",
+   "last_seen": "2026-09-28 (85b4c01)",
+   "recurrences": 10,
+   "root_cause": "the landing gate checks typecheck, literal presence or a judge, not behavioral change at the defect site; recommit children land after the parent defect is already fixed"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Same gap id landing 2-5 times; recommit-recommit-\u2026-semantic_reject chains",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "root_cause": "children of semantically closed or judge-rejected gaps are treated as fresh work; no depth bound; no already-fixed check"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "SA landings introduce defects: 30s shell cap, second spawn site, typecheck break, empty new_string rejection, gap flood",
+   "first_seen": "2026-07-22",
+   "last_seen": "2026-09-24",
+   "recurrences": 6,
+   "root_cause": "verify passes on typecheck and suite; no behavioral falsifier for primitives every other path depends on"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes reverted or reversed within days; operator reverted a correct autonomous fix and re-derived it 14 days later; discovery validation broke ribosome registration",
+   "first_seen": "2026-07-17",
+   "last_seen": "2026-09-19",
+   "recurrences": 7,
+   "root_cause": "a fix at one junction without grepping sibling call sites and consumers (ribosome shapes:[]); reverts without a recorded reason"
+  },
+  {
+   "key": "shell-exec-bounds",
+   "symptom": "Verify killed at 30s, orphaned pipelines for hours, unbounded concurrent test runs, wrong cwd",
+   "first_seen": "2026-06-25",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "root_cause": "hardcoded default in a shared primitive plus two independent spawn sites"
+  },
+  {
+   "key": "path-root-ambiguity",
+   "symptom": "ENOENT on valid paths, shadow garbage trees, confabulated filenames, sed editing the wrong checkout",
+   "first_seen": "2026-07-09",
+   "last_seen": "2026-09-25",
+   "recurrences": 6,
+   "root_cause": "four path roots (/vessels, clones, super-repo repos, vessel cwd) with per-vessel duplicate resolvers instead of one primitive"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "revoked keys listed active; auth traces dropped or ungraded; envelope args unread; reach read from the wrong field; ENOENT consumed as content",
+   "first_seen": "2026-04-20",
+   "last_seen": "2026-09-23",
+   "recurrences": 17,
+   "root_cause": "producer and consumer contracts not shared (redis vs surreal, tags vs column, flat vs pointer); fixes applied reader-side per call site"
+  },
+  {
+   "key": "auth-credential-plumbing",
+   "symptom": "401s on register or resolve; retire-sweep 401 covering 0/0 templates; SurrealDB function-name churn; unauthenticated JWT mint",
+   "first_seen": "2026-04-29",
+   "last_seen": "2026-09-29",
+   "recurrences": 10,
+   "root_cause": "auth scheme and issuer rules differ per caller (Bearer vs ApiKey); security hardening does not check its consumers"
+  },
+  {
+   "key": "llm-plane-availability",
+   "symptom": "Completion plane dark or degraded: exhaustion, invalid key 43h, dry default, phantom arms, stampedes",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-09-26",
+   "recurrences": 17,
+   "root_cause": "provider/arm state as hardcoded lists and env keys; liveness spread across cooldown map, policy file and advertisement"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Detector files unclosable bootstrap-tier gaps and floods the serialised gap store; 20 landings with unknown or blank gap",
+   "first_seen": "2026-07-03",
+   "last_seen": "2026-09-16",
+   "recurrences": 3,
+   "root_cause": "gaps written without edit_site or falsifier and without dedup; no attribution enforced at cutover"
+  },
+  {
+   "key": "landing-attribution",
+   "symptom": "Operator commits under the SA identity; unattributable SA commits; base SHAs that match no commit",
+   "first_seen": "2026-07-03",
+   "last_seen": "2026-09-28",
+   "recurrences": 27,
+   "root_cause": "cutover and scripts commit as SA regardless of origin; protected vessels force operator landings"
+  },
+  {
+   "key": "edit-primitive-safety",
+   "symptom": "fs_edit prepends on empty anchor; fs_write truncates running source; $ patterns corrupt; anchors confabulated",
+   "first_seen": "2026-06-17",
+   "last_seen": "2026-09-28",
+   "recurrences": 9,
+   "root_cause": "drafter edits apply directly to the running /vessels tree through permissive primitives"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Ribosome extraction dead for weeks, then storming, recursive self-extraction, duplicate path with goal-host",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-09-29",
+   "recurrences": 6,
+   "root_cause": "no single authoritative reach signal; duplicate extraction owners"
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "Spoke rows collapsed, frames truncated, reservations lapse silently, relay anchor empty at boot",
+   "first_seen": "2026-07-07",
+   "last_seen": "2026-09-22",
+   "recurrences": 6,
+   "root_cause": "health reports not tied to actual reachability; env frozen at boot"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Verify-suite ephemeral registrations left dead rows in the live registry, blinding compose",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-22",
+   "recurrences": 4,
+   "root_cause": "test processes register into production discovery"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "O(table) queries saturate SurrealDB; unbounded telemetry tables",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-08-17",
+   "recurrences": 2,
+   "root_cause": "no TTL, no narrow projection; the view sorts the blob before LIMIT"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "5 undeployed repo dirs, compiled artefacts in git, 12 mitosis residue dirs, duplicate implementations",
+   "first_seen": "2026-04-30",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "root_cause": "superseded components never retired; cutover leaves residue; script sweeps git add everything"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "distribution_policy used by one registrant; extraction policies never resolved; retire-sweep at 0/0; metric-collector disabled yet edited",
+   "first_seen": "2026-07-30",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "root_cause": "mechanisms landed 'dormant until' with no follow-through or liveness check"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Hardcoded loopback fallbacks (\u224823 sites) and inconsistent env names; the 'surgical' fix just wrapped the literal",
+   "first_seen": "2026-07-05",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "root_cause": "endpoint resolution not centralised in discovery client"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Autonomous effort spent on the replaced :8270 surface; panels grow unread (794)",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "pinned escalation target outlived its human reader"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "groupBounded + /proc killtree + test-exec slot governor + caller timeout",
+   "location": "local-tools-vessel src/index.ts, test-exec-slots.ts",
+   "purpose": "bound every shell/verify command",
+   "status": "live-used",
+   "general": true,
+   "evidence": "MAX_TIMEOUT_SEC=900 live; e4d604c/44c2b21/791051e"
+  },
+  {
+   "name": "boundedShellResolver",
+   "location": "local-tools-vessel src/index.ts (c709850)",
+   "purpose": "second shell spawn site",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "sh()",
+   "evidence": "every shell fix applied twice"
+  },
+  {
+   "name": "fs_edit/fs_write guards",
+   "location": "local-tools-vessel fsEdit/fsWrite",
+   "purpose": "make the drafter edit primitive safe",
+   "status": "live-used",
+   "general": true,
+   "evidence": "b42db41, 67a9e71, dded800, 52928b8, 6b0d86a"
+  },
+  {
+   "name": "mapPath",
+   "location": "local-tools-vessel",
+   "purpose": "map repos/ and bare paths to runtime and workspace roots",
+   "status": "live-used",
+   "general": true,
+   "duplicates_of": "analysis-vessel resolve-file-path.ts",
+   "evidence": "2aaa834, 44375c6"
+  },
+  {
+   "name": "resolve-file-path",
+   "location": "analysis-vessel src/resolve-file-path.ts",
+   "purpose": "path resolution for problem_detection",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "local-tools mapPath",
+   "evidence": "5a890c3, afb6955"
+  },
+  {
+   "name": "retireNeverSucceededTemplates (retire-sweep)",
+   "location": "light-dispatch-vessel src/index.ts:152-222",
+   "purpose": "retire arms with executions but zero successes",
+   "status": "broken",
+   "general": true,
+   "evidence": "Bearer\u2192401 vs ApiKey\u2192200; 'covered 0/0' \u00d789 since \u226509-25; setInterval hourly"
+  },
+  {
+   "name": "deprecateGhostTemplates",
+   "location": "light-dispatch-vessel (07-13 SA)",
+   "purpose": "retire 2 hardcoded ghost ids",
+   "status": "fossil",
+   "general": false,
+   "evidence": "nonexistent route; replaced 08-04"
+  },
+  {
+   "name": "light-dispatch reach POST",
+   "location": "light-dispatch-vessel runDispatch (59732fd)",
+   "purpose": "grade light dispatch executions",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "goal-host grade-at-insert / activity-api reachedVerdict",
+   "evidence": "third writer of reached"
+  },
+  {
+   "name": "ribosome reach re-read + census + depth-bound gate",
+   "location": "ribosome-vessel src/index.ts",
+   "purpose": "extract templates only from honestly reached executions",
+   "status": "live-used",
+   "general": true,
+   "evidence": "17,188 ALLOWED, 505 dispatched in 7 days; 515 learned- rows"
+  },
+  {
+   "name": "ribosome activityDispatch extraction path",
+   "location": "ribosome-vessel (43a6d0b)",
+   "purpose": "dispatch ribosome-extract",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "goal-host mintReachedTrace in-process extraction",
+   "evidence": "3,746/3,746 failed pre-07-30"
+  },
+  {
+   "name": "extractionEligibilityPolicy / extractionPolicy shapes",
+   "location": "ribosome-vessel (c779cfd)",
+   "purpose": "law-1 shaped extraction config",
+   "status": "dormant",
+   "general": true,
+   "evidence": "1,199 + 959 'unresolved \u2014 falling back' WARNs in 7 days"
+  },
+  {
+   "name": "ribosome discovery registration",
+   "location": "ribosome-vessel :697 (shapes: [])",
+   "purpose": "register consumer vessel",
+   "status": "broken",
+   "general": false,
+   "evidence": "5,208 register failed: 400 in 7 days after discovery 7cc9da4"
+  },
+  {
+   "name": "discovery register validation + dead-row eviction + liveness guard + registrant identity",
+   "location": "discovery-vessel (7cc9da4, ffd1d58)",
+   "purpose": "keep the routing fixed point clean",
+   "status": "live-used",
+   "general": true,
+   "evidence": "~1,499 /register 400 per day"
+  },
+  {
+   "name": "discovery identity-validation cache + grace + reason-bearing 401",
+   "location": "discovery-vessel auth",
+   "purpose": "survive identity outages without churn",
+   "status": "live-used",
+   "general": true,
+   "evidence": "db639cf, 7978682, 3f0edc9; ~32 rejected 401s per day"
+  },
+  {
+   "name": "distribution_policy / duplicate_policy",
+   "location": "discovery-vessel types/registry/resolvers",
+   "purpose": "vessels advertise routing rules",
+   "status": "dormant",
+   "general": true,
+   "evidence": "only obsidian federation-sidecar.ts:686 sets it"
+  },
+  {
+   "name": "/bootstrap + RELAY_MULTIADDR env-file read",
+   "location": "discovery-vessel (dfe8e24, 0b7db2d)",
+   "purpose": "point-and-go peering",
+   "status": "unknown",
+   "general": true,
+   "evidence": "not probed; works around law 1"
+  },
+  {
+   "name": "libp2p sendAll chunking + forced re-reservation",
+   "location": "libp2p-federation-transport src/index.ts",
+   "purpose": "reliable federation transport",
+   "status": "unknown",
+   "general": true,
+   "evidence": "federation-transport inactive on hub, active on node 2"
+  },
+  {
+   "name": "libp2p compiled .js/.d.ts in repo",
+   "location": "libp2p-federation-transport (542e712)",
+   "purpose": "none (sweep artefact)",
+   "status": "fossil",
+   "general": false,
+   "evidence": "stale vs .ts"
+  },
+  {
+   "name": "quota-gated llm_completion advertisement + dark-plane gap + last-resort willingness",
+   "location": "llm-resolver-vessel src/index.ts",
+   "purpose": "keep the LLM plane routable and detect darkness",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1f14a69, 0768990, 272edbd, 04b2e8f, 3ea2136"
+  },
+  {
+   "name": "reportMissingKey keyed dedup",
+   "location": "llm-resolver-vessel :323",
+   "purpose": "report missing provider keys once",
+   "status": "live-used",
+   "general": false,
+   "evidence": "after the 789853a dedup; the flood before it was 472/474 writes"
+  },
+  {
+   "name": "savePolicy serialised chain",
+   "location": "llm-resolver-vessel model-policy.ts (fce8203)",
+   "purpose": "no lost arm outcomes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "157 lost in 2 min before"
+  },
+  {
+   "name": "llmSpendSummary spend metering",
+   "location": "llm-resolver-vessel (7d7bf0a)",
+   "purpose": "per model/caller cost accounting",
+   "status": "live-used",
+   "general": true,
+   "evidence": "readers in boredom-vessel and development-vessel gap-to-feature/config/impulses"
+  },
+  {
+   "name": "pointer-body unwrap",
+   "location": "llm-resolver-vessel pointer-body.ts (db8af1d)",
+   "purpose": "accept discovery-routed {pointer} bodies",
+   "status": "live-used",
+   "general": false,
+   "duplicates_of": "per-handler str(body,'impulse','pointer') in local-tools",
+   "evidence": "should live at the VesselDaemon seam"
+  },
+  {
+   "name": "SUBSTRATE_EXECUTION_ID env threading",
+   "location": "local-tools sh/bounded_shell/gitCommit",
+   "purpose": "attribute commits to executions (causal ledger)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "read by scripts/substrate/git-hooks-ledger/_record.sh and goal-host"
+  },
+  {
+   "name": "key_session amortized reaper",
+   "location": "identity-vessel (bfad5ca)",
+   "purpose": "bound the auth telemetry table",
+   "status": "unknown",
+   "general": false,
+   "evidence": "1.34M-row history; not re-measured"
+  },
+  {
+   "name": "stateful-ui uiQuestion reader + panel persistence",
+   "location": "stateful-ui-vessel :8270",
+   "purpose": "escalation channel",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "794 panels; replaced surface, no human reader"
+  },
+  {
+   "name": "user-vessel client in identity",
+   "location": "identity-vessel services/user-vessel-client",
+   "purpose": "account_id lookup",
+   "status": "fossil",
+   "general": false,
+   "evidence": "user-vessel not deployed; config-gated off"
+  },
+  {
+   "name": "conversation-vessel / user-vessel / metabob-cloud-dashboard / react-renderer / terminal",
+   "location": "repos/ (gitignored, not in .gitmodules)",
+   "purpose": "product-era components",
+   "status": "fossil",
+   "general": false,
+   "evidence": "no units; last commits 04-30..08-17; conversation superseded by llm-resolver"
+  },
+  {
+   "name": "cpg-inference-ts",
+   "location": "library used by analysis-vessel",
+   "purpose": "code property graph via WASM tree-sitter",
+   "status": "live-used",
+   "general": true,
+   "evidence": "analysis-vessel active on both nodes"
+  },
+  {
+   "name": "metric-collector-vessel",
+   "location": "repos/metric-collector-vessel",
+   "purpose": "metricSample producer",
+   "status": "dormant",
+   "general": false,
+   "evidence": "unit disabled on both nodes yet received SA landings a885631, 6a93e22"
+  },
+  {
+   "name": "federation-transport unit ExecStartPre copy",
+   "location": "substrate-live unit federation-transport-vessel",
+   "purpose": "feed runtime src into node_modules and super-repo checkout",
+   "status": "live-used",
+   "general": false,
+   "evidence": "runs from the image copy /usr/local/share/substrate/super-repo; drift by copy"
+  }
+ ],
+ "principles": [
+  "A stated rule with no code check is a comment. (local-tools dded800)",
+  "A test that re-implements its subject is worse than no test. (local-tools 7a38f37, analysis afb6955)",
+  "A no-silent-caps guard that trusts the request instead of the response is not a guard. (light-dispatch 8de5cfa)",
+  "Suppressing repetition must not suppress recurrence; a condition that cannot be resolved by filing a gap must not file one repeatedly. (llm-resolver 789853a)",
+  "A negative is unattributed until a positive control shares its address. (llm-resolver 789853a)",
+  "De-advertising is the correct reaction and a poor detection. (llm-resolver 0768990)",
+  "A default is a last resort, not a route; a pin is a preference, not a mandate. (llm-resolver 272edbd, 5b199b3)",
+  "Policy arms and routable models are not the same set; a dry default must not blackhole a live plane. (04b2e8f)",
+  "A configured id the provider does not serve is a phantom arm. (dd9d886)",
+  "Do not record a provider's billing state as model quality. (3068940)",
+  "Extract on the honest reach verdict, never on exit status; do not fork the reach primitive (law 3). (ribosome a54691d)",
+  "Two writers with different rules is the defect: fix the write side, not the read side. (ribosome 5a374df)",
+  "Corpus-check a hard-fail gate against real traffic before landing it. (local-tools b42db41, 67a9e71)",
+  "Information at the right time: return the real surrounding lines when an anchor misses. (local-tools 52928b8)",
+  "Slow the fleet, never make it unable to verify itself: governors fail open. (local-tools 44c2b21)",
+  "A verify with no exit code is the signature of a kill, not a failure. (local-tools e4d604c)",
+  "A 401 must say whether to reissue a credential or repair a network path. (discovery 7978682)",
+  "Comments are what a future reader reads; a refuted mechanism story in a comment is a defect. (local-tools 81c8f57)",
+  "Do not override a documented design principle app-wide unilaterally; fix the one O(table) query. (metabob-cloud-dashboard 3f5e35e)",
+  "Tag deliberately non-extractable telemetry reached:false rather than leaving it ungraded. (identity 01af799)"
+ ]
+}

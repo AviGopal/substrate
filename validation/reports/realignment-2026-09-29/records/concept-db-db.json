@@ -1,0 +1,509 @@
+{
+ "source": "concept-db-db",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/concept-db-db.md",
+ "coverage": "Read-only pass over node-1 SurrealDB activity-system/learning_loop, run 2026-09-29 04:00\u201304:40 UTC.\n- Server level: listed namespaces and got a row count for every one of the 100 tables.\n- Migration ledger (init_migrations) diffed against activity-api, concept-db and identity-vessel sql/ in the host repo, the container /vessels tree and the push clone.\n- concept table: shape and source_type cardinality, recency, load counters, embedding coverage, org split.\n- All 45 compose_lesson rows read, plus their read/write code paths in feature-compose.ts.\n- 719 architecturePrinciple rows.\n- 1,991 doc-derived concepts checked against the current docs tree.\n- concept_edge: types, recency, traversal, dangling count (with a positive control).\n- concept_usage retention.\n- Oracle and outcome tables: goal_verification_labels, decision_outcome, refusal_events, promote_gate_evaluations.\n- impulse table: 107,865 rows across 6 shapes.\n- Other learning tables.\n- concept-db /health telemetry and the hub's concept-db and dev-vessel logs (last 6h).\n- Node 2 checked for concept-db/surrealdb presence, the dev-vessel's process environment, and 6h of logs.\n\nNot done:\n- No live /concepts/search calls, because each search writes concept_usage and bumps times_loaded.\n- The dense-empty root cause is PLAUSIBLE only. Probing KNN with a stored vector returns neighbours of the same type, so it can't discriminate for free-text queries.\n- Node 2 has no DB, so it had no DB queries.\n- Content of execution_trace_content, thompson_selection_log and context_thompson_scores was not analysed; only counts. The round-1 live shards cover them.\n- The compose_lesson rows carry no edit_site at all (pointer:{}), so the edit_site-existence check does not apply to them. It applies to gaps.",
+ "attempts": [
+  {
+   "key": "memory-recall",
+   "title": "Concept search starvation fixes (9 operator commits)",
+   "where": "repos/concept-db 7df39d2 08-10, c9f083e/dee1f90 08-15, a4e353d 08-16, 62cbf1e 08-29, 78311ad/cb400d6/c404069/fd645bd 09-02",
+   "tried": "Fixed @@-is-AND, bounded dense leg, delayed dense until lexical fails, ladder subject, scalar-beside-KNN, cached query vectors, starvation telemetry, record-id hydrate, two-stage FTS",
+   "outcome": "partial",
+   "date": "2026-08-10..2026-09-02",
+   "evidence": "/health since 09-28 18:57: 25,636 searches, dense_true_empty 24,207 (94%); 15,333 dense-empty + 4,159 term relaxations in 6h hub log"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Principle consult: shape filter dropped",
+   "where": "development-vessel/src/resolvers/feature-compose.ts:2546-2640",
+   "tried": "Removed shape=architecturePrinciple filter claiming no concept ever carried it; reduce spec to 3 longest words, narrowing retry",
+   "outcome": "partial",
+   "date": "2026-08-09",
+   "evidence": "719 architecturePrinciple rows exist (74 from June); concept.ts:329 does wire shape; consult now unfiltered over 88k rows, 87% signatures"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Compose-lesson failure write-back",
+   "where": "feature-compose.ts:3151-3170 (substrate-authored 6f69142, 2026-09-09)",
+   "tried": "On compose failure, search lessons by class and POST /usage/<id>/fail to grade them",
+   "outcome": "failed",
+   "date": "2026-09-09",
+   "evidence": "Route /usage/:id/fail does not exist (mounts /concepts,/mcp,/upkeep,/v2/impulses); flat body vs pointer; parses array vs {content}; errors swallowed; compose_lesson sum times_failed=1, times_succeeded=0, times_loaded=7,310"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Compose-lesson mirror to concept-db",
+   "where": "feature-compose.ts:3280-3315",
+   "tried": "Mirror each failure class as a concept_create_write with a static guidance string; log both HTTP outcomes",
+   "outcome": "partial",
+   "date": "2026-07-04..2026-09-26",
+   "evidence": "45 rows; dedup returns existing, so nothing learned per incident; 6 boilerplate 'avoid repeating' rows; node 2: 26 mirror failures in 6h (Unable to connect)"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Query lessons by most recent failure class",
+   "where": "feature-compose.ts:3375-3400",
+   "tried": "Send only failureClasses[0] as query instead of none (the fixed-8 defect)",
+   "outcome": "partial",
+   "evidence": "Node 2 6h: 14 of 29 recalls still class=none; generic July lessons L=1984/1682/1518 while measured 09-xx lessons L=0"
+  },
+  {
+   "key": "gap-content",
+   "title": "concept source_type vocabulary lock (two 007 migrations)",
+   "where": "repos/concept-db/sql/core/007-legacy-drift-*.surql and 007-repair-stranded-*.surql (substrate-authored 2026-07-03)",
+   "tried": "Closed ASSERT INSIDE 16 values, then a repair migration with ASSERT len>0",
+   "outcome": "failed",
+   "date": "2026-07-03",
+   "evidence": "Live DEFINE FIELD source_type ASSERT string::len($value) > 0; ~200 source_type values, 1,517 shapes (985 singletons)"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "activity-api migration ledger (init_migrations)",
+   "where": "repos/activity-api/scripts/init-database.ts",
+   "tried": "Filename ledger with UNIQUE index, bootstrap pre-population, F-35 migrations/ subdir inclusion",
+   "outcome": "partial",
+   "evidence": "158 has 2 rows under UNIQUE; ledger names 143-prediction-disagreement and 159-backfill have no file anywhere; 13 duplicate prefixes; 203 applied 09-24 after 204-212"
+  },
+  {
+   "key": "env-gating",
+   "title": "identity-vessel schema autoapply",
+   "where": "repos/identity-vessel/src/index.ts:1513",
+   "tried": "SCHEMA_AUTOAPPLY env gate with hardcoded list 001-003; 004 hand-applied 07-23",
+   "outcome": "dormant",
+   "date": "2026-07-23",
+   "evidence": "SCHEMA_AUTOAPPLY not in /etc/substrate/env; api_key/key_session PERMISSIONS NONE; 004 not in the list"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Concept credit decontaminate vs concept_usage retention",
+   "where": "concept-db/src/resolvers/decontaminate.ts (07-03); activity-api/src/services/trace-retention.ts:666-670",
+   "tried": "Recompute concept counters from concept_usage; later, reap concept_usage beyond the hot window",
+   "outcome": "unknown",
+   "evidence": "concept_usage holds only today (3,641 rows since 02:11 UTC); a non-dry decontaminate run would zero counters for up to 500 concepts"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Concept graph edges + upkeep",
+   "where": "concept-db src/upkeep/activities.ts, concept_edge",
+   "tried": "Auto-discovered related_to edges, upkeep scheduler (resolve-island, prune)",
+   "outcome": "dormant",
+   "evidence": "20,148 edges created in June, 2 in September; 95 of 22,365 ever traversed; 11,952 dangling; /health upkeep enabled:false"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Cluster shadow decisions (D5.3)",
+   "where": "activity-api/src/routes/activities.ts:7387-7440",
+   "tried": "Emit cluster_shadow_decision impulses for partial-pooling shadow mode",
+   "outcome": "dormant",
+   "evidence": "73,941 rows in the impulse table (58,696 in September), only reader is test/selector-cluster-shadow.test.ts; outside retention sweeps"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "relevance-feedback endpoint",
+   "where": "activity-api/src/routes/activities.ts:11477",
+   "tried": "POST /relevance-feedback to update impulse relevance",
+   "outcome": "dormant",
+   "evidence": "relevance_feedback table 0 rows; only callers are __tests__/phase10-atomic-alpha-beta.test.ts"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Promote gate",
+   "where": "activity-api promote gate -> promote_gate_evaluations",
+   "tried": "Beta-projected promote threshold 0.6 at >=3 samples, neighbor evidence",
+   "outcome": "partial",
+   "evidence": "Since July 33,731 promote vs 100 refused; September: 19,853 evals over only 55 templates (~360 each), top evaluated 628x"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Doc-to-concept ingestion (architecture_doc + doc_expectation)",
+   "where": "concept rows source_type architecture_doc/doc_expectation",
+   "tried": "Ingest doc sections as architecturePrinciple/expectation concepts",
+   "outcome": "partial",
+   "evidence": "1,991 rows; ~507 describe deleted files or headings; 96 sections double-ingested; no retirement field"
+  },
+  {
+   "key": "false-verification",
+   "title": "Oracle corpus labels",
+   "where": "goal_verification_labels",
+   "tried": "Human, automated and deterministic labelers",
+   "outcome": "partial",
+   "evidence": "grounded never true (0/14,100); human labels ~50/day in July -> ~3/day; 260 labels on fixture goals"
+  }
+ ],
+ "problems": [
+  {
+   "key": "memory-recall",
+   "symptom": "Concept search fallback returns nothing: dense_true_empty 94% of 25,636 searches; drafter gets generic lessons and no principles",
+   "root_cause": "Single undifferentiated concept table (87% impulse_signature), AND lexical, KNN top-32 then post-filter by org/source_type/shape (PLAUSIBLE)",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-29",
+   "recurrences": 9
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Compose lessons never graded (times_succeeded=0, times_failed=1 over 7,310 loads)",
+   "root_cause": "Write-back POSTs to the nonexistent /usage/<id>/fail with the wrong body/response shape; errors swallowed (6f69142)",
+   "first_seen": "2026-09-09",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Node 2 loses every concept write: 300 usage-record + 26 lesson-mirror failures per 6h",
+   "root_cause": "Reads route via discovery; writes use CONCEPT_DB_ENDPOINT default 127.0.0.1:8260, and node 2 runs no concept-db",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "~200 source_type values (memoryNote consolidation spelled 9+ ways), 1,517 shapes with 985 singletons",
+   "root_cause": "Two conflicting 007 migrations; the later one reopens the vocabulary on every boot",
+   "first_seen": "2026-07-03",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "25% of doc-derived concepts (~507/1,991) describe deleted files or headings and still compete in recall",
+   "root_cause": "Ingest-only pipeline, no retirement/superseded field; two ingesters duplicate 96 sections"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "08-09 comment asserts no architecturePrinciple concept ever existed; filter removed",
+   "root_cause": "Zero-hit caused by @@ AND over a long query, misattributed to the shape filter",
+   "first_seen": "2026-08-09"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "53% of concept edges dangle; 0.4% ever traversed; no edge creation since June; upkeep disabled",
+   "root_cause": "Concepts bulk-removed outside deleteConcept cascade; upkeep enabled:false"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "impulse table 107,865 rows (84k in September), 45-70s to count; 68% unread cluster_shadow_decision",
+   "root_cause": "Shadow emitter with no reader and no retention sweep"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "UNIQUE index on init_migrations.filename not enforced (158 twice); ghost ledger names 143/159",
+   "root_cause": "Index corruption class (cf. 196/197); migrations renumbered or deleted after apply"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Host clones activity-api 44 behind and concept-db 7 behind; migrations 211/212 live but absent in host",
+   "root_cause": "Autonomous landings push to origin/dev; operator clone not pulled"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Promote gate re-evaluates the same 55 templates ~360x/month, 99.7% promote at minimum samples",
+   "root_cause": "Gate re-runs on already-promoted templates; threshold satisfied at n=3"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "38 gap-closing templates for one tsc error (goal-host index l1445 TS2352); 1,925 of 4,010 activities are gap-closing:*",
+   "root_cause": "Each re-attempt mints a fresh timestamped template"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "22 scratch DBs on the live SurrealDB; 260 oracle labels on fixture goals; probe concepts in the lesson corpus",
+   "root_cause": "Bisect and test work run against the live server and store"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "6 boilerplate compose_lessons ('avoid repeating this failure class'); grounded field never true",
+   "root_cause": "Mirror writes a lesson for classes with no guidance; field written but never set true"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "decision_outcome predicted 0.207 vs observed 0.138 since 09-15; 1,915 success-but-not-reached",
+   "root_cause": "Over-confident predictor; exit status diverges from reach"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "identity-vessel migrations never auto-apply in the substrate; 004 hand-applied",
+   "root_cause": "SCHEMA_AUTOAPPLY env gate plus a hardcoded 001-003 list"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "76 concepts (11 compose_lessons) in org 'default' vs substrate; duplicated lessons across the tenant split",
+   "root_cause": "Writers with different credentials; dedup is org-scoped (PLAUSIBLE)"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "concept-db hybrid search (FTS ladder + dense HNSW + RRF)",
+   "location": "repos/concept-db/src/resolvers/concept.ts:400-830",
+   "purpose": "Recall of lessons, principles and memory at use time",
+   "status": "live-used",
+   "general": true,
+   "evidence": "25,636 searches since 09-28; dense fallback 94% empty; HNSW positive control OK"
+  },
+  {
+   "name": "DenseLegStats search telemetry",
+   "location": "concept-db/src/services/search-telemetry.ts",
+   "purpose": "Distinguish budget miss from true empty",
+   "status": "live-used",
+   "general": true,
+   "evidence": "/health search block"
+  },
+  {
+   "name": "compose_lesson corpus + recall by failure class",
+   "location": "development-vessel feature-compose.ts:3288 (write), :3387 (read via discovery)",
+   "purpose": "Teach the drafter from rejected composes",
+   "status": "live-used",
+   "general": false,
+   "evidence": "45 rows, no edit_site; lessons never graded"
+  },
+  {
+   "name": "lesson failure write-back",
+   "location": "feature-compose.ts:3151-3170",
+   "purpose": "Grade lessons on failure",
+   "status": "broken",
+   "general": false,
+   "evidence": "Nonexistent route /usage/:id/fail; errors swallowed"
+  },
+  {
+   "name": "consultPrinciples",
+   "location": "feature-compose.ts:2544-2650",
+   "purpose": "Inject architecture principles into drafts",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Unfiltered after 08-09; local endpoint fails on node 2"
+  },
+  {
+   "name": "createConcept content dedup",
+   "location": "concept-db/src/resolvers/concept.ts createConcept",
+   "purpose": "Avoid duplicate concepts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Unindexed content equality over 88k rows; org-scoped"
+  },
+  {
+   "name": "conceptCreditDecontaminate_write",
+   "location": "concept-db/src/resolvers/decontaminate.ts",
+   "purpose": "Recompute inflated concept counters",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Depends on concept_usage, which retention now limits to the hot window"
+  },
+  {
+   "name": "concept upkeep scheduler (resolve-island, prune-irrelevant-neighbors)",
+   "location": "concept-db/src/upkeep/activities.ts",
+   "purpose": "Maintain the concept graph",
+   "status": "dormant",
+   "general": true,
+   "evidence": "/health upkeep enabled:false; 95 edges ever traversed"
+  },
+  {
+   "name": "concept_edge graph",
+   "location": "learning_loop.concept_edge",
+   "purpose": "Related-concept neighbourhood",
+   "status": "fossil",
+   "general": true,
+   "evidence": "53% dangling; 2 edges created in September"
+  },
+  {
+   "name": "doc_expectation / architecture_doc ingestion",
+   "location": "concept rows",
+   "purpose": "Docs as expectations for the docs-align loop",
+   "status": "duplicate",
+   "duplicates_of": "architecture_doc vs doc_expectation (96 sections twice)",
+   "evidence": "25% stale"
+  },
+  {
+   "name": "concept-db apply-schema (unledgered)",
+   "location": "concept-db/scripts/apply-schema.ts via ExecStartPre",
+   "purpose": "Apply sql/core on every boot",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Re-runs UPDATEs and conflicting 007 DEFINEs every start"
+  },
+  {
+   "name": "activity-api init-database ledger",
+   "location": "activity-api/scripts/init-database.ts, init_migrations",
+   "purpose": "Apply migrations once",
+   "status": "live-used",
+   "general": true,
+   "evidence": "UNIQUE not enforced for 158; ghost names"
+  },
+  {
+   "name": "migrations table (second ledger)",
+   "location": "learning_loop.migrations",
+   "purpose": "Legacy ledger",
+   "status": "fossil",
+   "evidence": "2 rows 07-17, no filename"
+  },
+  {
+   "name": "identity-vessel SCHEMA_AUTOAPPLY",
+   "location": "identity-vessel/src/index.ts:1513",
+   "purpose": "Apply identity migrations",
+   "status": "dormant",
+   "evidence": "Env var unset; 004 not in the list"
+  },
+  {
+   "name": "cluster_shadow_decision emitter (D5.3)",
+   "location": "activity-api/src/routes/activities.ts:7387-7440",
+   "purpose": "Shadow partial-pooling decisions",
+   "status": "live-unused",
+   "evidence": "73,941 rows, test-only reader"
+  },
+  {
+   "name": "conceptUpkeepAuditLog write-audit",
+   "location": "concept-db/src/routes/impulses.ts:58-90",
+   "purpose": "Audit every concept write",
+   "status": "live-unused",
+   "evidence": "24,183 impulse rows; no reader found"
+  },
+  {
+   "name": "relevance-feedback endpoint",
+   "location": "activity-api/src/routes/activities.ts:11477",
+   "purpose": "Relevance grading from feedback",
+   "status": "live-unused",
+   "evidence": "0 rows, test-only callers"
+  },
+  {
+   "name": "promote gate",
+   "location": "activity-api -> promote_gate_evaluations",
+   "purpose": "Promote templates by projected posterior",
+   "status": "live-used",
+   "general": true,
+   "evidence": "99.7% promote; 55 templates looped ~360x"
+  },
+  {
+   "name": "decision_outcome capture",
+   "location": "activity-api migrations 201/202",
+   "purpose": "Prediction vs outcome ledger for calibration",
+   "status": "live-used",
+   "general": true,
+   "evidence": "57,908 rows since 08-24"
+  },
+  {
+   "name": "goal_verification_labels oracle corpus",
+   "location": "learning_loop.goal_verification_labels",
+   "purpose": "Reach verdicts from human/automated/deterministic labelers",
+   "status": "live-used",
+   "general": true,
+   "evidence": "14,100 rows; grounded never true"
+  },
+  {
+   "name": "embedding_prior_weights ridge retrain",
+   "location": "activity-api/src/services/embedding-prior.ts",
+   "purpose": "Embedding-conditioned priors",
+   "status": "live-used",
+   "evidence": "5,130 versions kept, latest only read"
+  },
+  {
+   "name": "trace-retention aux reap",
+   "location": "activity-api/src/services/trace-retention.ts:660-700",
+   "purpose": "Bound trace_digest/concept_usage",
+   "status": "live-used",
+   "general": true,
+   "evidence": "concept_usage only covers today"
+  },
+  {
+   "name": "38 empty tables incl. composition_chain, vessel*, tool_usage*, execution_traces, goal_execution_path",
+   "location": "learning_loop",
+   "purpose": "Various legacy schemas",
+   "status": "fossil",
+   "evidence": "0 rows each"
+  },
+  {
+   "name": "scratch namespaces",
+   "location": "SurrealDB root: scratch_test, 'scratch_test', audit-scratch (22 dbs)",
+   "purpose": "Migration bisect/test",
+   "status": "fossil",
+   "evidence": "INFO FOR NS"
+  }
+ ],
+ "principles": [
+  "Reads and writes of one shape must share one address: route concept writes via discovery exactly as reads are routed. A hardcoded local write endpoint silently drops every signal on a spoke.",
+  "A lesson channel that is never graded cannot learn which lessons help. Verify that the write-back route exists (a positive control) before calling the channel live.",
+  "Filter before KNN, or partition the corpus. Post-filtering a top-32 over a table that is 87% signatures starves small curated corpora.",
+  "Diagnose the zero-hit before removing a filter: the 08-09 removal was based on a false premise (719 rows existed).",
+  "Doc-derived knowledge needs a retirement field kept in sync with the docs tree. Without it, 25% of 'principles' describe text that no longer exists.",
+  "Never let two migrations share a number or redefine the same field. Lexical order silently decides the schema, and an unledgered applier re-runs both on every boot.",
+  "A UNIQUE ledger index must be proven to enforce (a positive control). Ghost ledger names mean a fresh boot diverges from live.",
+  "A shadow emitter with no reader and no retention is pure growth. Every write-only shape needs a named reader or a TTL.",
+  "A repair tool that recomputes from a table must be re-validated when that table gets a retention policy.",
+  "A gate that promotes 99.7% at the minimum sample size, re-evaluating the same templates hundreds of times, is not a gate.",
+  "Test and bisect work must use a scratch server, not scratch namespaces on the live one, and fixture goals must not be labelled into the live oracle corpus."
+ ],
+ "claims": [
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-09",
+   "claim": "No concept in the store has ever carried shape architecturePrinciple, so the shape filter was the failure and was dropped",
+   "where": "development-vessel/src/resolvers/feature-compose.ts:2546",
+   "later": "False premise: 74 rows existed in June and 524 in July (719 now), and concept.ts:329 wires shape into SQL. The zero-hit was the @@-AND long-query miss. The consult now runs unfiltered over 88k rows."
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-08-10",
+   "claim": "A real query matched nothing because @@ is AND; fixed with a relaxing ladder",
+   "where": "concept-db 7df39d2",
+   "later": "4,159 term relaxations in 6h on 09-29; still the dominant path"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-08-15",
+   "claim": "Bounded the dense leg / don't start it until lexical fails; ONNX embedding held searches hostage",
+   "where": "concept-db c9f083e, dee1f90",
+   "later": "Dense leg only runs on lexical-empty queries and returns empty 94% of the time (24,207/25,636)"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-08-29",
+   "claim": "A scalar filter beside <|K,EF|> defeats HNSW; moved filters to a hydrate stage",
+   "where": "concept-db 62cbf1e",
+   "later": "HNSW works (positive control), but post-filtering a top-32 plausibly empties small corpora"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-09-02",
+   "claim": "The drafter's principle consult was timing out; fixed via query-vector cache, record-id hydrate (17,000x), two-stage FTS, starvation telemetry",
+   "where": "concept-db 78311ad, c404069, fd645bd, cb400d6",
+   "later": "Latency fixed (event-loop p50 2ms), but telemetry shows 94% dense-empty; principles unfiltered; node 2 consult unreachable"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-09-09",
+   "claim": "Record failure for the lessons that led to this class (substrate-authored mitosis)",
+   "where": "development-vessel 6f69142, feature-compose.ts:3151",
+   "later": "Route /usage/:id/fail does not exist; compose_lesson times_failed total 1, times_succeeded 0 as of 09-29"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-09-2x",
+   "claim": "Mirror now logs both outcomes; the corpus stuck at ONE row for 19 days is fixed",
+   "where": "feature-compose.ts:3300-3315",
+   "later": "Hub logs 'mirrored' but dedup returns the existing static row; node 2 has 26 mirror failures in 6h; 6 boilerplate lessons"
+  },
+  {
+   "key": "gap-content",
+   "claimed_at": "2026-07-03",
+   "claim": "legacy-drift migration locks the concept source_type vocabulary",
+   "where": "concept-db sql/core/007-legacy-drift-source-types-and-priority.surql",
+   "later": "Overridden on every boot by 007-repair-stranded (len>0); ~200 source_type values live"
+  },
+  {
+   "key": "env-gating",
+   "claimed_at": "2026-07-23",
+   "claim": "004 tenant-isolation applied live; the file makes it durable across a fresh deploy",
+   "where": "identity-vessel/sql/migrations/004 header",
+   "later": "No applier: SCHEMA_AUTOAPPLY unset and 004 not in the hardcoded list; a fresh deploy would not apply it"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-08-22",
+   "claim": "Rebuilt corrupt success indexes (196/197)",
+   "where": "activity-api migrations 196-199",
+   "later": "Ledger UNIQUE index still admits a duplicate 158 row"
+  },
+  {
+   "key": "test-residue-live-state",
+   "claimed_at": "2026-09-22",
+   "claim": "SurQL gate wedge closed; 26/26 met (bisect campaign)",
+   "where": "operator memory; audit-scratch namespace",
+   "later": "22 scratch DBs from the campaign remain on the live SurrealDB server"
+  }
+ ]
+}

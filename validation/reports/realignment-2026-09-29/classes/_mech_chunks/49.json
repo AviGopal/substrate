@@ -1,0 +1,18 @@
+{
+ "area": "cpg-inference-ts",
+ "items": [
+  {
+   "name": "cpg-inference-ts",
+   "location": "library used by analysis-vessel",
+   "purpose": "code property graph via WASM tree-sitter",
+   "status": "live-used",
+   "general": true,
+   "evidence": "analysis-vessel active on both nodes",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  }
+ ]
+}

@@ -60,4 +60,14 @@ regexes = [
   #     by the harness before anything is written.
   '''[A-Z][A-Z_]*_sha256["']?\s*[:=]\s*["']?[0-9a-f]{64}''',
   '''key_id["']?\s*[:=]\s*["']?key_[A-Za-z0-9]{8,24}["']?''',
+  # Realignment/synthesis records key every row by a problem-class slug in a JSON
+  # "key" field (e.g. "federation-p2p"); a lowercase kebab slug is a label, not a
+  # credential. Only a pure lowercase-kebab value in a field named exactly "key".
+  '''"key":\s*"[a-z][a-z0-9]*(?:-[a-z0-9]+)+"''',
+  '''Key: `[a-z][a-z0-9]*(?:-[a-z0-9]+)+`''',
+  # libp2p Ed25519 peer ids (12D3KooW + base58) are public identifiers derived
+  # from a key; reports cite them in place of the key material itself.
+  '''\b12D3KooW[1-9A-HJ-NP-Za-km-z]{44}\b''',
+  # A documented command form in audit notes, not a value.
+  '''git log --grep \S+ --[a-z]+(?:[=-][A-Za-z0-9.]+)?''',
 ]

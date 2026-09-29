@@ -1,0 +1,18 @@
+{
+ "area": "clock-vessel",
+ "items": [
+  {
+   "name": "clock-vessel (plain dir)",
+   "location": "repos/clock-vessel",
+   "purpose": "currentTimeReport",
+   "status": "unknown",
+   "general": false,
+   "evidence": "TODO scaffold copied to host by operator (e9c1d2fa)",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,114 @@
+{
+ "area": "stateful-ui-vessel",
+ "items": [
+  {
+   "name": "stateful-ui-vessel :8270",
+   "location": "container unit",
+   "purpose": "Old UI question store",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Replaced by human-surface-vessel :8310 but still the escalation sink.",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "stateful-ui-vessel :8270",
+   "location": "repos/stateful-ui-vessel",
+   "purpose": "panels/questions",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "replaced by human-surface-vessel but still receives pinned escalations",
+   "duplicates_of": "human-surface-vessel",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "stateful-ui-vessel face :8270",
+   "location": "repos/stateful-ui-vessel",
+   "purpose": "panels/interactor learning",
+   "status": "fossil",
+   "evidence": "replaced by human-surface; pinned escalations unread (memory 09-22)",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "stateful-ui-vessel",
+   "location": "repos/stateful-ui-vessel :8270",
+   "purpose": "Durable panel pool (replaced predecessor)",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "human-surface-vessel",
+   "evidence": "Still first in registry for uiQuestion; 446 panels; pinned escalation target",
+   "source": "reports-4",
+   "mentions": 2,
+   "sources": [
+    "reports-4",
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "stateful-ui-vessel",
+   "location": "repos/stateful-ui-vessel, :8270",
+   "purpose": "Former human surface (panels, questions)",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "human-surface-vessel",
+   "evidence": "Still active with 794 panels; the retirement declared by human-surface-stack was not done",
+   "source": "openspec-8",
+   "mentions": 1,
+   "sources": [
+    "openspec-8"
+   ]
+  },
+  {
+   "name": "stateful-ui-vessel",
+   "location": "repos/stateful-ui-vessel, unit on substrate-live :8270",
+   "purpose": "legacy UI (React via esm.sh); slated for retirement 08-07",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "human-surface-vessel",
+   "evidence": "still running and listed as a producer of uiPanel_write/uiQuestion_write 09-28",
+   "source": "openspec-9",
+   "mentions": 1,
+   "sources": [
+    "openspec-9"
+   ]
+  },
+  {
+   "name": "stateful-ui-vessel panel store",
+   "location": "stateful-ui :8270, /workspace/state/ui-panel-store.json",
+   "purpose": "Former human surface",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "human-surface-vessel :8310",
+   "evidence": "794 panels, 5 feedback, still written",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "stateful-ui uiQuestion reader + panel persistence",
+   "location": "stateful-ui-vessel :8270",
+   "purpose": "escalation channel",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "794 panels; replaced surface, no human reader",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  }
+ ]
+}

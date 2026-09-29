@@ -1,0 +1,1991 @@
+{
+ "attempts": [
+  {
+   "key": "selection-learning",
+   "title": "Learner self-tuning via learning_policy_writeback",
+   "where": "development-vessel/src/resolvers/learning-policy-writeback.ts; table substrate_tuning_param",
+   "tried": "Recompute TD_LAMBDA/YIELD_FLOOR from posterior stats and write via /v2/tuning-params",
+   "outcome": "dormant",
+   "evidence": "TD_LAMBDA=0.6 written 2026-09-16 with evidence templates_fetched:0,total_sample_volume:0,kappa_spread:0; no learning_policy executions in 14d; SHAPE_ACTION still lists it as a standing invariant",
+   "date": "2026-09-16",
+   "source": "docs-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Six-member FailureModeSchema + outcome-conditional computeDeltas",
+   "where": "activity-api/src/models/schemas.ts, src/lib/posterior-update.ts; docs/learning/FAILURE_MODES.md",
+   "tried": "Differentiated posterior penalties by failure type",
+   "outcome": "dormant",
+   "evidence": "24h census of 21,058 execution rows: null 11,129; execution_error (not in union) 9,790, 7,727 of them on success=true; cascading 138 with 138/138 missing upstream_task_id; verifier_negative 3; four members 0 rows",
+   "source": "docs-3"
+  },
+  {
+   "key": "selection-learning",
+   "title": "classifyReach reach gate overrides exit status",
+   "where": "activity-api/src/lib/reach-classify.ts",
+   "tried": "reached/not-reached/ungraded/legacy-success verdicts; ungraded = {0,0}",
+   "outcome": "worked",
+   "evidence": "Used by posterior-update, ribosome route, grouped-execution-stats, goal-host, ribosome-vessel",
+   "source": "docs-3"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Posterior decay half-life of 3 days erased learned evidence",
+   "where": "1b0c693/f171ded (07-29/30) -> 99ae266, 2ededef, 82255e6 (08-22)",
+   "tried": "Time-decay copied from llm-resolver's cadence, then lengthened to 30 days",
+   "outcome": "reverted",
+   "date": "2026-08-22",
+   "evidence": "409 arms aged 14-30 days retained 0.1-3.9%: 'THIS IS WHY LEARNING DOES NOT COMPOUND'.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Beta(1,1) untried prior made learned arms unselectable",
+   "where": "a2a7dfd/12e1b3a (08-10)",
+   "tried": "Use a Beta(1,3) prior for untried arms",
+   "outcome": "worked",
+   "date": "2026-08-10",
+   "evidence": "At the measured pool size a learned arm with mean .755 won 0.0% of draws under Beta(1,1) and 43% under Beta(1,3).",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Increment discarded on every existing row, in 8 copies",
+   "where": "11cd301, 0857a1c (08-17)",
+   "tried": "Fix ?? vs + precedence in the duplicated UPSERT copies",
+   "outcome": "worked",
+   "date": "2026-08-17",
+   "evidence": "It had been fixed once in paradigm.ts with an explanatory comment; the other copies were missed.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "selection-learning",
+   "title": "goal_hash kept the gap-id hex, so paths were never reused",
+   "where": "d553b39 (08-05)",
+   "tried": "Normalize goal text before hashing",
+   "outcome": "worked",
+   "date": "2026-08-05",
+   "evidence": "78.6% of paths ran once (3690/4693); close-substrate-gap had 2145 distinct paths for 3102 executions.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Autonomous posterior fixes, 09-08..09-25",
+   "where": "2f01007, be6b5cd, 88f1769, dec321b/718af8c, 97adc04",
+   "tried": "Stop hardcoding ungraded; grade throwing tasks; grow beta on failure; don't drop signature-less deltas",
+   "outcome": "unknown",
+   "date": "2026-09-25",
+   "evidence": "Each came from a separately titled gap on the same credit path; no standing end-to-end falsifier.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "selection-learning",
+   "title": "docs-align timer to rhythm",
+   "where": "a87673e8",
+   "tried": "Retire the static timer; the rhythm family owns the job (law 5)",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "Timer and units deleted, rhythm family 'data-management' runs docs_align_tick. It is the only timer\u2192rhythm migration; about 40 static timers remain",
+   "source": "git-deployment"
+  },
+  {
+   "key": "selection-learning",
+   "title": "State signature revised five times",
+   "where": "3cd263d, 2bd15d4, e69a5df, df92d5e, c4d075a, 59c9d83 (06-01..07-10)",
+   "tried": "Bucket, coarsen, and add activity-class and rhythm axes so posteriors accumulate.",
+   "outcome": "unknown",
+   "date": "2026-06-04..2026-07-10",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "trace-store-reconcile variants never selected",
+   "where": "2bccc64, 651d10a, 0da5fd0, c598f1d, 2fd1dca, a8f457a, a5b4772",
+   "tried": "6-7 landings on one gap (family sampling, paging)",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "Variant execs now 171 and 166",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Rhythm conductor penalty leg reset its own clock",
+   "where": "2bc18d1 -> dc874da; 329fc5c",
+   "tried": "Penalty leg, then fix; stale-read rewrite",
+   "outcome": "partial",
+   "date": "2026-09-16..09-26",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Asymmetric credit: beta without a possible alpha",
+   "where": "62a00f5 (reverted 0ffb69a), cabf140, 3691ee7, b5e4b56, 020042d, d69a4ad, c256109",
+   "date": "2026-07-22..09-22",
+   "tried": "Withhold beta where alpha is impossible, grade at all 8 sites, draw a real Beta.",
+   "outcome": "partial",
+   "evidence": "Recurred 5 times. 020042d: 'a withheld beta is actually withheld'.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Satisfier self-certification and misclassification as learned_pathway",
+   "where": "6c020d9, 921d70e, d3a3815",
+   "date": "2026-08-05",
+   "tried": "Stop the satisfier grading itself and fix the classification.",
+   "outcome": "worked",
+   "evidence": "52% of paths had self-certified.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Pinned dispatcher keeps pinning a template with a decisively negative posterior",
+   "where": "runtime journal (ias-executor-ts goal-host.js:692)",
+   "date": "2026-09-21..09-28",
+   "tried": "The posterior refusal (pinnedTargetPosteriorVerdict) fires.",
+   "outcome": "partial",
+   "evidence": "966 refusals in 7 days for scaffold-and-publish-vessel (alpha 6.05, beta 8610.66). The caller never learns.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Ribosome mints input_shapes:[] so 16 learned templates stay at alpha=1",
+   "where": "ias-executor-ts a56fe27",
+   "tried": "Roll task inputShapes up to the template",
+   "outcome": "unknown",
+   "date": "2026-08-16",
+   "evidence": "Measured before: 16/16 at alpha=1.00; after-state not verified in this shard",
+   "source": "git-mid"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Scaffold template dispatched 2320 times at 0.07% success, bypassing Thompson",
+   "where": "boredom-vessel 4e17f86",
+   "tried": "Decline when alpha+beta>=100 and rate<0.01",
+   "outcome": "worked",
+   "evidence": "Control matrix: scaffold DECLINE (7.03e-4 over 8604), trace-store-reconcile proceed",
+   "source": "git-mid"
+  },
+  {
+   "key": "selection-learning",
+   "title": "NaN score pins selector on no-op",
+   "where": "boredom-vessel 008ae03",
+   "tried": "Finite-score fallback",
+   "outcome": "worked",
+   "date": "2026-06-22",
+   "source": "git-mid"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Candidate set frozen at the 100 oldest templates (page cap)",
+   "where": "boredom-vessel c606ab5 (+ revert 2113314, restore 2b9e23a)",
+   "tried": "Paginate; the operator commit accidentally staged deletion of goal-generation.ts",
+   "outcome": "worked",
+   "date": "2026-07-17",
+   "evidence": "The same 100-row cap later defeated 314f228 (09-06)",
+   "source": "git-mid"
+  },
+  {
+   "key": "selection-learning",
+   "title": "NaN maxCost made selection deterministic",
+   "where": "llm-resolver 3839090 (07-31)",
+   "tried": "guard cost ?? 0; stop grading drafting on resolved===true",
+   "outcome": "worked",
+   "evidence": "every score NaN \u2192 arms[0] always",
+   "source": "git-small"
+  },
+  {
+   "key": "selection-learning",
+   "title": "retire keyed on the lying success_rate",
+   "where": "light-dispatch 66b95e1 (08-04)",
+   "tried": "count successes instead",
+   "outcome": "worked",
+   "evidence": "398 rows rate=0 with successes>0; 21 working arms wrongly retired",
+   "source": "git-small"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Thompson score updates enabled (alpha/beta stuck at 1)",
+   "where": "bb992c92",
+   "date": "2026-04-13",
+   "tried": "migration 059 added thompson_alpha/beta to the activity table; the execution-traces endpoint increments them",
+   "outcome": "failed",
+   "evidence": "04-19 2663963b found the UPDATE matched plain strings against fully qualified record ids",
+   "source": "git-super-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "record::id fix; 'Learning loop now operational'",
+   "where": "2663963b",
+   "date": "2026-04-19",
+   "tried": "use record::id(id) in UPDATE; migration 060",
+   "outcome": "failed",
+   "evidence": "04-22 9000aaed 'Templates showing 0 runs (Thompson Sampling not updating)'",
+   "source": "git-super-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Proper Thompson with Beta sampling",
+   "where": "c4ef84df",
+   "date": "2026-03-25",
+   "tried": "replaced expected-value alpha/(alpha+beta) with betaSample; the earlier 'complete' claims (02-20, 02-23, 03-16) had no sampling",
+   "outcome": "superseded",
+   "evidence": "re-implemented again in microplastic bcaf315d 03-27 and later in the SurrealDB fn::beta_sample (04-30)",
+   "source": "git-super-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Boredom switched goal: to templateId: (bypasses selection)",
+   "where": "14e23e95",
+   "date": "2026-05-24",
+   "tried": "direct templateId dispatch to stop registry thrashing",
+   "outcome": "failed",
+   "evidence": "efa25a46: 199 successful executions, all alpha=beta=1, total_selections=0, so Thompson learning was dead",
+   "source": "git-super-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "targetTemplateId bypasses recommend() for named goals",
+   "where": "c8e48cb2",
+   "date": "2026-05-26",
+   "tried": "skip Thompson entirely for probe/coverage/health goals because high-alpha templates dominated",
+   "outcome": "partial",
+   "evidence": "routing worked, but selection was routed around instead of repaired",
+   "source": "git-super-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Hand-reset of posteriors (F-069, ghost-inflated draft-spec-from-gap)",
+   "where": "cb4dd022, 26390d62",
+   "date": "2026-05-25..30",
+   "tried": "reset VPM to alpha=1, beta=5 after 4 silent-success ghost executions inflated alpha to 12.5",
+   "outcome": "partial",
+   "evidence": "an operator edit of learning state; the class recurred 06-17",
+   "source": "git-super-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "recompute-poisoned-posteriors",
+   "where": "460cc35a",
+   "date": "2026-06-17",
+   "tried": "recompute 26 phantom-failure-poisoned variants from GROUP BY trace counts",
+   "outcome": "partial",
+   "evidence": "all 37,810 failed traces have no failure_mode and no error; the durable upstream fix was deferred and a recurring audit re-corrects instead",
+   "source": "git-super-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "selection never reads the learned posterior (R8)",
+   "where": "3b8ba963, 6ac76284, be2b9933, 4bcb9f81, b66201d6, 8ebcbb2a, 4921332d, 382abd16, 72aad357, 5f01d5ef",
+   "tried": "Four audits, each naming a different cause: M4 exemption, draw formula, signature width mismatch (16 vs 8 hex), missing view, org_id forms, 'ungraded' task failures",
+   "outcome": "partial",
+   "date": "2026-08-16..2026-09-26",
+   "evidence": "72aad357 (09-25) 'selection now reads its learned posteriors', but eb2b8fcf (09-27) still names alpha=1 random selection as the load-bearing loop",
+   "source": "git-super-2"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Activity-table posterior columns",
+   "where": "activity table thompson_alpha/beta, ev, *_executions, learning_track",
+   "tried": "Store per-activity posterior and counters on the activity row",
+   "outcome": "dormant",
+   "evidence": "All 4,010 rows are constant alpha=1, beta=1, ev=0.5, counters 0, learning_track=unclassified; the real posteriors are in variant_performance_metrics and context_thompson_scores",
+   "source": "live-activities"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Activity classifier pass",
+   "where": "activity.last_classified_at / learning_track",
+   "tried": "Periodically classify activities into learning tracks",
+   "outcome": "failed",
+   "date": "2026-09-26",
+   "evidence": "Every row has last_classified_at 09-26, yet all 4,010 are 'unclassified'; 3,993 rows had updated_at rewritten 09-28T08 with no semantic change",
+   "source": "live-activities"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Recommend-time Thompson selection",
+   "where": "thompson_selection_log (recommend-* ids, ~640 candidates)",
+   "tried": "Thompson-sample candidates at recommend time",
+   "outcome": "partial",
+   "evidence": "7d: 61,906 selections, 60% to arms with alpha+beta\u22644, 25% to arms with 0 executions in 5d, 24% to proposed rows; conservation-* family ~30k selections with few executions",
+   "source": "live-activities"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Phantom-failure recording beta-penalises correct runs",
+   "where": "model-reality-phantom-failure-*",
+   "tried": "detector re-detects",
+   "outcome": "failed",
+   "date": "2026-09-18..2026-09-28",
+   "evidence": "8 open; auto-bridge-problem_detection 0% over 2,385 traces with 0 real errors",
+   "source": "live-gaps"
+  },
+  {
+   "key": "selection-learning",
+   "title": "UCB cold-start infinity starvation",
+   "where": "boredom 4706b894",
+   "tried": "Finite cold scores",
+   "outcome": "worked",
+   "date": "2026-07-10",
+   "evidence": "Everything was perpetually never-picked with 45 restarts/day",
+   "source": "memory-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Wire drafting grading into LLM arm posteriors",
+   "where": "llm-resolver fec22cbc (llmArmOutcome_write); feature-compose 6b880960, 7792c3e5, 0f47d8ab; model-policy 700c70f8",
+   "date": "2026-09-12",
+   "tried": "Reuse recordArmOutcome; report model+reached per compose; clear carry vars; seed task posteriors neutral; reset inherited priors",
+   "outcome": "worked",
+   "evidence": "feature_compose posterior exists; one failure moves EV 0.5->0.333 (~120x influence); observation counts match planned composes. Reach unchanged 19%",
+   "source": "memory-10"
+  },
+  {
+   "key": "selection-learning",
+   "title": "LLM posterior time decay",
+   "where": "llm-resolver model-policy.ts decayedCounts; 8eb5e08",
+   "date": "2026-07-29",
+   "tried": "3-day half-life decay at select and write",
+   "outcome": "partial",
+   "evidence": "Idle arms re-explorable (verified); 09-12 found decay keyed to last_updated_at reset on every update -> busy arms never decay",
+   "source": "memory-10"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Activity-api Thompson decay spec",
+   "where": "openspec/changes/2026-07-29-thompson-posterior-time-decay; gap activity-api-thompson-posterior-unbounded-accumulation-no-decay",
+   "date": "2026-07-29",
+   "tried": "Filed spec+gap for substrate to implement",
+   "outcome": "unknown",
+   "evidence": "No landing recorded in shard",
+   "source": "memory-10"
+  },
+  {
+   "key": "selection-learning",
+   "title": "UNTRIED_PRIOR_BETA=3 for never-executed arms",
+   "where": "activity-api discover-by-shapes a2a7dfd -> 12e811e",
+   "date": "2026-08-11",
+   "tried": "Lower prior for total_executions===0 arms so earned arms win draws",
+   "outcome": "unknown",
+   "evidence": "Deployed; arithmetic proven; explicitly NOT behaviourally validated",
+   "source": "memory-10"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Verdict->belief junction widened",
+   "where": "activity-api POST /v2/activities/execution-traces/reach",
+   "date": "2026-09-07",
+   "tried": "Grade rows tagged not-reached/reached lacking reach_graded stamp",
+   "outcome": "worked",
+   "evidence": "0.6% rows had moved posterior; beta 19.48->31.48 monotone, implied 73.6%->63.3% unaided",
+   "source": "memory-10"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Selection<->outcome correlation join",
+   "where": "activity-api 755dca9 (ingest), 471febb/7413367 (reader)",
+   "date": "2026-08-24",
+   "tried": "Lift correlation tag to correlation_id; JOIN-free calibration on live execution",
+   "outcome": "partial",
+   "evidence": "2 of 4 joints closed; producer emits tag on 0/9,614 executions; no credit consumer; operator first overstated as resolved",
+   "source": "memory-10"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Recency-only prefilter widened",
+   "where": "activity-api paradigm.ts computeAdmissionLimit; a7182c9",
+   "date": "2026-08-24",
+   "tried": "Admit max(limit,1000) so Thompson sees earned non-recent arms",
+   "outcome": "worked",
+   "evidence": "Landed; ev column left dead (reads fields no writer sets)",
+   "source": "memory-10"
+  },
+  {
+   "key": "selection-learning",
+   "title": "counterIntegrity detector for total_executions inflation",
+   "where": "learning-transfer-report.ts; 40395ba",
+   "date": "2026-09-05",
+   "tried": "Continuously assert total_executions vs selections",
+   "outcome": "worked",
+   "evidence": "Production-confirmed slot-binding 243,063 claims / 5 selections; repair (thresholds, retirement of untraced arms, retired_reason) not done",
+   "source": "memory-10"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Pinned-target refusal rule n>=100 & rate<0.01",
+   "where": "3c7808a",
+   "date": "2026-09-06",
+   "tried": "Refuse pinned arm with bad posterior",
+   "outcome": "partial",
+   "evidence": "5 correct, 1 catastrophic (auth_resolve_v1 posterior 151x inflated), 7 unfalsifiable; safe only because one arm pinned",
+   "source": "memory-10"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Unpin LLM model literals",
+   "where": "goal-host 9d164de; dev-vessel b0435f4, beec282; ias-executor 58e538d",
+   "date": "2026-07-31",
+   "tried": "Replace hardcoded model ids with auto",
+   "outcome": "partial",
+   "evidence": "0 pins remain in swept sites; bypass resolvers (activity-api selectActivityForGoal direct OpenAI, local-tools web_search, pwt fallbackModels) remain; arm pool incomplete",
+   "source": "memory-10"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Goal-hash normalisation to class hash",
+   "where": "activity-api goal-paths.ts normalizeGoal",
+   "date": "2026-08-05",
+   "tried": "Elide hex ids /\\b[0-9a-f]{8,}(?::\\d+)?\\b/ so gap-close family can learn",
+   "outcome": "unknown",
+   "evidence": "Designed/tested; landing not confirmed in shard; close-substrate-gap 2,145 distinct paths for 3,102 execs",
+   "source": "memory-10"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Three-way honest posterior classifyReach",
+   "where": "activity-api 159bca7 src/lib/reach-classify.ts",
+   "tried": "reached\u2192credit, not\u2192penalize, ungraded\u2192skip, legacy\u2192fail-open",
+   "outcome": "partial",
+   "date": "2026-07-22",
+   "evidence": "reach-classify.ts:34 legacy-success still fails open (08-04 class-1 list); reached true on 1 of 108,119 execution rows (07-22)",
+   "source": "memory-2"
+  },
+  {
+   "key": "selection-learning",
+   "title": "creditReachedTemplate + producedShapesConsumable anti-spoof credit",
+   "where": "goal-host 16bde03",
+   "tried": "Symmetric credit on substance-honest reach via the feedback route",
+   "outcome": "partial",
+   "date": "2026-07-22",
+   "evidence": "dAlpha=2 was fabricated for satellite/fallback ids (404) until 4250971 (08-02); the feedback route returned 404 on 10 of 12 calls",
+   "source": "memory-2"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Thompson sample at pick + sampled_score emission",
+   "where": "activity-api 790114c discover-by-shapes.ts",
+   "tried": "betaSample per candidate, sort by sampled_score so the reuse bonus can fire",
+   "outcome": "worked",
+   "date": "2026-07-19",
+   "evidence": "Curated 10-goal reach 0.70\u21920.80 and health-pane lock-in broken; a split-brain on 07-20 showed the runtime file still stale on one node",
+   "source": "memory-2"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Walk Thompson selection ran without posteriors",
+   "where": "activity-api a4ff8b2, e2b40c9, 78b164b, 1e2e628",
+   "tried": "Passed metrics through the legacy transform, repointed from the phantom activity_metrics table, filled gaps from legacy variant_performance_metrics, fixed an origin tree that never booted.",
+   "outcome": "worked",
+   "date": "2026-07-16",
+   "evidence": "Probe 9ad2610c showed real alpha/beta on every step. 4 activity-api cutovers that day were no-ops, so the fix was deployed manually with docker cp.",
+   "source": "memory-3"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Compose FAVORABLE collapse 15-24% -> 0-6% from 2026-09-12 18:00",
+   "where": "llm-resolver model-policy.ts:113; bd851ec grade writer",
+   "tried": "Refuted four causes. Found the 1/1 cold-start selector inversion (401 sets no cooldown; failover ungraded).",
+   "outcome": "unknown",
+   "date": "2026-09-13",
+   "evidence": "Inversion is real but retracted as the cause; the step is unattributed. Fixes (401 cools arm, hierarchical prior) were proposed, not landed.",
+   "source": "memory-3"
+  },
+  {
+   "key": "selection-learning",
+   "title": "'Ablation lever never fired' claim",
+   "where": "goal-host effectiveTags index.ts:15134-15209; fix 6273bf6",
+   "tried": "Published, then retracted: the control used a different writer. Found tags pushed after handoff.",
+   "outcome": "worked",
+   "date": "2026-09-06",
+   "evidence": "Substrate hoisted ablation and learning_mode (0->1 each). The other three tags cannot be hoisted.",
+   "source": "memory-3"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Reach-verdict durable spool",
+   "where": "goal-host ea78fd7",
+   "tried": "Spool undelivered reach verdicts to /workspace/.reach-verdict-spool.jsonl and drain them later",
+   "outcome": "worked",
+   "date": "2026-08-26",
+   "evidence": "~13% transport loss (30/200) was being dropped before this",
+   "source": "memory-4"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Beta draw fix (blame annihilated at the draw)",
+   "where": "goal-host index.ts:5636 d69a4ad",
+   "tried": "Replace (rand^(1/\u03b1))/(rand^(1/\u03b2)) with a real Beta variate",
+   "outcome": "worked",
+   "date": "2026-08-16",
+   "evidence": "The old draw gave an \u03b1=1, \u03b2=113 arm P(>0.5)=50% (true 0%); tests now assert moments",
+   "source": "memory-4"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Stop \u03b2-pump on telemetry infra arms",
+   "where": "activity-api reach-classify.ts 018784f",
+   "tried": "isReachInapplicable makes telemetry-tagged traces ungraded",
+   "outcome": "worked",
+   "date": "2026-08-24",
+   "evidence": "auth_resolve_v1 \u0394\u03b2=0 across samples; capture stopped at 10:43; historical \u03b1=1/\u03b2=401646 scar remains",
+   "source": "memory-4"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Correlation attribution B1 (adapter drops correlation_id)",
+   "where": "ias-executor activity-api-adapter.ts 66f0322; activity-api e2c7959 mig 202; 03e6c55 reader",
+   "tried": "Carry correlation_id, add universal per-execution decision capture, then add a decision-calibration reader",
+   "outcome": "partial",
+   "date": "2026-08-24",
+   "evidence": "Wire forms 561 organic rows. Walks and pathway reuse never log a selection. The reader is read-only, and the credit path doesn't consume it.",
+   "source": "memory-4"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Guard against boredom's hardcoded scaffold dispatch (substrate-authored)",
+   "where": "boredom-vessel 314f228",
+   "tried": "69-line posterior guard landed autonomously",
+   "outcome": "failed",
+   "date": "2026-09-05",
+   "evidence": "It matched on nonexistent field t.identifier and queried a page capped at 100, so it was inert twice over",
+   "source": "memory-4"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Retirement on poor performance",
+   "where": "activity-api e2d7077, 1d83bf5",
+   "tried": "Judge on the VPM posterior; fire on a fresh graded failure",
+   "outcome": "unknown",
+   "date": "2026-08-16",
+   "evidence": "Deployed but not proven live (acceptance inconclusive: org 'public' mismatch, ungraded); deprecation is unenforceable against a pinned dispatch (09-05)",
+   "source": "memory-4"
+  },
+  {
+   "key": "selection-learning",
+   "title": "selectArm NaN pinned haiku",
+   "where": "llm-resolver 3839090, ee42e69",
+   "tried": "Coerce null cost to 0 and use a neutral cold-start prior.",
+   "outcome": "worked",
+   "date": "2026-08-01",
+   "evidence": "Selection varied (6 haiku / 3 sonnet). The posterior-inflation theory was a red herring.",
+   "source": "memory-5"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Honest arm grading from reach verdicts",
+   "where": "llm-resolver model-policy.ts recordPendingArmOutcome et al.",
+   "tried": "Identified as the durable fix.",
+   "outcome": "dormant",
+   "date": "2026-07-31",
+   "evidence": "The plumbing exists with ZERO callers. Arms are graded only on resolved===true.",
+   "source": "memory-5"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Untried-arm prior",
+   "where": "activity-api 12e811e",
+   "tried": "UNTRIED_PRIOR_BETA=3 for zero-execution arms.",
+   "outcome": "partial",
+   "date": "2026-08-11",
+   "evidence": "24% of untried arms on the hub still draw Beta(1,1) because the nullish chain short-circuits on a stored value.",
+   "source": "memory-5"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Lexical rebind content-store gate",
+   "where": "goal-host 8aa17cc -> clobbered by autonomous 3130a55 -> c477e07, 6a65f9c",
+   "tried": "Refuse cross-store donor rebinds.",
+   "outcome": "partial",
+   "date": "2026-08-13",
+   "evidence": "The substrate replaced it with an inert version, which was repaired in place. Live firing was never observed.",
+   "source": "memory-5"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Retire phantom LLM arms",
+   "where": "llm model policy rev 14",
+   "date": "2026-08-20",
+   "tried": "live-probe providers, retire 6 arms with large alpha",
+   "outcome": "worked",
+   "evidence": "25->19 arms; funded groq quota still unreachable (arm addition is code)",
+   "source": "memory-6"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Lenient ground-truth parser",
+   "where": "goal-host 089aead",
+   "date": "2026-08-07",
+   "tried": "accept wc output formats to cut abstentions",
+   "outcome": "reverted",
+   "evidence": "25/48 -> 18/48; reverted b41851c",
+   "source": "memory-6"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Donate verified command / single-derivation candidate",
+   "where": "goal-host 95a9626, 1ec89d1",
+   "date": "2026-08-07",
+   "tried": "convert verification truth into answering donors",
+   "outcome": "dormant",
+   "evidence": "95a9626 fired 0 times (kept); 1ec89d1 fired once, reverted",
+   "source": "memory-6"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Beta on nothing-measurable",
+   "where": "goal-host 62a00f54",
+   "date": "2026-08-07",
+   "tried": "charge pathways that produced no measurement",
+   "outcome": "reverted",
+   "evidence": "cost cascade to slower arms, timeouts, 17/48",
+   "source": "memory-6"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Floor seeding with recipe measurement",
+   "where": "goal-host (floor-seeding, 08-07)",
+   "date": "2026-08-07",
+   "tried": "hand ReAct floor recipe output as observation",
+   "outcome": "reverted",
+   "evidence": "fired 12x, 17/48 worst of series",
+   "source": "memory-6"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Close grade->credit loop (eight fixes)",
+   "where": "96684c4, 2b09cb5, ecd0c5a, 2b4e18b, b6a430f, 6c020d9, a54691d, 1cd87a0",
+   "date": "2026-08-06",
+   "tried": "deliver reach verdicts into posteriors and ribosome gating",
+   "outcome": "partial",
+   "evidence": "proven on one execution; delivery coverage ~1.3%; 128/130 mixed paths hold impossible 0/1 rates",
+   "source": "memory-6"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Additive Thompson updates replace multiplicative",
+   "where": "activity-api activities.ts ~5069; migration 186 commit 6f19696",
+   "tried": "Replaced alpha=ceil(alpha*2.5) with additive; deflated rows v->1+ln(v)/ln(2.5)",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "int64 saturation 500s (29/6h) stopped; variance collapse removed",
+   "source": "memory-7"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Lazy admission of satisfier: ids for grading",
+   "where": "activity-api 2fdd71e",
+   "tried": "Create activity row + score seed on first feedback for satisfier:* (shapes empty)",
+   "outcome": "unknown",
+   "date": "2026-08-02",
+   "evidence": "490x404/6h before; deployed but not observed firing; later 08-03 note: satisfier selection reads liveness only so alpha steers nothing",
+   "source": "memory-7"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Break the 1612:0 beta/alpha ratchet",
+   "where": "goal-host c84dbf9 (instrument), ec243fd (gate), later 0eb3231",
+   "tried": "Log withheld credit; credit on commandEvidence",
+   "outcome": "partial",
+   "date": "2026-08-03",
+   "evidence": "3/3 credited; substrate self-edit d65f8bd silenced instrument (reverted 24d46fe); 08-07 commandEvidence alone removed because wrong answers shell out",
+   "source": "memory-7"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Withhold never-reaching recommended paths; fix COALESCE",
+   "where": "activity-api 4cfef87, 514f25b",
+   "tried": "Absolute bar on recommendation; valid SurrealQL idiom",
+   "outcome": "worked",
+   "date": "2026-08-05",
+   "evidence": "38% of execution went to 352 never-reached paths; cts CREATE parse fail 172x/2h",
+   "source": "memory-7"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Auto-promote inverted threshold",
+   "where": "boredom auto-promote",
+   "tried": "Fixed the evidence-gating condition",
+   "outcome": "worked",
+   "date": "2026-08-09",
+   "evidence": "Promoted 3, including a composed-cap",
+   "source": "memory-8"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Floor records only its wins; walk_tier is a name substring",
+   "where": "goal-host recordGoalPath; 550ce23",
+   "tried": "Site 1 fixed by a substrate-authored commit; gaps filed",
+   "outcome": "partial",
+   "date": "2026-08-08",
+   "evidence": "Honest floor 23.9%, ceiling 47-60%",
+   "source": "memory-8"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Posterior-aware admission",
+   "where": "discover-by-shapes.ts; 1d9701d",
+   "tried": "Replace LIMIT 10 by ev over a flat 0.5 prior",
+   "outcome": "worked",
+   "date": "2026-07-31",
+   "source": "memory-8"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Pinned-target posterior guard",
+   "where": "ias-executor 3c7808a",
+   "tried": "Refuse a pinned target when its posterior is decisively negative. Deployed to the vessel's real dist copy",
+   "outcome": "worked",
+   "date": "2026-09-06",
+   "evidence": "An arm that had run 2,345 times, every one a failure, went flat",
+   "source": "memory-8"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Donor index backfill for Tier-2 reuse",
+   "where": "goal_execution_paths.endpoint_output_shapes; db_admin repair",
+   "date": "2026-09-06",
+   "tried": "backfill 1,644 satisfier-only rows from observed outputs",
+   "outcome": "unknown",
+   "evidence": "donors 1539->3186; effect on Tier-2 not adjudicated; the 'declared shapes' rule was refuted by control (33% superset)",
+   "source": "memory-9"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Credit outage poisoned Thompson arms",
+   "where": "llm-resolver recordArmOutcome",
+   "date": "2026-08-11",
+   "tried": "diagnosed only; repair (skip beta on provider failure) filed, not made",
+   "outcome": "dormant",
+   "evidence": "sonnet a1/b10, haiku a1.9/b40; isFailoverError exists but is not consulted on the learning path",
+   "source": "memory-9"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Counterfeit Beta sampler annihilates blame",
+   "where": "goal-host index.ts:5636",
+   "date": "2026-08-16",
+   "tried": "measured live; four cuts in the negative path documented",
+   "outcome": "unknown",
+   "evidence": "an arm with mean 0.142 passes the >0.5 reuse gate 99.8% of the time; retirement 0/100; penaliseHollowTemplate returns a literal dBeta:2",
+   "source": "memory-9"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Reached-command cache evicted on infrastructure noise",
+   "where": "goal-host evictReachedCommand; 77d318b",
+   "date": "2026-09-12",
+   "tried": "retain entries when the reason cites capacity/connection/timeout",
+   "outcome": "worked",
+   "evidence": "entry e1a13c0c: 29 evictions -> 3 retained; retention had been ~5%",
+   "source": "memory-9"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Grading autonomous light-dispatch executions",
+   "where": "light-dispatch reachVerdict 59732fd",
+   "date": "2026-09-08",
+   "tried": "shape-coverage verdict",
+   "outcome": "partial",
+   "evidence": "graded went from 0/1072 to graded, but 95.5% true: vacuous for deterministic ticks (pre-registered guard fired)",
+   "source": "memory-9"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Posterior never falls on task-thrown failures",
+   "where": "activity-api lib/posterior-update.ts applyOutcomeToPosteriors",
+   "date": "2026-09-24",
+   "tried": "filed one-op design",
+   "outcome": "dormant",
+   "evidence": "120 ok/184 failed yet a=119.7 b~9; 47 SKIPPED reach_ungraded",
+   "source": "memory-9"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Recompute poisoned posteriors",
+   "where": "scripts/substrate/recompute-poisoned-posteriors.ts 460cc35a2",
+   "tried": "reset 26 variants to Beta(1+succ,1+real_fail)",
+   "outcome": "partial",
+   "date": "2026-06-17",
+   "evidence": "durable upstream fix (distinguishable outcomes) not done; later skip-success fixes 07-04",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "selection-learning",
+   "title": "State-signature input-shape capture",
+   "where": "ias-executor-ts engine.ts",
+   "tried": "populate input shapes from placeholder references",
+   "outcome": "partial",
+   "date": "2026-06-21",
+   "evidence": "06-26 '98% coverage'; 07-31 drafter counters 0/0/0 after 4,649 runs",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "selection-learning",
+   "title": "NaN score guard in boredom selector",
+   "where": "boredom-vessel 008ae03 ucbScore",
+   "tried": "Number.isFinite fallback",
+   "outcome": "partial",
+   "date": "2026-06-23",
+   "evidence": "NaN root in combinedCostAdj never found",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Cost-weighted posteriors",
+   "where": "openspec/changes/2026-05-23-cost-weighted-posteriors",
+   "tried": "Joint (success,cost) Thompson with policy bandit",
+   "outcome": "dormant",
+   "date": "2026-05-23",
+   "evidence": "0/26 tasks; superseded by value-per-cost-selection 09-20; cost signal never existed",
+   "source": "openspec-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "LLM model MAB",
+   "where": "openspec/changes/2026-05-23-llm-resolver-model-mab",
+   "tried": "Per-model sub-resolvers with Thompson selection",
+   "outcome": "dormant",
+   "date": "2026-05-23",
+   "evidence": "0/33 tasks; no llmProviderConfig/model-mab in any src",
+   "source": "openspec-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "State-space signature conditional Thompson keying",
+   "where": "openspec/changes/2026-05-17-state-space-signature-thompson-keying; activity-api session-context.ts",
+   "tried": "v1 signature hash, conditional read with sampling floor, dual write",
+   "outcome": "partial",
+   "date": "2026-05-19",
+   "evidence": "29,178 context_thompson_scores rows, 9,809 v1; S2-S6 acceptance (discrimination p<0.05) never measured; v0 reaper not done",
+   "source": "openspec-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Chain credit ancestor bucket fix",
+   "where": "openspec/changes/2026-05-18-chain-credit-ancestor-signature-fix; posterior-update.ts",
+   "tried": "Recompute per-ancestor bucket instead of leaf bucket",
+   "outcome": "worked",
+   "date": "2026-05-18",
+   "evidence": "12/16 tasks; production audit script deferred",
+   "source": "openspec-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "successYield without cost (5.2)",
+   "where": "activity-api 97adc04 (+test 1b3a3f7)",
+   "tried": "separate P(success) from cost; law-12 posterior snapshot taken",
+   "outcome": "unknown",
+   "date": "2026-09-27 07:31",
+   "evidence": "landed byte-equal; tasks box [ ]; no before/after comparison recorded; 5.1/5.3/5.4 value-per-cost selection not built",
+   "source": "openspec-10"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Boredom topology tasks switched from goal: to templateId:",
+   "where": "minibob src/boredom.ts (findings D-002)",
+   "date": "2026-05-24",
+   "tried": "Bypassed goal-processing, Thompson and the stagnation detector so coverage-tick would run.",
+   "outcome": "partial",
+   "evidence": "The chain ran, but only by routing around the selector; the underlying selection defect was never fixed.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Info-gain bonus on successes",
+   "where": "openspec/changes/2026-05-30-info-gain-bonus-on-success",
+   "date": "2026-05-30",
+   "tried": "Scale signature-level \u03b1 by 1/(1+n) so redundant empty successes saturate.",
+   "outcome": "dormant",
+   "evidence": "infoGainFactor is absent from the code. Motivation: drain-pending-substrate-gaps got \u03b1 from 10ms empty successes, and 3 templates were drawn for the same goal.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Failure-mode taxonomy extensions + root_cause_step",
+   "where": "openspec/changes/2026-05-31-display-failure-mode-extensions",
+   "date": "2026-05-31",
+   "tried": "Add consent_revoked and action_reversal_failed, confidence tiers, and root_cause_step for chain credit.",
+   "outcome": "dormant",
+   "evidence": "0/13 tasks; identifiers absent. Depth-1 cascading attribution is still open.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "selection-learning",
+   "title": "LR-1 embedding-conditioned Thompson prior (ridge \u03b8 over MiniLM)",
+   "where": "activity-api services/embedding-prior.ts, embedding-prior-trainer.ts, lib/prior-seed.ts:81",
+   "tried": "Parametric prior \u03b1=f(e;\u03b8) replacing Beta(1,1) for cold cells",
+   "outcome": "unknown",
+   "date": "2026-06-04",
+   "evidence": "5128 append-only embedding_prior_weights rows (2394 written in Sep), all with org_id 'default'. The reader filters WHERE org_id=$org_id with the trace org, so it plausibly never serves. EMBEDDING_PRIOR_ENABLED is read from env. No MRR/variance acceptance was recorded",
+   "source": "openspec-3"
+  },
+  {
+   "key": "selection-learning",
+   "title": "LR-4 tier-restricted bandit (skip Thompson on deterministic cells)",
+   "where": "activity-api services/tier-classifier.ts imported by posterior-update.ts:27",
+   "tried": "Classify template tiers and skip posterior maintenance on all-deterministic cells (claimed ~1.6x effective rate)",
+   "outcome": "partial",
+   "date": "2026-06-04",
+   "evidence": "Live-used, but it starved auto-promote: deterministic activities never got vpm evidence (#54-B, 06-14). The rate gain was never measured",
+   "source": "openspec-3"
+  },
+  {
+   "key": "selection-learning",
+   "title": "LR-8 hierarchical signature clustering",
+   "where": "activity-api jobs/signature-cluster-tick.ts, lib/cluster-posterior.ts",
+   "tried": "Cluster signatures by embedding and keep a cluster-level Beta that shadows sparse cells",
+   "outcome": "worked",
+   "date": "2026-06-04",
+   "evidence": "4166 signature_cluster_run rows 2026-06-28 to 2026-09-28; imported by posterior-update, execution-traces and the activities.* modules; tasks.md still 0/45; no rate acceptance recorded",
+   "source": "openspec-3"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Information-yield reward for boredom UCB (Phase A)",
+   "where": "boredom-vessel src/index.ts:2843-2923 (IDLE_REWARD=0.2); commit 3b6219294",
+   "tried": "Replace the completion reward (86% of picks at mean 1.0) with productive/idle/error yield",
+   "outcome": "worked",
+   "date": "2026-06-14",
+   "evidence": "Means split into {0.2 idle, 1.0 productive}. information_yield was later reused by gap auto-close. Full allocation-shift maturation was blocked by the /workspace EMFILE wedge",
+   "source": "openspec-3"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Cross-signature reputation penalty",
+   "where": "2026-06-25-cross-signature-reputation-penalty; activity-api activities.ts:6388, jobs/accelerator-flag-tick.ts",
+   "tried": "reputationFactor = 1 - blendWeight*(1-mu_g) with novelty/min-obs exemptions, flag OFF",
+   "outcome": "dormant",
+   "date": "2026-06-25..07-01",
+   "evidence": "applyReputationFactor landed with 8 tests flag OFF; now getTuningParam-gated by accelerator-flag-tick; F3 staggered measured flips never recorded",
+   "source": "openspec-4"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Thompson posterior time-decay (3-day half-life)",
+   "where": "activity-api 1b0c693 (2026-07-30); openspec/changes/2026-07-29-thompson-posterior-time-decay",
+   "date": "2026-07-30",
+   "tried": "Exponential decay toward (1,1) at read and write, half-life 3d copied from llm-resolver-vessel decayedCounts",
+   "outcome": "reverted",
+   "evidence": "99ae266 (2026-08-22): decay annihilated 95.4% of evidence over 1,821 arms, median retained 0.0002% \u2014 learning did not compound for ~3 weeks; sweep of 15 half-lives showed no value satisfying both goals",
+   "source": "openspec-5"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Abstain on environmental failure + 30d shaped half-life",
+   "where": "activity-api 2ededef (2026-08-22); posterior-update.ts:895-972,1238",
+   "date": "2026-08-22",
+   "tried": "execution_error carries reason; computeDeltas beta+=0 on transport/availability failure; half-life 30d via substrate_tuning_param THOMPSON_DECAY_HALFLIFE_DAYS",
+   "outcome": "worked",
+   "evidence": "Live code; residual 32/509 arms still poisoned (auth_resolve_v1 beta=399,770); decay logic duplicated in TS and SurrealQL despite proposal saying avoid SQL-vs-TS drift; retirement reversibility never addressed",
+   "source": "openspec-5"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Consequence verdict into credit (reader half)",
+   "where": "openspec/changes/2026-08-26-consequence-verdict-into-credit/proposal.md (fe00585e)",
+   "date": "2026-08-26",
+   "tried": "Proposed reading goal_verification_label by execution_id in posterior-update.ts and correcting reach-time alpha through propagateCreditAlongChain (A supersede vs B distinct; recommends A). Gated on the large-file-edit capability. Writer half filed as gap consequence-verdict-writer-missing-for-goal-verification-labels.",
+   "outcome": "dormant",
+   "evidence": "posterior-update.ts has no read of goal_verification_labels (14,100 rows: deterministic 12479, human 1089, automated 532). No design.md or tasks.md. The writer gap is absent from the live store. A/B is unsettled.",
+   "source": "openspec-6"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Adjacent consequence-aware work that does not revise the banked alpha",
+   "where": "activity-api/dev-vessel 6d0c16e, a245fee, fd4afe6 (09-05), 970b112 (09-16)",
+   "date": "2026-09-05..16",
+   "tried": "Counterfactual stamped at pick time; detector-yield retirement from consequence asymmetry ('landed is 24.5x too generous'); abstain from blaming an arm for its environment.",
+   "outcome": "partial",
+   "evidence": "None revises reach-time alpha for a pathway whose change was later reverted, which was the core ask of the 08-26 proposal.",
+   "source": "openspec-6"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Importance learner reads parked interactorObservation telemetry",
+   "where": "repos/human-surface-vessel/src/importance-learn.ts (0d0951c5)",
+   "tried": "read exposure corpus and write renderPolicy importance weights",
+   "outcome": "partial",
+   "date": "2026-09-20",
+   "evidence": "closes the parked-telemetry reader gap from render-learning s2, but it is a resolver-level learner with no second render arm chosen by posterior",
+   "source": "openspec-9"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Counterfeit Beta draw replaced by real Marsaglia-Tsang sampler",
+   "where": "goal-host d69a4ad src/beta-sample.ts (index.ts:5636)",
+   "date": "2026-08-16",
+   "tried": "Replace (rand^(1/a))/(rand^(1/b)) that ignored beta; moment tests",
+   "outcome": "worked",
+   "evidence": "LIVE verified 12:47:44; arm with beta=113.6 had been picked 50% of time",
+   "source": "reports-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Poor-performance retirement binding fix",
+   "where": "f2857fc activity-api variant-creator.ts",
+   "date": "2026-08-16",
+   "tried": "activity:<$template_id> -> type::thing('activity',$id) for retire and variant CREATE",
+   "outcome": "dormant",
+   "evidence": "Deployed but the gate needs 20 executions in hub execution table; failing arms (202 exec/0 success) ran on spoke with traces stuck in a 16,754-file spool. Spot-check 2026-09-29: poor_performance retirements = 0",
+   "source": "reports-3"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Negative feedback on dead arm",
+   "where": "POST /v2/activities/feedback learned-satisfier-shell",
+   "date": "2026-08-16",
+   "tried": "Operator negative verdict to suppress 202/0 arm",
+   "outcome": "failed",
+   "evidence": "The same arm was selected twice more. beta+2 credited per failure, but persistence of the credit is unverified",
+   "source": "reports-3"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Conditioned differentiation key",
+   "where": "validation/scripts/conditioned-differentiation-harness.py",
+   "date": "2026-08-12",
+   "tried": "Condition identity on owning data store + content kind",
+   "outcome": "dormant",
+   "evidence": "Offline: 40/40 splits, purity 1.00, 4/5 invariance. Never threaded into live producer/pathway selection",
+   "source": "reports-3"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Counterfeit Beta draw (rand^(1/a))/(rand^(1/b)) granted reuse bonus to failing arms",
+   "where": "goal-host index.ts:5636 \u2192 src/beta-sample.ts",
+   "tried": "Replace with a real Beta sample",
+   "outcome": "worked",
+   "date": "2026-08-16",
+   "evidence": "P(draw>0.5)=99.8% for a mean-0.142 arm. [LIVE 09-28] beta-sample.ts documents the old bug as fixed.",
+   "source": "reports-5"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Non-terminal satisfier satellites graded reached:false permanently",
+   "where": "goal-host index.ts:8628; reach-classify.ts:52-54",
+   "tried": "d95a615 insert guard, reverted by 3e7e8e0 the same day; eca7c8a stamped the terminal trace only; b5e4b56 satellite:non_terminal",
+   "outcome": "partial",
+   "date": "2026-08-19",
+   "evidence": "satisfier:webSearchResult \u03b1=2.12/\u03b2=185.22 with 167/189 successes. b5e4b56 was not loaded as of 08-20.",
+   "source": "reports-5"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Admission cap truncated candidates by recency before the Thompson draw",
+   "where": "activity-api paradigm.ts computeAdmissionLimit (a7182c9)",
+   "tried": "Admit max(limit,1000)",
+   "outcome": "worked",
+   "date": "2026-08-24",
+   "evidence": "Shape-fetch logs count:680 and count:822, above the old ceiling of 150.",
+   "source": "reports-5"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Previous-round fixes (blame reason, correlation_id, 30d decay) live but inert",
+   "where": "NEEDLE_MOVERS \u00a71",
+   "tried": "Deployed to the goal-walk path",
+   "outcome": "dormant",
+   "date": "2026-08-22",
+   "evidence": "0/96, 0/96 and 0/358 confirmations. About 95% of traffic is boredom housekeeping that bypasses /recommend.",
+   "source": "reports-5"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Truthful beta/alphaBetaDelta instruments",
+   "where": "5be4cfa, 784ec45c, 3691ee7",
+   "tried": "dBeta reported only when applied; the summary line distinguishes a symmetric withhold from a penalty; delta recorded at all grading sites.",
+   "outcome": "worked",
+   "date": "2026-08-19",
+   "evidence": "POSTERIOR_DIVERGENCE: the log claimed 12 penalties when 0 were applied; after the fix the log matches the sink. The class had recurred one branch below its own fix.",
+   "source": "reports-6"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Decay half-life and failure attribution",
+   "where": "activity-api 2ededef; ias-executor acfd5c0; half-life 3 to 30 days",
+   "tried": "Forward execution_error reasons; abstain beta on transport failures; then lengthen the decay.",
+   "outcome": "worked",
+   "date": "2026-08-22",
+   "evidence": "95.4% of arms retained under 5% evidence at a 3-day half-life; a sweep proved the constant could not be tuned; attribution dissolved the conflict. The end-to-end reason row was pending in the source.",
+   "source": "reports-6"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Backfill endpoint_output_shapes via the db_admin repair rail",
+   "where": "activity-api 8e0c579 (recover_endpoint_output_shapes)",
+   "tried": "Decode satisfier ids into 1,644 shape-blind pathway rows (reuse of the rail, not a mint).",
+   "outcome": "partial",
+   "date": "2026-09-06",
+   "evidence": "Donors 1,539 to 3,186 as pre-registered; 2 recovered pathways were reused; organic rebind/shape_signature rates did not rise, so the index was not the binding constraint. The root guard (explicit [] defeats the fallback) was left open.",
+   "source": "reports-6"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Record state_signature; apply the conditioned view",
+   "where": "e1979f77, 092eac27, 6d998681, migration 211, schema 023",
+   "tried": "Write context at record time; apply the never-applied v_shape_conditioned_score.",
+   "outcome": "worked",
+   "date": "2026-09-20",
+   "evidence": "F-WRITE and F-PRIOR met (alpha 4 to 6 in one context bucket); F-SELECT not established.",
+   "source": "reports-6"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Step count as path_signature differentiation key",
+   "where": "validation/reports/STEP_COUNT_CALIBRATION.md",
+   "tried": "Ask the LLM for the number of external operations per goal and use it as the signature key",
+   "outcome": "failed",
+   "date": "2026-08-12",
+   "evidence": "Naive prompt gave k={3,3,3,4}. The calibrated prompt gave 1,2,3,4 once. The stability run (48 cells) was monotonic in only 2/4 model-phrasing combos because rephrasing identical work changes the count. Disqualified as an identity; usable only as a hint.",
+   "source": "reports-7"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Score-read id normalisation",
+   "where": "activity-api 53d8e77",
+   "tried": "Normalise activity:<id> to bare ids; drop the absent v_activity_score read",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "Legacy read returns 406 rows (was 0 on 242/242); Thompson had run on Beta(1,1) for every arm",
+   "source": "reports-7"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Edit lanes made to write deterministic reach labels in both polarities",
+   "where": "goal-host e992315, d08fe74, 0abf462",
+   "tried": "Add the deterministic prefix and call sites to the EARLY, ROUTED and pwt edit lanes",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "A deterministic:edit-intent-landed label was cross-checked with git cat-file. Before this, only 2 of 2,392 achieved labels cited landing evidence.",
+   "source": "reports-8"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Seeding rhythm impulses to restore validator cadence",
+   "where": "09-07 (ADDENDUM section B)",
+   "tried": "Seed 13 rhythm impulses",
+   "outcome": "failed",
+   "date": "2026-09-07",
+   "evidence": "The consumer rhythm_conductor_tick is itself Thompson-selected (11 executions ever). 90/102 validators stayed dormant for more than 24h.",
+   "source": "reports-8"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Timer-tier validator-liveness and rhythm-cadence",
+   "where": "8a3804ff (09-09); 22146522",
+   "tried": "Move cadence off selection to systemd timers",
+   "outcome": "worked",
+   "date": "2026-09-09",
+   "evidence": "Both timers fire 09-29. validator-liveness reported SEVERED 38/49 but is blind to demand-driven validators such as the reach oracle (section O).",
+   "source": "reports-8"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Picker rotation short requeue",
+   "where": "ff560216 2026-08-30T08:07 dev-vessel 86cdbf2 + e70b432",
+   "tried": "non-attempt costs short requeue not full release",
+   "outcome": "partial",
+   "date": "2026-08-30",
+   "evidence": "top share 35%->20% (back to baseline); justified by retracted 88% figure; correction commit",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "B1-B4 blockers",
+   "where": "44a75483 2026-08-24T06:05 ias-executor 66f0322, 4f83bdb; activity-api e2c7959 mig 202, a7182c9",
+   "tried": "admission cap 1000, validator registration, correlation_id, universal decision_outcome capture",
+   "outcome": "partial",
+   "date": "2026-08-24",
+   "evidence": "declared all-resolved 04:24, two falsified 04:58; decision_outcome later shown circular (graded-only) 09-03",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "beta-pump on telemetry arm",
+   "where": "44a75483 2026-08-24T10:49 activity-api 018784f",
+   "tried": "classifyReach ungraded for telemetry: tags",
+   "outcome": "worked",
+   "date": "2026-08-24",
+   "evidence": "auth capture stopped 10:43; 33 execs dbeta=0; historical beta 401,706 scar left",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "total_selections prefix mismatch",
+   "where": "3637e240 2026-09-04T02:39 activity-api 0950143",
+   "tried": "normalizeActivityId on activity:<name>",
+   "outcome": "worked",
+   "date": "2026-09-04",
+   "evidence": "0 of 4,049 -> arms at 1 after /recommend; substrate self-corrected import",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Evidence-aliasing static check",
+   "where": "3637e240 2026-09-03T10:49 super-repo c851cbbb packages/evidence-aliasing-check; activity-api 98f92bd",
+   "tried": "lint for writers resetting updated_at without decay",
+   "outcome": "worked",
+   "date": "2026-09-03",
+   "evidence": "found 8 writers vs 3 by hand; both-polarity fixtures",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "/reach ordering defect (verdict tag written before grade check)",
+   "where": "activity-api /execution-traces/reach",
+   "tried": "Grade before tagging so preVerdict is seen",
+   "outcome": "worked",
+   "date": "2026-09-07",
+   "evidence": "beta +14 over 13 monotone readings, believed rate 73.6%->59.2%; alpha frozen until adda1ef",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Reach delivery from autonomous lane (adda1ef)",
+   "where": "development-vessel -> activity-api",
+   "tried": "Post reach verdicts from compose lane",
+   "outcome": "worked",
+   "date": "2026-09-07",
+   "evidence": "alpha moved 54.39->55.13 at 20:36; later frozen again by 3d648ad",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Conservation auditors as activities + bridge",
+   "where": "activity-api /conservation-audit + six http_fetch templates",
+   "tried": "Six junction auditors, rhythm cadence, bridge aggregating to <=6 gaps",
+   "outcome": "partial",
+   "date": "2026-09-06",
+   "evidence": "runaway 61.6% of executions 09-07 until rhythm decay; 09-16 bridge 850 picks dominates selection",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Wire drafting grades to model-arm posteriors",
+   "where": "35537c7e @ 2026-09-13 summary",
+   "tried": "wire gradeArmByExecution plus a neutral prior across 6 commits",
+   "outcome": "partial",
+   "evidence": "selection shifted (gemini 46%->24%) but every arm's EV is 0.023-0.060; grounding 2.4%->81% with FAVORABLE 0/16, so the mechanism win moved no outcome",
+   "date": "2026-09-13",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Learning-rate mechanisms M1-M6",
+   "where": "validation/findings/learning-rate-2026-06-04",
+   "tried": "embedding prior, concept prior, replay, tier bandit, TD(lambda)",
+   "outcome": "unknown",
+   "date": "2026-06-04",
+   "evidence": "M1 dormant (EMBEDDING_PRIOR_ENABLED=false); 07-03 ledger: crystallized fraction non-predictive",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "SF-coverage backfill via feature_compose",
+   "where": "validation/results/2026-07-03-learning-transfer-causal-ledger.md",
+   "tried": "8 compose rounds + 2 operator repairs",
+   "outcome": "partial",
+   "date": "2026-07-03",
+   "evidence": "sf 0.1403->0.1808; landed a0bf985,36be0b2,edb5375,d1400b6; operator 2504304, 96c2aaa; ceiling 104 cells after retention destroyed evidence",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Source-conditioned differentiation",
+   "where": "validation/results/2026-08-12-conditioned-differentiation.json",
+   "tried": "conditioned signatures",
+   "outcome": "partial",
+   "date": "2026-08-12",
+   "evidence": "41/45 -> 44/45 correct; invariant false",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Reuse hit@k benchmark",
+   "where": "validation/results/*reuse-report.json",
+   "tried": "reuse-harness 20-30 goals",
+   "outcome": "dormant",
+   "date": "2026-05-13..2026-08-01",
+   "evidence": "hit@1 0-0.47 in May; 0/0/0 on 07-05, 07-10, 08-01 due to stale May expected ids",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Thompson posteriors disconnected from outcomes",
+   "where": "activity-api posterior-update / normalizeActivityId; 766cdbea SQL org_id data patch",
+   "tried": "normalizeActivityId fix plus a direct SQL data patch of variant_performance_metrics org_id",
+   "outcome": "worked",
+   "date": "2026-05-25",
+   "evidence": "F-037/F-043/F-066 resolved; iter-035 live rows show alpha consistent with 750/827 successes",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "selection-learning",
+   "title": "context_thompson_scores + impulse_relevance forward arm wiring",
+   "where": "ias-executor-ts TranslatingTraceSink, f0886c2, 937c4a2",
+   "tried": "Bridge state_space_signature and input_impulse_shapes onto traces; send impulse_state_space with /recommend",
+   "outcome": "worked",
+   "date": "2026-05-29",
+   "evidence": "Both tables had 0 rows on 05-28 (iter-035); on 2026-09-28 context_thompson_scores=29200 and impulse_relevance_metrics=20714",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "selection-learning",
+   "title": "S.4a coverage-progress lift criterion",
+   "where": "coverage-tick, boredom goals, 71b97deb",
+   "tried": "Coverage-progress windows as the lift criterion",
+   "outcome": "partial",
+   "date": "2026-05-26",
+   "evidence": "F-075 structural plateau; F-092 limit=200 spurious plateau self-fixed; F-113 regression 8 to 4; F-123 coverage_progress=true while coverage declined",
+   "source": "validation-other-2"
+  }
+ ],
+ "problems": [
+  {
+   "key": "selection-learning",
+   "symptom": "decision_outcome predicted 0.207 vs observed 0.138 since 09-15; 1,915 success-but-not-reached",
+   "root_cause": "Over-confident predictor; exit status diverges from reach",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Failure taxonomy mostly unemitted: 9,790/21,058 24h executions carry out-of-union execution_error (7,727 on success=true); 138/138 cascading lack upstream_task_id; four members never emitted",
+   "last_seen": "2026-09-29",
+   "source": "docs-3"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Posteriors don't move or don't steer: verdict uncredited, increment discarded, decay erases evidence, Beta(1,1) swamps learned arms, goal_hash un-reusable, ungraded hardcoded",
+   "root_cause": "Many independent write and read sites for one belief; constants copied across populations; no end-to-end falsifier that learning moves selection",
+   "first_seen": "2026-04-13",
+   "last_seen": "2026-09-27",
+   "recurrences": 14,
+   "source": "git-activityapi"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Arms only lose (beta without possible alpha), grades recorded at 2 of 8 sites, dispatcher pins a template at beta 8610",
+   "first_seen": "2026-07-22",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "root_cause": "Credit assignment is spread across many sites in the walk. Pinned dispatchers bypass selection learning.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Selector pinned on NaN; candidate set capped at 100 oldest; learned templates alpha=1 forever; hardcoded dispatch bypasses posterior",
+   "first_seen": "2026-06-22",
+   "last_seen": "2026-09-05",
+   "recurrences": 5,
+   "root_cause": "Learning inputs silently truncated or bypassed (page cap, missing input_shapes, direct /run-goal)",
+   "source": "git-mid"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Thompson posteriors do not move (alpha=beta=1) despite executions; selection bypassed or poisoned",
+   "first_seen": "2026-02-24",
+   "last_seen": "2026-06-17",
+   "recurrences": 9,
+   "root_cause": "posterior written in one table/field and read from another (activity table vs VPM, top-level prior vs metrics.*, string vs record id); selection bypassed via templateId/targetTemplateId; outcomes lack failure reasons",
+   "source": "git-super-1"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Thompson draws from the uniform prior; blame never lowers selection",
+   "root_cause": "The credit writer and the selection reader key the posterior differently (signature width/input, org_id form, missing view, 'ungraded' failures)",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-27",
+   "recurrences": 9,
+   "source": "git-super-2"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Posteriors of the auto-bridge family carry large betas from an infrastructure bug (auto-bridge-problem_detection alpha 6.9 / beta 36.2) even though the arm is 93% ok after the fix",
+   "root_cause": "Failures are charged to the arm with no failure-reason attribution; addressing errors are not separated from capability failures",
+   "source": "live-activities"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "60% of Thompson selections go to arms with \u22642 observations; conservation-* twins win ~30k/62k selections but rarely execute",
+   "root_cause": "Recommend-time selection is decoupled from execution and grading, so optimism on cold arms is never paid down; learned-* twins duplicate seeded arms",
+   "source": "live-activities"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "null Thompson scores, legacy score read matches no rows, beta not growing, credit on wrong arm, 67 composition islands",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-28",
+   "recurrences": 15,
+   "root_cause": "id format mismatch (activity:<> vs bare names); ungraded throws; satisfier steps withhold credit",
+   "source": "live-gaps"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "None of the 57 compose_lessons has a success credit, though 42 were loaded (up to 85 times); lessons are duplicated (anchor_not_found \u22655 variants) and some are empty boilerplate",
+   "first_seen": "2026-07-31",
+   "last_seen": "2026-09-26",
+   "recurrences": 1,
+   "root_cause": "Lesson efficacy is never credited back (PLAUSIBLE); a new lesson is minted per failure instead of reinforcing an existing one",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "899 picks with zero compounding; arms frozen at prior; model grading on transport, not reach",
+   "root_cause": "gradeArmByExecution never wired; producer/goal horizons not on the Thompson primitive; groupedExecutionStats unconsumed",
+   "first_seen": "2026-07-11",
+   "last_seen": "2026-08-18",
+   "recurrences": 4,
+   "source": "memory-1"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Learning does not compound: uniform priors swamp earned arms, credit to satisfier pseudo-ids, total_executions 155x inflated, untraced arms immortal, LLM selector graded on call-returned, failover mislabels, decay never fires for busy arms, verdict junction graded 0.6%",
+   "root_cause": "Credit assigned from effects that are not the outcome (law 12); evidence paths severed at multiple joints; counters not validated against censuses",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-12",
+   "recurrences": 9,
+   "source": "memory-10"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Greedy-mean lock-in, fabricated credit to synthetic ids, volatile or unread posteriors, two samplers splitting credit",
+   "first_seen": "2026-07-14",
+   "last_seen": "2026-08-04",
+   "recurrences": 7,
+   "root_cause": "Satisfier tiers are not activity rows; posteriors written but not read at decision time",
+   "source": "memory-2"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Walk selections without posteriors; a never-reaching composition at 0.67 ev; PROVEN-BAD arms held selectable with beta withheld; a 1/1 cold-start inversion after honest grading; no learning curve on saturated probes.",
+   "first_seen": "2026-07-16",
+   "last_seen": "2026-09-19",
+   "recurrences": 8,
+   "root_cause": "Credit is keyed to clean exit rather than reach. Belief is split across six stores. Hierarchical priors are missing. Beta is withheld on failover and suppression holds.",
+   "source": "memory-3"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Learning does not act on evidence: a non-Beta draw, fail-open legacy-success, frozen context scores, pinned dispatch bypassing a crushed arm, a pinned LLM arm not moving",
+   "first_seen": "2026-07-27",
+   "last_seen": "2026-09-16",
+   "recurrences": 6,
+   "root_cause": "Selection bypasses (hardcoded targetTemplateId, policy pins) and grading gaps; retirement is selection-scoped",
+   "source": "memory-4"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Learning does not compound: 74% of arms have n=1, Spearman is about 0, improvements are step functions from bug fixes.",
+   "root_cause": "Evidence per arm is 11x short. Views grade on exit status. Arm grading ignores reach. The router is degenerate and the boredom pin sits outside selection.",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-06",
+   "recurrences": 6,
+   "source": "memory-5"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Learning does not compound; repeated exposure never raises reach",
+   "root_cause": "reach is deterministic per class capability; verdict delivery ~1-4%; arms graded on transport/exit status; posteriors under-credited; pinned/target-template dispatch bypasses selection",
+   "first_seen": "2026-07-20",
+   "last_seen": "2026-09-10",
+   "recurrences": 7,
+   "source": "memory-6"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Arms credited on HTTP success / template exit status not reach",
+   "root_cause": "recordArmOutcome(resolved), goal-paths successful_executions from validated.success, impulse-resolve abort exemption",
+   "first_seen": "2026-07-14",
+   "last_seen": "2026-09-20",
+   "recurrences": 4,
+   "source": "memory-6"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Posteriors do not differentiate: multiplicative saturation, the 1612:0 beta ratchet, an orphan arm holding 96.8% of beta, validator-dispatch at 0.205 against an empirical 0.952, distinct_means 1",
+   "root_cause": "No marginal or counterfactual attribution. Satisfier pseudo-arms are graded but steer nothing. About 2-4% of executions are graded. Uninformed mints outgrow the grading loop",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-02",
+   "recurrences": 9,
+   "source": "memory-7"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Credit is mis-assigned: wrong answers alpha-credited, only the floor's wins recorded, compose rows ungraded, UNFAVORABLE beta lost, posteriors measure cost.",
+   "root_cause": "Graders key on self-reported verdicts, id schemes are disjoint, and the classifiers measure naming conventions.",
+   "first_seen": "2026-07-22",
+   "last_seen": "2026-09-10",
+   "recurrences": 9,
+   "source": "memory-8"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Learning does not compound: beta annihilated at the draw, the posterior never falls on thrown failures, success moves alpha only on deterministic labels, arms identical despite 8..701 runs",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-09-24",
+   "recurrences": 7,
+   "root_cause": "Wrong sampler transform; ungraded => 0/0; det gate drops LLM verdicts; billing failures counted as quality; state signature never persisted (0/96,959)",
+   "source": "memory-9"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Posteriors frozen, poisoned by benign no-ops, or fabricated; the bandit never demotes a 100%-failing activity",
+   "first_seen": "2026-05-25",
+   "last_seen": "2026-09-12",
+   "recurrences": 10,
+   "root_cause": "outcomes lack distinguishable failure modes; signatures missing; counters keyed differently across tables",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Something pins development-vessel:scaffold-and-publish-vessel 1036x/24h at posterior alpha 5.59 beta 7823 (7829 observations)",
+   "root_cause": "The caller ignores the posterior and pins a target; unattributed (boredom attribution retracted 09-26 10:00); the refusal holds but the loop never stops",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 1036,
+   "source": "node2-runtime"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Node 1 boredom selector: 5 sampled templates, distinct_means 1, variance 0 (all at prior 0.2); node 2 picks dozens of cold one-off detect-unclassified_failure_* templates with picks=0",
+   "root_cause": "Posterior not compounding; minting of one-shot detector templates splits traffic (law 3)",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-29",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Thompson posteriors do not move (total_selections=0) or are polluted; new zero-evidence templates win recommend for unrelated goals",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-09-25",
+   "recurrences": 4,
+   "root_cause": "dispatch paths that bypass selection; id normalization mismatch; silent success crediting alpha",
+   "source": "openspec-1"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "The same goal is re-dispatched endlessly (one hash refused 629x); the reconcile goal re-dispatched every 10 min",
+   "root_cause": "3.4 negative facts not built; failure memory drops deterministic refusals",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "source": "openspec-10"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Value-per-cost selection (5.1 cost posteriors, 5.3 p/E[cost], 5.4 calibrated landability) unbuilt; route-edit class alpha1/beta195",
+   "root_cause": "requires SCHEMAFULL migrations and a discovery-routed close credit; deferred",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28",
+   "source": "openspec-10"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Near-uniform draws among 3 templates for the same goal, and empty 10ms successes inflating \u03b1. The stagnation detector dropped the right template, and the fix bypassed the selector (templateId tasks). Cascading \u03b2 attributed to depth-1 only.",
+   "root_cause": "Sparse n\u22481 arms, success updates not discounted for information, credit attribution without a root_cause_step.",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-05-31",
+   "recurrences": 3,
+   "source": "openspec-2"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Boredom UCB saturated: 86% of selections at mean=1.0 because the reward was completion",
+   "first_seen": "2026-06-14",
+   "last_seen": "2026-06-14",
+   "recurrences": 1,
+   "root_cause": "reward measured process exit rather than information yield (same class as status vs reached)",
+   "source": "openspec-3"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Deterministic activities never earned vpm posteriors, so auto-promote could not graduate them",
+   "first_seen": "2026-06-14",
+   "last_seen": "2026-06-14",
+   "recurrences": 1,
+   "root_cause": "LR-4 tier-restricted bandit skipped the UPDATE for deterministic cells, and the promoter read only vpm",
+   "source": "openspec-3"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Gamed local signature escapes bad global reputation; lift gate 0/24 with lambda1=0 two-component topology",
+   "root_cause": "Linear blend downweights global at nContext>=5; composition graph fractured",
+   "first_seen": "2026-06-25",
+   "last_seen": "2026-07-02",
+   "recurrences": 1,
+   "source": "openspec-4"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Poisoned posteriors from transient outages suppress templates forever; then 3-day decay erased 95.4% of learned evidence so learning did not compound",
+   "root_cause": "Outage failures recorded as arm blame; a constant tuned for high-frequency LLM arms copied to week-cycle templates",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-08-22",
+   "recurrences": 2,
+   "source": "openspec-5"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Pathways that reached but produced inert or reverted changes keep reach-time credit, e.g. registryFieldFor rewritten 8x, each rewrite re-banking credit; confabulated blob 4eedb4de scored CORRECT.",
+   "root_cause": "Credit is banked at reach time by a surface-plausibility oracle; goal_verification_labels (14,100 rows) is never read by posterior-update.ts; the A/B supersede decision is unsettled.",
+   "first_seen": "2026-08-26",
+   "last_seen": "2026-09-28",
+   "source": "openspec-6"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "The surface can be steered but does not learn: one render arm, no posterior, surfaceIntent not an activity",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "No counterfactual arm and no reward computed (time-to-verdict). A behavior that exists only as a resolver is invisible to Thompson (law 2).",
+   "source": "openspec-9"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Posterior does not reflect outcomes: counterfeit draw; alpha != reach; exception failures ungraded so failing arms keep old posterior; composition_score never consumed; explore dropped best pathway",
+   "root_cause": "Credit applied only on graded verdicts; selection reads per-arm global posterior only (memoryless); counters and posterior written by different paths/keys",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-23",
+   "recurrences": 7,
+   "source": "reports-1"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Zero-success arms (202 exec/0 success, 53 learned-of-learned up to 7 deep) keep winning selection",
+   "root_cause": "Retirement SQL bound record id as literal ($template_id) so it never fired; after the fix the gate is starved (needs 20 hub executions, spoke traces spooled); feedback insufficient; no recipe eviction",
+   "first_seen": "2026-08-15",
+   "last_seen": "2026-09-29 (poor_performance retirements still 0)",
+   "recurrences": 3,
+   "source": "reports-3"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "60/68 learned-composition templates stuck alpha=1 despite 340 successes while beta rises, including on capacity refusals",
+   "root_cause": "In-walk consumedInChain needs declared task input shapes (91 templates declare []); capacity BUSY graded as template failure",
+   "first_seen": "2026-08-15",
+   "last_seen": "2026-08-15",
+   "recurrences": 1,
+   "source": "reports-3"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "79.8% of pool signatures have <=1 candidate; path_signature collapses 1-op and 3-op goals",
+   "root_cause": "Identity keyed on satisfier path/output kind, not on content dependency",
+   "first_seen": "2026-08-12",
+   "last_seen": "2026-08-14",
+   "recurrences": 2,
+   "source": "reports-3"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Credit misassigned: satisfier steps get no alpha/beta (4,335 WITHHELD/24h), last pick beta-penalised for downstream failure, holder posterior ignores 157 failures, floor record kills dispatch",
+   "first_seen": "2026-08-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "root_cause": "ledgerStep credits declared inputs only; satisfier traces carried no input ids; grading keyed to last pick; gap still open.",
+   "source": "reports-4"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Blame is annihilated or misdirected: the counterfeit Beta, satellites stamped reached:false, UCB on exit status, recommend dropping \u03b1/\u03b2, env-armed interlocks",
+   "root_cause": "Multiple posterior stores and several transit paths, each with its own key and semantics. The instrument (alphaBetaDelta) misreports.",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "source": "reports-5"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Posteriors are written but selection does not read them (tier 1 structural zero, org_id strip, 3-day decay erases 95% of evidence, satisfier plane ignores posterior, fix #7 0 rows, feature_compose posterior frozen 36h+ after 3d648ad, 7 arms with 5 or more outcomes frozen at Beta(1,1)).",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-09-25",
+   "recurrences": 7,
+   "root_cause": "The key-form and signature disagreements between credit writer and selection reader recur; the credit write is fire-and-forget and logs success when skipped.",
+   "source": "reports-6"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Selection is effectively random: posteriors at Beta(1,1) or alpha=1; about 49% of JWT-path CTS writes dropped on conflict; hidden dense-tie coupling on exploration",
+   "root_cause": "No closure credit; non-atomic, unretried posterior writes",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-27",
+   "recurrences": 3,
+   "source": "reports-7"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Learning is almost all punishment (19/21 applied updates are beta; feature_compose 14/14). 90/102 selection-scheduled validators died of unpopularity. The cold Beta(1,1) reuse-promotion helper promotes in 51.5% of draws. The obsidian beta-pump HOLLOWs an unreachable goal 49 times.",
+   "root_cause": "The input stream is mostly failure. Critical checks are scheduled by the mechanism they monitor. A sample is not evidence. INFRASTRUCTURE_UNAVAILABLE is not abstained.",
+   "first_seen": "2026-09-02",
+   "last_seen": "2026-09-11",
+   "recurrences": 4,
+   "source": "reports-8"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Verdict->belief declared closed then posterior frozen again",
+   "first_seen": "2026-09-02",
+   "last_seen": "2026-09-10",
+   "recurrences": 5,
+   "root_cause": "Multiple distinct seams: /reach ordering, delivery lane, id namespace (3d648ad), decay under-application",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Paths keyed on goal_hash (text) \u2014 155 consecutive non-reaches on one hash; state_signature 0/96,747; v_shape_conditioned_score empty",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-16",
+   "recurrences": 1,
+   "root_cause": "Instance key instead of shape-signature parametrization",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Selection ~98% observation / 2% repair",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-16",
+   "recurrences": 2,
+   "root_cause": "UCB on information yield rewards detectors; auditors dominate",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Satisfier posteriors inverted (a2/b185 over 189 runs, 167 succeeded); pool picks ~98% observation and ~2% repair",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-17",
+   "recurrences": 2,
+   "root_cause": "Readback check fails to see a successful write and grades it non-persistence; yield-based UCB favours detectors",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Posteriors flat (alpha=1), beta withheld, learning does not compound",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 5,
+   "root_cause": "Credit from reached/landed rather than verified closure; 09-05 measure 74% arms n=1",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "'Thompson converging' is validator-dispatch/slot-binding self-loop; satisfier wins WITHHELD alpha-credit; ladder shows 0 producer steps",
+   "first_seen": "2026-05-25",
+   "last_seen": "2026-08-12",
+   "recurrences": 7,
+   "root_cause": "credit needs chain edge or landed sha; state signature too fine; cost telemetry 0 on 210,955 traces",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Posteriors not moving with outcomes; priority inversion; a meta-activity holding 96% of traces; validator-dispatch alpha 6251 with zero observable output",
+   "first_seen": "2026-05-24 F-037",
+   "last_seen": "2026-05-27 F-127/F-118",
+   "recurrences": 6,
+   "root_cause": "activity id normalization and org_id mismatches; signature bridge missing; success graded on status",
+   "source": "validation-other-2"
+  }
+ ],
+ "claims": [
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-05-31",
+   "claim": "S2 sustained over 3 consecutive windows",
+   "where": "percolation_2026_05_31_s2_sustained",
+   "later": "06-13 boredom loop livelocked on mitosis-tick",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-06-14",
+   "claim": "Substrate IS autonomous and converged on its known gap classes",
+   "where": "finding_2026_06_14_evidence_seam_is_the_break",
+   "later": "06-17 forward model poisoned (resolver-author mean 0.004)",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-06-26",
+   "claim": "Signature starvation is FIXED (98% coverage)",
+   "where": "finding_2026_06_26_alignment_fixes_reach_observability_genuine_edges",
+   "later": "07-31 drafter posterior counters 0/0/0 after 4,649 executions",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-26 10:00",
+   "claim": "boredom attribution of the scaffold pin retracted; sender unattributed until goal-host origin logging lands",
+   "where": "CHECKINS.md",
+   "later": "Still unattributed 09-29: 1036 refusals per 24h at posterior alpha 5.59 / beta 7823.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-27 21:47",
+   "claim": "Autonomy reopened at 2 USD/h under the envelope",
+   "where": "CHECKINS.md",
+   "later": "09-28 18:45: five autonomous landings missed, none an improvement or system-verifiable; 23:45 the system credited an inert landing; reach fell to ~8%/h; 09-29 04:19 0/863 admitted on both nodes",
+   "source": "openspec-10"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-27",
+   "claim": "value-per-cost commits authored 'substrate-authored: apply route-edit'",
+   "where": "git log dev-vessel/goal-host/activity-api/llm-resolver/boredom",
+   "later": "all were operator pre-validated directed edits; git author cannot distinguish them from autonomous landings",
+   "source": "openspec-10"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-08-24T04:24",
+   "claim": "All four blockers B1-B4 resolved and verified",
+   "where": "44a75483",
+   "later": "04:58 same session: B1 and B3 falsified by live measurement; record corrected cfbf435b",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-08-24T06:05",
+   "claim": "B1 resolved by universal decision_outcome capture, organic row",
+   "where": "44a75483",
+   "later": "10:08: 561/561 executed_at NONE, 81% one arm; 09-03: records only graded rows, circular",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-08-30T03:53",
+   "claim": "One gap family monopolizes 76-88% of picks",
+   "where": "ff560216",
+   "later": "07:59 retracted: runner_up double-counted; real 8.5-35%; 86cdbf2 had already shipped on the false number",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-04T04:52",
+   "claim": "Thompson credit flows from execution.success, not reached",
+   "where": "3637e240",
+   "later": "04:55 wrong: effectiveSuccess = reachVerdict === 'reached'",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-04T06:21",
+   "claim": "Four-link chain closed; session goal met (alpha+beta +1.0 on one execution)",
+   "where": "5aac66b8/3637e240",
+   "later": "09-06 recap still lists 'compose lane is ungraded' as the top finding",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-06T10:43",
+   "claim": "Compose grading seam closed end to end \u2014 first-ever verdict on a real compose row (graded exec_* 0 -> 2)",
+   "where": "074acb94/0b1032b5",
+   "later": "09-06 12:04 retracted: feature_compose graded rows existed since 08-29",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-06T11:16",
+   "claim": "Posterior moved one second after first real verdict \u2014 full circuit observed",
+   "where": "0b1032b5",
+   "later": "09-07 00:07 falsified by own scorecard: posterior frozen while false verdicts rise",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-07T10:02",
+   "claim": "Verdict->belief CLOSED AND PROVEN (/reach ordering defect)",
+   "where": "074acb94",
+   "later": "worked for beta; 09-08 22:58 posterior frozen again by autonomous 3d648ad signature namespace change",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-08T23:47",
+   "claim": "Instrumentation compounding confirmed (credit 0.6%->71%, self-model 57.7->1.55 pts)",
+   "where": "074acb94",
+   "later": "capability flat: reach 4.4% over 72 readings, alpha +5.91 vs beta +364",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-13",
+   "claim": "Root cause found and fixed: drafting was ungraded",
+   "where": "35537c7e @ 2026-09-13T19:05 summary",
+   "later": "Every arm drafts at 2-6%; grounding up 34x with FAVORABLE 0/16; no outcome moved",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-13",
+   "claim": "Selector inversion is the mechanism",
+   "where": "35537c7e @ 2026-09-13T22:48 summary",
+   "later": "Retracted: per-arm outcomes all 0-4.5%",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-16",
+   "claim": "The pool grades a futile repair success 13x; the debit is unreachable",
+   "where": "faba5acd @ 2026-09-16T06:31",
+   "later": "06:33 retracted: the debit is keyed on reward (mean 0.00); the pool stopped at 13",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-28T07:11Z",
+   "claim": "Reconstruction of 'working on 09-24 to 09-26'",
+   "where": "ac8b0aad 2026-09-28T07:11Z",
+   "later": "Autonomous landings were not working then (23%->19%->8%, 0-2 closures/day); test check already blind, noted 09-25 06:30 and not acted on",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-05-25",
+   "claim": "Thompson converging; posteriors live after RETURN fix",
+   "where": "validation/findings/iter-21, iter-24",
+   "later": "validator-dispatch 301/301 dominance; \u224885% self-loop 06-04; memory 09-08 says posteriors vestigial",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-05-25",
+   "claim": "F-083 debunked, posteriors safe (alpha monotonic)",
+   "where": "validation/findings/f-083-debunked.md",
+   "later": "the proof metric was the self-looping validator-dispatch",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-06-04",
+   "claim": "M1-M6 all tracked and improving",
+   "where": "validation/findings/learning-rate-2026-06-04",
+   "later": "M1 dormant; 07-03 ledger: crystallized fraction not predictive; 08-12 ladder: 0 producer steps",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-05-23",
+   "claim": "reuse hit@5 0.6",
+   "where": "validation/results/2026-05-23-run2-20260523-reuse-report.json",
+   "later": "0/0/0 on 07-05, 07-10, 08-01 (benchmark fossil with stale ids)",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-05-25",
+   "claim": "F-083 CRITICAL: restart destroyed Thompson posteriors (alpha 300 to 85)",
+   "where": "inv 2026-05-25T11-16-28Z-020",
+   "later": "Debunked 05-26 (612521ce f-083-debunked.md): over-broad grep matched template writes",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-05-27",
+   "claim": "alpha grows on selection, not success (HIGH)",
+   "where": "stream-B iter-034",
+   "later": "Retracted in iter-035: 750/827 successes; real residue was success_rate staleness plus empty context_thompson_scores/impulse_relevance (both populated by 09-28)",
+   "source": "validation-other-2"
+  }
+ ]
+}

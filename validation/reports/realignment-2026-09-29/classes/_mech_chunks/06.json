@@ -1,0 +1,849 @@
+{
+ "area": "other",
+ "items": [
+  {
+   "name": "compose-slots O_EXCL allocator + directed reservation + per-gap in-flight guard",
+   "location": "$WORKSPACE_ROOT/compose-slots; c8cfc38",
+   "purpose": "bound compose concurrency",
+   "status": "live-used",
+   "general": true,
+   "evidence": "cap 1 autonomous / 2 directed; body.operator required for directed",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "runtimeTracingMiddleware",
+   "location": "(named in docs audit)",
+   "purpose": "Runtime trace flag",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Only app.use inside a comment; 0/97,000 rows",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "registration replication",
+   "location": "(not built)",
+   "purpose": "Dial-in => findable by all",
+   "status": "dormant",
+   "general": true,
+   "evidence": "grep finds no replicate/forward-on-register; specified 07-19 and 09-12",
+   "source": "federation-relay",
+   "mentions": 1,
+   "sources": [
+    "federation-relay"
+   ]
+  },
+  {
+   "name": "variant generator",
+   "location": "-<ts13>/_variant_/-improved-/-hardened- rows",
+   "purpose": "Variant-first repair",
+   "status": "fossil",
+   "general": true,
+   "evidence": "586 rows, 545 never ran; nothing new since July",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "bump-submodules CI + nightly dev build",
+   "location": ".github workflows",
+   "purpose": "Keep gitlinks current; build images",
+   "status": "live-used",
+   "general": true,
+   "evidence": "216 substrate-bot commits; 851c4725 fail on resolve-nothing",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "bump-submodules workflow",
+   "location": ".github/workflows/bump-submodules.yml",
+   "purpose": "keep submodule pointers current",
+   "status": "broken",
+   "general": false,
+   "evidence": "11 consecutive failures (dead PAT) as of 08-12",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "install acceptance workflow",
+   "location": ".github/workflows/install-acceptance.yml",
+   "purpose": "off-host install class detector",
+   "status": "broken",
+   "general": true,
+   "evidence": "usable=fail on every run; posting unwired (empty hub secrets); no gaps",
+   "source": "openspec-10",
+   "mentions": 1,
+   "sources": [
+    "openspec-10"
+   ]
+  },
+  {
+   "name": "metabob MCP cockpit",
+   "location": ".mcp.json -> /home/avi/documents/work/metabob-mcp",
+   "purpose": "ACT/TRACK/REASON/FEEDBACK/INSPECT planes",
+   "status": "broken",
+   "general": true,
+   "evidence": "goal_status and registry_query fail via localhost:18100. Two tool namespaces are exposed.",
+   "duplicates_of": "mcp__plugin_metabob_metabob__* plugin namespace",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "light-dispatch-healthcheck",
+   "location": "/usr/local/bin/light-dispatch-healthcheck",
+   "purpose": "Catch a hung light-dispatch",
+   "status": "live-used",
+   "general": true,
+   "evidence": "9945 ok runs in 3.6 days",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "mirror-to-live",
+   "location": "/usr/local/bin/mirror-to-live",
+   "purpose": "Shared deploy/recovery copy",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-05 recovery recipe ~30s",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "mirror-to-live repairer",
+   "location": "/usr/local/bin/mirror-to-live",
+   "purpose": "Repair live-vs-clone divergence",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "08-09 nothing invokes it for the poisoned case",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "substrate-pull-sync",
+   "location": "/usr/local/bin/substrate-pull-sync",
+   "purpose": "Pull clones, mirror the runtime, reseed active-scripts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "synced=1. cp -f with no prune (line 1666). Refuses to converge the fleet files",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "substrate-pull-sync + mirror-to-live + pre-cutover test gate",
+   "location": "/usr/local/bin/substrate-pull-sync (image)",
+   "purpose": "deploy convergence",
+   "status": "live-used",
+   "general": true,
+   "evidence": "silent failed=0 on a blocked ff; self-updates one tick behind; 26 non-zero exits/12h",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "substrate-pull-sync",
+   "location": "/usr/local/bin/substrate-pull-sync (image-baked)",
+   "purpose": "converge clones and /vessels",
+   "status": "live-used",
+   "general": true,
+   "evidence": "lags repo; never syncs units; reports success while skipping (08-28)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "Compose slots with staleness backstops",
+   "location": "/workspace/compose-slots, compose-slots.ts:214",
+   "purpose": "Cap concurrent composes, reserve directed slot",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Slot and in_flight leak on abort (20-min backstop); a single slot is shared by operator and autonomous lanes",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "gap-class-posteriors.json",
+   "location": "/workspace/gap-class-posteriors.json",
+   "purpose": "class rerank",
+   "status": "live-used",
+   "general": false,
+   "evidence": "node-local; alpha1/beta195",
+   "source": "openspec-10",
+   "mentions": 1,
+   "sources": [
+    "openspec-10"
+   ]
+  },
+  {
+   "name": "gap-class posteriors (updateClassPosterior)",
+   "location": "/workspace/gap-class-posteriors.json per node",
+   "purpose": "Rank compose work by class",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "alpha=1 on essentially every class on both nodes (09-27)",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "funnel-history and landability_predictions logs",
+   "location": "/workspace/git/super-repo/gaps/",
+   "purpose": "gap funnel metrics",
+   "status": "unknown",
+   "general": false,
+   "evidence": "median_latency_ms 0; 66,866-line log with unknown reader",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  },
+  {
+   "name": "microplastic agent-IDE",
+   "location": "03-27 commits",
+   "purpose": "composite vessel with Thompson + ribosome",
+   "status": "fossil",
+   "general": true,
+   "evidence": "no references after March",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "Coalesce in-flight + /resolve already-walking refusal",
+   "location": "055406c/7e121c4; 7f0425d",
+   "purpose": "Dedup concurrent identical goals",
+   "status": "duplicate",
+   "general": false,
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "host-sync-poller / host-pull-sync",
+   "location": "057ba013, c4d4045c",
+   "purpose": "sync container and host clones",
+   "status": "unknown",
+   "general": false,
+   "evidence": "host-location dependence; mirror-back b04330b8",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "June meta-detectors (detector_meta_scan, selector-saturation, detector-authoring recursion)",
+   "location": "06-13..06-19 commits",
+   "purpose": "Self-detection of detector health",
+   "status": "live-used",
+   "general": false,
+   "evidence": "1,948 detect-* runs/7d, mostly per-instance detect-unclassified_failure_* \u2014 bloat.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "spectral-gap governor",
+   "location": "237b6dc8",
+   "purpose": "topology optimization target",
+   "status": "fossil",
+   "general": false,
+   "evidence": "reframed away 8bef765e ('stop pushing the wrong global-lambda2 target')",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "drafter-corruption / non-LLM llmCall refusal",
+   "location": "35c6b33, 93b18ba (08-02)",
+   "purpose": "Stop self-sealing drafter corruption",
+   "status": "live-used",
+   "general": false,
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "neutral emitter bus",
+   "location": "4167ba2a, e3755a03",
+   "purpose": "substrate event bus",
+   "status": "unknown",
+   "general": true,
+   "evidence": "verified iter 42 (664d8434)",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "autonomy-metrics/status/criterion-coverage",
+   "location": "4602d2b2..635e158a",
+   "purpose": "operator autonomy dashboard",
+   "status": "unknown",
+   "general": false,
+   "evidence": "redefined at least 11 times ('honest' series)",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "compose-teacher",
+   "location": "46dbef2b, c4b0806c, 3a1726ca",
+   "purpose": "author composites over bridging pairs",
+   "status": "unknown",
+   "general": false,
+   "evidence": "hollow-composite root-cause fix 06-26",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "Expectation scan",
+   "location": "5-min expectation loop (09-19/09-23)",
+   "purpose": "Standing expectations on behaviour",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "273 ticks/24h 0 violations through a day of breaks; toy families only",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "Seam 3 net-new resolver authoring",
+   "location": "5e2dbe7 (06-19); config.ts allowlist",
+   "purpose": "Substrate authors new resolvers",
+   "status": "broken",
+   "general": true,
+   "evidence": "70 July mints. Nonexistent endpoints. 5 deleted as cruft. 60+ single-reference.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "restart attribution breadcrumbs",
+   "location": "644e7ee; 18a82bac",
+   "purpose": "Name who restarted a vessel",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Built 08-11",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "coherence-recover",
+   "location": "6b21bf4e",
+   "purpose": "demote byte-identical duplicate activities",
+   "status": "unknown",
+   "general": false,
+   "evidence": "symptom fix; source dedup deferred",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "reachable_unlearned_probe",
+   "location": "6c3448e reverted 9e99f11 (05-26)",
+   "purpose": "Recommend-to-execute probe",
+   "status": "fossil",
+   "general": false,
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "gap-compose (default-on)",
+   "location": "6f5e1bdd",
+   "purpose": "autonomous gap fixing",
+   "status": "unknown",
+   "general": true,
+   "evidence": "GAP_COMPOSE_TRIAGE opt-out env",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "self-recovery-tick (docker cp host source)",
+   "location": "6f5e1bdd",
+   "purpose": "revert unhealthy vessels",
+   "status": "unknown",
+   "general": false,
+   "evidence": "host source as authority",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "compose_topology_tick / author_producer / author_composed_capability",
+   "location": "71ad11e, aaee339, df174db (06-19..27)",
+   "purpose": "Composition-edge formation and bridge authoring",
+   "status": "unknown",
+   "general": true,
+   "evidence": "compose-auto-bridge-* runs in the hundreds/7d. author_* not seen in the 24h journal.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "validate-build reproducibility gate + doctor check 7",
+   "location": "7481a497; c8ffbae5",
+   "purpose": "Build reproducibility / host loop liveness",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Clean clone builds (08-09)",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "stratified harness / oracle-corpus arm / held-out suite",
+   "location": "796cc142..2a89594b",
+   "purpose": "measure recommendation/reach",
+   "status": "dormant",
+   "general": true,
+   "evidence": "no references after 05-22 in super-repo log",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "schema-drift / reach-rate-scan detectors",
+   "location": "8636190, bb8516e",
+   "purpose": "Detect DB drift and reach shortfall",
+   "status": "dormant",
+   "general": false,
+   "evidence": "0 execs in the retained window",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "landabilityScore recommit penalty",
+   "location": "9b305d2",
+   "purpose": "Down-weight retries of known failures",
+   "status": "unknown",
+   "general": false,
+   "evidence": "The effect experiment was confounded (section U)",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "disposition executor + bounded per-gap re-test exemption",
+   "location": "9cb83d0; read-back fe52076",
+   "purpose": "Let a human answer unseal one gap without unsealing its category",
+   "status": "broken",
+   "general": true,
+   "evidence": "Worked 08-29. By 09-22 escalations went to a replaced, unread :8270, and the parser rejected its own verb names.",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "Seam 1 generative frontier",
+   "location": "9d7208a (06-19)",
+   "purpose": "Spectral-headroom-gated generative gap source",
+   "status": "unknown",
+   "general": true,
+   "evidence": "No journal hits in 24h.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "closure-audit / verify-diagnostic-loops harness",
+   "location": "9da917a7, 18d3c405",
+   "purpose": "lift gate checks",
+   "status": "dormant",
+   "general": false,
+   "evidence": "16/16 on 05-29, then not referenced",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "bump-submodules.yml",
+   "location": "AviGopal/substrate .github/workflows",
+   "purpose": "move submodule gitlinks",
+   "status": "broken",
+   "general": false,
+   "evidence": "never bumped a pointer; now fails loud (851c472); PAT lacks Contents:Read",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "wiring-honest readiness/doctor/HEALTHCHECK",
+   "location": "a919a62a, a07ea8b7; relevance-sink d42910bc",
+   "purpose": "Make miswired fleets red with attribution",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Phase-2 pre-registered matrix fully met on 09-16",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "docs_align_scan / doc_drift_fix",
+   "location": "ad5f7c0, 729af75",
+   "purpose": "Docs-reality alignment",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Not seen in 24h journal.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "MAX_NEW_RESOLVERS_PER_HOUR mint guard",
+   "location": "apply-proposal-as-patch.ts:967/1186",
+   "purpose": "bound rho-grow",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "never fired; env-gated",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "causal attempt ledger",
+   "location": "attempt-ledger.ts, attempt-register.ts, attempt-checks.ts",
+   "purpose": "Record pre-state, attempt and outcome per landing",
+   "status": "live-used",
+   "general": true,
+   "evidence": "8 register / 5 snapshot execs; accepted 09-26",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "Unaccounted-landing detector (per repo)",
+   "location": "attempt-register.ts b6f0d14/617b12a/429c8bd/cbdb432",
+   "purpose": "Detect landings without attempt record",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Flood fixed; scan 14s->0.03s",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "auth telemetry into execution",
+   "location": "auth_resolve_v1 rows",
+   "purpose": "Record identity checks",
+   "status": "live-used",
+   "general": false,
+   "evidence": "21,427 rows in 5d (14%); pollutes the learning store",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "Probe file snapshot/restore (extractProbeFilePaths)",
+   "location": "author-producer.ts",
+   "purpose": "Undo validation probe file writes",
+   "status": "broken",
+   "general": false,
+   "evidence": "Mapped /vessels/repos/<v>, which never exists; fix dispatched 09-25",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "auto-bridge deterministic shape bridges",
+   "location": "auto-bridge-* activities (81)",
+   "purpose": "Bridge one shape to its producer resolver",
+   "status": "live-used",
+   "general": true,
+   "evidence": "After 5ca51be, 63/68 ok for problem_detection; new bridges still minted in September",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "Deferral -> negative feedback to lease holder",
+   "location": "b001631",
+   "purpose": "Fleet effect into holder posterior",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "No collisions since landing",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "causal-adjudication + operationalState snapshots",
+   "location": "causal-adjudication.ts, operational-state.ts",
+   "purpose": "Counterfactual adjudication of actions",
+   "status": "dormant",
+   "general": true,
+   "duplicates_of": "causal attempt ledger",
+   "evidence": "0 adjudication execs; 3 operational_state",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "recommit/narrowed child minting",
+   "location": "compose failure path (gap_to_feature)",
+   "purpose": "Retry a failed gap",
+   "status": "live-used",
+   "general": false,
+   "evidence": "746 live children, 29 closed; forks instead of enriching the parent",
+   "source": "gap-history",
+   "mentions": 1,
+   "sources": [
+    "gap-history"
+   ]
+  },
+  {
+   "name": "organic composition minting",
+   "location": "compose-*, compose-auto-bridge-*",
+   "purpose": "Mint producer\u2192consumer compositions",
+   "status": "fossil",
+   "general": true,
+   "evidence": "220 June rows; 2,815 runs, 33 ok",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "compose slots / per-gap in-flight guard",
+   "location": "compose-slots.ts",
+   "purpose": "Concurrency admission for compose",
+   "status": "live-used",
+   "general": true,
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "compose-slots cap",
+   "location": "compose-slots.ts:214",
+   "purpose": "Concurrency cap, directed vs autonomous",
+   "status": "broken",
+   "general": true,
+   "evidence": "Setting cap=0 halts only the directed lane (08-12)",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "HTTP env pinning node2->node1",
+   "location": "compose2-live /etc/substrate/env (9 keys -> host.containers.internal:18xxx)",
+   "purpose": "De facto cross-node resolution",
+   "status": "live-used",
+   "general": false,
+   "evidence": "All node2->node1 traffic; violates laws 1 and 11",
+   "source": "federation-relay",
+   "mentions": 1,
+   "sources": [
+    "federation-relay"
+   ]
+  },
+  {
+   "name": "pull-sync owed restart",
+   "location": "container pull-sync",
+   "purpose": "Apply mirrored content to the runtime",
+   "status": "live-used",
+   "general": true,
+   "evidence": "#56 window-blind; false-stale mtime at 06:54:53",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "self-recovery liveness restarts",
+   "location": "container self-recovery",
+   "purpose": "Restart unhealthy vessels",
+   "status": "live-used",
+   "general": true,
+   "evidence": "#55 kills saturated vessels mid-work; db_pressure_backoff reads 0",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "vessel-ctl dynamic manifest install",
+   "location": "container vessel-ctl",
+   "purpose": "Runtime vessel mutability",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Installed unit lost on recreate; restoring from inventory enables but does not start",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "anchor pipeline (renderSafeAnchors/locateRegion/index-choice)",
+   "location": "cross-file-symbols.ts; feature-compose (dd7afb3, dcb4198, 2ff42fe, e637523)",
+   "purpose": "Give the drafter valid anchors",
+   "status": "live-used",
+   "general": true,
+   "evidence": "The pick-an-index path fired on its first live run",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "change_window global lease",
+   "location": "cutover + trace-store-reconcile",
+   "purpose": "Serialize landings and DB maintenance",
+   "status": "broken",
+   "general": true,
+   "evidence": "held ~half wall-clock; 39% verified landings discarded 09-23",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "post-land suite + newly-failing withhold",
+   "location": "cutover/test_suite (5e9a0b2, fad0d3c)",
+   "purpose": "regression check after landing",
+   "status": "live-used",
+   "general": true,
+   "evidence": "19/19 ran=true since 09-28 08:00; withhold never fired",
+   "source": "openspec-7",
+   "mentions": 1,
+   "sources": [
+    "openspec-7"
+   ]
+  },
+  {
+   "name": "surgical-gap-scan resolve-path detector",
+   "location": "da76f061",
+   "purpose": "Static scan for endpoint+absolute joins",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "trace_failure_pattern_report oracle + existing gaps",
+   "evidence": "Reverted 807b92ef",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  }
+ ]
+}

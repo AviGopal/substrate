@@ -1,0 +1,45 @@
+{
+ "area": "metabob-cloud-dashboard",
+ "items": [
+  {
+   "name": "conversation-vessel / user-vessel / metabob-cloud-dashboard / react-renderer / terminal",
+   "location": "repos/ (gitignored, not in .gitmodules)",
+   "purpose": "product-era components",
+   "status": "fossil",
+   "general": false,
+   "evidence": "no units; last commits 04-30..08-17; conversation superseded by llm-resolver",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "metabob-cloud-dashboard",
+   "location": "repos/metabob-cloud-dashboard",
+   "purpose": "old dashboard",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "metabob-dashboard",
+   "evidence": "owner ruling 08-16: never cite",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "fossil K8s repos",
+   "location": "repos/{deployment,workbench,terminal,react-renderer,user-vessel,metabob-cloud-dashboard,conversation-vessel}",
+   "purpose": "Pre-substrate deployment and UI",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Gitignored, not submodules, last commits 04-30..08-17; hold 67 of 112 vessel .md",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  }
+ ]
+}

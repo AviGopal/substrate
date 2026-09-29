@@ -1,0 +1,1283 @@
+{
+ "attempts": [
+  {
+   "key": "dormant-mechanism",
+   "title": "Concept graph edges + upkeep",
+   "where": "concept-db src/upkeep/activities.ts, concept_edge",
+   "tried": "Auto-discovered related_to edges, upkeep scheduler (resolve-island, prune)",
+   "outcome": "dormant",
+   "evidence": "20,148 edges created in June, 2 in September; 95 of 22,365 ever traversed; 11,952 dangling; /health upkeep enabled:false",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Cluster shadow decisions (D5.3)",
+   "where": "activity-api/src/routes/activities.ts:7387-7440",
+   "tried": "Emit cluster_shadow_decision impulses for partial-pooling shadow mode",
+   "outcome": "dormant",
+   "evidence": "73,941 rows in the impulse table (58,696 in September), only reader is test/selector-cluster-shadow.test.ts; outside retention sweeps",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "relevance-feedback endpoint",
+   "where": "activity-api/src/routes/activities.ts:11477",
+   "tried": "POST /relevance-feedback to update impulse relevance",
+   "outcome": "dormant",
+   "evidence": "relevance_feedback table 0 rows; only callers are __tests__/phase10-atomic-alpha-beta.test.ts",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Stratified harness / coverage-matrix claims",
+   "where": "validation/scripts/stratified-harness.ts, compare-reports.ts, scripts/substrate/autonomy-status.ts",
+   "tried": "Run-over-run coverage fill and kappa limiter per SHAPE_ACTION Claims 4-5",
+   "outcome": "dormant",
+   "evidence": "latest baseline 2026-07-01, latest result 2026-08-12; autonomy-status.ts last commit 1cdd58b9 2026-07-05, only 'callers' are its compiled .js/.d.ts siblings",
+   "source": "docs-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Runtime activity tracing middleware",
+   "where": "activity-api/src/middleware/runtime-tracing.ts",
+   "tried": "Per-request tracing into execution store",
+   "outcome": "dormant",
+   "evidence": "DECIDED uninstalled until retention bounded (doc); 0 call sites - honest; meanwhile ticks write ~28.5k executions/day",
+   "date": "2026-09-17",
+   "source": "docs-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Closure-audit (idiom 7, CC-001..007)",
+   "where": "validation/scripts/closure-audit.ts; validation/state/closure-status.json",
+   "tried": "Operator-side script simulating the removal of 7 external crutches",
+   "outcome": "dormant",
+   "date": "2026-09-09",
+   "evidence": "Last written 09-09. No unit runs it, despite the doc's 'nightly'. Every open property's evidence is 'HTTP 0' or 'health check failed: 0', which are unattributed negatives from a probe that was never positively controlled.",
+   "source": "docs-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Push-away interventionRefused corpus",
+   "where": "repos/development-vessel/src/resolvers/intervention-evaluate.ts; $WORKSPACE_ROOT/refusals/refusals.json",
+   "tried": "Refuse an operator intervention with cited priors and persist interventionRefused",
+   "outcome": "dormant",
+   "evidence": "6 records in total, split across /workspace/refusals (5, 09-07) and /workspace/git/super-repo/refusals (1, 09-25; untracked, not ignored). This is the same WORKSPACE_ROOT split as the memory two-stores finding. The S3 refusal-rate measure is inert.",
+   "source": "docs-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Forge-vessel-for-shape",
+   "where": "repos/ias-executor-ts/src/templates/forge/forge-vessel-for-shape.json",
+   "tried": "Build a producer vessel for a shape with no producer",
+   "outcome": "dormant",
+   "evidence": "Registered but not dispatched. The no-producer path routes to create-shape-provider-goal, and the only runs are operator runs (validation test-22).",
+   "source": "docs-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Template upkeep write resolvers + audit log",
+   "where": "repos/activity-api (activityTemplate_update/_deprecate); docs/guides/TEMPLATE_UPKEEP.md; ACTIVITY_LIFECYCLE_DEPRECATION.md",
+   "tried": "Mutations via impulse resolvers with an upkeepAuditLog before/after diff",
+   "outcome": "dormant",
+   "evidence": "upkeep_audit_log has 0 rows (the table name is referenced in activity-api impulses.ts). The audit-and-backfill-templates middle activity is absent (0 hits).",
+   "source": "docs-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Ranked lifecycle-subscriber dispatch",
+   "where": "ias-executor-ts/src/lifecycle-subscriber.ts HIGH_FREQUENCY_TOP_K",
+   "tried": "Thompson/relevance-ranked top-K subscriber firing",
+   "outcome": "dormant",
+   "evidence": "Constants exported, no consumer; every matching subscriber fires",
+   "source": "docs-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Cross-vessel delegation headers",
+   "where": "docs/specs/auth-token-source-field.md",
+   "tried": "X-Metabob-Delegation-Chain/Hop",
+   "outcome": "dormant",
+   "evidence": "grep NONE across live clones; auth_token_source field itself declared by 5 vessels",
+   "source": "docs-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Closure audit as hard lift gate",
+   "where": "validation/scripts/closure-audit.ts (86186cb4, 2026-05-27); docs/SUBSTRATE.md \u00a7Closure properties",
+   "tried": "Seven (property, external tool) closure probes, 3 nightly greens gate lift",
+   "outcome": "dormant",
+   "evidence": "No unit, timer, Makefile, hook or vessel invokes it",
+   "source": "docs-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Network demo hub+spoke zero-config",
+   "where": "validation/reports/network-demo/REPORT.md, VALIDATION-POST-FIX.md, aba286bd",
+   "tried": "Hub (ENABLED_ROLES=hub) + spoke join by 2 env vars; add/remove vessel propagation; hub resolves spoke memoryNote over libp2p",
+   "outcome": "dormant",
+   "date": "2026-09-16",
+   "evidence": "Proven in throwaway val-hub/val-spoke containers, which were torn down; the production pair created 09-23/09-26 never joined an overlay",
+   "source": "federation-relay"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "identical-failure-run detector",
+   "where": "scripts/substrate/identical-failure-run-tick.ts (a172e235)",
+   "tried": "Detect (activity, failure-class) runs past a bound with no gap naming them",
+   "outcome": "dormant",
+   "date": "2026-09-16",
+   "evidence": "First run: an auth activity failing 2,286 times in 24h, 30 runs over the bound. No unit and no caller; never scheduled",
+   "source": "git-deployment"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "joint-liveness detector",
+   "where": "scripts/substrate/joint-liveness-tick.ts (daa2632c)",
+   "tried": "Detect write\u2192read joints going quiet",
+   "outcome": "partial",
+   "date": "2026-08-25",
+   "evidence": "Scheduled on the hub and green, but it has one binding (decision_outcome) and was never extended (WHY-THINGS-KEEP-BREAKING-2026-09-28)",
+   "source": "git-deployment"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Mechanisms discovered never to have run",
+   "where": "2a8ebf5, 5dcfc60, 3a6018f, 5a25f9c, b8feccd, 69d6a21, ff04a17, c0b665e, 530c1e9, 06fabe9, 6712946",
+   "tried": "Instance repair when found.",
+   "outcome": "partial",
+   "date": "2026-07-30..2026-08-12",
+   "evidence": "3a6018f: every seed validation block is decorative. b8feccd: 154/157 composable gaps had no live lane.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "June meta-detector explosion (detectors over detectors)",
+   "where": "3ccaebc, 813e864, a90ebee, ab2e058, a0f1a0a, 851cadc, 854127b, 1edf11f, 8daf031, 16a6cc9 (06-13..19)",
+   "tried": "Recursive self-detection and detector authoring.",
+   "outcome": "dormant",
+   "date": "2026-06-13",
+   "evidence": "Still firing today: 1,948 detect-* runs/7d, mostly per-instance detect-unclassified_failure_*. detector-meta-tick 107/7d.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "09-05 causal/ladder burst",
+   "where": "causal-adjudication.ts, operational-state.ts, schema-drift, reach-rate-scan",
+   "tried": "~40 operator commits in one day",
+   "outcome": "dormant",
+   "date": "2026-09-05",
+   "evidence": "0 causal-adjudication and 0 schema-drift executions in the retained window",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Verifier recipes as graded data",
+   "where": "48f67f9, 3d8d9bc, 72539a0, 30cbd14, 669db4d; /workspace/state/verifier-recipes.jsonl",
+   "date": "2026-08-07..08-08",
+   "tried": "Learn verifiers as recipes.",
+   "outcome": "dormant",
+   "evidence": "39 recipes, last written Aug 27. Loaded 44 times in 7 days with no grading evidence.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Floor recipe seeding",
+   "where": "1021176, d73da0b, c671407, e1e84cc, 496aebf; src/index.ts:5127",
+   "date": "2026-08-07",
+   "tried": "Seed the ReAct floor with the family's verified command.",
+   "outcome": "dormant",
+   "evidence": "Present in HEAD, 0 journal hits in 7 days.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Ephemeris (JPL Horizons) oracle",
+   "where": "b18c191, bb21ddf, 15bc5fd",
+   "date": "2026-08-16..08-17",
+   "tried": "Grade live astronomical distances.",
+   "outcome": "dormant",
+   "evidence": "6,479 ABSTAINED and 0 graded in 7 days. It runs on every goal.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "joint-liveness detector",
+   "where": "daa2632c -> 70254535",
+   "tried": "A class detector for write->read-severed joints",
+   "outcome": "dormant",
+   "date": "2026-08-25..2026-09-27",
+   "evidence": "One hardcoded binding for 33 days and it caught none of ~180 breaks. 70254535 moved joints into pool records: 6/6 checked, 3 severed found",
+   "source": "git-super-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "validation harness family",
+   "where": "75ea589c, d26b85c3, a6524f8c, 41d3c0d3, d0d15d8a, 949a1db4, 2e6c9651, 3fed381c, e1306767",
+   "tried": "Ablation, composition, validatability, falsification, reach-generalization, ladder, goal-expectation and self-dev-reliability harnesses",
+   "outcome": "dormant",
+   "date": "2026-07-26..2026-08-28",
+   "evidence": "Each touched 1-4 times, none after 08-28. About 58 more validation/scripts files untouched since before 07-01",
+   "source": "git-super-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "GitHub CI ci-result lane revived in place",
+   "where": "POST /v2/activities/ci-result",
+   "tried": "Operator fixed workflow + hostname",
+   "outcome": "superseded",
+   "date": "2026-08-05",
+   "evidence": "Never executed in 741 runs; superseded by the in-vessel test_suite",
+   "source": "memory-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "NO_RESERVATION transient retry",
+   "where": "patch-with-tools 63f0bf1",
+   "tried": "Bounded retry",
+   "outcome": "dormant",
+   "date": "2026-07-21",
+   "evidence": "0 firings; the burst was on the llm_completion_dispatch ingress path",
+   "source": "memory-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Gap-compose pickup chain unmasked and made in-process",
+   "where": "b8feccd, 69d6a21, b1c3e68, 267900a, 02b0d24",
+   "tried": "Unmasked gap-compose.service; observer handles composable gaps; in-process nudge.",
+   "outcome": "worked",
+   "date": "2026-08-09",
+   "evidence": "An operator-filed gap was closed autonomously in 12m59s (04775a7, landed_verified). Before that, the exit code was discarded and 'pickup triggered' was a lie.",
+   "source": "memory-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "execution_exemplar stage never ran",
+   "where": "activity-api 7c34185 + substrate fixes",
+   "tried": "Removed the boot env gate; fixed composite-index queries; added explicit selected_at.",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "0 rows ever -> 315 rows over 82 activities. Four stacked defects; the 24h setInterval ran in a process with 11.4-minute mean uptime.",
+   "source": "memory-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Census / validation activity families",
+   "where": "activity templates capability-census-tick, validation-dispatch-tick, validation-grade-tick",
+   "tried": "Minted, auto-promoted, rhythm-mounted.",
+   "outcome": "dormant",
+   "date": "2026-07-20",
+   "evidence": "Zero unassisted dispatches: the conductor only enqueued (load>=8 gated). Measured credit to the posterior was exactly zero.",
+   "source": "memory-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "self-recovery ESCALATE path terminates in log line",
+   "where": "scripts/substrate self-recovery-tick.sh",
+   "tried": "Filed an-escalation-that-only-logs-is-not-an-escalation; recommended masking via DISABLED_VESSELS.",
+   "outcome": "unknown",
+   "date": "2026-09-11",
+   "evidence": "19,348 restarts and 1071 ESCALATE lines over 4 days, all with a byte-identical diagnosis.",
+   "source": "memory-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Restore rhythm cadence (migrate orphaned rhythms)",
+   "where": "poolImpulse_write of 14 rhythms",
+   "tried": "Move rhythms into the pool the conductor reads",
+   "outcome": "reverted",
+   "date": "2026-08-08",
+   "evidence": "11/12 fired within 8 min. 3h later the substrate acted on the operator's 'consolidate the pool files' gap, universal fallback and auto-bridge wrote to the wrong path, and the live pool restarted empty, losing all rhythms.",
+   "source": "memory-4"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Cadence stack: mount rhythms + drainBoredomQueue + FAMILY_RESOLVERS",
+   "where": "dev-vessel a7749bd, 60a602e",
+   "tried": "Mount rhythms with family, drain the write-only queue, dispatch gap_lifecycle_scan directly",
+   "outcome": "partial",
+   "date": "2026-08-24",
+   "evidence": "Outcome was verified (funnel 8\u21929), but it was clobbered once by the 6ba576a stale-base cutover. The registry is not code-seeded, so a fresh image starts dead. It was marked resolved 3 times before it held.",
+   "source": "memory-4"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Dev-vessel event-loop deadlock fixed by substrate",
+   "where": "dev-vessel 61a6e46, 4783f38",
+   "tried": "--no-block on systemctl start gap-compose.",
+   "outcome": "worked",
+   "date": "2026-09-11",
+   "evidence": "Substrate-authored. 0/96 non-200 afterwards and gc-tick firing. The watchdog consecutive-restart escalation was not built.",
+   "source": "memory-5"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Dead LLM plane detector classifyPlane",
+   "where": "llm-resolver 0768990",
+   "date": "2026-08-07",
+   "tried": "LLM-free plane classification files gap on transition",
+   "outcome": "worked",
+   "evidence": "llm-completion-plane-dark row confirmed in store",
+   "source": "memory-6"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Rhythm cadence restoration",
+   "where": "22146522, 7f97df70, da6466a, e86bcd4",
+   "tried": "Seed/conduct timers, timeout fix, abstention fix",
+   "outcome": "partial",
+   "date": "2026-09-10",
+   "evidence": "The scheduler is coherent but inert: 10 of 11 rhythms have no staleness driver",
+   "source": "memory-8"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Conservation auditors + findings->gap bridge",
+   "where": "activity-api conservation-audit (ad41776), conservation-bridge-tick, liveness 986983b",
+   "date": "2026-09-06",
+   "tried": "6 pure-data auditor templates, boredom tag, bridge template",
+   "outcome": "partial",
+   "evidence": "37k findings and 0 gaps until the bridge got a caller; auditors untagged after taking 21% of executions; duplicate routes",
+   "source": "memory-9"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Orphaned capability detector and author_producer",
+   "where": "dev-vessel",
+   "tried": "find and bridge orphaned resolvers",
+   "outcome": "partial",
+   "date": "2026-06-25",
+   "evidence": "lever 2 closed; 07-01 MINT_FAILED mostly phantom shapes",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Shape-dispatch agreement check",
+   "where": "openspec/changes/2026-05-17-shape-dispatch-agreement; scripts/check-shape-dispatch.ts",
+   "tried": "Build-time lint + runtime self-trace",
+   "outcome": "partial",
+   "date": "2026-05-18",
+   "evidence": "lint wired into activity-api, concept-db, development-vessel; runtime verifier_negative self-trace never built; discovery/identity blocked",
+   "source": "openspec-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Forge goal completion test / forge path",
+   "where": "openspec/changes/2026-05-18-forge-goal-completion-test; audit F20",
+   "tried": "End-to-end forge via slot-binding escalation",
+   "outcome": "dormant",
+   "date": "2026-05-21",
+   "evidence": "T8.1 never met; forge resolvers only registered in ias-executor-ts/src/examples/vessel-forge-host.ts; no VesselForgeHost in goal-host-vessel/src today",
+   "source": "openspec-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Lifecycle emits without subscribers",
+   "where": "audit F4; commits 41382521, 31eeeb2f",
+   "tried": "Proposed convention: default subscriber per emit + check-lifecycle-channels.sh",
+   "outcome": "unknown",
+   "date": "2026-05-27",
+   "evidence": "llm:dispatched to NoopEventSink; gap:classified 0 subscribers",
+   "source": "openspec-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Stratified goal-generator harness",
+   "where": "validation/scripts/stratified-harness.ts, goal-generator.ts, weekly workflow",
+   "tried": "stratified universality, reuse efficiency, refinement events, multi-witness",
+   "outcome": "dormant",
+   "date": "2026-05-17..07-01",
+   "evidence": "weekly CI 20/20 failed since 05-18 (METABOB_API_KEY not set, checked on the 6 latest); newest stratified result 05-17; no gap filed",
+   "source": "openspec-10"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Topology-discovery loop (measurement + probes + coverage-tick)",
+   "where": "openspec/changes/2026-05-23-topology-discovery-loop; dev-vessel seeds",
+   "date": "2026-05-23",
+   "tried": "Three measurement activities, three probe activities, coverage-tick and substrate-health-tick, and an observer fan-out.",
+   "outcome": "dormant",
+   "evidence": "29/33 tasks done, but S.4a coverage_progress never became true (RL flat at 2). Since 09-14: coverage-tick 0 traces, learned_topology_snapshot only 3 as a satisfier.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Doc ingestion + concept management templates",
+   "where": "openspec/changes/2026-05-30-doc-ingestion-and-concept-management",
+   "date": "2026-05-30",
+   "tried": "Seeded ingest-doc-as-concepts and detect-stale-pointer, with inert listeners for correction and file-change events.",
+   "outcome": "failed",
+   "evidence": "All 5 dispatches aborted past the LLM step. Concept pointer coverage delta was 0% (272\u2192279, 0 with pointer.path). 0 traces since 09-14.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "draft-spec-from-gap (substrate-authored openspec)",
+   "where": "development-vessel src/seed/draft-spec-from-gap.ts",
+   "date": "2026-05-30",
+   "tried": "An LLM template that writes proposal.md and tasks.md from grouped substrateGaps.",
+   "outcome": "dormant",
+   "evidence": "One dispatch on 05-30; 0 traces since 09-14; operator review tasks unticked.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Closed-loop learning (detect-recurring-pattern, predict-and-verify, refine-on-disagreement)",
+   "where": "openspec/changes/2026-06-01-closed-loop-learning-and-verification",
+   "date": "2026-06-01",
+   "tried": "Pattern clustering, verifier routing by output shape, and a refiner.",
+   "outcome": "dormant",
+   "evidence": "Seeds exist but tasks are 0/5 ticked. The transfer test never ran. boredom-vessel index.ts:547 holds the obsidian-coupled detector out of the core loop.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "concept-db supersession edges + chunker write validators",
+   "where": "openspec/changes/2026-06-01-concept-db-supersession-and-chunker-hygiene",
+   "tried": "Add a supersedes edge type, superseded_by/supersedes fields, updated_at writes, 64KB content cap, {{}} validator, chunkerWriteRejection impulses, and drift-detector activities after an audit of 604 concepts (33 PATCH-superseded, 7 with 1MB+ backslash runaway content, heading slugs used as shape)",
+   "outcome": "failed",
+   "date": "2026-06-01",
+   "evidence": "live concept-db EdgeTypeSchema still has the 8 original values; no content cap, template-literal validator or include_superseded; tasks 0/42",
+   "source": "openspec-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "concept-db upkeep loop: eight truth-and-currency activities",
+   "where": "openspec/changes/2026-06-01-concept-db-upkeep-loop",
+   "tried": "Eight deterministic upkeep activities (provenance, currency, convergence, coverage, calibration, retrievability, decay, verdict capture)",
+   "outcome": "superseded",
+   "date": "2026-06-01",
+   "evidence": "none landed as specified; a different in-vessel scheduler exists at concept-db/src/upkeep (split-long-concept, resolve-island, decay-stale-relevance, ...), which runs on the resolver side and is not traced as activities; tasks 0/36",
+   "source": "openspec-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "LR-3 background trace replay for new templates",
+   "where": "openspec/changes/2026-06-04-learning-rate-3-background-trace-replay",
+   "tried": "HER-style counterfactual replay of historical traces against new templates at weight 0.3",
+   "outcome": "failed",
+   "date": "2026-06-04",
+   "evidence": "no replay code in activity-api; tasks 0/46",
+   "source": "openspec-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Detector-authoring recursion (detector_coverage_scan + draft-detector-activity) and cyclic-flow-scan",
+   "where": "development-vessel seeds detector-coverage-audit-tick, draft-detector-activity, cyclic-flow-scan-tick; resolvers detector-coverage-scan, cyclic-flow-scan",
+   "tried": "Detect uncovered failure clusters, author deterministic detectors autonomously, and measure cyclic flow",
+   "outcome": "dormant",
+   "date": "2026-06-14",
+   "evidence": "Code exists; C.GATE (an autonomously authored detector firing with trace evidence) was never recorded; cyclic-flow-scan is not in the boredom rotation; Phase B and E were never built; selector_saturation_audit (a0f1a0a) is the only instance that is live-wired",
+   "source": "openspec-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Obsidian observation layer (L0/L1 + action-effect probe)",
+   "where": "development-vessel seeds observe-obsidian-events, group-interaction-episodes, probe-obsidian-action-effects, detect-recurring-pattern",
+   "tried": "Deterministic Obsidian event/episode capture feeding pattern authoring",
+   "outcome": "superseded",
+   "date": "2026-06-01",
+   "evidence": "Seeds exist; #53 deliberately unwired obsidian-coupled detection from the core loop; tasks 0/6",
+   "source": "openspec-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Orphaned-capability detector (find-half)",
+   "where": "2026-06-23-demand-driven-orphan-capability-detection; dev-vessel orphaned-capability-scan.ts",
+   "tried": "live_resolver_shapes - invoked_resolvers, filtered, emit stable-id orphaned_capability gaps on boredom tick",
+   "outcome": "partial",
+   "date": "2026-06-23..24",
+   "evidence": "Detector live; fix-half proven missing 06-24; author_producer route added 07-01 (gap-to-feature.ts:1060-1069); 38 open/3 closed orphaned_capability gaps created 09-23..09-28 after store reset",
+   "source": "openspec-4"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Standing-intent fold into state signature",
+   "where": "07-09 task A5; cited commit b72cd62f",
+   "tried": "Fold top-8 open standing_intent_shapes into compute_state_signature hash",
+   "outcome": "reverted",
+   "date": "2026-07-09",
+   "evidence": "b72cd62f not a valid object in dev-vessel clone; standing_intent_shapes absent (git log --all -S empty); only a poolImpulse rhythm-axis fetch remains",
+   "source": "openspec-4"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Bridge activity for orphan interface_deploy_reach_check",
+   "where": "openspec/changes/2026-08-17-invoke-interface-deploy-reach-check-activity/ (commit 1bec4b88)",
+   "date": "2026-08-17",
+   "tried": "A proposal plus an activity_template.json invoking the interface_deploy_reach_check resolver; tasks 1/4 checked.",
+   "outcome": "failed",
+   "evidence": "The template was written into openspec, never registered: 0 activity rows reference the resolver. Gap orphaned-capability-interface_deploy_reach_check is open again, first_detected 2026-09-26, reopen_count 0.",
+   "source": "openspec-6"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "orphaned_capability_scan repairs (dry_run, rewire-before-mint, dual consumption surfaces)",
+   "where": "development-vessel 57f1ac4 (08-28), 786229b, 5693903 (08-29)",
+   "date": "2026-08-28..29",
+   "tried": "Fixed the detector's counting and prescribed rewiring before minting.",
+   "outcome": "partial",
+   "evidence": "Detection is live: 51 orphaned-capability gaps (open 38, rejected 8, closed 5); 173/323 resolvers invoked vs 28/262 on 06-23. The repair half never produced a registered bridge for goal_summary or interface_deploy_reach_check.",
+   "source": "openspec-6"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "interaction-conformance checker P1-P13 proven to refuse",
+   "where": "packages/interaction-conformance (f6afc6ca)",
+   "tried": "static checker with violating fixtures (30/0 self-test), planted violations on real source caught",
+   "outcome": "dormant",
+   "date": "2026-08-07",
+   "evidence": "no package.json outside the package references it; P5/P6/P10 false positives never fixed; no commits after 08-07 except drift",
+   "source": "openspec-9"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Ablation/learning_mode tags hoisted before handoff",
+   "where": "goal-host 6273bf6 (substrate-authored)",
+   "tried": "Push the tags before effectiveTags is handed to seek.",
+   "outcome": "dormant",
+   "date": "2026-09-06",
+   "evidence": "ablation:disableReuse went 0 to 1; the cold-vs-reuse cost A/B it exists for was never run; execution_path/walk_tier/attempt_count tags are still lost.",
+   "source": "reports-6"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "self-recovery.timer wall-clock schedule",
+   "where": "b2ff657b",
+   "tried": "Add OnCalendar=*:0/3 after the timer deadlocked (Trigger n/a since 08-08), leaving dev-vessel and identity down",
+   "outcome": "partial",
+   "date": "2026-08-13",
+   "evidence": "Fixed in the repo; the running container only gets it on redeploy. The watchdog later became an amplifier (restarting activity-api 09-25 and 09-26).",
+   "source": "reports-7"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Joint-liveness detector",
+   "where": "scripts/substrate/joint-liveness-tick.ts daa2632c",
+   "tried": "A writer-to-reader joint liveness check",
+   "outcome": "dormant",
+   "date": "2026-08-25",
+   "evidence": "Exactly 1 binding (decision_outcome), never extended; caught none of the 179 Aug-Sep breaks",
+   "source": "reports-7"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Post-land test suite recorded ran=false; named as top missing gate on 09-10 but it was in fact dead until 09-28",
+   "where": "ADDENDUM section A (f0cfb91 incident); memory 09-28 fix 5e9a0b2",
+   "tried": "Report recommended an execution-based post-land gate above all other work",
+   "outcome": "failed",
+   "date": "2026-09-10",
+   "evidence": "The post-land suite showed ran=false in 09-07 logs. Memory index: post-land suite silently dead 08-31->09-28 because of a 30s shell kill.",
+   "source": "reports-8"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "surgical-gap-scan supply of landable gaps",
+   "where": "scripts/substrate/surgical-gap-scan.ts (459bf0ca; da76f061/807b92ef)",
+   "date": "2026-06-29",
+   "tried": "Deterministic source scan that emits single-edit gaps. A detector for resolve-path joins was added on 09-28",
+   "outcome": "failed",
+   "evidence": "91/91 runs had emitted_count 0. The 09-28 detector was added and reverted the same day",
+   "source": "timers-readers"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "composition-edge-reconcile incremental watermark",
+   "where": "scripts/substrate/composition-edge-reconcile.ts (78eb6d91)",
+   "date": "2026-07-06",
+   "tried": "Incremental derivation of edges from traces",
+   "outcome": "superseded",
+   "evidence": "204/206 runs over 4 days had batch_traces 0 and upserted 0. graph_total still grows 13125->14953 through the inline write in activity-api routes/execution-traces.ts",
+   "source": "timers-readers"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Obsidian intake/learn/collaborate loops",
+   "where": "obsidian-*.timer (d6bb951c)",
+   "date": "2026-06-29",
+   "tried": "Async human<->substrate loop through Obsidian",
+   "outcome": "dormant",
+   "evidence": "Over 7 days: 2562+222+169 ticks, 100% SKIPPED with 'no vessel advertises obsidian:note'",
+   "source": "timers-readers"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "db-maintenance-tick autonomous DB maintenance",
+   "where": "/workspace/active-scripts/db-maintenance-tick.ts",
+   "tried": "Diagnose and remediate the DB on a cadence",
+   "outcome": "dormant",
+   "evidence": "actions:[] on every tick. Integrity findings acg_none_fk, cts_null_account_id and doubled_prefix_ids persist. prune_candidates 18135. slow_queries went 1764->2862",
+   "source": "timers-readers"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Orphan detector counted activity invocation only",
+   "where": "ce71b42c 2026-08-29T11:23 5693903; rewire-first 786229b",
+   "tried": "count resolver-to-resolver consumption; prescribe rewire with candidate consumers",
+   "outcome": "worked",
+   "date": "2026-08-29",
+   "evidence": "orphans 33->3; 147<=389; 32/115 gaps carry candidates",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Lifecycle audit top-k equals bottom-k",
+   "where": "3637e240 2026-09-04T09:47 dev-vessel e96015c, rankSize, dae9927, f0257fe6; activity-api 9646cf8 mig 205 unpushed",
+   "tried": "population guard (off-switch), rankSize, recent_count tie-break, paging, view projection",
+   "outcome": "partial",
+   "date": "2026-09-04",
+   "evidence": "T3 passes overlap=0; root cause view never projects signature; migration unpushed at 09:39",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "learning-loop-selftest-tick with severed-link controls",
+   "where": "development-vessel",
+   "tried": "Per-link assertions as pure functions; controls turn exactly one link red",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "first run RED on trace_write with a real bug; runs every 6h",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "gate-self-probe wiring",
+   "where": "development-vessel:gate-self-probe-tick",
+   "tried": "Wire template onto rotation",
+   "outcome": "dormant",
+   "date": "2026-09-09",
+   "evidence": "executed exactly once ever (09-10 09:40); 8 hypotheses, 7 refuted on why",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Joint registry extension of joint-liveness-tick",
+   "where": "joint-liveness-tick.ts + pool records (70254535)",
+   "date": "2026-09-28T06:11Z",
+   "tried": "pool-registered joints, 4 new check kinds, self-flag unless all checked",
+   "outcome": "partial",
+   "evidence": "Flags 3 severed joints every 30 min, 6 gaps filed, 0 closed; none of 6 overnight breaks registered",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Vessel mitosis parallel-track",
+   "where": "validation/findings/mitosis-empirical-proof-2026-06-03, goal-host-mitosis-*",
+   "tried": "vessel_mitosis_start v0.1/v0.2 on dev-vessel and goal-host",
+   "outcome": "partial",
+   "date": "2026-06-03",
+   "evidence": "booted; evaluate INSUFFICIENT_DATA/NEUTRAL, non-deterministic (06-05); 0 cutovers (06-04)",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Neutral-emitter lifecycle bus",
+   "where": "openspec 2026-05-27-neutral-emitter-lifecycle-bus; activity-api routes/events.ts; ias-executor-ts bus-forwarder.ts; discovery event-bus.ts",
+   "tried": "Publish lifecycle.* and vessel.* events neutrally so consumers can subscribe",
+   "outcome": "dormant",
+   "date": "2026-05-27",
+   "evidence": "inv-077: all 4 tasks shipped but zero lifecycle.* subscribers ('energized but draws no current'); only goal-host consumes vessel.registered",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Weekly recommendation validation GitHub workflow",
+   "where": ".github/workflows/weekly-recommendation-validation.yml -> validation/scripts/run-weekly-harness.sh",
+   "date": "2026-05-18..2026-09-28",
+   "tried": "Weekly CI running reuse/compare/stratified/goal-generator/forge harnesses",
+   "outcome": "failed",
+   "evidence": "gh run list: 20/20 runs failed. Run 36401878072 fails with 'FATAL: METABOB_API_KEY is not set.'",
+   "source": "validation-other-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "harness-run-matrix activity replaces the failure-mode script",
+   "where": "development-vessel seed harness-run-matrix / harness-check-scenario",
+   "date": "2026-05-23",
+   "tried": "Lifecycle observer fires harness-run-matrix automatically",
+   "outcome": "unknown",
+   "evidence": "The dev-vessel journal since 09-21 has 0 mentions. Open gap template-input-lint-development-vessel_harness-check-scenario reports that the declared gapScenario input is never consumed.",
+   "source": "validation-other-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "memory-budget-check.service placement fix for zero-call-site instruments",
+   "where": "scripts/substrate/units/memory-budget-check.service",
+   "date": "2026-08-17",
+   "tried": "Gave one detector a scheduler after an audit found two instruments with zero call sites",
+   "outcome": "partial",
+   "evidence": "The sibling validation/scripts/argument-chain-check.test.ts still has only comment references.",
+   "source": "validation-other-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "concept-db upkeep Thompson activities",
+   "where": "repos/concept-db CLAUDE.md; /upkeep/status",
+   "tried": "Five upkeep activities on a 5-minute scheduler",
+   "outcome": "dormant",
+   "date": "2026-09-29",
+   "evidence": "totalTrials are 0,0,3,0,0. /health reports upkeep.enabled:false while /upkeep/status reports enabled:true.",
+   "source": "vessel-docs-tooling"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "dev-vessel bootstrap templates (ship-change, scaffold-new-vessel, coverage-tick, substrate-health-tick, ...)",
+   "where": "repos/development-vessel/src/seed; activity table",
+   "tried": "Seed templates that route commits and measure lift",
+   "outcome": "dormant",
+   "date": "2026-09-28",
+   "evidence": "1 row each with total_executions=0, re-seeded 09-28 08:18. No row in activity_execution_traces matched by substring. Caveat: the recency of that table is not established.",
+   "source": "vessel-docs-tooling"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "openspec change pipeline (skills + opsx)",
+   "where": ".claude/skills/openspec-*, .claude/commands/opsx",
+   "tried": "propose/apply/archive lifecycle",
+   "outcome": "partial",
+   "date": "2026-09-29",
+   "evidence": "98 recognised changes of 176 dirs: 67 in-progress, 31 no-tasks, 0 complete, 4 archived.",
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "problems": [
+  {
+   "key": "dormant-mechanism",
+   "symptom": "53% of concept edges dangle; 0.4% ever traversed; no edge creation since June; upkeep disabled",
+   "root_cause": "Concepts bulk-removed outside deleteConcept cascade; upkeep enabled:false",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Doc-promised dev-vessel loops with 0 activity executions in 14d: doc_drift_fix, learning_policy(+writeback), selection-entropy, implicit-vessel-scan, obsidian-behavior-scan, interaction-expectation-verify, learning_mode, shape_closure_demand",
+   "root_cause": "resolvers registered but no rhythm/activity invokes them",
+   "last_seen": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Doc-promised apparatus absent or uninvoked: forge vessel, operatorIntervention, interventionRateReport, memory-sync-tick, verify-merge-candidate, ciAgreementReport, restart-vessel (absent); closure-audit.ts, substrate-narrator.ts, import-operator-memory.ts (uninvoked); ranked lifecycle dispatch, delegation headers, 4/6 distribution_policy values (inert)",
+   "source": "docs-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Write-only logs: landability_predictions.log (10.5MB/3d), auto-draft-decisions.jsonl (1MB/7d); funnel median_latency_ms=0 and expired=0 on all 47 live runs",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Instrumentation added without a reader activity. The lifecycle expiry path is dormant on the live store.",
+   "source": "gap-history"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Detectors built, verified once, then never scheduled or never extended (identical-failure-run-tick, joint-liveness with one binding)",
+   "root_cause": "Nothing asserts that a built detector keeps firing with coverage. The one detector for the 'same failure, nothing changed' class was never given a unit",
+   "first_seen": "2026-08-25",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "source": "git-deployment"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Escalations, reconcile, watchdogs, validation blocks and gates found never to have run",
+   "first_seen": "2026-07-08",
+   "last_seen": "2026-08-12",
+   "recurrences": 12,
+   "root_cause": "Mechanisms are validated at authoring, not proven to complete in production. A silent catch reads as a pass.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Three causal mechanisms for one intent; 09-05 detectors never executed",
+   "first_seen": "2026-09-05",
+   "last_seen": "2026-09-26",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Ephemeris oracle 0/6,479, rebind 0/3,456, recipes and recipe seeding unused",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "Mechanisms were built for one goal family, validated once, and never retired.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "distribution_policy used by one registrant; extraction policies never resolved; retire-sweep at 0/0; metric-collector disabled yet edited",
+   "first_seen": "2026-07-30",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "root_cause": "mechanisms landed 'dormant until' with no follow-through or liveness check",
+   "source": "git-small"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "ratchet, correctness validation, trace-enforce-validate, contract enforcement, stratified harness, closure-audit, M1-M6 built and validated, then no further references",
+   "first_seen": "2026-02-17",
+   "last_seen": "2026-06-05",
+   "recurrences": 10,
+   "root_cause": "mechanisms validated once by their author, with no activity or reader that keeps using them",
+   "source": "git-super-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Detectors and harnesses built, validated once, never extended (joint-liveness had 1 binding for 33 days; immune timer dead 5 days; harness family abandoned)",
+   "root_cause": "No reader or schedule is tied to the mechanism's coverage; script-retention law not enforced",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-09-27",
+   "recurrences": 8,
+   "source": "git-super-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "11 empty schema tables beside live twins (composition_chain, composition_node, activity_template, execution_traces, goal_execution_path, pattern, execution_pattern, composite_sequence_patterns, execution_sequences, activity_metrics, routing_trace)",
+   "root_cause": "Schema fossils left from earlier designs",
+   "source": "live-activities"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "9 dormant detectors, gap-compose.timer dormant, 8 detector units failing, 10/97 validators silent",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-28",
+   "recurrences": 20,
+   "root_cause": "built and validated once; no disposition; detectors fail without gapping on themselves",
+   "source": "live-gaps"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "The gap-compose watchdog restarts with ok:true while the stall continues (stalled_min up to 241, 383 open intents); the expectation-scan heartbeat reports checked:0; discardedLandingReport is always 0",
+   "first_seen": "2026-08-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Detectors act or report without checking that their action changed the condition",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Built mechanisms with zero callers or zero runs (ci-result, test_suite, gradeArmByExecution, runtimeTracingMiddleware, concept_edge contradicts)",
+   "root_cause": "Built and validated once, never wired or proven to complete; IMPLEMENTED_DORMANT is invisible to reading",
+   "first_seen": "2026-07-10",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "source": "memory-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Built-and-never-run: empty rhythm registry, learning_signal_health_observer disarmed by volume floor, credit-primed-concepts wired to wrong drafter, variant_promote unimplemented, SF_BLEND off, deterministic oracles never fire, concept upkeep optimizer reset, premise check 0 fires",
+   "root_cause": "Existence validated, caller set and firing rate on real workload never checked",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-13",
+   "recurrences": 10,
+   "source": "memory-10"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Built and imported but never called: decideContinuation, gradeArmByExecution, pruneExpiredImpulses, pattern-miner, timers, seam extraction, consumption-probe activity",
+   "first_seen": "2026-07-14",
+   "last_seen": "2026-08-04",
+   "recurrences": 10,
+   "root_cause": "Import-without-call passes gates; no conformance check that emitted fields are read",
+   "source": "memory-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Mechanisms built and validated once but never firing: census/validation families, the ReAct loop, the self-recovery timer, ESCALATE-to-log, a health detector watching 0 services, the exemplar selector, spectral gap / SF blend / TTSA, deterministic oracles.",
+   "first_seen": "2026-07-20",
+   "last_seen": "2026-09-19",
+   "recurrences": 12,
+   "root_cause": "Scheduling is env-gated or setInterval in short-lived processes. Detectors are never proven to complete, and their scope is never checked.",
+   "source": "memory-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Mechanisms built and validated once, then never fire (oracles uncovered, retirement, state-signature fold, orphaned resolver, mirror-to-live, missing-verifier filer)",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-16",
+   "recurrences": 8,
+   "root_cause": "No liveness/firing-rate check per mechanism; silent skip reads as pass",
+   "source": "memory-4"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Built capabilities never run: decomposition primitives, reach-to-arm grading, region grounding, extraction policies, composition edge writer, ingest-docs, spectral-gap lambda.",
+   "root_cause": "No activity invokes them, and nothing checks that a mechanism is reachable from a live caller.",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-20",
+   "recurrences": 10,
+   "source": "memory-5"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Mechanisms built, never scheduled/wired/read (landability model, horizon tags, arm reach grading, gate probe, observers, {{shape}})",
+   "root_cause": "no reader/scheduler required at landing; hollow-write not detected",
+   "first_seen": "2026-07-15",
+   "last_seen": "2026-09-20",
+   "recurrences": 10,
+   "source": "memory-6"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Mechanisms built and specced but inert: resolver_schema served in one place, pool Thompson ranking stubbed, behaviorBaseline unimplemented, detectors mis-calibrated, post-land suite dead for a month",
+   "root_cause": "Built without a consumer or an exercise. A 'didn't run' result is treated as neutral",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-28",
+   "recurrences": 9,
+   "source": "memory-7"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Built but never running: 14 autonomy units masked, 11 timers never enabled, 90/102 validators dormant, the rhythm conductor selection-scheduled, the ribosome dormant, the anti-loop guard.",
+   "root_cause": "Cadence rides on Thompson selection, and the inventory and role groups exclude units. A check is scheduled by the mechanism it exists to recover.",
+   "first_seen": "2026-07-27",
+   "last_seen": "2026-09-10",
+   "recurrences": 8,
+   "source": "memory-8"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Mechanisms built but never invoked (anchor_index primary path, execution_exemplar consumer, conservation bridge, remedy_effectiveness_observer, human_input, LLM-free edit floor, inferGoalTargetShapes, decideContinuation)",
+   "first_seen": "2026-08-05",
+   "last_seen": "2026-09-12",
+   "recurrences": 10,
+   "root_cause": "Producers and consumers are wired separately with no caller check; no detector for written-no-reader / read-no-writer fields",
+   "source": "memory-9"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Built mechanism wired but never exercised (0 executions, connected-but-yielding-nothing, live endpoint unused)",
+   "first_seen": "2026-06-17",
+   "last_seen": "2026-09-29",
+   "recurrences": 9,
+   "root_cause": "writers or resolvers minted without a scheduled caller or reader",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Lifecycle emits with zero subscribers; forge resolvers only in examples; specs with 0% tasks",
+   "first_seen": "2026-05-27",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "capacity shipped without consumer; no check that a writer has a reader",
+   "source": "openspec-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Weekly recommendation/stratified harness failed 20/20 scheduled runs since 05-18 in ~12s",
+   "root_cause": "METABOB_API_KEY secret not set; the CI failure never becomes a gap",
+   "first_seen": "2026-05-18",
+   "last_seen": "2026-09-28",
+   "recurrences": 20,
+   "source": "openspec-10"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Mechanisms were built and seeded but never reach or run: topology coverage-tick (S.4a never met, 0 traces since 09-14), ingest-doc (0% delta), draft-spec-from-gap, oom detector, obsidian writeback, closed-loop pattern detectors, and inert listeners with no emitter.",
+   "root_cause": "Acceptance was defined as code plus typecheck plus one dispatch, not as a sustained reached trace. Event-driven consumers shipped without producers.",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 7,
+   "source": "openspec-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Specified mechanisms never built or built but never wired: concept-db supersession, 8 upkeep activities, LR-3 replay, detector recursion C.GATE, cyclic-flow in rotation, OR-edge fan-out, stability-trend",
+   "first_seen": "2026-06-01",
+   "last_seen": "2026-09-28",
+   "recurrences": 7,
+   "root_cause": "proposals are ambitious multi-phase specs with no owner loop that tracks completion against live evidence",
+   "source": "openspec-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Orphaned-capability gaps regenerated (38 open) but rarely drained",
+   "root_cause": "Find-half built first; fix-half (bridge author needing resolver contract) absent then only partially added via author_producer",
+   "first_seen": "2026-06-23",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "source": "openspec-4"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "distribution_policy genre routing built in discovery and goal-host but almost no vessel declares a policy; all default stateless",
+   "root_cause": "Keystone config task (inventory genre stamp) never done; tasks.md never updated after 6ab2e24 landed",
+   "first_seen": "2026-07-31",
+   "last_seen": "2026-09-28",
+   "source": "openspec-5"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Detector finds orphans reliably but no bridge or retire action lands; goal_summary and interface_deploy_reach_check are still at 0 invocations 40+ days later.",
+   "root_cause": "repair_direction offers only rewire or mint, never retire. For a resolver that was itself a hollow mint, minting a bridge compounds the wrong mint (law 3).",
+   "first_seen": "2026-06-23",
+   "last_seen": "2026-09-26",
+   "source": "openspec-6"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Verifier-recipe countable grounding idle: 0 donations or recipe answers in 72h",
+   "root_cause": "countable goals rarely route to the shellResult path; misrouting (separate proposal) never done",
+   "first_seen": "2026-08-27",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "openspec-7"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Conformance checker and design-token contract built and proven, never wired into any lint or runtime probe",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "P5/P6/P10 false positives on well-factored code blocked wiring. Nobody owned the follow-up, and the openspec change was never archived and has no tasks.md.",
+   "source": "openspec-9"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Built and correct but never consumed/scheduled: composition graph, gap triple scan, family sampler, reuse lineage, refusal_events, many tables, drift repair",
+   "root_cause": "No reader wired or scheduling path missing; env-gated arming",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-23",
+   "recurrences": 10,
+   "source": "reports-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "22 detector resolvers, perf_canary_resolve, shape-dispatch-check, fc-coverage, conditioned-differentiation key built but never selected/called/enforcing",
+   "root_cause": "No seed template or caller; advisory-only catch blocks; detect-only design with no hands",
+   "first_seen": "2026-08-12",
+   "last_seen": "2026-08-21",
+   "recurrences": 6,
+   "source": "reports-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Immune system blind to absence-of-write (frozen table, inert diff, dead scheduler, unit exiting 0)",
+   "root_cause": "detector_coverage_scan clusters failing traces by failure_mode.type; there is no liveness/staleness predicate",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-08-16",
+   "recurrences": 3,
+   "source": "reports-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Mechanisms built and validated once, then dead or unused (synthesizer 0 fires, ablation A/B never run, isolated runner unwired, ribosome 0 templates since 09-22, causal-adjudication 0 callers, drift probes 0 call sites).",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-29",
+   "recurrences": 8,
+   "root_cause": "No liveness registry for joints until 09-28, and that one cannot see node 2; decay without detection.",
+   "source": "reports-6"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Self-correction mechanisms pass acceptance once, then stop firing on real traffic with nothing detecting it: behavioural verification ran:false since 07-12; joint-liveness has 1 binding; self-recovery.timer was dead 5 days; ribosome at 100% error; no substrate revert since 08-01",
+   "root_cause": "Validation is local and one-time; no expectation of the form 'mechanism fired on real traffic within N' (MECHANISM-AUDIT, WHY)",
+   "first_seen": "2026-07-12",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "source": "reports-7"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Post-land suite ran=false. The instrument named as missing on 09-10 was in fact present but dead from 08-31 to 09-28.",
+   "root_cause": "A 30s shell default killed the suite silently, and a skip read as a pass (memory 09-28, fix 5e9a0b2)",
+   "first_seen": "2026-08-31",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "source": "reports-8"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Built but never connected, at least 9 instances: rhythm registry, regionHint, lesson credit, its own detector, anchor_index in primary drafting, unarmed bootstrap-detector gaps, inferGoalTargetShapes/decideContinuation imported and never invoked, emitPosteriorUpdateMetric at debug level dropping skipped_reason, and the directed-lane reservation.",
+   "root_cause": "Absence of signal reads as health. No check verifies that a producer feeds a consumer, and noUnusedLocals is not enabled.",
+   "first_seen": "2026-06-13",
+   "last_seen": "2026-09-23",
+   "recurrences": 9,
+   "source": "reports-8"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "SurrealDB (zero namespaces) and valkey run in both spokes with no data. The probe harness is manual only, with no scheduled reader.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "source": "syzygy"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Timers run with zero output: obsidian x3 (100% skipped), surgical-gap-scan (0/91), typecheck-scenario-gen (0 now, and wrongly addressed before), db-maintenance (actions []), rhythm-conduct (enqueued=0 on most ticks)",
+   "root_cause": "The target moved (the Obsidian surface was replaced), there is no supply, or the unit is diagnose-only by design. Nothing dispositions them",
+   "first_seen": "2026-06-29",
+   "last_seen": "2026-09-29",
+   "recurrences": 5,
+   "source": "timers-readers"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Mechanisms present and never effective (fn::island_concepts, accuracy invariant, recipe maturation, growth governor, activity.ev)",
+   "first_seen": "2026-08-24",
+   "last_seen": "2026-09-06",
+   "recurrences": 6,
+   "root_cause": "fail-open appliers and callers that never request the branch",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "In-flight recovery loop never runs: 193/193 attempts are 1/1",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-16",
+   "recurrences": 1,
+   "root_cause": "recommendExcluding/repairSignatureOf/exhaustion have no reachable caller; re-found MEMORY 09-22",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Built but never exercised: exemplar consumer, variant minting, action_no_effect, parallel sibling, v_shape_conditioned_score, state_signature, in-flight re-route arm",
+   "first_seen": "2026-09-11",
+   "last_seen": "2026-09-17",
+   "recurrences": 7,
+   "root_cause": "Producers without readers or readers on unused endpoints; 'IMPLEMENTED_DORMANT' is the largest audit class",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Mechanisms built once and never extended or wired (joint-liveness, behavioural verification, auto-revert, ribosome, recipe rescue)",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 10,
+   "root_cause": "Validated once then assumed; humans detected 247 of 253 breaks; silence 64%",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "harnesses/probes/detectors built, run once, invoked by nothing",
+   "first_seen": "2026-05-13",
+   "last_seen": "2026-08-21",
+   "recurrences": 9,
+   "root_cause": "no activity validates them (script-retention rule)",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Built primitives with no consumers or callers (lifecycle bus, try-direct-answer fallback, narrator, cite-check, closure-audit)",
+   "first_seen": "2026-05-23 F-007/F-020",
+   "last_seen": "2026-05-30 inv-077",
+   "recurrences": 6,
+   "root_cause": "Emitters shipped without readers; scripts shipped without an invoking activity",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "~70 validation scripts have no invoker. The only invoker, the weekly CI, failed 20/20 runs. harness-run-matrix shows no activity since at least 09-21.",
+   "root_cause": "Instruments were built and run once by the operator and never placed under a scheduler or activity. The CI secret was never set.",
+   "first_seen": "2026-05-18",
+   "last_seen": "2026-09-28",
+   "recurrences": 20,
+   "source": "validation-other-3"
+  }
+ ],
+ "claims": [
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-09-26",
+   "claim": "Landability predictions logged for later validation",
+   "where": "development-vessel 418d80d gap-lifecycle-scan.ts:404",
+   "later": "Never validated; no reader; 10.5MB by 09-29",
+   "source": "gap-history"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-05-19..07-01",
+   "claim": "Stratified goal-generator harness DONE with weekly CI",
+   "where": "archive/2026-05-17-stratified-goal-generator-harness/tasks.md",
+   "later": "weekly workflow failed 20/20 since 05-18 (METABOB_API_KEY unset); no run since 05-17",
+   "source": "openspec-10"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-08-07",
+   "claim": "conformance gate proven to refuse (30/0, planted violations caught)",
+   "where": "human-surface-stack/BUILD-REPORT.md s1",
+   "later": "never wired into any lint; P5/P6/P10 false positives unfixed; no substantive commits after 08-07",
+   "source": "openspec-9"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-09-28",
+   "claim": "surgical-gap-scan detects endpoint + absolute resolve-path joins (da76f061)",
+   "where": "scripts/substrate/surgical-gap-scan.ts",
+   "later": "Reverted the same day (807b92ef). The scanner emitted 0 on 91/91 runs",
+   "source": "timers-readers"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-09-16T07:33",
+   "claim": "Retry/recovery machinery earlier described as live is implemented but never ran (193/193 attempt 1/1)",
+   "where": "8183a698",
+   "later": "re-declared as new MEMORY 09-22 'failure side had no store'",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-09-17",
+   "claim": "checkAndRetireByPosterior has zero callers",
+   "where": "80ab9659 @ 2026-09-17T02:27",
+   "later": "Minutes later: false zero (binary-invisible file); it is wired to an unused endpoint",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-09-28T05:08Z",
+   "claim": "Self-correction mechanisms I called missing were all built at least once; nothing reads provide_feedback",
+   "where": "ac8b0aad 2026-09-28T05:08Z",
+   "later": "05:11 partial correction: infra healthier than audit said; label reader exists (maybeConsumeOracleLabel) but keyed on dispatch ids",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-06-03",
+   "claim": "mitosis empirically proven",
+   "where": "validation/findings/mitosis-empirical-proof-2026-06-03",
+   "later": "06-04: 0 cutovers; 06-05: evaluate non-deterministic",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-09-07",
+   "claim": "push-away closed",
+   "where": "validation/state/closure-status.json",
+   "later": "the same run could not reach dev-vessel (HTTP 0); evidence is one recorded probe shape",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-05-23",
+   "claim": "Harness migrated to an activity: harness-run-matrix fires automatically on qualifying execution_completed events",
+   "where": "validation/failure-modes/README.md 'Migration to Activity-Driven Harness'",
+   "later": "0 journal mentions since 09-21. harness-check-scenario has an open mis-wire gap (09-22).",
+   "source": "validation-other-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-05-23 (run-weekly-harness.sh)",
+   "claim": "Scenarios run on the weekly harness schedule; lift proven when gap count decreases week-over-week",
+   "where": "validation/failure-modes/README.md 'Continuous Operation'",
+   "later": "The weekly workflow failed 20/20 runs from 2026-05-18 to 09-28 because METABOB_API_KEY was unset",
+   "source": "validation-other-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-08-17",
+   "claim": "memory-budget-check.service fixes zero-call-site instruments by giving them a scheduler",
+   "where": "scripts/substrate/units/memory-budget-check.service",
+   "later": "The same comment names argument-chain-check.test.ts, which is still unplaced as of 09-28",
+   "source": "validation-other-3"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-05-17",
+   "claim": "concept-db upkeep rules are autonomous Thompson activities creating traces",
+   "where": "repos/concept-db/CLAUDE.md",
+   "later": "3 trials total; /health says disabled",
+   "source": "vessel-docs-tooling"
+  }
+ ]
+}

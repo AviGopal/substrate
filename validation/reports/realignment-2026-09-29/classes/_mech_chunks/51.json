@@ -1,0 +1,18 @@
+{
+ "area": "conversation-vessel",
+ "items": [
+  {
+   "name": "workbench/react-renderer/cloud-dashboard/terminal/user-vessel/conversation-vessel",
+   "location": "repos/* (dropped b49942df)",
+   "purpose": "Apr UI/product layer",
+   "status": "fossil",
+   "general": false,
+   "evidence": "dropped 06-26",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  }
+ ]
+}

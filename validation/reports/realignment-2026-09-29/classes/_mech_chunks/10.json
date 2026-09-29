@@ -1,0 +1,564 @@
+{
+ "area": "other",
+ "items": [
+  {
+   "name": "close oracle predicates (Class 1/1b/2/3, landedCommitVerdict, arming guard)",
+   "location": "substrate-gap.ts, gap-to-feature.ts, removed-line-predicate.ts",
+   "purpose": "Machine-check gap closure",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Rewritten 10+ times; arming guard broken 09-15 to at least 09-22",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "gapClassKey consumption gate",
+   "location": "substrate-gap.ts:210/:746",
+   "purpose": "cap open gaps per class",
+   "status": "live-used",
+   "general": true,
+   "evidence": "8-hex strip landed 14def70; lineage capping missing",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "gapClassKey 8-hex normalisation",
+   "location": "substrate-gap.ts:313",
+   "purpose": "Group gaps by class for the consumption gate and dedupe",
+   "status": "broken",
+   "general": true,
+   "evidence": "Landed 3x 09-14, removed by ca53600, absent now",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "classifyFalsifier / verifyGapCondition",
+   "location": "substrate-gap.ts:418-437; gap-to-feature.ts:1563/1650",
+   "purpose": "Stamp and execute class1/class2 gap predicates",
+   "status": "live-used",
+   "general": true,
+   "evidence": "97.9% of open gaps stamped none",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "mitosis self-clones in /vessels",
+   "location": "substrate-live /vessels",
+   "purpose": "cutover staging",
+   "status": "fossil",
+   "general": false,
+   "evidence": "49 of 71 dirs, never composted (08-29)",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "/workspace/gaps, /workspace/policies, /workspace/compose-slots",
+   "location": "substrate-live container",
+   "purpose": "pre-WORKSPACE_ROOT paths",
+   "status": "fossil",
+   "general": false,
+   "evidence": "gaps.json frozen 08-08; operator misdiagnosed from it 08-30",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "substrate-ready readiness",
+   "location": "substrate-ready --once --json",
+   "purpose": "Report fleet readiness",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Reports ready:true on both spokes while the hub function path is dead. Federation reachability is not part of the check.",
+   "source": "syzygy",
+   "mentions": 1,
+   "sources": [
+    "syzygy"
+   ]
+  },
+  {
+   "name": "autonomous drift-sweep committer",
+   "location": "super-repo commits 4e4170a8 ('vessel code drift detected and committed'), 796fac89 ('vessel-code-commit-and-push')",
+   "purpose": "Commit and push drift in clones.",
+   "status": "broken",
+   "general": true,
+   "evidence": "Committed 2134 and 412 files including scratch drafts and tsc emit into openspec/changes; subject mislabels content.",
+   "source": "openspec-6",
+   "mentions": 1,
+   "sources": [
+    "openspec-6"
+   ]
+  },
+  {
+   "name": "maintenance leases",
+   "location": "super-repo/leases",
+   "purpose": "Mutual exclusion for maintenance",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Expired lease files from 09-25 and 09-26 left on disk",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "policies/*.json runtime policy files",
+   "location": "super-repo/policies",
+   "purpose": "walk-budget, pathway reuse, extraction depth, llm-model-policy arms",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Node 1 has 6 files, node 2 has 2 (rev 25 vs 9); they are files, not shapes",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "learning-mode-state",
+   "location": "super-repo/state/learning-mode-state.json",
+   "purpose": "Learning-mode driver",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Reset 09-28 by the 50830bec untrack",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "recommend-time Thompson selection",
+   "location": "thompson_selection_log",
+   "purpose": "Select an activity among ~640 candidates",
+   "status": "live-used",
+   "general": true,
+   "evidence": "61,906 selections/7d; 60% to n\u22642 arms; decoupled from execution",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "operator_pause field",
+   "location": "timeShapedRhythm body",
+   "purpose": "Pause a rhythm",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Its own text says 'no reader today'",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "Qualification rhythm",
+   "location": "timeShapedRhythm family qualification + rhythmFamilyGoal",
+   "purpose": "Continuous autonomous qualification probes",
+   "status": "unknown",
+   "general": true,
+   "evidence": "N=2 cycles 09-11; later state not in shard",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "rhythm hold via shape budget",
+   "location": "timeShapedRhythm rhythm-self-maintenance",
+   "purpose": "Hold a behaviour family by a shaped record (law 1)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "09-28 14:50 budget 2 plus lift_when, instead of stopping a timer",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "trace retention + aux reap + success sampling",
+   "location": "trace-retention.ts; 2c3f97a",
+   "purpose": "Bound the trace store",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Covers only a subset of tables; growth reduced ~73%",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "execution row cap",
+   "location": "trace_store_counters:execution cap=150000",
+   "purpose": "Bound trace growth",
+   "status": "live-used",
+   "general": true,
+   "evidence": "~5-day window",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "egressNoReservationCount / phantomSuspected health fields",
+   "location": "transport /health :8401",
+   "purpose": "Detect reservation liveness failures",
+   "status": "broken",
+   "general": true,
+   "evidence": "The inventory counter stayed at 0 right after an ingress-forward NO_RESERVATION failure.",
+   "source": "syzygy",
+   "mentions": 1,
+   "sources": [
+    "syzygy"
+   ]
+  },
+  {
+   "name": "cross-node routing via host.containers.internal drop-ins",
+   "location": "unit drop-ins VESSEL_ADVERTISE_ENDPOINT, VESSEL_ID, GAP_STORE_ENDPOINT (tasks.md 4.5, 4.0d-ii)",
+   "purpose": "node1<->node2 compose routing and gap store forwarding",
+   "status": "live-used",
+   "general": false,
+   "evidence": "sourced from tasks.md; node2 /bootstrap shows host.containers.internal identity; drop-in files not read",
+   "source": "openspec-7",
+   "mentions": 1,
+   "sources": [
+    "openspec-7"
+   ]
+  },
+  {
+   "name": "substrate-active-scripts-seed",
+   "location": "units/substrate-active-scripts-seed.service",
+   "purpose": "Seed the run-dir at boot",
+   "status": "live-used",
+   "general": true,
+   "evidence": "cp -f with no prune, so 11 deleted scripts persist in the volume",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "spend envelope + autonomyScope",
+   "location": "value-per-cost-selection / contained-self-development",
+   "purpose": "Bound spend; admission by falsifier class",
+   "status": "live-used",
+   "general": true,
+   "evidence": "a1826314 closed an envelope leak; 32d68e9b class1/class2",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "Orphaned resolvers (51)",
+   "location": "various vessels (code_* tools, gh_pr_*, pushPolicy*, llmModelPolicy*, docFixPolicy*, escalation_disposition_apply, fossilRankReport, ...)",
+   "purpose": "registered capabilities",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "invoked by 0 activities; duplicate names prune-stale-mitosis/prune_stale_mitosis, pushPolicy-write/pushPolicy_write",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  },
+  {
+   "name": "Class-2 evidence_resolve closure sweep",
+   "location": "verifyGapConditionAsync",
+   "purpose": "measured closure",
+   "status": "broken",
+   "general": true,
+   "evidence": "polarity inversion; 5 gaps flapping 23-26 times",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  },
+  {
+   "name": "Four detectors with negative controls (trace-boundary keys, sink forwarding, mock-factory completeness, fleet endpoint paths)",
+   "location": "vessel test suites",
+   "purpose": "Catch write/read and vacuous-check classes",
+   "status": "unknown",
+   "general": true,
+   "evidence": "built 08-17; later execution unknown",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "installed.json durable membership",
+   "location": "vessel-ctl + entrypoint (337c9226)",
+   "purpose": "survive recreate",
+   "status": "live-used",
+   "general": true,
+   "evidence": "acceptance 09-22",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "Closure-by-predicate gate (landing predicates never absent; held needs falsifier_exercise)",
+   "location": "vessel-mitosis-cutover + substrateGap_write; f122f86",
+   "purpose": "Prevent landings from closing their own gaps",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Sweeps closed=0 absent=0 after landing; negative control refused",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "change_window maintenanceLease",
+   "location": "vessel-mitosis-cutover.ts",
+   "purpose": "Serialize cutover vs pull-sync",
+   "status": "broken",
+   "general": true,
+   "evidence": "08-05 leaks on self-cutover restart",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "mitosis freshness gate",
+   "location": "vessel-mitosis-cutover.ts",
+   "purpose": "Refuse stale drafts",
+   "status": "broken",
+   "general": true,
+   "evidence": "Hashes the /vessels mirror, not origin; 096c517 reverted an operator fix; staged_base_sha deadlock 09-24",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "committed-drift gate",
+   "location": "vessel-mitosis-cutover.ts (0a0d59f)",
+   "purpose": "Refuse overwriting a newer committed landing",
+   "status": "broken",
+   "general": true,
+   "evidence": "Reverted 97f7cdf; overwrite class open",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "Cutover provenance gate",
+   "location": "vessel-mitosis-cutover.ts (573461a)",
+   "purpose": "Require gap_id/proposal_id for every landing",
+   "status": "live-used",
+   "general": true,
+   "evidence": "09-22 multifile path had dropped gap_id silently; fixed at the gate",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "drafter-corruption parse signature",
+   "location": "vessel-mitosis-cutover.ts (bec9d8d)",
+   "purpose": "Reject unparseable staged files",
+   "status": "broken",
+   "general": false,
+   "evidence": "Sits at the wrong stage: corruption recurred before cutover (08-11), and 84cd2f2 pushed unparseable (09-19).",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "clearPendingIfOwned",
+   "location": "vessel-mitosis-cutover.ts 0c96b99",
+   "purpose": "exit-guaranteed lock release",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-29",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "Restart coalescing + breadcrumb",
+   "location": "vessel-mitosis-cutover.ts 46d252c, 6bfbe4b",
+   "purpose": "One restart per burst; report in-flight loss",
+   "status": "live-used",
+   "general": true,
+   "evidence": "12 landings/9 restarts no pairs; 'observed 0 in flight'",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "per-test set-difference cutover gate",
+   "location": "vessel-mitosis-cutover.ts:2334",
+   "purpose": "Attribute only newly failing tests to a landing",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Fired correctly on 3e58e73 (2 new vs 184 pre-existing)",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "Post-land per-test baseline delta",
+   "location": "vessel-mitosis-cutover.ts:2334-2374",
+   "purpose": "Attribute newly failing tests to landing",
+   "status": "broken",
+   "general": true,
+   "evidence": "observes not gates; ran=false on every cutover 09-11; manufactured gap leading to 31f1d67",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "Behavioural verification",
+   "location": "vessel-mitosis-cutover.ts:2896/2906 (399bb2c 07-12)",
+   "purpose": "Run verification_spec after landing",
+   "status": "broken",
+   "general": true,
+   "evidence": "ran:false every cutover; 0 of ~6,100 gaps carry verification_spec; fires before restart",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "mitosis cutover + substrate-pull-sync",
+   "location": "vessel-mitosis-cutover.ts; pull-sync",
+   "purpose": "Deploy landed commits to /vessels",
+   "status": "live-used",
+   "general": true,
+   "evidence": "in_flight deferral 379ef9f4; restart attribution 644e7ee",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "70d2a00 resolver-change single-trace approval",
+   "location": "vessel-mitosis-evaluate.ts",
+   "purpose": "Approve resolver change on trace",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Approves on one trace of any outcome, skipping regression comparison",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "Parse-bail + resolveCheckScripts fail-closed",
+   "location": "vessel-mitosis-evaluate.ts (05450e6, 530c1e9)",
+   "purpose": "Typecheck gate must prove it ran",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-29/30 closed the vacuous-gate and dirty\u2192dirty holes",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "surqlBreakingFieldRefusal",
+   "location": "vessel-mitosis-evaluate.ts e8bc5ca",
+   "purpose": "Refuse destructive or unparseable .surql",
+   "status": "broken",
+   "general": false,
+   "evidence": "Its guard was deleted by substrate commit 54b7762 (MEMORY 09-22), then re-fixed",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "Restart-attribution breadcrumb",
+   "location": "vessels startup",
+   "purpose": "Attribute restarts to their requester",
+   "status": "broken",
+   "general": false,
+   "evidence": "#57 reuses a stale breadcrumb",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "autonomy role group units (operator-goal-generator, surgical-gap-scan +12)",
+   "location": "vessels.inventory.json 'full' only",
+   "purpose": "Autonomy timers",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Dead by construction on both hub and spoke (08-01)",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "Gap-compose watchdog",
+   "location": "watchdog-tick.ts + gap-compose.service.d/watchdog.conf",
+   "purpose": "Fire gap_to_feature when compose stalls",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-29: env-pinned to compose-lessons marker after drain-log pollution",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  }
+ ]
+}

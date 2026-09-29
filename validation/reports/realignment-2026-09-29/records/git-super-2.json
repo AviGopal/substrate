@@ -1,0 +1,856 @@
+{
+ "source": "git-super-2",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/git-super-2.md",
+ "coverage": "Super-repo only (/home/avi/documents/work/substrate), git log 2026-07-01 -> 2026-09-28: 2031 commits (Jul 306, Aug 924, Sep 801). Read every subject. Read about 150 commit bodies, grouped by cluster: pull-sync/mirror, federation/relay, self-recovery, secrets/auth, human-surface, trace-store, selection/learning audits, minting, residue commits, docs/openspec pruning, the 09-25..09-28 check-ins. Ran git log -S on recurring identifiers (content_hash, Requires=, HOST=127.0.0.1, MemoryMax, TRACE_RETENTION, NO_RESERVATION, RESTART_DEFER, QUIESCE_WAIT, learning-mode-state, git add -A). Counted residue files at HEAD, per autonomous commit. Took a file census of validation/scripts and openspec/changes. Submodule-internal history was not read; it is seen only through bump subjects and report check-ins, and vessel hashes are labelled as such. Pre-07-01 belongs to git-super-1. One report, WHY-THINGS-KEEP-BREAKING-2026-09-28.md (commits 2ca586ba/40fff5db), was read as commit-level evidence. Nothing was edited except the output file.",
+ "attempts": [
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync content_hash blind to file kinds (R1)",
+   "where": "967e3d6e, cb28e450, 66cc9185",
+   "tried": "Extend the change fingerprint from .ts to .json, then sql/.surql, then scripts/. The 09-24 body says 'the third time the list fell behind the mirror'",
+   "outcome": "partial",
+   "date": "2026-07-25..2026-09-24",
+   "evidence": "Coverage is still a list, not derived from what mirror-to-live copies"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "mirror decision by content, not marker sha",
+   "where": "596fd717",
+   "tried": "Replace 'clone HEAD == marker sha' with an md5 of the src tree compared against live",
+   "outcome": "worked",
+   "date": "2026-07-20",
+   "evidence": "goal-host/activity-api had run stale code while pull-sync skipped them forever"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "mirror-to-live restored from stale index",
+   "where": "a81c46f5",
+   "tried": "reset --hard HEAD before mirroring, instead of checkout -f from the index",
+   "outcome": "worked",
+   "date": "2026-07-21",
+   "evidence": "Root of 'landed on origin but not live' hollow landings"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "restart deferral never converges (R2)",
+   "where": "379ef9f4, ad535830, 25aad2cc, 73a3b54c, 85bc103c, fd3d6871, 421653ab",
+   "tried": "Quiesce wait, then RESTART_DEFER_MAX, then defer by the oldest in-flight request's age, then restart every unit that runs the vessel's tree",
+   "outcome": "partial",
+   "date": "2026-08-10..2026-09-24",
+   "evidence": "4b2d6410 'backstop is not a backstop'; 73a3b54c goal-host served code 23h stale; 421653ab LLM arms served weeks-old code"
+  },
+  {
+   "key": "false-verification",
+   "title": "pull-sync regression/test gate dead or blind (R3)",
+   "where": "676cb859, cffc9489, 2e47b75e, 5ef2966f, 86491fec, bb573355, 0a62b058, 6278a317, 24877839, 4e79dd76, 7f29a61c, 6c7c5b8a, b7dab713",
+   "tried": "14 successive repairs of the only behavioural guard on the deploy channel",
+   "outcome": "partial",
+   "date": "2026-08-04..2026-09-28",
+   "evidence": "676cb859 completed 0 of 132 runs; bb573355 saw 62 no-op ticks while autonomous commits landed; 5d9a7867 (09-24) says the gate fails open; b7dab713 says the post-land suite was dead 08-31->09-28"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "self-recovery restarts the DB-pressure victim (R4)",
+   "where": "9520a372, fc143654, 44250006, 0b3f70b2, 337c3b81, ad9da780",
+   "tried": "3-strike probe, a RETURN 1 pressure probe, a start-phase guard, a timed probe, then a bounded ladder",
+   "outcome": "partial",
+   "date": "2026-07-10..2026-09-16",
+   "evidence": "0b3f70b2: 16 restarts/6h, and the probe could only detect a dead DB. 337c3b81: 'the same loop, again'. ad9da780: 36 byte-identical escalations"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "SurrealDB memory/trace growth, six hats (R5)",
+   "where": "2687fbe7, ee9c1dc2, 6eda182a, 60b2328e, 5a2074f7, 9e8b931f, 8c862ef8, 9fdb0b27, 1178cc1a",
+   "tried": "Block cache cap, retention rhythm, 150k cap, restart on wedge, valve poison-row quarantine, then removal of the FTS rebuild",
+   "outcome": "partial",
+   "date": "2026-07-16..2026-09-25",
+   "evidence": "1178cc1a: 41GB on disk, 89% of it unreclaimed blob garbage from a 30-min FTS REBUILD. The rebuild was removed by substrate-authored activity-api 9387ca7 (worked); total growth is still open"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "operator SurrealDB memory cap OOM-killed prod",
+   "where": "e2ba1a69 -> 9df01220",
+   "tried": "Lower MemoryHigh/Max 22/26G to 10/12G fleet-wide",
+   "outcome": "reverted",
+   "date": "2026-08-17",
+   "evidence": "Arithmetic came from a 60.6G workstation, but the hub has 32.8G; the kernel killed surreal inside the cap write"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "retention batch=1 experiment",
+   "where": "a78fcfd7 -> 07e32d38",
+   "tried": "Narrow the DELETE statement width to 1",
+   "outcome": "reverted",
+   "date": "2026-08-16",
+   "evidence": "320 queries in flight, p50 33.7s; the real cause was poison rows (9e8b931f)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "persisted secrets file clobbered/corrupted (R6)",
+   "where": "03720115, b749a2a5, a030952b, 38e4f79a, ae110fcd, fd9d1102, f32b2274, fdd5503f, e31e28dd",
+   "tried": "Serial fixes to gen-env/secrets.env.sh persistence and quoting",
+   "outcome": "partial",
+   "date": "2026-08-07..2026-09-26",
+   "evidence": "Two writers truncated each other. JSON arrived as invalid JSON. Quotes doubled on read. Node 2 reverted an uncommitted gen-env fix through pull-sync"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "fleet keys wrong/unset: silent 401 empties the vocabulary (R7)",
+   "where": "3982521e, b2a0a878, cf882aed, 263ef893, 6d19c0a0, d60fcc81, 1322c71f, 2e18b398",
+   "tried": "Dual-secret bridge, a separate HUB_API_KEY, seeder validation by body, per-vessel key write",
+   "outcome": "partial",
+   "date": "2026-07-23..2026-09-22",
+   "evidence": "d60fcc81: API_KEY absent everywhere, discovery answered 401, the vocabulary came back empty and reach was gated at step 0 (the earlier section Q wrongly blamed LLM credit)"
+  },
+  {
+   "key": "selection-learning",
+   "title": "selection never reads the learned posterior (R8)",
+   "where": "3b8ba963, 6ac76284, be2b9933, 4bcb9f81, b66201d6, 8ebcbb2a, 4921332d, 382abd16, 72aad357, 5f01d5ef",
+   "tried": "Four audits, each naming a different cause: M4 exemption, draw formula, signature width mismatch (16 vs 8 hex), missing view, org_id forms, 'ungraded' task failures",
+   "outcome": "partial",
+   "date": "2026-08-16..2026-09-26",
+   "evidence": "72aad357 (09-25) 'selection now reads its learned posteriors', but eb2b8fcf (09-27) still names alpha=1 random selection as the load-bearing loop"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "autonomous minting 'demonstrated' 08-13",
+   "where": "31f0972a, 4689117b, f590ad76, 94dc3d5f, 4d417b6e",
+   "tried": "Fix composite mint tag/shapes/signatures/task layers and claim dozens of learned-* templates",
+   "outcome": "reverted",
+   "date": "2026-08-13",
+   "evidence": "11859d57 (08-21): the ribosome's entire output was 2 templates, and activity_templates has 1 writer and 0 readers. debc3da3 (09-27): ribosome dispatch targets a retired template"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "composition-edge write after ten causes on one function",
+   "where": "cf5370e8 (after 4f1e6b7c, 64b63cf9, 7bdf427e, 276cae6e, 07fd07a3)",
+   "tried": "Serial lookup/PERMISSIONS/id-form/UPSERT/auth-context fixes",
+   "outcome": "worked",
+   "date": "2026-08-21",
+   "evidence": "Composition edges 1999 -> 2004, 49 derive_ok"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "pathway reuse chain (v1..v3b, explore-mode fix)",
+   "where": "9b929eb6, 0aca3cc8 (vessel 579f365, c37df24, 249ff89)",
+   "tried": "Pathway head, satisfier order, rebind skip, bindBody guard, explore-branch fix",
+   "outcome": "worked",
+   "date": "2026-09-23",
+   "evidence": "20/20 goals accept the pathway and reach on the first verdict"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "autonomous drift-commit waves into super-repo (R10)",
+   "where": "3142f140, 4ad136ec..31719fc7, 4e4170a8, e72a7fc8, 13c5d466, 796fac89, edc68d49",
+   "tried": "Rhythm 'self-maintenance' goal: detect code drift, then vessel-code-commit-and-push (git add of everything)",
+   "outcome": "failed",
+   "date": "2026-07-25..2026-09-26",
+   "evidence": "About 4,400 of 6,667 tracked files at HEAD came from these commits. 4e4170a8 truncated spectral-gap in git (7013d1cf). edc68d49 blocked the node-1 super-repo ff, leaving it 130 commits behind (50830bec)"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "untrack runtime state / scratch (cleanup chain)",
+   "where": "8f8e87e7, a009e1d9, d993b331, f90dda1a, 50830bec",
+   "tried": "git rm --cached, .gitignore, and the placement hook installed in-container",
+   "outcome": "partial",
+   "date": "2026-08-02..2026-09-28",
+   "evidence": "Still at HEAD: Substrate/ (68 files), history.txt, leases/, run_scan.js, mitosis-applied-host-sync.jsonl, validation/failure-modes (3,342), 220 compiled artifacts in validation/scripts, and about 50 openspec/changes residue files"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Requires= coupling stops the fleet (R11)",
+   "where": "d19124c8, 94d12ed8, d08ebf5b, a45c540e, 699ad19c, 6bd4e1d0, c7b80f1f",
+   "tried": "Convert Requires to Wants in batches",
+   "outcome": "partial",
+   "date": "2026-07-09..2026-08-08",
+   "evidence": "d19124c8 missed goal-host. The same 13-unit fix was redone 07-23. 6bd4e1d0 'moved the blocker instead of removing it'"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "human-surface loopback bind / publish / bake (R12)",
+   "where": "cf8f419a, c47f3843, e92d2e1b, 937c54a6, 9c39f411, 86436189, ddf8f289",
+   "tried": "Bind 0.0.0.0 in the manifest, publish 18310, bake into the image",
+   "outcome": "partial",
+   "date": "2026-08-07..2026-09-23",
+   "evidence": "c47f3843's diff lacked the claimed change. ddf8f289 (09-23) applied the same 0.0.0.0 fix to the baked unit, 47 days after cf8f419a"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "human surface resolves by hardcoded address (R13)",
+   "where": "e53b54a4, 264829cc, d65a21e7, 4e50f1fa, 3b4f921a",
+   "tried": "Resolve on hub, then gap store by shape, then reverse hub preference, then per-row resolve path, then dispatch as shapes over p2p",
+   "outcome": "partial",
+   "date": "2026-08-07..2026-08-19",
+   "evidence": "d65a21e7 reversed e53b54a4. Autonomous bb5d6b9 (human-surface-vessel, via super-repo report 80e44669, 09-27) broke it again"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "relay reservation / phantom partition (R14)",
+   "where": "494a990e, 2c247adc, ea5882bd, 9fa6bd81, 607fc6ef, 824609c6, 0a535483, cfad41db, 3dbbbeff, e1c06f60",
+   "tried": "Watchdog re-reserve, phantom strikes, keep-alive ping (revert then re-land), drop proactive teardown",
+   "outcome": "partial",
+   "date": "2026-07-25..2026-09-22",
+   "evidence": "3dbbbeff (09-14): the phantom watchdog manufactured the outage it existed to catch (14 redials in 3h against a healthy reservation). abf60661 silently reverted ea5882bd"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "loopback/port derivation wrong for remote callers (R15)",
+   "where": "f85f0536, e975b0b2, 4fdf5b91, ada62cff, 6d19c0a0, 7736ac2f, 965901e1",
+   "tried": "Site-by-site repairs, then a shared discovery-client loopback repair",
+   "outcome": "partial",
+   "date": "2026-07-07..2026-09-14",
+   "evidence": "4fdf5b91: the repair existed in ONE consumer. The resolve-URL overshoot recurred 09-20..09-28 (goal-host 9531c5f/5ca51be via bd1fb6d9); 6+ join sites were still broken on 09-28"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "truncated/half-written source reaches live or git (R16)",
+   "where": "befbccdc, 2134839b, 7013d1cf, 4b73956e",
+   "tried": "Re-mirror on truncation, heal any live-vs-clone drift, restore from git",
+   "outcome": "partial",
+   "date": "2026-08-02..2026-09-26",
+   "evidence": "feature-compose.ts went from 190,111 to 38 bytes 3 times in a day. 4b73956e is the 'fourth walk-writes-live-source instance'"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "runtime-drift watchdog",
+   "where": "63b48175 -> bb217e5e, 251a6b4d",
+   "tried": "Second repairer that restores /vessels from committed source",
+   "outcome": "superseded",
+   "date": "2026-09-13",
+   "evidence": "It duplicated pull-sync's mirror-to-live. The grep that justified it ended in | head -15. Repair now defaults OFF"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "joint-liveness detector",
+   "where": "daa2632c -> 70254535",
+   "tried": "A class detector for write->read-severed joints",
+   "outcome": "dormant",
+   "date": "2026-08-25..2026-09-27",
+   "evidence": "One hardcoded binding for 33 days and it caught none of ~180 breaks. 70254535 moved joints into pool records: 6/6 checked, 3 severed found"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "autonomous landings break prod (09-25..09-28)",
+   "where": "vessel goal-host 8c31cdb (99db7a9f); human-surface bb5d6b9 (80e44669); activity-api 9cfdea4 + concept-db af2c737 (914828a2); patch-with-tools a198907 (37d5f9b0)",
+   "tried": "Contained autonomy with a spend envelope, falsifier-required admission, class1/class2 only",
+   "outcome": "reverted",
+   "date": "2026-09-25..2026-09-28",
+   "evidence": "Seen: a fetch monkey-patch, an 'as unknown as' cast, stale tests satisfied by breaking prod, and two landings that reintroduce env gates (law 1). All reverted; autonomy paused 13:00-21:47 on 09-27"
+  },
+  {
+   "key": "false-verification",
+   "title": "system-side closure falsely verifies",
+   "where": "015b31fa, 3a5387c2, 11afcd07, 37d5f9b0, 32d68e9b, 25d33255, 3e43c23c",
+   "tried": "Closure paths driven by measurement predicates",
+   "outcome": "partial",
+   "date": "2026-09-06..2026-09-28",
+   "evidence": "Close rate was inflatable. The class2 polarity was inverted. A hollow landing was closed landed_verified. A wrong-node close had 09-23 prior art. A prose remedy that never happened closed a gap"
+  },
+  {
+   "key": "false-verification",
+   "title": "reach grader false reaches",
+   "where": "952008e4, f51735cc, 5d340112, 2964496e, 62d987fe",
+   "tried": "Give the grader provenance, widen the denial pattern, treat missing:true as a denial",
+   "outcome": "partial",
+   "date": "2026-08-15..2026-08-17",
+   "evidence": "'Closed the false-reach class' (08-15), then new false reaches on 08-16 and 08-17"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "hollow close-goals and rename-only landings",
+   "where": "00ceef57, b68f3872, dc3a2068",
+   "tried": "Vacuous-edit, dead-store and semantic gates; grade repair landed_vessels",
+   "outcome": "partial",
+   "date": "2026-08-11..2026-09-06",
+   "evidence": "Every autonomous close-goal reached hollowly. A rename-only diff passed every gate. 80 successes landed nothing, then 4 of 4 did after 28de0e8"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "operator fixes that regressed",
+   "where": "86491fec, 24877839, 6bd4e1d0, 7736ac2f, 8de05562, 30ebe24b, 25ee2162, a600a8b9, f212b93c, 940dbfb7, abf60661, c47f3843",
+   "tried": "Direct operator edits to glue and units",
+   "outcome": "failed",
+   "date": "2026-07-29..2026-08-22",
+   "evidence": "f212b93c: 'six of the findings are damage the round-1 fixes did'. 940dbfb7: a landed fix hung every shell call for ~3h. The 2ca586ba census counts 28 category-F cases"
+  },
+  {
+   "key": "node-locality",
+   "title": "node-local stores fork on node 2",
+   "where": "a50d1196, 5d0788b via d628779f, 947c8729, 0862c4b6, 9ee996b8, e31e28dd, 31f15baf",
+   "tried": "Move calibration to the gap-store holder; a store-forwarding node stops measuring class2 locally",
+   "outcome": "partial",
+   "date": "2026-09-26..2026-09-28",
+   "evidence": "Node-2 local calibration sealed its pool; 2->59 after the move. Lifecycle tick ran 22 times on node-2 fixtures and 0 times on the real store"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "tests/fixtures pollute live stores",
+   "where": "2b049b7a, 914828a2, 947c8729, c62651ba, a009e1d9",
+   "tried": "Scrubbed test env (e6936725), restore guards",
+   "outcome": "partial",
+   "date": "2026-09-15..2026-09-28",
+   "evidence": "A test run registered a dead 127.0.0.1:20236 row in live discovery. The test runner inherits live DB creds (8-16k events/min). Node-2 gaps.json = 70 fixture rows"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "recommit/narrowed children churn",
+   "where": "8954e46c, 1bd6c614, 0add5b9d, 8141b538, d628779f",
+   "tried": "Lineage cap (failed_attempts>=6); narrowed children wait for the parent verdict (3df8ddd)",
+   "outcome": "partial",
+   "date": "2026-09-22..2026-09-28",
+   "evidence": "recommit-* took 46% of picks and landed 4% (4/92)"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "deterministic exact-edit application (2.7)",
+   "where": "b1ab1f9b, 11a655c8 (vessel f70160f, 1669ac8)",
+   "tried": "Apply pre-validated EDIT blocks with no LLM plan",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "Byte-equal landings through the lane"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "anchor/grounding defects",
+   "where": "ca1c48ad, 58ef8a13, 12bd74a3, bcb5c0dd, 0863e1f8, db6b984a, f8fe6dd1",
+   "tried": "Grounding-window, anchor-uniqueness and fs_edit literal-insert fixes",
+   "outcome": "partial",
+   "date": "2026-08-14..2026-09-28",
+   "evidence": "An edit applied 1602 lines from its target. The duplicated-line anchor class was found again 09-28"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "ReAct floor / target inference",
+   "where": "f70595f2, d60fcc81, 391e0da8, beb19924, 9c967329",
+   "tried": "Credentials repair, depth-cap raise, then 09-28 probes",
+   "outcome": "partial",
+   "date": "2026-08-16..2026-09-28",
+   "evidence": "09-28: the floor was broken, read-only questions were routed as code edits, and memory/recall had no target shape"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "resumable landings + leases",
+   "where": "5489b05a..a9b7a913, 2f12cf01, e3768a74",
+   "tried": "Park verified patches, restart budgets, named trace_store lease, autonomous_pick lease",
+   "outcome": "worked",
+   "date": "2026-09-24..2026-09-25",
+   "evidence": "Park, resume and push observed end to end. 0 auto-picks inside the graded window"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "value-per-cost envelope and containment",
+   "where": "143972d0..29597771, 065510a7, 4f830f37, 3d4ce31e, a1826314",
+   "tried": "A spend envelope of 1-2 USD/h, autonomyScope, a feature-compose chokepoint",
+   "outcome": "partial",
+   "date": "2026-09-26..2026-09-28",
+   "evidence": "Undirected composes bypassed the paused envelope until a1826314. Supply collapsed under containment (40fff5db)"
+  },
+  {
+   "key": "memory-recall",
+   "title": "concept recall / session memory",
+   "where": "118d341f, df11194a, 0d71a55c, 1b68bb9e, 5300020a, 62559ca6, 44ab5fd4",
+   "tried": "Session-hook injection, recall retries, union queries, conventions fetched by type",
+   "outcome": "partial",
+   "date": "2026-07-19..2026-09-28",
+   "evidence": "Recall failed ~80% on 08-15. Lexical recall was broken 09-02..09-25. On 09-28 system memory held nothing before 09-26"
+  },
+  {
+   "key": "env-gating",
+   "title": "env-read behaviour moved to shapes/use-time",
+   "where": "0968fd1c, f65556be, 16dd0571, 442de3ff, 28f78545, 42302670",
+   "tried": "Shaped policies and use-time reads; audit of variables with no delivery path",
+   "outcome": "partial",
+   "date": "2026-08-16..2026-08-22",
+   "evidence": "Autonomous landings reintroduced env gates on 09-27 (9cfdea4, a198907)"
+  },
+  {
+   "key": "docs-drift",
+   "title": "mass doc/openspec/script pruning",
+   "where": "d1e60e40, 3b5035d7, 8d3e57ce, bf56bffa, f3f53cb7",
+   "tried": "Delete archive (1,866 files), retire 31 proposals (929->238 files), prune 38 unreached scripts, drop 5 non-submodule trees",
+   "outcome": "partial",
+   "date": "2026-08-02",
+   "evidence": "openspec/changes has since regrown to 115 dated + 10 named change dirs plus ~50 autonomous residue files"
+  },
+  {
+   "key": "docs-drift",
+   "title": "docs asserting unwired/derived behaviour",
+   "where": "04ea2f3b->72f58abc, 3c113703, 047e11c5, d63eb56e, 82d19398, c7530bf2",
+   "tried": "Write operational docs, correct them, then revert to timeless expectations",
+   "outcome": "reverted",
+   "date": "2026-08-05..2026-09-16",
+   "evidence": "The operational doc was reverted as a cache. Measurements written into docs repeated the defect 'in a new costume'"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "stale/unpushed gitlinks misdiagnosed",
+   "where": "4ac80e01, c0e42fa3 -> ce80875f",
+   "tried": "Re-point gitlinks; claimed stale pointers were reverting deploys",
+   "outcome": "partial",
+   "date": "2026-07-27..2026-08-09",
+   "evidence": "ce80875f retracted: deploys come from /workspace/git/vessels, not super-repo submodules. 4ac80e01: an unpushed ref broke CI from 07-25"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "federation oracle self-defects",
+   "where": "a0c702bb..1ad7bacd (26a53fe0, a29653e4, 9834bd95, 5584bc3f, 37650c2f, df6206e3, e4fe46d1, 64dc1b8d, bf58a721)",
+   "tried": "Built an independent overlay oracle with a gap-close path",
+   "outcome": "partial",
+   "date": "2026-09-11..2026-09-15",
+   "evidence": "Seen: a negative control that could not fail, a call site never invoked, an oracle deleted by the workspace it measures, an echo instrument outcompeting its own shape"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "validation harness family",
+   "where": "75ea589c, d26b85c3, a6524f8c, 41d3c0d3, d0d15d8a, 949a1db4, 2e6c9651, 3fed381c, e1306767",
+   "tried": "Ablation, composition, validatability, falsification, reach-generalization, ladder, goal-expectation and self-dev-reliability harnesses",
+   "outcome": "dormant",
+   "date": "2026-07-26..2026-08-28",
+   "evidence": "Each touched 1-4 times, none after 08-28. About 58 more validation/scripts files untouched since before 07-01"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "30s shell kill 'BLOCKER 6 CLOSED'",
+   "where": "0c8705cd",
+   "tried": "Fix shell call latency, 30s to 22ms",
+   "outcome": "partial",
+   "date": "2026-08-15",
+   "evidence": "Cross-shard: operator memory records the post-land suite dead 08-31->09-28 from a shell 30s default (fixed in vessel 5e9a0b2). Suspected recurrence of the same class; verify in the vessel shard"
+  }
+ ],
+ "problems": [
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Committed code is not what runs: marker lies, blind fingerprint, permanent deferral, masked/dirty vessel deadlock, arms left stale, node 2 never converging",
+   "root_cause": "The single deploy path (pull-sync) is list-driven and validated per incident; no invariant asserts runtime == committed per unit",
+   "first_seen": "2026-07-20",
+   "last_seen": "2026-09-28",
+   "recurrences": 25
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gates, probes and doctors report green while measuring nothing (0/132 runs, PASS with exit 1, all-checks-pass FAILURES, fossil heartbeat path, inverted polarity, conjured closes)",
+   "root_cause": "Instruments are validated once at creation. A silent skip reads as a pass. Closure writes re-derive omitted fields",
+   "first_seen": "2026-08-04",
+   "last_seen": "2026-09-28",
+   "recurrences": 20
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "SurrealDB OOM/wedge/latency and trace growth (15GB -> 27GB -> 41GB); restarts cascade",
+   "root_cause": "Unbounded writers (full-table FTS rebuild with blob GC off, unexpiring impulses, auth_resolve 95% of executions) plus retention unable to delete; the immune system restarts the victim",
+   "first_seen": "2026-07-16",
+   "last_seen": "2026-09-25",
+   "recurrences": 11
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Thompson draws from the uniform prior; blame never lowers selection",
+   "root_cause": "The credit writer and the selection reader key the posterior differently (signature width/input, org_id form, missing view, 'ungraded' failures)",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-27",
+   "recurrences": 9
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Minting claimed working, found inert. The ribosome emitted 2 templates ever and later targeted a retired template",
+   "root_cause": "Writer and reader tables differ (activity_templates vs activity_template); reach tag not on the execution record",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-27",
+   "recurrences": 4
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "About 4,400 of 6,667 tracked files are autonomous residue: generated failure-mode scenarios, compiled .js/.d.ts/.map, root scratch, 6 duplicate http-response resolvers in openspec/changes",
+   "root_cause": "The rhythm 'self-maintenance' goal (drift scan + vessel-code-commit-and-push) commits everything in the super-repo worktree; the placement hook is enforced only after the fact",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-26",
+   "recurrences": 7
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Autonomous landings break prod or truncate source (fetch monkey-patch, as-unknown cast, stale-test satisfaction, spectral-gap truncated in git)",
+   "root_cause": "Landing gates check the motivating predicate locally; no consumer-side probe on the production path or registered-joint check",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-28",
+   "recurrences": 10
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes wedge deploy, OOM the DB, break every arm, revert parallel work",
+   "root_cause": "The same local-once validation as autonomous work; measured on a different machine or tree than the one deployed",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-26",
+   "recurrences": 14
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Loopback/port/resolve-path rows undialable remotely; silent 401 reads as an empty registry",
+   "root_cause": "Endpoints derived per consumer instead of routed by shape; credentials scoped to one trust domain",
+   "first_seen": "2026-07-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 16
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "Phantom reservations, redial storms, and a watchdog that manufactures outages",
+   "root_cause": "Liveness inferred from circuit traffic (wrong on DCUtR/LAN); passive relay with no keep-alive",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-22",
+   "recurrences": 12
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Human surface unreachable from host (loopback bind, unpublished, not baked); escalations to a vessel nobody reads",
+   "root_cause": "Two declarations of one fleet (Makefile vs compose vs baked unit) with nothing comparing them",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-27",
+   "recurrences": 7
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Node-local calibration/gaps/rhythm/spend files fork after the second node; lifecycle ran on fixtures; operator cap sized on the wrong host",
+   "root_cause": "'Stores' implemented as per-node files; measurement taken where the operator is, not where the code runs",
+   "first_seen": "2026-08-17",
+   "last_seen": "2026-09-28",
+   "recurrences": 6
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Test runs write live discovery/DB/event bus; fixtures in the live gap store",
+   "root_cause": "The test runner inherits the full live environment",
+   "first_seen": "2026-09-15",
+   "last_seen": "2026-09-28",
+   "recurrences": 5
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Green landings that change nothing (rename-only, scan satisfier, console.log reader)",
+   "root_cause": "Gates ask whether the diff is well-formed, not whether behaviour changed at a consumer",
+   "first_seen": "2026-07-21",
+   "last_seen": "2026-09-28",
+   "recurrences": 6
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Detectors and harnesses built, validated once, never extended (joint-liveness had 1 binding for 33 days; immune timer dead 5 days; harness family abandoned)",
+   "root_cause": "No reader or schedule is tied to the mechanism's coverage; script-retention law not enforced",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-09-27",
+   "recurrences": 8
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Docs describe unwired subsystems; pruned openspec regrows",
+   "root_cause": "Docs written as measurements/caches; proposals accumulate without archive",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-27",
+   "recurrences": 6
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The secrets/env file is clobbered, quote-corrupted or missing vars across recreate",
+   "root_cause": "Two writers and a hand-maintained heredoc list; uncommitted node edits reverted by self-update",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-26",
+   "recurrences": 8
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "recommit/-narrowed children take 46% of picks and land 4%",
+   "root_cause": "Children do not wait for the parent verdict; no lineage cap",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-28",
+   "recurrences": 4
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Recall late/failing; lexical recall broken for 3 weeks; memory empty before 09-26",
+   "root_cause": "Timeout mismatches, masked stores, split memory stores",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-09-28",
+   "recurrences": 6
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Walk dies at target inference; read-only questions routed as edits; no shape for memory",
+   "root_cause": "Empty vocabulary from 401; intent classification biased to edit",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 4
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "substrate-pull-sync + mirror-to-live",
+   "location": "scripts/substrate (pull-sync, mirror-to-live)",
+   "purpose": "The only path from committed code to the running fleet; tests, restart deferral, fan-out",
+   "status": "live-used",
+   "general": true,
+   "evidence": "73 commits in window; R1-R3 chains"
+  },
+  {
+   "name": "pull-sync test gate (failing-name-set delta)",
+   "location": "scripts/substrate pull-sync",
+   "purpose": "Refuse convergence on vessel test regressions",
+   "status": "broken",
+   "general": true,
+   "evidence": "Dead 08-31->09-28 (b7dab713); fails open (5d9a7867)"
+  },
+  {
+   "name": "self-recovery ladder / immune tick",
+   "location": "scripts/substrate/self-recovery-tick.sh + timer",
+   "purpose": "Restart, then revert, then escalate unhealthy vessels; restart SurrealDB on sustained wedge",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Bounded 09-16 (ad9da780); in-tree revert rung 8e935b13; history of restarting the pressure victim"
+  },
+  {
+   "name": "runtime-drift watchdog",
+   "location": "63b48175 (scripts/substrate)",
+   "purpose": "Restore /vessels from committed source",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "pull-sync mirror-to-live",
+   "evidence": "bb217e5e repair defaults OFF"
+  },
+  {
+   "name": "joint-liveness detector / jointBinding pool records",
+   "location": "scripts/substrate/joint-liveness-tick.ts",
+   "purpose": "Detect writer->reader joints that stop carrying records",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Dormant with 1 binding 08-25..09-27 (daa2632c); 70254535 made joints pool records, 6/6 checked"
+  },
+  {
+   "name": "identical-failure invariant",
+   "location": "a172e235 (scripts/substrate)",
+   "purpose": "Flag (activity, failure-class) runs with no open gap",
+   "status": "unknown",
+   "general": true,
+   "evidence": "No later evidence in window"
+  },
+  {
+   "name": "federation verification oracle/sweep",
+   "location": "libp2p-federation-transport probe + federation_verification_report shape",
+   "purpose": "Independent overlay health with gap close",
+   "status": "live-used",
+   "general": false,
+   "evidence": "~25 fix commits 09-11..09-15 for self-defects"
+  },
+  {
+   "name": "phantom-reservation watchdog",
+   "location": "federation transport",
+   "purpose": "Re-reserve on a silent one-directional partition",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Manufactured outages until 3dbbbeff (09-14)"
+  },
+  {
+   "name": "relay reserved-peer keep-alive",
+   "location": "relay (cfad41db, 46b3304d ping responder)",
+   "purpose": "Keep NAT mappings warm; drop dead peers",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Reverted once (0a535483), then re-landed churn-safe"
+  },
+  {
+   "name": "shared discovery-client loopback repair",
+   "location": "packages vessel-discovery-client (4fdf5b91)",
+   "purpose": "Make remote rows dialable",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Previously existed in one consumer only"
+  },
+  {
+   "name": "gen-env / .substrate-secrets persistence",
+   "location": "scripts/substrate/gen-env.sh, secrets.env.sh",
+   "purpose": "Bootstrap env and durable secrets",
+   "status": "live-used",
+   "general": true,
+   "evidence": "R6: 8 defect commits"
+  },
+  {
+   "name": "vessel-ctl single management surface",
+   "location": "scripts/substrate vessel-ctl (008f3ab9)",
+   "purpose": "Replace ~40 hand-enumerated make targets",
+   "status": "live-used",
+   "general": true,
+   "evidence": "23042561: 63 .PHONY ghosts exited 0"
+  },
+  {
+   "name": "launch manifest + role derivation + image readiness",
+   "location": "e375d716, d8fed96f, 76d548d1",
+   "purpose": "One install contract; image reports readiness",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Install acceptance CI fa7e9189; cold Docker/Podman served 831dbf69"
+  },
+  {
+   "name": "placement pre-commit hook",
+   "location": "scripts/git-hooks/pre-commit (ALLOWED_TOPLEVEL_DIRS)",
+   "purpose": "Reject root-level additions",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Installed in-container 09-23 (d993b331); 5 autonomous root residues survived at HEAD"
+  },
+  {
+   "name": "bump-submodules CI + nightly dev build",
+   "location": ".github workflows",
+   "purpose": "Keep gitlinks current; build images",
+   "status": "live-used",
+   "general": true,
+   "evidence": "216 substrate-bot commits; 851c4725 fail on resolve-nothing"
+  },
+  {
+   "name": "substrate-doctor / readiness checks",
+   "location": "scripts/substrate doctor (c8ffbae5..a5dd4b24)",
+   "purpose": "Fleet health verdict",
+   "status": "live-used",
+   "general": true,
+   "evidence": "False verdicts fixed 0baff728, 26ae3d94, 1d3785de, a5dd4b24"
+  },
+  {
+   "name": "autonomous drift-commit (self-maintenance rhythm goal)",
+   "location": "repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts:126 (walked goal: detect-vessel-code-drift then vessel-code-commit-and-push)",
+   "purpose": "Commit live-vs-clone drift",
+   "status": "broken",
+   "general": true,
+   "evidence": "~4,400 residue files at HEAD; truncation in git (7013d1cf); blocked node-1 ff (50830bec)"
+  },
+  {
+   "name": "ribosome extraction / template minting",
+   "location": "ias-executor-ts / activity-api / development-vessel",
+   "purpose": "Extract reached executions into templates",
+   "status": "broken",
+   "general": true,
+   "evidence": "11859d57: 2 templates ever; debc3da3: targets a retired template; 70254535: joints severed"
+  },
+  {
+   "name": "selection posterior tiers",
+   "location": "goal-host + activity-api",
+   "purpose": "Thompson selection over learned posteriors",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Read path fixed 72aad357 (09-25) after 4 audits; eb2b8fcf still names alpha=1"
+  },
+  {
+   "name": "change-window / autonomous_pick / trace_store leases",
+   "location": "resumable-landings (openspec archived 09-24)",
+   "purpose": "Hold autonomous work during windows; park and resume patches",
+   "status": "live-used",
+   "general": true,
+   "evidence": "e3768a74, 38508fad, 2f12cf01"
+  },
+  {
+   "name": "spend envelope + autonomyScope",
+   "location": "value-per-cost-selection / contained-self-development",
+   "purpose": "Bound spend; admission by falsifier class",
+   "status": "live-used",
+   "general": true,
+   "evidence": "a1826314 closed an envelope leak; 32d68e9b class1/class2"
+  },
+  {
+   "name": "deterministic exact-edit application (2.7)",
+   "location": "development-vessel (f70160f)",
+   "purpose": "Apply pre-validated edits without an LLM plan",
+   "status": "live-used",
+   "general": true,
+   "evidence": "11a655c8 byte-equal, no LLM plan"
+  },
+  {
+   "name": "failure memory keyed by goal_hash",
+   "location": "goal-host 9e23455/cf8fd87",
+   "purpose": "Carry rejection reasons to the next dispatch",
+   "status": "live-used",
+   "general": true,
+   "evidence": "f9033212, 27815bb3"
+  },
+  {
+   "name": "/resolve recursion guard",
+   "location": "goal-host (b192b726)",
+   "purpose": "Stop goal_execution recursion storms",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Operator-landed 09-26"
+  },
+  {
+   "name": "session-start memory hook",
+   "location": ".claude/hooks/substrate-session-start.sh",
+   "purpose": "Inject substrate memory/conventions into operator sessions",
+   "status": "live-used",
+   "general": false,
+   "evidence": "118d341f, 62559ca6"
+  },
+  {
+   "name": "self-observation KPI scripts / composition-edge-reconcile",
+   "location": "scripts/substrate (8 scripts)",
+   "purpose": "Autonomy metrics",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Read a table frozen 42 days until 3c1bf965; lift gate read a fossil heartbeat path (8e59ae6c)"
+  },
+  {
+   "name": "validation harness family",
+   "location": "validation/scripts (*-harness.py/.ts, stage-harness, failure-mode-harness)",
+   "purpose": "External-oracle measurement of reach, reuse, ablation",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Each touched 1-4 times, none after 08-28; 220 compiled artifacts committed by 4e4170a8"
+  },
+  {
+   "name": "failure-mode scenario corpus",
+   "location": "validation/failure-modes (3,342 files)",
+   "purpose": "Generated scenarios",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Added wholesale by autonomous commits 3142f140/4e4170a8/13c5d466/796fac89"
+  },
+  {
+   "name": "openspec/changes http-response resolver variants",
+   "location": "openspec/changes/*http-response*.ts/.js/.map (6 variants)",
+   "purpose": "Autonomous draft residue",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "Added 4e4170a8/796fac89"
+  },
+  {
+   "name": "db_under_pressure probe",
+   "location": "self-recovery-tick.sh",
+   "purpose": "Back off restarts when the DB is the bottleneck",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Third form (337c3b81); the first two could not see congestion"
+  },
+  {
+   "name": "surgical-gap-scan resolve-path detector",
+   "location": "da76f061",
+   "purpose": "Static scan for endpoint+absolute joins",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "trace_failure_pattern_report oracle + existing gaps",
+   "evidence": "Reverted 807b92ef"
+  }
+ ],
+ "principles": [
+  "Fixes are site-scoped and validated once; nothing re-checks the class (bd1fb6d9, 09-28)",
+  "Every change is validated locally and once; humans are the detector. 247 of 253 break cases were operator-found (2ca586ba)",
+  "A marker recording a git sha can lie about a tree it does not describe; compare content (596fd717)",
+  "A loud failure nobody queries is a silent one (4e79dd76)",
+  "Repeating a deterministic failure is not persistence, it is a refusal to conclude (ad9da780)",
+  "A check cannot be scheduled by the mechanism it recovers (bootstrap-tier exception) (b2ff657b)",
+  "Measure the machine you deploy to: 'the cap WAS the OOM' (9df01220)",
+  "A green check on the working tree says nothing about what was committed (e92d2e1b)",
+  "Querying a masked unit returns defaults, not its settings (e2ba1a69)",
+  "A close must close something; close rates inflate in the flattering direction (015b31fa)",
+  "Everything must be available over p2p; bespoke HTTP is unavailable to a federated peer by construction (3b4f921a)",
+  "A doc asserting operational structure is a cache; measurements in docs repeat the defect in a new costume (72f58abc, 3c113703)",
+  "Advertised is a claim, demonstrated is a fact (d4b7421e)",
+  "A configuration mistake is the one class the system cannot self-correct (28f78545)",
+  "Do not deduplicate identical failures; recurrence must stay arithmetically visible (a172e235)",
+  "A fix present in repo and build but absent from behaviour is a propagation question (33924f92)",
+  "Basename grep is not caller evidence; the watchdog duplicate came from '| head -15' (8d3e57ce, bb217e5e)",
+  "Instruments must live outside the subject they measure (e4fe46d1)",
+  "Pre-register criteria and falsifiers before dispatching (efad388f, a5723cef, 837cfe0e)"
+ ]
+}

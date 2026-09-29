@@ -1,0 +1,944 @@
+{
+ "attempts": [
+  {
+   "key": "gap-content",
+   "title": "concept source_type vocabulary lock (two 007 migrations)",
+   "where": "repos/concept-db/sql/core/007-legacy-drift-*.surql and 007-repair-stranded-*.surql (substrate-authored 2026-07-03)",
+   "tried": "Closed ASSERT INSIDE 16 values, then a repair migration with ASSERT len>0",
+   "outcome": "failed",
+   "date": "2026-07-03",
+   "evidence": "Live DEFINE FIELD source_type ASSERT string::len($value) > 0; ~200 source_type values, 1,517 shapes (985 singletons)",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "gap-content",
+   "title": "Autonomous commits carry no intent; gap records pruned",
+   "where": "all 298 autonomous commits; gaps.json",
+   "tried": "Commit body lists only Gap/Proposal/Mitosis/Attempt ids",
+   "outcome": "failed",
+   "date": "2026-09-28",
+   "evidence": "147 of 156 route-edit ids are gone from the gap store; the 9 remaining are 'open' though landed. The store holds {{goal.gap.status}}-style statuses.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "gap-content",
+   "title": "Siteless / unclosable gaps admitted to compose",
+   "where": "ea2476c, ddb34cb, e137df6, d3e1ca2, 4e5a603, c23b601/194df79 -> bea12ec, 9bf8512",
+   "tried": "Admission and defer rules at 5 different seams",
+   "outcome": "partial",
+   "date": "2026-08-30..09-27",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "gap-content",
+   "title": "Symptom-to-file routing at the door",
+   "where": "59166c8, e6a26eb, 4c1d800, fea9eab, 3f4421d, 2147c8a, a817403, 47a4549, 37912c8; reverts 88b212a, d2b3858",
+   "date": "2026-08-09..08-11",
+   "tried": "About 25 commits teaching goal-file-resolution to locate an edit site.",
+   "outcome": "partial",
+   "evidence": "9178b9a: 'uniqueness is no longer evidence of location at this corpus size'.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "gap-content",
+   "title": "Phantom capability gaps for executor or walk-artifact shapes",
+   "where": "404cd67, 80f7249, d575161, 8a6442c, 2d7fd0b, 3d4aa60",
+   "date": "2026-07-30..09-22",
+   "tried": "Suppress bogus gap filing and file nothing on lookup failure.",
+   "outcome": "partial",
+   "evidence": "About 5,000 [reach-gap] ABSTAIN lines in 7 days because producer discovery times out.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "gap-content",
+   "title": "Confabulated gap family escapes its guard via category laundering",
+   "where": "boredom-vessel 5bd047b(07-29), 7868111(08-06)",
+   "tried": "Predicate on the summary phrase, not the category",
+   "outcome": "partial",
+   "date": "2026-08-06",
+   "evidence": "121/174 gaps escaped; 119/121 named shapes already advertised (false premise)",
+   "source": "git-mid"
+  },
+  {
+   "key": "gap-content",
+   "title": "Gaps without edit site emit an investigate/decompose goal",
+   "where": "boredom-vessel 12bb26a (autonomous)",
+   "tried": "'investigate and decompose gap <id>' when no site",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "Present at HEAD; effect on reach not measured",
+   "source": "git-mid"
+  },
+  {
+   "key": "gap-content",
+   "title": "ui-feedback gaps carried no edit_site",
+   "where": "obsidian-vessel 968d693; boredom 47da778, b883e94",
+   "tried": "Static region->file mapping; carry site and region into the goal",
+   "outcome": "partial",
+   "date": "2026-08-07",
+   "evidence": "0% of ui_legibility gaps had edit_site (42% overall)",
+   "source": "git-mid"
+  },
+  {
+   "key": "gap-content",
+   "title": "missing-key detector flooded the gap store",
+   "where": "llm-resolver 0f9a160 (09-12) \u2192 789853a (09-16)",
+   "tried": "re-report missing keys on every advertisement sync",
+   "outcome": "reverted",
+   "date": "2026-09-16",
+   "evidence": "472/474 gap writes in 5 min; external gap writes timed out at 45-110s; ~3GB RSS; bootstrap-tier gap with no edit site",
+   "source": "git-small"
+  },
+  {
+   "key": "gap-content",
+   "title": "Gap-closing template factory",
+   "where": "gap-closing:* activities (1,925 rows, 1,841 minted June)",
+   "tried": "Mint one closer activity per gap from a fixed read_scenario\u2192fetch_traces\u2192analyze\u2192write_report skeleton producing patch_proposal",
+   "outcome": "failed",
+   "date": "2026-06",
+   "evidence": "1,742 identical skeletons; 1,106 retired; 257 live never ran and 240 are stale; ~500 live rows output patch_proposal (a report, not a fix)",
+   "source": "live-activities"
+  },
+  {
+   "key": "gap-content",
+   "title": "Selection credit for verifiable gaps",
+   "where": "gap-to-feature 4e5a603 (Substrate Autonomous)",
+   "tried": "+0.5 verifiabilityCredit for class1/class2",
+   "outcome": "worked",
+   "date": "2026-09-14",
+   "evidence": "class1 pick share 0%->43% (n=7); none-gaps still picked",
+   "source": "memory-1"
+  },
+  {
+   "key": "gap-content",
+   "title": "Operator vs autonomous spec split (the 80x)",
+   "where": "/workspace/proposals/*compose-report*.json; a325ef1 (directed field)",
+   "date": "2026-09-13",
+   "tried": "Split compose reports by goal author and code-edit vs other",
+   "outcome": "worked",
+   "evidence": "Operator 12/15=80%, autonomous code-edit 0/194 then 9/364=2.5%; reproduced from substrate's own directed field 4/5 vs 1/23. Bottleneck = deriving change from problem",
+   "source": "memory-10"
+  },
+  {
+   "key": "gap-content",
+   "title": "Mis-grounding fix + symbol localization in gap-to-feature",
+   "where": "development-vessel gap-to-feature.ts; 19bbb8b, e670b69",
+   "date": "2026-09-13",
+   "tried": "Named edit sites feed region; tier-3 symbol->line port of goal-host verbatimExcerptBlock",
+   "outcome": "partial",
+   "evidence": "Grounding 2.4%->81% but FAVORABLE 0/9 -> 0/16; pre-registered falsification fired: information placement not the lever",
+   "source": "memory-10"
+  },
+  {
+   "key": "gap-content",
+   "title": "Premise check PREMISE WARNING in anchorLabel",
+   "where": "gap-to-feature.ts:799-802; 9f222fb",
+   "date": "2026-09-13",
+   "tried": "Flag slash-route tokens in gap summary absent (quoted) from target file",
+   "outcome": "dormant",
+   "evidence": "Correct with controls, would kill 31-gap family at gen 0, but fired on 0 autonomous composes; drafter ignored advisory prose 2/2",
+   "source": "memory-10"
+  },
+  {
+   "key": "gap-content",
+   "title": "Pre-derived replace_lines fix for false-localized duplicate route gap",
+   "where": "activity-api routes/activities.ts; dispatch 2ebdee6e -> 9c1d56a",
+   "date": "2026-09-13",
+   "tried": "Operator derived real duplicate (/conservation-residual-trend 5901/5962) vs gap's /conservation-audit",
+   "outcome": "worked",
+   "evidence": "Landed first try, -60 lines; 30 open family gaps obsolete; lane had tried 12x by anchor",
+   "source": "memory-10"
+  },
+  {
+   "key": "gap-content",
+   "title": "Recommit children lead with parent spec + backfill",
+   "where": "development-vessel minting site 206f055b; 56 gap rewrites",
+   "date": "2026-09-12",
+   "tried": "Prepend parent specification, preserve 'repeated already-recorded failure class' phrase (db-admin.ts:78 classifier)",
+   "outcome": "partial",
+   "evidence": "Median summary 253->1546 chars; falsifier 7/10; first version refused 2/2 by gate for breaking db-admin consumer",
+   "source": "memory-10"
+  },
+  {
+   "key": "gap-content",
+   "title": "Gap closure-rate drive",
+   "where": "development-vessel 2e4759b, 2456459/01d0e017 producer_now_exists",
+   "tried": "Close 113 invalid; auto-close when a producer exists",
+   "outcome": "partial",
+   "date": "2026-07-16",
+   "evidence": "38.9%\u219247.2% then plateau; autonomous lifecycle scans run dry",
+   "source": "memory-2"
+  },
+  {
+   "key": "gap-content",
+   "title": "400-char truncation minted nonexistent edit_site",
+   "where": "dev-vessel 13f7d07, 172c7f7, 48656e6",
+   "tried": "Substrate-authored truncation guard and unexamined-files trace field; stored instance repaired by hand.",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "Recurrence stopped (7 samples). The existence-check detector on the target filter was proposed only.",
+   "source": "memory-3"
+  },
+  {
+   "key": "gap-content",
+   "title": "False-premise gaps retried forever",
+   "where": "gap-to-feature.ts admitActionableGaps",
+   "tried": "Fail-open exclusion of gaps whose quoted anchor is absent after >=2 failures; 7 families closed by hand.",
+   "outcome": "partial",
+   "date": "2026-09-11",
+   "evidence": "17 of 600 open gaps (2.8%). It excludes but does not close, so families respawn children.",
+   "source": "memory-3"
+  },
+  {
+   "key": "gap-content",
+   "title": "Spare never-attempted gaps from TTL expiry",
+   "where": "dev-vessel gap_lifecycle_scan fbf7433",
+   "tried": "hasNoAttemptEvidence with a pre-registered 174-gap cohort",
+   "outcome": "worked",
+   "date": "2026-09-05",
+   "evidence": "9/9 expired gaps had attempt evidence and 0/174 of the cohort was touched (p\u22480.0007). This turns silent deletion into a visible backlog of ~42/day.",
+   "source": "memory-4"
+  },
+  {
+   "key": "gap-content",
+   "title": "Actionability gate + store-identity leak + confab purge",
+   "where": "dev 76f44ca; goal-host 9651fc3",
+   "tried": "admitActionableGaps; stop appendComposeLesson overwriting category and summary; purge 58 gaps",
+   "outcome": "worked",
+   "date": "2026-07-30",
+   "evidence": "The loop picked real gaps and the semantic gate rejected cosmetic fixes",
+   "source": "memory-4"
+  },
+  {
+   "key": "gap-content",
+   "title": "Gap-store write-race lock",
+   "where": "dev-vessel cc0e966",
+   "tried": "withGapLock with a unique tmp file.",
+   "outcome": "partial",
+   "date": "2026-07-26",
+   "evidence": "The git-tracked multi-writer gaps.json collapsed from 683 to 51 anyway, and the store was later split between /workspace/gaps and the super-repo path (07-24/07-26).",
+   "source": "memory-5"
+  },
+  {
+   "key": "gap-content",
+   "title": "Goal shredding removed",
+   "where": "goal-host 9cd1dd7; boredom 18c50ae",
+   "tried": "Remove slice(0,400), and exempt two-fence goals from the first-sentence and tail caps.",
+   "outcome": "reverted",
+   "date": "2026-08-06",
+   "evidence": "On 09-05, 66% of decompose gaps were still the parent truncated at 400 chars, so the class recurred.",
+   "source": "memory-5"
+  },
+  {
+   "key": "gap-content",
+   "title": "pwt rescue path never ran (file_path vs edit_site)",
+   "where": "dev-vessel 2a8ebf5",
+   "tried": "Read the field identifyVessel trusts and fail closed.",
+   "outcome": "worked",
+   "date": "2026-08-10",
+   "evidence": "30 gaps are permanently flagged pwt_escalated by attempts that never happened.",
+   "source": "memory-5"
+  },
+  {
+   "key": "gap-content",
+   "title": "Confabulated capability-gap purge and filing guard",
+   "where": "goal-host 818dcfd; 0253725",
+   "tried": "Phantom-name regex guard; purge 58 confab gaps; fail closed on all-errored fallback.",
+   "outcome": "worked",
+   "date": "2026-07-30",
+   "evidence": "missing_capability open went from 213 to 40. The value-blind LLM gate is open.",
+   "source": "memory-5"
+  },
+  {
+   "key": "gap-content",
+   "title": "Missing-verifier per-family gap filing",
+   "where": "goal-host fdb7036",
+   "date": "2026-08-07",
+   "tried": "refusal files scope-narrowed gap for authoring",
+   "outcome": "partial",
+   "evidence": "gaps filed+picked event-driven; gap_to_feature drains 1 per invocation vs 465 open",
+   "source": "memory-6"
+  },
+  {
+   "key": "gap-content",
+   "title": "Landability recognises doc_path",
+   "where": "development-vessel 9fd234a (autonomous) + 31c7017 (operator)",
+   "date": "2026-08-26",
+   "tried": "substrate improved operator's proposed boost",
+   "outcome": "worked",
+   "evidence": "autonomous-origin keyed-verified; doc-drift boosted twice (duplicate)",
+   "source": "memory-6"
+  },
+  {
+   "key": "gap-content",
+   "title": "Stop phantom reach-gaps during LLM outage",
+   "where": "goal-host 80f7249",
+   "tried": "Skip executor shapes in reach-gap filing",
+   "outcome": "partial",
+   "date": "2026-08-05",
+   "evidence": "105 reach-gap rows fed 4%-reach close family; closed 2, 49 unverified remain",
+   "source": "memory-7"
+  },
+  {
+   "key": "gap-content",
+   "title": "Age-immune gap instrument (substrate-authored)",
+   "where": "dev-vessel 9b2cbdc",
+   "tried": "open_persistent_fresh fields in funnel-history",
+   "outcome": "worked",
+   "date": "2026-07-29",
+   "evidence": "autonomy criterion met; disposition fix held as inert on fresh store",
+   "source": "memory-7"
+  },
+  {
+   "key": "gap-content",
+   "title": "Abstract self-goals decompose into phantom shapes",
+   "where": "boredom 5bd047b; d34d295",
+   "tried": "Purged 12 gaps, skipped 'needs a producer' goals, re-sourced the generator",
+   "outcome": "partial",
+   "date": "2026-07-30",
+   "evidence": "50 unactionable gaps, a 110-event mis_localized storm. The localizer clamp was filed.",
+   "source": "memory-8"
+  },
+  {
+   "key": "gap-content",
+   "title": "Gaps without edit_site depress reach",
+   "where": "gap store",
+   "tried": "Filed with an edit_site and a verbatim anchor",
+   "outcome": "partial",
+   "date": "2026-09-12",
+   "evidence": "89% of failures come from the edit-intent-no-landed-edit rule",
+   "source": "memory-8"
+  },
+  {
+   "key": "gap-content",
+   "title": "Census blind to Class 1b expected_literal",
+   "where": "classifyFalsifier; f36c851 (autonomous 13 min)",
+   "date": "2026-09-07",
+   "tried": "handle expected_literal+edit_site as class1",
+   "outcome": "worked",
+   "evidence": "re-stamped its own gap class1; posterior did not move because gap-to-feature composes in-process",
+   "source": "memory-9"
+  },
+  {
+   "key": "gap-content",
+   "title": "Hand-arming predicates on landed gaps",
+   "where": "gap store",
+   "date": "2026-09-07",
+   "tried": "operator armed expected_literal on 3 landed gaps",
+   "outcome": "partial",
+   "evidence": "landed_verified 50->53, no-op picks 84%->25%, then rebounded to 67% within the hour; 'bailing, not fixing'",
+   "source": "memory-9"
+  },
+  {
+   "key": "gap-content",
+   "title": "Failure-mode autonomous loop",
+   "where": "openspec/changes/2026-05-22-failure-mode-autonomous-loop",
+   "tried": "Reduce manual_intervention_debt by drafting templates per gap",
+   "outcome": "failed",
+   "date": "2026-05-23",
+   "evidence": "debt metric satisfiable by drafting; drafts hollow (audit F10-F24); drafter still 86% failure in Sept",
+   "source": "openspec-1"
+  },
+  {
+   "key": "gap-content",
+   "title": "Admission gates: push scope, actionable-only, LLM availability, landability floor",
+   "where": "dev-vessel 3cbf979,c23b601,bea12ec,96bf098",
+   "tried": "cheap deterministic cannot-succeed checks before drafting",
+   "outcome": "partial",
+   "date": "2026-09-27",
+   "evidence": "live 09-29 04:19: 863 candidates -> 0 admitted on both nodes (needs_information 340/436); 2.3 reorder and site-cap fix still open; 97% of open gaps are not actionable as filed",
+   "source": "openspec-10"
+  },
+  {
+   "key": "operator-authorship-recursion",
+   "title": "Make draft-spec-from-gap author proposals with a mandatory substrate-self-reflection section (I.1-I.5)",
+   "where": "openspec/changes/2026-06-01-concept-db-supersession-and-chunker-hygiene/tasks.md \u00a7I",
+   "tried": "Specify the fix for operator-authored specs: the template must emit 'How the substrate should do this itself', a review-spec-substrate-coverage activity refuses non-compliant proposals, and historicalSpecGap impulses get logged",
+   "outcome": "failed",
+   "date": "2026-06-01",
+   "evidence": "None of I.1-I.5 landed; every later proposal in this shard (06-03, 06-04 x7, 06-14 x5) is again operator/agent-authored; #38 declared itself 'one of the last' operator-authored specs",
+   "source": "openspec-3"
+  },
+  {
+   "key": "gap-content",
+   "title": "gap_falsify + pre-admission decomposition",
+   "where": "gap-lifecycle-scan.ts, gap-to-feature.ts",
+   "date": "2026-09-27",
+   "tried": "6.1 0259b8c/c5f0081/b5df9c2; 6.3c 375ec90; 6.3d 2de0ae8",
+   "outcome": "partial",
+   "evidence": "first run falsified 10, second 0 (rules exhausted); decomposition ran 6x/24h, mostly 'no valid step' (reader not found); 1 wrote 2 steps",
+   "source": "openspec-7"
+  },
+  {
+   "key": "gap-content",
+   "title": "Scaffold emits nested resolverContract and omits systemVessel",
+   "where": "repos/development-vessel/src/seed/complete-vessel-scaffold.ts:213",
+   "tried": "BUILD-REPORT s7 item 4: file as gap",
+   "outcome": "failed",
+   "date": "2026-08-07",
+   "evidence": "still nested resolverContract and no systemVessel on 09-28",
+   "source": "openspec-9"
+  },
+  {
+   "key": "gap-content",
+   "title": "Admission fairness for human_reported gaps",
+   "where": "development-vessel 7d48a27 (substrate)",
+   "date": "2026-09-20",
+   "tried": "E5 site cap at admission before weighting starved gap ~70 min",
+   "outcome": "worked",
+   "evidence": "Item-1 re-test: picks within minutes at score 1.05",
+   "source": "reports-1"
+  },
+  {
+   "key": "gap-content",
+   "title": "Gap pool adversarial triage",
+   "where": "gap store 318->202",
+   "date": "2026-08-11",
+   "tried": "Batch classification + refuter + coverage guard; reject vs close",
+   "outcome": "worked",
+   "evidence": "24.3% of proposed closes overturned. The coverage guard held 17 unrefuted removals; 100 rejected, 11 closed; 0 silent no-ops",
+   "source": "reports-3"
+  },
+  {
+   "key": "gap-content",
+   "title": "fileCapabilityGap mints gaps from reach-gate LLM prose (deny-list over names)",
+   "where": "goal-host-vessel/src/index.ts:8367, :4409",
+   "tried": "Diagnosed; proposed gating on template demand / vocabulary filter like inferGoalTargetDecision's filterShape; three alternate mechanisms refuted",
+   "outcome": "unknown",
+   "date": "2026-08-11",
+   "evidence": "174 rows largest minter; 155/173 missing_capability name no live shape (a-detailed-fix, evidence_of_503_fix); one goal minted 77. Repair not landed in shard; gap absent from live store (history lost).",
+   "source": "reports-4"
+  },
+  {
+   "key": "gap-content",
+   "title": "Adjudication pathway for disagreement gaps",
+   "where": "gap-to-feature admitActionableGaps 53c4b4ec; 4e1ce8ffed",
+   "tried": "Recompute truth in-process, attribute producer vs verifier, write edit_site",
+   "outcome": "worked",
+   "date": "2026-09-19",
+   "evidence": "Sealed probe baseline E1-E4 NOT MET (gap no_groundable_target; walk sided with wrong verifier). After: E1'/E2'/E3'/transfer MET (stone=5, 421*17=7157). Blind to agreeing-wrong (triangulate both 12).",
+   "source": "reports-4"
+  },
+  {
+   "key": "gap-content",
+   "title": "Gap-driven compose for the bounded_shell description refused at 0-byte grounding",
+   "where": "dev-vessel feature-compose.ts vesselDirOf:593 \u2192 verify_vessels",
+   "tried": "Filed class2 gap verify-vessels-derivation-emits-a-directory-where-a-vessel-name-is-expected",
+   "outcome": "unknown",
+   "date": "2026-09-18",
+   "evidence": "[LIVE 09-28] vesselDirOf still returns repos/<name>, but consumers strip the prefix at :3107 and :3967. Probably closed at the consumer; not verified end to end.",
+   "source": "reports-5"
+  },
+  {
+   "key": "gap-content",
+   "title": "Admission prose-scan for cited files",
+   "where": "/vessels/development-vessel runtime mirror only",
+   "tried": "citedExistingFile also scans the summary (74 gaps were excluded).",
+   "outcome": "reverted",
+   "date": "2026-09-06",
+   "evidence": "Live in the mirror, in no git repo, erased by pull-sync as predicted.",
+   "source": "reports-6"
+  },
+  {
+   "key": "gap-content",
+   "title": "Capability-gap demand ledger",
+   "where": "goal-host 4361247; development-vessel 4d3381c, 36b82b8",
+   "tried": "File a gap only when a second distinct goal needs the shape; producer_count; null reads unknown.",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "693 walk-artifact gaps closed; open gaps 2,379 to 1,689.",
+   "source": "reports-6"
+  },
+  {
+   "key": "gap-content",
+   "title": "Decompose before admission",
+   "where": "development-vessel 2de0ae8",
+   "tried": "Decompose predicate-less sited gaps (at most 2 per scan).",
+   "outcome": "partial",
+   "date": "2026-09-29",
+   "evidence": "2 checked steps written and picked on node 2, with no landing; node 2's lifecycle scan reads a 70-row fixture store.",
+   "source": "reports-6"
+  },
+  {
+   "key": "gap-content",
+   "title": "Closure predicate at gap birth",
+   "where": "be26a6b",
+   "tried": "Mint a machine-checkable closure predicate when a gap is detected",
+   "outcome": "reverted",
+   "date": "2026-08-30",
+   "evidence": "Reverted by 8a5223c on 08-31; 09-27: 97% of open gaps still have no edit site or falsifier",
+   "source": "reports-7"
+  },
+  {
+   "key": "gap-content",
+   "title": "Bootstrap detectors filed unarmed gaps",
+   "where": "614de014",
+   "tried": "Pass evidence_resolve as an object, not a string",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "validator-cadence-severed read back as falsifier:class2",
+   "source": "reports-8"
+  },
+  {
+   "key": "gap-content",
+   "title": "Admission default-admits gaps naming no file",
+   "where": "ff560216 2026-08-31T03:42 dev-vessel ea2476c",
+   "tried": "defer no_groundable_target, fail open",
+   "outcome": "worked",
+   "date": "2026-08-31",
+   "evidence": "12/12 ungrounded refusals, 0 reports -> 3 reports/43min, 18 deferrals",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "gap-content",
+   "title": "Empty-pointer feature_compose claims slots",
+   "where": "ce71b42c 2026-08-29T08:56 817fb3f impulses.ts:462",
+   "tried": "apply gap_compose missing_input guard",
+   "outcome": "worked",
+   "date": "2026-08-29",
+   "evidence": "guard fired ~15x/25min later (REFUSED before slot claim)",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "gap-content",
+   "title": "Verified-unique region arming (155 armed gaps) with RCT",
+   "where": "gap store regions / fc-anchors",
+   "tried": "Mechanically derive unique anchors from gap text; randomise 72 withheld",
+   "outcome": "failed",
+   "date": "2026-09-08",
+   "evidence": "observational p=0.002; RCT treatment 5/73=6.8% vs control 5/72=6.9%, p=1.0; 50 mislocalising anchors retracted",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "gap-content",
+   "title": "Premise check for mislocalized gaps",
+   "where": "35537c7e @ 2026-09-13 summary",
+   "tried": "9f222fb in gap-to-feature.ts:799 flags an unquoted token (PREMISE UNVERIFIED); the true duplicate was fixed with replace_lines 9c1d56a",
+   "outcome": "unknown",
+   "evidence": "a replay against real data with controls passed; firing in production was 0 at the last check; 31-gap false-premise family with 30 open",
+   "date": "2026-09-13",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "gap-content",
+   "title": "zero_behaviour_delta exemption for string-only changes",
+   "where": "35537c7e @ 2026-09-15 summary",
+   "tried": "ede0030: string-only changes can land; comment-only still refused",
+   "outcome": "worked",
+   "evidence": "unblocked reach-gap producer-facts patch class",
+   "date": "2026-09-15",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "gap-content",
+   "title": "Operator gap starved by human-priority predicate",
+   "where": "80ab9659 @ 2026-09-18T14:08",
+   "tried": "re-filed with source human_reported; filed gap-operator-source-invisible-to-human-priority",
+   "outcome": "worked",
+   "evidence": "picked after the re-source; 1.5x weight matches only source==='human_reported'",
+   "date": "2026-09-18",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "gap-content",
+   "title": "Contained autonomy reopen at $1/h then $2/h",
+   "where": "spend-envelope + autonomyScope pool records, both nodes",
+   "date": "2026-09-27T08:56Z / 21:47Z",
+   "tried": "scope exclusion of 27 core paths; falsifier-required admission; class2-only; measured-field rule",
+   "outcome": "failed",
+   "evidence": "8 autonomous landings 09-27..09-28, 0 kept; bb5d6b9 regression, fabricate-to-satisfy, c4bb14d, a198907 certified verified; supply collapsed ~250->17->2 due to operator rules",
+   "source": "transcripts-4"
+  }
+ ],
+ "problems": [
+  {
+   "key": "gap-content",
+   "symptom": "~200 source_type values (memoryNote consolidation spelled 9+ ways), 1,517 shapes with 985 singletons",
+   "root_cause": "Two conflicting 007 migrations; the later one reopens the vocabulary on every boot",
+   "first_seen": "2026-07-03",
+   "last_seen": "2026-09-29",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Detector or auto-mint floods: 4522 in 2 days in June, 1724/day on 09-20, 763 missing_capability of which 734 had single-goal demand",
+   "first_seen": "2026-06-13",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "No demand or admission check at filing time; cleanup is always a manual bulk close",
+   "source": "gap-history"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Autonomous history illegible: commit bodies hold ids only, gap records pruned, landed gaps left open, template placeholders stored as status",
+   "root_cause": "Intent lives only in the mutable gap store; commit message template omits the summary",
+   "first_seen": "2026-06-28",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "source": "git-activityapi"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "239 landings with no gap id; 0/360 gaps with file_path; 0/30 landed closures with a checkable predicate",
+   "first_seen": "2026-06-23",
+   "last_seen": "2026-08-14",
+   "recurrences": 6,
+   "root_cause": "Gaps born without an edit site or machine check.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps without an edit site or falsifier consume compose slots and never close",
+   "first_seen": "2026-08-30",
+   "last_seen": "2026-09-27",
+   "recurrences": 5,
+   "root_cause": "Admission rule re-implemented at picker, store, TTL, escalation and admission seams separately.",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "ui gaps without edit_site; confabulated 'needs a producer' gaps whose premise is false; Close goals for siteless gaps",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "source": "git-mid"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Detector files unclosable bootstrap-tier gaps and floods the serialised gap store; 20 landings with unknown or blank gap",
+   "first_seen": "2026-07-03",
+   "last_seen": "2026-09-16",
+   "recurrences": 3,
+   "root_cause": "gaps written without edit_site or falsifier and without dedup; no attribution enforced at cutover",
+   "source": "git-small"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "96% of gaps have falsifier none; 157 landed-but-unmeasurable; confabulated capability gaps",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 750,
+   "root_cause": "detectors and the walk file gaps from text with no edit site or predicate; target inference invents shape names",
+   "source": "live-gaps"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "97.9% of open gaps lack a machine-checkable predicate; refuted or unlandable gaps occupy the single lane",
+   "root_cause": "Gaps born with prose only; flat write envelope drops predicates; category sealing; super-repo-root sites ungroundable",
+   "first_seen": "2026-07-11",
+   "last_seen": "2026-09-15",
+   "recurrences": 5,
+   "source": "memory-1"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Autonomous gaps carry a symptom not a change: 88% name only a file, false-localized premises spawn 31-gap families, recommit children carry raw failure output, instance-hash goal text prevents learning, unbound variables mint unreachable goals",
+   "root_cause": "Detectors emit problems without deriving an edit site/change/falsifier; substrate applies specified changes (80%) but cannot derive them (2.5%)",
+   "first_seen": "2026-08-03",
+   "last_seen": "2026-09-22",
+   "recurrences": 8,
+   "source": "memory-10"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps without edit site, modality or machine check; orphaned_capability never drains",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-07-19",
+   "recurrences": 4,
+   "source": "memory-2"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps are born with truncated or nonexistent edit sites, false premises, already-fixed demand, or confabulated files for pathless goals. The drafter faithfully executes wrong instructions.",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-09-19",
+   "recurrences": 6,
+   "root_cause": "Gap text is prose sliced and echoed. Target files are checked for shape, not existence. No premise re-check runs before compose.",
+   "source": "memory-3"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps born mis-localized, without machine-checkable predicate, or whose text instructs destructive action; the flat write drops metadata",
+   "first_seen": "2026-07-30",
+   "last_seen": "2026-09-18",
+   "recurrences": 6,
+   "root_cause": "The LLM localizer reads any path in the summary; the flat pointer write drops classification_metadata; the gap rewriter garbles operator specs",
+   "source": "memory-4"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps are born without edit_site or falsifier, decompose children echo the parent truncated at 400 chars, and the summary is frozen so a retry is the same try.",
+   "root_cause": "Goal-text shredding plus lineage by copying prose. 783 gaps have falsifier:none.",
+   "first_seen": "2026-08-06",
+   "last_seen": "2026-09-13",
+   "recurrences": 6,
+   "source": "memory-5"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps born without edit_site, with empty summaries, or aimed at victim files",
+   "root_cause": "detectors emit un-actionable gaps; localizer dead-ends; edit_site minted from most-cited path; law 13 as a regex",
+   "first_seen": "2026-07-20",
+   "last_seen": "2026-09-20",
+   "recurrences": 7,
+   "source": "memory-6"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Stale or phantom gaps manufacture hollow work, and gaps with no measurement predicate sit PENDING forever",
+   "root_cause": "Gaps are filed during outages or after the fix already landed, and summaries are frozen",
+   "first_seen": "2026-07-20",
+   "last_seen": "2026-08-23",
+   "recurrences": 5,
+   "source": "memory-7"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps are unactionable (phantom shapes, no edit_site, no falsifier, born closable, false premise).",
+   "root_cause": "Generators emit goals without checking they route to a real producer. The class-1 guard fails open. About 98% of gaps have no falsifier.",
+   "first_seen": "2026-07-30",
+   "last_seen": "2026-09-22",
+   "recurrences": 7,
+   "source": "memory-8"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps born without file, anchor or predicate (98% no predicate; 95.6% no anchor; 33% no file)",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-09-12",
+   "recurrences": 5,
+   "root_cause": "Nothing arms a predicate or derives an anchor at filing time; operator hand-supplies (law 13); falsifier field overwritten",
+   "source": "memory-9"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "gap-decompose invents 'repos/vessel/src/trace-store-reconcile.ts' (89 no-valid-step lines/24h); composer scaffolds new files for db_performance gaps (85)",
+   "root_cause": "The gap is born with classification_metadata.edit_site null, so the decomposer fills in a placeholder path",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Failure-mode gaps closed by drafting templates rather than code edits with machine checks",
+   "first_seen": "2026-05-22",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "root_cause": "gap carries no edit site or falsifier; debt metric counts drafts",
+   "source": "openspec-1"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "97% of open gaps not actionable (61/2,340 with edit site + class1/2); live admission 0/863 on both nodes",
+   "root_cause": "gaps born without an edit site or machine check",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "openspec-10"
+  },
+  {
+   "key": "operator-authorship-recursion",
+   "symptom": "Every proposal declares it 'should have been emitted by the substrate' and promises to be the last operator-authored one; the next proposal is operator-authored again",
+   "first_seen": "2026-06-01",
+   "last_seen": "2026-06-14",
+   "recurrences": 18,
+   "root_cause": "draft-spec-from-gap was non-functional and the I.* fix was never built; the declaration was treated as closure",
+   "source": "openspec-3"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "orphaned-capability-goal_summary open 6+ weeks; \u226517 draft remedies (add and delete) on 2026-08-17; re-detected 2026-09-26 with reopen_count 0 and falsifier none",
+   "root_cause": "Gap born without machine check; detector claims 'no file outside tests references goal_summary' (false: config.ts:764, routes/impulses.ts:952) and prescribes mint, while the sibling unreachable_producer gap shows the real issue is unproducible inputs (activity_metrics, goal); re-detection resets history so prior attempts are invisible",
+   "first_seen": "2026-07-01",
+   "last_seen": "2026-09-26",
+   "recurrences": 3,
+   "source": "openspec-5"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "orphaned-capability-goal_summary and orphaned-capability-interface_deploy_reach_check are open with first_detected 2026-09-26, reopen_count 0, and falsifier 'none', although the same ids were worked on 2026-08-17.",
+   "root_cause": "Gap store history was reset or re-created, so recurrence is invisible to the durability metric; orphan gaps carry no machine-checkable close predicate.",
+   "first_seen": "2026-08-17",
+   "last_seen": "2026-09-26",
+   "recurrences": 2,
+   "source": "openspec-6"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "10 gaps whose id/source/summary are unrendered template placeholders ({{substrateGap.id}}, {{goal.gap_id}} ...), 09-19..09-25",
+   "root_cause": "walk substrateGap_write payload synthesis emits template text; the store accepts it",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-25",
+   "recurrences": 10,
+   "source": "openspec-7"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "863 open candidates, 0 admitted on both nodes; 340 needs_information",
+   "root_cause": "97% of gaps are not fixable as filed (no edit site or machine check); decomposition fails on nonexistent readers",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "openspec-7"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "The vessel scaffold generates vessels that register partially invisible (nested resolverContract, no systemVessel)",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "Defect noted in BUILD-REPORT and never filed or fixed. No activity resolves the scaffold's own output against the registry.",
+   "source": "openspec-9"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps without machine check or correct edit site: 1,174 falsifier:none; 91% of substrate gaps are instantaneous missing_capability; system never mines its own logs for recurring defects",
+   "root_cause": "Detectors fire on single events; no generator from recurring log signatures; operator supplies region/constraint/falsifier",
+   "first_seen": "2026-08-17",
+   "last_seen": "2026-09-23",
+   "recurrences": 5,
+   "source": "reports-1"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gap vessel tag derived from prose overrides the file path in the same prose; largest minters produce phantom gaps",
+   "root_cause": "fileCapabilityGap deny-list (174 rows/walk); orphaned-capability-scan blind to code and tool-loop invocations (52/303); prose-derived vessel field",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-15",
+   "recurrences": 3,
+   "source": "reports-3"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps born without a machine check or edit site: capability gaps from judge prose, fileless gaps coerced into paths, outcome-level disagreement gaps never admitted, class-2 falsifiers rewritten to none",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-09-24",
+   "recurrences": 5,
+   "root_cause": "Filing path trusts free text (reach-gate verdict, operator prose); repair lane admits only file-localized gaps; store derives closability only from expected_literal.",
+   "source": "reports-4"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps born without an edit site or measured check (375 no_groundable_target; 111/129 substrate_detected falsifier none; 697 capability gaps that were walk artifacts; admissible supply 2.6%).",
+   "first_seen": "2026-09-06",
+   "last_seen": "2026-09-29",
+   "recurrences": 6,
+   "root_cause": "Detectors do not attach their own measured check; admission reads only metadata; parsed paths are never written back.",
+   "source": "reports-6"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "97% of open gaps have no edit site or falsifier; detectors emit categories; the phantom remedy template db_performance_slow_queries is minted hourly; storms file 146 symptom gaps per hour",
+   "root_cause": "The gap-to-edit-to-land-to-verify lane was never specified; closure-predicate-at-birth was reverted 08-31",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "source": "reports-7"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Most gaps are unmeasurable: 97.6% no falsifier (09-02); 758 none vs 15 armed (09-09); region on 2.6%; orphan gaps prescribe minting (114/114); template placeholders as status; the three pilot gaps filed with falsifier:none.",
+   "root_cause": "Nothing arms a predicate at filing. Detectors prescribe a mint instead of a rewire.",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-11",
+   "recurrences": 5,
+   "source": "reports-8"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps filed by timer detectors (db-contention since 09-18, model-reality-selector-unscored since 09-18, severed-joint-* x5, service-failure-* x3, learning-loop-selftest since 09-19) are refreshed every tick and never closed",
+   "root_cause": "The detectors emit no classification_metadata.edit_site or machine check, so re-detection only moves updated_at",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 11,
+   "source": "timers-readers"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps without an edit site or predicate consume the lane or sit pending forever",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-04",
+   "recurrences": 4,
+   "root_cause": "detectors emit prose edit_site; only 5/1,606 gaps ever carried a predicate",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Flat-pointer write drops edit_site/expected_literal/region/severity",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-12",
+   "recurrences": 3,
+   "root_cause": "walk_flat_pointer / gapFromFlatPointer field loss before classification",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "One mislocalized gap spawns a 31-gap family; recommit lane lands 0.8% while taking 26.5% of attempts; the system mints a -narrowed child of a gap about minting narrowed children",
+   "first_seen": "2026-09-11",
+   "last_seen": "2026-09-18",
+   "recurrences": 4,
+   "root_cause": "Gap text carries a wrong premise or edit_site; children inherit the pre-correction site; five carriers per failed parent",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps born without edit site or machine check; workable supply 2-17",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 6,
+   "root_cause": "Detectors emit categories not sites/counts; closure-predicate-at-birth reverted 08-31",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "gap behind c9faf50d never filed; corrected re-dispatch hashes to same frozen gap; correct-state summaries closed already_resolved",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-08-11",
+   "recurrences": 3,
+   "source": "validation-other-1"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "The system files wasted-cycle-development_vessel_gap_to_scenario_bridge_tick (36 dispatches, 100% zero-work), but with falsifier=none and no edit_site",
+   "root_cause": "The waste detector sees the symptom but nothing names the null-write seam",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "source": "validation-other-3"
+  }
+ ],
+ "claims": [
+  {
+   "key": "gap-content",
+   "claimed_at": "2026-07-03",
+   "claim": "legacy-drift migration locks the concept source_type vocabulary",
+   "where": "concept-db sql/core/007-legacy-drift-source-types-and-priority.surql",
+   "later": "Overridden on every boot by 007-repair-stranded (len>0); ~200 source_type values live",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "gap-content",
+   "claimed_at": "2026-09-18",
+   "claim": "model-reality-audit lifts selector degradation into the gap ontology",
+   "where": "gap model-reality-selector-unscored",
+   "later": "Open for 11 days and re-detected hourly (updated 09-29T03:29). It has no edit_site and has not been repaired",
+   "source": "timers-readers"
+  },
+  {
+   "key": "gap-content",
+   "claimed_at": "2026-09-08T22:10",
+   "claim": "Verified-unique region arming raises landing (observational p=0.002)",
+   "where": "074acb94",
+   "later": "09-09 04:36 RCT 6.8% vs 6.9%, p=1.0; claim retracted",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "gap-content",
+   "claimed_at": "2026-09-27T08:56Z",
+   "claim": "Contained autonomy reopened; containment passed acceptance",
+   "where": "ac8b0aad 2026-09-27T08:56Z",
+   "later": "First autonomous landing bb5d6b9 live regression; second fabricate-to-satisfy passed judge; sweep polarity inverted; 9 of 22 gap writes lost",
+   "source": "transcripts-4"
+  }
+ ]
+}

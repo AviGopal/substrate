@@ -1,0 +1,856 @@
+{
+ "area": "scripts-substrate",
+ "items": [
+  {
+   "name": "attempt-ledger git hooks",
+   "location": "scripts/substrate/git-hooks-ledger/ (installer uncommitted)",
+   "purpose": "Spool every commit/rewrite/ref update to the attempt ledger",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Node-1 journal 09-25 22:35Z 'installed'; installer and Dockerfile COPY are not in HEAD",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "identical-failure-run-tick",
+   "location": "scripts/substrate/identical-failure-run-tick.ts",
+   "purpose": "Detect long same-failure runs with no disposition change",
+   "status": "dormant",
+   "general": true,
+   "evidence": "a172e235 09-16 ran once by hand; no unit or caller",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "ingest-docs reap",
+   "location": "scripts/substrate/ingest-docs-as-concepts.ts",
+   "purpose": "evict stale doc concepts",
+   "status": "broken",
+   "general": false,
+   "evidence": "refused 18/18 runs, 596 vs limit 460",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "ingest-docs-as-concepts",
+   "location": "scripts/substrate/ingest-docs-as-concepts.ts, 6h timer",
+   "purpose": "Docs as concept expectations",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "No doc_expectation reader; 589 stale sections unreapable",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "ingest-docs \u2192 architecturePrinciple \u2192 feature-compose",
+   "location": "scripts/substrate/ingest-docs-as-concepts.ts; feature-compose.ts",
+   "purpose": "Docs as drafter-time expectations",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Timer ran 01:22, dryrun:false; this is why architecture-doc drift matters",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "joint-liveness detector / jointBinding pool records",
+   "location": "scripts/substrate/joint-liveness-tick.ts",
+   "purpose": "Detect writer->reader joints that stop carrying records",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Dormant with 1 binding 08-25..09-27 (daa2632c); 70254535 made joints pool records, 6/6 checked",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "joint-liveness registry (jointBinding)",
+   "location": "scripts/substrate/joint-liveness-tick.ts",
+   "purpose": "Register seams and detect severed joints",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Built 09-28; 3 severed on first run (ribosome registration and extraction, behavioural-verification input); node-2 files invisible",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "joint-liveness-tick",
+   "location": "scripts/substrate/joint-liveness-tick.ts",
+   "purpose": "Detect write->read-severed joints",
+   "status": "live-used",
+   "general": true,
+   "evidence": "severed=3-4 per tick. Masked+failed on node 2 (direct SQL)",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "joint-liveness detector",
+   "location": "scripts/substrate/joint-liveness-tick.ts (daa2632c, 08-25)",
+   "purpose": "Alert when a writer-to-reader joint goes quiet",
+   "status": "dormant",
+   "general": true,
+   "evidence": "1 binding (decision_outcome); caught 0 of 179 Aug-Sep breaks; proposed as the joint-registry seam",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "joint-liveness-tick",
+   "location": "scripts/substrate/joint-liveness-tick.ts + timer",
+   "purpose": "Detect write\u2192read joints going quiet",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "One binding only; caught none of the Aug\u2013Sep breaks",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "learning-liveness-probe",
+   "location": "scripts/substrate/learning-liveness-probe.ts",
+   "purpose": "Probe that the posterior follows an execution",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Injects a real execution every 6h and moves the probe arm's posterior (test residue on a cadence)",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "learning-loop-selftest",
+   "location": "scripts/substrate/learning-loop-selftest-tick.ts",
+   "purpose": "Check that the execution->learning chain conducts",
+   "status": "broken",
+   "general": true,
+   "evidence": "The script is deleted in node 2's worktree and every run since 09-27 04:43 hit Module not found; the unit is now masked.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "learning-loop-selftest-tick",
+   "location": "scripts/substrate/learning-loop-selftest-tick.ts",
+   "purpose": "End-to-end learning-chain probe",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1 RED link, posterior_delta. The script is missing on node 2",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "memory-budget-check",
+   "location": "scripts/substrate/memory-budget-check.sh + unit",
+   "purpose": "Memory cap sanity",
+   "status": "broken",
+   "general": false,
+   "evidence": "FAIL every hour, reported as success because SuccessExitStatus=0 1",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "mirror-to-live",
+   "location": "scripts/substrate/mirror-to-live.sh",
+   "purpose": "Mirror a vessel clone into /vessels runtime",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Called by pull-sync, feature-compose.ts, patch-with-tools.ts, pull-cutover.ts, goal-host",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "model-reality-audit",
+   "location": "scripts/substrate/model-reality-audit.ts",
+   "purpose": "Aggregate model-vs-trace checks",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Re-detects C4.selector_unscored every hour. The gap has been open since 09-18 with no edit_site",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "observe-orthogonal-refresh",
+   "location": "scripts/substrate/observe-orthogonal-refresh.ts",
+   "purpose": "Feed enact-orthogonal-decisions",
+   "status": "live-used",
+   "general": false,
+   "evidence": "0 decisions on most ticks. 2519 files accumulated",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "operator-goal-generator",
+   "location": "scripts/substrate/operator-goal-generator.ts via watchdog",
+   "purpose": "Generate operator-class goals",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Last run 09-09. Its last line was a grounding TypeError",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "operator-goal-signal.ts",
+   "location": "scripts/substrate/operator-goal-signal.ts",
+   "purpose": "Enrichment signal",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Named only in a unit comment. No caller",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "performance-status / autonomy-status views",
+   "location": "scripts/substrate/performance-status.ts, autonomy-status.ts",
+   "purpose": "Operator views",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Makefile targets deleted 08-20; no caller since",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "rhythm-cadence conductor",
+   "location": "scripts/substrate/rhythm-seed-tick.ts + rhythm-conduct-tick.ts",
+   "purpose": "Time-shaped rhythm impulses drive cadence (law 5)",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Node 2 logged 56 of ~70 runs as 'nothing enqueued and nothing recorded as skipped'. There is no per-family reason, and concept-management has no_goal_mapping.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "rhythm-cadence (seed+conduct)",
+   "location": "scripts/substrate/rhythm-{seed,conduct}-tick.ts",
+   "purpose": "Law-5 rhythm conductor",
+   "status": "live-used",
+   "general": true,
+   "evidence": "enqueued=0 on 260 of ~370 ticks. No per-family reason is given",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "isolated verification runner",
+   "location": "scripts/substrate/run-isolated-verification.sh",
+   "purpose": "Run tests in namespaces and chroot with no live service access",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Validated 09-14; not wired into feature-compose; the test-residue class recurred through 09-29",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "runtime-drift-tick",
+   "location": "scripts/substrate/runtime-drift-tick.ts",
+   "purpose": "runtime vs clone divergence",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "substrate-pull-sync mirror-to-live (:1198)",
+   "evidence": "repair off; detect-only; caught the credential outage footprint",
+   "source": "memory-9",
+   "mentions": 2,
+   "sources": [
+    "memory-9",
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "runtime-drift repair",
+   "location": "scripts/substrate/runtime-drift-tick.ts (RUNTIME_DRIFT_REPAIR)",
+   "purpose": "Restore /vessels from committed source",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "substrate-pull-sync + mirror-to-live",
+   "evidence": "bb217e5e set it default OFF; the detector half still runs",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "self-development-trend",
+   "location": "scripts/substrate/self-development-trend.ts",
+   "purpose": "Trend metric log",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "The jsonl is read only by its writer",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "self-operational-health",
+   "location": "scripts/substrate/self-operational-health.ts",
+   "purpose": "Deployment-boundary invariants",
+   "status": "live-used",
+   "general": true,
+   "evidence": "The workspace_subdir_unavailable finding is false (it checks under the super-repo root). The timer check is only is-active",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "self-recovery-tick db_under_pressure",
+   "location": "scripts/substrate/self-recovery-tick.sh",
+   "purpose": "Back off restarts under DB pressure; restart wedged surreal",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Validated 07-23; 60b2328e",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "self-recovery immune system",
+   "location": "scripts/substrate/self-recovery-tick.sh + timer",
+   "purpose": "Restart unhealthy vessels/SurrealDB",
+   "status": "live-used",
+   "general": true,
+   "evidence": "16 fix commits for autoimmune behaviour",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "self-recovery ladder / immune tick",
+   "location": "scripts/substrate/self-recovery-tick.sh + timer",
+   "purpose": "Restart, then revert, then escalate unhealthy vessels; restart SurrealDB on sustained wedge",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Bounded 09-16 (ad9da780); in-tree revert rung 8e935b13; history of restarting the pressure victim",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "self-repair-operational",
+   "location": "scripts/substrate/self-repair-operational.ts",
+   "purpose": "Re-enable allowlisted timers",
+   "status": "live-used",
+   "general": false,
+   "evidence": "0 repaired",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "spectral-gap",
+   "location": "scripts/substrate/spectral-gap.ts",
+   "purpose": "Topology metric",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Read by 3 dev-vessel resolvers through a hardcoded node-local path. live_genuine is 0/0. There is no file on node 2",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "spectral-gap instrument",
+   "location": "scripts/substrate/spectral-gap.ts",
+   "purpose": "Master inequality lambda1 >= rho_grow.",
+   "status": "broken",
+   "general": true,
+   "evidence": "live_lambda1 flat zero since 07-15",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "spectral-gap inequality",
+   "location": "scripts/substrate/spectral-gap.ts:280-300",
+   "purpose": "The \u03bb\u2081\u2265\u03c1_grow stability governor",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "JSONL only, no actuator, role store (dead on a spoke)",
+   "source": "reports-5",
+   "mentions": 1,
+   "sources": [
+    "reports-5"
+   ]
+  },
+  {
+   "name": "pull-sync",
+   "location": "scripts/substrate/substrate-pull-sync.sh",
+   "purpose": "Converge clones/runtime/restarts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Skip-and-log frozen checkouts; fingerprint dir drift x3; quiesce reopen starvation; super-repo FF failure logged 227x filing nothing",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "pull-sync quiesce and mirror",
+   "location": "scripts/substrate/substrate-pull-sync.sh",
+   "purpose": "Deploy origin/dev to runtime with drain",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Quiesce verified 08-18; untracked-dirty freeze fixed 9333f0f7; doesn't re-copy units",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "pull-sync test gate",
+   "location": "scripts/substrate/substrate-pull-sync.sh",
+   "purpose": "gate convergence on tests",
+   "status": "broken",
+   "general": true,
+   "evidence": "skipped on budget 8x; blames environment tests",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  },
+  {
+   "name": "substrate-pull-sync",
+   "location": "scripts/substrate/substrate-pull-sync.sh",
+   "purpose": "Converge clones -> /vessels, restart",
+   "status": "live-used",
+   "general": true,
+   "evidence": "repeatedly patched 07-25..08-24 (json hash, masked skip, dirty reset, marker reap); image-baked; lease/flaky-gate silent stalls",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "substrate-pull-sync / mirror-to-live",
+   "location": "scripts/substrate/substrate-pull-sync.sh",
+   "purpose": "converge clones and runtime",
+   "status": "live-used",
+   "general": true,
+   "evidence": "reported synced=0 while stale (09-16); wedged 16h by stranded commits (09-22)",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "Pull-sync fan-out hash gate + RUNTIME SOURCE TRUNCATED repair",
+   "location": "scripts/substrate/substrate-pull-sync.sh (c6d2212a)",
+   "purpose": "Converge and verify runtime bytes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "repaired pwt overwrite in 390s 09-23",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "substrate-pull-sync",
+   "location": "scripts/substrate/substrate-pull-sync.sh + substrate-pull-sync.timer",
+   "purpose": "Converge live vessels and super-repo glue to origin/dev from in-container clones, behind a test gate",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Timers run on both nodes; 65 fix commits; on node 2 it reports clean over a damaged clone",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "substrate-pull-sync",
+   "location": "scripts/substrate/substrate-pull-sync.sh -> /usr/local/bin/substrate-pull-sync; timer ~11 min",
+   "purpose": "Converge super-repo glue and vessels to origin/dev with a test gate",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Fires every ~11 min on node 2. Its success line ignores tree state, and its unit auto-enable is profile-blind.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "substrate-pull-sync + mirror-to-live",
+   "location": "scripts/substrate/substrate-pull-sync.sh, mirror-to-live.sh",
+   "purpose": "Self-update vessels from origin/dev",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Converged hub/spoke many times; broken by starvation, hash wedge, index restore and marker-vs-runtime",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "substrate-doctor/ready/status",
+   "location": "scripts/substrate/substrate-{doctor,ready,status}.sh",
+   "purpose": "Readiness and health verdict",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Re-fixed for false reports (0baff728, 26ae3d94, c1bd0da4, 1d3785de)",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "surgical-gap-scan",
+   "location": "scripts/substrate/surgical-gap-scan.ts",
+   "purpose": "Supply landable single-edit gaps",
+   "status": "dormant",
+   "general": false,
+   "evidence": "emitted_count 0 on 91/91 runs",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "surgical-gap-scan resolve-path pattern",
+   "location": "scripts/substrate/surgical-gap-scan.ts",
+   "purpose": "Detect resolve-URL joins",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "trace_failure_pattern_report oracle reason_contains 'URL is invalid' + existing gaps",
+   "evidence": "Reverted 807b92ef",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "trace-store-health-check",
+   "location": "scripts/substrate/trace-store-health-check.ts",
+   "purpose": "Row-count cap check",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Over the cap every tick. Blind to the 42GB of blobs, per its own open gap",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "typecheck-scenario-gen",
+   "location": "scripts/substrate/typecheck-scenario-gen.ts",
+   "purpose": "Turn tsc errors into gaps",
+   "status": "broken",
+   "general": false,
+   "evidence": "GAPS_PATH defaults to the frozen /workspace/gaps/gaps.json. 20 gaps were lost",
+   "source": "timers-readers",
+   "mentions": 2,
+   "sources": [
+    "timers-readers",
+    "validation-other-3"
+   ]
+  },
+  {
+   "name": "typecheck-scenario-gen timer",
+   "location": "scripts/substrate/typecheck-scenario-gen.ts:27; unit typecheck-scenario-gen.timer",
+   "purpose": "Turn tsc errors into gaps and scenarios",
+   "status": "broken",
+   "general": false,
+   "evidence": "GAPS_PATH is unset in /etc/substrate/env, so it writes the fossil store; the live lane never sees typecheck gaps",
+   "source": "gap-history",
+   "mentions": 1,
+   "sources": [
+    "gap-history"
+   ]
+  },
+  {
+   "name": "30 cadence timers",
+   "location": "scripts/substrate/units/*.timer",
+   "purpose": "side loops (funnel-drain, gap-compose, spectral-gap, model-reality-audit, coherence-recover, ...)",
+   "status": "unknown",
+   "general": false,
+   "evidence": "outside selection (law 2/5); lost on recreate 3 times (542e2dc7, 2600dab3, c0a61d47)",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "systemd timers (32)",
+   "location": "scripts/substrate/units/*.timer",
+   "purpose": "Self-op cadence",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Law: rhythms only; 13-14 never enabled",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "~40 custom systemd timers",
+   "location": "scripts/substrate/units/*.timer",
+   "purpose": "Scheduled detectors, drains and generators",
+   "status": "unknown",
+   "general": false,
+   "evidence": "All report success on the hub; none is validated by an activity (retention rule). Static intervals, not rhythms (law 5). No named detector was first to catch any of 253 breaks",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "~40 systemd timers (ungraded plane)",
+   "location": "scripts/substrate/units/*.timer",
+   "purpose": "maintenance cadence",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "boredom pool rhythms",
+   "evidence": "a futile repair fired 23->36 times on the timer plane while the pool stopped at 13 (09-16)",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "validator-liveness-tick",
+   "location": "scripts/substrate/validator-liveness-tick.ts",
+   "purpose": "Detect validators that stopped their cadence",
+   "status": "live-used",
+   "general": true,
+   "evidence": "SEVERED 10/97. Masked on node 2",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "validator-liveness-tick",
+   "location": "scripts/substrate/validator-liveness-tick.ts (8a3804ff)",
+   "purpose": "detect validators that stopped their cadence",
+   "status": "unknown",
+   "general": true,
+   "evidence": "reported SEVERED 37/48 on 09-10; no later use in window",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "vessel-ctl",
+   "location": "scripts/substrate/vessel-ctl.sh (in image)",
+   "purpose": "status/restart/logs/apply/drift for any unit",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Replaced 63 Makefile targets (008f3ab9)",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "installed.json membership reconcile",
+   "location": "scripts/substrate/vessel-ctl.sh, entrypoint.sh",
+   "purpose": "Durable dynamic vessel membership",
+   "status": "live-used",
+   "general": true,
+   "evidence": "membership-acceptance-PASS on 09-22; conflates auto-enable with operator install",
+   "source": "reports-5",
+   "mentions": 1,
+   "sources": [
+    "reports-5"
+   ]
+  },
+  {
+   "name": "vessels.inventory role groups",
+   "location": "scripts/substrate/vessels.inventory.json",
+   "purpose": "Select units per node role.",
+   "status": "broken",
+   "general": true,
+   "evidence": "hub/spoke lack autonomy, 42 units masked (08-09)",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "warn-baseline-drift.sh",
+   "location": "scripts/substrate/warn-baseline-drift.sh",
+   "purpose": "Warn when make sync-<vessel> hand-sync poisons the baseline",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Target it guards was deleted 08-20",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "watchdog-tick + watchdog.conf drop-ins",
+   "location": "scripts/substrate/watchdog-tick.ts",
+   "purpose": "Demoted timers restart flow only when stalled",
+   "status": "broken",
+   "general": true,
+   "evidence": "Stall marker compose-lessons.jsonl never stale; log silent since 07-20; superseded by in-process compose call (substrate-gap.ts:1218)",
+   "source": "openspec-4",
+   "mentions": 1,
+   "sources": [
+    "openspec-4"
+   ]
+  },
+  {
+   "name": "watchdog-tick demotion",
+   "location": "scripts/substrate/watchdog-tick.ts + 5 unit watchdog.conf drop-ins",
+   "purpose": "Restart the flow when the event drain stalls",
+   "status": "live-used",
+   "general": true,
+   "evidence": "263 restarts/24 h, unbounded, stall never clears",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "watchdog-tick.ts (demoted-timer watchdog)",
+   "location": "scripts/substrate/watchdog-tick.ts; units/{gap-compose,funnel-drain,compose-teacher,operator-goal-generator}.service.d/watchdog.conf",
+   "purpose": "Restart a flow's resolver only when its activity marker is stale",
+   "status": "broken",
+   "general": true,
+   "evidence": "Success is judged by HTTP 200 rather than by the marker: 711 restarts in 2 days, all ok, while the marker stayed stale. Default marker paths are shared across flows. funnel-drain's marker is the frozen /workspace/pool/drain-log.jsonl",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "stratified harness / compare-reports / autonomy-status kappa",
+   "location": "validation/scripts, scripts/substrate/autonomy-status.ts",
+   "purpose": "Coverage-matrix and limiter measurement",
+   "status": "dormant",
+   "general": false,
+   "evidence": "last run 08-12; autonomy-status last commit 07-05",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "validation reach-generalization harness / performance-status.ts",
+   "location": "validation/scripts/reach-generalization-harness.py; scripts/substrate/performance-status.ts",
+   "purpose": "Independent operator measurement",
+   "status": "unknown",
+   "general": false,
+   "evidence": "08-07, 07-31 operator instruments, not substrate activities",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "substrate-narrator.ts",
+   "location": "validation/scripts/substrate-narrator.ts",
+   "purpose": "Snapshot runtime-transient state for the auditor",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Referenced only by investigation JSONs; validation/observations/ holds only a README",
+   "source": "validation-other-2",
+   "mentions": 1,
+   "sources": [
+    "validation-other-2"
+   ]
+  }
+ ]
+}

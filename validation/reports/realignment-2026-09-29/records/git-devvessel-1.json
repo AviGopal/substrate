@@ -1,0 +1,710 @@
+{
+ "source": "git-devvessel-1",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/git-devvessel-1.md",
+ "coverage": "Live clone substrate-live:/workspace/git/vessels/development-vessel, git log --until=2026-08-15 (1521 commits, 2026-05-21..2026-08-14). All 684 operator-style subjects were read, and bodies for ~70 of them (every revert plus the commits making load-bearing claims). For the 837 substrate-authored landings only aggregates were read (gap tags, touched files, comment-only heuristic, timing) plus sample diffs. git log -S was run on 13 recurring identifiers. Resolver adds/deletes were read with --diff-filter on src/resolvers|observers|maintenance, and reference counts were taken at today's HEAD. Read-only SurrealDB counts were taken from the hub execution table (last 7d) to test whether June/July mechanisms still fire. Skipped: most individual autonomous diffs, test/ history, and anything after 08-15 except where it completes an in-window story.",
+ "attempts": [
+  {
+   "key": "false-verification",
+   "title": "Class-3 landed-commit evidence: a commit mentioning the gap id closes the gap",
+   "where": "de9be66, 370a88c (07-09)",
+   "tried": "Grep push clones for a substrate commit naming the gap id and close it as already_resolved. The logic was async-only, then copied into the sync variant.",
+   "outcome": "reverted",
+   "date": "2026-07-09",
+   "evidence": "On 08-07 it matched reverts and the fix commit itself (018fd05, 81d8474). On 08-14 a single inert commit closed a gap (bafd83d). Replaced by landedCommitVerdict (980135a)."
+  },
+  {
+   "key": "false-verification",
+   "title": "Revert-awareness fixed five times in one day",
+   "where": "77cf692, 271228e, d719fee, 018fd05, 81d8474, 0497d9d (08-07)",
+   "tried": "Detect 'This reverts commit', scope matches to the edit_site vessel, and fix the duplicate copy of the check that ran first.",
+   "outcome": "partial",
+   "date": "2026-08-07",
+   "evidence": "0497d9d: 'the SAME check exists twice \u2014 I fixed one copy and it ran second'. The duplicates were only centralised on 08-14 (c871a45)."
+  },
+  {
+   "key": "false-verification",
+   "title": "Close-oracle: close on measurement, not provenance",
+   "where": "c871a45, 25a1dfb, 4b1f862, caf4a95, 980135a (08-14)",
+   "tried": "landedCommitVerdict: 1 landing = pending, 2 or more = present. Measure before provenance. Earned-trust fail-open only at >=10 graded closes and >=0.7 hold rate.",
+   "outcome": "partial",
+   "date": "2026-08-14",
+   "evidence": "Baseline: 31/2112 closes were landed_verified, and landed_commit self-report showed closes:0, false_closes:8. Memory from 09-15/09-22 shows class1 predicates still arming falsely."
+  },
+  {
+   "key": "false-verification",
+   "title": "Landing typecheck gate was hollow (verify always passed)",
+   "where": "709b989 (06-23)",
+   "tried": "Fail closed on tsc exit_code. error_count was always 0 and the exitCode/exit_code key was wrong.",
+   "outcome": "worked",
+   "date": "2026-06-23",
+   "evidence": "A stale-gap wiring with 7 TS errors had landed and broken the vessel."
+  },
+  {
+   "key": "false-verification",
+   "title": "Landing gate was a no-op for goal-host (lint script missing)",
+   "where": "530c1e9 (07-30), a4a4102, 05450e6",
+   "tried": "Typecheck the real script, compare error signatures as a subset, fail closed on TS1xxx syntax bails.",
+   "outcome": "partial",
+   "date": "2026-07-30",
+   "evidence": "Two broken commits self-landed on goal-host origin/dev."
+  },
+  {
+   "key": "false-verification",
+   "title": "Test gate never ran; enabling it wedged landings; overlay tested unpatched code",
+   "where": "c0b665e (08-06), f3b427b, 41bde26, 5dec42c, b21b309 (wrong, retracted by 7c23983), 25cd735 (08-09)",
+   "tried": "Point the base root at the push clone, drop skip_tests, give the full suite its own timeout, cache the baseline, stop symlinking tests into the overlay.",
+   "outcome": "reverted",
+   "date": "2026-08-09",
+   "evidence": "82 commits landed test-blind with 76 failures behind them. Memory 09-28: post-land suite dead 08-31..09-28 from a shell 30s kill \u2014 the same timeout class came back."
+  },
+  {
+   "key": "false-verification",
+   "title": "Install the staged manifest in verify",
+   "where": "f38f1a3 -> b90d6c4 revert -> 0797af4 (substrate re-land) -> 49f4c06 revert; 1aaf435 (08-12)",
+   "tried": "bun install inside the compose worktree so manifest breakage becomes visible.",
+   "outcome": "reverted",
+   "date": "2026-08-10",
+   "evidence": "The worktree node_modules is a symlink, so the install pruned the shared tree and broke every other compose (TS2307)."
+  },
+  {
+   "key": "false-verification",
+   "title": "coverage-tick metric fixed ~9 times; lift flag true by construction",
+   "where": "8f365c1, 0842239, 2077ea6, 84638bb, d98777e, 74e4be0, 44ebd4d, fc495c1 (08-07), 83f3adc (08-09)",
+   "tried": "Window ordering, limit 200->2000, output_impulse_shapes, end_date, and dropping declared shapes as evidence.",
+   "outcome": "partial",
+   "date": "2026-08-09",
+   "evidence": "The server clamps limit to 100, so the 84638bb limit fix never took effect and older windows always read 0."
+  },
+  {
+   "key": "false-verification",
+   "title": "LLM health detector checked 'up', not 'can work'",
+   "where": "d5faf3f (08-12)",
+   "tried": "Probe an actual completion instead of reachability.",
+   "outcome": "worked",
+   "date": "2026-08-12",
+   "evidence": "Reported reachable:true through 43h of 100% 401s (566 per day, 0 ok)."
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Per-form hollow/vacuous gates (at least 9)",
+   "where": "f960423, c319dfb, 33b7d9e, 3641a1b, 1b5e7c9, 4ea5234, dcff64c, 7e378de, 671ce88, 3686670, 06fabe9",
+   "tried": "Refuse stubs, header-only, constant-return, zero-delta, unused-binding, type-only, diagnostic-only and dead-store edits.",
+   "outcome": "partial",
+   "date": "2026-06-29..2026-08-12",
+   "evidence": "The console.log-in-isInert landing bff3347 (reverted 11587fd) got through. 06fabe9: the dead-store gate was inert on arrival. Memory 09-15 hollow_write class still open."
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Seam 3 autonomous net-new resolver authoring",
+   "where": "5e2dbe7 (06-19); 70 Substrate resolver files in July",
+   "tried": "Let the substrate author and wire net-new resolvers.",
+   "outcome": "failed",
+   "date": "2026-06-19",
+   "evidence": "human-input.ts calls a nonexistent :8765/v2/notes. error.ts called :3173/v1/traces (repaired 08-29). 5 were deleted as cruft on 08-06..08. 60+ have a single dispatch-table reference."
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Drafter degenerate self-modification loop hardcodes the LLM endpoint",
+   "where": "50 substrate commits 08-01..02 on gap pwt-development-vessel-feature-compose.ts (bea427c, b467d4b, eab0e9c, 3f6e4f3, 5056240); fixes c20a972, 4fc14ab, 33afcc8+978a70f, c3194ee, 93b18ba, 35c6b33",
+   "tried": "Hand-revert the drafter and add gates that refuse non-LLM llmCall targets and corruption signatures.",
+   "outcome": "partial",
+   "date": "2026-08-02",
+   "evidence": "Pinned 127.0.0.1:8100 and CONCEPT_DB_ENDPOINT, destroyed failover, wrote a template placeholder at byte 0, crash-looped hub and spoke. The fix had to be landed twice (33afcc8/978a70f)."
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Federated LLM failover reimplemented per file",
+   "where": "ddaf74e, dde7d33, e252256, b43062d, 534189a, da08516, d08774a, 626225e, ec8ef67 (07-19..29)",
+   "tried": "Discover-all arms, egress rewrite, envelope unwrap, by-name hub fallback \u2014 separately in feature-compose, patch-with-tools and llm-completion-dispatch.",
+   "outcome": "partial",
+   "date": "2026-07-19",
+   "evidence": "c3194ee (08-02) 'restore LLM egress at all four llmCall recovery sites'. Memory 09-22 resolve-URL joiner overshoot."
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "trace-store-reconcile could never have run",
+   "where": "9674cb8 (07-08) -> 5dcfc60, af12cf3, 30aac7c, 4635174 (08-09)",
+   "tried": "Fix the route, the hardcoded 127.0.0.1:8080, the token placement and undeclared placeholders.",
+   "outcome": "partial",
+   "date": "2026-08-09",
+   "evidence": "af12cf3: 'my own fix was still broken'. It held the lease that gates every self-edit. The store sat at 2x cap."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Gap store readers pinned to a frozen literal path",
+   "where": "b1c3e68, 267900a (08-09)",
+   "tried": "Read via workspaceRoot(), then grep the literal prefix to find other pinned readers.",
+   "outcome": "worked",
+   "date": "2026-08-09",
+   "evidence": "Frozen copy: 2666 total/462 open. Live store: 200/154. A hand-filed gap sat 13h. The same class recurs for memory stores in memory 09-22."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Quiesce marker written where nobody reads",
+   "where": "a0e6692, 8a92d57, 31f957a (08-11)",
+   "tried": "Align the timer's quiesce dir with /workspace/quiesce.",
+   "outcome": "worked",
+   "date": "2026-08-11",
+   "evidence": "The timer wrote /workspace/git/super-repo/quiesce while the vessel and pull-sync read /workspace/quiesce."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "pwt escalation read gap.file_path that no gap carries",
+   "where": "2a8ebf5 (08-10)",
+   "tried": "Read classification_metadata.edit_site.",
+   "outcome": "worked",
+   "date": "2026-08-10",
+   "evidence": "0/360 gaps had file_path and 104 had edit_site. The escalation crashed on entry every time and the error was swallowed into a warn."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Selector reads trace shapes; template declared a different shape",
+   "where": "41fd8f7 V24e (06-08)",
+   "tried": "Declare the trace-recorded shape.",
+   "outcome": "worked",
+   "date": "2026-06-08",
+   "evidence": "Chain templates got a starvation floor of 0.3 instead of a pull boost of 2.0."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Mitosis pending lock / freshness livelock fixed at least 6 times",
+   "where": "2cfc6b0 (06-19), db30efa (06-30), 9019cbd (07-19), b4e3d77->05829d6 revert->0c96b99 (07-29), 3f4be28 (08-01), c8b2e6e (08-02), 76c5ed0/24060e3 (08-11)",
+   "tried": "Clear pending on no-op, gate the mirror on push, clear on all exits, avoid lease self-deadlock, per-file base sha.",
+   "outcome": "partial",
+   "date": "2026-06-19..2026-08-11",
+   "evidence": "Each fix names a new exit path. Memory 09-24 staged_base_sha lane deadlock \u2014 same class again."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Self-restart kills in-flight work",
+   "where": "4ec9ce8 (06-23), b1192fa (08-05), a0e6692, ede3aeb, 9f06451, 5a41852, 644e7ee (08-11)",
+   "tried": "Defer the restart, then quiesce admission instead of restarting into live work.",
+   "outcome": "partial",
+   "date": "2026-08-11",
+   "evidence": "Three consecutive operator trials died interrupted. The dev-vessel self-cutover had never deployed before 06-23."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Substrate replaced a local dep with a 404 registry version, twice",
+   "where": "ddffdee reverted 956e464 (08-09); 29d9b85 (-narrowed child) reverted 9a34712 (08-12); cf. 5208185 (07-11)",
+   "tried": "Operator revert, plus 1aaf435 refuse an unresolvable manifest.",
+   "outcome": "partial",
+   "date": "2026-08-12",
+   "evidence": "It landed as landed_verified after 4 failed attempts because verify used a pre-populated node_modules."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Autonomous cutovers clobber files",
+   "where": "d26a303 package.json (07-03), 96c2aaa, eafd87a (06-30), 70517eb -2969 lines reverted 3215e70 (08-01), 9c4660a (08-01), 25cd735 path-guard disable",
+   "tried": "Restore by hand. 35c6b33 corruption-signature refusal. af54cc8 truncation guard.",
+   "outcome": "partial",
+   "date": "2026-07-03..2026-08-09",
+   "evidence": "The path-guard disable landed FAVORABLE and afterwards every add/fix goal routed to feature_compose."
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Operator fixes reverted or oscillated",
+   "where": "6c3448e->9e99f11; cc00663->467360b; b4e3d77->05829d6; c0b665e->f3b427b; compose-lessons 89a7f31/90c585f/d274763/8236895/6137257 (08-10); semantic gate 575514d vs ff416d4; region gate 973b7f6/6712946/4645bf8/a71e9a8",
+   "tried": "Directed patches landed without a pre-registered falsifier.",
+   "outcome": "reverted",
+   "date": "2026-05-26..2026-08-10",
+   "evidence": "Five compose-lessons commits in one day. Four commits exist only to retract the mechanism claimed in an earlier commit (271228e, 2500b30, 6d3074d, 7c23983)."
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "recommit- recursion churn starved apply",
+   "where": "12e7611 (07-27)",
+   "tried": "Stop ingesting compose-report artifacts as proposals.",
+   "outcome": "partial",
+   "date": "2026-07-27",
+   "evidence": "1588 compose-reports vs 85 real proposals (~97% churn). 81/28/15/7/2 recommit depths. Chains up to depth 13 appear in landed gap ids."
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "-narrowed child gaps",
+   "where": "5697f70 (substrate) reverted 3434f3e; 449949c (07-29)",
+   "tried": "Give the narrowed child an id so chronic-failure escalation fires.",
+   "outcome": "failed",
+   "date": "2026-07-29",
+   "evidence": "The -narrowed child re-landed the reverted 404 dep repair (9a34712). Memory 09-22: -narrowed = verbatim duplicate."
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Dedup and penalty persistence attempts",
+   "where": "c214385, c8be5b1 (06-14), 486022e, 5f17869, cefddf5, c8a377d (06-30), bc6daac (07-21)",
+   "tried": "Class dedup, content-hash sentinels, TTL, preserve failed_attempts across re-emission, per-gap cooldown.",
+   "outcome": "partial",
+   "date": "2026-06-14..2026-07-21",
+   "evidence": "ff04a17: route-edit-62939765 re-applied 4x. service-failure-model-reality-audit landed twice."
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Category-level self-knowledge deprioritises classes with 0 lands",
+   "where": "d1bb37a, 8a1a761, 7833b6a (06-29..30), e78f8da, eb450e4",
+   "tried": "Deprioritise categories with >=8 attempts and 0 lands, add a mispredict penalty, rank gaps by landability.",
+   "outcome": "superseded",
+   "date": "2026-06-30",
+   "evidence": "Origin of the class-posterior seal (memory 09-22 'seal permanent'). eb450e4 prefers classes that 'land' (orphaned_capability). 143212a: blockingWeight had the wrong sign."
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Grounding / anchor / region localization series",
+   "where": "24e4dc0, a5680c0, 1f9fa12 (07-22); 83bb498, 31fb735, 15c611e (07-31); 12 region commits (08-07); ~16 grounding/anchor commits (08-10..11)",
+   "tried": "Probe mining, verbatim probes, site-centred windows, uniqueness-checked anchors, indexed anchor pick.",
+   "outcome": "partial",
+   "date": "2026-07-22..2026-08-11",
+   "evidence": "78ba658: 'uniqueness, which measured backwards'. 6060ab7's mechanism was retracted in 6d3074d."
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Drafter model pinning reintroduced at least 3 times",
+   "where": "568d483 (env), a6ee84b (DeepSeek), 5273bfa (sonnet-5), 47096a7, b0435f4, beec282, fd144a7",
+   "tried": "Restore shaped 'auto' model selection.",
+   "outcome": "partial",
+   "date": "2026-07-11..2026-07-31",
+   "evidence": "47096a7 'pass auto, not a hardcoded literal (law 1)'."
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Compose concurrency and capacity slots",
+   "where": "8ec501b (07-16), 6ad3721, 68a26de, 84712c5, 070f71e, 36dd9b7, 5f965b8, bf7fac0 (08-10..11)",
+   "tried": "Worktree isolation, then a cross-process cap with a directed-goal reservation and BUSY semantics.",
+   "outcome": "worked",
+   "date": "2026-08-10",
+   "evidence": "36dd9b7 'REFUSED does not queue, it dies'. feature_compose now 1949 runs/7d at 19.6% ok, $30.87."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Mechanisms discovered never to have run",
+   "where": "2a8ebf5, 5dcfc60, 3a6018f, 5a25f9c, b8feccd, 69d6a21, ff04a17, c0b665e, 530c1e9, 06fabe9, 6712946",
+   "tried": "Instance repair when found.",
+   "outcome": "partial",
+   "date": "2026-07-30..2026-08-12",
+   "evidence": "3a6018f: every seed validation block is decorative. b8feccd: 154/157 composable gaps had no live lane."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "June meta-detector explosion (detectors over detectors)",
+   "where": "3ccaebc, 813e864, a90ebee, ab2e058, a0f1a0a, 851cadc, 854127b, 1edf11f, 8daf031, 16a6cc9 (06-13..19)",
+   "tried": "Recursive self-detection and detector authoring.",
+   "outcome": "dormant",
+   "date": "2026-06-13",
+   "evidence": "Still firing today: 1,948 detect-* runs/7d, mostly per-instance detect-unclassified_failure_*. detector-meta-tick 107/7d."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Three parallel landing paths hardened separately",
+   "where": "apply_proposal_as_patch (b5001aa 06-04), patch_with_tools (c70b8d3 06-12), feature_compose (d8c982a 06-20); 44bcffd, e1f3656",
+   "tried": "Unify path-2 onto the static gate and add a location check to the second route.",
+   "outcome": "partial",
+   "date": "2026-07-29..2026-08-07",
+   "evidence": "e1f3656: 'the second landing route had no location check at all'."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Cruft sweep",
+   "where": "b306a58, 2e10d6a, 25f0b99, 1615970 (08-06), 500c1d1, 76383da, d86a4e4",
+   "tried": "Delete unwired scaffolds, llmCall_OLD, orphan resolvers.",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "evidence": "Three of the deleted files were July substrate mints."
+  },
+  {
+   "key": "memory-recall",
+   "title": "memoryNote write and recall defects",
+   "where": "9790c2f (07-26), 7761f47, 5dc8ab8 (08-06), abead92, 0b5b279 (08-09)",
+   "tried": "Tolerant intake, refuse blanking writes, use-time WORKSPACE_ROOT, fix the principle-search filter and AND semantics.",
+   "outcome": "partial",
+   "date": "2026-08-09",
+   "evidence": "An empty write could blank a good note. The principle search matched nothing for a 400-char spec. Memory 09-22 split store again."
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Test suite wrote to the real memory store",
+   "where": "5dc8ab8 (08-06)",
+   "tried": "Read WORKSPACE_ROOT at use time.",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "evidence": "The suite was self-poisoning run over run ('created' then 'updated')."
+  },
+  {
+   "key": "selection-learning",
+   "title": "State signature revised five times",
+   "where": "3cd263d, 2bd15d4, e69a5df, df92d5e, c4d075a, 59c9d83 (06-01..07-10)",
+   "tried": "Bucket, coarsen, and add activity-class and rhythm axes so posteriors accumulate.",
+   "outcome": "unknown",
+   "date": "2026-06-04..2026-07-10"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Reuse-before-mint at the mint chokepoint",
+   "where": "407e3ed (06-21 shadow), 900bc69 (06-26 enforce), 7148d37 (07-12 substrate loosened it)",
+   "tried": "Query discover-by-shapes before minting a Beta(1,1) cell.",
+   "outcome": "partial",
+   "date": "2026-06-26",
+   "evidence": "The off/shadow env override remains. The substrate loosened the gate for its own detector mints."
+  },
+  {
+   "key": "env-gating",
+   "title": "Behaviour behind env vars",
+   "where": "230093a MITOSIS_HOST_SYNC_MODE, 568d483 SELF_DEV_LLM_MODEL, 900bc69 REUSE_BEFORE_MINT, 6358937 EXTRA_WORKSPACE_ROOTS, 30bbe40 DEV_OPERATOR_PRESENT",
+   "tried": "Partially moved to discovery / 'auto'.",
+   "outcome": "partial",
+   "evidence": "gap-env-gated-write-allowlist was 'closed' twice by inert renames (69d680b, bafd83d)."
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Human complaint falsely closed by commit-mention evidence",
+   "where": "77cf692, 018fd05, fd601c2, b90cdcf (08-07)",
+   "tried": "Revert-aware closure, judge by the complainant, weight human reports.",
+   "outcome": "partial",
+   "date": "2026-08-07",
+   "evidence": "The UI complaint closed 5 seconds after every pick, three reopens in a row."
+  }
+ ],
+ "problems": [
+  {
+   "key": "false-verification",
+   "symptom": "Gaps close, or landings go FAVORABLE, on indirect signals (commit mentions gap, exit status, declared shape, reachable:true) while the condition persists",
+   "first_seen": "2026-06-23",
+   "last_seen": "2026-08-14",
+   "recurrences": 20,
+   "root_cause": "Verdicts read provenance or proxy signals instead of measuring the named outcome. Duplicated check copies let an unfixed copy decide."
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Comment-only, stub, console.log or unused-binding commits land green. 108/872 autonomous commits are comment-only.",
+   "first_seen": "2026-06-19",
+   "last_seen": "2026-08-12",
+   "recurrences": 11,
+   "root_cause": "Gates are per surface form, with no behavioural-delta oracle. The drafter optimises for a provable change over the requested change."
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Producer writes a path/field the consumer never reads (gap store, quiesce marker, verification_outcome, file_path, declared shape)",
+   "first_seen": "2026-05-30",
+   "last_seen": "2026-08-11",
+   "recurrences": 9,
+   "root_cause": "State location resolved independently per call site (WORKSPACE_ROOT vs literals). No shared accessor and no reader-exists check."
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Hardcoded loopback/ports/nonexistent routes; LLM failover pinned to one URL; spokes refuse hub-owned calls",
+   "first_seen": "2026-05-22",
+   "last_seen": "2026-08-13",
+   "recurrences": 15,
+   "root_cause": "llmCall/discovery failover reimplemented per file. The drafter confabulates endpoints and sees env-default literals as idiom."
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings delete 2969 lines, inject placeholders at byte 0, crash-loop the vessel, break package deps",
+   "first_seen": "2026-06-30",
+   "last_seen": "2026-08-12",
+   "recurrences": 10,
+   "root_cause": "The drafter edits its own source (192 autonomous edits to feature-compose.ts). Gates were blind, which makes the corruption self-sealing."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Mitosis pending-lock livelocks and orphaned locks freeze pull-sync; self-restarts kill in-flight composes",
+   "first_seen": "2026-06-19",
+   "last_seen": "2026-08-11",
+   "recurrences": 12,
+   "root_cause": "Many terminal exits of the cutover path; a single global lease; runtime /vessels mirror diverges from origin."
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "recommit-/narrowed children re-file the same failure (depth up to 13); the same gap is re-landed 2-4x",
+   "first_seen": "2026-06-14",
+   "last_seen": "2026-08-12",
+   "recurrences": 8,
+   "root_cause": "Failure re-files as a new identity; penalties reset; closure never recorded for route-edit landings."
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes reverted the same day or oscillating; four commits retract earlier claimed mechanisms",
+   "first_seen": "2026-05-26",
+   "last_seen": "2026-08-11",
+   "recurrences": 10,
+   "root_cause": "Fixes are proclaimed without a pre-registered falsifier measured on the consuming layer."
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Escalations, reconcile, watchdogs, validation blocks and gates found never to have run",
+   "first_seen": "2026-07-08",
+   "last_seen": "2026-08-12",
+   "recurrences": 12,
+   "root_cause": "Mechanisms are validated at authoring, not proven to complete in production. A silent catch reads as a pass."
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Classes with 0 lands deprioritised; selection favours classes that land easily",
+   "first_seen": "2026-06-29",
+   "last_seen": "2026-08-06",
+   "recurrences": 4,
+   "root_cause": "Landability posteriors reward the easy/hollow classes and suppress hard classes indefinitely."
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Edits land in the wrong region, anchors mis-located, invented paths/URLs, model pinned",
+   "first_seen": "2026-05-28",
+   "last_seen": "2026-08-11",
+   "recurrences": 40,
+   "root_cause": "Information starvation at draft time (law 8). Localization rebuilt heuristically many times."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Three landing paths, duplicated llmCall/failover, 60+ single-reference autonomous resolvers, June tick fossils still running at high volume",
+   "first_seen": "2026-06-04",
+   "last_seen": "2026-08-08",
+   "recurrences": 6,
+   "root_cause": "Mint-new over consolidate. No retirement path for templates and ticks."
+  },
+  {
+   "key": "gap-content",
+   "symptom": "239 landings with no gap id; 0/360 gaps with file_path; 0/30 landed closures with a checkable predicate",
+   "first_seen": "2026-06-23",
+   "last_seen": "2026-08-14",
+   "recurrences": 6,
+   "root_cause": "Gaps born without an edit site or machine check."
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Memory notes blanked/split, lesson recall returns zero rows",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-08-10",
+   "recurrences": 5,
+   "root_cause": "The prose lesson corpus vs the code spec query mismatch; the store path frozen at import."
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Test suite writes into the real memory store; tracked runtime files cause host-sync rejects",
+   "first_seen": "2026-06-05",
+   "last_seen": "2026-08-09",
+   "recurrences": 3,
+   "root_cause": "Config frozen at import; runtime state tracked in git."
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "feature_compose drafter",
+   "location": "src/resolvers/feature-compose.ts (d8c982a 06-20)",
+   "purpose": "General code-edit composer for edit-intent goals",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1,949 runs/7d, 382 ok (19.6%), $30.87. Self-edited 192x by the substrate."
+  },
+  {
+   "name": "vessel_mitosis_cutover + mitosis-tick",
+   "location": "src/resolvers/vessel-mitosis-cutover.ts (689cf99 06-02)",
+   "purpose": "Stage, gate, commit, push and deploy landings",
+   "status": "live-used",
+   "general": true,
+   "evidence": "589 cutovers/7d (66% ok). mitosis-tick 7,874/7d. Pending lock fixed at least 6x."
+  },
+  {
+   "name": "apply_proposal_as_patch",
+   "location": "src/resolvers/apply-proposal-as-patch.ts (b5001aa 06-04)",
+   "purpose": "Landing path 1: drafter proposal to staged mitosis",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "feature_compose landing",
+   "evidence": "44bcffd had to unify it onto the hardened gate."
+  },
+  {
+   "name": "patch_with_tools",
+   "location": "src/resolvers/patch-with-tools.ts (c70b8d3 06-12)",
+   "purpose": "Landing path 2: tool-using patcher",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "feature_compose",
+   "evidence": "Its escalation never ran until 2a8ebf5 (08-10). e1f3656: no location check."
+  },
+  {
+   "name": "gap-to-scenario-bridge-tick",
+   "location": "src/resolvers/gap-to-scenario-bridge.ts (492dd88 06-04)",
+   "purpose": "Bridge gaps to drafter scenarios",
+   "status": "fossil",
+   "general": false,
+   "evidence": "17,969 runs/7d at ~100% 'success' with no visible output. A June-era path still dominates trace volume."
+  },
+  {
+   "name": "dispatch-latest-auto-draft / proposed_pattern_authored_*",
+   "location": "src/seed (V24, 06-08); draft-activity-from-pattern outputs",
+   "purpose": "June drafter chain and its authored templates",
+   "status": "fossil",
+   "general": false,
+   "evidence": "1,711 plus 1,554 runs/7d."
+  },
+  {
+   "name": "landedCommitVerdict / close-oracle with earned trust",
+   "location": "src/resolvers/gap-to-feature.ts (c871a45, 980135a 08-14)",
+   "purpose": "Grade gap closure on measurement; abstain and escalate on provenance-only evidence",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Replaced 3 duplicated Class-3 blocks. Baseline false_closes 8/8."
+  },
+  {
+   "name": "sweepPendingLandVerifications",
+   "location": "gap-to-feature.ts (ff04a17 07-30)",
+   "purpose": "Close deferred self-cutover landings",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Memory 09-26: the pending_outcome_verification clear does not stick."
+  },
+  {
+   "name": "revert-aware history check (shaWasRevertedInAnyClone)",
+   "location": "gap-to-feature.ts (77cf692, 271228e)",
+   "purpose": "A reverted land is not a land",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "vacuous-edit / hollow gates",
+   "location": "src/vacuous-edit.ts, feature-compose.ts (f960423..06fabe9)",
+   "purpose": "Refuse inert edits by surface form",
+   "status": "live-used",
+   "general": false,
+   "evidence": "At least 9 per-form gates. 06fabe9 was inert on arrival."
+  },
+  {
+   "name": "test-delta landing gate",
+   "location": "mitosis static eval (c0b665e, 41bde26, 25cd735)",
+   "purpose": "Refuse landings that introduce test failures",
+   "status": "broken",
+   "general": true,
+   "evidence": "Fixed 08-09. Dead again 08-31..09-28 per memory (shell 30s kill)."
+  },
+  {
+   "name": "drafter-corruption / non-LLM llmCall refusal",
+   "location": "35c6b33, 93b18ba (08-02)",
+   "purpose": "Stop self-sealing drafter corruption",
+   "status": "live-used",
+   "general": false
+  },
+  {
+   "name": "compose slots capacity cap",
+   "location": "src/compose-slots.ts (6ad3721..5f965b8 08-10)",
+   "purpose": "Cross-process concurrency cap with directed reservation",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "quiesce / drain admission",
+   "location": "src/quiesce, long-running.ts (a0e6692 08-11)",
+   "purpose": "Close admission instead of restarting into live work",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "maintenanceLease",
+   "location": "src/resolvers/maintenance-lease.ts (9674cb8 07-08)",
+   "purpose": "Global change-window mutex",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Self-deadlocked 08-01 (3f4be28)."
+  },
+  {
+   "name": "trace-store-reconcile",
+   "location": "src/trace-store-reconcile.ts + seed (9674cb8)",
+   "purpose": "Self-managed DB reconciliation",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Could never run 07-08..08-09 (5dcfc60)."
+  },
+  {
+   "name": "reuse-before-mint",
+   "location": "activity-create-variant.ts (407e3ed, 900bc69)",
+   "purpose": "Reuse an existing producer before minting",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Env override remains. Loosened by the substrate on 07-12 (7148d37)."
+  },
+  {
+   "name": "Seam 3 net-new resolver authoring",
+   "location": "5e2dbe7 (06-19); config.ts allowlist",
+   "purpose": "Substrate authors new resolvers",
+   "status": "broken",
+   "general": true,
+   "evidence": "70 July mints. Nonexistent endpoints. 5 deleted as cruft. 60+ single-reference."
+  },
+  {
+   "name": "Seam 1 generative frontier",
+   "location": "9d7208a (06-19)",
+   "purpose": "Spectral-headroom-gated generative gap source",
+   "status": "unknown",
+   "general": true,
+   "evidence": "No journal hits in 24h."
+  },
+  {
+   "name": "June meta-detectors (detector_meta_scan, selector-saturation, detector-authoring recursion)",
+   "location": "06-13..06-19 commits",
+   "purpose": "Self-detection of detector health",
+   "status": "live-used",
+   "general": false,
+   "evidence": "1,948 detect-* runs/7d, mostly per-instance detect-unclassified_failure_* \u2014 bloat."
+  },
+  {
+   "name": "compose_topology_tick / author_producer / author_composed_capability",
+   "location": "71ad11e, aaee339, df174db (06-19..27)",
+   "purpose": "Composition-edge formation and bridge authoring",
+   "status": "unknown",
+   "general": true,
+   "evidence": "compose-auto-bridge-* runs in the hundreds/7d. author_* not seen in the 24h journal."
+  },
+  {
+   "name": "llmCall failover via discovery",
+   "location": "feature-compose.ts, patch-with-tools.ts, llm-completion-dispatch.ts",
+   "purpose": "Reach LLM arms across federation",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "Reimplemented per file. c3194ee fixed 'all four llmCall sites'."
+  },
+  {
+   "name": "state signature",
+   "location": "src/resolvers/compute-state-signature.ts",
+   "purpose": "Context for Thompson selection",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Revised 5x."
+  },
+  {
+   "name": "docs_align_scan / doc_drift_fix",
+   "location": "ad5f7c0, 729af75",
+   "purpose": "Docs-reality alignment",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Not seen in 24h journal."
+  },
+  {
+   "name": "maintenance parity-gate + seam-extraction",
+   "location": "src/maintenance (2c18203, 652fc1a 07-16)",
+   "purpose": "Behaviour-neutral refactor verification",
+   "status": "unknown",
+   "general": true,
+   "evidence": "spliceability.ts (a substrate sibling) has 0 refs."
+  },
+  {
+   "name": "reachable_unlearned_probe",
+   "location": "6c3448e reverted 9e99f11 (05-26)",
+   "purpose": "Recommend-to-execute probe",
+   "status": "fossil",
+   "general": false
+  }
+ ],
+ "principles": [
+  "A reverted land is not a land; git is append-only, so presence-in-history is never proof of outcome (77cf692, 018fd05)",
+  "Duplicated logic means a fix applied to one site is not a fix (0497d9d)",
+  "Close on measured 'absent', abstain on everything else; provenance is not measurement; trust is earned, and Beta(1,1) must not earn it (980135a)",
+  "A template's declaration is not evidence the shape was produced: advertised != demonstrated (83f3adc)",
+  "The gate cannot observe an install it never performs; a write that succeeds is not an edit; verify the rollback, do not trust the writer (956e464, 93d7596, 1abc4ff)",
+  "Drafter corruption is self-sealing: the edit mechanism must be protected by refusal gates (4fc14ab, 35c6b33)",
+  "Uniqueness is not location; a mention is not a declaration (6060ab7, d7c9177, fca1022)",
+  "Capacity refusal must be BUSY \u2014 REFUSED does not queue, it dies (36dd9b7)",
+  "Quiesce admission instead of restarting into live work; a destroyed run erases the learning signal (a0e6692)",
+  "Search for the defect's literal form, not the correct accessor, when hunting a class (267900a)",
+  "A detector must ask whether the thing can work, not whether it is up (d5faf3f)",
+  "Reuse-before-mint at the single mint chokepoint, so that lambda1 >= rho_grow (407e3ed, 900bc69)",
+  "Generative gap sources must be headroom-gated (9d7208a)",
+  "Operator fixes committed under the Substrate Autonomous identity (e.g. 2cfc6b0, 9019cbd, 0c96b99, d26a303) contaminate the autonomy criterion; never commit operator work under the substrate identity"
+ ]
+}

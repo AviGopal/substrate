@@ -1,0 +1,259 @@
+{
+ "source": "openspec-5",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/openspec-5.md",
+ "coverage": "openspec/changes listing entries 73-90: 2026-07-19-relay-findability-replication (proposal), 2026-07-19-vessel-duplicate-genres (proposal/design/tasks), 2026-07-29-thompson-posterior-time-decay (proposal/tasks), 2026-08-14-sound-close-oracle-reland (proposal), 2026-08-16-my-http-response-resolver.{ts,js,js.map,d.ts,d.ts.map}, 2026-08-16-route-edit-9077062c-author-my-resolver.json, 8 x 2026-08-17 goal-summary JSONs incl. add-summarize-goals-activity/ dir. Also read the 9 adjacent 2026-08-17 goal-summary JSONs (next shard) for context. Live checks: grep in host repos/ submodules and substrate-live /workspace/git/vessels; commit logs of activity-api, development-vessel, discovery-vessel; grep of live gap store for goal_summary. Not done: authenticated live registry query for declared distribution_policy (auth failed), bootstrap loopback check, compose2-live.",
+ "attempts": [
+  {
+   "key": "federation-p2p",
+   "title": "Relay findability via registration replication",
+   "where": "openspec/changes/2026-07-19-relay-findability-replication/proposal.md; discovery-vessel/src/index.ts:62,104; libp2p-federation-transport/src/sidecar.ts:148-160; gen-env.sh:960-968",
+   "date": "2026-07-19",
+   "tried": "Proposed replicate-on-register (LWW, TTL), loud reservation loss, honest /bootstrap (no loopback anchors), hub-side PEER_DISCOVERY wiring; operator ratified direct==punchthrough",
+   "outcome": "dormant",
+   "evidence": "No tasks.md; registration replication never built \u2014 discovery still only resolve-time forwardToPeers gated by env PEER_DISCOVERY_ENDPOINTS (empty on hub by default). Relay redial on empty circuit exists but logs only, no gap signal."
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Vessel duplicate-handling genres (duplicate_policy)",
+   "where": "openspec/changes/2026-07-19-vessel-duplicate-genres; discovery-vessel 6ab2e24 (2026-07-31) types.ts:77-96; goal-host satisfier-pick.ts:40-55",
+   "date": "2026-07-19",
+   "tried": "6-genre shape-visible policy honored by discovery /resolve instead of candidates[0]; retire _fedTargetVessel pin, identity split-brain, goal-host-only LLM selection; data-driven LLM arms",
+   "outcome": "partial",
+   "evidence": "Built as distribution_policy (6ab2e24) + satisfier-pick honors it, but tasks.md 0/19 checked; no vessel except obsidian federation-sidecar declares a policy, vessels.inventory.json has no genre, _fedTargetVessel 'concept-db-local' literal still at obsidian-vessel/src/concept-db-client.ts:484"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Thompson posterior time-decay (3-day half-life)",
+   "where": "activity-api 1b0c693 (2026-07-30); openspec/changes/2026-07-29-thompson-posterior-time-decay",
+   "date": "2026-07-30",
+   "tried": "Exponential decay toward (1,1) at read and write, half-life 3d copied from llm-resolver-vessel decayedCounts",
+   "outcome": "reverted",
+   "evidence": "99ae266 (2026-08-22): decay annihilated 95.4% of evidence over 1,821 arms, median retained 0.0002% \u2014 learning did not compound for ~3 weeks; sweep of 15 half-lives showed no value satisfying both goals"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Abstain on environmental failure + 30d shaped half-life",
+   "where": "activity-api 2ededef (2026-08-22); posterior-update.ts:895-972,1238",
+   "date": "2026-08-22",
+   "tried": "execution_error carries reason; computeDeltas beta+=0 on transport/availability failure; half-life 30d via substrate_tuning_param THOMPSON_DECAY_HALFLIFE_DAYS",
+   "outcome": "worked",
+   "evidence": "Live code; residual 32/509 arms still poisoned (auth_resolve_v1 beta=399,770); decay logic duplicated in TS and SurrealQL despite proposal saying avoid SQL-vs-TS drift; retirement reversibility never addressed"
+  },
+  {
+   "key": "false-verification",
+   "title": "Sound the close-oracle: re-landed commit is not condition-absent",
+   "where": "development-vessel c871a45, 25a1dfb, 4b1f862 (2026-08-14); gap-to-feature.ts:2461 landedCommitVerdict",
+   "date": "2026-08-14",
+   "tried": "Centralize 3 duplicated Class-3 blocks; count non-reverted gap-naming commits: 0 null, 1 absent, >=2 present",
+   "outcome": "superseded",
+   "evidence": "Later rewritten: 1 commit -> 'pending' (provenance not measurement), because '1 -> absent' was the same bafd83d inert-diff hole. 2026-08-23 bug: revert(scope): subject counted as 2nd landing closed a gap as already_resolved (fixed). Current query uses --since=14.days so re-lands >14d apart look like first landings."
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Author simple httpResponse resolver (route-edit-9077062c)",
+   "where": "openspec/changes/2026-08-16-my-http-response-resolver.ts + route-edit-9077062c JSON",
+   "date": "2026-08-16",
+   "tried": "Substrate drafted replace_file of repos/development-vessel/src/resolvers/http-response.ts importing invented package @quilt/resolver",
+   "outcome": "failed",
+   "evidence": "Never landed in vessel; written as stray file into openspec/changes; committed by drift auto-commit 4e4170a8 (09-07), then tsc emitted .js/.d.ts committed by 796fac89 (09-19)"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "~17 draft plans to close orphaned-capability-goal_summary",
+   "where": "openspec/changes/2026-08-17-*goal-summary*.json, 2026-08-17-add-summarize-goals-activity/proposal.json",
+   "date": "2026-08-17",
+   "tried": "Add summarize-goals activity (4 copies), register shape (already registered config.ts:764), file_create whole impulses.ts/config.ts/types.ts (clobbers), placeholder zero resolver (real one existed since dc18b62 07-01), and same-day opposite delete/remove plans",
+   "outcome": "failed",
+   "evidence": "src/activities/summarize-goals.ts does not exist; gap orphaned-capability-goal_summary still open, re-detected 2026-09-26 with reopen_count 0, falsifier none; sibling unreachable_producer gap on same shape also open"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Drift auto-commit of working-tree residue into super-repo",
+   "where": "super-repo commits 4e4170a8 (2026-09-07), 796fac89 (2026-09-19)",
+   "date": "2026-09-07",
+   "tried": "Autonomous 'vessel code drift detected and committed' / 'vessel-code-commit-and-push cpg-inference-ts' activity commits everything in tree",
+   "outcome": "failed",
+   "evidence": "Committed elements.html 3,270 lines, generate_report.js 6,234 lines, neptune_moons.txt, my_probe.txt, compose-slots, interactor-log jsonl, and all openspec stray JSON/JS in this shard"
+  }
+ ],
+ "problems": [
+  {
+   "key": "gap-content",
+   "symptom": "orphaned-capability-goal_summary open 6+ weeks; \u226517 draft remedies (add and delete) on 2026-08-17; re-detected 2026-09-26 with reopen_count 0 and falsifier none",
+   "root_cause": "Gap born without machine check; detector claims 'no file outside tests references goal_summary' (false: config.ts:764, routes/impulses.ts:952) and prescribes mint, while the sibling unreachable_producer gap shows the real issue is unproducible inputs (activity_metrics, goal); re-detection resets history so prior attempts are invisible",
+   "first_seen": "2026-07-01",
+   "last_seen": "2026-09-26",
+   "recurrences": 3
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Stray system-written JSON/TS/JS/d.ts files in openspec/changes (18 in this shard alone)",
+   "root_cause": "Drafter output written to a path nobody consumes; blanket drift auto-commit tracks the working tree; tsc run with root tsconfig emits .js next to strays; pre-commit dir allowlist does not police contents of allowed dirs",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-19",
+   "recurrences": 2
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafts import invented packages (@quilt/resolver, @function-llama/substrate-client), use file_create to clobber whole existing files, use absolute /workspace paths, mix 5 incompatible change formats",
+   "root_cause": "No single change-artifact contract or schema available to the drafter at use time; no existence check on imports/targets before emitting",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-08-17",
+   "recurrences": 2
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gaps closed landed_verified by commits that only name the gap id (bafd83d rename left WRITE_ALLOWLIST env read intact); revert commits counted as landings; 14-day window hides slow re-lands",
+   "root_cause": "Producer-authored strings (commit message) treated as measurement of the referent; verdict logic duplicated at 3 sites",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-08-23",
+   "recurrences": 3
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Poisoned posteriors from transient outages suppress templates forever; then 3-day decay erased 95.4% of learned evidence so learning did not compound",
+   "root_cause": "Outage failures recorded as arm blame; a constant tuned for high-frequency LLM arms copied to week-cycle templates",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-08-22",
+   "recurrences": 2
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "Hub-star findability; lost relay reservation silently blanks remote presence; hub has no resolve fan-out; bootstrap can hand out loopback anchors",
+   "root_cause": "Registry is single-replica in-memory with no replication; peer wiring is env-gated per node",
+   "first_seen": "2026-07-19",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "distribution_policy genre routing built in discovery and goal-host but almost no vessel declares a policy; all default stateless",
+   "root_cause": "Keystone config task (inventory genre stamp) never done; tasks.md never updated after 6ab2e24 landed",
+   "first_seen": "2026-07-31",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "_fedTargetVessel 'concept-db-local' literal pin and PEER_DISCOVERY_ENDPOINTS env still steer routing",
+   "root_cause": "Proposed retirement tasks T14 and hub wiring never executed",
+   "first_seen": "2026-07-19",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "openspec tasks.md files show 0 checked for changes that partly/fully landed (duplicate-genres, posterior decay)",
+   "root_cause": "No loop reconciles openspec task state with landed commits"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "distribution_policy genre routing",
+   "location": "discovery-vessel/src/types.ts:77-96, registry.ts:249, index.ts:233; goal-host-vessel/src/satisfier-pick.ts:40-55",
+   "purpose": "Producer-declared duplicate handling honored by discovery /resolve and walk satisfier pick",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Only obsidian-vessel/sidecar/federation-sidecar.ts declares a policy; inventory has no genre field"
+  },
+  {
+   "name": "Resolve-time peer discovery forwarding",
+   "location": "discovery-vessel/src/index.ts:62,104,228,274",
+   "purpose": "On local miss, fan resolve/capability query to PEER_DISCOVERY_ENDPOINTS",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Env-gated; defaults to HUB_DISCOVERY_URL so a hub has no fan-out"
+  },
+  {
+   "name": "Registration replication",
+   "location": "proposed in 2026-07-19-relay-findability-replication",
+   "purpose": "Make any dialed-in vessel findable by all peers",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Never built"
+  },
+  {
+   "name": "Relay phantom-reservation redial",
+   "location": "libp2p-federation-transport/src/sidecar.ts:148-160",
+   "purpose": "Redial relay when circuit empty or no circuit peers for 2 ticks",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Logs only; no gap signal"
+  },
+  {
+   "name": "Posterior time-decay with shaped half-life",
+   "location": "activity-api/src/lib/posterior-update.ts:895-972,1238",
+   "purpose": "Let posteriors poisoned in outages heal; half-life from substrate_tuning_param THOMPSON_DECAY_HALFLIFE_DAYS",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1b0c693, 99ae266, 2ededef; logic in both TS and SurrealQL"
+  },
+  {
+   "name": "Environmental-failure abstention in computeDeltas",
+   "location": "activity-api computeDeltas (2ededef)",
+   "purpose": "Do not blame arms for transport/availability failures",
+   "status": "live-used",
+   "general": true,
+   "evidence": "2ededef 2026-08-22"
+  },
+  {
+   "name": "landedCommitVerdict",
+   "location": "development-vessel/src/resolvers/gap-to-feature.ts:2461",
+   "purpose": "Single Class-3 close-oracle helper: count non-reverted gap-naming commits; 1=pending, >=2=present",
+   "status": "live-used",
+   "general": true,
+   "evidence": "5 call sites (1886,1981,2126,2153,2309); replaces 3 duplicated blocks"
+  },
+  {
+   "name": "Close-oracle per-class earned-trust posterior",
+   "location": "development-vessel gap-to-feature.ts (4b1f862)",
+   "purpose": "Fail-open close only for evidence classes that earned reliability",
+   "status": "live-used",
+   "general": true,
+   "evidence": "4b1f862 2026-08-14"
+  },
+  {
+   "name": "goal_summary resolver",
+   "location": "development-vessel/src/resolvers/goal-summary.ts; config.ts:764; routes/impulses.ts:952",
+   "purpose": "Substrate health/activity summary producer",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "0 invocations; orphaned-capability-goal_summary open 2026-09-26"
+  },
+  {
+   "name": "Drift auto-commit activity",
+   "location": "autonomous commits 4e4170a8, 796fac89",
+   "purpose": "Commit detected working-tree drift",
+   "status": "broken",
+   "general": true,
+   "evidence": "Commits residue (html, compiled js, probe txt, stray openspec JSON) into super-repo"
+  },
+  {
+   "name": "_fedTargetVessel literal pin",
+   "location": "obsidian-vessel/src/concept-db-client.ts:484; goal-host-vessel/src/index.ts:160",
+   "purpose": "Force concept shape to concept-db-local",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Band-aid slated for retirement by duplicate-genres T14; still present",
+   "duplicates_of": "distribution_policy stateful_data_owner_pin"
+  },
+  {
+   "name": "Stray goal-summary / http-response draft artifacts",
+   "location": "openspec/changes/2026-08-16-*, 2026-08-17-*.json",
+   "purpose": "Drafted change plans never applied",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Nothing reads them; delete"
+  }
+ ],
+ "principles": [
+  "Findability is a property of joining (replication), not of per-node peer wiring; findability != reachability (relay-findability proposal, 2026-07-19)",
+  "A direct connection is equivalent to a relay punchthrough; the relay is only a NAT fallback (operator ratified 2026-07-19)",
+  "Duplicate handling is a property of the producer's genre, declared as a shape; which duplicate serves stays learned (vessel-duplicate-genres design \u00a71)",
+  "Identity is the namespace boundary: same secret = replica, different secret = foreign namespace (duplicate-genres decision 1)",
+  "Per-caller failover/quota filtering is a forbidden band-aid; de-advertise is the producer's job, resolve through discovery (duplicate-genres T10 struck)",
+  "Decay and tuning parameters are runtime behaviour: shaped tuning rows, never frozen constants (thompson-decay tasks \u00a71; posterior-update.ts:930-958)",
+  "When one constant serves two incompatible jobs, dissolve the conflict at its source instead of trading (activity-api 2ededef)",
+  "A commit naming a gap is provenance, not measurement; only a measurement predicate may say 'absent' (gap-to-feature.ts landedCommitVerdict doc)",
+  "Certify closure against the referent's persistence signal, not a landed sha (sound-close-oracle-reland)",
+  "A fix applied to one site is not a fix: centralize duplicated verdict logic (sound-close-oracle-reland)",
+  "The substrate should express the full capability surface it advertises, preferring deterministic resolvers over LLM re-derivation (orphaned_capability_scan cite_principle)"
+ ]
+}

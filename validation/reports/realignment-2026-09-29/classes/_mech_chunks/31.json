@@ -1,0 +1,203 @@
+{
+ "area": "local-tools-vessel",
+ "items": [
+  {
+   "name": "replace_lines op",
+   "location": "feature-compose, patch-with-tools, local-tools",
+   "purpose": "line-range edits for large files",
+   "status": "live-used",
+   "general": true,
+   "evidence": "c86451f operator 08-25; 6cb5042 post-edit bytes",
+   "source": "openspec-7",
+   "mentions": 1,
+   "sources": [
+    "openspec-7"
+   ]
+  },
+  {
+   "name": "satisfier shellResult universal executor",
+   "location": "goal-host executorGuidance + local-tools-vessel sh()",
+   "purpose": "Execute synthesized shell commands for arbitrary goals",
+   "status": "live-used",
+   "general": true,
+   "evidence": "156/194 probe dispatches (08-08). CWD/env-fact defects; 30s timeout (6fb9282).",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "catastrophic truncation / fs_write refusal",
+   "location": "local-tools 0c50816",
+   "purpose": "Refuse whole-file truncation",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Refused real corruption on 08-04 and 08-07",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "SUBSTRATE_EXECUTION_ID env threading",
+   "location": "local-tools sh/bounded_shell/gitCommit",
+   "purpose": "attribute commits to executions (causal ledger)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "read by scripts/substrate/git-hooks-ledger/_record.sh and goal-host",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "failing-test measured gaps (test_suite requested_not_passing)",
+   "location": "local-tools test-suite + gap filing",
+   "purpose": "Measured, code-fixable supply",
+   "status": "live-used",
+   "general": true,
+   "evidence": "7 gaps 09-28; the first landings exposed stale tests; SATISFY-STALE-TEST lens added",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "fs_write primitive",
+   "location": "local-tools-vessel",
+   "purpose": "Write files.",
+   "status": "broken",
+   "general": true,
+   "evidence": "Relative path resolves to resolver cwd; whole-file fragment replace (08-08)",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "local-tools id-less shell request instrumentation",
+   "location": "local-tools-vessel",
+   "purpose": "Log pointer keys and caller when execution_id is missing",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Named the [type,command] sender, which led to 1b98343",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "mapPath",
+   "location": "local-tools-vessel",
+   "purpose": "map repos/ and bare paths to runtime and workspace roots",
+   "status": "live-used",
+   "general": true,
+   "duplicates_of": "analysis-vessel resolve-file-path.ts",
+   "evidence": "2aaa834, 44375c6",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "fs_edit/fs_write guards",
+   "location": "local-tools-vessel fsEdit/fsWrite",
+   "purpose": "make the drafter edit primitive safe",
+   "status": "live-used",
+   "general": true,
+   "evidence": "b42db41, 67a9e71, dded800, 52928b8, 6b0d86a",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "groupBounded / setsid process-group kill",
+   "location": "local-tools-vessel index.ts:68-101; mitosis 0fd7487",
+   "purpose": "kill whole spawned tree on timeout",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "a lesson re-learned at a second site",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "boundedShellResolver",
+   "location": "local-tools-vessel src/index.ts (c709850)",
+   "purpose": "second shell spawn site",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "sh()",
+   "evidence": "every shell fix applied twice",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "local-tools write guards",
+   "location": "local-tools-vessel src/index.ts fs_edit/fs_write (b42db41, 67a9e71); feature-compose create_file (c42410d)",
+   "purpose": "Refuse empty anchors, destructive overwrites/shrinks",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Caught 190,333->41 truncation live 08-02; guards disabled once target already damaged",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "groupBounded + /proc killtree + test-exec slot governor + caller timeout",
+   "location": "local-tools-vessel src/index.ts, test-exec-slots.ts",
+   "purpose": "bound every shell/verify command",
+   "status": "live-used",
+   "general": true,
+   "evidence": "MAX_TIMEOUT_SEC=900 live; e4d604c/44c2b21/791051e",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "__killtree + test-exec governor",
+   "location": "local-tools-vessel/src/index.ts, gap-to-feature.ts",
+   "purpose": "bound concurrent test suites, kill escaped descendants",
+   "status": "live-used",
+   "general": true,
+   "evidence": "__killtree present; governor symbol name not found by grep (possibly renamed)",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "local-tools on inventory spoke",
+   "location": "syzygy-local-inventory local-tools-vessel",
+   "purpose": "Shell/fs/git tools",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "Advertises shell, fs_write and gitCommitResult to the production hub from the laptop.",
+   "duplicates_of": "local-tools-vessel@syzygy-hub",
+   "source": "syzygy",
+   "mentions": 1,
+   "sources": [
+    "syzygy"
+   ]
+  }
+ ]
+}

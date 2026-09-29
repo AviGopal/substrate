@@ -1,0 +1,590 @@
+{
+ "source": "git-deployment",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/git-deployment.md",
+ "coverage": "Super-repo git history restricted to scripts/substrate (591 of 5,473 commits, 2026-05-23 \u2192 09-28), Dockerfile.substrate, scripts/git-hooks. Covered: add/delete cycles (--diff-filter A/D); full subject histories of substrate-pull-sync.sh, gen-env.sh, Makefile, self-recovery-tick.sh, setup-git-push.sh, apply-inventory.sh, entrypoint.sh, substrate-doctor.sh and the federation-relay files; full bodies of the key revert/prune/cleanup commits; git log -S on ~16 recurring identifiers; all 35 'Substrate Autonomous' super-repo commits; drift-commit commits in the in-container vessel clones (node 1). A caller scan for every non-compiled script (path-qualified, across scripts/.claude/.github/Dockerfile/units/packages/every repos/* tree, plus node-1 /etc/systemd and /usr/local/bin). Timer enablement and last result on both nodes. Read-only inspection of the host working-tree diff, the in-container super-repo clone status on both nodes, core.hooksPath and the git-push-setup journal. Summary only for repos/deployment (a gitignored helm/k8s clone, 1,014 commits, 03-28 \u2192 06-25). Two existing 09-28 reports cross-read: MECHANISM-AUDIT and WHY-THINGS-KEEP-BREAKING. Skipped: per-commit diffs of most of the 591 commits; the content and output of each of the ~40 timer scripts (I did not check whether their outputs have readers); vessel-repo histories except the drift-commit family; no DB queries.",
+ "attempts": [
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync content-hash/fingerprint coverage extended one artefact type at a time",
+   "where": "scripts/substrate/substrate-pull-sync.sh: 596fd717, 967e3d6e, cb28e450, 23ee216e, 392e1990, 5ddfc7e2, 7f97df70, 66cc9185, 31f15baf, 4bb21141",
+   "tried": "Make .json, .surql, units, selector, gen-env/secrets, timers (enable), scripts/ and declarations-only packages each deploy when changed",
+   "outcome": "partial",
+   "date": "2026-07-20..2026-09-28",
+   "evidence": "10+ separate fixes for the same 'changes of type X silently do not deploy' class; the fingerprint is still an allowlist"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync in-flight/drain guard before restart",
+   "where": "c5db6415, 887577bd, e22271bd, 25907d96, 3c86768c, 379ef9f4, ad535830, 25aad2cc, 73a3b54c, 85bc103c, fd3d6871",
+   "tried": "Defer vessel restarts while dispatches are in flight, then by quiesce, then by age of the oldest request",
+   "outcome": "partial",
+   "date": "2026-07-04..2026-09-24",
+   "evidence": "25aad2cc: 'quiesce wait outlived the unit, so it converged nothing'; 73a3b54c: 'a deferred restart was permanent \u2014 mirrored code was never loaded'"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "one dirty/masked vessel stops all convergence",
+   "where": "e8da4bfe, b0df07e3, cb5b0b24, 2e47b75e, 9d261470, 9333f0f7",
+   "tried": "Isolate per-vessel failures so one cannot block the others",
+   "outcome": "failed",
+   "date": "2026-08-01..2026-09-06",
+   "evidence": "On 09-28 node 2 has synced=0 because the cpg-inference-ts build fails (MECHANISM-AUDIT-2026-09-28)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync silent skip / silent failure",
+   "where": "65648ab5, 0b89a4ef, 24877839, 490b529d, 66cc9185",
+   "tried": "Stop swallowing failures; exit non-zero; log reasons",
+   "outcome": "failed",
+   "date": "2026-08-03..2026-09-24",
+   "evidence": "At 09-29 03:53Z node 2 pull-sync reports 'synced=0 skipped=0 failed=0' while its super-repo clone has vessels.inventory.json cut from 425 to 9 lines and learning-loop-selftest-tick.ts deleted"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "runtime-drift watchdog repair path",
+   "where": "63b48175 \u2192 bb217e5e (scripts/substrate/runtime-drift-tick.ts)",
+   "tried": "Second repairer that restores /vessels from the committed source",
+   "outcome": "reverted",
+   "date": "2026-09-13",
+   "evidence": "Duplicated pull-sync's mirror-to-live and raced it; a truncated grep ('| head -15') hid the existing caller; repair now defaults OFF behind RUNTIME_DRIFT_REPAIR"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "host-side sync pollers",
+   "where": "host-pull-sync.sh, host-sync-poller.sh (+units)",
+   "tried": "Host-side timers to pull and cut over mitosis changes",
+   "outcome": "superseded",
+   "date": "2026-06-04..2026-08-11",
+   "evidence": "Added 06-04/06-17, units deleted 06-25, re-added 06-26, all deleted 08-11 (a267367e)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "running image built from an uncommitted tree",
+   "where": "host working tree: Dockerfile.substrate, setup-git-push.sh, gen-env.sh, units/development-vessel*.service, Makefile",
+   "tried": "Ledger hooks installer, generic provider-secret carry, seed ordering and cutover lease wait, edited without commits",
+   "outcome": "unknown",
+   "date": "2026-09-25..2026-09-28",
+   "evidence": "HEAD has 0 occurrences of LEDGER_HOOKS in setup-git-push.sh and 0 of git-hooks-ledger in the Dockerfile, but the node-1 image installs them (journal 09-25 22:35Z). The uncommitted Makefile restores targets deleted by e375d716, and tasks.md 1.1\u20132.8 are un-ticked. All files share mtime 09-28 20:11:16"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "drift-commit family commits runtime state and residue into git",
+   "where": "super-repo 4e4170a8, e72a7fc8, 13c5d466, 796fac89, edc68d49; human-surface 877180a, 6a11bd6; concept-db 47bcd83; libp2p 542e712; discovery 799d574; development-vessel 9d839e0",
+   "tried": "Rhythm self-maintenance: detect vessel code drift, then commit and push everything",
+   "outcome": "failed",
+   "date": "2026-09-07..2026-09-28",
+   "evidence": "4e4170a8 committed 2,134 files, e72a7fc8 a 175,104-line tmp_gaps.json, 9d839e0 (09-28) 422 .bun cache binaries plus gaps.json and state; generator in dev-vessel rhythm-conductor-tick.ts:126; held 09-28 via the rhythm budget"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "operator cleanups of tracked residue",
+   "where": "8d3e57ce, bf56bffa, 1150750f, a009e1d9, d993b331, f90dda1a, dev-vessel 66ba773",
+   "tried": "Delete or untrack scratch files, orphan scripts and runtime snapshots",
+   "outcome": "reverted",
+   "date": "2026-08-02..2026-09-28",
+   "evidence": "Residue reappears because the generator is unchanged. Still tracked: 192 compiled files in scripts/substrate, 142 in packages/interaction-conformance, 220 in validation/scripts, 60 in openspec; root Substrate/ (68), leases/ (2), run_scan.js, history.txt"
+  },
+  {
+   "key": "false-verification",
+   "title": "super-repo placement gate installed in containers",
+   "where": "d993b331 (setup-git-push.sh) vs eca6bb44 plus the uncommitted core.hooksPath installer",
+   "tried": "setup-git-push installs .git/hooks/pre-commit running scripts/git-hooks/pre-commit",
+   "outcome": "failed",
+   "date": "2026-09-23..2026-09-26",
+   "evidence": "System core.hooksPath=/usr/local/share/substrate/git-hooks-ledger has no pre-commit, so git skips .git/hooks. edc68d49 (09-26 15:12Z) committed root leases/. Node-2 journal WARN 'placement gate INERT' has no reader; node 1 has no hook and logs nothing"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "prune scripts with no caller",
+   "where": "8d3e57ce (38 files), 1150750f (6), 008f3ab9 (63 Makefile targets and static LLM units), e375d716 (configure-local.sh, docker-compose.cluster.yml)",
+   "tried": "Enforce script retention by a caller search across planes",
+   "outcome": "partial",
+   "date": "2026-08-02..2026-09-23",
+   "evidence": "New orphans since then: identical-failure-run-tick.ts, performance-status.ts, autonomy-status.ts, warn-baseline-drift.sh, 4 DEPRECATED deploy shims, bootstrap-remote-google-arm.sh, gen-cluster-fixture.sh, 3 federation-relay clients"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "identical-failure-run detector",
+   "where": "scripts/substrate/identical-failure-run-tick.ts (a172e235)",
+   "tried": "Detect (activity, failure-class) runs past a bound with no gap naming them",
+   "outcome": "dormant",
+   "date": "2026-09-16",
+   "evidence": "First run: an auth activity failing 2,286 times in 24h, 30 runs over the bound. No unit and no caller; never scheduled"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "joint-liveness detector",
+   "where": "scripts/substrate/joint-liveness-tick.ts (daa2632c)",
+   "tried": "Detect write\u2192read joints going quiet",
+   "outcome": "partial",
+   "date": "2026-08-25",
+   "evidence": "Scheduled on the hub and green, but it has one binding (decision_outcome) and was never extended (WHY-THINGS-KEEP-BREAKING-2026-09-28)"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "per-model LLM arm units",
+   "where": "units/llm-resolver-{opus,haiku,google}.service (1ac0defe, ee8e46cc) \u2192 30ebe24b, 008f3ab9",
+   "tried": "Static unit per model, later a renderer",
+   "outcome": "superseded",
+   "date": "2026-07-03..2026-08-20",
+   "evidence": "'every arm shipped twice on one port, and half of them crash-looped invisibly'; static units deleted and replaced by render-llm-arms.sh and llm-arms.json"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "compose-topology cadence",
+   "where": "06c48140 \u2192 f1348751",
+   "tried": "Dedicated timer to drive the organic edge-former",
+   "outcome": "reverted",
+   "date": "2026-06-22",
+   "evidence": "Added and reverted the same day"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "local-tools read-only checkout drop-in",
+   "where": "9aa0b085 \u2192 6b238b63 (kept ae957b5e)",
+   "tried": "ReadOnlyPaths for super-repo checkouts, as both a drop-in and a unit edit",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "Duplicate drop-in reverted; the unit template is the single home; verified that a write under super-repo/repos fails 'Read-only file system'"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "bounded_shell wrote into super-repo checkouts",
+   "where": "local-tools 11636e6, goal-host 60833b4, ae957b5e",
+   "tried": "Move bounded_shell cwd to scratch; make checkouts read-only to local-tools",
+   "outcome": "partial",
+   "date": "2026-09-24..2026-09-25",
+   "evidence": "A second residue writer (not local-tools) was found 09-25 (c8a4bb4e). The node-1 clone now has 1,629 dirty entries, including literal '{{target_path}}' and '{{out_path}}' files"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "surgical-gap-scan endpoint+absolute-path detector",
+   "where": "da76f061 \u2192 807b92ef",
+   "tried": "Static host-timer scanner for resolve-URL joins",
+   "outcome": "reverted",
+   "date": "2026-09-28",
+   "evidence": "Duplicated open gaps and the trace-side oracle; 'belongs as a graded resolver like env_gate_scan, not a host timer script'"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "SurrealDB memory cap lowered fleet-wide",
+   "where": "e2ba1a69 \u2192 9df01220 (units/surrealdb.service)",
+   "tried": "MemoryHigh/Max 22G/26G \u2192 10G/12G",
+   "outcome": "reverted",
+   "date": "2026-08-17",
+   "evidence": "pull-sync converged the cap onto the hub and the kernel OOM-killed the production DB ('the cap WAS the OOM'); the sizing came from a workstation"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "trace retention delete batch=1",
+   "where": "a78fcfd7 \u2192 07e32d38 (gen-env.sh)",
+   "tried": "TRACE_RETENTION_DELETE_BATCH=1",
+   "outcome": "reverted",
+   "date": "2026-08-16",
+   "evidence": "320 queries in flight, p50 33.7s, load 13.4, row count did not fall"
+  },
+  {
+   "key": "node-locality",
+   "title": "pull-sync enables disabled timers",
+   "where": "7f97df70",
+   "tried": "Enable converged timers that is-enabled reports as 'disabled'",
+   "outcome": "partial",
+   "date": "2026-09-09",
+   "evidence": "On 09-26 12:56Z it enabled DB watchdogs on DB-less node 2, which failed 'Unable to connect'. Now compose-drift, joint-liveness, learning-loop-selftest and validator-liveness are masked-failed on node 2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "self-recovery 'immune system'",
+   "where": "scripts/substrate/self-recovery-tick.sh (6f5e1bdd \u2192 16 commits)",
+   "tried": "Auto-restart unhealthy vessels and SurrealDB",
+   "outcome": "partial",
+   "date": "2026-06-20..2026-09-16",
+   "evidence": "Repeatedly autoimmune: 92b1b1fa, fc143654, 44250006, 1d9190eb ('holding the door shut on the cure'), ad9da780 ('bound the recovery reflex')"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "phantom relay reservation",
+   "where": "federation-relay: 494a990e, ea5882bd, abf60661\u21929fa6bd81, 824609c6, 6ec65736\u21920a535483 (revert), cfad41db, 3dbbbeff",
+   "tried": "Watchdog, detection, self-heal, keep-alive, tick halving",
+   "outcome": "partial",
+   "date": "2026-07-25..2026-09-14",
+   "evidence": "cfad41db was called the 'root fix' (07-31); 3dbbbeff (09-14) says 'the phantom watchdog was manufacturing the outage it existed to catch'"
+  },
+  {
+   "key": "false-verification",
+   "title": "federation oracle",
+   "where": "federation-probe-tick.ts: a0c702bb and ~25 follow-ups (9834bd95, 26a53fe0, 015b31fa, e4fe46d1, 64dc1b8d\u2026)",
+   "tried": "Independent oracle for the overlay that files and closes gaps",
+   "outcome": "partial",
+   "date": "2026-09-11..2026-09-15",
+   "evidence": "A negative control that could not fail; an inflatable close rate; the oracle lived in the workspace it measures and was deleted by it"
+  },
+  {
+   "key": "env-gating",
+   "title": "env-var delivery bus defects",
+   "where": "gen-env.sh: 28f78545, fd9d1102, f32b2274, ae110fcd, fdd5503f, e31e28dd; uncommitted generic provider carry",
+   "tried": "Carry behaviour and config knobs through /etc/substrate/env",
+   "outcome": "partial",
+   "date": "2026-08-08..2026-09-28",
+   "evidence": "'seven variables had no working delivery path'; 'a comment in an unquoted heredoc ran as a command every boot'; SUBSTRATE_PUSH_VESSELS and GAP_STORE_ENDPOINT had not reached units until 09-26"
+  },
+  {
+   "key": "docs-drift",
+   "title": "unified install interface / launch manifest",
+   "where": "d8fed96f, e375d716, scripts/substrate/acceptance/",
+   "tried": "One manifest, named profiles, one deploy.sh, README install fences with an acceptance harness",
+   "outcome": "partial",
+   "date": "2026-09-23",
+   "evidence": "Tasks record the published-digest acceptance run and the one-gap check as pending. The host working tree un-ticks tasks and restores the deleted Makefile lanes"
+  },
+  {
+   "key": "docs-drift",
+   "title": "clean-clone docs audits",
+   "where": "6ebabec5, 16c9b46b, 92e5fb3a, 23042561, 1150750f",
+   "tried": "Follow the docs in a clean clone; correct what they assert",
+   "outcome": "partial",
+   "date": "2026-08-05..2026-08-21",
+   "evidence": "10 defects found, then 'building from source silently didn't build', then deleted .PHONY targets silently succeeding"
+  },
+  {
+   "key": "selection-learning",
+   "title": "docs-align timer to rhythm",
+   "where": "a87673e8",
+   "tried": "Retire the static timer; the rhythm family owns the job (law 5)",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "Timer and units deleted, rhythm family 'data-management' runs docs_align_tick. It is the only timer\u2192rhythm migration; about 40 static timers remain"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "single vessel-management surface",
+   "where": "008f3ab9 \u2192 25ee2162, 23042561, c809ffe5, 6c689441",
+   "tried": "vessel-ctl replaces ~40 Makefile targets; apply/drift verbs",
+   "outcome": "worked",
+   "date": "2026-08-20..2026-08-22",
+   "evidence": "Needed several follow-up fixes (five blockers, including one that disabled every LLM arm); vessel-ctl is live in the image today"
+  }
+ ],
+ "problems": [
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Deploy convergence silently fails to ship a change type, restarts the wrong units, blocks on one vessel, or skips in silence",
+   "root_cause": "pull-sync is a 1,777-line shell script whose deploy unit is an allowlist of artefact types and a hand-maintained unit\u2192source map. Each gap is found by an operator after the fact. Several parallel sync paths exist (pull-sync, mirror-to-live, runtime-drift repair, rhythm vessel-sync-and-health, cutovers)",
+   "first_seen": "2026-07-01",
+   "last_seen": "2026-09-29",
+   "recurrences": 65
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Autonomous commits sweep runtime state, scratch, compiled .js and cache binaries into git in the super-repo and vessel repos",
+   "root_cause": "The self-maintenance rhythm goal says 'commit and push' whatever the drift scan sees. Cleanups deleted its output but never changed the generator. The placement gate that should refuse root files is inert",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 11
+  },
+  {
+   "key": "false-verification",
+   "symptom": "The placement gate is declared installed (09-23) but refuses nothing; root leases/ was committed 09-26",
+   "root_cause": "The causal-attempt-ledger set the system core.hooksPath to a hooks dir without a pre-commit, so git ignores .git/hooks/pre-commit. The inert-gate WARN is only logged (node 2); node 1 is silent",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The live image contains changes absent from origin/dev (ledger hooks installer and Dockerfile COPY); the host tree carries a large uncommitted Makefile regression",
+   "root_cause": "Images are built from the operator's dirty working tree, so a fresh build from the repo does not reproduce the running system (law 11)",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-28",
+   "recurrences": 1
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Node 2's super-repo clone is damaged (inventory truncated, script deleted) while pull-sync reports clean; DB watchdogs were enabled on a DB-less node; two inventories disagree",
+   "root_cause": "Per-node clones and state are mutated by unidentified writers; pull-sync ignores uncommitted work; unit enablement is not profile-aware; apply-inventory and self-fact-reconcile read different inventory files",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 3
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Detectors built, verified once, then never scheduled or never extended (identical-failure-run-tick, joint-liveness with one binding)",
+   "root_cause": "Nothing asserts that a built detector keeps firing with coverage. The one detector for the 'same failure, nothing changed' class was never given a unit",
+   "first_seen": "2026-08-25",
+   "last_seen": "2026-09-28",
+   "recurrences": 2
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Scripts become orphans when the lane that called them is deleted (Makefile targets 08-20, deploy lanes 09-23); deprecated shims and temporary conduits persist",
+   "root_cause": "The retention rule runs as occasional operator prunes (08-02, 08-05), not as a continuous check; deletions do not follow the dependents of what they delete",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-28",
+   "recurrences": 4
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour knobs (MITOSIS_DIRECT_PUSH, TRACE_RETENTION_*, RUNTIME_DRIFT_REPAIR, CUTOVER_LEASE_WAIT_MS, ENABLED/DISABLED_VESSELS) live in gen-env and unit Environment; the env bus itself repeatedly loses or corrupts values",
+   "root_cause": "A new behaviour gets an env var instead of a shaped impulse. The 1,801-line gen-env has quoting, heredoc and carry-through defects that no instrument sees",
+   "first_seen": "2026-06-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 8
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes to fleet-wide deployment files regress other hosts or mechanisms (DB OOM, arms disabled, deploy loop wedged, placement gate disabled)",
+   "root_cause": "Changes are validated on one host or against their own motivating check. Shared unit and env files deploy to heterogeneous hosts via pull-sync with no cross-host or cross-mechanism check",
+   "first_seen": "2026-08-04",
+   "last_seen": "2026-09-26",
+   "recurrences": 9
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "Phantom relay reservations and one-directional partitions recur; the federation oracle's own checks were vacuous or self-destructive",
+   "root_cause": "The transport is a scripts-hosted vessel outside the submodule authoring loop, and each fix targets the observed instance",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-15",
+   "recurrences": 8
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "The self-recovery immune system restarts things that are healthy, starting, or under DB pressure (autoimmune)",
+   "root_cause": "Restart policy uses health probes that cannot tell a wedged vessel from a busy one; it was patched per incident",
+   "first_seen": "2026-06-30",
+   "last_seen": "2026-09-16",
+   "recurrences": 7
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Setup docs and Makefile targets claim behaviour that does not happen (silent .PHONY success, build-from-source did not build, false prerequisites)",
+   "root_cause": "Docs were verified by reading, not execution. The acceptance harness (09-23) exists but its end-to-end run on a published digest is still pending",
+   "first_seen": "2026-08-05",
+   "last_seen": "2026-09-28",
+   "recurrences": 5
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Untracked residue accumulates in in-container clones: 1,629 entries on node 1, including literal {{target_path}}/{{out_path}} files and 1,552 failure-mode scenarios",
+   "root_cause": "Walks, tests and LLM tool steps write with cwd or paths inside the super-repo clone. Unrendered template bindings are used as file paths. The drift-commit family later commits them",
+   "first_seen": "2026-09-13",
+   "last_seen": "2026-09-28",
+   "recurrences": 4
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "substrate-pull-sync",
+   "location": "scripts/substrate/substrate-pull-sync.sh + substrate-pull-sync.timer",
+   "purpose": "Converge live vessels and super-repo glue to origin/dev from in-container clones, behind a test gate",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Timers run on both nodes; 65 fix commits; on node 2 it reports clean over a damaged clone"
+  },
+  {
+   "name": "mirror-to-live",
+   "location": "scripts/substrate/mirror-to-live.sh",
+   "purpose": "Mirror a vessel clone into /vessels runtime",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Called by pull-sync, feature-compose.ts, patch-with-tools.ts, pull-cutover.ts, goal-host"
+  },
+  {
+   "name": "runtime-drift repair",
+   "location": "scripts/substrate/runtime-drift-tick.ts (RUNTIME_DRIFT_REPAIR)",
+   "purpose": "Restore /vessels from committed source",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "substrate-pull-sync + mirror-to-live",
+   "evidence": "bb217e5e set it default OFF; the detector half still runs"
+  },
+  {
+   "name": "rhythm vessel-sync-and-health",
+   "location": "repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts:127",
+   "purpose": "LLM-walked goal: ff clones, mirror to /vessels, restart, check health",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "substrate-pull-sync"
+  },
+  {
+   "name": "rhythm self-maintenance drift-commit",
+   "location": "repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts:126",
+   "purpose": "Detect vessel code drift and commit+push",
+   "status": "broken",
+   "general": false,
+   "evidence": "Produced 4e4170a8, e72a7fc8, 13c5d466, 796fac89, edc68d49 and 9d839e0 residue commits; held 09-28 via the rhythm budget"
+  },
+  {
+   "name": "host-pull-sync / host-sync-poller",
+   "location": "deleted (scripts/substrate/host-*.sh)",
+   "purpose": "Host-side sync and mitosis cutover",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Deleted 08-11 (a267367e) after an add/delete/re-add cycle"
+  },
+  {
+   "name": "launch manifest + profiles",
+   "location": "docker-compose.yml, gen-env.sh, entrypoint.sh, apply-inventory.sh, deploy.sh",
+   "purpose": "One launch path; role/profile derivation",
+   "status": "live-used",
+   "general": true,
+   "evidence": "d8fed96f/e375d716 09-23; host working-tree Makefile regresses it (uncommitted)"
+  },
+  {
+   "name": "deprecated launch shims",
+   "location": "scripts/substrate/deploy-hub.sh, deploy-hub-pull.sh, deploy-remote.sh, ui-only-up.sh",
+   "purpose": "Back-compat wrappers over deploy.sh/profiles",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "deploy.sh",
+   "evidence": "Headers say DEPRECATED; no caller except each other"
+  },
+  {
+   "name": "vessel-ctl",
+   "location": "scripts/substrate/vessel-ctl.sh (in image)",
+   "purpose": "status/restart/logs/apply/drift for any unit",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Replaced 63 Makefile targets (008f3ab9)"
+  },
+  {
+   "name": "LLM arm renderer",
+   "location": "render-llm-arms.sh, apply-llm-arms.sh, llm-arms.json",
+   "purpose": "Render per-provider arm units",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Replaced static llm-resolver-{opus,haiku,google} units, which were duplicates on the same ports"
+  },
+  {
+   "name": "placement gate",
+   "location": "scripts/git-hooks/pre-commit installed by setup-git-push.sh",
+   "purpose": "Refuse root-level/runtime files in super-repo commits",
+   "status": "broken",
+   "general": true,
+   "evidence": "Inert: system core.hooksPath=git-hooks-ledger (no pre-commit); edc68d49 committed root leases/ afterwards"
+  },
+  {
+   "name": "attempt-ledger git hooks",
+   "location": "scripts/substrate/git-hooks-ledger/ (installer uncommitted)",
+   "purpose": "Spool every commit/rewrite/ref update to the attempt ledger",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Node-1 journal 09-25 22:35Z 'installed'; installer and Dockerfile COPY are not in HEAD"
+  },
+  {
+   "name": "identical-failure-run-tick",
+   "location": "scripts/substrate/identical-failure-run-tick.ts",
+   "purpose": "Detect long same-failure runs with no disposition change",
+   "status": "dormant",
+   "general": true,
+   "evidence": "a172e235 09-16 ran once by hand; no unit or caller"
+  },
+  {
+   "name": "joint-liveness-tick",
+   "location": "scripts/substrate/joint-liveness-tick.ts + timer",
+   "purpose": "Detect write\u2192read joints going quiet",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "One binding only; caught none of the Aug\u2013Sep breaks"
+  },
+  {
+   "name": "self-recovery immune system",
+   "location": "scripts/substrate/self-recovery-tick.sh + timer",
+   "purpose": "Restart unhealthy vessels/SurrealDB",
+   "status": "live-used",
+   "general": true,
+   "evidence": "16 fix commits for autoimmune behaviour"
+  },
+  {
+   "name": "substrate-doctor/ready/status",
+   "location": "scripts/substrate/substrate-{doctor,ready,status}.sh",
+   "purpose": "Readiness and health verdict",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Re-fixed for false reports (0baff728, 26ae3d94, c1bd0da4, 1d3785de)"
+  },
+  {
+   "name": "federation transport/relay/probe oracle",
+   "location": "scripts/substrate/federation-relay/",
+   "purpose": "libp2p federation plane and its oracle",
+   "status": "live-used",
+   "general": true,
+   "evidence": "55 and 22 commits; a vessel hosted outside the submodule authoring loop"
+  },
+  {
+   "name": "federation-relay orphan clients",
+   "location": "federation-relay/fed-federated-resolve.ts, fed-resolve-client.ts, obsidian-passthrough.ts",
+   "purpose": "Manual resolve clients / passthrough",
+   "status": "fossil",
+   "general": false,
+   "evidence": "No caller"
+  },
+  {
+   "name": "performance-status / autonomy-status views",
+   "location": "scripts/substrate/performance-status.ts, autonomy-status.ts",
+   "purpose": "Operator views",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Makefile targets deleted 08-20; no caller since"
+  },
+  {
+   "name": "warn-baseline-drift.sh",
+   "location": "scripts/substrate/warn-baseline-drift.sh",
+   "purpose": "Warn when make sync-<vessel> hand-sync poisons the baseline",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Target it guards was deleted 08-20"
+  },
+  {
+   "name": "bootstrap-remote-google-arm.sh",
+   "location": "scripts/substrate/",
+   "purpose": "Temporary LLM conduit while local keys were credit-dead",
+   "status": "fossil",
+   "general": false
+  },
+  {
+   "name": "~40 custom systemd timers",
+   "location": "scripts/substrate/units/*.timer",
+   "purpose": "Scheduled detectors, drains and generators",
+   "status": "unknown",
+   "general": false,
+   "evidence": "All report success on the hub; none is validated by an activity (retention rule). Static intervals, not rhythms (law 5). No named detector was first to catch any of 253 breaks"
+  },
+  {
+   "name": "acceptance harness",
+   "location": "scripts/substrate/acceptance/",
+   "purpose": "Execute README install fences per published digest",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Tasks 1.2/1.4 pending the published-digest run"
+  },
+  {
+   "name": "repos/deployment helm/k8s lineage",
+   "location": "repos/deployment (gitignored)",
+   "purpose": "Pre-substrate Kubernetes deployment",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Last commit 06-25; superseded by the single-container image fe7dd493"
+  },
+  {
+   "name": "compiled artefacts in git",
+   "location": "scripts/substrate/*.js|.d.ts|.map (192), packages/, validation/scripts, openspec/changes",
+   "purpose": "none (tsc output)",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Added by autonomous drift commits 4e4170a8 and 796fac89"
+  }
+ ],
+ "principles": [
+  "A gate with no call sites can never be observed failing, so it can never be trusted when it passes (8d3e57ce 08-02; CLAUDE.md script retention)",
+  "Two copies is the producer/consumer drift this tree keeps paying for (008f3ab9 08-20)",
+  "A truncated search is not an absence (bb217e5e 09-13)",
+  "A timer that never runs emits silence, and silence reads as health; an active timer proves scheduling, not work (7f97df70, 6452ee6f)",
+  "A cap is a property of the HOST; lowering a live cap is not a safe edit (9df01220 08-17)",
+  "Cheap per statement is not cheap in aggregate (07e32d38 08-16)",
+  "A static scanner belongs as a graded resolver, not a host timer script \u2014 law 2 applies to scripts (807b92ef 09-28)",
+  "A file the substrate rewrites is not a file git should carry (CLAUDE.md placement; f90dda1a)",
+  "Fail LOUD on your own input, QUIET on gap emission (a172e235)",
+  "A hold's lift condition names the generator, not the instance (09-28 14:50 drift-commit hold)",
+  "A container-wide core.hooksPath without a chaining pre-commit leaves the gate inert (CLAUDE.md; confirmed live 09-29)"
+ ]
+}

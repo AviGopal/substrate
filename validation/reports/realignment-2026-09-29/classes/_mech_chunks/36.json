@@ -1,0 +1,161 @@
+{
+ "area": "memory",
+ "items": [
+  {
+   "name": "session-hook memory mirror",
+   "location": ".claude hooks \u2192 memoryNote_write",
+   "purpose": "Mirror operator memory files into the substrate store",
+   "status": "live-used",
+   "general": true,
+   "evidence": "8 operator files since 09-26 and 7 operator-mirror notes live",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "session-start memory hook",
+   "location": ".claude/hooks/substrate-session-start.sh",
+   "purpose": "Inject substrate memory/conventions into operator sessions",
+   "status": "live-used",
+   "general": false,
+   "evidence": "118d341f, 62559ca6",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "CLAUDE.md hooks (vessel-edit gate, memory start/end/mirror)",
+   "location": ".claude/settings.json, .claude/hooks/*",
+   "purpose": "Gate direct edits, sync memory",
+   "status": "live-used",
+   "general": false,
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "composition:shellresult-to-memorynote-write",
+   "location": "composition:* (code path, no row)",
+   "purpose": "Crystallized chain",
+   "status": "live-used",
+   "general": false,
+   "evidence": "308/308 in 5d",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "memory cutover hooks",
+   "location": "f259d9bd",
+   "purpose": "substrate-authoritative memory",
+   "status": "unknown",
+   "general": true,
+   "evidence": "169 notes migrated 06-15",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "memory retire primitive",
+   "location": "memory-note.ts:166-190 (19ae84e)",
+   "purpose": "Retire a note by id",
+   "status": "live-used",
+   "general": true,
+   "evidence": "552 notes retired 09-23",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "expectation-scan heartbeat",
+   "location": "memoryNote expectation-scan-heartbeat",
+   "purpose": "Expectation violation scan",
+   "status": "dormant",
+   "general": false,
+   "evidence": "checked:0 on both nodes, every minute",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "May\u2013July memory store",
+   "location": "node1 /workspace/memory/notes.json",
+   "purpose": "680 notes from the 07-25 fork",
+   "status": "fossil",
+   "general": false,
+   "evidence": "676 of its ids are contained in the 09-23 bak",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "pre-wipe memory backup",
+   "location": "node1 memory/notes.json.pre-op-retire.1790140094.bak",
+   "purpose": "The only complete copy of 1184 knowledge notes (05-27..09-23)",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Unread by any recall path",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "mergeEmbeddedTaskFields / materializeOutputImpulses / SessionMemoryAgent / HumanResolver TTY",
+   "location": "retired CLI (docs only)",
+   "purpose": "Task context propagation, interactive templates",
+   "status": "fossil",
+   "general": false,
+   "evidence": "0 live hits",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "Failure memory",
+   "location": "src/index.ts ~12073",
+   "purpose": "Feed prior hollow verdicts into attempt 1",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1,460 hits in 7 days",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "memory store /workspace/memory/notes.json",
+   "location": "substrate-live volume",
+   "purpose": "Original memoryNote store",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "/workspace/git/super-repo/memory/notes.json",
+   "evidence": "680 notes, last written Sep 7; unread by the live resolver",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  }
+ ]
+}

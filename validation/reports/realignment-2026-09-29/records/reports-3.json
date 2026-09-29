@@ -1,0 +1,952 @@
+{
+ "source": "reports-3",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/reports-3.md (NOT WRITTEN: harness refused the Write with 'Subagents should return findings as text, not write report files'; I did not bypass that guard. All findings are carried in this structured record.)",
+ "coverage": "Read in full, all 23 files of shard 47-69: causal-attempt-ledger/{RUN12, RUN12-PASS-0433 (identical to RUN12), RUN12-prev-0047, RUN1..RUN9, RUN4-aborted}.md (2026-09-24..09-26); coldboot-proof-2026-09-19/{PREREG, PREREG-RUN2}.md; COMPLEXITY_LADDER_AND_GAP_RESOLUTION.md (git 08-11..08-12); COMPOSITIONALITY_STATE.md (all 5743 lines, sessions 08-14..08-16); COMPOSITION_LEARNING_ARCHITECTURE_2026-08-21.md (incl. Appendix A law audit, Appendix B code-seam audit); COMPOSITION_LEARNING_STATE_2026-08-20.md; COMPOSITION_WIRING_AUDIT.md (08-13); CONDITIONED_DIFFERENTIATION.md (08-12); container-lifecycle-audit-2026-09-21/{PREREG, REPORT}.md. Skipped: RUN0/RUN10/RUN11 (outside shard; RUN0/RUN10 heads glimpsed only) and the JSON receipts in the lifecycle-audit dir. Live read-only spot checks on 2026-09-29 against substrate-live's DB to test whether things broke again: activity_composition_graph has 14,957 rows, 6,955 of them with a real execution_id, newest created 2026-09-29T03:40Z, so the July edge freeze is resolved. retired activities grouped by reason: null 1217, failed_out 10, deprecate_impulse 1, poor_performance 0, so the f2857fc retirement sweep has still never retired anything. substrate_tuning_param SF_BLEND=1.0, updated 2026-09-25. activity:learned-satisfier-shell is absent from the hub store; 1 non-retired learned-learned* activity remains. The output file was NOT written because the harness blocked the Write.",
+ "attempts": [
+  {
+   "key": "write-read-mismatch",
+   "title": "Composition edge minting at ingest (deriveCompositionEdgeFromParent)",
+   "where": "activity-api 516fc73 (execution-traces.ts:1690)",
+   "date": "2026-08-11",
+   "tried": "Derive producer->consumer edge at trace ingest from parent_execution_id",
+   "outcome": "failed",
+   "evidence": "Live for 3+ days with 0 edges. The lookup type::thing('execution',$pid) hit 0/200 (the ids live in activity_execution_traces.execution_id), and the miss path is a silent return. Edges newest 2026-07-14 through 08-16"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Edge parent lookup fixed autonomously",
+   "where": "fef173c (Substrate Autonomous 2026-08-15 02:54)",
+   "date": "2026-08-15",
+   "tried": "SELECT activity_id FROM activity_execution_traces WHERE execution_id=$pid",
+   "outcome": "partial",
+   "evidence": "200/200 hits on live walk-* ids, yet still no edges: the CREATE was missing 3 ASSERT!=NONE fields (execution_id, org_id, success), found by probing the live DB"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Edge CREATE fields goal landed destructively",
+   "where": "b4f9148 (autonomous, operator goal) activity-api execution-traces.ts",
+   "date": "2026-08-15",
+   "tried": "Add org_id/execution_id/success to edge CREATE",
+   "outcome": "reverted",
+   "evidence": "Redirected the variant_performance_metrics INSERT (Thompson posterior write) to activity_composition_graph, ~1600 lines from target. FAVORABLE via typecheck/shape-dispatch/tests because it was inside a SQL template literal. Reverted cee3686/fc64261"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Composition edges minted from executions (eventual state)",
+   "where": "hub activity_composition_graph (spot-check 2026-09-29)",
+   "date": "2026-09-29",
+   "tried": "Multiple later fixes (outside shard)",
+   "outcome": "worked",
+   "evidence": "6,955 rows with real execution ids, newest 2026-09-29T03:40Z"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "First fully autonomous landing targets a non-cause",
+   "where": "3e76227 development-vessel feature-compose.ts",
+   "date": "2026-08-15",
+   "tried": "PER_CALL_TIMEOUT_MS 250_000->600_000 via gap lane after operator dispatch 8a037659 failed",
+   "outcome": "partial",
+   "evidence": "Met the autonomy criterion (landed on origin/dev with no hands), but typecheck took 7s and tests 0.65s, so the cap was never binding. The pipeline was proven, not the need"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Concept recall timeout 4s->10s",
+   "where": "b10c3f2 goal-host index.ts:9332/9333 (autonomous)",
+   "date": "2026-08-15",
+   "tried": "Raise recallConceptRows override from 4_000 to 10_000",
+   "outcome": "partial",
+   "evidence": "Recall went 0/32 -> 1/3. Search took 7.7s and later 32s under load. A human-filed gap had sat 21h misrouted to vessel=concept-db"
+  },
+  {
+   "key": "memory-recall",
+   "title": "concept-db dense leg bounded then made lazy",
+   "where": "c9f083e, dee1f90 concept-db",
+   "date": "2026-08-15/16",
+   "tried": "Bound ONNX dense search; start dense only when lexical finds nothing",
+   "outcome": "partial",
+   "evidence": "Promise.race bounded the wait, not the work. With the lazy dense leg, resolve went 11.97s -> 6-8.9s and live recall appeared for the first time; it was later undone by masked orphan, federation loop and DB saturation"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Hub SurrealDB restart",
+   "where": "hub surrealdb (operator)",
+   "date": "2026-08-16",
+   "tried": "Restart the pathological DB process (27GB on disk, 607% CPU)",
+   "outcome": "worked",
+   "evidence": "CPU 607%->0, query 13,340ms->16ms, recall 40s->0.79-1.14s, trace spool 16,771->3. Also delivered arg-synthesis lessons chars=1687 via=opts"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Shell requestTimeoutSec 30->300",
+   "where": "e1ffa50 local-tools-vessel (autonomous, operator-authored goal)",
+   "date": "2026-08-15",
+   "tried": "Raise shell watchdog so verify is not SIGKILLed",
+   "outcome": "reverted",
+   "evidence": "The watchdog subshell inherited stdout, so every shell call took the full timeout. That meant a ~3h outage with no compose reports 05:30-08:50. Reverted live + 09e863b"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Watchdog detached from stdout",
+   "where": "7164c1c local-tools-vessel (autonomous)",
+   "date": "2026-08-15",
+   "tried": "( sleep N; kill ) >/dev/null 2>&1 &",
+   "outcome": "worked",
+   "evidence": "Shell calls 30s -> 22ms. It landed even though the adversarial refuter rejected it twice at conf 0.90 with false mechanism claims"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Dead-store gate validated on wrong input form",
+   "where": "671ce88 -> hand fix 06fabe9 development-vessel vacuous-edit/feature-compose",
+   "date": "2026-08-11",
+   "tried": "deadStoreEditReason wired at raw-op call site",
+   "outcome": "failed",
+   "evidence": "Returned null for the 8eb660a pure insertion it targeted. The twin at feature-compose.ts:3096 already simulated against the file. Hand-repaired after 3 dispatches were killed by NO_RESERVATION/BUSY"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Poor-performance retirement binding fix",
+   "where": "f2857fc activity-api variant-creator.ts",
+   "date": "2026-08-16",
+   "tried": "activity:<$template_id> -> type::thing('activity',$id) for retire and variant CREATE",
+   "outcome": "dormant",
+   "evidence": "Deployed but the gate needs 20 executions in hub execution table; failing arms (202 exec/0 success) ran on spoke with traces stuck in a 16,754-file spool. Spot-check 2026-09-29: poor_performance retirements = 0"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Negative feedback on dead arm",
+   "where": "POST /v2/activities/feedback learned-satisfier-shell",
+   "date": "2026-08-16",
+   "tried": "Operator negative verdict to suppress 202/0 arm",
+   "outcome": "failed",
+   "evidence": "The same arm was selected twice more. beta+2 credited per failure, but persistence of the credit is unverified"
+  },
+  {
+   "key": "false-verification",
+   "title": "Reached-command cache hand eviction",
+   "where": "/workspace/.goal-host-reached-commands.jsonl",
+   "date": "2026-08-16",
+   "tried": "Evict 2 poisoned recipes (628300000 km literal) after reach override did not",
+   "outcome": "partial",
+   "evidence": "The reach override writes the trace store while the walk reads the cache. No automatic eviction path exists"
+  },
+  {
+   "key": "false-verification",
+   "title": "Grader provenance for shell/bash",
+   "where": "goal-host recordExecutorCommand at every content path",
+   "date": "2026-08-16",
+   "tried": "Give reach judge the command that produced output",
+   "outcome": "worked",
+   "evidence": "cmdEvidenceLen 0->123; the judge refused a Mercury COMMAND=1 answer. It had certified 45.938 AU while blind"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Floor prompt states network reachable",
+   "where": "goal-host floor prompt (one line)",
+   "date": "2026-08-15",
+   "tried": "Tell model outbound access exists and external facts must be retrieved",
+   "outcome": "worked",
+   "evidence": "Floor moved from 'I cannot browse eBay' or fabricated price to attempted retrieval with honest failure"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "web_search added to UNIVERSAL_READ_TOOLS",
+   "where": "goal-host index.ts (7 attempts)",
+   "date": "2026-08-15",
+   "tried": "Give floor a web tool",
+   "outcome": "reverted",
+   "evidence": "Duplicate of an existing webSearchResult producer (law 3). It enabled a zero-tool fabricated eBay reach, and failed composes corrupted the shared clone"
+  },
+  {
+   "key": "false-verification",
+   "title": "Floor zero-tool fabrication gate + walk planned-retrieval guard + widening retry",
+   "where": "goal-host (08-16 series)",
+   "date": "2026-08-16",
+   "tried": "Refuse narrated tool calls with tools=0; refuse LLM-only completion when walk planned retrieval; widen retry shapes",
+   "outcome": "partial",
+   "evidence": "Fabrication closed on observed Io paths across 13 sub-attempts. The class outlived the instances: bitcoin container-of-numbers and ISS stale-grounded reaches remained"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Evidence-supply fixes for Io chain",
+   "where": "50448be, 32b5c04, cb03dfc, 21314ec, 1fee66f goal-host",
+   "date": "2026-08-16",
+   "tried": "Log command, re-fetch eaten body, log request URL, data-centred window, HOLLOW-CONTENT log",
+   "outcome": "worked",
+   "evidence": "Each worked on first contact. HOLLOW-CONTENT revealed a correct 6.27607851 AU that had been hidden for ~39 dispatches"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Decision-rule fixes for Io chain",
+   "where": "goal-host corrector/classifier (08-16)",
+   "date": "2026-08-16",
+   "tried": "Host ban, 4xx classifier, inspection credit, endpoint-vs-filter advice, 600-char window, advisory corrector",
+   "outcome": "failed",
+   "evidence": "Operator ledger: 0/8-0/10 on rules vs 6/6 on evidence. The classifier kept a non-existent host, the ban was escapable after 2 refusals, and the credit made wandering free"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Lesson handoff to arg synthesis keyed by goal hash",
+   "where": "c72ee75 goal-host",
+   "date": "2026-08-16",
+   "tried": "Deliver recalled lessons to arg synthesiser",
+   "outcome": "failed",
+   "evidence": "Store and lookup hashes were disjoint over 20 min; chars=0 for 6 attempts misread as 'drafter ignored lesson'. Fixed later by threading via opts"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Service-error routing",
+   "where": "ad61ae6 -> 39325b3 goal-host",
+   "date": "2026-08-16",
+   "tried": "Route HTTP-200 body errors back to correction",
+   "outcome": "reverted",
+   "evidence": "Read the envelope's top-level error while the error was in body.bodyJson.error, so the fix was inert on arrival. Re-fixed"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Pull-sync quiesce deadlock fix",
+   "where": "25aad2cc scripts/substrate pull-sync",
+   "date": "2026-08-16",
+   "tried": "Cap QUIESCE_WAIT_S to remaining TimeoutStartSec",
+   "outcome": "partial",
+   "evidence": "The converge-anyway branch had been unreachable (900s wait inside 900s timeout). First placed at scripts/ while the unit ran /usr/local/bin, so it had to be hand-placed"
+  },
+  {
+   "key": "node-locality",
+   "title": "Self-observation units moved to infra role",
+   "where": "6d9e611d inventory roles",
+   "date": "2026-08-16",
+   "tried": "Move 8 self-observation families from autonomy to infra",
+   "outcome": "worked",
+   "evidence": "42 autonomy-role units had run nowhere after federation; streams resumed; baseline reach_cum 0.1216, reach_6h 0.0235"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Dev-vessel mitosis shadow unit removed",
+   "where": "/etc/systemd/system/development-vessel.service + dynamic manifest (operator)",
+   "date": "2026-08-15",
+   "tried": "Move the override aside and drop the bogus manifest entry",
+   "outcome": "worked",
+   "evidence": "13 days crash-looping (2622 restarts, exit 0). The fix held across a pull-sync restart. Afterwards the gap store was readable and composition_flow_health_scan ran for the first time"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "SurrealDB unmask/start after OOM mask",
+   "where": "substrate-live surrealdb.service",
+   "date": "2026-08-16",
+   "tried": "systemctl unmask && start",
+   "outcome": "worked",
+   "evidence": "Masked since 08-12 OOM while running unmanaged; it died at load 66. After restart concept-db was healthy and load 66->4.5. Left enabled=disabled"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace spool quarantine",
+   "where": "spoke trace spool",
+   "date": "2026-08-16",
+   "tried": "Quarantine the 16,723 undelivered traces retried every 60s",
+   "outcome": "worked",
+   "evidence": "Spool 16,771->3. Pruning ~27GB / 29,354 trace rows was left as an operator decision (db-maintenance is detect-only)"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "End-to-end composition on arbitrary goal",
+   "where": "goal-host local :8210 dispatch f11349f0 + 45818d0",
+   "date": "2026-08-13",
+   "tried": "Composition-ask phrasing, deterministic composition-ask recovery when recall down",
+   "outcome": "partial",
+   "evidence": "2-step and 3-step fan-in chains reached with data flow and ribosome-extract, and reuse accepted a 10/10 pathway. Only works for the isCompositionAsk phrasing and resolver-served intermediates; per-step alpha withheld; first battery 1/5"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Complexity ladder",
+   "where": "validation/scripts/complexity-ladder-harness.ts",
+   "date": "2026-08-11",
+   "tried": "4 rungs of 1-4 transformations plus 3 must-fail controls",
+   "outcome": "failed",
+   "evidence": "Controls 3/3. Reach 3/4 but externally correct 1/4, with 0 producer steps at every rung (all satisfier:*). Rung 1 and rung 3 had identical path_signature 4502429f46"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Conditioned differentiation key",
+   "where": "validation/scripts/conditioned-differentiation-harness.py",
+   "date": "2026-08-12",
+   "tried": "Condition identity on owning data store + content kind",
+   "outcome": "dormant",
+   "evidence": "Offline: 40/40 splits, purity 1.00, 4/5 invariance. Never threaded into live producer/pathway selection"
+  },
+  {
+   "key": "gap-content",
+   "title": "Gap pool adversarial triage",
+   "where": "gap store 318->202",
+   "date": "2026-08-11",
+   "tried": "Batch classification + refuter + coverage guard; reject vs close",
+   "outcome": "worked",
+   "evidence": "24.3% of proposed closes overturned. The coverage guard held 17 unrefuted removals; 100 rejected, 11 closed; 0 silent no-ops"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "08-20 composition learning prescriptions",
+   "where": "COMPOSITION_LEARNING_STATE_2026-08-20.md",
+   "date": "2026-08-20",
+   "tried": "Populate ancestor_signatures, pass walkEvidence at floor, flip SF_BLEND",
+   "outcome": "superseded",
+   "evidence": "All three overturned on 08-21: e19997f already fixed credit; the floor has no opts; the graph is read but the picker does not order by blend. The report had read a fix's comment as evidence of the defect"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "08-21 composition architecture plan A1-A4/B1-B13",
+   "where": "COMPOSITION_LEARNING_ARCHITECTURE_2026-08-21.md",
+   "date": "2026-08-21",
+   "tried": "Schema-parity checker, walkEv at :9471, tuning readback, edge fields, predecessor threading, blend sort, psi",
+   "outcome": "unknown",
+   "evidence": "Plan only; the law audit found violations of laws 1/2/3/6/11/12. SF_BLEND row later =1 (09-25) and edges later minted (09-29); other items not traced in this shard"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Cold boot run 1",
+   "where": "coldboot-proof-2026-09-19 image f70de0656d69",
+   "date": "2026-09-19",
+   "tried": "Fresh volumes, standalone, OpenRouter only, no repairs",
+   "outcome": "failed",
+   "evidence": "F1 pass (121-template seeding gap closed, 112/121 + 9 law-3 refusals). F2 fail: goal-host discovery registration 401 after identity reseed. F3 fail: net-new file grounding refusal"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Cold boot run 2 single intervention",
+   "where": "081e9cbd seed-identity writes per-vessel keys; image 2edb33af",
+   "date": "2026-09-19",
+   "tried": "Write keys the seeder previously only printed",
+   "outcome": "partial",
+   "evidence": "F2 pass (byte-correct, deterministic transform-verified), with 9 secondary-path 401s in a ~70s window. F3 still fails on net-new grounding"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Isolated container lifecycle audit",
+   "where": "container-lifecycle-audit-2026-09-21 (image 2edb33af)",
+   "date": "2026-09-21/22",
+   "tried": "6 individual/hub/spoke x new/existing network/org arrangements",
+   "outcome": "partial",
+   "evidence": "21/26 checks met. Trace writes returned 500 on the fresh DB, UI was 503 ui_not_built, the dynamic unit was lost on recreate, and every terminal probe returned reached:false. The relay needed a manual manifest workaround"
+  },
+  {
+   "key": "false-verification",
+   "title": "Causal attempt ledger graded runs 1-5",
+   "where": "causal-attempt-ledger RUN1-RUN5",
+   "date": "2026-09-24",
+   "tried": "Graded acceptance R/restore/C/U",
+   "outcome": "failed",
+   "evidence": "Failures in order: container removed by another session (RUN1); grader race (1b); result-id re-evaluation 61/62 not_applicable (#31); execution_id not threaded through rawResolve (#32) and universalToolFallback/dispatchTool (#43); satisfier fs_write broke live canary (#33)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Causal ledger RUN6",
+   "where": "causal-attempt-ledger/RUN6.md",
+   "date": "2026-09-24",
+   "tried": "Graded run",
+   "outcome": "failed",
+   "evidence": "R never landed because cutover freshness refused it: staged_base_sha 43fbb36e vs current_live_sha 16bb007e (edit already live-synced) (#45/#51)"
+  },
+  {
+   "key": "false-verification",
+   "title": "Causal ledger RUN7-RUN9",
+   "where": "causal-attempt-ledger RUN7-9",
+   "date": "2026-09-24/25",
+   "tried": "Graded runs after hop fixes",
+   "outcome": "partial",
+   "evidence": "Scores 8/10, 6/10, 9/10. Causes: restart race recording rejected placeholder (#53), duplicate feature_compose routing (#54), an eighth hop without execution_id, retry cap blind during spool lag (ba0fcd3); U dispatch made 8 commits without reaching"
+  },
+  {
+   "key": "false-verification",
+   "title": "Causal ledger RUN12",
+   "where": "causal-attempt-ledger/RUN12.md (281bd41, 7bcf314, d58105a)",
+   "date": "2026-09-26",
+   "tried": "Graded acceptance after all hop fixes",
+   "outcome": "worked",
+   "evidence": "10/10 passed. The earlier RUN12-prev (09-25 23:04) was 8/10 with the U dispatch producing 21 commits"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "One-op one-anchor re-specification",
+   "where": "org_id edge fix goals 59be53ce vs autonomous landings",
+   "date": "2026-08-15",
+   "tried": "Restate multi-op fix as single op at unique anchor",
+   "outcome": "worked",
+   "evidence": "Every landing was single-op and every failure multi-op; a partially-correct multi-op plan rolled back its correct op"
+  }
+ ],
+ "problems": [
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Composition edge graph frozen at 2026-07-14 while a live consumer (discover-by-shapes composition_score) scored selection against it",
+   "root_cause": "Batch reconcile masked. The ingest deriver looked up the wrong table/key with a silent return on miss and omitted 3 required fields; SCHEMAFULL CREATE on a root connection fails silently",
+   "first_seen": "2026-07-14",
+   "last_seen": "2026-08-16 (resolved by 2026-09-29 spot-check)",
+   "recurrences": 4
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Flags/credit/lessons report written but consumer reads nothing (SF_BLEND null, lesson chars=0, cache replays overridden reach, body.bodyJson.error unread)",
+   "root_cause": "Producer and consumer disagree on key, table, envelope or store, and no layer counts what it consumed. NULL vs NONE in option<string>",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-08-21",
+   "recurrences": 7
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Thirteen false reaches in one session (fabricated, stale, constants, literals, replay, blind grader, container-of-numbers, narrated tool transcript)",
+   "root_cause": "Reach judge graded shell/bash output with no provenance, write-shaped goals graded on persistence, grounding not equal to freshness, and a cached recipe was not evicted on override",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-16",
+   "recurrences": 13
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Correct edits rolled back because verify produced no output (0/193 bytes); 5/12 composes never completed verify",
+   "root_cause": "Absent TC_EXIT marker scored as failed typecheck (same class fixed twice before for installExit/dryRunExit); exit_code 137 unread; cd && short-circuit",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-08-15",
+   "recurrences": 3
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Adversarial refuter vetoes correct fixes at conf 0.90-1.00 while a destructive change lands FAVORABLE",
+   "root_cause": "The refuter sees only the diff (no usage context, no execution); verdict not binding on cutover apply; SQL/shell inside string literals invisible to tsc/tests",
+   "first_seen": "2026-08-15",
+   "last_seen": "2026-08-15",
+   "recurrences": 4
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Masked-but-running or shadowed units look healthy but cannot be restarted or updated (dev-vessel 13 days, concept-db frozen 34h, surrealdb unrecoverable, 67-unit batch mask)",
+   "root_cause": "Mitosis wrote an /etc override; masks applied by hand or via DISABLED_VESSELS; mask defeats Restart=, self-recovery and pull-sync at once; nothing asserts running units are unmasked",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-08-16",
+   "recurrences": 5
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Killed or failed composes leave unverified code in live runtime and residue in the shared clone (duplicate array entries, deleted bracket) that blocks every cutover for the vessel",
+   "root_cause": "No rollback on abort or between internal re-drafts; slot and in_flight markers leak; apply path writes live/shared trees before judgment",
+   "first_seen": "2026-08-15",
+   "last_seen": "2026-09-24 (preLiveSync, staged_base_sha vs live sha in causal ledger)",
+   "recurrences": 4
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Deploy channel silently stalls; operator hot patches wiped every ~10 min, voiding dispatches",
+   "root_cause": "QUIESCE_WAIT_S 900 inside TimeoutStartSec=900 made converge unreachable; QUIESCE_MAX_MS 20min vs 10min timer; pull-sync mirrors origin/dev over live",
+   "first_seen": "2026-08-15",
+   "last_seen": "2026-08-16",
+   "recurrences": 3
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Law-8 concept recall dark on ~80% of walks, so target inference picks fabricating llm_completion instead of http_fetch",
+   "root_cause": "Moved through several layers in turn: 4s cap, then BM25 IDF not persisted, then per-query ONNX embedding contending with surreal, then a masked stale orphan, then a federation ingress shape-collision loop, then a saturated hub DB. Null return conflated slow/absent/refused",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-08-16",
+   "recurrences": 6
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Zero-success arms (202 exec/0 success, 53 learned-of-learned up to 7 deep) keep winning selection",
+   "root_cause": "Retirement SQL bound record id as literal ($template_id) so it never fired; after the fix the gate is starved (needs 20 hub executions, spoke traces spooled); feedback insufficient; no recipe eviction",
+   "first_seen": "2026-08-15",
+   "last_seen": "2026-09-29 (poor_performance retirements still 0)",
+   "recurrences": 3
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "60/68 learned-composition templates stuck alpha=1 despite 340 successes while beta rises, including on capacity refusals",
+   "root_cause": "In-walk consumedInChain needs declared task input shapes (91 templates declare []); capacity BUSY graded as template failure",
+   "first_seen": "2026-08-15",
+   "last_seen": "2026-08-15",
+   "recurrences": 1
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "79.8% of pool signatures have <=1 candidate; path_signature collapses 1-op and 3-op goals",
+   "root_cause": "Identity keyed on satisfier path/output kind, not on content dependency",
+   "first_seen": "2026-08-12",
+   "last_seen": "2026-08-14",
+   "recurrences": 2
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Walk performs 0 producer steps; all satisfiers; no producer->producer edges for dominant targets",
+   "root_cause": "Target inference flattens to [shellResult]@0.6 before vocabulary/LLM; producers declare input_shapes []; floor persists compositionChain []; ribosome mints nodes not edges",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-14",
+   "recurrences": 2
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Spoke reads masked/local stores and reports zeros or false gaps; detectors blind; retirement and reach baseline computed on partial data",
+   "root_cause": "Trace store/activity-api masked on spoke; detectors run where data isn't; spool backlog; autonomy role in no hub/spoke group",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-16",
+   "recurrences": 6
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Hub DB saturated: 27GB/19GB resident for ~64k rows, 607% CPU, 13s queries, 38,536 slow queries; fresh-install trace writes 500",
+   "root_cause": "Full payload per trace (~900KB/row), no pruning (db-maintenance detect-only), DB process in pathological state; array type errors on fresh schema (09-21)",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-22",
+   "recurrences": 2
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "22 detector resolvers, perf_canary_resolve, shape-dispatch-check, fc-coverage, conditioned-differentiation key built but never selected/called/enforcing",
+   "root_cause": "No seed template or caller; advisory-only catch blocks; detect-only design with no hands",
+   "first_seen": "2026-08-12",
+   "last_seen": "2026-08-21",
+   "recurrences": 6
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Immune system blind to absence-of-write (frozen table, inert diff, dead scheduler, unit exiting 0)",
+   "root_cause": "detector_coverage_scan clusters failing traces by failure_mode.type; there is no liveness/staleness predicate",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-08-16",
+   "recurrences": 3
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Landed fixes inert (516fc73, bafd83d, 671ce88, f2857fc, ad61ae6, c72ee75, quiesce fix at wrong path); autonomy 0.79% of changed lines, 44/76 commits <=2 lines",
+   "root_cause": "No post-land effect probe; lesson applied at one call site not its twin; tests don't exercise the path",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-16",
+   "recurrences": 7
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator/directed fixes composed wrongly with existing mechanisms: 3h shell outage, fabrication path, keep-a-nonexistent-host, escapable ban, free wandering",
+   "root_cause": "Causal stories acted on before executing the mechanism; decision rules generalised past their evidence",
+   "first_seen": "2026-08-15",
+   "last_seen": "2026-08-16",
+   "recurrences": 8
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafter invents anchors and APIs and applies edits ~1600 lines from target; mutates verified recalled commands every attempt",
+   "root_cause": "Mis-localisation cause unidentified (the fc-scope frequency hypothesis was refuted); multi-op plans fragile; lessons re-synthesised through the LLM instead of executed verbatim",
+   "first_seen": "2026-08-15",
+   "last_seen": "2026-08-16",
+   "recurrences": 5
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gap vessel tag derived from prose overrides the file path in the same prose; largest minters produce phantom gaps",
+   "root_cause": "fileCapabilityGap deny-list (174 rows/walk); orphaned-capability-scan blind to code and tool-loop invocations (52/303); prose-derived vessel field",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-15",
+   "recurrences": 3
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Arbitrary goals misrouted (eBay -> env_gate_scan/fileEditResult), busy compose reported as capability gap, retry cannot widen, reach_6h 2.35% vs ~90% expected",
+   "root_cause": "Domain-locked vocabulary, recall dark, fall-through to walk on BUSY, unsatisfiable retry target, floor prompt missing environment facts",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-16",
+   "recurrences": 5
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Federated routes hang or fail (NO_RESERVATION 72/h, hub goal-host :18401 answers nothing, ingress loops on shape collision)",
+   "root_cause": "Locality bonus worth half a priority step; ingress resolves by shape ignoring caller's vessel=; MCP federated vs local registry disagree",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-16",
+   "recurrences": 4
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Test fixture https://activity.test retried in production (81% of trace sink errors, ~500/h); probe rows left in tuning params; live-tree test runs EADDRINUSE",
+   "root_cause": "Fixture config leaking into live goal-host; no DELETE route; tests bind ports owned by running vessel",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-08-21",
+   "recurrences": 3
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behavioral switches and the reach label threshold live in env/constants (SF_BLEND env short-circuits above the row, hollow-cap literals, EDGE_BLEND_K, quiesce/slot constants)",
+   "root_cause": "Tuning table is not a shape; env tier placed above the readable row",
+   "first_seen": "2026-08-21",
+   "last_seen": "2026-08-21",
+   "recurrences": 1
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Docs and comments assert false facts (bun run lint enforces shape contract; docstring names the wrong table); reports repeatedly retracted; reports have no runtime reader",
+   "root_cause": "No verification of doc claims; operator reports are not routed to a read-at-use channel",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-08-21",
+   "recurrences": 3
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Fresh image UI 503 ui_not_built; feedback accepts stale/unknown asks; answer consumption unverified",
+   "root_cause": "UI not packaged in image; revision contract behind",
+   "first_seen": "2026-09-21",
+   "last_seen": "2026-09-22",
+   "recurrences": 1
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Walk commits repeatedly without reaching (8 commits in RUN9, 21 in RUN12-prev); satisfier fs_write corrupts live canary",
+   "root_cause": "Retry cap reads landings only after spool ingestion; fallback walk writes after refusing",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-25",
+   "recurrences": 3
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Single compose slot shared by operator and autonomous lanes; drains discard in-flight work; three corrections per executor too few",
+   "root_cause": "No priority separation; drain does not defer to applied composes; fixed small correction budget",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-16",
+   "recurrences": 3
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "Causal attempt ledger (pre-snapshot, flips, settlement, lessons, commit-to-dispatch linking)",
+   "location": "development-vessel feature_compose/cutover + causal-attempt-ledger harness",
+   "purpose": "Attribute each landing's effect and settle regressed/held with lessons",
+   "status": "live-used",
+   "general": true,
+   "evidence": "RUN12 10/10 on 2026-09-26 after hop-by-hop execution_id fixes (#31,#32,#43,#53)"
+  },
+  {
+   "name": "Close-oracle gate (landed sha must be present in HEAD)",
+   "location": "development-vessel gap-sweep (007163ab)",
+   "purpose": "Refuse gap closure on reverted landings",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-15 log 'landed sha bff334719e0a was REVERTED \u2026 gap unresolved'"
+  },
+  {
+   "name": "Adversarial refuter / semantic gate (inert-diff, spec conformance)",
+   "location": "development-vessel feature-compose",
+   "purpose": "Reject behaviour-neutral or misplaced patches",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Correct evidence-based rejections; false mechanism vetoes on 7164c1c and web_search; diff-only context; verdict not binding on cutover apply"
+  },
+  {
+   "name": "Verify stage (install/dry-run/typecheck/test markers)",
+   "location": "development-vessel feature-compose.ts",
+   "purpose": "Typecheck and test staged edits",
+   "status": "broken",
+   "general": true,
+   "evidence": "08-15: absent TC_EXIT scored as failure and exit_code 137 unread; 5/12 composes never completed verify"
+  },
+  {
+   "name": "fc-anchor-provenance / fc-anchor-region / fc-order / fc-symbols / fc-scope / fc-coverage",
+   "location": "development-vessel feature-compose",
+   "purpose": "Localize and validate drafter anchors; advise on untested targets",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Anchor gates enforce the region from the same source (1602-line mis-localisation); fc-coverage advisory-only catch; fc-scope log line misreports its centring"
+  },
+  {
+   "name": "substrate-pull-sync content-hash drift restore + quiesce",
+   "location": "scripts/substrate pull-sync (/usr/local/bin in container)",
+   "purpose": "Converge live vessels to origin/dev and restore drift",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Caught unverified live drift 08-15. The quiesce deadlock was fixed by 25aad2cc; it wipes hot patches every ~10 min"
+  },
+  {
+   "name": "Compose slots with staleness backstops",
+   "location": "/workspace/compose-slots, compose-slots.ts:214",
+   "purpose": "Cap concurrent composes, reserve directed slot",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Slot and in_flight leak on abort (20-min backstop); a single slot is shared by operator and autonomous lanes"
+  },
+  {
+   "name": "Reached-command cache",
+   "location": "/workspace/.goal-host-reached-commands.jsonl (goal-host)",
+   "purpose": "Replay verified commands for similar goals",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Replayed a false reach (628300000 literal). No eviction on reach override; operator evicted 2 entries by hand 08-16"
+  },
+  {
+   "name": "tryLexicalRebind",
+   "location": "goal-host-vessel",
+   "purpose": "Adapt a donor verified command to a new goal",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Donor chosen by goal-token overlap with no data-store gate: it chose an unrelated fs_write for eBay and a file-count command for Io"
+  },
+  {
+   "name": "recordGoalPath / goal_execution_paths pathway reuse via shape_signature",
+   "location": "goal-host + activity-api",
+   "purpose": "Ceiling: reuse learned pathways",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-13 'accepted 2-step pathway \u2026 10/10 reached'. The posterior tracks verdicts correctly but learns satisfier:shellResult"
+  },
+  {
+   "name": "LLM model Thompson policy",
+   "location": "llm-resolver-vessel",
+   "purpose": "Select provider/model by graded outcomes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Demoted the dead Anthropic key on its own (haiku alpha1.36/beta578) and selected deepseek (alpha10058)"
+  },
+  {
+   "name": "deriveCompositionEdgeFromParent (execution-time edge minting)",
+   "location": "activity-api routes/execution-traces.ts",
+   "purpose": "Mint composition edges from executions (law 4)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Inert 08-11..08-16+. Spot-check 09-29 found 6,955 execution-minted edges, newest today"
+  },
+  {
+   "name": "composition-edge-reconcile batch job",
+   "location": "scripts/substrate/composition-edge-reconcile.ts + timer",
+   "purpose": "Backfill composition edges",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Masked. Last edges 2026-07-14; last_full_at written after the loop, so one abort pins full mode. Demoted per law 4"
+  },
+  {
+   "name": "composition_score blend (discover-by-shapes + edge-blend)",
+   "location": "activity-api discover-by-shapes.ts:154-176; goal-host edge-blend.ts, producer-pick.ts",
+   "purpose": "Reward composed pathways at selection",
+   "status": "unknown",
+   "general": true,
+   "evidence": "08-21: computed but the picker does not order genuine producers by it; predecessor_activity_id never sent; possible record-vs-string mismatch"
+  },
+  {
+   "name": "Successor features psi / SF_BLEND ratchet",
+   "location": "activity-api accelerator-flag-tick.ts, activities.scoring.ts; goal-host psi-inputs.ts",
+   "purpose": "Composition-aware ranking",
+   "status": "dormant",
+   "general": true,
+   "evidence": "psiInputs returned {} at 9 call sites (8-hex vs 16-hex); nothing reads successor_value. SF_BLEND row=1.0 as of 09-25"
+  },
+  {
+   "name": "Poor-performance retirement (checkAndRetireTemplate / variant-creator)",
+   "location": "activity-api variant-creator.ts, activities.ts:2477",
+   "purpose": "Remove decisively failing arms (law 3 other half)",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Binding fixed f2857fc 08-16, gate starved. 09-29: poor_performance retirements = 0; failed_out path retired 10"
+  },
+  {
+   "name": "perf_canary_resolve / performance_reach_gate",
+   "location": "development-vessel",
+   "purpose": "Measure-after-change with revert",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 executions in 720h, no seed template (08-15)"
+  },
+  {
+   "name": "22 orphaned detector resolvers",
+   "location": "development-vessel resolvers (composition-flow-health-scan, schema-assert-drift-scan, concept-credit-integrity-scan, env-gate-scan, etc.)",
+   "purpose": "Self-detection of defect classes",
+   "status": "dormant",
+   "general": false,
+   "evidence": "No seed template. The trace-reading ones are blind on a spoke; concept_credit_integrity_scan found 15/50 degenerate when run by hand"
+  },
+  {
+   "name": "composition_flow_health_scan",
+   "location": "development-vessel",
+   "purpose": "Composition graph health",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Ran once on 08-15 (flow_split, 11 components, self-filed gap); structural predicate with no freshness check"
+  },
+  {
+   "name": "db-maintenance-tick",
+   "location": "activity-api db-maintenance-tick.ts",
+   "purpose": "Detect DB degradation, apply index/migration",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Detect-only for pruning: 29,354 prune candidates and 38,536 slow queries, actions []"
+  },
+  {
+   "name": "TranslatingTraceSink + disk spool",
+   "location": "ias-executor-ts / goal-host trace sink",
+   "purpose": "Deliver traces to hub with retry",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Turned into a self-sustaining storm (16,771 files) until quarantine; 81% of errors were test fixture activity.test"
+  },
+  {
+   "name": "Reach judge with command provenance (recordExecutorCommand)",
+   "location": "goal-host verifyGoalReached",
+   "purpose": "Command-to-intent alignment in reach grading",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Blind for shell/bash until 08-16; fixed by recording at every content path"
+  },
+  {
+   "name": "Floor zero-tool fabrication gate, walk planned-retrieval guard, widening retry",
+   "location": "goal-host universalToolFallback + walk",
+   "purpose": "Refuse unretrieved answers",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Closed fabrication on observed Io paths (08-16). Class survived elsewhere (bitcoin, ISS)"
+  },
+  {
+   "name": "Evidence-supply instruments (command log, body re-fetch, request URL log, data-centred window, HOLLOW-CONTENT log)",
+   "location": "goal-host (50448be, 32b5c04, cb03dfc, 21314ec, 1fee66f)",
+   "purpose": "Put load-bearing facts in the model/operator window",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Worked on first contact every time (operator ledger 6/6)"
+  },
+  {
+   "name": "Host disqualification + web candidate search",
+   "location": "goal-host corrector",
+   "purpose": "Stop fixation on refusing hosts, find keyless endpoints",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Found JPL Horizons by mechanism; ban escapable after 2 refusals"
+  },
+  {
+   "name": "Deterministic composition-ask recovery",
+   "location": "goal-host goal-target-inference (45818d0)",
+   "purpose": "Compose when concept recall is down",
+   "status": "live-used",
+   "general": false,
+   "evidence": "12/12 offline; covers the phrasing class only"
+  },
+  {
+   "name": "Target-inference early-return shortcuts",
+   "location": "goal-host goal-target-inference.ts:362/381/396/416 (08-13 lines)",
+   "purpose": "Fast deterministic targets",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Flatten derivation goals to [shellResult]@0.6 before vocabulary/LLM"
+  },
+  {
+   "name": "isPathlessCodeChangeGoal admitter",
+   "location": "goal-host",
+   "purpose": "Admit pathless edit goals (law 13)",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Regex conjunction admitted 1/4 natural phrasings"
+  },
+  {
+   "name": "fileCapabilityGap deny-list",
+   "location": "goal-host index.ts:4409",
+   "purpose": "File missing-capability gaps",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Largest phantom minter (174 rows per walk); its own comment states the correct rule, which it does not implement"
+  },
+  {
+   "name": "orphaned-capability-scan",
+   "location": "development-vessel",
+   "purpose": "Detect unused resolvers",
+   "status": "broken",
+   "general": false,
+   "evidence": "Blind to direct code and LLM tool-loop invocations; 52/303 gaps phantom"
+  },
+  {
+   "name": "Deterministic verified-registry-count oracle",
+   "location": "goal-host reach verifier",
+   "purpose": "Oracle against primary source",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Rung 1: queried /registry/stats totalShapes=324 and matched"
+  },
+  {
+   "name": "Conditioned differentiation key",
+   "location": "validation/scripts/conditioned-differentiation-harness.py",
+   "purpose": "Identity separating work by data store",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Offline-only validation 08-12; not wired into the walk"
+  },
+  {
+   "name": "packages/shape-dispatch-check",
+   "location": "packages/shape-dispatch-check + scripts/check-shape-dispatch-all.sh",
+   "purpose": "Class detector for shape dispatch contract",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Zero callers (08-21); activity-api CLAUDE.md claims bun run lint runs it, but no lint script exists"
+  },
+  {
+   "name": "Inventory role taxonomy (full/hub/spoke/infra/autonomy) + apply-inventory",
+   "location": "scripts/substrate vessels.inventory.json",
+   "purpose": "Place units by profile",
+   "status": "live-used",
+   "general": true,
+   "evidence": "autonomy role in no hub/spoke group, so 42 units ran nowhere; 6d9e611d moved self-observation to infra"
+  },
+  {
+   "name": "seed-identity per-vessel key writing",
+   "location": "081e9cbd bootstrap",
+   "purpose": "Identity convergence on cold boot",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Cold boot F2 went from 401 failure to pass"
+  },
+  {
+   "name": "bootstrap-seeder / development-vessel-seed",
+   "location": "bootstrap tier",
+   "purpose": "Seed templates on fresh volumes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Cold boot 112/121 + 9 law-3 duplicate refusals. Needs to be included and started on a restricted roster"
+  },
+  {
+   "name": "vessel-ctl dynamic manifest install",
+   "location": "container vessel-ctl",
+   "purpose": "Runtime vessel mutability",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Installed unit lost on recreate; restoring from inventory enables but does not start"
+  },
+  {
+   "name": "compose_lesson concept channel",
+   "location": "concept-db -> feature-compose prompt",
+   "purpose": "Read-at-use-time drafter lessons",
+   "status": "live-used",
+   "general": true,
+   "evidence": "20 lessons, text from hardcoded COMPOSE_LESSON_GUIDANCE. The operator seeded a lesson from a hypothesis later refuted (fc-scope frequency)"
+  }
+ ],
+ "principles": [
+  "A retracted claim must leave the heading, because the heading is what gets quoted (COMPLEXITY_LADDER \u00a70)",
+  "A timestamp is not an identifier: attribute via the dispatch's own walkLog/goal_reasoning, never a shared-journal grep. Violated 4+ times (COMPLEXITY_LADDER \u00a72-3, COMPOSITIONALITY_STATE \u00a715.36)",
+  "Identical goal text coalesces, so an A/B reusing text measures one execution (COMPLEXITY_LADDER \u00a72)",
+  "A zero read through a filter measures the filter; a returned-row count is not a table total; a failed page is not an empty page (COMPLEXITY_LADDER \u00a75, COMPOSITION_LEARNING_STATE)",
+  "Close and reject are not interchangeable: closed is a landed-fix training label (COMPLEXITY_LADDER \u00a76)",
+  "When fixing a class, grep the twin/sibling call sites: dead-store gate, tcExit, shell/bash vs shellResult x4, floor vs walk guard (COMPLEXITY_LADDER \u00a77, COMPOSITIONALITY_STATE \u00a715.41)",
+  "Absence-of-write is the frontier. A trace-driven immune system cannot see a store that stops being written; the missing predicate is 'something that should be written or alive is not' (COMPOSITIONALITY_STATE \u00a79.1/9.4)",
+  "A detector must run where its data lives or distinguish not-written from not-visible-from-here (COMPOSITIONALITY_STATE \u00a715.3)",
+  "A masked unit that is running defeats every recovery mechanism; assert that no running vessel's unit is masked (COMPOSITIONALITY_STATE \u00a715.34)",
+  "A partition of roles can be complete on each side and still lose a member (COMPOSITIONALITY_STATE \u00a715.53)",
+  "Validate a fix against the live system before dispatching it; the database reveals the full constraint set in seconds (COMPOSITIONALITY_STATE \u00a715.12)",
+  "Time the operation in the environment it runs in (compose worktree is not the live tree) (\u00a715.11.1)",
+  "'Fix landed and nothing changed' has two readings: not deployed yet, or a second defect downstream (\u00a715.7.1)",
+  "One op at one distinctive anchor predicts landing; a partially-correct multi-op plan is worth nothing (\u00a715.10)",
+  "An absent marker means NOT OBSERVED, not FAILED. Violated at verify, refuter and cutover layers (\u00a711.5, \u00a715.19, \u00a715.20)",
+  "Evidence supply beats decision rules and instructions (6/6 vs 0/10). Refined: concrete values transfer, procedure does not; a supplied fact cannot compose wrongly (\u00a715.37, \u00a715.51, \u00a715.59)",
+  "Law 8 changed what the system tried; gates only changed what it was allowed to keep (\u00a715.49)",
+  "Grounding is not freshness: for time-varying values, retrieval without a timestamp is indistinguishable from fabrication (\u00a715.23, \u00a715.47)",
+  "An oracle that disagrees with a peer source is not an oracle until something independent arbitrates (\u00a715.47)",
+  "A negative reproduction only refutes the conditions you actually recreated (\u00a715.39)",
+  "When a dependency's latency is bimodal across orders of magnitude, suspect the dependency's state before tuning the caller (\u00a715.58)",
+  "Retrying a failing compose is not free: residue accumulates in the shared clone (\u00a715.20)",
+  "A correction that does not reach the consumer is not a correction (reach override vs reached-command cache) (\u00a715.30)",
+  "The substrate has no path from 'this has never worked' to 'stop selecting it'. Retirement plus recipe eviction are the missing half of law 3 (\u00a715.33-35)",
+  "One disease in four stores: an action that reports success while changing nothing (retirement, cache, masked unit, grader) (\u00a715.35, \u00a715.40)",
+  "The system knows what it is but not what it is currently doing: descriptive self-knowledge is strong, reflexive self-knowledge is missing (\u00a712.3)",
+  "Bind what the schema requires, name what the query needs, and make every seam emit a counter at the consuming layer. Counters need a non-human runtime reader (ARCHITECTURE_2026-08-21 \u00a72, Appendix A law 2)",
+  "A detector must be proven to complete (broken fixture exits 1), not merely to exist (ARCHITECTURE_2026-08-21 \u00a72.4)",
+  "Operator failure delays work without destroying it: the demand survives as a gap and the autonomous lane closes it (3e76227, fef173c, b10c3f2) (\u00a711.11, \u00a715.4, \u00a715.6)",
+  "Pre-register falsifiers and make no in-run repairs; setup failures are findings, never passes; check HTTP status and payload separately (coldboot PREREG, container-lifecycle REPORT)",
+  "A test whose form can be satisfied without doing the work is not a test (the epoch field) (\u00a715.25)",
+  "Guidance that generalises past its evidence is how a fix becomes a defect (\u00a715.31)",
+  "The reach gate is only as good as the oracle on the target shape; a write-shaped goal graded on the write passes a durable wrong answer (COMPLEXITY_LADDER \u00a75)",
+  "A validation stack that derives its reference from the same source as the thing it validates cannot detect that source being wrong (\u00a714)"
+ ]
+}

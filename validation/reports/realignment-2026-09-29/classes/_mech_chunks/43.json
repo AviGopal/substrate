@@ -1,0 +1,71 @@
+{
+ "area": "light-dispatch-vessel",
+ "items": [
+  {
+   "name": "light-dispatch-vessel",
+   "location": "a4a50a07",
+   "purpose": "stateless oneshot dispatcher",
+   "status": "unknown",
+   "general": true,
+   "evidence": "needed a liveness watchdog (5882bc8e, 08a0f156)",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "deprecateGhostTemplates",
+   "location": "light-dispatch-vessel (07-13 SA)",
+   "purpose": "retire 2 hardcoded ghost ids",
+   "status": "fossil",
+   "general": false,
+   "evidence": "nonexistent route; replaced 08-04",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "light-dispatch reach POST",
+   "location": "light-dispatch-vessel runDispatch (59732fd)",
+   "purpose": "grade light dispatch executions",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "goal-host grade-at-insert / activity-api reachedVerdict",
+   "evidence": "third writer of reached",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "retireNeverSucceededTemplates (retire-sweep)",
+   "location": "light-dispatch-vessel src/index.ts:152-222",
+   "purpose": "retire arms with executions but zero successes",
+   "status": "broken",
+   "general": true,
+   "evidence": "Bearer\u2192401 vs ApiKey\u2192200; 'covered 0/0' \u00d789 since \u226509-25; setInterval hourly",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "light-dispatch-vessel",
+   "location": "repos/light-dispatch-vessel",
+   "purpose": "stateless second dispatcher (removes the goal-host SPOF)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "systemd active on substrate-live",
+   "source": "openspec-3",
+   "mentions": 1,
+   "sources": [
+    "openspec-3"
+   ]
+  }
+ ]
+}

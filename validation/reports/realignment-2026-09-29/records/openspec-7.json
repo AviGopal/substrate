@@ -1,0 +1,756 @@
+{
+ "source": "openspec-7",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/openspec-7.md",
+ "coverage": "Entries 109-126 of the openspec index, read in full: 2026-08-26-large-file-edit-capability, 2026-08-26-reuse-before-mint-crossfamily-dedup, 2026-08-27-live-recipe-rescues-failed-partner, 2026-08-28-escalation-disposition-executor, 2026-08-29-cross-vessel-wiring-repair, 2026-09-12-host-independent-federation-join, 2026-09-24-live-self-view (all of it), causal-attempt-ledger (proposal, design, tasks, sources, plus GAPS_OBSERVED/FINISH_LINE skimmed), consumer-side-landing-probes, contained-self-development (proposal, design, tasks), decentralized-compose-ownership (proposal, design, tasks), and 7 stray JSON fossils (add-goal-summary-*, add-new-http-response-resolver, add-summarize-goals-activity, config-patch, delete-old-http-response). Some changes the prompt named are NOT in 109-126: value-per-cost-selection, unified-install-interface, do-anything-surface, human-surface-stack, obsidian-legibility-surface, the *http-response*.ts/.js fossil family and the archive are entries 127-179, covered by openspec-8. Liveness was checked against the container push clones (/workspace/git/vessels) with merge-base --is-ancestor. It was not checked against the host repos/ checkouts, which are 5 days stale. Other live sources: shape resolves on both nodes, 24-72h journals, the live gap store (6,278 rows), the per-node attempt-ledger JSONL, and read-only SurrealDB. Timestamps are UTC, read 09-29. A temporary resolve helper was put in /tmp in both containers and then removed. Outcome convention: proposal-only entries that were never built are 'dormant' with tried='proposal only'; a replaced one is 'superseded'.",
+ "attempts": [
+  {
+   "key": "drafter-quality",
+   "title": "Large-file edit capability for composer",
+   "where": "openspec/changes/2026-08-26-large-file-edit-capability",
+   "date": "2026-08-26",
+   "tried": "spec for verbatim-anchor grounding, line-range ops, AST ops; operator built replace_lines c86451f (08-25), line-addressed repair ee6312c/4841fb3 (08-30); later targetFileOnDisk anchors (09-24), [fc-exact] verbatim edits",
+   "outcome": "partial",
+   "evidence": "replace_lines present in feature-compose/patch-with-tools/local-tools; the spec's own verification (7-arm removal autonomously; learning-core gap self-closes) never recorded; class recurred as template-literal drafts, duplicate anchors, fs_edit empty new_string, $' expansion"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Reuse-before-mint cross-family producer dedup",
+   "where": "openspec/changes/2026-08-26-reuse-before-mint-crossfamily-dedup",
+   "date": "2026-08-26",
+   "tried": "proposal only (producerExistsForShape guard + consolidation sweep)",
+   "outcome": "dormant",
+   "evidence": "producerExistsForShape absent in live clones; SurrealDB: 70 activities output activityExecutionSummary (68 not deprecated), all minted 05-30..07-01; growth stopped for other reasons, clones never retired"
+  },
+  {
+   "key": "false-verification",
+   "title": "Recipe rescue clause for countable grounding",
+   "where": "openspec/changes/2026-08-27-live-recipe-rescues-failed-partner",
+   "date": "2026-08-27",
+   "tried": "rescue when fresh partner null; deployed and live-validated",
+   "outcome": "failed",
+   "evidence": "INERT: wrong branch (_recipeAnswered => _useRecipe=false); later declared UNSOUND (self-confirmation); deleted"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Option A retry-once on null fresh derivation",
+   "where": "goal-host index.ts",
+   "date": "2026-08-27",
+   "tried": "retry once on fresh derivation that produced no measurement",
+   "outcome": "worked",
+   "evidence": "26f4ecb landed durable, in live goal-host HEAD bc99f91; DONATED truth=1 observed 08-27"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Layer-2 pointer resolution via reachContentDigests",
+   "where": "goal-host poolDigest",
+   "date": "2026-08-27",
+   "tried": "resolve stub executionId via reachContentDigests; dispatched first (UNFAVORABLE), then supervised",
+   "outcome": "reverted",
+   "evidence": "live test: reachContentDigests.size=0, still abstained; reverted to 26f4ecb"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Layer-2 stdout render in poolDigest",
+   "where": "goal-host index.ts ~10845",
+   "date": "2026-08-27",
+   "tried": "render executable-result stdout instead of JSON (160-char guard dropped the line)",
+   "outcome": "dormant",
+   "evidence": "f91f8f2 live; verified attempt-1 reach 08-27; but 72h goal-host journal: 0 DONATED, 0 recipe answers, 0 independent-recompute-agrees, 3 'walk emitted no measurable value'"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Escalation-disposition executor",
+   "where": "development-vessel escalation-disposition-apply.ts",
+   "date": "2026-08-28",
+   "tried": "4-verb executor consuming solicitationOutcomeReport with bounded re-test exemption; built 08-29..09-15 (91cc1ff, 891304c, f4a6a72, d3e1ca2, 9c13474)",
+   "outcome": "dormant",
+   "evidence": "0 gaps carry a disposition or human_* closed_reason; gap orphaned-capability-escalation_disposition_apply OPEN; answers never arrive (memory: 248 escalations to pinned :8270, 0 answered)"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Cross-vessel wiring repair composition",
+   "where": "openspec/changes/2026-08-29-cross-vessel-wiring-repair",
+   "date": "2026-08-29",
+   "tried": "proposal only; one operator hand run (activity-api 4e0d27a receiver -> goal-host d45aa3d sender)",
+   "outcome": "dormant",
+   "evidence": "no cross_vessel_repair symbol anywhere; 38 orphaned-capability gaps open; the first system-landed orphaned_capability was never recorded"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Host-independent federation join",
+   "where": "openspec/changes/2026-09-12-host-independent-federation-join; federation-transport-server.ts, gen-env, units",
+   "date": "2026-09-12",
+   "tried": "ungate transport startup, anchor precedence, remove frozen droplet IP, de-advertise, sibling derivation, discovery over overlay; graded by federation-probe-tick",
+   "outcome": "partial",
+   "evidence": "09-29: node-1 federation-transport-vessel disabled/inactive; node-1 /bootstrap still returns loopback identity_endpoint (Defect C unchanged); fed:no_relay_anchor and fed:join_door_host_dependent open (updated 09-29 03:47); node 2 transport active, register 201"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "/bootstrap request-derived anchor via dispatch",
+   "where": "discovery-vessel index.ts",
+   "date": "2026-09-12",
+   "tried": "3 dispatches, 2 formulations",
+   "outcome": "failed",
+   "evidence": "refused 'grounding window (0 BYTES)'; filed fed:compose-grounding-window-empty-for-discovery-index; the grounding class was later fixed by b0782f8 but the /bootstrap edit never landed"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "targetFileOnDisk: compose readers read push clone",
+   "where": "feature-compose.ts",
+   "date": "2026-09-24",
+   "tried": "guard 2 then sites A/B/D",
+   "outcome": "worked",
+   "evidence": "20a668b, a0ff3d3, 13841a4, 1d4ac1c live; anchors supplied 100/122 candidates (0/7 before)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Cutover advances super-repo gitlink (live-self-view 2.1)",
+   "where": "vessel-mitosis-cutover.ts",
+   "date": "2026-09-24",
+   "tried": "spec'd",
+   "outcome": "superseded",
+   "evidence": "premise wrong: the gitlink advanced, but the WORKTREE was frozen by draft residue; writer = walk bounded_shell sed with default cwd super-repo"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "bounded_shell default cwd + 503 retryable instead of walk fall-through",
+   "where": "local-tools index.ts, goal-host index.ts",
+   "date": "2026-09-25",
+   "tried": "C1 scratch cwd, trigger fix",
+   "outcome": "worked",
+   "evidence": "local-tools 11636e6 falsifier MET 06:03Z; goal-host 60833b4 RETRYABLE CAPACITY present live; detector 2.2 still open"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Restart coalescing selfRestartAlreadyOwed",
+   "where": "vessel-mitosis-cutover.ts",
+   "date": "2026-09-24",
+   "tried": "14 drafts, template literal broke builds; spec rewritten with unique anchors",
+   "outcome": "worked",
+   "evidence": "46d252c live; 12 landings, 0 pairs <60s, 4 coalescings (09-25 03:52Z)"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Deterministic refusals propagate to children; scope_refused lesson",
+   "where": "feature-compose.ts, gap-to-feature.ts",
+   "date": "2026-09-24",
+   "tried": "4.1 72fdb1f, 4.2a 2992a23, 4.2b fcbd737",
+   "outcome": "partial",
+   "evidence": "live; 4.2b falsifier unexercised; 714 recommit/narrowed-prefixed gaps still open in store"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "staged_base_sha = pre-patch hash (5.4)",
+   "where": "feature-compose.ts",
+   "date": "2026-09-24",
+   "tried": "082f6ee",
+   "outcome": "reverted",
+   "evidence": "the second reader (freshness) needed the patched hash: 7 false already_applied no-ops; substrate self-repaired with 96a1f57 (freshness also accepts staged==live)"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Remove forged operator_approved block (d8c93b4)",
+   "where": "feature-compose.ts, gap-to-feature.ts, local-tools fs_edit",
+   "date": "2026-09-25",
+   "tried": "6.2 5cbc6d0 prompt, 6.1 60ad9cd replacement op (deletion ops impossible until 6.3 aaee500)",
+   "outcome": "worked",
+   "evidence": "0 occurrences of 'operator_approved: true' in live feature-compose.ts"
+  },
+  {
+   "key": "false-verification",
+   "title": "Causal attempt ledger (intent/snapshot/outcome/settlement)",
+   "where": "development-vessel attempt-ledger.ts, attempt-register.ts; git hooks",
+   "date": "2026-09-23",
+   "tried": "full change; graded acceptance 3x10/10 incl. cold boot",
+   "outcome": "partial",
+   "evidence": "live: node1 305 settlements (247 held/42 regressed, mostly acceptance fixtures), node2 124 (122 held). The ledger settled 0a0d59f held although it deadlocked landings (#47); per-node, not shared; tasks.md 0/35 ticked"
+  },
+  {
+   "key": "false-verification",
+   "title": "Consumer-side landing probes",
+   "where": "openspec/changes/consumer-side-landing-probes",
+   "date": "2026-09-28",
+   "tried": "proposal (trace-derived probe replay)",
+   "outcome": "superseded",
+   "evidence": "operator ruling 'reuse before minting' -> contained-self-development section 8 (8.20 f2491b4, 8.22 fad0d3c); nothing built"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "autonomyScope containment (stage 1)",
+   "where": "gap-to-feature.ts, feature-compose.ts, pool record autonomy-scope",
+   "date": "2026-09-27",
+   "tried": "c110070, c27964b, d7ec192 require_falsifier_classes, 00c0e5f, bb51374, 28a69cf, 59bfc4c",
+   "outcome": "worked",
+   "evidence": "falsifier 1.5 PASSED 08:49; live admission 09-29 04:19 on both nodes: 863 candidates -> 0 admitted (not owned 426, needs_information 340, autonomy_scope 68)"
+  },
+  {
+   "key": "gap-content",
+   "title": "gap_falsify + pre-admission decomposition",
+   "where": "gap-lifecycle-scan.ts, gap-to-feature.ts",
+   "date": "2026-09-27",
+   "tried": "6.1 0259b8c/c5f0081/b5df9c2; 6.3c 375ec90; 6.3d 2de0ae8",
+   "outcome": "partial",
+   "evidence": "first run falsified 10, second 0 (rules exhausted); decomposition ran 6x/24h, mostly 'no valid step' (reader not found); 1 wrote 2 steps"
+  },
+  {
+   "key": "false-verification",
+   "title": "Post-land suite actually runs (8.21)",
+   "where": "test_suite timeout_sec",
+   "date": "2026-09-28",
+   "tried": "5e9a0b2",
+   "outcome": "worked",
+   "evidence": "node2 journal: before 09-28 08:00 dev-vessel ran=false 76/ran=true 1; after: 19/19 ran=true, activity-api 3/3, goal-host 3/3"
+  },
+  {
+   "key": "false-verification",
+   "title": "Newly failing test withholds landed_verified (8.22)",
+   "where": "vessel-mitosis-cutover/feature-compose",
+   "date": "2026-09-28",
+   "tried": "fad0d3c",
+   "outcome": "unknown",
+   "evidence": "0 'landed_verified credit withheld' lines in 72h: falsifier unexercised"
+  },
+  {
+   "key": "node-locality",
+   "title": "Decentralized compose ownership (node 2 owns dev-vessel/activity-api/goal-host)",
+   "where": "gap-to-feature ownedVessels, composeOwnership, goal-host routing, composer-interruption-sweep",
+   "date": "2026-09-26",
+   "tried": "~25 landed tasks incl. 1.1c 988377f, 4.6 8645ead, 4.7 fbb2fab/1669ac8, 5.1a 1e18e09",
+   "outcome": "worked",
+   "evidence": "live composeOwnership: node1 16 repos, node2 3; composerInterruptionReport 24h node1: 21 restarts, 0 lossy, 0 foreign_cutovers; 4.4 falsifier passed 09-27 21:41-22:21Z"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Gap store forwarding 4.0d-i",
+   "where": "substrate-gap.ts",
+   "date": "2026-09-26",
+   "tried": "51e30de landed",
+   "outcome": "reverted",
+   "evidence": "deleted 6 min later by autonomous recommit 21179d8 (stale base); re-landed partially as 516bc18, read side eb62676"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Exact-edit goal in prose (4.7b)",
+   "where": "goal-host index.ts",
+   "date": "2026-09-27",
+   "tried": "prose 'Replace exactly this line'",
+   "outcome": "partial",
+   "evidence": "3cced35 applied 1 of 3 edits and still reached; the 2.7 block-format retry 1669ac8 was byte-equal"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "goal_summary / http_response drafts as openspec JSON",
+   "where": "openspec/changes/*.json (super-repo commit 4e4170a8)",
+   "date": "2026-08-17",
+   "tried": "route-edit-9077062c / orphaned-capability-goal_summary recommit churn; drafts later committed by the 'vessel code drift' self-maintenance path",
+   "outcome": "failed",
+   "evidence": "4e4170a8 09-07 Substrate Autonomous: 2134 files +59401, 34 in openspec/changes; goal_summary resolver live with no code reader; gap orphaned-capability-goal_summary still OPEN"
+  }
+ ],
+ "problems": [
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Compose gates read the target file from the stale super-repo submodule checkout while the edit applies in the push clone; the dev-vessel worktree was ~100 commits behind",
+   "root_cause": "two roots; only the operator's pull-sync advanced the worktree; draft residue froze it",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-25",
+   "recurrences": 3
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Operator host repos/* checkouts are 5 days stale; host grep reports live mechanisms absent",
+   "root_cause": "host submodules not updated; liveness checked on the wrong tree",
+   "first_seen": "2026-09-23",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Walk bounded_shell sed -i edits the super-repo submodule checkout",
+   "root_cause": "local-tools DEFAULT_CWD = super-repo; edit-intent compose 503 fell through to the walk",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-25",
+   "recurrences": 2
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Test runs wrote the live gap store and registered a phantom local-tools endpoint; ledger-u-probe scratch-repo gaps remain in the live store",
+   "root_cause": "module-load race in substrate-gap-falsifier.test.ts; tests inherit live DISCOVERY env",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-28",
+   "recurrences": 3
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate-authored drift gate 0a0d59f refused every isolated landing, including its own repair",
+   "root_cause": "staged_base_sha was the patched hash; the gate compared it with HEAD",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-24",
+   "recurrences": 1
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Landed edits overwritten or reverted: 21179d8 deleted 51e30de; 6ab8271 undid a0ff3d3; live-sync rollback reverted a committed line",
+   "root_cause": "recommit/park resume on a stale base; rollback restores the snapshot over a file equal to the commit",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-26",
+   "recurrences": 4
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Cross-gap ride-along: one gap's edit committed under another gap's commit (4e40707, 996b841)",
+   "root_cause": "lease deferral without rollback leaves the edit staged; the next compose commits it",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-24",
+   "recurrences": 2
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Spec fix 5.4 (pre-patch base) broke freshness: 7 false already_applied no-ops",
+   "root_cause": "one field with two readers holding two meanings",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-24",
+   "recurrences": 1
+  },
+  {
+   "key": "false-verification",
+   "symptom": "The ledger settled 'held' on the commit that stopped every landing",
+   "root_cause": "baseline checks observe units and gates, not whether a known-good landing still lands (no landing_liveness check)",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-24",
+   "recurrences": 1
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Post-land test suite silently ran=false for about 600 landings on dev-vessel/activity-api",
+   "root_cause": "test_suite passed no timeout_sec; the shell's 30s default killed the suite before it printed a summary",
+   "first_seen": "2026-08-31",
+   "last_seen": "2026-09-28",
+   "recurrences": 1
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Autonomous landings that satisfied their own check were regressions (9cfdea4, af2c737, a198907), stamped landed_verified",
+   "root_cause": "verdicts graded against the gaming-prone motivating check; runBehavioralVerification had no input (0/~6100 gaps)",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-28",
+   "recurrences": 3
+  },
+  {
+   "key": "false-verification",
+   "symptom": "nonzero_field predicate closed a live divergence as landed_verified on a reverted landing",
+   "root_cause": "predicate polarity: health field used as a defect count",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-27",
+   "recurrences": 1
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "A drafter wrote code forcing operator_approved:true (d8c93b4)",
+   "root_cause": "the prompt told the drafter to set operator_approved itself",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-25",
+   "recurrences": 1
+  },
+  {
+   "key": "gap-content",
+   "symptom": "10 gaps whose id/source/summary are unrendered template placeholders ({{substrateGap.id}}, {{goal.gap_id}} ...), 09-19..09-25",
+   "root_cause": "walk substrateGap_write payload synthesis emits template text; the store accepts it",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-25",
+   "recurrences": 10
+  },
+  {
+   "key": "gap-content",
+   "symptom": "863 open candidates, 0 admitted on both nodes; 340 needs_information",
+   "root_cause": "97% of gaps are not fixable as filed (no edit site or machine check); decomposition fails on nonexistent readers",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Four open composer-interruption gaps with four id schemes, plus a capability gap for the literal id template 'composer-interruption-<node>-<day>'",
+   "root_cause": "LLM walks author gap ids; no stable derived-id discipline outside the sweep; fixed bugs leave their walk-filed gaps open",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-26",
+   "recurrences": 5
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Per-commit unaccounted-landing detector opened 469 gaps and closed 36 in 24h",
+   "root_cause": "one gap per commit; fixture scratch repo commits",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-25",
+   "recurrences": 1
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "70 activityExecutionSummary producers (68 active-flagged, dormant)",
+   "root_cause": "mint via mitosis bypassed the per-parent cap; no cross-family guard; consolidation never ran",
+   "first_seen": "2026-06-20",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Substrate commit 4e4170a8 added 2134 files (+59401) including openspec JSON drafts and root residue",
+   "root_cause": "rhythm self-maintenance 'commit vessel drift' LLM path through ungated shell git",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-07",
+   "recurrences": 1
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Autonomous recommits write inert code: node:null (1c7833b), gap write via READ resolver (827a218), a803852 rescue without a call site, goal_summary producer with no code reader",
+   "root_cause": "single-file drafts satisfying a check without a live reader",
+   "first_seen": "2026-07-01",
+   "last_seen": "2026-09-26",
+   "recurrences": 4
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Human answers never take effect; category seal permanent",
+   "root_cause": "escalations posted to a replaced vessel no human reads; the executor has no input",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-26",
+   "recurrences": 1
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "Hub transport disabled; /bootstrap serves loopback identity; fed:no_relay_anchor open",
+   "root_cause": "join door derives anchors from env; transport not enabled on the standalone hub; nodes federate over host.containers.internal HTTP drop-ins instead",
+   "first_seen": "2026-09-12",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Attempt ledger, selection state and operator pauses are per node; containment reopens if the holder drops from discovery",
+   "root_cause": "only the gap store (forwarding) and pool records (discovery) are shared",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "A runtime state file tracked in the super-repo froze pull-sync 130 commits (learning-mode-state.json); more tracked runtime files on node 2",
+   "root_cause": "autonomous commit edc68d49 re-added the state file; runtime files are not gitignored",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 2
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Verifier-recipe countable grounding idle: 0 donations or recipe answers in 72h",
+   "root_cause": "countable goals rarely route to the shellResult path; misrouting (separate proposal) never done",
+   "first_seen": "2026-08-27",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "targetFileOnDisk (clone-first target resolution)",
+   "location": "development-vessel/src/resolvers/feature-compose.ts",
+   "purpose": "compose gates read the file the edit applies to",
+   "status": "live-used",
+   "general": true,
+   "evidence": "20a668b/a0ff3d3/13841a4/1d4ac1c in live HEAD; anchors supplied on the cutover file"
+  },
+  {
+   "name": "selfRestartAlreadyOwed",
+   "location": "development-vessel vessel-mitosis-cutover.ts",
+   "purpose": "coalesce owed self-restarts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "46d252c; 4 coalescings; 1 'already owed' on node2 in 72h"
+  },
+  {
+   "name": "autonomyScope reader + admission/verdict floor",
+   "location": "gap-to-feature.ts, feature-compose.ts, pool record autonomy-scope",
+   "purpose": "keep autonomous work off the lane core; require a falsifier class",
+   "status": "live-used",
+   "general": true,
+   "evidence": "autonomy_scope 68 exclusions per admission pass on 09-29"
+  },
+  {
+   "name": "composeOwnership / ownedVessels / findComposeOwner",
+   "location": "development-vessel routes/impulses.ts, gap-to-feature.ts; goal-host index.ts",
+   "purpose": "per-node repo ownership and owner routing of composes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "resolves live: node1 16 repos, node2 3; 'not owned here' 426 exclusions"
+  },
+  {
+   "name": "cross-node routing via host.containers.internal drop-ins",
+   "location": "unit drop-ins VESSEL_ADVERTISE_ENDPOINT, VESSEL_ID, GAP_STORE_ENDPOINT (tasks.md 4.5, 4.0d-ii)",
+   "purpose": "node1<->node2 compose routing and gap store forwarding",
+   "status": "live-used",
+   "general": false,
+   "evidence": "sourced from tasks.md; node2 /bootstrap shows host.containers.internal identity; drop-in files not read"
+  },
+  {
+   "name": "forwardToGapStore",
+   "location": "development-vessel substrate-gap.ts",
+   "purpose": "single shared gap store held by node 1",
+   "status": "live-used",
+   "general": true,
+   "evidence": "positive half verified 07:10Z per tasks; symbol live"
+  },
+  {
+   "name": "composer-interruption-sweep",
+   "location": "development-vessel composer-interruption-sweep.ts + rhythm impulses",
+   "purpose": "detect composer restarts caused by foreign cutovers",
+   "status": "live-used",
+   "general": false,
+   "evidence": "24h report: 45009 lines, 21 restarts, 0 lossy, 0 foreign"
+  },
+  {
+   "name": "causal attempt ledger (attempt_register, snapshots, outcome, settlement)",
+   "location": "development-vessel attempt-ledger.ts, attempt-register.ts; /workspace/attempt-ledger/*.jsonl per node",
+   "purpose": "link landings to consequences; deferred settlement",
+   "status": "live-used",
+   "general": true,
+   "evidence": "node1 408 intents/305 settlements, node2 124/124; per-node, not shared; blind to landing-path liveness (#47)"
+  },
+  {
+   "name": "unaccounted landing detector (aggregated)",
+   "location": "development-vessel sweepAttempts",
+   "purpose": "file commits with no attempt",
+   "status": "live-used",
+   "general": true,
+   "evidence": "10 open unaccounted-landings-<repo> aggregates incl. ledger-u-probe fixture"
+  },
+  {
+   "name": "escalation_disposition_apply",
+   "location": "development-vessel escalation-disposition-apply.ts",
+   "purpose": "apply a human answer (drop/redefine/provide/grant) to a sealed gap",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 dispositions in store; orphaned-capability-escalation_disposition_apply open"
+  },
+  {
+   "name": "verifier-recipe + independent recompute (retry-once, stdout render)",
+   "location": "goal-host index.ts (26f4ecb, f91f8f2)",
+   "purpose": "grounded reach for countable goals",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 DONATED / 0 recipe answers / 0 agrees in 72h"
+  },
+  {
+   "name": "a803852 recipe rescue",
+   "location": "goal-host independent-recompute",
+   "purpose": "unsound rescue clause",
+   "status": "fossil",
+   "general": false,
+   "evidence": "call site unwired per the 08-27 log; still in HEAD"
+  },
+  {
+   "name": "goal_summary resolver",
+   "location": "development-vessel resolvers/goal-summary.ts",
+   "purpose": "close orphaned-capability-goal_summary",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "resolves live; no code reader; 1 activity references the shape; gap still open"
+  },
+  {
+   "name": "federation-transport-vessel on hub",
+   "location": "scripts/substrate/federation-relay/federation-transport-server.ts",
+   "purpose": "libp2p overlay reachability",
+   "status": "dormant",
+   "general": true,
+   "evidence": "node1 unit disabled/inactive; node2 active"
+  },
+  {
+   "name": "federation-probe-tick",
+   "location": "scripts/substrate/federation-relay/federation-probe-tick.ts",
+   "purpose": "external-vantage federation oracle filing fed:<class> gaps",
+   "status": "live-used",
+   "general": true,
+   "evidence": "fed:* gaps updated 09-29 03:47"
+  },
+  {
+   "name": "replace_lines op",
+   "location": "feature-compose, patch-with-tools, local-tools",
+   "purpose": "line-range edits for large files",
+   "status": "live-used",
+   "general": true,
+   "evidence": "c86451f operator 08-25; 6cb5042 post-edit bytes"
+  },
+  {
+   "name": "[fc-exact] verbatim goal-supplied edits",
+   "location": "feature-compose (value-per-cost 2.7)",
+   "purpose": "apply pre-validated EDIT blocks with no LLM plan",
+   "status": "live-used",
+   "general": true,
+   "evidence": "96 applications on node2 in 72h"
+  },
+  {
+   "name": "gap_falsify pass + pre-admission decomposition",
+   "location": "gap-lifecycle-scan.ts, gap-to-feature.ts",
+   "purpose": "make gaps verifiable",
+   "status": "live-used",
+   "general": true,
+   "evidence": "6 decompositions in 24h, mostly 'no valid step'"
+  },
+  {
+   "name": "post-land suite + newly-failing withhold",
+   "location": "cutover/test_suite (5e9a0b2, fad0d3c)",
+   "purpose": "regression check after landing",
+   "status": "live-used",
+   "general": true,
+   "evidence": "19/19 ran=true since 09-28 08:00; withhold never fired"
+  },
+  {
+   "name": "producerExistsForShape (proposed)",
+   "location": "not built",
+   "purpose": "cross-family dedup before mint",
+   "status": "unknown",
+   "general": true,
+   "evidence": "absent from all clones"
+  },
+  {
+   "name": "activityExecutionSummary clone family",
+   "location": "SurrealDB activity table",
+   "purpose": "duplicate producers",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "70 rows, 68 not deprecated, minted 05-30..07-01"
+  },
+  {
+   "name": "stray openspec JSON drafts (7 in shard)",
+   "location": "openspec/changes/*.json",
+   "purpose": "drafter scratch plans for goal_summary/http_response",
+   "status": "fossil",
+   "general": false,
+   "evidence": "committed by 4e4170a8; read by nothing"
+  }
+ ],
+ "principles": [
+  "Verify liveness in the tree that runs (container push clone and /vessels), not the host checkout; the host repos/ tree was 5 days stale and hid every 09-24..09-29 mechanism.",
+  "Grep every READER of a field before redefining it (5.4: one field, two readers, two meanings, a lane-wide no-op).",
+  "A consequence ledger that checks units and gates but not 'a known-good landing still lands' will settle the lane-killing commit as held.",
+  "Verify at the consuming layer, and confirm the precondition branch fires before deploying (live-recipe: three inert fixes were caught only by runtime diagnostics).",
+  "A check that reports 'did not run' as a neutral value decays silently (post-land suite ran=false for 4 weeks).",
+  "Reuse before mint also applies to the operator: consumer-side probes were superseded by registering into existing expectation loops.",
+  "Containment by scope before containment by branch: one shape and two readers, reversible by editing a record.",
+  "Exact-edit goals must use the structured EDIT block format; prose goals go through the planner and can drop edits while still reaching.",
+  "An executor whose input channel no human reads is dormant however correct it is; build the reader and the channel together.",
+  "Task checkboxes and the gap store both lag reality; neither is authoritative without a live check."
+ ],
+ "claims": [
+  {
+   "key": "codebase-bloat-fossils",
+   "claimed_at": "2026-08-25",
+   "claim": "activityExecutionSummary served by 15+ near-duplicate producers",
+   "where": "2026-08-26-reuse-before-mint-crossfamily-dedup/proposal.md",
+   "later": "09-29 SurrealDB: 70 producers (68 not deprecated); guard never built; sweep never ran"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-08-27",
+   "claim": "Both layers of the verifier-recipe grounding chain now closed (26f4ecb, f91f8f2)",
+   "where": "2026-08-27-live-recipe-rescues-failed-partner/proposal.md",
+   "later": "code still live, but 0 recipe donations or answers in 72h to 09-29: dormant"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-27",
+   "claim": "Rescue fix deployed and validated live",
+   "where": "live-recipe proposal",
+   "later": "INERT (wrong branch), then declared UNSOUND; autonomous a803852 rescue remains unwired in HEAD"
+  },
+  {
+   "key": "human-surface-escalation",
+   "claimed_at": "2026-08-28",
+   "claim": "Read-back repaired (outcomes 0->85, answered 0->1); executor spec gives the human answer an effect",
+   "where": "2026-08-28-escalation-disposition-executor/proposal.md",
+   "later": "executor built 08-29..09-15; 0 dispositions ever applied; its own orphaned-capability gap is open"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-07",
+   "claim": "gap-msvqgv4y closed: uiPanel_write is now invoked by draft-detector-activity",
+   "where": "openspec/changes/gap-msvqgv4y-closed.json (outside the shard, same commit 4e4170a8)",
+   "later": "false: live draft-detector-activity.ts contains no uiPanel_write"
+  },
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-09-12",
+   "claim": "Relay-less transport is healthy; ungate landed and verified",
+   "where": "2026-09-12-host-independent-federation-join Outcome",
+   "later": "09-29: hub transport disabled/inactive; /bootstrap still loopback; fed:no_relay_anchor and join_door_host_dependent open"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-24",
+   "claim": "1.2 sites A/B/D landed, falsifier MET 16:49",
+   "where": "live-self-view/tasks.md",
+   "later": "code live, but the site-D gap is still open in the store (updated 09-24 16:53)"
+  },
+  {
+   "key": "directed-overshoot",
+   "claimed_at": "2026-09-24",
+   "claim": "5.4 falsifier MET 23:54Z; staged_base_sha now the pre-patch hash",
+   "where": "live-self-view/tasks.md",
+   "later": "regression the same evening: 7 false already_applied no-ops; self-repaired by substrate 96a1f57"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-26",
+   "claim": "Causal attempt ledger acceptance CONSISTENT (3x10/10 incl. cold boot)",
+   "where": "causal-attempt-ledger/tasks.md header, FINISH_LINE.md",
+   "later": "0/35 task boxes ticked; the ledger settled 0a0d59f held (#47); per-node ledgers only"
+  },
+  {
+   "key": "calibration-seal",
+   "claimed_at": "2026-09-27",
+   "claim": "Stage-1 containment falsifier PASSED; 164 then 9 admitted",
+   "where": "contained-self-development/tasks.md 1.5/1.6",
+   "later": "09-29 04:19: 863 candidates -> 0 admitted on both nodes"
+  },
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-27",
+   "claim": "4.4 change-level falsifier PASSED (node-2 landing did not interrupt node 1)",
+   "where": "decentralized-compose-ownership/tasks.md",
+   "later": "holds: 24h node1 report shows 21 restarts, 0 lossy, 0 foreign cutovers"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-28",
+   "claim": "8.21: post-land suite runs again (5e9a0b2)",
+   "where": "contained-self-development/tasks.md",
+   "later": "holds: node2 19/19 dev-vessel ran=true since 08:00 09-28 (76 ran=false before)"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-28",
+   "claim": "8.22: a newly failing test withholds landed_verified",
+   "where": "contained-self-development/tasks.md",
+   "later": "never exercised: 0 'credit withheld' lines in 72h"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-07-01",
+   "claim": "goal_summary producer closes orphaned-capability-goal_summary (dc18b62)",
+   "where": "development-vessel config.ts comment 'Seam 3 substrate-authored resolver'",
+   "later": "no code reader; gap orphaned-capability-goal_summary still OPEN 09-29"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-26",
+   "claim": "4.0d-i gap-store forwarding landed exactly as requested (51e30de)",
+   "where": "decentralized-compose-ownership/tasks.md",
+   "later": "deleted 6 min later by autonomous recommit 21179d8; re-landed in parts"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-27",
+   "claim": "4.7b cleanup reached",
+   "where": "decentralized-compose-ownership/tasks.md",
+   "later": "3cced35 applied 1 of 3 edits; 4.7c in block format fixed it"
+  }
+ ]
+}

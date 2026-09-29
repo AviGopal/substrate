@@ -1,0 +1,372 @@
+{
+ "area": "llm-resolver-vessel",
+ "items": [
+  {
+   "name": "hardcoded ?vessel=llm-resolver-vessel pins",
+   "location": "feature-compose:1737, patch-with-tools:586, llm-completion-dispatch:182",
+   "purpose": "LLM routing in dev-vessel consumers",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "llm-router.ts",
+   "evidence": "07-31 misroutes to obsidian vessel",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "gradeArmByExecution",
+   "location": "llm-resolver",
+   "purpose": "Reach -> model arm credit",
+   "status": "dormant",
+   "general": false,
+   "evidence": "0 callers as of 07-21",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "syncCompletionAdvertisement quota-gated de-advertise",
+   "location": "llm-resolver",
+   "purpose": "withdraw exhausted capability",
+   "status": "unknown",
+   "general": true,
+   "evidence": "deadlocked 07-18, disabled 9c17905, behaviour oscillated",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "classifyPlane detector",
+   "location": "llm-resolver 0768990",
+   "purpose": "detect dead LLM plane",
+   "status": "unknown",
+   "general": true,
+   "evidence": "verified 08-07",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "4 local llm-resolver units",
+   "location": "llm-resolver :8220-8225",
+   "purpose": "Provider failover",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "llm-resolver-vessel",
+   "evidence": "07-31/08-05 cosmetic clones, same keys, de-advertise together",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "llm-resolver insertion-order fallback cascade",
+   "location": "llm-resolver index.ts ~727",
+   "purpose": "Fallback across modelClientMap",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Kept only because ~7 goal-host calls pin claude-haiku",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "last-resort routableModels guard + provider cooldowns",
+   "location": "llm-resolver last-resort.ts, index.ts",
+   "purpose": "Refuse only when nothing routable is willing; recover credit automatically",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Behaved correctly on a dry plane (section V). Keys need a restart; credit recovers without one.",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "gradeArmByExecution / recordArmOutcomeFromPending",
+   "location": "llm-resolver model-policy.ts",
+   "purpose": "Reach-based model grading",
+   "status": "fossil",
+   "general": true,
+   "evidence": "Zero non-definition references; PENDING_ARM_OUTCOMES never created; superseded by llmArmOutcome_write",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "model-policy betaSample reimplementation",
+   "location": "llm-resolver model-policy.ts",
+   "purpose": "Beta sampling",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "activity-api seedable betaSample (activities.scoring.ts:113)",
+   "evidence": "Normal-approx re-implementation",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "recordPendingArmOutcome / gradeArmByExecution",
+   "location": "llm-resolver model-policy.ts",
+   "purpose": "reach-graded arm reward",
+   "status": "dormant",
+   "general": true,
+   "evidence": "never wired (07-15)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "selectArm Thompson model policy",
+   "location": "llm-resolver model-policy.ts",
+   "purpose": "Pick willing and capable models.",
+   "status": "live-used",
+   "general": true,
+   "evidence": "NaN fix 3839090; router degenerate at 1 alternative per task (09-06)",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "llmModelPolicy selectArm per (task_type x model)",
+   "location": "llm-resolver model-policy.ts (517d75c, e149a18, 279496b)",
+   "purpose": "Learned model selection",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Considers 8 arms; grades transport, not reach (07-21)",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "LLM arm task-type posteriors + drafting grading",
+   "location": "llm-resolver model-policy.ts recordArmOutcome, llmArmOutcome_write (fec22cbc); feature-compose report",
+   "purpose": "Select drafting model on drafting evidence",
+   "status": "live-used",
+   "general": true,
+   "evidence": "feature_compose posteriors exist post 09-12; decay clock reset defect open",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "reach-to-arm grading plumbing",
+   "location": "llm-resolver model-policy.ts recordPendingArmOutcome/gradeArmByExecution",
+   "purpose": "Grade LLM arms on reach, not HTTP-OK.",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Zero callers (07-31)",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "llmModelPolicy bandit + walkFallbackModels",
+   "location": "llm-resolver model-policy.ts, 17dc3d0",
+   "purpose": "model selection as shape",
+   "status": "live-used",
+   "general": true,
+   "evidence": "reward on transport; phantom arms (08-20)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "LLM model Thompson policy",
+   "location": "llm-resolver-vessel",
+   "purpose": "Select provider/model by graded outcomes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Demoted the dead Anthropic key on its own (haiku alpha1.36/beta578) and selected deepseek (alpha10058)",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "llm-resolver pickProvider / isModelWilling hardcoded model list",
+   "location": "llm-resolver-vessel",
+   "purpose": "Route LLM calls to a provider",
+   "status": "live-used",
+   "general": true,
+   "evidence": "#17: strong OpenRouter models unreachable; claude slugs sent to a keyless lane",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "llmModelPolicy bandit + cooldown/de-advertise",
+   "location": "llm-resolver-vessel",
+   "purpose": "Model selection and quota",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Design reversed; hub ignores spoke policy; pins bypass it",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "llmSpendSummary spend metering",
+   "location": "llm-resolver-vessel (7d7bf0a)",
+   "purpose": "per model/caller cost accounting",
+   "status": "live-used",
+   "general": true,
+   "evidence": "readers in boredom-vessel and development-vessel gap-to-feature/config/impulses",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "reportMissingKey keyed dedup",
+   "location": "llm-resolver-vessel :323",
+   "purpose": "report missing provider keys once",
+   "status": "live-used",
+   "general": false,
+   "evidence": "after the 789853a dedup; the flood before it was 472/474 writes",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "savePolicy serialised chain",
+   "location": "llm-resolver-vessel model-policy.ts (fce8203)",
+   "purpose": "no lost arm outcomes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "157 lost in 2 min before",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "llm-resolver arm policy + failover walk",
+   "location": "llm-resolver-vessel model-policy.ts, index.ts OPENAI_WIRE_PROVIDERS",
+   "purpose": "Model selection and provider failover",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1/1 cliff at :113; 401 sets no cooldown; retired arms re-seed on restart; no CAS; routable set hardcoded.",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "pointer-body unwrap",
+   "location": "llm-resolver-vessel pointer-body.ts (db8af1d)",
+   "purpose": "accept discovery-routed {pointer} bodies",
+   "status": "live-used",
+   "general": false,
+   "duplicates_of": "per-handler str(body,'impulse','pointer') in local-tools",
+   "evidence": "should live at the VesselDaemon seam",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "quota-gated llm_completion advertisement + dark-plane gap + last-resort willingness",
+   "location": "llm-resolver-vessel src/index.ts",
+   "purpose": "keep the LLM plane routable and detect darkness",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1f14a69, 0768990, 272edbd, 04b2e8f, 3ea2136",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "llmSpendSummary / llmSpendSummaryNode",
+   "location": "llm-resolver-vessel src/index.ts; dev-vessel routes/impulses.ts",
+   "purpose": "per-node spend window; cross-node relay",
+   "status": "live-used",
+   "general": true,
+   "evidence": "read by the envelope gate on both nodes",
+   "source": "openspec-10",
+   "mentions": 1,
+   "sources": [
+    "openspec-10"
+   ]
+  },
+  {
+   "name": "LLM arm renderer (llm-arms.json, render/apply-llm-arms.sh) + LLM_PINNED_PROVIDER",
+   "location": "scripts/substrate/*, entrypoint.sh:198-221; llm-resolver-vessel src/index.ts:69,1098",
+   "purpose": "One pinned provider arm per config line",
+   "status": "live-used",
+   "general": true,
+   "source": "openspec-4",
+   "mentions": 1,
+   "sources": [
+    "openspec-4"
+   ]
+  },
+  {
+   "name": "rendered llm-<id>.service vs llm-resolver-<id>.service",
+   "location": "scripts/substrate/units",
+   "purpose": "LLM arm units",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "PORT collision, 128 restarts/11min on spoke (08-09)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "static llm-resolver-* units versus rendered llm-* arms",
+   "location": "scripts/substrate/units, entrypoint",
+   "purpose": "LLM arms",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "Same ports, NRestarts=95; static units retired 08-20",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  }
+ ]
+}

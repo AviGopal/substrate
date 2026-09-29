@@ -1,0 +1,18 @@
+{
+ "area": "metric-collector-vessel",
+ "items": [
+  {
+   "name": "metric-collector-vessel",
+   "location": "repos/metric-collector-vessel",
+   "purpose": "metricSample producer",
+   "status": "dormant",
+   "general": false,
+   "evidence": "unit disabled on both nodes yet received SA landings a885631, 6a93e22",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  }
+ ]
+}

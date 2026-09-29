@@ -1,0 +1,842 @@
+{
+ "attempts": [
+  {
+   "key": "docs-drift",
+   "title": "Doc-to-concept ingestion (architecture_doc + doc_expectation)",
+   "where": "concept rows source_type architecture_doc/doc_expectation",
+   "tried": "Ingest doc sections as architecturePrinciple/expectation concepts",
+   "outcome": "partial",
+   "evidence": "1,991 rows; ~507 describe deleted files or headings; 96 sections double-ingested; no retirement field",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "docs-drift",
+   "title": "docs-align loop (law 9) as the drift detector",
+   "where": "development-vessel/src/resolvers/docs-align-tick.ts:578, docs-align-scan.ts:320; gaps docs-drift-* (24, opened 2026-09-18)",
+   "tried": "Automated scan of docs against live_truth to file doc-drift gaps and fix via doc_drift_fix",
+   "outcome": "failed",
+   "evidence": "existing_paths walks only scripts/ so validation/scripts/* (which exist) flagged missing in CLAUDE.md, SHAPE_ACTION, README gaps; 33/35 doc gaps open, all falsifier=none; docs_align_bridge resolver invoked by 0 activities; real drift (API_V2 k8s URL, 'resolve all pointer types', GOAL_PATHS dated headings) unflagged; tick invoked via deprecated bare-pointer envelope 09-28",
+   "date": "2026-09-18..2026-09-29",
+   "source": "docs-1"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Operator hand-aligned docs after docs-align missed a refused command",
+   "where": "commit 37b18ec0; gap docs-prescribed-a-command-the-tooling-now-refuses-and-the-docs-align-loop-never-noticed(+ -narrowed)",
+   "tried": "Operator verified claims and fixed docs/SUBSTRATE.md + README by hand, filed gap against docs-align-tick.ts",
+   "outcome": "partial",
+   "evidence": "docs fixed but generator gap still open, re-spawned as -narrowed 2026-09-28 with falsifier=none",
+   "date": "2026-09-22",
+   "source": "docs-1"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Honest-status doc patterns (retractions, DECIDED, specified-not-implemented)",
+   "where": "seq/04 (improvise_solution retracted), RUNTIME_TRACING header, foundation observe-detect-resolve status box, DYNAMICS header",
+   "tried": "State in-doc what is design vs running and how to confirm by effect",
+   "outcome": "worked",
+   "evidence": "these docs' identifiers all resolve in live code or are explicitly marked absent; only 10 of 436 named identifiers absent, mostly retracted ones",
+   "source": "docs-1"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Watchdog demotion of gap-compose/compose-teacher/funnel-drain never reflected in the canonical software chart",
+   "where": "commit 887577bd (2026-07-08); /usr/lib/systemd/system/{gap-compose,compose-teacher,funnel-drain,boredom-vessel,operator-goal-generator}.service.d/watchdog.conf; docs/architecture/SUBSTRATE_AS_SOFTWARE.md \u00a75",
+   "tried": "Made the event-driven GapDrainObserver primary and replaced the tick units' ExecStart with watchdog-tick.ts",
+   "outcome": "partial",
+   "date": "2026-07-08",
+   "evidence": "The drop-ins override run-dir.conf ExecStart. SOFTWARE \u00a75, which is ingested as architecturePrinciple into the drafter prompt, still says these units route and compose. compose-teacher has produced no output of its own in 2 days.",
+   "source": "docs-2"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Deprecated-predicate gap on the recommend path, documented and never filed",
+   "where": "activities.get-activities-with-tiered-fallback.ts; ACTIVITY_LIFECYCLE_DEPRECATION.md",
+   "tried": "Documented the asymmetry as 'advice to the selector'",
+   "outcome": "dormant",
+   "evidence": "The file has 0 occurrences of 'deprecated'. The doc was last touched 2026-08-02 and the gap is still open.",
+   "source": "docs-2"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Foundation-compliance validator spec",
+   "where": "docs/FOUNDATION_COMPLIANCE_CHECKS.md",
+   "tried": "20 FC checks plus 7 CC checks gating substrate-authored spec proposals",
+   "outcome": "dormant",
+   "evidence": "0 hits for foundation-compliance, proposedSpec, closureStatusReport, operatorOverride, ciAgreementReport, verify-merge-candidate and restart-vessel. propose-spec appears only in dev-vessel CLAUDE.md and memory-note.ts.",
+   "source": "docs-2"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Retired-CLI guides kept as live docs",
+   "where": "docs/guides/{ACTIVITY_TASK_CONTEXT_PROPAGATION,INTERACTIVE_ACTIVITIES_AND_HUMAN_RESOLVER,CONCEPT_INTEGRATION_TEMPLATES,DASHBOARD_ANALYTICS,EXTERNAL_VALIDATION}.md; docs/IDENTITY_VESSEL_CURL_EXAMPLES.md",
+   "tried": "Kept retired-CLI and product-era guides with a 'historical' note",
+   "outcome": "failed",
+   "evidence": "0 hits for mergeEmbeddedTaskFields, materializeOutputImpulses, build-and-execute, human-guided-orchestrator, interactive-activity-selector and the three concept templates. templates/ does not exist. The curl guide uses the retired identity.metabob.com and the wrong port 8080.",
+   "source": "docs-2"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Conditional-task doc vs live gate",
+   "where": "docs/guides/CONDITIONAL_TASKS.md; ias-executor-ts/src/engine.interpolation.ts:143",
+   "tried": "Documented evaluateTaskCondition semantics (missing impulse \u2192 '', eval error \u2192 skip)",
+   "outcome": "superseded",
+   "evidence": "The live function is evaluateConditionalGate, and engine.ts:263 says an unresolved placeholder in a gate is fatal rather than defaulted.",
+   "source": "docs-2"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Untracked dated instance docs",
+   "where": "docs/guides/SYZYGY_LOCAL_SURFACE.md, CONTAINER_NETWORK_LIFECYCLE.md",
+   "tried": "Wrote the 09-22 Syzygy bring-up as a guide",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "Pins an image id, date, host and port (law 9 violation). Contains setup commands and make lifecycle targets outside README. Links to validation/reports/syzygy-local-bringup-2026-09-22/, which is untracked on the host and absent in the container.",
+   "source": "docs-2"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Doc-ingest reap with 25% fraction guard",
+   "where": "scripts/substrate/ingest-docs-as-concepts.ts; ingest-docs.service/timer; gap docs-reap-refused",
+   "tried": "Delete concept-db sections not re-seen, refusing when reap set >25% of manifest to avoid truncated-walk mass deletion",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "75/75 journaled runs since 09-25: reap refused, reapCandidates 606 > limit 472 (of 1890); gap docs-reap-refused open since 2026-09-24T04:59Z; 606 stale concepts still eligible for consultPrinciples top-4",
+   "source": "docs-3"
+  },
+  {
+   "key": "docs-drift",
+   "title": "docs-align scan filing docs-drift-* gaps",
+   "where": "development-vessel/src/resolvers/docs-align-scan.ts; gap ids docs-drift-docs-*",
+   "tried": "Automatic detection of doc invariant violations filed as gaps",
+   "outcome": "partial",
+   "date": "2026-09-18",
+   "evidence": "24 docs-drift gaps, all open, 0 closed since 09-18; 6 for this shard (SUBSTRATE.md, README.md, NARRATION, shapes/README, QUICK_VERIFICATION 5 violations, testing/README 4)",
+   "source": "docs-3"
+  },
+  {
+   "key": "docs-drift",
+   "title": "compositionEdge_write shape",
+   "where": "docs/impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md vs docs/shapes/README.md",
+   "tried": "Write composition edges via dedicated shape",
+   "outcome": "superseded",
+   "evidence": "Not advertised/dispatched in live activity-api; superseded by activityComposition_write; write-resolver doc still lists it",
+   "source": "docs-3"
+  },
+  {
+   "key": "docs-drift",
+   "title": "unified install interface / launch manifest",
+   "where": "d8fed96f, e375d716, scripts/substrate/acceptance/",
+   "tried": "One manifest, named profiles, one deploy.sh, README install fences with an acceptance harness",
+   "outcome": "partial",
+   "date": "2026-09-23",
+   "evidence": "Tasks record the published-digest acceptance run and the one-gap check as pending. The host working tree un-ticks tasks and restores the deleted Makefile lanes",
+   "source": "git-deployment"
+  },
+  {
+   "key": "docs-drift",
+   "title": "clean-clone docs audits",
+   "where": "6ebabec5, 16c9b46b, 92e5fb3a, 23042561, 1150750f",
+   "tried": "Follow the docs in a clean clone; correct what they assert",
+   "outcome": "partial",
+   "date": "2026-08-05..2026-08-21",
+   "evidence": "10 defects found, then 'building from source silently didn't build', then deleted .PHONY targets silently succeeding",
+   "source": "git-deployment"
+  },
+  {
+   "key": "docs-drift",
+   "title": "docs-align false positives",
+   "where": "f3933c5, ddbfdc4, 18a4e3c/14e530e, 9abb4bd, ffbabd7",
+   "tried": "Accuracy predicate reworks",
+   "outcome": "dormant",
+   "date": "2026-08-21..09-23",
+   "evidence": "No docs-align execs in the retained window",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Realignment passes",
+   "where": "af9d8308, 1cc4805a, 28d3ac6c, 4c57df9a, 8f8bbe05, e53f0266",
+   "date": "2026-02-24..06-24",
+   "tried": "six foundation/doc realignments",
+   "outcome": "failed",
+   "evidence": "the current realignment is the seventh",
+   "source": "git-super-1"
+  },
+  {
+   "key": "docs-drift",
+   "title": "mass doc/openspec/script pruning",
+   "where": "d1e60e40, 3b5035d7, 8d3e57ce, bf56bffa, f3f53cb7",
+   "tried": "Delete archive (1,866 files), retire 31 proposals (929->238 files), prune 38 unreached scripts, drop 5 non-submodule trees",
+   "outcome": "partial",
+   "date": "2026-08-02",
+   "evidence": "openspec/changes has since regrown to 115 dated + 10 named change dirs plus ~50 autonomous residue files",
+   "source": "git-super-2"
+  },
+  {
+   "key": "docs-drift",
+   "title": "docs asserting unwired/derived behaviour",
+   "where": "04ea2f3b->72f58abc, 3c113703, 047e11c5, d63eb56e, 82d19398, c7530bf2",
+   "tried": "Write operational docs, correct them, then revert to timeless expectations",
+   "outcome": "reverted",
+   "date": "2026-08-05..2026-09-16",
+   "evidence": "The operational doc was reverted as a cache. Measurements written into docs repeated the defect 'in a new costume'",
+   "source": "git-super-2"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Regex retired-name substitution over docs/",
+   "where": "docs/**",
+   "tried": "Bulk replace",
+   "outcome": "reverted",
+   "date": "2026-08-02",
+   "evidence": "128 replacements produced falsehoods (live vessel 'removed', fake 410 routes)",
+   "source": "memory-1"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Install repeatability",
+   "where": ".gitmodules, docker-compose.yml, 069ebf54",
+   "tried": "HTTPS submodules, public image, both volumes; then GHCR canonical",
+   "outcome": "partial",
+   "date": "2026-07-19",
+   "evidence": "Registry flip-flopped Docker Hub \u2192 GHCR the same day; fixes initially uncommitted",
+   "source": "memory-2"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Architecture-doc realized-vs-intended audit",
+   "where": "docs/architecture SUBSTRATE_AS_*, GLOSSARY, FOUNDATION",
+   "tried": "Assessed as a body; proposed marking dormant mechanisms and reconciling the credit row.",
+   "outcome": "unknown",
+   "date": "2026-07-24",
+   "evidence": "SF blend off, spectral gap metrics-only, TTSA not implemented. Credit discount stated three incompatible ways (code TD_LAMBDA 0.7). 4-vs-7 family size.",
+   "source": "memory-3"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Openspec intent audit + re-grounding",
+   "where": "109 openspec changes (wf_27e8c8c6, wf_ad069f1c)",
+   "tried": "179-agent triage, then inline re-grounding.",
+   "outcome": "partial",
+   "date": "2026-07-26",
+   "evidence": "35 implemented / 39 partial / 30 not. Only 12 of 27 dispatch items survived re-grounding (agents confabulated file:line).",
+   "source": "memory-3"
+  },
+  {
+   "key": "docs-drift",
+   "title": "autoClose default contradicted comment",
+   "where": "gap-lifecycle-scan; 04775a7 (autonomous, 13 min)",
+   "date": "2026-08-10",
+   "tried": "gap summary containing the exact diff",
+   "outcome": "worked",
+   "evidence": "3/3 specified gaps closed in 6-15 min; 0/5+ symptom gaps",
+   "source": "memory-9"
+  },
+  {
+   "key": "docs-drift",
+   "title": "README Installation as the only setup page (5.1/5.2)",
+   "where": "README.md install:* fences, d043bde5",
+   "tried": "collapse 8 lanes to one page, with launch-command detectors in docs-align-tick",
+   "outcome": "partial",
+   "date": "2026-09-23",
+   "evidence": "committed tasks ticked; the uncommitted working tree 09-28 20:11 unticks them all",
+   "source": "openspec-10"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Expectations doc watched by docs-align-scan",
+   "where": "07-01 A2; docs/architecture/SHAPE_ACTION_EVIDENCE_EXPECTATIONS.md",
+   "tried": "7 falsifiable claims + fold-in to MDP/DEC docs",
+   "outcome": "partial",
+   "date": "2026-07-01..02",
+   "evidence": "Status lines drifted within a day (Claim 1); F4 zero-drift never certified; IAL tasks vs SUBSTRATE.md contradictory",
+   "source": "openspec-4"
+  },
+  {
+   "key": "docs-drift",
+   "title": "causal-attempt-ledger build and acceptance",
+   "where": "openspec/changes/causal-attempt-ledger; repos/development-vessel/src/resolvers/attempt-ledger.ts",
+   "tried": "append-only attempt ledger, substrate-authored (b99b877, 2974205 on 09-23)",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "header says accepted 3x10/10, but tasks.md shows 0/36 checked",
+   "source": "openspec-9"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Documented setup/management executed against live fleet",
+   "where": "validation/reports/DOCUMENTED_LIFECYCLE_VERIFICATION.md; Makefile, deploy scripts, substrate-ready.sh, inventory",
+   "tried": "Ran every documented command; fixed make stop drain, 939-restart desktop crash loops (ExecCondition), bootstrap-seeder self-preconditions, doctor mis-count, relevance-sink role/creds, GOAL_HOST endpoint default",
+   "outcome": "partial",
+   "date": "2026-08-21",
+   "evidence": "18,135 traces preserved across stop/recreate; checker CLEAN with control. But hot-patched unit files reverted on next boot (image re-copies /usr/lib/systemd/system). 09-22 assessment found the docs checker blind (~85% FP, 0/5 real drifts caught).",
+   "source": "reports-4"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Docs self-management assessment",
+   "where": "docs-self-management-assessment-2026-09-22/REPORT.md; docs-align-tick.ts:112,169; apply-proposal-as-patch.ts:325-332",
+   "tried": "Code audit, census, positive control vs 5 operator doc fixes, 2 probe dispatches",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "Detector lexical, ~85% FP (node_modules fill walkScripts cap), 0/5 real drifts; doc_drift_fix never ran; targeted land path cannot reach super-repo docs; 112/113 docs commits operator-authored. Gap docs-prescribed-a-command-...-never-noticed still OPEN 09-29 (4 attempts + narrowed).",
+   "source": "reports-4"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Setup docs aligned to audited behaviour",
+   "where": "37b18ec0 and about 40 setup commits since August",
+   "tried": "Fix each defect per lane and per instance",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "8 launch lanes, 8 or more 'canonical' docs, 20 contradictions. The docs followed the harness, never the reverse. There was never an off-host run reaching reached:true.",
+   "source": "reports-7"
+  },
+  {
+   "key": "docs-drift",
+   "title": "docs-align accuracy invariant enabled",
+   "where": "ce71b42c 2026-08-28T12:01 14e530e; revert 18a4e3c",
+   "tried": "enable accuracy; reverted on 15 false findings; tightened predicate then re-enabled with control",
+   "outcome": "worked",
+   "date": "2026-08-28",
+   "evidence": "4 FP docs 0 findings; synthetic control 1 finding",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Docs annotated with measurements",
+   "where": "faba5acd @ 2026-09-16T09:29",
+   "tried": "wrote measured readings into SUBSTRATE_AS_DYNAMICS.md",
+   "outcome": "reverted",
+   "evidence": "user: 'already out of date \u2026 names, tables \u2026 irrelevant'; rewritten as invariants 3c113703",
+   "date": "2026-09-16",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Align lifecycle docs to audited reality",
+   "where": "7726f8bf @ 2026-09-22T11:14",
+   "tried": "verify each claim on a live boot, rewrite docs",
+   "outcome": "worked",
+   "evidence": "37b18ec0; the docs prescribed vessel-ctl install human-surface, which now refuses by design",
+   "date": "2026-09-22",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Unified install interface + nine-fleet demo",
+   "where": "openspec/changes/unified-install-interface, README Installation",
+   "date": "2026-09-24T07:14Z",
+   "tried": "98-agent workflow; single-layer image; seeder retry 74cb240d; CI acceptance",
+   "outcome": "partial",
+   "evidence": "Image 139 layers broke Docker since mid-Sept; prior audits Podman-only; CI shows served not usable; make -n clean destroyed substrate-live",
+   "source": "transcripts-4"
+  }
+ ],
+ "problems": [
+  {
+   "key": "docs-drift",
+   "symptom": "25% of doc-derived concepts (~507/1,991) describe deleted files or headings and still compete in recall",
+   "root_cause": "Ingest-only pipeline, no retirement/superseded field; two ingesters duplicate 96 sections",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Docs-align detector files false drift (paths outside scripts/ deemed missing) and misses real drift; 24 doc-drift gaps open since 09-18, falsifier=none",
+   "root_cause": "docs-align-tick.ts:578 existing_paths = walkScripts(scriptsDir) only; gaps have no machine falsifier so they can never close",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 24,
+   "source": "docs-1"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Top-level docs contradict each other on the ribosome: CLAUDE.md/foundation say it mints templates; README says applyExtraction=false and nothing registers",
+   "root_cause": "CLAUDE.md ontology sentence not re-verified against README correction; ribosome runs proposal-only",
+   "last_seen": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "API_V2_ACTIVITY.md: k8s cluster URL, 'resolve all impulse pointer types' (contradicts backend-not-universal-resolver), fossil routes (execution-sequences, boredom queue, vessel registry)",
+   "root_cause": "doc touched once since June (2026-08-02); detector only flagged a dated version marker",
+   "last_seen": "2026-09-29",
+   "source": "docs-1"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "README/CLAUDE.md name obsidian-vessel as the human interface; obsidian-vessel unit inactive, human-surface-vessel :8310 is the served surface; SHAPE_ACTION Claim 7 keyed on obsidian",
+   "last_seen": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "SHAPE_ACTION 'standing invariant' learner self-tunes; last writeback 09-16 on zero evidence",
+   "root_cause": "expectation not re-verified; detector checks paths not behaviour",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Lens docs (MDP/DEC/DYNAMICS/NETWORK/FLEET/REPRESENTATION ~4.9k lines) promise mechanisms (spectral gap, harmonic livelock detector, CRDT, foreign_provenance, survey-environment, budget-grant) with 0 code hits, yet are ingested as architecturePrinciple drafter context",
+   "root_cause": "theory docs not separated from operational expectations",
+   "last_seen": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Architecture docs ingested as architecturePrinciple into the drafter prompt carry stale unit semantics (SOFTWARE \u00a75 gap-compose/compose-teacher/funnel-drain), a non-existent shape (resolutionRefused) and an exemplar list containing the anti-pattern (svc.cluster.local in concept-db and activity-api)",
+   "root_cause": "Docs are updated by operators; no detector compares architecture claims with unit drop-ins or grep reality, and the docs-align loop's coverage of these files was not verified",
+   "first_seen": "2026-07-08",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "source": "docs-2"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Known defects recorded as prose in docs (tiered-fallback deprecated predicate, missing upkeep activity, postExecution never emitted, forge undispatched, federation one-directional, direct-only silent) persist for months",
+   "root_cause": "The doc acts as the gap store; the runtime reader is the operator only, so nothing files or detects them",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-29",
+   "recurrences": 6,
+   "source": "docs-2"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "GLOSSARY says ribosome-extract subscribes to postExecution and emits extractedTemplate (reads as live), while CORE_IDIOMS says nothing emits postExecution; ribosome-vessel's comment says activity-api does not emit execution.completed while execution-traces.ts:4062 does",
+   "root_cause": "Parallel descriptions of one mechanism with no single owner or check",
+   "last_seen": "2026-09-29",
+   "source": "docs-2"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Doc-ingest reap refused on every run; 606 stale doc concepts stay eligible for the drafter's top-4 architecture slots; 24 docs-drift gaps open, none closed",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 75,
+   "root_cause": "25% fraction guard cannot tell a truncated walk from a real docs restructure, and no supervised-reap path has ever been exercised; docs-align scan detects but no repair closes",
+   "source": "docs-3"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "All 13 activity-api docs last touched Apr-May, against about 650 later commits",
+   "root_cause": "No docs-align reader for vessel docs",
+   "first_seen": "2026-05-02",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "source": "git-activityapi"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Setup docs and Makefile targets claim behaviour that does not happen (silent .PHONY success, build-from-source did not build, false prerequisites)",
+   "root_cause": "Docs were verified by reading, not execution. The acceptance harness (09-23) exists but its end-to-end run on a published digest is still pending",
+   "first_seen": "2026-08-05",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "source": "git-deployment"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "foundation realigned 6+ times; specs 'misdescribed'; docs passes after the fact",
+   "first_seen": "2026-02-24",
+   "last_seen": "2026-06-24",
+   "recurrences": 7,
+   "root_cause": "docs written as status and reconciled manually instead of verified by a reader",
+   "source": "git-super-1"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Docs describe unwired subsystems; pruned openspec regrows",
+   "root_cause": "Docs written as measurements/caches; proposals accumulate without archive",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-27",
+   "recurrences": 6,
+   "source": "git-super-2"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "24 docs-drift gaps open since 09-18; harness path flagged missing though present on host",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-20",
+   "recurrences": 24,
+   "root_cause": "detector truth source (container super-repo) lags or wrong root; docs-align loop never closes them",
+   "source": "live-gaps"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Docs carry volatile identifiers or falsified renames and are read back into drafter prompts",
+   "root_cause": "Docs written as measurements rather than invariants; bulk substitution",
+   "first_seen": "2026-07-09",
+   "last_seen": "2026-09-16",
+   "recurrences": 3,
+   "source": "memory-1"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Critical protocols exist only in code (failed-falsifier literal, seal verbs, lane rules); docs-drift detector 60/66 false positives; CLAUDE.md documents unimplemented variant_promote",
+   "root_cause": "Docs index (live_truth.existing_paths) incomplete; behaviour added without expectation docs",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-22",
+   "recurrences": 3,
+   "source": "memory-10"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Ports, tool counts, install paths, 'views never carry data', tests-never-gated and PERMISSIONS-isolation claims contradict reality",
+   "first_seen": "2026-07-19",
+   "last_seen": "2026-07-23",
+   "recurrences": 6,
+   "source": "memory-2"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Docs and code comments assert behavior the code lacks: variant_promote, dormant dynamics, contradictory credit discount, relay read at use time, concept.ts:679. The substrate cannot fix comments because comment-only changes are refused.",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-15",
+   "recurrences": 6,
+   "root_cause": "Docs describe intent without a realized/dormant marking, and the gate refuses comment-only repairs.",
+   "source": "memory-3"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Code contradicts its own comments; openspec ratified and never implemented; operator memory steering on stale facts",
+   "first_seen": "2026-07-30",
+   "last_seen": "2026-09-16",
+   "recurrences": 5,
+   "root_cause": "Comments and docs treated as spec; nothing verifies expectations against running code",
+   "source": "memory-4"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Docs cite deleted minibob as the executor. Comment line citations are 9/9 wrong. A CLAUDE.md satisfier-reach claim is refuted.",
+   "root_cause": "Docs are not verified against the running system.",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-08-08",
+   "recurrences": 3,
+   "source": "memory-5"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Comments/headers/docs assert behaviour the system lacks",
+   "root_cause": "docs and code comments not verified against runtime",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-09-10",
+   "recurrences": 6,
+   "source": "memory-6"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Cited openspec change does not exist. Spec behaviorBaseline is unimplemented. README raw docker run path is broken",
+   "root_cause": "Docs cite intent that was never built, and paths are not exercised",
+   "first_seen": "2026-08-08",
+   "last_seen": "2026-09-01",
+   "recurrences": 3,
+   "source": "memory-7"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "The architecture prescribes activities-as-tests and counterfactual relevance, but the implementation is shadows of both. Log strings lie.",
+   "root_cause": "The cheaper observational shadow was implemented instead of the prescribed structure.",
+   "first_seen": "2026-08-05",
+   "last_seen": "2026-08-30",
+   "recurrences": 4,
+   "source": "memory-8"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Comments assert invariants the code violates (autoClose default, ADD BESIDE NEVER REWRITE, index-backed ORDER BY); the foundation doc defines reachable as advertised",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-12",
+   "recurrences": 4,
+   "root_cause": "Prose treated as a measurement; no sentinel tests of stated invariants",
+   "source": "memory-9"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "IAL tasks 2,301 lines, spec itself says further iteration is doc drift; tasks.md files unchecked though code exists or superseded",
+   "first_seen": "2026-05-02",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "specs not archived or reconciled with live system",
+   "source": "openspec-1"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Setup-audit ledger: 55 defects, 17 never fixed, 2 regressed; 37b18ec0 aligned the docs to the harness and added a false README claim",
+   "root_cause": "audits ran warm-state on one host with their own drivers; fixes landed outside the artifact",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-22",
+   "recurrences": 7,
+   "source": "openspec-10"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "tasks.md checkboxes are wrong in both directions: 4 live changes at 0% ticked, 3 mostly ticked but dormant. 8 of 18 changes are dead or superseded but not archived. Proposals reference removed paths (minibob, metabob-activity-api).",
+   "root_cause": "There is no archive/closure step tied to live verification, and openspec status is maintained by hand.",
+   "first_seen": "2026-05-23",
+   "last_seen": "2026-09-29",
+   "recurrences": 11,
+   "source": "openspec-2"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "tasks.md checkboxes do not reflect reality: shipped LR mechanisms show 0 done, [x] dedup has since re-bloated, no change archived",
+   "first_seen": "2026-06-04",
+   "last_seen": "2026-09-28",
+   "recurrences": 12,
+   "root_cause": "no activity reconciles openspec task state against live code/state (docs-align loop absent for openspec)",
+   "source": "openspec-3"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "An LLM-drafted finding cites 'Commit [fourth commit]' as evidence; research prompts claimed unweighted \u03b3=1 when decay already existed",
+   "first_seen": "2026-06-01",
+   "last_seen": "2026-06-04",
+   "recurrences": 2,
+   "root_cause": "generated docs are not checked against the repo before being committed",
+   "source": "openspec-3"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Specs not updated after landing or drift; 175 active vs 4 archived changes; tasks all unchecked despite VERIFY done",
+   "root_cause": "No archive/closure step owned by anything; expectations doc status lines drift",
+   "first_seen": "2026-07-01",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "source": "openspec-4"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "openspec tasks.md files show 0 checked for changes that partly/fully landed (duplicate-genres, posterior decay)",
+   "root_cause": "No loop reconciles openspec task state with landed commits",
+   "source": "openspec-5"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "openspec tasks.md checkboxes do not reflect status (causal-attempt-ledger 0/36 while accepted); human-surface-stack never archived",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "root_cause": "No reader keeps tasks.md in sync with landed work. Status lives in prose headers and memory files.",
+   "source": "openspec-9"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Headline CLAUDE.md claims falsified by measurement; stale code comments; reports contain later-retracted sections",
+   "root_cause": "Docs written as claims not re-verified; findings committed before causal legs tested (causal leg survives 1/7)",
+   "first_seen": "2026-08-18",
+   "last_seen": "2026-09-11",
+   "recurrences": 5,
+   "source": "reports-1"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "CLAUDE.md's one-file-per-goal guidance contradicts the semantic judge, which requires a new resolver's registration in the same compose.",
+   "root_cause": "The doc rule predates the semantic judge's 'no callers' rejection.",
+   "first_seen": "2026-09-24 (#13)",
+   "last_seen": "2026-09-24",
+   "recurrences": 1,
+   "source": "reports-2"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Docs and comments assert false facts (bun run lint enforces shape contract; docstring names the wrong table); reports repeatedly retracted; reports have no runtime reader",
+   "root_cause": "No verification of doc claims; operator reports are not routed to a read-at-use channel",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-08-21",
+   "recurrences": 3,
+   "source": "reports-3"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Docs declared correct (08-21 CLEAN) while detector is lexical/blind (~85% FP, 0/5 recall) and substrate cannot land super-repo docs",
+   "first_seen": "2026-08-21",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "root_cause": "docs_align never reads code/runtime; walkScripts cap filled by node_modules; deriveVesselFromPath rejects docs/; calibration seals the category.",
+   "source": "reports-4"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Docs and schema say \u03b1=successes+1 while practice is a graded, decayed accumulator; docs say the transport auto-starts; a report claims a nonexistent fix",
+   "root_cause": "Docs and comments assert rather than get verified",
+   "first_seen": "2026-08-19",
+   "last_seen": "2026-09-15",
+   "recurrences": 4,
+   "source": "reports-5"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "The front door is the least accurate surface; dead make targets in docs and usage text; inverted warnings; CLAUDE.md names a validation harness with 0 callers that crashes on 118/125 scenarios.",
+   "first_seen": "2026-08-22",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "Docs verified by reading, not by running; a chain of superseding reports; fixes to docs introduced fabricated claims.",
+   "source": "reports-6"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "8 launch lanes, 20 contradictions; docs edited to match the harness; spec ledger stale (at least 12 changes with 0 ticked but landed); lift-status claims S2 since 05-26",
+   "root_cause": "Per-instance fixes raise the surface; no off-host doc-following acceptance run; spec checkboxes not the source of truth",
+   "first_seen": "2026-08-20",
+   "last_seen": "2026-09-27",
+   "recurrences": 3,
+   "source": "reports-7"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Operator docs diverge from code: compose volume prefix silently discards 16.7GB; the :obsidian tag is missing and :dev IS the obsidian stage (no CI target:base); image is public but documented as private 4 times; human surface port absent; 'full' does include desktop; the doc contradicts itself on default selection; the docs checker flags role names as shapes; coerceCorpus gives a vacuous 0.",
+   "root_cause": "Code moved without the doc edit in the same commit (d63d64b6). The checker vocabulary is shape-only.",
+   "first_seen": "2026-09-1x",
+   "last_seen": "2026-09-1x",
+   "recurrences": 2,
+   "source": "reports-8"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "SYZYGY_LOCAL_SURFACE.md says 'local setup succeeds \u2026 board now reads hub-owned dispatches', which is false on 9-29. The guides and the bring-up evidence directory are untracked, yet docs/README.md links them.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "source": "syzygy"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Docs annotations stale before push; bring-up script configures retired model; doc-contract on FeatureComposePointer.gap wrong",
+   "first_seen": "2026-09-09",
+   "last_seen": "2026-09-16",
+   "recurrences": 3,
+   "root_cause": "Docs carry instances (names, tables, counts) instead of invariants",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Docs written as measurements go stale immediately; setup docs prescribe a command the fix now refuses",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-22",
+   "recurrences": 2,
+   "root_cause": "Readings instead of invariants; the docs-align loop did not detect them",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Spec checkboxes and 'done' claims contradict reality; setup docs bifurcated",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "Checkboxes not tied to observed falsifiers; audits run only on one host",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "config audit stale both directions; role table wrong; 'two commands' spoke claim false; surface doc claims persistence",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-08-21",
+   "recurrences": 4,
+   "root_cause": "docs not checked by any invoked probe",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "The 63-mode failure matrix claimed but only 6 scenarios on disk; CLAUDE.md cites an archived doc; foundation Known Gaps stale",
+   "first_seen": "2026-05-23 F-004",
+   "last_seen": "2026-05-27 F-132/inv-029",
+   "recurrences": 4,
+   "root_cause": "Docs asserted state rather than expectations",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Vessel CLAUDE.md files claim tables, deprecations, LLM-free resolvers, shape budgets and open findings that reality contradicts",
+   "root_cause": "Docs are written at build time and never re-verified. The docs-align loop does not cover repos/*/.md.",
+   "first_seen": "2026-05-17",
+   "last_seen": "2026-09-29",
+   "recurrences": 8,
+   "source": "vessel-docs-tooling"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "The ten core vessels (goal-host, boredom, llm-resolver, local-tools, ribosome, light-dispatch, metric-collector, analysis, relevance-sink, clock) have no .md at all",
+   "root_cause": "Expectations are written for old vessels, not for the ones running the loop",
+   "first_seen": "unknown",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "claims": [
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-09-26",
+   "claim": "causal-attempt-ledger accepted (runs 10/11/12 each 10/10)",
+   "where": "openspec/changes/causal-attempt-ledger/tasks.md header",
+   "later": "tasks.md checkboxes 0/36; attempt-ledger.ts landed by the substrate 09-23",
+   "source": "openspec-9"
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-09-22",
+   "claim": "Observed result: local setup succeeds \u2026 The board now reads hub-owned dispatches.",
+   "where": "docs/guides/SYZYGY_LOCAL_SURFACE.md (untracked)",
+   "later": "False on 9-29. The file is untracked in git but linked from docs/README.md:150.",
+   "source": "syzygy"
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-09-16T09:24",
+   "claim": "SUBSTRATE_AS_DYNAMICS annotation of a dead producer",
+   "where": "8183a698",
+   "later": "out of date before push (producer repaired same session); second fix swapped counts for symbol names \u2014 still instance-level",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-09-24T07:14Z",
+   "claim": "New launches reach goals peered with Syzygy and substrate-live; nine fleets usable",
+   "where": "4e4db180 2026-09-24T07:14Z",
+   "later": "Prior 'green' audits were Podman/host-local; image exceeded Docker layer limit since mid-Sept; CI proves served not usable",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-09-26T22:23Z",
+   "claim": "decentralized-compose-ownership done: 37/37 tasks, openspec validate passes",
+   "where": "606414b2 2026-09-26T22:23Z",
+   "later": "Node-local pause/calibration/memory/verification found 09-26..09-29; 4.4 clause 'completes and pushes' not observed; node-1 ownership only a drop-in",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-05-01",
+   "claim": "activity-api /v2/vessels/* return 410 Gone from 2026-07-01",
+   "where": "repos/activity-api/CLAUDE.md",
+   "later": "Still routed on 09-29 (401)",
+   "source": "vessel-docs-tooling"
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-05-15",
+   "claim": "ias-executor-ts is a Milestone A scaffold",
+   "where": "repos/ias-executor-ts/README.md",
+   "later": "7 live vessels depend on it",
+   "source": "vessel-docs-tooling"
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-07-09",
+   "claim": "dev-vessel ships zero LLM-tier resolvers; 19 to 23 shapes",
+   "where": "repos/development-vessel/CLAUDE.md",
+   "later": "51 LLM-referencing files; 264 advertised shapes",
+   "source": "vessel-docs-tooling"
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-08-21",
+   "claim": "identity findings 1 and 3 still open",
+   "where": "repos/identity-vessel/docs/OPEN-FINDINGS.md",
+   "later": "Fixed by c8bf5d9 (08-22) and a9db360 (08-25); doc never updated",
+   "source": "vessel-docs-tooling"
+  }
+ ]
+}

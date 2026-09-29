@@ -1,0 +1,107 @@
+{
+ "area": "identity-vessel",
+ "items": [
+  {
+   "name": "seed-identity per-vessel key writing",
+   "location": "081e9cbd bootstrap",
+   "purpose": "Identity convergence on cold boot",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Cold boot F2 went from 401 failure to pass",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "key_session amortized reaper",
+   "location": "identity-vessel (bfad5ca)",
+   "purpose": "bound the auth telemetry table",
+   "status": "unknown",
+   "general": false,
+   "evidence": "1.34M-row history; not re-measured",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "key_session reaper",
+   "location": "identity-vessel bfad5ca",
+   "purpose": "bound auth telemetry table",
+   "status": "live-used",
+   "general": false,
+   "evidence": "07-29",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "C6 issuer delegation + dual-secret",
+   "location": "identity-vessel ddda0d8/14cada5/3d5aaaf",
+   "purpose": "Cross-substrate key validation, rotation",
+   "status": "live-used",
+   "general": true,
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "Auth telemetry traces",
+   "location": "identity-vessel services/trace.ts (auth_resolve_v1)",
+   "purpose": "Grade authentication",
+   "status": "live-used",
+   "general": false,
+   "evidence": "21,427 rows in 5 days; rejects carry no reason",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "user-vessel client in identity",
+   "location": "identity-vessel services/user-vessel-client",
+   "purpose": "account_id lookup",
+   "status": "fossil",
+   "general": false,
+   "evidence": "user-vessel not deployed; config-gated off",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "identity-vessel SCHEMA_AUTOAPPLY",
+   "location": "identity-vessel/src/index.ts:1513",
+   "purpose": "Apply identity migrations",
+   "status": "dormant",
+   "evidence": "Env var unset; 004 not in the list",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "RELATE composes graph / HNSW / cost-weighted / model-MAB / substrateIdentity / test-audit / H1,H3,H4,H5",
+   "location": "openspec proposals only",
+   "purpose": "various",
+   "status": "dormant",
+   "general": true,
+   "evidence": "never built",
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  }
+ ]
+}

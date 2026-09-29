@@ -1,0 +1,364 @@
+{
+ "source": "validation-other-3",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/validation-other-3.md",
+ "coverage": "validation/failure-modes: README, PROGRESSION, all 8 cycle files, 9 proposals (plus the live /workspace proposal), all 2275 scenario and 1046 vessel-scenario names grouped by pattern, about 12 read in full. Also the node1 and node2 container copies (3 lineages), and the writer and reader code paths in development-vessel. validation/scripts: invocation grep for all ~75 source scripts plus the lib files, directory references in Dockerfile, Makefile and units, the GitHub workflow run history (20 runs), the headers of the 12 main harnesses, and the validation/results receipts. Live DB: activity table (gap-closing:* rows) and the legacy activity_execution_traces table, which holds only July rows. The current trace store was not queried, so \"no executions after July\" is limited to the tables I checked. The activity counters are known to be vestigial. The CI failure cause comes from one run log; the other 19 runs have the same duration signature.",
+ "attempts": [
+  {
+   "key": "false-verification",
+   "title": "6-scenario failure-mode lift harness + progression-driver LIFT criterion",
+   "where": "validation/failure-modes/{README,PROGRESSION}.md, cycles/, validation/scripts/{failure-mode-harness,progression-driver}.ts",
+   "date": "2026-05-22..05-23",
+   "tried": "Dispatch 6 FP/FM scenario goals to /v2/activities/recommend on canary. Count reuse/new/gap and manual debt. Declare LIFT after 3 zero-debt cycles.",
+   "outcome": "failed",
+   "evidence": "Gap went 6->0 between 05-23 04:47 and 06:17 only after the harness gained a discover-by-shapes fallback. cycle-6.json says gap=6 debt=3 consec=0, yet cycle-7 claims 3 consecutive. The 2026-07-05 hub run shows the same 6 scenarios back to gap (1/0/6)."
+  },
+  {
+   "key": "hollow-landing",
+   "title": "draft-gap-closing-activity autonomous proposals",
+   "where": "development-vessel seed draft-gap-closing-activity; validation/failure-modes/proposals",
+   "date": "2026-05-22",
+   "tried": "LLM drafts a gap-closing activity template per scenario and registers it as a variant (authored_by make_activity_autonomous)",
+   "outcome": "failed",
+   "evidence": "The live /workspace proposal-fp-11.json (created_at 1970-01-01) is a template to 'resolve fs_read file-not-found' on its own missing scenario file. 1925 gap-closing:* activities exist, 1841 of them minted in June and 1119 retired."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "gap_to_scenario_bridge: mirror gaps into scenario files for the drafter",
+   "where": "repos/development-vessel/src/resolvers/gap-to-scenario-bridge.ts",
+   "date": "2026-06-04 (492dd88), vessel routing 06-13 (b51ed1d)",
+   "tried": "Write scenarios/<gap>.json under WORKSPACE_ROOT for the drafter, with class-level dedup",
+   "outcome": "partial",
+   "evidence": "The bridge writes to the super-repo copy (env file WORKSPACE_ROOT wins), but the drafter, pick-priority-scenario and vessel-arrival-scan read /workspace/... Three diverging copies: 3364, 4573 and 2275 files."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Autonomous cutovers added a null-return in the vessel-authoring branch",
+   "where": "gap-to-scenario-bridge.ts:229-233 (bd42c72, 4e9eb41, 92dce2c)",
+   "date": "2026-08-05",
+   "tried": "Substrate mitosis cutovers guarded a missing meta.shape by returning null",
+   "outcome": "failed",
+   "evidence": "null is still serialized to <id>.json, and exists() then skips that gap forever. 1428 of 1509 live vessel-scenarios are the 4-byte 'null', the newest from 2026-09-28."
+  },
+  {
+   "key": "false-verification",
+   "title": "gap-lifecycle-scan reprobe before auto-close",
+   "where": "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts:251-309,582-588",
+   "tried": "Re-run the gap's scenario and block the close if it reproduces",
+   "outcome": "dormant",
+   "evidence": "The path resolves under /vessels/development-vessel/validation, which does not exist, so the result is always scenario-not-found and not_reproduced evidence gets stamped. There are 0 churned_unlandable closes in the 6279-gap store, so the path has not fired yet."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Weekly recommendation validation GitHub workflow",
+   "where": ".github/workflows/weekly-recommendation-validation.yml -> validation/scripts/run-weekly-harness.sh",
+   "date": "2026-05-18..2026-09-28",
+   "tried": "Weekly CI running reuse/compare/stratified/goal-generator/forge harnesses",
+   "outcome": "failed",
+   "evidence": "gh run list: 20/20 runs failed. Run 36401878072 fails with 'FATAL: METABOB_API_KEY is not set.'"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "harness-run-matrix activity replaces the failure-mode script",
+   "where": "development-vessel seed harness-run-matrix / harness-check-scenario",
+   "date": "2026-05-23",
+   "tried": "Lifecycle observer fires harness-run-matrix automatically",
+   "outcome": "unknown",
+   "evidence": "The dev-vessel journal since 09-21 has 0 mentions. Open gap template-input-lint-development-vessel_harness-check-scenario reports that the declared gapScenario input is never consumed."
+  },
+  {
+   "key": "false-verification",
+   "title": "External-oracle harness family",
+   "where": "validation/scripts/{validatability,falsification,reach-generalization}-harness.py, goal-expectation-harness.ts, complexity-ladder-harness.ts, stage-harness.ts, self-dev-reliability.mjs",
+   "date": "2026-07-27..08-26",
+   "tried": "Grade reached against independently computed ground truth and report the gaming gap, confabulation rate and inert or duplicate commits",
+   "outcome": "partial",
+   "evidence": "The method is sound and results exist (stage-harness 29 pass / 7 known_open, complexity-ladder 08-12). All are operator-run, nothing schedules them, and they hardcode :18210 and /home/avi."
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "substrate-gap-falsifier test isolation via WORKSPACE_ROOT",
+   "where": "repos/development-vessel/test/resolvers/substrate-gap-falsifier.test.ts",
+   "tried": "Set WORKSPACE_ROOT before import to isolate the suite",
+   "outcome": "failed",
+   "evidence": "The test's own comments say it lost the import race and wrote to /workspace/git/super-repo/gaps/gaps.json. 8 falsifier-* fixture gaps are open live (detected_at 2026-09-01T00:00:00Z), with narrowed children created 09-27 and mirrored scenarios."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Autonomous drift commits sweep runtime state into the super-repo",
+   "where": "4e4170a8, 6ced94dc (09-07), 13c5d466 (09-18), 796fac89 (09-19), edc68d49 (09-26)",
+   "tried": "Automated 'vessel code drift detected and committed'",
+   "outcome": "failed",
+   "evidence": "4e4170a8 touched 2134 files: 897 compiled .js/.d.ts/.map, 1120 failure-mode files, and literal {{target_path}} and {{unitFilePath}} files. Substrate/Projects (68 files) is still tracked outside ALLOWED_TOPLEVEL_DIRS. d993b331 (09-23) cleaned only the root scratch files."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "memory-budget-check.service placement fix for zero-call-site instruments",
+   "where": "scripts/substrate/units/memory-budget-check.service",
+   "date": "2026-08-17",
+   "tried": "Gave one detector a scheduler after an audit found two instruments with zero call sites",
+   "outcome": "partial",
+   "evidence": "The sibling validation/scripts/argument-chain-check.test.ts still has only comment references."
+  }
+ ],
+ "problems": [
+  {
+   "key": "write-read-mismatch",
+   "symptom": "The scenario store has three diverging copies. The bridge writes to the super-repo copy while the drafter and pickers read /workspace. The drafter drafts repairs for its own fs_read misses.",
+   "root_cause": "Unit WORKSPACE_ROOT=/workspace is overridden by the env file's super-repo value, and the readers hardcode /workspace. It is the same class as the 09-22 two-memory-stores finding, but that fix did not grep the scenario call sites.",
+   "first_seen": "2026-05-22 (proposal-fp-11)",
+   "last_seen": "2026-09-29",
+   "recurrences": 3
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "1428/1509 live vessel-scenarios are 'null'. Capability gaps are permanently marked bridged to nothing.",
+   "root_cause": "The 2026-08-05 autonomous cutovers made the IIFE return null, the writer still serializes it, and the exists() idempotency then skips the gap forever",
+   "first_seen": "2026-08-05",
+   "last_seen": "2026-09-28",
+   "recurrences": 1428
+  },
+  {
+   "key": "gap-content",
+   "symptom": "The system files wasted-cycle-development_vessel_gap_to_scenario_bridge_tick (36 dispatches, 100% zero-work), but with falsifier=none and no edit_site",
+   "root_cause": "The waste detector sees the symptom but nothing names the null-write seam",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-29",
+   "recurrences": 3
+  },
+  {
+   "key": "false-verification",
+   "symptom": "LIFT CANDIDATE declared after 20h of cycles on canary. The 07-05 hub rerun shows gap=6 again.",
+   "root_cause": "The measurement was widened (discover-by-shapes fallback) and the debt KPI rescoped. Cycle files contradict each other.",
+   "first_seen": "2026-05-23",
+   "last_seen": "2026-07-05",
+   "recurrences": 1
+  },
+  {
+   "key": "false-verification",
+   "symptom": "The reprobe gate would stamp not_reproduced evidence on every auto-close",
+   "root_cause": "The import.meta.dir-relative path points to a nonexistent dir, and any HTTP error counts as reproduced. The gate is fail-open.",
+   "first_seen": "unknown",
+   "last_seen": "2026-09-28 (dormant)",
+   "recurrences": 0
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Test fixture gaps (falsifier-*) are open in the live store, get narrowed children, and get scenarios",
+   "root_cause": "config.ts snapshots WORKSPACE_ROOT at import. The bun test shared process loses the race, so the suite writes the live gaps.json.",
+   "first_seen": "2026-09-01",
+   "last_seen": "2026-09-27",
+   "recurrences": 10
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Across 661 recommit scenarios the recorded failure reasons are: semantic_reject 199, syntax_break 98, anchor_not_found 83, typecheck_dangling_reference 80, verify_failed 68, compose_execution_failure 50, wrong_location 13",
+   "root_cause": "Blind edits into giant files (goal-host index.ts is 16403 lines), TODO-stub drafts, and anchors lost",
+   "first_seen": "2026-06",
+   "last_seen": "2026-09-29",
+   "recurrences": 661
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "664 -narrowed scenario files are verbatim copies plus a failure block. Duplicate compose rows differ only by timestamp. draft-gap-closing-activity and harness-check-scenario are each duplicated.",
+   "root_cause": "Narrowing mints a new id instead of annotating the existing gap",
+   "first_seen": "2026-06",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "3321 tracked scenario files, 220 compiled artifacts in validation/scripts, 1925 gap-closing:* activities (1841 minted in June), and Substrate/Projects fixtures tracked at the root",
+   "root_cause": "Runtime stores live inside the git tree, autonomous drift commits sweep everything in, and minting has no reuse check",
+   "first_seen": "2026-05-22",
+   "last_seen": "2026-09-26"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "~70 validation scripts have no invoker. The only invoker, the weekly CI, failed 20/20 runs. harness-run-matrix shows no activity since at least 09-21.",
+   "root_cause": "Instruments were built and run once by the operator and never placed under a scheduler or activity. The CI secret was never set.",
+   "first_seen": "2026-05-18",
+   "last_seen": "2026-09-28",
+   "recurrences": 20
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "21 validation scripts hardcode localhost:18xxx/8xxx, 17 embed /home/avi, and 13 target canary/minibob",
+   "root_cause": "Operator-side scripts bypass discovery and substrate-connect config",
+   "first_seen": "2026-05",
+   "last_seen": "2026-08-28"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "The node2 scenario store is frozen at 09-26 (2275) and its /workspace copy is empty. The node1 copies hold 3364 and 4573 files.",
+   "root_cause": "A file-based per-node store is used as a drafter queue instead of a shaped impulse",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "gap_to_scenario_bridge",
+   "location": "repos/development-vessel/src/resolvers/gap-to-scenario-bridge.ts + seed gap-to-scenario-bridge-tick",
+   "purpose": "Mirror gaps into drafter scenario JSON files; route capability gaps to vessel-scenarios",
+   "status": "broken",
+   "general": false,
+   "evidence": "Writes to the super-repo while readers use /workspace; 1428/1509 null vessel-scenarios; self-filed wasted-cycle gap (36x zero-work)"
+  },
+  {
+   "name": "draft-gap-closing-activity",
+   "location": "repos/development-vessel/src/seed/draft-gap-closing-activity.ts",
+   "purpose": "LLM-draft a gap-closing activity template per scenario",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Reads a hardcoded /workspace path. 338 July traces, 73 success. 1925 gap-closing:* outputs, 1119 retired. 7 rows have task path scenarios/.json."
+  },
+  {
+   "name": "harness-run-matrix / harness-check-scenario / failure_mode_matrix_score",
+   "location": "development-vessel seeds + resolvers/failure-mode-matrix-score.ts",
+   "purpose": "Activity form of the failure-mode harness",
+   "status": "dormant",
+   "general": false,
+   "evidence": "0 journal mentions since 09-21; mis-wire gap template-input-lint-\u2026harness-check-scenario open",
+   "duplicates_of": "validation/scripts/failure-mode-harness.ts"
+  },
+  {
+   "name": "gap-lifecycle-scan dispatchScenario reprobe",
+   "location": "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts:251",
+   "purpose": "Block auto-close if scenario reproduces",
+   "status": "broken",
+   "general": false,
+   "evidence": "Nonexistent path, so it always returns not_reproduced. The autoClose path has not fired (0 churned_unlandable)."
+  },
+  {
+   "name": "failure-mode-harness.ts + progression-driver.ts",
+   "location": "validation/scripts",
+   "purpose": "6-scenario lift harness and cycle KPI",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Last real run on 2026-07-05 showed gap=6; its LIFT claim was invalid"
+  },
+  {
+   "name": "run-weekly-harness.sh + weekly workflow (reuse/compare/stratified/goal-generator/forge)",
+   "location": ".github/workflows/weekly-recommendation-validation.yml, validation/scripts",
+   "purpose": "Weekly recommendation quality gate",
+   "status": "broken",
+   "general": false,
+   "evidence": "20/20 runs failed on a missing secret, 05-18 to 09-28"
+  },
+  {
+   "name": "External-oracle harness family (validatability, falsification, goal-expectation, reach-generalization, complexity-ladder, stage-harness, self-dev-reliability)",
+   "location": "validation/scripts",
+   "purpose": "Grade reached/landings against independent ground truth; measure the gaming gap, confabulation and inert commits",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Runs by the operator only, 07-27 to 08-26. Results in validation/results (stage-harness 29/7/0). Nothing schedules them, and ports are hardcoded."
+  },
+  {
+   "name": "typecheck-scenario-gen",
+   "location": "scripts/substrate/typecheck-scenario-gen.ts",
+   "purpose": "Write typecheck-failure scenarios",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Newest /workspace scenario from 2026-09-26 (typecheck-\u2026-l2785-ts1005). Writes the /workspace copy, the opposite of the bridge."
+  },
+  {
+   "name": "scenario store on disk (validation/failure-modes/scenarios, vessel-scenarios)",
+   "location": "super-repo tree, git-tracked, 3 copies",
+   "purpose": "Drafter input queue",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "It duplicates the gap store (2232/2275 are bridge mirrors). Runtime state sits in git, against CLAUDE.md placement."
+  },
+  {
+   "name": "argument-chain-check.test.ts",
+   "location": "validation/scripts",
+   "purpose": "Trace-sink argument chain check",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Named as a zero-call-site instrument in memory-budget-check.service (08-17); still unplaced"
+  },
+  {
+   "name": "phase-era one-off tests (test-18-*, test-22-*, test-4-6-*, verify-*, probe-*, seed-*, cite-check, closure-audit, narrator)",
+   "location": "validation/scripts",
+   "purpose": "May-June phase validation",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Last commits 05-05 to 06-24, no invokers, canary endpoints"
+  },
+  {
+   "name": "compiled .js/.d.ts/.map artifacts",
+   "location": "validation/scripts (220 files)",
+   "purpose": "none (tsc emit)",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Committed by Substrate Autonomous in 4e4170a8 (09-07)"
+  }
+ ],
+ "principles": [
+  "A metric that flips when the harness widens its matcher measures the harness. Record harness changes as interventions and rerun the old matcher as a control. The 05-23 LIFT came from adding a discover-by-shapes fallback.",
+  "When a store's path comes from WORKSPACE_ROOT, grep every writer and reader of that store. The 09-22 two-memory-stores fix left the scenario store split in the same way.",
+  "An idempotency check keyed on file existence turns a bad write (\"null\") into a permanent skip. Validate the content before treating existence as done.",
+  "A reprobe gate that treats 'not found' as 'not reproduced' is fail-open. Absence of the probe must block the close, not permit it.",
+  "A drafter queue should be a shaped impulse or the gap store itself, not a git-tracked per-node directory.",
+  "The only instrument with a scheduler (weekly CI) had never had its secret set in 20 runs. Check that an instrument ran by its output, not by the existence of its schedule.",
+  "The valuable asset in validation/scripts is the independent-oracle pattern: grade reached against externally computed truth. It should become a scheduled activity family resolved through discovery, not operator scripts with hardcoded ports.",
+  "Test suites that import config at module load can write live stores. Fixture gaps then get narrowed and composed as real work."
+ ],
+ "claims": [
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-22/23 (commits 5504d03c, 4b7ce0e8)",
+   "claim": "LIFT CANDIDATE: consecutive_zero_debt_cycles=3 (then 4), gap 6->0; 'The system can now address new failure-mode gaps autonomously'",
+   "where": "validation/failure-modes/cycles/cycle-7.json, cycle-8.json, PROGRESSION.md",
+   "later": "cycle-6.json itself shows gap=6 debt=3 consec=0. The flip came from a harness fallback added 05-23 06:17. The 2026-07-05 hub run has the same six scenarios as gap (1/0/6)."
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-05-22 (b9eca1ed)",
+   "claim": "cycle-2: first autonomous proposals via draft-gap-closing-activity; 'remaining_gaps=[] for the first time'",
+   "where": "cycles/cycle-2.json, PROGRESSION.md",
+   "later": "The live proposal-fp-11 is a template to recover from the drafter's own fs_read 500 on a missing scenario file (created_at 1970)"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-05-23",
+   "claim": "Harness migrated to an activity: harness-run-matrix fires automatically on qualifying execution_completed events",
+   "where": "validation/failure-modes/README.md 'Migration to Activity-Driven Harness'",
+   "later": "0 journal mentions since 09-21. harness-check-scenario has an open mis-wire gap (09-22)."
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-06-04 (492dd88)",
+   "claim": "gap_to_scenario_bridge closes 'Break 1': gaps reach the drafter as scenario files",
+   "where": "repos/development-vessel/src/resolvers/gap-to-scenario-bridge.ts header",
+   "later": "The writer and readers use different roots, the 08-05 autonomous edit writes null files, and the 09-29 wasted-cycle gap reports 100% zero-work"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-05-23 (run-weekly-harness.sh)",
+   "claim": "Scenarios run on the weekly harness schedule; lift proven when gap count decreases week-over-week",
+   "where": "validation/failure-modes/README.md 'Continuous Operation'",
+   "later": "The weekly workflow failed 20/20 runs from 2026-05-18 to 09-28 because METABOB_API_KEY was unset"
+  },
+  {
+   "key": "test-residue-live-state",
+   "claimed_at": "test suite comments (date unknown)",
+   "claim": "substrate-gap-falsifier.test.ts isolates itself by setting WORKSPACE_ROOT before import",
+   "where": "repos/development-vessel/test/resolvers/substrate-gap-falsifier.test.ts",
+   "later": "The test's own comments admit it lost the import race. 8 falsifier-* fixture gaps are open live, and narrowed children were created 2026-09-27."
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-08-17",
+   "claim": "memory-budget-check.service fixes zero-call-site instruments by giving them a scheduler",
+   "where": "scripts/substrate/units/memory-budget-check.service",
+   "later": "The same comment names argument-chain-check.test.ts, which is still unplaced as of 09-28"
+  },
+  {
+   "key": "drafter-quality",
+   "claimed_at": "2026-08-12 (stage-harness.ts header)",
+   "claim": "Thirty end-to-end trials produced 32 fixes and no clean landing; nine fixes shipped inert (typechecked, passed own tests)",
+   "where": "validation/scripts/stage-harness.ts",
+   "later": "stage-harness-latest.json: 29 pass / 7 known_open / 0 regression. That is operator-run; nothing has rerun it since."
+  }
+ ]
+}

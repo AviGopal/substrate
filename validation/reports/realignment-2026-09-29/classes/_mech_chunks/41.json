@@ -1,0 +1,70 @@
+{
+ "area": "docs",
+ "items": [
+  {
+   "name": "operatorIntervention, interventionRateReport, memory-sync-tick, verify-merge-candidate, ciAgreementReport, restart-vessel, forge vessel",
+   "location": "docs/SUBSTRATE.md (promised)",
+   "purpose": "Closure/S3 and self-deployment apparatus",
+   "status": "fossil",
+   "general": true,
+   "evidence": "grep NONE in live clones",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "trace_store_health_observer",
+   "location": "docs/SUBSTRATE.md worked example",
+   "purpose": "Detector activity -> substrateGap -> repair",
+   "status": "live-used",
+   "general": true,
+   "evidence": "09-01 exists for one metric only",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "In-Flight Recovery Loop re-route arm",
+   "location": "docs/architecture/sequences/04-improvisation-failure-modes.md:75",
+   "purpose": "retry with a different approach on a miss",
+   "status": "dormant",
+   "general": true,
+   "evidence": "arm unreachable; blocked on an operator decision (task 43, 09-16)",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "Delegation headers X-Metabob-Delegation-*",
+   "location": "docs/specs/auth-token-source-field.md",
+   "purpose": "Cross-vessel user delegation",
+   "status": "fossil",
+   "general": true,
+   "evidence": "grep NONE",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "narration gap records",
+   "location": "validation/gaps/*.md + INDEX.md; docs/SUBSTRATE_NARRATION_PROTOCOL.md",
+   "purpose": "Hand-authored recurrence-ranked gap list",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Last commit 05-24; INDEX refers to .yaml files that are actually .md",
+   "source": "gap-history",
+   "mentions": 1,
+   "sources": [
+    "gap-history"
+   ]
+  }
+ ]
+}

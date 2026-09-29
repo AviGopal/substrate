@@ -1,0 +1,1145 @@
+{
+ "attempts": [
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Shape-dispatch sweep",
+   "where": "scripts/check-shape-dispatch-all.sh; packages/shape-dispatch-check",
+   "tried": "Mechanically verify that advertised shapes match dispatch cases",
+   "outcome": "partial",
+   "evidence": "VESSELS covers 2 of 19 clones (activity-api, concept-db). Its only callers are itself and 3 package.json lint scripts; no activity validates it.",
+   "source": "docs-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Substrate-Narration Protocol + validation/gaps",
+   "where": "validation/scripts/substrate-narrator.ts (2026-05-23); validation/gaps/INDEX.md (2026-05-24)",
+   "tried": "Operator narration gap accumulation",
+   "outcome": "superseded",
+   "evidence": "No invoker; last record 05-24; superseded by gaps/gaps.json (6,276 records)",
+   "source": "docs-3"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "account_id migration phases A-G, then withdrawn",
+   "where": "1c16490..941af8a (04-28) -> 166/170/174 (07-22)",
+   "tried": "Dual-scope account_id across 39 tables and 42 views",
+   "outcome": "reverted",
+   "date": "2026-07-22",
+   "evidence": "The views kept regenerating (174 'neutralize regenerating account views').",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Dead views and tables dropped",
+   "where": "164-179 (07-22/23), b7da452, f9d1962 (08-06)",
+   "tried": "Drop 0-reader views, orphan tables and dead detectors",
+   "outcome": "worked",
+   "date": "2026-07-23",
+   "evidence": "4635fb1 caught 177 about to drop concept-db's live upkeep_stats (a shared store).",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Template-list cache layered and invalidated 7 times",
+   "where": "b129695,93cd621,dafb045 (05), a4735e9 (07-24), 1f58320,55cd36d (09-24), ba3408b+39783b0 (09-27/28)",
+   "tried": "Fix invalidation or ordering, then add a new in-process catalogue cache",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "Each layer adds an invalidation obligation; the problem recurred 7 times.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "drift-commit family commits runtime state and residue into git",
+   "where": "super-repo 4e4170a8, e72a7fc8, 13c5d466, 796fac89, edc68d49; human-surface 877180a, 6a11bd6; concept-db 47bcd83; libp2p 542e712; discovery 799d574; development-vessel 9d839e0",
+   "tried": "Rhythm self-maintenance: detect vessel code drift, then commit and push everything",
+   "outcome": "failed",
+   "date": "2026-09-07..2026-09-28",
+   "evidence": "4e4170a8 committed 2,134 files, e72a7fc8 a 175,104-line tmp_gaps.json, 9d839e0 (09-28) 422 .bun cache binaries plus gaps.json and state; generator in dev-vessel rhythm-conductor-tick.ts:126; held 09-28 via the rhythm budget",
+   "source": "git-deployment"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "operator cleanups of tracked residue",
+   "where": "8d3e57ce, bf56bffa, 1150750f, a009e1d9, d993b331, f90dda1a, dev-vessel 66ba773",
+   "tried": "Delete or untrack scratch files, orphan scripts and runtime snapshots",
+   "outcome": "reverted",
+   "date": "2026-08-02..2026-09-28",
+   "evidence": "Residue reappears because the generator is unchanged. Still tracked: 192 compiled files in scripts/substrate, 142 in packages/interaction-conformance, 220 in validation/scripts, 60 in openspec; root Substrate/ (68), leases/ (2), run_scan.js, history.txt",
+   "source": "git-deployment"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "prune scripts with no caller",
+   "where": "8d3e57ce (38 files), 1150750f (6), 008f3ab9 (63 Makefile targets and static LLM units), e375d716 (configure-local.sh, docker-compose.cluster.yml)",
+   "tried": "Enforce script retention by a caller search across planes",
+   "outcome": "partial",
+   "date": "2026-08-02..2026-09-23",
+   "evidence": "New orphans since then: identical-failure-run-tick.ts, performance-status.ts, autonomy-status.ts, warn-baseline-drift.sh, 4 DEPRECATED deploy shims, bootstrap-remote-google-arm.sh, gen-cluster-fixture.sh, 3 federation-relay clients",
+   "source": "git-deployment"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "per-model LLM arm units",
+   "where": "units/llm-resolver-{opus,haiku,google}.service (1ac0defe, ee8e46cc) \u2192 30ebe24b, 008f3ab9",
+   "tried": "Static unit per model, later a renderer",
+   "outcome": "superseded",
+   "date": "2026-07-03..2026-08-20",
+   "evidence": "'every arm shipped twice on one port, and half of them crash-looped invisibly'; static units deleted and replaced by render-llm-arms.sh and llm-arms.json",
+   "source": "git-deployment"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "local-tools read-only checkout drop-in",
+   "where": "9aa0b085 \u2192 6b238b63 (kept ae957b5e)",
+   "tried": "ReadOnlyPaths for super-repo checkouts, as both a drop-in and a unit edit",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "Duplicate drop-in reverted; the unit template is the single home; verified that a write under super-repo/repos fails 'Read-only file system'",
+   "source": "git-deployment"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Three parallel landing paths hardened separately",
+   "where": "apply_proposal_as_patch (b5001aa 06-04), patch_with_tools (c70b8d3 06-12), feature_compose (d8c982a 06-20); 44bcffd, e1f3656",
+   "tried": "Unify path-2 onto the static gate and add a location check to the second route.",
+   "outcome": "partial",
+   "date": "2026-07-29..2026-08-07",
+   "evidence": "e1f3656: 'the second landing route had no location check at all'.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Cruft sweep",
+   "where": "b306a58, 2e10d6a, 25f0b99, 1615970 (08-06), 500c1d1, 76383da, d86a4e4",
+   "tried": "Delete unwired scaffolds, llmCall_OLD, orphan resolvers.",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "evidence": "Three of the deleted files were July substrate mints.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "ClassRow route-as-data oracle harness",
+   "where": "e8caa37, ef5c645, 6bc12d5, 8478bc6, 5fa3fc8, 6ba5c6c, b307589",
+   "date": "2026-07-30",
+   "tried": "Make a new compositional reach class one data row, guarded by an executable drift gate.",
+   "outcome": "partial",
+   "evidence": "Only avg-threshold and below-mean migrated. 20 legacy verify*Reach functions remain beside it.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "index.ts never decomposed",
+   "where": "src/index.ts; 6a6eaa4",
+   "date": "2026-06-20..09-28",
+   "tried": "Extraction into 84 sibling modules. Removed 2 callerless functions.",
+   "outcome": "failed",
+   "evidence": "2,113 -> 17,910 lines. 3 functions hold about 7,950 lines. Autonomous churn +6,051/-1,380.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "compiled artefacts committed",
+   "where": "libp2p 542e712 (09-19 'vessel-code-commit-and-push')",
+   "tried": "script sweep commit",
+   "outcome": "failed",
+   "evidence": "12 .js/.d.ts/.map files, now stale vs .ts",
+   "source": "git-small"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Recurring cleanup sweeps",
+   "where": "a547b3e1, 5a1311c8, 1fdf0df7, 0c2a746c, d4290a6b, 0da7e4ef, 3818115e",
+   "date": "2026-02-05..06-25",
+   "tried": "54 cleanup/prune/jiggle commits; placement hook ab4af9bd (04-30)",
+   "outcome": "partial",
+   "evidence": "a547b3e1 alone deleted 4093 files; 3818115e removed 63,745 lines on 06-25; cruft regrows",
+   "source": "git-super-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Platform-generation abandonment",
+   "where": "f71ebe72, b49942df, 57d74520",
+   "date": "2026-04-30..06-26",
+   "tried": "dropped 11 then 8 submodules; removed minibob",
+   "outcome": "worked",
+   "evidence": "metabob-mcp dropped 04-30 and re-added 05-12 (abandon, then revive)",
+   "source": "git-super-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "autonomous drift-commit waves into super-repo (R10)",
+   "where": "3142f140, 4ad136ec..31719fc7, 4e4170a8, e72a7fc8, 13c5d466, 796fac89, edc68d49",
+   "tried": "Rhythm 'self-maintenance' goal: detect code drift, then vessel-code-commit-and-push (git add of everything)",
+   "outcome": "failed",
+   "date": "2026-07-25..2026-09-26",
+   "evidence": "About 4,400 of 6,667 tracked files at HEAD came from these commits. 4e4170a8 truncated spectral-gap in git (7013d1cf). edc68d49 blocked the node-1 super-repo ff, leaving it 130 commits behind (50830bec)",
+   "source": "git-super-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "untrack runtime state / scratch (cleanup chain)",
+   "where": "8f8e87e7, a009e1d9, d993b331, f90dda1a, 50830bec",
+   "tried": "git rm --cached, .gitignore, and the placement hook installed in-container",
+   "outcome": "partial",
+   "date": "2026-08-02..2026-09-28",
+   "evidence": "Still at HEAD: Substrate/ (68 files), history.txt, leases/, run_scan.js, mitosis-applied-host-sync.jsonl, validation/failure-modes (3,342), 220 compiled artifacts in validation/scripts, and about 50 openspec/changes residue files",
+   "source": "git-super-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "runtime-drift watchdog",
+   "where": "63b48175 -> bb217e5e, 251a6b4d",
+   "tried": "Second repairer that restores /vessels from committed source",
+   "outcome": "superseded",
+   "date": "2026-09-13",
+   "evidence": "It duplicated pull-sync's mirror-to-live. The grep that justified it ended in | head -15. Repair now defaults OFF",
+   "source": "git-super-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Variant generation storm (-<ts13>, -improved-, -hardened-, _variant_)",
+   "where": "development-vessel variant generator, June-July 2026",
+   "tried": "Mint variants of weak activities for Thompson to choose between",
+   "outcome": "failed",
+   "date": "2026-06/07",
+   "evidence": "586 rows, 570 proposed, 545 never executed, 0 executed in last 5d; e.g. LADDERWALK step 18 x185 (1 ever ran), release-change x177 (0 ran)",
+   "source": "live-activities"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Retire primitive applied to gap-closers",
+   "where": "activity.retired (retire primitive 19ae84e per memory)",
+   "tried": "Retire superseded activities",
+   "outcome": "partial",
+   "evidence": "Retired rows are respected (only 3 runs from 2 retired rows in 5d), but 1,340 live never-run rows remain",
+   "source": "live-activities"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "k8s-era ias-executor resolvers",
+   "where": "ias-executor-ts src/resolvers helmfile-sync, docker-build-push, wire-auth-blueprint, wire-discovery-registration, scaffold-vessel-skeleton",
+   "tried": "Resolvers for k8s deploy and scaffold",
+   "outcome": "superseded",
+   "evidence": "0 traces in 30 days; the deployment is now a single container with systemd",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Activity-api default-arm resolve gateway",
+   "where": "defa169",
+   "tried": "Universal resolve front door in activity-api",
+   "outcome": "reverted",
+   "date": "2026-07-16",
+   "evidence": "Wrong mint; re-homed to discovery",
+   "source": "memory-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Duplicate resolve-path-join detector in surgical-gap-scan.ts",
+   "where": "da76f061 reverted 807b92ef",
+   "tried": "Extended a host timer script",
+   "outcome": "reverted",
+   "date": "2026-09-28",
+   "evidence": "Existing gaps seven-more-resolve-url-sites-*, rawresolve-concatenates-*, and oracle reason_contains 'URL is invalid' already covered it",
+   "source": "memory-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "minibob removal and repo hygiene",
+   "where": "repos/minibob, .github/workflows",
+   "tried": "Delete repo + workflows",
+   "outcome": "partial",
+   "date": "2026-08-01",
+   "evidence": "~279 mentions across 34 docs remain; 43% dead archive, 111 change dirs",
+   "source": "memory-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Era-A obsidian notebook removal",
+   "where": "obsidian-vessel 400788a",
+   "tried": "Delete 19 files (~6.3k lines)",
+   "outcome": "worked",
+   "date": "2026-07-15",
+   "source": "memory-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Obsidian single-conduit config collapse",
+   "where": "obsidian-vessel 2180d32, 15799bb, 228e6ec, d8e8ec3, 06e8305, d1d4d69",
+   "tried": "Remove direct fallbacks, WebSockets, legacy settings",
+   "outcome": "worked",
+   "date": "2026-07-16",
+   "evidence": "Config = relay + apiKey; large main.ts edits needed hand-edits",
+   "source": "memory-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Seam extraction + parity gate",
+   "where": "development-vessel 2c18203, 652fc1a",
+   "tried": "AST-parity-gated deterministic seam extraction",
+   "outcome": "dormant",
+   "date": "2026-07-17",
+   "evidence": "Dry-run PARITY PASS on activities.ts; Phase 3 never landed",
+   "source": "memory-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Parity-gated fossil decomposition (operator seam extractor)",
+   "where": "activity-api ea4cf1b, 2a17f54, 65f7fbe; goal-host c3fe0b7; ias-executor b5a37cc; openspec 2026-07-15-vessel-maintenance-parity-gate",
+   "tried": "Used a deterministic 4-check parity gate (surface, tsc, tests, normalized AST) with operator tools seam-extract.ts and parity-check.ts.",
+   "outcome": "partial",
+   "date": "2026-07-15",
+   "evidence": "Files shrank (activities.ts 12015->11118, engine.ts 1907->1596). The tools were never minted as activities (they live in job tmp); detect/verify activities were never built.",
+   "source": "memory-3"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Clean pinned clones blocking convergence",
+   "where": "/home/avi/substrate-clone-preserve-2026-08-12/",
+   "tried": "Preserve local diffs, then reset and clean 5 clones",
+   "outcome": "worked",
+   "date": "2026-08-12",
+   "evidence": "The clones held abandoned drafts (wrong-framework router.get, a deleted retry block)",
+   "source": "memory-4"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Dead gap-to-feature dispatch removed",
+   "where": "dev-vessel 5a25f9c",
+   "tried": "Remove the resolveDispatchGoal call that could never fire.",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "source": "memory-5"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Raw NUL separators make sources grep-invisible",
+   "where": "8 files incl. activity-api execution-traces.ts:4372",
+   "tried": "Filed a gap, then retired it as rejected because the zero_behaviour_delta gate blocks string-only fixes.",
+   "outcome": "failed",
+   "date": "2026-09-13",
+   "evidence": "The gap family grew 1 to 3 and starved the compose slot. Mislocalized gaps persist.",
+   "source": "memory-5"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Retirement sweep keyed on success_rate",
+   "where": "light-dispatch 7f3a81f->66b95e1; activity-api 8b76d56, 7947f79",
+   "tried": "Retire never-succeeded arms",
+   "outcome": "partial",
+   "date": "2026-08-05",
+   "evidence": "retired 21 working arms (success_rate lies: 398 rows); restored; deprecated vs retired mismatch fixed; old sweep hit a non-existent route and had never retired anything",
+   "source": "memory-7"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Duplicate E4 retirement block",
+   "where": "gap-to-feature.ts; 43bb297, b05c41b, 89d3dca, fa2b9d4",
+   "date": "2026-09-12",
+   "tried": "cancelled dispatches still landed; guarded both blocks",
+   "outcome": "partial",
+   "evidence": "the duplicate defeated 2 correct repairs; now undeletable (vacuity gate: zero behaviour delta)",
+   "source": "memory-9"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "ias-executor as canonical host / minibob removal",
+   "where": "openspec/changes/2026-05-19-ias-executor-as-canonical-host",
+   "tried": "Deprecate minibob god-object in favor of GoalHost",
+   "outcome": "superseded",
+   "date": "2026-05-21",
+   "evidence": "minibob absent from repos/ and .gitmodules; achieved via substrate-explicit-vessels; parity gates S.1-S.5 never measured",
+   "source": "openspec-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Parked landings (resumable-landings 1.1-1.5)",
+   "where": "dev-vessel 873fd81,c1dd4c2,6ab8271,b789d9c,49b6b1c",
+   "tried": "park the verified diff before cutover, resume on the next pick, and count discards with a detector",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "resumes observed 09-24; 6ab8271 reverted a0ff3d3 (restored 7994841); 47 park files never reaped (newest 09-26); detector runs 292x/48h with total=0; discarded-landings-09-24/25/26 gaps still open",
+   "source": "openspec-10"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Self-replacement pipeline (audit purity/shadow/promote/archive) + AviGopal rename",
+   "where": "openspec/changes/2026-05-23-substrate-self-replacement-pipeline",
+   "date": "2026-05-23",
+   "tried": "A five-activity pipeline and a C.1 minibob tool-vessel decomposition canary.",
+   "outcome": "superseded",
+   "evidence": "0/49 tasks; audit-vessel-purity absent; minibob gone. Vessel mitosis cutover is the later analogue.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Substrate as constrained git author (H2-signed PR branches)",
+   "where": "openspec/changes/2026-06-01-substrate-as-git-author; development-vessel seed publish-substrate-authored-artifact",
+   "tried": "substrate_commit/push/open_pr resolvers, substrate-authored/* branches and operator PR review",
+   "outcome": "superseded",
+   "date": "2026-06-01",
+   "evidence": "The resolvers were never built; 62 origin/substrate-authored/* branches (06-01..06-29) are left as residue; superseded by direct Substrate Autonomous commits to dev. The finding cites 'Commit [fourth commit]' placeholder",
+   "source": "openspec-3"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Namespace migration + compose surface",
+   "where": "2026-06-16-substrate-namespace-and-compose-migration",
+   "tried": "Create AviGopal remotes, split 9 vessels, transfer 5, rename metabob-activity-api, docker-compose.yml",
+   "outcome": "superseded",
+   "date": "2026-06-16",
+   "evidence": "M0-M2.6, M3.1-3.2 done (94b38dd56); M1.2/M3.3/M3.4/R.1/X.* open; superseded by root rename and unified-install-interface",
+   "source": "openspec-4"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Root rename + repo hygiene",
+   "where": "2026-06-25-substrate-root-rename-and-repo-hygiene",
+   "tried": "Cruft removal, convert 8 embedded repos to submodules, drop obsidian/dashboard, de-hardcode paths, grep pre-commit gate, mv root",
+   "outcome": "partial",
+   "date": "2026-06-25",
+   "evidence": "Root did move to /home/avi/documents/work/substrate; tasks.md 0 checked; .gitmodules still carries obsidian-vessel",
+   "source": "openspec-4"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Drift auto-commit of working-tree residue into super-repo",
+   "where": "super-repo commits 4e4170a8 (2026-09-07), 796fac89 (2026-09-19)",
+   "date": "2026-09-07",
+   "tried": "Autonomous 'vessel code drift detected and committed' / 'vessel-code-commit-and-push cpg-inference-ts' activity commits everything in tree",
+   "outcome": "failed",
+   "evidence": "Committed elements.html 3,270 lines, generate_report.js 6,234 lines, neptune_moons.txt, my_probe.txt, compose-slots, interactor-log jsonl, and all openspec stray JSON/JS in this shard",
+   "source": "openspec-5"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Autonomous drift-sweep commits swept draft residue and tsc emit into git",
+   "where": "super-repo 4e4170a8 (2026-09-07, 2134 files +59401), 796fac89 (2026-09-19, 412 files +16104, mislabeled 'cpg-inference-ts')",
+   "date": "2026-09-07, 2026-09-19",
+   "tried": "'vessel code drift detected and committed' commits everything in the tree.",
+   "outcome": "failed",
+   "evidence": "All 17 stray openspec entries in this shard entered git this way, including .js/.d.ts/.map emit. openspec/changes has 77 stray top-level files and 60 compiled files overall.",
+   "source": "openspec-6"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Reuse-before-mint cross-family producer dedup",
+   "where": "openspec/changes/2026-08-26-reuse-before-mint-crossfamily-dedup",
+   "date": "2026-08-26",
+   "tried": "proposal only (producerExistsForShape guard + consolidation sweep)",
+   "outcome": "dormant",
+   "evidence": "producerExistsForShape absent in live clones; SurrealDB: 70 activities output activityExecutionSummary (68 not deprecated), all minted 05-30..07-01; growth stopped for other reasons, clones never retired",
+   "source": "openspec-7"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "goal_summary / http_response drafts as openspec JSON",
+   "where": "openspec/changes/*.json (super-repo commit 4e4170a8)",
+   "date": "2026-08-17",
+   "tried": "route-edit-9077062c / orphaned-capability-goal_summary recommit churn; drafts later committed by the 'vessel code drift' self-maintenance path",
+   "outcome": "failed",
+   "evidence": "4e4170a8 09-07 Substrate Autonomous: 2134 files +59401, 34 in openspec/changes; goal_summary resolver live with no code reader; gap orphaned-capability-goal_summary still OPEN",
+   "source": "openspec-7"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "date": "2026-08-16",
+   "title": "Substrate re-drafted a generic httpResponse resolver into openspec/changes 3 times",
+   "where": "openspec/changes/{fix-http-response-resolver,http-response-camel,httpResponse,delete-old-http-response-new}*",
+   "tried": "LLM drafter wrote 5 competing resolver implementations plus delete instructions as loose files",
+   "outcome": "failed",
+   "evidence": "None landed or are read by anything; header of repos/development-vessel/src/resolvers/http-response.ts says '12 orphaned files, none landed'; the files were later committed by 4e4170a8/796fac89 with tsc emit",
+   "source": "openspec-8"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "date": "2026-09-23",
+   "title": "Root scratch cleanup and placement hook",
+   "where": "d993b331 (unified-install-interface)",
+   "tried": "Delete tracked root scratch; install the pre-commit placement hook in in-container clones",
+   "outcome": "partial",
+   "evidence": "Root junk removed, but the hook checks only top-level dirs: 77 strays remain in openspec/changes/, 142 .js emit files sit next to their .ts, and history.txt, run_scan.js and tsconfig.json remain at root; edc68d49 on 09-26 committed leases/ and state/ runtime files",
+   "source": "openspec-8"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Substrate drafted generic httpResponse resolver into openspec/changes (x3 sessions)",
+   "where": "openspec/changes/http-response-resolver.ts, httpResponse.ts, http-response-types.ts, new-http-response-resolver.ts, impulses-patch.json",
+   "tried": "08-16: re-minted an http fetch resolver 3 times because the advertised httpResponse producer ignored its URL (hardcoded httpbin 404)",
+   "outcome": "failed",
+   "date": "2026-08-16",
+   "evidence": "12 orphaned files, none landed (header of dev-vessel src/resolvers/http-response.ts); later committed as residue by 4e4170a8/796fac89",
+   "source": "openspec-9"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Drift-commit swept untracked residue into super-repo",
+   "where": "super-repo 4e4170a8 'Automated commit: vessel code drift detected and committed.'",
+   "tried": "autonomous drift commit of 2134 files incl. root tsconfig.json, {{target_path}}, neptune_moons.txt, interactor-log jsonl, openspec strays",
+   "outcome": "failed",
+   "date": "2026-09-07",
+   "evidence": "git show --stat 4e4170a8; operator had deleted root tsconfig 04-30 (1c626d6d)",
+   "source": "openspec-9"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Drift-commit committed tsc emit of every stray TS",
+   "where": "super-repo 796fac89 'vessel-code-commit-and-push cpg-inference-ts'",
+   "tried": "added rootDir/outDir to root tsconfig and committed .js/.d.ts/.map beside sources plus probe files",
+   "outcome": "failed",
+   "date": "2026-09-19",
+   "evidence": "823 tracked emit-type files outside repos/ now (615 .d.ts/.map, 177 .js with .ts sibling)",
+   "source": "openspec-9"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Cleanup of drift-commit residue 9d839e0 (bun cache)",
+   "where": "development-vessel 9d839e0; report 46a6b047",
+   "tried": "cleaned .bun/install/cache pile binaries committed by 'sync vessel code'",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "super-repo instances (tsconfig, 823 emits, ~60 openspec strays) untouched",
+   "source": "openspec-9"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Reuse lineage made storable",
+   "where": "activity-api 4e0d27a (migration 204)",
+   "date": "2026-08-29",
+   "tried": "REUSE LINEAGE computed then discarded to log ~8/day",
+   "outcome": "partial",
+   "evidence": "Receiver landed; sender pending; E1/E2 showed reuse rarely occurs (satisfier pathways discarded)",
+   "source": "reports-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Restore sed-bloated worktree files; stop the retry harness (#35)",
+   "where": "/workspace/git/super-repo/repos/*: goal-host index.ts (170 MB, 658,893 lines appended), feature-compose.ts (95 MB), gap-to-feature.ts (94 dup imports), patch-with-tools.ts; backups in /workspace/backups/sed-bloat-2026-09-24/",
+   "tried": "The operator restored the files from HEAD and stopped the retry harness. The root cause was that dispatch.sh sent the operator only as a tag, not as the body field.",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "The instances were cleaned. The walk shell route and the satisfier refusal still do not cover shell executors (#4, #33).",
+   "source": "reports-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Human-surface authoring root bootstrap (subtree split)",
+   "where": "/workspace/git/remotes/human-surface-vessel.git, /workspace/git/vessels/human-surface-vessel, /vessels/human-surface-vessel",
+   "tried": "git subtree split (37 commits), bare remote, push clone, live tree",
+   "outcome": "partial",
+   "date": "2026-09-22",
+   "evidence": "Vessel AUTHORABLE; /vessels is image layer (dies on rebuild); super-repo now carries two copies; clock-vessel, relevance-sink still plain files; gap three-fleet-vessels-are-plain-files still OPEN 09-29.",
+   "source": "reports-4"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Retire static LLM units superseded by rendered arms",
+   "where": "entrypoint.sh",
+   "tried": "Duplicate units on identical ports crash-looped EADDRINUSE",
+   "outcome": "worked",
+   "date": "2026-08-20",
+   "evidence": "NRestarts went from 95 in 40 min to 0; readiness now says fleet ready",
+   "source": "reports-7"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Enable noUnusedLocals and noUnusedParameters",
+   "where": "survey in ADDENDUM section K",
+   "tried": "Survey the cost: 265 violations (goal-host 12, ias-executor 19, dev-vessel 75, activity-api 159)",
+   "outcome": "dormant",
+   "date": "2026-09-10",
+   "evidence": "No vessel tsconfig enables them at HEAD 09-23. The survey found inferGoalTargetShapes and decideContinuation imported but never invoked, and both are still imported.",
+   "source": "reports-8"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "consumer-side-landing-probes proposal",
+   "where": "openspec (512337c1, superseded 6f329e2e)",
+   "date": "2026-09-28T06:44Z",
+   "tried": "new openspec change for pre/post cutover production probes",
+   "outcome": "superseded",
+   "evidence": "User 'reuse before minting more'; existing expectation scan/behavioural verification preferred",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Surgical gap scan extension for resolve joins",
+   "where": "surgical scan da76f061",
+   "date": "2026-09-28T17:06Z",
+   "tried": "new pattern for endpoint+resolvePath joins",
+   "outcome": "reverted",
+   "evidence": "Duplicated open gaps seven-more-resolve-url-sites-*, rawresolve-concatenates-* and an existing trace detector",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Placement hook hand-installed in container clone",
+   "where": "validation/findings/round7-blocker-sweep.md \u00a72",
+   "tried": "scripts/git-hooks/install.sh in /workspace/git/super-repo",
+   "outcome": "failed",
+   "date": "2026-08-11",
+   "evidence": "09-07 4e4170a8 Substrate Autonomous committed 2134 files/59,401 lines; real fix 09-23 d993b331 in setup-git-push",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Autonomous drift commits sweep runtime state into the super-repo",
+   "where": "4e4170a8, 6ced94dc (09-07), 13c5d466 (09-18), 796fac89 (09-19), edc68d49 (09-26)",
+   "tried": "Automated 'vessel code drift detected and committed'",
+   "outcome": "failed",
+   "evidence": "4e4170a8 touched 2134 files: 897 compiled .js/.d.ts/.map, 1120 failure-mode files, and literal {{target_path}} and {{unitFilePath}} files. Substrate/Projects (68 files) is still tracked outside ALLOWED_TOPLEVEL_DIRS. d993b331 (09-23) cleaned only the root scratch files.",
+   "source": "validation-other-3"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "activity-api K8s-era CI",
+   "where": "repos/activity-api/.github/workflows/ci-webhook.yml, sync-to-deployment.yml",
+   "tried": "CI on push to dev",
+   "outcome": "failed",
+   "date": "2026-09-28",
+   "evidence": "200 of 200 runs failed at 'Build Docker image' (08-22 to 09-28). concept-db failed 50 of 50.",
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "problems": [
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "150 of 323 live resolvers never invoked; 4010 activity rows all with 0 counted executions, 1228 retired; monolith files (goal-host index.ts 17,910 lines, activities.ts 11,766)",
+   "root_cause": "minting outpaces use (master-inequality livelock symptom); no retirement of uninvoked resolvers",
+   "last_seen": "2026-09-26",
+   "source": "docs-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "activity-api has its own vessel registry and boredom queue duplicating discovery-vessel and boredom-vessel",
+   "root_cause": "legacy SPEC-004 routes retained",
+   "last_seen": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "7 fossil guides for a retired CLI or out-of-fleet surfaces; hub files of 17,910 (goal-host index.ts), 11,766 (activities.ts) and 7,274 (feature-compose.ts) lines; untracked refusals/ residue in the substrate clone",
+   "root_cause": "No retirement path for docs; runtime state written inside the git tree",
+   "source": "docs-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Ingested docs that are fossils or pitches (SUBSTRATE_PRESENTATION_2026_06.md claims monotone capacity growth and LLM-free runtime; NARRATION protocol; testing/README.md pre-substrate vocabulary; SUBSTRATE.md closure/forge/self-deployment sections in present tense for unbuilt features)",
+   "source": "docs-3"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "20 tracked compiled .js/.d.ts/.map in the relay dir, build output in the transport repo, 3 caller-less scripts, a third libp2p implementation in the obsidian sidecar, 16+ ephemeral spoke-<hex> ids in hub metrics",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Autonomous drift commits include build output; demo/compose runs mint new substrate ids",
+   "source": "federation-relay"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Orphan gaps.json.*.tmp files (~98MB live dir, ~300MB on 09-10), fossil /workspace/gaps store, stale validation/gaps narration dir",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-26",
+   "recurrences": 3,
+   "root_cause": "Atomic write whose rename fails leaves a temp file; nothing reaps them",
+   "source": "gap-history"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "11.7k-line activities.ts, 31 of 134 routes with no caller, duplicated scripts, dead k8s migration scripts, abandoned subsystems (account_id, composition_edge, AET dual-write), cache layers stacked",
+   "root_cause": "Mechanisms minted without a consumer and never retired; the parity-gated extraction stopped after 4 helpers",
+   "first_seen": "2026-04-22",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "source": "git-activityapi"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Autonomous commits sweep runtime state, scratch, compiled .js and cache binaries into git in the super-repo and vessel repos",
+   "root_cause": "The self-maintenance rhythm goal says 'commit and push' whatever the drift scan sees. Cleanups deleted its output but never changed the generator. The placement gate that should refuse root files is inert",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 11,
+   "source": "git-deployment"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Scripts become orphans when the lane that called them is deleted (Makefile targets 08-20, deploy lanes 09-23); deprecated shims and temporary conduits persist",
+   "root_cause": "The retention rule runs as occasional operator prunes (08-02, 08-05), not as a continuous check; deletions do not follow the dependents of what they delete",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "source": "git-deployment"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Three landing paths, duplicated llmCall/failover, 60+ single-reference autonomous resolvers, June tick fossils still running at high volume",
+   "first_seen": "2026-06-04",
+   "last_seen": "2026-08-08",
+   "recurrences": 6,
+   "root_cause": "Mint-new over consolidate. No retirement path for templates and ticks.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "76% of autonomous landings have no recoverable intent (route-edit ids absent from the gap store); 59% of resolvers untouched since before 08-16; duplicate families",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-29",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "index.ts 17,910 lines; 3 functions about 7,950; dead gates and diagnostic sinks left in; 4 generations of reach grading coexist",
+   "first_seen": "2026-06-20",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "Every fix is additive. Mechanisms are superseded but not retired.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Compiled .js in boredom src, forge/Helm/examples in ias, whole workbench repo, 4 copies of interpolateBoundValues, _quarantineFile2",
+   "first_seen": "2026-05-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "root_cause": "Additive landings plus no retirement path for superseded eras",
+   "source": "git-mid"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "5 undeployed repo dirs, compiled artefacts in git, 12 mitosis residue dirs, duplicate implementations",
+   "first_seen": "2026-04-30",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "root_cause": "superseded components never retired; cutover leaves residue; script sweeps git add everything",
+   "source": "git-small"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "cruft regrows between 54 sweeps; 764 docs commits (~22%); 19 submodules abandoned; leaked credentials",
+   "first_seen": "2026-02-05",
+   "last_seen": "2026-06-25",
+   "recurrences": 54,
+   "root_cause": "session summaries/reports committed to tree; platform rewrites leave fossils; placement hook only from 04-30",
+   "source": "git-super-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "About 4,400 of 6,667 tracked files are autonomous residue: generated failure-mode scenarios, compiled .js/.d.ts/.map, root scratch, 6 duplicate http-response resolvers in openspec/changes",
+   "root_cause": "The rhythm 'self-maintenance' goal (drift scan + vessel-code-commit-and-push) commits everything in the super-repo worktree; the placement hook is enforced only after the fact",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-26",
+   "recurrences": 7,
+   "source": "git-super-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "48% of live activities (1,340) never ran; 94% of the pool predates August; 165 duplicate signatures hold 2,052 live rows",
+   "root_cause": "June/July mint storms (variants, gap-closers, organic compositions) with no automatic retirement of never-run or zero-success arms",
+   "source": "live-activities"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "51 orphaned resolvers, duplicate names (prune-stale-mitosis/prune_stale_mitosis, pushPolicy-write/_write), 66k-line prediction log",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-28",
+   "recurrences": 51,
+   "root_cause": "mint before reuse; no retirement path",
+   "source": "live-gaps"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Runtime residue: 21 orphaned standing.json.tmp files (~100MB); an unbounded 180MB drain-log; 1805 never-retired snapshots; 30+ residue files in the super-repo root; {{placeholder}} files and titles; compiled .js beside .ts in boredom src",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "root_cause": "No retention or cleanup for runtime logs and snapshots; template placeholders are not rendered before writes",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "29 multi-owner shapes, 9 case twins, 5 non-identifier shape names, 84/260 dev shapes and 16/21 concept-db shapes with no traced output; 255 dev resolver files / 75k lines; 342 hardcoded ports",
+   "root_cause": "minting without reuse; substrate-authored resolvers register free-text names; the replaced vessel is never retired",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Oversized S1 fossils, duplicate detectors and selectors, deprecated namespaces, dead archive",
+   "root_cause": "Modularization loop never owned; minting before searching prior art",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "source": "memory-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "49 ungc'd mitosis clones, frozen AET table, decoy gaps.json, activity_templates plural table, write-only feedback table, registry aliases (3 producers one process), duplicate switch cases, 217 never-executed advertised shapes, free-text shape names, empty shape_definition",
+   "root_cause": "Nothing composts residue; minting outpaces evidence (law 3 growth term)",
+   "first_seen": "2026-08-05",
+   "last_seen": "2026-09-13",
+   "recurrences": 6,
+   "source": "memory-10"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "6-11k-line files un-self-editable, 263 corrupt staging roots, satisfier graveyards, wrong mints, duplicated maps and rewrites, dead views",
+   "first_seen": "2026-07-10",
+   "last_seen": "2026-09-29",
+   "recurrences": 8,
+   "root_cause": "Specific paths built instead of general tools at shared seams (operating-model note 09-29)",
+   "source": "memory-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "88% of templates have zero executions (1311 degenerate). Fossil files run 6-12k lines. Leftovers: vestigial columns and tables, zero-reader views, duplicate arm units, debug cruft, NUL bytes, AET residue, runtime state committed.",
+   "first_seen": "2026-07-15",
+   "last_seen": "2026-09-22",
+   "recurrences": 9,
+   "root_cause": "Minting is cheap, retirement has no reader-driven sweep, and pieces are left after partial migrations.",
+   "source": "memory-3"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Fossil tables and columns, 1,200+ deprecated templates still runnable, recursive learned-learned stacking, orphan drafts and probes, duplicate registration mechanisms",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-09-22",
+   "recurrences": 6,
+   "root_cause": "Mint is cheap and retirement is selection-scoped; no fossil sweep",
+   "source": "memory-4"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Dead files and symbols, a fs_write graveyard in /vessels/local-tools-vessel, a dead trace-digest writer to a 0-row table, fossilized inverted composites.",
+   "root_cause": "Wrong-path writes and mint-without-retire.",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-09-13",
+   "recurrences": 4,
+   "source": "memory-5"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Duplicate stacks/renderers/callers/units and never-run vessels",
+   "root_cause": "new paths added beside old without retirement",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-20",
+   "recurrences": 8,
+   "source": "memory-6"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Duplicate switch arms, six copies of the extension parse, cosmetic-clone resolvers, confab cruft in clones, 383 leaked templates, an orphan arm",
+   "root_cause": "Per-site copies instead of a shared helper, and no retirement path until 08-05",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-09-01",
+   "recurrences": 7,
+   "source": "memory-7"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Duplicate mints, fossil stores, junk commits, orphan temp files, dead tables, vestigial annotations.",
+   "root_cause": "No retention lifecycle, no placement hook in the container clone, and mints never retired.",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-22",
+   "recurrences": 10,
+   "source": "memory-8"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Duplicate tables, dead vessels, and conflicting dashboards remain in tree and DB",
+   "first_seen": "2026-04-24",
+   "last_seen": "2026-08-16",
+   "recurrences": 6,
+   "root_cause": "no retire step after supersession",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "48 tracked .js build outputs in scripts/substrate, 6 in boredom-vessel src; leftover /vessels/*mitosis* dirs (4 node 2, 11 node 1); memory .bak files holding 1788 notes nobody reads; /workspace/state/learning-mode-state.json stale since 07-29; 4 orphaned gaps.json .tmp files on node 1; leases/*.json tracked in git",
+   "root_cause": "No retention or cleanup; runtime state committed to git",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-29",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "13 of 18 old changes unarchived; duplicate activity ids for draft-gap-closing; examples folder holds production resolvers",
+   "first_seen": "2026-05-21",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "root_cause": "no retirement step for specs/variants",
+   "source": "openspec-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Drift committer 4e4170a8 committed 2,134 untracked files (+59k lines) into the super-repo, incl. {{target_path}}, e.g, elements.html and 51 loose .ts/.js/.json in openspec/changes; it truncated compose-teacher.ts; the class recurred (9d839e0, held 09-28)",
+   "root_cause": "an automated 'vessel code drift detected and committed' sweep with no placement filter",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "source": "openspec-10"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "47 orphaned park files in /workspace/parked-landings (up to 910KB), none reaped",
+   "root_cause": "park TTL drop not enforced; a noop already_applied resume keeps the park",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-26",
+   "source": "openspec-10"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Tracked 228KB boredom-vessel/src/index.js stale twin of index.ts committed by substrate landing 84cd2f2; 62 orphan substrate-authored/* branches; mvp.patch files; 2275 runtime scenario JSONs in git",
+   "first_seen": "2026-06-01",
+   "last_seen": "2026-09-19",
+   "recurrences": 4,
+   "root_cause": "no retention/archival activity; superseded models (PR-branch authoring) leave residue; runtime state is written into the tracked tree",
+   "source": "openspec-3"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "624MB /workspace/tmp clones each with own gaps.json; compiled watchdog-tick .js/.d.ts residue; root hygiene tasks never done",
+   "root_cause": "Experiments and composes leave artifacts in live volume and scripts dir",
+   "first_seen": "2026-06-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "source": "openspec-4"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Stray system-written JSON/TS/JS/d.ts files in openspec/changes (18 in this shard alone)",
+   "root_cause": "Drafter output written to a path nobody consumes; blanket drift auto-commit tracks the working tree; tsc run with root tsconfig emits .js next to strays; pre-commit dir allowlist does not police contents of allowed dirs",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-19",
+   "recurrences": 2,
+   "source": "openspec-5"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Draft payloads and tsc .js/.d.ts/.map emit accumulate in openspec/changes: 77 stray files, 60 compiled files, 20 goal_summary entries.",
+   "root_cause": "Drafts are written into the wrong directory; a tsc run emitted into the super-repo; autonomous drift-sweep commits (4e4170a8, 796fac89) commit the whole tree; the pre-commit gate only checks top-level dirs.",
+   "first_seen": "2026-08-17",
+   "last_seen": "2026-09-19",
+   "source": "openspec-6"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "70 activityExecutionSummary producers (68 active-flagged, dormant)",
+   "root_cause": "mint via mitosis bypassed the per-parent cap; no cross-family guard; consolidation never ran",
+   "first_seen": "2026-06-20",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "openspec-7"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Substrate commit 4e4170a8 added 2134 files (+59401) including openspec JSON drafts and root residue",
+   "root_cause": "rhythm self-maintenance 'commit vessel drift' LLM path through ungated shell git",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-07",
+   "recurrences": 1,
+   "source": "openspec-7"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Loose drafts, tsc emit (.js/.d.ts/.map) and probe files committed into openspec/changes, root and validation by substrate sweeps",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-26",
+   "recurrences": 4,
+   "root_cause": "The rhythm prose goal 'vessel-code-commit-and-push' runs git add on whatever tree the LLM walk picks. The placement hook guards only top-level dir names, not content or emit residue.",
+   "source": "openspec-8"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Autonomous drift-commit activities commit untracked residue (drafts, tsc emit, probe files, {{placeholder}} paths, runtime jsonl, bun cache) into git",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "root_cause": "The drift-commit writer (vessel-code-commit-and-push / 'vessel code drift detected') has no source-vs-artifact filter. The pre-commit gate checks only top-level dirs, and a root tsconfig re-added by the substrate emits beside every .ts.",
+   "source": "openspec-9"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Orphaned drafts, null files, dead routes, legacy tables, duplicate implementations, malformed templates 14%, validation/demo2 residue",
+   "root_cause": "Re-minting when a lying capability fails; no retirement path",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "source": "reports-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "sed -i fall-through appended one line 658,893 times (170 MB goal-host index.ts) plus 3 other files, with no commit, invisible to hooks and the ledger.",
+   "root_cause": "The walk tool fallback on edit goals is ungated, and the satisfier's fs-write refusal does not cover shell. Operator dispatches without the operator body field competed as autonomous, were refused BUSY, and were retried.",
+   "first_seen": "2026-09-23 14:20",
+   "last_seen": "2026-09-24 09:00",
+   "recurrences": 4,
+   "source": "reports-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Duplicate/fossil structures: two human surfaces each half a form learner, two copies of human-surface in super-repo, stateful-ui + human-surface producer collision, three shape names for one meaning, duplicate paging landings, residue proposals",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-24",
+   "recurrences": 5,
+   "root_cause": "Replace without retire; minting to dodge gates; authorability tied to submodule membership.",
+   "source": "reports-4"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Fossil tables, shadowed routes, unreachable selector framework, 125 composed-cap templates with one-off shapes, unretired probe templates",
+   "root_cause": "No retirement path; per-goal shape naming",
+   "first_seen": "2026-08-19",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "source": "reports-5"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Dead tables and views read or written (activity_template, v_activity_score, v_paradigm_execution_traces, AET); duplicate LLM units; an unused 825-line extractor; 97 active openspec changes; a redundant ribosome dispatch; an 11,716-file spool",
+   "root_cause": "Retirement never completes; there is no reader-check before keeping code",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "source": "reports-7"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "265 unused locals/params across 4 vessels. A duplicated copy-pasted block in substrate-gap.ts. About 50 orphan gaps.json tmp files (300MB). credit-primed-concepts.ts wired to another drafter. goal-host index.ts is 16k lines.",
+   "root_cause": "noUnusedLocals is off. Self-edits deposit residue in the hottest file.",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-23",
+   "recurrences": 3,
+   "source": "reports-8"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Orphan exited containers with retained volumes (spoke-syz, mini-node, verify-node, coldboot-node, coldboot2-node). Proof fixtures left running for 6+ days. Diagnostic tick logs (mem-probe, gc-tick, BoundedBusSink at 18k lines each).",
+   "first_seen": "2026-09-17",
+   "last_seen": "2026-09-29",
+   "source": "syzygy"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "11 scripts exist only in the /workspace/active-scripts volume (not in the super-repo). 7 more have no caller. 48 .js and 48 .d.ts tsc outputs are tracked in scripts/substrate. 2519 orthogonal observation files. 3 stale standing.json.tmp.* files of 4MB each",
+   "root_cause": "The seeder and pull-sync run 'cp -f *.ts' with no prune. The autonomous commit 4e4170a8 (09-07) committed emit residue. Append-only file outputs have no retention",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "source": "timers-readers"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Duplicate route registrations, junk awaits, dead activity posterior fields, shadow ledger",
+   "first_seen": "2026-09-05",
+   "last_seen": "2026-09-10",
+   "recurrences": 4,
+   "root_cause": "Double-applied landings and unretired legacy paths",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "18k-line files, 45 timers, 4,010 activities, operator harness sprawl, duplicate blocks from double-applies",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "root_cause": "Specific paths instead of general resolvers composed by the walk (user 09-29)",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "autonomous commits sweep scratch/runtime files into super-repo root",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-09-07",
+   "recurrences": 2,
+   "root_cause": "placement hook absent where substrate commits; fixed at bootstrap tier 09-23",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Investigation numbering collisions across 4 interleaved streams; dev-responses filed in the auditor namespace; substrate committing auditor files; root PNG clutter",
+   "first_seen": "2026-05-23 F-010",
+   "last_seen": "2026-05-28 F-147",
+   "recurrences": 6,
+   "root_cause": "Shared directory and counter with no owner or namespace enforcement",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "3321 tracked scenario files, 220 compiled artifacts in validation/scripts, 1925 gap-closing:* activities (1841 minted in June), and Substrate/Projects fixtures tracked at the root",
+   "root_cause": "Runtime stores live inside the git tree, autonomous drift commits sweep everything in, and minting has no reuse check",
+   "first_seen": "2026-05-22",
+   "last_seen": "2026-09-26",
+   "source": "validation-other-3"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "67 of 112 vessel .md files sit in gitignored K8s-era repos. Live CLAUDE.md files point at repos/deployment. CI is 100% red.",
+   "root_cause": "The fossil repos were left in the working tree and their CI workflows were never removed",
+   "first_seen": "2026-04-30",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "claims": [
+  {
+   "key": "codebase-bloat-fossils",
+   "claimed_at": "2026-09-24",
+   "claim": "resumable-landings complete and archived",
+   "where": "archive/2026-09-24-resumable-landings",
+   "later": "47 orphan parks unreaped; 3.3c executor failure path absent; reconcile HOLLOW; discarded-landings gaps 09-24..26 still open",
+   "source": "openspec-10"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "claimed_at": "2026-08-25",
+   "claim": "activityExecutionSummary served by 15+ near-duplicate producers",
+   "where": "2026-08-26-reuse-before-mint-crossfamily-dedup/proposal.md",
+   "later": "09-29 SurrealDB: 70 producers (68 not deprecated); guard never built; sweep never ran",
+   "source": "openspec-7"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "claimed_at": "2026-09-23",
+   "claim": "Root scratch removed; placement hook installed where the substrate commits, so new launches reject new root files",
+   "where": "d993b331",
+   "later": "Root holds; 77 strays remain in openspec/changes and runtime-state commits recurred 09-26 (edc68d49 leases/, state/)",
+   "source": "openspec-8"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "claimed_at": "2026-08-16",
+   "claim": "twelve orphaned http-response drafts in openspec/changes, none landed",
+   "where": "repos/development-vessel/src/resolvers/http-response.ts header (5be029a)",
+   "later": "committed into git as residue by 4e4170a8 (09-07), and their tsc emit by 796fac89 (09-19); still tracked 09-28",
+   "source": "openspec-9"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "claimed_at": "2026-09-28",
+   "claim": "9d839e0 residue cleaned",
+   "where": "validation report commit 46a6b047",
+   "later": "covered only the dev-vessel bun-cache instance; the super-repo tsconfig, 823 emit files and openspec strays from the same drift-commit family are untouched",
+   "source": "openspec-9"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "claimed_at": "2026-09-28T17:06Z",
+   "claim": "Extended surgical gap scan to resolve-join sites (da76f061)",
+   "where": "ac8b0aad 2026-09-28T17:06Z",
+   "later": "Reverted 17:30: duplicated open gaps and an existing trace detector",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "claimed_at": "2026-08-11",
+   "claim": "placement hook installed, root cause closed",
+   "where": "validation/findings/round7-blocker-sweep.md \u00a72",
+   "later": "09-07 4e4170a8 still committed 2134 files; fixed at bootstrap 09-23 d993b331",
+   "source": "validation-other-1"
+  }
+ ]
+}

@@ -1,0 +1,443 @@
+{
+ "area": "discovery-vessel",
+ "items": [
+  {
+   "name": "Global fetch discovery shim",
+   "location": "8c31cdb (reverted 6ce1446)",
+   "purpose": "Discovery-first routing via fetch override",
+   "status": "fossil",
+   "general": false,
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "Duplicate-policy pick / distribution_policy",
+   "location": "discovery 7e051d7, 6ab2e24",
+   "purpose": "Choose among multi-owner shapes",
+   "status": "unknown",
+   "general": true,
+   "evidence": "29 multi-owner shapes exist; use not verified",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "vessel connect contract /bootstrap",
+   "location": "discovery GET /bootstrap; federation-transport-server.ts",
+   "purpose": "Two-field {discoveryEndpoint, apiKey} onboarding",
+   "status": "broken",
+   "general": true,
+   "evidence": "Transport read relay once at module load, froze to decommissioned droplet (08-10)",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "Learned shape descriptions",
+   "location": "discovery POST/GET /registry/shape-descriptions",
+   "purpose": "Planner matches goals to resolvers by description",
+   "status": "live-used",
+   "general": true,
+   "evidence": "312 of 405 shapes described",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "Registrant identity/event ring",
+   "location": "discovery ffd1d58 /registry/events",
+   "purpose": "Attribute registrations",
+   "status": "live-used",
+   "general": true,
+   "evidence": "500-event ring with key/org; 1 of 11 verified",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "two loopback reachability rules",
+   "location": "discovery union-merge vs human-surface proxy reachableFrom",
+   "purpose": "handle loopback peer rows",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "08-14",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "discovery register validation + dead-row eviction + liveness guard + registrant identity",
+   "location": "discovery-vessel (7cc9da4, ffd1d58)",
+   "purpose": "keep the routing fixed point clean",
+   "status": "live-used",
+   "general": true,
+   "evidence": "~1,499 /register 400 per day",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "/bootstrap + RELAY_MULTIADDR env-file read",
+   "location": "discovery-vessel (dfe8e24, 0b7db2d)",
+   "purpose": "point-and-go peering",
+   "status": "unknown",
+   "general": true,
+   "evidence": "not probed; works around law 1",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "discovery resolve gateway",
+   "location": "discovery-vessel /resolve",
+   "purpose": "Universal shape routing",
+   "status": "live-used",
+   "general": true,
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "discovery probe-and-evict",
+   "location": "discovery-vessel 7cc9da4",
+   "purpose": "Evict dead registry rows.",
+   "status": "live-used",
+   "general": true,
+   "evidence": "09-20 planted-row falsifier",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "discovery identity-validation cache + grace + reason-bearing 401",
+   "location": "discovery-vessel auth",
+   "purpose": "survive identity outages without churn",
+   "status": "live-used",
+   "general": true,
+   "evidence": "db639cf, 7978682, 3f0edc9; ~32 rejected 401s per day",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "/bootstrap + gen-env role inference",
+   "location": "discovery-vessel dfe8e24; gen-env.sh 84e379e7",
+   "purpose": "Point-and-go join",
+   "status": "live-used",
+   "general": true,
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "discovery resolve gateway candidates[0]",
+   "location": "discovery-vessel index.ts:205; engine.ts:258",
+   "purpose": "producer pick",
+   "status": "live-used",
+   "general": true,
+   "evidence": "first healthy process, not quota/reach aware (07-21)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "auth_token_source registration field",
+   "location": "discovery-vessel registry + 5 vessels",
+   "purpose": "Declare which credential a caller must attach",
+   "status": "live-used",
+   "general": true,
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "distribution_policy genres",
+   "location": "discovery-vessel registry/resolvers; goal-host satisfier-pick.ts; federation transport",
+   "purpose": "Producer-declared treatment of duplicate producers",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Only unique_authoritative and stateful_data_owner_pin steer; 4 values inert",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "Discovery registry + /resolve gateway",
+   "location": "discovery-vessel src/index.ts, registry.ts (:8100)",
+   "purpose": "The only fixed point for shape routing",
+   "status": "live-used",
+   "general": true,
+   "evidence": "11 vessels, 405 shapes, all healthy on the hub",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "Register payload validation",
+   "location": "discovery-vessel src/index.ts:336 (7cc9da4)",
+   "purpose": "Reject malformed registrations",
+   "status": "broken",
+   "general": true,
+   "evidence": "Rejects consumer-only ribosome, 4560 times",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "learned shape-description channel",
+   "location": "discovery-vessel src/index.ts:505 setLearnedDescription",
+   "purpose": "Correct the catalogue text planners read",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Volatile, in-memory; the advertised-description durability fix never landed",
+   "source": "reports-5",
+   "mentions": 1,
+   "sources": [
+    "reports-5"
+   ]
+  },
+  {
+   "name": "distribution_policy / duplicate_policy",
+   "location": "discovery-vessel types/registry/resolvers",
+   "purpose": "vessels advertise routing rules",
+   "status": "dormant",
+   "general": true,
+   "evidence": "only obsidian federation-sidecar.ts:686 sets it",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "Resolve-time peer discovery forwarding",
+   "location": "discovery-vessel/src/index.ts:62,104,228,274",
+   "purpose": "On local miss, fan resolve/capability query to PEER_DISCOVERY_ENDPOINTS",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Env-gated; defaults to HUB_DISCOVERY_URL so a hub has no fan-out",
+   "source": "openspec-5",
+   "mentions": 1,
+   "sources": [
+    "openspec-5"
+   ]
+  },
+  {
+   "name": "Advisory pubkey vessel identity",
+   "location": "discovery-vessel/src/registry.ts:259",
+   "purpose": "identity_status verified/unverified/mismatch",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "nothing gates on it",
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "distribution_policy genre routing",
+   "location": "discovery-vessel/src/types.ts:77-96, registry.ts:249, index.ts:233; goal-host-vessel/src/satisfier-pick.ts:40-55",
+   "purpose": "Producer-declared duplicate handling honored by discovery /resolve and walk satisfier pick",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Only obsidian-vessel/sidecar/federation-sidecar.ts declares a policy; inventory has no genre field",
+   "source": "openspec-5",
+   "mentions": 1,
+   "sources": [
+    "openspec-5"
+   ]
+  },
+  {
+   "name": "llmCall failover via discovery",
+   "location": "feature-compose.ts, patch-with-tools.ts, llm-completion-dispatch.ts",
+   "purpose": "Reach LLM arms across federation",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "Reimplemented per file. c3194ee fixed 'all four llmCall sites'.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "federation relay/transport + discovery peer forwarding",
+   "location": "federation-relay, federation-transport-vessel, discovery",
+   "purpose": "cross-node resolution",
+   "status": "live-used",
+   "general": true,
+   "evidence": "working 09-18 after hand setup (socat bridge, MAX_PEER_DEPTH env); loopback endpoints; relay baked path 09-22",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "registry alias re-federation",
+   "location": "hub discovery via 127.0.0.1:8401",
+   "purpose": "Federate vessels",
+   "status": "duplicate",
+   "general": true,
+   "evidence": "shellResult 3 producers for one process; fs_write advertised by 2 vessels",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "producer pick first-match / discovery candidates[0]",
+   "location": "ias-executor-ts engine.ts:258; discovery-vessel index.ts:205",
+   "purpose": "Choose the producer for a shape",
+   "status": "fossil",
+   "general": false,
+   "evidence": "healthScore tiebreak v1 8602362; reach-graded posterior never built",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "quota-gated advertisement (llmQuotaState / cooldown_until_ms)",
+   "location": "llm-resolver syncCompletionAdvertisement/markExhausted; discovery",
+   "purpose": "Dead arms de-advertise; discovery computes usable at selection",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Partly built; runtime masking used as a stopgap; producer path reads llmQuotaState at 0 sites (07-21)",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "Host watchdog for the local-tools discovery row",
+   "location": "operator host",
+   "purpose": "Heal the ephemeral endpoint hijack",
+   "status": "unknown",
+   "general": false,
+   "evidence": "#25 operator stopgap",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "shared discovery-client loopback repair",
+   "location": "packages vessel-discovery-client (4fdf5b91)",
+   "purpose": "Make remote rows dialable",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Previously existed in one consumer only",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "discovery /bootstrap door",
+   "location": "repos/discovery-vessel/src/index.ts",
+   "purpose": "Point-and-go federation join",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Empty relay and discovery_endpoint on both nodes",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "discovery local-first resolve with peer fan-out",
+   "location": "repos/discovery-vessel/src/index.ts /resolve ~L209-231",
+   "purpose": "Serve a shape locally, else forward to peer discovery",
+   "status": "live-used",
+   "general": true,
+   "evidence": "The inventory answers activeDispatches locally with an empty board, so the hub outage is shadowed.",
+   "source": "syzygy",
+   "mentions": 1,
+   "sources": [
+    "syzygy"
+   ]
+  },
+  {
+   "name": "discovery peer fan-out",
+   "location": "repos/discovery-vessel/src/index.ts forwardToPeers/forwardResolveToPeers",
+   "purpose": "Query-time pull from PEER_DISCOVERY_ENDPOINTS",
+   "status": "unknown",
+   "general": true,
+   "evidence": "0 peer log lines in 24h on node 1/2; open gap: per-peer outcomes discarded",
+   "source": "federation-relay",
+   "mentions": 1,
+   "sources": [
+    "federation-relay"
+   ]
+  },
+  {
+   "name": "discovery register validation",
+   "location": "repos/discovery-vessel/src/index.ts:320-340 (7cc9da4)",
+   "purpose": "Reject malformed registrations",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Also rejects ribosome's legitimate shapes:[] (5,240 times)",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "buildProxyResolver vs buildDiscoveryProxyResolver",
+   "location": "src/index.ts:14886, 15064",
+   "purpose": "Proxy shapes to dev-vessel (specific) or via discovery (general)",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "Both registered (15317, 15366)",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  }
+ ]
+}

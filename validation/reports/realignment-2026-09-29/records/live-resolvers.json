@@ -1,0 +1,407 @@
+{
+ "source": "live-resolvers",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/live-resolvers.md",
+ "coverage": "Live, read-only, 2026-09-29 ~04:00Z. Hub substrate-live discovery (:8100 /registry/stats, /registry/shapes, /registry/shape-descriptions, /registry/events?limit=500, /vessels/<id> for all 11 registered ids); node 2 compose2-live stats/shapes/events. Resolver source listings for all 19 clones in /workspace/git/vessels (dev-vessel resolvers dir, routes/impulses.ts cases vs config discovery.shapes; ias-executor, concept-db, goal-host, boredom, identity, ribosome, obsidian resolvers). SurrealDB: table inventory; execution_trace_content aggregated over 08-29..09-29 in 7 windows (resolver_id, success, output_shapes); execution (5-day window, capped at 150k) by activity, success and failure reason; trace_store_counters. Journals: ribosome, identity, boredom registration lines. stateful-ui panel store summarized (kinds, created dates, feedback count). Grep for hardcoded ports, k8s DNS, and resolve-URL joiner call sites. Commits checked: goal-host 6c98916, 5ca51be; discovery 7cc9da4, ffd1d58. Skipped: per-vessel /shapes handlers for unregistered vessels, the git_branch_create 0% cause (no error text stored), the source of node-2 stray registrant activity-api-activity-api, the 08-30 trace spike, whether observer output is consumed, and whether discovery's duplicate-policy pick is used.",
+ "attempts": [
+  {
+   "key": "endpoint-routing",
+   "title": "Resolve-URL joiner fix attempt 1 (rawResolve absolute endpoint)",
+   "where": "goal-host-vessel 6c98916 (2026-09-22 07:12, substrate-authored via mitosis cutover)",
+   "tried": "1-line fix so rawResolve stops concatenating an absolute resolve_endpoint onto the row endpoint",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "`fetch() URL is invalid` kept failing afterward: 09-24 1751, 09-25 1562, 09-26 3422, 09-27 2196, 09-28 897 (about 9.8k, plus about 2.5k via compose sub-activities); top activities auto-bridge-problem_detection 2107, auto-bridge-source_code 1000"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Resolve-URL fix attempt 2 (walk path sites 7457/15128)",
+   "where": "goal-host-vessel 5ca51be (2026-09-28 13:00)",
+   "tried": "Inline startsWith('http') ternaries at index.ts:7457 and :15128",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "Invalid-URL failures stop after 09-28T13; after 14:00, auto-bridge-problem_detection 64 ok / 5 fail. asResolvePath (index.ts:448) still returns absolute URLs and is concatenated at 9460, 12746, 12776, 13507, 13519, 13994, 14347, 16678, 16797; 8251 and dev feature-compose.ts:538 are unguarded. Discovery still stores 3 resolve_endpoint formats"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Discovery register payload validation",
+   "where": "discovery-vessel 7cc9da4 (2026-09-19, operator) src/index.ts:336",
+   "tried": "Reject empty shapes arrays, long ids, etc. (audit tests expected 400/413) and evict dead rows at resolve time",
+   "outcome": "partial",
+   "date": "2026-09-19",
+   "evidence": "ribosome-vessel registers shapes:[] by design (index.ts:697). 'register failed: 400' logged 4560 times since 09-26 (first seen in journal 09-25 13:11), so ribosome cannot be discovered. identity-vessel is also unregistered (21 initial-registration failures; cause unconfirmed)"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Registrant identity + event log + liveness guard",
+   "where": "discovery-vessel ffd1d58 (2026-09-22, operator bypass)",
+   "tried": "Attach registrant identity to registry rows, add an event ring, and a registration-time liveness guard",
+   "outcome": "worked",
+   "date": "2026-09-22",
+   "evidence": "/registry/events carries key/user/org per registration; exposed node-2 stray registrant activity-api-activity-api with a k8s DNS endpoint. Only 1 of 11 vessels is identity 'verified'"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "09-22 diagnosis that escalations go to the replaced stateful-ui (:8270)",
+   "where": "memory 2026-09-22; dev-vessel ui-write-passthrough.ts:25, docs-decision-deliver.ts:42, seed/draft-gap-closing-activity.ts:118",
+   "tried": "Diagnosed and filed; the pin and default were not removed",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "stateful-ui went from 480 to 794 panels, with 318 created 09-22..09-28. feedback array has 5 entries total, the last a durability-probe dismiss on 09-25. STATEFUL_UI_VESSEL_ENDPOINT is unset, so the :8270 default is live"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Failure memory keyed by goal_hash (FAILURE-RECALL)",
+   "where": "goal-host /run-goal (memory 09-22)",
+   "tried": "Feed prior hollow and near-miss verdicts into attempt 1",
+   "outcome": "partial",
+   "date": "2026-09-22",
+   "evidence": "4803 'walk' rows in the 30-day trace content carry FAILURE-RECALL text, so it is live. But task-level trace content stores no error text (0 of 5742 failed tasks since 09-27), and execution.failure_mode.reason survives only about 5 days (150k cap)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Workspace-root split (WORKSPACE_ROOT vs env file)",
+   "where": "memory 09-22; dev-vessel fs_read/fs_edit",
+   "tried": "Merged the memory stores at file level (09-22)",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "In 5 days: fs_read 'path outside workspace root: /workspace/validation/...' 152 times, fs_edit '/vessels/...' 161 times; 7 more after 09-28T14. The files exist (4573 scenario files)"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "gap-closing:pull-sync-unhealthy-activity-api-1784251158497",
+   "where": "execution table activity_id",
+   "tried": "Gap-closing activity minted about 07-17",
+   "outcome": "dormant",
+   "date": "2026-09-24..29",
+   "evidence": "Ran 1490 times in 5 days (1424 'success', about 300/day). The gap id has 0 matches in /workspace/git/super-repo/gaps/gaps.json"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace retention exemptions + 150k cap",
+   "where": "activity-api services/trace-retention.ts:158; trace_store_counters",
+   "tried": "Cap the execution table; exempt validator-dispatch and slot-binding through the TRACE_RETENTION_ACTIVITIES env var",
+   "outcome": "partial",
+   "evidence": "The cap holds at 149,783 rows. validator-dispatch 47,732 + auth_resolve_v1 21,427 = 46% of it, so the window is about 5 days. execution_trace_content (513k rows) is not reclaimed with its executions"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "k8s-era ias-executor resolvers",
+   "where": "ias-executor-ts src/resolvers helmfile-sync, docker-build-push, wire-auth-blueprint, wire-discovery-registration, scaffold-vessel-skeleton",
+   "tried": "Resolvers for k8s deploy and scaffold",
+   "outcome": "superseded",
+   "evidence": "0 traces in 30 days; the deployment is now a single container with systemd"
+  }
+ ],
+ "problems": [
+  {
+   "key": "endpoint-routing",
+   "symptom": "resolve URL built as endpoint+absolute resolve_endpoint gives an invalid URL, which reads as 'no producer'",
+   "root_cause": "discovery stores resolve_endpoint in 3 formats (6 absolute, 4 relative, 1 /dispatch) without normalizing; the shared helper asResolvePath returns absolute URLs; fixes patch call sites one at a time",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-28T13 (loud sites); 11+ latent sites remain",
+   "recurrences": 3
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "ribosome-vessel cannot be discovered: register 400 every 60 s",
+   "root_cause": "7cc9da4 requires non-empty shapes; consumer vessels register shapes:[]",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 4560
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "gap escalations keep going to replaced stateful-ui :8270 (794 panels, 5 feedback)",
+   "root_cause": "dev-vessel defaults STATEFUL_UI_VESSEL_ENDPOINT to :8270 with env unset; seed drafter prompts teach :8270; stateful-ui still registered as a ui* owner",
+   "first_seen": "2026-09-22 (diagnosed)",
+   "last_seen": "2026-09-28",
+   "recurrences": 318
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "26,970 of 46,591 failures in 5 days carry no reason in any field (auth_resolve_v1 20,636; universal-tool-fallback 1,532; feature_compose 474)",
+   "root_cause": "identity sets error_message only in the catch path; other writers omit failure_mode.reason; trace content drops task error text"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "failure reasons are gone after about 5 days while success content persists 30+ days",
+   "root_cause": "reasons live only on the execution row (150k cap, mostly telemetry); execution_trace_content keeps tasks without errors"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "execution table fills in about 5 days; 9 tables empty; activity_execution_traces frozen since July",
+   "root_cause": "per-fire telemetry (validator-dispatch, auth) recorded as executions; env-gated retention list"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "fs_read/fs_edit refuse existing files as 'path outside workspace root' (313 in 5 days)",
+   "root_cause": "templates bound to /workspace/validation and /vessels roots; the dev-vessel workspace root differs (same root split as memory 09-22)",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "gap-closing activities fire hundreds of times a day, 'success', for gaps absent from the store",
+   "root_cause": "closing activities are not retired when their gap closes or disappears"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "universal-tool-fallback (ReAct floor) 17% success; feature_compose 20%; git_branch_create 0/2393; git_push 6/65",
+   "root_cause": "unknown for most (no reason recorded); partly draining refusals (852), invalid URLs, workspace-root refusals"
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "hub fails federation_verification_report and federation_probe (159 unreachable + 150 not registered in 5 days)",
+   "root_cause": "hub federation-transport-vessel.service disabled; /bootstrap relay_multiaddrs empty; shapes exist only in node 2's registry"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "29 multi-owner shapes, 9 case twins, 5 non-identifier shape names, 84/260 dev shapes and 16/21 concept-db shapes with no traced output; 255 dev resolver files / 75k lines; 342 hardcoded ports",
+   "root_cause": "minting without reuse; substrate-authored resolvers register free-text names; the replaced vessel is never retired"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "trace retention, escalation target and the dev-vessel advertise endpoint are set by env vars",
+   "root_cause": "TRACE_RETENTION_ACTIVITIES, STATEFUL_UI_VESSEL_ENDPOINT default, VESSEL_ADVERTISE_ENDPOINT=host.containers.internal"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "node 2 registers 8 vessels / 325 shapes; 83 hub-only shapes; stray k8s-DNS registrant activity-api-activity-api on node 2",
+   "root_cause": "stray registrant source unknown"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "dev-vessel routes gap_to_feature, doc_drift_fix, db_contention_observer but never registers them; registers 6 shapes with no route case",
+   "root_cause": "route switch and config.discovery.shapes are maintained separately"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "Discovery registry + /resolve gateway",
+   "location": "discovery-vessel src/index.ts, registry.ts (:8100)",
+   "purpose": "The only fixed point for shape routing",
+   "status": "live-used",
+   "general": true,
+   "evidence": "11 vessels, 405 shapes, all healthy on the hub"
+  },
+  {
+   "name": "Register payload validation",
+   "location": "discovery-vessel src/index.ts:336 (7cc9da4)",
+   "purpose": "Reject malformed registrations",
+   "status": "broken",
+   "general": true,
+   "evidence": "Rejects consumer-only ribosome, 4560 times"
+  },
+  {
+   "name": "Registrant identity/event ring",
+   "location": "discovery ffd1d58 /registry/events",
+   "purpose": "Attribute registrations",
+   "status": "live-used",
+   "general": true,
+   "evidence": "500-event ring with key/org; 1 of 11 verified"
+  },
+  {
+   "name": "Learned shape descriptions",
+   "location": "discovery POST/GET /registry/shape-descriptions",
+   "purpose": "Planner matches goals to resolvers by description",
+   "status": "live-used",
+   "general": true,
+   "evidence": "312 of 405 shapes described"
+  },
+  {
+   "name": "Duplicate-policy pick / distribution_policy",
+   "location": "discovery 7e051d7, 6ab2e24",
+   "purpose": "Choose among multi-owner shapes",
+   "status": "unknown",
+   "general": true,
+   "evidence": "29 multi-owner shapes exist; use not verified"
+  },
+  {
+   "name": "asResolvePath",
+   "location": "goal-host-vessel src/index.ts:448",
+   "purpose": "Normalize resolve_endpoint to a path",
+   "status": "broken",
+   "general": true,
+   "evidence": "Returns absolute URLs; concatenated after endpoint at 9+ sites"
+  },
+  {
+   "name": "Inline absolute-URL ternaries",
+   "location": "goal-host index.ts:7457, 8004, 15128",
+   "purpose": "Per-site fix for absolute resolve_endpoint",
+   "status": "live-used",
+   "general": false,
+   "duplicates_of": "asResolvePath",
+   "evidence": "5ca51be stopped 'URL is invalid'"
+  },
+  {
+   "name": "Other URL joiners",
+   "location": "goal-host llm-router.ts:100; human-surface routes/proxy.ts:246; dev feature-compose.ts:538",
+   "purpose": "Build resolve URLs",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "asResolvePath"
+  },
+  {
+   "name": "Dev-vessel shape list",
+   "location": "development-vessel src/config.ts discovery.shapes + routes/impulses.ts switch",
+   "purpose": "Single source for registration",
+   "status": "live-used",
+   "general": true,
+   "evidence": "260 registered vs 257 route cases; 3+6 mismatches"
+  },
+  {
+   "name": "execution trace store",
+   "location": "activity-api routes/execution-traces.ts; SurrealDB execution",
+   "purpose": "Traces with outcome and failure_mode",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Capped at 150k, about a 5-day window, 46% telemetry"
+  },
+  {
+   "name": "execution_trace_content",
+   "location": "SurrealDB",
+   "purpose": "Task-level trace content",
+   "status": "live-used",
+   "general": true,
+   "evidence": "513k rows over 30+ days, no error text, not reclaimed"
+  },
+  {
+   "name": "Trace retention exemptions",
+   "location": "activity-api services/trace-retention.ts:158",
+   "purpose": "Exempt per-fire system traces",
+   "status": "live-used",
+   "general": false,
+   "evidence": "TRACE_RETENTION_ACTIVITIES env var (law-1 violation)"
+  },
+  {
+   "name": "Auth telemetry traces",
+   "location": "identity-vessel services/trace.ts (auth_resolve_v1)",
+   "purpose": "Grade authentication",
+   "status": "live-used",
+   "general": false,
+   "evidence": "21,427 rows in 5 days; rejects carry no reason"
+  },
+  {
+   "name": "validator-dispatch / slot-binding traces",
+   "location": "activity-api system templates",
+   "purpose": "Per-fire validation",
+   "status": "live-used",
+   "general": false,
+   "evidence": "47,732 + 9,772 rows in 5 days"
+  },
+  {
+   "name": "FAILURE-RECALL in walk",
+   "location": "goal-host /run-goal",
+   "purpose": "Feed prior failures into attempt 1",
+   "status": "live-used",
+   "general": true,
+   "evidence": "4803 walk bookkeeping rows"
+  },
+  {
+   "name": "Vessel mitosis",
+   "location": "development-vessel vessel-mitosis-*.ts",
+   "purpose": "Land substrate-authored changes via cutover",
+   "status": "live-used",
+   "general": true,
+   "evidence": "About 77k tasks in 30 days; commits 'via mitosis cutover'"
+  },
+  {
+   "name": "Ribosome extraction",
+   "location": "ribosome-vessel :8240 + ribosome-extract",
+   "purpose": "Extract templates from reached executions",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1456/1459 ok in 5 days though undiscoverable"
+  },
+  {
+   "name": "stateful-ui-vessel panel store",
+   "location": "stateful-ui :8270, /workspace/state/ui-panel-store.json",
+   "purpose": "Former human surface",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "human-surface-vessel :8310",
+   "evidence": "794 panels, 5 feedback, still written"
+  },
+  {
+   "name": "human-surface-vessel",
+   "location": ":8310",
+   "purpose": "Live human resolver surface",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "Federation transport",
+   "location": "node 2 :8401; hub unit disabled",
+   "purpose": "Cross-node shape resolution",
+   "status": "broken",
+   "general": true,
+   "evidence": "Hub has no relay; federation shapes fail on the hub"
+  },
+  {
+   "name": "dev-vessel fs/git resolvers",
+   "location": "development-vessel fs-*.ts, git-*.ts",
+   "purpose": "File and git tools",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "local-tools-vessel fs_*/git_*",
+   "evidence": "7 shapes owned by both"
+  },
+  {
+   "name": "ias-executor k8s resolvers",
+   "location": "ias-executor-ts helmfile-sync, docker-build-push, wire-*, scaffold-vessel-skeleton",
+   "purpose": "k8s deploy/scaffold",
+   "status": "fossil",
+   "general": false,
+   "evidence": "0 traces in 30 days"
+  },
+  {
+   "name": "Scaffold dispatch resolvers",
+   "location": "goal-host vessel-scaffold-dispatch-resolver, loopC-vessel-designer-resolver; boredom vesselAdditionScaffoldDispatch; ribosome vessel-scaffold-dispatch-result",
+   "purpose": "Vessel addition",
+   "status": "dormant",
+   "general": false,
+   "evidence": "0 traces"
+  },
+  {
+   "name": "Empty SurrealDB tables",
+   "location": "routing_trace, tool_usage, impulse_resolution_metrics, llm_resolution_log, impulse_usage_history, execution_system_traces, vessel, vessel_capabilities, shape_definition",
+   "purpose": "Various metrics",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 rows"
+  },
+  {
+   "name": "activity_execution_traces",
+   "location": "SurrealDB",
+   "purpose": "Old trace table",
+   "status": "fossil",
+   "general": true,
+   "evidence": "18,135 rows, all July 2026"
+  },
+  {
+   "name": "Unregistered dev resolvers",
+   "location": "dev behavioral-verification.ts, causal-adjudication.ts, region-probe.ts, gap-to-feature.ts, doc-drift-fix.ts",
+   "purpose": "Verification and adjudication",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "0 resolver_id traces in 30 days; not registered"
+  },
+  {
+   "name": "Dev observers/scans (~70 ids)",
+   "location": "development-vessel *-observer, *-scan, *-audit, *-report",
+   "purpose": "Self-detection",
+   "status": "unknown",
+   "general": false,
+   "evidence": "Near-100% success; nobody measures whether their output is consumed"
+  }
+ ],
+ "principles": [
+  "REGISTRATION is the list discovery actually ROUTES on; filtering the /shapes handler alone is inert (development-vessel src/index.ts:74)",
+  "An ungraded trace is not neutral: grade every trace (identity-vessel src/services/trace.ts, 2026-08-09)",
+  "Planner matches a goal to ANY advertised resolver from its description alone, with no hand-written per-resolver hint; a vessel-advertised description beats a learned one (discovery-vessel src/index.ts ~570-600)",
+  "Resolve through DISCOVERY, never activity-api (ribosome-vessel src/index.ts:117)",
+  "A consumer vessel owns no shapes (ribosome index.ts:697); discovery must accept consumers or fail loudly",
+  "Observed: every fix here patched one call site or one resolver and left the shared seam (registration normalization, one URL joiner, one trace schema with reasons) alone, so the same failure comes back under a different name",
+  "Measurement caveat: 'last 30 days' is unanswerable for failure reasons because the execution table keeps about 5 days and trace content keeps no errors; a store that keeps successes longer than failures cannot compound on failure"
+ ]
+}

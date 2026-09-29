@@ -1,0 +1,798 @@
+{
+ "source": "git-mid",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/git-mid.md",
+ "coverage": "Git history of 5 repos. Four came from live hub clones in substrate-live:/workspace/git/vessels: ias-executor-ts (218 commits, HEAD 700ceff 09-28), boredom-vessel (134, HEAD 12bb26a 09-28), concept-db (122, HEAD d844020 09-28) and obsidian-vessel (371, HEAD 1bd0226 08-22). workbench (213, HEAD e045a2d 05-24) came from host repos/, since no live clone exists. Node 2 (compose2-live) HEADs were checked and match the hub for all four live repos, so no node divergence was found in this shard. Host submodules lag (ias 25150c9, boredom 36954f2, concept-db 9e2c8a8).\n\nWhat I read: all operator commit subjects, about 45 operator commit bodies, numstat for every autonomous commit, and about 30 autonomous diffs. Pickaxe (-S) searches covered gaps.json, body.gaps, edit_site, posterior, EXECUTABLE_RESOLVERS, resolve_endpoint, spendEnvelope, confabulat, interpolateBoundValues and concept-relevance-backfill-v2. I also checked super-repo gitlink ancestry (c0e42fa3), live systemd units and timers for these vessels, and Bun's .ts-vs-.js resolution with one scratch test on the host.\n\nSKIPPED: workbench diffs (subjects only). About 180 of the 187 July obsidian autonomous diffs (numstat only). Boredom June/July unknown-proposal index.ts churn (e.g. 3b422bf +95/-134). Concept-db July autonomous diffs (sql/core 007/008, decontaminate). Gap-store and DB records for the named gap ids were not queried.",
+ "attempts": [
+  {
+   "key": "write-read-mismatch",
+   "title": "boredom C9 gap-store read: wrong path",
+   "where": "boredom-vessel 0b76b4f(06-24) -> cfe1cd3(07-21)",
+   "tried": "Fixed the read path /workspace/gaps.json -> /workspace/gaps/gaps.json; gap-driven selection had been silently dead",
+   "outcome": "partial",
+   "date": "2026-07-21",
+   "evidence": "f12e865 the same day: 'path fix alone read nothing' (flat array vs parsed.gaps)"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "boredom gap-store parse: flat array vs envelope",
+   "where": "boredom-vessel f12e865, 312146d, bd8aab3",
+   "tried": "Tolerate array and {gaps:[]}; parse resolve envelope body.gaps",
+   "outcome": "partial",
+   "date": "2026-07-17..21",
+   "evidence": "02b0d24 (08-09): the store read was a copy frozen 08-08; follow WORKSPACE_ROOT"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "boredom ranks live work by a frozen gap-store copy",
+   "where": "boredom-vessel 02b0d24",
+   "tried": "Follow WORKSPACE_ROOT where substrate-gap.ts writes",
+   "outcome": "partial",
+   "date": "2026-08-09",
+   "evidence": "4th fix of the same reader; memory 09-22 found a WORKSPACE_ROOT unit-vs-env-file conflict again"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome emits config:{} so compositions cannot be replayed",
+   "where": "ias-executor-ts 0bbd488(07-31), 3b95072, 5a5aa41, 9518d4e, 5030377, f71bb56 (08-17)",
+   "tried": "Harden derivation rule, record resolvedConfig at push sites, forward it through the sink, fix the prompt skeleton, rename the key",
+   "outcome": "partial",
+   "date": "2026-07-31..08-17",
+   "evidence": "The 9518d4e body says a fifth inert layer was found; f71bb56 says the fix itself named a nonexistent field (write/read mismatch in prose)"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Ribosome mints input_shapes:[] so 16 learned templates stay at alpha=1",
+   "where": "ias-executor-ts a56fe27",
+   "tried": "Roll task inputShapes up to the template",
+   "outcome": "unknown",
+   "date": "2026-08-16",
+   "evidence": "Measured before: 16/16 at alpha=1.00; after-state not verified in this shard"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Trace sink strips the failure reason at the wire boundary",
+   "where": "ias-executor-ts dc4c4e5(05-21) -> acfd5c0(08-22) -> 700ceff(09-28)",
+   "tried": "dc4c4e5 stripped non-canonical failure_mode (diff verified); acfd5c0 restored the reason; 700ceff adds reach_reason as the reason",
+   "outcome": "partial",
+   "date": "2026-05-21..09-28",
+   "evidence": "acfd5c0: 98% of failures became an information-free label; the premise (closed FailureModeSchema) was applied on no route"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Dead LLM unwrap: shape llm_completion_result vs llmTextCompletion",
+   "where": "goal-host b164b73; ias-executor-ts 2a12397",
+   "tried": "Fixed the same literal in two executors separately",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "evidence": "The envelope JSON had been written into ribosome-vessel/src/index.ts and 7 proposal files"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Walk reads outputs from a just-cleared store",
+   "where": "ias-executor-ts 8676beb",
+   "tried": "Stop evictExecutionScope clearing before goal-host reads outputs back",
+   "outcome": "worked",
+   "date": "2026-08-21",
+   "evidence": "Stubs had been pooled as data and graded by the reach judge"
+  },
+  {
+   "key": "memory-recall",
+   "title": "concept-db BM25 on SurrealDB 3",
+   "where": "concept-db db765b0, 4325538, f4901a6, dec74f6, 2c6488a",
+   "tried": "@@ operator, split queries, literal term, TF fallback",
+   "outcome": "partial",
+   "date": "2026-04-28",
+   "evidence": "Lexical search broke again 08-10, 08-16 and 09-02"
+  },
+  {
+   "key": "memory-recall",
+   "title": "@@ is AND over every term, so real queries match nothing",
+   "where": "concept-db 7df39d2",
+   "tried": "Term ladder",
+   "outcome": "partial",
+   "date": "2026-08-10",
+   "evidence": "a4e353d: the ladder dropped the subject term"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Two-stage FTS perf fix broke lexical search for 24 days",
+   "where": "concept-db fd645bd(09-02) -> 278edae(09-26 autonomous)",
+   "tried": "Match on the index alone, then filter; the placeholder appears twice and .replace substitutes once",
+   "outcome": "partial",
+   "date": "2026-09-02",
+   "evidence": "278edae gap 'lexical-search-has-returned-nothing-since-09-02'; fixed with split/join"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Lexical search placeholder repair",
+   "where": "concept-db 278edae",
+   "tried": "split(PLACEHOLDER).join(esc)",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "Substrate-authored; no durable recall positive-control detector exists"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Half of concept writes lost to retryable conflict",
+   "where": "concept-db 945a667",
+   "tried": "Retry SurrealDB retryable transaction conflict",
+   "outcome": "worked",
+   "date": "2026-08-30",
+   "evidence": "6 identical writes alternated 200/400; the compose-lesson corpus was halved"
+  },
+  {
+   "key": "false-verification",
+   "title": "/health green through a search outage",
+   "where": "concept-db cb400d6",
+   "tried": "Search starvation telemetry",
+   "outcome": "partial",
+   "date": "2026-09-02",
+   "evidence": "Did not catch the fd645bd break the same day"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Schemas .min(1) ping-pong between two gaps",
+   "where": "concept-db e059a98 (04:08) / c8c944f (04:12)",
+   "tried": "The failing-test lane added .min(1); a route-edit gap byte-reverted it 4 minutes later",
+   "outcome": "reverted",
+   "date": "2026-09-28",
+   "evidence": "Identical inverse diffs on src/models/schemas.ts"
+  },
+  {
+   "key": "false-verification",
+   "title": "Failing-test lane lowered a timeout to match a stale test",
+   "where": "concept-db af2c737 -> operator d4eee29",
+   "tried": "resolve_timeout_ms 30000 -> 10000 despite the documenting comment",
+   "outcome": "reverted",
+   "date": "2026-09-28",
+   "evidence": "The operator filed the lane gap 'atomic multi-file changes' (one file per compose)"
+  },
+  {
+   "key": "env-gating",
+   "title": "/health enabled gated on DENSE_BACKFILL_ENABLED, flip-flopped",
+   "where": "concept-db 071088f(08-15), 120d9d1(08-18), acb7a5a(08-18)",
+   "tried": "pwt mitosis gaps gated, ungated, then regated",
+   "outcome": "failed",
+   "date": "2026-08-15..18",
+   "evidence": "Three oscillating landings, all law-1 env gating"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Non-mitosis autonomous commit broke index.ts and committed build output",
+   "where": "boredom-vessel 84cd2f2 -> 36954f2",
+   "tried": "'feat: Update boredom-vessel content' committed 24 compiled .js/.d.ts/.map files and a string literal outside AUTONOMOUS_GOALS",
+   "outcome": "failed",
+   "date": "2026-09-19",
+   "evidence": "Syntax repaired by 36954f2 about 4h later; compiled files still tracked at HEAD (inert only because Bun prefers .ts, verified)"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Autonomous re-enable of confabulated producer-goal minting",
+   "where": "boredom-vessel c7fb5a6 -> 1bf4fee (pwt)",
+   "tried": "Minted 'Author a producer resolver for shape X', undoing operator 5bd047b",
+   "outcome": "reverted",
+   "date": "2026-07-31",
+   "evidence": "Reverted 28 minutes later by pwt mitosis"
+  },
+  {
+   "key": "gap-content",
+   "title": "Confabulated gap family escapes its guard via category laundering",
+   "where": "boredom-vessel 5bd047b(07-29), 7868111(08-06)",
+   "tried": "Predicate on the summary phrase, not the category",
+   "outcome": "partial",
+   "date": "2026-08-06",
+   "evidence": "121/174 gaps escaped; 119/121 named shapes already advertised (false premise)"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Posterior-decline guard that can never fire",
+   "where": "boredom-vessel 314f228 -> operator 4e17f86",
+   "tried": "Matched t.identifier (0/100 rows have it) on a route capped at 100/2670",
+   "outcome": "failed",
+   "date": "2026-09-06",
+   "evidence": "Typechecked, passed the semantic gate, reached origin/dev; replaced by the operator using the by-id route"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Scaffold template dispatched 2320 times at 0.07% success, bypassing Thompson",
+   "where": "boredom-vessel 4e17f86",
+   "tried": "Decline when alpha+beta>=100 and rate<0.01",
+   "outcome": "worked",
+   "evidence": "Control matrix: scaffold DECLINE (7.03e-4 over 8604), trace-store-reconcile proceed"
+  },
+  {
+   "key": "false-verification",
+   "title": "Gap-goal arms graded on POST 202 (wirehead)",
+   "where": "boredom-vessel fb2e5f0",
+   "tried": "Grade on reach after 3 minutes + 10-minute per-gap cooldown",
+   "outcome": "partial",
+   "date": "2026-07-17",
+   "evidence": "59ac3cf found the 3-minute deadline graded 26.3% of outcomes before they existed"
+  },
+  {
+   "key": "false-verification",
+   "title": "Gap-goal arms graded at a 180s deadline, training drafting to extinction",
+   "where": "boredom-vessel 59ac3cf",
+   "tried": "Grade on terminal status",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "evidence": "Before: 98% of selection went to idle ticks (reward 0.2 vs 0)"
+  },
+  {
+   "key": "selection-learning",
+   "title": "NaN score pins selector on no-op",
+   "where": "boredom-vessel 008ae03",
+   "tried": "Finite-score fallback",
+   "outcome": "worked",
+   "date": "2026-06-22"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Candidate set frozen at the 100 oldest templates (page cap)",
+   "where": "boredom-vessel c606ab5 (+ revert 2113314, restore 2b9e23a)",
+   "tried": "Paginate; the operator commit accidentally staged deletion of goal-generation.ts",
+   "outcome": "worked",
+   "date": "2026-07-17",
+   "evidence": "The same 100-row cap later defeated 314f228 (09-06)"
+  },
+  {
+   "key": "false-verification",
+   "title": "Dormancy predicate tautological",
+   "where": "boredom-vessel c6d3109",
+   "tried": "Keep zero-pick rows in the snapshot roster",
+   "outcome": "worked",
+   "date": "2026-08-28"
+  },
+  {
+   "key": "env-gating",
+   "title": "EXECUTABLE_RESOLVERS constant blocked all 214 proposals",
+   "where": "boredom-vessel 92f3336 (autonomous)",
+   "tried": "Seed set unioned with discovery",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "evidence": "45 distinct blocked resolvers, 94 idle cycles; a law-1 repair made by the substrate"
+  },
+  {
+   "key": "gap-content",
+   "title": "Gaps without edit site emit an investigate/decompose goal",
+   "where": "boredom-vessel 12bb26a (autonomous)",
+   "tried": "'investigate and decompose gap <id>' when no site",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "Present at HEAD; effect on reach not measured"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Goal-text prefix accretion; sanitizeGoalText never committed",
+   "where": "boredom-vessel 6de8e4f",
+   "tried": "Commit sanitizeGoalText",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "11 doubled prefixes in 3h; the function existed only in a working tree"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "concept-db advertised shapes inserted repeatedly",
+   "where": "concept-db 9d7d715, 84cad4f, 1b7fe81 (09-01), 9e2c8a8 (09-11)",
+   "tried": "recommit/narrowed landings each appended the same shapes",
+   "outcome": "failed",
+   "date": "2026-09-01..11",
+   "evidence": "HEAD config.ts lists 6 shapes twice; 3 are both public and @shape-dispatch:private"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Load-time placeholder interpolation blanks chained templates",
+   "where": "ias-executor-ts 946034c",
+   "tried": "Interpolate {{x}} in non-LLM configs against raw task fields with ?? ''",
+   "outcome": "failed",
+   "date": "2026-09-15",
+   "evidence": "Spawned gap 'the-template-provider-blanks-every-placeholder-at-load-time...'"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Template-provider blanking fix layered 3 times",
+   "where": "ias-executor-ts 2893a93, 0685c69 (09-24), fef2f14 (09-28)",
+   "tried": "Each added another interpolateBoundValues or walk copy",
+   "outcome": "partial",
+   "date": "2026-09-24..28",
+   "evidence": "HEAD has 3 definitions + 1 IIFE (one is a module-level identity stub between imports); load-time interpolation still present; the last copy reintroduces ?? ''"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Trace-sink spool replay landed 4 times",
+   "where": "ias-executor-ts 29b2f70, 7d2c5ab, c8a354b, e439193",
+   "tried": "Interval replay, bounded pass, _quarantineFile2 duplicate, commented-out unref()",
+   "outcome": "partial",
+   "date": "2026-09-23..28",
+   "evidence": "Duplicate quarantine helper; env-gated batch IAS_TRACE_SPOOL_DRAIN_BATCH"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace-sink retries writes the server already committed",
+   "where": "ias-executor-ts 09c32a0(06-17) -> 3cf29a3(09-26)",
+   "tried": "Timeout 15s -> 120s, Idempotency-Key, jittered backoff",
+   "outcome": "unknown",
+   "date": "2026-09-26",
+   "evidence": "The retry mechanism added 06-17 created duplicates"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Test suite wrote into the live trace-retry spool",
+   "where": "ias-executor-ts fdc9100",
+   "tried": "Isolate the spool dir in tests",
+   "outcome": "worked",
+   "date": "2026-08-21",
+   "evidence": "81/83 spool files were exec_test_1 debris; real traces at ranks 64 and 73 were never retried"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Discovery adapter passes resolve_endpoint verbatim",
+   "where": "ias-executor-ts d1ebb66 (operator)",
+   "tried": "Construct URLs: libp2p via egress, absolute pass-through, path join, else ''",
+   "outcome": "worked",
+   "date": "2026-09-17",
+   "evidence": "Operator-authored after 5 failed substrate attempts on gap-mu6dazag"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Dead resolveVesselEndpoint helper, then a narrowed child edits it",
+   "where": "ias-executor-ts a065d22, 25150c9",
+   "tried": "Racing autonomous compose added an uncalled helper; a narrowed child edited it after the operator close",
+   "outcome": "failed",
+   "date": "2026-09-18",
+   "evidence": "grep: defined at line 31, never called"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Third copy of resolve-URL joiner in boredom",
+   "where": "boredom-vessel f28bc06",
+   "tried": "Inline boredomDiscoverResolveUrls with absolute/path join",
+   "outcome": "unknown",
+   "date": "2026-09-27",
+   "evidence": "Duplicates goal-host routeFor and ias discovery-adapter"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Boredom spend envelope duplicated from dev-vessel",
+   "where": "boredom-vessel f28bc06",
+   "tried": "About 85 lines reimplementing spendEnvelopeAllows",
+   "outcome": "unknown",
+   "date": "2026-09-27",
+   "evidence": "The comment names dev-vessel gap-to-feature.ts as the source it mirrors"
+  },
+  {
+   "key": "false-verification",
+   "title": "Semantic gate approved wrong-region and wrong-semantics UI edits",
+   "where": "obsidian-vessel ad706ce, d90318f + 3 mitosis; reverted by 1812ee7, b1d2417, 78c675d, 0022455, 4de7dba",
+   "tried": "Autonomous ui-feedback compose",
+   "outcome": "reverted",
+   "date": "2026-08-07",
+   "evidence": "addresses:true while editing the wrong region; '0s' discarded the duration"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Autonomous obsidian UI edits never reached the running panel",
+   "where": "obsidian-vessel (194 autonomous commits, 0 touch main.js); aa4ae90",
+   "tried": "Landings in src/*.ts; the runtime loads the built main.js, rebuilt only by the operator (127 commits)",
+   "outcome": "dormant",
+   "date": "2026-07..08",
+   "evidence": "aa4ae90 body; the host-pull-sync timer 'vanished' 08-07; the last autonomous commit 3364d47 postdates the last rebuild"
+  },
+  {
+   "key": "gap-content",
+   "title": "ui-feedback gaps carried no edit_site",
+   "where": "obsidian-vessel 968d693; boredom 47da778, b883e94",
+   "tried": "Static region->file mapping; carry site and region into the goal",
+   "outcome": "partial",
+   "date": "2026-08-07",
+   "evidence": "0% of ui_legibility gaps had edit_site (42% overall)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Stale super-repo pins reset submodules under deploys",
+   "where": "super-repo c0e42fa3",
+   "tried": "Bump 5 pointers",
+   "outcome": "partial",
+   "date": "2026-08-09",
+   "evidence": "The same commit moved obsidian-vessel backwards 3364d47->aa4ae90 (verified ancestry)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Live cutover not followed by a git landing",
+   "where": "boredom-vessel 312146d",
+   "tried": "Operator lands the substrate's live hot-fix",
+   "outcome": "worked",
+   "date": "2026-07-17"
+  },
+  {
+   "key": "schema-ownership",
+   "title": "concept-db clobbered activity-api's impulse table",
+   "where": "concept-db 9b5c087",
+   "tried": "IF NOT EXISTS, non-owning",
+   "outcome": "worked",
+   "date": "2026-07-23",
+   "evidence": "Stripped tenant PERMISSIONS on each crash loop"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Three generations of the human surface",
+   "where": "workbench (04-22..05-24), obsidian-vessel (06-15..08-22), human-surface-vessel (09)",
+   "tried": "Rebuilt the surface twice",
+   "outcome": "superseded",
+   "evidence": "workbench 0 autonomous commits, not deployed; obsidian dev stopped 08-22"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Autonomous lane edits test fake store",
+   "where": "concept-db d844020",
+   "tried": "Add INSERT handlers to the write-shapes test fake",
+   "outcome": "unknown",
+   "date": "2026-09-28",
+   "evidence": "Could be a legitimately incomplete test double or test-appeasing; not judged"
+  }
+ ],
+ "problems": [
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Producer writes where the consumer does not read: gap-store path/format/frozen-copy (boredom), resolvedConfig dropped at the sink, prompt names a nonexistent field, llm shape name mismatch, walk reads a cleared store",
+   "first_seen": "2026-05-21",
+   "last_seen": "2026-09-28",
+   "recurrences": 10,
+   "root_cause": "Explicit projections and hardcoded paths/keys with no end-to-end positive control; each layer is fixed alone"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "concept-db lexical search returns nothing (SurrealDB 3, AND semantics, ladder drops subject, placeholder replaced once), undetected for 24 days while /health was green",
+   "first_seen": "2026-04-28",
+   "last_seen": "2026-09-26",
+   "recurrences": 5,
+   "root_cause": "No recall positive-control probe at the consuming layer; perf changes validated on latency, not results"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings break or oscillate: schemas ping-pong in 4 minutes, /health env-gate flip x3, syntax break + build output commit, re-enabled a disabled mint path, load-time placeholder blanking",
+   "first_seen": "2026-07-31",
+   "last_seen": "2026-09-28",
+   "recurrences": 7,
+   "root_cause": "Multiple gaps own the same file with opposite intents; one-file-per-compose; no cross-gap conflict check"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Landings that cannot act: guard on a nonexistent field, dead helper, layered duplicate functions, UI source edits never bundled",
+   "first_seen": "2026-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "root_cause": "Gates check typecheck/semantics, not execution against live data; the drafter adds instead of replacing"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Semantic gate approves 'changes the behaviour' not 'does what was asked'; arm graders measure POST or deadline instead of outcome; tautological dormancy predicate; failing-test lane matches stale tests",
+   "first_seen": "2026-07-17",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "root_cause": "Verifiers grade a proxy event rather than the consumer-visible outcome"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "recommit/narrowed children re-apply the same insert (concept-db shapes listed twice), goal prefixes accrete, narrowed child lands after an operator close",
+   "first_seen": "2026-07-10",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "root_cause": "Narrowing re-dispatches the original edit without checking whether it already landed"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "resolve_endpoint absolute-vs-path joining reimplemented per vessel (goal-host, ias discovery-adapter, boredom); fetch URL invalid on spokes",
+   "first_seen": "2026-07-11",
+   "last_seen": "2026-09-27",
+   "recurrences": 3,
+   "root_cause": "No shared URL-construction primitive; each caller re-derives it"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Landed != running: obsidian bundle never rebuilt, super-repo pins reset submodules, live cutover without a git landing, function only in a working tree",
+   "first_seen": "2026-07-17",
+   "last_seen": "2026-08-09",
+   "recurrences": 4,
+   "root_cause": "Deploy steps outside the lane (manual bundle, pull-sync submodule update)"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Selector pinned on NaN; candidate set capped at 100 oldest; learned templates alpha=1 forever; hardcoded dispatch bypasses posterior",
+   "first_seen": "2026-06-22",
+   "last_seen": "2026-09-05",
+   "recurrences": 5,
+   "root_cause": "Learning inputs silently truncated or bypassed (page cap, missing input_shapes, direct /run-goal)"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "DENSE_BACKFILL_ENABLED, IAS_TRACE_SPOOL_DRAIN_BATCH, IAS_TRACE_SPOOL_DIR, resolve timeout env, agent_fill default-off, EXECUTABLE_RESOLVERS constant",
+   "first_seen": "2026-05-21",
+   "last_seen": "2026-09-26",
+   "recurrences": 6,
+   "root_cause": "The drafter and operators reach for env/constant knobs; law 1 is not enforced at the gate"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Compiled .js in boredom src, forge/Helm/examples in ias, whole workbench repo, 4 copies of interpolateBoundValues, _quarantineFile2",
+   "first_seen": "2026-05-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "root_cause": "Additive landings plus no retirement path for superseded eras"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Human surface rebuilt 3 times; obsidian timers still tick and SKIP every run",
+   "first_seen": "2026-04-22",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Surface replaced without retiring its loops; the new surface is outside the authorable set"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Retry re-sends committed traces; retryable conflicts dropped; full scans on 66K rows; shared-table schema clobber",
+   "first_seen": "2026-06-17",
+   "last_seen": "2026-09-26",
+   "recurrences": 4
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Tests wrote into the live /workspace/trace-spool (81/83 files debris)",
+   "first_seen": "2026-08-21",
+   "last_seen": "2026-08-21",
+   "recurrences": 1,
+   "root_cause": "Production default path used as the test default"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "ui gaps without edit_site; confabulated 'needs a producer' gaps whose premise is false; Close goals for siteless gaps",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-28",
+   "recurrences": 4
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Checked: node 2 clone HEADs equal the hub for all four repos (negative result); only d1ebb66 spoke-only URL failure relates",
+   "first_seen": "2026-09-17",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "mitosis cutover landing lane (apply_proposal_as_patch + vessel_mitosis_cutover)",
+   "location": "dev-vessel; evidence in the 4 repos' logs",
+   "purpose": "Land substrate-authored patches",
+   "status": "live-used",
+   "general": true,
+   "evidence": "395 autonomous commits across 4 repos, active 09-28; one-file-per-compose (d4eee29), cross-gap ping-pong (e059a98/c8c944f)"
+  },
+  {
+   "name": "pwt-* post-write mitosis",
+   "location": "gap ids pwt-<vessel>-<file>",
+   "purpose": "Post-write repair/revert",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Reverted 1bf4fee; oscillated concept-db /health x3"
+  },
+  {
+   "name": "semantic gate (addresses:true)",
+   "location": "landing lane",
+   "purpose": "Judge whether a patch addresses the gap",
+   "status": "broken",
+   "general": true,
+   "evidence": "Approved wrong-region/wrong-semantics obsidian edits 08-07 and inert 314f228"
+  },
+  {
+   "name": "failing-test lane",
+   "location": "gap ids failing-test-<vessel>-tests-*",
+   "purpose": "Repair failing tests",
+   "status": "live-used",
+   "general": true,
+   "evidence": "af2c737 lowered a documented timeout to match a stale test (reverted d4eee29); e059a98 reverted in 4 minutes"
+  },
+  {
+   "name": "ribosome extraction / synthesize_template",
+   "location": "ias-executor-ts src/templates/lifecycle/ribosome-extract.json",
+   "purpose": "Mint templates from reached executions",
+   "status": "unknown",
+   "general": true,
+   "evidence": "About 12 repair commits 06-25..08-17; compounding not verified in this shard"
+  },
+  {
+   "name": "template-provider load-time interpolation",
+   "location": "ias-executor-ts src/adapters/activity-api-provider.ts",
+   "purpose": "Bind values into non-LLM task configs",
+   "status": "broken",
+   "general": false,
+   "evidence": "946034c blanks placeholders; 3 layered fixes; 4 copies at HEAD"
+  },
+  {
+   "name": "trace-sink retry + disk spool + replay",
+   "location": "ias-executor-ts src/adapters/activity-api-trace-sink.ts",
+   "purpose": "Durable trace delivery",
+   "status": "live-used",
+   "general": false,
+   "evidence": "4 landings 09-23..28, _quarantineFile2 duplicate, env-gated batch, retry duplicates (3cf29a3)"
+  },
+  {
+   "name": "discovery-adapter URL construction",
+   "location": "ias-executor-ts src/adapters/discovery-adapter.ts",
+   "purpose": "Build fetchable resolve URLs from registry rows",
+   "status": "live-used",
+   "general": true,
+   "evidence": "d1ebb66; resolveVesselEndpoint helper in the same file is dead"
+  },
+  {
+   "name": "boredom resolve-URL joiner",
+   "location": "boredom-vessel src/index.ts boredomDiscoverResolveUrls (f28bc06)",
+   "purpose": "Discover producers for the envelope read",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "goal-host routeFor / ias discovery-adapter",
+   "evidence": "Same absolute-vs-path logic reimplemented"
+  },
+  {
+   "name": "boredom spend envelope",
+   "location": "boredom-vessel src/index.ts readBoredomEnvelope (f28bc06)",
+   "purpose": "Stop dispatch when LLM spend is exhausted",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "development-vessel gap-to-feature.ts spendEnvelopeAllows",
+   "evidence": "The comment states it mirrors dev-vessel"
+  },
+  {
+   "name": "boredom gap-admission MIRROR",
+   "location": "boredom-vessel goal-generation (0ccfadf)",
+   "purpose": "Apply dev-vessel admitActionableGaps predicate",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "development-vessel admitActionableGaps",
+   "evidence": "Declared mirror with a delete-when-shape-exists TODO"
+  },
+  {
+   "name": "boredom gap-goal supply (generateGapGoalCandidates)",
+   "location": "boredom-vessel src/goal-generation.ts",
+   "purpose": "Mint goals from open gaps",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Store reader fixed 4 times; 12bb26a investigate/decompose on 09-28"
+  },
+  {
+   "name": "boredom posterior-decline guard",
+   "location": "boredom-vessel resolvers/vesselAdditionScaffoldDispatch (4e17f86)",
+   "purpose": "Skip a hardcoded dispatch when the posterior is decisively negative",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Control matrix; the 314f228 version is a fossil"
+  },
+  {
+   "name": "EXECUTABLE_RESOLVERS seed + discovery union",
+   "location": "boredom-vessel src/index.ts (92f3336)",
+   "purpose": "Decide which proposals are executable",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Autonomous law-1 repair; had blocked 214 proposals"
+  },
+  {
+   "name": "AUTONOMOUS_GOALS static rotation",
+   "location": "boredom-vessel src/index.ts",
+   "purpose": "Hardcoded goal list (goal[46..49])",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Law-5 static list; still edited 09-19/20"
+  },
+  {
+   "name": "selector-state snapshot roster",
+   "location": "boredom-vessel (00c1965, c6d3109)",
+   "purpose": "Feed dormancy detectors",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Tautology fixed 08-28"
+  },
+  {
+   "name": "concept-db lexical ladder + two-stage FTS + dense leg",
+   "location": "concept-db src/resolvers/concept.ts searchConcepts",
+   "purpose": "Concept recall for drafter/lessons",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Broken 09-02..09-26 unnoticed; fixed 278edae"
+  },
+  {
+   "name": "concept-db search telemetry",
+   "location": "concept-db (cb400d6)",
+   "purpose": "Make search starvation observable",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "Did not flag the 24-day lexical outage"
+  },
+  {
+   "name": "concept-db shape-dispatch agreement check",
+   "location": "concept-db 995fee1/568b668",
+   "purpose": "Enforce advertised=dispatchable",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Coexists with duplicated public+private entries in config.ts"
+  },
+  {
+   "name": "obsidian panel bundle (main.js)",
+   "location": "obsidian-vessel main.js",
+   "purpose": "The runtime human surface",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Only the operator rebuilds (127 commits); 0/194 autonomous commits reached it; dev stopped 08-22"
+  },
+  {
+   "name": "obsidian-intake/learn/collaborate timers",
+   "location": "substrate-live systemd timers",
+   "purpose": "Human-surface loops",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Every tick: 'SKIPPED: no vessel advertises obsidian:note'"
+  },
+  {
+   "name": "obsidian libp2p federation sidecar",
+   "location": "obsidian-vessel sidecar (4ae5ba0 + ~30 fixes)",
+   "purpose": "Surface-to-substrate conduit",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Surface superseded by human-surface-vessel"
+  },
+  {
+   "name": "workbench React app",
+   "location": "repos/workbench",
+   "purpose": "First human/observer surface",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Last commit 05-24, 0 autonomous commits, no unit; still referenced in docs/LIVE_DEVELOPMENT.md and docs/README.md"
+  },
+  {
+   "name": "ias forge resolvers + examples + Docker/Helm ports",
+   "location": "ias-executor-ts src/examples, src/resolvers/{docker-build-push,helmfile-sync,scaffold-vessel-skeleton,wire-*}",
+   "purpose": "Phase 22 vessel forge",
+   "status": "fossil",
+   "general": false,
+   "evidence": "VesselForgeHost/HelmfilePort 0 external refs; autonomous a07e8fd still edited examples"
+  },
+  {
+   "name": "verify-dist-fresh (F-111)",
+   "location": "ias-executor-ts b6b58a2",
+   "purpose": "Detect dist drift",
+   "status": "fossil",
+   "general": false,
+   "evidence": "0 external refs"
+  },
+  {
+   "name": "agent_fill impulse preparation",
+   "location": "ias-executor-ts f685b16",
+   "purpose": "LLM slot filling",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Env-gated, default off; 0 external refs"
+  },
+  {
+   "name": "boredom compiled artifacts in src",
+   "location": "boredom-vessel src/*.js,*.d.ts,*.map (84cd2f2)",
+   "purpose": "none (residue)",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Tracked at HEAD; Bun prefers .ts so they are inert"
+  }
+ ],
+ "principles": [
+  "An explicit projection is a silent dropper by construction; adding a field produces no error (ias 9518d4e)",
+  "An instruction naming a field that does not exist is worse than no instruction (ias f71bb56)",
+  "Show the correct output beside the incorrect one; prohibition alone has a poor record (ias 5030377)",
+  "The category was never evidence; predicate on the claim itself (boredom 7868111)",
+  "Behaviour gated behind an in-process constant can never be found wanting because it is never attempted (boredom 92f3336, substrate-authored)",
+  "A judge verifying that a patch CHANGES the named behaviour is not verifying it does what was asked (obsidian b1d2417)",
+  "A wrong edit_site is strictly worse than none (obsidian 968d693)",
+  "Run the lookup against live data rather than trusting a clean typecheck; proceed on absence of evidence (boredom 4e17f86)",
+  "A liveness ping can report healthy through a total capability outage (concept-db cb400d6)",
+  "When fixing a class, grep sibling call sites, but also re-run the consumer (fd645bd followed that principle and still broke recall for 24 days)",
+  "Landing is not deploying: Obsidian loads a BUILT main.js (obsidian aa4ae90)",
+  "A consumer of a shared table must not define it (concept-db 9b5c087)",
+  "Grade the outcome event, not the dispatch/deadline proxy (boredom fb2e5f0, 59ac3cf)",
+  "A siteless gap should yield investigate/decompose, not a Close goal (boredom 12bb26a, substrate-authored)"
+ ]
+}

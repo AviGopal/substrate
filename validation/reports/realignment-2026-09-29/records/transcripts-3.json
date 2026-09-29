@@ -1,0 +1,1031 @@
+{
+ "source": "transcripts-3",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/transcripts-3.md",
+ "coverage": "Covered 9 transcript files with mtime 09-17..09-22: 35537c7e (60.6MB, content 09-05 to 09-17, 10 compactions), faba5acd (09-12 to 09-16), 80ab9659 (09-16 to 09-18 19:31), efb65009 (a prefix-copy/fork of 80ab9659 up to 09-18 03:39, not double-counted), 7726f8bf (09-22), 5f47eeb0 (09-16 sovereignty), cb2ffd73 (09-15 wiring proof); a7116f6d and af84ebd8 are empty. Method: jq extracted assistant text and non-sidechain user text into /tmp/t3 (outside the repo). I read all 14 compaction summaries (Errors, Problem-solving, Pending, Current sections), read the raw assistant text for the windows the summaries do not cover (80ab9659 09-16 21:05 to 09-18 19:31, all of 7726f8bf, the tails of 35537c7e and faba5acd), and grepped for claim keywords. NOT read: tool_result bodies, subagent sidechains, and 35537c7e detail before 09-10 beyond its 09-05 summary. Hashes and numbers are as stated in the transcripts. I did not re-verify them against git or the DB. Items whose where says MEMORY.md come from the operator memory index and not from transcripts. NEW KEYS added (no seed key fit): operator-instrument-fault (the operator's own probes giving false negatives or positives, the dominant recurring pattern: 40+ enumerated instances), llm-provider-plane (dead or placeholder credentials and arm cooling blocking drafting), gap-store-integrity (gap store overwritten, NUL-filled, mass-expired or polluted). I folded the push-credential recurrence into sync-deploy-drift.",
+ "attempts": [
+  {
+   "key": "hollow-landing",
+   "title": "Coverage-check fix for rung 3 via dispatch",
+   "where": "35537c7e @ 2026-09-10 summary",
+   "tried": "7 dispatches of feature-compose.ts coverage fix",
+   "outcome": "partial",
+   "evidence": "TS1109, 503, BUSY, old_string not found, landed INERT (testDir file path), landed as REGRESSION (deleted matching logic), then hand-fixed c349b27; post-deploy coverage 93.3%",
+   "date": "2026-09-10"
+  },
+  {
+   "key": "false-verification",
+   "title": "Rung 2 one-way latch windowed",
+   "where": "35537c7e @ 2026-09-11 summary",
+   "tried": "window rung-2 unexamined query to 24h (48656e6); truncation source fixed 13f7d07",
+   "outcome": "worked",
+   "evidence": "ladder 7/7, staged_unexamined 0 for 26h",
+   "date": "2026-09-11"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Execution exemplar extraction brought alive",
+   "where": "35537c7e @ 2026-09-11 summary",
+   "tried": "fix 4 stacked defects in exemplar-selector (7c34185 etc.)",
+   "outcome": "partial",
+   "evidence": "execution_exemplar 0->719 across 82 activities, but no consumer was ever designed (gap exemplars-are-produced-but-no-production-path-consumes-them)",
+   "date": "2026-09-11"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Digest dual-write on second ingest route",
+   "where": "35537c7e @ 2026-09-12 summary",
+   "tried": "add trace_digest write to /v2/activities/executions (activities.ts:1910)",
+   "outcome": "worked",
+   "evidence": "feature_compose 2,491 executions/0 digests -> digests 0->43+; exemplars formed",
+   "date": "2026-09-12"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Revert reach-metric accumulation break",
+   "where": "35537c7e @ 2026-09-12 summary",
+   "tried": "revert 52452e0 (Substrate Autonomous 08-28 pwt- lane replaced +$reached with =$reached) via bc268e7",
+   "outcome": "partial",
+   "evidence": "accumulation 27->88->914->1198, but reconciliation still fails (stored 1198 vs source 18,987)",
+   "date": "2026-09-12"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Eviction guard for reached-command cache",
+   "where": "35537c7e @ 2026-09-12 summary",
+   "tried": "77d318b: do not evict on unknown/infra verdicts",
+   "outcome": "partial",
+   "evidence": "env-cited evictions 0 after activation, but live cache flat 108->109->110->109; 'removes one drain, doesn't create gains'",
+   "date": "2026-09-12"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Wire drafting grades to model-arm posteriors",
+   "where": "35537c7e @ 2026-09-13 summary",
+   "tried": "wire gradeArmByExecution plus a neutral prior across 6 commits",
+   "outcome": "partial",
+   "evidence": "selection shifted (gemini 46%->24%) but every arm's EV is 0.023-0.060; grounding 2.4%->81% with FAVORABLE 0/16, so the mechanism win moved no outcome",
+   "date": "2026-09-13"
+  },
+  {
+   "key": "gap-content",
+   "title": "Premise check for mislocalized gaps",
+   "where": "35537c7e @ 2026-09-13 summary",
+   "tried": "9f222fb in gap-to-feature.ts:799 flags an unquoted token (PREMISE UNVERIFIED); the true duplicate was fixed with replace_lines 9c1d56a",
+   "outcome": "unknown",
+   "evidence": "a replay against real data with controls passed; firing in production was 0 at the last check; 31-gap false-premise family with 30 open",
+   "date": "2026-09-13"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Restore container push",
+   "where": "35537c7e @ 2026-09-14 summary",
+   "tried": "a dead PAT shadowed a valid GITHUB_TOKEN via ${A:-$B}",
+   "outcome": "superseded",
+   "evidence": "on 09-18 03:08 the push PAT was dead again and substrate landings stayed container-local; gen-env.sh:298 prefers the stale env value over the persisted secret (pending since 09-14)",
+   "date": "2026-09-14"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Operator answers escalations to unseal gaps",
+   "where": "35537c7e @ 2026-09-14/15 summaries",
+   "tried": "provide_information answers via uiFeedback_write + escalation_disposition_apply; d3e1ca2 answers become gap metadata",
+   "outcome": "partial",
+   "evidence": "escalations answered 3->31; applied:1-2; 2000-char truncation cut load-bearing scope; seal posts to pinned :8270 no human reads (MEMORY.md 09-22)",
+   "date": "2026-09-14"
+  },
+  {
+   "key": "gap-content",
+   "title": "zero_behaviour_delta exemption for string-only changes",
+   "where": "35537c7e @ 2026-09-15 summary",
+   "tried": "ede0030: string-only changes can land; comment-only still refused",
+   "outcome": "worked",
+   "evidence": "unblocked reach-gap producer-facts patch class",
+   "date": "2026-09-15"
+  },
+  {
+   "key": "false-verification",
+   "title": "Operator-run gap_lifecycle_scan autoClose",
+   "where": "35537c7e @ 2026-09-15 summary",
+   "tried": "ran gap_lifecycle_scan autoClose:true",
+   "outcome": "failed",
+   "evidence": "expired 100 gaps and low-value-closed 22 on non-evidence after flagging that exact risk",
+   "date": "2026-09-15"
+  },
+  {
+   "key": "false-verification",
+   "title": "Arm gaps from shas named in gap text",
+   "where": "35537c7e @ 2026-09-15 19:23 summary",
+   "tried": "armed pending_outcome_verification with a commit named in each gap",
+   "outcome": "reverted",
+   "evidence": "mis-closed 4 of 11 (the sha was the CAUSE); reopened; landed_verified 121->117",
+   "date": "2026-09-15"
+  },
+  {
+   "key": "llm-provider-plane",
+   "title": "llm-resolver boot crash loop cleared by env placeholders",
+   "where": "35537c7e @ 2026-09-15 19:23 summary",
+   "tried": "five 'unset-placeholder' sentinel env keys; gap emptyKeyPlaceholder filed",
+   "outcome": "partial",
+   "evidence": "restarts 0 after fix; 09-17 a 2-char placeholder key made an arm look configured so it got selected and cooled the plane",
+   "date": "2026-09-15"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Federation stack independent of workspace clone (P1)",
+   "where": "faba5acd @ 2026-09-16 05:09 summary",
+   "tried": "repoint manifest workdir to image copy, render-unit symlink skip",
+   "outcome": "partial",
+   "evidence": "falsifier failed: image vendored libp2p-federation-transport is a stub; shipped only 27c99783 halves; gap filed",
+   "date": "2026-09-16"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Fix rollback-skip corruption loop",
+   "where": "faba5acd @ 2026-09-16T08:08",
+   "tried": "88032ab rollback ownership fix; restore relevance-sink source",
+   "outcome": "worked",
+   "evidence": "e76b88c (substrate 09-10) made rollback structurally dead for every applied edit while trace said rolled_back:true; relevance-sink 10,501B corruption -> 7,709B restored and parses",
+   "date": "2026-09-16"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Docs annotated with measurements",
+   "where": "faba5acd @ 2026-09-16T09:29",
+   "tried": "wrote measured readings into SUBSTRATE_AS_DYNAMICS.md",
+   "outcome": "reverted",
+   "evidence": "user: 'already out of date \u2026 names, tables \u2026 irrelevant'; rewritten as invariants 3c113703",
+   "date": "2026-09-16"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace retention byte ceiling",
+   "where": "80ab9659 @ 2026-09-16T21:38",
+   "tried": "c0b9624+3cafd9c byte-derived ceiling in trace-retention.ts",
+   "outcome": "partial",
+   "evidence": "deployed; its own instrument refuted the large-row premise; boundBy:'rows' in 9 unattended runs, so the byte bound never binds; deleting rows does not reclaim disk (gap-mu4m9fdb)",
+   "date": "2026-09-16"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Self-heal observation: 4h window",
+   "where": "80ab9659 @ 2026-09-16T22:21 to 09-17T01:39",
+   "tried": "operator pre-registered that the self-filed root-cause gaps would not be attempted, then observed without dispatching",
+   "outcome": "failed",
+   "evidence": "both target gaps got 0 attempts; open gaps 2,479->2,498; the drain exposes only the top 15 and these gaps had 0 citations or unlocks",
+   "date": "2026-09-16"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Fix retention duty cycle starving dispatch (gap-mu4pb4p3)",
+   "where": "80ab9659 @ 2026-09-17T05:47",
+   "tried": "dispatched 5 attempts to change the batch",
+   "outcome": "reverted",
+   "evidence": "retracted: the duty cycle drained 0.66->0.07 on its own with no commit; 'Had the drafter succeeded, I would have manufactured causal evidence'",
+   "date": "2026-09-17"
+  },
+  {
+   "key": "llm-provider-plane",
+   "title": "Restore LLM drafting plane locally",
+   "where": "80ab9659 @ 2026-09-17T05:51 to 09:15",
+   "tried": "restart llm-resolver, add OpenRouter arm, scope policy, clean-draw restart",
+   "outcome": "failed",
+   "evidence": "7 of 7 providers unusable (401s, $0, placeholder, OpenRouter 402 above ~200 tokens); the operator's own probes cooled the providers",
+   "date": "2026-09-17"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "SurrealDB compaction by export/import",
+   "where": "80ab9659 @ 2026-09-17T23:15 to 09-18T00:24",
+   "tried": "export 4.6GB logical (37GB on disk) then re-import",
+   "outcome": "failed",
+   "evidence": "~1,000 rows/min meant ~8.8h downtime; abandoned; bulk DELETE blocked by classifier",
+   "date": "2026-09-17"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Migrate Docker Desktop to rootless podman",
+   "where": "80ab9659 @ 2026-09-18T01:06",
+   "tried": "loop-mount Docker.raw, podman volume import",
+   "outcome": "worked",
+   "evidence": "21 running/0 failed; 5/7 tables exact; IPv6 localhost split worked around in config",
+   "date": "2026-09-18"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Federate local <-> syzygy.host",
+   "where": "80ab9659 @ 2026-09-18T02:41",
+   "tried": "install relay on syzygy, socat bridge for port 30333, HUB_API_KEY, MAX_PEER_DEPTH 1->2",
+   "outcome": "partial",
+   "evidence": "hub and syzygy goals reached with artifact proof; spokes cannot reach (the ReAct floor is dark on spokes, gap-mu6ejfac)",
+   "date": "2026-09-18"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Engine VesselResolver multiaddr-as-URL fix",
+   "where": "80ab9659 @ 2026-09-18T03:07",
+   "tried": "substrate composed 2084b4b for gap-mu6dazag",
+   "outcome": "partial",
+   "evidence": "landed locally; the push failed on an invalid PAT until a new PAT was supplied at 03:16",
+   "date": "2026-09-18"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Crystallization proof, 4 runs",
+   "where": "80ab9659 @ 2026-09-18T10:19",
+   "tried": "novel -> identical -> after restart -> variant goal",
+   "outcome": "superseded",
+   "evidence": "declared 'Proven'; user asked for a trend not a sample; trial v2 replay 7/18, rebind 0/146; class-compounding claim retracted",
+   "date": "2026-09-18"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Exact-hit selection and eviction discipline",
+   "where": "80ab9659 @ 2026-09-18 summary and 12:45-15:44",
+   "tried": "6eed100 exact-hit (operator), 4c5534d unconfirmed-vs-disconfirmed (operator), 2e8b4cc strike counter (substrate, dictated diff)",
+   "outcome": "worked",
+   "evidence": "mul 12/12; pow strike->retain->replay live; final slice 9/12, every miss explained",
+   "date": "2026-09-18"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Deterministic token oracle for pow/rev",
+   "where": "80ab9659 @ 2026-09-18T15:18-15:21",
+   "tried": "gap with dictated diff -> substrate 0d86170",
+   "outcome": "partial",
+   "evidence": "landed:true FAVORABLE but silently traded away mul's deterministic oracle; restored by operator 51b34a6",
+   "date": "2026-09-18"
+  },
+  {
+   "key": "gap-content",
+   "title": "Operator gap starved by human-priority predicate",
+   "where": "80ab9659 @ 2026-09-18T14:08",
+   "tried": "re-filed with source human_reported; filed gap-operator-source-invisible-to-human-priority",
+   "outcome": "worked",
+   "evidence": "picked after the re-source; 1.5x weight matches only source==='human_reported'",
+   "date": "2026-09-18"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Discovery row shadowed by dead endpoint",
+   "where": "80ab9659 @ 2026-09-18T15:11-15:16",
+   "tried": "restart local-tools to rewrite its row",
+   "outcome": "partial",
+   "evidence": "healed by restart after ~45 min of fleet-wide grounding failure; class gap filed, not fixed",
+   "date": "2026-09-18"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Fresh-datastore trace persistence (023/045/055 migrations)",
+   "where": "7726f8bf @ 2026-09-22T08:48",
+   "tried": "scratch-namespace repro; substrate-landed 50946be, 291b72d, 41c9e89 through hand-staged evaluate/cutover",
+   "outcome": "worked",
+   "evidence": "cold-boot trace POST 200 stored:true and listed; rebuilt image 125775d7 passes",
+   "date": "2026-09-22"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Restore deleted surql landing guard",
+   "where": "7726f8bf @ 2026-09-22T08:22",
+   "tried": "dispatch with the verbatim 39-line block",
+   "outcome": "worked",
+   "evidence": "1a18944 byte-exact restore of the guard deleted by 54b7762 (09-16); .surql landings had been wedged for 6 days",
+   "date": "2026-09-22"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Durable vessel membership across recreate",
+   "where": "7726f8bf @ 2026-09-22T08:54",
+   "tried": "installed.json + entrypoint reconcile + absent-workdir refusal (337c9226)",
+   "outcome": "worked",
+   "evidence": "recreate-membership acceptance passes; audit check dynamic_installed_unit_survives_recreate flipped",
+   "date": "2026-09-22"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Container lifecycle audit rerun",
+   "where": "7726f8bf @ 2026-09-22T10:52",
+   "tried": "12-stage harness on rebuilt image, same 26 checks",
+   "outcome": "worked",
+   "evidence": "26/26 MET (19b3e668); all 4 arrangements dispatch completed with reached:false and a null reason (not scored)",
+   "date": "2026-09-22"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Align lifecycle docs to audited reality",
+   "where": "7726f8bf @ 2026-09-22T11:14",
+   "tried": "verify each claim on a live boot, rewrite docs",
+   "outcome": "worked",
+   "evidence": "37b18ec0; the docs prescribed vessel-ctl install human-surface, which now refuses by design",
+   "date": "2026-09-22"
+  }
+ ],
+ "problems": [
+  {
+   "key": "operator-instrument-fault",
+   "symptom": "Operator declares breakage or landing from a mis-addressed, self-matching, truncated or wrong-clock probe (grep -c lines, || echo 0, wrong WORKSPACE_ROOT, wrong unit, X-Api-Key vs Authorization, host-local vs UTC, client timeout read as server work)",
+   "first_seen": "2026-09-05",
+   "last_seen": "2026-09-18",
+   "recurrences": 40,
+   "root_cause": "Negatives have two generators (absent vs mis-addressed); no positive control through the same address; the rule was written 09-16 and violated again 09-17"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Live state read from /workspace decoys (gaps.json fossil, policies rev 10, compose-slots, memory notes) while the live copy is under /workspace/git/super-repo",
+   "first_seen": "2026-09-05",
+   "last_seen": "2026-09-22",
+   "recurrences": 7,
+   "root_cause": "WORKSPACE_ROOT differs between unit, env-file and code default (MEMORY.md 09-22: EnvironmentFile wins, 680 notes unread)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Runtime runs stale code while pull-sync reports synced=0 skipped=0 failed=0; docker cp erased by reset --hard; stale host submodules baked into image; 12 stranded commits wedge pull-sync 16h",
+   "first_seen": "2026-09-10",
+   "last_seen": "2026-09-22",
+   "recurrences": 6,
+   "root_cause": "Three or four trees per vessel with no by-effect convergence check; process_start > mtime is unsound under idempotent rewrite"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Substrate-authored commits stay container-local because the push PAT is dead",
+   "first_seen": "2026-09-14",
+   "last_seen": "2026-09-18",
+   "recurrences": 2,
+   "root_cause": "Credential lifecycle: gen-env.sh prefers the stale env value over the persisted secret; nothing detects push failure as a gap"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "FAVORABLE compose with no effect (hollow_write, inert_predicate, comment-only, mis_localized_path, deleting the refusal); 617ed21 inert with all gate booleans true",
+   "first_seen": "2026-09-10",
+   "last_seen": "2026-09-18",
+   "recurrences": 5,
+   "root_cause": "on_live_path means the enclosing symbol is reachable, not that the written value is read; gates read diffs"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings break machinery: 52452e0 reach metric, e76b88c rollback dead, f4bae3c llm-resolver crash loop, 54b7762 surql guard deleted",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-22",
+   "recurrences": 4,
+   "root_cause": "computeNewlyFailing returns [] on an empty baseline (failing_recorded=0 while 35 tests fail); the pwt lane has no semantic judge"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gaps closed on non-evidence: already_resolved with 0 commits, cause-commit as fix, auto-expiry of one-shot work, class1 armed while literal present",
+   "first_seen": "2026-09-05",
+   "last_seen": "2026-09-22",
+   "recurrences": 6,
+   "root_cause": "Closure predicates are includes() literals; expiry keyed on re-detection; guards fail open"
+  },
+  {
+   "key": "llm-provider-plane",
+   "symptom": "Drafting impossible: composer reports no LLM endpoint while model vessels are healthy",
+   "first_seen": "2026-09-11",
+   "last_seen": "2026-09-18",
+   "recurrences": 4,
+   "root_cause": "Invalid, placeholder or unfunded keys; the shared policy samples ids a pinned provider cannot serve; cooling leads the resolver to de-advertise llm_completion"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "One mislocalized gap spawns a 31-gap family; recommit lane lands 0.8% while taking 26.5% of attempts; the system mints a -narrowed child of a gap about minting narrowed children",
+   "first_seen": "2026-09-11",
+   "last_seen": "2026-09-18",
+   "recurrences": 4,
+   "root_cause": "Gap text carries a wrong premise or edit_site; children inherit the pre-correction site; five carriers per failed parent"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "hopeless() seals by category; escalations unanswered or truncated at 2000 chars; 67 carry falsifier none",
+   "first_seen": "2026-09-14",
+   "last_seen": "2026-09-22",
+   "recurrences": 3,
+   "root_cause": "Seal's only escape posts to a pinned replaced vessel (MEMORY.md 09-22)"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Learned pathways do not compound: paths keyed by goal_hash (11.9x pooling lost), exemplars write-only, cache evicted on noise, rebind 0/146",
+   "first_seen": "2026-09-05",
+   "last_seen": "2026-09-18",
+   "recurrences": 3,
+   "root_cause": "Instance key instead of shape signature (found 09-05 and again 09-16); grader false negatives evict proven entries"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "The ReAct floor is dark on spokes; every lifecycle arrangement returns reached:false with a null reason",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-22",
+   "recurrences": 2,
+   "root_cause": "llm_completion_dispatch registered through a channel the federation mirror never reads; later the resolve-URL joiner (MEMORY.md 09-22)"
+  },
+  {
+   "key": "gap-store-integrity",
+   "symptom": "Gap store overwritten with 95 bytes by a credited orphan closer; NUL-filled 18MB (~251 gaps lost); polluted by the test suite; 100 mass-expired",
+   "first_seen": "2026-09-13",
+   "last_seen": "2026-09-18",
+   "recurrences": 4,
+   "root_cause": "Single JSON file rewritten in place; closers graded success:true; tests touch the live store"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "SurrealDB 37GB for 4.6GB logical; fresh-datastore trace writes return 500",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-22",
+   "recurrences": 2,
+   "root_cause": "Deletes do not reclaim blobs; migrations 023/045/055 poison inserts or never parse on an empty store"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Built but never exercised: exemplar consumer, variant minting, action_no_effect, parallel sibling, v_shape_conditioned_score, state_signature, in-flight re-route arm",
+   "first_seen": "2026-09-11",
+   "last_seen": "2026-09-17",
+   "recurrences": 7,
+   "root_cause": "Producers without readers or readers on unused endpoints; 'IMPLEMENTED_DORMANT' is the largest audit class"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Loopback public_endpoint; dead-port discovery row with fresh lastSeen; multiaddr treated as URL",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-18",
+   "recurrences": 3,
+   "root_cause": "Liveness by heartbeat, not socket; advertisement not computed from the caller's view"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Satisfier posteriors inverted (a2/b185 over 189 runs, 167 succeeded); pool picks ~98% observation and ~2% repair",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-17",
+   "recurrences": 2,
+   "root_cause": "Readback check fails to see a successful write and grades it non-persistence; yield-based UCB favours detectors"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Host disk 100% / Docker VM death, then a missing kernel module tree; secrets rotated by an asymmetric mount",
+   "first_seen": "2026-09-17",
+   "last_seen": "2026-09-18",
+   "recurrences": 2,
+   "root_cause": "Sparse Docker.raw never shrinks (922G alloc / 399G used); gen-env's fresh-deploy detector reads the store volume and writes the workspace volume"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Docs written as measurements go stale immediately; setup docs prescribe a command the fix now refuses",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-22",
+   "recurrences": 2,
+   "root_cause": "Readings instead of invariants; the docs-align loop did not detect them"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "operational_state recovery ladder",
+   "location": "repos/development-vessel/src/resolvers/operational-state.ts",
+   "purpose": "7-rung self-health verdict",
+   "status": "unknown",
+   "general": true,
+   "evidence": "used 09-10/11 (7/7 on 09-11); rung 2 was a latch, windowed in 48656e6; not seen after 09-11 in window"
+  },
+  {
+   "name": "validator-liveness-tick",
+   "location": "scripts/substrate/validator-liveness-tick.ts (8a3804ff)",
+   "purpose": "detect validators that stopped their cadence",
+   "status": "unknown",
+   "general": true,
+   "evidence": "reported SEVERED 37/48 on 09-10; no later use in window"
+  },
+  {
+   "name": "execution_exemplar",
+   "location": "activity-api services/exemplar-selector.ts",
+   "purpose": "extract successful executions for reuse",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "719 rows on 09-11; consumer never designed"
+  },
+  {
+   "name": "reachedCommandCache (crystallization)",
+   "location": "goal-host-vessel src/index.ts, /workspace/.goal-host-reached-commands.jsonl",
+   "purpose": "replay verified commands and skip synthesis",
+   "status": "live-used",
+   "general": false,
+   "evidence": "replay proven 09-18; 6eed100/4c5534d/2e8b4cc/0d86170; goal-host only"
+  },
+  {
+   "name": "goal_execution_paths keyed by goal_hash",
+   "location": "activity-api routes/goal-paths.ts, impulses.ts:2227",
+   "purpose": "learned pathway store",
+   "status": "live-used",
+   "general": true,
+   "evidence": "13,423 rows; instance-keyed, 11.9x pooling lost; signature fields persisted but unused as key"
+  },
+  {
+   "name": "v_shape_conditioned_score / state_signature",
+   "location": "activity-api paradigm.ts:1126,1163",
+   "purpose": "contextual Thompson",
+   "status": "broken",
+   "general": true,
+   "evidence": "0 rows while queried live; state_signature never written (09-16)"
+  },
+  {
+   "name": "closeLandedGap / sweepPendingLandVerifications",
+   "location": "development-vessel gap-to-feature.ts:1915,:2411",
+   "purpose": "close a gap on land signal plus absent predicate",
+   "status": "live-used",
+   "general": true,
+   "evidence": "closed gaps 09-15; class1 needs a land signal too"
+  },
+  {
+   "name": "autoCloseStaleGaps (gap_lifecycle_scan)",
+   "location": "development-vessel",
+   "purpose": "expire idle gaps",
+   "status": "live-used",
+   "general": true,
+   "evidence": "expires one-shot work that looks stale while still outstanding (09-16)"
+  },
+  {
+   "name": "hopeless() seal + escalation_disposition_apply",
+   "location": "development-vessel gap-to-feature.ts",
+   "purpose": "stop futile retries, escalate to a human",
+   "status": "live-used",
+   "general": true,
+   "evidence": "seals by category; escalations to pinned :8270 (MEMORY.md 09-22)"
+  },
+  {
+   "name": "premise check PREMISE UNVERIFIED",
+   "location": "gap-to-feature.ts:799 (9f222fb)",
+   "purpose": "refuse gaps whose quoted token is absent",
+   "status": "unknown",
+   "general": true,
+   "evidence": "0 production firings at last check 09-13"
+  },
+  {
+   "name": "zero_behaviour_delta gate + string exemption",
+   "location": "development-vessel feature-compose.ts (ede0030)",
+   "purpose": "refuse vacuous edits",
+   "status": "live-used",
+   "general": true,
+   "evidence": "refused string-only patches until 09-15"
+  },
+  {
+   "name": "computeNewlyFailing delta-aware verify",
+   "location": "development-vessel",
+   "purpose": "blame only new test failures",
+   "status": "live-used",
+   "general": true,
+   "evidence": "fail-open on empty baseline; missed 54b7762"
+  },
+  {
+   "name": "semantic gate + refuter panel",
+   "location": "development-vessel feature-compose.ts",
+   "purpose": "judge whether a draft addresses the gap",
+   "status": "live-used",
+   "general": true,
+   "evidence": "fails open when judge unreachable (09-05, refuseWhenJudgeUnavailable 09-15); refuters confabulated SurrealQL facts (09-22)"
+  },
+  {
+   "name": "surqlBreakingFieldRefusal guard",
+   "location": "development-vessel",
+   "purpose": "refuse breaking .surql edits",
+   "status": "live-used",
+   "general": false,
+   "evidence": "deleted 54b7762 09-16, restored 1a18944 09-22"
+  },
+  {
+   "name": "runtime-drift-tick",
+   "location": "scripts/substrate runtime-drift-tick.ts",
+   "purpose": "detect runtime vs clone divergence",
+   "status": "live-used",
+   "general": true,
+   "evidence": "reports only, not armed to repair; blind to in-tree vessels; reader added 76113293"
+  },
+  {
+   "name": "substrate-pull-sync / mirror-to-live",
+   "location": "scripts/substrate/substrate-pull-sync.sh",
+   "purpose": "converge clones and runtime",
+   "status": "live-used",
+   "general": true,
+   "evidence": "reported synced=0 while stale (09-16); wedged 16h by stranded commits (09-22)"
+  },
+  {
+   "name": "self-recovery-surreal-wedge-restart",
+   "location": "self-recovery timer",
+   "purpose": "restart a wedged SurrealDB",
+   "status": "live-used",
+   "general": false,
+   "evidence": "acted autonomously 09-16 20:03, RSS 22.5->4GB"
+  },
+  {
+   "name": "trace-retention byte ceiling",
+   "location": "activity-api services/trace-retention.ts (c0b9624)",
+   "purpose": "bound the trace working set",
+   "status": "live-used",
+   "general": false,
+   "evidence": "9 unattended runs; boundBy rows; does not reclaim disk"
+  },
+  {
+   "name": "boredom UCB selector",
+   "location": "repos/boredom-vessel/src/index.ts:3413",
+   "purpose": "condition-driven idle selection",
+   "status": "live-used",
+   "general": true,
+   "evidence": "~85% of picks go to 5 detector templates; repair ~2%"
+  },
+  {
+   "name": "~40 systemd timers (ungraded plane)",
+   "location": "scripts/substrate/units/*.timer",
+   "purpose": "maintenance cadence",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "boredom pool rhythms",
+   "evidence": "a futile repair fired 23->36 times on the timer plane while the pool stopped at 13 (09-16)"
+  },
+  {
+   "name": "In-Flight Recovery Loop re-route arm",
+   "location": "docs/architecture/sequences/04-improvisation-failure-modes.md:75",
+   "purpose": "retry with a different approach on a miss",
+   "status": "dormant",
+   "general": true,
+   "evidence": "arm unreachable; blocked on an operator decision (task 43, 09-16)"
+  },
+  {
+   "name": "variant minting / checkAndRetireByPosterior",
+   "location": "activity-api /executions route",
+   "purpose": "mint and retire variants",
+   "status": "dormant",
+   "general": true,
+   "evidence": "wired to an endpoint with 24 req/3h vs 82,629 on /execution-traces; zero variants ever"
+  },
+  {
+   "name": "action_no_effect",
+   "location": "prompt sentence only",
+   "purpose": "penalize no-effect actions",
+   "status": "dormant",
+   "general": true,
+   "evidence": "consumer wired; zero rows vs 108,563 executions"
+  },
+  {
+   "name": "resolutionProposal/Action/Refused channel",
+   "location": "docs only",
+   "purpose": "resolution channel",
+   "status": "fossil",
+   "general": true,
+   "evidence": "0 source files (09-17)"
+  },
+  {
+   "name": "parallel sibling dispatch",
+   "location": "goal-host",
+   "purpose": "fan-out",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0/108,563; credit rule sums instead of averaging"
+  },
+  {
+   "name": "universal tool fallback (ReAct floor)",
+   "location": "goal-host-vessel",
+   "purpose": "parity floor for any goal",
+   "status": "broken",
+   "general": true,
+   "evidence": "dark on spokes 09-18 (gap-mu6ejfac)"
+  },
+  {
+   "name": "federation relay/transport + discovery peer forwarding",
+   "location": "federation-relay, federation-transport-vessel, discovery",
+   "purpose": "cross-node resolution",
+   "status": "live-used",
+   "general": true,
+   "evidence": "working 09-18 after hand setup (socat bridge, MAX_PEER_DEPTH env); loopback endpoints; relay baked path 09-22"
+  },
+  {
+   "name": "federation_verification_report probe",
+   "location": "/usr/local/lib/substrate/",
+   "purpose": "self-verify federation invariants",
+   "status": "unknown",
+   "general": false,
+   "evidence": "autonomous sweeps observed 09-15; oracle defects fixed then"
+  },
+  {
+   "name": "installed.json durable membership",
+   "location": "vessel-ctl + entrypoint (337c9226)",
+   "purpose": "survive recreate",
+   "status": "live-used",
+   "general": true,
+   "evidence": "acceptance 09-22"
+  },
+  {
+   "name": "gen-env fresh-deploy detection",
+   "location": "scripts/substrate/gen-env.sh",
+   "purpose": "generate or reuse secrets",
+   "status": "broken",
+   "general": true,
+   "evidence": "reads the store volume, writes the workspace volume; rotated secrets 09-17; :298 stale env preferred"
+  },
+  {
+   "name": "human-priority weight",
+   "location": "gap-to-feature.ts ranking",
+   "purpose": "prefer human gaps",
+   "status": "live-used",
+   "general": true,
+   "evidence": "matches only human_reported and excludes operator:* sources (09-18)"
+  },
+  {
+   "name": "compose slot allocator cap=1",
+   "location": "development-vessel acquireComposeSlot",
+   "purpose": "serialize edits",
+   "status": "live-used",
+   "general": true,
+   "evidence": "stale-PID slot (gap-mu69ndsd); two slot dirs (09-17)"
+  },
+  {
+   "name": "composeLessonsBlock / compose_lesson",
+   "location": "development-vessel + concept-db",
+   "purpose": "failure lessons at prompt-build",
+   "status": "live-used",
+   "general": true,
+   "evidence": "the two auth headers hit different corpora; negation blindness leaks banned ids (gap-mu6x0axe)"
+  },
+  {
+   "name": "metamorphic gate probe",
+   "location": "/home/avi/.claude/jobs/35537c7e/tmp/metamorphic-probe.ts",
+   "purpose": "generative hostile inputs for gate_self_probe",
+   "status": "fossil",
+   "general": false,
+   "evidence": "deferred 09-10, never dispatched"
+  },
+  {
+   "name": "SATISFIER_REUSE_ORDERING_ENABLED",
+   "location": "goal-host env",
+   "purpose": "posterior reuse ordering",
+   "status": "dormant",
+   "general": false,
+   "evidence": "in-code A/B 0/4 vs 3/4, kept false; env-gated (law 1)"
+  },
+  {
+   "name": "lifecycle acceptance harness",
+   "location": "validation/reports/lifecycle-audit-fixes-2026-09-22/, container-lifecycle-audit-rerun-2026-09-22/",
+   "purpose": "26-check container lifecycle",
+   "status": "unknown",
+   "general": false,
+   "evidence": "operator harness 26/26 (19b3e668); not an activity"
+  }
+ ],
+ "principles": [
+  "A negative result is unattributed until a positive control through the same address shows a known-present payload (written 09-16, violated again 09-17).",
+  "status/FAVORABLE/typecheck/landed:true is not evidence; read the landed diff region (0d86170 traded away an oracle while green).",
+  "Never quote reach without splitting by author: operator 80% vs autonomous 0.9-2.6% on 09-13; operator dispatches contaminate the denominator.",
+  "A single reading cannot distinguish a level from a point on a drain curve; a flat line proves nothing if the window starts after the step.",
+  "Pre-register and control for spontaneous recovery: a landed fix during a drain would have manufactured causal evidence (09-17).",
+  "Retention is not reclamation, at every layer (SurrealDB 37GB/4.6GB; Docker.raw 922G/399G).",
+  "User: docs must state invariants and failure modes; names, tables and implementation details are irrelevant and subject to change.",
+  "User: nothing should fail the same way every time; identical failures count as independent samples, and the system must understand causality.",
+  "User: a fully autonomous system tries alternate routes and verifies it reached; no SPOF may block it.",
+  "User: it is not known until it is a trend, not a sample.",
+  "User: every learning write needs a demonstrated reader; if the operator supplies the diagnosis, that intervention is the next missing capability.",
+  "Crystallization compounds exactly as far as deterministic grading extends (boundary law, 09-18).",
+  "Information at the right time is measurable: supplying edit_site moved predicted_p 0.5->0.7, and dictated diffs land where prose fails, but depending on dictation is itself the gap (law 13).",
+  "A writer that pins a peer cannot learn the peer was replaced; liveness must prove the socket, not the heartbeat.",
+  "The same finding recurs under new names: path_signature keying (09-05 and 09-16), judge fail-open (09-05 and 09-15), push PAT (09-14 and 09-18), 'root cause of everything' twice (09-17 and 09-18)."
+ ],
+ "claims": [
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-09-11",
+   "claim": "Ladder reached 7/7",
+   "where": "35537c7e @ 2026-09-11T23:59 summary",
+   "later": "Same day: learning loop still open, reach 8.6%/24h, exemplar consumer never designed; the ladder measured self-health, not reach"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-09-12",
+   "claim": "Five repairs landed and pushed, all substrate-authored; reach 22.6%",
+   "where": "35537c7e @ 2026-09-12T10:20 summary",
+   "later": "09-13: all reach baselines were operator-contaminated; autonomous 0.9-2.6%, operator 80%"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-13",
+   "claim": "Root cause found and fixed: drafting was ungraded",
+   "where": "35537c7e @ 2026-09-13T19:05 summary",
+   "later": "Every arm drafts at 2-6%; grounding up 34x with FAVORABLE 0/16; no outcome moved"
+  },
+  {
+   "key": "llm-provider-plane",
+   "claimed_at": "2026-09-13",
+   "claim": "An anthropic 401 sets no cooldown",
+   "where": "35537c7e @ 2026-09-13T22:48 summary",
+   "later": "Retracted the same day: fires 151x/40h; the operator had sampled the wrong unit"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-13",
+   "claim": "Selector inversion is the mechanism",
+   "where": "35537c7e @ 2026-09-13T22:48 summary",
+   "later": "Retracted: per-arm outcomes all 0-4.5%"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-14",
+   "claim": "The gap closer is inert / the store is a one-way ratchet",
+   "where": "35537c7e @ 2026-09-14T06:51 summary",
+   "later": "False: 981 gaps closed_by gap_lifecycle_scan"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-14",
+   "claim": "Container push restored",
+   "where": "35537c7e @ 2026-09-14T06:51 summary",
+   "later": "09-18 03:08: push PAT dead again; landings container-local until a new PAT at 03:16"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-15",
+   "claim": "Grounding restored; the root cause was delivery (stale runtime)",
+   "where": "35537c7e @ 2026-09-15T01:00 summary",
+   "later": "09-18 15:09: grounding empty again fleet-wide ~45 min from a dead-port discovery row (a different cause)"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-15",
+   "claim": "class1 predicate means machine-closable",
+   "where": "35537c7e @ 2026-09-15T01:00 summary",
+   "later": "Refuted: a verified predicate did not close the gap; a land signal is also needed"
+  },
+  {
+   "key": "llm-provider-plane",
+   "claimed_at": "2026-09-15",
+   "claim": "LLM plane not a blocker, verified serving",
+   "where": "MEMORY.md (09-15 entry)",
+   "later": "09-17: 7 of 7 providers unusable for drafting; 09-18 only syzygy.host serves"
+  },
+  {
+   "key": "llm-provider-plane",
+   "claimed_at": "2026-09-15",
+   "claim": "llm-resolver crash loop cleared via env placeholders; stable",
+   "where": "35537c7e @ 2026-09-15T19:23 summary",
+   "later": "09-17: a placeholder key made a dead arm look configured, so it was selected and cooled the plane"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-15",
+   "claim": "All 11 tasks complete; substrate landed f083cf0 and 77e419a; functioning in a way that would fix",
+   "where": "35537c7e @ 2026-09-15T19:23 summary",
+   "later": "09-16: diagnosed non-viable (green payable without fixing; red pins 18->35; yield 99->12 lines/commit)"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-16",
+   "claim": "relevance-sink is now genuinely healthy; the green signal is honest",
+   "where": "faba5acd @ 2026-09-16T08:12",
+   "later": "MEMORY.md 09-22: relevance-sink is a plain in-tree vessel outside the authoring loop; 09-19 an unparseable autonomous commit crash-looped a vessel 1404x/4h"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-09-16",
+   "claim": "76 substrate resolvers, ~91% wired: ReAct floor met",
+   "where": "35537c7e @ 2026-09-16T20:52 summary",
+   "later": "09-18: floor dark on spokes (gap-mu6ejfac); MEMORY.md 09-22: the URL joiner kills the floor"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-09-16",
+   "claim": "Signature keying is the missing parametrization (11.9x pooling)",
+   "where": "35537c7e @ 2026-09-16T20:52 summary",
+   "later": "Same finding filed 09-05 (re-key paths by path_signature); not landed in window; recurrence"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-09-16",
+   "claim": "Retention sweep hung; nothing is burning",
+   "where": "80ab9659 @ 2026-09-16T22:57",
+   "later": "09-17 00:04 retracted: 19.7-min sweep completed; SurrealDB at 511% CPU"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-09-17",
+   "claim": "Retention duty cycle starves dispatch (gap-mu4pb4p3)",
+   "where": "80ab9659 @ 2026-09-17T00:30",
+   "later": "05:47 retracted: drain curve 0.66->0.07 with no change"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-16",
+   "claim": "The pool grades a futile repair success 13x; the debit is unreachable",
+   "where": "faba5acd @ 2026-09-16T06:31",
+   "later": "06:33 retracted: the debit is keyed on reward (mean 0.00); the pool stopped at 13"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-09-17",
+   "claim": "checkAndRetireByPosterior has zero callers",
+   "where": "80ab9659 @ 2026-09-17T02:27",
+   "later": "Minutes later: false zero (binary-invisible file); it is wired to an unused endpoint"
+  },
+  {
+   "key": "llm-provider-plane",
+   "claimed_at": "2026-09-17",
+   "claim": "Blocker cleared; compose running for the first time today",
+   "where": "80ab9659 @ 2026-09-17T06:24",
+   "later": "06:25 the registration lapsed again; 06:29 the real root cause was invalid keys and deliberate de-advertisement"
+  },
+  {
+   "key": "llm-provider-plane",
+   "claimed_at": "2026-09-17",
+   "claim": "The clean draw worked; the composer is drafting right now",
+   "where": "80ab9659 @ 2026-09-17T07:04",
+   "later": "09:11 'I was wrong last turn': nothing landed in 30 windows; att stayed 5"
+  },
+  {
+   "key": "llm-provider-plane",
+   "claimed_at": "2026-09-17",
+   "claim": "No configuration path to a drafting-capable provider on this substrate",
+   "where": "80ab9659 @ 2026-09-17T09:14",
+   "later": "09-18 02:24: federating to syzygy.host gives a working model plane without local credentials"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-16",
+   "claim": "Disk is not full (df inside a container)",
+   "where": "35537c7e @ 2026-09-16T20:56",
+   "later": "09-17 22:50: host disk 100%; the in-container df was a sparse VM disk"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-17",
+   "claim": "Host disk full is the root cause of everything",
+   "where": "80ab9659 @ 2026-09-17T22:51",
+   "later": "09-18 00:35: 'bigger' root cause, the running kernel has no module tree, likely explaining the Docker instability"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-18",
+   "claim": "Migration to Podman complete",
+   "where": "80ab9659 @ 2026-09-18T01:06",
+   "later": "No in-window contradiction; the gap store was found NUL-filled (~251 lost) during recovery"
+  },
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-09-18",
+   "claim": "Goal met: local <-> syzygy.host federated with confirmed-reach goals",
+   "where": "80ab9659 @ 2026-09-18T02:41",
+   "later": "03:32: reach from spokes refuses 4/4 (floor dark); 06:16 spokes still have the floor gap"
+  },
+  {
+   "key": "endpoint-routing",
+   "claimed_at": "2026-09-18",
+   "claim": "A substrate-authored commit landed (2084b4b)",
+   "where": "80ab9659 @ 2026-09-18T03:07",
+   "later": "03:08: not pushed (dead PAT), so the autonomy criterion was not met until 03:16"
+  },
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-09-18",
+   "claim": "Proof complete: any inventory, any container, all resources, multiple goal-hosts reaching",
+   "where": "80ab9659 @ 2026-09-18T06:16",
+   "later": "Same message: mini and spoke-syz goal reach still red (floor gap); 09-22 audit found all arrangements reached:false"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-09-18",
+   "claim": "Proven: crystallization works, durable, compounds to the class",
+   "where": "80ab9659 @ 2026-09-18T10:19",
+   "later": "User: trend not sample; trial v2 replay 7/18, rebind 0/146; class-compounding claim retracted"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-09-18",
+   "claim": "Strike-counter fix substrate-landed 2e8b4cc (full coax loop working)",
+   "where": "80ab9659 @ 2026-09-18T14:32",
+   "later": "Landed only after the operator dictated a three-edit diff into the gap (attempt 1 failed typecheck)"
+  },
+  {
+   "key": "directed-overshoot",
+   "claimed_at": "2026-09-18",
+   "claim": "Landed and pushed 0d86170, tokenTruth present",
+   "where": "80ab9659 @ 2026-09-18T15:18",
+   "later": "15:19: silently traded away mul's deterministic oracle; operator restored it (51b34a6)"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-09-18",
+   "claim": "Conformance loop converged; nothing has died since the oracle went live",
+   "where": "80ab9659 @ 2026-09-18T15:44",
+   "later": "Rebind 0/146 and lesson-vocabulary gaps remain open; MEMORY.md flags that a FAVORABLE compose replaced a branch"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-22",
+   "claim": "Campaign closed: all five audit failures fixed and verified; the rebuilt image passes out of the box",
+   "where": "7726f8bf @ 2026-09-22T09:06",
+   "later": "The first image build had baked stale submodules (caught by the advisor at 09:00); no later in-window refutation"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-22",
+   "claim": "Audit rerun 26/26 MET, full_lifecycle_acceptance true for the first time",
+   "where": "7726f8bf @ 2026-09-22T10:56",
+   "later": "No in-window contradiction; every arrangement's dispatch was reached:false with a null reason, which was not among the 26 checks"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-09-16",
+   "claim": "Retention byte ceiling landed and working (c0b9624)",
+   "where": "80ab9659 @ 2026-09-17T09:18",
+   "later": "Deployed and running, but boundBy was rows in every run (the byte bound never binds), and disk reclamation is still absent"
+  }
+ ]
+}

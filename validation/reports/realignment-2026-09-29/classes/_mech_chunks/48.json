@@ -1,0 +1,19 @@
+{
+ "area": "analysis-vessel",
+ "items": [
+  {
+   "name": "resolve-file-path",
+   "location": "analysis-vessel src/resolve-file-path.ts",
+   "purpose": "path resolution for problem_detection",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "local-tools mapPath",
+   "evidence": "5a890c3, afb6955",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  }
+ ]
+}

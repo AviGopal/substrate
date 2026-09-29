@@ -1,0 +1,226 @@
+{
+ "area": "federation",
+ "items": [
+  {
+   "name": "federation_verification_report probe",
+   "location": "/usr/local/lib/substrate/",
+   "purpose": "self-verify federation invariants",
+   "status": "unknown",
+   "general": false,
+   "evidence": "autonomous sweeps observed 09-15; oracle defects fixed then",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "federation cascade in dispatch",
+   "location": "08-18 series",
+   "purpose": "Resolve federated arms lazily with provenance",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Untouched since 08-18",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "libp2p federation transport",
+   "location": "c0a28dc2, 3d3a2b48",
+   "purpose": "cross-substrate resolve",
+   "status": "unknown",
+   "general": true,
+   "evidence": "06-30",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "federation-probe-tick closure",
+   "location": "federation probe",
+   "purpose": "close fed:* classes after 2 quiescent sweeps, auto-reopen",
+   "status": "live-used",
+   "general": false,
+   "evidence": "4 honest closes",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  },
+  {
+   "name": "phantom-reservation watchdog",
+   "location": "federation transport",
+   "purpose": "Re-reserve on a silent one-directional partition",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Manufactured outages until 3dbbbeff (09-14)",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "federation relay",
+   "location": "federation-relay.service",
+   "purpose": "Relay anchor for cross-substrate visibility",
+   "status": "broken",
+   "general": true,
+   "evidence": "Unit not-found on node 2 and MainPID=0 on node 1. 144 'no relay anchor \u2014 hub mirror skipped'.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "federation_join_health emission",
+   "location": "federation-transport aadb1c1c",
+   "purpose": "Shaped detector on 401",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-24",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "federation transport relay anchor",
+   "location": "federation-transport-server.ts",
+   "purpose": "libp2p circuit via relay",
+   "status": "broken",
+   "general": true,
+   "evidence": "Reads the relay once at module load (08-10); 19,348 restarts on empty env (09-11).",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "federation transport reservation healing",
+   "location": "federation-transport-server.ts",
+   "purpose": "keep relay circuits alive",
+   "status": "live-used",
+   "general": true,
+   "evidence": "4 reactive layers; 'do not add a 5th' (07-31)",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "loud reservation / de-advertise on SIGTERM",
+   "location": "federation-transport-server.ts",
+   "purpose": "Observable reservation loss, withdraw mirror rows",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Logs 'reservation lost \u2026 reacquired', 'SIGTERM: withdrawing 4 mirrored row(s)'",
+   "source": "federation-relay",
+   "mentions": 1,
+   "sources": [
+    "federation-relay"
+   ]
+  },
+  {
+   "name": "relay reservation watchdog",
+   "location": "federation-transport-server.ts 494a990e",
+   "purpose": "renew libp2p reservation",
+   "status": "unknown",
+   "general": true,
+   "evidence": "stale circuit recurred 07-29",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "Federation transport",
+   "location": "node 2 :8401; hub unit disabled",
+   "purpose": "Cross-node shape resolution",
+   "status": "broken",
+   "general": true,
+   "evidence": "Hub has no relay; federation shapes fail on the hub",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "Registration replication",
+   "location": "proposed in 2026-07-19-relay-findability-replication",
+   "purpose": "Make any dialed-in vessel findable by all peers",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Never built",
+   "source": "openspec-5",
+   "mentions": 1,
+   "sources": [
+    "openspec-5"
+   ]
+  },
+  {
+   "name": "relay reserved-peer keep-alive",
+   "location": "relay (cfad41db, 46b3304d ping responder)",
+   "purpose": "Keep NAT mappings warm; drop dead peers",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Reverted once (0a535483), then re-landed churn-safe",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "FEDERATION_SIGNING_SECRET / FEDERATION_PEER_AUTH_MODE",
+   "location": "secrets.env.sh, deploy-remote.sh",
+   "purpose": "peer signing",
+   "status": "fossil",
+   "general": false,
+   "evidence": "read by no vessel (08-01)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "FEDERATION_SIGNING_SECRET / FEDERATION_PEER_AUTH_MODE",
+   "location": "secrets.env.sh, gen-env.sh, manifest",
+   "purpose": "Peer auth",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Written at every layer, read by no code (H13)",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "federation-transport unit ExecStartPre copy",
+   "location": "substrate-live unit federation-transport-vessel",
+   "purpose": "feed runtime src into node_modules and super-repo checkout",
+   "status": "live-used",
+   "general": false,
+   "evidence": "runs from the image copy /usr/local/share/substrate/super-repo; drift by copy",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  }
+ ]
+}

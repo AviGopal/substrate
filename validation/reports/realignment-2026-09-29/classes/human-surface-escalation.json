@@ -1,0 +1,732 @@
+{
+ "attempts": [
+  {
+   "key": "human-surface-escalation",
+   "title": "Human participation exchange pathway",
+   "where": "human-surface-vessel; docs/architecture/HUMAN_PARTICIPATION.md",
+   "tried": "uiQuestion_write -> journaled question -> browser -> uiFeedback -> read by activity",
+   "outcome": "partial",
+   "evidence": "journals split: /workspace/interactor-log (last 09-22, ends in probe-panel/ghost-ask residue) vs /workspace/git/super-repo/interactor-log (last 09-27); doc says Learn 'not established'; unit runs from /vessels image layer",
+   "date": "2026-09-21..27",
+   "source": "docs-1"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "S2->S3 intervention measurement shapes",
+   "where": "docs/SUBSTRATE.md; development-vessel intervention-evaluate.ts",
+   "tried": "operatorIntervention, interventionRefused, interventionRateReport",
+   "outcome": "partial",
+   "evidence": "Only interventionRefused exists and is advertised; other two absent",
+   "source": "docs-3"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Human complaint falsely closed by commit-mention evidence",
+   "where": "77cf692, 018fd05, fd601c2, b90cdcf (08-07)",
+   "tried": "Revert-aware closure, judge by the complainant, weight human reports.",
+   "outcome": "partial",
+   "date": "2026-08-07",
+   "evidence": "The UI complaint closed 5 seconds after every pick, three reopens in a row.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Escalation disposition and human-gap starvation",
+   "where": "9cb83d0, 891304c, 60722a6, 7d48a27, f5bbaa0, 03d98c1, 31ce2f7, f80bc67",
+   "tried": "Disposition executor, priority, lane allocation, persistent dedupe",
+   "outcome": "partial",
+   "date": "2026-08-28..09-25",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Three generations of the human surface",
+   "where": "workbench (04-22..05-24), obsidian-vessel (06-15..08-22), human-surface-vessel (09)",
+   "tried": "Rebuilt the surface twice",
+   "outcome": "superseded",
+   "evidence": "workbench 0 autonomous commits, not deployed; obsidian dev stopped 08-22",
+   "source": "git-mid"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "5 landings repairing a replaced surface",
+   "where": "stateful-ui 09-20..09-28",
+   "tried": "panel overwrite fixes on :8270",
+   "outcome": "partial",
+   "evidence": ":8270 panels 480 (09-22) \u2192 794 now; no human reader per operator memory",
+   "source": "git-small"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Hopeless-seal escalations to pinned :8270",
+   "where": "gap-to-feature hopeless(); resolveUiWritePassthrough",
+   "tried": "apply side repaired; delivery side never connected",
+   "outcome": "failed",
+   "date": "2026-09-20..2026-09-25",
+   "evidence": "248 needs-human, 0 answered; in-memory dedupe re-asks 37x per day",
+   "source": "live-gaps"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "09-22 diagnosis that escalations go to the replaced stateful-ui (:8270)",
+   "where": "memory 2026-09-22; dev-vessel ui-write-passthrough.ts:25, docs-decision-deliver.ts:42, seed/draft-gap-closing-activity.ts:118",
+   "tried": "Diagnosed and filed; the pin and default were not removed",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "stateful-ui went from 480 to 794 panels, with 318 created 09-22..09-28. feedback array has 5 entries total, the last a durability-probe dismiss on 09-25. STATEFUL_UI_VESSEL_ENDPOINT is unset, so the :8270 default is live",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Escalation answers lift EDIT_SITE/EXPECTED_LITERAL/VERIFY_SHAPE into predicates",
+   "where": "escalation-disposition-apply.ts d3e1ca2 (operator) + substrate union fix",
+   "tried": "Bootstrap the parser (the lane failed 3x at drafting), then union answered panels with scan ids",
+   "outcome": "worked",
+   "date": "2026-09-14",
+   "evidence": "12/12 gaps armed on 09-15; concept-usage-record edit_site None->set. Per the index, escalations later went to an unread :8270 surface",
+   "source": "memory-1"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Seal escape loop (answer readback + disposition executor)",
+   "where": "solicitation-outcome-scan 421052c; escalation_disposition_apply 9cb83d0",
+   "date": "2026-08-28",
+   "tried": "Match answers by panel_id; bounded exemption 3",
+   "outcome": "superseded",
+   "evidence": "Worked 08-28 (hopeless_excluded 79->78); unattended 16 days (09-14, 175 asks/3 answered); 09-22 escalations pinned to replaced :8270, 248 unanswered, seal permanent",
+   "source": "memory-10"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Escalation backlog self-report",
+   "where": "development-vessel f169ab1, 4bffab0",
+   "date": "2026-09-14",
+   "tried": "Upsert operator-escalation-backlog gap; filter moot panels",
+   "outcome": "worked",
+   "evidence": "94 unanswered/30 answered after dropping 51 moot panels",
+   "source": "memory-10"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Dispatch record retention compaction",
+   "where": "goal-host fe609c4",
+   "tried": "Keep executionId on compacted records up to 2000",
+   "outcome": "worked",
+   "date": "2026-09-1x",
+   "evidence": "Window grew past 196 min; feedback verdicts attachable",
+   "source": "memory-2"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Obsidian write-back satisfier liveness",
+   "where": "goal-host e62801b (substrate-authored)",
+   "tried": "Widen the satisfier predicate to proxy shapes",
+   "outcome": "unknown",
+   "date": "2026-07-15",
+   "evidence": "Landed and self-deployed; vault write unverifiable (in-container Obsidian GUI dead)",
+   "source": "memory-2"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Seal escape valve made answerable",
+   "where": "421052c (08-28); pinned STATEFUL_UI_VESSEL_ENDPOINT :8270",
+   "tried": "Repaired the apply/read-back side.",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "Delivery still went to replaced stateful-ui-vessel :8270: 248 needs-human-* questions, 0 answered. The live surface :8310 never reads them, so the seal is permanent.",
+   "source": "memory-3"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Bootstrap human-surface-vessel authoring root",
+   "where": "in-container subtree split + local bare origin; 8a83c8c, cab60aa, a1532dc, 1dcfd4b",
+   "tried": "Give the plain-file vessel a push clone so the substrate can author it",
+   "outcome": "partial",
+   "date": "2026-09-22",
+   "evidence": "The form loop landed via the chain. /vessels is an image layer, deploy (cut 1) is open, and submodule conversion is pending.",
+   "source": "memory-4"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Dispatch over p2p as a shape",
+   "where": "3b4f921a supersedes 4e50f1fa",
+   "tried": "Use the advertised goalDispatchAsync over the relay and normalize envelopes.",
+   "outcome": "worked",
+   "date": "2026-08-19",
+   "source": "memory-5"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Escape valve four links",
+   "where": "60722a6, be891f3",
+   "tried": "Fix verb parsing, selection priority and cooldown burn.",
+   "outcome": "partial",
+   "date": "2026-08-29",
+   "evidence": "Link 4 (provide_information writes no field compose reads) is OPEN. The 09-22 index records 248 escalations unanswered and a permanent seal.",
+   "source": "memory-5"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Human surface root-and-stem replacement",
+   "where": "repos/human-surface-vessel; packages design-tokens, interaction-conformance",
+   "date": "2026-08-07",
+   "tried": "retire react-renderer/stateful-ui, build one vessel on 8310",
+   "outcome": "partial",
+   "evidence": "09-20 baseline: 0/3,977 templates consume ui shapes; consumption severed 3 ways; escalations still to :8270",
+   "source": "memory-6"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Consumption link increment 1",
+   "where": "human-surface 1704850a, cbd134e5",
+   "date": "2026-09-20",
+   "tried": "store predicate + reader + denylist for escalation kinds",
+   "outcome": "partial",
+   "evidence": "solicitation_outcome_scan answered:1; value unvalidated; replay path bypasses guards",
+   "source": "memory-6"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "ui_legibility_scan can fail + re-observation closure",
+   "where": "development-vessel 354a134",
+   "date": "2026-08-07",
+   "tried": "structuredError when unobservable; close own findings on rescan",
+   "outcome": "superseded",
+   "evidence": "worked 08-07 both directions; 09-20 22/23 executions failed, reads as-const literals",
+   "source": "memory-6"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Grounding badge requires non-LLM shape",
+   "where": "obsidian-vessel 81a1c41",
+   "date": "2026-07-27",
+   "tried": "stop badging bare-LLM answers grounded",
+   "outcome": "worked",
+   "evidence": "verified live both cases in motion",
+   "source": "memory-6"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "federation_join_health on 401",
+   "where": "super-repo aadb1c1c",
+   "tried": "Shaped emission when registerAtHub gets 401/403",
+   "outcome": "worked",
+   "date": "2026-07-24",
+   "evidence": "class detector for stale-key blank panel",
+   "source": "memory-7"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Human surface push refused, cutovers parked",
+   "where": "human-surface-vessel fb042e9",
+   "tried": "Created a GitHub repo, repointed origin, hand-landed the index",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "/api/questions went from 20s to 5ms. A test had been writing 501 fake records per run to the live journal.",
+   "source": "memory-8"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Human reach-override latch",
+   "where": "goal-host maybeConsumeOracleLabel",
+   "date": "2026-09-12",
+   "tried": "source-aware latch",
+   "outcome": "worked",
+   "evidence": "human overrides 0 -> 2 in 48h; 87% of consumption attempts find no_labels",
+   "source": "memory-9"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Intervention tracking",
+   "where": "openspec/changes/2026-05-23-intervention-tracking; development-vessel/src/resolvers/intervention-evaluate.ts",
+   "tried": "operatorIntervention / interventionRefused shapes + audit workflow",
+   "outcome": "unknown",
+   "date": "2026-05-23",
+   "evidence": "tasks 0/43 but code exists; emission in practice not verified",
+   "source": "openspec-1"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Obsidian legibility surface (clarify, reformulate, outcome note)",
+   "where": "openspec/changes/obsidian-legibility-surface",
+   "tried": "spec only",
+   "outcome": "dormant",
+   "date": "2026-07-18",
+   "evidence": "no implementation hits in goal-host, human-surface, obsidian or dev-vessel src",
+   "source": "openspec-10"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "concept-bridge Part B, the substrate-authored successor",
+   "where": "2026-05-28-concept-bridge-observer tasks 3.x",
+   "date": "2026-05-28",
+   "tried": "The lift test: the substrate should author the next adapter from substrateGap after palette expansion.",
+   "outcome": "dormant",
+   "evidence": "Tasks 3.1-3.5 unticked; the hand-authored observer is still the producer.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Obsidian-vessel as bidirectional concept-db frontend",
+   "where": "openspec/changes/2026-05-30-obsidian-vessel-concept-db-frontend; obsidian-vessel src",
+   "date": "2026-05-30",
+   "tried": "Read mirror, canvas, writeback and bus listener, with a hardcoded default endpoint 127.0.0.1:18260.",
+   "outcome": "dormant",
+   "evidence": "18/21 code tasks done, but the acceptance probes for canvas, writeback and live push are unchecked. The live surface is human-surface-vessel plus obsidian-* timers.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Implicit human-interaction closure (G workstream)",
+   "where": "2026-07-01 umbrella G1-G4; obsidian 82099b4a, febe74e",
+   "tried": "solicitation_id stamping, expectation verify detector, operator-presence guard, interaction_surface_gap self-modification",
+   "outcome": "dormant",
+   "date": "2026-07-01",
+   "evidence": "G1.1 landed; G1.2, G2.2-G4.3 open; capability-gap-interaction-expectation-verify compose UNFAVORABLE and gap now absent; surface later replaced",
+   "source": "openspec-4"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Escalation-disposition executor",
+   "where": "development-vessel escalation-disposition-apply.ts",
+   "date": "2026-08-28",
+   "tried": "4-verb executor consuming solicitationOutcomeReport with bounded re-test exemption; built 08-29..09-15 (91cc1ff, 891304c, f4a6a72, d3e1ca2, 9c13474)",
+   "outcome": "dormant",
+   "evidence": "0 gaps carry a disposition or human_* closed_reason; gap orphaned-capability-escalation_disposition_apply OPEN; answers never arrive (memory: 248 escalations to pinned :8270, 0 answered)",
+   "source": "openspec-7"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "do-anything-surface proposal (browser do-anything box with honest reached verdict)",
+   "where": "openspec/changes/do-anything-surface (9ea845d4 2026-08-07)",
+   "tried": "Reuse goal-host dispatch; add a browser box with starters, reached headline, artifact evidence, one-gesture grading, all traced; initially on stateful-ui-vessel, then superseded in part by human-surface-stack",
+   "outcome": "partial",
+   "evidence": "Realized in repos/human-surface-vessel: Surface.tsx:57, AskRegion.tsx:219 tag surface:do-anything, StarterChips/RunRow/GradeGesture, proxy.ts:654 /api/run-goal via goalDispatchAsync; :8310 healthy. Falsifiers 1/2/5 never measured; stateful-ui-vessel not retired (794 panels on :8270).",
+   "source": "openspec-8"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Replace 3 UI stacks with one human-surface-vessel",
+   "where": "openspec/changes/human-surface-stack; repos/human-surface-vessel",
+   "tried": "Bun+Hono+Vite+React19 surface, inherit uiPanel/uiQuestion/uiFeedback/interactor* shapes, retire stateful-ui-vessel/react-renderer/workbench",
+   "outcome": "partial",
+   "date": "2026-08-07",
+   "evidence": "surface live on both nodes; stateful-ui-vessel still running and producing uiPanel_write on node 1; react-renderer/workbench on disk (gitignored)",
+   "source": "openspec-9"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Six coax goals to add question read route",
+   "where": "human-surface-vessel src/routes/proxy.ts; compose clone",
+   "tried": "Dispatched through surface",
+   "outcome": "failed",
+   "date": "2026-08-14",
+   "evidence": "5 admitted then refused CAPACITY (1 directed slot, autonomous refills same second); 1 not admitted (verb whitelist); substrate's own /v2/panels draft left non-typechecking in dirty clone, blocked all composes, then vanished.",
+   "source": "reports-4"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Lifecycle audit fixes: UI packaging, receipts, membership, relay",
+   "where": "Dockerfile.substrate, vessel-ctl.sh installed.json, entrypoint.sh, spoke-federate.sh",
+   "tried": "Operator edits plus one dispatched receipt fix",
+   "outcome": "worked",
+   "date": "2026-09-22",
+   "evidence": "membership-acceptance-PASS, no-overlay-acceptance-PASS. The relay join was never driven through a real spoke.",
+   "source": "reports-5"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Feedback index for /api/questions",
+   "where": "human-surface fb042e9 (operator identity)",
+   "tried": "Index feedback by panel.",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "20 s to 5 ms. The cause was 94k fake feedback rows from participation.test.ts; 48 cutovers had been refused at push scope.",
+   "source": "reports-6"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Escalation read-back and disposition executor (seal escape valve)",
+   "where": "fe52076, 9cb83d0 (08-29)",
+   "tried": "Let human answers reach the gap with a bounded per-gap re-test exemption",
+   "outcome": "reverted",
+   "date": "2026-08-29",
+   "evidence": "Worked on 08-29 (hopeless_excluded 79->78). By 09-22 memory records 248 escalations posted to a pinned :8270 replaced vessel with 0 answers, so the seal is permanent again.",
+   "source": "reports-8"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Supervised repair of pre-selection feedback labelling",
+   "where": "dispatches e55b8618 and a0603d3e (09-11)",
+   "tried": "Operator-authored goal with localization of the MCP/API/schema contracts",
+   "outcome": "failed",
+   "date": "2026-09-11",
+   "evidence": "The goal was rewritten to the wrong file (goal-host index.ts region not_reached) and then anchored on the MCP field selectedTemplateId. The same grep ran 6 times, then a TS1128/TS1005 rollback.",
+   "source": "reports-8"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Human surface questions index + GitHub remote",
+   "where": "human-surface-vessel fb042e9",
+   "date": "2026-09-26T21:35Z",
+   "tried": "operator hand-landed index; private repo created",
+   "outcome": "worked",
+   "evidence": "Page 10-22s -> 5.5ms; 48 verified surface patches refused in 12h for missing remote; Questions header 45 vs 1,523 persists",
+   "source": "transcripts-4"
+  }
+ ],
+ "problems": [
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Two contradictory human-answer semantics in docs: INTERACTIVE_ACTIVITIES falls back to default/options[0] when non-interactive, while HUMAN_PROJECT_LIFECYCLE says no timeout or preselected option is a human answer; uiquestion escalation channel write-only",
+   "root_cause": "Fossil doc not retired when the contract changed",
+   "source": "docs-2"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "The human surfaces live on the syzygy island; node 1 obsidian-intake SKIPPED 681x/24h (no obsidian:note advertised); the surface shows a federated peer's findings as its own after a local restart",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "root_cause": "Two disconnected federation islands; federation fallback lacks provenance of rows",
+   "source": "federation-relay"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "25 of 47 verified parked patches target human-surface proxy.ts and can never land",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-26",
+   "recurrences": 1,
+   "root_cause": "human-surface-vessel has no gitlink or push clone (unauthorable). The park has no exit or escalation for it.",
+   "source": "gap-history"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Human surface rebuilt 3 times; obsidian timers still tick and SKIP every run",
+   "first_seen": "2026-04-22",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Surface replaced without retiring its loops; the new surface is outside the authorable set",
+   "source": "git-mid"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Autonomous effort spent on the replaced :8270 surface; panels grow unread (794)",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "pinned escalation target outlived its human reader",
+   "source": "git-small"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "obsidian dispatchId/executionId confusion (4 fixes); human surface not registered in discovery until 06-13",
+   "first_seen": "2026-06-03",
+   "last_seen": "2026-06-29",
+   "recurrences": 6,
+   "root_cause": "surface contracts not shaped; plain-dir vessels outside the authoring loop",
+   "source": "git-super-1"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Human surface unreachable from host (loopback bind, unpublished, not baked); escalations to a vessel nobody reads",
+   "root_cause": "Two declarations of one fleet (Makefile vs compose vs baked unit) with nothing comparing them",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-27",
+   "recurrences": 7,
+   "source": "git-super-2"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "248 escalations unanswered; re-asks after restart; question cards lack context",
+   "first_seen": "2026-09-20",
+   "last_seen": "2026-09-26",
+   "recurrences": 8,
+   "root_cause": "escalation writer pins :8270 which no human surface reads; in-memory dedupe",
+   "source": "live-gaps"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "gap escalations keep going to replaced stateful-ui :8270 (794 panels, 5 feedback)",
+   "root_cause": "dev-vessel defaults STATEFUL_UI_VESSEL_ENDPOINT to :8270 with env unset; seed drafter prompts teach :8270; stateful-ui still registered as a ui* owner",
+   "first_seen": "2026-09-22 (diagnosed)",
+   "last_seen": "2026-09-28",
+   "recurrences": 318,
+   "source": "live-resolvers"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Human answers unread, truncated or destroyed; panels move under the reader",
+   "root_cause": "Zero readers for human_disposition_answer; tracked log; escalations sent to the replaced :8270 vessel",
+   "first_seen": "2026-08-05",
+   "last_seen": "2026-09-22",
+   "recurrences": 4,
+   "source": "memory-1"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "1755 asks/48h unreadable (08-28); 175 asks 3 answered, operator silent 16 days (09-14); 248 asks to pinned replaced vessel (09-22); UI header undercounts; scalar values render as code",
+   "root_cause": "Writer pins peer address; panel store not retired with gap; no human reads the channel the system writes to",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-25",
+   "recurrences": 4,
+   "source": "memory-10"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Feedback plane unused and short-retention, 401 on labels, answers not applied, bundle treadmill, dead GUI, escalations to a replaced vessel",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-09-1x",
+   "recurrences": 6,
+   "source": "memory-2"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Questions to humans go unread (248, 0 answered). The uiQuestion exit returns 500. Gaps vanish from the ui_legibility board as soon as a lane touches them.",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-09-22",
+   "recurrences": 4,
+   "root_cause": "The escalation writer pins the replaced vessel; category rewrites in substrateGap_write fight the surface filter.",
+   "source": "memory-3"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Human questions go unread (248 escalations to a replaced vessel, hopeless escalation, verdict latch); the live human surface can't be authored by the substrate",
+   "first_seen": "2026-08-04",
+   "last_seen": "2026-09-22",
+   "recurrences": 4,
+   "root_cause": "Pinned writer endpoints; human-surface is plain files, not a submodule; answers have no runtime reader",
+   "source": "memory-4"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "The dispatch button sticks, human verdict notes are dead storage, escalations are posted to a vessel nobody reads.",
+   "root_cause": "Field-name mismatches and write-only human channels.",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-08-29",
+   "recurrences": 4,
+   "source": "memory-5"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Human surface redesigned 3x; answers/escalations never consumed",
+   "root_cause": "consumption link severed (kind filters, journal format, pinned :8270); graders read fiction; presentation not learnable",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-22",
+   "recurrences": 4,
+   "source": "memory-6"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Questions nobody answers (uiQuestion has no read producer), the panel starved of data, obsidian-desktop crash-looping 58,875 times",
+   "root_cause": "The surface is not self-updating, federation reads are split, and the escalation read shape is missing",
+   "first_seen": "2026-07-15",
+   "last_seen": "2026-08-23",
+   "recurrences": 6,
+   "source": "memory-7"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Human surface push refused, 48 verified cutovers parked, O(PxF) load from test residue.",
+   "root_cause": "The surface vessel is outside the authorable submodule set, with a local bare remote.",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-09-26",
+   "recurrences": 2,
+   "source": "memory-8"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Human complaint channel contaminated by substrate traffic (351/384); surface store volatile; false human escalations from provenance counting",
+   "first_seen": "2026-09-06",
+   "last_seen": "2026-09-07",
+   "recurrences": 2,
+   "root_cause": "Machine writes on the human shape; closure by commit count instead of measurement",
+   "source": "memory-9"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Human channel built but response half unregistered or dispatch dead",
+   "first_seen": "2026-06-15",
+   "last_seen": "2026-09-22",
+   "recurrences": 5,
+   "root_cause": "respond/grade resolvers unregistered; escalations pinned to a replaced vessel",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "2873 needs-human escalations from node 2 throw 'Unable to connect' since 09-26; no human ever sees a node-2-owned gap's question",
+   "root_cause": "resolveUiWritePassthrough posts to STATEFUL_UI_ENDPOINT defaulting to local :8270; stateful-ui-vessel masked on compute (same class as the 09-22 '248 escalations to a vessel no human reads')",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 2873,
+   "source": "node2-runtime"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Human answers never take effect; category seal permanent",
+   "root_cause": "escalations posted to a replaced vessel no human reads; the executor has no input",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-26",
+   "recurrences": 1,
+   "source": "openspec-7"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "The replaced stateful-ui-vessel still runs and accumulates panels (480 on 09-22, 794 on 09-28) after human-surface-stack declared it retired",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "Supersession declared in docs but the unit was never masked; writers still pin :8270",
+   "source": "openspec-8"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Retired UI vessel still running and co-producing uiPanel_write/uiQuestion_write; escalations go to the unread one",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "root_cause": "The cutover was never executed. A dark or duplicate producer reads as available (the design warned about this on 08-07), and 248 escalations went to :8270 (memory 09-22).",
+   "source": "openspec-9"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Questions asked through channels nobody reads (uiQuestion 1,000/24h, 1755 escalations, 248 to replaced vessel); feedback route unreachable with API key",
+   "root_cause": "Write shape without read shape; pinned peers",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-22",
+   "recurrences": 4,
+   "source": "reports-1"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Fresh image UI 503 ui_not_built; feedback accepts stale/unknown asks; answer consumption unverified",
+   "root_cause": "UI not packaged in image; revision contract behind",
+   "first_seen": "2026-09-21",
+   "last_seen": "2026-09-22",
+   "recurrences": 1,
+   "source": "reports-3"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Questions to humans end where nobody looks: solicitation unreachable on attempt exhaustion, stored questions unreadable, 179/199 escalations hidden by kind allowlist, 248 escalations to replaced vessel, answers applied to nothing; later over-asking on every restart",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-09-29",
+   "recurrences": 5,
+   "root_cause": "Escalation writer/reader pairs keyed by hardcoded endpoint, closed kind allowlist, prose log detection, no consumer that applies answers to fields the compose path reads; in-process dedupe lost on restart.",
+   "source": "reports-4"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "The Questions header shows 45 awaiting against 376 to 1,601 unanswered; escalations re-asked on every restart; landings on :8270, the surface no human reads.",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "In-memory dedup; the slice total is never published; the escalation target is pinned to a replaced vessel.",
+   "source": "reports-6"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Surface questions count shows 43 against 178 actually unanswered; the surface showed another substrate's findings; parity checked ad hoc; the substrate cannot see its own surface; 312 gaps target the protected discovery vessel",
+   "root_cause": "No scheduled surface verification; no browser in the image",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-27",
+   "recurrences": 2,
+   "source": "reports-7"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "The seal's human escape is dead: 1755 escalations were unread (08-29, repaired); ESCALATE for federation-transport was only logged, 1071 times (09-11); memory 09-22: 248 escalations went to a replaced :8270 with 0 answered.",
+   "root_cause": "The escalation writer pins a peer or terminates in a log line, and has no consumed-by check",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-22",
+   "recurrences": 3,
+   "source": "reports-8"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "A laptop human-surface on a loopback-only port advertises uiQuestion and uiQuestion_write to the production hub, and nobody watches it (panels 0).",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "root_cause": "Registration does not tell apart a surface someone is watching from a fixture.",
+   "source": "syzygy"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Timer plane escalates futile repairs indefinitely (23->36) while pool plane learned to stop",
+   "first_seen": "2026-09-04",
+   "last_seen": "2026-09-16",
+   "recurrences": 2,
+   "root_cause": "Watchdog not an activity; no grading; re-declared MEMORY 09-22 (248 escalations)",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Questions header wrong (45 vs 1,523), re-asked after restart, 22s page",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-26",
+   "recurrences": 3,
+   "root_cause": "In-memory dedup sets; surface vessel outside authorable remotes until 09-26",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "surface store in-memory; solicitation panel it can never receive",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-08-21",
+   "recurrences": 1,
+   "root_cause": "store.ts no persistence",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "stateful-ui (the replaced surface) still accretes panels (480 on 09-22, 794 now). All 8 of its shapes are duplicated by human-surface in discovery.",
+   "root_cause": "The old vessel was never retired. dev-vessel still has 8270 defaults (compute-state-signature.ts:46, docs-decision-answer-scan.ts:151).",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "claims": [
+  {
+   "key": "human-surface-escalation",
+   "claimed_at": "2026-09-22",
+   "claim": "248 escalations were asked of a vessel no human reads (:8270)",
+   "where": "operator memory index",
+   "later": "On node 2 the same channel now fails before reaching any vessel: 2873 uiQuestion_write THREW since 09-26. Same class, worse hat.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "human-surface-escalation",
+   "claimed_at": "2026-08-28",
+   "claim": "Read-back repaired (outcomes 0->85, answered 0->1); executor spec gives the human answer an effect",
+   "where": "2026-08-28-escalation-disposition-executor/proposal.md",
+   "later": "executor built 08-29..09-15; 0 dispositions ever applied; its own orphaned-capability gap is open",
+   "source": "openspec-7"
+  },
+  {
+   "key": "human-surface-escalation",
+   "claimed_at": "2026-08-07",
+   "claim": "stateful-ui-vessel and react-renderer retired in favour of one human-facing vessel (human-surface-stack, cited by do-anything-surface)",
+   "where": "openspec/changes/do-anything-surface/proposal.md",
+   "later": "2026-09-28: stateful-ui-vessel.service still active with 794 panels",
+   "source": "openspec-8"
+  },
+  {
+   "key": "human-surface-escalation",
+   "claimed_at": "2026-08-07",
+   "claim": "stateful-ui-vessel to be cut over and retired; react-renderer and workbench removed",
+   "where": "human-surface-stack proposal falsifier 5, design s4",
+   "later": "not done: stateful-ui-vessel still running and producing uiPanel_write 09-28; react-renderer and workbench still on disk",
+   "source": "openspec-9"
+  },
+  {
+   "key": "human-surface-escalation",
+   "claimed_at": "2026-08-07",
+   "claim": "human-flow instrument usable 11/14 on a quiet fleet",
+   "where": "VALIDATION-3 s6",
+   "later": "the deployed surface measured 7/14 then 9/14; the instrument itself was found flattering (networkidle hang, early-exit denominator)",
+   "source": "openspec-9"
+  }
+ ]
+}
