@@ -1,0 +1,9 @@
+{
+  "description": "selfFactSpec rows (v1 as a committed data file) read at use time by development-vessel's self_fact_reconcile from the git object origin/dev:scripts/substrate/self-facts.json in each node's super-repo clone. A row registers one instrument (a fact function in self-fact-reconcile.ts): the node profiles whose node holds the copies it checks, the edit site its gaps point at, and its must-fail control. An instrument with no row does not run. REALIGNMENT 2026-09-29 §2.1 items 1, 3, 4, 5.",
+  "rows": [
+    { "id": "fleet_inventory_copy", "instrument": "fleet_inventory_copy", "profiles": ["standalone", "hub"], "edit_site": "repos/development-vessel/src/resolvers/pull-cutover.ts", "must_fail": "canary", "window_hours": 1 },
+    { "id": "authoring_root", "instrument": "authoring_root", "profiles": ["standalone", "hub"], "edit_site": "repos/development-vessel/src/resolvers/patch-with-tools.ts", "must_fail": "canary", "window_hours": 1 },
+    { "id": "manifest_checkout_lag", "instrument": "manifest_checkout_lag", "profiles": ["standalone", "hub"], "edit_site": "repos/development-vessel/src/resolvers/pull-cutover.ts", "must_fail": "canary", "window_hours": 1 },
+    { "id": "lane_coverage", "instrument": "lane_coverage", "profiles": ["standalone", "hub"], "edit_site": "repos/development-vessel/src/resolvers/feature-compose.ts", "must_fail": "canary", "window_hours": 1 }
+  ]
+}
