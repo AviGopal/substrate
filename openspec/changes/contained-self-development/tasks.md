@@ -55,6 +55,19 @@
 - [x] 7.6 LANDED `f26494b`: a gate-named symbol (`suspected_real_location`) resolves to its resolver file, so retries stop returning to the rejected edit_site.
 - [x] 7.7 FABRICATE-TO-SATISFY lens for refuters and the drafter's closure criterion (after b585a03 created the tree its falsifier checks for).
 - [x] 6.3c LANDED `375ec90`: decomposeGap refuses a step whose falsifier is the parent's own check (one step cannot flip it, so it cannot be verified alone).
+- [x] 6.3d LANDED `2de0ae8` (2026-09-29, directed, BYTE-EQUAL; tsc 0; suite 2298/33 = parent): the
+  gap_falsify pass decomposes up to 2 predicate-less gaps per scan BEFORE admission (edit site an
+  existing source file outside the scope exclusions; no decomposed_at; not a step/recommit/narrowed
+  child; no operator hold). Reason: decomposition was reached only after an admitted gap failed
+  compose twice, and admission excludes predicate-less gaps, so the 762 open detected gaps with an
+  edit site and no predicate were never decomposed (decomposition = 15 checked class1/2 steps in 48 h
+  vs 3 from inherit). Cost bound: scan ~20/day → ≤ ~40 LLM calls/day, one attempt per gap
+  (decomposed_at stamped on every attempt). Falsifier: node 1 logs `decomposing … before admission`
+  and `[gap-decompose]` outcomes; admitted count on node 2 rises above 7 as steps are written.
+  Related fixes the same night (value-per-cost 5.5(iv); CHECKINS 09-28 18:30–09-29 00:10):
+  holder-held calibration 76bf256/094c230; admission re-tightened to class1/class2 (pool record);
+  narrowed child waits for its parent's verdict 3df8ddd; class2 measured only where the store is
+  held 5d0788b.
 
 ## 8. System-side verification of autonomous landings (autonomy paused until 8.1–8.4 hold)
 
