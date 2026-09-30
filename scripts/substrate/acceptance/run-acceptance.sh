@@ -271,7 +271,7 @@ else
   run_dir="$root/run"; mkdir -p "$run_dir"
   driver="$run_dir/driver.sh"
   {
-    echo 'set -eE'
+    echo 'set -eE -o pipefail'
     echo "trap '[ -e \"$state_dir/err\" ] || printf \"%s\\t%s\\t%s\\n\" \"\$__acceptance_block\" \"\$LINENO\" \"\$BASH_COMMAND\" >\"$state_dir/err\"' ERR"
   } >"$driver"
   while IFS=$'\t' read -r n line _cases path; do
