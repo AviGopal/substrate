@@ -13,6 +13,7 @@ import {
   buildOutcomeRecord,
   collectCandidates,
   readConditions,
+  readDrawnForm,
   visibleSlice,
   type ExposureOutcome,
   type Rect,
@@ -114,5 +115,7 @@ export function reportExposureAct(
   askId?: string | null,
 ): void {
   if (typeof window === "undefined") return;
-  sendObservation(buildOutcomeRecord(ledger.act(solicitationId, outcome, askId), readConditions(window)));
+  const event = ledger.act(solicitationId, outcome, askId);
+  const drawn = readDrawnForm(window.document, solicitationId);
+  sendObservation(buildOutcomeRecord(drawn ? { ...event, drawn } : event, readConditions(window)));
 }

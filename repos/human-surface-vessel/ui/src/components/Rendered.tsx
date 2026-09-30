@@ -83,6 +83,21 @@ export function summarizeLine(plan: RenderPlan): string {
   return t.split("\n").find((l) => l.trim().length > 0)?.replace(/^#+\s*/, "") ?? "";
 }
 
+/**
+ * The plan `<Rendered>` draws for this content under this policy. Exported so a
+ * caller that must NAME the form elsewhere (a question row, for the form
+ * learner) names exactly the form the card draws — one function, not two.
+ */
+export function planFor(
+  content: Content,
+  policy: { formByShape?: Readonly<Record<string, string>>; learnedFormByShape?: Readonly<Record<string, string>> } | undefined,
+): RenderPlan {
+  const text = contentText(content);
+  return content.state === "absent" || text.trim().length === 0
+    ? ({ form: "empty", text: "", decidedBy: "empty_preview" } as RenderPlan)
+    : planContent(content.shape, text, content.state === "truncated", policy?.formByShape, policy?.learnedFormByShape);
+}
+
 export function Rendered({
   content,
   density = "full",
@@ -103,10 +118,7 @@ export function Rendered({
   const policy = useRenderPolicy({ enabled: !paused, intervalMs }).data;
   const text = contentText(content);
   const truncated = content.state === "truncated";
-  const plan =
-    content.state === "absent" || text.trim().length === 0
-      ? ({ form: "empty", text: "", decidedBy: "empty_preview" } as RenderPlan)
-      : planContent(content.shape, text, truncated, policy?.formByShape, policy?.learnedFormByShape);
+  const plan = planFor(content, policy);
 
   if (density === "row") {
     return (

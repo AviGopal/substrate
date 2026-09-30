@@ -162,6 +162,12 @@ export interface OutcomeEvent {
   readonly askId: string | null;
   /** How many presentation ticks had this id in the visible slice when the act happened. */
   readonly exposureCount: number;
+  /**
+   * The form the question was drawn in, READ OFF THE DOM at act time — the
+   * form learner's evidence. Absent when no drawn element for this id was on
+   * the page; never inferred.
+   */
+  readonly drawn?: { readonly form: string; readonly shape: string; readonly readFrom: "list_row" | "question_card" };
 }
 
 /**
@@ -328,7 +334,36 @@ export function buildOutcomeRecord(
     renderer_bundle: conditions.rendererBundle,
     viewport: conditions.viewport,
     presentation_variant: conditions.presentationVariant,
+    ...(event.drawn
+      ? { form: event.drawn.form, form_source: "dom", shape: event.drawn.shape, form_read_from: event.drawn.readFrom }
+      : {}),
   };
+}
+
+/**
+ * The form a solicitation was drawn in, from the page as it is now: its list
+ * row if that is mounted, else the open question card. Both carry the form
+ * `<Rendered>` planned for the body (see `planFor`). Null when neither is on
+ * the page — the record then says nothing about form rather than guessing.
+ */
+export function readDrawnForm(
+  root: ParentNode,
+  solicitationId: string,
+): { form: string; shape: string; readFrom: "list_row" | "question_card" } | null {
+  const id = CSS.escape(solicitationId);
+  const probes: [string, "list_row" | "question_card"][] = [
+    [`[${SOLICITATION_ATTR}="${id}"][data-form]`, "list_row"],
+    [`[data-question-body="${id}"] [data-form]`, "question_card"],
+  ];
+  for (const [selector, readFrom] of probes) {
+    const el = root.querySelector<HTMLElement>(selector);
+    const form = el?.getAttribute("data-form");
+    if (el && form) {
+      const shape = el.getAttribute("data-form-shape") ?? el.closest("[data-form-shape]")?.getAttribute("data-form-shape") ?? "human_question";
+      return { form, shape, readFrom };
+    }
+  }
+  return null;
 }
 
 // ─── DOM measurement ────────────────────────────────────────────────────────

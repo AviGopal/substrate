@@ -101,7 +101,9 @@ function QuestionCard({ incoming }: { incoming: Question }): ReactNode {
       </header>
 
       <section className="sf-view-section">
-        <Rendered content={fromPanel(QUESTION_CONTENT_SHAPE, question.body)} density="full" header={false} region="question_card" />
+        <div data-question-body={question.id} data-form-shape={QUESTION_CONTENT_SHAPE}>
+          <Rendered content={fromPanel(QUESTION_CONTENT_SHAPE, question.body)} density="full" header={false} region="question_card" />
+        </div>
       </section>
 
       {revised ? (

@@ -10,7 +10,12 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { reportExposureTick } from "../lib/exposure-reporter";
+import { useRenderPolicy } from "../api/queries";
+import { fromPanel } from "../lib/content";
+import { useLiveControls } from "../state/liveControls";
 import { questionGapId, questionSubject, useQuestions } from "../state/questions";
+import { planFor } from "./Rendered";
+import { QUESTION_CONTENT_SHAPE } from "./QuestionView";
 
 export function QuestionsList({
   selectedId,
@@ -21,6 +26,8 @@ export function QuestionsList({
 }): ReactNode {
   const { query, groups, ordered, ranking, changed, acceptedTicks, accept } = useQuestions();
   const listRef = useRef<HTMLDivElement | null>(null);
+  const { paused, intervalMs } = useLiveControls();
+  const policy = useRenderPolicy({ enabled: !paused, intervalMs }).data;
 
   useEffect(() => {
     if (acceptedTicks === 0 || !listRef.current) return;
@@ -60,6 +67,10 @@ export function QuestionsList({
                     data-status={status}
                     data-solicitation-id={question.id}
                     data-exposure-role="list_row"
+                    // The form the card draws this question's body in — the
+                    // form learner's evidence, read off this row at act time.
+                    data-form={planFor(fromPanel(QUESTION_CONTENT_SHAPE, question.body), policy).form}
+                    data-form-shape={QUESTION_CONTENT_SHAPE}
                     {...(typeof question.rank === "number" ? { "data-rank": String(question.rank) } : {})}
                     {...(question.because?.[0] ? { "data-rank-explanation": question.because[0] } : {})}
                     aria-current={selectedId === question.id ? "true" : undefined}
