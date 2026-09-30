@@ -5,9 +5,13 @@
  * Content is rendered at full size — this pane is the reading surface, and a
  * capped box inside it is a second scroller hiding the evidence.
  *
- * Join: `poolEvents` carry time and source; `poolProvenance` carries content.
- * Each event takes the first unused provenance entry of its shape; provenance
- * no event claimed is appended untimed. Steps sort by `at`, then `index`,
+ * A dispatch may walk several times; the trace is split into attempts (see
+ * lib/attempts) and every attempt stays on screen, so a retry appends rather
+ * than replacing what the reader was looking at.
+ *
+ * Join, within an attempt: events carry time and source; provenance carries
+ * content. Each event takes the first unused provenance entry of its shape;
+ * provenance no event claimed is appended untimed. Steps sort by `at`, then `index`,
  * because several are stamped in the same millisecond.
  */
 
@@ -15,6 +19,7 @@ import type { ReactNode } from "react";
 import type { GoalWalkState, PoolEvent, WalkStep } from "../api/types";
 import { normalizeLedger, planContent, type LedgerEntry } from "../lib/ledger";
 import { formatChars } from "../lib/time";
+import { segmentAttempts, type AttemptSegment } from "../lib/attempts";
 import { walkLogText } from "../lib/walk";
 import { ContentRender } from "./ContentRender";
 import { FormDecisionRecorder } from "./FormDecisionRecorder";
@@ -38,14 +43,14 @@ function str(v: unknown): string | null {
   return typeof v === "string" && v.length > 0 ? v : null;
 }
 
-function buildItems(walk: GoalWalkState): readonly TraceItem[] {
-  const entries = normalizeLedger(walk.poolProvenance);
+function buildItems(segment: AttemptSegment): readonly TraceItem[] {
+  const entries = segment.provenance ? normalizeLedger(segment.provenance) : [];
   const used = new Set<number>();
   const items: TraceItem[] = [];
   const shownShapes = new Set<string>();
   let order = 0;
 
-  walk.poolEvents.forEach((event: PoolEvent) => {
+  segment.events.forEach((event: PoolEvent) => {
     const shape = event.shape ?? "impulse";
     const idx = entries.findIndex((e, i) => !used.has(i) && e.shape === shape);
     if (idx >= 0) used.add(idx);
@@ -56,7 +61,7 @@ function buildItems(walk: GoalWalkState): readonly TraceItem[] {
     items.push({ kind: "impulse", at: num(event.at), order: order++, shape, source: str(event.source), entry });
   });
 
-  walk.steps.forEach((step) => {
+  segment.steps.forEach((step) => {
     items.push({ kind: "step", at: num(step["at"]), order: num(step["index"]) ?? order, step });
     order++;
   });
@@ -181,6 +186,38 @@ function ImpulseRow({
   );
 }
 
+function AttemptItems({
+  segment,
+  time,
+  formByShape,
+  policyRevision,
+}: {
+  segment: AttemptSegment;
+  time: (at: number | null) => string;
+  formByShape?: Readonly<Record<string, string>>;
+  policyRevision: number | null;
+}): ReactNode {
+  const items = buildItems(segment);
+  if (items.length === 0) return <p className="sf-trace-none">Nothing recorded yet</p>;
+  return (
+    <ol className="sf-trace">
+      {items.map((item) =>
+        item.kind === "step" ? (
+          <StepRow key={`step-${item.order}`} step={item.step} t={time(item.at)} />
+        ) : (
+          <ImpulseRow
+            key={`imp-${item.order}`}
+            item={item}
+            t={time(item.at)}
+            formByShape={formByShape}
+            policyRevision={policyRevision}
+          />
+        ),
+      )}
+    </ol>
+  );
+}
+
 export function Trace({
   walk,
   formByShape,
@@ -190,30 +227,49 @@ export function Trace({
   formByShape?: Readonly<Record<string, string>>;
   policyRevision: number | null;
 }): ReactNode {
-  const items = buildItems(walk);
-  const t0 = items.find((i) => i.at !== null)?.at ?? null;
+  const segments = segmentAttempts(walk);
+  const t0 = segments.find((s) => s.startAt !== null)?.startAt ?? null;
   const time = (at: number | null): string => (at !== null && t0 !== null ? clock(at - t0) : "");
+  const empty = segments.every((s) => s.events.length === 0 && s.steps.length === 0 && (s.provenance?.length ?? 0) === 0);
+  const running = walk.status === "running";
 
   return (
     <>
-      {items.length === 0 ? (
+      {empty ? (
         <p className="sf-trace-none">No impulses recorded{walk.completionShapes?.length ? ` · covered by ${walk.completionShapes.join(", ")}` : ""}</p>
+      ) : segments.length === 1 && segments[0] ? (
+        <AttemptItems segment={segments[0]} time={time} formByShape={formByShape} policyRevision={policyRevision} />
       ) : (
-        <ol className="sf-trace">
-          {items.map((item) =>
-            item.kind === "step" ? (
-              <StepRow key={`step-${item.order}`} step={item.step} t={time(item.at)} />
-            ) : (
-              <ImpulseRow
-                key={`imp-${item.order}`}
-                item={item}
-                t={time(item.at)}
-                formByShape={formByShape}
-                policyRevision={policyRevision}
-              />
-            ),
-          )}
-        </ol>
+        <>
+          <nav className="sf-attempt-nav" aria-label="Attempts">
+            {segments.map((seg) => (
+              <a key={seg.number} href={`#attempt-${walk.dispatchId}-${seg.number}`}>
+                {seg.number}
+              </a>
+            ))}
+          </nav>
+          {segments.map((seg) => (
+            // Every attempt stays where it is; a new one appends below.
+            <section
+              key={seg.number}
+              id={`attempt-${walk.dispatchId}-${seg.number}`}
+              className="sf-attempt"
+              data-current={seg.current && running}
+            >
+              <h4 className="sf-attempt-head">
+                <span>Attempt {seg.number}</span>
+                <span className="sf-attempt-meta">
+                  {time(seg.startAt)}
+                  {seg.reason ? ` · ${seg.reason}` : ""}
+                  {seg.current ? (running ? " · in progress" : " · final") : ""}
+                  {seg.partial ? " · earlier events not retained" : ""}
+                  {!seg.current && seg.provenance === null ? " · content not retained" : ""}
+                </span>
+              </h4>
+              <AttemptItems segment={seg} time={time} formByShape={formByShape} policyRevision={policyRevision} />
+            </section>
+          ))}
+        </>
       )}
       {walk.walkLog.length > 0 ? (
         <details className="sf-walklog-details">
