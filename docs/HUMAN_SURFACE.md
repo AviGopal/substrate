@@ -6,8 +6,8 @@ command's output as terminal text — rather than as JSON on a screen.
 
 This document explains what a surface is and how it behaves. Putting one in front
 of a person is sequence D of [README § Installation](../README.md#installation), the
-only place setup commands appear: the `surface` profile, pointed at a hub with the
-two join inputs, waiting for the `served` verdict.
+only place setup commands appear: the `surface` profile, joined to a hub with the one
+join token the hub issues, waiting for the `served` verdict.
 
 A surface does not need a substrate of its own. It runs as a **UI-only
 federated spoke**: a container holding just a discovery registry, the federation
@@ -27,14 +27,16 @@ federation transport.
   indistinguishable from a healthy one until the surface fails to register:
 
   ```bash
-  curl -s http://<hub-host>:18100/bootstrap | jq '.relay_multiaddrs | length'   # must be > 0
+  curl -s http://<hub-host>:<P100>/bootstrap | jq '.relay_multiaddrs | length'   # must be > 0
   ```
 
   A hub launched with the `hub` profile runs its relay in-container and
   advertises it at its `PUBLIC_IP`; see [`FEDERATION.md`](FEDERATION.md).
-- **A key issued by that hub** as the surface's `METABOB_API_KEY`. A key minted
-  locally is not valid there and every hub-facing call answers 401, which
-  surfaces later as a page that loads and then cannot dispatch anything.
+- **A join token from that hub** (`docker exec <hub> substrate-key join <name>`). It
+  carries the hub's advertised discovery endpoint and a key the hub issued, which
+  becomes the surface's `METABOB_API_KEY`. A key minted locally is not valid there and
+  every hub-facing call answers 401, which surfaces later as a page that loads and then
+  cannot dispatch anything.
 - **No credential for the image, and no checkout.** `ghcr.io/avigopal/substrate`
   is a public package, and the surface and its built UI are baked into it.
 
@@ -53,6 +55,13 @@ adopt.
 Each run gets a page showing what was produced and whether the goal was actually
 **reached** — which is not the same as the run exiting cleanly. Feedback typed
 back into the surface is recorded as an operator verdict, not a comment.
+
+A script can do what the page does, on the surface's own port: `POST /api/run-goal`
+with `{"goal": "<text>"}` dispatches and returns a `dispatchId`, and
+`GET /api/executions/<dispatchId>` reports that run's walk state (the page reads the
+same state through `/api/resolve`). A surface works end to end
+when a goal sent this way comes back reached with a durable trace — a loaded page
+or a `/health` answer alone does not show that.
 
 ---
 
@@ -77,11 +86,14 @@ that is not reachable — not the page.
 
 **The hub URL must work from inside the container.** A check you run with `curl`
 on the *host* and the surface's own calls from *inside* the bridge network see
-different addresses. On a same-host hub/surface pair those differ: `127.0.0.1`
-answers only from the host, the docker bridge gateway only from the container.
-Use the machine's LAN IP, which answers from both. A hub URL that is unreachable
-from the host reports `HTTP 000`, which reads like a federation failure and is
-not one.
+different addresses. On a same-host hub/surface pair, `127.0.0.1` from inside the
+container is the container itself, and under rootless Podman the host's LAN address
+is not reachable from inside a container either; the join is refused at boot. Address
+the hub by the engine's host name (`host.containers.internal` on Podman,
+`host.docker.internal` on Docker), as sequence C of the install page shows. A join
+token minted on the hub carries the hub's `PUBLIC_IP`, so on one host use the explicit
+two-value form with the engine's host name. A hub URL that is unreachable from the
+host reports `HTTP 000`, which reads like a federation failure and is not one.
 
 **A local port may legitimately answer nothing.** The container publishes the
 usual `18xxx` range, but the units behind most of those ports are not running
@@ -95,7 +107,7 @@ inventory kept in the container's volume. The image seeds that file on first
 boot; from then on the volume copy is authoritative, deliberately — a substrate
 is allowed to alter its own membership.
 
-A repo-side inventory change now reaches a running container on its own.
+A repo-side inventory change reaches a running container on its own.
 `substrate-pull-sync` converges both the inventory and the selector that reads
 it, so you do not need an image rebuild to change a roster. Two things to hold
 about the timing:
@@ -143,7 +155,7 @@ stops converging. The install hook builds only when `dist` is absent.
 The cost lands on whoever changes UI source: a `ui/src` commit must carry its
 rebuilt bundle. The pre-commit hook refuses otherwise and prints the command.
 It cannot cover a commit path that skips hooks — substrate-authored commits
-included — so a substrate that edits `ui/src` today still lands source without a
+included — so a substrate-authored `ui/src` change can land source without a
 bundle.
 
 The reliable check is the bundle, not the commit: compare the
@@ -166,24 +178,26 @@ One hazard on the same path is worth knowing:
   relay anchor does not restart at all — it starts direct-only and polls for one —
   so a surface that never reached the relay looks identical to a federated one
   under both `--state=failed` and `restarts=`. The signal that separates them is
-  the reservation: `curl -s http://127.0.0.1:8401/health` inside the container and
-  read `.transport.activeReservations`; `0` means the surface is running and
-  federating nothing.
+  the reservation: `docker exec <container> curl -s http://127.0.0.1:8401/health` and
+  read `.transport.reservationsHeld`; `0` means the surface is running and
+  federating nothing. (`.transport.activeReservations` counts circuit listen
+  addresses, which can outlive the reservation; `.transport.phantomSuspected` flags
+  that case. See [`FEDERATION.md`](FEDERATION.md) § "Verifying a join".)
 
 ## Stopping and starting one
 
 A surface container can be stopped and started; it re-registers with the hub and
-its shapes reappear in the registry without help. Two things make that true, and
-both were silently false until they were tested by actually doing it:
+its shapes reappear in the registry without help. Two invariants make that true:
 
-- **The secrets must be persisted.** `/workspace/.substrate-secrets` had two
-  writers that each truncated it, so `API_KEY_SECRET` could vanish. A container
-  in that state runs indefinitely and refuses to boot the moment it is
-  restarted — it will not sign keys with a secret it cannot reproduce. Only a
-  substrate with a local datastore trips the check, which is why it hid.
-- **The substrate id must be persisted too.** `FED_SUBSTRATE_ID` regenerated on
-  each boot, so a restart appeared on the hub as a *new* substrate and left the
-  old identity behind as a record nothing would ever refresh.
+- **The secrets are persisted.** Generated secrets live in
+  `/workspace/.substrate-secrets` on the workspace volume. A substrate with a local
+  datastore refuses to boot if `API_KEY_SECRET` is missing there — it will not sign
+  keys with a secret it cannot reproduce — so a lost secrets file shows up at the next
+  restart, not while the container keeps running.
+- **The federation id is persisted.** `FED_SUBSTRATE_ID` is minted once
+  (`spoke-<hex>`) and kept in the same volume, so a restart re-registers under the
+  same `<vessel>@spoke-<hex>` rows instead of appearing on the hub as a new substrate
+  and leaving the old rows behind.
 
 When judging whether a restart worked, do not ask whether the hub still lists
 the substrate's shapes. Registry records outlive the process that wrote them by
