@@ -80,6 +80,7 @@
 #   ACCEPTANCE_DISCOVERY_ENDPOINT, ACCEPTANCE_METABOB_API_KEY
 #                             the spoke case's hub anchor and issued key (spoke: required)
 #   INSTALL_IMAGE_REF         image literal the page names
+#   COCKPIT_BUN_DIR           directory holding bun, added to PATH for the cockpit check only
 #                                           (default: ghcr.io/avigopal/substrate:dev)
 #   ACCEPTANCE_CONTAINER      container the page launches     (default: substrate-live)
 #   ACCEPTANCE_PORTS          host ports that must be free before the run
@@ -508,7 +509,10 @@ if [ "$(jq -r '.client_config.result' <<<"$checks")" = "pass" ]; then
   # the page wrote.
   if command -v npx >/dev/null 2>&1; then
     cdir="$root/cockpit"; mkdir -p "$cdir/cwd"; mkfifo "$cdir/in"
-    ( cd "$cdir/cwd" && env -i "${fence_env[@]}" timeout 300 npx -y @metabob/mcp <"$cdir/in" >"$cdir/out" 2>"$RESULT_DIR/diag/cockpit.err" ) &
+    # The cockpit runs on Bun, which the page lists as a cockpit prerequisite. It is kept
+    # off the fences' PATH (a warm-host finding there) and added for this check only.
+    cockpit_path="$bin_dir:$PATH"; [ -n "${COCKPIT_BUN_DIR:-}" ] && cockpit_path="$COCKPIT_BUN_DIR:$cockpit_path"
+    ( cd "$cdir/cwd" && env -i "${fence_env[@]}" "PATH=$cockpit_path" timeout 300 npx -y @metabob/mcp <"$cdir/in" >"$cdir/out" 2>"$RESULT_DIR/diag/cockpit.err" ) &
     cpid=$!
     exec 7>"$cdir/in"
     wait_for_id() {  # id seconds

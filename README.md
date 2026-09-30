@@ -80,7 +80,7 @@ declaration, the launch manifest `docker-compose.yml` and a `.env` of install in
 **Prerequisites:** a container engine that allows privileged containers, with compose:
 Docker with `docker compose`, or Podman with `podman compose` (rootless supported).
 `docker` below works identically with `podman`. Nothing else is needed on the host for the
-substrate itself; the cockpit adds node/npx.
+substrate itself; the cockpit adds node/npx and [Bun](https://bun.sh) (the cockpit server runs on Bun).
 
 ### Where things run
 
@@ -190,7 +190,7 @@ One command, with your provider key in place of the placeholder:
 docker run --rm ghcr.io/avigopal/substrate:dev install | ANTHROPIC_API_KEY=sk-ant-… sh
 ```
 
-Then run the `claude mcp add …` line it printed (node/npx required for the cockpit), make
+Then run the `claude mcp add …` line it printed (the cockpit needs node/npx and Bun), make
 a first cockpit call (for example `registry_query`), and read the full verdict:
 
 ```bash install:standalone

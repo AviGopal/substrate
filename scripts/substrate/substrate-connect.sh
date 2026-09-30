@@ -79,6 +79,6 @@ jq -n --arg e "$ENDPOINT" --arg k "$KEY" '{metabob:{endpoint:$e, apiKey:$k}}'
 {
   echo "[connect] stdout above is the client config — redirect it to ~/.metabob/config.json (the redirect replaces the whole file)."
   echo "[connect] WARNING if either applies where the cockpit runs: METABOB_CONFIG_PATH, when set, overrides ~/.metabob/config.json; and if ./.metabob/config.json exists in the directory the cockpit starts in, it takes precedence over the file written here."
-  echo "[connect] Register the cockpit (needs node/npx), then make one call such as registry_query:"
+  echo "[connect] Register the cockpit (needs node/npx and Bun: https://bun.sh), then make one call such as registry_query:"
   echo "  claude mcp add metabob -- npx -y @metabob/mcp"
 } >&2

@@ -181,6 +181,16 @@ jobs:
           # with one is exactly what this run exists to catch.
           persist-credentials: false
 
+      # The install page says the cockpit needs node/npx and Bun (@metabob/mcp declares
+      # engines.bun and refuses to start without it). Bun goes into a private directory,
+      # NOT onto PATH: the fences must still run on a cold PATH (bun there is a warm-host
+      # finding), and only the harness's cockpit check adds this directory.
+      - name: Install Bun for the cockpit check (off PATH)
+        run: |
+          set -euo pipefail
+          curl -fsSL https://bun.sh/install | BUN_INSTALL="$RUNNER_TEMP/cockpit-bun" bash >/dev/null
+          "$RUNNER_TEMP/cockpit-bun/bin/bun" --version
+
       - name: Install the Podman compose implementation
         if: matrix.engine == 'podman'
         run: |
@@ -198,6 +208,7 @@ jobs:
           ACCEPTANCE_PROVIDER_VAR: ${{ vars.ACCEPTANCE_PROVIDER_VAR || 'ANTHROPIC_API_KEY' }}
           ACCEPTANCE_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           RESULT_DIR: ${{ runner.temp }}/acceptance/${{ matrix.engine }}
+          COCKPIT_BUN_DIR: ${{ runner.temp }}/cockpit-bun/bin
         run: bash scripts/substrate/acceptance/run-acceptance.sh
 
       - name: Keep the result and diagnostics
