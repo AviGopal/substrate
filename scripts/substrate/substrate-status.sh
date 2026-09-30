@@ -421,6 +421,17 @@ eval_live() {
   # No systemd, no unit matrix: every unit would read as down, which is a verdict
   # about the checker, not the fleet.
   if [ ! -d /run/systemd/system ]; then V=unknown; E="systemd is not running here, so unit state cannot be read"; return; fi
+  # A boot that has not finished is not live, whatever the units read so far: while
+  # systemd is still initializing, the units it has not reached are neither up nor
+  # down, and the levels above counted what had started ("1 selected unit(s) up")
+  # as served. A boot that stalls here (every job waiting, none running) is named
+  # with its job count, so a host limit such as an exhausted inotify budget shows up
+  # as a stuck boot rather than as a healthy fleet.
+  local sys_state; sys_state="$(systemctl is-system-running 2>/dev/null || true)"
+  case "$sys_state" in
+    initializing|starting)
+      V=fail; E="systemd is still $sys_state ($(systemctl list-jobs --no-legend 2>/dev/null | wc -l | tr -d ' ') job(s) queued, $(systemctl list-jobs --no-legend 2>/dev/null | awk '$4=="running"' | wc -l | tr -d ' ') running)"; return ;;
+  esac
   run_ready
   if ! printf '%s' "$READY_JSON" | jq -e '.vessels' >/dev/null 2>&1; then
     V=unknown; E="substrate-ready produced no verdict (exit $READY_RC)"; return
