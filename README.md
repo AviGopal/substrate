@@ -68,7 +68,8 @@ for every published image, on Docker and on Podman, so this page is tested rathe
 trusted. The run types values in place of the placeholders as a reader would: the
 provider key in every case, and for the hub and spoke cases the address the hub
 advertises, its discovery endpoint and the key it issued, without which those cases cannot
-run.
+run. A third run upgrades a fleet from the published image to the new one by re-running
+the install command, and requires that keys issued before the upgrade still validate.
 
 The whole system runs as **one privileged container** hosting the vessel fleet as systemd
 units, from the public image `ghcr.io/avigopal/substrate:dev` (it pulls anonymously; no

@@ -269,6 +269,54 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  # The upgrade promise: re-running the install command moves a fleet to the new image
+  # and keeps what it had (keys it issued, its federation id, its volumes). The previous
+  # image is the :dev this digest would replace. Not yet in promote's needs: it joins
+  # them once it has passed on both engines.
+  upgrade:
+    needs: resolve
+    if: needs.resolve.outputs.found == 'true'
+    name: upgrade (${{ matrix.engine }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [docker, podman]
+    steps:
+      - name: Check out the harness at the image's commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.ref }}
+          submodules: false
+          persist-credentials: false
+
+      - name: Install the Podman compose implementation
+        if: matrix.engine == 'podman'
+        run: |
+          set -euo pipefail
+          pipx install 'podman-compose>=1.6'
+
+      - name: Upgrade a fleet from the published :dev to this image
+        env:
+          ENGINE: ${{ matrix.engine }}
+          IMAGE: ${{ needs.resolve.outputs.image }}
+          PREVIOUS_IMAGE: ghcr.io/${{ github.repository_owner }}/substrate:dev
+          RESULT_DIR: ${{ runner.temp }}/upgrade/${{ matrix.engine }}
+        run: |
+          set -euo pipefail
+          export PREVIOUS_IMAGE="${PREVIOUS_IMAGE,,}"
+          bash scripts/substrate/acceptance/run-upgrade-acceptance.sh
+
+      - name: Keep the result and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: upgrade-acceptance-result-${{ matrix.engine }}
+          path: ${{ runner.temp }}/upgrade/${{ matrix.engine }}
+          if-no-files-found: warn
+          retention-days: 30
+
   report:
     # Runs whatever the verdicts were: a failure is exactly what the hub must hear.
     needs: [resolve, accept]
