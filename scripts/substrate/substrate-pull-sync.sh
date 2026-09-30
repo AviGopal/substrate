@@ -122,7 +122,9 @@ tracked_fail_names() {
   | jq -r --arg v "$1" --argjson files "$files" '(.body.gaps // [])[] | .classification_metadata.evidence_resolve? // empty | select(.shape? == "test_suite") | select(((.input.vessel // "") | sub("^repos/"; "")) == $v) | select((.input.test_file // "") as $tf | $files | index($tf)) | (.input.only_tests // [])[] | select(type == "string" and test("\\S"))' 2>/dev/null || true
 }
 
-# FAILING-TEST GAP GENERATOR (2026-09-30, user-cleared; qa-reviewed). The pre-land gate (feature-compose
+# FAILING-TEST GAP GENERATOR (2026-09-30, user-cleared; qa-reviewed). Its evidence_resolve carries zero_field
+# "requested_not_passing": gap-to-feature admission excludes a class2 check with no measured field as
+# needs_information, so without it every gap filed here was silently inadmissible (found 2026-09-30 12:10). The pre-land gate (feature-compose
 # op5-op7) can only certify a landing for a gap that carries its own test_suite check, and every such gap in
 # the store had been written by an operator: 196 failing activity-api tests yielded one admissible
 # check-backed gap. The missing generator was the gap. This files check-backed failing_test gaps from the
@@ -226,7 +228,7 @@ gen_failing_test_gaps() {
           + " Done when the named tests pass."),
         classification_metadata: ({
           falsifier: "class2",
-          evidence_resolve: {shape: "test_suite", input: {vessel: $v, test_file: .file, only_tests: [.t[].name], timeout_ms: 180000}},
+          evidence_resolve: {shape: "test_suite", input: {vessel: $v, test_file: .file, only_tests: [.t[].name], timeout_ms: 180000}, zero_field: "requested_not_passing"},
           filed_by: "pull-sync failing-test generator", generator_head: $head, failure_class: .cls}
           + (if $mock then {edit_site: ("repos/" + $v + "/" + .file), region: (.t[0].name | split(" > ") | last)}
              elif $located then {edit_site: ("repos/" + $v + "/" + .frame), protected_files: [("repos/" + $v + "/" + .file)]}
