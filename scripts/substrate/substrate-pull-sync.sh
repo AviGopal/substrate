@@ -142,7 +142,7 @@ tracked_fail_names() {
 #     open (the redispatch livelock is unfixed; a flood would wedge the lane). Smallest groups first.
 # FAILTEST_GEN_DRYRUN=1 logs the payloads instead of filing them.
 gen_failing_test_gaps() {
-  local v="$1" out="$2" prev="$3" head="$4" rows st payloads id ex n=0
+  local v="$1" out="$2" prev="$3" head="$4" rows st payloads id ex exs n=0
   command -v jq >/dev/null 2>&1 || return 0
   [ -s "$prev" ] || return 0
   rows="$(printf '%s' "$out" | sed 's/\x1b\[[0-9;]*m//g' | awk -v prevf="$prev" '
@@ -209,11 +209,17 @@ gen_failing_test_gaps() {
     id="$(printf '%s' "$p" | jq -r '.impulse.pointer.gap.id')"
     ex="$(curl -s --max-time 30 -X POST "$DEV_VESSEL/v2/impulses/resolve" -H 'Content-Type: application/json' \
          -d "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap\",\"id\":\"$id\",\"limit\":1}}}" 2>/dev/null \
-       | jq -r '((.body.gaps // [])[0].status) // ""' 2>/dev/null || true)"
-    if [ "$ex" = "open" ]; then log "$v: failing-test generator: $id already open; skipped"; continue; fi
-    if [ -n "$ex" ]; then
-      p="$(printf '%s' "$p" | jq -c --arg rid "$id-r$(date -u +%Y%m%d%H%M)" --arg of "$id" '.impulse.pointer.gap.id = $rid | .impulse.pointer.gap.classification_metadata.recurrence_of = $of')"
-      log "$v: failing-test generator: $id exists ($ex); filing the recurrence as a new row with recurrence_of"
+       | jq -c '(.body.gaps // [])[0] // {} | {s: (.status // ""), n: (.classification_metadata.evidence_resolve.input.only_tests // [])}' 2>/dev/null || echo '{"s":""}')"
+    exs="$(printf '%s' "$ex" | jq -r '.s' 2>/dev/null || true)"
+    if [ "$exs" = "open" ]; then log "$v: failing-test generator: $id already open; skipped"; continue; fi
+    if [ -n "$exs" ]; then
+      # A re-failing name the closed gap named is a RECURRENCE (law-7 durability); a different set in the same
+      # file is the REMAINDER the <=5 cap left out, never fixed, so it must not count as a reappearance (qa).
+      p="$(printf '%s' "$p" | jq -c --arg rid "$id-r$(date -u +%Y%m%d%H%M)" --arg of "$id" --argjson ex "$ex" '.impulse.pointer.gap.id = $rid
+          | (if ([.impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | . as $n | $ex.n | index($n)] | any(. != null))
+             then .impulse.pointer.gap.classification_metadata.recurrence_of = $of
+             else .impulse.pointer.gap.classification_metadata.continuation_of = $of end)')"
+      log "$v: failing-test generator: $id exists ($exs); filing a new row ($(printf '%s' "$p" | jq -r '.impulse.pointer.gap.classification_metadata | if .recurrence_of then "recurrence_of" else "continuation_of" end'))"
       id="$(printf '%s' "$p" | jq -r '.impulse.pointer.gap.id')"
     fi
     if [ "${FAILTEST_GEN_DRYRUN:-0}" = "1" ]; then log "$v: failing-test generator DRYRUN would file: $p"; else emit_gap "$p"; log "$v: failing-test generator filed $id"; fi
