@@ -2,7 +2,7 @@
 # substrate-install.sh — print the one-command installer for this image.
 #
 #   docker run --rm ghcr.io/avigopal/substrate:dev install | ANTHROPIC_API_KEY=sk-ant-… sh
-#   docker run --rm ghcr.io/avigopal/substrate:dev install | sh -s -- --join http://<hub>:18100 --key <key>
+#   docker run --rm ghcr.io/avigopal/substrate:dev install | SUBSTRATE_JOIN=<token from `substrate-key join` on the hub> sh
 #
 # STDOUT CARRIES ONLY A POSIX sh SCRIPT. It runs README § Installation's sequence and
 # nothing else: write the launch manifest and a `.env` of install inputs into a fleet

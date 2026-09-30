@@ -131,7 +131,9 @@ only the vessels the profile selects.
 | `P333` | federation relay | spokes (libp2p) | hub, hub-minimal |
 
 A hub's firewall list is this table filtered by "spokes". Exposure is decided only by the
-manifest's port mapping: `127.0.0.1:P310:8310` keeps the surface on the local host.
+manifest's port mapping, set by an install input rather than a compose override (an override
+merges port lists and cannot narrow one): `HUMAN_SURFACE_PUBLISH_IP=127.0.0.1` in `.env` keeps
+the surface on the local host, and `SUBSTRATE_PUBLISH_IP=127.0.0.1` keeps every port there.
 
 ### Configuration
 
@@ -153,7 +155,7 @@ manifest's port mapping: `127.0.0.1:P310:8310` keeps the surface on the local ho
 | `DISCOVERY_ENDPOINT` + `METABOB_API_KEY` | unset | spoke, surface, compute |
 | provider key (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, …) | unset | standalone, hub |
 | `PUBLIC_IP` | unset | hub (the address spokes reach; `/bootstrap` advertises it) |
-| `SUBSTRATE_GIT_PAT` + `SUBSTRATE_REPO_OWNER` | unset / unset (a token without an owner fails the launch) | self-development (push capability) |
+| `SUBSTRATE_GIT_PAT` + `SUBSTRATE_REPO_OWNER` | unset / unset (a first token without an owner fails the launch; a volume that already held a token keeps its default owner, with a warning) | self-development (push capability) |
 
 Required inputs per profile: **standalone 1** (provider key); **spoke, surface, compute 2**
 (the anchor + key pair); **hub 3** (`PROFILE`, provider key, `PUBLIC_IP`).
@@ -303,7 +305,8 @@ What joining means, and how to tell it happened:
   hub's `llm_completion` and concept-db. The evidence is the reservation, read inside the
   container (the transport's health port is not published):
   `docker exec substrate-live curl -s http://127.0.0.1:8401/health`, where
-  `.transport.activeReservations` of `0` means not federated. Identity is the other
+  `.transport.reservationsHeld` of `0` means not federated (`activeReservations` counts
+  listen addresses, and `phantomSuspected: true` is a circuit advertised with no reservation held). Identity is the other
   discriminator: a spoke runs no identity-vessel, so a valid
   `docker exec substrate-live substrate-key whoami` can only have come from the hub.
 - **A joining spoke writes to the hub.** Its seeder registers the shared activity templates
@@ -325,8 +328,8 @@ Protocol and concepts: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 As C, with `--profile surface`:
 `docker run --rm ghcr.io/avigopal/substrate:dev install | SUBSTRATE_JOIN=<join token from the hub> sh -s -- --profile surface`.
 The surface is the human-surface vessel at `http://localhost:<prefix>310/`; everything it
-asks for is resolved on the hub. To keep it on the local host, map `127.0.0.1:P310:8310` in
-a compose override. `served` passes when the surface answers.
+asks for is resolved on the hub. To keep it on the local host, add
+`HUMAN_SURFACE_PUBLISH_IP=127.0.0.1` to its `.env`. `served` passes when the surface answers.
 
 An Obsidian vault is an optional, alternative window onto the same network. Its plugin
 installer lives in a submodule, so it needs a checkout, and reads the same two join inputs,

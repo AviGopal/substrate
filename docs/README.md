@@ -130,7 +130,8 @@ substrate, never preprocessors for it — if a goal
 only works after someone rewrites it into paths and shapes, that rewriting is a gap. The
 cockpit's tool surface is enumerated in the root `CLAUDE.md` linked at the top of this page.
 
-- [Running a human surface](HUMAN_SURFACE.md) — what a surface needs (a relayed hub and a hub-issued key; the launch is sequence D of the install page), what runs locally versus on the hub, and why a surface that loads but cannot dispatch is a hub-link problem.
+- [Running a human surface](HUMAN_SURFACE.md) — what a surface needs (a relayed hub and the join token it issues; the launch is sequence D of the install page), what runs locally versus on the hub, and why a surface that loads but cannot dispatch is a hub-link problem.
+- [Human project lifecycle](guides/HUMAN_PROJECT_LIFECYCLE.md) — what a human can expect across starting or joining, configuring, maintaining, deploying, interacting and checking health, with acceptance criteria per activity.
 - [Workbench Chain-Based UX Design](architecture/WORKBENCH_CHAIN_UX_DESIGN.md) — the chain vocabulary of the workbench surface.
 - [Interactive Activities and the Human Resolver](guides/INTERACTIVE_ACTIVITIES_AND_HUMAN_RESOLVER.md) — dispatching a task to a human as a resolver and waiting on the answer.
 - [Substrate-Narration Protocol](SUBSTRATE_NARRATION_PROTOCOL.md) — the operator-side narration and gap-accumulation methodology.

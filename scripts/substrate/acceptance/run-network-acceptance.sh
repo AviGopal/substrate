@@ -157,9 +157,11 @@ if [ "$spoke_rc" = 0 ] || [ "$spoke_rc" = 20 ]; then
     set_check spoke_seeded pass "$(jq -nc --arg e "$(sed -n 's/^ *seeded *pass *//p' "$RESULT_DIR/diag/spoke-seeded.txt" | head -1)" '{evidence: $e}')"
   else set_check spoke_seeded fail null; fi
 
-  reservations() { r="$(eng exec "$SPOKE_C" curl -s -m5 http://127.0.0.1:8401/health 2>/dev/null | jq -r '.transport.activeReservations // 0')"; [ "${r:-0}" -ge 1 ] 2>/dev/null; }
-  if poll 180 reservations; then set_check relay_reservation pass "$(jq -nc --argjson n "$r" '{activeReservations: $n}')"
-  else set_check relay_reservation fail "$(jq -nc --arg n "${r:-0}" '{activeReservations: $n}')"; fi
+  # reservationsHeld is what the relay granted; activeReservations counts listen addresses and
+  # reads 1 on a phantom (a circuit advertised with no reservation behind it).
+  reservations() { r="$(eng exec "$SPOKE_C" curl -s -m5 http://127.0.0.1:8401/health 2>/dev/null | jq -r '.transport.reservationsHeld // 0')"; [ "${r:-0}" -ge 1 ] 2>/dev/null; }
+  if poll 180 reservations; then set_check relay_reservation pass "$(jq -nc --argjson n "$r" '{reservationsHeld: $n}')"
+  else set_check relay_reservation fail "$(jq -nc --arg n "${r:-0}" '{reservationsHeld: $n}')"; fi
 
   spoke_id="$(eng exec "$SPOKE_C" sh -c 'sed -n "s/^FED_SUBSTRATE_ID=//p" /etc/substrate/env | tr -d "\""' 2>/dev/null | head -1)"
   hub_key="$(jq -r '.metabob.apiKey // empty' "$root/hub-config.json" 2>/dev/null)"; secrets+=("$hub_key")
