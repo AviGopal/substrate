@@ -53,11 +53,20 @@
 # DBUS_SESSION_BUS_ADDRESS for rootless Podman, the provider key under the page's
 # variable name, SUBSTRATE_IMAGE, and for the hub and spoke cases the values the
 # page leaves as placeholders (PUBLIC_IP; DISCOVERY_ENDPOINT + METABOB_API_KEY).
-# The manifest reads the environment ahead of .env, so the placeholders the page
-# writes into .env are outranked by these without rewriting the page.
-# One substitution is applied to the page text and recorded in the result: the page's
-# public image reference (INSTALL_IMAGE_REF) becomes the digest under test, so a run
-# judges the image that was published, not whatever the tag points at when it starts.
+# Two kinds of substitution are applied to the page text and counted in the result:
+#   - the page's public image reference (INSTALL_IMAGE_REF) becomes the digest under
+#     test, so a run judges the image that was published, not whatever the tag points
+#     at when it starts;
+#   - the page's placeholders become the values above, as a reader types a value in
+#     place of a placeholder: `ANTHROPIC_API_KEY=sk-ant-…` becomes the provider key
+#     under its variable name (and is dropped when there is no key, so a keyless run
+#     installs keyless), `http://<hub-host>:18100` the discovery endpoint,
+#     `<key issued by the hub>` the key, `<address spokes reach>` the public address.
+#     Values travel to the rewrite through the environment, never argv, and every
+#     secret is redacted from the failing command and the log this run records.
+# An installer block (`… install | … sh …`) that exits 20 ran every step and stopped at
+# its wait: it is judged as a wait for its `--wait` level (default usable), exactly like
+# a failed `substrate-status --wait`.
 #
 # ENVIRONMENT
 #   ENGINE                    docker | podman                               (required)
@@ -228,7 +237,29 @@ extract_rc=0
 fence_total=0
 [ -s "$fence_dir/index.tsv" ] && fence_total="$(wc -l <"$fence_dir/index.tsv" | tr -d ' ')"
 
-substitutions=0
+substitutions=0; placeholder_substitutions=0
+# Placeholder -> value pairs, joined on the unit separator and handed to awk through
+# its environment. A placeholder with no value is left as written (a hub or spoke case
+# refuses above without one), except the provider key, which is dropped.
+US=$'\x1f'
+sub_from=""; sub_to=""
+add_sub() { sub_from="${sub_from}${1}${US}"; sub_to="${sub_to}${2}${US}"; }
+if [ -n "${ACCEPTANCE_PROVIDER_KEY:-}" ]; then
+  add_sub 'ANTHROPIC_API_KEY=sk-ant-…' "${ACCEPTANCE_PROVIDER_VAR}=${ACCEPTANCE_PROVIDER_KEY}"
+else
+  add_sub 'ANTHROPIC_API_KEY=sk-ant-… ' ''
+fi
+[ -n "${ACCEPTANCE_DISCOVERY_ENDPOINT:-}" ] && add_sub 'http://<hub-host>:18100' "$ACCEPTANCE_DISCOVERY_ENDPOINT"
+[ -n "${ACCEPTANCE_METABOB_API_KEY:-}" ] && add_sub '<key issued by the hub>' "$ACCEPTANCE_METABOB_API_KEY"
+[ -n "${ACCEPTANCE_PUBLIC_IP:-}" ] && add_sub '<address spokes reach>' "$ACCEPTANCE_PUBLIC_IP"
+# Every secret this run could write into a command, for redaction before recording.
+redact() {
+  local t="$1" v
+  for v in "${ACCEPTANCE_PROVIDER_KEY:-}" "${ACCEPTANCE_METABOB_API_KEY:-}"; do
+    [ -n "$v" ] && t="${t//"$v"/<redacted>}"
+  done
+  printf '%s' "$t"
+}
 fence_rc=0; fence_failed_index=""; fence_failed_line=""; fence_failed_cmd=""; fences_ran=0
 if [ "$extract_rc" -ne 0 ]; then
   set_check extraction fail "$(jq -nc --arg e "$(cat "$RESULT_DIR/diag/extract.err")" --argjson rc "$extract_rc" '{exit: $rc, detail: $e}')"
@@ -246,12 +277,19 @@ else
   while IFS=$'\t' read -r n line _cases path; do
     # The one declared substitution: the page's public tag becomes the digest under test.
     run_copy="$run_dir/$(basename "$path")"
-    awk -v from="$INSTALL_IMAGE_REF" -v to="$IMAGE" '
-      { out = ""; s = $0
-        while ((i = index(s, from)) > 0) { out = out substr(s, 1, i - 1) to; s = substr(s, i + length(from)); hits++ }
-        print out s }
-      END { printf "%d\n", hits + 0 > "/dev/stderr" }' "$path" >"$run_copy" 2>"$run_dir/hits"
-    substitutions=$((substitutions + $(cat "$run_dir/hits")))
+    SUB_FROM="${INSTALL_IMAGE_REF}${US}${sub_from}" SUB_TO="${IMAGE}${US}${sub_to}" awk '
+      BEGIN { n = split(ENVIRON["SUB_FROM"], F, "\037"); split(ENVIRON["SUB_TO"], T, "\037") }
+      { line = $0
+        for (k = 1; k <= n; k++) {
+          if (F[k] == "") continue
+          out = ""; s = line
+          while ((i = index(s, F[k])) > 0) { out = out substr(s, 1, i - 1) T[k]; s = substr(s, i + length(F[k])); hits[k == 1 ? 1 : 2]++ }
+          line = out s
+        }
+        print line }
+      END { printf "%d %d\n", hits[1] + 0, hits[2] + 0 > "/dev/stderr" }' "$path" >"$run_copy" 2>"$run_dir/hits"
+    read -r h_img h_ph <"$run_dir/hits"
+    substitutions=$((substitutions + h_img)); placeholder_substitutions=$((placeholder_substitutions + h_ph))
     {
       echo "__acceptance_block=$n"
       echo "printf '%s\\t%s\\n' $n $line >\"$state_dir/current\""
@@ -261,12 +299,12 @@ else
       echo "printf '%s\\n' $n >>\"$state_dir/completed\""
     } >>"$driver"
   done <"$fence_dir/index.tsv"
-  log "running $fence_total install block(s) from ${INSTALL_DOC##*/} (case $ACCEPTANCE_CASE, $substitutions image reference(s) pinned to the digest)"
+  log "running $fence_total install block(s) from ${INSTALL_DOC##*/} (case $ACCEPTANCE_CASE, $substitutions image reference(s) pinned to the digest, $placeholder_substitutions placeholder(s) filled)"
   (
     cd "$work_dir" &&
     env -i "${fence_env[@]}" timeout --kill-after=60 "$FENCE_TIMEOUT" \
       bash --noprofile --norc "$driver" </dev/null
-  ) 2>&1 | tee "$RESULT_DIR/fences.log"
+  ) 2>&1 | while IFS= read -r l; do redact "$l"; printf '\n'; done | tee "$RESULT_DIR/fences.log"
   fence_rc="${PIPESTATUS[0]}"
   [ -s "$state_dir/completed" ] && fences_ran="$(wc -l <"$state_dir/completed" | tr -d ' ')"
   if [ "$fence_rc" -ne 0 ]; then
@@ -276,6 +314,7 @@ else
       IFS=$'\t' read -r fence_failed_index _ <"$state_dir/current"
     fi
     [ "$fence_rc" -eq 124 ] && fence_failed_cmd="timed out after ${FENCE_TIMEOUT}s: ${fence_failed_cmd}"
+    fence_failed_cmd="$(redact "$fence_failed_cmd")"
   fi
 fi
 
@@ -394,6 +433,12 @@ to_seconds() {  # systemd timespan ("1min 30s", "5min", "90s", "500ms", "infinit
     printf "%d\n", (t == int(t)) ? t : int(t) + 1
   }' <<<"$1"
 }
+# The fleet directory: the page's working directory, or the one the installer made in it.
+fleet_dir="$work_dir"
+if [ ! -f "$fleet_dir/docker-compose.yml" ]; then
+  m="$(find "$work_dir" -maxdepth 2 -name docker-compose.yml -print 2>/dev/null | head -1)"
+  [ -n "$m" ] && fleet_dir="$(dirname "$m")"
+fi
 if [ "$have_container" -eq 1 ]; then
   stop_raw="$(eng container inspect --format '{{.Config.StopTimeout}}' "$ACCEPTANCE_CONTAINER" 2>/dev/null || true)"
   case "$stop_raw" in ''|'<nil>'|'<no value>') stop_s=10 ;; *) stop_s="$stop_raw" ;; esac
@@ -406,7 +451,7 @@ if [ "$have_container" -eq 1 ]; then
   # `podman stop` of the container still gets the engine default, which the result
   # records beside it.
   if [ "$ENGINE" = "podman" ]; then
-    grace_raw="$(cd "$work_dir" && env -i "${fence_env[@]}" docker compose config 2>/dev/null \
+    grace_raw="$(cd "$fleet_dir" && env -i "${fence_env[@]}" docker compose config 2>/dev/null \
       | awk '/^[[:space:]]*stop_grace_period:/ { v = $2; gsub(/["\047]/, "", v); print v; exit }')"
     if [ -n "$grace_raw" ]; then
       grace_s="$(to_seconds "$grace_raw")"
@@ -582,6 +627,12 @@ done
 wait_level=""
 wait_re='substrate-status([[:space:]].*)?[[:space:]]--(wait|level)(=|[[:space:]]+)([a-z]+)'
 [[ "$fence_failed_cmd" =~ $wait_re ]] && wait_level="${BASH_REMATCH[4]}"
+# The one-command installer ends in its own wait and exits 20 when that wait falls short.
+if [ -z "$wait_level" ] && [ "$fence_rc" -eq 20 ] && [ -n "${f_path:-}" ] \
+   && grep -qE '[[:space:]]install([[:space:]][^|]*)?\|' "$f_path"; then
+  inst_re='--wait[[:space:]]+([a-z]+)'
+  if [[ "$fence_failed_cmd" =~ $inst_re ]]; then wait_level="${BASH_REMATCH[1]}"; else wait_level=usable; fi
+fi
 level_block_json='null'
 if [ "$fence_rc" -ne 0 ]; then
   block_judged=1
@@ -640,7 +691,7 @@ jq -n \
   --arg run_url "$ACCEPTANCE_RUN_URL" --arg started "$started_at" --arg finished "$finished_at" \
   --argjson levels "$levels" --argjson checks "$checks" --argjson failing "$failing" \
   --argjson fence_total "$fence_total" --argjson fences_ran "$fences_ran" --argjson fence_rc "$fence_rc" \
-  --argjson fence_failed "$fence_json" --argjson subs "$substitutions" \
+  --argjson fence_failed "$fence_json" --argjson subs "$substitutions" --argjson phsubs "$placeholder_substitutions" \
   --arg status_note "$status_note" \
   --argjson reasons "$(printf '%s\n' "${reasons[@]+"${reasons[@]}"}" | jq -R 'select(. != "")' | jq -sc .)" \
   '{
@@ -650,7 +701,7 @@ jq -n \
      engine: $engine, case: $case, profile: $profile,
      image: $image, digest: (if $digest == "" then null else $digest end),
      image_revision: (if $rev == "" then null else $rev end),
-     install_doc: $doc, install_image_ref: $install_ref, image_ref_substitutions: $subs,
+     install_doc: $doc, install_image_ref: $install_ref, image_ref_substitutions: $subs, placeholder_substitutions: $phsubs,
      container: $container,
      levels: $levels,
      status_note: (if $status_note == "" then null else $status_note end),
