@@ -18,8 +18,11 @@
 #
 # Targets: up, stop, recreate (replaces the container, volumes kept; refuses a
 # changed identity, port or volume unless ADOPT=1, and a port check it cannot
-# run unless SKIP_PORT_CHECK=1). Knobs: REBUILD, WAIT_LEVEL (a keyless spoke
-# waits for `served`: `usable` needs an arm), CONNECT_WRITE, ADOPT, COMPOSE.
+# run unless SKIP_PORT_CHECK=1), clean (removes the container, never the
+# volumes), verdict, and the build helpers build, build-obsidian, image and
+# migrate-state-to-volumes (a one-time copy of legacy host state dirs). Knobs:
+# REBUILD, WAIT_LEVEL (a keyless spoke waits for `served`: `usable` needs an
+# arm), CONNECT_WRITE, ADOPT, COMPOSE.
 #
 # DEPRECATED, still honoured with a warning:
 #   LIVE_NAME=<n>     -> the exact-name aliases for container <n> and volumes
