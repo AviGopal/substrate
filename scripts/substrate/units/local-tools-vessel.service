@@ -30,6 +30,12 @@ ReadOnlyPaths=-/workspace/git/super-repo/repos
 # The leading '-' keeps the unit starting on a node where a path does not exist.
 InaccessiblePaths=-/etc/substrate
 InaccessiblePaths=-/workspace/.substrate-secrets
+# The timer run-dir is code that runs as root with the fleet EnvironmentFile on
+# the next firing. The agent's shell writing a file there is the same as reading
+# every secret, so it is read-only here. Its writers are the boot seed unit,
+# pull-sync, and development-vessel's activate_substrate_script (committed blobs
+# only) — none of them this shell.
+ReadOnlyPaths=-/workspace/active-scripts
 ExecStart=/root/.bun/bin/bun /vessels/local-tools-vessel/src/index.ts
 Restart=on-failure
 RestartSec=5
