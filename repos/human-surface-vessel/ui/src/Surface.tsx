@@ -59,7 +59,22 @@ function Workbench(): ReactNode {
 
   const [filter, setFilter] = useState<RunFilter>("all");
   const [issuesOpen, setIssuesOpen] = useState(false);
-  const closeIssues = useCallback(() => setIssuesOpen(false), []);
+  const [highlightIssue, setHighlightIssue] = useState<string | null>(null);
+  const closeIssues = useCallback(() => {
+    setIssuesOpen(false);
+    setHighlightIssue(null);
+  }, []);
+  // A filed report asks to be shown: open the drawer on it (see ComplainButton showIssue).
+  useEffect(() => {
+    const onShow = (e: Event): void => {
+      const id = (e as CustomEvent<unknown>).detail;
+      if (typeof id !== "string") return;
+      setHighlightIssue(id);
+      setIssuesOpen(true);
+    };
+    window.addEventListener("sf:show-issue", onShow);
+    return () => window.removeEventListener("sf:show-issue", onShow);
+  }, []);
 
   const board = useBoard({ enabled: !paused, intervalMs });
   const questions = useQuestions();
@@ -125,7 +140,7 @@ function Workbench(): ReactNode {
           <p className="sf-main-empty">Select a run or a question</p>
         )}
       </main>
-      {issuesOpen ? <IssuesDrawer onClose={closeIssues} /> : null}
+      {issuesOpen ? <IssuesDrawer onClose={closeIssues} highlightId={highlightIssue} /> : null}
     </div>
   );
 }

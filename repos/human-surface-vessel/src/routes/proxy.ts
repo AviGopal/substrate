@@ -1007,6 +1007,54 @@ proxyRouter.get("/api/gaps", async (c) => {
  * so a complaint travels the same path a complaint from anywhere else would —
  * one code path, one place for the gap-filing side effect to live.
  */
+/**
+ * One gap by id, from whichever vessel serves `substrateGap`.
+ *
+ * The question view reads the escalated gap back after a person answers, so the
+ * card can say whether the answer was applied (`human_disposition_record_id`
+ * equals the answer's response id), replaced by a later one, or not yet applied.
+ */
+proxyRouter.get("/api/gaps/:id", async (c) => {
+  const id = c.req.param("id");
+  const origin = c.req.header("Origin");
+  if (!id || id.length > 300) return c.json({ error: "gap id required" }, 400, corsHeaders(origin));
+  const body = JSON.stringify({ impulse: { pointer: { type: "substrateGap", id, limit: 1 } } });
+  const ask = async (base: string): Promise<{ found: boolean; gap: unknown } | null> => {
+    try {
+      const upstream = await fetch(`${base.replace(/\/+$/, "")}/v2/impulses/resolve`, {
+        method: "POST",
+        headers: upstreamHeaders(true),
+        body,
+        signal: AbortSignal.timeout(4_000),
+      });
+      if (!upstream.ok) return null;
+      const j = (await upstream.json()) as {
+        body?: { gaps?: unknown[] };
+        content?: { body?: { gaps?: unknown[] } };
+      };
+      const gaps = Array.isArray(j?.body?.gaps) ? j.body.gaps : Array.isArray(j?.content?.body?.gaps) ? j.content.body.gaps : null;
+      if (!gaps) return null;
+      const gap = gaps.find((g) => (g as { id?: unknown })?.id === id) ?? null;
+      return { found: gap !== null, gap };
+    } catch {
+      return null;
+    }
+  };
+  const bases = [
+    ...(await candidateEndpointsFor("substrateGap")).map((cand) => cand.base),
+    process.env["DEV_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8090",
+  ];
+  for (const base of bases) {
+    const answer = await ask(base);
+    if (answer) {
+      return answer.found
+        ? c.json({ gap: answer.gap }, 200, corsHeaders(origin))
+        : c.json({ gap: null, error: "no gap with that id" }, 404, corsHeaders(origin));
+    }
+  }
+  return c.json({ gap: null, error: "no vessel serving substrateGap answered" }, 502, corsHeaders(origin));
+});
+
 proxyRouter.post("/api/feedback", async (c) => {
   const body = (await c.req.json().catch(() => null)) as null | Record<string, unknown>;
   if (!body || typeof body["panel_id"] !== "string" || !body["value"]) {

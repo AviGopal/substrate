@@ -40,7 +40,7 @@ function InjectContext({ dispatchId }: { dispatchId: string }): ReactNode {
 
   return (
     <details className="sf-view-section sf-inject">
-      <summary>Add context to this run</summary>
+      <summary>Add other context</summary>
       <form
         className="sf-inject-body sf-interaction"
         onSubmit={(e) => {
@@ -59,6 +59,81 @@ function InjectContext({ dispatchId }: { dispatchId: string }): ReactNode {
         />
       </form>
     </details>
+  );
+}
+
+/**
+ * What the walk is missing, and a way to supply it.
+ *
+ * `pendingTargets` are the shapes the walk still needs; an impulse of one of those
+ * shapes is the only human contribution that can satisfy the walk (free-form
+ * `human_context` is consumed by no activity). Readback is the next walk read: the
+ * shape leaves `pendingTargets` once the walk has taken it in.
+ */
+function WalkNeeds({ walk }: { walk: GoalWalkState }): ReactNode {
+  const [shape, setShape] = useState<string | null>(null);
+  const [content, setContent] = useState("");
+  const [sent, setSent] = useState<string | null>(null);
+  const mutation = useInjectContext();
+  const missing = walk.pendingTargets;
+  if (missing.length === 0 && !sent) return null;
+  const stillMissing = sent !== null && missing.includes(sent);
+
+  return (
+    <section className="sf-view-section sf-walk-needs" aria-label="What the walk is missing">
+      <h3 className="sf-view-label">The walk is missing</h3>
+      {missing.length > 0 ? (
+        <ul className="sf-needs-list">
+          {missing.map((s) => (
+            <li key={s}>
+              <span className="sf-shape-badge">{s}</span>
+              <button
+                type="button"
+                className="sf-button sf-button-quiet"
+                aria-pressed={shape === s}
+                onClick={() => {
+                  setShape(s);
+                  mutation.reset();
+                }}
+              >
+                Provide
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {shape ? (
+        <form
+          className="sf-interaction"
+          onSubmit={(e) => {
+            e.preventDefault();
+            mutation.mutate(injectPayload({ dispatchId: walk.dispatchId, shape, content }), {
+              onSuccess: () => {
+                setSent(shape);
+                setContent("");
+                setShape(null);
+              },
+            });
+          }}
+        >
+          <TextInput label={`Provide ${shape}`} placeholder={`Content for ${shape}`} value={content} onChange={setContent} disabled={mutation.isPending} />
+          <InteractionFooter
+            state={stateOf(mutation)}
+            submitLabel="Add to the walk"
+            canSubmit={content.trim().length > 0}
+            error={mutation.isError ? (mutation.error as Error).message : null}
+            sentLabel="In the pool"
+          />
+        </form>
+      ) : null}
+      {sent ? (
+        <p className="sf-outcome-strip" data-outcome={stillMissing ? "waiting" : "applied"}>
+          {stillMissing
+            ? `… ${sent} is in the pool — waiting for the walk's next step to take it in.`
+            : `✓ ${sent} is no longer missing.`}
+        </p>
+      ) : null}
+    </section>
   );
 }
 
@@ -137,6 +212,8 @@ export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
         ) : null}
         {walk.humanReachNotes ? <p className="sf-run-reason-full">“{walk.humanReachNotes}”</p> : null}
       </header>
+
+      {walk.status === "running" ? <WalkNeeds walk={walk} /> : null}
 
       {solicitation ? (
         <section className="sf-view-section">

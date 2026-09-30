@@ -1823,3 +1823,43 @@ body { overflow: hidden; }
 .sf-ix-status { font-size: var(--sf-text-sm); }
 .sf-ix-receipt { color: var(--sf-ink-3); }
 .sf-ask-part + .sf-ask-part { margin-top: var(--sf-space-3); }
+
+/* ── participation loop: what became of an answer ── */
+.sf-outcome-strip {
+  margin: var(--sf-space-2) 0 0;
+  padding: var(--sf-space-2) var(--sf-space-3);
+  border-radius: var(--sf-radius-sm);
+  font-size: var(--sf-text-sm);
+  background: var(--sf-panel-alt);
+  color: var(--sf-ink-2);
+  max-width: var(--sf-measure-prose);
+}
+.sf-outcome-strip[data-outcome="applied"] { background: var(--sf-reached-bg); color: var(--sf-ink); }
+.sf-outcome-strip[data-outcome="waiting"] { background: var(--sf-running-bg); color: var(--sf-ink); }
+.sf-outcome-strip[data-outcome="superseded"] { background: var(--sf-waiting-bg); color: var(--sf-ink); }
+.sf-outcome-strip[data-outcome="not_understood"],
+.sf-outcome-strip[data-outcome="error"] { background: var(--sf-not-reached-bg); color: var(--sf-ink); }
+.sf-respond-more { font-size: var(--sf-text-sm); }
+.sf-respond-more > summary { cursor: pointer; color: var(--sf-ink-2); }
+.sf-respond-fields { display: grid; gap: var(--sf-space-2); margin-top: var(--sf-space-2); }
+.sf-ix-field { display: grid; gap: var(--sf-space-1); }
+.sf-link-button {
+  font: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--sf-accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.sf-issue[data-highlight="true"] {
+  outline: 2px solid var(--sf-accent);
+  outline-offset: 4px;
+  border-radius: var(--sf-radius-sm);
+}
+
+/* ── what the walk is missing ── */
+.sf-walk-needs { border-left: 3px solid var(--sf-running); padding-left: var(--sf-space-4); margin-top: var(--sf-space-4); }
+.sf-needs-list { list-style: none; margin: 0 0 var(--sf-space-3); padding: 0; display: flex; flex-wrap: wrap; gap: var(--sf-space-2) var(--sf-space-4); }
+.sf-needs-list li { display: flex; align-items: center; gap: var(--sf-space-2); }
+.sf-needs-list button[aria-pressed="true"] { color: var(--sf-ink); border-color: var(--sf-accent); }

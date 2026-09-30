@@ -348,3 +348,21 @@ export async function fetchRenderPolicy(): Promise<RenderPolicy> {
   if (!res.ok) throw new Error(`render policy unavailable (${res.status})`);
   return (await res.json()) as RenderPolicy;
 }
+
+/** A gap as the gap store returns it; only the fields the surface reads are typed. */
+export interface GapRecord {
+  readonly id: string;
+  readonly status?: string;
+  readonly summary?: string;
+  readonly classification_metadata?: Record<string, unknown>;
+  readonly updated_at?: string;
+}
+
+/** One gap by id. Null when the store answered and has no such gap. */
+export async function fetchGap(id: string): Promise<GapRecord | null> {
+  const res = await fetch(`/api/gaps/${encodeURIComponent(id)}`, { credentials: "same-origin" });
+  if (res.status === 404) return null;
+  const body = (await res.json().catch(() => null)) as { gap?: GapRecord | null; error?: string } | null;
+  if (!res.ok) throw new Error(body?.error ?? `gap store unavailable (${res.status})`);
+  return body?.gap ?? null;
+}

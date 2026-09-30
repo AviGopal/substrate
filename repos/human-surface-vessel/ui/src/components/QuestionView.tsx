@@ -15,6 +15,8 @@ import { contributionContent, questionForAsk } from "../lib/interaction";
 import { ChoiceInput, InteractionFooter, TextInput, stateOf } from "./Interaction";
 import { fromPanel, fromResponse } from "../lib/content";
 import { ComplainButton } from "./ComplainButton";
+import { answerReaderFor, gapIdForPanel } from "../lib/disposition";
+import { EscalationForm, EscalationOutcome, LocalizationForm, UnreadNote, VerificationForm } from "./ResponseForms";
 import { Rendered } from "./Rendered";
 
 /** The pin key a question body is planned under. */
@@ -65,6 +67,19 @@ function QuestionCard({ incoming }: { incoming: Question }): ReactNode {
   }
 
   const state = stateOf(mutation);
+  const reader = answerReaderFor(question.id);
+  const escalatedGap = gapIdForPanel(question.id);
+  // The answer the reader will act on: the newest non-decline, whether just sent or from an earlier visit.
+  const latestAnswer =
+    [...incoming.responses, ...(mutation.data ? [mutation.data] : [])]
+      .filter((r) => r.kind === "answer")
+      .sort((a, b) => b.receivedAt - a.receivedAt)[0] ?? null;
+  const formProps = {
+    send: (kind: "answer" | "dismiss", value: unknown) => send(kind, null, value),
+    state: lastAsk === null ? state : ("idle" as const),
+    error: lastAsk === null && mutation.isError ? `Not delivered: ${mutation.error.message}. Retry sends the same response.` : null,
+    revised,
+  };
 
   return (
     <article className="sf-question" aria-labelledby={`${id}-title`}>
@@ -158,44 +173,58 @@ function QuestionCard({ incoming }: { incoming: Question }): ReactNode {
         </section>
       ) : null}
 
-      <form
-        className="sf-view-section sf-respond sf-interaction"
-        onSubmit={(event) => {
-          event.preventDefault();
-          submitWhole("answer");
-        }}
-      >
-        <TextInput
-          label="Your response"
-          placeholder={question.answered ? "Add to your response" : question.asks?.length ? "Respond to the whole question" : "Your response"}
-          value={text}
-          onChange={(v) => {
-            setText(v);
-            mutation.reset();
+      {reader === "escalation" && escalatedGap ? (
+        <>
+          <EscalationForm {...formProps} />
+          <EscalationOutcome gapId={escalatedGap} response={latestAnswer} />
+        </>
+      ) : reader === "pending_verification" ? (
+        <VerificationForm {...formProps} />
+      ) : reader === "localization" ? (
+        <LocalizationForm {...formProps} />
+      ) : (
+        <>
+        <form
+          className="sf-view-section sf-respond sf-interaction"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submitWhole("answer");
           }}
-          disabled={state === "pending"}
-          format={format}
-          onFormat={(f) => {
-            setFormat(f);
-            mutation.reset();
-          }}
-        />
-        <InteractionFooter
-          state={lastAsk === null ? state : "idle"}
-          submitLabel="Send"
-          canSubmit={!revised}
-          error={
-            error ||
-            (lastAsk === null && mutation.isError ? `Not delivered: ${mutation.error.message}. Retry sends the same response.` : null)
-          }
-          sentLabel={mutation.data?.kind === "dismiss" ? "Declined" : "Sent"}
-          secondary={
-            <button type="button" className="sf-button" disabled={state === "pending" || revised} onClick={() => submitWhole("dismiss")}>
-              Decline
-            </button>
-          }
-        />
-      </form>
+        >
+          <TextInput
+            label="Your response"
+            placeholder={question.answered ? "Add to your response" : question.asks?.length ? "Respond to the whole question" : "Your response"}
+            value={text}
+            onChange={(v) => {
+              setText(v);
+              mutation.reset();
+            }}
+            disabled={state === "pending"}
+            format={format}
+            onFormat={(f) => {
+              setFormat(f);
+              mutation.reset();
+            }}
+          />
+          <InteractionFooter
+            state={lastAsk === null ? state : "idle"}
+            submitLabel="Send"
+            canSubmit={!revised}
+            error={
+              error ||
+              (lastAsk === null && mutation.isError ? `Not delivered: ${mutation.error.message}. Retry sends the same response.` : null)
+            }
+            sentLabel={mutation.data?.kind === "dismiss" ? "Declined" : "Sent"}
+            secondary={
+              <button type="button" className="sf-button" disabled={state === "pending" || revised} onClick={() => submitWhole("dismiss")}>
+                Decline
+              </button>
+            }
+          />
+        </form>
+          {reader === "docs_decision" ? <UnreadNote /> : null}
+        </>
+      )}
 
       <details className="sf-view-section sf-history">
         <summary>

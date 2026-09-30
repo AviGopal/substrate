@@ -32,11 +32,17 @@ const KINDS: ReadonlyArray<{ id: Kind; label: string }> = [
  * "filed"), never on open or on submit: an outcome record for a complaint that
  * failed to file would be a record of an act that did not land.
  */
+/** Ask the surface to open the Issues drawer on one issue. Surface listens for this. */
+export function showIssue(gapId: string): void {
+  window.dispatchEvent(new CustomEvent("sf:show-issue", { detail: gapId }));
+}
+
 export function ComplainButton({ region, onFiled }: { region: string; onFiled?: () => void }): ReactNode {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<Kind>("hard_to_understand");
   const [text, setText] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "filed" | "failed">("idle");
+  const [filedAs, setFiledAs] = useState<string | null>(null);
   const qc = useQueryClient();
 
   const send = async (): Promise<void> => {
@@ -50,13 +56,16 @@ export function ComplainButton({ region, onFiled }: { region: string; onFiled?: 
         body: JSON.stringify(complaintPayload({ region, kind, text })),
       });
       if (!res.ok) throw new Error(String(res.status));
+      const j = (await res.json().catch(() => null)) as { body?: { filed_gap_id?: unknown } } | null;
+      setFiledAs(typeof j?.body?.filed_gap_id === "string" ? j.body.filed_gap_id : null);
       setState("filed");
       setText("");
       onFiled?.();
-      // The gap strip is the evidence that this landed; refresh it rather than
-      // claiming success on our own say-so.
+      // The issue list is the evidence that this landed; refresh it rather than
+      // claiming success on our own say-so. The gap is written just after this
+      // response returns, so read the list again once it has had time to land.
       void qc.invalidateQueries({ queryKey: ["interfaceGaps"] });
-      window.setTimeout(() => setOpen(false), 2200);
+      window.setTimeout(() => void qc.invalidateQueries({ queryKey: ["interfaceGaps"] }), 2500);
     } catch {
       setState("failed");
     }
@@ -92,7 +101,14 @@ export function ComplainButton({ region, onFiled }: { region: string; onFiled?: 
         submitLabel="File"
         canSubmit={text.trim().length > 0}
         error={state === "failed" ? "Not filed" : null}
-        sentLabel="Filed"
+        sentLabel={filedAs ? `Filed as ${filedAs}` : "Filed"}
+        receipt={
+          filedAs ? (
+            <button type="button" className="sf-link-button" onClick={() => showIssue(filedAs)}>
+              show
+            </button>
+          ) : undefined
+        }
         secondary={
           <button type="button" className="sf-button sf-button-quiet" onClick={() => setOpen(false)}>
             Cancel
