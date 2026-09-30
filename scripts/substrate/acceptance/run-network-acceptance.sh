@@ -183,12 +183,15 @@ if [ "$spoke_rc" = 0 ] || [ "$spoke_rc" = 20 ]; then
   else set_check hub_registration fail "$(jq -nc --arg s "@${spoke_id}" '{wanted: ("a fileContent producer ending " + $s)}')"; fi
 
   marker="spoke-only-$(date +%s)-$RANDOM"
-  eng exec "$SPOKE_C" sh -c "printf '%s\n' '$marker' > /workspace/network-acceptance-marker.txt" >/dev/null 2>&1
-  eng exec "$HUB_C" sh -c "printf '%s\n' 'hub-copy-must-not-be-read' > /workspace/network-acceptance-marker.txt" >/dev/null 2>&1
+  # Inside a data directory the file tools serve: /workspace itself is never a tool root,
+  # because it holds the fleet's secrets file.
+  marker_path=/workspace/validation/network-acceptance-marker.txt
+  eng exec "$SPOKE_C" sh -c "mkdir -p /workspace/validation && printf '%s\n' '$marker' > $marker_path" >/dev/null 2>&1
+  eng exec "$HUB_C" sh -c "mkdir -p /workspace/validation && printf '%s\n' 'hub-copy-must-not-be-read' > $marker_path" >/dev/null 2>&1
   read_via_spoke() {
     answer="$(eng exec "$HUB_C" curl -s -m40 -H 'Content-Type: application/json' -X POST \
       "http://127.0.0.1:8401/egress/resolve?vessel=${target}" \
-      -d '{"pointer":{"type":"fileContent","path":"/workspace/network-acceptance-marker.txt"}}' 2>/dev/null)"
+      -d "{\"pointer\":{\"type\":\"fileContent\",\"path\":\"$marker_path\"}}" 2>/dev/null)"
     printf '%s' "$answer" | grep -qF "$marker"
   }
   if [ -n "$target" ] && poll 120 read_via_spoke; then
@@ -198,7 +201,7 @@ if [ "$spoke_rc" = 0 ] || [ "$spoke_rc" = 20 ]; then
   # A goal from the spoke, graded on the hub. Needs a model, so it is judged only with a key.
   if [ -n "${ACCEPTANCE_PROVIDER_KEY:-}" ]; then
     spoke_client_key="$(jq -r '.metabob.apiKey // empty' "$root/spoke-config.json" 2>/dev/null)"; secrets+=("$spoke_client_key")
-    did="$(eng exec "$SPOKE_C" sh -c "curl -s -m30 -X POST http://127.0.0.1:8210/run-goal -H 'Content-Type: application/json' -H 'Authorization: ApiKey $spoke_client_key' -d '{\"goal\":\"Read /workspace/network-acceptance-marker.txt and tell me exactly what it says.\",\"operator\":\"operator:network-acceptance\",\"tags\":[\"network_acceptance\"]}'" 2>/dev/null | jq -r '.dispatchId // empty')"
+    did="$(eng exec "$SPOKE_C" sh -c "curl -s -m30 -X POST http://127.0.0.1:8210/run-goal -H 'Content-Type: application/json' -H 'Authorization: ApiKey $spoke_client_key' -d '{\"goal\":\"Read $marker_path and tell me exactly what it says.\",\"operator\":\"operator:network-acceptance\",\"tags\":[\"network_acceptance\"]}'" 2>/dev/null | jq -r '.dispatchId // empty')"
     done_goal() { rec="$(eng exec "$SPOKE_C" curl -s -m10 -H "Authorization: ApiKey $spoke_client_key" "http://127.0.0.1:8210/executions/$did" 2>/dev/null)"; case "$(jq -r '.status // empty' <<<"$rec")" in running|pending|"") return 1 ;; esac; }
     if [ -n "$did" ] && poll 600 done_goal; then
       reached="$(jq -r '.goalReached // .reached // false' <<<"$rec")"; exe="$(jq -r '.executionId // .execution_id // empty' <<<"$rec")"
