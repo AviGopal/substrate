@@ -809,7 +809,25 @@ Bun.serve({
             && !('shape' in r.content) && !('body' in r.content) && !('value' in r.content))
             || nestedRefusal(r)
           let reached = false
-          for (const a of circuits) {
+          // The named vessel's own registered circuit comes first. A spoke registers its
+          // vessels on the hub as `<vessel>@<substrate>` with protocol 'libp2p' and its
+          // circuit multiaddr, but the hub's connection table holds only the relay until
+          // something dials the spoke, so the live-circuit walk below finds nothing and a
+          // ?vessel=-only call to a joined spoke failed with "could not reach … over any
+          // live circuit" (measured 2026-09-30, one-command spoke join: the same resolve
+          // with that registered multiaddr as ?target= was answered by the spoke).
+          const wantedShape = String((pointer as any)?.type ?? '')
+          if (wantedShape) {
+            const rows = await localDiscoveryResolve({ type: 'vesselCapability', shape: wantedShape }, true).catch(() => [] as any[])
+            const named = rows.find((v: any) => (v?.vesselId ?? v?.id) === targetVessel
+              && Array.isArray(v?.libp2p_multiaddr) && v.libp2p_multiaddr[0] && !isSelfCircuit(v))
+            if (named) {
+              const alt = await resolveOverLibp2p(String(named.libp2p_multiaddr[0]), pointer).catch(errOf)
+              if (alt && !alt.error && !isHollowErr(alt)) { console.log('[fed-transport] egress -> ' + wantedShape + ' via the registered circuit of ' + targetVessel); res = alt; reached = true }
+              else res = res ?? alt
+            }
+          }
+          for (const a of (reached ? [] : circuits)) {
             const alt = await resolveOverLibp2p(a, pointer).catch(errOf)
             if (alt && !alt.error && !isHollowErr(alt)) { console.log('[fed-transport] egress repair -> ' + String((pointer as any)?.type ?? '?') + ' via live circuit …' + a.slice(-16)); res = alt; reached = true; break }
             res = res ?? alt
