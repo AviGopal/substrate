@@ -201,14 +201,23 @@ if [ "$spoke_rc" = 0 ] || [ "$spoke_rc" = 20 ]; then
   # A goal from the spoke, graded on the hub. Needs a model, so it is judged only with a key.
   if [ -n "${ACCEPTANCE_PROVIDER_KEY:-}" ]; then
     spoke_client_key="$(jq -r '.metabob.apiKey // empty' "$root/spoke-config.json" 2>/dev/null)"; secrets+=("$spoke_client_key")
-    did="$(eng exec "$SPOKE_C" sh -c "curl -s -m30 -X POST http://127.0.0.1:8210/run-goal -H 'Content-Type: application/json' -H 'Authorization: ApiKey $spoke_client_key' -d '{\"goal\":\"Read $marker_path and tell me exactly what it says.\",\"operator\":\"operator:network-acceptance\",\"tags\":[\"network_acceptance\"]}'" 2>/dev/null | jq -r '.dispatchId // empty')"
     done_goal() { rec="$(eng exec "$SPOKE_C" curl -s -m10 -H "Authorization: ApiKey $spoke_client_key" "http://127.0.0.1:8210/executions/$did" 2>/dev/null)"; case "$(jq -r '.status // empty' <<<"$rec")" in running|pending|"") return 1 ;; esac; }
-    if [ -n "$did" ] && poll 600 done_goal; then
-      reached="$(jq -r '.goalReached // .reached // false' <<<"$rec")"; exe="$(jq -r '.executionId // .execution_id // empty' <<<"$rec")"
-      on_hub="$(curl -s -m10 -o /dev/null -w '%{http_code}' -H "Authorization: ApiKey $hub_key" "http://localhost:${HUB_PREFIX}080/v2/activities/execution-traces/$exe")"
-      r=fail; [ "$reached" = true ] && [ "$on_hub" = 200 ] && printf '%s' "$rec" | grep -qF "$marker" && r=pass
-      set_check spoke_goal "$r" "$(jq -nc --arg d "$did" --arg re "$reached" --arg h "$on_hub" '{dispatch: $d, reached: $re, trace_on_hub_http: $h}')"
-    else set_check spoke_goal fail "$(jq -nc --arg d "${did:-}" '{dispatch: $d, note: "not dispatched or not finished in 600s"}')"; fi
+    # Up to three dispatches, the same budget substrate-status gives its own known-answer
+    # goal: reach is expected with high probability, not certainty, and one miss must not
+    # decide a publish. Every attempt is recorded, so a miss stays visible in the result.
+    r=fail; attempts='[]'
+    for attempt in 1 2 3; do
+      did="$(eng exec "$SPOKE_C" sh -c "curl -s -m30 -X POST http://127.0.0.1:8210/run-goal -H 'Content-Type: application/json' -H 'Authorization: ApiKey $spoke_client_key' -d '{\"goal\":\"Read $marker_path and tell me exactly what it says.\",\"operator\":\"operator:network-acceptance\",\"tags\":[\"network_acceptance\"]}'" 2>/dev/null | jq -r '.dispatchId // empty')"
+      reached=""; on_hub=""
+      if [ -n "$did" ] && poll 600 done_goal; then
+        reached="$(jq -r '.goalReached // .reached // false' <<<"$rec")"; exe="$(jq -r '.executionId // .execution_id // empty' <<<"$rec")"
+        on_hub="$(curl -s -m10 -o /dev/null -w '%{http_code}' -H "Authorization: ApiKey $hub_key" "http://localhost:${HUB_PREFIX}080/v2/activities/execution-traces/$exe")"
+        [ "$reached" = true ] && [ "$on_hub" = 200 ] && printf '%s' "$rec" | grep -qF "$marker" && r=pass
+      fi
+      attempts="$(jq -c --arg d "${did:-}" --arg re "${reached:-not finished in 600s}" --arg h "${on_hub:-}" '. + [{dispatch: $d, reached: $re, trace_on_hub_http: $h}]' <<<"$attempts")"
+      [ "$r" = pass ] && break
+    done
+    set_check spoke_goal "$r" "$(jq -nc --argjson a "$attempts" '{attempts: $a}')"
   else
     set_check spoke_goal unknown '{"note":"needs a provider key; not judged"}'
   fi
