@@ -230,6 +230,7 @@ COPY scripts/substrate/substrate-doctor.sh /usr/local/bin/substrate-doctor
 COPY scripts/substrate/substrate-status.sh /usr/local/bin/substrate-status
 COPY scripts/substrate/substrate-connect.sh /usr/local/bin/substrate-connect
 COPY scripts/substrate/substrate-manifest.sh /usr/local/bin/substrate-manifest
+COPY scripts/substrate/substrate-install.sh /usr/local/bin/substrate-install
 COPY scripts/substrate/reseed-restart.sh /usr/local/bin/reseed-restart
 # Config provenance (`substrate-config`) answers the one question no other tool
 # could: WHERE a resolved value came from — the operator's env, a PRIOR boot's
@@ -360,7 +361,7 @@ RUN set -e; \
 
 RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/local/bin/setup-git-push \
         /usr/local/bin/substrate-ready /usr/local/bin/substrate-doctor /usr/local/bin/reseed-restart \
-        /usr/local/bin/substrate-status /usr/local/bin/substrate-connect /usr/local/bin/substrate-manifest \
+        /usr/local/bin/substrate-status /usr/local/bin/substrate-connect /usr/local/bin/substrate-manifest /usr/local/bin/substrate-install \
         /usr/local/bin/substrate-config \
         /usr/local/bin/substrate-pull-sync /usr/local/bin/mirror-to-live \
         /usr/local/bin/vessel-ctl /usr/local/bin/apply-llm-arms \

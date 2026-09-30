@@ -8,12 +8,13 @@
 #   manifest  print the launch manifest (substrate-manifest)
 #   status    the readiness verdict (substrate-status)
 #   connect   the client configuration (substrate-connect)
+#   install   print the one-command installer (substrate-install): `… install | sh`
 # Nothing else is touched on that path: no env file, no volume, no systemd.
 # Any other argument, or none, boots the fleet exactly as before.
 set -euo pipefail
 
 case "${1:-}" in
-  manifest|status|connect)
+  manifest|status|connect|install)
     _cmd="$1"
     _tool="/usr/local/bin/substrate-$_cmd"
     shift

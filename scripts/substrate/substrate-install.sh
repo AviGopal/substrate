@@ -1,0 +1,270 @@
+#!/usr/bin/env bash
+# substrate-install.sh — print the one-command installer for this image.
+#
+#   docker run --rm ghcr.io/avigopal/substrate:dev install | ANTHROPIC_API_KEY=sk-ant-… sh
+#   docker run --rm ghcr.io/avigopal/substrate:dev install | sh -s -- --join http://<hub>:18100 --key <key>
+#
+# STDOUT CARRIES ONLY A POSIX sh SCRIPT. It runs README § Installation's sequence and
+# nothing else: write the launch manifest and a `.env` of install inputs into a fleet
+# directory, `compose up -d`, wait for `seeded`, write the client config from
+# substrate-connect, then wait for the requested level (default `usable`). It derives
+# nothing the image derives (role, endpoints, key requirement, secrets); the image
+# still judges every input at boot.
+#
+# Two facts are baked in at print time, so the emitted script cannot drift from the
+# image that printed it:
+#   - the launch manifest, byte for byte (the same file substrate-manifest prints);
+#   - the input names: the install inputs and the manifest's provider-key section are
+#     carried from the environment into `.env`; every other variable the manifest
+#     interpolates is read from `.env` only and unset from the environment compose
+#     sees, so an ambient shell variable (a GITHUB_TOKEN, a REDIS_URL) never configures
+#     a fleet by accident.
+#
+# Exit status of the emitted script: 0 when the requested level passes; 20 when every
+# step ran and the verdict is short of the requested level (the install acceptance run
+# reads 20 as "a wait for a level", like a failed `substrate-status --wait`); anything
+# else is a step that did not run.
+set -euo pipefail
+
+MANIFEST="${SUBSTRATE_MANIFEST:-/usr/local/share/substrate/docker-compose.yml}"
+[ -f "$MANIFEST" ] || { echo "[install] $MANIFEST is missing from this image" >&2; exit 1; }
+if grep -qx 'SUBSTRATE_MANIFEST_EOF' "$MANIFEST"; then
+  echo "[install] the manifest contains the heredoc delimiter; refusing to print a broken installer" >&2
+  exit 1
+fi
+
+# Every ${NAME…} the manifest interpolates, in manifest order, deduplicated.
+names_in() { grep -v '^[[:space:]]*#' | grep -oE '\$\{[A-Z][A-Z0-9_]*' | cut -c3- | awk '!seen[$0]++' | tr '\n' ' '; }
+INPUT_NAMES="$(names_in < "$MANIFEST")"
+[ -n "$INPUT_NAMES" ] || { echo "[install] found no input names in the manifest" >&2; exit 1; }
+# The ones the installer takes from its environment: the install inputs (README
+# § Installation's closed set) and the manifest's provider-key section. Every other
+# manifest input is advanced configuration: it is honoured from .env, and ignored (with
+# a notice) when it is only ambient in the shell, so .env is the one declaration.
+PROVIDER_NAMES="$(awk '/# ── Provider keys/{f=1;next} f&&/# ──/{exit} f' "$MANIFEST" | names_in)"
+[ -n "$PROVIDER_NAMES" ] || { echo "[install] found no provider-key section in the manifest" >&2; exit 1; }
+CARRY_NAMES="SUBSTRATE_IMAGE SUBSTRATE_NAME SUBSTRATE_PORT_PREFIX PROFILE DISCOVERY_ENDPOINT METABOB_API_KEY PUBLIC_IP SUBSTRATE_GIT_PAT SUBSTRATE_REPO_OWNER ${PROVIDER_NAMES}"
+for n in $CARRY_NAMES; do
+  case " $INPUT_NAMES " in *" $n "*) ;; *) echo "[install] install input $n is not read by the manifest" >&2; exit 1 ;; esac
+done
+
+REVISION="$(cat /etc/substrate/image-revision 2>/dev/null || echo unknown)"
+
+case "${1:-}" in
+  ""|--print) ;;
+  -h|--help)
+    cat <<'EOF'
+usage: docker run --rm <image> install | [INPUT=value …] sh [-s -- options]
+
+Prints an installer for this image. Pipe it to sh; options go after `sh -s --`.
+
+  --join <discovery-url>   join a network: the hub's discovery endpoint (DISCOVERY_ENDPOINT)
+  --key <key>              the key the hub issued (METABOB_API_KEY; prefer the env form)
+  --profile <p>            standalone | hub | hub-minimal | spoke | surface | compute (PROFILE)
+  --public-ip <addr>       the address spokes reach; required for a hub (PUBLIC_IP)
+  --name <n>               fleet name: container <n>-live, volumes <n>-* (SUBSTRATE_NAME)
+  --prefix <nn>            host port prefix, ports <nn>xxx (SUBSTRATE_PORT_PREFIX)
+  --dir <path>             fleet directory (default ./<name>)
+  --engine docker|podman   container engine (default: the first whose compose answers)
+  --wait <level>           live | seeded | served | usable | none (default usable)
+  --no-connect             do not write the client configuration
+
+Install inputs may also be given as environment variables of the sh: a provider key
+(ANTHROPIC_API_KEY, OPENAI_API_KEY, …), METABOB_API_KEY, SUBSTRATE_GIT_PAT +
+SUBSTRATE_REPO_OWNER. They are written to the fleet's .env, so a later
+`compose up -d` keeps them. Advanced configuration is read from that .env only.
+Re-running in the same directory updates that fleet: inputs you pass replace their
+lines, the rest are kept.
+EOF
+    exit 0 ;;
+  *) echo "usage: substrate-install [--help]   (options belong to the printed script: … | sh -s -- <options>)" >&2; exit 2 ;;
+esac
+
+cat <<EOF
+#!/bin/sh
+# substrate installer, printed by image revision ${REVISION}.
+# Runs README § Installation: manifest + .env -> compose up -d -> wait seeded ->
+# client config -> wait for the requested level. Options: see \`install --help\`.
+set -eu
+INPUT_NAMES='${INPUT_NAMES}'
+CARRY_NAMES='${CARRY_NAMES}'
+EOF
+
+cat <<'EOF'
+say() { printf '[install] %s\n' "$*" >&2; }
+die() { say "$*"; exit 1; }
+
+engine=""; dir=""; wait_level=usable; connect=1
+set_name=""; set_prefix=""; set_profile=""; set_public_ip=""; set_join=""; set_key=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --join) set_join="${2:?--join needs a discovery url}"; shift 2 ;;
+    --key) set_key="${2:?--key needs a key}"; shift 2 ;;
+    --profile) set_profile="${2:?--profile needs a value}"; shift 2 ;;
+    --public-ip) set_public_ip="${2:?--public-ip needs an address}"; shift 2 ;;
+    --name) set_name="${2:?--name needs a value}"; shift 2 ;;
+    --prefix) set_prefix="${2:?--prefix needs a value}"; shift 2 ;;
+    --dir) dir="${2:?--dir needs a path}"; shift 2 ;;
+    --engine) engine="${2:?--engine needs docker or podman}"; shift 2 ;;
+    --wait) wait_level="${2:?--wait needs a level}"; shift 2 ;;
+    --no-connect) connect=0; shift ;;
+    -h|--help) die "options are listed by: docker run --rm <image> install --help" ;;
+    *) die "unknown option '$1' (docker run --rm <image> install --help lists them)" ;;
+  esac
+done
+case "$wait_level" in live|seeded|served|usable|none) ;; *) die "--wait must be live, seeded, served, usable or none" ;; esac
+
+# Flags are spellings of manifest inputs; they win over the same input in the environment.
+[ -n "$set_join" ] && DISCOVERY_ENDPOINT="$set_join" && export DISCOVERY_ENDPOINT
+[ -n "$set_key" ] && METABOB_API_KEY="$set_key" && export METABOB_API_KEY
+[ -n "$set_profile" ] && PROFILE="$set_profile" && export PROFILE
+[ -n "$set_public_ip" ] && PUBLIC_IP="$set_public_ip" && export PUBLIC_IP
+[ -n "$set_name" ] && SUBSTRATE_NAME="$set_name" && export SUBSTRATE_NAME
+[ -n "$set_prefix" ] && SUBSTRATE_PORT_PREFIX="$set_prefix" && export SUBSTRATE_PORT_PREFIX
+
+# ── Engine ─────────────────────────────────────────────────────────────────────
+if [ -z "$engine" ]; then
+  for e in docker podman; do
+    if command -v "$e" >/dev/null 2>&1 && "$e" compose version >/dev/null 2>&1; then engine="$e"; break; fi
+  done
+  [ -n "$engine" ] || die "no container engine with compose found: install Docker with 'docker compose', or Podman with 'podman compose'"
+fi
+case "$engine" in docker|podman) ;; *) die "--engine must be docker or podman" ;; esac
+
+# ── Fleet directory and .env ───────────────────────────────────────────────────
+envval() { # value of $1 in ./.env, empty when absent
+  [ -f .env ] || return 0
+  sed -n "s/^$1=//p" .env | tail -1
+}
+name="${SUBSTRATE_NAME:-}"
+[ -n "$dir" ] || dir="./${name:-substrate}"
+start="$(pwd)"
+mkdir -p "$dir"
+cd "$dir"
+# A refused new fleet leaves nothing behind (the directory is removed only while empty).
+refuse() { cd "$start"; rmdir "$dir" 2>/dev/null || true; die "$@"; }
+[ -n "$name" ] || name="$(envval SUBSTRATE_NAME)"
+name="${name:-substrate}"
+prefix="${SUBSTRATE_PORT_PREFIX:-$(envval SUBSTRATE_PORT_PREFIX)}"
+prefix="${prefix:-18}"
+container="${SUBSTRATE_CONTAINER:-$(envval SUBSTRATE_CONTAINER)}"
+container="${container:-${name}-live}"
+
+new_fleet=1
+[ -f .env ] && [ -f docker-compose.yml ] && new_fleet=0
+
+if [ "$new_fleet" = 1 ]; then
+  # A new directory must not attach to a fleet that already owns these names or ports.
+  if "$engine" container inspect "$container" >/dev/null 2>&1 || "$engine" volume inspect "${name}-workspace" >/dev/null 2>&1; then
+    refuse "a fleet named '$name' already exists on this host (container $container or volume ${name}-workspace). Update it from its own directory, or pick another: --name <n> --prefix <nn> (19-32 avoid the ephemeral range)"
+  fi
+  busy=""
+  if command -v ss >/dev/null 2>&1; then
+    for p in 080 090 100 101 210 250 260 270 310 333; do
+      ss -Hltn "sport = :${prefix}${p}" 2>/dev/null | grep -q . && busy="$busy ${prefix}${p}"
+    done
+    [ -z "$busy" ] || refuse "host port(s)$busy are already in use; choose another --prefix <nn>"
+  else
+    say "ss is not available, so host ports ${prefix}xxx were not checked before launch"
+  fi
+fi
+
+# Rootless engines give every container's systemd session keyrings from this user's
+# kernel key quota (kernel.keys.maxkeys, often 200: about 25 per fleet). When it runs
+# out, a container fails to start with "unable to create session key: disk quota
+# exceeded", which names neither keys nor the fix.
+if [ -r /proc/key-users ] && [ -r /proc/sys/kernel/keys/maxkeys ] && [ "$(id -u)" != 0 ]; then
+  used="$(awk -v u="$(id -u):" '$1 == u { split($4, a, "/"); print a[1] }' /proc/key-users)"
+  max="$(cat /proc/sys/kernel/keys/maxkeys)"
+  if [ -n "$used" ] && [ $((max - used)) -lt 40 ]; then
+    say "this user holds $used of $max kernel keys; a new fleet needs about 25. If the launch fails with 'unable to create session key: disk quota exceeded', raise the limit: sudo sysctl -w kernel.keys.maxkeys=2000 kernel.keys.maxbytes=2000000"
+  fi
+fi
+
+# The manifest this image was built with (re-running rewrites it, which is how an
+# image upgrade reaches the declaration).
+cat > docker-compose.yml <<'SUBSTRATE_MANIFEST_EOF'
+EOF
+
+cat "$MANIFEST"
+
+cat <<'EOF'
+SUBSTRATE_MANIFEST_EOF
+
+# Carry each install input set in this environment into .env, replacing its line.
+umask 077
+touch .env
+carried=""
+for n in $CARRY_NAMES; do
+  eval "v=\${$n:-}"
+  [ -n "$v" ] || continue
+  case "$v" in *"
+"*) die "$n contains a newline; .env cannot hold it" ;; esac
+  grep -v "^$n=" .env > .env.tmp || true
+  printf '%s=%s\n' "$n" "$v" >> .env.tmp
+  mv .env.tmp .env
+  carried="$carried $n"
+done
+chmod 600 .env
+# Nothing ambient: any other manifest input reaches compose only through .env.
+ignored=""
+for n in $INPUT_NAMES; do
+  case " $CARRY_NAMES " in *" $n "*) continue ;; esac
+  eval "v=\${$n:-}"
+  [ -n "$v" ] || continue
+  grep -q "^$n=" .env || ignored="$ignored $n"
+  unset "$n"
+done
+[ -z "$ignored" ] || say "ignored from your shell (advanced inputs are read from .env only; add them there to use them):$ignored"
+say "fleet directory: $(pwd)  (inputs written:${carried:- none, defaults only})"
+
+# ── Launch ─────────────────────────────────────────────────────────────────────
+"$engine" compose up -d || die "compose up failed; the manifest and .env are in $(pwd)"
+
+if [ "$wait_level" = none ]; then
+  say "launched $container; not waiting (check with: $engine exec $container substrate-status)"
+  exit 0
+fi
+
+# ── Wait for a key, then hand the client its connection ───────────────────────
+level_rank() { case "$1" in live) echo 1 ;; seeded) echo 2 ;; served) echo 3 ;; usable) echo 4 ;; esac; }
+first_wait=seeded
+[ "$(level_rank "$wait_level")" -lt 2 ] && first_wait="$wait_level"
+if ! "$engine" exec "$container" substrate-status --wait "$first_wait"; then
+  say "the verdict did not reach '$first_wait'; nothing else was done"
+  exit 20
+fi
+
+if [ "$connect" = 1 ] && [ "$first_wait" = seeded ]; then
+  target="${METABOB_CONFIG_PATH:-}"
+  [ -n "$target" ] || { [ -n "${HOME:-}" ] && target="$HOME/.metabob/config.json"; }
+  if [ -z "$target" ]; then
+    say "HOME and METABOB_CONFIG_PATH are unset; client configuration not written"
+  elif "$engine" exec "$container" substrate-connect > metabob-config.json; then
+    chmod 600 metabob-config.json
+    ep="$(grep -o '"endpoint"[^,}]*' metabob-config.json | head -1)"
+    if [ -f "$target" ] && ! grep -qF "$ep" "$target"; then
+      # Never overwrite another fleet's client config: leave it, point at ours.
+      say "$target already points at another fleet and was left as it is."
+      say "to use this fleet: export METABOB_CONFIG_PATH=$(pwd)/metabob-config.json"
+    else
+      mkdir -p "$(dirname "$target")"
+      cp metabob-config.json "$target"
+      chmod 600 "$target"
+      say "client configuration written to $target"
+    fi
+  else
+    say "substrate-connect refused; client configuration not written"
+  fi
+fi
+
+if [ "$(level_rank "$wait_level")" -gt 2 ]; then
+  if ! "$engine" exec "$container" substrate-status --wait "$wait_level"; then
+    say "installed, but the verdict is short of '$wait_level' (the lines above name the failing level)"
+    say "report it: $engine exec $container substrate-status --report"
+    exit 20
+  fi
+fi
+say "done: $container reached '$wait_level'. Human surface: http://localhost:${prefix}310/"
+say "verdict any time: $engine exec $container substrate-status"
+EOF
