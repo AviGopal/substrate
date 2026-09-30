@@ -283,3 +283,16 @@ scripts/substrate/workspace/
 /scripts/substrate/mirror-to-live
 .config-probe.*
 validation/human-participation/witness-excluded/
+
+# Runtime files a fleet writes at the root of its own super-repo clone (WORKSPACE_ROOT
+# defaults there), which unscoped autonomous commits then swept in. Ignored so they
+# cannot be re-added; the copies already tracked are a separate cleanup decision.
+/leases/
+/Substrate/
+/history.txt
+/run_scan.js
+/mitosis-applied-host-sync*.jsonl
+# A relay's libp2p private key (relay.js writes it to its working directory; the
+# "pub" in the name is misleading). Never commit one.
+scripts/substrate/federation-relay/.relay-*key*.protobuf
+*.protobuf
