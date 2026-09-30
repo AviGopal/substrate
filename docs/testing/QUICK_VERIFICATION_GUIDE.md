@@ -115,8 +115,9 @@ kill %1
 ```bash
 cd repos/activity-api
 
-# Hot-reload in substrate:
-docker exec <container> vessel-ctl restart activity-api   # migrations apply on unit start
+# In the substrate, once the change is pushed to origin/dev (nothing on the host is
+# bind-mounted, so an unpushed edit never arrives):
+docker exec <container> vessel-ctl sync activity-api   # pull, mirror, restart; migrations apply on unit start
 
 # Verify migration applied:
 curl -sf $ACTIVITY_API_URL/health | jq .
@@ -299,17 +300,21 @@ curl -H "Authorization: ApiKey $METABOB_API_KEY" \
 curl -H "Authorization: ApiKey $METABOB_API_KEY" \
   "$ACTIVITY_API_URL/v2/activities/execution-traces?limit=1" | jq '.executions[0].status'
 
-# 2. Confirm Thompson write path is active (check activity-api logs)
-docker exec substrate-live bun /vessels/seed-identity.ts   # ensure auth seeded
+# 2. Confirm the key is seeded (the `seeded` level) and read activity-api's journal
+docker exec <container> substrate-status --level seeded
+docker exec <container> journalctl -u activity-api -n 100 --no-pager
 ```
 
 ### Dense search disabled (embedding.status=disabled)
 
-This indicates the `EMBEDDING_MODEL_DIR` env var is missing. Check:
+activity-api could not load its embedding model. gen-env pins `EMBEDDING_MODEL_DIR` in
+`/etc/substrate/env` (the file the units read, not the container's own environment), so
+check the value and that the directory it names exists:
 
 ```bash
-docker exec substrate-live env | grep EMBEDDING
-# Should show EMBEDDING_MODEL_DIR=/vessels/assets/models or similar
+docker exec <container> grep EMBEDDING_MODEL_DIR /etc/substrate/env
+# EMBEDDING_MODEL_DIR=/vessels/activity-api/src/assets/models/all-MiniLM-L6-v2
+docker exec <container> sh -c 'ls "$(sed -n "s/^EMBEDDING_MODEL_DIR=//p" /etc/substrate/env)"'
 ```
 
 ---
@@ -349,7 +354,6 @@ bun run validation/scripts/stratified-harness.ts
 |----------|---------|---------|
 | `METABOB_API_KEY` | Authentication | `mb-<base64>-<hex>` (~160 chars) |
 | `ACTIVITY_API_URL` | Backend endpoint | `http://localhost:18080` |
-| `SURREALDB_URL` | Database | `ws://localhost:8000` |
 
 Client tooling reads the client configuration file (`~/.metabob/config.json`, or the file
 `METABOB_CONFIG_PATH` names; a project-local `.metabob/config.json` shadows both). The
