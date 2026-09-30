@@ -474,12 +474,15 @@ function Stub({ text }: { text: string }): ReactNode {
   const executionId = typeof o["executionId"] === "string" ? o["executionId"] : null;
   if (producedBy === null || executionId === null) return <Verbatim text={text} />;
   return (
-    // Nothing here is clickable, on the Prose.tsx precedent: impulse content is
-    // untrusted, so an execution id a walk invented never becomes a link.
+    // A POINTER, not an absence. The step ran and its output lives with its
+    // execution; this run carried only the reference (goal-host's horizontal
+    // bundle pools `{producedBy, executionId}` without reading the content).
+    // Saying "no content" here claimed a fact nobody measured. Nothing is
+    // clickable, on the Prose.tsx precedent: an execution id is untrusted text.
     <p className="sf-stub">
-      No content carried — this impulse records only that a step ran. Produced by{" "}
-      <span className="sf-mono">{activityLabel(producedBy)}</span> in execution{" "}
-      <span className="sf-mono">{executionId}</span>. <CopyButton text={executionId} what="the execution id" />
+      Pointer only — <span className="sf-mono">{activityLabel(producedBy)}</span>'s output was not carried into
+      this run · execution <span className="sf-mono">{executionId}</span>{" "}
+      <CopyButton text={executionId} what="the execution id" />
     </p>
   );
 }
