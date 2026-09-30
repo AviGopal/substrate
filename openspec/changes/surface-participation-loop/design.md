@@ -129,8 +129,9 @@ What should happen to this gap?
 Mirror-check failure, inline, before sending:
 
 ```
-  ⚠ Your details mention "drop", which the applier would read first as a different
-    decision than "Provide missing information". Reword the details.   [ Send ] disabled
+  (Drop it chosen; details say "no need to redefine anything, just drop it")
+  ⚠ Your details mention "redefine", which the applier reads before "drop", so this
+    would be applied as Redefine the goal. Reword the details.         [ Send ] disabled
 ```
 
 ### 4b. Unread kinds (Q3, Q4, Q5)
