@@ -25,6 +25,7 @@
 # mirror. Fail-open: no PAT / no network -> warn once and no-op (a substrate
 # without pull access is frozen-but-functional).
 set -uo pipefail
+PULLSYNC_T0="$(date +%s)"; GEN_QUEUE=""
 
 CLONE_DIR="${MITOSIS_PUSH_CLONE_DIR:-/workspace/git/vessels}"
 RUNTIME_DIR="${MITOSIS_RUNTIME_DIR:-/vessels}"
@@ -255,13 +256,22 @@ gen_failing_test_gaps() {
     fi
     tf="$(printf '%s' "$p" | jq -r '.impulse.pointer.gap.classification_metadata.evidence_resolve.input.test_file')"
     if [ -z "$dir" ] || [ -z "${BUN_BIN:-}" ]; then log "$v: failing-test generator: cannot run $tf alone (no checkout or bun); not filing $id"; continue; fi
-    local ar alone keep
+    if [ -n "${FAILTEST_GEN_DEADLINE:-}" ] && [ $(( $(date +%s) + 170 )) -gt "$FAILTEST_GEN_DEADLINE" ]; then log "$v: failing-test generator: tick budget spent; $id left for a later tick"; break; fi
+    local ar ao keep passed
     ar="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-alone-XXXXXX")"
-    alone="$(cd "$dir" && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$ar" timeout --kill-after=15 150 "$BUN_BIN" test "./$tf" --timeout 20000 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | awk '/^\(fail\) /' | sed 's/^(fail) //; s/ \[[0-9.]*m*s\]$//; s/[[:space:]]*$//')"
+    ao="$(cd "$dir" && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$ar" timeout --kill-after=15 150 "$BUN_BIN" test "./$tf" --timeout 20000 2>&1 | sed 's/\x1b\[[0-9;]*m//g; s/ \[[0-9.]*m*s\]$//; s/[[:space:]]*$//')"
     rm -rf "$ar" 2>/dev/null
-    keep="$(printf '%s' "$p" | jq -c --arg alone "$alone" '[.impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(. as $n | ($alone | split("\n")) | index($n))]')"
-    printf '%s' "$p" | jq -r --argjson keep "$keep" '.impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(. as $n | $keep | index($n) | not)' >> "$poll" 2>/dev/null || true
-    if [ "$keep" = "[]" ] || [ -z "$keep" ]; then log "$v: failing-test generator: $tf is green when run ALONE (suite-only failure: cross-file mock pollution); not filing $id"; continue; fi
+    # A run that printed no bun summary (unloadable alone, crashed, timed out) proves nothing: neither red nor
+    # polluted. A name is red on "(fail) <name>" and polluted only on POSITIVE "(pass) <name>" (qa).
+    if ! printf '%s\n' "$ao" | command grep -qE '^ *[0-9]+ (pass|fail)$'; then log "$v: failing-test generator: alone run of $tf produced no result; not filing $id, not marking polluted"; continue; fi
+    keep="$(printf '%s' "$p" | jq -c --arg ao "$ao" '($ao | split("\n")) as $L | [.impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(("(fail) " + .) as $x | $L | index($x))]')"
+    passed="$(printf '%s' "$p" | jq -r --arg ao "$ao" '($ao | split("\n")) as $L | .impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(("(pass) " + .) as $x | $L | index($x))')"
+    [ -n "$passed" ] && printf '%s\n' "$passed" >> "$poll" 2>/dev/null
+    if [ "$keep" = "[]" ] || [ -z "$keep" ]; then
+      if [ -n "$passed" ]; then log "$v: failing-test generator: $tf passes when run ALONE (suite-only failure: cross-file mock pollution); not filing $id"
+      else log "$v: failing-test generator: named tests of $tf neither failed nor passed alone (inconclusive); not filing $id"; fi
+      continue
+    fi
     p="$(printf '%s' "$p" | jq -c --argjson keep "$keep" '.impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests = $keep | .impulse.pointer.gap.classification_metadata.red_alone = true')"
     if [ "${FAILTEST_GEN_DRYRUN:-0}" = "1" ]; then log "$v: failing-test generator DRYRUN would file: $p"; else emit_gap "$p"; log "$v: failing-test generator filed $id"; fi
     n=$((n + 1))
@@ -1309,7 +1319,11 @@ EOF
       T_NAMES="$(fail_names "$T_OUT")"
       # Before the baseline is refreshed below: B_NAMES_FILE still holds the PREVIOUS tick's fail set,
       # which is what the generator's two-tick flake filter compares against. Never fatal.
-      gen_failing_test_gaps "$v" "$T_OUT" "$B_NAMES_FILE" "$HEAD" "$d" || true
+      # Queued, not run: the generator's alone-runs (up to 3 x 165 s) must never sit in front of a deploy in a
+      # 900 s unit (qa). Its inputs are snapshotted here, before the baseline below is refreshed, and it runs at
+      # the END of the tick, after every vessel has converged, only while the tick budget allows.
+      _gq="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-genq-XXXXXX")" && printf '%s' "$T_OUT" > "$_gq/out" && cp "$B_NAMES_FILE" "$_gq/prev" 2>/dev/null \
+        && GEN_QUEUE="${GEN_QUEUE}${v}|${_gq}|${HEAD}|${d}"$'\n' || rm -rf "${_gq:-/nonexistent-genq}" 2>/dev/null || true
       # The gate compares NAME SETS; the old two-number baseline is no longer read. The old
       # count variable was left behind in two log strings after that rewrite and, under
       # `set -u`, an unbound variable ABORTS the whole converge — so a string that only
@@ -1998,6 +2012,15 @@ converge_units "${SUPER_REPO_DIR:-/workspace/git/super-repo}"
 # container that boots on an already-current commit would otherwise never pick
 # them up at all.
 converge_fleet_defs "${SUPER_REPO_DIR:-/workspace/git/super-repo}"
+
+# FAILING-TEST GENERATOR, deferred to the end of the tick (see the queue note at the test gate).
+while IFS='|' read -r gv gq gh gd; do
+  [ -n "$gv" ] || continue
+  gleft=$(( ${UNIT_TIMEOUT_S:-900} - ( $(date +%s) - PULLSYNC_T0 ) - ${FAILTEST_GEN_MARGIN_S:-240} ))
+  if [ "$gleft" -lt 200 ]; then log "$gv: failing-test generator deferred to a later tick (${gleft}s of tick budget left)"; rm -rf "$gq"; continue; fi
+  FAILTEST_GEN_DEADLINE=$(( $(date +%s) + gleft )) gen_failing_test_gaps "$gv" "$(cat "$gq/out" 2>/dev/null)" "$gq/prev" "$gh" "$gd" || true
+  rm -rf "$gq"
+done <<< "$GEN_QUEUE"
 
 log "done — synced=$synced skipped=$skipped failed=$failed"
 
