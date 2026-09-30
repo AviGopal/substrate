@@ -121,74 +121,100 @@ tracked_fail_names() {
   | jq -r --arg v "$1" --argjson files "$files" '(.body.gaps // [])[] | .classification_metadata.evidence_resolve? // empty | select(.shape? == "test_suite") | select(((.input.vessel // "") | sub("^repos/"; "")) == $v) | select((.input.test_file // "") as $tf | $files | index($tf)) | (.input.only_tests // [])[] | select(type == "string" and test("\\S"))' 2>/dev/null || true
 }
 
-# FAILING-TEST GAP GENERATOR (2026-09-30, user-cleared). The pre-land gate (feature-compose op5-op7) can
-# only certify a landing for a gap that carries its own test_suite check, and every such gap in the store
-# had been written by an operator: 196 failing activity-api tests yielded one admissible check-backed gap.
-# The missing generator was the gap. This files one check-backed failing_test gap per test FILE from the
+# FAILING-TEST GAP GENERATOR (2026-09-30, user-cleared; qa-reviewed). The pre-land gate (feature-compose
+# op5-op7) can only certify a landing for a gap that carries its own test_suite check, and every such gap in
+# the store had been written by an operator: 196 failing activity-api tests yielded one admissible
+# check-backed gap. The missing generator was the gap. This files check-backed failing_test gaps from the
 # suite output the gate already produced, conservatively:
-#   - red on two consecutive ticks (in this run AND in the previous tick's stored fail set: flake filter);
-#   - environment failures skipped (401/403, connect, auth, port, timeout in the failure's error block):
-#     they need a sandbox, not a compose, and filing them would only feed the redispatch livelock;
+#   - only per-file results are read; bun's end-of-run summary REPEATS every failure under the last file
+#     header with no error block, so parsing stops there (qa: 388 rows for 194 failures otherwise);
+#   - red on two consecutive ticks (this run AND the previous tick's stored fail set: flake filter);
+#   - environment failures skipped (401/403, connect, auth, port, timeout; case-insensitive): the check
+#     runs under the same scrubbed env, so they could never close;
+#   - by error CLASS, because op7 cannot catch a CHANGED expected value (equal count, red parent, green
+#     draft): mock/wiring failures (the test's own doubles no longer match the code) edit the TEST;
+#     assertion failures PROTECT the test and point edit_site at the first non-test src frame, or are filed
+#     needs_information for localization when the stack names none; anything else is needs_information;
 #   - names already in an open gap's only_tests, and files an open gap already checks, are skipped;
-#   - an id that exists in ANY status is not rewritten: the store carries omitted keys forward, so
-#     re-opening a closed row would keep its closed_reason/falsifier_exercise and read as verified;
+#   - an id already OPEN is skipped; a CLOSED id is never rewritten (the store carries closed fields forward),
+#     a recurrence is filed as <id>-r<stamp> with recurrence_of so durability stays measurable;
 #   - at most FAILTEST_GEN_PER_TICK new gaps per tick, none while FAILTEST_GEN_OPEN_MAX generator gaps are
-#     open (the redispatch livelock is unfixed; a flood would wedge the lane). Smallest files first.
+#     open (the redispatch livelock is unfixed; a flood would wedge the lane). Smallest groups first.
 # FAILTEST_GEN_DRYRUN=1 logs the payloads instead of filing them.
 gen_failing_test_gaps() {
-  local v="$1" out="$2" prev="$3" head="$4" rows st payloads id n=0
+  local v="$1" out="$2" prev="$3" head="$4" rows st payloads id ex n=0
   command -v jq >/dev/null 2>&1 || return 0
   [ -s "$prev" ] || return 0
   rows="$(printf '%s' "$out" | sed 's/\x1b\[[0-9;]*m//g' | awk -v prevf="$prev" '
     BEGIN { while ((getline l < prevf) > 0) P[l] = 1 }
-    /^[^ (].*\.test\.[jt]sx?:$/ { file = substr($0, 1, length($0) - 1); sub(/^\.\//, "", file); err = ""; why = ""; next }
-    /^\(pass\)/ { err = ""; why = ""; next }
+    /^[[:space:]]*[0-9]+ tests? (failed|skipped|todo):/ { exit }
+    /^[^ (].*\.test\.[jt]sx?:$/ { file = substr($0, 1, length($0) - 1); sub(/^\.\//, "", file); err = ""; why = ""; frame = ""; next }
+    /^\(pass\)/ { err = ""; why = ""; frame = ""; next }
     /^\(fail\) / {
       name = $0; sub(/^\(fail\) /, "", name); sub(/ \[[0-9.]+m?s\]$/, "", name); sub(/[[:space:]]+$/, "", name)
-      env = (err ~ /Received: 40[13]|Unable to connect|ECONNREFUSED|EADDRINUSE|fetch failed|authentication|timed out/) ? 1 : 0
-      if (file != "" && P["(fail) " name]) { gsub(/\t/, " ", name); gsub(/\t/, " ", why); print file "\t" name "\t" env "\t" why }
-      err = ""; why = ""; next
+      e = tolower(err)
+      env = (e ~ /received: 40[13]|unable to connect|econnrefused|eaddrinuse|fetch failed|authentication|timed out/) ? 1 : 0
+      cls = (e ~ /typeerror|is not a function|undefined is not an object|null is not an object|is not a constructor|cannot read propert/) ? "mock" : ((e ~ /expect\(received\)/) ? "assert" : "other")
+      if (file != "" && P["(fail) " name] && !seen[name]++) { gsub(/\t/, " ", name); gsub(/\t/, " ", why); print file "\t" name "\t" env "\t" cls "\t" frame "\t" why }
+      err = ""; why = ""; frame = ""; next
     }
-    { err = err "\n" $0; if ($0 ~ /^(error:|Expected|Received)/ && length(why) < 300) why = why (why == "" ? "" : " / ") substr($0, 1, 200) }')"
+    {
+      err = err "\n" $0
+      if ($0 ~ /^(error:|Expected|Received)/ && length(why) < 300) why = why (why == "" ? "" : " / ") substr($0, 1, 200)
+      if (frame == "" && $0 !~ /node_modules/ && match($0, /src\/[A-Za-z0-9_.\/-]+\.[jt]sx?:[0-9]+/)) { f = substr($0, RSTART, RLENGTH); sub(/:[0-9]+$/, "", f); if (f !~ /\.test\.[jt]sx?$/) frame = f }
+    }')"
   [ -n "$rows" ] || return 0
   st="$(mktemp "${TMPDIR:-/tmp}/pullsync-gen-XXXXXX")" || return 0
   curl -s --max-time 30 -X POST "$DEV_VESSEL/v2/impulses/resolve" -H 'Content-Type: application/json' \
     -d '{"impulse":{"pointer":{"type":"substrateGap","status":"open","limit":5000}}}' > "$st" 2>/dev/null || true
   jq -e '.body.gaps | type == "array"' "$st" >/dev/null 2>&1 || { rm -f "$st"; log "$v: failing-test generator: gap store unreadable; nothing filed"; return 0; }
   payloads="$(printf '%s\n' "$rows" | jq -R -s -c --arg v "$v" --arg head "${head:0:10}" \
-    --argjson cap "${FAILTEST_GEN_PER_TICK:-3}" --argjson openmax "${FAILTEST_GEN_OPEN_MAX:-8}" --slurpfile st "$st" '
+    --argjson cap "${FAILTEST_GEN_PER_TICK:-3}" --argjson openmax "${FAILTEST_GEN_OPEN_MAX:-8}" --argjson infomax "${FAILTEST_GEN_INFO_MAX:-20}" --slurpfile st "$st" '
     ($st[0].body.gaps // []) as $g
-    | ([$g[] | select((.classification_metadata.filed_by? // "") == "pull-sync failing-test generator")] | length) as $genopen
+    | ([$g[] | select((.classification_metadata.filed_by? // "") == "pull-sync failing-test generator")] | length) as $genall
+    | ([$g[] | select((.classification_metadata.filed_by? // "") == "pull-sync failing-test generator") | select((.classification_metadata.disposition? // "") != "needs_information")] | length) as $genopen
     | ([$g[] | .classification_metadata.evidence_resolve? // empty | select(.shape? == "test_suite")
         | select(((.input.vessel // "") | sub("^repos/"; "")) == $v)]) as $ers
     | ([$ers[] | .input.test_file // empty]) as $tfiles
     | ([$ers[] | (.input.only_tests // [])[]]) as $tnames
-    | split("\n") | map(select(length > 0) | split("\t") | {file: .[0], name: .[1], env: (.[2] == "1"), why: (.[3] // "")})
+    | split("\n") | map(select(length > 0) | split("\t") | {file: .[0], name: .[1], env: (.[2] == "1"), cls: .[3], frame: (.[4] // ""), why: (.[5] // "")})
     | map(select(.env | not) | select(.file as $f | $tfiles | index($f) | not) | select(.name as $n | $tnames | index($n) | not))
-    | group_by(.file) | map({file: .[0].file, t: .[:5]}) | sort_by(.t | length)
+    | group_by(.file + "\u0000" + .cls) | map({file: .[0].file, cls: .[0].cls, frame: ([.[].frame | select(length > 0)] | first // ""), t: .[:5]})
+    | map(. + {actionable: (.cls == "mock" or (.cls == "assert" and .frame != ""))})
+    | map(select(.actionable or $genall < $infomax))
+    | sort_by([(if .actionable then 0 else 1 end), (.t | length)])
     | if $genopen >= $openmax then [] else .[: ([$cap, $openmax - $genopen] | min)] end
-    | .[] | {impulse: {pointer: {type: "substrateGap_write", gap: {
-        id: ("failing-test-" + $v + "-" + (.file | ascii_downcase | gsub("[^a-z0-9]+"; "-") | sub("-+$"; "")) + "-gen"),
+    | .[] | (.cls == "mock") as $mock | (.cls == "assert" and .frame != "") as $located
+    | {impulse: {pointer: {type: "substrateGap_write", gap: ({
+        id: ("failing-test-" + $v + "-" + (.file | ascii_downcase | gsub("[^a-z0-9]+"; "-") | sub("-+$"; "")) + "-gen-" + .cls),
         category: "failing_test", source: "substrate_detected", status: "open",
         summary: ("Failing test(s) in repos/" + $v + "/" + .file + ", detected by pull-sync at " + $head
           + " (red on two consecutive ticks under the checker env; not an environment failure): "
           + ([.t[] | (.name + (if .why != "" then " [" + .why + "]" else "" end))] | join(" ; "))
-          + ". Diagnose each: if the source is wrong, fix the source; if the test expectation is outdated, change the expectation."
-          + " Keep every expect (change it, never delete it); do not skip or weaken a test. Done when the named tests pass."),
-        classification_metadata: {
-          edit_site: ("repos/" + $v + "/" + .file), region: (.t[0].name | split(" > ") | last), falsifier: "class2",
+          + (if $mock then ". The failure is thrown from the test'\''s own doubles (mock/spy/factory), which no longer match the code'\''s call shape: update the doubles in the test so they model the current code. Keep every expect; do not skip or weaken a test."
+             elif $located then ". An assertion fails against the source; the stack'\''s first source frame is repos/" + $v + "/" + .frame + ". The test is protected: fix the source so the named tests pass. If you conclude the expectation itself is outdated, do not edit it; say so, so the gap can be re-classified."
+             else ". Not yet localized (no source frame in the stack, or an unclassified error): needs a diagnosis of whether the source or the test is wrong before any compose." end)
+          + " Done when the named tests pass."),
+        classification_metadata: ({
+          falsifier: "class2",
           evidence_resolve: {shape: "test_suite", input: {vessel: $v, test_file: .file, only_tests: [.t[].name], timeout_ms: 180000}},
-          filed_by: "pull-sync failing-test generator", generator_head: $head}}}}}' 2>/dev/null || true)"
+          filed_by: "pull-sync failing-test generator", generator_head: $head, failure_class: .cls}
+          + (if $mock then {edit_site: ("repos/" + $v + "/" + .file), region: (.t[0].name | split(" > ") | last)}
+             elif $located then {edit_site: ("repos/" + $v + "/" + .frame), protected_files: [("repos/" + $v + "/" + .file)]}
+             else {edit_site: ("repos/" + $v + "/" + .file), protected_files: [("repos/" + $v + "/" + .file)], disposition: "needs_information"} end))})}}}' 2>/dev/null || true)"
   rm -f "$st"
   [ -n "$payloads" ] || return 0
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     id="$(printf '%s' "$p" | jq -r '.impulse.pointer.gap.id')"
-    if curl -s --max-time 30 -X POST "$DEV_VESSEL/v2/impulses/resolve" -H 'Content-Type: application/json' \
+    ex="$(curl -s --max-time 30 -X POST "$DEV_VESSEL/v2/impulses/resolve" -H 'Content-Type: application/json' \
          -d "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap\",\"id\":\"$id\",\"limit\":1}}}" 2>/dev/null \
-       | jq -e '(.body.gaps // []) | length > 0' >/dev/null 2>&1; then
-      log "$v: failing-test generator: $id already exists (any status); recurrence not re-filed (a rewrite would carry its closed fields forward)"
-      continue
+       | jq -r '((.body.gaps // [])[0].status) // ""' 2>/dev/null || true)"
+    if [ "$ex" = "open" ]; then log "$v: failing-test generator: $id already open; skipped"; continue; fi
+    if [ -n "$ex" ]; then
+      p="$(printf '%s' "$p" | jq -c --arg rid "$id-r$(date -u +%Y%m%d%H%M)" --arg of "$id" '.impulse.pointer.gap.id = $rid | .impulse.pointer.gap.classification_metadata.recurrence_of = $of')"
+      log "$v: failing-test generator: $id exists ($ex); filing the recurrence as a new row with recurrence_of"
+      id="$(printf '%s' "$p" | jq -r '.impulse.pointer.gap.id')"
     fi
     if [ "${FAILTEST_GEN_DRYRUN:-0}" = "1" ]; then log "$v: failing-test generator DRYRUN would file: $p"; else emit_gap "$p"; log "$v: failing-test generator filed $id"; fi
     n=$((n + 1))
