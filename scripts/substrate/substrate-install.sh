@@ -58,7 +58,10 @@ usage: docker run --rm <image> install | [INPUT=value …] sh [-s -- options]
 
 Prints an installer for this image. Pipe it to sh; options go after `sh -s --`.
 
-  --join <discovery-url>   join a network: the hub's discovery endpoint (DISCOVERY_ENDPOINT)
+  --join <token|url>       join a network: the join token the hub issued
+                           (`substrate-key join <name>` on the hub; prefer SUBSTRATE_JOIN=<token>
+                           in the environment, since it carries the key), or the hub's
+                           discovery URL together with --key
   --key <key>              the key the hub issued (METABOB_API_KEY; prefer the env form)
   --profile <p>            standalone | hub | hub-minimal | spoke | surface | compute (PROFILE)
   --public-ip <addr>       the address spokes reach; required for a hub (PUBLIC_IP)
@@ -113,6 +116,25 @@ while [ $# -gt 0 ]; do
   esac
 done
 case "$wait_level" in live|seeded|served|usable|none) ;; *) die "--wait must be live, seeded, served, usable or none" ;; esac
+
+# A join token (`substrate-key join` on the hub) carries both join inputs: the endpoint the
+# hub advertises and a key it issued, so a joiner types one value and no port.
+#   sj1.<base64url of "<discovery endpoint>\n<api key>">
+[ -n "$set_join" ] || set_join="${SUBSTRATE_JOIN:-}"
+case "$set_join" in
+  sj1.*)
+    b="$(printf '%s' "${set_join#sj1.}" | tr '_-' '/+')"
+    case $(( ${#b} % 4 )) in 2) b="$b==" ;; 3) b="$b=" ;; esac
+    decoded="$(printf '%s' "$b" | base64 -d 2>/dev/null)" || die "the join token does not decode; copy it again from the hub"
+    tok_ep="$(printf '%s\n' "$decoded" | sed -n 1p)"; tok_key="$(printf '%s\n' "$decoded" | sed -n 2p)"
+    case "$tok_ep" in http://*|https://*) ;; *) die "the join token carries no discovery endpoint; ask the hub for a new one" ;; esac
+    [ -n "$tok_key" ] || die "the join token carries no key; ask the hub for a new one"
+    set_join="$tok_ep"; [ -n "$set_key" ] || set_key="$tok_key"
+    ;;
+  sj[0-9]*.*) die "this installer does not understand join token version '${set_join%%.*}'; pull a newer image" ;;
+  ""|http://*|https://*) ;;
+  *) die "--join takes the join token the hub issued (substrate-key join <name>) or a discovery URL (http://…)" ;;
+esac
 
 # Flags are spellings of manifest inputs; they win over the same input in the environment.
 [ -n "$set_join" ] && DISCOVERY_ENDPOINT="$set_join" && export DISCOVERY_ENDPOINT

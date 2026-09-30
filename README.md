@@ -243,27 +243,38 @@ docker exec substrate-live substrate-status --wait usable
 docker run --rm ghcr.io/avigopal/substrate:dev install | ANTHROPIC_API_KEY=sk-ant-… sh -s -- --profile hub --public-ip <address spokes reach>
 ```
 
-Open the ports the table marks "spokes". Issue a key per spoke:
-`docker exec substrate-live substrate-key issue <spoke-name>` (the full key is printed once
-and never stored). The hub reaches `usable` on its own because it dispatches: the `hub`
+Then give each joining node one join token:
+
+```bash
+docker exec substrate-live substrate-key join <spoke-name>
+```
+
+It prints the token and the exact command the joiner runs. The token carries the discovery
+endpoint this hub advertises (from `PUBLIC_IP` and the published ports) and a key issued
+for that node, printed once and never stored, so nobody types or configures a port. The
+manifest publishes the ports on every interface; if the host sits behind a firewall, it must
+admit the ones the table marks "spokes". The hub reaches `usable` on its own because it dispatches: the `hub`
 profile carries goal-host and the compute vessels next to the posteriors. `hub-minimal`
 leaves compute out for a control-plane or relay-only node. The federation relay runs inside
 the container on `P333`, and `/bootstrap` advertises it at `PUBLIC_IP`, which is why the
 hub cannot omit that input.
 
-To run a hub or any other node on a remote machine, copy the manifest and `.env` to it and
-run the same sequence there.
+To run a hub or any other node on a remote machine, run the same command there.
 
 #### C. Spoke
 
-Joining a network takes the hub's discovery endpoint and a key the hub issued:
+Joining a network takes one value, the join token the hub issued (B):
 
 ```bash install:spoke
-docker run --rm ghcr.io/avigopal/substrate:dev install | METABOB_API_KEY=<key issued by the hub> sh -s -- --join http://<hub-host>:18100
+docker run --rm ghcr.io/avigopal/substrate:dev install | SUBSTRATE_JOIN=<join token from the hub> sh
 ```
 
-The role, the hub endpoints, the relay anchor and the spoke's federation id are derived
-from those two inputs, at boot, in the image. A spoke needs no provider key: it runs no
+The token unpacks into the two join inputs, the hub's discovery endpoint and the key, and
+the installer writes them to `.env` as `DISCOVERY_ENDPOINT` and `METABOB_API_KEY`. Given
+those two directly instead, the same command is
+`… install | METABOB_API_KEY=<key> sh -s -- --join http://<hub>:<discovery port>`. The
+role, the hub endpoints, the relay anchor and the spoke's federation id are derived from
+them, at boot, in the image. A spoke needs no provider key: it runs no
 model resolver of its own, and its `llm_completion` is answered by its hub's arms through
 discovery, so it reaches `usable` exactly when its hub can. (A provider key in a spoke's
 `.env` is not used.) Run the `claude mcp add …` line it printed, as in A.

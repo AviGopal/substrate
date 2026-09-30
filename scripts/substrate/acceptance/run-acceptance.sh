@@ -252,11 +252,18 @@ else
 fi
 [ -n "${ACCEPTANCE_DISCOVERY_ENDPOINT:-}" ] && add_sub 'http://<hub-host>:18100' "$ACCEPTANCE_DISCOVERY_ENDPOINT"
 [ -n "${ACCEPTANCE_METABOB_API_KEY:-}" ] && add_sub '<key issued by the hub>' "$ACCEPTANCE_METABOB_API_KEY"
+# The spoke's one input: the join token `substrate-key join` prints, built from the same two
+# values (sj1.<base64url of "<endpoint>\n<key>">).
+join_token=""
+if [ -n "${ACCEPTANCE_DISCOVERY_ENDPOINT:-}" ] && [ -n "${ACCEPTANCE_METABOB_API_KEY:-}" ]; then
+  join_token="sj1.$(printf '%s\n%s' "$ACCEPTANCE_DISCOVERY_ENDPOINT" "$ACCEPTANCE_METABOB_API_KEY" | base64 -w0 | tr '+/' '-_' | tr -d '=')"
+  add_sub '<join token from the hub>' "$join_token"
+fi
 [ -n "${ACCEPTANCE_PUBLIC_IP:-}" ] && add_sub '<address spokes reach>' "$ACCEPTANCE_PUBLIC_IP"
 # Every secret this run could write into a command, for redaction before recording.
 redact() {
   local t="$1" v
-  for v in "${ACCEPTANCE_PROVIDER_KEY:-}" "${ACCEPTANCE_METABOB_API_KEY:-}"; do
+  for v in "${ACCEPTANCE_PROVIDER_KEY:-}" "${ACCEPTANCE_METABOB_API_KEY:-}" "${join_token:-}"; do
     [ -n "$v" ] && t="${t//"$v"/<redacted>}"
   done
   printf '%s' "$t"

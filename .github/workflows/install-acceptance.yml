@@ -220,6 +220,53 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  # The network promise: a second node joins a hub with the page's two inputs and
+  # contributes (its vessels registered on the hub, the hub reading the spoke's own data
+  # over the relay; with a key, a goal from the spoke reaching and graded on the hub).
+  # One runner hosts both fleets. It reports and goes red on its own, and is not yet a
+  # promotion gate: promote needs `accept` only, until this has a green record.
+  network:
+    needs: resolve
+    if: needs.resolve.outputs.found == 'true'
+    name: network (${{ matrix.engine }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [docker, podman]
+    steps:
+      - name: Check out the install page at the image's commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.ref }}
+          submodules: false
+          persist-credentials: false
+
+      - name: Install the Podman compose implementation
+        if: matrix.engine == 'podman'
+        run: |
+          set -euo pipefail
+          pipx install 'podman-compose>=1.6'
+
+      - name: Join a spoke to a hub with the page's commands
+        env:
+          ENGINE: ${{ matrix.engine }}
+          IMAGE: ${{ needs.resolve.outputs.image }}
+          ACCEPTANCE_PROVIDER_KEY: ${{ secrets.ACCEPTANCE_PROVIDER_KEY }}
+          ACCEPTANCE_PROVIDER_VAR: ${{ vars.ACCEPTANCE_PROVIDER_VAR || 'ANTHROPIC_API_KEY' }}
+          RESULT_DIR: ${{ runner.temp }}/network/${{ matrix.engine }}
+        run: bash scripts/substrate/acceptance/run-network-acceptance.sh
+
+      - name: Keep the result and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: network-acceptance-result-${{ matrix.engine }}
+          path: ${{ runner.temp }}/network/${{ matrix.engine }}
+          if-no-files-found: warn
+          retention-days: 30
+
   report:
     # Runs whatever the verdicts were: a failure is exactly what the hub must hear.
     needs: [resolve, accept]

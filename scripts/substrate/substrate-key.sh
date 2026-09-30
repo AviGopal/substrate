@@ -15,6 +15,9 @@
 #   show                              print the substrate operator API key
 #   whoami                            print the operator identity (org, user, scopes)
 #   issue <name> [scopes] [days]      mint a new API key (external peer / spoke / vessel)
+#   join <name> [scopes] [days]       mint a key for a joining node and print ONE join
+#                                     token (this fleet's advertised discovery endpoint +
+#                                     the key) and the command the joiner runs
 #   jwt [role] [expires_seconds]      mint a Bearer JWT (dashboard / admin flows)
 #   list                              list issued keys for the substrate org
 #   revoke <key_id>                   revoke a key
@@ -135,6 +138,24 @@ case "$cmd" in
     if has_admin_scope "$scopes"; then persist_admin_key "$key"; fi
     echo "The full key is shown ONCE and never stored — save it now." >&2
     echo "$key"
+    ;;
+
+  join)
+    # One input for a joiner. The endpoint is the one this fleet ADVERTISES (its own
+    # /bootstrap: DISCOVERY_PUBLIC_URL, or PUBLIC_IP and the published port prefix), so
+    # no port is typed by a human or written into any launcher. Token format, versioned
+    # so a joiner can refuse one it does not understand:
+    #   sj1.<base64url of "<discovery endpoint>\n<api key>">
+    name="${1:-}"; [[ -n "$name" ]] || die "usage: substrate-key join <name> [scopes] [expires_days]"
+    disc="$(curl -s -m 10 "${DISCOVERY_LOCAL_URL:-http://127.0.0.1:8100}/bootstrap" | jq -r '.discovery_endpoint // empty')"
+    [[ -n "$disc" ]] || die "this fleet advertises no public discovery endpoint (/bootstrap discovery_endpoint is empty): a hub needs PUBLIC_IP (install with --profile hub --public-ip <address>)"
+    case "$disc" in *://127.*|*://localhost*) die "this fleet advertises a loopback discovery endpoint ($disc); a joiner elsewhere cannot use it — set PUBLIC_IP" ;; esac
+    key="$("$0" issue "$name" "${2:-read,write}" ${3:+"$3"})" || die "key issuance failed"
+    token="sj1.$(printf '%s\n%s' "$disc" "$key" | base64 -w0 | tr '+/' '-_' | tr -d '=')"
+    echo "Join token for '$name' (endpoint $disc). It carries the key: give it only to that node's operator." >&2
+    echo "The joiner runs:" >&2
+    echo "  docker run --rm ghcr.io/avigopal/substrate:dev install | SUBSTRATE_JOIN='$token' sh" >&2
+    echo "$token"
     ;;
 
   jwt)
