@@ -18,6 +18,7 @@ import { detectSolicitation, hasProgress, progressFingerprint } from "../lib/wal
 import { useNow } from "../lib/useNow";
 import { useProgressWatch } from "../lib/useProgressWatch";
 import { useLiveControls } from "../state/liveControls";
+import { segmentAttempts } from "../lib/attempts";
 import { AnswerBody } from "./Answer";
 import { Rendered } from "./Rendered";
 import { GradeGesture } from "./GradeGesture";
@@ -186,6 +187,16 @@ export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
   const reason = state === "not-reached" ? (walk.goalReachReason?.trim() || walk.error || null) : null;
   const who = walk.operator ?? walk.trigger;
   const answer = walk.answerBody?.trim() ? walk.answerBody : null;
+  // Several walks: say WHICH one the verdict, answer and grade belong to. It is
+  // the reported walk, which is not necessarily the last one.
+  const segments = segmentAttempts(walk);
+  const reportedSeg = segments.find((s) => s.reported) ?? null;
+  const attemptNote =
+    segments.length > 1
+      ? reportedSeg
+        ? `attempt ${reportedSeg.number} of ${segments.length} reported`
+        : `${segments.length} attempts`
+      : null;
 
   return (
     <article className="sf-run" data-state={state} aria-busy={query.isFetching}>
@@ -199,6 +210,7 @@ export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
           {who ? <span>{who}</span> : null}
           {walk.executionPath ? <span className="sf-chip">{PATH_LABEL[walk.executionPath]}</span> : null}
           {walk.humanGraded ? <span className="sf-chip">human-graded</span> : null}
+          {attemptNote ? <span className="sf-chip sf-chip-quiet">{attemptNote}</span> : null}
           <span className="sf-mono sf-view-id" title={walk.executionId ?? undefined}>
             {walk.dispatchId}
           </span>
@@ -246,6 +258,13 @@ export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
             executionId={walk.executionId}
             goal={walk.goal ?? ""}
             alreadyGraded={walk.humanGraded}
+            appliesTo={
+              segments.length > 1
+                ? reportedSeg
+                  ? `Applies to attempt ${reportedSeg.number} of ${segments.length} — the attempt this run reports`
+                  : `Applies to the attempt this run reports; which of the ${segments.length} it is could not be determined`
+                : null
+            }
             humanReachNotes={walk.humanReachNotes}
           />
         </section>

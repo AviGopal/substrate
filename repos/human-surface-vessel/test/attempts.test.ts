@@ -116,4 +116,39 @@ describe("segmentAttempts", () => {
     expect(segs.length).toBe(1);
     expect(segs[0]?.current).toBe(true);
   });
+
+  test("each attempt carries its own rejection, and the reported attempt can be a middle one", () => {
+    const hollow = (r: string, tail = "; β WITHHELD (α was structurally unreachable") => `[goal-host-vessel] walk(/run-goal): HOLLOW — ${r}${tail}`;
+    const segs = segmentAttempts(
+      walk({
+        dispatchId: "d-reported",
+        status: "failed",
+        reached: false,
+        // A retry replaces the reported walk; a re-frame that does not reach does not —
+        // so attempt 2 is the one the dispatch reports (the 523e099d pattern).
+        goalReachReason: "The output contains an error and does not fulfill the goal.",
+        poolEvents: events,
+        walkLog: [
+          hollow("It failed to generate meaningful content."),
+          "[goal-host-vessel] /run-goal: walk: FEEDBACK-RETRY — re-running the same chain",
+          hollow("The output contains an error and does not fulfill the goal.", "; β-penalised last pick activity:x"),
+          "[goal-host-vessel] /run-goal: walk: re-framing to alternative target shapes [\"a\"] after no-pick",
+          hollow("It only includes headlines."),
+        ],
+      }),
+    );
+    expect(segs.map((s) => s.verdict)).toEqual([
+      "It failed to generate meaningful content.",
+      "The output contains an error and does not fulfill the goal.",
+      "It only includes headlines.",
+    ]);
+    expect(segs.map((s) => s.reported)).toEqual([false, true, false]);
+  });
+
+  test("a reached run reports its last attempt; an unmatched reason reports none", () => {
+    const reached = segmentAttempts(walk({ dispatchId: "d-reached", status: "completed", reached: true, poolEvents: events }));
+    expect(reached.map((s) => s.reported)).toEqual([false, false, true]);
+    const unknown = segmentAttempts(walk({ dispatchId: "d-unknown", reached: false, goalReachReason: "something else", poolEvents: events }));
+    expect(unknown.some((s) => s.reported)).toBe(false);
+  });
 });

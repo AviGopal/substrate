@@ -28,6 +28,7 @@ export function GradeGesture({
   goal,
   alreadyGraded,
   humanReachNotes,
+  appliesTo = null,
 }: {
   renderedState: "reached" | "not-reached";
   /** ABSENT when goal-host never recorded one — the key is not serialized. */
@@ -35,6 +36,8 @@ export function GradeGesture({
   goal: string;
   alreadyGraded: boolean;
   humanReachNotes: string | null;
+  /** Which attempt a grade lands on, when the run walked more than once. */
+  appliesTo?: string | null;
 }): ReactNode {
   const [selected, setSelected] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -70,6 +73,7 @@ export function GradeGesture({
         grade.mutate(gradePayload({ renderedState, option: selected, note, executionId, goal }));
       }}
     >
+      {appliesTo ? <p className="sf-note sf-muted sf-grade-applies">{appliesTo}</p> : null}
       <ChoiceInput label="Disagree with the verdict?" options={options} value={selected} onChange={setSelected} disabled={grade.isPending} />
       <TextInput label="Note" placeholder="Note (optional)" value={note} onChange={setNote} disabled={grade.isPending} />
       <InteractionFooter

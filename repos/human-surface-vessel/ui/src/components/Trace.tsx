@@ -209,17 +209,26 @@ export function Trace({
               id={`attempt-${walk.dispatchId}-${seg.number}`}
               className="sf-attempt"
               data-current={seg.current && running}
+              data-reported={seg.reported}
             >
               <h4 className="sf-attempt-head">
                 <span>Attempt {seg.number}</span>
+                {seg.reported ? <span className="sf-attempt-reported">reported</span> : null}
                 <span className="sf-attempt-meta">
                   {time(seg.startAt)}
                   {seg.reason ? ` · ${seg.reason}` : ""}
-                  {seg.current ? (running ? " · in progress" : " · final") : ""}
+                  {seg.current ? (running ? " · in progress" : " · last") : ""}
                   {seg.partial ? " · earlier events not retained" : ""}
                   {!seg.current && seg.provenance === null ? " · content not retained" : ""}
                 </span>
               </h4>
+              {seg.verdict ? (
+                <p className="sf-attempt-verdict" data-verdict="rejected">
+                  ✗ rejected — {seg.verdict}
+                </p>
+              ) : seg.reported && walk.reached === true ? (
+                <p className="sf-attempt-verdict" data-verdict="reached">✓ reached</p>
+              ) : null}
               <AttemptItems segment={seg} time={time} />
             </section>
           ))}

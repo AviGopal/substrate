@@ -28,6 +28,15 @@ export interface AttemptSegment {
   readonly current: boolean;
   /** The event cap cut this attempt's opening; what shows is its tail. */
   readonly partial: boolean;
+  /** The judge's rejection of this attempt, from its `HOLLOW — …` walk-log line; null when none survives. */
+  readonly verdict: string | null;
+  /**
+   * This attempt is the one the dispatch REPORTS (its verdict reason is the
+   * run's `goalReachReason`). Not necessarily the last attempt: a retry that
+   * does not reach replaces the reported walk, a re-frame that does not reach
+   * does not — so the reported walk can be a middle one.
+   */
+  readonly reported: boolean;
 }
 
 interface Seen {
@@ -97,6 +106,23 @@ function restartReasons(log: readonly WalkLogEntry[]): string[] {
   return reasons;
 }
 
+const HOLLOW_LINE = /HOLLOW \u2014 (.+?)(?:; \u03b2|$)/;
+
+/** One judge rejection per judged walk, in walk order. */
+function hollowVerdicts(log: readonly WalkLogEntry[]): string[] {
+  const out: string[] = [];
+  for (const entry of log) {
+    const text = typeof entry === "string" ? entry : JSON.stringify(entry);
+    const m = HOLLOW_LINE.exec(text);
+    if (m && m[1]) out.push(m[1].trim());
+  }
+  return out;
+}
+
+function norm(s: string): string {
+  return s.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
 function sameProvenance(a: readonly RawProvenance[], b: readonly RawProvenance[]): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
@@ -131,11 +157,15 @@ export function segmentAttempts(walk: GoalWalkState): readonly AttemptSegment[] 
   }
 
   const reasons = restartReasons(walk.walkLog);
+  const verdicts = hollowVerdicts(walk.walkLog);
+  // The log is a tail: align verdicts to the LAST attempts.
+  const verdictOffset = starts.length - verdicts.length;
+  const reportedReason = walk.goalReachReason ? norm(walk.goalReachReason) : null;
   // The log is a tail: align reasons to the LAST attempts, since the earliest
   // lines are the ones that fall off.
   const reasonOffset = starts.length - 1 - reasons.length;
 
-  return starts.map((start, n) => {
+  const segs: AttemptSegment[] = starts.map((start, n) => {
     const end = starts[n + 1] ?? events.length;
     const startAt = startAts[n] ?? null;
     const nextAt = startAts[n + 1] ?? null;
@@ -146,6 +176,7 @@ export function segmentAttempts(walk: GoalWalkState): readonly AttemptSegment[] 
       : (record?.steps ?? []).filter((s) => nextAt === null || typeof s["at"] !== "number" || (s["at"] as number) < nextAt);
     const provenance = current ? (stale ? [] : walk.poolProvenance) : (record?.provenance ?? null);
     const reasonIndex = n - 1 - reasonOffset;
+    const verdict = n - verdictOffset >= 0 ? (verdicts[n - verdictOffset] ?? null) : null;
     return {
       number: n + 1,
       startAt,
@@ -155,6 +186,23 @@ export function segmentAttempts(walk: GoalWalkState): readonly AttemptSegment[] 
       reason: n > 0 && reasonIndex >= 0 ? (reasons[reasonIndex] ?? null) : null,
       current,
       partial: n === 0 && events.length >= 64 && events[0]?.shape !== "goal",
+      verdict,
+      reported: false,
     };
   });
+
+  // Which attempt the dispatch reports: the LAST attempt whose rejection is the
+  // run's reason. A reached run reports its last attempt.
+  let reportedIndex = -1;
+  if (walk.reached === true) reportedIndex = segs.length - 1;
+  else if (reportedReason) {
+    for (let i = segs.length - 1; i >= 0; i--) {
+      const v = segs[i]?.verdict;
+      if (v && (norm(v) === reportedReason || reportedReason.startsWith(norm(v)) || norm(v).startsWith(reportedReason))) {
+        reportedIndex = i;
+        break;
+      }
+    }
+  }
+  return reportedIndex < 0 ? segs : segs.map((s, i) => (i === reportedIndex ? { ...s, reported: true } : s));
 }
