@@ -284,12 +284,15 @@ jobs:
       matrix:
         engine: [docker, podman]
     steps:
-      - name: Check out the harness at the image's commit
+      # The harness comes from this workflow's own commit, not the image's: it only drives
+      # the image's own installer, and an image built before the harness existed must still
+      # be judged by the job that now gates it.
+      - name: Check out the harness
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.resolve.outputs.ref }}
           submodules: false
           persist-credentials: false
+          sparse-checkout: scripts/substrate/acceptance
 
       - name: Install the Podman compose implementation
         if: matrix.engine == 'podman'
