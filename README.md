@@ -322,11 +322,15 @@ Protocol and concepts: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 
 #### D. Surface (a human's local window)
 
-As C, adding `--profile surface` after `--join`. To keep the surface on the local host, map
-`127.0.0.1:P310:8310` in a compose override. `served` passes when the surface answers.
+As C, with `--profile surface`:
+`docker run --rm ghcr.io/avigopal/substrate:dev install | SUBSTRATE_JOIN=<join token from the hub> sh -s -- --profile surface`.
+The surface is the human-surface vessel at `http://localhost:<prefix>310/`; everything it
+asks for is resolved on the hub. To keep it on the local host, map `127.0.0.1:P310:8310` in
+a compose override. `served` passes when the surface answers.
 
-A human can also work from an Obsidian vault. The plugin installer lives in a submodule and
-needs only the two inputs the plugin reads, an API key and the discovery endpoint:
+An Obsidian vault is an optional, alternative window onto the same network. Its plugin
+installer lives in a submodule, so it needs a checkout, and reads the same two join inputs,
+the discovery endpoint and a key:
 
 ```bash
 git submodule update --init repos/obsidian-vessel
