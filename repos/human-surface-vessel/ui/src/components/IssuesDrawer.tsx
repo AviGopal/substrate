@@ -7,7 +7,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, type ReactNode } from "react";
 import { useLiveControls } from "../state/liveControls";
+import { streamAwareInterval, useStreamConnected } from "../state/stream";
+import { fromText } from "../lib/content";
 import { ComplainButton } from "./ComplainButton";
+import { Rendered } from "./Rendered";
 
 export interface InterfaceGap {
   readonly id: string;
@@ -59,11 +62,12 @@ const SOURCE_LABEL: Record<string, string> = {
 
 export function useInterfaceGaps() {
   const { paused, intervalMs } = useLiveControls();
+  const live = useStreamConnected();
   return useQuery({
     queryKey: ["interfaceGaps"],
     queryFn: fetchGaps,
     enabled: !paused,
-    refetchInterval: !paused ? Math.max(intervalMs, 15000) : false,
+    refetchInterval: !paused ? streamAwareInterval(Math.max(intervalMs, 15000), live) : false,
     refetchOnWindowFocus: false,
     placeholderData: (previous) => previous,
   });
@@ -98,7 +102,7 @@ function GapCard({ gap }: { gap: InterfaceGap }): ReactNode {
       {rest ? (
         <details className="sf-issue-more">
           <summary>More</summary>
-          <p>{rest}</p>
+          <Rendered content={fromText("interface_gap", rest)} density="inline" header={false} region="issue_card" />
         </details>
       ) : null}
       <p className="sf-issue-id sf-mono">{gap.id}</p>

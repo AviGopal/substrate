@@ -15,9 +15,11 @@
  * would be asserting that the human saw nothing.
  */
 import { useState, type ReactNode } from "react";
+import { complaintPayload, type ComplaintKind } from "../lib/interaction";
+import { ChoiceInput, InteractionFooter, TextInput } from "./Interaction";
 import { useQueryClient } from "@tanstack/react-query";
 
-type Kind = "hard_to_see" | "hard_to_understand" | "wrong";
+type Kind = ComplaintKind;
 
 const KINDS: ReadonlyArray<{ id: Kind; label: string }> = [
   { id: "hard_to_see", label: "hard to see" },
@@ -45,7 +47,7 @@ export function ComplainButton({ region, onFiled }: { region: string; onFiled?: 
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ panel_id: region, kind, value: text.trim() }),
+        body: JSON.stringify(complaintPayload({ region, kind, text })),
       });
       if (!res.ok) throw new Error(String(res.status));
       setState("filed");
@@ -69,41 +71,34 @@ export function ComplainButton({ region, onFiled }: { region: string; onFiled?: 
   }
 
   return (
-    <div className="sf-complain">
-      <div className="sf-complain-kinds" role="group" aria-label="what kind of problem">
-        {KINDS.map((k) => (
-          <button
-            key={k.id}
-            type="button"
-            className="sf-complain-kind"
-            aria-pressed={kind === k.id}
-            onClick={() => setKind(k.id)}
-          >
-            {k.label}
-          </button>
-        ))}
-      </div>
-      <textarea
-        className="sf-complain-text"
-        value={text}
-        placeholder={`what is wrong with “${region}”?`}
-        aria-label={`what is wrong with ${region}`}
-        onChange={(e) => setText(e.target.value)}
+    <form
+      className="sf-complain sf-interaction"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void send();
+      }}
+    >
+      <ChoiceInput
+        label="What kind of problem"
+        options={KINDS.map((k) => k.id)}
+        labels={Object.fromEntries(KINDS.map((k) => [k.id, k.label]))}
+        value={kind}
+        onChange={(v) => setKind(v as Kind)}
+        disabled={state === "sending"}
       />
-      <div className="sf-complain-actions">
-        <button type="button" className="sf-button sf-button-primary" onClick={() => void send()} disabled={state === "sending"}>
-          {state === "sending" ? "Filing…" : "File"}
-        </button>
-        <button type="button" className="sf-button sf-button-quiet" onClick={() => setOpen(false)}>
-          Cancel
-        </button>
-        {state === "filed" ? (
-          <span className="sf-complain-note">Filed</span>
-        ) : null}
-        {state === "failed" ? (
-          <span className="sf-complain-note sf-complain-failed">Not filed</span>
-        ) : null}
-      </div>
-    </div>
+      <TextInput label={`What is wrong with ${region}`} placeholder={`What is wrong with “${region}”?`} value={text} onChange={setText} />
+      <InteractionFooter
+        state={state === "sending" ? "pending" : state === "filed" ? "sent" : state === "failed" ? "failed" : "idle"}
+        submitLabel="File"
+        canSubmit={text.trim().length > 0}
+        error={state === "failed" ? "Not filed" : null}
+        sentLabel="Filed"
+        secondary={
+          <button type="button" className="sf-button sf-button-quiet" onClick={() => setOpen(false)}>
+            Cancel
+          </button>
+        }
+      />
+    </form>
   );
 }

@@ -9,30 +9,22 @@
 import { useMutation } from "@tanstack/react-query";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { sendContribution, type Contribution, type Question } from "../api/participation";
-import { useRenderPolicy } from "../api/queries";
-import { planContent } from "../lib/ledger";
 import { reportExposureAct } from "../lib/exposure-reporter";
-import { useLiveControls } from "../state/liveControls";
 import { questionGapId, questionSubject, useQuestions } from "../state/questions";
+import { contributionContent, questionForAsk } from "../lib/interaction";
+import { ChoiceInput, InteractionFooter, TextInput, stateOf } from "./Interaction";
+import { fromPanel, fromResponse } from "../lib/content";
 import { ComplainButton } from "./ComplainButton";
-import { ContentRender } from "./ContentRender";
-import { FormDecisionRecorder } from "./FormDecisionRecorder";
+import { Rendered } from "./Rendered";
 
 /** The pin key a question body is planned under. */
 export const QUESTION_CONTENT_SHAPE = "human_question";
 
-function contentText(value: unknown): string {
-  return typeof value === "string" ? value : (JSON.stringify(value, null, 2) ?? "");
-}
-
 function QuestionCard({ incoming }: { incoming: Question }): ReactNode {
   const { recordReceipt } = useQuestions();
-  const { paused, intervalMs } = useLiveControls();
-  const renderPolicy = useRenderPolicy({ enabled: !paused, intervalMs }).data;
   const [question, setQuestion] = useState(incoming);
   const [text, setText] = useState("");
   const [format, setFormat] = useState<"text" | "json">("text");
-  const [ask, setAsk] = useState("");
   const [error, setError] = useState("");
   const id = useId();
   const pending = useRef<{ signature: string; contribution: Contribution } | null>(null);
@@ -40,7 +32,21 @@ function QuestionCard({ incoming }: { incoming: Question }): ReactNode {
   const revised = incoming.revision !== question.revision;
   const gapId = questionGapId(question);
 
-  function submit(kind: "answer" | "dismiss"): void {
+  const [askValues, setAskValues] = useState<Record<string, string | number | null>>({});
+  const [lastAsk, setLastAsk] = useState<string | null>(null);
+
+  /** One write for every response path; the same payload retried keeps its response id. */
+  function send(kind: "answer" | "dismiss", askId: string | null, value: unknown): void {
+    const content = contributionContent({ panelId: question.id, revision: question.revision, askId, kind, value });
+    const signature = JSON.stringify(content);
+    if (pending.current?.signature !== signature) {
+      pending.current = { signature, contribution: { ...content, response_id: crypto.randomUUID() } };
+    }
+    setLastAsk(askId);
+    mutation.mutate(pending.current.contribution);
+  }
+
+  function submitWhole(kind: "answer" | "dismiss"): void {
     setError("");
     let value: unknown = text;
     if (kind === "answer" && !text.trim()) {
@@ -55,21 +61,10 @@ function QuestionCard({ incoming }: { incoming: Question }): ReactNode {
         return;
       }
     }
-    const content = {
-      panel_id: question.id,
-      panel_revision: question.revision,
-      ...(kind === "answer" && ask ? { ask_id: ask } : {}),
-      kind,
-      value,
-    };
-    const signature = JSON.stringify(content);
-    if (pending.current?.signature !== signature) {
-      pending.current = { signature, contribution: { ...content, response_id: crypto.randomUUID() } };
-    }
-    mutation.mutate(pending.current.contribution);
+    send(kind, null, value);
   }
 
-  const plan = planContent(QUESTION_CONTENT_SHAPE, contentText(question.body), false, renderPolicy?.formByShape);
+  const state = stateOf(mutation);
 
   return (
     <article className="sf-question" aria-labelledby={`${id}-title`}>
@@ -91,20 +86,7 @@ function QuestionCard({ incoming }: { incoming: Question }): ReactNode {
       </header>
 
       <section className="sf-view-section">
-        <ContentRender plan={plan} />
-        <FormDecisionRecorder
-          shape={QUESTION_CONTENT_SHAPE}
-          plan={plan}
-          truncated={false}
-          policyRevision={renderPolicy?.revision ?? null}
-          region="question_card"
-        />
-        {question.asks?.map((part) => (
-          <p key={part.id}>
-            <strong>{part.prompt}</strong>
-            {part.choices?.length ? ` — ${part.choices.join(" · ")}` : ""}
-          </p>
-        ))}
+        <Rendered content={fromPanel(QUESTION_CONTENT_SHAPE, question.body)} density="full" header={false} region="question_card" />
       </section>
 
       {revised ? (
@@ -115,7 +97,7 @@ function QuestionCard({ incoming }: { incoming: Question }): ReactNode {
             className="sf-button"
             onClick={() => {
               setQuestion(incoming);
-              setAsk("");
+              setAskValues({});
               mutation.reset();
               setError("");
               pending.current = null;
@@ -126,75 +108,93 @@ function QuestionCard({ incoming }: { incoming: Question }): ReactNode {
         </div>
       ) : null}
 
+      {question.asks?.length ? (
+        <section className="sf-view-section sf-respond" aria-label="Parts of this question">
+          {question.asks.map((part) => {
+            const q = questionForAsk(part);
+            const v = askValues[part.id] ?? null;
+            const set = (nv: string | number | null): void => {
+              setAskValues((prev) => ({ ...prev, [part.id]: nv }));
+              mutation.reset();
+            };
+            return (
+              <form
+                key={part.id}
+                className="sf-interaction sf-ask-part"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (v === null || v === "") return;
+                  send("answer", part.id, v);
+                }}
+              >
+                {q.kind === "choice" ? (
+                  <ChoiceInput label={part.prompt} options={q.options} value={typeof v === "string" ? v : null} onChange={set} disabled={revised || state === "pending"} />
+                ) : q.kind === "number" ? (
+                  <label className="sf-ix-choice">
+                    <span className="sf-ix-label">{part.prompt}</span>
+                    <input
+                      type="number"
+                      className="sf-input"
+                      value={typeof v === "number" ? v : ""}
+                      disabled={revised || state === "pending"}
+                      onChange={(e) => set(e.target.value === "" ? null : Number(e.target.value))}
+                    />
+                  </label>
+                ) : (
+                  <>
+                    <span className="sf-ix-label">{part.prompt}</span>
+                    <TextInput label={part.prompt} value={typeof v === "string" ? v : ""} onChange={set} disabled={revised || state === "pending"} />
+                  </>
+                )}
+                <InteractionFooter
+                  state={lastAsk === part.id ? state : "idle"}
+                  submitLabel="Send"
+                  canSubmit={!revised && v !== null && v !== ""}
+                  error={lastAsk === part.id && mutation.isError ? `Not delivered: ${mutation.error.message}. Retry sends the same response.` : null}
+                />
+              </form>
+            );
+          })}
+        </section>
+      ) : null}
+
       <form
-        className="sf-view-section sf-respond"
+        className="sf-view-section sf-respond sf-interaction"
         onSubmit={(event) => {
           event.preventDefault();
-          submit("answer");
+          submitWhole("answer");
         }}
       >
-        {question.asks?.length ? (
-          <select
-            aria-label="Respond to"
-            className="sf-select"
-            value={ask}
-            disabled={mutation.isPending}
-            onChange={(event) => setAsk(event.target.value)}
-          >
-            <option value="">Whole question</option>
-            {question.asks.map((part) => (
-              <option key={part.id} value={part.id}>
-                {part.prompt}
-              </option>
-            ))}
-          </select>
-        ) : null}
-        <textarea
-          aria-label="Your response"
-          className="sf-textarea"
+        <TextInput
+          label="Your response"
+          placeholder={question.answered ? "Add to your response" : question.asks?.length ? "Respond to the whole question" : "Your response"}
           value={text}
-          disabled={mutation.isPending}
-          placeholder={question.answered ? "Add to your response" : "Your response"}
-          onChange={(event) => {
-            setText(event.target.value);
+          onChange={(v) => {
+            setText(v);
+            mutation.reset();
+          }}
+          disabled={state === "pending"}
+          format={format}
+          onFormat={(f) => {
+            setFormat(f);
             mutation.reset();
           }}
         />
-        <div className="sf-respond-actions">
-          <button type="submit" className="sf-button sf-button-primary" disabled={mutation.isPending || revised}>
-            {mutation.isPending ? "Sending…" : "Send"}
-          </button>
-          <button
-            type="button"
-            className="sf-button"
-            disabled={mutation.isPending || revised}
-            onClick={() => submit("dismiss")}
-          >
-            Decline
-          </button>
-          <select
-            aria-label="Response format"
-            className="sf-select sf-select-quiet"
-            value={format}
-            disabled={mutation.isPending}
-            onChange={(event) => {
-              setFormat(event.target.value as "text" | "json");
-              mutation.reset();
-            }}
-          >
-            <option value="text">Text</option>
-            <option value="json">JSON</option>
-          </select>
-          <span className="sf-respond-status" role="status">
-            {error ? <span className="sf-error-inline">{error}</span> : null}
-            {mutation.isError ? (
-              <span className="sf-error-inline">Not delivered: {mutation.error.message}. Retry sends the same response.</span>
-            ) : null}
-            {mutation.data ? (
-              <span className="sf-ok-inline">{mutation.data.kind === "dismiss" ? "Declined" : "Sent"}</span>
-            ) : null}
-          </span>
-        </div>
+        <InteractionFooter
+          state={lastAsk === null ? state : "idle"}
+          submitLabel="Send"
+          canSubmit={!revised}
+          error={
+            error ||
+            (lastAsk === null && mutation.isError ? `Not delivered: ${mutation.error.message}. Retry sends the same response.` : null)
+          }
+          sentLabel={mutation.data?.kind === "dismiss" ? "Declined" : "Sent"}
+          secondary={
+            <button type="button" className="sf-button" disabled={state === "pending" || revised} onClick={() => submitWhole("dismiss")}>
+              Decline
+            </button>
+          }
+        />
       </form>
 
       <details className="sf-view-section sf-history">
@@ -208,7 +208,7 @@ function QuestionCard({ incoming }: { incoming: Question }): ReactNode {
               {response.kind} · rev {response.panelRevision ?? 1}
               {response.askId ? ` · part ${response.askId}` : ""} · <span className="sf-mono">{response.id}</span>
             </p>
-            <pre className="sf-verbatim">{contentText(response.value)}</pre>
+            <Rendered content={fromResponse("human_contribution", response.value, response.receivedAt)} density="inline" header={false} region="response_history" />
           </div>
         ))}
         <p className="sf-history-meta">

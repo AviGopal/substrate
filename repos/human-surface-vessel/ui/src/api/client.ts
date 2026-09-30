@@ -328,6 +328,8 @@ export async function submitGrade(g: GradeSubmission): Promise<void> {
 export interface RenderPolicy {
   readonly tokenOverrides: Readonly<Record<string, string>>;
   readonly formByShape: Readonly<Record<string, string>>;
+  /** Forms a learner earned per shape; applied below a human pin. Absent on older policies. */
+  readonly learnedFormByShape?: Readonly<Record<string, string>>;
   readonly maxPreviewChars: number | null;
   readonly ledgerDefaultExpanded: boolean;
   /** Repertoire variant chosen through the impulse; adopted at page load only. */

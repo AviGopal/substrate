@@ -20,6 +20,7 @@ import { RunView } from "./components/RunView";
 import { TopBar } from "./components/TopBar";
 import { useTokenOverrides } from "./lib/useTokenOverrides";
 import { useLiveControls } from "./state/liveControls";
+import { useStoreStream } from "./state/stream";
 import { QuestionsProvider, useQuestions } from "./state/questions";
 
 /**
@@ -38,6 +39,7 @@ const FILTERS: readonly { id: RunFilter; label: string }[] = [
 
 function Workbench(): ReactNode {
   const { paused, intervalMs } = useLiveControls();
+  useStoreStream(paused);
   const policy = useRenderPolicy({ enabled: !paused, intervalMs }).data;
   useTokenOverrides(policy?.tokenOverrides);
   useEffect(() => {

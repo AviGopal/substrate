@@ -17,22 +17,10 @@
  */
 
 import { VERDICT_OPTIONS } from "@avigopal/design-tokens";
-import { useId, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useSubmitGrade } from "../api/queries";
-import type { OracleVerdict } from "../api/types";
-
-/**
- * Which corpus verdict each option means.
- *
- * Every option under a `reached` run disputes the reach, so all of them map to
- * `not_achieved`. Under a `not-reached` run, only "It actually worked" claims
- * the opposite. The option text travels verbatim in `notes`, so the corpus
- * keeps the granularity the mapping collapses.
- */
-function verdictFor(renderedState: "reached" | "not-reached", option: string): OracleVerdict {
-  if (renderedState === "reached") return "not_achieved";
-  return option === "It actually worked" ? "achieved" : "not_achieved";
-}
+import { gradePayload } from "../lib/interaction";
+import { ChoiceInput, InteractionFooter, TextInput, stateOf } from "./Interaction";
 
 export function GradeGesture({
   renderedState,
@@ -48,7 +36,6 @@ export function GradeGesture({
   alreadyGraded: boolean;
   humanReachNotes: string | null;
 }): ReactNode {
-  const groupId = useId();
   const [selected, setSelected] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const grade = useSubmitGrade();
@@ -75,62 +62,23 @@ export function GradeGesture({
   }
 
   return (
-    <div className="sf-grade">
-      <fieldset className="sf-grade-options">
-        <legend className="sf-label">
-          Disagree with the verdict?
-        </legend>
-        {options.map((option) => (
-          <label className="sf-grade-option" key={option}>
-            <input
-              type="radio"
-              name={groupId}
-              value={option}
-              checked={selected === option}
-              onChange={() => setSelected(option)}
-            />
-            <span>{option}</span>
-          </label>
-        ))}
-      </fieldset>
-
-      <label className="sf-label" htmlFor={`${groupId}-note`}>
-        Note
-      </label>
-      <textarea
-        id={`${groupId}-note`}
-        className="sf-textarea"
-        style={{ minHeight: "3.5rem", fontSize: "var(--sf-text-base)" }}
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
+    <form
+      className="sf-grade sf-interaction"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!selected) return;
+        grade.mutate(gradePayload({ renderedState, option: selected, note, executionId, goal }));
+      }}
+    >
+      <ChoiceInput label="Disagree with the verdict?" options={options} value={selected} onChange={setSelected} disabled={grade.isPending} />
+      <TextInput label="Note" placeholder="Note (optional)" value={note} onChange={setNote} disabled={grade.isPending} />
+      <InteractionFooter
+        state={stateOf(grade)}
+        submitLabel="Record"
+        canSubmit={selected !== null}
+        error={grade.isError ? `Not recorded: ${(grade.error as Error).message}` : null}
+        sentLabel="Recorded"
       />
-
-      <div style={{ marginTop: "var(--sf-space-2)" }}>
-        <button
-          type="button"
-          className="sf-button sf-button-primary"
-          disabled={selected === null || grade.isPending}
-          onClick={() => {
-            if (!selected) return;
-            grade.mutate({
-              executionId,
-              goal,
-              verdict: verdictFor(renderedState, selected),
-              notes: note.trim() ? `${selected} — ${note.trim()}` : selected,
-            });
-          }}
-        >
-          {grade.isPending ? "Recording…" : "Record"}
-        </button>
-      </div>
-
-      {/* No optimistic green. If the write did not land, it did not land. */}
-      {grade.isError ? (
-        <p className="sf-error">Not recorded: {(grade.error as Error).message}</p>
-      ) : null}
-      {grade.isSuccess ? (
-        <p className="sf-ok">Recorded</p>
-      ) : null}
-    </div>
+    </form>
   );
 }

@@ -4,9 +4,9 @@
  */
 
 import type { ReactNode } from "react";
-import { planContent, truncatedEnvelopePayload } from "../lib/ledger";
-import { ContentRender } from "./ContentRender";
-import { FormDecisionRecorder } from "./FormDecisionRecorder";
+import { fromResponse } from "../lib/content";
+import { truncatedEnvelopePayload } from "../lib/ledger";
+import { Rendered } from "./Rendered";
 import { Prose } from "./Prose";
 
 /**
@@ -140,31 +140,14 @@ function segmentAnswer(body: string): readonly AnswerSegment[] {
  * a form decision a person reads; leaving it out would make the corpus quietly
  * ledger-only while the answer is the part they came for.
  */
-function AnswerSegmentView({
-  shape,
-  text,
-  truncated,
-  formByShape,
-  policyRevision,
-}: {
-  shape: string;
-  text: string;
-  truncated: boolean;
-  formByShape?: Readonly<Record<string, string>>;
-  policyRevision: number | null;
-}): ReactNode {
-  const plan = planContent(shape, text, truncated, formByShape);
+function AnswerSegmentView({ shape, text, truncated }: { shape: string; text: string; truncated: boolean }): ReactNode {
   return (
-    <>
-      <ContentRender plan={plan} />
-      <FormDecisionRecorder
-        shape={shape}
-        plan={plan}
-        truncated={truncated}
-        policyRevision={policyRevision}
-        region="answer_card"
-      />
-    </>
+    <Rendered
+      content={{ ...fromResponse(shape, text), state: truncated ? "truncated" : "full" }}
+      density="full"
+      header={false}
+      region="answer_card"
+    />
   );
 }
 
@@ -187,12 +170,8 @@ function splitAnswer(body: string, goal: string | undefined): { main: string; ba
 
 function Segments({
   text,
-  formByShape,
-  policyRevision,
 }: {
   text: string;
-  formByShape?: Readonly<Record<string, string>>;
-  policyRevision: number | null;
 }): ReactNode {
   return (
     <>
@@ -205,8 +184,6 @@ function Segments({
             shape={segment.declaredShape ?? "goal_answer"}
             text={segment.text}
             truncated={segment.truncated}
-            formByShape={formByShape}
-            policyRevision={policyRevision}
           />
         ),
       )}
@@ -217,22 +194,18 @@ function Segments({
 export function AnswerBody({
   answerBody,
   goal,
-  formByShape,
-  policyRevision,
 }: {
   answerBody: string;
   goal?: string;
-  formByShape?: Readonly<Record<string, string>>;
-  policyRevision: number | null;
 }): ReactNode {
   const { main, basis } = splitAnswer(answerBody, goal);
   return (
     <div className="sf-answer">
-      {main ? <Segments text={main} formByShape={formByShape} policyRevision={policyRevision} /> : null}
+      {main ? <Segments text={main} /> : null}
       {basis ? (
         <details className="sf-answer-basis">
           <summary>Basis</summary>
-          <Segments text={basis} formByShape={formByShape} policyRevision={policyRevision} />
+          <Segments text={basis} />
         </details>
       ) : null}
     </div>

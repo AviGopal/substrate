@@ -17,12 +17,11 @@
 
 import type { ReactNode } from "react";
 import type { GoalWalkState, PoolEvent, WalkStep } from "../api/types";
-import { normalizeLedger, planContent, type LedgerEntry } from "../lib/ledger";
-import { formatChars } from "../lib/time";
+import { normalizeLedger, type LedgerEntry } from "../lib/ledger";
+import { fromLedgerEntry } from "../lib/content";
 import { segmentAttempts, type AttemptSegment } from "../lib/attempts";
 import { walkLogText } from "../lib/walk";
-import { ContentRender } from "./ContentRender";
-import { FormDecisionRecorder } from "./FormDecisionRecorder";
+import { Rendered } from "./Rendered";
 
 type TraceItem =
   | { readonly kind: "step"; readonly at: number | null; readonly order: number; readonly step: WalkStep }
@@ -135,52 +134,21 @@ function StepRow({ step, t }: { step: WalkStep; t: string }): ReactNode {
   );
 }
 
-function ImpulseRow({
-  item,
-  t,
-  formByShape,
-  policyRevision,
-}: {
-  item: Extract<TraceItem, { kind: "impulse" }>;
-  t: string;
-  formByShape?: Readonly<Record<string, string>>;
-  policyRevision: number | null;
-}): ReactNode {
+function ImpulseRow({ item, t }: { item: Extract<TraceItem, { kind: "impulse" }>; t: string }): ReactNode {
   const entry = item.entry;
-  const plan = entry && entry.kind === "content" ? planContent(entry.shape, entry.preview, entry.truncated, formByShape) : null;
-
   return (
     <li className="sf-trace-item sf-trace-impulse">
       <span className="sf-trace-time">{t}</span>
       <div className="sf-trace-main">
-        <div className="sf-trace-line">
-          <span className="sf-shape-badge">{item.shape}</span>
-          {item.source && !(entry?.kind === "content" && entry.preview.includes(item.source)) ? (
-            <span className="sf-trace-source">{item.source}</span>
-          ) : null}
-          {entry?.producedBy && entry.producedBy !== "goal-host-walk" ? (
-            <span className="sf-trace-source sf-mono">{entry.producedBy}</span>
-          ) : null}
-          {entry && entry.kind === "content" && entry.truncated ? (
-            <span className="sf-trace-cut">
-              first {formatChars(entry.preview.length)} of {formatChars(entry.chars)} chars
-            </span>
-          ) : null}
-        </div>
-        {entry && plan ? (
-          <div className="sf-trace-content">
-            <ContentRender plan={plan} />
-            <FormDecisionRecorder
-              shape={entry.shape}
-              plan={plan}
-              truncated={entry.kind === "content" && entry.truncated}
-              policyRevision={policyRevision}
-              region="evidence_ledger"
-            />
+        {entry ? (
+          <Rendered content={fromLedgerEntry(entry, item.source, item.at)} density="full" region="evidence_ledger" />
+        ) : (
+          // An event whose content this page never received: named, not drawn.
+          <div className="sf-rendered-head">
+            <span className="sf-shape-badge">{item.shape}</span>
+            {item.source ? <span className="sf-rendered-source">{item.source}</span> : null}
           </div>
-        ) : entry ? (
-          <p className="sf-trace-none">empty</p>
-        ) : null}
+        )}
       </div>
     </li>
   );
@@ -189,13 +157,9 @@ function ImpulseRow({
 function AttemptItems({
   segment,
   time,
-  formByShape,
-  policyRevision,
 }: {
   segment: AttemptSegment;
   time: (at: number | null) => string;
-  formByShape?: Readonly<Record<string, string>>;
-  policyRevision: number | null;
 }): ReactNode {
   const items = buildItems(segment);
   if (items.length === 0) return <p className="sf-trace-none">Nothing recorded yet</p>;
@@ -205,13 +169,7 @@ function AttemptItems({
         item.kind === "step" ? (
           <StepRow key={`step-${item.order}`} step={item.step} t={time(item.at)} />
         ) : (
-          <ImpulseRow
-            key={`imp-${item.order}`}
-            item={item}
-            t={time(item.at)}
-            formByShape={formByShape}
-            policyRevision={policyRevision}
-          />
+          <ImpulseRow key={`imp-${item.order}`} item={item} t={time(item.at)} />
         ),
       )}
     </ol>
@@ -220,12 +178,8 @@ function AttemptItems({
 
 export function Trace({
   walk,
-  formByShape,
-  policyRevision,
 }: {
   walk: GoalWalkState;
-  formByShape?: Readonly<Record<string, string>>;
-  policyRevision: number | null;
 }): ReactNode {
   const segments = segmentAttempts(walk);
   const t0 = segments.find((s) => s.startAt !== null)?.startAt ?? null;
@@ -238,7 +192,7 @@ export function Trace({
       {empty ? (
         <p className="sf-trace-none">No impulses recorded{walk.completionShapes?.length ? ` · covered by ${walk.completionShapes.join(", ")}` : ""}</p>
       ) : segments.length === 1 && segments[0] ? (
-        <AttemptItems segment={segments[0]} time={time} formByShape={formByShape} policyRevision={policyRevision} />
+        <AttemptItems segment={segments[0]} time={time} />
       ) : (
         <>
           <nav className="sf-attempt-nav" aria-label="Attempts">
@@ -266,7 +220,7 @@ export function Trace({
                   {!seg.current && seg.provenance === null ? " · content not retained" : ""}
                 </span>
               </h4>
-              <AttemptItems segment={seg} time={time} formByShape={formByShape} policyRevision={policyRevision} />
+              <AttemptItems segment={seg} time={time} />
             </section>
           ))}
         </>

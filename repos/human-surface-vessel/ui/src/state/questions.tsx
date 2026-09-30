@@ -14,6 +14,7 @@ import { fetchQuestions, type ParticipationResponse, type Question, type Questio
 import { reportExposureAct } from "../lib/exposure-reporter";
 import { sortRuns } from "../lib/sort";
 import { useLiveControls } from "./liveControls";
+import { streamAwareInterval, useStreamConnected } from "./stream";
 
 export interface QuestionGroup {
   readonly kind: string;
@@ -104,11 +105,12 @@ function groupQuestions(ordered: readonly Question[]): readonly QuestionGroup[] 
 
 export function QuestionsProvider({ children }: { children: ReactNode }): ReactNode {
   const { paused, intervalMs } = useLiveControls();
+  const live = useStreamConnected();
   const query = useQuery({
     queryKey: ["humanQuestions"],
     queryFn: fetchQuestions,
     enabled: !paused,
-    refetchInterval: !paused ? Math.max(intervalMs, 5000) : false,
+    refetchInterval: !paused ? streamAwareInterval(Math.max(intervalMs, 5000), live) : false,
     refetchOnWindowFocus: false,
     retry: false,
   });

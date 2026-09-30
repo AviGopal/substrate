@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
+import { streamAwareInterval, useStreamConnected } from "../state/stream";
 import {
   answerSolicitation,
   dispatchGoal,
@@ -139,11 +140,12 @@ export function useRenderPolicy(opts: {
   enabled: boolean;
   intervalMs: number;
 }): UseQueryResult<RenderPolicy> {
+  const live = useStreamConnected();
   return useQuery({
     queryKey: queryKeys.renderPolicy,
     queryFn: fetchRenderPolicy,
     enabled: opts.enabled,
-    refetchInterval: opts.enabled ? opts.intervalMs : false,
+    refetchInterval: opts.enabled ? streamAwareInterval(opts.intervalMs, live) : false,
     refetchOnWindowFocus: false,
     staleTime: 0,
     placeholderData: (previous) => previous,

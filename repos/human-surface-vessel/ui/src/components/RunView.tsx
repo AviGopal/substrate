@@ -7,7 +7,10 @@
  */
 
 import { useState, type ReactNode } from "react";
-import { useInjectContext, useRenderPolicy, useWalk } from "../api/queries";
+import { useInjectContext, useWalk } from "../api/queries";
+import { fromText } from "../lib/content";
+import { injectPayload } from "../lib/interaction";
+import { InteractionFooter, TextInput, stateOf } from "./Interaction";
 import type { ExecutionPath, GoalWalkState } from "../api/types";
 import type { RunState } from "@avigopal/design-tokens";
 import { deriveRunState, stateIsTerminal } from "../lib/runState";
@@ -16,6 +19,7 @@ import { useNow } from "../lib/useNow";
 import { useProgressWatch } from "../lib/useProgressWatch";
 import { useLiveControls } from "../state/liveControls";
 import { AnswerBody } from "./Answer";
+import { Rendered } from "./Rendered";
 import { GradeGesture } from "./GradeGesture";
 import { SolicitationPanel } from "./SolicitationPanel";
 import { StateBadge } from "./StateBadge";
@@ -37,32 +41,23 @@ function InjectContext({ dispatchId }: { dispatchId: string }): ReactNode {
   return (
     <details className="sf-view-section sf-inject">
       <summary>Add context to this run</summary>
-      <div className="sf-inject-body">
-        <input
-          aria-label="Shape"
-          className="sf-input sf-mono"
-          value={shape}
-          onChange={(e) => setShape(e.target.value)}
+      <form
+        className="sf-inject-body sf-interaction"
+        onSubmit={(e) => {
+          e.preventDefault();
+          mutation.mutate(injectPayload({ dispatchId, shape, content }));
+        }}
+      >
+        <TextInput label="Shape" value={shape} onChange={setShape} singleLine mono disabled={mutation.isPending} />
+        <TextInput label="Content" value={content} onChange={setContent} disabled={mutation.isPending} />
+        <InteractionFooter
+          state={stateOf(mutation)}
+          submitLabel="Add"
+          canSubmit={content.trim().length > 0 && shape.trim().length > 0}
+          error={mutation.isError ? (mutation.error as Error).message : null}
+          sentLabel="Added"
         />
-        <textarea
-          aria-label="Content"
-          className="sf-textarea"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-        />
-        <div className="sf-respond-actions">
-          <button
-            type="button"
-            className="sf-button"
-            disabled={mutation.isPending || content.trim().length === 0 || shape.trim().length === 0}
-            onClick={() => mutation.mutate({ dispatchId, shape: shape.trim(), content: content.trim() })}
-          >
-            {mutation.isPending ? "Adding…" : "Add"}
-          </button>
-          {mutation.isError ? <span className="sf-error-inline">{(mutation.error as Error).message}</span> : null}
-          {mutation.isSuccess ? <span className="sf-ok-inline">Added</span> : null}
-        </div>
-      </div>
+      </form>
     </details>
   );
 }
@@ -90,7 +85,6 @@ export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
   // run that stopped updating while the top bar says "Live" would be lying.
   // The global pause is the reader's lever.
   const query = useWalk(dispatchId, { enabled: !paused, intervalMs });
-  const renderPolicy = useRenderPolicy({ enabled: !paused, intervalMs }).data;
   const walk = query.data;
   const quietForMs = useProgressWatch(walk ? progressFingerprint(walk) : "", now);
 
@@ -136,7 +130,11 @@ export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
           {walk.requeueOf ? <span className="sf-mono">requeue of {walk.requeueOf}</span> : null}
           {query.isError ? <span className="sf-error-inline">refresh failed</span> : null}
         </p>
-        {reason ? <p className="sf-run-reason-full">{reason}</p> : null}
+        {reason ? (
+          <div className="sf-run-reason-full">
+            <Rendered content={fromText("goal_reach_reason", reason)} density="inline" header={false} region="run_reason" />
+          </div>
+        ) : null}
         {walk.humanReachNotes ? <p className="sf-run-reason-full">“{walk.humanReachNotes}”</p> : null}
       </header>
 
@@ -152,15 +150,13 @@ export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
           <AnswerBody
             answerBody={answer}
             goal={walk.goal}
-            formByShape={renderPolicy?.formByShape}
-            policyRevision={renderPolicy?.revision ?? null}
           />
         </section>
       ) : null}
 
       <section className="sf-view-section" aria-label="Trace">
         <h3 className="sf-view-label">Trace</h3>
-        <Trace walk={walk} formByShape={renderPolicy?.formByShape} policyRevision={renderPolicy?.revision ?? null} />
+        <Trace walk={walk} />
       </section>
 
       {walk.status === "running" ? <InjectContext dispatchId={walk.dispatchId} /> : null}
