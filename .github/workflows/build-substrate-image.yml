@@ -59,12 +59,13 @@ concurrency:
   # when called — `cancel-in-progress` on a shared ref group would let the
   # push-triggered build kill the nightly mid-build.
   #
-  # A run that follows a bump shares the dev group but never cancels: it arrives
-  # whether or not the bump moved anything, and a no-op bump must not kill a push
-  # build in flight. It waits its turn instead, and a later push still cancels it,
-  # so the newest dev head is the one that ends up as :dev.
+  # Nothing cancels a build in flight: a started build always publishes, so install
+  # acceptance judges it. GitHub keeps at most one run pending per group, and a newer
+  # one replaces it, so pushes do not pile up and the newest dev head still ends up as
+  # :dev, one build later. Cancel-on-push used to kill every build while several
+  # lanes pushed to dev within a build's duration, and no image was judged for hours.
   group: substrate-image-${{ github.workflow }}-${{ github.event_name == 'workflow_call' && github.run_id || github.ref }}
-  cancel-in-progress: ${{ github.event_name != 'workflow_call' && github.event_name != 'workflow_run' }}
+  cancel-in-progress: false
 
 jobs:
   # Decide whether there is anything to build. Every trigger builds, except a completed
