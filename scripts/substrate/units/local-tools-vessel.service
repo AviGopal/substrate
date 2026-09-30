@@ -15,7 +15,10 @@ WorkingDirectory=/vessels/local-tools-vessel
 # tree: a shell walk that edits them freezes pull-sync ("left at old pointers")
 # and every reader of that copy sees stale code. local-tools runs arbitrary
 # shell for walks, so it gets them read-only; pull-sync is a separate unit.
-ReadOnlyPaths=/workspace/git/super-repo/repos
+# The leading '-' makes this conditional: where no super-repo clone exists (a node whose
+# vessel set creates none), the unit still starts. Which vessels share a container must not
+# decide whether this one runs; without it, a missing path failed every start at NAMESPACE.
+ReadOnlyPaths=-/workspace/git/super-repo/repos
 ExecStart=/root/.bun/bin/bun /vessels/local-tools-vessel/src/index.ts
 Restart=on-failure
 RestartSec=5
