@@ -17,8 +17,14 @@
 # target completes, and seeding proceeds alongside the running fleet. Nothing
 # about the seeding itself changes — same wait, same command, same timeout.
 Description=development-vessel template seed (out-of-band so it cannot hold the boot)
-After=development-vessel.service
+# identity-seeder mints the org and keys and rewrites /etc/substrate/env on a fresh
+# volume. Uploading before it finishes presents a key that does not exist yet, and every
+# template upload is refused 401 — on a warm volume the old key still validates, so the
+# race is invisible until a cold boot loses every dev seed template. bootstrap-seeder
+# and concept-db-seeder already order after it; this unit was the one that did not.
+After=development-vessel.service identity-seeder.service
 Requires=development-vessel.service
+Wants=identity-seeder.service
 
 [Service]
 # Type=simple, NOT oneshot — the same correction bootstrap-seeder needed, and I
