@@ -54,18 +54,18 @@ hot-reloaded by anything here. Drive it through its `mcp__metabob__*` tools.
 
 ### Substrate-hosted vessels
 
-These vessels run as systemd units **inside the substrate container** and are not started directly with `bun run dev`. Edit source in `repos/<vessel>/`, then hot-reload via:
+These vessels run as systemd units **inside the substrate container** and are not started directly with `bun run dev`. Nothing on the host is bind-mounted into the container: editing `repos/<vessel>/` and restarting the unit runs the old code. Commit and push the change to `origin/dev`, then pull it into the container's own clone and restart:
 
 ```bash
-docker exec <container> vessel-ctl restart <vessel>
+docker exec <container> vessel-ctl sync <vessel>      # pull origin/dev in the container's clone, mirror, restart
+docker exec <container> vessel-ctl restart <vessel>   # restart only, no new code
 # e.g.:
-docker exec <container> vessel-ctl restart goal-host-vessel
-docker exec <container> vessel-ctl restart development-vessel
+docker exec <container> vessel-ctl sync goal-host-vessel
 ```
 
-`restart` works on any unit the fleet has — there is no per-vessel target list to
-consult, and no vessel that needs a different command. To pick up edited source
-as well as restart, use `vessel-ctl sync <vessel>`.
+`restart` and `sync` work on any unit the fleet has — there is no per-vessel target
+list to consult, and no vessel that needs a different command. Without either, the
+fleet's own `substrate-pull-sync` picks up a pushed change on its next tick.
 
 | Vessel | Port (in-container) | Role | Notes |
 |---|---|---|---|
