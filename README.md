@@ -359,7 +359,10 @@ keyrings) from the user's quota, which is often 200. When it runs out, the next 
 fails to start with `unable to create session key: disk quota exceeded`. The installer
 warns when fewer than 40 remain; raise the limit with
 `sudo sysctl -w kernel.keys.maxkeys=2000 kernel.keys.maxbytes=2000000` (persist it in
-`/etc/sysctl.d/`).
+`/etc/sysctl.d/`). The inotify budget is the same kind of limit: when it runs out, a new
+fleet stays `initializing` with every unit waiting and its journal reports
+`inotify watch limit reached`. Raise it with
+`sudo sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=2097152`.
 
 #### F. Enabling self-development
 

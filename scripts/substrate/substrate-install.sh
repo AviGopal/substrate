@@ -214,6 +214,17 @@ if [ -r /proc/key-users ] && [ -r /proc/sys/kernel/keys/maxkeys ] && [ "$(id -u)
   fi
 fi
 
+# Every container's systemd also holds inotify instances and watches from the host's
+# per-user budget (fs.inotify.max_user_instances / max_user_watches). Exhausted, the next
+# container's boot stalls in "initializing" with every unit waiting and the journal saying
+# "inotify watch limit reached" / "No space left on device"; nothing names the limit.
+if [ -r /proc/sys/fs/inotify/max_user_instances ] && [ "$(id -u)" != 0 ]; then
+  inst_max="$(cat /proc/sys/fs/inotify/max_user_instances)"
+  if [ "$inst_max" -lt 4096 ] 2>/dev/null; then
+    say "fs.inotify.max_user_instances is $inst_max; several fleets on one host can exhaust it and a new one then never finishes booting. Raise it: sudo sysctl -w fs.inotify.max_user_instances=8192 fs.inotify.max_user_watches=2097152"
+  fi
+fi
+
 # The manifest this image was built with (re-running rewrites it, which is how an
 # image upgrade reaches the declaration).
 cat > docker-compose.yml <<'SUBSTRATE_MANIFEST_EOF'
