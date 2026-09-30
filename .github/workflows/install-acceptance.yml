@@ -56,7 +56,8 @@ name: Install acceptance
 #   `true`: gating. The build publishes only :<sha> (and any extra tag), and the
 #   `promote` job below moves :dev (and the Docker Hub :dev when its credentials exist)
 #   to the judged digest only when every engine passed in gating mode, both the install
-#   page (`accept`) and the one-token join to a hub (`network`). The switch
+#   page (`accept`), the one-token join to a hub (`network`) and the upgrade of a fleet
+#   running the current :dev (`upgrade`). The switch
 #   takes effect only while ACCEPTANCE_PROVIDER_KEY exists: without it no run can pass
 #   in gating mode, so the build keeps publishing :dev itself and warns. Unsetting the
 #   variable restores the previous behavior on the next build.
@@ -271,8 +272,8 @@ jobs:
 
   # The upgrade promise: re-running the install command moves a fleet to the new image
   # and keeps what it had (keys it issued, its federation id, its volumes). The previous
-  # image is the :dev this digest would replace. Not yet in promote's needs: it joins
-  # them once it has passed on both engines.
+  # image is the :dev this digest would replace. It gates promotion alongside accept and
+  # network.
   upgrade:
     needs: resolve
     if: needs.resolve.outputs.found == 'true'
@@ -453,10 +454,11 @@ jobs:
 
   promote:
     # The publishing switch (see the header). Off unless the repository variable says so.
-    # :dev moves only to a digest that both installed from the page (accept) and joined a
-    # hub with one token and contributed to it (network), on every engine.
-    needs: [resolve, accept, network]
-    if: vars.INSTALL_ACCEPTANCE_GATES_DEV == 'true' && needs.resolve.outputs.found == 'true' && needs.accept.result == 'success' && needs.network.result == 'success'
+    # :dev moves only to a digest that installed from the page (accept), joined a hub with
+    # one token and contributed to it (network), and upgraded the fleet :dev runs without
+    # losing its keys or identity (upgrade), on every engine.
+    needs: [resolve, accept, network, upgrade]
+    if: vars.INSTALL_ACCEPTANCE_GATES_DEV == 'true' && needs.resolve.outputs.found == 'true' && needs.accept.result == 'success' && needs.network.result == 'success' && needs.upgrade.result == 'success'
     runs-on: ubuntu-latest
     # One promotion at a time across every judgement, so two runs finishing together
     # cannot interleave their reads of :dev and their copies to it.
