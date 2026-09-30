@@ -202,6 +202,7 @@ docker exec substrate-live substrate-status
 The image prints the installer, and `sh` runs it on the host. It runs the manual sequence
 below and derives nothing: the image still judges every input at boot. Options go after
 `sh -s --` and are listed by `docker run --rm ghcr.io/avigopal/substrate:dev install --help`.
+If the command stops at once with "not in this image revision", pull a newer image.
 Secrets go before `sh` as environment variables, so they never appear in the command's
 arguments. Re-running the same command from the same place updates that fleet: it rewrites
 the manifest from the image, replaces the inputs you pass, and keeps the rest.
@@ -297,11 +298,11 @@ What joining means, and how to tell it happened:
 - **A joining spoke writes to the hub.** Its seeder registers the shared activity templates
   into the hub's trace store with the issued key (idempotent upserts). A spoke you do not
   fully trust should get a read-scoped key, or `DISABLED_VESSELS=bootstrap-seeder`.
-- **A joined spoke is dialable from the hub with no further step.** Its first boot mints a
+- **A joined spoke registers on the hub with no further step.** Its first boot mints a
   federation id (`spoke-<hex>`, persisted in the workspace volume), and its vessels appear
-  in the hub registry as `<vessel>@spoke-<hex>`, reached through the relay circuit, so the
-  hub can route work to the spoke's tools and files. The transport's journal line
-  `hub-register per-vessel (<n> rows) -> all ok` records it.
+  in the hub registry as `<vessel>@spoke-<hex>`, addressed through the hub's transport.
+  The spoke transport's journal line `hub-register per-vessel (<n> rows) -> all ok`
+  records it.
 
 Protocol and concepts: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 
