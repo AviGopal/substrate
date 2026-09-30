@@ -71,6 +71,9 @@ Prints an installer for this image. Pipe it to sh; options go after `sh -s --`.
   --engine docker|podman   container engine (default: the first whose compose answers)
   --wait <level>           live | seeded | served | usable | none (default usable)
   --no-connect             do not write the client configuration
+  --adopt                  keep the existing volumes of this name: move a fleet launched
+                           another way onto the manifest (remove its container first;
+                           learning state, keys and secrets in the volumes are kept)
 
 Install inputs may also be given as environment variables of the sh: a provider key
 (ANTHROPIC_API_KEY, OPENAI_API_KEY, …), METABOB_API_KEY, SUBSTRATE_GIT_PAT +
@@ -97,7 +100,7 @@ cat <<'EOF'
 say() { printf '[install] %s\n' "$*" >&2; }
 die() { say "$*"; exit 1; }
 
-engine=""; dir=""; wait_level=usable; connect=1
+engine=""; dir=""; wait_level=usable; connect=1; adopt=0
 set_name=""; set_prefix=""; set_profile=""; set_public_ip=""; set_join=""; set_key=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -111,6 +114,7 @@ while [ $# -gt 0 ]; do
     --engine) engine="${2:?--engine needs docker or podman}"; shift 2 ;;
     --wait) wait_level="${2:?--wait needs a level}"; shift 2 ;;
     --no-connect) connect=0; shift ;;
+    --adopt) adopt=1; shift ;;
     -h|--help) die "options are listed by: docker run --rm <image> install --help" ;;
     *) die "unknown option '$1' (docker run --rm <image> install --help lists them)" ;;
   esac
@@ -177,8 +181,15 @@ new_fleet=1
 
 if [ "$new_fleet" = 1 ]; then
   # A new directory must not attach to a fleet that already owns these names or ports.
-  if "$engine" container inspect "$container" >/dev/null 2>&1 || "$engine" volume inspect "${name}-workspace" >/dev/null 2>&1; then
-    refuse "a fleet named '$name' already exists on this host (container $container or volume ${name}-workspace). Update it from its own directory, or pick another: --name <n> --prefix <nn> (19-32 avoid the ephemeral range)"
+  if "$engine" container inspect "$container" >/dev/null 2>&1; then
+    refuse "container $container already exists. To move it onto this manifest, stop it with a grace that covers the datastore flush ($engine stop -t 360 $container), remove it ($engine rm $container; its volumes stay), then re-run with --adopt"
+  fi
+  if [ "$adopt" = 1 ]; then
+    "$engine" volume inspect "${name}-workspace" >/dev/null 2>&1 \
+      && say "adopting the existing volumes ${name}-workspace and ${name}-surreal: their learning state, keys and secrets are kept" \
+      || say "--adopt given, but there is no volume ${name}-workspace; installing fresh"
+  elif "$engine" volume inspect "${name}-workspace" >/dev/null 2>&1; then
+    refuse "a fleet named '$name' already exists on this host (container $container or volume ${name}-workspace). Update it from its own directory; re-run with --adopt to keep those volumes (a fleet launched another way); or pick another: --name <n> --prefix <nn> (19-32 avoid the ephemeral range)"
   fi
   busy=""
   if command -v ss >/dev/null 2>&1; then
