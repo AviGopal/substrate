@@ -56,14 +56,14 @@ jobs:
 
   # 2. Build the reconciled commit.
   #
-  # Runs when the reconcile moved something, or or when an operator forced it.
+  # Runs when the reconcile moved something, or when an operator forced it.
   # When nothing moved, the tree is identical to one :dev was already built
   # from, so a build would republish a byte-identical image under a new tag —
   # cost with no signal. `force_build` exists for the case where the image and
   # the tree have drifted for a reason outside git (a base-image CVE rebuild).
   build:
     needs: reconcile
-    if: always()
+    if: needs.reconcile.outputs.changed == '1' || inputs.force_build
     uses: ./.github/workflows/build-substrate-image.yml
     permissions:
       contents: read
