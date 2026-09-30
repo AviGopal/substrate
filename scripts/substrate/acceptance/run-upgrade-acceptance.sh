@@ -53,6 +53,10 @@ if [ "\${1:-}" = "compose" ]; then shift; exec "$pc" "\$@"; fi
 exec "$pm" "\$@"
 EOF
   chmod +x "$bin_dir/docker"
+  # The installer is told --engine podman, so it calls `podman compose`, which hands off
+  # to whichever provider it finds first; a runner's docker-compose plugin then wants a
+  # Podman socket nothing started. Name the provider the page expects.
+  export PODMAN_COMPOSE_PROVIDER="$pc"
 fi
 export PATH="$bin_dir:$PATH"
 eng() { "$ENGINE" "$@"; }
