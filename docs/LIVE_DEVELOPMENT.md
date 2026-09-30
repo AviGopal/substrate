@@ -65,7 +65,8 @@ docker exec <container> vessel-ctl sync goal-host-vessel
 
 `restart` and `sync` work on any unit the fleet has — there is no per-vessel target
 list to consult, and no vessel that needs a different command. Without either, the
-fleet's own `substrate-pull-sync` picks up a pushed change on its next tick.
+fleet's own `substrate-pull-sync` picks up a pushed change on its next tick, wherever
+it can fetch `origin` (a repo it cannot fetch is skipped for that tick).
 
 | Vessel | Port (in-container) | Role | Notes |
 |---|---|---|---|
