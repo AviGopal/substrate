@@ -14,7 +14,7 @@ import { deriveRunState, stateIsTerminal } from "../lib/runState";
 import { detectSolicitation, hasProgress, progressFingerprint } from "../lib/walk";
 import { useNow } from "../lib/useNow";
 import { useProgressWatch } from "../lib/useProgressWatch";
-import { useLiveControls, useRegionFreeze } from "../state/liveControls";
+import { useLiveControls } from "../state/liveControls";
 import { AnswerBody } from "./Answer";
 import { GradeGesture } from "./GradeGesture";
 import { SolicitationPanel } from "./SolicitationPanel";
@@ -85,10 +85,12 @@ function duration(ms: number): string {
 
 export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
   const { paused, intervalMs } = useLiveControls();
-  const { frozen, handlers } = useRegionFreeze();
   const now = useNow(paused);
-  const query = useWalk(dispatchId, { enabled: !paused && !frozen, intervalMs });
-  const renderPolicy = useRenderPolicy({ enabled: !paused && !frozen, intervalMs }).data;
+  // No hover-freeze here: nothing in this pane reorders under a hand, and a
+  // run that stopped updating while the top bar says "Live" would be lying.
+  // The global pause is the reader's lever.
+  const query = useWalk(dispatchId, { enabled: !paused, intervalMs });
+  const renderPolicy = useRenderPolicy({ enabled: !paused, intervalMs }).data;
   const walk = query.data;
   const quietForMs = useProgressWatch(walk ? progressFingerprint(walk) : "", now);
 
@@ -117,7 +119,7 @@ export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
   const answer = walk.answerBody?.trim() ? walk.answerBody : null;
 
   return (
-    <article className="sf-run" data-state={state} aria-busy={query.isFetching} {...handlers}>
+    <article className="sf-run" data-state={state} aria-busy={query.isFetching}>
       <header className="sf-view-head">
         <h2 className="sf-view-title sf-run-title">
           {walk.goal ?? <span className="sf-muted">goal text not recorded</span>}
