@@ -63,7 +63,7 @@ export function ComplainButton({ region, onFiled }: { region: string; onFiled?: 
   if (!open) {
     return (
       <button type="button" className="sf-complain-open" onClick={() => setOpen(true)}>
-        something's wrong here
+        Report a problem
       </button>
     );
   }
@@ -92,21 +92,16 @@ export function ComplainButton({ region, onFiled }: { region: string; onFiled?: 
       />
       <div className="sf-complain-actions">
         <button type="button" className="sf-button sf-button-primary" onClick={() => void send()} disabled={state === "sending"}>
-          {state === "sending" ? "filing…" : "file it"}
+          {state === "sending" ? "Filing…" : "File"}
         </button>
         <button type="button" className="sf-button sf-button-quiet" onClick={() => setOpen(false)}>
-          cancel
+          Cancel
         </button>
         {state === "filed" ? (
-          <span className="sf-complain-note">
-            Filed as an open gap on this interface — it appears below, and the substrate's own
-            detector will never close it for you.
-          </span>
+          <span className="sf-complain-note">Filed</span>
         ) : null}
         {state === "failed" ? (
-          <span className="sf-complain-note sf-complain-failed">
-            Not filed — the gap store did not accept it. Nothing was recorded.
-          </span>
+          <span className="sf-complain-note sf-complain-failed">Not filed</span>
         ) : null}
       </div>
     </div>

@@ -1,0 +1,180 @@
+/**
+ * One run, open in the main pane: what was asked, the verdict, the answer,
+ * the trace, and the human's levers (context while running, a grade after).
+ *
+ * The verdict is the badge and it leads. `status` is shown only as a fact
+ * beside it, never in the place a reader scans for the outcome.
+ */
+
+import { useState, type ReactNode } from "react";
+import { useInjectContext, useRenderPolicy, useWalk } from "../api/queries";
+import type { ExecutionPath, GoalWalkState } from "../api/types";
+import type { RunState } from "@avigopal/design-tokens";
+import { deriveRunState, stateIsTerminal } from "../lib/runState";
+import { detectSolicitation, hasProgress, progressFingerprint } from "../lib/walk";
+import { useNow } from "../lib/useNow";
+import { useProgressWatch } from "../lib/useProgressWatch";
+import { useLiveControls, useRegionFreeze } from "../state/liveControls";
+import { AnswerBody } from "./Answer";
+import { GradeGesture } from "./GradeGesture";
+import { SolicitationPanel } from "./SolicitationPanel";
+import { StateBadge } from "./StateBadge";
+import { Trace } from "./Trace";
+
+const PATH_LABEL: Readonly<Record<ExecutionPath, string>> = {
+  learned_pathway: "learned path",
+  satisfier: "direct",
+  universal_tool_fallback: "tool loop",
+  feature_compose: "code edit",
+  fresh_derivation: "new path",
+};
+
+function InjectContext({ dispatchId }: { dispatchId: string }): ReactNode {
+  const [content, setContent] = useState("");
+  const [shape, setShape] = useState("human_context");
+  const mutation = useInjectContext();
+
+  return (
+    <details className="sf-view-section sf-inject">
+      <summary>Add context to this run</summary>
+      <div className="sf-inject-body">
+        <input
+          aria-label="Shape"
+          className="sf-input sf-mono"
+          value={shape}
+          onChange={(e) => setShape(e.target.value)}
+        />
+        <textarea
+          aria-label="Content"
+          className="sf-textarea"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+        />
+        <div className="sf-respond-actions">
+          <button
+            type="button"
+            className="sf-button"
+            disabled={mutation.isPending || content.trim().length === 0 || shape.trim().length === 0}
+            onClick={() => mutation.mutate({ dispatchId, shape: shape.trim(), content: content.trim() })}
+          >
+            {mutation.isPending ? "Adding…" : "Add"}
+          </button>
+          {mutation.isError ? <span className="sf-error-inline">{(mutation.error as Error).message}</span> : null}
+          {mutation.isSuccess ? <span className="sf-ok-inline">Added</span> : null}
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function spanMs(walk: GoalWalkState): number | null {
+  const times = [
+    ...walk.poolEvents.map((e) => e.at),
+    ...walk.steps.map((s) => (typeof s["at"] === "number" ? (s["at"] as number) : undefined)),
+  ].filter((t): t is number => typeof t === "number" && Number.isFinite(t));
+  if (times.length < 2) return null;
+  return Math.max(...times) - Math.min(...times);
+}
+
+function duration(ms: number): string {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  return m < 60 ? `${m}m ${s % 60}s` : `${Math.floor(m / 60)}h ${m % 60}m`;
+}
+
+export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
+  const { paused, intervalMs } = useLiveControls();
+  const { frozen, handlers } = useRegionFreeze();
+  const now = useNow(paused);
+  const query = useWalk(dispatchId, { enabled: !paused && !frozen, intervalMs });
+  const renderPolicy = useRenderPolicy({ enabled: !paused && !frozen, intervalMs }).data;
+  const walk = query.data;
+  const quietForMs = useProgressWatch(walk ? progressFingerprint(walk) : "", now);
+
+  if (!walk) {
+    return (
+      <p className="sf-main-empty">
+        {query.isError ? `Could not read this run: ${(query.error as Error).message}` : "Loading…"}
+      </p>
+    );
+  }
+
+  const solicitation = detectSolicitation(walk);
+  const terminal = walk.status !== "running";
+  const state: RunState = deriveRunState({
+    status: walk.status,
+    reached: walk.reached,
+    awaitingAnswer: solicitation !== null,
+    hasProgress: hasProgress(walk),
+    quietForMs: terminal ? null : quietForMs,
+    // goalWalkState carries no startedAt; the board row judges accept-silence.
+    acceptedForMs: null,
+  });
+  const span = spanMs(walk);
+  const reason = state === "not-reached" ? (walk.goalReachReason?.trim() || walk.error || null) : null;
+  const who = walk.operator ?? walk.trigger;
+  const answer = walk.answerBody?.trim() ? walk.answerBody : null;
+
+  return (
+    <article className="sf-run" data-state={state} aria-busy={query.isFetching} {...handlers}>
+      <header className="sf-view-head">
+        <h2 className="sf-view-title sf-run-title">
+          {walk.goal ?? <span className="sf-muted">goal text not recorded</span>}
+        </h2>
+        <p className="sf-view-facts">
+          <StateBadge state={state} />
+          {span !== null ? <span>{duration(span)}</span> : null}
+          {who ? <span>{who}</span> : null}
+          {walk.executionPath ? <span className="sf-chip">{PATH_LABEL[walk.executionPath]}</span> : null}
+          {walk.humanGraded ? <span className="sf-chip">human-graded</span> : null}
+          <span className="sf-mono sf-view-id" title={walk.executionId ?? undefined}>
+            {walk.dispatchId}
+          </span>
+          {walk.requeueOf ? <span className="sf-mono">requeue of {walk.requeueOf}</span> : null}
+          {query.isError ? <span className="sf-error-inline">refresh failed</span> : null}
+        </p>
+        {reason ? <p className="sf-run-reason-full">{reason}</p> : null}
+        {walk.humanReachNotes ? <p className="sf-run-reason-full">“{walk.humanReachNotes}”</p> : null}
+      </header>
+
+      {solicitation ? (
+        <section className="sf-view-section">
+          <SolicitationPanel solicitation={solicitation} />
+        </section>
+      ) : null}
+
+      {answer ? (
+        <section className="sf-view-section" aria-label="Answer">
+          <h3 className="sf-view-label">Answer</h3>
+          <AnswerBody
+            answerBody={answer}
+            goal={walk.goal}
+            formByShape={renderPolicy?.formByShape}
+            policyRevision={renderPolicy?.revision ?? null}
+          />
+        </section>
+      ) : null}
+
+      <section className="sf-view-section" aria-label="Trace">
+        <h3 className="sf-view-label">Trace</h3>
+        <Trace walk={walk} formByShape={renderPolicy?.formByShape} policyRevision={renderPolicy?.revision ?? null} />
+      </section>
+
+      {walk.status === "running" ? <InjectContext dispatchId={walk.dispatchId} /> : null}
+
+      {stateIsTerminal(state) ? (
+        <section className="sf-view-section" aria-label="Grade">
+          <h3 className="sf-view-label">Grade</h3>
+          <GradeGesture
+            renderedState={state === "reached" ? "reached" : "not-reached"}
+            executionId={walk.executionId}
+            goal={walk.goal ?? ""}
+            alreadyGraded={walk.humanGraded}
+            humanReachNotes={walk.humanReachNotes}
+          />
+        </section>
+      ) : null}
+    </article>
+  );
+}

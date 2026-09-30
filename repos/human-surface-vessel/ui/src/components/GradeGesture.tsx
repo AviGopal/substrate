@@ -57,10 +57,7 @@ export function GradeGesture({
   if (alreadyGraded) {
     return (
       <div className="sf-grade">
-        <p className="sf-note">
-          A human has already graded this run
-          {humanReachNotes ? `: “${humanReachNotes}”` : "."}
-        </p>
+        <p className="sf-note">Graded{humanReachNotes ? `: “${humanReachNotes}”` : ""}</p>
       </div>
     );
   }
@@ -72,10 +69,7 @@ export function GradeGesture({
   if (!executionId) {
     return (
       <div className="sf-grade">
-        <p className="sf-note">
-          This run cannot be graded: it carries no execution id, and the verdict corpus is keyed on
-          one. The run happened; the record needed to attach a verdict to it does not exist.
-        </p>
+        <p className="sf-note sf-muted">No execution id — cannot be graded</p>
       </div>
     );
   }
@@ -84,9 +78,7 @@ export function GradeGesture({
     <div className="sf-grade">
       <fieldset className="sf-grade-options">
         <legend className="sf-label">
-          {renderedState === "reached"
-            ? "If this did not actually do what you asked, say which"
-            : "If this verdict is wrong, say how"}
+          Disagree with the verdict?
         </legend>
         {options.map((option) => (
           <label className="sf-grade-option" key={option}>
@@ -103,7 +95,7 @@ export function GradeGesture({
       </fieldset>
 
       <label className="sf-label" htmlFor={`${groupId}-note`}>
-        What actually happened (optional)
+        Note
       </label>
       <textarea
         id={`${groupId}-note`}
@@ -128,22 +120,16 @@ export function GradeGesture({
             });
           }}
         >
-          {grade.isPending ? "Recording…" : "Record this verdict"}
+          {grade.isPending ? "Recording…" : "Record"}
         </button>
       </div>
 
       {/* No optimistic green. If the write did not land, it did not land. */}
       {grade.isError ? (
-        <p className="sf-error">
-          The verdict was NOT recorded: {(grade.error as Error).message}. Nothing about this run has
-          changed.
-        </p>
+        <p className="sf-error">Not recorded: {(grade.error as Error).message}</p>
       ) : null}
       {grade.isSuccess ? (
-        <p className="sf-ok">
-          Recorded. A human verdict overrides the machine one and is not charged against the
-          pathway's posterior as an ordinary failure.
-        </p>
+        <p className="sf-ok">Recorded</p>
       ) : null}
     </div>
   );

@@ -28,7 +28,7 @@ import { Prose } from "./Prose";
 const SCALAR_MAX_CHARS = 300;
 
 /** Beyond this depth a record summarises instead of recursing. */
-const RECORD_MAX_DEPTH = 2;
+const RECORD_MAX_DEPTH = 4;
 
 function Verbatim({ text }: { text: string }): ReactNode {
   return <pre className="sf-verbatim">{text}</pre>;

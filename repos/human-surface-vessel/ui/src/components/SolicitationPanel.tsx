@@ -36,22 +36,18 @@ export function SolicitationPanel({
   return (
     <div className="sf-waiting-panel">
       <p className="sf-label" style={{ margin: 0 }}>
-        This run is waiting on you
+        Waiting on you
       </p>
       <p className="sf-mono" style={{ fontSize: "var(--sf-text-sm)" }}>
         {solicitation.evidenceLine}
       </p>
 
       {solicitation.solicitationId === null ? (
-        <p className="sf-note">
-          The walk log says a question was asked but does not carry its id, and the question itself
-          lives in a separate impulse this surface cannot read. There is no way to answer it from
-          here — the run will time out on its own.
-        </p>
+        <p className="sf-note sf-muted">The question's id was not recorded, so it cannot be answered here.</p>
       ) : (
         <>
           <label className="sf-label" htmlFor="sf-solicit-answer">
-            Your answer
+            Answer
           </label>
           <textarea
             id="sf-solicit-answer"
@@ -96,16 +92,13 @@ export function SolicitationPanel({
                 })
               }
             >
-              {mutation.isPending ? "Sending…" : "Send to the walk"}
+              {mutation.isPending ? "Sending…" : "Send"}
             </button>
           </div>
           {mutation.isError ? (
-            <p className="sf-error">
-              The answer was not delivered: {(mutation.error as Error).message}. The walk is still
-              waiting.
-            </p>
+            <p className="sf-error">Not delivered: {(mutation.error as Error).message}</p>
           ) : null}
-          {mutation.isSuccess ? <p className="sf-ok">Delivered. The walk resumes from where it stopped.</p> : null}
+          {mutation.isSuccess ? <p className="sf-ok">Delivered</p> : null}
         </>
       )}
     </div>
