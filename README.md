@@ -422,6 +422,7 @@ the unscoped form rewrites every GitHub URL and breaks anonymous cloning everywh
 | Upgrade the image | in the fleet directory: `docker compose pull && docker compose up -d`; or re-run the install command, which also refreshes the manifest | volumes kept; code also converges to origin at boot |
 | Change an install input or profile | re-run the install command with the new input; or edit `.env`, then `docker compose up -d` | recreate; volumes, installed vessels and secrets kept |
 | Move a fleet launched another way (a raw `docker run`, an old lane) onto the manifest | `docker stop -t 360 <c> && docker rm <c>`, then the install command for its role with `--adopt` | its volumes are kept: learning state, issued keys, secrets and federation id |
+| Keep one vessel on an extra host port (e.g. a page URL people already use) | a `docker-compose.override.yml` in the fleet directory adding `ports: ["127.0.0.1:<port>:<container port>"]` to service `substrate` | compose merges port lists, so it adds a mapping beside the derived one; it cannot remove or narrow one. The deprecated per-port inputs (`HUMAN_SURFACE_PORT` …) are refused alongside a prefix |
 | Add or remove one vessel at runtime | `docker exec <c> vessel-ctl install <v>` / `uninstall <v>` | persisted in the workspace; survives recreate |
 | Issue or revoke keys | `docker exec <c> substrate-key issue <name>` / `revoke <id>` | hub-issued keys join spokes |
 | Point a client elsewhere | re-run `substrate-connect` against that fleet | one config path, one override variable |
