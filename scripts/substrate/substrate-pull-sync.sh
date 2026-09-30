@@ -1093,7 +1093,7 @@ EOF
   # DOWN, so a suite that grew could never converge again. Left as a comment rather than
   # deleted silently because its absence is the point: no count of failures, however measured,
   # can distinguish "a test broke" from "more tests exist".
-  REG=""; REG_F=""; REG_P=""
+  REG=""; REG_F=""; REG_P=""; REG_U=""
   if [ -z "$BUN_BIN" ]; then
     log "$v: !!! TEST GATE BLIND — no test runner available (bun missing, or the per-tick budget line above disabled it); this is not 'no tests', it is no instrument. Converging ungated."
     # Only file when the runner is genuinely missing. When the budget branch above cleared
@@ -1140,10 +1140,43 @@ EOF
       # origin sat unconverged. Report the baseline's named-failure count instead, which is
       # what this gate actually reasons about.
       B_NAMED="$(grep -c . "$B_NAMES_FILE" 2>/dev/null || true)"; B_NAMED="${B_NAMED:-0}"
-      if [ ! -s "$B_NAMES_FILE" ]; then
+      T_NAMED="$(printf '%s' "$T_NAMES" | grep -c . || true)"; T_NAMED="${T_NAMED:-0}"
+      T_UNNAMED=$((T_FAIL - T_NAMED)); [ "$T_UNNAMED" -ge 0 ] || T_UNNAMED=0
+      # A FILE THAT STOPS LOADING READS AS AN IMPROVEMENT TO A NAME-SET GATE. bun counts a test
+      # file that fails to load as ONE failure with no "(fail)" name, and drops every test in it.
+      # So the named set SHRINKS (its failing names vanish), its passing tests vanish, and the
+      # set comparison below converges it. Measured 2026-09-29: the summary count has been
+      # named + 2 all day on both nodes, i.e. the unnamed count is a stable constant, so a rise
+      # in it — confirmed on a second run — is a load regression the name set cannot see.
+      # The baseline's third field is its own unnamed count, written with it, so the check never
+      # depends on the names file and the count file staying in step (the starvation break used
+      # to rewrite only the counts). A legacy two-field file derives it from the names file.
+      B_SUM_FAIL="$(awk 'NR==1{print $1}' "$TEST_BASELINE_DIR/$v" 2>/dev/null || true)"
+      B_UNNAMED="$(awk 'NR==1{print $3}' "$TEST_BASELINE_DIR/$v" 2>/dev/null || true)"
+      case "$B_SUM_FAIL" in ''|*[!0-9]*) B_SUM_FAIL="" ;; esac
+      case "$B_UNNAMED" in ''|*[!0-9]*) B_UNNAMED="" ;; esac
+      if [ -z "$B_UNNAMED" ] && [ -n "$B_SUM_FAIL" ] && [ "$B_SUM_FAIL" -ge "$B_NAMED" ]; then B_UNNAMED=$((B_SUM_FAIL - B_NAMED)); fi
+      if [ -s "$B_NAMES_FILE" ] && [ -n "$B_UNNAMED" ]; then
+        if [ "$T_UNNAMED" -gt "$B_UNNAMED" ]; then
+          L_OUT="$(run_suite)"; L_FAIL="$(count_pf "$L_OUT" fail)"
+          L_NAMED="$(fail_names "$L_OUT" | grep -c . || true)"; L_NAMED="${L_NAMED:-0}"
+          if [ -n "$L_FAIL" ] && [ $((L_FAIL - L_NAMED)) -gt "$B_UNNAMED" ]; then
+            REG="test file(s) no longer load: unnamed failures $B_UNNAMED -> $T_UNNAMED, $((L_FAIL - L_NAMED)) on a re-run (a file that fails to load hides its failing names and drops its passing tests; pass ${T_PASS:-?})"
+            REG_F="$T_FAIL"; REG_P="${T_PASS:-0}"; REG_U="$T_UNNAMED"
+          else
+            log "$v: unnamed failures rose $B_UNNAMED -> $T_UNNAMED but not on a re-run — flake"
+            # Noise is additive, so the lower of the two runs is the deterministic count; storing
+            # the flaky one would raise the baseline and hide a later genuine load failure.
+            if [ -n "$L_FAIL" ] && [ $((L_FAIL - L_NAMED)) -lt "$T_UNNAMED" ]; then T_UNNAMED=$((L_FAIL - L_NAMED)); [ "$T_UNNAMED" -ge 0 ] || T_UNNAMED=0; fi
+          fi
+        fi
+      fi
+      if [ -n "$REG" ]; then
+        log "$v: load-error gate — $REG"
+      elif [ ! -s "$B_NAMES_FILE" ]; then
         log "$v: test baseline recorded — $T_FAIL fail / ${T_PASS:-?} pass, $(printf '%s' "$T_NAMES" | grep -c . || true) named failing tests (no gate on first observation)"
         printf '%s\n' "$T_NAMES" > "$B_NAMES_FILE"
-        echo "$T_FAIL ${T_PASS:-0}" > "$TEST_BASELINE_DIR/$v"
+        echo "$T_FAIL ${T_PASS:-0} $T_UNNAMED" > "$TEST_BASELINE_DIR/$v"
       elif [ -n "$(comm -23 <(printf '%s\n' "$T_NAMES") <(sort -u "$B_NAMES_FILE") 2>/dev/null | grep -c . | grep -v '^0$')" ]; then
         # BEST OF TWO: these suites are measurably flaky (development-vessel reported
         # 98 then 103 failures on an identical tree). Noise is additive, so the minimum
@@ -1210,7 +1243,7 @@ EOF
         if [ "${CONFIRMED:-0}" -gt 0 ]; then
           FIRST_NEW="$(printf '%s' "${CONF_SET:-}" | grep -m1 . || true)"
           REG="$CONFIRMED test(s) newly failing in both candidate runs and attributable to this commit, e.g. ${FIRST_NEW:-?} (counts: $B_NAMED -> $BEST_F fail)"
-          REG_F="$BEST_F"; REG_P="${BEST_P:-0}"
+          REG_F="$BEST_F"; REG_P="${BEST_P:-0}"; REG_U="$T_UNNAMED"
         else
           log "$v: newly-failing tests did not reproduce on re-run — flake, converging (run1 $(printf '%s' "$NEW1" | grep -c . || true) new, run2 $(printf '%s' "$NEW2" | grep -c . || true) new, intersection 0)"
           # UNFREEZE THE BASELINE. The refresh used to live only in the no-newly-failing branch
@@ -1221,16 +1254,16 @@ EOF
           # converge, the tree it converged is the new reference — otherwise the same drift is
           # re-litigated, and re-charged to an innocent commit, on every subsequent tick.
           printf '%s\n' "$T_NAMES" > "$B_NAMES_FILE"
-          echo "$T_FAIL ${T_PASS:-0}" > "$TEST_BASELINE_DIR/$v"
+          echo "$T_FAIL ${T_PASS:-0} $T_UNNAMED" > "$TEST_BASELINE_DIR/$v"
         fi
       else
         # No newly-failing test. Re-baseline whenever the SET changed at all, so a suite that
         # grows or whose flakes settle does not carry a stale reference forward — the failure
         # mode that wedged this gate in the first place.
         if [ "$(printf '%s\n' "$T_NAMES")" != "$(cat "$B_NAMES_FILE" 2>/dev/null)" ]; then
-          log "$v: no newly-failing test; refreshing baseline ($B_NAMED -> $T_FAIL fail, $(printf '%s' "$T_NAMES" | grep -c . || true) named)"
+          log "$v: no newly-failing test; refreshing baseline ($B_NAMED -> $T_NAMED named failing; $T_FAIL fail in the summary)"
           printf '%s\n' "$T_NAMES" > "$B_NAMES_FILE"
-          echo "$T_FAIL ${T_PASS:-0}" > "$TEST_BASELINE_DIR/$v"
+          echo "$T_FAIL ${T_PASS:-0} $T_UNNAMED" > "$TEST_BASELINE_DIR/$v"
         fi
       fi
     fi
@@ -1251,7 +1284,10 @@ EOF
     # baseline file. Accepting a degraded baseline blinds the gate to THIS regression,
     # so the acceptance itself is filed as its own gap rather than passing silently.
     log "$v: TEST-GATE STARVATION BREAK — refused $RC consecutive runs at ${HEAD:0:10} ($REG); indefinite staleness is the worse failure, converging anyway and accepting $REG_F fail/$REG_P pass as the new baseline"
-    echo "$REG_F $REG_P" > "$TEST_BASELINE_DIR/$v"
+    echo "$REG_F $REG_P ${REG_U:-}" > "$TEST_BASELINE_DIR/$v"
+    # Accept the names too: a count-only rewrite left the names file describing the OLD tree, so
+    # every later commit was re-judged against a baseline that no longer matched the counts.
+    printf '%s\n' "${T_NAMES:-}" > "$TEST_BASELINE_DIR/$v.failnames"
     emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-testgate-baseline-degraded-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate accepted a DEGRADED baseline for $v ($REG) after $RC refusals. The gate is now blind to this regression until the suite is repaired and the baseline lowered.\",\"status\":\"open\"}}}}"
   fi
   rm -f "$MARKER_DIR/$v.testgate-refusals" 2>/dev/null || true
