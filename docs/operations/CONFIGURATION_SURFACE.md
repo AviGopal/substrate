@@ -4,7 +4,9 @@ This is the advanced-configuration reference. A launch needs only the **install 
 listed with their defaults and the profiles that require them in
 [README § Installation](../../README.md#installation); that page is also the only place
 setup commands appear. Everything in this document is optional: set it in the same host
-`.env`, and the launch manifest forwards it to the image unchanged.
+`.env`, and the launch manifest forwards it to the image unchanged. The installer takes only
+the install inputs from your shell; an advanced variable set only in the shell is ignored
+with a notice, so set it in the fleet's `.env`.
 
 ## The tiers
 
@@ -29,11 +31,20 @@ unfinished shaping (see §3 below).
 | LLM arms | `LLM_ARMS` | a JSON array of `{id, model, provider, port}` that replaces the whole arm list in `scripts/substrate/llm-arms.json` |
 | Vessel selection | `ENABLED_VESSELS`, `ENABLED_ROLES`, `ENABLED_EXTRA_VESSELS`, `DISABLED_VESSELS` | refine the unit set `PROFILE` selects; precedence and grammar in [`docs/SUBSTRATE.md`](../SUBSTRATE.md#topology-selection); preview with `apply-inventory` under `DRY_RUN=1` |
 | Federation overrides | `ACTIVITY_API_ENDPOINT`, `IDENTITY_VESSEL_URL`, `FED_SUBSTRATE_ID`, `RELAY_MULTIADDR`, `PEER_MULTIADDR`, `PEER_DISCOVERY_ENDPOINTS`, `FEDERATION_SIGNING_SECRET` | endpoints and the relay anchor are otherwise derived from `DISCOVERY_ENDPOINT` and `/bootstrap`; `PEER_MULTIADDR` is accepted only alongside `DISCOVERY_ENDPOINT` |
-| Relay ports | `RELAY_PORT`, `RELAY_ANNOUNCE_PORT` | `RELAY_PORT` is the host port the manifest publishes the in-container relay on instead of `<prefix>333`, e.g. to keep an existing hub on `30333`. `RELAY_ANNOUNCE_PORT` is the port the relay advertises; the manifest derives it from the published port, so set it only when peers dial a different port (the container port across a shared container network) |
-| Retention | `TRACE_STORE_CAP` and the `TRACE_*` family | trace-store retention; see [`docs/SUBSTRATE.md`](../SUBSTRATE.md#trace-store-retention-and-the-maintenance-lease) |
+| Federation, less common | `HUB_DISCOVERY_URL`, `METABOB_ENDPOINT`, `IDENTITY_ENDPOINT`, `FED_EXTRA_SHAPE`, `MAX_PEER_DEPTH`, `FEDERATION_PEER_AUTH_MODE` | endpoint aliases and peering knobs; `HUB_DISCOVERY_URL` without `DISCOVERY_ENDPOINT` fails the launch |
+| Advertised address | `FED_PUBLIC_IP`, `DISCOVERY_PUBLIC_URL`, `IDENTITY_PUBLIC_URL`, `DISCOVERY_PUBLIC_PORT`, `IDENTITY_PUBLIC_PORT`, `SUBSTRATE_BIND_HOST` | refine what `/bootstrap` advertises; the `*_PUBLIC_URL` and `*_PUBLIC_PORT` overrides are inert without `PUBLIC_IP` |
+| Landing scope | `SUBSTRATE_PUSH_VESSELS`, `GAP_STORE_ENDPOINT`, `GITHUB_TOKEN` | which repos this node lands; the resolve URL of the node holding the gap store (empty on the holder); `GITHUB_TOKEN` is carried beside `SUBSTRATE_GIT_PAT` and persisted like it |
+| Stores and roots | `SUBSTRATE_ROOT`, `SURREALDB_URL`, `REDIS_URL` | in-container locations; the defaults are correct for the image |
+| Relay ports | `RELAY_PORT`, `RELAY_ANNOUNCE_PORT` | `RELAY_PORT` is the host port the manifest publishes the in-container relay (container port `30333`) on instead of `<prefix>333`, e.g. to keep an existing hub on the host port its spokes already dial. `RELAY_ANNOUNCE_PORT` is the port the relay advertises; the manifest derives it from the published port, so set it only when peers dial a different port (the container port across a shared container network) |
+| Exposure | `SUBSTRATE_PUBLISH_IP`, `<VESSEL>_PUBLISH_IP` (`ACTIVITY_API`, `DEV_VESSEL`, `DISCOVERY`, `IDENTITY`, `GOAL_HOST`, `ANALYSIS`, `CONCEPT_DB`, `STATEFUL_UI`, `HUMAN_SURFACE`, `RELAY`) | the host address each port is published on; unset publishes on every interface, and a per-vessel value outranks `SUBSTRATE_PUBLISH_IP` for its port. Compose consumes these to build the port mappings; they never reach gen-env, so `substrate-config` does not report them. A compose override file cannot narrow a mapping (compose merges `ports` lists), so these are the supported way to keep a port on the local host |
 | Safety switches | `MITOSIS_DIRECT_PUSH`, `ROUTE_EDIT_INTENT_TO_COMPOSE` | `MITOSIS_DIRECT_PUSH` is the emergency kill switch for autonomous landing: `0` = no commit, no push, no host-sync intent (refusal kind `push_kill_switch`); unset or `1` = landings proceed, scoped by `SUBSTRATE_REPO_OWNER` and the `pushPolicy` impulse. It takes effect on recreate. A new install starts under an initial `pushPolicy` (no promotion) written on its first boot; an install that predates the policy keeps landing where its push clone points until a `pushPolicy` is recorded |
 | Image | `SUBSTRATE_IMAGE` | the tag the manifest runs; the published image is public |
 | Key signing | `API_KEY_SECRET`, `API_KEY_SECRET_PREVIOUS`, `ALLOW_INSECURE_API_KEY_SECRET` | generated and persisted on a fresh datastore; set explicitly only for a deliberate rotation or an existing deployment's migration |
+
+Trace-store retention (`TRACE_STORE_CAP` and the rest of the `TRACE_*` family) is not in
+this tier: the manifest does not forward those names, and gen-env writes them as fixed
+literals, warning on stderr when a supplied value is discarded. See
+[`docs/SUBSTRATE.md`](../SUBSTRATE.md#trace-store-retention-and-the-maintenance-lease).
 
 ### What the image reports back
 
@@ -54,7 +65,8 @@ below explains what it cannot see.
 
 ## Migration: retired names
 
-Retired names fall into three groups, and only the first still does anything.
+Retired names and lanes fall into four groups: aliases still honoured, names already
+ignored, lanes removed, and wrappers deprecated but still working.
 
 **Aliases still honoured.** These take effect during migration. A name alias that
 conflicts with its replacement fails the launch before anything is written, and so does a
@@ -65,7 +77,7 @@ used, a partial set is warned about and boots as before.
 |---|---|---|
 | `SUBSTRATE_CONTAINER`, `WORKSPACE_VOLUME`, `SURREAL_VOLUME` | `SUBSTRATE_NAME` | honoured as exact names; gen-env warns on each |
 | `LIVE_NAME` | `SUBSTRATE_NAME` | honoured; `make up` and gen-env warn |
-| `PORT_OFFSET` | `SUBSTRATE_PORT_PREFIX` | translated to prefix `18 + n/1000` by `make up` (with a warning) and by `ui-only-up.sh` |
+| `PORT_OFFSET` | `SUBSTRATE_PORT_PREFIX` | translated to prefix `18 + n/1000` by `make up` (with a warning); `ui-only-up.sh` accepts the same value only as its `--port-offset` flag and ignores the variable |
 | `ACTIVITY_API_PORT`, `DEV_VESSEL_PORT`, `DISCOVERY_PORT`, `IDENTITY_PORT`, `GOAL_HOST_PORT`, `ANALYSIS_PORT`, `CONCEPT_DB_PORT`, `STATEFUL_UI_PORT`, `HUMAN_SURFACE_PORT` | `SUBSTRATE_PORT_PREFIX` | honoured by the manifest as a per-port override; gen-env warns on each, and refuses one that contradicts an explicit `SUBSTRATE_PORT_PREFIX` |
 | `ENABLED_ROLES=hub` + a hand-listed `ENABLED_EXTRA_VESSELS` | `PROFILE=hub` | honoured: both still refine the unit set |
 | `MITOSIS_DIRECT_PUSH` as the autonomy switch | push capability (`SUBSTRATE_GIT_PAT` + `SUBSTRATE_REPO_OWNER`) + `pushPolicy` | honoured only as the kill switch (`0` stops autonomous landing) |
@@ -81,8 +93,13 @@ them says so.
 
 | Retired | Replacement |
 |---|---|
-| `make run-live`, `run`, `run-detach`, `run-live-obsidian`, raw `docker run` recipes, `configure-local.sh`, the host deploy scripts | the install page's sequences |
+| `make run-live`, `run`, `run-detach`, `run-live-obsidian`, raw `docker run` recipes, `configure-local.sh` | the install page's sequences |
 | a host relay process on its own port | the in-container relay on `P333` (`RELAY_PORT` keeps an existing hub's port) |
+
+**Wrappers deprecated but still working.** `scripts/substrate/deploy-hub.sh`,
+`deploy-hub-pull.sh` and `deploy-remote.sh` translate their old inputs into an `.env` and
+run `scripts/substrate/deploy.sh`, which runs the launch manifest on another host over
+ssh. The replacement for all of them is the install command run on the target host.
 
 ---
 
@@ -206,7 +223,7 @@ systemctl show <unit> -p FragmentPath -p DropInPaths
 ## 2. Precedence, end to end
 
 ```
-  docker run -e   >   shell env at compose time   >   repo .env   >   compose ":-" default
+  docker run -e   >   shell env at compose time   >   .env beside the manifest   >   compose ":-" default
       └── these four are indistinguishable to gen-env: they are just "the run environment"
    >  /workspace/.substrate-secrets      (per-field grep — never sourced, so an operator
    >  gen-env generated (openssl)         value cannot be clobbered by the persisted one)
@@ -227,7 +244,7 @@ Three sub-chains deviate:
   `+ ENABLED_EXTRA_VESSELS`, then `− DISABLED_VESSELS`. Emitted conditionally — an unset
   selection stays absent, and `apply-inventory` reads absence as "keep everything".
 - **Endpoints** insert a derivation tier: explicit env > **spoke auto-derivation** from the
-  discovery host (scheme + port-offset arithmetic) > alias chain > loopback literal.
+  discovery host (scheme + port-block arithmetic on the discovery port) > alias chain > loopback literal.
   **Routing anchors are never persisted.** `HUB_DISCOVERY_URL`, `DISCOVERY_ENDPOINT`,
   `IDENTITY_VESSEL_URL`, `ACTIVITY_API_ENDPOINT` and their aliases describe where this
   substrate is pointed *right now*; they are re-derived every boot and are excluded from
@@ -291,7 +308,7 @@ documents why*.
 | Distinct names read across vessels and packages | ~451 | dot + bracket + helper forms, `sort -u` |
 | Names in unit `Environment=` lines | 52 (48 unique to that channel) | §1 |
 | `.service.d` drop-in files | 34 total, 10 carrying `Environment=` | `grep -l Environment= …/*.service.d/*.conf` |
-| Names documented in `.env.example` | 50 (2 uncommented) | `grep -oE '^#? ?[A-Z_][A-Z0-9_]*=' … \| sort -u` |
+| Names documented in `scripts/substrate/.env.example` | 15 (none uncommented) | `grep -oE '^#? ?[A-Z_][A-Z0-9_]*=' … \| sort -u` |
 | `_ENV_SUPPLIED` provenance snapshot | 33 | `gen-env.sh` |
 
 **The scanner's own blind spots**, stated because a count presented without them invites
@@ -364,7 +381,7 @@ What it reports, and why each exists:
 | `DROPPED` | a lane passes a name gen-env never emits — delivered to nothing |
 | `HARDCODED` | the name is emitted but your value was replaced by a literal |
 | cross-lane differential | two lanes that claim to launch the same thing and do not |
-| `UNOFFERED` | `.env.example` documents the name and this lane never passes it — the axis the other rows cannot reach, because every one of them starts from what a lane *already* passes. Both autonomy kill switches hid here |
+| `UNOFFERED` | `scripts/substrate/.env.example` documents the name and this lane never passes it — the axis the other rows cannot reach, because every one of them starts from what a lane *already* passes. Both autonomy kill switches hid here |
 | `MANGLED` | the name is emitted and the value still carries the sentinel marker, but is not byte-identical to what was supplied — a value CORRUPTED in transit. Scoped to names documented as JSON, because gen-env legitimately *derives* many values and an unscoped byte-comparison reports nine false positives |
 | `PHANTOM` | a persisted read with no matching write |
 
