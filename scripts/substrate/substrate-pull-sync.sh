@@ -142,7 +142,7 @@ tracked_fail_names() {
 #     open (the redispatch livelock is unfixed; a flood would wedge the lane). Smallest groups first.
 # FAILTEST_GEN_DRYRUN=1 logs the payloads instead of filing them.
 gen_failing_test_gaps() {
-  local v="$1" out="$2" prev="$3" head="$4" rows st payloads id ex exs n=0
+  local v="$1" out="$2" prev="$3" head="$4" dir="${5:-}" rows st payloads id ex exs n=0 flags tf
   command -v jq >/dev/null 2>&1 || return 0
   [ -s "$prev" ] || return 0
   rows="$(printf '%s' "$out" | sed 's/\x1b\[[0-9;]*m//g' | awk -v prevf="$prev" '
@@ -164,12 +164,25 @@ gen_failing_test_gaps() {
       if (frame == "" && $0 !~ /node_modules/ && match($0, /src\/[A-Za-z0-9_.\/-]+\.[jt]sx?:[0-9]+/)) { f = substr($0, RSTART, RLENGTH); sub(/:[0-9]+$/, "", f); if (f !~ /\.test\.[jt]sx?$/) frame = f }
     }')"
   [ -n "$rows" ] || return 0
+  # Per test FILE: does it use test doubles, and is it a SOURCE-TEXT guard (reads src and asserts on its text)?
+  # A TypeError counts as mock/wiring only in a file that actually uses doubles; a source-text guard is always
+  # assert-class, because its "fix" rewrites src to match text it asserts, and a guard can be stale on purpose
+  # (2026-09-30: a guard demanded a predicate an operator had removed as a false-close generator).
+  flags="{}"
+  if [ -n "$dir" ]; then
+    while IFS= read -r tf; do
+      [ -n "$tf" ] && [ -f "$dir/$tf" ] || continue
+      flags="$(printf '%s' "$flags" | jq -c --arg f "$tf" \
+        --argjson m "$(command grep -qE 'mock\.module|spyOn|(^|[^A-Za-z_.])mock\(' "$dir/$tf" && echo true || echo false)" \
+        --argjson g "$(command grep -qE 'readFileSync\([^)]*src/' "$dir/$tf" && echo true || echo false)" '. + {($f): {mocks: $m, guard: $g}}')"
+    done <<< "$(printf '%s\n' "$rows" | cut -f1 | sort -u)"
+  fi
   st="$(mktemp "${TMPDIR:-/tmp}/pullsync-gen-XXXXXX")" || return 0
   curl -s --max-time 30 -X POST "$DEV_VESSEL/v2/impulses/resolve" -H 'Content-Type: application/json' \
     -d '{"impulse":{"pointer":{"type":"substrateGap","status":"open","limit":5000}}}' > "$st" 2>/dev/null || true
   jq -e '.body.gaps | type == "array"' "$st" >/dev/null 2>&1 || { rm -f "$st"; log "$v: failing-test generator: gap store unreadable; nothing filed"; return 0; }
   payloads="$(printf '%s\n' "$rows" | jq -R -s -c --arg v "$v" --arg head "${head:0:10}" \
-    --argjson cap "${FAILTEST_GEN_PER_TICK:-3}" --argjson openmax "${FAILTEST_GEN_OPEN_MAX:-8}" --argjson infomax "${FAILTEST_GEN_INFO_MAX:-20}" --slurpfile st "$st" '
+    --argjson flags "$flags" --argjson cap "${FAILTEST_GEN_PER_TICK:-3}" --argjson openmax "${FAILTEST_GEN_OPEN_MAX:-8}" --argjson infomax "${FAILTEST_GEN_INFO_MAX:-20}" --slurpfile st "$st" '
     ($st[0].body.gaps // []) as $g
     | ([$g[] | select((.classification_metadata.filed_by? // "") == "pull-sync failing-test generator")] | length) as $genall
     | ([$g[] | select((.classification_metadata.filed_by? // "") == "pull-sync failing-test generator") | select((.classification_metadata.disposition? // "") != "needs_information")] | length) as $genopen
@@ -179,7 +192,12 @@ gen_failing_test_gaps() {
     | ([$ers[] | (.input.only_tests // [])[]]) as $tnames
     | split("\n") | map(select(length > 0) | split("\t") | {file: .[0], name: .[1], env: (.[2] == "1"), cls: .[3], frame: (.[4] // ""), why: (.[5] // "")})
     | map(select(.env | not) | select(.file as $f | $tfiles | index($f) | not) | select(.name as $n | $tnames | index($n) | not))
-    | group_by(.file + "\u0000" + .cls) | map({file: .[0].file, cls: .[0].cls, frame: ([.[].frame | select(length > 0)] | first // ""), t: .[:5]})
+    | group_by(.file) | map(.[0].file as $f | ($flags[$f] // {mocks: false, guard: false}) as $fl
+        | ([.[].cls] | unique) as $cs
+        | {file: $f, guard: $fl.guard,
+           cls: (if $fl.guard then "assert" elif ($cs | index("assert")) or ($cs | index("other")) then (if ($cs | index("assert")) then "assert" else "other" end)
+                 elif ($fl.mocks | not) then "other" else "mock" end),
+           frame: (if $fl.guard then "" else ([.[].frame | select(length > 0)] | first // "") end), t: .[:5]})
     | map(. + {actionable: (.cls == "mock" or (.cls == "assert" and .frame != ""))})
     | map(select(.actionable or $genall < $infomax))
     | sort_by([(if .actionable then 0 else 1 end), (.t | length)])
@@ -201,7 +219,7 @@ gen_failing_test_gaps() {
           filed_by: "pull-sync failing-test generator", generator_head: $head, failure_class: .cls}
           + (if $mock then {edit_site: ("repos/" + $v + "/" + .file), region: (.t[0].name | split(" > ") | last)}
              elif $located then {edit_site: ("repos/" + $v + "/" + .frame), protected_files: [("repos/" + $v + "/" + .file)]}
-             else {edit_site: ("repos/" + $v + "/" + .file), protected_files: [("repos/" + $v + "/" + .file)], disposition: "needs_information"} end))})}}}' 2>/dev/null || true)"
+             else {protected_files: [("repos/" + $v + "/" + .file)], disposition: "needs_information"} + (if .guard then {source_text_guard: true} else {} end) end))})}}}' 2>/dev/null || true)"
   rm -f "$st"
   [ -n "$payloads" ] || return 0
   while IFS= read -r p; do
@@ -1271,7 +1289,7 @@ EOF
       T_NAMES="$(fail_names "$T_OUT")"
       # Before the baseline is refreshed below: B_NAMES_FILE still holds the PREVIOUS tick's fail set,
       # which is what the generator's two-tick flake filter compares against. Never fatal.
-      gen_failing_test_gaps "$v" "$T_OUT" "$B_NAMES_FILE" "$HEAD" || true
+      gen_failing_test_gaps "$v" "$T_OUT" "$B_NAMES_FILE" "$HEAD" "$d" || true
       # The gate compares NAME SETS; the old two-number baseline is no longer read. The old
       # count variable was left behind in two log strings after that rewrite and, under
       # `set -u`, an unbound variable ABORTS the whole converge — so a string that only
