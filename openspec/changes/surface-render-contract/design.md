@@ -23,12 +23,12 @@ Every draw site in `ui/src`, classified. The inventory is grep-derived
 | Response history (`QuestionView.tsx:211`) | `<pre>` of `JSON.stringify` | `Rendered` · inline · `fromResponse` (shape `human_contribution`) |
 | Issue card (`IssuesDrawer.tsx`) | hand-split lead + `<details>` | `Rendered` · inline · `fromGap` (lead/rest is the prose form's `inline` density) |
 | Run reason / error (`RunView.tsx`) | bare string | `Rendered` · inline · `fromText` |
-| Walk log (`Trace.tsx:280`) | `walkLogText` string list | `Rendered` · full · `fromLog` → `terminal` |
+| Walk log (`Trace.tsx`) | `walkLogText` string list | stays a list (one line per entry keeps line identity; the planner would reflow it as prose). `fromLog` exists for a caller that wants it as one block |
 | Step row (`Trace.tsx` StepRow) | bespoke line | stays bespoke chrome (a step is a decision record, not content); its candidates list is `Rendered` · inline · `record` |
-| Dispatch outcome (`TopBar.tsx`) | bespoke per kind | `Rendered` · row · `fromOutcome` |
+| Dispatch outcome (`TopBar.tsx`) | bespoke per kind | stays bespoke: it describes the surface's own send, not an impulse (§1c) |
 | Solicitation evidence (`SolicitationPanel.tsx`) | mono string | `Rendered` · inline · `fromText` |
 | Nested field values (`ContentRender.tsx` renderValue) | recursive `ContentRender` | unchanged — recursion stays inside the registry |
-| Rail rows: run goal, question subject | clamped text | `Rendered` · row (prose/text only) |
+| Rail rows: run goal, question subject | clamped text | stays clamped text: goal text and a gap subject are plain strings; the `row` density exists for content previews |
 
 ### 1b. Input → `Interaction`
 
@@ -82,7 +82,7 @@ interface FormRenderer {
 ```
 
 - **Adapters** (`lib/content/`): `fromProvenance`, `fromAnswer`, `fromPanel`,
-  `fromResponse`, `fromOutcome`, `fromLog`, `fromGap`, `fromText`, `fromStream`. An adapter
+  `fromResponse`, `fromLedgerEntry`, `fromLog`, `fromText`, `fromStream`. An adapter
   never chooses a form; it only states what arrived and how complete it is.
 - **Planner:** `plan(content, policy)` → `RenderPlan`. Tier order:
   **pin → learned → jev → envelope unwrap → heuristic → `text`**. The `jev` tier is a
@@ -291,11 +291,49 @@ Phases 1–3 are independent of 4–7; 4–7 each light up an already-present sl
 
 ---
 
+## 7a. Baseline — what the planner does with the content that actually arrives
+
+Measured by running the production planner over every distinct preview on the
+live surface (`test/fixtures/render-census.json`: 50 runs, 142 impulses with
+content, answers and question bodies):
+
+| Class | Count | Behavior |
+|---|---|---|
+| `{success, shape, body}` resolver reply | 20 | `body` is planned; `shape` (when it differs) and failure ride as chips — `decidedBy: resolver_envelope` |
+| truncated JSON | 18 | the members that arrived whole are drawn as structure; the container the cut fell in carries a `⋯ cut off here` row; a member cut mid-value is dropped, never completed — `partial_json` |
+| `{success, content: "<json>"}` | 7 | the string is parsed once and planned; `metadata.summary` becomes a note chip — `content_envelope` |
+| `{error}` / `{success:false, error}` | 7 | the message, with a `failed` chip — `error_envelope` |
+| command result nested in `body` | 3 | the command envelope path (terminal/scalar + exit chip) |
+
+Inside records: ISO timestamps and epoch-ms `*At`/`*_at` fields read as an age
+with the instant beside it; URLs are links; collections over three items carry a
+count; empty objects read `empty`.
+
+Result on the census: raw text walls 18 → 1 (a cut-off HTML 403 page, correctly
+verbatim). The partial reader's no-invention property is tested against the
+census: every kept member appears verbatim in its preview.
+
+The partial reader revisits the earlier rule that truncated content skips JSON
+analysis. That rule exists because a half-parse presents a guess as a reading;
+this reader never half-parses — a member is complete and shown verbatim, or
+incomplete and dropped — and the frame still states how much of the whole is
+present.
+
+## 7b. Interaction as built
+
+The widgets (`ChoiceInput`, `ScoreInput`, `NoulInput`, `TextInput`, and a numeric
+input for the store's `number` asks) share `InteractionFooter`'s four states.
+Every write body is composed by one builder in `lib/interaction.ts`, pinned
+byte-for-byte to the pre-migration payloads. The typed `Answer` shape exists in
+the contract but does not ride the wire yet: persisting it needs the store to
+accept typed answers (phase 4). Score and Noul have no live caller until a
+writer emits typed asks.
+
 ## 8. Validation (pre-registered)
 
 1. **Completeness of migration.** After phase 1, `grep -rn "<pre\|sf-verbatim" ui/src`
-   matches only files under the registry (`components/forms/`, `Prose`). Any other hit is an
-   unmigrated site.
+   matches only the renderers (`ContentRender`, `Prose`, and `Rendered`'s fallback). Any
+   other hit is an unmigrated site.
 2. **Error boundary.** A renderer that throws produces the frame intact and a verbatim body
    of the same text (unit test with a throwing stub renderer).
 3. **Tier attribution.** Every `form_decision` observation carries
