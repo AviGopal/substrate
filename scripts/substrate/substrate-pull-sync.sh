@@ -108,6 +108,19 @@ restart_age_defer() {
     RA_WHY="$RA_INFLIGHT in flight after ${2:-0} deferral(s) and no in_flight_oldest_ms published — convergence must not be starved"
   fi
 }
+# Failing-test names that are red ON PURPOSE in this commit: an OPEN gap's class2 check (evidence_resolve
+# test_suite for vessel $1) whose test_file is among the files the commit changed ($2, newline-separated).
+# That is a check-first landing (the check landed before its fix), a filed failure, not a regression.
+# Keyed on the commit touching the check file, so a tracked test broken by an UNRELATED change still counts
+# as a regression. Empty output (store unreachable, no jq, no match) keeps the stricter gate.
+tracked_fail_names() {
+  local files
+  files="$(printf '%s\n' "$2" | jq -R -s -c 'split("\n") | map(select(length > 0))' 2>/dev/null || echo '[]')"
+  curl -s --max-time 30 -X POST "$DEV_VESSEL/v2/impulses/resolve" -H 'Content-Type: application/json' \
+    -d '{"impulse":{"pointer":{"type":"substrateGap","status":"open","limit":5000}}}' 2>/dev/null \
+  | jq -r --arg v "$1" --argjson files "$files" '(.body.gaps // [])[] | .classification_metadata.evidence_resolve? // empty | select(.shape? == "test_suite") | select(((.input.vessel // "") | sub("^repos/"; "")) == $v) | select((.input.test_file // "") as $tf | $files | index($tf)) | (.input.only_tests // [])[] | select(type == "string" and test("\\S"))' 2>/dev/null || true
+}
+
 # A gap that fails to file is worse than no detector: the condition is real, the
 # log line claims "(substrateGap)", and nothing is queryable afterwards. Observed
 # 2026-08-03: the hub super-repo clone sat DIVERGED for hours, refusing every
@@ -1240,12 +1253,36 @@ EOF
             fi
           fi
         fi
+        # A FAILING TEST AN OPEN GAP ALREADY TRACKS IS NOT A REGRESSION (2026-09-30). Check-first landings
+        # (activity-api f636900 added a deliberately red check for an open performance gap) were refused
+        # here for 3 cycles, and the regression gap they filed invited a lane to "repair" by weakening the
+        # check. Names in an open gap's evidence_resolve.only_tests for this vessel are subtracted.
+        TRACKED_ONLY=""
+        if [ "${CONFIRMED:-0}" -gt 0 ]; then
+          TRACKED="$(tracked_fail_names "$v" "$(git -C "$d" diff --name-only "${HEAD}^" "$HEAD" 2>/dev/null || true)")"
+          if [ -n "$TRACKED" ]; then
+            # Exact leaf match (the line ENDS with " > <name>"), at most ONE line per tracked name: a leaf name
+            # shared by another test file must not hide that file's real regression (qa, 09-30).
+            SUBTRACTED="$(printf '%s\n' "${CONF_SET:-}" | awk -v names="$TRACKED" 'BEGIN{n=split(names,T,"\n")} $0=="" {next} {hit=0; for(i=1;i<=n;i++){ if(T[i]!="" && !used[i] && length($0)>=length(T[i])+3 && substr($0,length($0)-length(T[i])-2)==" > " T[i]){used[i]=1; hit=1; break} } if(hit) print}' || true)"
+            UNTRACKED="$(printf '%s\n' "${CONF_SET:-}" | awk -v names="$TRACKED" 'BEGIN{n=split(names,T,"\n")} $0=="" {next} {hit=0; for(i=1;i<=n;i++){ if(T[i]!="" && !used[i] && length($0)>=length(T[i])+3 && substr($0,length($0)-length(T[i])-2)==" > " T[i]){used[i]=1; hit=1; break} } if(!hit) print}' || true)"
+            N_LEFT="$(printf '%s' "$UNTRACKED" | grep -c . || true)"
+            if [ "${N_LEFT:-0}" -lt "$CONFIRMED" ]; then
+              log "$v: $((CONFIRMED - ${N_LEFT:-0})) newly-failing test(s) are tracked by open gaps (evidence_resolve.only_tests), not counted as a regression: $(printf '%s' "$SUBTRACTED" | tr '\n' ';' | cut -c1-400)"
+              CONF_SET="$UNTRACKED"; CONFIRMED="${N_LEFT:-0}"
+              [ "$CONFIRMED" -eq 0 ] && TRACKED_ONLY=1
+            fi
+          fi
+        fi
         if [ "${CONFIRMED:-0}" -gt 0 ]; then
           FIRST_NEW="$(printf '%s' "${CONF_SET:-}" | grep -m1 . || true)"
           REG="$CONFIRMED test(s) newly failing in both candidate runs and attributable to this commit, e.g. ${FIRST_NEW:-?} (counts: $B_NAMED -> $BEST_F fail)"
           REG_F="$BEST_F"; REG_P="${BEST_P:-0}"; REG_U="$T_UNNAMED"
         else
-          log "$v: newly-failing tests did not reproduce on re-run — flake, converging (run1 $(printf '%s' "$NEW1" | grep -c . || true) new, run2 $(printf '%s' "$NEW2" | grep -c . || true) new, intersection 0)"
+          if [ -n "$TRACKED_ONLY" ]; then
+            log "$v: every newly-failing test is tracked by an open gap — converging"
+          else
+            log "$v: newly-failing tests did not reproduce on re-run — flake, converging (run1 $(printf '%s' "$NEW1" | grep -c . || true) new, run2 $(printf '%s' "$NEW2" | grep -c . || true) new, intersection 0)"
+          fi
           # UNFREEZE THE BASELINE. The refresh used to live only in the no-newly-failing branch
           # below, so any persistently newly-failing name pinned the stored baseline forever and
           # every later commit was judged against an ever-staler reference. Observed 2026-08-28:
