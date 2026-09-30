@@ -55,7 +55,8 @@ name: Install acceptance
 #   nothing.
 #   `true`: gating. The build publishes only :<sha> (and any extra tag), and the
 #   `promote` job below moves :dev (and the Docker Hub :dev when its credentials exist)
-#   to the judged digest only when every engine passed in gating mode. The switch
+#   to the judged digest only when every engine passed in gating mode, both the install
+#   page (`accept`) and the one-token join to a hub (`network`). The switch
 #   takes effect only while ACCEPTANCE_PROVIDER_KEY exists: without it no run can pass
 #   in gating mode, so the build keeps publishing :dev itself and warns. Unsetting the
 #   variable restores the previous behavior on the next build.
@@ -224,8 +225,8 @@ jobs:
   # The network promise: a second node joins a hub with the page's two inputs and
   # contributes (its vessels registered on the hub, the hub reading the spoke's own data
   # over the relay; with a key, a goal from the spoke reaching and graded on the hub).
-  # One runner hosts both fleets. It reports and goes red on its own, and is not yet a
-  # promotion gate: promote needs `accept` only, until this has a green record.
+  # One runner hosts both fleets. It gates promotion alongside `accept`: a digest that
+  # cannot be joined does not become :dev.
   network:
     needs: resolve
     if: needs.resolve.outputs.found == 'true'
@@ -401,8 +402,10 @@ jobs:
 
   promote:
     # The publishing switch (see the header). Off unless the repository variable says so.
-    needs: [resolve, accept]
-    if: vars.INSTALL_ACCEPTANCE_GATES_DEV == 'true' && needs.resolve.outputs.found == 'true' && needs.accept.result == 'success'
+    # :dev moves only to a digest that both installed from the page (accept) and joined a
+    # hub with one token and contributed to it (network), on every engine.
+    needs: [resolve, accept, network]
+    if: vars.INSTALL_ACCEPTANCE_GATES_DEV == 'true' && needs.resolve.outputs.found == 'true' && needs.accept.result == 'success' && needs.network.result == 'success'
     runs-on: ubuntu-latest
     # One promotion at a time across every judgement, so two runs finishing together
     # cannot interleave their reads of :dev and their copies to it.
