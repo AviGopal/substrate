@@ -65,10 +65,10 @@ This section is the only place setup commands appear; every other document links
 The command blocks of sequences A, B and C are fenced `install:standalone`, `install:hub`
 and `install:spoke`: the acceptance run executes one case's blocks verbatim on a fresh host
 for every published image, on Docker and on Podman, so this page is tested rather than
-trusted. Values a reader types in place of a placeholder reach the run through the
-environment, which the manifest reads ahead of `.env`: the provider key in every case, and
-for the hub and spoke cases the address the hub advertises, its discovery endpoint and the
-key it issued, without which those cases cannot run.
+trusted. The run types values in place of the placeholders as a reader would: the
+provider key in every case, and for the hub and spoke cases the address the hub
+advertises, its discovery endpoint and the key it issued, without which those cases cannot
+run.
 
 The whole system runs as **one privileged container** hosting the vessel fleet as systemd
 units, from the public image `ghcr.io/avigopal/substrate:dev` (it pulls anonymously; no
@@ -181,66 +181,65 @@ Every sequence ends at a verdict level. `substrate-status` reports five ordered 
 
 #### A. Standalone (the default)
 
-These are the default names: container `substrate-live`, volumes `substrate-workspace` and
-`substrate-surreal`, ports `18xxx`. If `docker ps -a` already lists `substrate-live` or
-`docker volume ls` lists `substrate-workspace` on this host, a fleet (however it was made)
-already owns them: add sequence E's two inputs before step 3, or the new container attaches
-to that fleet's volumes.
+One command, with your provider key in place of the placeholder:
 
 ```bash install:standalone
-# 1. Get the manifest (no checkout needed; or clone the repo and use its root file)
-docker run --rm --entrypoint substrate-manifest ghcr.io/avigopal/substrate:dev > docker-compose.yml
-
-# 2. Configure: one required input
-echo 'ANTHROPIC_API_KEY=sk-ant-…' > .env
-
-# 3. Launch
-docker compose up -d
-
-# 4. Wait for a reached goal (exits non-zero and prints the failing level otherwise)
-docker exec substrate-live substrate-status --wait usable
-
-# 5. Connect the cockpit. stdout is the config JSON only; the registration line and any
-#    shadowing warning go to stderr, so the redirect is safe.
-mkdir -p ~/.metabob
-docker exec substrate-live substrate-connect > ~/.metabob/config.json
-#    then run the `claude mcp add …` line it printed (node/npx required for the cockpit)
+# Install: writes the manifest and .env into ./substrate, launches, waits for a reached
+# goal, and writes the client config to ~/.metabob/config.json. Exits non-zero and
+# prints the failing level if the fleet does not become usable.
+docker run --rm ghcr.io/avigopal/substrate:dev install | ANTHROPIC_API_KEY=sk-ant-… sh
 ```
 
-Step 5 writes the whole client configuration file; if `~/.metabob/config.json` already
-points at another fleet, redirect to a different path and select it with
-`METABOB_CONFIG_PATH` instead. Then make a first cockpit call (for example
-`registry_query`), and read the full verdict:
+Then run the `claude mcp add …` line it printed (node/npx required for the cockpit), make
+a first cockpit call (for example `registry_query`), and read the full verdict:
 
 ```bash install:standalone
-# 6. Print the full verdict. The exit status reflects `usable`; `connected` passes once
-#    a cockpit call has reached the fleet, and reads `unknown` before that.
+# The exit status reflects `usable`; `connected` passes once a cockpit call has reached
+# the fleet, and reads `unknown` before that.
 docker exec substrate-live substrate-status
 ```
 
-`OPENAI_API_KEY` works in place of `ANTHROPIC_API_KEY`; exactly one provider key is
-required, and every other secret is generated on first boot and persisted to the
-workspace volume. The human surface is at `http://localhost:18310/`.
+The image prints the installer, and `sh` runs it on the host. It runs the manual sequence
+below and derives nothing: the image still judges every input at boot. Options go after
+`sh -s --` and are listed by `docker run --rm ghcr.io/avigopal/substrate:dev install --help`.
+Secrets go before `sh` as environment variables, so they never appear in the command's
+arguments. Re-running the same command from the same place updates that fleet: it rewrites
+the manifest from the image, replaces the inputs you pass, and keeps the rest.
 
-A fleet with no valid provider key boots, passes `live`, `seeded` and `served`, and fails
-`usable` naming the missing key: health without usability is reported as such, not as
-green.
+`OPENAI_API_KEY` (or any provider key the manifest lists, such as `OPENROUTER_API_KEY`)
+works in place of `ANTHROPIC_API_KEY`. Exactly one provider key is required. Every other
+secret is generated on first boot and persisted to the workspace volume. The human surface
+is at `http://localhost:18310/`.
+
+The installer refuses to start a new fleet whose names or ports another fleet on this host
+already holds, and names what it found. Add `--name <n> --prefix <nn>` (sequence E). It
+writes the client config only when `~/.metabob/config.json` is absent or already points at
+this fleet. Otherwise it leaves that file alone and prints the `METABOB_CONFIG_PATH` to
+use. Only the install inputs (the table above) are taken from your shell. Advanced
+variables are read from the fleet's `.env` only, and one that is merely set in your shell
+is ignored with a notice, so an unrelated `GITHUB_TOKEN` never configures a fleet.
+
+A fleet with no working provider key boots, passes `live`, `seeded` and `served`, and fails
+`usable` naming the model plane: health without usability is reported as such, not as
+green. A key that is valid but out of credit fails the same way (the provider answers 402);
+the llm-resolver journal names it.
+
+**The manual sequence** (what the installer runs; use it when you want each step):
+
+```bash
+docker run --rm --entrypoint substrate-manifest ghcr.io/avigopal/substrate:dev > docker-compose.yml
+echo 'ANTHROPIC_API_KEY=sk-ant-…' > .env        # the install inputs, one per line
+docker compose up -d
+docker exec substrate-live substrate-status --wait seeded
+mkdir -p ~/.metabob
+docker exec substrate-live substrate-connect > ~/.metabob/config.json   # stdout is only the config
+docker exec substrate-live substrate-status --wait usable
+```
 
 #### B. Hub
 
-As A, with `PROFILE=hub` and `PUBLIC_IP=<address spokes reach>` in `.env`:
-
 ```bash install:hub
-docker run --rm --entrypoint substrate-manifest ghcr.io/avigopal/substrate:dev > docker-compose.yml
-cat > .env <<'EOF'
-PROFILE=hub
-PUBLIC_IP=<address spokes reach>
-ANTHROPIC_API_KEY=sk-ant-…
-EOF
-docker compose up -d
-docker exec substrate-live substrate-status --wait usable
-mkdir -p ~/.metabob
-docker exec substrate-live substrate-connect > ~/.metabob/config.json
+docker run --rm ghcr.io/avigopal/substrate:dev install | ANTHROPIC_API_KEY=sk-ant-… sh -s -- --profile hub --public-ip <address spokes reach>
 ```
 
 Open the ports the table marks "spokes". Issue a key per spoke:
@@ -256,30 +255,28 @@ run the same sequence there.
 
 #### C. Spoke
 
+Joining a network takes the hub's discovery endpoint and a key the hub issued:
+
 ```bash install:spoke
-docker run --rm --entrypoint substrate-manifest ghcr.io/avigopal/substrate:dev > docker-compose.yml
-cat > .env <<'EOF'
-DISCOVERY_ENDPOINT=http://<hub-host>:18100
-METABOB_API_KEY=<key issued by the hub>
-EOF
-docker compose up -d
-docker exec substrate-live substrate-status --wait usable
-mkdir -p ~/.metabob
-docker exec substrate-live substrate-connect > ~/.metabob/config.json
+docker run --rm ghcr.io/avigopal/substrate:dev install | METABOB_API_KEY=<key issued by the hub> sh -s -- --join http://<hub-host>:18100
 ```
 
-The role, the hub endpoints and the relay anchor are derived from the two inputs. A spoke
-needs no provider key: it runs no model resolver of its own, and its `llm_completion` is
-answered by its hub's arms through discovery, so it reaches `usable` like any other node. (A
-provider key in a spoke's `.env` is not used.) The last two lines connect the cockpit as in
-A, step 5; run the `claude mcp add …` line `substrate-connect` printed.
+The role, the hub endpoints, the relay anchor and the spoke's federation id are derived
+from those two inputs, at boot, in the image. A spoke needs no provider key: it runs no
+model resolver of its own, and its `llm_completion` is answered by its hub's arms through
+discovery, so it reaches `usable` exactly when its hub can. (A provider key in a spoke's
+`.env` is not used.) Run the `claude mcp add …` line it printed, as in A.
 
 **A hub on the same host.** From inside a container, the host's own LAN address is not
 reachable on rootless Podman, and the join is refused at boot ("derived IDENTITY_VESSEL_URL
 … is unreachable"). Address the hub by the engine's host name instead:
-`DISCOVERY_ENDPOINT=http://host.containers.internal:18100` on Podman, or
+`--join http://host.containers.internal:18100` on Podman, or
 `http://host.docker.internal:18100` on Docker (on Linux, add
-`extra_hosts: ["host.docker.internal:host-gateway"]` in a compose override).
+`extra_hosts: ["host.docker.internal:host-gateway"]` in a compose override). The hub's
+`PUBLIC_IP` can still be the host's LAN address: the relay is dialled by the spoke's
+transport, which reaches it. Give each fleet its own `--name` and `--prefix` (sequence E).
+The client config the spoke writes then names `host.containers.internal`, which the host
+itself does not resolve; point the cockpit at `http://localhost:<hub prefix>080` instead.
 
 What joining means, and how to tell it happened:
 
@@ -300,15 +297,17 @@ What joining means, and how to tell it happened:
 - **A joining spoke writes to the hub.** Its seeder registers the shared activity templates
   into the hub's trace store with the issued key (idempotent upserts). A spoke you do not
   fully trust should get a read-scoped key, or `DISABLED_VESSELS=bootstrap-seeder`.
-- To make the spoke's vessels dialable from the hub behind NAT, give it a unique id once
-  after boot: `docker exec substrate-live spoke-federate substrate-live <unique-id>`; its
-  vessels then appear in the hub registry as `<vessel>@<unique-id>`.
+- **A joined spoke is dialable from the hub with no further step.** Its first boot mints a
+  federation id (`spoke-<hex>`, persisted in the workspace volume), and its vessels appear
+  in the hub registry as `<vessel>@spoke-<hex>`, reached through the relay circuit, so the
+  hub can route work to the spoke's tools and files. The transport's journal line
+  `hub-register per-vessel (<n> rows) -> all ok` records it.
 
 Protocol and concepts: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 
 #### D. Surface (a human's local window)
 
-As C, with `PROFILE=surface`. To keep the surface on the local host, map
+As C, adding `--profile surface` after `--join`. To keep the surface on the local host, map
 `127.0.0.1:P310:8310` in a compose override. `served` passes when the surface answers.
 
 A human can also work from an Obsidian vault. The plugin installer lives in a submodule and
@@ -326,11 +325,19 @@ relay anchor. See [`repos/obsidian-vessel/README.md`](repos/obsidian-vessel/READ
 
 #### E. A second fleet on one host
 
-Required whenever this host already runs a fleet under the default names (see A). Add
-`SUBSTRATE_NAME=lab` and `SUBSTRATE_PORT_PREFIX=24` to the `.env` of any sequence above.
-This gives container `lab-live`, volumes `lab-*` and ports `24xxx`; replace `substrate-live`
-with `lab-live` in the `docker exec` commands. Prefixes 19–32 avoid the ephemeral range.
-Keep each fleet's manifest and `.env` in its own directory.
+Required whenever this host already runs a fleet under the default names or ports (the
+installer refuses and says which). Add `--name lab --prefix 24` after `sh -s --` in any
+sequence above. This gives directory `./lab`, container `lab-live`, volumes `lab-*` and
+ports `24xxx`; replace `substrate-live` with `lab-live` in the `docker exec` commands.
+Prefixes 19–32 avoid the ephemeral range. Each fleet keeps its manifest and `.env` in its
+own directory, which is where re-running the installer updates it.
+
+Under a rootless engine every fleet also draws about 25 kernel keys (systemd's session
+keyrings) from the user's quota, which is often 200. When it runs out, the next container
+fails to start with `unable to create session key: disk quota exceeded`. The installer
+warns when fewer than 40 remain; raise the limit with
+`sudo sysctl -w kernel.keys.maxkeys=2000 kernel.keys.maxbytes=2000000` (persist it in
+`/etc/sysctl.d/`).
 
 #### F. Enabling self-development
 
@@ -379,8 +386,8 @@ the unscoped form rewrites every GitHub URL and breaks anonymous cloning everywh
 | Know whether it is healthy | `docker exec <c> substrate-status` | five levels; image revision, and each vessel's running revision where pull-sync moved it |
 | Report a failed install | `docker exec <c> substrate-status --report` | posts a human-reported `installAcceptance` to the anchor; files a gap |
 | Stop / start | `docker compose stop` / `docker compose start` | the grace period covers the drain and the datastore flush |
-| Upgrade the image | `docker compose pull && docker compose up -d` | volumes kept; code also converges to origin at boot |
-| Change an install input or profile | edit `.env`, then `docker compose up -d` | recreate; volumes, installed vessels and secrets kept |
+| Upgrade the image | in the fleet directory: `docker compose pull && docker compose up -d`; or re-run the install command, which also refreshes the manifest | volumes kept; code also converges to origin at boot |
+| Change an install input or profile | re-run the install command with the new input; or edit `.env`, then `docker compose up -d` | recreate; volumes, installed vessels and secrets kept |
 | Add or remove one vessel at runtime | `docker exec <c> vessel-ctl install <v>` / `uninstall <v>` | persisted in the workspace; survives recreate |
 | Issue or revoke keys | `docker exec <c> substrate-key issue <name>` / `revoke <id>` | hub-issued keys join spokes |
 | Point a client elsewhere | re-run `substrate-connect` against that fleet | one config path, one override variable |
