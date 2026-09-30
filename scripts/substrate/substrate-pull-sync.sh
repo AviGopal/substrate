@@ -1275,8 +1275,10 @@ EOF
           if [ -n "$TRACKED" ]; then
             # Exact leaf match (the line ENDS with " > <name>"), at most ONE line per tracked name: a leaf name
             # shared by another test file must not hide that file's real regression (qa, 09-30).
-            SUBTRACTED="$(printf '%s\n' "${CONF_SET:-}" | awk -v names="$TRACKED" 'BEGIN{n=split(names,T,"\n")} $0=="" {next} {hit=0; for(i=1;i<=n;i++){ if(T[i]!="" && !used[i] && length($0)>=length(T[i])+3 && substr($0,length($0)-length(T[i])-2)==" > " T[i]){used[i]=1; hit=1; break} } if(hit) print}' || true)"
-            UNTRACKED="$(printf '%s\n' "${CONF_SET:-}" | awk -v names="$TRACKED" 'BEGIN{n=split(names,T,"\n")} $0=="" {next} {hit=0; for(i=1;i<=n;i++){ if(T[i]!="" && !used[i] && length($0)>=length(T[i])+3 && substr($0,length($0)-length(T[i])-2)==" > " T[i]){used[i]=1; hit=1; break} } if(!hit) print}' || true)"
+            # A FULL-PATH name ("describe > test") is the whole line after the "(fail) "/"✗ " marker, so it
+            # can never end with " > <name>"; it matches only as the entire line (still exact, never substring).
+            SUBTRACTED="$(printf '%s\n' "${CONF_SET:-}" | awk -v names="$TRACKED" 'BEGIN{n=split(names,T,"\n")} $0=="" {next} {hit=0; for(i=1;i<=n;i++){ if(T[i]!="" && !used[i] && ((length($0)>=length(T[i])+3 && substr($0,length($0)-length(T[i])-2)==" > " T[i]) || $0=="(fail) " T[i] || $0=="✗ " T[i])){used[i]=1; hit=1; break} } if(hit) print}' || true)"
+            UNTRACKED="$(printf '%s\n' "${CONF_SET:-}" | awk -v names="$TRACKED" 'BEGIN{n=split(names,T,"\n")} $0=="" {next} {hit=0; for(i=1;i<=n;i++){ if(T[i]!="" && !used[i] && ((length($0)>=length(T[i])+3 && substr($0,length($0)-length(T[i])-2)==" > " T[i]) || $0=="(fail) " T[i] || $0=="✗ " T[i])){used[i]=1; hit=1; break} } if(!hit) print}' || true)"
             N_LEFT="$(printf '%s' "$UNTRACKED" | grep -c . || true)"
             if [ "${N_LEFT:-0}" -lt "$CONFIRMED" ]; then
               log "$v: $((CONFIRMED - ${N_LEFT:-0})) newly-failing test(s) are tracked by open gaps (evidence_resolve.only_tests), not counted as a regression: $(printf '%s' "$SUBTRACTED" | tr '\n' ';' | cut -c1-400)"
