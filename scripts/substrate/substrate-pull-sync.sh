@@ -174,7 +174,7 @@ gen_failing_test_gaps() {
       [ -n "$tf" ] && [ -f "$dir/$tf" ] || continue
       flags="$(printf '%s' "$flags" | jq -c --arg f "$tf" \
         --argjson m "$(command grep -qE 'mock\.module|spyOn|(^|[^A-Za-z_.])mock\(' "$dir/$tf" && echo true || echo false)" \
-        --argjson g "$(command grep -qE 'readFileSync\([^)]*src/' "$dir/$tf" && echo true || echo false)" '. + {($f): {mocks: $m, guard: $g}}')"
+        --argjson g "$( { command grep -qE 'readFileSync\(|Bun\.file\(' "$dir/$tf" && command grep -qE 'import\.meta\.(dir|url)|/src/|["'"'"'`][^"'"'"'`]*[A-Za-z0-9_-]\.tsx?["'"'"'`]' "$dir/$tf"; } && echo true || echo false)" '. + {($f): {mocks: $m, guard: $g}}')"
     done <<< "$(printf '%s\n' "$rows" | cut -f1 | sort -u)"
   fi
   st="$(mktemp "${TMPDIR:-/tmp}/pullsync-gen-XXXXXX")" || return 0
