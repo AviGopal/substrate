@@ -431,7 +431,16 @@ persisted_secret() {
   # both start and end with a quote. A value whose intended content is itself a
   # quoted string literal would be changed by this, which is why exactly one
   # pair is removed and never more.
-  if [[ ${#_v} -ge 2 && "$_v" == '"'*'"' ]]; then _v="${_v:1:${#_v}-2}"; fi
+  if [[ ${#_v} -ge 2 && "$_v" == '"'*'"' ]]; then
+    _v="${_v:1:${#_v}-2}"
+    # Images before this strip handed the same stored line to their processes as
+    # `value""` (systemd's EnvironmentFile keeps the trailing pair). So an upgrade
+    # changes what every process sees for this name: a signing secret stops
+    # validating the keys it issued, a SurrealDB root password stops matching the
+    # datastore. Name it on every boot so an upgrade of an old store says which
+    # names moved. API_KEY_SECRET is bridged below; the others need a hand check.
+    echo "[gen-env] NOTE: $1 is stored in double quotes; images before the quote fix read it as the value with a trailing \"\" pair, so its effective value changed on upgrade" >&2
+  fi
   # Attribute at the point of resolution: if this function is being consulted at
   # all, the caller's ${VAR:-…} found the environment empty.
   if [[ -n "$_v" ]]; then prov "$1" persisted; fi
@@ -490,6 +499,7 @@ fi
 # substrates that both fall back share one trust space (the shared-API_KEY_SECRET
 # federation hazard). Give each substrate its own secret and round-trip it so
 # issued keys keep validating across restarts.
+_AKS_FROM_ENV="${API_KEY_SECRET:+1}"
 API_KEY_SECRET="${API_KEY_SECRET:-$(persisted_secret API_KEY_SECRET)}"
 if [[ -z "$API_KEY_SECRET" ]]; then
   if [[ -e /var/lib/surrealdb/data.db ]]; then
@@ -531,6 +541,39 @@ fi
 # it is retired. Set API_KEY_SECRET_PREVIOUS explicitly only for a deliberate
 # secret rotation, and drop it once all keys are re-issued.)
 API_KEY_SECRET_PREVIOUS="${API_KEY_SECRET_PREVIOUS:-$(persisted_secret API_KEY_SECRET_PREVIOUS)}"
+
+# An upgrade must never change the signing secret by accident: every key issued
+# under the old effective value stops validating at once, the seeders cannot log
+# in to re-issue them, and nothing names the cause. Two guards.
+#
+# (1) Legacy quote bridge. A store line API_KEY_SECRET="v" reached identity-vessel
+# as v"" on images before the quote fix (systemd's EnvironmentFile keeps the
+# trailing pair), and as v since. Keys issued before the upgrade were signed with
+# v"", so it goes into the rotation window, where they keep validating. Only for a
+# value read from the store: a value passed in the run environment is a deliberate
+# setting, not an old store being reread.
+if [[ -z "$_AKS_FROM_ENV" && -f "$SECRETS_FILE" ]] \
+   && grep -m1 '^API_KEY_SECRET=' "$SECRETS_FILE" | cut -d= -f2- | grep -q '^".*"$'; then
+  _aks_legacy="${API_KEY_SECRET}\"\""
+  case ",${API_KEY_SECRET_PREVIOUS}," in
+    *",${_aks_legacy},"*) ;;
+    *) API_KEY_SECRET_PREVIOUS="${API_KEY_SECRET_PREVIOUS:+${API_KEY_SECRET_PREVIOUS},}${_aks_legacy}"
+       echo "[gen-env] API_KEY_SECRET: added its pre-quote-fix reading to API_KEY_SECRET_PREVIOUS, so keys issued before this upgrade keep validating" >&2 ;;
+  esac
+fi
+# (2) Fingerprint. The store records sha256 of the effective secret; a later boot
+# that resolves a different one says so, by cause. The seeded level of
+# substrate-status fails too, once the client key stops validating; this line
+# names why.
+_aks_fp_recorded="$(persisted_secret API_KEY_SECRET_SHA256)"
+API_KEY_SECRET_SHA256="$(printf '%s' "$API_KEY_SECRET" | sha256sum | cut -d' ' -f1)"
+if [[ -n "$_aks_fp_recorded" && "$_aks_fp_recorded" != "$API_KEY_SECRET_SHA256" ]]; then
+  if [[ -n "$_AKS_FROM_ENV" ]]; then
+    echo "[gen-env] WARNING: API_KEY_SECRET was set to a new value. Keys issued under the old one validate only while API_KEY_SECRET_PREVIOUS carries it." >&2
+  else
+    echo "[gen-env] ERROR: the effective API_KEY_SECRET changed with no new value supplied: the store was read differently than on the last boot. Every key issued before now will fail validation. Restore the old value, or put it in API_KEY_SECRET_PREVIOUS." >&2
+  fi
+fi
 
 # Bootstrap key: used only for the initial identity-vessel signup call.
 # After seed-identity.ts runs, vessels use the HMAC keys it issues.
@@ -1122,7 +1165,7 @@ cat > /etc/substrate/env <<EOF
 JWT_SECRET="${JWT_SECRET}"
 SURREAL_PASS="${SURREAL_PASS}"
 API_KEY_SECRET="${API_KEY_SECRET}"
-API_KEY_SECRET_PREVIOUS="${API_KEY_SECRET_PREVIOUS:-}"
+API_KEY_SECRET_PREVIOUS="$(_env_escape "${API_KEY_SECRET_PREVIOUS:-}")"
 METABOB_API_KEY="${METABOB_API_KEY}"
 SUBSTRATE_ADMIN_KEY="${SUBSTRATE_ADMIN_KEY:-}"
 # LLM provider credentials — at least one must be non-empty (validated above).
@@ -1571,6 +1614,7 @@ SUBSTRATE_GIT_PAT=${SUBSTRATE_GIT_PAT}
 # vanished on the first recreate without -e and every key minted under the old
 # secret began failing validation with no warning and no log line.
 API_KEY_SECRET_PREVIOUS=${API_KEY_SECRET_PREVIOUS:-}
+API_KEY_SECRET_SHA256=${API_KEY_SECRET_SHA256}
 # GITHUB_TOKEN sat beside SUBSTRATE_GIT_PAT in every launch recipe but was in
 # neither this list nor RECREATE_CARRY, so a recreate kept the PAT and silently
 # dropped the token. LLM_DEFAULT_MODEL had the same asymmetry against the
