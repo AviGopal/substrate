@@ -593,6 +593,20 @@ if [ "$have_container" -eq 1 ]; then
     eng exec "$ACCEPTANCE_CONTAINER" journalctl -u "$_u" -n 80 --no-pager >"$RESULT_DIR/diag/unit-${_u%.*}.log" 2>&1 || true
   done
   eng logs --tail 300 "$ACCEPTANCE_CONTAINER" >"$RESULT_DIR/diag/container.log" 2>&1
+  # Pull-sync on a cold image is an environment no operator node reproduces (every live
+  # node is warm), so the run keeps its evidence: one tick's journal, and the test-gate
+  # lines among it (a blind gate files pull-sync-testgate-blind-<vessel>). When the run
+  # ends before the first scheduled tick, one tick is started here, bounded, after the
+  # verdict was read, so it can never change the verdict.
+  if eng exec "$ACCEPTANCE_CONTAINER" systemctl cat substrate-pull-sync.service >/dev/null 2>&1; then
+    if ! eng exec "$ACCEPTANCE_CONTAINER" journalctl -u substrate-pull-sync --no-pager -q 2>/dev/null | grep -q .; then
+      log "no pull-sync tick has run yet; starting one for diagnostics (bounded to ${PULL_SYNC_DIAG_TIMEOUT:-600}s)"
+      timeout "${PULL_SYNC_DIAG_TIMEOUT:-600}" env -i "${fence_env[@]}" "$ENGINE" exec "$ACCEPTANCE_CONTAINER" \
+        systemctl start substrate-pull-sync.service >"$RESULT_DIR/diag/pull-sync-start.txt" 2>&1 || echo "exit $?" >>"$RESULT_DIR/diag/pull-sync-start.txt"
+    fi
+    eng exec "$ACCEPTANCE_CONTAINER" journalctl -u substrate-pull-sync --no-pager -n 400 >"$RESULT_DIR/diag/pull-sync.log" 2>&1 || true
+    grep -E 'testgate|test gate|pull-sync-testgate-' "$RESULT_DIR/diag/pull-sync.log" >"$RESULT_DIR/diag/pull-sync-testgate.txt" 2>/dev/null || true
+  fi
 else
   status_note="the install page launched no container named $ACCEPTANCE_CONTAINER"
 fi
