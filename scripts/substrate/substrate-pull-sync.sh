@@ -209,7 +209,10 @@ gen_failing_test_gaps() {
     id="$(printf '%s' "$p" | jq -r '.impulse.pointer.gap.id')"
     ex="$(curl -s --max-time 30 -X POST "$DEV_VESSEL/v2/impulses/resolve" -H 'Content-Type: application/json' \
          -d "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap\",\"id\":\"$id\",\"limit\":1}}}" 2>/dev/null \
-       | jq -c '(.body.gaps // [])[0] // {} | {s: (.status // ""), n: (.classification_metadata.evidence_resolve.input.only_tests // [])}' 2>/dev/null || echo '{"s":""}')"
+       | jq -c 'if (.body.gaps | type) == "array" then ((.body.gaps[0] // {}) | {s: (.status // ""), n: (.classification_metadata.evidence_resolve.input.only_tests // [])}) else {err: true} end' 2>/dev/null || true)"
+    # FAIL CLOSED (qa): an unreadable answer must not read as "no such id", or a CLOSED row would be rewritten open
+    # with its closed_reason/falsifier_exercise carried forward. Unknown existence means: not this tick.
+    if [ -z "$ex" ] || [ "$(printf '%s' "$ex" | jq -r '.err // false' 2>/dev/null)" != "false" ]; then log "$v: failing-test generator: existence of $id unknown (store read failed); not filing it this tick"; continue; fi
     exs="$(printf '%s' "$ex" | jq -r '.s' 2>/dev/null || true)"
     if [ "$exs" = "open" ]; then log "$v: failing-test generator: $id already open; skipped"; continue; fi
     if [ -n "$exs" ]; then
