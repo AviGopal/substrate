@@ -19,6 +19,17 @@ WorkingDirectory=/vessels/local-tools-vessel
 # vessel set creates none), the unit still starts. Which vessels share a container must not
 # decide whether this one runs; without it, a missing path failed every start at NAMESPACE.
 ReadOnlyPaths=-/workspace/git/super-repo/repos
+# SECRETS LIVE WITH THE RESOLVER THAT USES THEM. local-tools runs the agent's
+# shell, so the secret files must not exist in its mount namespace: otherwise a
+# root shell can read them, and the credential helper in /etc/gitconfig sources
+# /etc/substrate/env, so `git credential fill` would hand out the push token.
+# The EnvironmentFile= lines above still work: systemd reads them in the manager
+# before it forks and builds this namespace. Nothing in local-tools reads these
+# paths at runtime. Credentialed git (fetch/push of a private remote) belongs to
+# development-vessel's own process, not to this shell.
+# The leading '-' keeps the unit starting on a node where a path does not exist.
+InaccessiblePaths=-/etc/substrate
+InaccessiblePaths=-/workspace/.substrate-secrets
 ExecStart=/root/.bun/bin/bun /vessels/local-tools-vessel/src/index.ts
 Restart=on-failure
 RestartSec=5
