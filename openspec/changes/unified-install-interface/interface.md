@@ -214,7 +214,7 @@ make -C scripts/substrate up REBUILD=1    # build (needs bun) → the same compo
 | Know whether it is healthy | `docker exec <c> substrate-status` | five levels; image revision, and each vessel's running revision where pull-sync moved it |
 | Report a failed install | `docker exec <c> substrate-status --report` | posts a human-reported `installAcceptance` to the anchor; files a gap |
 | Stop / start | `docker compose stop` / `docker compose start` | the grace period covers the drain and the datastore flush |
-| Upgrade the image | `docker compose pull && docker compose up -d` | volumes kept; code also converges to origin at boot |
+| Upgrade the image | re-run the install command (`--pull always` fetches the newer image; the installer recreates the container when the image changed, which Podman's compose does not do on its own) | volumes, keys and secrets kept; code also converges to origin at boot |
 | Change an install input or profile | edit `.env`, then `docker compose up -d` | recreate; volumes, installed vessels and secrets kept |
 | Add or remove one vessel at runtime | `docker exec <c> vessel-ctl install <v>` / `uninstall <v>` | persisted in the workspace; survives recreate |
 | Issue or revoke keys | `docker exec <c> substrate-key issue <name>` / `revoke <id>` | hub-issued keys join spokes |

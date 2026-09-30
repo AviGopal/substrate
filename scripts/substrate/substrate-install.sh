@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # substrate-install.sh — print the one-command installer for this image.
 #
-#   docker run --rm ghcr.io/avigopal/substrate:dev install | ANTHROPIC_API_KEY=sk-ant-… sh
-#   docker run --rm ghcr.io/avigopal/substrate:dev install | SUBSTRATE_JOIN=<token from `substrate-key join` on the hub> sh
+#   docker run --rm --pull always ghcr.io/avigopal/substrate:dev install | ANTHROPIC_API_KEY=sk-ant-… sh
+#   docker run --rm --pull always ghcr.io/avigopal/substrate:dev install | SUBSTRATE_JOIN=<token from `substrate-key join` on the hub> sh
 #
 # STDOUT CARRIES ONLY A POSIX sh SCRIPT. It runs README § Installation's sequence and
 # nothing else: write the launch manifest and a `.env` of install inputs into a fleet
@@ -79,8 +79,10 @@ Install inputs may also be given as environment variables of the sh: a provider 
 (ANTHROPIC_API_KEY, OPENAI_API_KEY, …), METABOB_API_KEY, SUBSTRATE_GIT_PAT +
 SUBSTRATE_REPO_OWNER. They are written to the fleet's .env, so a later
 `compose up -d` keeps them. Advanced configuration is read from that .env only.
-Re-running in the same directory updates that fleet: inputs you pass replace their
-lines, the rest are kept.
+Re-running updates a fleet: run it inside the fleet directory (or where it was first
+run, with the same --name). Inputs you pass replace their lines, the rest are kept, and
+the container is recreated when the image changed. To upgrade, run the install command
+again: its --pull always fetches the newer image.
 EOF
     exit 0 ;;
   *) echo "usage: substrate-install [--help]   (options belong to the printed script: … | sh -s -- <options>)" >&2; exit 2 ;;
@@ -163,6 +165,12 @@ envval() { # value of $1 in ./.env, empty when absent
   sed -n "s/^$1=//p" .env | tail -1
 }
 name="${SUBSTRATE_NAME:-}"
+# Run from inside a fleet directory (its manifest and .env are here) with no name or
+# --dir, it is that fleet: re-running there is how it is updated.
+if [ -z "$dir" ] && [ -z "$name" ] && [ -f .env ] \
+   && head -1 docker-compose.yml 2>/dev/null | grep -q '^# Substrate launch manifest'; then
+  dir=.
+fi
 [ -n "$dir" ] || dir="./${name:-substrate}"
 start="$(pwd)"
 mkdir -p "$dir"
@@ -274,7 +282,22 @@ done
 say "fleet directory: $(pwd)  (inputs written:${carried:- none, defaults only})"
 
 # ── Launch ─────────────────────────────────────────────────────────────────────
-"$engine" compose up -d || die "compose up failed; the manifest and .env are in $(pwd)"
+# An upgrade usually keeps the image's name and changes what it names (a newer :dev).
+# Docker's compose recreates the container for that; Podman's does not (podman-compose
+# 1.6 `up -d` after a retag leaves the old image running), so re-running would report
+# success on the old code. Compare the image the container runs with the one the
+# manifest names, and recreate when they differ.
+recreate=""
+if "$engine" container inspect "$container" >/dev/null 2>&1; then
+  want_ref="$("$engine" compose config 2>/dev/null | sed -n 's/^ *image: *//p' | head -1 | tr -d "\"'")"
+  want_id="$([ -n "$want_ref" ] && "$engine" image inspect -f '{{.Id}}' "$want_ref" 2>/dev/null || true)"
+  have_id="$("$engine" container inspect -f '{{.Image}}' "$container" 2>/dev/null || true)"
+  if [ -n "$want_id" ] && [ -n "$have_id" ] && [ "${want_id#sha256:}" != "${have_id#sha256:}" ]; then
+    say "$container runs an older image than $want_ref; recreating it (volumes kept)"
+    recreate="--force-recreate"
+  fi
+fi
+"$engine" compose up -d $recreate || die "compose up failed; the manifest and .env are in $(pwd)"
 
 if [ "$wait_level" = none ]; then
   say "launched $container; not waiting (check with: $engine exec $container substrate-status)"

@@ -154,7 +154,7 @@ case "$cmd" in
     token="sj1.$(printf '%s\n%s' "$disc" "$key" | base64 -w0 | tr '+/' '-_' | tr -d '=')"
     echo "Join token for '$name' (endpoint $disc). It carries the key: give it only to that node's operator." >&2
     echo "The joiner runs:" >&2
-    echo "  docker run --rm ghcr.io/avigopal/substrate:dev install | SUBSTRATE_JOIN='$token' sh" >&2
+    echo "  docker run --rm --pull always ghcr.io/avigopal/substrate:dev install | SUBSTRATE_JOIN='$token' sh" >&2
     echo "$token"
     ;;
 

@@ -198,7 +198,7 @@ One command, with your provider key in place of the placeholder:
 # Install: writes the manifest and .env into ./substrate, launches, waits for a reached
 # goal, and writes the client config to ~/.metabob/config.json. Exits non-zero and
 # prints the failing level if the fleet does not become usable.
-docker run --rm ghcr.io/avigopal/substrate:dev install | ANTHROPIC_API_KEY=sk-ant-… sh
+docker run --rm --pull always ghcr.io/avigopal/substrate:dev install | ANTHROPIC_API_KEY=sk-ant-… sh
 ```
 
 Then run the `claude mcp add …` line it printed (the cockpit needs node/npx and Bun), make
@@ -213,7 +213,8 @@ docker exec substrate-live substrate-status
 The image prints the installer, and `sh` runs it on the host. It runs the manual sequence
 below and derives nothing: the image still judges every input at boot. Options go after
 `sh -s --` and are listed by `docker run --rm ghcr.io/avigopal/substrate:dev install --help`.
-If the command stops at once with "not in this image revision", pull a newer image.
+`--pull always` fetches the current image each time, so running the same command again
+later is also how a fleet is upgraded.
 Secrets go before `sh` as environment variables, so they never appear in the command's
 arguments. Re-running the same command from the same place updates that fleet: it rewrites
 the manifest from the image, replaces the inputs you pass, and keeps the rest.
@@ -251,7 +252,7 @@ docker exec substrate-live substrate-status --wait usable
 #### B. Hub
 
 ```bash install:hub
-docker run --rm ghcr.io/avigopal/substrate:dev install | ANTHROPIC_API_KEY=sk-ant-… sh -s -- --profile hub --public-ip <address spokes reach>
+docker run --rm --pull always ghcr.io/avigopal/substrate:dev install | ANTHROPIC_API_KEY=sk-ant-… sh -s -- --profile hub --public-ip <address spokes reach>
 ```
 
 Then give each joining node one join token:
@@ -277,7 +278,7 @@ To run a hub or any other node on a remote machine, run the same command there.
 Joining a network takes one value, the join token the hub issued (B):
 
 ```bash install:spoke
-docker run --rm ghcr.io/avigopal/substrate:dev install | SUBSTRATE_JOIN=<join token from the hub> sh
+docker run --rm --pull always ghcr.io/avigopal/substrate:dev install | SUBSTRATE_JOIN=<join token from the hub> sh
 ```
 
 The token unpacks into the two join inputs, the hub's discovery endpoint and the key, and
@@ -335,7 +336,7 @@ Protocol and concepts: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 #### D. Surface (a human's local window)
 
 As C, with `--profile surface`:
-`docker run --rm ghcr.io/avigopal/substrate:dev install | SUBSTRATE_JOIN=<join token from the hub> sh -s -- --profile surface`.
+`docker run --rm --pull always ghcr.io/avigopal/substrate:dev install | SUBSTRATE_JOIN=<join token from the hub> sh -s -- --profile surface`.
 The surface is the human-surface vessel at `http://localhost:<prefix>310/`; everything it
 asks for is resolved on the hub. To keep it on the local host, add
 `HUMAN_SURFACE_PUBLISH_IP=127.0.0.1` to its `.env`. `served` passes when the surface answers.
@@ -420,7 +421,7 @@ the unscoped form rewrites every GitHub URL and breaks anonymous cloning everywh
 | Know whether it is healthy | `docker exec <c> substrate-status` | five levels; image revision, and each vessel's running revision where pull-sync moved it |
 | Report a failed install | `docker exec <c> substrate-status --report` | posts a human-reported `installAcceptance` to the anchor; files a gap |
 | Stop / start | `docker compose stop` / `docker compose start` | the grace period covers the drain and the datastore flush |
-| Upgrade the image | in the fleet directory: `docker compose pull && docker compose up -d`; or re-run the install command, which also refreshes the manifest | volumes kept; code also converges to origin at boot |
+| Upgrade the image | re-run the install command, inside the fleet directory or where it was first run | refreshes the manifest and recreates the container on the new image; volumes, keys and secrets kept. `docker compose pull && docker compose up -d` is not enough on Podman: its compose keeps the old container when a tag changes |
 | Change an install input or profile | re-run the install command with the new input; or edit `.env`, then `docker compose up -d` | recreate; volumes, installed vessels and secrets kept |
 | Move a fleet launched another way (a raw `docker run`, an old lane) onto the manifest | `docker stop -t 360 <c> && docker rm <c>`, then the install command for its role with `--adopt` | its volumes are kept: learning state, issued keys, secrets and federation id |
 | Keep one vessel on an extra host port (e.g. a page URL people already use) | a `docker-compose.override.yml` in the fleet directory adding `ports: ["127.0.0.1:<port>:<container port>"]` to service `substrate` | compose merges port lists, so it adds a mapping beside the derived one; it cannot remove or narrow one. The deprecated per-port inputs (`HUMAN_SURFACE_PORT` …) are refused alongside a prefix |
