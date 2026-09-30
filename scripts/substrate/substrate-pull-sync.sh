@@ -124,7 +124,10 @@ tracked_fail_names() {
 
 # FAILING-TEST GAP GENERATOR (2026-09-30, user-cleared; qa-reviewed). Its evidence_resolve carries zero_field
 # "requested_not_passing": gap-to-feature admission excludes a class2 check with no measured field as
-# needs_information, so without it every gap filed here was silently inadmissible (found 2026-09-30 12:10). The pre-land gate (feature-compose
+# needs_information, so without it every gap filed here was silently inadmissible (found 2026-09-30 12:10).
+# A non-actionable gap is also filed with operator_hold: admission reads operator_hold but NOT disposition, so a
+# 'needs_information' label alone let an unlocalized assertion gap be picked (12:21); for a stale test its only
+# green is changing src to match an outdated expectation, which op7 cannot see. The pre-land gate (feature-compose
 # op5-op7) can only certify a landing for a gap that carries its own test_suite check, and every such gap in
 # the store had been written by an operator: 196 failing activity-api tests yielded one admissible
 # check-backed gap. The missing generator was the gap. This files check-backed failing_test gaps from the
@@ -232,7 +235,9 @@ gen_failing_test_gaps() {
           filed_by: "pull-sync failing-test generator", generator_head: $head, failure_class: .cls}
           + (if $mock then {edit_site: ("repos/" + $v + "/" + .file), region: (.t[0].name | split(" > ") | last)}
              elif $located then {edit_site: ("repos/" + $v + "/" + .frame), protected_files: [("repos/" + $v + "/" + .file)]}
-             else {protected_files: [("repos/" + $v + "/" + .file)], disposition: "needs_information"} + (if .guard then {source_text_guard: true} else {} end) end))})}}}' 2>/dev/null || true)"
+             else {protected_files: [("repos/" + $v + "/" + .file)], disposition: "needs_information",
+                   operator_hold: true, operator_hold_reason: "needs_localization: no source frame (or a source-text guard); release only after the edit site is localized and the test is confirmed correct"}
+                  + (if .guard then {source_text_guard: true} else {} end) end))})}}}' 2>/dev/null || true)"
   rm -f "$st"
   [ -n "$payloads" ] || return 0
   while IFS= read -r p; do
