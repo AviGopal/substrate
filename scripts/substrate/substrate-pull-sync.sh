@@ -1228,7 +1228,11 @@ EOF
   # heal-probe, flat-*-probe, …) in the live store. It now runs under a scrubbed environment
   # with a throwaway WORKSPACE_ROOT, like the compose (d8891ed) and post-land (53b4993) runners;
   # parent and candidate are both measured this way, so the gate still compares like with like.
-  run_suite() { (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test 2>&1; rm -rf "$_rs_root" 2>/dev/null) || true; }
+  # The trailing __PULLSYNC_RC line is diagnostic only (count_pf and fail_names ignore it): a BLIND tick's retained
+  # tail was bun's end-of-run failure list cut mid-line at 36 s, far inside the 240 s timeout, so the run was ended
+  # by something other than the timeout. Its exit status (124/137 timeout/kill, 1 normal red, other = crash or
+  # signal) and wall time are what the next blind tick must show.
+  run_suite() { (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_t0=$(date +%s) && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test 2>&1; _rs_rc=$?; echo "__PULLSYNC_RC=$_rs_rc wall=$(( $(date +%s) - _rs_t0 ))s"; rm -rf "$_rs_root" 2>/dev/null) || true; }
   # Run the suite at an arbitrary ref, NOW, under this tick's conditions.
   #
   # The stored baseline is a snapshot taken at some earlier tick; test outcomes here depend on
