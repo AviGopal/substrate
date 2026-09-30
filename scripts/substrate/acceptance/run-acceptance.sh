@@ -75,7 +75,7 @@
 #   ACCEPTANCE_CASE           which `install:<case>` blocks run   (default: standalone)
 #   ACCEPTANCE_PROFILE        profile the case launches            (default: the case)
 #   ACCEPTANCE_PROVIDER_KEY   provider key secret; absent means report-only
-#   ACCEPTANCE_PROVIDER_VAR   the page's provider variable  (default: ANTHROPIC_API_KEY)
+#   ACCEPTANCE_PROVIDER_VAR   the provider variable (default: read from the key's prefix, else ANTHROPIC_API_KEY)
 #   ACCEPTANCE_PUBLIC_IP      the hub case's PUBLIC_IP                 (hub: required)
 #   ACCEPTANCE_DISCOVERY_ENDPOINT, ACCEPTANCE_METABOB_API_KEY
 #                             the spoke case's hub anchor and issued key (spoke: required)
@@ -104,7 +104,9 @@ IMAGE="${IMAGE:-}"
 INSTALL_DOC="${INSTALL_DOC:-$repo_root/README.md}"
 ACCEPTANCE_CASE="${ACCEPTANCE_CASE:-standalone}"
 ACCEPTANCE_PROFILE="${ACCEPTANCE_PROFILE:-$ACCEPTANCE_CASE}"
-ACCEPTANCE_PROVIDER_VAR="${ACCEPTANCE_PROVIDER_VAR:-ANTHROPIC_API_KEY}"
+# The key names its own provider by prefix; ACCEPTANCE_PROVIDER_VAR only overrides that.
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/provider-of-key.sh"
+ACCEPTANCE_PROVIDER_VAR="$(resolve_provider_var "${ACCEPTANCE_PROVIDER_KEY:-}" "${ACCEPTANCE_PROVIDER_VAR:-}")"
 INSTALL_IMAGE_REF="${INSTALL_IMAGE_REF:-ghcr.io/avigopal/substrate:dev}"
 ACCEPTANCE_CONTAINER="${ACCEPTANCE_CONTAINER:-substrate-live}"
 FENCE_TIMEOUT="${FENCE_TIMEOUT:-3600}"
@@ -167,7 +169,7 @@ fence_env=(
 # Rootless Podman on cgroups v2 needs the user's runtime dir and session bus.
 [ -n "${XDG_RUNTIME_DIR:-}" ] && fence_env+=("XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR")
 [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] && fence_env+=("DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS")
-[ -n "${ACCEPTANCE_PROVIDER_KEY:-}" ] && fence_env+=("$ACCEPTANCE_PROVIDER_VAR=$ACCEPTANCE_PROVIDER_KEY")
+[ -n "${ACCEPTANCE_PROVIDER_KEY:-}" ] && fence_env+=("$ACCEPTANCE_PROVIDER_VAR=$ACCEPTANCE_PROVIDER_KEY") && log "provider key exported as $ACCEPTANCE_PROVIDER_VAR"
 # The page's placeholders for a hub or spoke case. A case whose placeholder has no
 # value is a harness input error, not a page failure: it would launch with the
 # literal placeholder and report the page broken.

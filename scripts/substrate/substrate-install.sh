@@ -250,6 +250,17 @@ for n in $CARRY_NAMES; do
   carried="$carried $n"
 done
 chmod 600 .env
+# A key under the wrong provider's name fails every model call with no hint why. Anthropic
+# keys always start sk-ant-, so a recognisably different key in ANTHROPIC_API_KEY is named.
+case "${ANTHROPIC_API_KEY:-sk-ant-}" in
+  sk-ant-*) ;;
+  sk-or-*) say "ANTHROPIC_API_KEY holds an OpenRouter key (sk-or-); pass it as OPENROUTER_API_KEY=… instead" ;;
+  gsk_*)   say "ANTHROPIC_API_KEY holds a Groq key (gsk_); pass it as GROQ_API_KEY=… instead" ;;
+  AIza*)   say "ANTHROPIC_API_KEY holds a Google key (AIza); pass it as GOOGLE_API_KEY=… instead" ;;
+  cpk_*)   say "ANTHROPIC_API_KEY holds a Chutes key (cpk_); pass it as CHUTES_API_KEY=… instead" ;;
+  sk-*)    say "ANTHROPIC_API_KEY holds what looks like an OpenAI-style key (sk-); pass it as OPENAI_API_KEY=… (with OPENAI_BASE_URL for a compatible service) instead" ;;
+  *)       say "ANTHROPIC_API_KEY does not look like an Anthropic key (they start sk-ant-); if it belongs to another provider, pass it under that provider's name" ;;
+esac
 # Nothing ambient: any other manifest input reaches compose only through .env.
 ignored=""
 for n in $INPUT_NAMES; do

@@ -34,7 +34,8 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTALL_DOC="${INSTALL_DOC:-$here/../../../README.md}"
 INSTALL_IMAGE_REF="${INSTALL_IMAGE_REF:-ghcr.io/avigopal/substrate:dev}"
 RESULT_DIR="${RESULT_DIR:-./network-acceptance-result}"
-ACCEPTANCE_PROVIDER_VAR="${ACCEPTANCE_PROVIDER_VAR:-ANTHROPIC_API_KEY}"
+. "$here/provider-of-key.sh"
+ACCEPTANCE_PROVIDER_VAR="$(resolve_provider_var "${ACCEPTANCE_PROVIDER_KEY:-}" "${ACCEPTANCE_PROVIDER_VAR:-}")"
 case "$ENGINE" in docker|podman) ;; *) echo "run-network-acceptance: ENGINE must be docker or podman" >&2; exit 64 ;; esac
 [ -n "$IMAGE" ] || { echo "run-network-acceptance: IMAGE is required" >&2; exit 64; }
 for tool in jq curl awk; do command -v "$tool" >/dev/null 2>&1 || { echo "run-network-acceptance: $tool is required" >&2; exit 64; }; done
@@ -101,6 +102,7 @@ run_case() {
   return "$rc"
 }
 
+[ -n "${ACCEPTANCE_PROVIDER_KEY:-}" ] && log "provider key exported as $ACCEPTANCE_PROVIDER_VAR"
 key_sub_from='ANTHROPIC_API_KEY=sk-ant-…'; key_sub_to="${ACCEPTANCE_PROVIDER_VAR}=${ACCEPTANCE_PROVIDER_KEY:-}"
 [ -n "${ACCEPTANCE_PROVIDER_KEY:-}" ] || { key_sub_from='ANTHROPIC_API_KEY=sk-ant-… '; key_sub_to=''; }
 

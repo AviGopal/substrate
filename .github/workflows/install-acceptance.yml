@@ -34,8 +34,9 @@ name: Install acceptance
 #                                    reach them and the image contract checks still fail
 #                                    the job. A fixture provider is not a substitute: it
 #                                    would make `usable` hollow.
-#   ACCEPTANCE_PROVIDER_VAR  var     the provider variable the install page asks for
-#                                    (default ANTHROPIC_API_KEY)
+#   ACCEPTANCE_PROVIDER_VAR  var     override for the provider variable; unset, it is read
+#                                    from the key's prefix (sk-ant- Anthropic, sk-or-
+#                                    OpenRouter, gsk_ Groq, AIza Google, …)
 #   ACCEPTANCE_HUB_URL       var     the reference hub's discovery endpoint
 #                                    (secret of the same name also accepted)
 #   ACCEPTANCE_HUB_KEY       secret  a hub API key, never root or admin. Keys carry only
@@ -205,7 +206,7 @@ jobs:
           IMAGE: ${{ needs.resolve.outputs.image }}
           ACCEPTANCE_CASE: ${{ needs.resolve.outputs.case }}
           ACCEPTANCE_PROVIDER_KEY: ${{ secrets.ACCEPTANCE_PROVIDER_KEY }}
-          ACCEPTANCE_PROVIDER_VAR: ${{ vars.ACCEPTANCE_PROVIDER_VAR || 'ANTHROPIC_API_KEY' }}
+          ACCEPTANCE_PROVIDER_VAR: ${{ vars.ACCEPTANCE_PROVIDER_VAR }}
           ACCEPTANCE_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           RESULT_DIR: ${{ runner.temp }}/acceptance/${{ matrix.engine }}
           COCKPIT_BUN_DIR: ${{ runner.temp }}/cockpit-bun/bin
@@ -254,7 +255,7 @@ jobs:
           ENGINE: ${{ matrix.engine }}
           IMAGE: ${{ needs.resolve.outputs.image }}
           ACCEPTANCE_PROVIDER_KEY: ${{ secrets.ACCEPTANCE_PROVIDER_KEY }}
-          ACCEPTANCE_PROVIDER_VAR: ${{ vars.ACCEPTANCE_PROVIDER_VAR || 'ANTHROPIC_API_KEY' }}
+          ACCEPTANCE_PROVIDER_VAR: ${{ vars.ACCEPTANCE_PROVIDER_VAR }}
           RESULT_DIR: ${{ runner.temp }}/network/${{ matrix.engine }}
         run: bash scripts/substrate/acceptance/run-network-acceptance.sh
 
