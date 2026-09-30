@@ -266,7 +266,8 @@ gen_failing_test_gaps() {
     if [ -n "${FAILTEST_GEN_DEADLINE:-}" ] && [ $(( $(date +%s) + 170 )) -gt "$FAILTEST_GEN_DEADLINE" ]; then log "$v: failing-test generator: tick budget spent; $id left for a later tick"; break; fi
     local ar ao keep passed
     ar="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-alone-XXXXXX")"
-    ao="$(cd "$dir" && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$ar" timeout --kill-after=15 150 "$BUN_BIN" test "./$tf" --timeout 20000 2>&1 | sed 's/\x1b\[[0-9;]*m//g; s/ \[[0-9.]*m*s\]$//; s/[[:space:]]*$//')"
+    ao="$(cd "$dir" && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$ar" timeout --kill-after=15 150 "$BUN_BIN" test "./$tf" --timeout 20000 > "$ar.out" 2>&1; cat "$ar.out"; rm -f "$ar.out")"
+    ao="$(printf '%s\n' "$ao" | sed 's/\x1b\[[0-9;]*m//g; s/ \[[0-9.]*m*s\]$//; s/[[:space:]]*$//')"
     rm -rf "$ar" 2>/dev/null
     # A run that printed no bun summary (unloadable alone, crashed, timed out) proves nothing: neither red nor
     # polluted. A name is red on "(fail) <name>" and polluted only on POSITIVE "(pass) <name>" (qa).
@@ -1232,7 +1233,11 @@ EOF
   # tail was bun's end-of-run failure list cut mid-line at 36 s, far inside the 240 s timeout, so the run was ended
   # by something other than the timeout. Its exit status (124/137 timeout/kill, 1 normal red, other = crash or
   # signal) and wall time are what the next blind tick must show.
-  run_suite() { (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_t0=$(date +%s) && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test 2>&1; _rs_rc=$?; echo "__PULLSYNC_RC=$_rs_rc wall=$(( $(date +%s) - _rs_t0 ))s"; rm -rf "$_rs_root" 2>/dev/null) || true; }
+  # OUTPUT GOES TO A FILE, NOT THE PIPE (qa reproduced, 2026-09-30): bun exits before a stdout PIPE drains, so
+  # captured through $( ) ~45% of the output was lost, cut inside the end-of-run failure list before the totals
+  # (324,504 of ~594,000 bytes, mid-line). The same run redirected to a file keeps its summary. That race was the
+  # ~40% "TEST GATE BLIND" rate: exit 1 (a normal red), not a timeout, kill or crash.
+  run_suite() { (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && _rs_t0=$(date +%s) && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test > "$_rs_out" 2>&1; _rs_rc=$?; cat "$_rs_out"; echo "__PULLSYNC_RC=$_rs_rc wall=$(( $(date +%s) - _rs_t0 ))s"; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true; }
   # Run the suite at an arbitrary ref, NOW, under this tick's conditions.
   #
   # The stored baseline is a snapshot taken at some earlier tick; test outcomes here depend on
@@ -1262,7 +1267,7 @@ EOF
       rm -rf "$_rsa_wt" 2>/dev/null || true; return 1
     fi
     [ -d "$d/node_modules" ] && ln -s "$d/node_modules" "$_rsa_wt/node_modules" 2>/dev/null || true
-    _rsa_out="$( (cd "$_rsa_wt" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test 2>&1; rm -rf "$_rs_root" 2>/dev/null) || true )"
+    _rsa_out="$( (cd "$_rsa_wt" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test > "$_rs_out" 2>&1; cat "$_rs_out"; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true )"
     git -C "$d" worktree remove --force "$_rsa_wt" >/dev/null 2>&1 || rm -rf "$_rsa_wt" 2>/dev/null || true
     git -C "$d" worktree prune >/dev/null 2>&1 || true
     printf '%s' "$_rsa_out"
