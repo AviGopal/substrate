@@ -43,3 +43,7 @@ workspace
 # Operator-side Obsidian vault (gitignored runtime state). The obsidian
 # image builds its vault skeleton from the plugin at build time — no host dep.
 vault
+
+# Secret files never enter the image: scripts/substrate is copied wholesale, so a stray .env there would be baked in.
+.env
+**/.env
