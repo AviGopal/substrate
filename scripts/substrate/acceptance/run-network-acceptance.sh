@@ -11,10 +11,11 @@
 #   spoke_seeded      the spoke's client key validates, against the hub's identity (the
 #                     spoke runs none of its own)
 #   relay_reservation the spoke's transport holds a reservation on the hub's relay
-#   hub_registration  the hub's discovery lists the spoke's vessels as
-#                     `<vessel>@<spoke id>` with protocol libp2p and a circuit address
+#   hub_registration  the hub's discovery lists a producer of the fileContent shape on the
+#                     spoke (`<any vessel>@<spoke id>`, protocol libp2p, a circuit address)
 #   hub_to_spoke      the hub reads a file that exists only on the spoke, through that
-#                     spoke vessel, over the relay (the spoke's data serving the network)
+#                     producer, over the relay (the spoke's data serving the network).
+#                     Both are addressed by shape: which vessels a node runs is placement.
 #   spoke_goal        with a provider key only: a goal dispatched on the spoke reaches,
 #                     and its trace is in the hub's trace store (the network learns
 #                     from the spoke's work); unjudged without a key
@@ -167,15 +168,19 @@ if [ "$spoke_rc" = 0 ] || [ "$spoke_rc" = 20 ]; then
 
   spoke_id="$(eng exec "$SPOKE_C" sh -c 'sed -n "s/^FED_SUBSTRATE_ID=//p" /etc/substrate/env | tr -d "\""' 2>/dev/null | head -1)"
   hub_key="$(jq -r '.metabob.apiKey // empty' "$root/hub-config.json" 2>/dev/null)"; secrets+=("$hub_key")
-  target="local-tools-vessel@${spoke_id}"
+  # Addressed by SHAPE, not by vessel name: whichever vessel on the spoke advertises
+  # fileContent is the one the hub reads through. Which vessels a node runs is placement,
+  # never something a caller (or this check) may depend on.
+  target=""
   registered() {
-    eng exec "$HUB_C" curl -s -m10 -H "Authorization: ApiKey $hub_key" -H 'Content-Type: application/json' \
+    target="$(eng exec "$HUB_C" curl -s -m10 -H "Authorization: ApiKey $hub_key" -H 'Content-Type: application/json' \
       -X POST http://127.0.0.1:8100/resolve -d '{"pointer":{"type":"vesselCapability","shape":"fileContent"}}' 2>/dev/null \
-      | jq -e --arg t "$target" '.content.vessels[]? | select((.id // .vesselId) == $t and .protocol == "libp2p" and ((.libp2p_multiaddr // []) | length) > 0)' >/dev/null
+      | jq -r --arg s "@${spoke_id}" '[.content.vessels[]? | select(((.id // .vesselId) | endswith($s)) and .protocol == "libp2p" and ((.libp2p_multiaddr // []) | length) > 0) | (.id // .vesselId)][0] // empty')"
+    [ -n "$target" ]
   }
   if [ -n "$spoke_id" ] && [ -n "$hub_key" ] && poll 300 registered; then
-    set_check hub_registration pass "$(jq -nc --arg t "$target" '{row: $t, protocol: "libp2p"}')"
-  else set_check hub_registration fail "$(jq -nc --arg t "$target" '{row: $t}')"; fi
+    set_check hub_registration pass "$(jq -nc --arg t "$target" '{row: $t, protocol: "libp2p", shape: "fileContent"}')"
+  else set_check hub_registration fail "$(jq -nc --arg s "@${spoke_id}" '{wanted: ("a fileContent producer ending " + $s)}')"; fi
 
   marker="spoke-only-$(date +%s)-$RANDOM"
   eng exec "$SPOKE_C" sh -c "printf '%s\n' '$marker' > /workspace/network-acceptance-marker.txt" >/dev/null 2>&1
@@ -186,7 +191,7 @@ if [ "$spoke_rc" = 0 ] || [ "$spoke_rc" = 20 ]; then
       -d '{"pointer":{"type":"fileContent","path":"/workspace/network-acceptance-marker.txt"}}' 2>/dev/null)"
     printf '%s' "$answer" | grep -qF "$marker"
   }
-  if [ -n "$spoke_id" ] && poll 120 read_via_spoke; then
+  if [ -n "$target" ] && poll 120 read_via_spoke; then
     set_check hub_to_spoke pass "$(jq -nc --arg t "$target" --arg p "$(printf '%s' "$answer" | jq -r '.content.produced_by // empty')" '{vessel: $t, produced_by: $p}')"
   else set_check hub_to_spoke fail "$(jq -nc --arg t "$target" --arg a "$(printf '%s' "${answer:-}" | head -c 300)" '{vessel: $t, answer: $a}')"; fi
 

@@ -110,6 +110,14 @@ The rule behind the table (data locality): a spoke exists because some data live
 host (files, tools, a vault). Everything learned lives with the learner on the hub, so a
 spoke never carries its own trace store or identity.
 
+A profile decides placement, never capability. Every caller, whether a goal, a vessel, the
+cockpit or a check, asks for a shape, and discovery routes it to whichever node serves that
+shape, local or remote. So the set of vessels a container runs never changes what can be
+done through it, only where the work runs and whose data it touches. A node that runs no
+producer of a shape still resolves it through the network. When a request depends on one
+specific node's data (a file on that host), it is still addressed by shape, and names the
+node rather than a vessel.
+
 ### Ports
 
 The manifest publishes one set of ports on every profile, each derived from
