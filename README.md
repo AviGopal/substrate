@@ -298,11 +298,14 @@ What joining means, and how to tell it happened:
 - **A joining spoke writes to the hub.** Its seeder registers the shared activity templates
   into the hub's trace store with the issued key (idempotent upserts). A spoke you do not
   fully trust should get a read-scoped key, or `DISABLED_VESSELS=bootstrap-seeder`.
-- **A joined spoke registers on the hub with no further step.** Its first boot mints a
-  federation id (`spoke-<hex>`, persisted in the workspace volume), and its vessels appear
-  in the hub registry as `<vessel>@spoke-<hex>`, addressed through the hub's transport.
-  The spoke transport's journal line `hub-register per-vessel (<n> rows) -> all ok`
-  records it.
+- **A joined spoke is reachable from the hub with no further step.** Its first boot mints
+  a federation id (`spoke-<hex>`, persisted in the workspace volume), and its vessels
+  appear in the hub registry as `<vessel>@spoke-<hex>` with `protocol: libp2p` and the
+  spoke's circuit address (the spoke transport logs `hub-register per-vessel (<n> rows)
+  -> all ok`). A resolve that names one of them (a goal's `target_vessel_id`) is carried
+  over the relay circuit and answered by the spoke, with its own files and tools. A
+  resolve that names no vessel is answered by the hub's own producer of the shape first:
+  data locality, not an outage.
 
 Protocol and concepts: [`docs/FEDERATION.md`](docs/FEDERATION.md).
 
