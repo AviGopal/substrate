@@ -164,6 +164,16 @@ gen_failing_test_gaps() {
       if (frame == "" && $0 !~ /node_modules/ && match($0, /src\/[A-Za-z0-9_.\/-]+\.[jt]sx?:[0-9]+/)) { f = substr($0, RSTART, RLENGTH); sub(/:[0-9]+$/, "", f); if (f !~ /\.test\.[jt]sx?$/) frame = f }
     }')"
   [ -n "$rows" ] || return 0
+  # RED ALONE (qa, 2026-09-30). The rows come from the FULL suite, but a gap's own check runs its file ALONE, and
+  # bun's mock.module is process-wide: another file's partial mock can break a later file only in the full run
+  # (broadcaster.account-id: 14 fail in the suite, 14/0 alone). A gap for such a name is green on the parent
+  # forever: op10 refuses it, excludes it for 6 h, and it never closes. Names already found green ALONE at this
+  # HEAD are skipped; the file resets when HEAD changes. The pollution root is the mock-factory debt, not a
+  # per-victim gap.
+  local poll="${TEST_BASELINE_DIR:-/workspace/.test-baseline}/$v.polluted"
+  [ "$(head -n1 "$poll" 2>/dev/null)" = "head=${head:0:10}" ] || printf 'head=%s\n' "${head:0:10}" > "$poll" 2>/dev/null || true
+  rows="$(printf '%s\n' "$rows" | awk -F'\t' -v pf="$poll" 'BEGIN { while ((getline l < pf) > 0) G[l] = 1 } !($2 in G)')"
+  [ -n "$rows" ] || return 0
   # Per test FILE: does it use test doubles, and is it a SOURCE-TEXT guard (reads src and asserts on its text)?
   # A TypeError counts as mock/wiring only in a file that actually uses doubles; a source-text guard is always
   # assert-class, because its "fix" rewrites src to match text it asserts, and a guard can be stale on purpose
@@ -243,6 +253,16 @@ gen_failing_test_gaps() {
       log "$v: failing-test generator: $id exists ($exs); filing a new row ($(printf '%s' "$p" | jq -r '.impulse.pointer.gap.classification_metadata | if .recurrence_of then "recurrence_of" else "continuation_of" end'))"
       id="$(printf '%s' "$p" | jq -r '.impulse.pointer.gap.id')"
     fi
+    tf="$(printf '%s' "$p" | jq -r '.impulse.pointer.gap.classification_metadata.evidence_resolve.input.test_file')"
+    if [ -z "$dir" ] || [ -z "${BUN_BIN:-}" ]; then log "$v: failing-test generator: cannot run $tf alone (no checkout or bun); not filing $id"; continue; fi
+    local ar alone keep
+    ar="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-alone-XXXXXX")"
+    alone="$(cd "$dir" && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$ar" timeout --kill-after=15 150 "$BUN_BIN" test "./$tf" --timeout 20000 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | awk '/^\(fail\) /' | sed 's/^(fail) //; s/ \[[0-9.]*m*s\]$//; s/[[:space:]]*$//')"
+    rm -rf "$ar" 2>/dev/null
+    keep="$(printf '%s' "$p" | jq -c --arg alone "$alone" '[.impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(. as $n | ($alone | split("\n")) | index($n))]')"
+    printf '%s' "$p" | jq -r --argjson keep "$keep" '.impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests[] | select(. as $n | $keep | index($n) | not)' >> "$poll" 2>/dev/null || true
+    if [ "$keep" = "[]" ] || [ -z "$keep" ]; then log "$v: failing-test generator: $tf is green when run ALONE (suite-only failure: cross-file mock pollution); not filing $id"; continue; fi
+    p="$(printf '%s' "$p" | jq -c --argjson keep "$keep" '.impulse.pointer.gap.classification_metadata.evidence_resolve.input.only_tests = $keep | .impulse.pointer.gap.classification_metadata.red_alone = true')"
     if [ "${FAILTEST_GEN_DRYRUN:-0}" = "1" ]; then log "$v: failing-test generator DRYRUN would file: $p"; else emit_gap "$p"; log "$v: failing-test generator filed $id"; fi
     n=$((n + 1))
   done <<< "$payloads"
