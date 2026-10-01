@@ -226,7 +226,12 @@ fi
 # ── Diagnostics and the verdict ───────────────────────────────────────────────────
 for c in "$HUB_C" "$SPOKE_C"; do
   eng exec "$c" substrate-status --quick >"$RESULT_DIR/diag/status-$c.txt" 2>&1 || true
-  eng exec "$c" sh -c 'journalctl -u federation-transport-vessel --no-pager -n 120' >"$RESULT_DIR/diag/transport-$c.log" 2>&1 || true
+  # Whole-boot logs: a circuit that never forms is decided minutes before the check
+  # gives up, and 120 lines held only the re-dial loop, not its cause. The relay runs
+  # as its own unit on the hub, so its side of a reservation or a refused dial is here too.
+  eng exec "$c" sh -c 'journalctl -b -u federation-transport-vessel --no-pager -n 1500' >"$RESULT_DIR/diag/transport-$c.log" 2>&1 || true
+  eng exec "$c" sh -c 'journalctl -b -u federation-relay --no-pager -n 1500' >"$RESULT_DIR/diag/relay-$c.log" 2>&1 || true
+  eng exec "$c" sh -c 'curl -s -m5 http://127.0.0.1:8401/health' >"$RESULT_DIR/diag/transport-health-$c.json" 2>&1 || true
 done
 for f in "$RESULT_DIR"/diag/*; do [ -f "$f" ] && { t="$(cat "$f")"; redact "$t" >"$f"; }; done
 
