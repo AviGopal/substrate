@@ -183,6 +183,66 @@
       "max": 65,
       "max_ref_age_hours": 6,
       "linked_gap": "discovery-lookup-copies-must-migrate-onto-the-typed-ias-seam"
+    },
+    {
+      "id": "argv_pass_flag_sites",
+      "instrument": "argv_shape_sites",
+      "profiles": [],
+      "edit_site": "scripts/substrate",
+      "reader": "scripts/substrate/substrate-doctor.sh check 2c, at use time from the working tree that holds the doctor (or /workspace/git/super-repo in-container). profiles is empty on purpose: self_fact_reconcile has no argv_shape_sites instrument and must not list these rows.",
+      "super_repo_pathspecs": [
+        ":(glob)scripts/substrate/**/*.sh",
+        ":(glob)scripts/substrate/units/**",
+        ":(glob)scripts/substrate/**/Makefile",
+        ":(glob)scripts/substrate/**/*.ts",
+        ":(exclude,glob)**/*.d.ts",
+        ":(exclude,glob)**/*.test.ts"
+      ],
+      "site_pattern": "(^|[^[:alnum:]_-])--pass(word)?([[:space:]]+|=)[\\\\\"']*\\$",
+      "max": 0,
+      "must_fail": "one added site in a scratch copy of the tree must make 2c FAIL above max; removing one site must report max-1 remaining; comment lines (#, //, *) never count; the doctor holds no copy of site_pattern, so it cannot count itself",
+      "why": "a --pass/--password flag whose value is a shell expansion: the value lands in world-readable /proc/<pid>/cmdline for the life of the process (surreal does not blank it)",
+      "notes": "RATCHET: max is the count at the commit that set it and only ever moves DOWN, by a data commit, as sites migrate to stdin/env (curl -K -, SURREAL_PASS). 2c notes when the count is below max so the ceiling gets lowered."
+    },
+    {
+      "id": "argv_user_colon_sites",
+      "instrument": "argv_shape_sites",
+      "profiles": [],
+      "edit_site": "scripts/substrate",
+      "reader": "scripts/substrate/substrate-doctor.sh check 2c, at use time from the working tree that holds the doctor (or /workspace/git/super-repo in-container). profiles is empty on purpose: self_fact_reconcile has no argv_shape_sites instrument and must not list these rows.",
+      "super_repo_pathspecs": [
+        ":(glob)scripts/substrate/**/*.sh",
+        ":(glob)scripts/substrate/units/**",
+        ":(glob)scripts/substrate/**/Makefile",
+        ":(glob)scripts/substrate/**/*.ts",
+        ":(exclude,glob)**/*.d.ts",
+        ":(exclude,glob)**/*.test.ts"
+      ],
+      "site_pattern": "(^|[^[:alnum:]_-])(-u|--user)([[:space:]]+|=)[\\\\\"']*[^[:space:]]*:[\\\\]?\\$",
+      "max": 0,
+      "must_fail": "one added site in a scratch copy of the tree must make 2c FAIL above max; removing one site must report max-1 remaining; comment lines (#, //, *) never count; the doctor holds no copy of site_pattern, so it cannot count itself",
+      "why": "-u/--user <x>:<expansion>: curl blanks the value after parsing, so it is exposed for a window at every exec",
+      "notes": "RATCHET: max is the count at the commit that set it and only ever moves DOWN, by a data commit, as sites migrate to stdin/env (curl -K -, SURREAL_PASS). 2c notes when the count is below max so the ceiling gets lowered."
+    },
+    {
+      "id": "argv_authz_header_sites",
+      "instrument": "argv_shape_sites",
+      "profiles": [],
+      "edit_site": "scripts/substrate",
+      "reader": "scripts/substrate/substrate-doctor.sh check 2c, at use time from the working tree that holds the doctor (or /workspace/git/super-repo in-container). profiles is empty on purpose: self_fact_reconcile has no argv_shape_sites instrument and must not list these rows.",
+      "super_repo_pathspecs": [
+        ":(glob)scripts/substrate/**/*.sh",
+        ":(glob)scripts/substrate/units/**",
+        ":(glob)scripts/substrate/**/Makefile",
+        ":(glob)scripts/substrate/**/*.ts",
+        ":(exclude,glob)**/*.d.ts",
+        ":(exclude,glob)**/*.test.ts"
+      ],
+      "site_pattern": "(^|[^[:alnum:]_-])(-H|--header)([[:space:]]+|=)[\\\\\"']*[Aa]uthorization:",
+      "max": 41,
+      "must_fail": "one added site in a scratch copy of the tree must make 2c FAIL above max; removing one site must report max-1 remaining; comment lines (#, //, *) never count; the doctor holds no copy of site_pattern, so it cannot count itself",
+      "why": "-H/--header 'Authorization: …': curl never blanks header values, so the credential is in argv for the life of the request",
+      "notes": "RATCHET: max is the count at the commit that set it and only ever moves DOWN, by a data commit, as sites migrate to stdin/env (curl -K -, SURREAL_PASS). 2c notes when the count is below max so the ceiling gets lowered."
     }
   ]
 }

@@ -27,8 +27,10 @@
 set -euo pipefail
 
 set -a; source /etc/substrate/env; set +a
-SQL() { surreal sql --endpoint "$SURREALDB_URL" --username "$SURREALDB_USERNAME" \
-  --password "$SURREALDB_PASSWORD" --namespace "$SURREALDB_NAMESPACE" \
+# Credentials go through the environment (`surreal sql` reads SURREAL_USER /
+# SURREAL_PASS), never --username/--password: argv is world-readable in /proc.
+SQL() { SURREAL_USER="$SURREALDB_USERNAME" SURREAL_PASS="$SURREALDB_PASSWORD" \
+  surreal sql --endpoint "$SURREALDB_URL" --namespace "$SURREALDB_NAMESPACE" \
   --database "$SURREALDB_DATABASE" --pretty --hide-welcome <<<"$1"; }
 
 echo "############ 1. LIVE VIEW SHAPE + INDEXES (fat vs narrow) ############"

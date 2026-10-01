@@ -307,13 +307,22 @@ diagnose() {
 # store (indexed, one row) but has to reach storage, so it degrades WITH the table the
 # vessels are actually blocked on. The two-consecutive-failures rule and the
 # timeout/000/5xx semantics below are unchanged — only the question being asked is.
+# CREDENTIALS RIDE STDIN, NEVER ARGV. `curl -u root:$P` put the DB root password on
+# curl's command line, which /proc/<pid>/cmdline exposes to every process (and `ps` on
+# the host). curl blanks the -u value once it has parsed it, so the exposure is a
+# window at every exec rather than permanent — but this probe execs twice per tick.
+# `printf` is a shell builtin (no argv of its own), and `curl -K -` reads
+# the `user = root:<pass>` line from its stdin config. The value is left unquoted in
+# the config on purpose: curl takes an unquoted value literally up to whitespace, so a
+# backslash or quote in a provided password needs no escaping (a password containing
+# whitespace would need the quoted form; the generated one is hex).
 db_under_pressure() {
   local i out
   for i in 1 2; do
     out=$(csh "P=\$(grep -m1 '^SURREALDB_PASSWORD=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); \
 NS=\$(grep -m1 '^SURREALDB_NAMESPACE=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); \
 DB=\$(grep -m1 '^SURREALDB_DATABASE=' /etc/substrate/env | cut -d= -f2- | tr -d '\"'); \
-curl -s -o /dev/null -w '%{http_code} %{time_total}' --max-time $DB_PROBE_TIMEOUT -u \"root:\$P\" \
+printf 'user = root:%s\\n' \"\$P\" | curl -s -K - -o /dev/null -w '%{http_code} %{time_total}' --max-time $DB_PROBE_TIMEOUT \
   -X POST $SURREAL_URL/sql -H 'Accept: application/json' \
   -H \"surreal-ns: \${NS:-activity-system}\" -H \"surreal-db: \${DB:-learning_loop}\" \
   -d 'SELECT VALUE execution_id FROM execution LIMIT 1;' 2>/dev/null" 2>/dev/null)

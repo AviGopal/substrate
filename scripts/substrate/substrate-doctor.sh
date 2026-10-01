@@ -134,7 +134,7 @@ if masked surrealdb.service; then
     else
       SURREAL_URL="$(csh 'grep -m1 "^SURREALDB_URL=" /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d "\""' 2>/dev/null || true)"
       [ -n "$SURREAL_URL" ] || SURREAL_URL="http://127.0.0.1:8000"
-      STORE_PROBE="$(csh 'P=$(grep -m1 "^SURREALDB_PASSWORD=" /etc/substrate/env | cut -d= -f2- | tr -d "\""); U=$(grep -m1 "^SURREALDB_URL=" /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d "\""); curl -s -m 5 -u "root:$P" -X POST "${U:-http://127.0.0.1:8000}/sql" -H "Accept: application/json" -H "surreal-ns: activity-system" -H "surreal-db: learning_loop" -d "RETURN 1;"' 2>/dev/null || true)"
+      STORE_PROBE="$(csh 'P=$(grep -m1 "^SURREALDB_PASSWORD=" /etc/substrate/env | cut -d= -f2- | tr -d "\""); U=$(grep -m1 "^SURREALDB_URL=" /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d "\""); printf "user = root:%s\n" "$P" | curl -s -m 5 -K - -X POST "${U:-http://127.0.0.1:8000}/sql" -H "Accept: application/json" -H "surreal-ns: activity-system" -H "surreal-db: learning_loop" -d "RETURN 1;"' 2>/dev/null || true)"
       if echo "$STORE_PROBE" | grep -q '"OK"'; then
         ok "store masked locally but the resolved SURREALDB_URL ($SURREAL_URL) answers — remote-store topology"
       else
@@ -144,7 +144,7 @@ if masked surrealdb.service; then
     fi
   fi
 else
-SURREAL_CHECK="$(csh 'P=$(grep -m1 "^SURREALDB_PASSWORD=" /etc/substrate/env | cut -d= -f2- | tr -d "\""); curl -s -m 5 -u "root:$P" -X POST http://127.0.0.1:8000/sql -H "Accept: application/json" -H "surreal-ns: activity-system" -H "surreal-db: learning_loop" -d "RETURN 1;"' 2>/dev/null || true)"
+SURREAL_CHECK="$(csh 'P=$(grep -m1 "^SURREALDB_PASSWORD=" /etc/substrate/env | cut -d= -f2- | tr -d "\""); printf "user = root:%s\n" "$P" | curl -s -m 5 -K - -X POST http://127.0.0.1:8000/sql -H "Accept: application/json" -H "surreal-ns: activity-system" -H "surreal-db: learning_loop" -d "RETURN 1;"' 2>/dev/null || true)"
 if echo "$SURREAL_CHECK" | grep -q '"OK"'; then
   ok "surrealdb root credentials valid"
 else
@@ -159,6 +159,192 @@ else
     note "the datastore directory is empty — this is a first boot, not a recreate against warm state"
   fi
 fi
+fi
+
+echo "== 2b. no credential on any command line =="
+# /proc/<pid>/cmdline is world-readable: a secret passed as a flag is readable by every
+# process in the container and by `ps` on the host. surrealdb.service carried the DB
+# root password as a flag for months, and probes passed it to curl as user:password.
+# This check matches argv by SHAPE, never by value, so it reads no secret, and it prints
+# only shape names, counts, PIDs and comm names — never argv.
+#   pass  : an argument equal to the pass/password long flag, or that flag with `=…`
+#   user  : the -u/--user flag followed by an argument containing ':' (or joined: -ux:y, --user=x:y)
+#   authz : the -H/--header flag followed by an Authorization header (or joined)
+# Severity: pass and user FAIL on any count. authz is reported as a count only: a curl
+# -H request lives for milliseconds, so a sample of it cannot gate anything — the
+# static ratchet in 2c is where authz sites are held to a ceiling.
+# NO SELF-COUNT, by construction: every flag literal is assembled inside awk from
+# fragments ("-" "-pa" "ss"), so no argument of the scanner — the awk program, the sh -c
+# body — contains a contiguous flag; and matching is whole-argument, anchored at the
+# argument's first byte, while each of those arguments begins with code, not a dash.
+# POSITIVE CONTROL: the scan plants a short-lived process whose argv carries the bind
+# flag (surreal's own counts too). If the control is not seen the scan read nothing —
+# /proc empty or unreadable, or the matcher broken — and the verdict is BLIND, never
+# PASS. $1 overrides the proc root (scratch tests only).
+ARGV_SCAN="$(cat <<'SCAN'
+R="${1:-/proc}"
+C="$(printf '%s%s' '--bi' 'nd')"
+sh -c 'sleep 15; :' argv-scan-control "$C" >/dev/null 2>&1 &
+CP=$!
+sleep 0.5
+for f in "$R"/[0-9]*/cmdline; do
+  [ -r "$f" ] || continue
+  d="${f%/cmdline}"
+  printf '\001%s\n' "${d##*/}"
+  tr '\000' '\n' < "$f" 2>/dev/null
+  echo
+done | awk '
+  BEGIN {
+    BIND = "-" "-bi" "nd"; PASS = "-" "-pa" "ss"; PASSW = PASS "word"
+    U = "-" "u"; USER = "-" "-us" "er"; H = "-" "H"; HDR = "-" "-hea" "der"; AUTHZ = "author" "ization:"
+  }
+  function hit(s,  k) { k = s SUBSEP pid; if (!(k in seen)) { seen[k] = 1; n[s]++; ids[s] = ids[s] " " pid } }
+  function starts(x, p) { return index(x, p) == 1 }
+  /^\001/ { pid = substr($0, 2); prev = ""; scanned++; next }
+  {
+    a = $0; la = tolower(a)
+    if (a == BIND || starts(a, BIND "=")) hit("control")
+    if (a == PASS || a == PASSW || starts(a, PASS "=") || starts(a, PASSW "=")) hit("pass")
+    if ((prev == U || prev == USER) && index(a, ":") > 0) hit("user")
+    if (starts(a, USER "=") && index(substr(a, length(USER) + 2), ":") > 0) hit("user")
+    if (starts(a, U) && length(a) > 2 && substr(a, 3, 1) != "-" && index(a, ":") > 0) hit("user")
+    if ((prev == H || prev == HDR) && index(la, AUTHZ) > 0) hit("authz")
+    if ((starts(a, HDR "=") || (starts(a, H) && length(a) > 2)) && index(la, AUTHZ) > 0) hit("authz")
+    prev = a
+  }
+  END {
+    printf "scanned %d\n", scanned + 0
+    split("control pass user authz", S, " ")
+    for (i = 1; i <= 4; i++) printf "%s %d%s\n", S[i], n[S[i]] + 0, ids[S[i]]
+  }' | while read -r shape count pids; do
+  out="$shape $count"
+  for p in $pids; do
+    c="$(tr -cd 'A-Za-z0-9._:-' < "$R/$p/comm" 2>/dev/null)"
+    out="$out $p(${c:-?})"
+  done
+  echo "$out"
+done
+kill "$CP" 2>/dev/null
+# PENDING-RESTART EVIDENCE for surrealdb (read here, in the container, where systemd is).
+# The unit fix lands by convergence, but the running surreal keeps its old argv until
+# its next restart. Emit: MainPID, its wall-clock start, the installed unit file's
+# mtime, and whether that file still carries the pass flag. Start time comes from
+# /proc/<pid>/stat field 22 (ticks since boot) + /proc/stat btime: it is anchored to
+# the PID we matched, integer-only, and needs no date parsing (ExecMainStart* is
+# systemd's record of the start, which is not necessarily the PID in hand).
+# $2/$3 override the PID and the unit path (scratch tests only).
+SP="${2:-$(systemctl show -p MainPID --value surrealdb 2>/dev/null)}"
+FP="${3:-$(systemctl show -p FragmentPath --value surrealdb 2>/dev/null)}"
+ST=""; MT=""; UF=""
+case "$SP" in ''|0|*[!0-9]*) SP="" ;; esac
+if [ -n "$SP" ] && [ -r "$R/$SP/stat" ] && [ -r "$R/stat" ]; then
+  _rest="$(sed 's/^.*) //' "$R/$SP/stat" 2>/dev/null)"
+  _tk="$(printf '%s\n' "$_rest" | awk '{ print $20 }')"
+  _bt="$(awk '$1 == "btime" { print $2 }' "$R/stat")"
+  _hz="$(getconf CLK_TCK 2>/dev/null || echo 100)"
+  case "$_tk$_bt$_hz" in ''|*[!0-9]*) ;; *) ST=$(( _bt + _tk / _hz )) ;; esac
+fi
+if [ -n "$FP" ] && [ -f "$FP" ]; then
+  MT="$(stat -c %Y "$FP" 2>/dev/null)"
+  _pf="$(printf '%s%s' '--pa' 'ss')"
+  # fixed = no non-comment line of the installed unit carries the flag
+  if grep -v '^[[:space:]]*#' "$FP" 2>/dev/null | grep -q -e "$_pf"; then UF=0; else UF=1; fi
+fi
+echo "surreal ${SP:--} ${ST:--} ${MT:--} ${UF:--}"
+SCAN
+)"
+ARGV_OUT="$(csh "$ARGV_SCAN" 2>/dev/null || true)"
+_argv() { printf '%s\n' "$ARGV_OUT" | awk -v s="$1" '$1==s { $1=""; sub(/^ /, ""); print; exit }'; }
+_argv_n() { _v="$(_argv "$1")"; _v="${_v%% *}"; case "$_v" in ''|*[!0-9]*) echo 0 ;; *) echo "$_v" ;; esac; }
+ARGV_CTL="$(_argv_n control)"; ARGV_SCANNED="$(_argv_n scanned)"
+if [ "$ARGV_CTL" -lt 1 ]; then
+  bad "BLIND — the positive control matched no process (scanned $ARGV_SCANNED); the argv scan read nothing, so its zeros are not a pass"
+else
+  ARGV_HITS=0; _hit_pids=""
+  for _s in pass user; do
+    _n="$(_argv_n "$_s")"
+    if [ "$_n" -gt 0 ]; then
+      ARGV_HITS=1
+      _ids="$(_argv "$_s")"; _ids="${_ids#* }"
+      for _t in $_ids; do _hit_pids="$_hit_pids ${_t%%(*}"; done
+    fi
+  done
+  # PENDING RESTART: the ONLY pass/user carrier is surrealdb's MainPID, that process
+  # started before the installed unit file was written, and the installed unit no longer
+  # carries the flag outside comments — i.e. the fix has landed and only the restart
+  # (deferred to the rotation window) is owed. Still a FAIL, but labelled, so a known
+  # owed restart does not read like a new leak. Anything else is a plain FAIL.
+  read -r _sp _st _mt _uf <<< "$(_argv surreal)"
+  _uniq="$(printf '%s\n' $_hit_pids | sort -u | tr '\n' ' ')"; _uniq="${_uniq% }"
+  ARGV_PENDING=0
+  case "$_sp$_st$_mt" in
+    ''|*[!0-9]*) ;;
+    *) [ "$_uniq" = "$_sp" ] && [ "$_uf" = 1 ] && [ "$_st" -lt "$_mt" ] && ARGV_PENDING=1 ;;
+  esac
+  if [ "$ARGV_PENDING" = 1 ]; then
+    bad "(pending restart: unit fixed, process predates it) surrealdb MainPID $_sp is the only credential-flag carrier; it started at epoch $_st, before the installed unit was written at $_mt — clears at the next surrealdb restart"
+  else
+    for _s in pass user; do
+      _n="$(_argv_n "$_s")"
+      [ "$_n" -gt 0 ] || continue
+      _ids="$(_argv "$_s")"; _ids="${_ids#* }"
+      case "$_s" in
+        pass) bad "$_n process(es) carry a pass/password flag in argv: $_ids" ;;
+        user) bad "$_n process(es) carry -u/--user <x>:<y> in argv: $_ids" ;;
+      esac
+    done
+  fi
+  _n="$(_argv_n authz)"
+  if [ "$_n" -gt 0 ]; then _ids="$(_argv authz)"; note "authz (count only, not a gate): $_n process(es) carried an Authorization header in argv at sample time: ${_ids#* }"
+  else note "authz (count only, not a gate): 0 at sample time"; fi
+  if [ "$ARGV_HITS" = 1 ] && [ "$ARGV_PENDING" = 1 ]; then
+    note "owed: one surrealdb restart (the rotation window); no code change is needed"
+  elif [ "$ARGV_HITS" = 1 ]; then
+    note "pass credentials through the environment (SURREAL_PASS) or stdin (curl -K -), never a flag"
+  else
+    ok "no pass/user credential flag on any command line (scanned $ARGV_SCANNED, control $ARGV_CTL)"
+  fi
+fi
+
+echo "== 2c. credential-in-argv sites in source (ratchet) =="
+# The runtime sample in 2b sees only what is running at that instant; the source is
+# where every future carrier comes from. Each `argv_shape_sites` row in
+# scripts/substrate/self-facts.json names a shape (site_pattern, an ERE), the paths it
+# covers (super_repo_pathspecs) and a ceiling (max) — the same ratchet Row B
+# (typed_seam_sites) uses. max only moves DOWN, by a data commit, as sites migrate to
+# env/stdin; above it is a FAIL, below it is a note to lower it. Comment lines never
+# count. The doctor holds no copy of any site_pattern (they live in the JSON, which no
+# pathspec covers), so this check cannot count itself.
+SRC_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || true)"
+[ -n "$SRC_ROOT" ] && [ -f "$SRC_ROOT/scripts/substrate/self-facts.json" ] || SRC_ROOT=""
+if [ -z "$SRC_ROOT" ] && [ "$IN_CONTAINER" = 1 ] && [ -f /workspace/git/super-repo/scripts/substrate/self-facts.json ]; then
+  SRC_ROOT=/workspace/git/super-repo
+fi
+SITE_ROWS=""
+[ -n "$SRC_ROOT" ] && SITE_ROWS="$(jq -r '.rows[] | select(.instrument == "argv_shape_sites") | .id' "$SRC_ROOT/scripts/substrate/self-facts.json" 2>/dev/null || true)"
+if [ -z "$SITE_ROWS" ]; then
+  bad "UNOBSERVED — no source tree with argv_shape_sites rows in self-facts.json (looked at ${SRC_ROOT:-the checkout holding this doctor, and /workspace/git/super-repo}); the ratchet did not run"
+else
+  for _id in $SITE_ROWS; do
+    _row="$(jq -c --arg id "$_id" '.rows[] | select(.id == $id)' "$SRC_ROOT/scripts/substrate/self-facts.json")"
+    _pat="$(printf '%s' "$_row" | jq -r '.site_pattern // empty')"
+    _max="$(printf '%s' "$_row" | jq -r '.max // empty')"
+    _specs=(); while IFS= read -r _sp; do _specs+=("$_sp"); done < <(printf '%s' "$_row" | jq -r '.super_repo_pathspecs[]?')
+    case "$_max" in ''|*[!0-9]*) bad "$_id: no numeric max in its row — the ratchet cannot be read"; continue ;; esac
+    if [ -z "$_pat" ] || [ "${#_specs[@]}" = 0 ]; then bad "$_id: row has no site_pattern or pathspecs"; continue; fi
+    _gout="$(git -C "$SRC_ROOT" grep -nE -e "$_pat" -- "${_specs[@]}" 2>&1)"; _grc=$?
+    if [ "$_grc" -gt 1 ]; then bad "$_id: git grep failed (rc $_grc) — not a count"; continue; fi
+    _sites="$(printf '%s\n' "$_gout" | awk 'NF { l = $0; sub(/^[^:]*:[0-9]+:/, "", l); if (l ~ /^[[:space:]]*(#|\/\/|\*)/) next; print }')"
+    _cnt="$(printf '%s' "$_sites" | grep -c .)"
+    if [ "$_cnt" -gt "$_max" ]; then
+      bad "$_id: $_cnt site(s), above the ceiling of $_max — a new credential-in-argv site was added"
+      note "sites: $(printf '%s\n' "$_sites" | cut -d: -f1,2 | tr '\n' ' ')"
+    elif [ "$_cnt" -lt "$_max" ]; then
+      ok "$_id: $_cnt remaining (ceiling $_max) — lower max to $_cnt in self-facts.json"
+    else
+      ok "$_id: $_cnt remaining (ceiling $_max)"
+    fi
+  done
 fi
 
 echo "== 3. seeded API key =="

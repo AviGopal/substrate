@@ -58,10 +58,21 @@ Environment=SURREAL_ROCKSDB_BLOCK_CACHE_SIZE=4294967296
 MemoryAccounting=yes
 MemoryHigh=22G
 MemoryMax=26G
+# ROOT CREDENTIALS COME FROM THE ENVIRONMENT, NEVER FROM ARGV.
+# `--pass ${SURREAL_PASS}` put the live root password into /proc/<pid>/cmdline, which
+# every process in the container (and `ps` on the host) can read. `surreal start` reads
+# the same two settings from SURREAL_USER / SURREAL_PASS (`surreal start --help`,
+# 2.3.3: "[env: SURREAL_PASS=]"), and /proc/<pid>/environ is readable only by the
+# process owner. SURREAL_PASS arrives through EnvironmentFile= above; SURREAL_USER is
+# set here because /etc/substrate/env does not carry it (if it ever does, the
+# EnvironmentFile value wins, which is fine as long as it is still root).
+# Both apply ONLY when the datastore has no root user yet: on a warm data.db the stored
+# root user governs auth, so this change cannot alter who can log in.
+# Post-deploy must-fail check (prints a count only): `grep -c -- --pass
+# /proc/$(systemctl show -p MainPID --value surrealdb)/cmdline` must print 0.
+Environment=SURREAL_USER=root
 ExecStart=/usr/local/bin/surreal start \
     --bind 127.0.0.1:8000 \
-    --user root \
-    --pass ${SURREAL_PASS} \
     --log info \
     file:/var/lib/surrealdb/data.db
 Restart=on-failure
