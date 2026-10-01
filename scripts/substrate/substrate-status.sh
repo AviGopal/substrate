@@ -428,9 +428,19 @@ eval_live() {
   # with its job count, so a host limit such as an exhausted inotify budget shows up
   # as a stuck boot rather than as a healthy fleet.
   local sys_state; sys_state="$(systemctl is-system-running 2>/dev/null || true)"
+  # A boot that is still moving (jobs running) only holds the level back until the core
+  # units are up: on a large hub the one-shot boot jobs (pull-sync convergence, metrics
+  # refreshes) keep systemd "starting" for well over the --wait bound while every core
+  # vessel already serves. A boot with jobs queued and none running is stuck, and fails.
+  local boot_note="" jobs_q jobs_r
   case "$sys_state" in
     initializing|starting)
-      V=fail; E="systemd is still $sys_state ($(systemctl list-jobs --no-legend 2>/dev/null | wc -l | tr -d ' ') job(s) queued, $(systemctl list-jobs --no-legend 2>/dev/null | awk '$4=="running"' | wc -l | tr -d ' ') running)"; return ;;
+      jobs_q="$(systemctl list-jobs --no-legend 2>/dev/null | wc -l | tr -d ' ')"
+      jobs_r="$(systemctl list-jobs --no-legend 2>/dev/null | awk '$4=="running"' | wc -l | tr -d ' ')"
+      if [ "${jobs_r:-0}" -eq 0 ] || [ "$sys_state" = initializing ]; then
+        V=fail; E="systemd is still $sys_state ($jobs_q job(s) queued, $jobs_r running)"; return
+      fi
+      boot_note=" (boot still finishing: $jobs_r one-shot job(s) running)" ;;
   esac
   run_ready
   if ! printf '%s' "$READY_JSON" | jq -e '.vessels' >/dev/null 2>&1; then
@@ -467,7 +477,7 @@ eval_live() {
   if [ -n "$down" ]; then
     V=fail; E="$scope not serving:$down"
   else
-    V=pass; E="every selected $scope active ($window)"
+    V=pass; E="every selected $scope active ($window)$boot_note"
   fi
 }
 
