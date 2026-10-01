@@ -102,6 +102,23 @@
           "zero_field": "requested_not_passing"
         }
       }
+    },
+    {
+      "id": "retry_evidence",
+      "instrument": "retry_evidence",
+      "profiles": [
+        "standalone",
+        "hub"
+      ],
+      "edit_site": "repos/development-vessel/src/resolvers/feature-compose.ts",
+      "must_fail": "canary: a planted gap with an overlapping retry, a stage-contradicting class and an unescalated repeat refusal, plus a planted source with one unbranched checkOpNoEffect call, must all be measured; controls every run: noEffectOverlapRefusal must refuse a planted retry re-editing a no-effect span (else enforcement-not-refusing) and allow a disjoint one (else enforcement-over-refusing); fewer than min_sites branched checkOpNoEffect call sites at origin/dev is divergence gate-call-sites; retries past apply with no recorded spans make the row UNOBSERVED; a planted journaled refusal with no stored record must be measured (canary), and journaled refusals exceeding stored refusals for an unsaturated gap is divergence refusals-not-recorded",
+      "window_hours": 24,
+      "repo": "development-vessel",
+      "site_file": "src/resolvers/feature-compose.ts",
+      "min_sites": 4,
+      "journal_unit": "development-vessel",
+      "journal_grace_minutes": 30,
+      "notes": "FOLLOW-UP: once intervention 1 lands, fold this row's git-show call-site count into I1's countSites and gate it on refAgeHours (a stale origin/dev must read unobserved, never as a count). The journal cross-check reads only this node's development-vessel journal; node 2 (compute) composes are not cross-checked unless the row is also scoped to compute."
     }
   ]
 }
