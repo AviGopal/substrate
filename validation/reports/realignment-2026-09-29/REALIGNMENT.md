@@ -16,6 +16,8 @@
 
 **The P0 warning applies to this document.** CANON.md:11 says the canon is "restatement number eight" unless its §5 is done. This document inherits that condition. Its predecessors include the seven realignments counted in `dossiers/docs-drift.md`, the 08-08 nine-agent audit, the four multi-agent audits of 08-16..08-22, the 09-22 docs-self-management assessment, WHY-THINGS-KEEP-BREAKING and MECHANISM-AUDIT. Earlier attempts to turn rulings into machine-read rows also failed: `FOUNDATION_COMPLIANCE_CHECKS.md` (20 FC + 7 CC checks, 0 code hits) and the `doc_expectation` concept ingestion (1,991 rows, no reader) (`classes/docs-drift.json`). A realignment held only in prose is a claim, not state (K5).
 
+> **Amended 2026-10-01:** see §9 (security findings and the hardcoding census). §9.0 is a new precondition on §2.4 and on any seam that makes an address resolvable or a behaviour writable.
+
 ### Review disposition (09-29 revision)
 
 R1 = history lens, R2 = architecture lens, R3 = evidence lens. "Fixed" means the text changed. "Rebutted" means the text stands, with the reason given.
@@ -776,3 +778,59 @@ The outline follows law 3 as it applies to specs. It **amends existing openspec 
 - the row generator existing.
 
 If none of the three is built, this file joins the previous seven as an archive, and the next synthesis should count it as restatement number nine.
+
+## 9. Amendments (2026-10-01): security findings and the hardcoding census
+
+Sources: the hardcoding census and approach (`validation/reports/realignment-2026-09-29/hardcoding/`, super-repo `7c4d860d`); qa's audit of it; and the 10-01 security findings, filed as gaps:
+- `development-vessel-resolve-route-is-unauthenticated-so-anyone-reachable-can-write-our-policy`
+- `local-policy-reads-span-federated-peers-so-an-unresponsive-peer-substrate-halts-the-lane`
+- `substrate-local-shapes-must-resolve-only-to-own-substrate-producers`
+- `activity-api-accepts-unsigned-minibob-bearer-tokens`
+- `human-ask-route-reads-span-federated-peers-so-a-peer-can-redirect-human-asks`
+
+### 9.0 New precondition: addressability follows locality and authentication
+No seam that makes an address resolvable or a behaviour writable lands before two things are enforced:
+1. **The shape's locality.** A substrate-local shape resolves only to own-substrate producers, using a positive allowlist stamped by discovery on receive.
+2. **The route's caller authentication.** Every vessel resolve/write route validates against identity.
+
+The reason, measured on 10-01:
+- Only discovery and activity-api authenticate. activity-api also accepts an unsigned bearer.
+- Producer ports are host-published on all interfaces, including a global IPv6 address.
+- Node 2's federation ingress proxies any shape from any overlay dialer.
+- Discovery fan-out returns foreign producers for local shapes, and policy reads take the newest record across them.
+
+So making more things "resolve by shape" or "writable as a shape" before this converts fixed pins, which at least pointed at our own node, into injection paths. The per-shape trust-root gate on policy writes stays as defence in depth after route auth lands.
+
+### 9.1 §2.4 correction: the address seam is the typed lookup
+- The seam is the ias-executor-ts typed discovery lookup (`HttpDiscoveryAdapter.lookup()`, `4719cb4`), extended with origin/origin_upstream provenance. It is not `packages/vessel-discovery-client`, whose `discoverByShape` returns `found:false` on a query error. That makes an unreadable lookup look like an absent producer.
+- §2.4 must also count three pin sources that weren't listed:
+  - the seed templates and prompts that teach `127.0.0.1:8xxx`;
+  - the env-default disguise, `process.env.X ?? "http://127.0.0.1:<port>"`, including four endpoint vars set nowhere, so their literal always wins;
+  - self-address pins.
+- The A-class migration (~254 sites) depends on §9.0. The seam must carry the locality property before any site migrates.
+
+### 9.2 §2.2 addition: abstain on a truncated view or a max_tokens stop, with a counterweight
+- A verdict computed on a truncated input, or from a generation that stopped at max_tokens, is an abstain, not HOLLOW, and carries no β. The abstain is computed in code from the cut record (`cuts[]`, `stop_reason`) before the judge is called, not in prompt text. The label carries the cut.
+- Counterweight: abstention can't become an escape hatch. The same §2.1 row checks the abstain rate per family, and a family that abstains in more than a set share of its runs is a divergence. This is the same lesson as verified deferrals: a family that always overflows its budget would otherwise never be graded.
+- Related: a deferral to a concurrent lease holder is ungraded only when the lease store confirms the other holder. A family's self-report doesn't count.
+
+### 9.3 §2.1: three planned evaluator rows, each with a must-fail control
+1. A content-budget check: decision paths may not silently truncate.
+2. A port-pin lint, which counts new `127.0.0.1:<port>` / env-default pins against a ceiling.
+3. A widened env-gate scan. The current `env_gate_scan` exempts inline-default reads, which is exactly the law-1 set, and its `GUARD_RE` is corrupted.
+
+### 9.4 §4: the human-surface-stack acceptance item 5 is unmet
+stateful-ui is still live (805 panels) and was still being written to on 10-01. Its retirement is a user decision.
+
+### 9.5 Order of the hardcoding work
+- **Step 0, first: stop the generators.** Three small edits stop new pins from being produced:
+  - surgical-gap-scan's prescription of the env-default pin;
+  - the seed templates that teach pins;
+  - the topology hint that teaches the `obsidian:write_note` fallback.
+  Every day they run, the A/D inventories grow.
+- **Then C** (judge and human view, per §9.2).
+- **D: delivery by origin is HELD.** It needs re-specifying with an origin derived from the authenticated caller identity and a target constrained to own-substrate surfaces. A caller-asserted origin is the human-ask-route injection again.
+- **Then A, after §9.0.**
+- **Then B, last.** Explicit precondition: route auth plus trust-root gating of `tuningParam_write`, with an authority rule (operator or a named learner identity).
+- Early small fix: the trace-store reconcile should stop at a margin below its cap (hysteresis, as a policy, not a constant). Today it parks at the cap, re-crosses within minutes, and dispatches reconcile into lease contention.
+
