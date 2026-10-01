@@ -645,8 +645,11 @@ eval_usable() {
 # request; with the flat form only, a different key first means `unknown`.
 #
 # The marker lives on the volume, so one written by an earlier container survives
-# a recreate: it counts only when its process started no earlier than the running
-# activity-api did.
+# a recreate: it counts only when it was written during this container's life (since
+# systemd started). It used to be compared with activity-api's own start, which made
+# every routine restart of activity-api (pull-sync converging new code, self-recovery)
+# erase the evidence that a client had connected: an install run whose cockpit call
+# landed seconds before a convergence restart read `unknown`.
 to_epoch() { [ -n "$1" ] && date -d "$1" +%s 2>/dev/null || true; }
 eval_connected() {
   local f="${SUBSTRATE_INSTALL_DIR:-/workspace/.install}/connected.json" rec first remote kid started enter_s started_s
@@ -667,12 +670,13 @@ eval_connected() {
   remote="$(printf '%s' "$rec" | jq -r '.remote // "?"' 2>/dev/null)"; kid="$(printf '%s' "$rec" | jq -r '.key_id // empty' 2>/dev/null)"
   started="$(printf '%s' "$rec" | jq -r '.process_started_at // empty' 2>/dev/null || true)"
   [ -n "$started" ] || started="$(jq -r '.process_started_at // empty' "$f" 2>/dev/null || true)"
-  enter_s="$(to_epoch "$(unit_prop activity-api.service ActiveEnterTimestamp)")"
-  started_s="$(to_epoch "${started:-$first}")"
+  enter_s="$(to_epoch "$(systemctl show -p UserspaceTimestamp --value 2>/dev/null)")"
+  [ -n "$enter_s" ] || enter_s="$(to_epoch "$(unit_prop activity-api.service ActiveEnterTimestamp)")"
+  started_s="$(to_epoch "${first:-$started}")"
   # A few seconds of slack: systemd stamps the unit active before bun has taken
   # its own start time, never after.
   if [ -n "$enter_s" ] && [ -n "$started_s" ] && [ "$started_s" -lt $((enter_s - 5)) ]; then
-    V=unknown; E="the only recorded connection ($first from $remote) is a marker from an earlier boot; none observed since activity-api started — make one cockpit call"
+    V=unknown; E="the only recorded connection ($first from $remote) is a marker from an earlier container; none observed since this one started — make one cockpit call"
     return
   fi
   if [ -n "$kid" ] && [ -n "${KEY_ID:-}" ] && [ "$kid" != "$KEY_ID" ]; then
