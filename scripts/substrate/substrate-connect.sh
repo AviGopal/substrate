@@ -62,12 +62,12 @@ if printf '%s' "$VERDICT" | jq -e '.launched_by_manifest == false' >/dev/null 2>
 fi
 
 if [ "$(systemctl is-active activity-api.service 2>/dev/null || true)" = "active" ]; then
-  ENDPOINT="http://localhost:${HOST_PORT}"
+  ENDPOINT="http://127.0.0.1:${HOST_PORT}"
 else
   ENDPOINT="$(envval ACTIVITY_API_ENDPOINT)"
   case "$ENDPOINT" in
     ""|*://127.0.0.1*|*://localhost*)
-      ENDPOINT="http://localhost:${HOST_PORT}"
+      ENDPOINT="http://127.0.0.1:${HOST_PORT}"
       echo "[connect] WARNING: this fleet runs no trace store and resolves against none a client can reach; the endpoint below will not answer until one is published" >&2 ;;
     *)
       echo "[connect] this fleet runs no trace store of its own; the client is pointed at the one it resolves against: $ENDPOINT" >&2 ;;

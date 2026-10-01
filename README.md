@@ -300,7 +300,8 @@ reachable on rootless Podman, and the join is refused at boot ("derived IDENTITY
 `PUBLIC_IP` can still be the host's LAN address: the relay is dialled by the spoke's
 transport, which reaches it. Give each fleet its own `--name` and `--prefix` (sequence E).
 The client config the spoke writes then names `host.containers.internal`, which the host
-itself does not resolve; point the cockpit at `http://localhost:<hub prefix>080` instead.
+itself does not resolve; point the cockpit at `http://127.0.0.1:<hub prefix>080` instead
+(not `localhost`: rootless Podman publishes on IPv4 only, and `localhost` tries `::1` first).
 
 What joining means, and how to tell it happened:
 
