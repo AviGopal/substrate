@@ -385,7 +385,7 @@ for _n in ANTHROPIC_API_KEY OPENAI_API_KEY OPENAI_BASE_URL GOOGLE_API_KEY GROQ_A
           VLLM_BASE_URL VLLM_MODELS VLLM_API_KEY VLLM_ENDPOINTS \
           METABOB_API_KEY API_KEY_SECRET SURREAL_PASS JWT_SECRET SUBSTRATE_GIT_PAT \
           DISCOVERY_ENDPOINT HUB_DISCOVERY_URL ACTIVITY_API_ENDPOINT IDENTITY_VESSEL_URL \
-          FED_SUBSTRATE_ID RELAY_MULTIADDR PEER_MULTIADDR PEER_DISCOVERY_ENDPOINTS PUBLIC_IP \
+          FED_SUBSTRATE_ID RELAY_MULTIADDR PEER_MULTIADDR PEER_DISCOVERY_ENDPOINTS PEER_CREDENTIALS PUBLIC_IP \
           FED_EXTRA_SHAPE \
           ENABLED_ROLES ENABLED_VESSELS DISABLED_VESSELS ENABLED_EXTRA_VESSELS PROFILE \
           LLM_ARMS LLM_DEFAULT_MODEL MITOSIS_DIRECT_PUSH \
@@ -970,6 +970,11 @@ RELAY_MULTIADDR="${RELAY_MULTIADDR:-}"
 # re-pointing DISCOVERY_ENDPOINT at a new hub is never shadowed by a stale pin).
 PEER_DISCOVERY_ENDPOINTS_EXPLICIT="${PEER_DISCOVERY_ENDPOINTS:-$(persisted_secret PEER_DISCOVERY_ENDPOINTS)}"
 PEER_DISCOVERY_ENDPOINTS="${PEER_DISCOVERY_ENDPOINTS_EXPLICIT:-${HUB_DISCOVERY_URL}}"
+# Per-peer credential map for discovery forwarding (discovery-vessel peer-credentials.ts):
+# comma list of <peer origin>=<NAME of an env var holding that peer's key>. Names only, never
+# values; the keys are *_API_KEY vars persisted like every other key. Operator-explicit, so it
+# round-trips as given and is empty by default (no mapping = today's single-credential fallback).
+PEER_CREDENTIALS="${PEER_CREDENTIALS:-$(persisted_secret PEER_CREDENTIALS)}"
 PEER_FANOUT_MODE="${PEER_FANOUT_MODE:-union}"
 # Peering settings deploy-remote.sh appends to /etc/substrate/env AFTER boot, to
 # turn on discovery fan-out against a peer substrate. This file writes that env
@@ -1324,6 +1329,7 @@ RELAY_MULTIADDR="${RELAY_MULTIADDR}"
 PEER_MULTIADDR="${PEER_MULTIADDR:-}"
 FED_EXTRA_SHAPE="${FED_EXTRA_SHAPE:-}"
 PEER_DISCOVERY_ENDPOINTS="${PEER_DISCOVERY_ENDPOINTS}"
+PEER_CREDENTIALS="${PEER_CREDENTIALS}"
 PEER_FANOUT_MODE="${PEER_FANOUT_MODE}"
 
 # Dense search (F-V58 fix — must point to directory containing model.onnx + vocab.txt)
@@ -1648,6 +1654,8 @@ VLLM_ENDPOINTS=${VLLM_ENDPOINTS:-}
 # Operator-explicit discovery peer list (hub-side resolve fan-out). Only the
 # explicit value round-trips; a hub-derived spoke default is re-derived each run.
 PEER_DISCOVERY_ENDPOINTS=${PEER_DISCOVERY_ENDPOINTS_EXPLICIT:-}
+# Per-peer credential map (names only, operator-explicit).
+PEER_CREDENTIALS=${PEER_CREDENTIALS:-}
 # Peer-federation settings applied post-boot by deploy-remote.sh. Persisted so
 # they survive the truncating rewrite of /etc/substrate/env on the next boot.
 # Note the 2026-08-08 incident recorded above: these two names were in an OLDER
