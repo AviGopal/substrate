@@ -452,13 +452,20 @@ eval_live() {
     s="$(row_status "$u")"
     if [ "$s" = "down" ]; then
       n="$(unit_prop "$u" NRestarts)"
-      down="$down $u($(systemctl is-active "$u" 2>/dev/null || true), NRestarts=${n:-?})"
+      a="$(systemctl is-active "$u" 2>/dev/null || true)"
+      # substrate-ready also calls a unit down when it runs but its health check does
+      # not answer in time. Say which, so a stalled vessel is not chased as a crash.
+      if [ "$a" = active ] && [ "${n:-0}" = 0 ]; then
+        down="$down $u(running, health check not answering)"
+      else
+        down="$down $u($a, NRestarts=${n:-?})"
+      fi
     fi
   done <<<"$units"
   local window="restart counts watched over ${READY_LOOP_WINDOW:-25}s"
   [ "$QUICK" = 1 ] && window="single sample, restart stability not observed"
   if [ -n "$down" ]; then
-    V=fail; E="$scope down or restarting:$down"
+    V=fail; E="$scope not serving:$down"
   else
     V=pass; E="every selected $scope active ($window)"
   fi
