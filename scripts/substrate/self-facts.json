@@ -76,6 +76,32 @@
       "pattern": "Template registered successfully.*fts_tags_test",
       "max": 0,
       "must_fail_line": "INFO Template registered successfully {\"id\":\"fts_tags_test_18_1_unrelated\"}"
+    },
+    {
+      "id": "gap_birth_verdicts",
+      "instrument": "gap_birth_verdicts",
+      "profiles": [
+        "standalone",
+        "hub"
+      ],
+      "edit_site": "repos/development-vessel/src/resolvers/substrate-gap.ts",
+      "must_fail": "canary",
+      "window_hours": 1,
+      "max": 95,
+      "must_fail_check": {
+        "evidence_resolve": {
+          "shape": "test_suite",
+          "input": {
+            "vessel": "repos/development-vessel",
+            "test_file": "test/resolvers/substrate-gap-falsifier.test.ts",
+            "only_tests": [
+              "no predicate at all is \"none\" — the 99% case, and not an error"
+            ],
+            "timeout_ms": 120000
+          },
+          "zero_field": "requested_not_passing"
+        }
+      }
     }
   ]
 }
