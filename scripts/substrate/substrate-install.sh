@@ -269,6 +269,16 @@ case "${ANTHROPIC_API_KEY:-sk-ant-}" in
   sk-*)    say "ANTHROPIC_API_KEY holds what looks like an OpenAI-style key (sk-); pass it as OPENAI_API_KEY=… (with OPENAI_BASE_URL for a compatible service) instead" ;;
   *)       say "ANTHROPIC_API_KEY does not look like an Anthropic key (they start sk-ant-); if it belongs to another provider, pass it under that provider's name" ;;
 esac
+# A git token grants push capability, and the image refuses to boot a NEW fleet that has
+# one without SUBSTRATE_REPO_OWNER naming whose repositories it may land on. The refusal
+# happens inside the container, where it becomes a restart loop; say it here instead,
+# before anything is launched. (A fleet whose volumes already hold an owner is exempt,
+# as it is in the image.) A token exported in the shell for something else is carried
+# like any other input, which is how this is usually met.
+if [ -n "$(envval SUBSTRATE_GIT_PAT)" ] && [ -z "$(envval SUBSTRATE_REPO_OWNER)" ] \
+   && ! "$engine" volume inspect "${name}-workspace" >/dev/null 2>&1; then
+  refuse "SUBSTRATE_GIT_PAT is set (from your shell or .env) but SUBSTRATE_REPO_OWNER is not. The token lets this substrate push; the owner scopes it to whose repositories it lands on. Either pass SUBSTRATE_REPO_OWNER=<github owner> with the token, or drop the token: unset SUBSTRATE_GIT_PAT and remove its line from $(pwd)/.env"
+fi
 # Nothing ambient: any other manifest input reaches compose only through .env.
 ignored=""
 for n in $INPUT_NAMES; do
@@ -309,6 +319,16 @@ level_rank() { case "$1" in live) echo 1 ;; seeded) echo 2 ;; served) echo 3 ;; 
 first_wait=seeded
 [ "$(level_rank "$wait_level")" -lt 2 ] && first_wait="$wait_level"
 if ! "$engine" exec "$container" substrate-status --wait "$first_wait"; then
+  # A container that is not running cannot be asked anything (the exec fails with a bare
+  # 409), so say what it is doing and show why, from its own boot log.
+  state="$("$engine" container inspect -f '{{.State.Status}} restarts={{.RestartCount}}' "$container" 2>/dev/null || echo missing)"
+  case "$state" in
+    running\ restarts=0) ;;
+    *)
+      say "$container is not running steadily ($state). The last refusals in its log:"
+      "$engine" logs --tail 200 "$container" 2>&1 | grep -E '^\[gen-env\] (ERROR|  )|^\[entrypoint\].*(ERROR|refus)' | tail -15 >&2 || true
+      say "full log: $engine logs $container" ;;
+  esac
   say "the verdict did not reach '$first_wait'; nothing else was done"
   exit 20
 fi
