@@ -1,0 +1,663 @@
+# SUMMARY (see detailed rows below)
+
+Counts (non-comment), class i/ii/iii/iv/v/db:
+- development-vessel: 14/101/104/80/14/15 (seed/ templates+prompts: 52 bare, 7 retired; code: 99 env, 52 bare, 75 self)
+- goal-host 3/8/2/2/0/0; boredom 0/10/1; ribosome 0/7/1; activity-api 0/4/1/1/0/1; human-surface 3/1/2; others <=3 each
+- scripts: boot tier ii23/iii9/db5; non-boot i7/ii58/iii52/db32
+- 297 migratable pins (i,ii,iii,v) in 164 repo files; 35 in 9 autonomyScope-excluded files (builder a)
+Env defaults never set by gen-env/units (pin in disguise): CONCEPT_DB_ENDPOINT(15), GOAL_HOST_ENDPOINT, DEVELOPMENT_VESSEL_ENDPOINT, HUMAN_SURFACE_ENDPOINT...
+Retired: 9x :8270 in dev-vessel (ui-write-passthrough:28, docs-decision-deliver:42, docs-decision-answer-scan:151, solicitation-outcome-scan:38, compute-state-signature:46, author-composed-capability:409, activity-create-variant:644 allowlist, seed/draft-gap-closing-activity:118, seed/draft-activity-from-pattern:138); 5x :8290 seed param defaults.
+
+Helpers:
+- ias-executor-ts HttpDiscoveryAdapter.lookup()+buildResolveUrl (4719cb4 09-30; d1ebb66 09-17): typed failure vs empty, correct absolute/relative/libp2p join. dev-vessel config.lookupShape wraps it: 3 callers (config, rhythm-conductor-tick, gap-to-feature). Dead private resolveVesselEndpoint() builds /vessels/:id/resolve which discovery does not serve.
+- packages/vessel-discovery-client (REALIGNMENT's named helper): deps only identity-vessel (+ legacy react-renderer/terminal under @metabob scope); discoverByShape collapses failure into found:false (absence-as-absence).
+- goal-host: ufResolveUrl (correct join), endpointForShape, asResolvePath (returns ABSOLUTE since 9531c5f 09-20); 9 call sites still `endpoint + asResolvePath()` unguarded: index.ts 9568,12854,12884,13615,13627,14102,14455,16788,16907 (shapes poolImpulse, feature_compose, template_repair, obsidian:write_note). 6c98916/5ca51be patched 3 sites by inline guard only.
+- human-surface proxy.ts candidateEndpointsFor/resolveGoalHostEndpoint (local).
+- hand-rolled vesselCapability lookups: dev-vessel 20 files, scripts 6, goal-host 4; resolve_endpoint join logic in 24 dev-vessel files.
+
+Prior attempts: surgical-gap-scan HARDCODED_FETCH_ENDPOINT (459bf0ca 06-29) -> ~17 autonomous landings (dev 11, gh 3, aa/boredom/ribosome 1) whose prescribed fix is `process.env.X ?? "http://127.0.0.1:port"` i.e. converts iii->ii; da76f061 abs-join scanner reverted 807b92ef same day (dup of open gaps + trace oracle). 1adbad4 (gh 08-07) "delete the pinned port" for concept-db. 99a39a6c drafter loopback fix. ui-write-passthrough now routes by shape with humanAskRoute (09-29), :8270 last fallback. 06-25 hygiene "de-hardcode" gate is about /home/avi PATHS not ports, 0/30 tasks.
+Gate: none (pre-commit has no port check; no lint; env_gate_scan exempts reads with inline defaults; mitosis-evaluate runs `bun run lint` = typecheck + shape-dispatch-check).
+# A — Pinned addresses census (2026-10-01, read-only)
+
+Method: classify.py (this dir). Regex `(127.0.0.1|localhost|0.0.0.0|host.docker.internal):8xxx` over repos/*/src, packages/*/src, scripts/ (excl tests, .d.ts, dist, node_modules, .js twins of .ts). Classes: i = `??`/`||` fallback with a discovery call within 4 lines; ii = env default with no discovery in context; iii = bare; iv = vessel's own port; v = retired port (:8270 stateful-ui, :8290 obsidian bridge) or legacy repo; db = :8000 surreal; comment. Heuristic, ±10%.
+
+Row-level data: rows.json
+
+## Per-class rows (non-comment, excluding scripts)
+
+
+### v-retired/legacy
+
+- repos/development-vessel/src/resolvers/activity-create-variant.ts:644 :8270 `const VALID_HTTP_HOSTS = ["127.0.0.1:8080","127.0.0.1:8090","127.0.0.1:8260","127.0.0.1:8270","127.0.0.1:8100","127.0.0.`
+- repos/development-vessel/src/resolvers/compute-state-signature.ts:46 :8270 `const DEFAULT_STATEFUL_UI = "http://127.0.0.1:8270";`
+- repos/development-vessel/src/resolvers/ui-write-passthrough.ts:28 :8270 `process.env["STATEFUL_UI_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8270";`
+- repos/development-vessel/src/resolvers/author-composed-capability.ts:409 :8270 `const fallbackEndpoints = ["http://127.0.0.1:8090/v2/impulses/resolve", "http://127.0.0.1:8080/v2/impulses/resolve", "ht`
+- repos/development-vessel/src/resolvers/solicitation-outcome-scan.ts:38 :8270 `const uiEndpoint = (await resolveObsidianEndpointViaDiscovery()) ?? process.env["STATEFUL_UI_VESSEL_ENDPOINT"] ?? "http:`
+- repos/development-vessel/src/resolvers/docs-decision-deliver.ts:42 :8270 `process.env["STATEFUL_UI_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8270";`
+- repos/development-vessel/src/resolvers/docs-decision-answer-scan.ts:151 :8270 `env("STATEFUL_UI_VESSEL_ENDPOINT", "http://127.0.0.1:8270")`
+- repos/development-vessel/src/seed/detect-recurring-pattern.ts:66 :8290 `"Default: http://127.0.0.1:8290 (Phase 1 obsidian-observe-and-experiment).",`
+- repos/development-vessel/src/seed/draft-activity-from-pattern.ts:138 :8270 `- substrateGap_write → http://127.0.0.1:8270/v2/impulses/resolve`
+- repos/development-vessel/src/seed/draft-gap-closing-activity.ts:118 :8270 `- substrateGap_write: POST http://127.0.0.1:8270/v2/impulses/resolve`
+- repos/development-vessel/src/seed/group-interaction-episodes.ts:42 :8290 `description: "Base URL for obsidian-vessel resolver bridge. Default http://127.0.0.1:8290.",`
+- repos/development-vessel/src/seed/observe-obsidian-events.ts:46 :8290 `"Default: http://127.0.0.1:8290.",`
+- repos/development-vessel/src/seed/predict-and-verify.ts:74 :8290 `"interpretation and prediction verifiers. Default http://127.0.0.1:8290.",`
+- repos/development-vessel/src/seed/probe-obsidian-action-effects.ts:52 :8290 `description: "Base URL for obsidian-vessel resolver bridge. Default http://127.0.0.1:8290.",`
+- repos/react-renderer/src/config-loader.ts:126 :8080 `'http://localhost:8080',`
+- repos/stateful-ui-vessel/src/index.ts:37 :8100 `const DISCOVERY_ENDPOINT = process.env.DISCOVERY_VESSEL_ENDPOINT ?? "http://127.0.0.1:8100";`
+- repos/stateful-ui-vessel/src/index.ts:38 :8090 `const DEV_VESSEL_ENDPOINT = process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";`
+- repos/stateful-ui-vessel/src/index.ts:39 :8080 `const ACTIVITY_API_ENDPOINT = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/workbench/src/components/trajectory/VesselSelectorPanel.tsx:63 :8080 `const [directUrl, setDirectUrl] = useState('http://localhost:8080');`
+- repos/workbench/src/components/trajectory/VesselSelectorPanel.tsx:234 :8080 `placeholder="http://localhost:8080"`
+
+### i-discovery-fallback
+
+- repos/analysis-vessel/src/index.ts:20 :8080 `const ACTIVITY_API = process.env.ACTIVITY_API_URL ?? process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/config.ts:95 :8210 `export const GOAL_HOST_VESSEL_ENDPOINT = env("GOAL_HOST_VESSEL_ENDPOINT", "http://127.0.0.1:8210");`
+- repos/development-vessel/src/config.ts:96 :8260 `export const CONCEPT_DB_ENDPOINT = env("CONCEPT_DB_ENDPOINT", "http://127.0.0.1:8260");`
+- repos/development-vessel/src/resolvers/patch-with-tools.ts:41 :8401 `const FED_TRANSPORT_EGRESS = env("FED_TRANSPORT_EGRESS", "http://127.0.0.1:8401");`
+- repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts:554 :8210 `const GOAL_HOST_VESSEL_ENDPOINT = (process.env["GOAL_HOST_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8210");`
+- repos/development-vessel/src/resolvers/llm-api-health-observer.ts:31 :8401 `const FED_TRANSPORT_EGRESS = process.env["FED_TRANSPORT_EGRESS"] ?? "http://127.0.0.1:8401";`
+- repos/development-vessel/src/resolvers/obsidian-request-scan.ts:116 :8210 `const DEFAULT_GOAL_HOST = process.env["GOAL_HOST_ENDPOINT"] ?? "http://127.0.0.1:8210";`
+- repos/development-vessel/src/resolvers/vessel-arrival-scan.ts:51 :8080 `const DEFAULT_METABOB = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/shape-closure-demand.ts:19 :8080 `const ACT = p.activityApiUrl ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/error.ts:13 :8080 `const endpoint = env("METABOB_ENDPOINT", "http://127.0.0.1:8080");`
+- repos/development-vessel/src/resolvers/config-file.ts:6 :8210 `const GOAL_HOST_VESSEL_ENDPOINT = process.env["GOAL_HOST_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8210";`
+- repos/development-vessel/src/resolvers/vessel-exercise-scan.ts:5 :8080 `const DEFAULT_ACTIVITY_ENDPOINT = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/vessel-exercise-scan.ts:6 :8210 `const DEFAULT_GOAL_HOST_ENDPOINT = process.env["GOAL_HOST_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8210";`
+- repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts:29 :8210 `const GOAL_HOST_ENDPOINT = process.env["GOAL_HOST_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8210";`
+- repos/development-vessel/src/routes/impulses.ts:455 :8220 `const llmBase = (process.env["LLM_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8220").replace(/\/+$/, "").replace(/\/resolve$/`
+- repos/goal-host-vessel/src/config.ts:63 :8401 `process.env["FED_TRANSPORT_EGRESS"] ?? "http://127.0.0.1:8401",`
+- repos/goal-host-vessel/src/llm-router.ts:68 :8401 `const fedEgress = process.env["FED_TRANSPORT_EGRESS"] ?? "http://127.0.0.1:8401"; // Egress target is the fresh discover`
+- repos/goal-host-vessel/src/index.ts:1023 :8080 `?? "http://127.0.0.1:8080";`
+- repos/human-surface-vessel/src/config.ts:44 :8210 `process.env.GOAL_HOST_ENDPOINT ?? "http://127.0.0.1:8210";`
+- repos/human-surface-vessel/src/routes/proxy.ts:990 :8090 `const pinned = process.env["DEV_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8090";`
+- repos/human-surface-vessel/src/routes/proxy.ts:1045 :8090 `process.env["DEV_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8090",`
+- repos/ias-executor-ts/src/adapters/discovery-adapter.ts:199 :8401 `const egress = process.env["FED_TRANSPORT_EGRESS"] ?? "http://127.0.0.1:8401";`
+- repos/llm-resolver-vessel/src/index.ts:60 :8090 `const DEV_VESSEL_FALLBACK = process.env.DEVELOPMENT_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";`
+
+### ii-env-default
+
+- repos/activity-api/src/lib/signature-cluster.ts:53 :8260 `process.env.CONCEPT_DB_CLUSTER_ENDPOINT || 'http://localhost:8260/v2/impulses/resolve';`
+- repos/activity-api/src/lib/signature-embedding.ts:32 :8260 `process.env.CONCEPT_DB_EMBED_ENDPOINT || 'http://localhost:8260/v2/impulses/resolve';`
+- repos/activity-api/src/lib/posterior-update.ts:517 :8255 `process.env.RELEVANCE_SINK_ENDPOINT ?? "http://127.0.0.1:8255";`
+- repos/activity-api/src/routes/activities.ts:4134 :8100 `const discoveryEndpoint = process.env.DISCOVERY_VESSEL_ENDPOINT ?? "http://127.0.0.1:8100";`
+- repos/analysis-vessel/src/index.ts:19 :8100 `const DISCOVERY = process.env.DISCOVERY_VESSEL_ENDPOINT ?? process.env.DISCOVERY_ENDPOINT ?? "http://127.0.0.1:8100";`
+- repos/boredom-vessel/src/goal-generation.ts:103 :8090 `const DEV_VESSEL_ENDPOINT = process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";`
+- repos/boredom-vessel/src/goal-generation.ts:134 :8210 `const GOAL_HOST_ENDPOINT = process.env.GOAL_HOST_ENDPOINT ?? "http://127.0.0.1:8210";`
+- repos/boredom-vessel/src/goal-generation.ts:339 :8260 `const CONCEPT_DB_ENDPOINT = process.env.CONCEPT_DB_ENDPOINT ?? "http://127.0.0.1:8260";`
+- repos/boredom-vessel/src/index.ts:30 :8080 `const ACTIVITY_API_ENDPOINT = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/boredom-vessel/src/index.ts:31 :8210 `const GOAL_HOST_ENDPOINT = process.env.GOAL_HOST_VESSEL_ENDPOINT ?? "http://127.0.0.1:8210";`
+- repos/boredom-vessel/src/index.ts:32 :8280 `const LIGHT_DISPATCH_ENDPOINT = process.env.LIGHT_DISPATCH_ENDPOINT ?? "http://127.0.0.1:8280";`
+- repos/boredom-vessel/src/index.ts:36 :8090 `const DEV_VESSEL_ENDPOINT = process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";`
+- repos/boredom-vessel/src/index.ts:984 :8100 `const BOREDOM_DISCOVERY_ENDPOINT = process.env["DISCOVERY_VESSEL_ENDPOINT"] ?? process.env["DISCOVERY_ENDPOINT"] ?? "htt`
+- repos/boredom-vessel/src/index.ts:2966 :8080 `const url = (process.env["ACTIVITY_API_ENDPOINT"] ?? "http://127.0.0.1:8080").replace(/^http/, "ws") + "/ws";`
+- repos/boredom-vessel/src/resolvers/vesselAdditionScaffoldDispatch.ts:151 :8080 `const base = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/concept-db/src/config.ts:156 :8080 `url: process.env.ACTIVITY_API_ENDPOINT || process.env.ACTIVITY_API_URL || 'http://127.0.0.1:8080',`
+- repos/development-vessel/src/index.ts:91 :8260 `const base = process.env["CONCEPT_DB_ENDPOINT"] ?? "http://127.0.0.1:8260";`
+- repos/development-vessel/src/index.ts:446 :8210 `const EXP_GOAL_HOST = process.env["GOAL_HOST_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8210";`
+- repos/development-vessel/src/config.ts:38 :8080 `export const METABOB_ENDPOINT = env("METABOB_ENDPOINT", "http://127.0.0.1:8080");`
+- repos/development-vessel/src/config.ts:42 :8100 `export const DISCOVERY_ENDPOINT = env("DISCOVERY_ENDPOINT", "http://127.0.0.1:8100");`
+- repos/development-vessel/src/observers/failure-credit-observer.ts:9 :8080 `const METABOB_ENDPOINT = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/observers/failure-credit-observer.ts:10 :8260 `const CONCEPT_DB_BASE = process.env["CONCEPT_DB_ENDPOINT"] ?? "http://127.0.0.1:8260";`
+- repos/development-vessel/src/resolvers/patch-with-tools.ts:38 :8100 `const DISCOVERY_ENDPOINT = env("DISCOVERY_ENDPOINT", "http://127.0.0.1:8100");`
+- repos/development-vessel/src/resolvers/compose-topology-tick.ts:33 :8210 `const GOAL_HOST = (process.env.GOAL_HOST_VESSEL_ENDPOINT || "http://127.0.0.1:8210").replace(/\/$/, "");`
+- repos/development-vessel/src/resolvers/composition-coverage-report.ts:7 :8765 `const response = await fetch(`${process.env.SUBSTRATE_API_URL ?? 'http://localhost:8765'}/v1/composition/coverage`, {`
+- repos/development-vessel/src/resolvers/concept-db-health-observer.ts:15 :8260 `const DEFAULT_ENDPOINT = process.env["CONCEPT_DB_ENDPOINT"] ?? "http://127.0.0.1:8260";`
+- repos/development-vessel/src/resolvers/convergent-validity-check.ts:45 :8260 `process.env.CONCEPT_DB_ENDPOINT ?? "http://127.0.0.1:8260";`
+- repos/development-vessel/src/resolvers/credit-vessel-shapes.ts:27 :8080 `const DEFAULT_METABOB = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/discovery-vessel-registry-observer.ts:16 :8100 `const DEFAULT_ENDPOINT = process.env["DISCOVERY_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8100";`
+- repos/development-vessel/src/resolvers/dispatch-goal.ts:63 :8210 `const GOAL_HOST_ENDPOINT = process.env["GOAL_HOST_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8210";`
+- repos/development-vessel/src/resolvers/dispatch-latest-auto-draft.ts:23 :8080 `const ACTIVITY_API = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/dispatch-latest-auto-draft.ts:24 :8280 `const LIGHT_DISPATCH = process.env["LIGHT_DISPATCH_ENDPOINT"] ?? "http://127.0.0.1:8280";`
+- repos/development-vessel/src/resolvers/concept-write.ts:115 :8100 `const discovery = process.env["DISCOVERY_ENDPOINT"] ?? process.env["DISCOVERY_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:810`
+- repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts:293 :8080 `const resolveEndpoint = (process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080") + "/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/feature-compose.ts:256 :8100 `const DISCOVERY_ENDPOINT = process.env.DISCOVERY_ENDPOINT ?? "http://127.0.0.1:8100";`
+- repos/development-vessel/src/resolvers/feature-compose.ts:261 :8401 `const FED_TRANSPORT_EGRESS = process.env.FED_TRANSPORT_EGRESS ?? "http://127.0.0.1:8401";`
+- repos/development-vessel/src/resolvers/feature-compose.ts:316 :8100 `export const FEATURE_COMPOSE_ENDPOINT = process.env.FEATURE_COMPOSE_ENDPOINT ?? "http://127.0.0.1:8100";`
+- repos/development-vessel/src/resolvers/feature-compose.ts:2834 :8260 `const CONCEPT_DB_ENDPOINT = process.env["CONCEPT_DB_ENDPOINT"] ?? "http://127.0.0.1:8260"; // Renamed from DEV_VESSEL_EN`
+- repos/development-vessel/src/resolvers/feature-compose.ts:3998 :8080 `const refusalEndpoint = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/feature-compose.ts:7495 :8080 `const traceEndpoint = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/feature-compose.ts:7498 :8080 `const metabobEndpoint = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/goal-host-behavior-scan.ts:27 :8080 `const ACTIVITY_API = process.env["ACTIVITY_API_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/goal-host-behavior-scan.ts:28 :8260 `const DEFAULT_CONCEPT_DB = process.env["CONCEPT_DB_ENDPOINT"] ?? "http://127.0.0.1:8260";`
+- repos/development-vessel/src/resolvers/llm-api-health-observer.ts:28 :8220 `const DEFAULT_ENDPOINT = process.env["LLM_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8220";`
+- repos/development-vessel/src/resolvers/llm-api-health-observer.ts:29 :8100 `const DISCOVERY_ENDPOINT = process.env["DISCOVERY_ENDPOINT"] ?? "http://127.0.0.1:8100";`
+- repos/development-vessel/src/resolvers/llm-completion-dispatch.ts:9 :8401 `const FED_TRANSPORT_EGRESS = process.env["FED_TRANSPORT_EGRESS"] ?? "http://127.0.0.1:8401";`
+- repos/development-vessel/src/resolvers/obsidian-assist-feedback-scan.ts:25 :8080 `const DEFAULT_METABOB = process.env["METABOB_ENDPOINT"] ?? process.env["ACTIVITY_API_ENDPOINT"] ?? "http://127.0.0.1:808`
+- repos/development-vessel/src/resolvers/obsidian-assist-feedback-scan.ts:26 :8260 `const DEFAULT_CONCEPT_DB = process.env["CONCEPT_DB_ENDPOINT"] ?? "http://127.0.0.1:8260";`
+- repos/development-vessel/src/resolvers/obsidian-behavior-scan.ts:28 :8260 `const DEFAULT_CONCEPT_DB = process.env["CONCEPT_DB_ENDPOINT"] ?? "http://127.0.0.1:8260";`
+- repos/development-vessel/src/resolvers/obsidian-command-gate.ts:28 :8260 `const DEFAULT_CONCEPT_DB = process.env["CONCEPT_DB_ENDPOINT"] ?? "http://127.0.0.1:8260";`
+- repos/development-vessel/src/resolvers/obsidian-deliver-assist.ts:25 :8220 `const DEFAULT_LLM_ENDPOINT = process.env["LLM_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8220/resolve";`
+- repos/development-vessel/src/resolvers/obsidian-learn-commands.ts:30 :8260 `const DEFAULT_CONCEPT_DB = process.env["CONCEPT_DB_ENDPOINT"] ?? "http://127.0.0.1:8260";`
+- repos/development-vessel/src/resolvers/obsidian-reflect.ts:21 :8260 `const DEFAULT_CONCEPT_DB = process.env["CONCEPT_DB_ENDPOINT"] ?? "http://127.0.0.1:8260";`
+- repos/development-vessel/src/resolvers/obsidian-request-scan.ts:417 :8080 `const ACT = process.env["ACTIVITY_API_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/posterior-consistency-audit.ts:10 :8080 `const DEFAULT_METABOB_ENDPOINT = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/concept.ts:3 :8080 `const METABOB_ENDPOINT = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/concept.ts:5 :8260 `const CONCEPT_DB_ENDPOINT = process.env["CONCEPT_DB_ENDPOINT"] ?? "http://127.0.0.1:8260";`
+- repos/development-vessel/src/resolvers/trace-completeness-report.ts:14 :8080 `const endpoint = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/trace-outcome-validity-audit.ts:13 :8080 `const DEFAULT_METABOB_ENDPOINT = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/trace-recurring-pattern-scan.ts:38 :8210 `const DEFAULT_GOAL_HOST = process.env["GOAL_HOST_ENDPOINT"] ?? "http://127.0.0.1:8210";`
+- repos/development-vessel/src/resolvers/vector-space-orthogonality-audit.ts:28 :8080 `const DEFAULT_METABOB_ENDPOINT = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/vector-space-orthogonality-audit.ts:29 :8260 `const DEFAULT_CONCEPT_DB_URL = process.env["CONCEPT_DB_ENDPOINT"] ?? "http://127.0.0.1:8260";`
+- repos/development-vessel/src/resolvers/vessel-arrival-scan.ts:50 :8100 `const DEFAULT_DISCOVERY = process.env["DISCOVERY_ENDPOINT"] ?? "http://127.0.0.1:8100";`
+- repos/development-vessel/src/resolvers/vessel-arrival-scan.ts:64 :8210 `const DEFAULT_GOAL_HOST = process.env["GOAL_HOST_ENDPOINT"] ?? "http://127.0.0.1:8210";`
+- repos/development-vessel/src/resolvers/vessel-gap-to-cluster.ts:52 :8260 `const DEFAULT_CONCEPT_DB = process.env["CONCEPT_DB_ENDPOINT"] ?? "http://127.0.0.1:8260";`
+- repos/development-vessel/src/resolvers/vessel-gap-to-cluster.ts:53 :8210 `const DEFAULT_GOAL_HOST = process.env["GOAL_HOST_ENDPOINT"] ?? "http://127.0.0.1:8210";`
+- repos/development-vessel/src/resolvers/vessel-gap-to-cluster.ts:206 :8080 `activity_api_endpoint: process.env["ACTIVITY_API_ENDPOINT"] ?? process.env["ACTIVITY_API_URL"] ?? "http://127.0.0.1:8080`
+- repos/development-vessel/src/resolvers/substrate-gap.ts:1379 :8080 `const activityApiUrl = process.env["ACTIVITY_API_ENDPOINT"] ?? process.env["ACTIVITY_API_URL"] ?? "http://127.0.0.1:8080`
+- repos/development-vessel/src/resolvers/transport-health-observer.ts:65 :8401 `const transportEndpoint = process.env["TRANSPORT_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8401";`
+- repos/development-vessel/src/resolvers/activity-metrics.ts:14 :8080 `const endpoint = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/advertised-shape-coverage-scan.ts:46 :8100 `const endpoint = process.env["DISCOVERY_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8100";`
+- repos/development-vessel/src/resolvers/obsidian-note-with-project-list-content.ts:14 :8080 `const endpoint = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/perf-canary-resolve.ts:32 :8100 `const DISCOVERY_ENDPOINT = env("DISCOVERY_ENDPOINT", "http://127.0.0.1:8100");`
+- repos/development-vessel/src/resolvers/pick-priority-scenario.ts:30 :8080 `const ACTIVITY_API = process.env["ACTIVITY_API_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/populated-concept-graph-links.ts:14 :8080 `const activityEndpoint = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/selection-entropy.ts:18 :8080 `const endpoint = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/source-code.ts:14 :8080 `const activityEndpoint = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/test-suite.ts:35 :8100 `const DISCOVERY_ENDPOINT = process.env.DISCOVERY_VESSEL_ENDPOINT ?? "http://127.0.0.1:8100";`
+- repos/development-vessel/src/resolvers/coarsenable-chain.ts:14 :8080 `const activityApi = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/goal-summary.ts:14 :8080 `const activityEndpoint = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/learning-mode.ts:93 :8080 `const ACT = p.activityApiUrl ?? env("ACTIVITY_API_ENDPOINT", "http://127.0.0.1:8080");`
+- repos/development-vessel/src/resolvers/learning-policy.ts:14 :8080 `const activityApi = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/repair-policy.ts:32 :8080 `const activityEndpoint = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/substantive-findings.ts:14 :8080 `const activityEndpoint = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/config-file.ts:3 :8080 `const METABOB_ENDPOINT = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/config-file.ts:5 :8100 `const DISCOVERY_ENDPOINT = process.env["DISCOVERY_ENDPOINT"] ?? "http://127.0.0.1:8100";`
+- repos/development-vessel/src/resolvers/activity-template.ts:4 :8080 `const METABOB_ENDPOINT = env("METABOB_ENDPOINT", "http://127.0.0.1:8080");`
+- repos/development-vessel/src/resolvers/vessel-exercise-scan.ts:4 :8100 `const DEFAULT_DISCOVERY_ENDPOINT = env("DISCOVERY_ENDPOINT", "http://127.0.0.1:8100");`
+- repos/development-vessel/src/resolvers/ui-legibility-scan.ts:80 :8310 `const humanSurfaceEndpoint = (process.env["HUMAN_SURFACE_ENDPOINT"] ?? "http://localhost:8310").replace(/\/+$/, "");`
+- repos/development-vessel/src/resolvers/obsidian-vessel-count.ts:23 :8100 `process.env["DISCOVERY_ENDPOINT"] ?? "http://127.0.0.1:8100";`
+- repos/development-vessel/src/resolvers/recurring-pattern-concept.ts:10 :8080 `const endpoint = env("METABOB_ENDPOINT", "http://127.0.0.1:8080");`
+- repos/development-vessel/src/resolvers/template-success-ranking-24h.ts:3 :8080 `const METABOB_ENDPOINT = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/gap-to-feature.ts:4330 :8080 ``    • activity-api = (process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080"):\n` +`
+- repos/development-vessel/src/resolvers/gap-to-feature.ts:4343 :8080 ``  const endpoint = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";\n` +`
+- repos/development-vessel/src/resolvers/gap-to-feature.ts:4499 :8080 `const reachEndpoint = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/gap-to-feature.ts:5190 :8100 `const mcDiscoveryEndpoint = process.env["DISCOVERY_ENDPOINT"] ?? "http://127.0.0.1:8100";`
+- repos/development-vessel/src/resolvers/gap-to-feature.ts:5277 :8080 `const reachEndpoint = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/gap-to-feature.ts:5806 :8080 `const reachEndpoint2 = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/apply-proposal-as-patch.ts:135 :8280 `const url = process.env["LIGHT_DISPATCH_URL"] ?? "http://127.0.0.1:8280/dispatch";`
+- repos/development-vessel/src/resolvers/failure-count-report.ts:10 :8080 `const endpoint = env("METABOB_ENDPOINT", "http://127.0.0.1:8080");`
+- repos/development-vessel/src/resolvers/resolver-tier-cost-summary.ts:18 :8080 `const metabobEndpoint = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/docs-align-tick.ts:592 :8100 `const base = (process.env["DISCOVERY_ENDPOINT"] ?? "http://127.0.0.1:8100").replace(/\/+$/, "");`
+- repos/development-vessel/src/resolvers/human-input.ts:8 :8765 `const discoveryEndpoint = process.env.DISCOVERY_ENDPOINT ?? "http://localhost:8765";`
+- repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts:512 :8080 `const ep = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts:594 :8080 `const ep = env("METABOB_ENDPOINT", "http://127.0.0.1:8080");`
+- repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts:1675 :8080 `void fetch(`${env("ACTIVITY_API_ENDPOINT", "http://127.0.0.1:8080")}/v2/activities/feedback`, {`
+- repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts:2976 :8210 `try { const _ghEndpoint = (process.env["GOAL_HOST_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8210").replace(/\/+$/, ""); con`
+- repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts:2989 :8210 `const ghEndpointQ = (process.env["GOAL_HOST_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8210").replace(/\/+$/, "");`
+- repos/development-vessel/src/resolvers/light-dispatch-vessel-status.ts:4 :8320 `process.env["LIGHT_DISPATCH_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8320";`
+- repos/development-vessel/src/resolvers/light-dispatch-vessel-status.ts:5 :8080 `const METABOB_ENDPOINT = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/light-dispatch-vessel-status.ts:7 :8100 `const DISCOVERY_ENDPOINT = process.env["DISCOVERY_ENDPOINT"] ?? "http://127.0.0.1:8100";`
+- repos/development-vessel/src/resolvers/vessel-health-report.ts:3 :8080 `const METABOB_ENDPOINT = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/vessel-health-report.ts:4 :8100 `const DISCOVERY_ENDPOINT = process.env["DISCOVERY_ENDPOINT"] ?? "http://127.0.0.1:8100";`
+- repos/development-vessel/src/seed/complete-vessel-scaffold.ts:114 :8100 `process.env["DISCOVERY_ENDPOINT"] ?? "http://127.0.0.1:8100";`
+- repos/development-vessel/src/seed/scaffold-and-publish-vessel.ts:133 :8100 `export const DISCOVERY_ENDPOINT = process.env["DISCOVERY_ENDPOINT"] ?? "http://127.0.0.1:8100";`
+- repos/development-vessel/src/services/gap-drain-observer.ts:5 :8080 `const ACTIVITY_API_URL = process.env["ACTIVITY_API_URL"] ?? "http://127.0.0.1:8080";`
+- repos/development-vessel/src/services/gap-drain-observer.ts:200 :8210 `const goalHostUrl = process.env["GOAL_HOST_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8210";`
+- repos/goal-host-vessel/src/config.ts:59 :8100 `process.env["DISCOVERY_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8100",`
+- repos/goal-host-vessel/src/config.ts:61 :8080 `process.env["PRODUCER_DISCOVERY_ENDPOINT"] ?? "http://127.0.0.1:8080",`
+- repos/goal-host-vessel/src/llm-router.ts:37 :8100 `const DISCOVERY_ENDPOINT = process.env.DISCOVERY_VESSEL_ENDPOINT ?? "http://127.0.0.1:8100";`
+- repos/goal-host-vessel/src/index.ts:995 :8100 `const disc = process.env.DISCOVERY_VESSEL_ENDPOINT ?? "http://127.0.0.1:8100";`
+- repos/goal-host-vessel/src/index.ts:1030 :8080 `const PRODUCER_DISCOVERY_ENDPOINT = process.env.PRODUCER_DISCOVERY_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/goal-host-vessel/src/index.ts:1031 :8100 `const DISCOVERY_ENDPOINT = process.env.DISCOVERY_VESSEL_ENDPOINT ?? "http://127.0.0.1:8100";`
+- repos/goal-host-vessel/src/index.ts:1252 :8090 `const DEV_VESSEL_ENDPOINT = process.env.DEVELOPMENT_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";`
+- repos/goal-host-vessel/src/index.ts:16481 :8090 `await fetch(`${process.env.DEVELOPMENT_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090"}/v2/impulses/resolve`, {`
+- repos/human-surface-vessel/src/routes/impulses.ts:339 :8090 `process.env["DEV_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8090"`
+- repos/light-dispatch-vessel/src/index.ts:83 :8080 `const ACTIVITY_API = process.env["ACTIVITY_API_ENDPOINT"] ?? "http://127.0.0.1:8080";`
+- repos/light-dispatch-vessel/src/index.ts:84 :8100 `const DISCOVERY = process.env["DISCOVERY_ENDPOINT"] ?? "http://127.0.0.1:8100";`
+- repos/llm-resolver-vessel/src/index.ts:55 :8100 `const DISCOVERY_ENDPOINT = process.env.DISCOVERY_VESSEL_ENDPOINT ?? "http://127.0.0.1:8100";`
+- repos/llm-resolver-vessel/src/index.ts:475 :8090 `process.env.LLM_TOOL_DISPATCH_ENDPOINT ?? "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/local-tools-vessel/src/index.ts:24 :8100 `const DISCOVERY = process.env.DISCOVERY_ENDPOINT ?? "http://127.0.0.1:8100";`
+- repos/metric-collector-vessel/src/config.ts:4 :8100 `export const DISCOVERY_ENDPOINT = process.env["DISCOVERY_ENDPOINT"] ?? "http://127.0.0.1:8100";`
+- repos/relevance-sink-vessel/src/index.ts:14 :8100 `const DISCOVERY_ENDPOINT = process.env.DISCOVERY_VESSEL_ENDPOINT ?? "http://127.0.0.1:8100";`
+- repos/ribosome-vessel/src/replay-observer.ts:45 :8220 `process.env.LLM_RESOLVER_VESSEL_ENDPOINT ?? "http://127.0.0.1:8220";`
+- repos/ribosome-vessel/src/replay-observer.ts:48 :8080 `process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/ribosome-vessel/src/index.ts:25 :8080 `const ACTIVITY_API_ENDPOINT = process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080";`
+- repos/ribosome-vessel/src/index.ts:26 :8100 `const DISCOVERY_ENDPOINT = process.env.DISCOVERY_VESSEL_ENDPOINT ?? "http://127.0.0.1:8100";`
+- repos/ribosome-vessel/src/index.ts:88 :8210 `const GOAL_HOST_ENDPOINT = process.env.GOAL_HOST_VESSEL_ENDPOINT ?? "http://127.0.0.1:8210";`
+- repos/ribosome-vessel/src/index.ts:426 :8220 `llmEndpoint: process.env.LLM_RESOLVER_VESSEL_ENDPOINT ?? "http://127.0.0.1:8220",`
+- repos/ribosome-vessel/src/resolvers/vessel-scaffold-dispatch-result.ts:5 :8210 `const GOAL_HOST_VESSEL_ENDPOINT = process.env.GOAL_HOST_VESSEL_ENDPOINT ?? "http://127.0.0.1:8210";`
+- packages/vessel-discovery-client/src/registration-loop.ts:263 :8080 `const api = (process.env.ACTIVITY_API_URL ?? process.env.ACTIVITY_API_ENDPOINT ?? "http://127.0.0.1:8080").replace(/\/$/`
+
+### iii-bare
+
+- repos/activity-api/src/routes/activities.ts:5996 :8090 `const emitUrl = 'http://127.0.0.1:8090/v2/impulses/resolve';`
+- repos/boredom-vessel/src/resolvers/vesselAdditionScaffoldDispatch.ts:21 :8210 `const RUN_GOAL_URL = "http://127.0.0.1:8210/run-goal";`
+- repos/development-vessel/src/resolvers/activity-create-variant.ts:644 :8080 `const VALID_HTTP_HOSTS = ["127.0.0.1:8080","127.0.0.1:8090","127.0.0.1:8260","127.0.0.1:8270","127.0.0.1:8100","127.0.0.`
+- repos/development-vessel/src/resolvers/activity-create-variant.ts:644 :8260 `const VALID_HTTP_HOSTS = ["127.0.0.1:8080","127.0.0.1:8090","127.0.0.1:8260","127.0.0.1:8270","127.0.0.1:8100","127.0.0.`
+- repos/development-vessel/src/resolvers/activity-create-variant.ts:644 :8100 `const VALID_HTTP_HOSTS = ["127.0.0.1:8080","127.0.0.1:8090","127.0.0.1:8260","127.0.0.1:8270","127.0.0.1:8100","127.0.0.`
+- repos/development-vessel/src/resolvers/activity-create-variant.ts:644 :8210 `const VALID_HTTP_HOSTS = ["127.0.0.1:8080","127.0.0.1:8090","127.0.0.1:8260","127.0.0.1:8270","127.0.0.1:8100","127.0.0.`
+- repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts:27 :8080 `const DEFAULT_TEMPLATES_URL = "http://127.0.0.1:8080/v2/activities/templates";`
+- repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts:28 :8080 `const DEFAULT_TRACES_URL = "http://127.0.0.1:8080/v2/activities/execution-traces";`
+- repos/development-vessel/src/resolvers/author-producer.ts:282 :8250 `"http://127.0.0.1:8250/resolve", // analysis-vessel`
+- repos/development-vessel/src/resolvers/author-producer.ts:283 :8260 `"http://127.0.0.1:8260/v2/impulses/resolve", // concept-db`
+- repos/development-vessel/src/resolvers/author-producer.ts:284 :8230 `"http://127.0.0.1:8230/resolve", // local-tools`
+- repos/development-vessel/src/resolvers/author-producer.ts:286 :8220 `"http://127.0.0.1:8220/resolve", // llm-resolver`
+- repos/development-vessel/src/resolvers/authoring-chain-health-report.ts:40 :8080 `const DEFAULT_TRACES_URL = "http://127.0.0.1:8080/v2/activities/execution-traces";`
+- repos/development-vessel/src/resolvers/capability-gap-audit.ts:33 :8100 `const DEFAULT_DISCOVERY_URL = "http://127.0.0.1:8100";`
+- repos/development-vessel/src/resolvers/chain-fetch-failure-scan.ts:50 :8260 `const DEFAULT_SEARCH_URL = "http://127.0.0.1:8260/concepts/search?min_relevance=0&limit=200";`
+- repos/development-vessel/src/resolvers/code-needs-report.ts:52 :8080 `const DEFAULT_TRACES_URL = "http://127.0.0.1:8080/v2/activities/execution-traces";`
+- repos/development-vessel/src/resolvers/code-needs-report.ts:53 :8080 `const DEFAULT_TEMPLATES_URL = "http://127.0.0.1:8080/v2/activities/templates";`
+- repos/development-vessel/src/resolvers/code-needs-report.ts:54 :8100 `const DEFAULT_DISCOVERY_URL = "http://127.0.0.1:8100/shapes";`
+- repos/development-vessel/src/resolvers/compute-state-signature.ts:45 :8080 `const DEFAULT_ACTIVITY_API = "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/concept-search-by-source.ts:44 :8260 `const DEFAULT_CONCEPT_DB_URL = "http://127.0.0.1:8260/concepts/search";`
+- repos/development-vessel/src/resolvers/concept-select-for-prompt.ts:56 :8260 `const DEFAULT_CONCEPT_DB_URL = "http://127.0.0.1:8260/concepts/search";`
+- repos/development-vessel/src/resolvers/concept-usage-record.ts:34 :8260 `const DEFAULT_CONCEPT_DB_URL = "http://127.0.0.1:8260/concepts";`
+- repos/development-vessel/src/resolvers/credit-primed-concepts.ts:22 :8260 `const DEFAULT_BASE = "http://127.0.0.1:8260";`
+- repos/development-vessel/src/resolvers/db-contention-observer.ts:34 :8080 `const DEFAULT_API = "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/concept-write.ts:47 :8260 `const DEFAULT_CONCEPT_DB_URL = "http://127.0.0.1:8260/concepts";`
+- repos/development-vessel/src/resolvers/learning-signal-health-observer.ts:21 :8260 `const DEFAULT_CONCEPT_DB_SEARCH = "http://127.0.0.1:8260/concepts/search?limit=5000";`
+- repos/development-vessel/src/resolvers/precondition-rejection-scan.ts:48 :8080 `const DEFAULT_TRACES_URL = "http://127.0.0.1:8080/v2/activities/execution-traces";`
+- repos/development-vessel/src/resolvers/resolver-distribution-audit.ts:28 :8080 `const DEFAULT_TEMPLATES_URL = "http://127.0.0.1:8080/v2/activities/templates";`
+- repos/development-vessel/src/resolvers/resolver-distribution-audit.ts:29 :8080 `const DEFAULT_TRACES_URL = "http://127.0.0.1:8080/v2/activities/execution-traces";`
+- repos/development-vessel/src/resolvers/resolver-distribution-audit.ts:30 :8100 `const DEFAULT_DISCOVERY_URL = "http://127.0.0.1:8100/shapes";`
+- repos/development-vessel/src/resolvers/resolver-distribution-audit.ts:31 :8260 `const DEFAULT_CONCEPT_DB_URL = "http://127.0.0.1:8260/concepts/search";`
+- repos/development-vessel/src/resolvers/stale-pointer-emit.ts:34 :8260 `const DEFAULT_SEARCH_URL = "http://127.0.0.1:8260/concepts/search?limit=500";`
+- repos/development-vessel/src/resolvers/template-invocation-history-report.ts:30 :8080 `const DEFAULT_TEMPLATES_URL = "http://127.0.0.1:8080/v2/activities/templates";`
+- repos/development-vessel/src/resolvers/template-invocation-history-report.ts:31 :8080 `const DEFAULT_TRACES_URL = "http://127.0.0.1:8080/v2/activities/execution-traces";`
+- repos/development-vessel/src/resolvers/vessel-architecture-pattern-scan.ts:32 :8080 `const DEFAULT_TEMPLATES_URL = "http://127.0.0.1:8080/v2/activities/templates";`
+- repos/development-vessel/src/resolvers/vessel-architecture-pattern-scan.ts:33 :8080 `const DEFAULT_TRACES_URL = "http://127.0.0.1:8080/v2/activities/execution-traces";`
+- repos/development-vessel/src/resolvers/vessel-architecture-pattern-scan.ts:34 :8100 `const DEFAULT_DISCOVERY_URL = "http://127.0.0.1:8100/shapes";`
+- repos/development-vessel/src/resolvers/vessel-architecture-pattern-scan.ts:35 :8260 `const DEFAULT_CONCEPT_DB_URL = "http://127.0.0.1:8260/concepts/search";`
+- repos/development-vessel/src/resolvers/vessel-demand-report.ts:41 :8080 `const DEFAULT_TEMPLATES_URL = "http://127.0.0.1:8080/v2/activities/templates";`
+- repos/development-vessel/src/resolvers/vessel-demand-report.ts:42 :8100 `const DEFAULT_DISCOVERY_URL = "http://127.0.0.1:8100/shapes";`
+- repos/development-vessel/src/resolvers/vessel-responsibility-audit.ts:30 :8260 `const DEFAULT_CONCEPT_DB_URL = "http://127.0.0.1:8260/concepts/search";`
+- repos/development-vessel/src/resolvers/vessel-mitosis-evaluate.ts:1338 :8080 `const DEFAULT_TRACES_URL = "http://127.0.0.1:8080/v2/activities/execution-traces";`
+- repos/development-vessel/src/resolvers/author-composed-capability.ts:409 :8080 `const fallbackEndpoints = ["http://127.0.0.1:8090/v2/impulses/resolve", "http://127.0.0.1:8080/v2/impulses/resolve", "ht`
+- repos/development-vessel/src/resolvers/author-composed-capability.ts:409 :8210 `const fallbackEndpoints = ["http://127.0.0.1:8090/v2/impulses/resolve", "http://127.0.0.1:8080/v2/impulses/resolve", "ht`
+- repos/development-vessel/src/resolvers/author-composed-capability.ts:409 :8100 `const fallbackEndpoints = ["http://127.0.0.1:8090/v2/impulses/resolve", "http://127.0.0.1:8080/v2/impulses/resolve", "ht`
+- repos/development-vessel/src/resolvers/author-composed-capability.ts:409 :8260 `const fallbackEndpoints = ["http://127.0.0.1:8090/v2/impulses/resolve", "http://127.0.0.1:8080/v2/impulses/resolve", "ht`
+- repos/development-vessel/src/resolvers/learning-policy-writeback.ts:56 :8080 `"http://127.0.0.1:8080"`
+- repos/development-vessel/src/resolvers/perf-canary-resolve.ts:186 :8080 `await callTool(toolsEndpoint, "shell", { command: `for i in $(seq 1 15); do curl -s -m2 -o /dev/null http://localhost:80`
+- repos/development-vessel/src/resolvers/pick-priority-scenario.ts:48 :8280 `const DEFAULT_LIGHT_DISPATCH = "http://127.0.0.1:8280/dispatch";`
+- repos/development-vessel/src/resolvers/concept-credit-integrity-scan.ts:16 :8260 `const base = pointer.conceptDbBase ?? "http://127.0.0.1:8260";`
+- repos/development-vessel/src/resolvers/concept-truth-probe.ts:12 :8260 `const baseUrl = pointer.conceptDbUrl ?? "http://127.0.0.1:8260/concepts/search";`
+- repos/development-vessel/src/resolvers/remedy-effectiveness-observer.ts:52 :8080 `const DEFAULT_API = "http://127.0.0.1:8080";`
+- repos/development-vessel/src/resolvers/trace-store-health-observer.ts:27 :8080 `const DEFAULT_API = "http://127.0.0.1:8080"; // Note: a spoke masks activity-api, so this default only resolves on a hub`
+- repos/development-vessel/src/resolvers/reach-rate-scan.ts:94 :8080 `const DEFAULT_API = "http://127.0.0.1:8080";`
+- repos/development-vessel/src/seed/close-health-gap.ts:75 :8210 `url: "http://127.0.0.1:8210/run-goal",`
+- repos/development-vessel/src/seed/detect-classifier-distribution-skew.ts:49 :8080 `"(e.g. http://127.0.0.1:8080/v2/activities/recommend).",`
+- repos/development-vessel/src/seed/detect-classifier-distribution-skew.ts:171 :8260 `url: "http://127.0.0.1:8260/v2/impulses/resolve",`
+- repos/development-vessel/src/seed/detect-concept-db-drift.ts:63 :8260 `url: "http://127.0.0.1:8260/concepts/search?limit=50&min_relevance=0.0",`
+- repos/development-vessel/src/seed/detect-concept-db-drift.ts:79 :8260 `url: "http://127.0.0.1:8260/concepts/search?source_type=memo,extracted,human_input,vessel_construction_pattern&limit=30"`
+- repos/development-vessel/src/seed/detect-cutover-stuck-loop.ts:69 :8080 `{ name: "activity_api_endpoint", description: "Activity-api base URL. Default http://127.0.0.1:8080." },`
+- repos/development-vessel/src/seed/detect-feature-flag-zero-exercise.ts:164 :8260 `url: "http://127.0.0.1:8260/v2/impulses/resolve",`
+- repos/development-vessel/src/seed/detect-filter-saturation.ts:166 :8260 `url: "http://127.0.0.1:8260/v2/impulses/resolve",`
+- repos/development-vessel/src/seed/detect-obsidian-vessel-health.ts:75 :8260 `url: "http://127.0.0.1:8260/concepts/search?source_type=extracted&query=obsidian+cors+websocket&limit=5",`
+- repos/development-vessel/src/seed/detect-obsidian-vessel-health.ts:91 :8230 `url: "http://127.0.0.1:8230/resolve",`
+- repos/development-vessel/src/seed/detect-recurring-pattern.ts:181 :8210 `url: "http://127.0.0.1:8210/run-goal",`
+- repos/development-vessel/src/seed/draft-activity-from-pattern.ts:136 :8260 `- concept_create_write → http://127.0.0.1:8260/v2/impulses/resolve`
+- repos/development-vessel/src/seed/draft-activity-from-pattern.ts:140 :8080 `templates / advertised output shapes: GET http://127.0.0.1:8080/v2/activities/templates?limit=200`
+- repos/development-vessel/src/seed/draft-activity-from-pattern.ts:141 :8080 `recent execution traces / invocations:  GET http://127.0.0.1:8080/v2/activities/execution-traces?limit=50`
+- repos/development-vessel/src/seed/draft-activity-from-pattern.ts:223 :8080 `description: "Base URL of activity-api. Spokes must pass their hub endpoint; activity-api does not run locally there. De`
+- repos/development-vessel/src/seed/draft-activity-from-pattern.ts:224 :8080 `default: "http://127.0.0.1:8080",`
+- repos/development-vessel/src/seed/draft-activity-from-pattern.ts:269 :8260 `url: "http://127.0.0.1:8260/concepts/search?min_relevance=0.3&limit=15",`
+- repos/development-vessel/src/seed/draft-gap-closing-activity.ts:110 :8080 `6. http_fetch config: { "type": "http_fetch", "url": "http://127.0.0.1:8080/...", "method": "GET" }`
+- repos/development-vessel/src/seed/draft-gap-closing-activity.ts:112 :8080 `- GET http://127.0.0.1:8080/v2/activities/execution-traces?limit=20`
+- repos/development-vessel/src/seed/draft-gap-closing-activity.ts:113 :8080 `- POST http://127.0.0.1:8080/v2/activities/discover-by-shapes with body`
+- repos/development-vessel/src/seed/draft-gap-closing-activity.ts:116 :8260 `- concept_create_write: POST http://127.0.0.1:8260/v2/impulses/resolve`
+- repos/development-vessel/src/seed/draft-gap-closing-activity.ts:156 :8080 `config: { "type": "http_fetch", "url": "http://127.0.0.1:8080/v2/activities/execution-traces?limit=20", "method": "GET" `
+- repos/development-vessel/src/seed/draft-gap-closing-activity.ts:298 :8260 `url: "http://127.0.0.1:8260/concepts/search?min_relevance=0.3&limit=15",`
+- repos/development-vessel/src/seed/draft-gap-closing-activity.ts:313 :8260 `url: "http://127.0.0.1:8260/mcp/tools/call",`
+- repos/development-vessel/src/seed/draft-gap-closing-activity.ts:565 :8260 `url: "http://127.0.0.1:8260/v2/impulses/resolve",`
+- repos/development-vessel/src/seed/draft-spec-from-gap.ts:116 :8260 `url: "http://127.0.0.1:8260/concepts/search?source_type=substrate_gap&query={{gap_class}}&limit={{max_gaps}}",`
+- repos/development-vessel/src/seed/draft-spec-from-gap.ts:130 :8260 `url: "http://127.0.0.1:8260/concepts/search?query={{fix_priors_query}}&limit=5",`
+- repos/development-vessel/src/seed/draft-spec-from-gap.ts:308 :8260 `url: "http://127.0.0.1:8260/v2/impulses/resolve",`
+- repos/development-vessel/src/seed/drafter-trigger-tick.ts:82 :8280 `light_dispatch_url: "http://127.0.0.1:8280/dispatch",`
+- repos/development-vessel/src/seed/drain-pending-substrate-gaps.ts:129 :8210 `url: "http://127.0.0.1:8210/run-goal",`
+- repos/development-vessel/src/seed/enact-orthogonal-decisions.ts:323 :8210 `url: "http://127.0.0.1:8210/run-goal",`
+- repos/development-vessel/src/seed/goal-execution-with-retry.ts:93 :8080 `url: "http://127.0.0.1:8080/v2/activities/recommend",`
+- repos/development-vessel/src/seed/goal-execution-with-retry.ts:127 :8210 `"or 'activity_id' — check all). Then POST to http://127.0.0.1:8210/run-goal " +`
+- repos/development-vessel/src/seed/goal-execution-with-retry.ts:203 :8210 `"If should_retry = true: POST to http://127.0.0.1:8210/run-goal with body:\n" +`
+- repos/development-vessel/src/seed/goal-shape-pre-check.ts:61 :8080 `url: "http://127.0.0.1:8080/v2/activities/templates/{{template_id}}",`
+- repos/development-vessel/src/seed/mechanism-health-tick.ts:39 :8210 `const RUN_GOAL_URL = "http://127.0.0.1:8210/run-goal";`
+- repos/development-vessel/src/seed/mechanism-health-tick.ts:283 :8080 `endpoint_path: "http://127.0.0.1:8080/v2/activities/recommend",`
+- repos/development-vessel/src/seed/mechanism-health-tick.ts:319 :8080 `"http://127.0.0.1:8080/v2/activities/execution-traces?limit=200",`
+- repos/development-vessel/src/seed/mechanism-health-tick.ts:442 :8260 `url: "http://127.0.0.1:8260/v2/impulses/resolve",`
+- repos/development-vessel/src/seed/observe-and-author-from-gaps.ts:80 :8080 `description: "Base URL for activity-api. Default http://127.0.0.1:8080.",`
+- repos/development-vessel/src/seed/observe-and-author-from-gaps.ts:81 :8080 `default: "http://127.0.0.1:8080",`
+- repos/development-vessel/src/seed/observe-and-author-from-gaps.ts:85 :8210 `description: "Base URL for goal-host-vessel. Default http://127.0.0.1:8210.",`
+- repos/development-vessel/src/seed/observe-and-author-from-gaps.ts:86 :8210 `default: "http://127.0.0.1:8210",`
+- repos/development-vessel/src/seed/predict-and-verify.ts:68 :8080 `description: "activity-api base URL. Default http://127.0.0.1:8080.",`
+- repos/development-vessel/src/seed/recover-from-goal-failure.ts:66 :8080 `url: "http://127.0.0.1:8080/v2/activities/execution-traces/{{failed_execution_id}}",`
+- repos/development-vessel/src/seed/recover-from-goal-failure.ts:139 :8210 `"http://127.0.0.1:8210/run-goal\n\n" +`
+- repos/development-vessel/src/seed/refine-on-disagreement.ts:69 :8080 `description: "activity-api base URL. Default http://127.0.0.1:8080.",`
+- repos/development-vessel/src/seed/refine-on-disagreement.ts:204 :8210 `url: "http://127.0.0.1:8210/run-goal",`
+- repos/development-vessel/src/seed/template-mitosis-tick.ts:98 :8080 `url: "http://127.0.0.1:8080/v2/activities/templates?limit=1&id={{pick_weak_content}}",`
+- repos/development-vessel/src/seed/vessel-scaffold-trigger-tick.ts:252 :8210 `url: "http://127.0.0.1:8210/run-goal",`
+- repos/development-vessel/src/seed/trace-store-reconcile.ts:83 :8080 `{ name: "activity_api_endpoint", description: "Activity-api base URL. Default http://127.0.0.1:8080." },`
+- repos/development-vessel/src/seed/trace-store-reconcile.ts:193 :8080 `url: "http://127.0.0.1:8080/v2/impulses/resolve",`
+- repos/goal-host-vessel/src/llm-router.ts:36 :8080 `"http://127.0.0.1:8080";`
+- repos/goal-host-vessel/src/index.ts:7676 :8100 `? [`\nPRIOR FINDINGS (from preceding walk steps — use these to fill required fields not explicit in the goal text, e.g. `
+- repos/human-surface-vessel/src/config.ts:35 :8100 `"http://127.0.0.1:8100";`
+- repos/human-surface-vessel/src/routes/proxy.ts:89 :8080 `"http://127.0.0.1:8080"`
+- repos/ias-executor-ts/src/hosts/goal-host.ts:445 :8220 `"Either set LLM_VESSEL_ENDPOINT=http://127.0.0.1:8220 or supply an Anthropic client.",`
+- repos/ias-executor-ts/src/hosts/__example__/minimal-vessel.ts:68 :8299 `console.log("minimal-vessel running on http://localhost:8299");`
+- repos/ribosome-vessel/src/composes/vessel-authoring-scenario-consumer.ts:54 :8210 `url: "http://127.0.0.1:8210/run-goal",`
+
+### iv-self
+
+- repos/activity-api/src/routes/activities.ts:5978 :8080 `const ACTIVITY_API_ENDPOINT = process.env['ACTIVITY_API_ENDPOINT'] ?? 'http://127.0.0.1:8080';`
+- repos/development-vessel/src/index.ts:445 :8090 `const EXP_SELF = process.env["DEV_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8090";`
+- repos/development-vessel/src/lib/detector-output-sanity.ts:24 :8090 `process.env["DEV_VESSEL_IMPULSES_URL"] ?? "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/activity-create-variant.ts:644 :8090 `const VALID_HTTP_HOSTS = ["127.0.0.1:8080","127.0.0.1:8090","127.0.0.1:8260","127.0.0.1:8270","127.0.0.1:8100","127.0.0.`
+- repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts:29 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/author-producer.ts:285 :8090 `"http://127.0.0.1:8090/v2/impulses/resolve", // dev-vessel`
+- repos/development-vessel/src/resolvers/capability-gap-audit.ts:32 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/chain-fetch-failure-scan.ts:51 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/cost-expectation-scan.ts:75 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/cyclic-flow-scan.ts:28 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/db-contention-observer.ts:35 :8090 `const DEFAULT_EMIT = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/dead-end-decision-scan.ts:45 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/detector-coverage-scan.ts:28 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/detector-meta-scan.ts:38 :8090 `const DEFAULT_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/detector-yield-registry.ts:51 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/dispatch-target-drift-scan.ts:57 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts:50 :8090 `const DEFAULT_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/feature-compose.ts:3884 :8090 `const DEV_VESSEL_ENDPOINT = process.env["DEV_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8090";`
+- repos/development-vessel/src/resolvers/gate-saturation-scan.ts:65 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/generative-frontier-gap-tick.ts:92 :8090 `const DEFAULT_EMIT_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/goal-host-behavior-scan.ts:29 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/learning-signal-health-observer.ts:22 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/llm-quota-observer.ts:15 :8090 `const DEFAULT_API_ENDPOINT = process.env["METABOB_ENDPOINT"] ?? "http://127.0.0.1:8090";`
+- repos/development-vessel/src/resolvers/model-opportunity-scan.ts:67 :8090 `const DEFAULT_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/obsidian-assist-feedback-scan.ts:27 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/obsidian-behavior-scan.ts:29 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/obsidian-request-scan.ts:416 :8090 `const DEV = process.env["DEV_VESSEL_SELF_ENDPOINT"] ?? "http://127.0.0.1:8090";`
+- repos/development-vessel/src/resolvers/orphaned-capability-scan.ts:36 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/phantom-trace-scan.ts:102 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/posterior-consistency-audit.ts:11 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/precondition-rejection-scan.ts:49 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/push-health-observer.ts:38 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/resolver-distribution-audit.ts:32 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/selector-saturation-audit.ts:26 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/self-alteration-funnel-scan.ts:46 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/service-oom-cascade-scan.ts:93 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/stale-pointer-emit.ts:35 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/systemd-unit-health-observer.ts:4 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/template-input-lint-scan.ts:55 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/trace-outcome-validity-audit.ts:14 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/vector-space-orthogonality-audit.ts:30 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/vessel-architecture-pattern-scan.ts:36 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/vessel-demand-report.ts:43 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/substrate-gap.ts:1349 :8090 `const selfUrl = process.env["DEV_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8090";`
+- repos/development-vessel/src/resolvers/vessel-responsibility-audit.ts:31 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/vessel-write-error-scan.ts:45 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/workspace-hygiene-observer.ts:35 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/assessment-summary.ts:4 :8090 `process.env["DEV_VESSEL_IMPULSES_URL"] ?? "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/author-composed-capability.ts:409 :8090 `const fallbackEndpoints = ["http://127.0.0.1:8090/v2/impulses/resolve", "http://127.0.0.1:8080/v2/impulses/resolve", "ht`
+- repos/development-vessel/src/resolvers/code-quality-with-substantive-assessment-content.ts:4 :8090 `process.env["DEV_VESSEL_IMPULSES_URL"] ?? "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/docs-align-scan.ts:54 :8090 `const SELF_ENDPOINT = process.env["SELF_ENDPOINT"] ?? "http://127.0.0.1:8090";`
+- repos/development-vessel/src/resolvers/env-gate-scan.ts:103 :8090 `const emitUrl = pointer.devVesselImpulsesUrl ?? "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/implicit-vessel-scan.ts:48 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/obsidian-note-with-project-list-content.ts:15 :8090 `const devEndpoint = process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";`
+- repos/development-vessel/src/resolvers/populated-concept-graph-links.ts:15 :8090 `const devVesselEndpoint = process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";`
+- repos/development-vessel/src/resolvers/residual-shape-discovery.ts:65 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/shape-closure-demand.ts:18 :8090 `const DEV = p.devVesselUrl ?? "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/solicitation-outcome-scan.ts:113 :8090 `await fetch(process.env["DEV_VESSEL_IMPULSES_URL"] ?? "http://127.0.0.1:8090/v2/impulses/resolve", {`
+- repos/development-vessel/src/resolvers/source-code.ts:15 :8090 `const devEndpoint = process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";`
+- repos/development-vessel/src/resolvers/composition-flow-health-scan.ts:49 :8090 `const emitUrl = pointer.devVesselImpulsesUrl ?? "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/goal-summary.ts:15 :8090 `const devVesselEndpoint = process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";`
+- repos/development-vessel/src/resolvers/learning-mode.ts:91 :8090 `const devBase = (p.devVesselUrl ?? env("DEV_VESSEL_ENDPOINT", "http://127.0.0.1:8090")).replace(/\/$/, "");`
+- repos/development-vessel/src/resolvers/prior-seed-efficacy-scan.ts:31 :8090 `const emitUrl = pointer.devVesselImpulsesUrl ?? "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/signature-cluster-scan.ts:20 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/source-code-analysis.ts:5 :8090 `process.env["DEV_VESSEL_IMPULSES_URL"] ?? "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/source-code-analysis.ts:7 :8090 `process.env["DEV_VESSEL_IMPULSES_URL"] ?? "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/substantive-findings.ts:15 :8090 `const devVesselEndpoint = process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";`
+- repos/development-vessel/src/resolvers/vessel-exercise-scan.ts:7 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/ui-legibility-scan.ts:38 :8090 `const DEFAULT_DEV_VESSEL_URL = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/gap-to-feature.ts:4334 :8090 ``    • dev-vessel = (process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090"):\n` +`
+- repos/development-vessel/src/resolvers/rhythm-reality-sync.ts:1 :8090 `const IMPULSE_ENDPOINT = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/remedy-effectiveness-observer.ts:51 :8090 `const DEFAULT_EMIT = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts:28 :8090 `const DEV_SELF_ENDPOINT = process.env["DEV_VESSEL_SELF_ENDPOINT"] ?? "http://127.0.0.1:8090";`
+- repos/development-vessel/src/resolvers/trace-store-health-observer.ts:28 :8090 `const DEFAULT_EMIT = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/resolvers/reach-rate-scan.ts:95 :8090 `const DEFAULT_EMIT = "http://127.0.0.1:8090/v2/impulses/resolve";`
+- repos/development-vessel/src/seed/draft-gap-closing-activity.ts:334 :8090 `url: "http://127.0.0.1:8090/v2/impulses/resolve",`
+- repos/development-vessel/src/seed/draft-gap-closing-activity.ts:360 :8090 `url: "http://127.0.0.1:8090/v2/impulses/resolve",`
+- repos/development-vessel/src/seed/drafter-trigger-tick.ts:71 :8090 `url: "http://127.0.0.1:8090/v2/impulses/resolve",`
+- repos/development-vessel/src/seed/ingest-audit-findings.ts:84 :8090 `url: "http://127.0.0.1:8090/v2/impulses/resolve",`
+- repos/development-vessel/src/seed/resolver-author.ts:59 :8090 `url: "http://127.0.0.1:8090/v2/impulses/resolve",`
+- repos/development-vessel/src/services/gap-drain-observer.ts:10 :8090 `const DEV_VESSEL_ENDPOINT = process.env["DEV_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8090"; // env-overridable dev-vessel`
+- repos/goal-host-vessel/src/config.ts:57 :8210 `process.env["GOAL_HOST_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8210",`
+- repos/goal-host-vessel/src/consumers/vessel-authoring-scenario-queue-consumer.ts:58 :8210 `url: "http://127.0.0.1:8210/run-goal",`
+
+### db(surreal)
+
+- repos/activity-api/src/config.ts:230 :8000 `url: process.env.SURREALDB_URL || 'http://localhost:8000',`
+- repos/concept-db/src/config.ts:137 :8000 `url: process.env.SURREALDB_URL || 'http://localhost:8000',`
+- repos/development-vessel/src/resolvers/compose-topology-tick.ts:30 :8000 `const SQL_URL = (process.env.SURREALDB_URL || "http://127.0.0.1:8000").replace(/\/$/, "") + "/sql";`
+- repos/development-vessel/src/resolvers/dead-end-decision-scan.ts:46 :8000 `const DEFAULT_SURREAL_URL = "http://127.0.0.1:8000";`
+- repos/development-vessel/src/resolvers/operational-state.ts:24 :8000 `const SURREALDB_URL = process.env["SURREALDB_URL"] ?? "http://127.0.0.1:8000";`
+- repos/development-vessel/src/resolvers/surrealdb-export.ts:43 :8000 `const DEFAULT_SURREAL_URL = "http://127.0.0.1:8000";`
+- repos/development-vessel/src/resolvers/surrealdb-import.ts:25 :8000 `const DEFAULT_SURREAL_URL = "http://127.0.0.1:8000";`
+- repos/development-vessel/src/resolvers/advertised-shape-coverage-scan.ts:26 :8000 `const url = (process.env["SURREALDB_URL"] ?? "http://127.0.0.1:8000").replace(/\/+$/, "");`
+- repos/development-vessel/src/resolvers/residual-shape-discovery.ts:66 :8000 `const DEFAULT_SURREAL_URL = "http://127.0.0.1:8000";`
+- repos/development-vessel/src/resolvers/composition-flow-health-scan.ts:36 :8000 `const url = (process.env["SURREALDB_URL"] ?? "http://127.0.0.1:8000").replace(/\/+$/, "");`
+- repos/development-vessel/src/resolvers/learning-transfer-report.ts:19 :8000 `const DEFAULT_SURREAL_URL = "http://127.0.0.1:8000";`
+- repos/development-vessel/src/resolvers/orphaned-org-write-scan.ts:1 :8000 `const SURREALDB_URL = process.env["SURREALDB_URL"] ?? "http://127.0.0.1:8000";`
+- repos/development-vessel/src/resolvers/resolver-latency-ceiling-scan.ts:1 :8000 `const SURREALDB_URL = process.env['SURREALDB_URL'] ?? 'http://127.0.0.1:8000';`
+- repos/development-vessel/src/resolvers/schema-assert-drift-scan.ts:11 :8000 `const SURREALDB_URL = process.env["SURREALDB_URL"] ?? "http://127.0.0.1:8000";`
+- repos/development-vessel/src/resolvers/causal-adjudication.ts:132 :8000 `const SURREALDB_URL = process.env["SURREALDB_URL"] ?? "http://127.0.0.1:8000";`
+- repos/development-vessel/src/seed/detect-feature-flag-zero-exercise.ts:92 :8000 `"(http://localhost:8000/sql). Credentials are pulled from the substrate " +`
+- repos/development-vessel/src/seed/detect-feature-flag-zero-exercise.ts:103 :8000 `"curl -sS -X POST http://localhost:8000/sql " +`
+- repos/relevance-sink-vessel/src/index.ts:3 :8000 `const SURREALDB_URL = process.env.SURREALDB_URL ?? "http://127.0.0.1:8000";`
+
+
+## scripts/
+
+- [ii-env-default] BOOT scripts/bootstrap-seeder.ts:21 :8080
+- [ii-env-default] BOOT scripts/bootstrap-seeder.js:21 :8080
+- [ii-env-default] BOOT scripts/concept-seed/seed-claudemd.ts:30 :8260
+- [ii-env-default] BOOT scripts/concept-seed/seed-claudemd.js:30 :8260
+- [iii-bare] scripts/substrate/autonomy-status.ts:47 :8090
+- [iii-bare] scripts/substrate/autonomy-status.ts:53 :8100
+- [ii-env-default] scripts/substrate/autonomy-status.ts:124 :8100
+- [iii-bare] scripts/substrate/autonomy-status.js:48 :8090
+- [iii-bare] scripts/substrate/autonomy-status.js:53 :8100
+- [ii-env-default] scripts/substrate/autonomy-status.js:134 :8100
+- [db(surreal)] scripts/substrate/coherence-metric.ts:22 :8000
+- [iii-bare] scripts/substrate/coherence-metric.ts:35 :8260
+- [db(surreal)] scripts/substrate/coherence-metric.js:24 :8000
+- [iii-bare] scripts/substrate/coherence-metric.js:37 :8260
+- [db(surreal)] scripts/substrate/model-reality-audit.ts:28 :8000
+- [iii-bare] scripts/substrate/model-reality-audit.ts:29 :8080
+- [iii-bare] scripts/substrate/model-reality-audit.ts:30 :8090
+- [db(surreal)] scripts/substrate/operator-goal-generator.ts:48 :8000
+- [ii-env-default] scripts/substrate/operator-goal-generator.ts:49 :8210
+- [iii-bare] BOOT scripts/substrate/gen-env.sh:773 :8100
+- [iii-bare] BOOT scripts/substrate/gen-env.sh:896 :8100
+- [iii-bare] BOOT scripts/substrate/gen-env.sh:944 :8080
+- [iii-bare] BOOT scripts/substrate/gen-env.sh:965 :8401
+- [iii-bare] BOOT scripts/substrate/gen-env.sh:967 :8101
+- [iii-bare] BOOT scripts/substrate/gen-env.sh:991 :8100
+- [db(surreal)] BOOT scripts/substrate/gen-env.sh:1355 :8000
+- [ii-env-default] scripts/substrate/db-contention-check.ts:14 :8090
+- [db(surreal)] scripts/substrate/coherence-recover.js:21 :8000
+- [ii-env-default] scripts/substrate/funnel-drain.ts:23 :8090
+- [iii-bare] scripts/substrate/goal-host-behavior-tick.sh:7 :8090
+- [ii-env-default] BOOT scripts/substrate/rhythm-seed-tick.ts:37 :8090
+- [iii-bare] scripts/substrate/self-recovery-tick.sh:30 :8090
+- [db(surreal)] scripts/substrate/self-recovery-tick.sh:35 :8000
+- [db(surreal)] BOOT scripts/substrate/joint-liveness-tick.ts:29 :8000
+- [ii-env-default] BOOT scripts/substrate/joint-liveness-tick.ts:30 :8090
+- [ii-env-default] BOOT scripts/substrate/joint-liveness-tick.ts:137 :8100
+- [iii-bare] scripts/substrate/substrate-key.sh:34 :8101
+- [iii-bare] scripts/substrate/substrate-key.sh:150 :8100
+- [iii-bare] scripts/substrate/light-dispatch-healthcheck.sh:18 :8280
+- [db(surreal)] scripts/substrate/autonomy-metrics.ts:28 :8000
+- [ii-env-default] scripts/substrate/autonomy-metrics.ts:29 :8080
+- [ii-env-default] scripts/substrate/autonomy-metrics.ts:30 :8090
+- [iii-bare] scripts/substrate/obsidian-desktop-launch.sh:42 :8080
+- [iii-bare] scripts/substrate/obsidian-desktop-launch.sh:43 :8080
+- [iii-bare] scripts/substrate/obsidian-desktop-launch.sh:44 :8260
+- [iii-bare] scripts/substrate/obsidian-desktop-launch.sh:45 :8210
+- [iii-bare] scripts/substrate/obsidian-desktop-launch.sh:46 :8100
+- [iii-bare] BOOT scripts/substrate/setup-git-push.sh:299 :8090
+- [ii-env-default] BOOT scripts/substrate/seed-concepts.ts:11 :8260
+- [db(surreal)] scripts/substrate/compose-teacher.js:28 :8000
+- [ii-env-default] scripts/substrate/compose-teacher.js:29 :8080
+- [ii-env-default] scripts/substrate/compose-teacher.js:30 :8210
+- [ii-env-default] scripts/substrate/self-operational-health.ts:37 :8090
+- [ii-env-default] scripts/substrate/self-repair-operational.ts:26 :8090
+- [ii-env-default] BOOT scripts/substrate/seed-identity.ts:10 :8101
+- [ii-env-default] BOOT scripts/substrate/seed-identity.ts:12 :8100
+- [ii-env-default] scripts/substrate/auto-describe-resolvers.js:37 :8100
+- [i-discovery-fallback] scripts/substrate/auto-describe-resolvers.js:38 :8220
+- [db(surreal)] scripts/substrate/auto-describe-resolvers.js:45 :8000
+- [ii-env-default] scripts/substrate/ingest-docs-as-concepts.ts:65 :8260
+- [ii-env-default] scripts/substrate/ingest-docs-as-concepts.ts:69 :8090
+- [ii-env-default] scripts/substrate/funnel-drain.js:25 :8090
+- [ii-env-default] BOOT scripts/substrate/learning-liveness-probe.ts:57 :8210
+- [ii-env-default] BOOT scripts/substrate/learning-liveness-probe.ts:58 :8090
+- [iii-bare] BOOT scripts/substrate/learning-liveness-probe.ts:81 :8080
+- [iii-bare] scripts/substrate/substrate-pull-sync.sh:38 :8090
+- [db(surreal)] scripts/substrate/compose-teacher.ts:26 :8000
+- [ii-env-default] scripts/substrate/compose-teacher.ts:27 :8080
+- [ii-env-default] scripts/substrate/compose-teacher.ts:28 :8210
+- [iii-bare] scripts/substrate/deploy-hub-pull.sh:62 :8100
+- [iii-bare] scripts/substrate/db-maintenance-tick.ts:27 :8080
+- [db(surreal)] scripts/substrate/operator-goal-signal.ts:20 :8000
+- [db(surreal)] scripts/substrate/self-development-trend.ts:25 :8000
+- [ii-env-default] scripts/substrate/auto-describe-resolvers.ts:37 :8100
+- [i-discovery-fallback] scripts/substrate/auto-describe-resolvers.ts:38 :8220
+- [db(surreal)] scripts/substrate/auto-describe-resolvers.ts:46 :8000
+- [ii-env-default] scripts/substrate/efficiency-failure-tick.ts:14 :8090
+- [ii-env-default] scripts/substrate/gap-compose-tick.ts:33 :8090
+- [ii-env-default] scripts/substrate/gap-compose-tick.js:35 :8090
+- [iii-bare] scripts/substrate/obsidian-learn-tick.sh:14 :8090
+- [iii-bare] scripts/substrate/obsidian-learn-tick.sh:15 :8100
+- [iii-bare] scripts/substrate/obsidian-learn-tick.sh:128 :8210
+- [ii-env-default] scripts/substrate/surgical-gap-scan.ts:62 :8090
+- [iii-bare] scripts/substrate/obsidian-collaborate-tick.sh:20 :8090
+- [iii-bare] scripts/substrate/obsidian-collaborate-tick.sh:33 :8100
+- [db(surreal)] scripts/substrate/coherence-recover.ts:19 :8000
+- [db(surreal)] scripts/substrate/composition-edge-reconcile.ts:56 :8000
+- [iii-bare] scripts/substrate/composition-edge-reconcile.ts:59 :8100
+- [ii-env-default] BOOT scripts/substrate/seed-concepts.js:12 :8260
+- [iii-bare] scripts/substrate/spoke-federate.sh:102 :8401
+- [db(surreal)] scripts/substrate/autonomy-metrics.js:30 :8000
+- [ii-env-default] scripts/substrate/autonomy-metrics.js:31 :8080
+- [ii-env-default] scripts/substrate/autonomy-metrics.js:32 :8090
+- [ii-env-default] scripts/substrate/trace-store-health-check.ts:14 :8090
+- [iii-bare] scripts/substrate/obsidian-intake-tick.sh:26 :8090
+- [iii-bare] scripts/substrate/obsidian-intake-tick.sh:39 :8100
+- [iii-bare] scripts/substrate/obsidian-intake-tick.sh:58 :8220
+- [iii-bare] scripts/substrate/obsidian-intake-tick.sh:59 :8210
+- [iii-bare] scripts/substrate/deploy-hub.sh:60 :8100
+- [db(surreal)] scripts/substrate/spectral-gap.ts:33 :8000
+- [ii-env-default] scripts/substrate/spectral-gap.ts:314 :8080
+- [iii-bare] scripts/substrate/discovery-deregister.sh:15 :8100
+- [iii-bare] scripts/substrate/substrate-doctor.sh:111 :8080
+- [iii-bare] scripts/substrate/substrate-doctor.sh:112 :8101
+- [db(surreal)] scripts/substrate/substrate-doctor.sh:136 :8000
+- [db(surreal)] scripts/substrate/substrate-doctor.sh:137 :8000
+- [db(surreal)] scripts/substrate/substrate-doctor.sh:147 :8000
+- [i-discovery-fallback] scripts/substrate/substrate-doctor.sh:224 :8100
+- [i-discovery-fallback] scripts/substrate/substrate-doctor.sh:249 :8100
+- [i-discovery-fallback] scripts/substrate/substrate-doctor.sh:257 :8100
+- [ii-env-default] BOOT scripts/substrate/watchdog-tick.ts:36 :8090
+- [db(surreal)] scripts/substrate/composition-edge-reconcile.js:57 :8000
+- [iii-bare] scripts/substrate/composition-edge-reconcile.js:60 :8100
+- [ii-env-default] scripts/substrate/db-contention-check.js:16 :8090
+- [iii-bare] scripts/substrate/db-maintenance-tick.js:30 :8080
+- [ii-env-default] scripts/substrate/efficiency-failure-tick.js:16 :8090
+- [ii-env-default] scripts/substrate/ingest-docs-as-concepts.js:66 :8260
+- [ii-env-default] scripts/substrate/ingest-docs-as-concepts.js:70 :8090
+- [db(surreal)] scripts/substrate/model-reality-audit.js:29 :8000
+- [iii-bare] scripts/substrate/model-reality-audit.js:30 :8080
+- [iii-bare] scripts/substrate/model-reality-audit.js:31 :8090
+- [db(surreal)] scripts/substrate/operator-goal-generator.js:48 :8000
+- [ii-env-default] scripts/substrate/operator-goal-generator.js:49 :8210
+- [db(surreal)] scripts/substrate/operator-goal-signal.js:22 :8000
+- [ii-env-default] BOOT scripts/substrate/seed-identity.js:10 :8101
+- [ii-env-default] BOOT scripts/substrate/seed-identity.js:12 :8100
+- [db(surreal)] scripts/substrate/self-development-trend.js:28 :8000
+- [ii-env-default] scripts/substrate/self-operational-health.js:37 :8090
+- [ii-env-default] scripts/substrate/self-repair-operational.js:27 :8090
+- [db(surreal)] scripts/substrate/spectral-gap.js:34 :8000
+- [ii-env-default] scripts/substrate/spectral-gap.js:369 :8080
+- [ii-env-default] scripts/substrate/surgical-gap-scan.js:62 :8090
+- [ii-env-default] scripts/substrate/trace-store-health-check.js:16 :8090
+- [db(surreal)] BOOT scripts/substrate/validator-liveness-tick.ts:41 :8000
+- [ii-env-default] BOOT scripts/substrate/validator-liveness-tick.ts:42 :8090
+- [db(surreal)] scripts/substrate/compose-drift-tick.ts:61 :8000
+- [ii-env-default] scripts/substrate/compose-drift-tick.ts:62 :8090
+- [ii-env-default] scripts/substrate/gap-store-census-tick.ts:48 :8090
+- [db(surreal)] scripts/substrate/learning-loop-selftest-tick.ts:48 :8000
+- [ii-env-default] scripts/substrate/learning-loop-selftest-tick.ts:49 :8090
+- [ii-env-default] scripts/substrate/learning-loop-selftest-tick.ts:56 :8210
+- [ii-env-default] scripts/substrate/rhythm-conduct-tick.ts:25 :8090
+- [ii-env-default] scripts/substrate/runtime-drift-tick.ts:95 :8090
+- [ii-env-default] scripts/substrate/identical-failure-run-tick.ts:42 :8090
+- [db(surreal)] scripts/substrate/identical-failure-run-tick.ts:43 :8000
+- [db(surreal)] scripts/substrate/compose-drift-tick.js:62 :8000
+- [ii-env-default] scripts/substrate/compose-drift-tick.js:63 :8090
+- [ii-env-default] scripts/substrate/gap-store-census-tick.js:48 :8090
+- [ii-env-default] scripts/substrate/identical-failure-run-tick.js:43 :8090
+- [db(surreal)] scripts/substrate/identical-failure-run-tick.js:44 :8000
+- [db(surreal)] BOOT scripts/substrate/joint-liveness-tick.js:30 :8000
+- [ii-env-default] BOOT scripts/substrate/joint-liveness-tick.js:31 :8090
+- [ii-env-default] BOOT scripts/substrate/learning-liveness-probe.js:58 :8210
+- [ii-env-default] BOOT scripts/substrate/learning-liveness-probe.js:59 :8090
+- [iii-bare] BOOT scripts/substrate/learning-liveness-probe.js:81 :8080
+- [db(surreal)] scripts/substrate/learning-loop-selftest-tick.js:50 :8000
+- [ii-env-default] scripts/substrate/learning-loop-selftest-tick.js:51 :8090
+- [ii-env-default] scripts/substrate/learning-loop-selftest-tick.js:57 :8210
+- [ii-env-default] scripts/substrate/rhythm-conduct-tick.js:26 :8090
+- [ii-env-default] BOOT scripts/substrate/rhythm-seed-tick.js:38 :8090
+- [ii-env-default] scripts/substrate/runtime-drift-tick.js:97 :8090
+- [db(surreal)] BOOT scripts/substrate/validator-liveness-tick.js:42 :8000
+- [ii-env-default] BOOT scripts/substrate/validator-liveness-tick.js:43 :8090
+- [ii-env-default] BOOT scripts/substrate/watchdog-tick.js:37 :8090
+- [iii-bare] scripts/substrate/substrate-status.sh:131 :8101
+- [iii-bare] scripts/substrate/substrate-status.sh:132 :8100
+- [iii-bare] scripts/substrate/substrate-status.sh:301 :8210
+- [iii-bare] scripts/substrate/substrate-status.sh:812 :8090
+- [iii-bare] scripts/substrate/acceptance/run-network-acceptance.sh:165 :8401
+- [iii-bare] scripts/substrate/acceptance/run-network-acceptance.sh:177 :8100
+- [iii-bare] scripts/substrate/acceptance/run-network-acceptance.sh:193 :8401
+- [iii-bare] scripts/substrate/acceptance/run-network-acceptance.sh:204 :8210
+- [iii-bare] scripts/substrate/acceptance/run-network-acceptance.sh:210 :8210
+- [iii-bare] scripts/substrate/acceptance/run-upgrade-acceptance.sh:70 :8101
+- [iii-bare] scripts/substrate/federation-relay/fed-federated-resolve.ts:8 :8100
+- [iii-bare] scripts/substrate/federation-relay/fed-federated-resolve.js:7 :8100
+- [ii-env-default] scripts/substrate/federation-relay/federation-transport-server.ts:32 :8100
+- [ii-env-default] scripts/substrate/federation-relay/federation-transport-server.ts:503 :8090
+- [ii-env-default] scripts/substrate/federation-relay/federation-transport-server.ts:918 :8080
+- [ii-env-default] scripts/substrate/federation-relay/federation-probe-tick.ts:43 :8100
+- [i-discovery-fallback] scripts/substrate/federation-relay/federation-probe-tick.ts:44 :8090
+- [ii-env-default] scripts/substrate/federation-relay/federation-probe-tick.js:41 :8100
+- [i-discovery-fallback] scripts/substrate/federation-relay/federation-probe-tick.js:42 :8090
+- [ii-env-default] scripts/substrate/federation-relay/federation-transport-server.js:30 :8100
+- [ii-env-default] scripts/substrate/federation-relay/federation-transport-server.js:505 :8090
+- [ii-env-default] scripts/substrate/federation-relay/federation-transport-server.js:926 :8080
+
+# CORRECTIONS / ADDENDA (post-review)
+- :8100 / DISCOVERY_ENDPOINT defaults (43 rows) are the bootstrap anchor (the one fixed point), NOT pins. Migratable after carve-out: 254 rows / 153 files. :8080 METABOB_ENDPOINT stays counted (locality pin on a spoke).
+- asResolvePath 9 unguarded joins: LATENT, unverified - registry_query to localhost:18100 failed ("socket closed") on 10-01, so row forms for poolImpulse/feature_compose/template_repair/obsidian:write_note not checked.
+- 35-row / 9-file builder-(a) split derived from REALIGNMENT's prose summary of the 27 excluded paths, not the live autonomyScope record. scripts/substrate excluded => all script pins are (a). vessel-mitosis-evaluate excluded => the §2.4 gate itself is (a).
+- vessel-discovery-client adoption is split across two package names: identity-vessel imports @avigopal/, react-renderer and terminal (legacy) import @metabob/.
+
+# REALIGNMENT §2.4 mapping
+Prescribes: finish adoption of one helper; fleet-wide consumer control before any helper change; pre-land literal-port lint in vessel-mitosis-evaluate; typed /resolve errors + resolved_by/server_time echo; C21 evidence replication; builder (a) discovery/goal-host/identity, (b) call sites.
+Omits / wrong:
+1. Names the wrong helper. vessel-discovery-client: 1 live consumer, discoverByShape returns found:false on failure (absence-as-absence, violating §2.4's own C21 bullet). ias-executor-ts HttpDiscoveryAdapter.lookup() (4719cb4, 09-30, after REALIGNMENT) already has typed failure vs empty and the correct join. Cost: ias reaches vessels as a copied dist, so each helper change needs a per-vessel dist rebuild. That rebuild is the consumer control.
+2. Seed/template pins (52 bare + 7 retired in dev-vessel src/seed): url: fields in activity template steps, plus prompt text teaching the drafter 127.0.0.1:8xxx. They seed the activity table (live DB pins outside this census - inference). A fetch-literal lint misses all of them.
+3. The predecessor lane manufactures class ii: surgical-gap-scan's prescribed fix is `process.env.X ?? "http://127.0.0.1:port"` (~17 landings).
+4. env_gate_scan exempts reads with inline defaults, so class ii is invisible to the one detector that could see it.
+5. Env vars never set: CONCEPT_DB_ENDPOINT (15 reads; matches the 1,459/24h node-2 failures), GOAL_HOST_ENDPOINT, DEVELOPMENT_VESSEL_ENDPOINT, HUMAN_SURFACE_ENDPOINT, among others.
+6. Self-address (75x :8090 in dev-vessel) is not addressed. Low risk; should read PORT.
+7. Wrong citation: the 06-25 "de-hardcode grep pre-commit gate" is about /home/avi paths, not ports (0/30 tasks).
+
+# Proposed approach
+Seam: ias HttpDiscoveryAdapter.lookup()+buildResolveUrl. Each vessel gets one wrapper like dev-vessel config.lookupShape. Retire asResolvePath/ufResolveUrl into it (goal-host index = (a)). Deprecate vessel-discovery-client's discoverByShape, or re-point it at the ias adapter.
+Gate: one graded lint resolver, using the shape-dispatch-check precedent (it already runs under `bun run lint`, which mitosis-evaluate invokes). It matches the literal regex over src + seed + template JSON/prompt strings, allows the :8100 anchor and own-PORT, and refuses new ii/iii. Wire it pre-land (builder a). Positive control: a fixture compose that carries a seeded pin and must be refused. Also retire or redirect surgical-gap-scan's env-default prescription, and drop the inline-default exemption from env_gate_scan.
+Order:
+1. 9x :8270 + 5x :8290 retired pins (dead addresses, highest signal)
+2. never-set env defaults (CONCEPT_DB_ENDPOINT first)
+3. 9 latent asResolvePath joins (a)
+4. 20 hand-rolled vesselCapability lookups -> lookupShape (b, one file per goal)
+5. seed templates last (need a reseed step + DB template audit)
+6. scripts non-boot (a)
+Verification: for each migrated call site, a known-present shape resolves through the wrapper on node 1 AND node 2 (positive control at the same address). Fleet-wide consumer control before any adapter change. Pin count by this census must be monotone non-increasing.
+Sizing: ~254 rows / ~153 files. Builder (a) ~9 files + gate + adapter + scripts. The rest (b) is ~140 one-file goals, or fewer if grouped by wrapper adoption.
