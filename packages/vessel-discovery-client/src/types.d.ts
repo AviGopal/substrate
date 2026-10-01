@@ -251,6 +251,10 @@ export interface VesselCapability {
      *  absent: `"forward"`. Meaningful only when
      *  `auth_token_source === "user_identity"`. */
     auth_delegation_mode?: AuthDelegationMode;
+    /** Where the ANSWERING discovery got this row, stamped on receive: "local", "overlay", or "peer:<origin>". Absent from an older discovery (treat as foreign). */
+    origin?: "local" | "overlay" | `peer:${string}`;
+    /** For a peer row: the origin the asked peer itself reported (a recorded claim, never the origin). */
+    origin_upstream?: string | null;
 }
 /**
  * Discovery query result

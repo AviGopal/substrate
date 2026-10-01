@@ -309,6 +309,16 @@ export interface VesselCapability {
    *  absent: `"forward"`. Meaningful only when
    *  `auth_token_source === "user_identity"`. */
   auth_delegation_mode?: AuthDelegationMode
+
+  /** Where the ANSWERING discovery got this row, stamped by it on receive (never copied from a
+   *  peer): "local" (a plain registration in its own registry), "overlay" (a libp2p facade in its
+   *  registry), or "peer:<http origin of the peer discovery it asked>". Absent from an older
+   *  discovery: such a row is not provably anyone's, so a reader that must take only its own
+   *  substrate's producers treats it as foreign. */
+  origin?: "local" | "overlay" | `peer:${string}`
+  /** For a peer row: the origin the asked peer itself reported (a recorded claim; "local" = the
+   *  peer serves it from its own registry, anything else = relayed through that peer). */
+  origin_upstream?: string | null
 }
 
 /**
