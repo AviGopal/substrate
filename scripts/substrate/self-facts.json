@@ -1,5 +1,5 @@
 {
-  "description": "selfFactSpec rows (v1 as a committed data file) read at use time by development-vessel's self_fact_reconcile from the git object origin/dev:scripts/substrate/self-facts.json in each node's super-repo clone. A row registers one instrument (a fact function in self-fact-reconcile.ts): the node profiles whose node holds the copies it checks, the edit site its gaps point at, and its must-fail control. An instrument with no row does not run. REALIGNMENT 2026-09-29 §2.1 items 1, 3, 4, 5. Rows with instrument journal_pattern are recurring-defect detectors (unit, pattern, max, window_hours, must_fail_line, gate); the canary fires only if the pattern matches its own must_fail_line (REALIGNMENT 2026-09-29 section 7 step 2).",
+  "description": "selfFactSpec rows (v1 as a committed data file) read at use time by development-vessel's self_fact_reconcile from the git object origin/dev:scripts/substrate/self-facts.json in each node's super-repo clone. A row registers one instrument (a fact function in self-fact-reconcile.ts): the node profiles whose node holds the copies it checks, the edit site its gaps point at, and its must-fail control. An instrument with no row does not run. REALIGNMENT 2026-09-29 §2.1 items 1, 3, 4, 5. Rows with instrument journal_pattern are recurring-defect detectors (unit, pattern, max, window_hours, must_fail_line, gate); the canary fires only if the pattern matches its own must_fail_line (REALIGNMENT 2026-09-29 section 7 step 2). Rows with instrument lookup_classification check that a failed discovery lookup is never read as no producer (a per-node journal count plus planted failed lookups); rows with instrument typed_seam_sites count discovery lookup sites outside the typed ias seam against a ratcheting ceiling (max), lowered by a data commit as sites migrate, and read unobserved when any clone ref is older than max_ref_age_hours.",
   "rows": [
     {
       "id": "fleet_inventory_copy",
@@ -119,6 +119,70 @@
       "journal_unit": "development-vessel",
       "journal_grace_minutes": 30,
       "notes": "FOLLOW-UP: once intervention 1 lands, fold this row's git-show call-site count into I1's countSites and gate it on refAgeHours (a stale origin/dev must read unobserved, never as a count). The journal cross-check reads only this node's development-vessel journal; node 2 (compute) composes are not cross-checked unless the row is also scoped to compute."
+    },
+    {
+      "id": "policy_reads_classify_failed_lookups",
+      "instrument": "lookup_classification",
+      "profiles": [
+        "standalone",
+        "hub",
+        "compute"
+      ],
+      "edit_site": "repos/development-vessel/src/config.ts",
+      "must_fail": "planted failed discovery lookups through the ias typed seam (timeout: a local discovery that accepts and never answers; network: a refused port), for each probe shape, must read 'lookup failed' and no policy-reader line built from them may match the pattern; a misread is a finding. The pattern must also match its own must_fail_line.",
+      "window_hours": 1,
+      "unit": "development-vessel",
+      "pattern": "(scope|envelope) unreadable.*no (poolImpulse|llmSpendSummaryNode) producer",
+      "max": 0,
+      "must_fail_line": "[gap-to-feature] selection skipped: spend envelope envelope unreadable: no poolImpulse producer discovered",
+      "probe_shapes": [
+        "poolImpulse",
+        "llmSpendSummaryNode"
+      ],
+      "probe_modes": [
+        "timeout",
+        "network"
+      ],
+      "linked_gap": "discovery-lookup-copies-must-migrate-onto-the-typed-ias-seam"
+    },
+    {
+      "id": "discovery_lookups_on_typed_seam",
+      "instrument": "typed_seam_sites",
+      "profiles": [
+        "standalone",
+        "hub"
+      ],
+      "edit_site": "repos/development-vessel/src/config.ts",
+      "must_fail": "a scratch repo holding one planted site, plus a .test.ts and a .js twin that must not count, must count exactly 1 with this row pattern and pathspecs; a clone whose origin/dev was last fetched or moved more than max_ref_age_hours ago (newest of FETCH_HEAD mtime and the ref reflog time) makes the row unobserved, never a lower count",
+      "site_pattern": "type:[[:space:]]*['\"]vesselCapability['\"]",
+      "pathspecs": [
+        ":(glob)src/**/*.ts",
+        ":(glob)src/**/*.tsx",
+        ":(glob)ui/src/**/*.ts",
+        ":(glob)ui/src/**/*.tsx",
+        ":(exclude,glob)**/*.test.ts",
+        ":(exclude,glob)**/*.test.tsx",
+        ":(exclude,glob)**/*.spec.ts",
+        ":(exclude,glob)**/test/**",
+        ":(exclude,glob)**/__tests__/**"
+      ],
+      "super_repo_pathspecs": [
+        ":(glob)packages/*/src/**/*.ts",
+        ":(glob)scripts/**/*.ts",
+        ":(exclude,glob)**/*.test.ts",
+        ":(exclude,glob)**/*.spec.ts",
+        ":(exclude,glob)**/test/**",
+        ":(exclude,glob)**/__tests__/**"
+      ],
+      "exclude_repos": [
+        "discovery-vessel"
+      ],
+      "seam_files": [
+        "ias-executor-ts:src/adapters/discovery-adapter.ts"
+      ],
+      "max": 65,
+      "max_ref_age_hours": 6,
+      "linked_gap": "discovery-lookup-copies-must-migrate-onto-the-typed-ias-seam"
     }
   ]
 }
