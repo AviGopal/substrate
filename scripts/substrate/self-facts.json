@@ -243,6 +243,118 @@
       "must_fail": "one added site in a scratch copy of the tree must make 2c FAIL above max; removing one site must report max-1 remaining; comment lines (#, //, *) never count; the doctor holds no copy of site_pattern, so it cannot count itself",
       "why": "-H/--header 'Authorization: …': curl never blanks header values, so the credential is in argv for the life of the request",
       "notes": "RATCHET: max is the count at the commit that set it and only ever moves DOWN, by a data commit, as sites migrate to stdin/env (curl -K -, SURREAL_PASS). 2c notes when the count is below max so the ceiling gets lowered."
+    },
+    {
+      "id": "autonomy_scope_pinned",
+      "instrument": "pool_record_pin",
+      "profiles": [
+        "*"
+      ],
+      "edit_site": "repos/development-vessel/src/resolvers/gap-to-feature.ts",
+      "must_fail": "each node's run plants a path into excluded_paths and a class into require_falsifier_classes of the copy it read; both must be reported as a mismatch",
+      "pool_shape": "autonomyScope",
+      "expected_by_node": {
+        "c951b44f4a99": {
+          "excluded_paths": [
+            "repos/development-vessel/src/resolvers/feature-compose.ts",
+            "repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts",
+            "repos/development-vessel/src/resolvers/pull-cutover.ts",
+            "repos/development-vessel/src/resolvers/push-policy.ts",
+            "repos/development-vessel/src/resolvers/git-push.ts",
+            "repos/development-vessel/src/resolvers/gap-to-feature.ts",
+            "repos/development-vessel/src/resolvers/substrate-gap.ts",
+            "repos/development-vessel/src/resolvers/apply-proposal-as-patch.ts",
+            "repos/development-vessel/src/resolvers/pool-impulse.ts",
+            "repos/development-vessel/src/resolvers/maintenance-lease.ts",
+            "repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts",
+            "repos/development-vessel/src/routes/impulses.ts",
+            "repos/development-vessel/src/index.ts",
+            "repos/development-vessel/src/config.ts",
+            "repos/goal-host-vessel/src/index.ts",
+            "repos/activity-api/src/lib/posterior-update.ts",
+            "repos/llm-resolver-vessel/src/index.ts",
+            "repos/boredom-vessel/src/index.ts",
+            "repos/discovery-vessel/",
+            "repos/identity-vessel/",
+            "scripts/substrate/",
+            "repos/human-surface-vessel/",
+            "repos/cycle-demo-3/",
+            "repos/development-vessel/src/resolvers/attempt-register.ts",
+            "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts",
+            "repos/development-vessel/src/resolvers/self-fact-reconcile.ts",
+            "repos/development-vessel/src/resolvers/vessel-mitosis-evaluate.ts",
+            "scripts/bootstrap-seeder.ts"
+          ],
+          "require_falsifier_classes": [
+            "class2"
+          ]
+        },
+        "compose2": {
+          "excluded_paths": [
+            "repos/development-vessel/src/resolvers/feature-compose.ts",
+            "repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts",
+            "repos/development-vessel/src/resolvers/pull-cutover.ts",
+            "repos/development-vessel/src/resolvers/push-policy.ts",
+            "repos/development-vessel/src/resolvers/git-push.ts",
+            "repos/development-vessel/src/resolvers/gap-to-feature.ts",
+            "repos/development-vessel/src/resolvers/substrate-gap.ts",
+            "repos/development-vessel/src/resolvers/apply-proposal-as-patch.ts",
+            "repos/development-vessel/src/resolvers/pool-impulse.ts",
+            "repos/development-vessel/src/resolvers/maintenance-lease.ts",
+            "repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts",
+            "repos/development-vessel/src/routes/impulses.ts",
+            "repos/development-vessel/src/index.ts",
+            "repos/development-vessel/src/config.ts",
+            "repos/goal-host-vessel/src/index.ts",
+            "repos/activity-api/src/lib/posterior-update.ts",
+            "repos/llm-resolver-vessel/src/index.ts",
+            "repos/boredom-vessel/src/index.ts",
+            "repos/discovery-vessel/",
+            "repos/identity-vessel/",
+            "scripts/substrate/",
+            "repos/human-surface-vessel/",
+            "repos/cycle-demo-3/",
+            "repos/development-vessel/src/resolvers/attempt-register.ts",
+            "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts",
+            "repos/development-vessel/src/resolvers/self-fact-reconcile.ts",
+            "repos/development-vessel/src/resolvers/vessel-mitosis-evaluate.ts",
+            "scripts/bootstrap-seeder.ts"
+          ],
+          "require_falsifier_classes": [
+            "class2"
+          ]
+        }
+      },
+      "notes": "autonomyScope is a trust root and the containment the autonomous lane obeys; an absent record reads closed, so drift is the remaining failure: one node's copy gaining or losing an excluded path, or its falsifier classes changing, while the other keeps the old value. Compared: excluded_paths and require_falsifier_classes as exact-string sets (a directory entry 'x/' and a file entry 'x' differ); the reason text is not compared. Node keys are thisNode() (SUBSTRATE_NAME, else hostname), matching substrate_nodes_pinned: substrate-live sets no SUBSTRATE_NAME, so its key is the container hostname c951b44f4a99 and a recreated container SKIPS this row until SUBSTRATE_NAME is set and the key renamed; compose2-live sets SUBSTRATE_NAME=compose2. Rows naming nodes are skipped on every other node and substrate (nodes field). The pinned value is operator-authored here (a git object), never read from the pool it checks; changing the record means changing this row in the same operator act.",
+      "nodes": [
+        "c951b44f4a99",
+        "compose2"
+      ]
+    },
+    {
+      "id": "spend_envelope_pinned",
+      "instrument": "pool_record_pin",
+      "profiles": [
+        "*"
+      ],
+      "edit_site": "repos/development-vessel/src/resolvers/gap-to-feature.ts",
+      "must_fail": "each node's run perturbs usd_cap_per_hour and flips paused in the copy it read; both must be reported as a mismatch",
+      "pool_shape": "spendEnvelope",
+      "expected_by_node": {
+        "c951b44f4a99": {
+          "usd_cap_per_hour": 2,
+          "paused": false
+        },
+        "compose2": {
+          "usd_cap_per_hour": 2,
+          "paused": false
+        }
+      },
+      "notes": "spendEnvelope is a trust root and the budget the autonomous lane obeys; an absent record reads closed, so drift is the remaining failure: a cap raised, a pause lifted or set, or the cap replaced by uncapped:true on one node. Compared: usd_cap_per_hour and paused by equality; the reason text is not compared. Node keys are thisNode() (SUBSTRATE_NAME, else hostname), matching substrate_nodes_pinned: substrate-live sets no SUBSTRATE_NAME, so its key is the container hostname c951b44f4a99 and a recreated container SKIPS this row until SUBSTRATE_NAME is set and the key renamed; compose2-live sets SUBSTRATE_NAME=compose2. Rows naming nodes are skipped on every other node and substrate (nodes field). The pinned value is operator-authored here (a git object), never read from the pool it checks; changing the record means changing this row in the same operator act.",
+      "nodes": [
+        "c951b44f4a99",
+        "compose2"
+      ]
     }
   ]
 }
