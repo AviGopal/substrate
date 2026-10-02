@@ -306,6 +306,50 @@ emit_gap() {
   esac
 }
 
+# AN OVERWRITE OF CONTENT PULL-SYNC DID NOT WRITE MUST BE RECOVERABLE AND LOUD.
+#
+# The mirror runs toward the clone and has no notion of which side is newer. On
+# 2026-10-02 10:07Z the drift heal restored human-surface-vessel from a clone that
+# WAS origin/dev, over a hand-deployed CSRF fix that had never been pushed: the
+# newer code was gone, and nothing said so. "Clone is origin" cannot tell a
+# corrupt draft from an unpushed fix — neither is on origin.
+#
+# Nor can any record pull-sync keeps. $v.sha holds ONE content hash, the last
+# clone tree it attempted, and the drift heal only runs when that equals the
+# clone hash, so "runtime matches a hash pull-sync wrote" is false by
+# construction there; .last-good is a git sha, not a content hash. Refusing every
+# such overwrite would also refuse the heal of a patch_with_tools draft left in
+# the live tree, which is what the drift heal exists for. So the overwrite still
+# happens, but only after the live tree is copied aside and the copy verified
+# byte-for-byte; if the copy cannot be made, the caller does NOT overwrite.
+#
+# The copy lives on the volume (/vessels can be replaced by an image rebuild),
+# node_modules excluded, newest DRIFT_QUARANTINE_KEEP per vessel retained.
+# Test: validation/scripts/pull-sync-drift-quarantine.test.sh.
+DRIFT_QUARANTINE_DIR="${DRIFT_QUARANTINE_DIR:-/workspace/.drift-quarantine}"
+DRIFT_QUARANTINE_KEEP="${DRIFT_QUARANTINE_KEEP:-3}"
+drift_quarantine() { # vessel -> 0 and DQ_PATH=<copy of $RUNTIME_DIR/<v>>, or 1 and DQ_WHY
+  local v="$1" ts dest keep old n
+  DQ_PATH=""; DQ_WHY=""
+  ts="$(date -u +%Y%m%dT%H%M%S.%NZ)"   # fixed width, so names sort by time
+  dest="$DRIFT_QUARANTINE_DIR/$v-$ts"; n=0
+  while [ -e "$dest" ]; do n=$((n+1)); dest="$DRIFT_QUARANTINE_DIR/$v-$ts-$n"; done
+  if ! mkdir -p "$dest" 2>/dev/null; then DQ_WHY="cannot create $dest"; return 1; fi
+  if ! tar -C "$RUNTIME_DIR" --exclude=node_modules -cf - "$v" 2>/dev/null | tar -C "$dest" -xf - 2>/dev/null; then
+    DQ_WHY="copying $RUNTIME_DIR/$v into $dest failed"; rm -rf "$dest"; return 1
+  fi
+  if ! diff -rq -x node_modules "$RUNTIME_DIR/$v" "$dest/$v" >/dev/null 2>&1; then
+    DQ_WHY="the copy at $dest does not match $RUNTIME_DIR/$v"; rm -rf "$dest"; return 1
+  fi
+  DQ_PATH="$dest/$v"
+  # Retention only after the new copy is verified. Names sort by their UTC stamp.
+  keep="$DRIFT_QUARANTINE_KEEP"; case "$keep" in ''|*[!0-9]*) keep=3 ;; esac
+  [ "$keep" -ge 1 ] || keep=1
+  ls -1d "$DRIFT_QUARANTINE_DIR/$v"-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]T[0-9][0-9][0-9][0-9][0-9][0-9].[0-9]*Z* 2>/dev/null \
+    | LC_ALL=C sort | head -n "-$keep" | while IFS= read -r old; do rm -rf "$old"; done
+  return 0
+}
+
 # INSTALL ONLY WHAT IS COMMITTED.
 #
 # Every glue install below (units, the bootstrap-tier scripts, this script itself,
@@ -1002,6 +1046,7 @@ for d in "$CLONE_DIR"/*/; do
   if [ "$CLONE_HASH" = "$RUNTIME_HASH" ]; then
     if [ -z "$DIST_RETRY" ]; then
       [ "$LAST" = "$CLONE_HASH" ] || echo "$CLONE_HASH" > "$MARKER"
+      [ "$(cat "$MARKER_DIR/$v.runtime-sha" 2>/dev/null)" = "$CLONE_HASH" ] || echo "$CLONE_HASH" > "$MARKER_DIR/$v.runtime-sha" 2>/dev/null || true
       # Say so when the clone moved but nothing mirrored changed: this branch used to
       # skip in silence, which is how a scripts-only landing sat unrun for hours with
       # `synced=0` and no line naming the vessel. Once per HEAD.
@@ -1125,11 +1170,12 @@ EOF
       RUNTIME_HASH="$(content_hash "$RUNTIME_DIR/$v" "$d")"
       # Repair runs TOWARD THE CLONE, so it is only a repair while the clone IS
       # origin. Step 1 already lands the clone on origin, so this only restates
-      # that invariant at the point of use. It does NOT close the
-      # drift-repair-reverted-a-security-fix class: in that incident the clone
-      # WAS origin (the newer code was never pushed), so this check passes and
-      # the newer runtime is still overwritten. That class stays open (gap:
-      # human-surface-two-sources-of-truth-and-drift-repair-reverted-a-security-fix).
+      # that invariant at the point of use. It cannot tell an unpushed newer fix
+      # from a stray draft (on 10-02 the clone WAS origin and a hand-deployed
+      # CSRF fix was overwritten), so the heal proceeds, but the mirror site
+      # first copies a live tree pull-sync did not write to the drift
+      # quarantine and files a gap naming it — and refuses the overwrite if the
+      # copy fails (see drift_quarantine).
       if [ "$RUNTIME_HASH" != none ] && [ "$CLONE_HASH" != none ] && [ "$RUNTIME_HASH" != "$CLONE_HASH" ] \
          && [ "$HEAD" != "$(git -C "$d" rev-parse "origin/$BRANCH" 2>/dev/null)" ]; then
         log "$v: live content drifts from the clone, but the clone (${HEAD:0:10}) is not origin/$BRANCH — NOT repairing toward it"
@@ -1713,6 +1759,22 @@ EOF
   rm -f "$MARKER_DIR/$v.testgate-refusals" 2>/dev/null || true
 
   PREV_GOOD="$(cat "$LAST_GOOD_DIR/$v" 2>/dev/null || true)"
+  # THE LIVE TREE IS NOT WHAT PULL-SYNC LAST PUT THERE: copy it aside before the
+  # mirror overwrites it (see drift_quarantine). "Put there" is the last attempted
+  # clone hash ($v.sha) or the hash recorded after the last mirror/revert
+  # ($v.runtime-sha). This covers the drift heal and an ordinary advance that
+  # lands on top of hand-deployed content alike. A first run (no marker) is the
+  # image-baked tree and stays quiet. The copy failing means NO overwrite.
+  DQ_WROTE="$(cat "$MARKER_DIR/$v.runtime-sha" 2>/dev/null || true)"
+  if [ -n "${LAST:-}" ] && [ "$RUNTIME_HASH" != none ] && [ "$RUNTIME_HASH" != "$LAST" ] && [ "$RUNTIME_HASH" != "$DQ_WROTE" ]; then
+    if ! drift_quarantine "$v"; then
+      log "$v: live content ${RUNTIME_HASH:0:10} is not what pull-sync last wrote, and quarantining it failed ($DQ_WHY) — NOT overwriting it"
+      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-drift-quarantine-failed-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync would have overwritten live content under $RUNTIME_DIR/$v (content $RUNTIME_HASH, not a tree pull-sync wrote) with the clone (content $CLONE_HASH, git $HEAD), but could not copy it aside ($DQ_WHY), so it refused the overwrite. $v is held off the clone until the copy succeeds or the live tree is reconciled by hand.\",\"status\":\"open\"}}}}"
+      failed=$((failed+1)); continue
+    fi
+    log "$v: live content ${RUNTIME_HASH:0:10} is not what pull-sync last wrote — QUARANTINED to $DQ_PATH before overwriting it with the clone (${CLONE_HASH:0:10}, git ${HEAD:0:10})"
+    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-drift-quarantined-$v\",\"category\":\"source_divergence\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync overwrote live content under $RUNTIME_DIR/$v that it had not written (live content $RUNTIME_HASH) with the clone (content $CLONE_HASH, git $HEAD). The live tree was copied first to $DQ_PATH. If it held a change newer than origin (a hand deploy that was never pushed), recover it from there and land it through git; if it was a stray draft, nothing is lost.\",\"classification_metadata\":{\"vessel\":\"$v\",\"quarantine_path\":\"$DQ_PATH\",\"runtime_hash\":\"$RUNTIME_HASH\",\"clone_hash\":\"$CLONE_HASH\",\"clone_head\":\"$HEAD\"},\"status\":\"open\"}}}}"
+  fi
   # Taken BEFORE the mirror: what the running unit's non-test code is, vs the clone's.
   RUNTIME_NONTEST="$(content_hash_nontest "$RUNTIME_DIR/$v")"; CLONE_NONTEST="$(content_hash_nontest "$d")"
   log "$v: content ${RUNTIME_HASH:0:10} -> ${CLONE_HASH:0:10} (git ${HEAD:0:10}) — mirroring into $RUNTIME_DIR"
@@ -1720,6 +1782,7 @@ EOF
     log "$v: mirror failed — skipping"; failed=$((failed+1)); continue
   fi
   echo "$CLONE_HASH" > "$MARKER"
+  echo "$CLONE_HASH" > "$MARKER_DIR/$v.runtime-sha" 2>/dev/null || true
 
   # 2c. Shared-package fan-out. A mirrored clone with NO unit of its own but a
   # build step that OTHER runtime vessels file:-dep (e.g. @avigopal/ias-executor-ts,
@@ -1957,6 +2020,9 @@ EOF
           /usr/local/bin/mirror-to-live "$v" "$CLONE_DIR" || true
           git -C "$d" checkout -q "$BRANCH" 2>/dev/null || true
           git -C "$d" reset --hard -q "$HEAD" 2>/dev/null || true
+          # The live tree is now PREV_GOOD, written by pull-sync: record it so the
+          # next mirror over it is not mistaken for overwriting foreign content.
+          content_hash "$RUNTIME_DIR/$v" "$d" > "$MARKER_DIR/$v.runtime-sha" 2>/dev/null || true
           systemctl restart "$UNIT" 2>/dev/null || true
         fi
         # marker stays at $CLONE_HASH (last ATTEMPTED content): live code is PREV_GOOD,
