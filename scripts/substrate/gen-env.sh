@@ -1042,6 +1042,41 @@ PEER_DISCOVERY_ENDPOINTS="${PEER_DISCOVERY_ENDPOINTS_EXPLICIT:-${HUB_DISCOVERY_U
 # values; the keys are *_API_KEY vars persisted like every other key. Operator-explicit, so it
 # round-trips as given and is empty by default (no mapping = today's single-credential fallback).
 PEER_CREDENTIALS="${PEER_CREDENTIALS:-$(persisted_secret PEER_CREDENTIALS)}"
+# The map and the keys it names can also live in the volume, in /workspace/.peer-credentials
+# (lines NAME=value: PEER_CREDENTIALS plus each named key), so a peer credential an operator
+# issued survives a recreate. Before this, the only way to load that file was a systemd
+# drop-in written inside the container, and a recreate discarded it: node 1 lost its
+# credential for syzygy and discovery's calls there went back to 401 (2026-10-02).
+# Precedence per value: the launch environment, then the persisted secrets, then this file.
+PEER_CREDENTIALS_FILE="${PEER_CREDENTIALS_FILE:-/workspace/.peer-credentials}"
+_peer_file_val() {
+  local _v=""
+  [[ -f "$PEER_CREDENTIALS_FILE" ]] && _v="$(grep -m1 "^$1=" "$PEER_CREDENTIALS_FILE" | cut -d= -f2- || true)"
+  _v="${_v#\"}"; _v="${_v%\"}"
+  printf '%s' "$_v"
+}
+[[ -n "$PEER_CREDENTIALS" ]] || PEER_CREDENTIALS="$(_peer_file_val PEER_CREDENTIALS)"
+# Each key the map names must reach discovery-vessel, which reads it by name. Only names
+# ending in _API_KEY are rendered, so the map cannot set an arbitrary variable (PATH, a
+# unit's own settings); the core keys are rendered elsewhere and never from here.
+PEER_KEY_NAMES=""
+for _pair in ${PEER_CREDENTIALS//,/ }; do
+  _pn="${_pair#*=}"
+  if [[ ! "$_pn" =~ ^[A-Z][A-Z0-9_]*_API_KEY$ ]] || [[ "$_pn" == METABOB_API_KEY || "$_pn" == HUB_API_KEY ]]; then
+    echo "[gen-env] WARNING: PEER_CREDENTIALS maps ${_pair%%=*} to '${_pn}', which is not a peer key name (<NAME>_API_KEY); ignored" >&2
+    continue
+  fi
+  _pv="${!_pn:-}"
+  [[ -n "$_pv" ]] || _pv="$(persisted_secret "$_pn")"
+  [[ -n "$_pv" ]] || _pv="$(_peer_file_val "$_pn")"
+  if [[ -z "$_pv" ]]; then
+    echo "[gen-env] WARNING: PEER_CREDENTIALS maps ${_pair%%=*} to ${_pn}, but no value for ${_pn} is set (environment, secrets or ${PEER_CREDENTIALS_FILE}); that peer gets the default credential" >&2
+    continue
+  fi
+  printf -v "$_pn" '%s' "$_pv"
+  PEER_KEY_NAMES="${PEER_KEY_NAMES} ${_pn}"
+done
+_peer_key_lines() { local _k; for _k in $PEER_KEY_NAMES; do printf '%s="%s"\n' "$_k" "$(_env_escape "${!_k}")"; done; }
 PEER_FANOUT_MODE="${PEER_FANOUT_MODE:-union}"
 # Peering settings deploy-remote.sh appends to /etc/substrate/env AFTER boot, to
 # turn on discovery fan-out against a peer substrate. This file writes that env
@@ -1403,6 +1438,7 @@ PEER_MULTIADDR="${PEER_MULTIADDR:-}"
 FED_EXTRA_SHAPE="${FED_EXTRA_SHAPE:-}"
 PEER_DISCOVERY_ENDPOINTS="${PEER_DISCOVERY_ENDPOINTS}"
 PEER_CREDENTIALS="${PEER_CREDENTIALS}"
+$(_peer_key_lines)
 PEER_FANOUT_MODE="${PEER_FANOUT_MODE}"
 
 # Dense search (F-V58 fix — must point to directory containing model.onnx + vocab.txt)
