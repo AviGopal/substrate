@@ -8,6 +8,8 @@
 - "OM" is the user's operating model of 09-29, in memory `project-operating-model-route-around-then-encapsulate-2026-09-29.md`.
 - Class keys refer to `classes/<key>.json` and `dossiers/<key>.md`.
 
+**Amended 2026-10-02** (continuity amendment, `CONTINUITY-AMENDMENT-2026-10-02.md`; integrated into REALIGNMENT §10): §1's "middle", evidence figures and autonomy criterion, K3, C8 and §5 were reconciled with REALIGNMENT. The withdrawn readings are kept, marked as withdrawn, so they cannot become current thresholds.
+
 **Warning, the P0 finding.** Nothing in this document is new. Every law below has been written down before, and most of them several times. For example, "negative unattributed" was learned at least 10 times before it was written (#1203), and WORKING_SYSTEM_EXPECTATIONS says "asked seven times, answered seven times in prose; prose did not stick" (#1143). This canon only earns its place if §5 is done: every law gets a runtime reader. Otherwise it is restatement number eight.
 
 ---
@@ -17,19 +19,21 @@
 The substrate is a decentralised fleet that develops itself. Given any goal in natural language, it walks the shape graph to a useful, verified output.
 - **Floor:** at worst it matches a ReAct agent. The walk routes around missing capabilities, bad formats and errors using tool-enabled fallback, and every step is traced (CLAUDE.md execution expectation, #11; OM).
 - **Ceiling:** at best it reuses a learned pathway.
-- **Middle:** it adapts only the first or last mile.
+- **Middle:** it reuses the characterized portions of a learned pathway and adapts the uncertain connections wherever they occur, not only at the first or last mile (amended 10-02; REALIGNMENT §2.0b).
 
 It reaches its answers from existing, versioned resolvers first. It **encapsulates** a new capability only when traces show that a routed-around need recurs. It then reuses that capability, and it chains outputs into new goals (OM, L3, L4).
 
 Its history, meaning traces graded against independent ground truth, decides what to do next, what to learn, and what can wait (L5, L7). Every shape is reachable from every node over p2p, so absence in one place is not absence (OM, L11, #30/#33).
 
-**Done means** an end-to-end path runs across nodes and reaches its goal. The **autonomy criterion** is a substrate-authored commit on origin/dev, with no operator hands, whose effect is verified at the consumer (#13, #784, #965).
+**Done means** an end-to-end path runs across nodes and reaches its goal. An execution completing, a consumer using its output, a learning update being stored, and that update changing later execution are four separate claims (amended 10-02).
+
+**The autonomy criterion** has two levels (amended 10-02). The **self-development milestone** is a substrate-authored commit on origin/dev, with no operator hands, whose effect is verified at the consumer (#13, #784, #965). The **broader criterion** is sustained continuation and learning within granted authority. Legitimate human participation is not an autonomy failure; repeated human reconstruction of lost inputs, context or history is a continuity defect.
 
 **The failure** is the same issue recurring for the same reason. Trying things that fail is not the failure (OM, #1227).
 
 What this goal has never had is one end-to-end build (OM: "never once built so that it works end to end"). Evidence of how far the build falls short:
-- Learned-pathway reach is 30.8%, against 3.0% for fresh derivation (#263).
-- The floor tier reaches about 2% of the time (`dossiers/goal-walk-floor.md`).
+- **Corrected 10-02 (REALIGNMENT §1, R3-1, R3-8).** An earlier version of this line read "learned-pathway reach is 30.8%, against 3.0% for fresh derivation (#263)". That is **withdrawn as a reach figure**. 30.8% (860/2,788) and 3.0% (485/16,165) are lifetime validated-success counts from `goal_execution_paths.successful_executions`, a counter family ruled unreliable, so the contrast is indicative only. **Reach by tier is unmeasured.**
+- **Corrected 10-02.** An earlier version read "the floor tier reaches about 2% of the time". That is **withdrawn**: the ~2% (7/7,197) was an artefact of a first-run flag summed against lifetime execution counts. Floor reach re-measured on 09-29 from goal-host's per-run LLM-judge verdicts was 12.6% on node 1 (161/1,276) and 24.1% on node 2 (59/245), with denominators that depend on journal retention. These are observations bounded by that time, node and instrument, not thresholds.
 - A need that names no component had no entry point on 09-29 03:35 (#1112, commit 9c967329).
 
 ---
@@ -52,6 +56,7 @@ Env vars, config and literals are allowed only for identity, secrets, ports and 
 Exit status, typecheck, `landed:true`, FAVORABLE, a sha or green CI are not outcomes. Read back the artifact the goal named, at the layer that consumes it.
 - **Sources:** CLAUDE.md "`reached`, not `status`", #12, #34, #54, #84, #396, #625 (reached plus a landed sha checked out 0/4 on diff read), #948 (72 of 80 reached but 23 of 80 correct), #1245 ("`reached` is data, not a verdict"), #1063, #1248, #540 (a fix that lowers reported reach is correct if it removes false credit).
 - **Bound:** a class earns credit only by gaining a deterministic verifier. Where there is no verifier, reach stays data (C2).
+- **Bound (amended 10-02): three uses of evidence.** *Observation*: a specific consumer used a specific output under identified conditions, with an observed consequence. *Learning*: an attributed observation updates one transition's characterization, including its uncertainty and applicability. *Acceptance*: accumulated evidence meets the requirements of a named action (delivery, landing, closure, scope expansion). This law governs **acceptance**. A terminal verdict is one observation, not the only source of learning; consumption establishes use, not causal benefit; an unavailable observation is unresolved, never negative; a correction names what it supersedes, and duplicate delivery never duplicates an update. Partial learning never authorizes deployment (REALIGNMENT §2.2).
 
 ### K4. A negative is unattributed until a positive control shares its address
 Absent, empty, zero, not-observed and failed are five different states. A zero read through a filter measures the filter. A truncated search does not establish absence. "Absent here" does not mean absent on a decentralised system.
@@ -139,7 +144,7 @@ These are ordered by how much they block. "Proposed ruling" means the one the ev
 | **C5** | Fail open, fail closed, or abstain | #214, the CLAUDE.md hook vs #349, #130, #477 vs #423 | Gates on learning, landing and closing fail **closed**. Throttles, governors and operator-convenience hooks fail **open visibly**, with a signal (#1275). Verifiers with incomplete class coverage **abstain**. |
 | **C6** | Route around holes (OM) vs surface the missing producer and use no fallback chain | OM, #1228 vs #1264, #310, #787 | Routing around is mandatory, but it must be *traced and visible*. The fallback records "producer X absent, routed via Y", and that record is the demand signal for encapsulation (K10). A silent fallback is forbidden. |
 | **C7** | Where behaviour lives: OM (resolvers) vs L2 (activities) | OM vs L2, #140 | Settled by K11. Write it into CLAUDE.md L2 and FOUNDATION. |
-| **C8** | Autonomy scoped out of its own core vs the S2 lift | #282 (autonomyScope 09-27: 27 excluded paths), #315, #841 vs #51, #13, #229, #220 | A staged earn-in rule, held as a shape. A path leaves the exclusion set when a machine-checked criterion is met, for example N verified landings in adjacent paths with zero regressions. Today the rule is only `autonomyScope.reason` prose. |
+| **C8** | Autonomy scoped out of its own core vs the S2 lift | #282 (autonomyScope 09-27: 27 excluded paths), #315, #841 vs #51, #13, #229, #220 | **Amended 10-02 (REALIGNMENT §7 step 9).** Three categories in `autonomyScope`: human-governed authority boundaries, which evidence alone never moves (evaluator paths among them; whether any is permanent is an open user decision); implementations eligible for earned modification, which leave only by a machine-checked criterion held as a shape and citing evidence relevant to *that* behaviour (success in adjacent paths is not such evidence; the earlier example "N verified landings in adjacent paths" is withdrawn); and temporary restrictions with a reason, release condition and expiry. A candidate evaluator cannot certify its own promotion. Today the rule is only `autonomyScope.reason` prose. |
 | **C9** | Hand-land vs let the loop learn | #833, L6 vs #590, #677, #1185 ("fails twice") | #1184 is the operative rule: the operator lands only what restores the system's ability to land its own fixes. "Fails twice" is the trigger for *considering* that rule, not a licence. |
 | **C10** | Kill switches and critical self-observation schedules as env or timers vs L1 and L5 | #1083, #697, #1162, #400, #56 vs L1, L5, #94 | Extend the bootstrap-tier exception by name: kill switches plus self-observation watchdogs that sit outside the selector they monitor. Each exception carries an attempt budget and a loud-failure duty. |
 | **C11** | Docs as expectations vs docs as caches, and status in specs | L9, #81, #1216, #1226 vs #249, #100, #463, #1166 | Docs hold invariants and failure modes only. Every measured value, status, "ships vs design" block or dormant marker is a cache. It lives in the substrate as a shape and is queried. Docs-align is substrate work (L9), not an author's duty. |
@@ -211,3 +216,4 @@ Per #1382 and #328, a principle with no runtime reader is an archive. The minimu
 - **K8:** a lint that fails a landing when a new literal port or `127.0.0.1` appears in `repos/*/src`. It needs a caller: the post-land suite, which now executes (5e9a0b2).
 - **K16 and P0:** recurrence counted across closed rows and store resets (`substrate-gap.ts:460`), so that "same issue, same reason" becomes a number the selector reads.
 - **Contradictions C1 to C25:** each ruling becomes a shaped policy row with its source `#n`. A ruling that exists only in this file is subject to K5: it is a claim, not state.
+- **Generation from this file (amended 10-02; REALIGNMENT §8).** Before any row is generated, each source statement is classified as an **observation** (bounded by time, node, version and method), an **expectation** (behaviour required by a stated contract or purpose) or a **hypothesis** (a proposed relationship awaiting an experiment). Each generated row keeps its source revision and line, its statement kind and its reader. A change here refreshes or explicitly invalidates the derived rows. Statements marked withdrawn (§1) never become active expectations. Unparsed claims stay explicit and are never fabricated into predicates.
