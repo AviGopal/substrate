@@ -1361,7 +1361,7 @@ converge_fleet_defs() {
       cp -f "$_cf_live" "$_cf_mark" 2>/dev/null \
         && log "fleet: $f differs from git; adopting the live copy as baseline (no sidecar yet) — will converge once it is unmodified"
     else
-      log "fleet: $f was modified locally — leaving it alone (git version NOT applied; delete $_cf_mark to accept git)"
+      log "fleet: $f was modified locally — leaving it alone (git version NOT applied; deleting $_cf_mark makes the next tick re-adopt the live copy and the tick after that replace it with git)"
     fi
   done
 }
