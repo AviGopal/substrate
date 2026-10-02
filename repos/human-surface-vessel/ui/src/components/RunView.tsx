@@ -223,16 +223,6 @@ export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
             <Rendered content={fromText("goal_reach_reason", reason)} density="inline" header={false} region="run_reason" />
           </div>
         ) : null}
-        {reason && segments.length > 1 ? (
-          // The record's reason is the REPORTED attempt's, which is not always the
-          // last one. Until goal-host serves attempts[] (asked 10-02), the attempt
-          // is matched the way the provenance trace already matches it.
-          <p className="sf-note sf-muted sf-run-reason-attempt">
-            {reportedSeg
-              ? `This reason is from attempt ${reportedSeg.number} of ${segments.length}${reportedSeg.number === segments.length ? "" : ", not the last one"} — each attempt's own verdict is in Provenance.`
-              : `This run made ${segments.length} attempts; which one this reason belongs to could not be determined — each attempt's verdict is in Provenance.`}
-          </p>
-        ) : null}
         {walk.humanReachNotes ? <p className="sf-run-reason-full">“{walk.humanReachNotes}”</p> : null}
       </header>
 
@@ -254,10 +244,10 @@ export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
         </section>
       ) : null}
 
-      <Chain walk={walk} hasAnswer={answer !== null} />
+      <Chain walk={walk} />
 
       <details className="sf-view-section sf-provenance" aria-label="Provenance">
-        <summary className="sf-view-label">Provenance — the walk, step by step</summary>
+        <summary className="sf-view-label">Provenance</summary>
         <Trace walk={walk} />
       </details>
 
@@ -274,8 +264,8 @@ export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
             appliesTo={
               segments.length > 1
                 ? reportedSeg
-                  ? `Applies to attempt ${reportedSeg.number} of ${segments.length} — the attempt this run reports`
-                  : `Applies to the attempt this run reports; which of the ${segments.length} it is could not be determined`
+                  ? `Attempt ${reportedSeg.number} of ${segments.length}`
+                  : `Reported attempt (of ${segments.length})`
                 : null
             }
             humanReachNotes={walk.humanReachNotes}

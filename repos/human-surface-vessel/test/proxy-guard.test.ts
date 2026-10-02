@@ -110,7 +110,7 @@ describe("fetchGap", () => {
     expect(await fetchGap("g-1")).toBeNull();
 
     answer(404, "Not Found");
-    await expect(fetchGap("g-1")).rejects.toThrow("the gap was not checked");
+    await expect(fetchGap("g-1")).rejects.toThrow("not checked");
 
     answer(200, JSON.stringify({ gap: { id: "g-1" } }));
     expect(await fetchGap("g-1")).toEqual({ id: "g-1" } as never);

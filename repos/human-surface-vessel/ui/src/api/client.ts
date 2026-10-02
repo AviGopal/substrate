@@ -367,7 +367,7 @@ export async function fetchGap(id: string): Promise<GapRecord | null> {
   // store" told the reader every escalation's gap had vanished (10-02: the live
   // server ran a proxy.ts without the route).
   if (res.status === 404 && body !== null && "gap" in body && body.gap === null) return null;
-  if (!res.ok) throw new Error(body?.error ?? `gap lookup unavailable (${res.status}) — the gap was not checked`);
-  if (!body || !("gap" in body)) throw new Error("gap lookup answered without a gap field — the gap was not checked");
+  if (!res.ok) throw new Error(body?.error ?? `not checked (${res.status})`);
+  if (!body || !("gap" in body)) throw new Error("not checked");
   return body.gap ?? null;
 }
