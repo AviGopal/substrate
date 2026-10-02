@@ -645,6 +645,26 @@ SUBSTRATE_ADMIN_KEY="${SUBSTRATE_ADMIN_KEY:-$(persisted_secret SUBSTRATE_ADMIN_K
 # a historical unquoted SUBSTRATE_GIT_AUTHOR_NAME) would run as a command here.
 SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-$(persisted_secret SUBSTRATE_GIT_PAT)}"
 SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-}"
+
+# AUTHORING NODES ARE CANARIES (staged-fleet-rollout). Drafting and grounding read
+# /vessels, the running tree, and a landing is committed onto dev. A node that lands code
+# while running the verified fleet revision would draft against code dev has moved past.
+# So a node that can land (a git token, and the landing kill switch not set to 0) runs dev:
+# with no channel given it is a canary, and an explicit fleet or hold is refused. Defaulting
+# rather than refusing keeps an existing authoring node booting after an upgrade.
+_lands=0
+# gen-env treats any MITOSIS_DIRECT_PUSH other than unset or 1 as push off (see the switch below).
+if [ -n "${SUBSTRATE_GIT_PAT:-}" ] && [ "${MITOSIS_DIRECT_PUSH:-1}" = "1" ]; then _lands=1; fi
+if [ "$_lands" = 1 ]; then
+  case "${SUBSTRATE_UPDATE_CHANNEL:-}" in
+    "") SUBSTRATE_UPDATE_CHANNEL=canary
+        echo "[gen-env] update channel: canary (this node lands code, so it runs dev)" >&2 ;;
+    fleet|hold)
+      _refuse "SUBSTRATE_UPDATE_CHANNEL=${SUBSTRATE_UPDATE_CHANNEL} on a node that lands code." \
+        "A node that lands code must run dev, because drafting reads the running tree." \
+        "Use SUBSTRATE_UPDATE_CHANNEL=canary, or stop this node landing: remove SUBSTRATE_GIT_PAT, or set MITOSIS_DIRECT_PUSH=0." ;;
+  esac
+fi
 # The push capability's scope (see the guard at the top of this file). Precedence
 # is the file's usual one — explicit env > persisted > default — and the default
 # is reachable only on a volume that already held a token or on one with no
