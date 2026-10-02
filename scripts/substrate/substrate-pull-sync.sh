@@ -1782,7 +1782,12 @@ EOF
     log "$v: mirror failed — skipping"; failed=$((failed+1)); continue
   fi
   echo "$CLONE_HASH" > "$MARKER"
-  echo "$CLONE_HASH" > "$MARKER_DIR/$v.runtime-sha" 2>/dev/null || true
+  # Record what is MEASURABLY live, not what was meant to land: a mirror that exits 0
+  # but does not fully land would otherwise read as foreign content next tick and be
+  # quarantined and gapped as someone else's write when it is pull-sync's own partial one.
+  _rt_after="$(content_hash "$RUNTIME_DIR/$v" "$d")"
+  [ "$_rt_after" = "$CLONE_HASH" ] || log "$v: mirror exited 0 but live (${_rt_after:0:10}) != clone (${CLONE_HASH:0:10})"
+  echo "$_rt_after" > "$MARKER_DIR/$v.runtime-sha" 2>/dev/null || true
 
   # 2c. Shared-package fan-out. A mirrored clone with NO unit of its own but a
   # build step that OTHER runtime vessels file:-dep (e.g. @avigopal/ias-executor-ts,
