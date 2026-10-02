@@ -158,7 +158,15 @@ jobs:
           for p in $paths; do
             if ! out=$(git submodule update --init "$p" 2>&1); then
               want=$(git ls-tree HEAD "$p" | awk '{print $3}')
-              echo "::error::submodule ${p}: cannot fetch pinned commit ${want}. It is almost certainly UNPUSHED — the super-repo references a commit that exists on no remote. Push it from the clone that has it, or move the gitlink to a commit that is on the remote."
+              # Two causes print differently: a token that cannot read the repository
+              # (a private submodule the build PAT has no grant on) never reaches the
+              # commit, so calling it unpushed sent the reader to the wrong fix.
+              case "$out" in
+                *"Authentication failed"*|*"Repository not found"*|*"could not read Username"*)
+                  echo "::error::submodule ${p}: the build token cannot read its repository. Grant SUBSTRATE_GIT_PAT read access to it (or make the repository public); the pinned commit ${want} was never reached." ;;
+                *)
+                  echo "::error::submodule ${p}: cannot fetch pinned commit ${want}. It is almost certainly UNPUSHED — the super-repo references a commit that exists on no remote. Push it from the clone that has it, or move the gitlink to a commit that is on the remote." ;;
+              esac
               echo "$out" | sed 's/^/    /'
               failed="${failed}${p} (${want:0:10})\n"
             fi
