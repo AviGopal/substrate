@@ -11,7 +11,9 @@ Type=simple
 # of truth for where this substrate is pointed — when it was listed last, a
 # stale HUB_DISCOVERY_URL pinned to a decommissioned droplet outranked env on
 # every boot and crash-looped the federation transport.
-EnvironmentFile=-/workspace/.substrate-secrets
+# The persisted store (/workspace/.substrate-secrets) is NOT loaded: it holds every
+# trust-root secret (secrets-manifest.json), and gen-env re-emits each non-scoped name
+# it carries into /etc/substrate/env, which is authoritative anyway.
 EnvironmentFile=/etc/substrate/env
 Environment=PORT=8090
 Environment=HOST=0.0.0.0
@@ -35,6 +37,12 @@ WorkingDirectory=/vessels/development-vessel
 # development-vessel.service.d/10-secrets-out-of-reach.conf (-> vessel.d/). /etc/substrate stays
 # readable on purpose: env-gate-scan reads the variable NAMES there, and the push credential helper
 # sources it at push time.
+# The scoped trust-root secret files (secrets-manifest.json): this vessel consumes none
+# of them, so none exists in its namespace. Not containment on its own (the process is
+# still root, so PID1 and other units' /proc environ remain reachable); it closes the
+# plain file read.
+InaccessiblePaths=-/etc/substrate/env.d
+InaccessiblePaths=-/etc/substrate/admin.env
 # First-boot policy records (bootstrap tier): on a FRESH pool only (no pool file yet), write the initial
 # autonomyScope and spendEnvelope from the committed scripts/substrate/autonomy-scope.json; the policy
 # reads otherwise refuse them as absent. Before the vessel serves, so no writer races it; with this unit's

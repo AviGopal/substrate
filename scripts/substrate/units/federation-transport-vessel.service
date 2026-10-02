@@ -11,8 +11,14 @@ Type=simple
 # revision of gen-env, and because it loaded last it beat the empty/derived value
 # in /etc/substrate/env — no relay anchor resolved and the transport hard-exited
 # every 5s, parked in `activating`, never `failed`.
-EnvironmentFile=-/workspace/.substrate-secrets
+# The persisted store (/workspace/.substrate-secrets) is NOT loaded: it holds every
+# trust-root secret (secrets-manifest.json), and gen-env re-emits each non-scoped name
+# it carries into /etc/substrate/env, which is authoritative anyway.
 EnvironmentFile=/etc/substrate/env
+# Scoped trust-root secrets (secrets-manifest.json; rendered by render-secret-scope.sh).
+# After the shared file, and WITHOUT '-': a missing file must fail this unit, not
+# start it without the secret it exists to hold.
+EnvironmentFile=/etc/substrate/env.d/federation-transport-vessel.env
 Environment=FED_HEALTH_PORT=8401
 Environment=DISCOVERY_URL=http://127.0.0.1:8100
 WorkingDirectory=/usr/local/share/substrate/super-repo/scripts/substrate/federation-relay

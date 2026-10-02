@@ -397,7 +397,10 @@ echo "== 3c. the substrate can still manage its own keyspace =="
 # .substrate-secrets. The fleet was healthy and every other check passed. Nothing
 # noticed until an operator tried to issue a key — which is why this check exists
 # rather than being left to surface at the moment of need.
-ADMIN_LEN="$(csh "grep -m1 '^SUBSTRATE_ADMIN_KEY=' /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d '\"' | wc -c" 2>/dev/null || echo 0)"
+# Read from admin.env: SUBSTRATE_ADMIN_KEY is scoped out of the shared env
+# (secrets-manifest.json), so the shared file reads EMPTY on every current node.
+# The shared env is still consulted for a node booted before that split.
+ADMIN_LEN="$(csh "cat /etc/substrate/admin.env /etc/substrate/env 2>/dev/null | grep -m1 '^SUBSTRATE_ADMIN_KEY=..' | cut -d= -f2- | tr -d '\"' | wc -c" 2>/dev/null || echo 0)"
 if [ "${ADMIN_LEN:-0}" -gt 1 ] 2>/dev/null; then
   ok "SUBSTRATE_ADMIN_KEY present — key management reachable"
 else

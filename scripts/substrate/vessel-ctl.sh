@@ -244,12 +244,21 @@ case "$ACTION" in
       echo "{\"warn\":\"$VESSEL: $install_note\"}" >&2
     fi
 
-    # 2. Ensure declared secrets exist in /etc/substrate/env (single place).
+    # 2. Ensure declared secrets exist where their consumer reads them. A name the
+    # secrets manifest scopes (a trust-root secret) goes ONLY to this vessel's
+    # /etc/substrate/env.d/<vessel>.env, and only if the manifest names this vessel
+    # as its consumer; writing it to /etc/substrate/env would hand it to every unit.
+    # Every other declared name stays in the shared env, as before.
     secs=$(echo "$e" | jq -r '.secrets[]?' | tr '\n' ' ')
     if [[ -n "$secs" ]]; then
       csh "set -a; [ -f /usr/local/share/substrate/secrets.env.sh ] && source /usr/local/share/substrate/secrets.env.sh >/dev/null 2>&1 || true; set +a; \
-           for k in $secs; do v=\"\${!k:-}\"; \
-             if [ -n \"\$v\" ]; then grep -v \"^\$k=\" /etc/substrate/env > /etc/substrate/env.tmp && mv /etc/substrate/env.tmp /etc/substrate/env; echo \"\$k=\$v\" >> /etc/substrate/env; fi; done"
+           sm=/usr/local/share/substrate/secrets-manifest.json; \
+           for k in $secs; do v=\"\${!k:-}\"; [ -n \"\$v\" ] || continue; f=/etc/substrate/env; \
+             if [ -f \"\$sm\" ] && jq -e --arg k \"\$k\" '.secrets[\$k] != null' \"\$sm\" >/dev/null 2>&1; then \
+               if ! jq -e --arg k \"\$k\" --arg u '$VESSEL' '.secrets[\$k].units | index(\$u) != null' \"\$sm\" >/dev/null 2>&1; then echo \"[vessel-ctl] not writing scoped secret \$k: $VESSEL is not its declared consumer\" >&2; continue; fi; \
+               f=/etc/substrate/env.d/$VESSEL.env; mkdir -p -m 700 /etc/substrate/env.d; [ -f \"\$f\" ] || { : > \"\$f\"; chmod 600 \"\$f\"; }; v=\"\\\"\$v\\\"\"; \
+               { grep -v \"^\$k=\" /etc/substrate/env || true; } > /etc/substrate/env.tmp && chmod 600 /etc/substrate/env.tmp && mv /etc/substrate/env.tmp /etc/substrate/env; fi; \
+             { grep -v \"^\$k=\" \"\$f\" || true; echo \"\$k=\$v\"; } > \"\$f.tmp\" && chmod 600 \"\$f.tmp\" && mv \"\$f.tmp\" \"\$f\"; done"
     fi
 
     # 3. Render + install the unit via the shared template.

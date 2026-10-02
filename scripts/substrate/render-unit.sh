@@ -39,6 +39,17 @@ desc="$(echo "$e" | jq -r '.description // .name')"
 env_lines="$(echo "$e" | jq -r '.env // {} | to_entries[] | "Environment=\(.key)=\(.value)"')"
 after="$(echo "$e" | jq -r '(.depends_on // []) | map(. + ".service") | join(" ")')"
 
+# Scoped trust-root secrets: a vessel the secrets manifest names as a consumer loads
+# its own /etc/substrate/env.d/<name>.env (rendered by render-secret-scope.sh), after
+# the shared file and without '-'. Every other rendered vessel gets none of them.
+SECRETS_MANIFEST="${SECRETS_MANIFEST:-$(dirname "$MANIFEST")/secrets-manifest.json}"
+[ -f "$SECRETS_MANIFEST" ] || SECRETS_MANIFEST=/usr/local/share/substrate/secrets-manifest.json
+scoped_env=""
+if [ -f "$SECRETS_MANIFEST" ] && jq -e --arg n "$VESSEL" \
+     '[.secrets[].units[]?, .patterns[]?.units[]?] | index($n) != null' "$SECRETS_MANIFEST" >/dev/null 2>&1; then
+  scoped_env="EnvironmentFile=/etc/substrate/env.d/$VESSEL.env"
+fi
+
 # A vessel whose workdir is inside the SUPER-REPO CLONE cannot start — or install
 # — before git-push-setup.service has materialised that clone, and until now
 # nothing said so. systemd started the unit concurrently with git-push-setup, it
@@ -72,17 +83,17 @@ Type=simple
 # ORDER IS LOAD-BEARING: systemd applies EnvironmentFile= directives in listing
 # order, so a LATER file overrides an earlier one. /etc/substrate/env is listed
 # LAST and is therefore authoritative for every rendered vessel.
-# /workspace/.substrate-secrets is a host-side restart cache for SECRETS; it is
-# not a source of truth for where this substrate is pointed. While it loaded
-# last, a stale HUB_DISCOVERY_URL carried forward from an older gen-env revision
-# (a decommissioned droplet IP) outranked env on every boot.
+# /workspace/.substrate-secrets is NOT loaded: it is a restart cache holding every
+# trust-root secret (secrets-manifest.json), and gen-env re-emits its non-scoped
+# names into /etc/substrate/env. (While it loaded last, a stale HUB_DISCOVERY_URL
+# carried forward from an older gen-env revision outranked env on every boot.)
 #
 # Separately: the \$env_lines below are Environment= directives, and systemd
 # gives EnvironmentFile= precedence over Environment= REGARDLESS of line order
 # (systemd.exec: "Settings from these files override settings made with
 # Environment="). They survive only because gen-env never emits their names.
-EnvironmentFile=-/workspace/.substrate-secrets
 EnvironmentFile=/etc/substrate/env
+$scoped_env
 $env_lines
 WorkingDirectory=$workdir
 # A RESTART MUST BE ABLE TO REPAIR AN INCOMPLETE INSTALL.

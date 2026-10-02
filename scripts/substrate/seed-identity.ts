@@ -5,7 +5,7 @@
 // Usage: bun run /vessels/seed-identity.ts
 //   Requires METABOB_API_KEY, JWT_SECRET env vars (set via EnvironmentFile).
 
-import { writeFileSync, readFileSync, existsSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync, renameSync } from "node:fs";
 
 const IDENTITY_URL = process.env.IDENTITY_VESSEL_URL ?? "http://127.0.0.1:8101";
 // Fallback authed route for key validation when identity exposes no /v1/keys/validate.
@@ -33,7 +33,34 @@ function upsertEnvVar(path: string, key: string, value: string): void {
   const updated = re.test(content)
     ? content.replace(re, line)
     : content.replace(/\n?$/, `\n${line}\n`);
-  writeFileSync(path, updated, { mode: 0o600 });
+  // temp + rename: units read these paths, and a torn write reads as "no key".
+  const tmp = `${path}.tmp.${process.pid}`;
+  writeFileSync(tmp, updated, { mode: 0o600 });
+  renameSync(tmp, path);
+}
+
+// SUBSTRATE_ADMIN_KEY is a trust-root secret: it is NEVER written to the shared
+// /etc/substrate/env (loaded by every unit, development-vessel's lane code
+// included). secrets-manifest.json names the files that carry it — the operator /
+// bootstrap admin.env plus each consumer unit's env.d file — so this writer
+// follows the manifest rather than a list of its own. Falls back to admin.env.
+function scopedFiles(name: string): string[] {
+  for (const m of ["/usr/local/share/substrate/secrets-manifest.json", `${import.meta.dir}/secrets-manifest.json`]) {
+    try {
+      const j = JSON.parse(readFileSync(m, "utf-8"));
+      const e = j?.secrets?.[name];
+      if (!e) continue;
+      const tmpl: string = j.unit_file ?? "env.d/{unit}.env";
+      const files = (e.units ?? []).map((u: string) => `/etc/substrate/${tmpl.replace("{unit}", u)}`);
+      if ((e.scripts ?? []).length > 0) files.push(`/etc/substrate/${j.admin_file ?? "admin.env"}`);
+      return files;
+    } catch {}
+  }
+  return ["/etc/substrate/admin.env"];
+}
+function persistAdminKey(key: string): void {
+  for (const f of scopedFiles("SUBSTRATE_ADMIN_KEY")) upsertEnvVar(f, "SUBSTRATE_ADMIN_KEY", key);
+  upsertEnvVar(SECRETS_FILE, "SUBSTRATE_ADMIN_KEY", key);
 }
 
 // Backfill SUBSTRATE_ADMIN_KEY on a substrate that predates it.
@@ -75,9 +102,8 @@ async function ensureAdminKey(fleetKey: string): Promise<void> {
       console.warn(`[seed-identity] admin backfill failed ${r.status}: ${JSON.stringify(j?.error ?? j)}`);
       return;
     }
-    upsertEnvVar("/etc/substrate/env", "SUBSTRATE_ADMIN_KEY", key);
-    upsertEnvVar(SECRETS_FILE, "SUBSTRATE_ADMIN_KEY", key);
-    console.log("[seed-identity] backfilled SUBSTRATE_ADMIN_KEY — key management had been unreachable");
+    persistAdminKey(key);
+    console.log("[seed-identity] backfilled SUBSTRATE_ADMIN_KEY (scoped files + .substrate-secrets) — key management had been unreachable");
   } catch (e) {
     console.warn(`[seed-identity] admin backfill error: ${(e as Error).message}`);
   }
@@ -322,10 +348,11 @@ async function main() {
   // directly. Persist it under SUBSTRATE_ADMIN_KEY so operators (and the keyctl
   // CLI) can retrieve it as the keyspace's bootstrap credential.
   const adminKey = await issueKey(token, user_id, org_id, "substrate-admin", ["read", "write", "admin"]);
-  upsertEnvVar("/etc/substrate/env", "SUBSTRATE_ADMIN_KEY", adminKey);
-  upsertEnvVar(SECRETS_FILE, "SUBSTRATE_ADMIN_KEY", adminKey);
-  console.log(`[seed-identity] issued self-admin key (substrate-admin): ${adminKey}`);
-  console.log("[seed-identity] set SUBSTRATE_ADMIN_KEY in /etc/substrate/env and .substrate-secrets");
+  persistAdminKey(adminKey);
+  // Name only: the journal is readable by every root process, so an admin key
+  // printed here is an admin key handed to the whole fleet.
+  console.log("[seed-identity] issued self-admin key (substrate-admin)");
+  console.log("[seed-identity] set SUBSTRATE_ADMIN_KEY in its scoped files (secrets-manifest.json) and .substrate-secrets");
 
   // Issue dedicated per-vessel keys (per D4 — per-vessel trace attribution) and
   // WRITE them. These stanzas previously only console.log'd an instruction to

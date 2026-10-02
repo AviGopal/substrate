@@ -12,7 +12,9 @@ RemainAfterExit=yes
 # The persisted workspace file is a restart cache for SECRETS, never a source
 # of truth for routing anchors. SUBSTRATE_GIT_PAT/GITHUB_TOKEN are unaffected:
 # gen-env re-emits both verbatim into /etc/substrate/env.
-EnvironmentFile=-/workspace/.substrate-secrets
+# The persisted store (/workspace/.substrate-secrets) is NOT loaded: it holds every
+# trust-root secret (secrets-manifest.json), and gen-env re-emits each non-scoped name
+# it carries into /etc/substrate/env, which is authoritative anyway.
 EnvironmentFile=/etc/substrate/env
 ExecStart=/usr/local/bin/setup-git-push
 StandardOutput=journal

@@ -204,7 +204,11 @@ probe_lane() {  # $1 = lane name; writes $WORK/<lane>.{env,secrets,values}
   # say so, never produce a number.
   local genenv_mount=() genenv_cmd='/usr/local/bin/gen-env'
   if [ -z "${PROBE_USE_IMAGE:-}" ]; then
-    genenv_mount=( -v "$HERE/gen-env.sh:/probe-gen-env.sh:ro" )
+    # gen-env renders the scoped trust-root secrets through its sibling renderer and
+    # manifest; mount them beside it so the worktree copies are what runs.
+    genenv_mount=( -v "$HERE/gen-env.sh:/probe-gen-env.sh:ro"
+                   -v "$HERE/render-secret-scope.sh:/render-secret-scope.sh:ro"
+                   -v "$HERE/secrets-manifest.json:/secrets-manifest.json:ro" )
     genenv_cmd='bash /probe-gen-env.sh'
   fi
 
@@ -212,7 +216,10 @@ probe_lane() {  # $1 = lane name; writes $WORK/<lane>.{env,secrets,values}
     --entrypoint bash "$IMAGE" -c "
       $genenv_cmd >/dev/null 2>&1 || true
       echo '===ENV==='
-      grep -oE '^[A-Z_][A-Z0-9_]*=' /etc/substrate/env 2>/dev/null | tr -d '=' | sort -u
+      # A vessel can read the shared env AND, if it consumes one, its scoped file
+      # (secrets-manifest.json): both count as emitted.
+      cat /etc/substrate/env /etc/substrate/env.d/*.env /etc/substrate/admin.env 2>/dev/null \
+        | grep -oE '^[A-Z_][A-Z0-9_]*=' | tr -d '=' | sort -u
       echo '===SECRETS==='
       grep -oE '^[A-Z_][A-Z0-9_]*=' /workspace/.substrate-secrets 2>/dev/null | tr -d '=' | sort -u
       echo '===VALUES==='
@@ -221,7 +228,7 @@ probe_lane() {  # $1 = lane name; writes $WORK/<lane>.{env,secrets,values}
       # (as it must for JSON values) a perfectly delivered value stopped matching
       # its own sentinel and was reported HARDCODED. What a vessel sees is the
       # SOURCED value; compare that. env -i so nothing is inherited.
-      env -i sh -c 'set -a; . /etc/substrate/env 2>/dev/null; set +a; env' 2>/dev/null \
+      env -i sh -c 'set -a; for f in /etc/substrate/env /etc/substrate/env.d/*.env /etc/substrate/admin.env; do [ -f "\$f" ] && . "\$f"; done 2>/dev/null; set +a; env' 2>/dev/null \
         | grep -E '^[A-Z_][A-Z0-9_]*=.*PROBEVAL' | sort
     " > "$WORK/$lane.raw" 2> "$WORK/$lane.err"
   local rc=$?

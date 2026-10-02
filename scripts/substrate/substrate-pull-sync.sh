@@ -609,6 +609,22 @@ converge_units() {
   stage_committed_glue "$_cu_super" || return 0
   _cu_root="$PULLSYNC_GLUE_STAGE"
   [ -d "$_cu_root/scripts/substrate/units" ] || return 0
+  # SCOPED SECRETS FIRST. Consumer units load /etc/substrate/env.d/<unit>.env WITHOUT
+  # '-' (secrets-manifest.json), but gen-env renders those files only at boot. A unit
+  # converged onto a node booted before the split, then restarted (identity-vessel is,
+  # whenever its repo advances), would fail on the missing file. So render them here,
+  # in recover mode (values from the files already rendered, else the shared env this
+  # node booted with, else the persisted store; never minted), and converge NO unit
+  # this tick if that fails. After the units land, the same renderer removes each
+  # scoped name from the shared env once every installed consumer loads its file.
+  _cu_rss="$_cu_root/scripts/substrate/render-secret-scope.sh"
+  _cu_envdir="${PULLSYNC_SECRET_ENV_DIR:-/etc/substrate}"
+  if [ -f "$_cu_rss" ] && [ -f "$_cu_envdir/env" ]; then
+    if ! bash "$_cu_rss" --mode recover --env-dir "$_cu_envdir" >/dev/null 2>"$_cu_envdir/.secret-scope.err"; then
+      log "units: !!! render-secret-scope failed ($(tail -n1 "$_cu_envdir/.secret-scope.err" 2>/dev/null)) — converging NO unit this tick, so no consumer is installed without its scoped file"
+      return 0
+    fi
+  fi
   UNITS_CHANGED=0
   for uf in "$_cu_root"/scripts/substrate/units/*; do
     [ -e "$uf" ] || continue
@@ -645,6 +661,11 @@ converge_units() {
     systemctl daemon-reload 2>/dev/null \
       && log "units: daemon-reload done — TimeoutStopSec/Restart apply at the next stop; Environment= needs the unit to restart (next convergence)" \
       || log "units: !!! daemon-reload FAILED — unit changes are on disk but NOT active"
+  fi
+  if [ -f "$_cu_rss" ] && [ -f "$_cu_envdir/env" ]; then
+    bash "$_cu_rss" --mode recover --strip-shared --env-dir "$_cu_envdir" \
+      --unit-dirs "/etc/systemd/system /run/systemd/system $UNIT_DIR /lib/systemd/system" 2>&1 \
+      | grep -E 'removed from the shared env|kept ' | while IFS= read -r _l; do log "units: $_l"; done || true
   fi
   # CONVERGING A TIMER'S FILE DOES NOT MAKE IT FIRE.
   #
@@ -728,6 +749,20 @@ converge_fleet_defs() {
   # defect it was supposed to fix. Converging them is what makes such a repair
   # take effect on the next `vessel-ctl install`, which is the only moment either
   # script runs.
+  # gen-env's own dependencies, installed even where the image never had them (the
+  # "do not invent it" rule below is for scripts an image may deliberately lack):
+  # the gen-env converged below refuses to boot without its secret renderer, so a
+  # converged gen-env without them would brick the next container start.
+  for _cf_pair in \
+    "render-secret-scope.sh:$BIN_DIR/render-secret-scope:0755" \
+    "secrets-manifest.json:$SHARE_DIR/secrets-manifest.json:0644"; do
+    IFS=: read -r _cf_from _cf_to _cf_mode <<< "$_cf_pair"
+    [ -f "$_cf_src/$_cf_from" ] || continue
+    cmp -s "$_cf_src/$_cf_from" "$_cf_to" 2>/dev/null && continue
+    install -m "$_cf_mode" "$_cf_src/$_cf_from" "$_cf_to.new" 2>/dev/null \
+      && mv -f "$_cf_to.new" "$_cf_to" 2>/dev/null \
+      && log "fleet: converged $(basename "$_cf_to") (gen-env dependency; read at the next boot and by unit convergence)"
+  done
   for _cf_pair in \
     "apply-inventory.sh:$BIN_DIR/apply-inventory" \
     "gen-env.sh:$BIN_DIR/gen-env" \

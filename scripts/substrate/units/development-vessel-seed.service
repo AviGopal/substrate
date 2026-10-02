@@ -38,7 +38,9 @@ Type=simple
 # earlier one, so /etc/substrate/env is listed LAST and is authoritative. This
 # unit's ExecStart dials ${METABOB_ENDPOINT}, a routing anchor — it must come
 # from the substrate's own env, not from a value frozen into the host workspace.
-EnvironmentFile=-/workspace/.substrate-secrets
+# The persisted store (/workspace/.substrate-secrets) is NOT loaded: it holds every
+# trust-root secret (secrets-manifest.json), and gen-env re-emits each non-scoped name
+# it carries into /etc/substrate/env, which is authoritative anyway.
 EnvironmentFile=/etc/substrate/env
 Environment=WORKSPACE_ROOT=/workspace
 Environment=VESSEL_ID=development-vessel-local

@@ -1076,7 +1076,8 @@ for _pair in ${PEER_CREDENTIALS//,/ }; do
   printf -v "$_pn" '%s' "$_pv"
   PEER_KEY_NAMES="${PEER_KEY_NAMES} ${_pn}"
 done
-_peer_key_lines() { local _k; for _k in $PEER_KEY_NAMES; do printf '%s="%s"\n' "$_k" "$(_env_escape "${!_k}")"; done; }
+# The resolved keys (PEER_KEY_NAMES) are rendered into discovery-vessel's scoped file by
+# render-secret-scope.sh (secrets-manifest.json patterns), never into the shared env.
 PEER_FANOUT_MODE="${PEER_FANOUT_MODE:-union}"
 # Peering settings deploy-remote.sh appends to /etc/substrate/env AFTER boot, to
 # turn on discovery fan-out against a peer substrate. This file writes that env
@@ -1271,10 +1272,11 @@ cat > /etc/substrate/env <<EOF
 # span in a comment EXECUTES at generation time.)
 JWT_SECRET="${JWT_SECRET}"
 SURREAL_PASS="${SURREAL_PASS}"
-API_KEY_SECRET="${API_KEY_SECRET}"
-API_KEY_SECRET_PREVIOUS="$(_env_escape "${API_KEY_SECRET_PREVIOUS:-}")"
+# API_KEY_SECRET, API_KEY_SECRET_PREVIOUS and SUBSTRATE_ADMIN_KEY are NOT here:
+# this file is loaded by every unit, and those are trust-root secrets. They are
+# rendered by render-secret-scope.sh into the files only their consumers load
+# (secrets-manifest.json is the one list) — see the call after the persisted store.
 METABOB_API_KEY="${METABOB_API_KEY}"
-SUBSTRATE_ADMIN_KEY="${SUBSTRATE_ADMIN_KEY:-}"
 # LLM provider credentials — at least one must be non-empty (validated above).
 # (2) provider-secret spot — resolved (env>persisted>empty) just above.
 ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
@@ -1438,7 +1440,8 @@ PEER_MULTIADDR="${PEER_MULTIADDR:-}"
 FED_EXTRA_SHAPE="${FED_EXTRA_SHAPE:-}"
 PEER_DISCOVERY_ENDPOINTS="${PEER_DISCOVERY_ENDPOINTS}"
 PEER_CREDENTIALS="${PEER_CREDENTIALS}"
-$(_peer_key_lines)
+# The peer keys PEER_CREDENTIALS names are rendered into discovery-vessel's scoped
+# file only (secrets-manifest.json patterns), not here.
 PEER_FANOUT_MODE="${PEER_FANOUT_MODE}"
 
 # Dense search (F-V58 fix — must point to directory containing model.onnx + vocab.txt)
@@ -1609,7 +1612,7 @@ echo "[gen-env] wrote per-model llm-resolver env files (opus, haiku, google)"
   # was never peered stays unpeered and discovery keeps its own defaults.
   [ -n "${MAX_PEER_DEPTH:-}" ]             && echo "MAX_PEER_DEPTH=\"$(_env_escape "${MAX_PEER_DEPTH}")\""
   [ -n "${FEDERATION_PEER_AUTH_MODE:-}" ]  && echo "FEDERATION_PEER_AUTH_MODE=\"$(_env_escape "${FEDERATION_PEER_AUTH_MODE}")\""
-  [ -n "${FEDERATION_SIGNING_SECRET:-}" ]  && echo "FEDERATION_SIGNING_SECRET=\"$(_env_escape "${FEDERATION_SIGNING_SECRET}")\""
+  # FEDERATION_SIGNING_SECRET is scoped (secrets-manifest.json), never emitted here.
   # The effective composition (see "THE PROFILE THIS CONTAINER RUNS"). Named
   # PROFILE_EFFECTIVE, never PROFILE: it is a report of the outcome, and readers
   # that key on PROFILE treat it as an operator's hand-written allow-list.
@@ -1844,6 +1847,32 @@ chmod 600 "$_SECRETS_TMP"
 mv -f "$_SECRETS_TMP" /workspace/.substrate-secrets
 chmod 600 /workspace/.substrate-secrets
 echo "[gen-env] persisted secrets to /workspace/.substrate-secrets"
+
+# ── Scoped secrets: the trust-root names only their consumers load ───────────
+# The shared file above is loaded by EVERY unit, so anything written there sits in
+# every vessel's process env, development-vessel (where autonomously landed code
+# runs) included. secrets-manifest.json names each trust-root secret's consumers;
+# the renderer writes /etc/substrate/env.d/<unit>.env per consumer unit and
+# /etc/substrate/admin.env for the bootstrap/operator scripts, atomically, 0600,
+# from exactly the values resolved above (the API_KEY_SECRET_PREVIOUS bridge and
+# the fingerprint check included). Consumer units load their file WITHOUT '-', so
+# a render failure must stop the boot here rather than start identity keyless.
+_rss=""
+for _c in "$(dirname "$0")/render-secret-scope.sh" /usr/local/bin/render-secret-scope; do
+  [ -x "$_c" ] && { _rss="$_c"; break; }
+done
+if [ -z "$_rss" ]; then
+  echo "[gen-env] ERROR: render-secret-scope is not installed. The trust-root secrets are no longer written to /etc/substrate/env; without the renderer identity-vessel cannot start." >&2
+  exit 1
+fi
+for _pk in $PEER_KEY_NAMES; do export "$_pk"; done
+if ! API_KEY_SECRET="$API_KEY_SECRET" API_KEY_SECRET_PREVIOUS="${API_KEY_SECRET_PREVIOUS:-}" \
+     SUBSTRATE_ADMIN_KEY="${SUBSTRATE_ADMIN_KEY:-}" FEDERATION_SIGNING_SECRET="${FEDERATION_SIGNING_SECRET:-}" \
+     PEER_CREDENTIALS="${PEER_CREDENTIALS:-}" \
+     "$_rss" --mode values --env-dir /etc/substrate; then
+  echo "[gen-env] ERROR: rendering the scoped secret files failed; refusing to boot with consumers that cannot load them." >&2
+  exit 1
+fi
 
 # ── Emit the provenance record ───────────────────────────────────────────────
 # One line per variable: NAME=<source>. `substrate-config` renders this next to

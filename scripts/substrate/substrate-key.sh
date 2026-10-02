@@ -31,6 +31,10 @@
 set -euo pipefail
 
 set -a; source /etc/substrate/env 2>/dev/null || true; set +a
+# The trust-root secrets this CLI needs (SUBSTRATE_ADMIN_KEY, API_KEY_SECRET) are not in
+# the shared env, which every unit loads: they live in the operator/bootstrap file that
+# secrets-manifest.json scopes them to. No vessel unit loads it.
+set -a; source /etc/substrate/admin.env 2>/dev/null || true; set +a
 IDENTITY="${IDENTITY_VESSEL_URL:-http://127.0.0.1:8101}"
 
 die() { echo "[substrate-key] ERROR: $*" >&2; exit 1; }
@@ -70,9 +74,21 @@ SECRETS_FILE="${SECRETS_FILE:-/workspace/.substrate-secrets}"
 # (values double-quoted), while gen-env.sh's persisted_secret() reads
 # .substrate-secrets with `cut -d= -f2-`, so a quoted value there would be
 # recovered WITH its quotes and silently corrupt the key.
+# The env-format targets are the files secrets-manifest.json scopes SUBSTRATE_ADMIN_KEY
+# to (admin.env + each consumer unit's env.d file) — never the shared /etc/substrate/env.
+admin_key_files() {
+  local m
+  for m in /usr/local/share/substrate/secrets-manifest.json "$(dirname "$0")/secrets-manifest.json"; do
+    [[ -f "$m" ]] || continue
+    jq -r '(.unit_file // "env.d/{unit}.env") as $t | .secrets.SUBSTRATE_ADMIN_KEY as $e
+           | ([$e.units[]? as $u | "/etc/substrate/" + ($t | sub("\\{unit\\}"; $u))]
+              + (if (($e.scripts // []) | length) > 0 then ["/etc/substrate/" + (.admin_file // "admin.env")] else [] end))[]' "$m" && return 0
+  done
+  echo /etc/substrate/admin.env
+}
 persist_admin_key() { # $1=key
   local k="$1" f line t
-  for f in /etc/substrate/env "$SECRETS_FILE"; do
+  for f in $(admin_key_files) "$SECRETS_FILE"; do
     [[ -f "$f" ]] || continue
     if [[ "$f" == "$SECRETS_FILE" ]]; then line="SUBSTRATE_ADMIN_KEY=$k"; else line="SUBSTRATE_ADMIN_KEY=\"$k\""; fi
     t="${f}.tmp.$$"
@@ -82,7 +98,7 @@ persist_admin_key() { # $1=key
     chmod 600 "$t" 2>/dev/null || true
     mv -f "$t" "$f"
   done
-  echo "[substrate-key] persisted SUBSTRATE_ADMIN_KEY to /etc/substrate/env and $SECRETS_FILE" >&2
+  echo "[substrate-key] persisted SUBSTRATE_ADMIN_KEY to its scoped files ($(admin_key_files | tr '\n' ' ')) and $SECRETS_FILE" >&2
 }
 
 # True when a comma-separated scope list contains `admin`. Matched on exact list
@@ -187,7 +203,7 @@ case "$cmd" in
     #
     # Reachable only from inside the container: identity-vessel refuses this
     # endpoint unless the request arrives on loopback AND presents API_KEY_SECRET,
-    # which lives in root-only /etc/substrate/env. Anyone who can satisfy both
+    # which lives in root-only /etc/substrate/admin.env (secrets-manifest.json). Anyone who can satisfy both
     # already owns the box — this routes that existing authority through an
     # audited, logged path instead of a hand-forged admin JWT.
     #
