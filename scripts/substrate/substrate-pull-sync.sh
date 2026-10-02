@@ -446,6 +446,51 @@ stage_committed_glue() {
   return 0
 }
 
+# UPDATE CHANNEL hold: CONVERGE NOTHING (openspec staged-fleet-rollout, task 3).
+#
+# The channel is the install input gen-env validates and renders into
+# /etc/substrate/env (task 3.0), which this unit reads as its EnvironmentFile; there
+# is no second reader. canary (or unset) and fleet fall through to the run below
+# unchanged — fleet convergence is task 3.1, not built yet.
+#
+# A hold node keeps what it runs. Measured (CI run 37011691597): a fresh node from a
+# published image had its first-boot pull-sync converge it from image code to
+# origin/dev within ~3 min, restarting discovery and goal-host mid-probe, so install
+# acceptance judged "image + current dev" instead of the image it names. On hold
+# this run therefore touches no vessel (no fetch, mirror or restart), no super-repo
+# glue, no units, no fleet definitions, and does not reinstall itself from the
+# super-repo — a held node's converger must not change under it. It writes the
+# convergence record substrate-status reads, logs one line, and exits.
+#
+# The SHAs recorded are what RUNS, not the clones: setup-git-push resets the clones
+# to origin/dev at boot while the runtime stays at image code. A vessel's live
+# revision is its last healthy mirror (last-good), else the revision the image
+# baked; the super-repo's is its last-good, else the image revision.
+if [ "${SUBSTRATE_UPDATE_CHANNEL:-canary}" = hold ]; then
+  _h_img_rev="$(head -n1 /etc/substrate/image-revision 2>/dev/null || true)"
+  _h_super="$(cat "$LAST_GOOD_DIR/super-repo" 2>/dev/null || true)"; _h_super="${_h_super:-$_h_img_rev}"
+  _h_vessels="{}"
+  for _h_d in "$RUNTIME_DIR"/*/; do
+    [ -d "$_h_d" ] || continue
+    _h_v="$(basename "$_h_d")"
+    case "$_h_v" in *-mitosis-*|packages) continue ;; esac
+    _h_sha="$(cat "$LAST_GOOD_DIR/$_h_v" 2>/dev/null || true)"
+    [ -n "$_h_sha" ] || _h_sha="$(awk -F= -v V="$_h_v" '$1 == V {print $2}' "$SHARE_DIR/vessel-revisions" 2>/dev/null | head -n1)"
+    _h_vessels="$(jq -c --arg v "$_h_v" --arg s "$_h_sha" '. + {($v): (if $s == "" then null else $s end)}' <<<"$_h_vessels")"
+  done
+  if jq -n --arg sha "$_h_super" --argjson vessels "$_h_vessels" --arg at "$(date -Iseconds)" \
+       '{channel:"hold", ref:null, sha:(if $sha == "" then null else $sha end), vessels:$vessels, at:$at, ref_missing:false}' \
+       > "$MARKER_DIR/channel.json.new" 2>/dev/null \
+     && mv -f "$MARKER_DIR/channel.json.new" "$MARKER_DIR/channel.json" 2>/dev/null; then
+    log "update channel hold: converging nothing (vessels, super-repo glue, units and pull-sync itself stay as they run; super-repo ${_h_super:0:10}); recorded $MARKER_DIR/channel.json"
+  else
+    rm -f "$MARKER_DIR/channel.json.new" 2>/dev/null || true
+    log "update channel hold: converging nothing; FAILED to write $MARKER_DIR/channel.json, so substrate-status will not confirm the hold"
+    exit 1
+  fi
+  exit 0
+fi
+
 # A cutover mid-flight owns /vessels mutation; never race it.
 #
 # STARVATION BOUND (2026-08-02). The freshness test alone is not enough: the

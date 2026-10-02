@@ -15,13 +15,14 @@
 ## 3. Converge to the channel (pull-sync; coordinator; builder (a))
 
 - [x] 3.0 Authoring nodes are canaries: no channel means `canary`; `fleet`/`hold` turn landing off, refuse an explicit landing switch, and refuse the gap-store holder, a node that runs development-vessel without `GAP_STORE_ENDPOINT` (f3596a2c, correcting ddbecca4; holder detection fixed in the next commit).
+- [x] 3.0b On `hold`, converge nothing: no vessel fetch, mirror or restart, no super-repo glue, units or fleet definitions, and no self-reinstall of pull-sync; log one line and write `channel.json` (ref `null`, live SHAs from last-good, else the image's baked revisions). Canary unchanged (`validation/scripts/pull-sync-hold-channel.test.sh`).
 - [ ] 3.1 On a non-canary node, converge the super-repo clone to `origin/fleet`, and each vessel clone, detached, to the revision that commit's gitlink names (fetch by revision). Skip ancestry and divergence checks there. If any named revision cannot be fetched, converge nothing, keep last-good, record it and file one gap. Skip, last-good, revert, marker, `DIST_RETRY` and owed-restart keep keying on the one tree.
 - [ ] 3.2 Run the check-first test gate, and the failing-test gap generator that rides on it, only on canaries.
 - [ ] 3.3 On a missing channel ref, converge nothing, record `ref_missing`, and file one gap per window. Never fall back to `dev`.
-- [ ] 3.4 Write `/workspace/.pull-sync/channel.json` each run (channel, ref, super-repo and per-vessel SHAs, at, ref_missing).
+- [ ] 3.4 Write `/workspace/.pull-sync/channel.json` each run (channel, ref, super-repo and per-vessel SHAs, at, ref_missing). Done for `hold` (3.0b); canary and fleet still write none, so status reports them "declared; not in effect" until 3.1.
 - [ ] 3.5 Read a time-limited `updateHold` impulse that overrides the channel until it expires, on any node including canaries (after 4.2). It is the only way to freeze a canary.
 - [ ] 3.6 On `fleet` nodes not under hold, file one gap when `behind` exceeds its threshold for longer than its window (the no-canary watchdog).
-- [ ] 3.8 Exclude a node whose landings are stopped from gap admission (gap-to-feature), so a consumer node drafts nothing (development-vessel).
+- [x] 3.8 Exclude a node whose landings are stopped from gap admission (gap-to-feature), so a consumer node drafts nothing (development-vessel 2e03692a: `admitActionableGaps` excludes all when `landingsStopped()`).
 - [ ] 3.7 Set syzygy (the hub) to `fleet` (which turns its landing off) and point its `GAP_STORE_ENDPOINT` at an authoring node, after 2.1 and 3.1.
 
 ## 4. Preconditions for advancing (other owners)
