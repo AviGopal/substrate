@@ -361,8 +361,13 @@ export interface GapRecord {
 /** One gap by id. Null when the store answered and has no such gap. */
 export async function fetchGap(id: string): Promise<GapRecord | null> {
   const res = await fetch(`/api/gaps/${encodeURIComponent(id)}`, { credentials: "same-origin" });
-  if (res.status === 404) return null;
   const body = (await res.json().catch(() => null)) as { gap?: GapRecord | null; error?: string } | null;
-  if (!res.ok) throw new Error(body?.error ?? `gap store unavailable (${res.status})`);
-  return body?.gap ?? null;
+  // Absence is a STATEMENT the route makes ({gap:null}), not any 404. A server
+  // missing this route answers 404 too, and reading that as "no longer in the
+  // store" told the reader every escalation's gap had vanished (10-02: the live
+  // server ran a proxy.ts without the route).
+  if (res.status === 404 && body !== null && "gap" in body && body.gap === null) return null;
+  if (!res.ok) throw new Error(body?.error ?? `gap lookup unavailable (${res.status}) — the gap was not checked`);
+  if (!body || !("gap" in body)) throw new Error("gap lookup answered without a gap field — the gap was not checked");
+  return body.gap ?? null;
 }
