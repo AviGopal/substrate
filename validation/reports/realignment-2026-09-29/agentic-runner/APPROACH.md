@@ -192,7 +192,10 @@ and refs after `:8348` are +9. Re-pin at build time.
 - nothing widens what is addressable before §9.0, except where marked;
 - **every battery or parity run writes to a sandboxed store** (REALIGNMENT §2.5), never the live memory, gap or
   trace stores;
-- **no dispatch or ledger write until the user rules** (coordinator, 10-02).
+- the user has ruled (§9). Every (a) item is cleared **subject to qa review before it lands**; (b) items go
+  through the lane as check-first gaps.
+- **Ownership (10-02):** this work is the coordinator session's objective. The human-surface session works on
+  the interface only and asks, never edits, for executor changes.
 
 ### Step 0 — contain the floor's shell (qa: HIGH, live hole)
 - The floor's `shellResult` resolves to local-tools `shell` (`bash -c`, working directory = the live super-repo).
@@ -345,7 +348,7 @@ its next dispatch reach through the ceiling.
 
 ## 6. What the substrate can do itself ((b)), and what needs you — after the user rules
 
-Nothing is dispatched until the user rules (coordinator, 10-02).
+The user ruled on 10-02 (§9); the hold is lifted.
 
 **(b) items in the slice:**
 1. V1: the `/deliverable-shapes` gate.
@@ -362,7 +365,7 @@ Nothing is dispatched until the user rules (coordinator, 10-02).
 
 **Held until §9.0.1:** R2b's resolver ranking; R3's offer filter, which is only useful with R3.
 
-**(a), needing your clearance:**
+**(a), cleared by the user on 10-02, each subject to qa review before landing:**
 - step 0's sandboxed-shell seam, if it lands in `scripts/substrate` or goal-host;
 - V2, V3, V4 and V6;
 - the goal-host half of agentic-floor steps 1–2;
@@ -382,7 +385,7 @@ Nothing is dispatched until the user rules (coordinator, 10-02).
 | `keyword_extractor` catalogue entry (opened and closed 09-30) | **Cite** as R0's must-fail control. |
 | Failing nested-execution contract test (filed 09-30) | **Fix the test,** not the code (track 3 P5). |
 | validator-dispatch 586/586 failures | **Port the template lookup, or retire it** (decision 2). |
-| `shape_producer_inventory` always "0 producers" | **New finding** (§10): it reads `vessels` where discovery returns `content.vessels`. |
+| `shape_producer_inventory` always "0 producers" | **Closed:** landed autonomously as activity-api `a5e52db` (10-02), `landed_verified`. It reads `content.vessels` by `vesselId`. |
 | output-shapes and agentic-floor ledgers | Stand as amended there (reopen and close rules per qa). |
 
 ## 8. Proposed REALIGNMENT amendments (for the coordinator)
@@ -402,17 +405,38 @@ Nothing is dispatched until the user rules (coordinator, 10-02).
 6. **§9.0: a tool impulse that names its own dispatch address, with our credential attached on dispatch,** is
    the same injection class as the human-ask route.
 
-## 9. Decisions needed (the user's)
+## 9. The user's rulings (10-02)
 
-1. **Does forward-in-place replace the post-walk floor?** It would go through the parity battery with the
-   baseline run first, using the same go/no-go criterion as agentic-floor decision 1.
-2. **The `activity` resolver:** fix it, or retire it along with validator-dispatch.
-3. **Concept-db's 9 MCP-format tools:** serve them as pointer shapes, or drop them from the catalogue.
-4. **Credit for a nested child when its ancestor reaches.** This is `posterior-update.ts`, an (a) build. Today 0
-   of 369 composed children earn anything.
-5. **May the runner ever offer write-bearing activities or write shapes?** If so, under what containment, after
-   §9.0.
-6. **`tool_usage` (0 rows):** give it a writer (R2's search grading), or retire it.
+The decisions this section used to list were ruled on by the user. In their words, then how each applies:
+
+1. **Walking is additive.** "Walking should be a partially additive process, moving down the steps required to
+   reach the output shapes with valid impulse content. Being able to continue after a retarget or
+   re-evaluation is essential to this."
+   - A walk accumulates. Re-frames, retargets and FEEDBACK-RETRY continue from the pool already built, never
+     from an empty pool.
+   - Forward mode is entered **in place** and is additive, not a separate engine after the walk. The parity
+     battery (baseline arm first) stays the go/no-go for switching the floor over.
+   - output-shapes T2 P2 (a retry seeds the prior attempt's intermediates) and R4 ("continue forward from what
+     was observed") are core, not optional.
+   - A step is measured by whether it moves the pool toward the target shapes with valid impulse content.
+2. **Individual resolvers are not decisions for the user.** "Whether we fix a particular resolver or not is
+   irrelevant, so long as the system can use its existing capabilities (including already known activities) to
+   reach more reliably and in fewer steps; that is the end goal."
+   - The former decisions 2, 3 and 6 (the `activity` resolver and validator-dispatch, concept-db's MCP-format
+     tools, `tool_usage`) are judged only by whether they serve reliable, fewer-step reach through existing
+     capabilities and known activities.
+   - The success metric is reach reliability and step count on reuse of known activities.
+3. **An activity is a step.** "Activities are not nested so much as they should be treated as a step in and of
+   themselves. Like any producer of impulses they get credit when they are involved in achieving a goal."
+   - An activity used in a walk appears as a chain step, its output impulses enter the pool, and it earns
+     credit when the goal is reached. This settles former decision 4: credit by involvement
+     (`posterior-update.ts`, (a)).
+   - R3 and track 3 P1 are reframed: the execute-block step recorded as a chain link is the model, not nesting.
+     The three-relations tag on `parent_execution_id` still separates a walk step from a lifecycle subscriber.
+4. **Clearances.** All operator (a) fixes are cleared, provided qa reviews each before it lands.
+
+**Still open:** whether the runner may ever offer write-bearing activities or write shapes (former decision 5).
+Until it is ruled, nothing write-bearing is offered.
 
 ## 10. Findings for the coordinator (not folded in)
 
