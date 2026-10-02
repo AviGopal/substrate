@@ -254,21 +254,33 @@ function checkAnchorPrecedence() {
   // substrate's own env — which is how a dead droplet address in .substrate-secrets
   // killed the transport while /etc/substrate/env held the empty (correct) value.
   const ANCHORS = ['HUB_DISCOVERY_URL', 'DISCOVERY_ENDPOINT', 'IDENTITY_VESSEL_URL', 'ACTIVITY_API_ENDPOINT']
-  const readEnvFile = (p: string): Record<string, string> => {
+  // MEASURE THE PROPERTY, NOT A PROXY FILE. The question is whether the value a unit
+  // actually STARTED with differs from the substrate's env. This probe is itself a unit
+  // started with the same EnvironmentFile order, so its own process env IS the effective
+  // value. It never reads the secrets store: that file is InaccessiblePaths for every
+  // vessel unit (units/vessel.d/10-secrets-out-of-reach.conf), and an unreadable store
+  // used to read as "absent → pass", a check that passed blind.
+  const readEnvFile = (p: string): Record<string, string> | null => {
     const out: Record<string, string> = {}
-    try {
-      for (const line of readFileSync(p, 'utf8').split('\n')) {
-        const m = line.match(/^([A-Z0-9_]+)=(.*)$/)
-        if (m) out[m[1]!] = m[2]!.replace(/^["']|["']$/g, '')
-      }
-    } catch { /* absent is a valid answer */ }
+    let text: string
+    try { text = readFileSync(p, 'utf8') } catch { return null }
+    for (const line of text.split('\n')) {
+      const m = line.match(/^([A-Z0-9_]+)=(.*)$/)
+      if (m) out[m[1]!] = m[2]!.replace(/^["']|["']$/g, '')
+    }
     return out
   }
   const base = readEnvFile('/etc/substrate/env')
-  const secrets = readEnvFile('/workspace/.substrate-secrets')
+  if (base === null) {
+    record('I2_anchor_precedence', 'undecidable', {
+      witness: 'static',
+      evidence: { unmeasurable: '/etc/substrate/env is unreadable from this unit; precedence cannot be compared', checked: ANCHORS },
+    })
+    return
+  }
   const conflicts = ANCHORS
-    .filter((k) => secrets[k] !== undefined && secrets[k] !== '' && secrets[k] !== base[k])
-    .map((k) => ({ key: k, etc_substrate_env: base[k] ?? '(unset)', substrate_secrets: secrets[k] }))
+    .filter((k) => (process.env[k] ?? '') !== (base[k] ?? ''))
+    .map((k) => ({ key: k, etc_substrate_env: base[k] ?? '(unset)', effective_process_env: process.env[k] ?? '(unset)' }))
 
   if (conflicts.length === 0) {
     record('I2_anchor_precedence', 'pass', { witness: 'static', clears: 'bootstrap_env_precedence_inversion', evidence: { checked: ANCHORS } })
