@@ -10,7 +10,8 @@
 #            super-repo and per-vessel SHAs (last-good, else the image's baked
 #            revision — never the clone), at, ref_missing:false; one log line; exit 0
 #   unset    the control: converges exactly as before (clone advances, mirror,
-#            restart, pull-sync reinstalls itself) and writes no channel.json
+#            restart, pull-sync reinstalls itself and re-executes the tick on the
+#            pulled copy) and writes no channel.json
 #
 # usage: validation/scripts/pull-sync-hold-channel.test.sh [path/to/substrate-pull-sync.sh]
 # Needs bash, git, jq. No root, no live state: every path is a temp dir.
@@ -71,7 +72,9 @@ setup() {
   g "$T/seed/super" remote add origin "$T/o/super.git"; g "$T/seed/super" push origin dev
   SBASE="$(git -C "$T/seed/super" rev-parse HEAD)"
   git clone -q --branch dev "$T/o/super.git" "$T/ws/git/super-repo"
-  printf '#!/usr/bin/env bash\necho NEW pull-sync from dev\n' > "$T/seed/super/scripts/substrate/substrate-pull-sync.sh"
+  # The new pull-sync is a REAL one (the script under test plus a marker line): the tick
+  # that pulls it re-executes on it (SELF-CONVERGE FIRST), so a stub here would stop the run.
+  { cat "$T/pull-sync.sh"; echo '# NEW pull-sync from dev'; } > "$T/seed/super/scripts/substrate/substrate-pull-sync.sh"
   printf '[Unit]\nDescription=new\n' > "$T/seed/super/scripts/substrate/units/new.service"
   g "$T/seed/super" add -A; g "$T/seed/super" commit -m advance; g "$T/seed/super" push origin dev
   # the image: its revision, its baked vessel revisions, the pull-sync it installed
@@ -100,6 +103,7 @@ grep -q 'x = 1' "$T/rt/$V/src/x.ts" && ok "hold: the runtime keeps the code it r
 [ "$(git -C "$T/ws/git/super-repo" rev-parse HEAD)" = "$SBASE" ] && ok "hold: the super-repo clone does not advance" || bad "hold: the super-repo clone advanced"
 cmp -s "$T/bin/substrate-pull-sync" "$T/image-pull-sync" && ok "hold: pull-sync does not reinstall itself" || bad "hold: pull-sync reinstalled itself from the super-repo"
 [ ! -e "$T/unit/new.service" ] && ok "hold: no unit converges" || bad "hold: a unit was converged"
+grep -q 're-executing this tick' "$T/out.txt" && bad "hold: pull-sync re-executed itself" || ok "hold: no self re-exec"
 if jq -e . "$REC" >/dev/null 2>&1; then
   ok "hold: channel.json is written and parses"
   jq -e '.channel == "hold" and .ref == null and .ref_missing == false' "$REC" >/dev/null && ok "hold: channel hold, ref null, ref_missing false" || bad "hold: channel/ref/ref_missing wrong: $(cat "$REC")"
@@ -121,6 +125,7 @@ grep -q "^MIRROR $V" "$CALLS" && ok "unset: the vessel is mirrored" || bad "unse
 grep -q "systemctl restart $V.service" "$CALLS" && ok "unset: the vessel is restarted" || bad "unset: no restart"
 [ "$(git -C "$T/ws/git/super-repo" rev-parse HEAD)" != "$SBASE" ] && ok "unset: the super-repo clone advances" || bad "unset: the super-repo clone did not advance"
 grep -q 'NEW pull-sync from dev' "$T/bin/substrate-pull-sync" && ok "unset: pull-sync reinstalls itself from dev (as before)" || bad "unset: pull-sync did not reinstall itself"
+grep -q 're-executing this tick' "$T/out.txt" && ok "unset: the tick re-executed on the pulled pull-sync" || bad "unset: no self re-exec"
 [ ! -e "$REC" ] && ok "unset: no channel.json (canary behaviour unchanged)" || bad "unset: channel.json written on canary"
 grep -q 'update channel hold' "$T/out.txt" && bad "unset: logged a hold" || ok "unset: no hold line"
 

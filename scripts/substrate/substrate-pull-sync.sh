@@ -25,7 +25,12 @@
 # mirror. Fail-open: no PAT / no network -> warn once and no-op (a substrate
 # without pull access is frozen-but-functional).
 set -uo pipefail
-PULLSYNC_T0="$(date +%s)"; GEN_QUEUE=""
+# The args this tick was started with, kept for the one self re-exec (see SELF-CONVERGE FIRST).
+PULLSYNC_ARGS=("$@")
+# A re-exec'd tick keeps the ORIGINAL start time: the failing-test generator's budget is
+# measured against the unit timeout, which the exec does not reset.
+if [ "${PULLSYNC_REEXECED:-}" = 1 ] && [ -n "${PULLSYNC_T0:-}" ]; then :; else PULLSYNC_T0="$(date +%s)"; fi
+GEN_QUEUE=""
 
 CLONE_DIR="${MITOSIS_PUSH_CLONE_DIR:-/workspace/git/vessels}"
 RUNTIME_DIR="${MITOSIS_RUNTIME_DIR:-/vessels}"
@@ -518,7 +523,9 @@ fi
 # consecutive runs, then converge anyway and say so loudly.
 MITOSIS_DEFER_COUNT_FILE=/workspace/pull-sync-mitosis-defers
 MITOSIS_MAX_CONSECUTIVE_DEFERS="${MITOSIS_MAX_CONSECUTIVE_DEFERS:-4}"
-if [ -f "$MITOSIS_LOCK" ] && [ -n "$(find "$MITOSIS_LOCK" -mmin "-$MITOSIS_LOCK_TTL_MIN" 2>/dev/null)" ]; then
+# A re-exec'd tick does not re-ask: its parent already decided to converge (possibly as a
+# starvation break, after which the counter above was reset and a re-check would defer).
+if [ "${PULLSYNC_REEXECED:-}" != 1 ] && [ -f "$MITOSIS_LOCK" ] && [ -n "$(find "$MITOSIS_LOCK" -mmin "-$MITOSIS_LOCK_TTL_MIN" 2>/dev/null)" ]; then
   _defers="$(cat "$MITOSIS_DEFER_COUNT_FILE" 2>/dev/null || echo 0)"
   case "$_defers" in ''|*[!0-9]*) _defers=0 ;; esac
   _defers=$((_defers + 1))
@@ -545,6 +552,89 @@ if [ -n "$CW_HELD" ]; then
   log "change_window lease held — deferring this run"
   echo "{\"at\":\"$(date -Iseconds)\",\"actor\":\"pull-sync\",\"action\":\"deferred_change_window\"}" >> "$DEFERRAL_LOG" 2>/dev/null || true
   exit 0
+fi
+
+# SELF-CONVERGE FIRST: the tick that pulls a commit runs that commit's pull-sync.
+#
+# pull-sync used to reinstall itself (and mirror-to-live) at the END of a tick, after
+# the super-repo pull, so the first tick after a merge ran the OLD script against the
+# NEW super-repo content. Observed 10-02 with 3b7b31b9: the old converge_units (no
+# secret renderer) installed new identity/discovery units whose non-"-"
+# EnvironmentFile=/etc/substrate/env.d/<unit>.env did not exist yet, so any restart of
+# those units would have failed until the next tick. Any new step a commit adds to the
+# converger has the same hole: it can never apply to the tick that pulls it.
+#
+# So, before anything converges: fetch the super-repo once (section 4 reuses the
+# result), fast-forward it when it is strictly behind, stage its COMMITTED
+# scripts/substrate, and if the committed pull-sync differs from the file executing
+# now, install it with its helpers and exec it, once. PULLSYNC_REEXECED=1 makes the
+# second pass skip this block, so a copy that never matches (a failed write, origin
+# moving under us) cannot loop. A staged copy that fails `bash -n` is never installed:
+# the tick finishes on the code it started with and files a gap. The hold channel
+# exits above, so a held node never reaches this block and never self-updates.
+SUPER_DIR="${SUPER_REPO_DIR:-/workspace/git/super-repo}"
+if [ "${PULLSYNC_REEXECED:-}" = 1 ] && [ -n "${PULLSYNC_SUPER_FETCH_OK:-}" ]; then
+  SUPER_FETCH_OK="$PULLSYNC_SUPER_FETCH_OK"   # the parent fetched this tick; once is enough
+else
+  SUPER_FETCH_OK=0
+  if [ -d "$SUPER_DIR/.git" ]; then
+    if git -C "$SUPER_DIR" fetch -q origin "$BRANCH" 2>/dev/null; then
+      SUPER_FETCH_OK=1
+    else
+      log "super-repo: FETCH FAILED — glue layer NOT converged this tick (scripts, federation wrapper, and pull-sync's own self-update all skipped); the clone stays at $(git -C "$SUPER_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    fi
+  fi
+fi
+if [ "${PULLSYNC_REEXECED:-}" != 1 ] && [ "$SUPER_FETCH_OK" = 1 ]; then
+  _se_head="$(git -C "$SUPER_DIR" rev-parse HEAD 2>/dev/null || true)"
+  _se_remote="$(git -C "$SUPER_DIR" rev-parse "origin/$BRANCH" 2>/dev/null || true)"
+  # Strictly behind only; ahead and diverged are section 4's to report.
+  if [ -n "$_se_head" ] && [ -n "$_se_remote" ] && [ "$_se_head" != "$_se_remote" ] \
+     && git -C "$SUPER_DIR" merge-base --is-ancestor HEAD "origin/$BRANCH" 2>/dev/null; then
+    git -C "$SUPER_DIR" checkout -q "$BRANCH" 2>/dev/null || true
+    _se_err="$(git -C "$SUPER_DIR" pull -q --ff-only origin "$BRANCH" 2>&1)" \
+      || log "super-repo: early ff-only pull FAILED — this tick's self-update reads $(git -C "$SUPER_DIR" rev-parse --short HEAD 2>/dev/null); git said: $(printf '%s' "$_se_err" | tr '\n' ' ' | cut -c1-300)"
+  fi
+  _se_self="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || true)"
+  if [ -n "$_se_self" ] && [ -r "$_se_self" ] && stage_committed_glue "$SUPER_DIR"; then
+    _se_src="$PULLSYNC_GLUE_STAGE/scripts/substrate"
+    if [ -f "$_se_src/substrate-pull-sync.sh" ] && ! cmp -s "$_se_src/substrate-pull-sync.sh" "$_se_self"; then
+      if ! _se_syn="$(bash -n "$_se_src/substrate-pull-sync.sh" 2>&1)"; then
+        log "self: !!! the committed substrate-pull-sync.sh does not parse — NOT installed; this tick finishes on the running code: $(printf '%s' "$_se_syn" | tr '\n' ' ' | cut -c1-300)"
+        emit_gap "$(jq -n -c --arg s "pull-sync refused to install the committed scripts/substrate/substrate-pull-sync.sh because bash -n rejects it: $(printf '%s' "$_se_syn" | tr '\n' ' ' | cut -c1-300). The node keeps converging on its installed copy until a parsing commit lands." \
+          '{impulse:{pointer:{type:"substrateGap_write",gap:{id:"pull-sync-self-update-unparseable",category:"service_failure",source:"substrate_detected",summary:$s,status:"open"}}}}' 2>/dev/null)"
+      else
+        # Helpers first, so the exec'd tick runs against its own generation of them.
+        # Only what is already installed is replaced (never invent a tool the image lacks).
+        for _se_pair in "mirror-to-live.sh:mirror-to-live" "self-recovery-tick.sh:self-recovery-tick"; do
+          _se_from="$_se_src/${_se_pair%%:*}"; _se_to="$BIN_DIR/${_se_pair#*:}"
+          [ -f "$_se_from" ] && [ -e "$_se_to" ] || continue
+          cmp -s "$_se_from" "$_se_to" && continue
+          install -m 0755 "$_se_from" "$_se_to.new" 2>/dev/null && mv -f "$_se_to.new" "$_se_to" 2>/dev/null \
+            && log "self: converged $(basename "$_se_to")"
+        done
+        # Atomic: install to .new, then rename; the running bash keeps its old inode.
+        if install -m 0755 "$_se_src/substrate-pull-sync.sh" "$BIN_DIR/.substrate-pull-sync.new" 2>/dev/null \
+           && mv -f "$BIN_DIR/.substrate-pull-sync.new" "$BIN_DIR/substrate-pull-sync" 2>/dev/null; then
+          log "self: the committed substrate-pull-sync differs from the running one — installed it; re-executing this tick on it (once)"
+          pullsync_glue_cleanup   # exec does not run the EXIT trap
+          shopt -s execfail       # a failed exec falls through to the log line, not exit
+          exec env PULLSYNC_REEXECED=1 PULLSYNC_T0="$PULLSYNC_T0" PULLSYNC_SUPER_FETCH_OK="$SUPER_FETCH_OK" \
+            bash "$BIN_DIR/substrate-pull-sync" ${PULLSYNC_ARGS[@]+"${PULLSYNC_ARGS[@]}"}
+          log "self: !!! exec of the new substrate-pull-sync FAILED — this tick finishes on the running code"
+        else
+          log "self: !!! could not install the committed substrate-pull-sync to $BIN_DIR — this tick finishes on the running code"
+        fi
+      fi
+    fi
+  fi
+elif [ "${PULLSYNC_REEXECED:-}" = 1 ]; then
+  _se_self="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || true)"
+  if [ -n "$_se_self" ] && stage_committed_glue "$SUPER_DIR" \
+     && [ -f "$PULLSYNC_GLUE_STAGE/scripts/substrate/substrate-pull-sync.sh" ] \
+     && ! cmp -s "$PULLSYNC_GLUE_STAGE/scripts/substrate/substrate-pull-sync.sh" "$_se_self"; then
+    log "self: still not the committed substrate-pull-sync after one re-exec — NOT re-executing again this tick (no loop); the next tick retries"
+  fi
 fi
 
 # Vessel -> unit map from the inventory (fallback: every clone dir, unit <v>.service).
@@ -625,6 +715,34 @@ converge_units() {
       return 0
     fi
   fi
+  # REFUSE A UNIT WHOSE REQUIRED ENVIRONMENT FILE IS ABSENT (defence in depth behind
+  # SELF-CONVERGE FIRST). systemd refuses to START a unit whose EnvironmentFile= (no '-')
+  # names a missing file, so installing it arms a failure for its next restart. Checked
+  # here, after the render above, per unit file and per drop-in: such a file is skipped,
+  # logged, and filed as one gap per unit (stable id); the installed copy, if any, stays.
+  # '-' paths are optional by definition; paths with % specifiers cannot be resolved here.
+  _cu_envfile_missing() { # unit-or-dropin-file -> prints the first missing required path
+    local _l _p
+    while IFS= read -r _l; do
+      _p="${_l#*=}"; _p="${_p#"${_p%%[![:space:]]*}"}"; _p="${_p%"${_p##*[![:space:]]}"}"
+      _p="${_p#\"}"; _p="${_p%\"}"
+      case "$_p" in ''|-*|*%*) continue ;; esac
+      [ -e "$_p" ] || { printf '%s\n' "$_p"; return 0; }
+    done < <(grep -E '^[[:space:]]*EnvironmentFile[[:space:]]*=' "$1" 2>/dev/null)
+    return 1
+  }
+  _cu_refuse() { # unit file missing-path
+    local _id
+    _id="pull-sync-unit-envfile-missing-$(printf '%s' "$1" | tr -c 'A-Za-z0-9' '-' | cut -c1-80)"
+    log "units: !!! REFUSED $2 — it requires EnvironmentFile=$3, which does not exist; NOT installed (the installed copy, if any, stays) ($_id)"
+    if command -v jq >/dev/null 2>&1; then
+      emit_gap "$(jq -n -c --arg id "$_id" --arg u "$1" --arg f "$2" --arg p "$3" \
+        --arg s "pull-sync refused to install $2 for unit $1: it loads EnvironmentFile=$3 without '-', and that file does not exist on this node after the secret-scope render, so systemd would refuse to start $1 on its next restart. Find who should render $3 (secrets-manifest.json / render-secret-scope.sh), or make the load optional with '-'." \
+        '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"service_failure",source:"substrate_detected",summary:$s,classification_metadata:{unit:$u,file:$f,missing_environment_file:$p},status:"open"}}}}')"
+    else
+      log "units: jq missing — gap $_id NOT filed"
+    fi
+  }
   UNITS_CHANGED=0
   for uf in "$_cu_root"/scripts/substrate/units/*; do
     [ -e "$uf" ] || continue
@@ -636,12 +754,14 @@ converge_units() {
         [ -f "$cf" ] || continue
         dst="$UNIT_DIR/$ubase/$(basename "$cf")"
         if ! cmp -s "$cf" "$dst" 2>/dev/null; then
+          if _cu_miss="$(_cu_envfile_missing "$cf")"; then _cu_refuse "${ubase%.d}" "$ubase/$(basename "$cf")" "$_cu_miss"; continue; fi
           install -m 0644 "$cf" "$dst" 2>/dev/null && { log "units: converged $ubase/$(basename "$cf")"; UNITS_CHANGED=1; }
         fi
       done
     else
       dst="$UNIT_DIR/$ubase"
       if ! cmp -s "$uf" "$dst" 2>/dev/null; then
+        if _cu_miss="$(_cu_envfile_missing "$uf")"; then _cu_refuse "$ubase" "$ubase" "$_cu_miss"; continue; fi
         install -m 0644 "$uf" "$dst" 2>/dev/null && { log "units: converged $ubase"; UNITS_CHANGED=1; }
         # A REAL file in /etc outranks /usr/lib, so the convergence above is
         # inert for that unit — systemd keeps using the /etc copy and the log
@@ -812,6 +932,11 @@ converge_fleet_defs() {
   # Safe to replace while running: install-to-.new + atomic mv, so the executing
   # process keeps its original inode and finishes on the code it started with. Never
   # edited in place, which WOULD corrupt the running interpreter mid-read.
+  #
+  # BACKSTOP ONLY. SELF-CONVERGE FIRST (top of the tick) normally installs and execs the
+  # committed copy before anything converges, so this cmp finds nothing to do. It still
+  # acts when that block could not (the running file unreadable, a refused exec), and it
+  # keeps this function self-sufficient for callers that run it alone.
   _ps_src="$_cf_src/substrate-pull-sync.sh"
   _ps_dst="$BIN_DIR/substrate-pull-sync"
   if [ -f "$_ps_src" ] && [ -e "$_ps_dst" ] && ! cmp -s "$_ps_src" "$_ps_dst" 2>/dev/null; then
@@ -2429,9 +2554,9 @@ done
 # itself. Same discipline as vessels: ahead -> skip, diverged -> gap + skip,
 # behind -> ff-only pull. The marker records the last ATTEMPTED sha so an
 # unhealthy convergence (reverted below) is not re-attempted every tick — only
-# a fresh origin commit re-arms it. Runs after the vessel loop so a bad glue
-# change can never block vessel convergence. Gap: super-repo-not-in-self-update-set.
-SUPER_DIR="${SUPER_REPO_DIR:-/workspace/git/super-repo}"
+# a fresh origin commit re-arms it. The fetch and the fast-forward happen at the top of
+# the tick (SELF-CONVERGE FIRST); the refresh below runs after the vessel loop so a bad
+# glue change can never block vessel convergence. Gap: super-repo-not-in-self-update-set.
 SUPER_MARKER="$MARKER_DIR/super-repo.sha"
 # A FAILED FETCH SKIPPED THE ENTIRE GLUE LAYER IN SILENCE.
 #
@@ -2452,14 +2577,9 @@ SUPER_MARKER="$MARKER_DIR/super-repo.sha"
 # Fetch ONCE and branch on the result. An earlier draft of this fix ran the fetch twice —
 # once to test, once in the condition — which doubles the network call and lets the two
 # attempts disagree on a bursty link, reporting a failure that the second call then hides.
-SUPER_FETCH_OK=0
-if [ -d "$SUPER_DIR/.git" ]; then
-  if git -C "$SUPER_DIR" fetch -q origin "$BRANCH" 2>/dev/null; then
-    SUPER_FETCH_OK=1
-  else
-    log "super-repo: FETCH FAILED — glue layer NOT converged this tick (scripts, federation wrapper, and pull-sync's own self-update all skipped); the clone stays at $(git -C "$SUPER_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
-  fi
-fi
+# The fetch itself now runs ONCE, at the top of the tick (SELF-CONVERGE FIRST), so the
+# pull-sync that converges this commit is this commit's; SUPER_DIR and SUPER_FETCH_OK
+# come from there, and a failed fetch was logged there.
 if [ "$SUPER_FETCH_OK" = 1 ]; then
   SHEAD="$(git -C "$SUPER_DIR" rev-parse HEAD 2>/dev/null || true)"
   SREMOTE="$(git -C "$SUPER_DIR" rev-parse "origin/$BRANCH" 2>/dev/null || true)"
@@ -2547,31 +2667,15 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
           || _sm_lag="$_sm_lag $_sm(checkout-failed)"
       done
       [ -n "$_sm_lag" ] && log "super-repo: submodule worktrees left at old pointers (uncommitted work — NOT discarded):$_sm_lag"
-      # Updater self-refresh (atomic: the running bash keeps its old inode).
       # Every install in this block reads the COMMITTED tree (stage_committed_glue);
       # when it cannot be staged, none of them runs.
       _sg_ok=0; stage_committed_glue "$SUPER_DIR" && _sg_ok=1
       _sg_src="$PULLSYNC_GLUE_STAGE/scripts/substrate"
-      if [ "$_sg_ok" = 1 ] && [ -f "$_sg_src/substrate-pull-sync.sh" ]; then
-        install -m 0755 "$_sg_src/substrate-pull-sync.sh" "$BIN_DIR/.substrate-pull-sync.new" 2>/dev/null \
-          && mv -f "$BIN_DIR/.substrate-pull-sync.new" "$BIN_DIR/substrate-pull-sync" 2>/dev/null || true
-      fi
-      # mirror-to-live is part of the same glue layer: converge it too, or a
-      # repo-side mirror fix never reaches the running container (the
-      # super-repo-not-in-self-update-set gap class).
-      if [ "$_sg_ok" = 1 ] && [ -f "$_sg_src/mirror-to-live.sh" ]; then
-        install -m 0755 "$_sg_src/mirror-to-live.sh" "$BIN_DIR/mirror-to-live" 2>/dev/null || true
-      fi
-      # self-recovery-tick is the immune-system tick installed to /usr/local/bin
-      # at boot but (until now) never re-converged — the SAME super-repo-not-in-
-      # self-update-set gap: a repo-side recovery fix (e.g. the 2026-07-31
-      # sustained-DB-wedge -> restart-surrealdb escalation) never reached the
-      # running unit. Converge it here so operator immune-system logic ships via
-      # git like everything else (running unit picks it up next timer fire).
-      if [ "$_sg_ok" = 1 ] && [ -f "$_sg_src/self-recovery-tick.sh" ]; then
-        install -m 0755 "$_sg_src/self-recovery-tick.sh" "$BIN_DIR/.self-recovery-tick.new" 2>/dev/null \
-          && mv -f "$BIN_DIR/.self-recovery-tick.new" "$BIN_DIR/self-recovery-tick" 2>/dev/null || true
-      fi
+      # substrate-pull-sync, mirror-to-live and self-recovery-tick are NOT installed here
+      # any more: SELF-CONVERGE FIRST installs them at the top of the tick (compare-based,
+      # every tick), and re-executes this tick on the new pull-sync. Installing them here,
+      # after the pull, is what made the first tick after a merge run the old converger
+      # against the new content.
       # SYSTEMD UNITS are the same super-repo-not-in-self-update-set gap class, and
       # were the last part of the glue layer still stuck at image-build time.
       # Dockerfile.substrate:213 copies units/ into the image; nothing converged
