@@ -72,6 +72,29 @@ $(basename "$_a")"
 else
   UNITS="discovery-vessel.service identity-vessel.service activity-api.service development-vessel.service local-tools-vessel.service llm-resolver-vessel.service goal-host-vessel.service ribosome-vessel.service concept-db.service analysis-vessel.service light-dispatch-vessel.service relevance-sink-vessel.service stateful-ui-vessel.service"
 fi
+# A key consumer is a unit that loaded this file, whatever the inventory says about it.
+# The inventory's `manifest` flag means "apply-inventory never selects this unit", not
+# "this unit holds no key", yet the filter above read it as the latter. So the
+# federation transport kept the pre-seed key for the life of every fresh hub: its local
+# /register and its discovery lookups answered 401, so the hub resolved none of its
+# spokes' registered circuits. Install acceptance failed hub_to_spoke on every run once
+# pull-sync stopped restarting the transport as a side effect (measured 2026-10-02).
+# human-surface-vessel (also `manifest`) and units the inventory does not name
+# (metric-collector) were missed the same way. The store and the seed oneshots are
+# left out: the store does not authenticate with the key, and seeders re-run below.
+for u in $(systemctl list-units --type=service --state=active --no-legend --plain 2>/dev/null | awk '{print $1}'); do
+  case "$u" in surrealdb.service|identity-vessel.service|identity-seeder.service) continue ;; esac
+  _have=0; for _k in $UNITS; do [ "$_k" = "$u" ] && _have=1; done
+  [ "$_have" = 1 ] && continue
+  [ "$(systemctl show -p Type --value "$u" 2>/dev/null)" = oneshot ] && continue
+  if [ -f "$INV" ] && command -v jq >/dev/null 2>&1 \
+    && [ "$(jq -r --arg u "$u" '[.vessels[] | select(.unit == $u and .role == "seed")] | length' "$INV")" != 0 ]; then
+    continue
+  fi
+  systemctl show -p EnvironmentFiles --value "$u" 2>/dev/null | grep -q '/etc/substrate/env' || continue
+  UNITS="$UNITS
+$u"
+done
 for u in $UNITS; do
   # membership = enabled OR running (core units are often 'disabled' by symlink
   # yet pulled in via Requires= — same rule as substrate-ready.sh)
