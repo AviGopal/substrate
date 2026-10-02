@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # mirror-to-live.sh — mirror a vessel's git clone into the live /vessels runtime.
 #
-#   mirror-to-live.sh <vessel> [clone-dir]
+#   mirror-to-live.sh <vessel> [clone-dir] [expect-sha] [ref]
+#
+# [ref] (or MIRROR_REF) mirrors that commit instead of HEAD — see MATERIALISE A
+# REF below; the clone itself never leaves its branch.
 #
 # The single in-container equivalent of the host Makefile's sync-<vessel>
 # recipe (wipe src, copy src, bun install iff package.json changed) — shared by
@@ -13,7 +16,7 @@
 # always rm the target first, then cp the tree.
 set -uo pipefail
 
-VESSEL="${1:?usage: mirror-to-live.sh <vessel> [clone-dir]}"
+VESSEL="${1:?usage: mirror-to-live.sh <vessel> [clone-dir] [expect-sha] [ref]}"
 CLONE_DIR="${2:-${MITOSIS_PUSH_CLONE_DIR:-/workspace/git/vessels}}"
 RUNTIME_DIR="${MITOSIS_RUNTIME_DIR:-/vessels}"
 
@@ -22,6 +25,24 @@ DST="$RUNTIME_DIR/$VESSEL"
 log() { echo "[mirror-to-live] $*"; }
 
 [ -d "$SRC/.git" ] || { log "no clone at $SRC — nothing to mirror"; exit 1; }
+CLONE="$SRC"
+
+# MATERIALISE A REF, NOT JUST HEAD. pull-sync's unhealthy revert used to
+# `git checkout PREV_GOOD -- .` in the clone and then call this script — whose
+# `reset --hard HEAD` below discarded that checkout and mirrored HEAD, the very
+# code being reverted, while the caller logged "reverted". A revert target is
+# therefore an INPUT here: with a ref, the clone is still restored to HEAD (that
+# protection is unchanged), then the ref is checked out into a throwaway detached
+# worktree and everything below copies from it. The clone never leaves its branch;
+# the worktree is removed on exit. Omitted, behaviour is exactly as before.
+REF="${4:-${MIRROR_REF:-}}"
+REF_SHA=""; REF_WT=""
+if [ -n "$REF" ]; then
+  REF_SHA="$(git -C "$CLONE" rev-parse -q --verify "$REF^{commit}" 2>/dev/null || true)"
+  [ -n "$REF_SHA" ] || { log "ERROR $VESSEL: ref $REF is not a commit in $CLONE — REFUSING to mirror; the live tree is untouched"; exit 1; }
+fi
+# What the deploy is about to ship: the ref when given, else the clone's HEAD.
+target_sha() { if [ -n "$REF_SHA" ]; then git -C "$SRC" rev-parse HEAD 2>/dev/null; else git -C "$CLONE" rev-parse HEAD 2>/dev/null; fi; }
 
 # EXPECTED SHA — the deploy's only defence against shipping the wrong commit.
 #
@@ -39,7 +60,7 @@ log() { echo "[mirror-to-live] $*"; }
 # not a new requirement they must satisfy.
 EXPECT_SHA="${3:-${MIRROR_EXPECT_SHA:-}}"
 if [ -n "$EXPECT_SHA" ]; then
-  ACTUAL_SHA="$(git -C "$SRC" rev-parse HEAD 2>/dev/null || echo "")"
+  ACTUAL_SHA="${REF_SHA:-$(git -C "$CLONE" rev-parse HEAD 2>/dev/null || echo "")}"
   if [ -z "$ACTUAL_SHA" ]; then
     log "ERROR cannot read HEAD of $SRC — refusing to mirror against an expected SHA"
     exit 1
@@ -48,7 +69,7 @@ if [ -n "$EXPECT_SHA" ]; then
   case "$ACTUAL_SHA" in
     "$EXPECT_SHA"*) : ;;
     *)
-      log "ERROR $VESSEL clone is at ${ACTUAL_SHA%"${ACTUAL_SHA#???????}"}… but the deploy asked for $EXPECT_SHA"
+      log "ERROR $VESSEL ${REF_SHA:+ref $REF resolves to}${REF_SHA:-clone is at} ${ACTUAL_SHA%"${ACTUAL_SHA#???????}"}… but the deploy asked for $EXPECT_SHA"
       log "      REFUSING to mirror — the live tree is untouched"
       log "      likely: the clone never fetched the commit, or is on another branch"
       exit 1
@@ -68,7 +89,18 @@ fi
 # That is a root cause of "landed on origin/dev but never went live" hollow landings
 # (self-authored AND operator commits). `reset --hard HEAD` forces BOTH the index and the
 # working tree to the committed HEAD — which is what "restore to HEAD" always intended.
-git -C "$SRC" reset --hard HEAD 2>/dev/null || log "WARN could not restore $SRC working tree to HEAD"
+git -C "$CLONE" reset --hard HEAD 2>/dev/null || log "WARN could not restore $CLONE working tree to HEAD"
+if [ -n "$REF_SHA" ]; then
+  REF_WT="$(mktemp -d "${TMPDIR:-/tmp}/mirror-$VESSEL-ref.XXXXXX")" || { log "ERROR cannot create a worktree dir for $REF"; exit 1; }
+  rmdir "$REF_WT"
+  trap 'git -C "$CLONE" worktree remove --force "$REF_WT" >/dev/null 2>&1; rm -rf "$REF_WT"; git -C "$CLONE" worktree prune >/dev/null 2>&1' EXIT
+  git -C "$CLONE" worktree prune >/dev/null 2>&1 || true
+  if ! git -C "$CLONE" worktree add -q --detach "$REF_WT" "$REF_SHA" >/dev/null 2>&1; then
+    log "ERROR $VESSEL: cannot check out $REF into a worktree — REFUSING to mirror; the live tree is untouched"; exit 1
+  fi
+  SRC="$REF_WT"
+  log "$VESSEL: mirroring ref $REF (${REF_SHA%"${REF_SHA#???????}"}) — clone stays at $(git -C "$CLONE" rev-parse --short HEAD 2>/dev/null)"
+fi
 
 # Repo package.json declares workspace deps as RELATIVE file: paths
 # (file:../ias-executor-ts, file:../../packages/...). The runtime layout is
@@ -162,7 +194,7 @@ if [ "$DEPS_CHANGED" = 1 ]; then
   (cd "$DST" && /root/.bun/bin/bun install --silent 2>&1 | tail -2) || log "WARN bun install failed for $VESSEL"
 fi
 
-FINAL_SHA="$(git -C "$SRC" rev-parse HEAD 2>/dev/null || echo '?')"
+FINAL_SHA="$(target_sha || echo '?')"
 
 # POST-MIRROR CHECK. The pre-flight above proves the clone was right BEFORE the
 # copy; it cannot prove the copy happened. `reset --hard` runs between them, and
@@ -172,7 +204,7 @@ if [ -n "$EXPECT_SHA" ]; then
   case "$FINAL_SHA" in
     "$EXPECT_SHA"*) : ;;
     *)
-      log "ERROR $VESSEL clone moved to $FINAL_SHA during the mirror (expected $EXPECT_SHA)"
+      log "ERROR $VESSEL ${REF_SHA:+ref worktree}${REF_SHA:-clone} moved to $FINAL_SHA during the mirror (expected $EXPECT_SHA)"
       log "      the live tree may now hold code from neither commit — re-run this deploy"
       exit 1
       ;;
@@ -192,4 +224,4 @@ done <<EOF
 $(tracked_output_dirs "$SRC")
 EOF
 
-log "$VESSEL mirrored (${FINAL_SHA%"${FINAL_SHA#???????}"}${EXPECT_SHA:+ verified}) -> $DST"
+log "$VESSEL mirrored (${FINAL_SHA%"${FINAL_SHA#???????}"}${REF_SHA:+ from ref $REF}${EXPECT_SHA:+ verified}) -> $DST"

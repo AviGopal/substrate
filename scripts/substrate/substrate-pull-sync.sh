@@ -878,7 +878,7 @@ content_hash() { # vessel-root [clone-root] -> md5 over sorted src/ + sql/ + scr
   # stray untracked file in the clone's dist cannot read as permanent drift
   # (a mirror/restart loop). Runtime side: everything on disk, so an asset git
   # no longer tracks still counts as drift there.
-  if [ -d "$1/.git" ]; then
+  if [ -e "$1/.git" ]; then   # -e: a git worktree's .git is a FILE (revert_target_hashes)
     _ch_outsum="$(cd "$1" && for _ch_d in $_ch_out; do git ls-files -- "$_ch_d"; done | LC_ALL=C sort | xargs -r md5sum | md5sum | cut -d' ' -f1)"
   else
     _ch_outsum="$(cd "$1" && for _ch_d in $_ch_out; do [ -d "$_ch_d" ] && find "$_ch_d" -type f; done | LC_ALL=C sort | xargs -r md5sum | md5sum | cut -d' ' -f1)"
@@ -919,6 +919,24 @@ test_only_range() {
   done <<EOF
 $_tor_paths
 EOF
+  return 0
+}
+# What a revert to <sha> SHOULD leave live, measured the way convergence measures it.
+# revert_target_hashes <clone> <sha> <runtime-root> -> 0 with RT_WANT=content_hash of
+# <sha>'s tree and RT_LIVE=content_hash of the runtime (tracked dirs read from <sha>, not
+# HEAD, so a bundle HEAD added or dropped is judged by the tree being restored); 1 and
+# RT_WHY when <sha> cannot be checked out. Throwaway detached worktree, always removed.
+revert_target_hashes() {
+  RT_WANT=""; RT_LIVE=""; RT_WHY=""
+  local wt
+  wt="$(mktemp -d "${TMPDIR:-/tmp}/pull-sync-revert.XXXXXX")" || { RT_WHY="cannot create a temp dir"; return 1; }
+  git -C "$1" worktree prune >/dev/null 2>&1 || true
+  if ! git -C "$1" worktree add -q --detach "$wt" "$2" >/dev/null 2>&1; then
+    rm -rf "$wt"; RT_WHY="cannot check out ${2:0:10} to hash its tree"; return 1
+  fi
+  RT_WANT="$(content_hash "$wt")"; RT_LIVE="$(content_hash "$3" "$wt")"
+  git -C "$1" worktree remove --force "$wt" >/dev/null 2>&1 || true
+  rm -rf "$wt"; git -C "$1" worktree prune >/dev/null 2>&1 || true
   return 0
 }
 # content_hash with test files excluded (same patterns as test_only_range).
@@ -1400,7 +1418,14 @@ EOF
       # first copies a live tree pull-sync did not write to the drift
       # quarantine and files a gap naming it — and refuses the overwrite if the
       # copy fails (see drift_quarantine).
-      if [ "$RUNTIME_HASH" != none ] && [ "$CLONE_HASH" != none ] && [ "$RUNTIME_HASH" != "$CLONE_HASH" ] \
+      # A VERIFIED REVERT IS NOT DRIFT. After an unhealthy convergence the runtime
+      # deliberately holds PREV_GOOD while the clone holds the attempted commit; healing
+      # "toward the clone" would re-mirror the unhealthy code, restart, revert again —
+      # every tick (the bounce SUPPRESS_REATTEMPT exists to stop). $v.reverted is written
+      # only when the revert's CONTENT was verified, and cleared by the next real mirror.
+      if [ "$RUNTIME_HASH" != none ] && [ "$RUNTIME_HASH" = "$(cat "$MARKER_DIR/$v.reverted" 2>/dev/null)" ]; then
+        log "$v: live content is the verified revert to last-good (${RUNTIME_HASH:0:10}), not drift — holding it; clone ${HEAD:0:10} stays unmirrored (the pull-sync-unhealthy gap owns escalation)"
+      elif [ "$RUNTIME_HASH" != none ] && [ "$CLONE_HASH" != none ] && [ "$RUNTIME_HASH" != "$CLONE_HASH" ] \
          && [ "$HEAD" != "$(git -C "$d" rev-parse "origin/$BRANCH" 2>/dev/null)" ]; then
         log "$v: live content drifts from the clone, but the clone (${HEAD:0:10}) is not origin/$BRANCH — NOT repairing toward it"
       elif [ "$RUNTIME_HASH" != none ] && [ "$CLONE_HASH" != none ] && [ "$RUNTIME_HASH" != "$CLONE_HASH" ]; then
@@ -2058,6 +2083,7 @@ EOF
   _rt_after="$(content_hash "$RUNTIME_DIR/$v" "$d")"
   [ "$_rt_after" = "$CLONE_HASH" ] || log "$v: mirror exited 0 but live (${_rt_after:0:10}) != clone (${CLONE_HASH:0:10})"
   echo "$_rt_after" > "$MARKER_DIR/$v.runtime-sha" 2>/dev/null || true
+  rm -f "$MARKER_DIR/$v.reverted" 2>/dev/null || true
 
   # 2c. Shared-package fan-out. A mirrored clone with NO unit of its own but a
   # build step that OTHER runtime vessels file:-dep (e.g. @avigopal/ias-executor-ts,
@@ -2291,19 +2317,60 @@ EOF
       for _ in 1 2 3 4 5; do healthy "$PORT" && { ok=1; break; }; sleep 4; done
       if [ "$ok" = 0 ]; then
         log "$v: UNHEALTHY after mirror+restart — reverting to last-good ${PREV_GOOD:0:10} and HALTING run"
-        if [ -n "$PREV_GOOD" ] && git -C "$d" checkout -q "$PREV_GOOD" -- . 2>/dev/null; then
-          /usr/local/bin/mirror-to-live "$v" "$CLONE_DIR" || true
-          git -C "$d" checkout -q "$BRANCH" 2>/dev/null || true
-          git -C "$d" reset --hard -q "$HEAD" 2>/dev/null || true
-          # The live tree is now PREV_GOOD, written by pull-sync: record it so the
-          # next mirror over it is not mistaken for overwriting foreign content.
-          content_hash "$RUNTIME_DIR/$v" "$d" > "$MARKER_DIR/$v.runtime-sha" 2>/dev/null || true
-          systemctl restart "$UNIT" 2>/dev/null || true
+        # THE REVERT IS AN INPUT TO THE MIRROR, AND ITS RESULT IS MEASURED. This used to
+        # `checkout PREV_GOOD -- .` in the clone and call mirror-to-live, whose first act
+        # is `reset --hard HEAD`: the checkout was discarded, HEAD (the unhealthy code)
+        # re-mirrored, and this log and the gap below both said "reverted". Now the
+        # mirror materialises PREV_GOOD itself (the clone never leaves $BRANCH), and the
+        # revert counts only if the live content hashes to PREV_GOOD's tree.
+        REVERT_OK=0; REVERT_WHY=""; REVERT_HEALTH=""
+        if [ -z "$PREV_GOOD" ]; then
+          REVERT_WHY="no last-good pin recorded"
+        elif ! /usr/local/bin/mirror-to-live "$v" "$CLONE_DIR" "$PREV_GOOD" "$PREV_GOOD"; then
+          REVERT_WHY="mirror-to-live of ${PREV_GOOD:0:10} failed"
+        elif ! revert_target_hashes "$d" "$PREV_GOOD" "$RUNTIME_DIR/$v"; then
+          REVERT_WHY="$RT_WHY"
+        elif [ "$RT_LIVE" != "$RT_WANT" ]; then
+          REVERT_WHY="live content ${RT_LIVE:0:10} != ${PREV_GOOD:0:10}'s tree ${RT_WANT:0:10}"
+        else
+          REVERT_OK=1
+        fi
+        # The clone stays on its branch at HEAD whatever happened above.
+        [ "$(git -C "$d" symbolic-ref -q --short HEAD 2>/dev/null)" = "$BRANCH" ] || git -C "$d" checkout -q "$BRANCH" 2>/dev/null || true
+        git -C "$d" reset --hard -q "$HEAD" 2>/dev/null || true
+        # Whatever is live now was written by pull-sync: record what it MEASURABLY is, so
+        # the next mirror over it is not mistaken for overwriting foreign content.
+        _rv_rt="$(content_hash "$RUNTIME_DIR/$v" "$d")"
+        echo "$_rv_rt" > "$MARKER_DIR/$v.runtime-sha" 2>/dev/null || true
+        if [ "$REVERT_OK" = 1 ]; then
+          echo "$_rv_rt" > "$MARKER_DIR/$v.reverted" 2>/dev/null || true
+          log "$v: reverted to ${PREV_GOOD:0:10} — verified: live content ${RT_LIVE:0:10} == its tree"
+        else
+          rm -f "$MARKER_DIR/$v.reverted" 2>/dev/null || true
+          log "$v: revert FAILED — $REVERT_WHY; $UNIT is still serving unhealthy code from ${HEAD:0:10} (pull-sync-revert-failed-$v)"
+          emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-revert-failed-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$v went unhealthy after pull-sync to ${HEAD:0:10} and the revert to last-good ${PREV_GOOD:0:10} did NOT land: $REVERT_WHY. The live tree under $RUNTIME_DIR/$v is not the last-good tree, so the unit is still running the code that failed its health check.\",\"classification_metadata\":{\"vessel\":\"$v\",\"attempted_head\":\"$HEAD\",\"prev_good\":\"$PREV_GOOD\",\"runtime_hash\":\"$_rv_rt\",\"prev_good_hash\":\"${RT_WANT:-}\"},\"status\":\"open\"}}}}"
+        fi
+        systemctl restart "$UNIT" 2>/dev/null || true
+        # Re-check after the revert restart: a revert that lands but stays unhealthy
+        # says the commit was not (only) the cause.
+        if [ "$REVERT_OK" = 1 ]; then
+          sleep "$STAGGER_SECONDS"; REVERT_HEALTH=unhealthy
+          for _ in 1 2 3 4 5; do healthy "$PORT" && { REVERT_HEALTH=healthy; break; }; sleep 4; done
+          if [ "$REVERT_HEALTH" = healthy ]; then
+            log "$v: reverted and healthy on ${PREV_GOOD:0:10}"
+          else
+            log "$v: reverted to ${PREV_GOOD:0:10} but STILL UNHEALTHY — ${HEAD:0:10} may not be (the only) cause"
+          fi
         fi
         # marker stays at $CLONE_HASH (last ATTEMPTED content): live code is PREV_GOOD,
         # but re-attempting the same bad commit every tick would be a mirror/
         # revert loop — the substrateGap below owns the escalation instead.
-        emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-unhealthy-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$v unhealthy after pull-sync to ${HEAD:0:10}; reverted to ${PREV_GOOD:0:10} and halted the sync run\",\"status\":\"open\"}}}}"
+        if [ "$REVERT_OK" = 1 ]; then
+          _rv_sum="$v unhealthy after pull-sync to ${HEAD:0:10}; reverted to ${PREV_GOOD:0:10} (live content verified against its tree; $REVERT_HEALTH after the revert restart) and halted the sync run"
+        else
+          _rv_sum="$v unhealthy after pull-sync to ${HEAD:0:10}; revert to ${PREV_GOOD:-<none>} FAILED ($REVERT_WHY) — still running the unhealthy code; halted the sync run"
+        fi
+        emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-unhealthy-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$_rv_sum\",\"status\":\"open\"}}}}"
         failed=$((failed+1))
         break
       fi
