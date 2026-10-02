@@ -759,13 +759,22 @@ fi
 
 # ── Update channel ───────────────────────────────────────────────────────────
 # Which revision this node runs: canary (dev first), fleet (what canaries verified)
-# or hold. A declared channel that the installed pull-sync does not read is still
-# converging to dev, so "enforced" says which: a setting nothing reads must not
-# look like a working one.
+# or hold. The declaration is only half the fact: "enforced" is read from the record
+# pull-sync writes each time it converges (/workspace/.pull-sync/channel.json:
+# {channel, ref, sha, at, ref_missing}), never inferred from pull-sync's source, which
+# a comment could satisfy. No record, or one naming another channel, means the
+# declared channel is not in effect. A channel whose ref does not exist is reported as
+# missing, never quietly served from dev.
 UPDATE_CHANNEL="$(envval SUBSTRATE_UPDATE_CHANNEL)"; UPDATE_CHANNEL="${UPDATE_CHANNEL:-fleet}"
-CHANNEL_ENFORCED=false
-PULL_SYNC_BIN="$(command -v substrate-pull-sync 2>/dev/null || true)"
-[ -n "$PULL_SYNC_BIN" ] && grep -q SUBSTRATE_UPDATE_CHANNEL "$PULL_SYNC_BIN" 2>/dev/null && CHANNEL_ENFORCED=true
+CHANNEL_RECORD="$(cat /workspace/.pull-sync/channel.json 2>/dev/null || true)"
+CHANNEL_ENFORCED=false; CHANNEL_REF=""; CHANNEL_SHA=""; CHANNEL_AT=""; CHANNEL_REF_MISSING=false
+if [ -n "$CHANNEL_RECORD" ] && jq -e 'type == "object"' >/dev/null 2>&1 <<<"$CHANNEL_RECORD"; then
+  CHANNEL_REF="$(jq -r '.ref // empty' <<<"$CHANNEL_RECORD")"
+  CHANNEL_SHA="$(jq -r '.sha // empty' <<<"$CHANNEL_RECORD")"
+  CHANNEL_AT="$(jq -r '.at // empty' <<<"$CHANNEL_RECORD")"
+  [ "$(jq -r '.ref_missing // false' <<<"$CHANNEL_RECORD")" = true ] && CHANNEL_REF_MISSING=true
+  [ "$(jq -r '.channel // empty' <<<"$CHANNEL_RECORD")" = "$UPDATE_CHANNEL" ] && [ "$CHANNEL_REF_MISSING" = false ] && CHANNEL_ENFORCED=true
+fi
 
 # ── Output ───────────────────────────────────────────────────────────────────
 verdict_json() {
@@ -784,9 +793,12 @@ verdict_json() {
     --arg profile "$PROFILE" --arg engine "$ENGINE" --arg prefix "$PORT_PREFIX" \
     --arg thp "$TRACE_HOST_PORT" --argjson bym "$BY_MANIFEST" --arg aliases "$ALIASES_USED" \
     --arg channel "$UPDATE_CHANNEL" --argjson enforced "$CHANNEL_ENFORCED" \
+    --arg cref "$CHANNEL_REF" --arg csha "$CHANNEL_SHA" --arg cat "$CHANNEL_AT" --argjson cmiss "$CHANNEL_REF_MISSING" \
     '{requested_level:$target, value:$value, ok:($value=="pass"), image_revision:$img,
       profile:$profile, engine:$engine, port_prefix:$prefix,
-      update_channel:{channel:$channel, enforced:$enforced},
+      update_channel:{channel:$channel, enforced:$enforced,
+        ref:(if $cref=="" then null else $cref end), sha:(if $csha=="" then null else $csha end),
+        converged_at:(if $cat=="" then null else $cat end), ref_missing:$cmiss},
       trace_host_port:$thp, launched_by_manifest:($bym == 1),
       deprecated_port_aliases:($aliases | split(" ") | map(select(length > 0))),
       levels:$levels, vessels:$vessels}'
@@ -796,8 +808,9 @@ if [ "$JSON" = 1 ]; then
   verdict_json
 else
   printf 'substrate-status  image %s  profile %s  engine %s  port prefix %s\n' "$IMAGE_REVISION" "$PROFILE" "$ENGINE" "$PORT_PREFIX"
-  if [ "$CHANNEL_ENFORCED" = true ]; then printf '  update channel %s\n' "$UPDATE_CHANNEL"
-  else printf '  update channel %s (declared; this image'"'"'s pull-sync does not read it yet, so every vessel still follows dev)\n' "$UPDATE_CHANNEL"; fi
+  if [ "$CHANNEL_ENFORCED" = true ]; then printf '  update channel %s (running %s at %s, converged %s)\n' "$UPDATE_CHANNEL" "$CHANNEL_REF" "${CHANNEL_SHA:0:10}" "$CHANNEL_AT"
+  elif [ "$CHANNEL_REF_MISSING" = true ]; then printf '  update channel %s: NOT IN EFFECT, its ref %s does not exist (channel_ref_missing)\n' "$UPDATE_CHANNEL" "${CHANNEL_REF:-?}"
+  else printf '  update channel %s (declared; not in effect: pull-sync has recorded no convergence to it, so every vessel still follows dev)\n' "$UPDATE_CHANNEL"; fi
   for l in $LEVELS; do printf '  %-10s %-8s %s\n' "$l" "${VAL[$l]}" "${EVID[$l]}"; done
   if [ -n "$VESSEL_ROWS" ]; then
     moved="$(printf '%s' "$VESSEL_ROWS" | awk -F'|' '$2=="moved"{printf "    %-28s image %s -> clone head %s\n", $1, ($3==""?"(baked)":$3), ($4==""?"(no clone)":$4)}')"

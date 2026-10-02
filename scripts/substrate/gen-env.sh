@@ -228,9 +228,6 @@ if [ -n "$_join_hint" ] && [ -z "${DISCOVERY_ENDPOINT:-}" ]; then
   echo "[gen-env]   but a fresh launch with these inputs is refused. Set DISCOVERY_ENDPOINT to the hub's discovery URL." >&2
 fi
 
-# PROFILE AGAINST ANCHOR. A hub profile holds the network's identity and learning
-# state; a remote discovery anchor makes this container a spoke of someone else's.
-# Both at once has no coherent reading, so neither is picked.
 # Update channel: which revision this node runs. canary runs dev first, fleet (the
 # default) runs what canaries verified, hold keeps what runs. A typo here would
 # silently pick a default channel, so an unknown value is refused, naming the three.
@@ -239,6 +236,10 @@ case "${SUBSTRATE_UPDATE_CHANNEL:-}" in
   *) _refuse "SUBSTRATE_UPDATE_CHANNEL=${SUBSTRATE_UPDATE_CHANNEL} is not an update channel." \
        "Use canary (run dev first), fleet (the default: run what canaries verified) or hold (keep what runs)." ;;
 esac
+
+# PROFILE AGAINST ANCHOR. A hub profile holds the network's identity and learning
+# state; a remote discovery anchor makes this container a spoke of someone else's.
+# Both at once has no coherent reading, so neither is picked.
 case "${PROFILE:-}" in
   hub|hub-minimal)
     if ! _is_loopback_host "${DISCOVERY_ENDPOINT:-}" || ! _is_loopback_host "${HUB_DISCOVERY_URL:-}"; then
@@ -1271,8 +1272,9 @@ SUBSTRATE_GIT_AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL}"
 #                                  patched (kills the base_sha path-mismatch livelock)
 #   MITOSIS_PUSH_CLONE_DIR       — where setup-git-push put the per-vessel clones
 MITOSIS_DIRECT_PUSH="${MITOSIS_DIRECT_PUSH:-1}"
-# Update channel (see the validation above): read by pull-sync to choose the revision
-# it mirrors into /vessels. Landings and their verification always use dev.
+# Update channel (see the validation above). Declared here for pull-sync to read when
+# it converges /vessels (openspec staged-fleet-rollout, task 2); until that lands,
+# every node still follows dev. Landings and their verification always use dev.
 SUBSTRATE_UPDATE_CHANNEL="${SUBSTRATE_UPDATE_CHANNEL:-fleet}"
 MITOSIS_RUNTIME_DIR=${MITOSIS_RUNTIME_DIR:-/vessels}
 MITOSIS_PUSH_CLONE_DIR=${MITOSIS_PUSH_CLONE_DIR:-/workspace/git/vessels}
