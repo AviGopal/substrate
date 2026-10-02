@@ -305,6 +305,18 @@ probe_goal() {
       TERMINAL="the known-answer goal's dispatch budget ($GOAL_MAX_DISPATCHES) is spent"
       return
     fi
+    # A pull-sync run restarts every vessel whose code it moves, discovery among them, and
+    # the known-answer goal reads discovery. A dispatch made while it runs can land in a
+    # restart and miss, which this level would report as the substrate being unusable.
+    # Measured on a fresh install (CI run 37011691597): the first boot pull-sync restarted
+    # discovery at 13:19:18 and goal-host at 13:19:28; a dispatch between them found no
+    # content and spent the probe's budget. So no dispatch is made while one runs: the
+    # level stays unknown and says why, and --wait asks again once the run has finished.
+    if [ "$(systemctl is-active substrate-pull-sync.service 2>/dev/null)" = activating ]; then
+      P_VAL=unknown
+      P_EVID="pull-sync is converging this node's vessels and restarts the ones it moves; the known-answer goal is dispatched once it finishes"
+      return
+    fi
     body="$(jq -nc --arg g "$KNOWN_ANSWER_GOAL" --arg op "substrate-status" --arg t "$OPERATOR_TAG" \
             '{goal:$g, operator:$op, tags:[$t,"install_probe"]}')"
     if [ "$(http_code "$gh/health" 4)" = "200" ]; then
