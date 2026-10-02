@@ -20,6 +20,7 @@ import { useProgressWatch } from "../lib/useProgressWatch";
 import { useLiveControls } from "../state/liveControls";
 import { segmentAttempts } from "../lib/attempts";
 import { AnswerBody } from "./Answer";
+import { BestOutput } from "./BestOutput";
 import { Rendered } from "./Rendered";
 import { GradeGesture } from "./GradeGesture";
 import { SolicitationPanel } from "./SolicitationPanel";
@@ -232,6 +233,8 @@ export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
           <SolicitationPanel solicitation={solicitation} />
         </section>
       ) : null}
+
+      {!answer && walk.reached !== true ? <BestOutput walk={walk} segments={segments} running={!terminal} /> : null}
 
       {answer ? (
         <section className="sf-view-section" aria-label="Answer">

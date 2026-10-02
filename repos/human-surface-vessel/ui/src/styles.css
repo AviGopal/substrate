@@ -188,7 +188,7 @@ body {
    700px lower inside the same run's impulse card — two type roles for the
    same bytes on one screen. A paragraph that is nothing but a code span is
    machine record, and reads as one. */
-.sf-prose p:has(> code:only-child) {
+.sf-prose p.sf-prose-record {
   font-family: var(--sf-font-mono);
   font-size: var(--sf-text-sm);
 }
@@ -1766,6 +1766,10 @@ body { overflow: hidden; }
 }
 .sf-question-subject { font-size: var(--sf-text-lg); max-width: var(--sf-measure-prose); }
 .sf-answer-basis { margin-top: var(--sf-space-4); font-size: var(--sf-text-sm); }
+/* A not-reached run's best output: readable, but never mistakable for an answer. */
+.sf-best-output { border-left: 3px solid var(--sf-rule-strong); padding-left: var(--sf-space-4); }
+.sf-best-output .sf-view-facts { margin: 0 0 var(--sf-space-3); }
+.sf-best-verdict { margin: 0 0 var(--sf-space-3); max-width: var(--sf-measure-prose); color: var(--sf-ink-2); font-size: var(--sf-text-sm); }
 .sf-answer-basis > summary { cursor: pointer; color: var(--sf-ink-2); }
 .sf-attempt-nav { display: flex; gap: var(--sf-space-1); margin-bottom: var(--sf-space-3); font-size: var(--sf-text-xs); }
 .sf-attempt-nav a { padding: var(--sf-space-1) var(--sf-space-2); border: 1px solid var(--sf-rule); border-radius: var(--sf-radius-sm); color: var(--sf-ink-2); text-decoration: none; font-variant-numeric: tabular-nums; }

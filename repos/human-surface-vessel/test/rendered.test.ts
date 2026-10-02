@@ -97,3 +97,54 @@ describe("<Rendered>", () => {
     expect(recorded[0]!.body).toContain('"decided_by":"record"');
   });
 });
+
+describe("<Prose> machine-record paragraphs", () => {
+  test("only a paragraph that is nothing but one code span is set as a record", async () => {
+    const { Prose } = await import("../ui/src/components/Prose");
+    const el = await mount(React.createElement(Prose, { source: "The tree of `local-tools-vessel` diverges.\n\n`{\"stdout\":\"27\"}`" }));
+    const ps = [...el.querySelectorAll("p")];
+    expect(ps.length).toBe(2);
+    expect(ps[0]?.className).toBe("");
+    expect(ps[1]?.className).toBe("sf-prose-record");
+  });
+});
+
+describe("<BestOutput>", () => {
+  const T = 1_790_840_000_000;
+  const base = {
+    dispatchId: "d-best-dom", status: "failed", reached: false, poolShapes: [], poolProvenance: [], pendingTargets: [],
+    currentStep: null, steps: [], executionPath: null, walkTier: null, attemptCount: null, grounded: null, learning: null,
+    answerBody: null, operator: null, completionShapes: null, humanGraded: false, humanReachNotes: null, trigger: null, requeueOf: null,
+    goal: "What is happening today?",
+    poolEvents: [{ shape: "goal", source: "What is happening today?", at: T }, { shape: "goal", source: "seed var goal", at: T }],
+  };
+
+  test("a rejected report is shown as an excerpt, labelled not reached, with how much is missing", async () => {
+    const { BestOutput } = await import("../ui/src/components/BestOutput");
+    const { segmentAttempts } = await import("../ui/src/lib/attempts");
+    const walk = {
+      ...base,
+      goalReachReason: "Too generic.",
+      walkLog: [
+        '[goal-host-vessel] walk(/run-goal): HOLLOW-CONTENT llm_completion (4965 chars) = {"resolved":true,"shape":"llmCompletion","content":"Today\\u2019s date: Thursday, 1 October 2026\\n\\nUS\\u2013Iran tensions',
+        "[goal-host-vessel] walk(/run-goal): HOLLOW — Too generic.",
+      ],
+    };
+    const el = await mount(React.createElement(BestOutput, { walk, segments: segmentAttempts(walk as never), running: false }));
+    const text = el.textContent ?? "";
+    expect(text).toContain("Best output — not reached");
+    expect(text).toContain("of 4,965 characters");
+    expect(text).toContain("the server kept only an excerpt");
+    expect(text).toContain("Today’s date: Thursday, 1 October 2026");
+    // The header already shows the reported attempt's reason; it is not repeated.
+    expect(text).not.toContain("judged not reached: Too generic");
+  });
+
+  test("nothing is drawn when the run has no usable output", async () => {
+    const { BestOutput } = await import("../ui/src/components/BestOutput");
+    const { segmentAttempts } = await import("../ui/src/lib/attempts");
+    const walk = { ...base, goalReachReason: null, walkLog: [] };
+    const el = await mount(React.createElement(BestOutput, { walk, segments: segmentAttempts(walk as never), running: false }));
+    expect(el.querySelector("section.sf-best-output")).toBeNull();
+  });
+});
