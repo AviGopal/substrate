@@ -147,6 +147,22 @@ const forward_model = {
   selector_scored_fraction,
 };
 
+// How many of the given parent execution ids exist, in ONE query against `execution`
+// by record id (an id lookup, no scan). This replaced a per-child loop of up to 900
+// `count()` queries against v_paradigm_execution_traces every 20 minutes: on the
+// syzygy hub (1.5M execution rows, the view live) that loop was about 18% of all
+// database time in a 2-minute capture (2026-10-02). Each child counts once, as the
+// loop did: a parent referenced by two children counts for both.
+async function parentsPresent(parentIds: string[]): Promise<number> {
+  const ids = [...new Set(parentIds.filter((x) => typeof x === "string" && x.length > 0))];
+  if (ids.length === 0) return 0;
+  const rows = await sql<{ id: string }>(
+    `SELECT VALUE meta::id(id) FROM ${JSON.stringify(ids)}.map(|$i| type::thing("execution", $i));`,
+  );
+  const present = new Set(rows.map((r: any) => String(r)));
+  return parentIds.filter((p) => present.has(p)).length;
+}
+
 // ── backward model (composition graph) ──
 const comp_edges = await tryNum(() => count("SELECT count() FROM activity_composition_graph GROUP ALL;"));
 let orphan_parent_rate: number | null = null;
@@ -154,11 +170,7 @@ try {
   // sample 500 children, resolve parent activity_id presence
   const kids = await sql<{ parent_execution_id: string }>("SELECT parent_execution_id FROM v_paradigm_execution_traces WHERE parent_execution_id != NONE LIMIT 500;");
   if (kids.length) {
-    let resolved = 0;
-    for (const k of kids) {
-      const p = await sql<{ c: number }>(`SELECT count() AS c FROM v_paradigm_execution_traces WHERE execution_id = ${JSON.stringify(k.parent_execution_id)} GROUP ALL;`);
-      if (p[0]?.c) resolved++;
-    }
+    const resolved = await parentsPresent(kids.map((k) => k.parent_execution_id));
     orphan_parent_rate = Math.round((1 - resolved / kids.length) * 1000) / 1000;
   }
 } catch { /* leave null */ }
@@ -176,11 +188,7 @@ try {
   );
   recent_composition_count = rk.length;
   if (rk.length) {
-    let resolved = 0;
-    for (const k of rk) {
-      const p = await sql<{ c: number }>(`SELECT count() AS c FROM v_paradigm_execution_traces WHERE execution_id = ${JSON.stringify(k.parent_execution_id)} GROUP ALL;`);
-      if (p[0]?.c) resolved++;
-    }
+    const resolved = await parentsPresent(rk.map((k) => k.parent_execution_id));
     recent_orphan_rate = Math.round((1 - resolved / rk.length) * 1000) / 1000;
   }
 } catch { /* leave null */ }
