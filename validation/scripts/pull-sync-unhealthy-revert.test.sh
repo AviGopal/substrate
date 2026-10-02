@@ -24,6 +24,9 @@
 #   (e) a mirror that exits 0 but ships HEAD anyway (the historic lie) is caught:
 #       revert-failed gap filed with a stable id, "revert FAILED" logged, never
 #       "reverted to"
+#   (f) the revert lands but the unit stays unhealthy and inactive (a dependency
+#       is down): the next tick does not re-mirror the failed commit, restart, or
+#       halt the run — both trees already failed
 #
 # usage: validation/scripts/pull-sync-unhealthy-revert.test.sh [repo-root]
 # Needs bash, git, jq, tar, md5sum. No root, no live state: every path is a temp dir.
@@ -55,14 +58,14 @@ mkdir -p "$T/stub" "$T/bin" "$T/share" "$T/unit" "$T/etc"
 cat > "$T/stub/systemctl" <<EOF
 #!/usr/bin/env bash
 echo "systemctl \$*" >> "$CALLS"
-case "\$1" in is-active) exit 0 ;; is-enabled) echo enabled ;; esac
+case "\$1" in is-active) [ -e "$T/unit-down" ] && exit 3; exit 0 ;; is-enabled) echo enabled ;; esac
 exit 0
 EOF
 cat > "$T/stub/curl" <<EOF
 #!/usr/bin/env bash
 echo "curl \$*" >> "$CALLS"
 case "\$*" in
-  */health*) grep -q 'x = 1' "$R/src/x.ts" 2>/dev/null && printf 200 || printf 503; exit 0 ;;
+  */health*) [ ! -e "$T/dep-down" ] && grep -q 'x = 1' "$R/src/x.ts" 2>/dev/null && printf 200 || printf 503; exit 0 ;;
 esac
 exit 7
 EOF
@@ -87,7 +90,7 @@ printf '{"vessels":[{"repo":"%s","unit":"%s.service","health_port":"18999"}]}\n'
 
 # ── fixture: last-good base live, origin one (unhealthy) commit ahead ───────────
 setup() { # mirror-binary
-  rm -rf "$T/ws" "$T/rt" "$T/o" "$T/seed" "$T/expect"; : > "$CALLS"
+  rm -rf "$T/ws" "$T/rt" "$T/o" "$T/seed" "$T/expect" "$T/dep-down" "$T/unit-down"; : > "$CALLS"
   cp "$1" "$T/bin/mirror-to-live"
   mkdir -p "$T/ws/git/vessels" "$T/ws/.last-good" "$R" "$T/o"
   git init -q --bare "$T/o/$V.git"; git -C "$T/o/$V.git" symbolic-ref HEAD refs/heads/dev
@@ -160,5 +163,16 @@ grep -q "reverted to" "$OUT" && bad "(e) the log claims a revert that did not ha
 grep "pull-sync-unhealthy-$V" "$CALLS" | grep -q "reverted to" && bad "(e) the unhealthy gap claims a revert" || ok "(e) the unhealthy gap does not claim a revert"
 [ "$(git -C "$CL" symbolic-ref -q HEAD)" = refs/heads/dev ] && [ "$(git -C "$CL" rev-parse HEAD)" = "$VNEW" ] \
   && ok "(e) the clone is on dev at HEAD" || bad "(e) the clone was left elsewhere"
+
+# ── (f) both trees unhealthy: no per-tick bounce ───────────────────────────────
+setup "$T/mirror-wrapper"; : > "$T/dep-down"; run
+[ "$(content_hash "$R" "$T/expect")" = "$EXPECT_HASH" ] && ok "(f) the revert still lands" || bad "(f) the revert did not land"
+grep -q "STILL UNHEALTHY" "$OUT" && ok "(f) the post-revert re-check says still unhealthy" || bad "(f) no still-unhealthy verdict"
+grep "pull-sync-unhealthy-$V" "$CALLS" | grep -q "unhealthy after the revert restart" && ok "(f) the gap carries the post-revert verdict" || bad "(f) the gap lacks the post-revert verdict"
+: > "$T/unit-down"; : > "$CALLS"; run
+grep -q "^MIRROR" "$CALLS" && bad "(f) the next tick re-mirrored the failed commit" || ok "(f) the next tick does not re-mirror"
+grep -q "systemctl restart $V.service" "$CALLS" && bad "(f) the next tick restarted the sick unit" || ok "(f) no restart on the next tick"
+grep -q "UNHEALTHY after mirror+restart" "$OUT" && bad "(f) the next tick halted the run again" || ok "(f) the run is not halted again"
+[ "$(content_hash "$R" "$T/expect")" = "$EXPECT_HASH" ] && ok "(f) the runtime stays on PREV_GOOD" || bad "(f) the runtime left PREV_GOOD"
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

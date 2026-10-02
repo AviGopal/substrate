@@ -1343,6 +1343,13 @@ for d in "$CLONE_DIR"/*/; do
      && ! systemctl is-active "$SELF_UNIT" >/dev/null 2>&1; then
     if [ "$(systemctl is-enabled "$SELF_UNIT" 2>/dev/null)" = masked ]; then
       log "$v: content already attempted and $SELF_UNIT is MASKED — this deployment does not run it; keeping suppression so it cannot starve the vessels that do"
+    elif [ "$RUNTIME_HASH" != none ] && [ "$RUNTIME_HASH" = "$(cat "$MARKER_DIR/$v.reverted" 2>/dev/null)" ]; then
+      # Both trees already failed: the attempted one went unhealthy and the verified
+      # revert to last-good did not bring the unit back either. Re-mirroring the
+      # attempted content would restart a sick vessel twice and `break` the run every
+      # tick, starving every vessel after it. A new origin commit re-arms this vessel;
+      # self-recovery owns a down unit; the pull-sync-unhealthy gap owns escalation.
+      log "$v: $SELF_UNIT is not active, but the live tree is the verified revert and the attempted content already failed — keeping suppression (not re-mirroring ${HEAD:0:10})"
     else
       SUPPRESS_REATTEMPT=""
       log "$v: content already attempted but $SELF_UNIT is not active — overriding re-attempt suppression to restore service"
