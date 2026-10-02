@@ -3,20 +3,21 @@
 # the AviGopal repos (substrate self-development through repositories).
 #
 # Runs once at startup (git-push-setup.service oneshot), AFTER gen-env has
-# written /etc/substrate/env. Two jobs:
+# written /etc/substrate/env. Its jobs, in order:
 #   1. System-level git identity + credential helper. MUST be --system, not
 #      --global: systemd services run with NO HOME, so ~/.gitconfig (--global)
 #      is never read — that silently breaks push auth (commit works via git's
 #      hostname fallback, push fails → local_only). /etc/gitconfig is read
 #      regardless of HOME.
-#   2. Idempotent writable clones of the self-developed vessel repos at
-#      MITOSIS_PUSH_CLONE_DIR/<vessel>, on dev. The cutover (direct-push mode)
-#      commits+pushes here, then mirrors into the live /vessels runtime.
-#   3. Idempotent super-repo clone at /workspace/git/super-repo, on dev, tracking
+#   2. Idempotent super-repo clone at /workspace/git/super-repo, on dev, tracking
 #      the canonical AviGopal/substrate. The cutover diff-baseline + unit-file
 #      source and the landed-truth reads (docs-align-scan, self-operational-health)
 #      all read this tree, so it MUST track substrate.git/dev — not the stale
 #      metabob-devbob.git/snapshot-branch a persistent volume artifact used to leave it on.
+#   3. The vessel inventory, derived from that clone's .gitmodules, then
+#      idempotent writable clones of every listed vessel repo at
+#      MITOSIS_PUSH_CLONE_DIR/<vessel>, on dev. The cutover (direct-push mode)
+#      commits+pushes here, then mirrors into the live /vessels runtime.
 #
 # Fails open: no PAT → configure identity only, skip clones (drafts won't push,
 # but the substrate still runs and learns).
@@ -38,10 +39,23 @@ AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL:-substrate-autonomous@substrate.local
 CLONE_DIR="${MITOSIS_PUSH_CLONE_DIR:-/workspace/git/vessels}"
 # Everything mutable from all vessels: clone every substrate vessel repo so the
 # cutover can self-develop ANY of them (not just development-vessel). Each maps
-# to AviGopal/<name> on dev and to the live runtime /vessels/<name>. Override
-# via SUBSTRATE_PUSH_VESSELS (space-separated). A clone whose vessel doesn't run
-# at /vessels/<name> is still pushable; its mirror-to-live just no-ops safely.
-VESSELS="${SUBSTRATE_PUSH_VESSELS:-activity-api analysis-vessel boredom-vessel concept-db cpg-inference-ts development-vessel discovery-vessel goal-host-vessel ias-executor-ts identity-vessel light-dispatch-vessel llm-resolver-vessel local-tools-vessel obsidian-vessel ribosome-vessel stateful-ui-vessel}"
+# to AviGopal/<name> on dev and to the live runtime /vessels/<name>. A clone
+# whose vessel doesn't run at /vessels/<name> is still pushable; its
+# mirror-to-live just no-ops safely.
+#
+# THE INVENTORY IS THE SUPER-REPO'S .gitmodules. Authorability is submodule
+# membership: a vessel the super-repo does not carry as a submodule has no push
+# clone, so the substrate cannot author it. A hardcoded list here drifted from
+# .gitmodules (16 names vs 18 submodules, and a resident vessel in neither), so
+# the list is derived after the super-repo clone below — adding a vessel is
+# adding a submodule, nothing else. SUBSTRATE_PUSH_VESSELS (space-separated)
+# still overrides for a deliberately narrowed node.
+vessels_from_gitmodules() {
+  # $1: a .gitmodules file. Prints the basename of every submodule path under repos/.
+  [ -r "$1" ] || return 1
+  git config -f "$1" --get-regexp '^submodule\..*\.path$' 2>/dev/null \
+    | awk '$2 ~ /^repos\/[A-Za-z0-9._-]+$/ { sub(/^repos\//, "", $2); print $2 }' | sort -u | tr '\n' ' '
+}
 
 # 1. System git identity (always). The credential helper is configured ONLY if
 #    the PAT validates — see below.
@@ -119,31 +133,8 @@ else
   echo "[setup-git-push] no SUBSTRATE_GIT_PAT — in-container HTTPS push disabled; self-authored commits are committed locally but cannot land until a credential is supplied. Clones refreshed read-only if reachable."
 fi
 
-# 2. Idempotent writable clones on dev.
-mkdir -p "$CLONE_DIR"
-# REPO_OWNER already resolved above (SUBSTRATE_REPO_OWNER, default AviGopal).
-for v in $VESSELS; do
-  d="$CLONE_DIR/$v"
-  url="https://github.com/${REPO_OWNER}/$v.git"
-  if [ -d "$d/.git" ]; then
-    git -C "$d" remote set-url origin "$url"
-    if git -C "$d" fetch origin dev -q 2>/dev/null; then
-      git -C "$d" checkout -q dev 2>/dev/null || true
-      git -C "$d" reset --hard origin/dev -q 2>/dev/null \
-        && echo "[setup-git-push] refreshed $v → $(git -C "$d" rev-parse --short HEAD)" \
-        || echo "[setup-git-push] WARN refresh failed for $v"
-    else
-      echo "[setup-git-push] WARN fetch failed for $v (offline?); keeping existing clone"
-    fi
-  else
-    git clone -q --branch dev "$url" "$d" \
-      && echo "[setup-git-push] cloned $v" \
-      || echo "[setup-git-push] WARN clone failed for $v"
-  fi
-done
-
-# 3. Idempotent super-repo clone on dev (canonical AviGopal/substrate). Same
-#    clone-or-refresh pattern as the vessels above (reuse, not a new mechanism) so a
+# 2. Idempotent super-repo clone on dev (canonical AviGopal/substrate). Same
+#    clone-or-refresh pattern as the vessel clones below (reuse, not a new mechanism) so a
 #    from-repo container comes up with the super-repo tracking substrate.git/dev by
 #    construction — no divergence onto a fork/snapshot branch. --no-recurse-submodules:
 #    the reads that matter (docs/, scripts/, direct-tree vessels) live in the working
@@ -190,6 +181,43 @@ else
     echo "[setup-git-push] WARN clone failed for super-repo"
   fi
 fi
+
+# 3. The vessel inventory, read from the super-repo just cloned/refreshed (or the
+#    copy baked into the image when no clone exists). Refuse to guess: with no
+#    readable .gitmodules and no override, clone nothing and say so loudly rather
+#    than fall back to a list that silently drifts.
+VESSELS="${SUBSTRATE_PUSH_VESSELS:-}"
+if [ -z "$VESSELS" ]; then
+  VESSELS="$(vessels_from_gitmodules "$SUPER_REPO_DIR/.gitmodules" || vessels_from_gitmodules /usr/local/share/substrate/super-repo/.gitmodules || true)"
+  if [ -n "$VESSELS" ]; then
+    echo "[setup-git-push] vessel inventory from .gitmodules: $(echo $VESSELS | wc -w) vessel(s)"
+  else
+    echo "[setup-git-push] WARN no readable .gitmodules (super-repo clone or baked copy) and no SUBSTRATE_PUSH_VESSELS — no vessel push clones prepared; the substrate cannot author any vessel on this node"
+  fi
+fi
+
+# 3a. Idempotent writable clones on dev.
+mkdir -p "$CLONE_DIR"
+# REPO_OWNER already resolved above (SUBSTRATE_REPO_OWNER, default AviGopal).
+for v in $VESSELS; do
+  d="$CLONE_DIR/$v"
+  url="https://github.com/${REPO_OWNER}/$v.git"
+  if [ -d "$d/.git" ]; then
+    git -C "$d" remote set-url origin "$url"
+    if git -C "$d" fetch origin dev -q 2>/dev/null; then
+      git -C "$d" checkout -q dev 2>/dev/null || true
+      git -C "$d" reset --hard origin/dev -q 2>/dev/null \
+        && echo "[setup-git-push] refreshed $v → $(git -C "$d" rev-parse --short HEAD)" \
+        || echo "[setup-git-push] WARN refresh failed for $v"
+    else
+      echo "[setup-git-push] WARN fetch failed for $v (offline?); keeping existing clone"
+    fi
+  else
+    git clone -q --branch dev "$url" "$d" \
+      && echo "[setup-git-push] cloned $v" \
+      || echo "[setup-git-push] WARN clone failed for $v"
+  fi
+done
 
 # 3b. What a composer node needs to compose the repos it lands. feature_compose grounds
 #     each target from $SUPER_REPO_DIR/repos/<v> (cloned --no-recurse-submodules above,

@@ -292,6 +292,9 @@ RUN chmod +x /usr/local/bin/obsidian-learn-tick.sh /usr/local/bin/obsidian-intak
 # can never clone it. Bake the fleet scripts and pre-install the relay deps;
 # setup-git-push seeds the working tree from this copy when the clone fails.
 COPY scripts/substrate /usr/local/share/substrate/super-repo/scripts/substrate
+# The vessel inventory: setup-git-push derives which vessel repos to clone from
+# .gitmodules, and falls back to this copy when the super-repo clone fails.
+COPY .gitmodules /usr/local/share/substrate/super-repo/.gitmodules
 # The relay depends on @avigopal/libp2p-federation-transport via a PRIVATE
 # github: URL — unfetchable during an image build. Vendor the submodule and
 # rewrite the dep to a file: path (same pattern as ias-executor-ts above).
