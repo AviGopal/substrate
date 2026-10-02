@@ -15,8 +15,8 @@
 #   PROFILE                 standalone | hub | hub-minimal | spoke | surface | compute
 #   PUBLIC_IP               the address a hub advertises to its spokes
 #   SUBSTRATE_GIT_PAT + SUBSTRATE_REPO_OWNER   push capability and its scope
-#   SUBSTRATE_UPDATE_CHANNEL  canary | fleet | hold (default fleet): which revision
-#                           this node runs; canaries run a change before the fleet
+#   SUBSTRATE_UPDATE_CHANNEL  canary | fleet | hold (default canary): which revision
+#                           this node runs; fleet and hold nodes consume and do not land
 # Everything else below is advanced configuration, forwarded unchanged.
 #
 # Every derivation (role, endpoints, key requirement, alias checks) runs in the

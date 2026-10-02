@@ -765,7 +765,7 @@ fi
 # a comment could satisfy. No record, or one naming another channel, means the
 # declared channel is not in effect. A channel whose ref does not exist is reported as
 # missing, never quietly served from dev.
-UPDATE_CHANNEL="$(envval SUBSTRATE_UPDATE_CHANNEL)"; UPDATE_CHANNEL="${UPDATE_CHANNEL:-fleet}"
+UPDATE_CHANNEL="$(envval SUBSTRATE_UPDATE_CHANNEL)"; UPDATE_CHANNEL="${UPDATE_CHANNEL:-canary}"
 CHANNEL_RECORD="$(cat /workspace/.pull-sync/channel.json 2>/dev/null || true)"
 CHANNEL_ENFORCED=false; CHANNEL_REF=""; CHANNEL_SHA=""; CHANNEL_AT=""; CHANNEL_REF_MISSING=false; CHANNEL_STALE=false
 if [ -n "$CHANNEL_RECORD" ] && jq -e 'type == "object"' >/dev/null 2>&1 <<<"$CHANNEL_RECORD"; then

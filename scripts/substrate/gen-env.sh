@@ -228,13 +228,13 @@ if [ -n "$_join_hint" ] && [ -z "${DISCOVERY_ENDPOINT:-}" ]; then
   echo "[gen-env]   but a fresh launch with these inputs is refused. Set DISCOVERY_ENDPOINT to the hub's discovery URL." >&2
 fi
 
-# Update channel: which revision this node runs. canary runs dev first, fleet (the
-# default) runs what canaries verified, hold keeps what runs. A typo here would
+# Update channel: which revision this node runs. canary (the default) runs dev, fleet
+# runs what canaries verified, hold keeps what runs. A typo here would
 # silently pick a default channel, so an unknown value is refused, naming the three.
 case "${SUBSTRATE_UPDATE_CHANNEL:-}" in
   ""|canary|fleet|hold) ;;
   *) _refuse "SUBSTRATE_UPDATE_CHANNEL=${SUBSTRATE_UPDATE_CHANNEL} is not an update channel." \
-       "Use canary (run dev first), fleet (the default: run what canaries verified) or hold (keep what runs)." ;;
+       "Use canary (the default: run dev), fleet (run what canaries verified) or hold (keep what runs)." ;;
 esac
 
 # PROFILE AGAINST ANCHOR. A hub profile holds the network's identity and learning
@@ -647,24 +647,32 @@ SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-$(persisted_secret SUBSTRATE_GIT_PAT)}"
 SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-}"
 
 # AUTHORING NODES ARE CANARIES (staged-fleet-rollout). Drafting and grounding read
-# /vessels, the running tree, and a landing is committed onto dev. A node that lands code
-# while running the verified fleet revision would draft against code dev has moved past.
-# So a node that can land (a git token, and the landing kill switch not set to 0) runs dev:
-# with no channel given it is a canary, and an explicit fleet or hold is refused. Defaulting
-# rather than refusing keeps an existing authoring node booting after an upgrade.
-_lands=0
-# gen-env treats any MITOSIS_DIRECT_PUSH other than unset or 1 as push off (see the switch below).
-if [ -n "${SUBSTRATE_GIT_PAT:-}" ] && [ "${MITOSIS_DIRECT_PUSH:-1}" = "1" ]; then _lands=1; fi
-if [ "$_lands" = 1 ]; then
-  case "${SUBSTRATE_UPDATE_CHANNEL:-}" in
-    "") SUBSTRATE_UPDATE_CHANNEL=canary
-        echo "[gen-env] update channel: canary (this node lands code, so it runs dev)" >&2 ;;
-    fleet|hold)
-      _refuse "SUBSTRATE_UPDATE_CHANNEL=${SUBSTRATE_UPDATE_CHANNEL} on a node that lands code." \
-        "A node that lands code must run dev, because drafting reads the running tree." \
-        "Use SUBSTRATE_UPDATE_CHANNEL=canary, or stop this node landing: remove SUBSTRATE_GIT_PAT, or set MITOSIS_DIRECT_PUSH=0." ;;
-  esac
-fi
+# /vessels, the running tree, and a landing is committed onto dev; the gap-store holder
+# judges landings against its clones. Either job on a node that runs the verified fleet
+# revision would work against code dev has moved past. What makes a node author is the
+# landing switch, not a token: with MITOSIS_DIRECT_PUSH anything but 0 the cutover still
+# commits into the push clone (a token only decides whether the push succeeds), and 2
+# lands through a host-sync intent.
+#   no channel   canary: today's behaviour, every node follows dev.
+#   fleet, hold  a node that consumes. Landing is turned off here when it was not set,
+#                refused when it was set on, and the gap-store holder is refused.
+case "${SUBSTRATE_UPDATE_CHANNEL:-}" in
+  "") SUBSTRATE_UPDATE_CHANNEL=canary ;;
+  fleet|hold)
+    case "${MITOSIS_DIRECT_PUSH:-}" in
+      "") MITOSIS_DIRECT_PUSH=0
+          echo "[gen-env] update channel ${SUBSTRATE_UPDATE_CHANNEL}: this node consumes verified code, so landing is off (MITOSIS_DIRECT_PUSH=0)" >&2 ;;
+      0) ;;
+      *) _refuse "SUBSTRATE_UPDATE_CHANNEL=${SUBSTRATE_UPDATE_CHANNEL} with MITOSIS_DIRECT_PUSH=${MITOSIS_DIRECT_PUSH}: a node that lands code must run dev." \
+           "Drafting reads the running tree and landings go onto dev." \
+           "Use SUBSTRATE_UPDATE_CHANNEL=canary, or stop this node landing: MITOSIS_DIRECT_PUSH=0." ;;
+    esac
+    if [ -z "${GAP_STORE_ENDPOINT:-}" ]; then
+      _refuse "SUBSTRATE_UPDATE_CHANNEL=${SUBSTRATE_UPDATE_CHANNEL} on the node that holds its gap store." \
+        "The gap-store holder judges landings on dev against its own clones, so it must run dev." \
+        "Use SUBSTRATE_UPDATE_CHANNEL=canary, or point GAP_STORE_ENDPOINT at an authoring node's resolve URL so this node no longer holds a gap store."
+    fi ;;
+esac
 # The push capability's scope (see the guard at the top of this file). Precedence
 # is the file's usual one — explicit env > persisted > default — and the default
 # is reachable only on a volume that already held a token or on one with no
@@ -1295,7 +1303,7 @@ MITOSIS_DIRECT_PUSH="${MITOSIS_DIRECT_PUSH:-1}"
 # Update channel (see the validation above). Declared here for pull-sync to read when
 # it converges /vessels (openspec staged-fleet-rollout, task 3); until that lands,
 # every node still follows dev. Landings and their verification always use dev.
-SUBSTRATE_UPDATE_CHANNEL="${SUBSTRATE_UPDATE_CHANNEL:-fleet}"
+SUBSTRATE_UPDATE_CHANNEL="${SUBSTRATE_UPDATE_CHANNEL:-canary}"
 MITOSIS_RUNTIME_DIR=${MITOSIS_RUNTIME_DIR:-/vessels}
 MITOSIS_PUSH_CLONE_DIR=${MITOSIS_PUSH_CLONE_DIR:-/workspace/git/vessels}
 LOCAL_TOOLS_VESSEL_API_KEY=${LOCAL_TOOLS_VESSEL_API_KEY}
