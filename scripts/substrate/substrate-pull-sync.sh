@@ -306,6 +306,102 @@ emit_gap() {
   esac
 }
 
+# INSTALL ONLY WHAT IS COMMITTED.
+#
+# Every glue install below (units, the bootstrap-tier scripts, this script itself,
+# mirror-to-live, self-recovery-tick, the fleet definitions, the active-scripts
+# seed) used to copy from the super-repo clone's WORKING TREE. The working tree is
+# not the landing channel — a commit on origin is — and on 10-01 that difference
+# broke a node: a goal walk's fs_edit wrote an uncommitted change into
+# scripts/substrate/substrate-pull-sync.sh in the live clone (an autonomy-scope
+# excluded path), this script installed it to /usr/local/bin on its next tick,
+# and the node's deploys broke. Nothing had been reviewed, committed or pushed.
+#
+# So every install reads a STAGED copy of scripts/substrate taken from git
+# (`git archive`), never the working tree. The ref is HEAD, unless HEAD carries
+# local commits touching scripts/substrate that origin/$BRANCH does not have (a
+# commit made in the live clone is not a landing either) — then origin/$BRANCH.
+# A tracked file that differs from the ref, or an untracked file under
+# scripts/substrate, is DIVERGENCE: logged and filed as a gap each tick it
+# persists, and never installed. If nothing can be staged, NOTHING is installed
+# this tick (a stale glue layer is recoverable; an installed uncommitted one is
+# what broke the node). Destinations are unchanged; PULLSYNC_*_DIR exist only so
+# the test (validation/scripts/pull-sync-committed-glue.test.sh) can observe
+# an install without root.
+UNIT_DIR="${PULLSYNC_UNIT_DIR:-/usr/lib/systemd/system}"
+BIN_DIR="${PULLSYNC_BIN_DIR:-/usr/local/bin}"
+SHARE_DIR="${PULLSYNC_SHARE_DIR:-/usr/local/share/substrate}"
+PULLSYNC_GLUE_STAGE=""
+PULLSYNC_GLUE_KEY=""
+PULLSYNC_GLUE_KEY_DIR=""
+PULLSYNC_GLUE_STAGES=""
+pullsync_glue_cleanup() { for _d in $PULLSYNC_GLUE_STAGES; do rm -rf "$_d"; done; PULLSYNC_GLUE_STAGES=""; }
+trap pullsync_glue_cleanup EXIT
+
+glue_divergence_gap() { # super path what
+  local id summary
+  id="pull-sync-uncommitted-glue-$(printf '%s' "$2" | tr -c 'A-Za-z0-9' '-' | cut -c1-80)"
+  summary="pull-sync found $2 $3 in the super-repo clone $1 and installed the committed copy instead. A working-tree change under scripts/substrate is not a landing: on 10-01 an uncommitted edit there (written by a goal walk's fs_edit) was installed to /usr/local/bin and broke the node's deploys. Find the writer (git -C $1 diff -- $2), revert or land it through review, and ask which tool wrote into the live clone."
+  if command -v jq >/dev/null 2>&1; then
+    emit_gap "$(jq -n -c --arg id "$id" --arg s "$summary" '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"source_divergence",source:"substrate_detected",summary:$s,status:"open"}}}}')"
+  else
+    log "glue: jq missing — divergence gap $id NOT filed"
+  fi
+}
+
+# stage_committed_glue <super-dir> — sets PULLSYNC_GLUE_STAGE to a directory whose
+# scripts/substrate is the committed tree. Returns 1 (and installs nothing) when it
+# cannot. Staged once per (clone, commit) per run.
+stage_committed_glue() {
+  local super="$1" ref sha unpushed dir dirty line path what
+  PULLSYNC_GLUE_STAGE=""
+  if ! git -C "$super" rev-parse --git-dir >/dev/null 2>&1; then
+    log "glue: !!! $super is not a git checkout — installing NOTHING from it (only committed content is ever installed)"
+    return 1
+  fi
+  ref=HEAD
+  if git -C "$super" rev-parse -q --verify "origin/$BRANCH" >/dev/null 2>&1; then
+    unpushed="$(git -C "$super" rev-list "origin/$BRANCH..HEAD" -- scripts/substrate 2>/dev/null | head -3 | tr '\n' ' ')"
+    if [ -n "$unpushed" ]; then
+      ref="origin/$BRANCH"
+      log "glue: !!! DIVERGENCE — HEAD of $super carries local commit(s) touching scripts/substrate that origin/$BRANCH lacks (${unpushed% }); installing origin/$BRANCH's copy"
+      glue_divergence_gap "$super" "scripts/substrate" "changed by local commit(s) not on origin/$BRANCH (${unpushed% })"
+    fi
+  fi
+  sha="$(git -C "$super" rev-parse -q --verify "$ref^{commit}" 2>/dev/null)" || sha=""
+  if [ -z "$sha" ]; then
+    log "glue: !!! cannot resolve $ref in $super — installing NOTHING this tick"
+    return 1
+  fi
+  if [ "$PULLSYNC_GLUE_KEY" = "$super@$sha" ] && [ -d "$PULLSYNC_GLUE_KEY_DIR" ]; then
+    PULLSYNC_GLUE_STAGE="$PULLSYNC_GLUE_KEY_DIR"
+    return 0
+  fi
+  dir="$(mktemp -d "${TMPDIR:-/tmp}/pull-sync-glue.XXXXXX")" || { log "glue: !!! mktemp failed — installing NOTHING this tick"; return 1; }
+  PULLSYNC_GLUE_STAGES="$PULLSYNC_GLUE_STAGES $dir"
+  if ! git -C "$super" archive "$sha" -- scripts/substrate 2>/dev/null | tar -x -C "$dir" 2>/dev/null || [ ! -d "$dir/scripts/substrate" ]; then
+    log "glue: !!! could not stage the committed scripts/substrate from $ref (${sha:0:10}) — installing NOTHING this tick"
+    return 1
+  fi
+  # Report divergence: tracked files that differ from the staged commit, and
+  # untracked files (a planted unit or script would have been installed before).
+  dirty="$(git -C "$super" diff --name-only "$sha" -- scripts/substrate 2>/dev/null; git -C "$super" ls-files --others --exclude-standard -- scripts/substrate 2>/dev/null)"
+  if [ -n "$dirty" ]; then
+    while IFS= read -r path; do
+      [ -n "$path" ] || continue
+      if ! git -C "$super" ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then what="present but untracked"
+      elif ! git -C "$super" diff --quiet HEAD -- "$path" 2>/dev/null; then what="modified in the working tree (uncommitted)"
+      else what="changed by a local commit not on origin/$BRANCH"; fi
+      log "glue: !!! DIVERGENCE — $path is $what in $super; NOT installed (the committed copy from ${sha:0:10} is)"
+      glue_divergence_gap "$super" "$path" "$what"
+    done <<< "$dirty"
+  fi
+  PULLSYNC_GLUE_KEY="$super@$sha"
+  PULLSYNC_GLUE_KEY_DIR="$dir"
+  PULLSYNC_GLUE_STAGE="$dir"
+  return 0
+}
+
 # A cutover mid-flight owns /vessels mutation; never race it.
 #
 # STARVATION BOUND (2026-08-02). The freshness test alone is not enough: the
@@ -409,23 +505,26 @@ healthy() { # port -> 0 if 200
 # Writing units to /etc would silently un-maskable the whole fleet.
 converge_units() {
   _cu_super="$1"
-  [ -d "$_cu_super/scripts/substrate/units" ] || return 0
+  # Committed content only (stage_committed_glue): _cu_root is a staged git tree.
+  stage_committed_glue "$_cu_super" || return 0
+  _cu_root="$PULLSYNC_GLUE_STAGE"
+  [ -d "$_cu_root/scripts/substrate/units" ] || return 0
   UNITS_CHANGED=0
-  for uf in "$_cu_super"/scripts/substrate/units/*; do
+  for uf in "$_cu_root"/scripts/substrate/units/*; do
     [ -e "$uf" ] || continue
     ubase="$(basename "$uf")"
     if [ -d "$uf" ]; then
       # drop-in directory: <unit>.service.d/*.conf
-      mkdir -p "/usr/lib/systemd/system/$ubase" 2>/dev/null || true
+      mkdir -p "$UNIT_DIR/$ubase" 2>/dev/null || true
       for cf in "$uf"/*; do
         [ -f "$cf" ] || continue
-        dst="/usr/lib/systemd/system/$ubase/$(basename "$cf")"
+        dst="$UNIT_DIR/$ubase/$(basename "$cf")"
         if ! cmp -s "$cf" "$dst" 2>/dev/null; then
           install -m 0644 "$cf" "$dst" 2>/dev/null && { log "units: converged $ubase/$(basename "$cf")"; UNITS_CHANGED=1; }
         fi
       done
     else
-      dst="/usr/lib/systemd/system/$ubase"
+      dst="$UNIT_DIR/$ubase"
       if ! cmp -s "$uf" "$dst" 2>/dev/null; then
         install -m 0644 "$uf" "$dst" 2>/dev/null && { log "units: converged $ubase"; UNITS_CHANGED=1; }
         # A REAL file in /etc outranks /usr/lib, so the convergence above is
@@ -464,7 +563,7 @@ converge_units() {
   # targeting note above), `static`, and `indirect`; acting on those would either
   # un-mask a deliberately-masked unit or churn. Idempotent, so it is a no-op on
   # every tick after the first, and it logs only when it actually changes something.
-  for uf in "$_cu_super"/scripts/substrate/units/*.timer; do
+  for uf in "$_cu_root"/scripts/substrate/units/*.timer; do
     [ -f "$uf" ] || continue
     ubase="$(basename "$uf")"
     if [ "$(systemctl is-enabled "$ubase" 2>/dev/null)" = "disabled" ]; then
@@ -502,7 +601,9 @@ converge_units() {
 # apply-inventory is unconditional: it is code, not state.
 converge_fleet_defs() {
   _cf_super="$1"
-  _cf_src="$_cf_super/scripts/substrate"
+  # Committed content only (stage_committed_glue): _cf_src is a staged git tree.
+  stage_committed_glue "$_cf_super" || return 0
+  _cf_src="$PULLSYNC_GLUE_STAGE/scripts/substrate"
   [ -d "$_cf_src" ] || return 0
 
   # Bootstrap-tier scripts entrypoint.sh runs BEFORE systemd. All of them are
@@ -528,11 +629,11 @@ converge_fleet_defs() {
   # take effect on the next `vessel-ctl install`, which is the only moment either
   # script runs.
   for _cf_pair in \
-    "apply-inventory.sh:/usr/local/bin/apply-inventory" \
-    "gen-env.sh:/usr/local/bin/gen-env" \
-    "render-unit.sh:/usr/local/bin/render-unit" \
-    "vessel-ctl.sh:/usr/local/bin/vessel-ctl" \
-    "secrets.env.sh:/usr/local/share/substrate/secrets.env.sh"; do
+    "apply-inventory.sh:$BIN_DIR/apply-inventory" \
+    "gen-env.sh:$BIN_DIR/gen-env" \
+    "render-unit.sh:$BIN_DIR/render-unit" \
+    "vessel-ctl.sh:$BIN_DIR/vessel-ctl" \
+    "secrets.env.sh:$SHARE_DIR/secrets.env.sh"; do
     _cf_from="${_cf_pair%%:*}"
     _cf_to="${_cf_pair#*:}"
     [ -f "$_cf_src/$_cf_from" ] || continue
@@ -577,7 +678,7 @@ converge_fleet_defs() {
   # process keeps its original inode and finishes on the code it started with. Never
   # edited in place, which WOULD corrupt the running interpreter mid-read.
   _ps_src="$_cf_src/substrate-pull-sync.sh"
-  _ps_dst="/usr/local/bin/substrate-pull-sync"
+  _ps_dst="$BIN_DIR/substrate-pull-sync"
   if [ -f "$_ps_src" ] && [ -e "$_ps_dst" ] && ! cmp -s "$_ps_src" "$_ps_dst" 2>/dev/null; then
     install -m 0755 "$_ps_src" "$_ps_dst.new" 2>/dev/null \
       && mv -f "$_ps_dst.new" "$_ps_dst" 2>/dev/null \
@@ -599,8 +700,8 @@ converge_fleet_defs() {
   # other one. (Found by probing: a marker key survived sourcing the converged
   # copy, and vanished at the next boot anyway.)
   for _cf_img in \
-    /usr/local/share/substrate/secrets.env.sh \
-    /usr/local/share/substrate/super-repo/scripts/substrate/secrets.env.sh
+    "$SHARE_DIR/secrets.env.sh" \
+    "$SHARE_DIR/super-repo/scripts/substrate/secrets.env.sh"
   do
     [ -f "$_cf_src/secrets.env.sh" ] && [ -f "$_cf_img" ] || continue
     cmp -s "$_cf_src/secrets.env.sh" "$_cf_img" 2>/dev/null && continue
@@ -1900,15 +2001,19 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
       done
       [ -n "$_sm_lag" ] && log "super-repo: submodule worktrees left at old pointers (uncommitted work — NOT discarded):$_sm_lag"
       # Updater self-refresh (atomic: the running bash keeps its old inode).
-      if [ -f "$SUPER_DIR/scripts/substrate/substrate-pull-sync.sh" ]; then
-        install -m 0755 "$SUPER_DIR/scripts/substrate/substrate-pull-sync.sh" /usr/local/bin/.substrate-pull-sync.new 2>/dev/null \
-          && mv -f /usr/local/bin/.substrate-pull-sync.new /usr/local/bin/substrate-pull-sync 2>/dev/null || true
+      # Every install in this block reads the COMMITTED tree (stage_committed_glue);
+      # when it cannot be staged, none of them runs.
+      _sg_ok=0; stage_committed_glue "$SUPER_DIR" && _sg_ok=1
+      _sg_src="$PULLSYNC_GLUE_STAGE/scripts/substrate"
+      if [ "$_sg_ok" = 1 ] && [ -f "$_sg_src/substrate-pull-sync.sh" ]; then
+        install -m 0755 "$_sg_src/substrate-pull-sync.sh" "$BIN_DIR/.substrate-pull-sync.new" 2>/dev/null \
+          && mv -f "$BIN_DIR/.substrate-pull-sync.new" "$BIN_DIR/substrate-pull-sync" 2>/dev/null || true
       fi
       # mirror-to-live is part of the same glue layer: converge it too, or a
       # repo-side mirror fix never reaches the running container (the
       # super-repo-not-in-self-update-set gap class).
-      if [ -f "$SUPER_DIR/scripts/substrate/mirror-to-live.sh" ]; then
-        install -m 0755 "$SUPER_DIR/scripts/substrate/mirror-to-live.sh" /usr/local/bin/mirror-to-live 2>/dev/null || true
+      if [ "$_sg_ok" = 1 ] && [ -f "$_sg_src/mirror-to-live.sh" ]; then
+        install -m 0755 "$_sg_src/mirror-to-live.sh" "$BIN_DIR/mirror-to-live" 2>/dev/null || true
       fi
       # self-recovery-tick is the immune-system tick installed to /usr/local/bin
       # at boot but (until now) never re-converged — the SAME super-repo-not-in-
@@ -1916,9 +2021,9 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
       # sustained-DB-wedge -> restart-surrealdb escalation) never reached the
       # running unit. Converge it here so operator immune-system logic ships via
       # git like everything else (running unit picks it up next timer fire).
-      if [ -f "$SUPER_DIR/scripts/substrate/self-recovery-tick.sh" ]; then
-        install -m 0755 "$SUPER_DIR/scripts/substrate/self-recovery-tick.sh" /usr/local/bin/.self-recovery-tick.new 2>/dev/null \
-          && mv -f /usr/local/bin/.self-recovery-tick.new /usr/local/bin/self-recovery-tick 2>/dev/null || true
+      if [ "$_sg_ok" = 1 ] && [ -f "$_sg_src/self-recovery-tick.sh" ]; then
+        install -m 0755 "$_sg_src/self-recovery-tick.sh" "$BIN_DIR/.self-recovery-tick.new" 2>/dev/null \
+          && mv -f "$BIN_DIR/.self-recovery-tick.new" "$BIN_DIR/self-recovery-tick" 2>/dev/null || true
       fi
       # SYSTEMD UNITS are the same super-repo-not-in-self-update-set gap class, and
       # were the last part of the glue layer still stuck at image-build time.
@@ -1938,7 +2043,7 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
       # called after this whole block) rather than only when origin advances. See the
       # rationale there — it is idempotent, so calling it here too would be redundant.
       # Reseed the active-scripts run-dir (same source substrate-active-scripts-seed uses at boot).
-      cp -f "$SUPER_DIR"/scripts/substrate/*.ts /workspace/active-scripts/ 2>/dev/null || true
+      [ "$_sg_ok" = 1 ] && cp -f "$_sg_src"/*.ts /workspace/active-scripts/ 2>/dev/null || true
       # SUPER-REPO-HOSTED VESSELS — the last thing a convergence changes on disk
       # that nothing then restarts.
       #
