@@ -109,42 +109,43 @@ describe("<Prose> machine-record paragraphs", () => {
   });
 });
 
-describe("<BestOutput>", () => {
-  const T = 1_790_840_000_000;
+describe("<Chain>", () => {
   const base = {
-    dispatchId: "d-best-dom", status: "failed", reached: false, poolShapes: [], poolProvenance: [], pendingTargets: [],
+    dispatchId: "d-chain-dom", status: "failed", reached: false, goalReachReason: null, poolShapes: [], pendingTargets: [],
     currentStep: null, steps: [], executionPath: null, walkTier: null, attemptCount: null, grounded: null, learning: null,
     answerBody: null, operator: null, completionShapes: null, humanGraded: false, humanReachNotes: null, trigger: null, requeueOf: null,
-    goal: "What is happening today?",
-    poolEvents: [{ shape: "goal", source: "What is happening today?", at: T }, { shape: "goal", source: "seed var goal", at: T }],
+    poolEvents: [], walkLog: [], goal: "What is happening today?",
   };
-
-  test("a rejected report is shown as an excerpt, labelled not reached, with how much is missing", async () => {
-    const { BestOutput } = await import("../ui/src/components/BestOutput");
-    const { segmentAttempts } = await import("../ui/src/lib/attempts");
-    const walk = {
-      ...base,
-      goalReachReason: "Too generic.",
-      walkLog: [
-        '[goal-host-vessel] walk(/run-goal): HOLLOW-CONTENT llm_completion (4965 chars) = {"resolved":true,"shape":"llmCompletion","content":"Today\\u2019s date: Thursday, 1 October 2026\\n\\nUS\\u2013Iran tensions',
-        "[goal-host-vessel] walk(/run-goal): HOLLOW — Too generic.",
-      ],
-    };
-    const el = await mount(React.createElement(BestOutput, { walk, segments: segmentAttempts(walk as never), running: false }));
-    const text = el.textContent ?? "";
-    expect(text).toContain("Best output — not reached");
-    expect(text).toContain("of 4,965 characters");
-    expect(text).toContain("the server kept only an excerpt");
-    expect(text).toContain("Today’s date: Thursday, 1 October 2026");
-    // The header already shows the reported attempt's reason; it is not repeated.
-    expect(text).not.toContain("judged not reached: Too generic");
+  const entry = (id: string, shape: string, producedBy: string, preview: string, consumedIds: string[] = []) => ({
+    id, shape, producedBy, producerExecutionId: `exec-${id}`, consumedIds, contentPreview: preview, chars: preview.length, truncated: false,
   });
 
-  test("nothing is drawn when the run has no usable output", async () => {
-    const { BestOutput } = await import("../ui/src/components/BestOutput");
-    const { segmentAttempts } = await import("../ui/src/lib/attempts");
-    const walk = { ...base, goalReachReason: null, walkLog: [] };
-    const el = await mount(React.createElement(BestOutput, { walk, segments: segmentAttempts(walk as never), running: false }));
-    expect(el.querySelector("section.sf-best-output")).toBeNull();
+  test("the output leads, with the impulses it consumed under it; unused output is set aside", async () => {
+    const { Chain } = await import("../ui/src/components/Chain");
+    const walk = {
+      ...base,
+      poolProvenance: [
+        entry("g", "goal", "seed", '{"goal":"What is happening today?"}'),
+        entry("s", "web_search", "satisfier:web_search", '{"shape":"webSearchResult","results":[]}'),
+        entry("a", "llm_completion", "satisfier:llm_completion", "Today is Thursday, 1 October 2026.", ["s"]),
+        entry("t", "activity_template", "satisfier:activity_template", '{"ok":true}'),
+      ],
+      routeArounds: [{ kind: "stall", missing_producer: ["obsidian:write_note"], route_taken: "retry:feedback" }],
+    };
+    const el = await mount(React.createElement(Chain, { walk, hasAnswer: false }));
+    const outputs = [...el.querySelectorAll(".sf-chain-output")];
+    expect(outputs.length).toBe(1);
+    expect(outputs[0]?.textContent).toContain("Today is Thursday, 1 October 2026.");
+    expect(outputs[0]?.querySelector(".sf-chain-inputs")?.textContent).toContain("web_search");
+    expect(el.querySelector(".sf-chain-unused")?.textContent).toContain("activity_template");
+    // The request is not output.
+    expect(el.querySelector(".sf-chain-unused")?.textContent).not.toContain("goal");
+    expect(el.querySelector(".sf-chain-routes")?.textContent).toContain("obsidian:write_note");
+  });
+
+  test("a run the server has blanked says 'not retained', not empty", async () => {
+    const { Chain } = await import("../ui/src/components/Chain");
+    const el = await mount(React.createElement(Chain, { walk: { ...base, poolProvenance: [] }, hasAnswer: false }));
+    expect(el.textContent).toContain("Not retained");
   });
 });

@@ -1766,10 +1766,18 @@ body { overflow: hidden; }
 }
 .sf-question-subject { font-size: var(--sf-text-lg); max-width: var(--sf-measure-prose); }
 .sf-answer-basis { margin-top: var(--sf-space-4); font-size: var(--sf-text-sm); }
-/* A not-reached run's best output: readable, but never mistakable for an answer. */
-.sf-best-output { border-left: 3px solid var(--sf-rule-strong); padding-left: var(--sf-space-4); }
-.sf-best-output .sf-view-facts { margin: 0 0 var(--sf-space-3); }
-.sf-best-verdict { margin: 0 0 var(--sf-space-3); max-width: var(--sf-measure-prose); color: var(--sf-ink-2); font-size: var(--sf-text-sm); }
+/* The run as a chain: each output with what it consumed, then what went unused. */
+.sf-chain-output { margin: 0 0 var(--sf-space-5); }
+.sf-chain-inputs { margin: var(--sf-space-2) 0 0 var(--sf-space-4); padding-left: var(--sf-space-3); border-left: 2px solid var(--sf-rule); }
+.sf-chain-inputs ul, .sf-chain-unused ul { list-style: none; margin: 0; padding: 0; }
+.sf-chain-label { margin: 0 0 var(--sf-space-1); font-size: var(--sf-text-xs); color: var(--sf-ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
+.sf-chain-input > details > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sf-space-2); cursor: pointer; padding: var(--sf-space-1) 0; font-size: var(--sf-text-sm); }
+.sf-chain-input > details > summary .sf-rendered-row { color: var(--sf-ink-2); max-width: 60ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sf-chain-input-body { margin: var(--sf-space-2) 0 var(--sf-space-3) var(--sf-space-4); }
+.sf-chain-unused, .sf-chain-routes { margin-top: var(--sf-space-4); font-size: var(--sf-text-sm); }
+.sf-chain-unused > summary, .sf-chain-routes > summary { cursor: pointer; color: var(--sf-ink-2); }
+.sf-chain-routes ol { margin: var(--sf-space-2) 0 0; padding-left: var(--sf-space-6); }
+.sf-provenance > summary { cursor: pointer; }
 .sf-answer-basis > summary { cursor: pointer; color: var(--sf-ink-2); }
 .sf-attempt-nav { display: flex; gap: var(--sf-space-1); margin-bottom: var(--sf-space-3); font-size: var(--sf-text-xs); }
 .sf-attempt-nav a { padding: var(--sf-space-1) var(--sf-space-2); border: 1px solid var(--sf-rule); border-radius: var(--sf-radius-sm); color: var(--sf-ink-2); text-decoration: none; font-variant-numeric: tabular-nums; }

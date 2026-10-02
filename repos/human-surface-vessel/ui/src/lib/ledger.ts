@@ -481,14 +481,26 @@ function envelopeMeta(
  * reading a file — one of the most common things anybody asks for — still put
  * escaped JSON on the screen.
  */
+/*
+ * The declared shape may sit anywhere among the leading scalar pairs, not only
+ * first: the LLM resolver answers `{"resolved":true,"shape":"llmCompletion",
+ * "content":"…`. Requiring `shape` first meant the most common long output on
+ * the surface — a written report, cut at the 2,000-character preview — drew as
+ * `resolved true · shape llmCompletion · cut off here`, with the report itself
+ * nowhere on screen. The guard is unchanged: every byte before the payload
+ * quote is a complete scalar pair, and one of them must DECLARE a shape.
+ */
 const TRUNCATED_ENVELOPE =
-  /^\s*\{"shape"\s*:\s*"([^"\\]{1,80})"\s*,\s*(?:"[A-Za-z_][A-Za-z0-9_]*"\s*:\s*(?:"[^"\\]*"|-?\d+(?:\.\d+)?|true|false|null)\s*,\s*)*"(stdout|stderr|content|text|output)"\s*:\s*"/;
+  /^\s*\{\s*((?:"[A-Za-z_][A-Za-z0-9_]*"\s*:\s*(?:"[^"\\]*"|-?\d+(?:\.\d+)?|true|false|null)\s*,\s*)*)"(stdout|stderr|content|text|output)"\s*:\s*"/;
+const DECLARED_SHAPE = /"shape"\s*:\s*"([^"\\]{1,80})"/;
 
 export function truncatedEnvelopePayload(
   preview: string,
-): { text: string; envelopeShape: string } | null {
+): { text: string; envelopeShape: string; payloadKey: string } | null {
   const m = TRUNCATED_ENVELOPE.exec(preview);
   if (!m) return null;
+  const declared = DECLARED_SHAPE.exec(m[1] ?? "");
+  if (!declared) return null;
   const body = preview.slice(m[0].length);
   // A closing quote means the string ENDED inside what we can see, so the cut
   // fell somewhere later in the object and there is structure here this
@@ -496,7 +508,18 @@ export function truncatedEnvelopePayload(
   if (/(^|[^\\])"/.test(body)) return null;
   const text = decodeJsonStringBody(body);
   if (text.trim().length === 0) return null;
-  return { text, envelopeShape: m[1] ?? "" };
+  return { text, envelopeShape: declared[1] ?? "", payloadKey: m[2] ?? "" };
+}
+
+/**
+ * Only a command's streams are command output. `content`/`text` carry authored
+ * text — a report an LLM wrote — and are planned as text, exactly as the
+ * complete `{…, content}` envelope already is (`planText`). Treating them as
+ * command output drew a cut markdown report as a terminal block whose lines ran
+ * off the page.
+ */
+function isCommandOutputKey(key: string): boolean {
+  return key === "stdout" || key === "stderr" || key === "output";
 }
 
 /**
@@ -709,7 +732,8 @@ export function parsePartialJson(preview: string): { value: unknown; cut: boolea
 /** Keys a resolver reply wrapper may carry around its `body`. Closed, like the command list. */
 const RESOLVER_ENVELOPE_KEYS: ReadonlySet<string> = new Set(["success", "shape", "body", "error", "resolved", "metadata"]);
 /** Keys a content-string wrapper may carry. */
-const CONTENT_ENVELOPE_KEYS: ReadonlySet<string> = new Set(["success", "shape", "content", "error", "metadata"]);
+// `resolved` is the LLM resolver's reply flag: {resolved, shape, content}.
+const CONTENT_ENVELOPE_KEYS: ReadonlySet<string> = new Set(["success", "shape", "content", "error", "metadata", "resolved"]);
 
 function failureChip(o: Readonly<Record<string, unknown>>): Extract<MetaChip, { kind: "failure" }> | null {
   const err = o["error"];
@@ -859,7 +883,7 @@ export function planContent(
     const prefix = truncatedEnvelopePayload(preview);
     if (prefix) {
       return {
-        form: heuristicForm(shape, prefix.text, true),
+        form: heuristicForm(shape, prefix.text, isCommandOutputKey(prefix.payloadKey)),
         text: prefix.text,
         decidedBy: "truncated_envelope",
         ...(prefix.envelopeShape ? { envelopeShape: prefix.envelopeShape } : {}),

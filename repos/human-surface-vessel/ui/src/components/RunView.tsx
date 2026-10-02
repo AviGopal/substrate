@@ -20,7 +20,7 @@ import { useProgressWatch } from "../lib/useProgressWatch";
 import { useLiveControls } from "../state/liveControls";
 import { segmentAttempts } from "../lib/attempts";
 import { AnswerBody } from "./Answer";
-import { BestOutput } from "./BestOutput";
+import { Chain } from "./Chain";
 import { Rendered } from "./Rendered";
 import { GradeGesture } from "./GradeGesture";
 import { SolicitationPanel } from "./SolicitationPanel";
@@ -234,8 +234,6 @@ export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
         </section>
       ) : null}
 
-      {!answer && walk.reached !== true ? <BestOutput walk={walk} segments={segments} running={!terminal} /> : null}
-
       {answer ? (
         <section className="sf-view-section" aria-label="Answer">
           <h3 className="sf-view-label">Answer</h3>
@@ -246,10 +244,12 @@ export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
         </section>
       ) : null}
 
-      <section className="sf-view-section" aria-label="Trace">
-        <h3 className="sf-view-label">Trace</h3>
+      <Chain walk={walk} hasAnswer={answer !== null} />
+
+      <details className="sf-view-section sf-provenance" aria-label="Provenance">
+        <summary className="sf-view-label">Provenance — the walk, step by step</summary>
         <Trace walk={walk} />
-      </section>
+      </details>
 
       {walk.status === "running" ? <InjectContext dispatchId={walk.dispatchId} /> : null}
 

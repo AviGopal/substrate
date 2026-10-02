@@ -37,21 +37,6 @@ export interface AttemptSegment {
    * does not — so the reported walk can be a middle one.
    */
   readonly reported: boolean;
-  /**
-   * What the judge read and rejected for this attempt, from its
-   * `HOLLOW-CONTENT <shape> (<N> chars) = <excerpt>` walk-log lines. The server
-   * logs a 400-character excerpt per judged shape; the rest of the output is
-   * not kept anywhere this surface can read.
-   */
-  readonly judged: readonly JudgedExcerpt[];
-}
-
-export interface JudgedExcerpt {
-  readonly shape: string;
-  /** Characters the output had when it was judged. */
-  readonly chars: number;
-  /** The excerpt as logged — an envelope or text, usually cut. */
-  readonly excerpt: string;
 }
 
 interface Seen {
@@ -122,34 +107,14 @@ function restartReasons(log: readonly WalkLogEntry[]): string[] {
 }
 
 const HOLLOW_LINE = /HOLLOW \u2014 (.+?)(?:; \u03b2|$)/;
-const HOLLOW_CONTENT_LINE = /HOLLOW-CONTENT (\S+) \((\d+) chars\) = ([\s\S]*)$/;
 
-interface JudgedWalk {
-  readonly verdict: string;
-  readonly judged: readonly JudgedExcerpt[];
-}
-
-/**
- * One judge rejection per judged walk, in walk order, each with the excerpts
- * logged just before it. goal-host writes a walk's HOLLOW-CONTENT lines and
- * then its HOLLOW verdict, so the excerpts since the previous verdict belong
- * to this one.
- */
-function hollowVerdicts(log: readonly WalkLogEntry[]): JudgedWalk[] {
-  const out: JudgedWalk[] = [];
-  let pending: JudgedExcerpt[] = [];
+/** One judge rejection per judged walk, in walk order. */
+function hollowVerdicts(log: readonly WalkLogEntry[]): string[] {
+  const out: string[] = [];
   for (const entry of log) {
     const text = typeof entry === "string" ? entry : JSON.stringify(entry);
-    const c = HOLLOW_CONTENT_LINE.exec(text);
-    if (c && c[1] && c[2]) {
-      pending.push({ shape: c[1], chars: Number(c[2]), excerpt: c[3] ?? "" });
-      continue;
-    }
     const m = HOLLOW_LINE.exec(text);
-    if (m && m[1]) {
-      out.push({ verdict: m[1].trim(), judged: pending });
-      pending = [];
-    }
+    if (m && m[1]) out.push(m[1].trim());
   }
   return out;
 }
@@ -211,7 +176,7 @@ export function segmentAttempts(walk: GoalWalkState): readonly AttemptSegment[] 
       : (record?.steps ?? []).filter((s) => nextAt === null || typeof s["at"] !== "number" || (s["at"] as number) < nextAt);
     const provenance = current ? (stale ? [] : walk.poolProvenance) : (record?.provenance ?? null);
     const reasonIndex = n - 1 - reasonOffset;
-    const judgedWalk = n - verdictOffset >= 0 ? (verdicts[n - verdictOffset] ?? null) : null;
+    const verdict = n - verdictOffset >= 0 ? (verdicts[n - verdictOffset] ?? null) : null;
     return {
       number: n + 1,
       startAt,
@@ -221,9 +186,8 @@ export function segmentAttempts(walk: GoalWalkState): readonly AttemptSegment[] 
       reason: n > 0 && reasonIndex >= 0 ? (reasons[reasonIndex] ?? null) : null,
       current,
       partial: n === 0 && events.length >= 64 && events[0]?.shape !== "goal",
-      verdict: judgedWalk?.verdict ?? null,
+      verdict,
       reported: false,
-      judged: judgedWalk?.judged ?? [],
     };
   });
 
