@@ -1273,7 +1273,7 @@ SUBSTRATE_GIT_AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL}"
 #   MITOSIS_PUSH_CLONE_DIR       — where setup-git-push put the per-vessel clones
 MITOSIS_DIRECT_PUSH="${MITOSIS_DIRECT_PUSH:-1}"
 # Update channel (see the validation above). Declared here for pull-sync to read when
-# it converges /vessels (openspec staged-fleet-rollout, task 2); until that lands,
+# it converges /vessels (openspec staged-fleet-rollout, task 3); until that lands,
 # every node still follows dev. Landings and their verification always use dev.
 SUBSTRATE_UPDATE_CHANNEL="${SUBSTRATE_UPDATE_CHANNEL:-fleet}"
 MITOSIS_RUNTIME_DIR=${MITOSIS_RUNTIME_DIR:-/vessels}

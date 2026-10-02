@@ -767,13 +767,20 @@ fi
 # missing, never quietly served from dev.
 UPDATE_CHANNEL="$(envval SUBSTRATE_UPDATE_CHANNEL)"; UPDATE_CHANNEL="${UPDATE_CHANNEL:-fleet}"
 CHANNEL_RECORD="$(cat /workspace/.pull-sync/channel.json 2>/dev/null || true)"
-CHANNEL_ENFORCED=false; CHANNEL_REF=""; CHANNEL_SHA=""; CHANNEL_AT=""; CHANNEL_REF_MISSING=false
+CHANNEL_ENFORCED=false; CHANNEL_REF=""; CHANNEL_SHA=""; CHANNEL_AT=""; CHANNEL_REF_MISSING=false; CHANNEL_STALE=false
 if [ -n "$CHANNEL_RECORD" ] && jq -e 'type == "object"' >/dev/null 2>&1 <<<"$CHANNEL_RECORD"; then
   CHANNEL_REF="$(jq -r '.ref // empty' <<<"$CHANNEL_RECORD")"
   CHANNEL_SHA="$(jq -r '.sha // empty' <<<"$CHANNEL_RECORD")"
   CHANNEL_AT="$(jq -r '.at // empty' <<<"$CHANNEL_RECORD")"
   [ "$(jq -r '.ref_missing // false' <<<"$CHANNEL_RECORD")" = true ] && CHANNEL_REF_MISSING=true
   [ "$(jq -r '.channel // empty' <<<"$CHANNEL_RECORD")" = "$UPDATE_CHANNEL" ] && [ "$CHANNEL_REF_MISSING" = false ] && CHANNEL_ENFORCED=true
+  # A record pull-sync stopped refreshing says what used to be true. pull-sync runs every
+  # 10 min, so a record older than three runs is stale and does not count as enforced.
+  CHANNEL_AGE_S=""
+  if [ -n "$CHANNEL_AT" ]; then _cat_s="$(date -d "$CHANNEL_AT" +%s 2>/dev/null || true)"; [ -n "$_cat_s" ] && CHANNEL_AGE_S=$(( $(date +%s) - _cat_s )); fi
+  if [ "$CHANNEL_ENFORCED" = true ] && { [ -z "$CHANNEL_AGE_S" ] || [ "$CHANNEL_AGE_S" -gt "${CHANNEL_RECORD_MAX_AGE_S:-1800}" ]; }; then
+    CHANNEL_ENFORCED=false; CHANNEL_STALE=true
+  fi
 fi
 
 # ── Output ───────────────────────────────────────────────────────────────────
@@ -793,12 +800,12 @@ verdict_json() {
     --arg profile "$PROFILE" --arg engine "$ENGINE" --arg prefix "$PORT_PREFIX" \
     --arg thp "$TRACE_HOST_PORT" --argjson bym "$BY_MANIFEST" --arg aliases "$ALIASES_USED" \
     --arg channel "$UPDATE_CHANNEL" --argjson enforced "$CHANNEL_ENFORCED" \
-    --arg cref "$CHANNEL_REF" --arg csha "$CHANNEL_SHA" --arg cat "$CHANNEL_AT" --argjson cmiss "$CHANNEL_REF_MISSING" \
+    --arg cref "$CHANNEL_REF" --arg csha "$CHANNEL_SHA" --arg cat "$CHANNEL_AT" --argjson cmiss "$CHANNEL_REF_MISSING" --argjson cstale "$CHANNEL_STALE" \
     '{requested_level:$target, value:$value, ok:($value=="pass"), image_revision:$img,
       profile:$profile, engine:$engine, port_prefix:$prefix,
       update_channel:{channel:$channel, enforced:$enforced,
         ref:(if $cref=="" then null else $cref end), sha:(if $csha=="" then null else $csha end),
-        converged_at:(if $cat=="" then null else $cat end), ref_missing:$cmiss},
+        converged_at:(if $cat=="" then null else $cat end), ref_missing:$cmiss, record_stale:$cstale},
       trace_host_port:$thp, launched_by_manifest:($bym == 1),
       deprecated_port_aliases:($aliases | split(" ") | map(select(length > 0))),
       levels:$levels, vessels:$vessels}'
@@ -809,6 +816,7 @@ if [ "$JSON" = 1 ]; then
 else
   printf 'substrate-status  image %s  profile %s  engine %s  port prefix %s\n' "$IMAGE_REVISION" "$PROFILE" "$ENGINE" "$PORT_PREFIX"
   if [ "$CHANNEL_ENFORCED" = true ]; then printf '  update channel %s (running %s at %s, converged %s)\n' "$UPDATE_CHANNEL" "$CHANNEL_REF" "${CHANNEL_SHA:0:10}" "$CHANNEL_AT"
+  elif [ "$CHANNEL_STALE" = true ]; then printf '  update channel %s: NOT CONFIRMED, pull-sync last recorded convergence at %s (stale)\n' "$UPDATE_CHANNEL" "$CHANNEL_AT"
   elif [ "$CHANNEL_REF_MISSING" = true ]; then printf '  update channel %s: NOT IN EFFECT, its ref %s does not exist (channel_ref_missing)\n' "$UPDATE_CHANNEL" "${CHANNEL_REF:-?}"
   else printf '  update channel %s (declared; not in effect: pull-sync has recorded no convergence to it, so every vessel still follows dev)\n' "$UPDATE_CHANNEL"; fi
   for l in $LEVELS; do printf '  %-10s %-8s %s\n' "$l" "${VAL[$l]}" "${EVID[$l]}"; done
