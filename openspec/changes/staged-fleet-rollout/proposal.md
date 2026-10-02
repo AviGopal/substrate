@@ -21,7 +21,7 @@ The substrate develops itself, so the same thing that lands a change has to deci
   - no new failure class in the canary's journal compared with before the change.
 
   If all of that passes, it fast-forwards `fleet` to that revision in each repository it covered, and writes the verdict as a trace. If it fails, it files a gap that names the revision and its evidence, and `fleet` does not move.
-- **A landing node's clones stay on `dev`, whatever its channel.** `vessel-mitosis-cutover` builds commits on the clone's HEAD and pushes them to `origin dev`, so clones that converged to `fleet` would build landings on the wrong base. On non-canary nodes, pull-sync keeps two trees per vessel (`design.md`): the push clone on `dev` for developing, grounding and closure, and a runtime source at the channel's ref that is the only thing mirrored into `/vessels`. Every runtime comparison (skip, last-good, revert) moves to the runtime source.
+- **A node that lands code is a canary.** Drafting and grounding read the running tree, and landings are committed onto `dev`, so an authoring node must run `dev`. gen-env enforces it: such a node defaults to `canary` and refuses `fleet` or `hold`. A non-canary node therefore only consumes, and pull-sync converges its single tree per vessel to the channel's ref (`design.md`).
 - **The human interface is one value.** Changing a node's channel is a single `.env` line followed by the install command. `substrate-status` shows the channel, the revision the node runs, the head of the channel's ref, and the gap between them.
 
 ## What This Does Not Change

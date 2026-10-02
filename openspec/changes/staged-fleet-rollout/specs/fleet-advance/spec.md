@@ -26,14 +26,14 @@ The known-answer goal SHALL run as a sandboxed battery run. It SHALL write no tr
 - **THEN** advancing does not run check 2 and does not advance
 
 ### Requirement: One advance at a time, from observation
-Advancing SHALL hold a lease while moving refs, and SHALL move the exact per-repository revision set observed running on the canary, never the `dev` head at advance time. A canary whose observed set is behind `fleet` SHALL abstain.
+Advancing SHALL move the exact per-repository revision set observed running on the canary, never the `dev` head at advance time, and SHALL push each ref as a fast-forward only. A canary whose push is rejected as non-fast-forward SHALL re-fetch, and abstain if `fleet` is already at or past its observed set.
 
 #### Scenario: Two canaries judge at once
-- **WHEN** two canaries finish their settle windows at the same time
-- **THEN** only the lease holder moves `fleet`, and the other abstains if its set is not ahead
+- **WHEN** two canaries on different nodes finish their settle windows at the same time
+- **THEN** the first fast-forward wins, and the other is rejected, re-fetches and abstains
 
 ### Requirement: A fleet that stops advancing is reported
-A non-canary node SHALL file one gap when it has been behind `dev` by more than a threshold for longer than a window.
+A `fleet` node that is not under a hold SHALL file one gap when it has been behind `dev` by more than a threshold for longer than a window. `hold` nodes and nodes under an active `updateHold` SHALL NOT.
 
 #### Scenario: No canary online
 - **WHEN** no canary has advanced `fleet` for longer than the window while `dev` gained commits
