@@ -19,6 +19,8 @@
 > **Amended 2026-10-01:** see §9 (security findings and the hardcoding census). §9.0 is a new precondition on §2.4 and on any seam that makes an address resolvable or a behaviour writable.
 >
 > **Amended 2026-10-02:** the continuity amendment (`CONTINUITY-AMENDMENT-2026-10-02.md`) is integrated into §§1, 2.0b, 2.1, 2.2, 2.6, 3.4, 4.2, 6.2, 7 and 8. §10 records what was adopted and the decisions it leaves open. It grants no new runtime authority and has no runtime effect until each integrated item names its writer and reader.
+>
+> **Amended again 2026-10-02 (user rulings on authority):** §2.1 item 6, §7 step 9 and §10 no longer define a human-governed boundary. The system changes its own limits on evidence applied by the previously accepted version; humans are informed, not gating (§10 item 1).
 
 ### Review disposition (09-29 revision)
 
@@ -256,7 +258,7 @@ Its 6 bindings, the `expectation:*` families, the declaration-drift checks, the 
      - `c71819af` judged success by HTTP status (`classes/false-verification.json`);
      - `self-recovery.timer` amplified outages, restarting activity-api on 09-25 and 09-26.
    - The watchdog's pass condition is therefore **effect**: a must-fail row is refused within its window. HTTP status and process liveness do not count.
-   - The evaluator's paths are a **human-governed authority boundary** in `autonomyScope` (§7 step 9): evidence alone does not move them, and success in nearby files is never read as permission. Whether that boundary is permanent is an open design decision (§10). An earlier draft said "permanently" here while §7 step 9 let all excluded paths earn their way out; that contradiction is resolved in step 9. **Tamper of rows and controls** is covered by item 2's rule applied to the evaluator itself.
+   - The evaluator changes only through the gate-evolution path of §7 step 9: a candidate runs in shadow, and the **accepted** evaluator promotes it only if it refuses everything the accepted one refuses. Success in nearby files is never read as permission, and a candidate never judges itself. Earlier drafts said "permanently excluded" and then "human-governed boundary"; both are superseded by the 10-02 user rulings (§10). **Tamper of rows and controls** is covered by item 2's rule applied to the evaluator itself.
    - The remaining risk is an operator edit. It is logged as an L12 intervention.
 
 **Honest note.**
@@ -801,12 +803,16 @@ The agentic-runner approach stays the implementation-sequencing reference named 
    - So the **baseline arm runs first**, before any parity claim. The comparison is on outcome. Battery output goes to a sandboxed store (2.5), never to the memory or gap stores, because battery residue once filled 578 of 1,077 notes.
    - Exit: need-phrased probes reach ≥90% and ≥ the baseline arm's rate.
 9. **Earn-in of autonomy scope (C8, C20, R2-P13).** It is listed last but **starts right after the slice, concurrently with step 2**, because it is what moves later builder labels from (a) to (b). Its criterion can only fire once step 5 measures landings, so it is built early and fires late.
-   - **Authority categories (amended 10-02; this replaces "N verified landings in adjacent paths", which contradicted §2.1 item 6).** The existing `autonomyScope` policy distinguishes three kinds of excluded path:
-     - **Human-governed authority boundaries** (the evaluator's paths among them): evidence alone never grants permission. Whether any of these is permanent is an open decision (§10).
-     - **Implementations eligible for earned modification:** they leave the set only by a machine-checked criterion held as a shape, citing evidence **relevant to that behaviour and its consequences**, measured by step 5. Successful changes in nearby files are not such evidence.
-     - **Temporary restrictions:** each keeps its reason, release condition and existing expiry or quarantine semantics.
-   - A candidate evaluator is tested separately while the accepted one stays in force, compared on known-valid cases, known-invalid cases and downstream use. A candidate cannot approve its own promotion by weakening its evidence source, control or acceptance rule. The authority that governs promotion is named.
-   - **Acceptance:** an unauthorized operation stays refused despite high confidence; scope changes cite relevant evidence; a weakened evaluator cannot certify its own promotion; dispatchers consume the effective scope decision.
+   - **Authority (amended 10-02, user rulings; this supersedes the same-day "three authority categories", which itself replaced "N verified landings in adjacent paths").** There is no trust root as such and no human-governed category. The system changes its own limits when its evidence supports the change, and operates under its own principles:
+     - **Limits are shapes the system reads and writes (law 1).** These are spend, scope, which paths it may change, its own deploy gate, and its risk parameters (soak length, canary choice, rollout order, the widening and tightening bars, hold TTLs).
+     - **No self-certification (K15, K18).** Anyone, the lane included, may propose a change with evidence. A change is **applied only by the previously accepted version** of the system's own gate and evaluator, never by the change being proposed. That includes a new deploy gate or a new pull-sync: it is a candidate until the accepted version promotes it.
+     - **Evidence must be relevant and independent.** It concerns the behaviour the limit governs (success in nearby files is not evidence), it predates the proposal, it comes from executions the proposer's own lineage did not dispatch, and it is graded by the accepted evaluator, whose must-fail controls refused within their window.
+     - **Tightenings** need less evidence and carry a TTL. **Widenings** need the full criterion. Every change is an L12 intervention.
+     - **A change to the gate or evaluator itself** runs in shadow next to the accepted one, on the accepted version's fixture corpus and on live ticks. It is promoted only if it refuses everything the accepted one refuses, agrees on known-valid cases, has its own must-fail controls refuse, and has soaked. A candidate may add fixtures but not remove them.
+     - **The system builds its own vessels, its own security checks, its own holds and releases, and manages its own development risk.** New vessels start from a confined-by-default template and are checked by the accepted harness. The operator builds only the minimal bootstrap that runs the accepted version, plus its break-glass.
+     - **Humans are informed, never gating.** Every limit change and gate promotion is reported through the surface humans actually read (C18), with the evidence and a one-step undo. Delivery is checked by effect. Humans can always intervene by hold or revert. They do not approve each change, and nothing waits on them.
+     - **Holds** are C20 quarantine shapes. Anyone may place one, and it applies at once as a tightening. A hold is lifted only by expiry or by the criterion with evidence, never by deleting a record. The system's own detectors place and release holds.
+   - **Acceptance:** an unauthorized operation stays refused despite high confidence (a change citing its own or irrelevant evidence is refused); a weakened gate cannot certify its own promotion; a hold survives deletion of its request record; a new vessel without the confinement template is refused by the accepted harness; dispatchers consume the effective limits.
    - The widen/tighten decisions stop being record edits. They become that criterion plus a C20 TTL quarantine shape that dispatchers read.
    - The 09-28 rhythm hold with a nonexistent `lift_when` is re-expressed under the same shape.
    - Exit: two consecutive scope changes made by the criterion, with no operator record edit in between.
@@ -910,7 +916,7 @@ stateful-ui is still live (805 panels) and was still being written to on 10-01. 
 | 2. Observations, learning and acceptance | §2.2 "Three uses of evidence" |
 | 3. Reduction and partially known cases | §1 "Middle"; §2.0b "Reduction and partially known cases"; §2.6 "Workaround records"; §3.4 rebind row |
 | 4. Human-originated experiments | §4.2 step 3; §6.2 |
-| 5. Authority and evaluator evolution | §2.1 item 6; §7 step 9 "Authority categories" |
+| 5. Authority and evaluator evolution | §2.1 item 6; §7 step 9 "Authority" (re-amended the same day by the user rulings in item 1 below) |
 | 6. Inputs to generated expectations | §8 "Correct the inputs first" |
 | 7. One execution-and-learning slice | §7 step 1 "Execution-and-learning extension" |
 | 8. Integration order and readers | §7 "Integration order" |
@@ -918,10 +924,19 @@ stateful-ui is still live (805 panels) and was still being written to on 10-01. 
 **What it does not do.** It grants no new runtime authority and has no runtime effect. An integrated item counts as implemented only when it names its concrete writer and reader and demonstrates consumption. Keeping only prose here would repeat the warning at the top of this document.
 
 **Open items, stated rather than settled:**
-1. **The permanent boundary (§2.1 item 6, §7 step 9).** Whether any human-governed authority boundary, the evaluator's paths in particular, is permanent is a design decision for the user. Until it is made, those paths stay excluded, and no evidence moves them.
+1. **The permanent boundary: resolved by the user on 10-02.** There is no human-governed category and no trust root as such. The rulings, verbatim:
+   - "There shouldn't be a trust root per-se."
+   - "The revision is correct. The system should operate in accordance to its design principles." This confirms that the system may change its own limits when its evidence supports it, with humans informed and able to intervene, not approving each change.
+   - "We must consider that the system will need to build its own vessels, implement these sorts of security checks, hold and release on its own, manage its own develop and risk. And operate under the system's principles."
+   - Standing alongside them: "safety via locality, secrets never in agent reach"; "the goal … is not to have the operator blocking"; "we can leave the github token as is for now"; "we should use the pull-sync check" (a deploy-side check judged by the accepted version, never by the incoming change).
+
+   §2.1 item 6 and §7 step 9 now state this. The one constraint that remains is a principle, not a boundary: **no change judges itself**.
 2. **CANON.md was reconciled in the same change** (§1's middle, figures and autonomy criterion, K3, C8, and §5's generation rule). The withdrawn readings stay in the canon, marked withdrawn. No rows have been generated from it yet, and §8's classification rule applies when they are.
 3. **The broader autonomy criterion has no measured acceptance.** §1's "sustained continuation and learning within granted authority" needs a measurable form, or the self-development milestone (landing counts) stays the de facto goal.
 4. **Known live conflicts at adoption (10-02):**
-   - Step 9's acceptance ("an unauthorized operation stays refused despite high confidence") fails today: the admin key and identity's key secret are in every vessel's process environment, so lane code could write trust-root policy (filed HIGH, `every-vessel-process-env-carries-the-admin-and-api-key-secrets-so-lane-code-can-unlock-containment`).
+   - Step 9's acceptance ("an unauthorized operation stays refused despite high confidence") failed at adoption: the admin key and identity's key secret were in every vessel's process environment (filed HIGH, `every-vessel-process-env-carries-the-admin-and-api-key-secrets-so-lane-code-can-unlock-containment`). Status later on 10-02:
+     - Env scoping is in effect on node 1 by effect at 16:03Z; node 2 is pending its strip and restarts.
+     - The gap stays open: every vessel still runs as root, and the policy store is written by the lane's own process.
+     - Until a deploy-side check judged by the accepted version lands, a lane push can change root code on every node within one tick (pull-sync runs the newly pulled version of itself). So step 9 holds for the runtime path only, not for landing → deploy.
    - `6ac1aa6` is a live case of a candidate weakening its own evidence source: a lane draft added entries to a guard test's allowlist so its own landing passed. The guard is now frozen.
    - Proposed, not live: the slice Y verdict stamping in review on 10-02 (Y1c) would not meet §2.2's "a correction names what it supersedes" as drafted, because a failure class stamped on a run stays when the run later reaches, so readers would have to filter it.
