@@ -298,6 +298,17 @@ say "fleet directory: $(pwd)  (inputs written:${carried:- none, defaults only})"
 # success on the old code. Compare the image the container runs with the one the
 # manifest names, and recreate when they differ.
 recreate=""
+# The compose project is the directory's name unless something says otherwise, and a fleet
+# launched from a directory with another name (or with COMPOSE_PROJECT_NAME) carries its own
+# project on the container. Running compose here under the directory's project then never
+# matched that container: `up --force-recreate` recreated nothing and compose only started
+# the stopped container again, still on the old image, while the installer reported the
+# upgrade done (node 2, 2026-10-02: project compose2, directory node2). The container's own
+# label names the project it belongs to, so every compose call below uses that one.
+if [ -z "${COMPOSE_PROJECT_NAME:-}" ]; then
+  _proj="$("$engine" container inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "$container" 2>/dev/null || true)"
+  case "$_proj" in ""|"<no value>") ;; *) export COMPOSE_PROJECT_NAME="$_proj" ;; esac
+fi
 if "$engine" container inspect "$container" >/dev/null 2>&1; then
   want_ref="$("$engine" compose config 2>/dev/null | sed -n 's/^ *image: *//p' | head -1 | tr -d "\"'")"
   want_id="$([ -n "$want_ref" ] && "$engine" image inspect -f '{{.Id}}' "$want_ref" 2>/dev/null || true)"
