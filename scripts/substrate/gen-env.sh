@@ -655,7 +655,8 @@ SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-}"
 # lands through a host-sync intent.
 #   no channel   canary: today's behaviour, every node follows dev.
 #   fleet, hold  a node that consumes. Landing is turned off here when it was not set,
-#                refused when it was set on, and the gap-store holder is refused.
+#                refused when it was set on, and the gap-store holder (a node running
+#                development-vessel with no GAP_STORE_ENDPOINT) is refused.
 case "${SUBSTRATE_UPDATE_CHANNEL:-}" in
   "") SUBSTRATE_UPDATE_CHANNEL=canary ;;
   fleet|hold)
@@ -667,7 +668,19 @@ case "${SUBSTRATE_UPDATE_CHANNEL:-}" in
            "Drafting reads the running tree and landings go onto dev." \
            "Use SUBSTRATE_UPDATE_CHANNEL=canary, or stop this node landing: MITOSIS_DIRECT_PUSH=0." ;;
     esac
-    if [ -z "${GAP_STORE_ENDPOINT:-}" ]; then
+    # Only development-vessel holds a gap store, so a node that does not run it (a surface
+    # profile, or DISABLED_VESSELS) is no holder whatever GAP_STORE_ENDPOINT says. The
+    # selection is apply-inventory's to decide, so ask it, without changing anything. If
+    # that dry run fails or prints nothing about development-vessel, the node counts as a
+    # holder: the conservative answer keeps it on canary.
+    # Captured first, then matched: under pipefail, grep -q exiting on the first match kills
+    # apply-inventory with SIGPIPE and the pipeline reads as failed even though it matched.
+    _dv_selected=1
+    if [ -x /usr/local/bin/apply-inventory ]; then
+      _inv_plan="$(DRY_RUN=1 /usr/local/bin/apply-inventory 2>&1 || true)"
+      case "$_inv_plan" in *"would disable: development-vessel.service"*) _dv_selected=0 ;; esac
+    fi
+    if [ -z "${GAP_STORE_ENDPOINT:-}" ] && [ "$_dv_selected" = 1 ]; then
       _refuse "SUBSTRATE_UPDATE_CHANNEL=${SUBSTRATE_UPDATE_CHANNEL} on the node that holds its gap store." \
         "The gap-store holder judges landings on dev against its own clones, so it must run dev." \
         "Use SUBSTRATE_UPDATE_CHANNEL=canary, or point GAP_STORE_ENDPOINT at an authoring node's resolve URL so this node no longer holds a gap store."
