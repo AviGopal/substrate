@@ -74,3 +74,7 @@
 	path = repos/libp2p-federation-transport
 	url = ../libp2p-federation-transport.git
 	branch = dev
+[submodule "repos/human-surface-vessel"]
+	path = repos/human-surface-vessel
+	url = ../human-surface-vessel.git
+	branch = dev
