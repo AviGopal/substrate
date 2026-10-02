@@ -802,6 +802,63 @@ if [ -n "$CHANNEL_RECORD" ] && jq -e 'type == "object"' >/dev/null 2>&1 <<<"$CHA
   fi
 fi
 
+# ── Image freshness ──────────────────────────────────────────────────────────
+# pull-sync keeps a node's code on its channel, but nothing replaces the image: the
+# entrypoint, the tools baked into /usr/local/bin, the units vessel-ctl renders at boot
+# and the container's own settings change only when the install command is re-run. So
+# this reports whether the image is behind the tag an install would pull (the revision
+# label ghcr's :dev carries). It only reports: no level depends on it, --quick skips it
+# (the image HEALTHCHECK runs that), the registry answer is cached for an hour in the
+# volume, and the comparison reads the super-repo clone without fetching.
+IMAGE_FRESH_REF="${STATUS_IMAGE_REF:-ghcr.io/avigopal/substrate:dev}"
+FRESH_DEV=""; FRESH_STATE=unknown; FRESH_BEHIND=""; FRESH_WHY=""; FRESH_AT=""
+fresh_check() {
+  local cache=/workspace/.substrate-status/image-freshness.json ttl="${STATUS_IMAGE_FRESH_TTL_S:-3600}"
+  local repo tag tok m d cfg acc clone=/workspace/git/super-repo
+  acc='application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json'
+  if [ -f "$cache" ] && [ $(( $(date +%s) - $(stat -c %Y "$cache" 2>/dev/null || echo 0) )) -lt "$ttl" ] \
+     && jq -e --arg r "$IMAGE_FRESH_REF" '.ref == $r and (.dev_revision | type) == "string"' "$cache" >/dev/null 2>&1; then
+    FRESH_DEV="$(jq -r '.dev_revision' "$cache")"; FRESH_AT="$(jq -r '.checked_at // empty' "$cache")"
+  else
+    case "$IMAGE_FRESH_REF" in
+      ghcr.io/*:*) ;;
+      *) FRESH_WHY="$IMAGE_FRESH_REF is not a ghcr.io tag this check can read"; return ;;
+    esac
+    repo="${IMAGE_FRESH_REF#ghcr.io/}"; tag="${repo##*:}"; repo="${repo%:*}"
+    tok="$(curl -s -m5 "https://ghcr.io/token?scope=repository:${repo}:pull" 2>/dev/null | jq -r '.token // empty' 2>/dev/null)"
+    m="$(curl -s -m5 -H "Authorization: Bearer $tok" -H "Accept: $acc" "https://ghcr.io/v2/${repo}/manifests/${tag}" 2>/dev/null)"
+    # A multi-platform tag is an index: read the linux/amd64 image it lists.
+    d="$(jq -r '[.manifests[]? | select(.platform.os == "linux" and .platform.architecture == "amd64") | .digest][0] // empty' <<<"$m" 2>/dev/null)"
+    [ -n "$d" ] && m="$(curl -s -m5 -H "Authorization: Bearer $tok" -H "Accept: $acc" "https://ghcr.io/v2/${repo}/manifests/${d}" 2>/dev/null)"
+    cfg="$(jq -r '.config.digest // empty' <<<"$m" 2>/dev/null)"
+    [ -n "$cfg" ] && FRESH_DEV="$(curl -s -m5 -L -H "Authorization: Bearer $tok" "https://ghcr.io/v2/${repo}/blobs/${cfg}" 2>/dev/null \
+      | jq -r '.config.Labels["org.opencontainers.image.revision"] // empty' 2>/dev/null)"
+    if [ -z "$FRESH_DEV" ]; then
+      FRESH_WHY="could not read the revision $IMAGE_FRESH_REF carries (registry unreachable, or the image has no revision label)"; return
+    fi
+    FRESH_AT="$(date -u +%FT%TZ)"
+    mkdir -p "$(dirname "$cache")" 2>/dev/null \
+      && jq -nc --arg r "$IMAGE_FRESH_REF" --arg d "$FRESH_DEV" --arg a "$FRESH_AT" '{ref: $r, dev_revision: $d, checked_at: $a}' >"$cache.tmp" 2>/dev/null \
+      && mv -f "$cache.tmp" "$cache" 2>/dev/null
+  fi
+  case "$IMAGE_REVISION" in unknown|"") FRESH_WHY="this image carries no revision to compare"; return ;; esac
+  if [ "$IMAGE_REVISION" = "$FRESH_DEV" ]; then FRESH_STATE=current; return; fi
+  if git -C "$clone" cat-file -e "${IMAGE_REVISION}^{commit}" 2>/dev/null && git -C "$clone" cat-file -e "${FRESH_DEV}^{commit}" 2>/dev/null; then
+    if git -C "$clone" merge-base --is-ancestor "$IMAGE_REVISION" "$FRESH_DEV" 2>/dev/null; then
+      FRESH_STATE=behind; FRESH_BEHIND="$(git -C "$clone" rev-list --count "${IMAGE_REVISION}..${FRESH_DEV}" 2>/dev/null)"
+    elif git -C "$clone" merge-base --is-ancestor "$FRESH_DEV" "$IMAGE_REVISION" 2>/dev/null; then
+      FRESH_STATE=ahead
+    else
+      FRESH_STATE=diverged
+    fi
+  else
+    # The clone lacks one of the commits (no clone, or not fetched yet): the revisions
+    # differ, and which is newer is not known here.
+    FRESH_STATE=differs
+  fi
+}
+[ "$QUICK" = 1 ] || fresh_check
+
 # ── Output ───────────────────────────────────────────────────────────────────
 verdict_json() {
   local l levels_json="[]" vessels_json
@@ -820,11 +877,16 @@ verdict_json() {
     --arg thp "$TRACE_HOST_PORT" --argjson bym "$BY_MANIFEST" --arg aliases "$ALIASES_USED" \
     --arg channel "$UPDATE_CHANNEL" --argjson enforced "$CHANNEL_ENFORCED" \
     --arg cref "$CHANNEL_REF" --arg csha "$CHANNEL_SHA" --arg cat "$CHANNEL_AT" --argjson cmiss "$CHANNEL_REF_MISSING" --argjson cstale "$CHANNEL_STALE" \
+    --arg fref "$IMAGE_FRESH_REF" --arg fdev "$FRESH_DEV" --arg fstate "$FRESH_STATE" --arg fbehind "$FRESH_BEHIND" --arg fat "$FRESH_AT" --arg fwhy "$FRESH_WHY" --argjson fquick "$([ "$QUICK" = 1 ] && echo true || echo false)" \
     '{requested_level:$target, value:$value, ok:($value=="pass"), image_revision:$img,
       profile:$profile, engine:$engine, port_prefix:$prefix,
       update_channel:{channel:$channel, enforced:$enforced,
         ref:(if $cref=="" then null else $cref end), sha:(if $csha=="" then null else $csha end),
         converged_at:(if $cat=="" then null else $cat end), ref_missing:$cmiss, record_stale:$cstale},
+      image_freshness:(if $fquick then null else {ref:$fref, state:$fstate,
+        published_revision:(if $fdev=="" then null else $fdev end),
+        commits_behind:(if $fbehind=="" then null else ($fbehind|tonumber) end),
+        checked_at:(if $fat=="" then null else $fat end), why:(if $fwhy=="" then null else $fwhy end)} end),
       trace_host_port:$thp, launched_by_manifest:($bym == 1),
       deprecated_port_aliases:($aliases | split(" ") | map(select(length > 0))),
       levels:$levels, vessels:$vessels}'
@@ -838,6 +900,16 @@ else
   elif [ "$CHANNEL_STALE" = true ]; then printf '  update channel %s: NOT CONFIRMED, pull-sync last recorded convergence at %s (stale)\n' "$UPDATE_CHANNEL" "$CHANNEL_AT"
   elif [ "$CHANNEL_REF_MISSING" = true ]; then printf '  update channel %s: NOT IN EFFECT, its ref %s does not exist (channel_ref_missing)\n' "$UPDATE_CHANNEL" "${CHANNEL_REF:-?}"
   else printf '  update channel %s (declared; not in effect: pull-sync has recorded no convergence to it, so every vessel still follows dev)\n' "$UPDATE_CHANNEL"; fi
+  if [ "$QUICK" != 1 ]; then
+    case "$FRESH_STATE" in
+      current)  printf '  image is current with %s\n' "$IMAGE_FRESH_REF" ;;
+      behind)   printf '  image BEHIND %s: it carries %s, this node runs %s (%s commit(s) older). pull-sync keeps code current, but the image (entrypoint, baked tools, boot-rendered units, container settings) changes only when the install command is re-run\n' "$IMAGE_FRESH_REF" "${FRESH_DEV:0:10}" "${IMAGE_REVISION:0:10}" "${FRESH_BEHIND:-?}" ;;
+      ahead)    printf '  image is newer than %s (%s), e.g. a candidate not promoted yet\n' "$IMAGE_FRESH_REF" "${FRESH_DEV:0:10}" ;;
+      diverged) printf '  image is on a different line than %s (%s); neither contains the other\n' "$IMAGE_FRESH_REF" "${FRESH_DEV:0:10}" ;;
+      differs)  printf '  image differs from %s (%s); this node cannot tell which is newer (its clone lacks one revision)\n' "$IMAGE_FRESH_REF" "${FRESH_DEV:0:10}" ;;
+      *)        printf '  image freshness unknown: %s\n' "${FRESH_WHY:-not checked}" ;;
+    esac
+  fi
   for l in $LEVELS; do printf '  %-10s %-8s %s\n' "$l" "${VAL[$l]}" "${EVID[$l]}"; done
   if [ -n "$VESSEL_ROWS" ]; then
     moved="$(printf '%s' "$VESSEL_ROWS" | awk -F'|' '$2=="moved"{printf "    %-28s image %s -> clone head %s\n", $1, ($3==""?"(baked)":$3), ($4==""?"(no clone)":$4)}')"
