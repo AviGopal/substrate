@@ -7,7 +7,7 @@
 
 ## 2. Refs exist before anything reads them (needs the user's approval: outward git action)
 
-- [ ] 2.1 Create the super-repo `fleet` branch: one commit whose tree is the current `dev` tree and whose gitlinks are each vessel's current `dev` head. No vessel repository needs a `fleet` branch.
+- [x] 2.1 Create the super-repo `fleet` branch (d4693d2b, a parentless commit). Its tree is that of super-repo 9f1ce189, which install acceptance run 37019710262 verified on both engines and promoted to `:dev`, gitlinks included. It is not `dev`'s tree with each vessel's `dev` head: three vessel heads (activity-api, goal-host, human-surface) had not been judged by anything, and `fleet` names only what was verified. No vessel repository needs a `fleet` branch.
 - [ ] 2.2 Record the grant to push `fleet` in the pushPolicy, as its own scope, separate from landing scope.
 - [ ] 2.3 Choose the first `fleet` nodes (everything else stays `canary`, today's behaviour). Proposed: syzygy, the hub.
 - [x] 2.4 Decide how a canary is frozen: `updateHold` only, no `.env` freeze for canaries (user, 2026-10-02; until 4.2 lands, a canary has no freeze).
