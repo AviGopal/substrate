@@ -602,6 +602,13 @@ if [ "$have_container" -eq 1 ]; then
     eng exec "$ACCEPTANCE_CONTAINER" journalctl -u "$_u" -n 80 --no-pager >"$RESULT_DIR/diag/unit-${_u%.*}.log" 2>&1 || true
   done
   eng logs --tail 300 "$ACCEPTANCE_CONTAINER" >"$RESULT_DIR/diag/container.log" 2>&1
+  # A usable miss is decided by the known-answer goal's walk, and a fresh install is the
+  # one place a walk runs with no learned pathway. The walk's decision log lives only in
+  # goal-host's journal, which leaves with the throwaway fleet, so keep it (redacted).
+  if [ "$(jq -r '.usable // empty' <<<"$levels" 2>/dev/null)" = fail ]; then
+    eng exec "$ACCEPTANCE_CONTAINER" journalctl -u goal-host-vessel --no-pager -n 2000 2>&1 \
+      | while IFS= read -r l; do redact "$l"; printf '\n'; done >"$RESULT_DIR/diag/goal-host.log"
+  fi
   # Pull-sync on a cold image is an environment no operator node reproduces (every live
   # node is warm), so the run keeps its evidence: one tick's journal, and the test-gate
   # lines among it (a blind gate files pull-sync-testgate-blind-<vessel>). When the run
