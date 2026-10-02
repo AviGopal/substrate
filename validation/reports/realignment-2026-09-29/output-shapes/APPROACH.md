@@ -12,8 +12,12 @@ and prior art):
 - [4 — the reach judge on content goals](4-reach-judge.md)
 - [5 — delivery to the surface](5-delivery-to-surface.md)
 
-**Code line numbers** refer to the live goal-host source, which is byte-identical to `origin/dev` `76bb373`.
-The local checkout carries someone else's uncommitted edits.
+**Code line numbers** refer to goal-host at `76bb373`. Live is now `a72918f`: refs between `:399` and `:8348` are
++1, and refs after `:8348` are +9. Re-pin at build time.
+
+**qa review (10-02): accepted with changes, applied here.** The order of record is
+[agentic-runner/APPROACH.md §4](../agentic-runner/APPROACH.md), which pulls this document's step 0 (V1) and
+step 3 (V2, V3) into its vertical slice. This document's own order is superseded.
 
 **REALIGNMENT is read from `origin/dev`** (`e028a7f9`, with §9). Tracks 1–3 read a stale local copy that ends
 at §8. Their "§9 is absent" remarks are superseded here.
@@ -121,9 +125,11 @@ So the order below is forced: unblock the reach first, then let the existing ext
 ## 4. Approach, in order
 
 Builder labels follow REALIGNMENT §2.0.
-- **(a)**: operator bootstrap. goal-host `index.ts` and `goal-target-inference.ts`, which only it imports,
-  are excluded, as are discovery and `scripts/substrate`.
+- **(a)**: operator bootstrap. goal-host `index.ts` is excluded, as are discovery and `scripts/substrate`.
 - **(b)**: a dispatched goal.
+- **Correction (qa, live `autonomyScope`):** `goal-target-inference.ts` is **not** excluded, so its items are
+  **(b)**. That covers rejecting unadvertised targets, failure memory into inference, and the dead web-search
+  route. Wherever this document says (a) for `goal-target-inference.ts`, read (b).
 
 Every item ships with the positive and must-fail controls specified in its track file. Change one thing per
 landing (law 12).
@@ -273,8 +279,8 @@ which the substrate cannot author.
 | `a-satisfier-that-returns-no-content-logs-no-reason-so-a-failed-web-search-reads-as-no-producer` | **Extend** with the refusal class (T2 P3). |
 | `produced-llmcompletion-does-not-flow-into-the-deferred-memorynote-terminal-body` | **Extend:** same seam as re-frame binding. |
 | `the-missing-verifier-generator-only-mints-quantitative-families-…` | **Cite:** G1 is the instance it should have minted from this hollow cluster. |
-| `goal-target-inference-reads-what-is-happening-in-the-world-as-substrate-health` | **Reopen.** It closed on an `expected_literal` that occurs 0 times in the file, and 0/887 inferences chose `web_search`. |
-| `goal-host-rawresolve-lets-synthesized-args-override-the-resolved-shape-type` | **Close.** Fixed by `7310fb0`; 0 events after 09-30 15:24Z. |
+| `goal-target-inference-reads-what-is-happening-in-the-world-as-substrate-health` | **Reopen with a class2 falsifier,** not an `expected_literal` (qa): over a window, the share of world/current-events goals whose inference includes `web_search` is above a threshold held as a shape. Baseline: 0/887. It closed on a literal that occurs 0 times in the file. |
+| `goal-host-rawresolve-lets-synthesized-args-override-the-resolved-shape-type` | **Let the system close it on re-measure,** or record the closure as an intervention (law 12). A hand close is hand-completion (qa). The evidence: fixed by `7310fb0`, 0 events after 09-30 15:24Z. |
 | `detector-coverage-gap-…obsidian_write_note` (×2) | Close as covered once step 0 lands and the joint row holds. |
 | *Not yet filed* | These are candidates for the coordinator to fold into existing gaps or file:<br>• goal-only LLM writer tasks<br>• re-frames pass no terminals<br>• the bound evidence block has no provenance filter<br>• the judge chooses `completion_shapes`, junk included<br>• the backward-chain pick has no posterior check<br>• the inference cache ignores failure memory<br>• capability demand is keyed by invented name<br>• shape descriptions are volatile (56/407) |
 

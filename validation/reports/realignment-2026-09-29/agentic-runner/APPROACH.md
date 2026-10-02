@@ -170,7 +170,12 @@ S12 REUSE    next time S1 finds it by shape signature (ceiling), or S9 finds it 
 - **Acceptance is measured at the consumer:** a runner-minted template is selected for a different goal and
   reaches (§5).
 
-## 4. Approach, in order
+## 4. Approach, in order — the order of record for all three documents
+
+**qa review (10-02): all five load-bearing claims confirmed; accepted with changes, applied here.** This
+section is the **single order** for this document, [agentic-floor](../agentic-floor/APPROACH.md) and
+[output-shapes](../output-shapes/APPROACH.md). Their own sections are referenced from here, and their own
+orders are superseded.
 
 **Builders,** from the live `autonomyScope` (read 10-01; admission requires a class2 falsifier):
 - **(a):** operator bootstrap, for goal-host `index.ts`, llm-resolver `index.ts`, discovery, development-vessel
@@ -178,95 +183,147 @@ S12 REUSE    next time S1 finds it by shape signature (ceiling), or S9 finds it 
 - **(b):** a dispatched goal, for activity-api routes, concept-db, ias-executor, ribosome-vessel, local-tools,
   development-vessel `llm-completion-dispatch.ts`, and goal-host `goal-target-inference.ts`.
 
+**Line references.** goal-host refs are at `76bb373`. Live is `a72918f`: refs between `:399` and `:8348` are +1,
+and refs after `:8348` are +9. Re-pin at build time.
+
 **Rules for every step:**
 - one change per landing (law 12);
 - controls are in the track file cited;
-- nothing widens what is addressable before §9.0, except where marked.
+- nothing widens what is addressable before §9.0, except where marked;
+- **every battery or parity run writes to a sandboxed store** (REALIGNMENT §2.5), never the live memory, gap or
+  trace stores;
+- **no dispatch or ledger write until the user rules** (coordinator, 10-02).
 
-### R0 — make the loss visible (b; first, cheap, independent)
-- **Remove the search and tool shapes from orphaned-capability-scan's `META_DENY`**, and add a §2.1 row: every
-  `mcpTool` catalogue entry names a shape its producer serves (track 1 P4, track 2 P5). Must-fail today:
-  - 9 of 10 entries are uncallable;
-  - the `keyword_extractor` entry lived 16 days because nothing reads the catalogue.
-- **File the missing gap:** "the substrate has no runner for goals without a learned pathway that selects,
-  searches and composes".
-  - Its falsifier is §5's S-criteria.
-  - Its history is track 5's timeline.
-  - It consolidates the floor-family gaps rather than adding beside them.
-- **Docs:** one doc-expectation row reconciling the two improvisation layers (track 4 N5).
+### Step 0 — contain the floor's shell (qa: HIGH, live hole)
+- The floor's `shellResult` resolves to local-tools `shell` (`bash -c`, working directory = the live super-repo).
+  That path is outside the 10-02 containment fix (dev-vessel `c6262c3f`, local-tools `3815e9e7`, goal-host
+  `a72918fd`), which refuses write and commit **shapes**, not shell commands.
+- Nothing stops a repeat of `GPT-5.md` today.
+- **Gap:** qa filed it critical as `floor-shell-tool-still-writes-and-commits-in-the-live-super-repo-past-the-containment-fix`.
+- **First, before anything that makes the floor more effective.** Details: [agentic-floor step 0](../agentic-floor/APPROACH.md).
 
-### R1 — agentic-floor steps 1–3 (prerequisites, unchanged)
-- Visible tool calls, with both guards.
-- Produced-only credit and bound-only edges.
-- One pool with real provenance, composites from real inputs, and an extractor that copies edges.
+### V — the vertical slice: `a30a893c` end to end on both nodes (qa: name it, let it order the rest)
 
-### R2 — the one ranker and the one search read (b)
-- **Ranker.** Extend `discover-by-shapes` (activity-api `services/discover-by-shapes.ts`) to rank **resolver
-  shapes** as well as activities against the current pool and goal (track 4 N1).
-  - Locally advertised, read-only shapes only, until §9.0.
-  - The posterior term stays off until the satisfier re-baseline (track 1), so ranking is lexical and
-    descriptive meanwhile.
-  - The re-baseline gap that goal-host's interlock names must exist in the live store first.
-- **Search.** Extend `activity_search` into the typed union (track 2 P1), with:
-  - input contracts on every item;
-  - non-null posteriors;
-  - retired and draft rows excluded;
-  - the discovery read through the typed §9.1 seam.
+**Goal.** The smallest subset that runs the news goal end to end, producing:
+- a **route-around record**;
+- a **chained output**: evidence → dated answer, with edges;
+- a **minted template that carries those edges**.
 
-  Search then learns from use: a result counts as used if it is consumed by a later step, and as helpful if it
-  sits in a reached chain. That is recorded as impulse relevance (track 2 P3), and it feeds the per-tool prior
-  that is a constant today.
-- **The `mcpTool` producers** advertise only pointer-shape, callable tools into this ranker. activity-api lists
-  its own-origin advertised shapes with description and schema (track 1 P1).
-  - Concept-db's MCP-format tools are either served as pointer shapes or dropped (decision 3).
+**What the slice does not need.** It uses the **walk's existing backward chain and its existing local
+satisfiers** (`web_search`, `llm_completion`): the main walk already bound search results into a grounded report
+once (cea3f4a4 #1). So the slice needs:
+- no forward mode;
+- no widened tool offer;
+- no floor changes.
 
-### R3 — forward steps through the walk's own blocks (a)
-- **The offer.** The forward step's offer is R2's ranker output plus the search tool. Hand-written lists are
-  retired as data (track 1 P3).
-- **Acting on a shape.** A shape choice goes through the satisfier step block (`:10110-10245`).
-- **Acting on an activity.** An activity choice goes through execute block (d) (`:10848`), pulled into one shared
-  function. It is recorded as the next chain link and extracted as a `compose` task (track 3 P1, track 4 N2).
-- **The offer filter (b, activity-api).** Exclude templates that:
-  - write (1,017 of 2,778 contain a file-write or git task, and the 10-01 containment does not check template
-    steps);
-  - call back into goal-host (23);
-  - or are already ancestors in the chain (track 3 P2).
-- **The decision record.** Each step assigns `source:"improvise"` and records the offer with its scores (the
-  counterfactual at decision time, law 12), plus the expected and actual shape (track 4 N3).
-- **One relation per edge.** A `step_source:` tag separates the three relations on `parent_execution_id`
-  (track 3 P4), so ingest derives edges only from real composition.
+That is why it can run before §9.0.1.
 
-### R4 — enter forward mode in place, and hand back (a)
-- **At the stall, enter forward mode inside the walk,** with the same pool. Emit the route-around record there,
-  where `missingTargets` already exist as local state (track 4 N3, §5.2).
-  - This replaces the post-walk floor call (`:13540`), gated on a parity battery that runs the baseline first.
-  - The REUSE floor (`:13235`) stays until a runner-minted composite exists to replace it.
-- **After each forward step, check whether a learned composite or a producer of the target is now in reach**
-  (`discover-by-shapes mode:"backward"` on the new pool). The threshold is read from a shape, not the 0.3
-  constant (track 4 N4).
-  - Re-frame and FEEDBACK-RETRY become "continue forward from what was observed", not restart from an empty pool.
-- **This needs agentic-floor step 5's "return pending tool calls" mode** in llm-resolver (a) and the wrapper (b),
-  so goal-host owns S5–S6.
+| # | Item | Builder | From |
+|---|---|---|---|
+| V1 | **The `/deliverable-shapes` gate:** evidence of a reached run **and** a live advertiser. Inference stops aiming at `obsidian:write_note`, and the walk stops filling its chain with the dead terminal's producers. | (b) | output-shapes step 0 |
+| V2 | **The current date at synthesis and at the judge**, as a deterministic read, never prompt text (the open date gap) | (a) | output-shapes step 3 |
+| V3 | **The judge reads the deliverable first, at full length.**<br>• Junk shapes are excluded.<br>• `completion_shapes` is restricted in code.<br>• A cut view abstains (§9.2). | (a) | output-shapes step 3 (G2) |
+| V4 | **Edges are declared only when bound** (B4), **plus one pool with real producers and consumed ids** (B1), **plus composites built from real per-step inputs** (B2) | (a) | agentic-floor steps 2–3 |
+| V5 | **The extractor copies edges and refuses collapse** (C3) | (b) | agentic-floor step 3 |
+| V6 | **A route-around record when the walk stalls or re-frames** (need, missing producer, failed producers, route taken), at the stall site where `missingTargets` is local state | (a) | agentic-floor D P5, track 4 §5.2 |
+
+**Slice acceptance.** Each criterion holds per node, measured at the consumer.
+- **Clean dispatch.** A dispatch of `a30a893c` logs an inference line with no unadvertised target.
+- **Grounded answer.** The answer `llm_completion` consumes the `web_search` impulse id, carries today's date, and
+  is judged on its full text.
+- **Edged composite.** On a reach, the composite has ≥ 2 tasks with real edges, and the minted `learned-*` row
+  carries `dependencies`.
+- **Reuse.** A re-dispatch **with different wording** (a different `goal_hash`) selects that template and reaches.
+  This is agentic-floor A4 at the smallest scale.
+- **Route-around.** At least one route-around record exists for the goal family.
+
+**Must-fail controls:**
+- on the parent sha, the same dispatch ends "missing shapes [obsidian:write_note]";
+- the stored 10-01 08:57–08:59Z rows declare `web_search` consumed by goal-only prompts.
+
+**Node 2** runs spoke-style (activity-api and concept-db are inactive there). The slice must show node 2
+resolving the hub's producers through discovery. Track 5 did not test this, so it is the slice's first check
+on node 2.
+
+**Known risk.** Without G1, the LLM judge may still reject a grounded report on format, as it did twice for
+cea3f4a4. If the slice's judge rejects a report that V2 and V3 show was grounded and dated, G1
+(output-shapes step 3) joins the slice. Its must-fail control is the false reach "October 27, 2023".
+
+### After the slice, in order
+
+1. **Instrument the floor:** agentic-floor step 1, under the step 0 containment. The positive control is the
+   **sandboxed** line-count control, never a `27c1c600`-style run.
+2. **Stop the rest of the false learning:** agentic-floor step 2.
+   - produced-only floor credit;
+   - the `:9552` sibling call site;
+   - the receipt filter;
+   - the interim borrow requires an exact `goal_hash` match.
+3. **Retention and the always-built, labelled `answerBody`** (a), and the **run view's best-output block** (in the
+   human-surface grant). This is what the person sees.
+4. **R0 — make the loss visible (b).** Remove the search and tool shapes from orphaned-capability-scan's `META_DENY`.
+   - **In the same landing, change what the scan prescribes for those shapes.** Their findings attach to the one
+     consolidating gap, not to new orphan gaps that each prescribe a mint (qa: MED).
+   - Add the §2.1 row "every `mcpTool` catalogue entry names a callable shape". Must-fail today: 9/10 entries
+     uncallable, and `keyword_extractor` lived 16 days.
+   - **Gap: extend `floor-tools-counter-reads-zero-…`; don't mint a new one** (qa: MED).
+     - Its scope widens to "the floor/runner has no visible, selectable, searchable, composable steps".
+     - Its falsifier gains §5 S1–S6.
+     - It names the gaps it supersedes: the `phantom-success-universal-tool-fallback-*`,
+       `systematic-failure-universal-tool-fallback-*`, `wasted-cycle-universal_tool_fallback` and
+       `lost-reached-verdict-universal-tool-fallback-*` families, and `minted-copy-of-the-floor-shadows-the-floor`
+       (which stays as a standing must-fail).
+   - Docs: one doc-expectation row reconciling the two improvisation layers.
+5. **R2a — the one search read, activities only (b).** `activity_search` with:
+   - input contracts;
+   - non-null posteriors;
+   - retired and draft rows excluded;
+   - grading by use, recorded as impulse relevance.
+
+   **Resolver shapes are not added to its results** until §9.0.1.
+6. **The remaining output-shapes items:**
+   - retiring the goal-only writers as data (b);
+   - the provenance filter and re-frame binding (a);
+   - failure memory into inference (b, `goal-target-inference.ts`).
+
+### Held until §9.0.1 (shape locality) and route authentication (qa: HIGH)
+
+"Read-only" is a label, not a property: `shellResult` is labelled read-only and wrote `GPT-5.md`. So the
+following wait for §9.0.1. This also resolves the contradiction with agentic-floor step 5.
+- **R2b — `discover-by-shapes` ranks resolver shapes** for the offer (track 4 N1, track 1 P1).
+  - The posterior term also waits on the satisfier re-baseline.
+  - **Before restoring that gap, run a positive control:** the gap-store read must find a known-present gap
+    (qa: MED). A missing gap is otherwise unattributed.
+- **R3 — forward steps through the walk's own blocks (a).**
+  - The offer is R2b's output plus search.
+  - A shape choice goes through the satisfier step block.
+  - An activity choice goes through execute block (d), extracted as `compose`.
+  - The offer filter excludes templates that write (1,017/2,778), call back into goal-host (23), or are ancestors
+    in the chain (b).
+  - Each step records `source:"improvise"`, the offer with its scores, and the expected and actual shape.
+  - `step_source:` tags separate the three relations on `parent_execution_id`.
+- **R4 — forward mode in place at the stall, with handback after each step (a).**
+  - It needs agentic-floor step 5's "return pending tool calls" mode.
+  - It replaces the post-walk floor only after a baseline-first parity battery, run in a sandboxed store.
+- **Also held:**
+  - peer producers in any offer (a tool impulse names its own address, and our ApiKey is attached on dispatch);
+  - write shapes or write-bearing activities;
+  - remote `activity_execution`;
+  - per-producer credit.
 
 ### R5 — answer, extract, reuse
-- The answer is a `human_presentation` impulse consuming observation ids, judged at full length with the date
-  (output-shapes preconditions).
-- Extraction comes from the real chain (agentic-floor steps 3–4).
-- The ceiling then finds it by shape signature.
-
-### Held behind §9.0 (stated, not a footnote)
-- Any **peer** producer in the offer. A tool impulse names its own dispatch address and the dispatcher
-  attaches our ApiKey, so a peer can point a tool anywhere and receive our credential (track 1). Peer `mcpTool`
-  rows advertise `auth_scheme: none`, and llm-resolver takes the first discovered row.
-- Offering **write** shapes or write-bearing activities.
-- Remote `activity_execution` as a tool (it also returns no content).
-- Per-producer credit (track 1 P5).
+- The answer is a `human_presentation` impulse consuming observation ids, judged at full length with the date.
+- Extraction comes from the real chain.
+- The ceiling then finds it by shape signature. The slice proves the walk half; R3–R4 extend it to forward
+  steps.
 
 ## 5. Acceptance
 
 **Preconditions.** Until all hold, every criterion is "not evaluable":
 - agentic-floor P0.1–P0.3;
-- **P0.4:** §9.0 holds for tool dispatch. Today it fails, so S1 and S3 stay held for peer and write producers.
+- **P0.4:** §9.0.1 (shape locality) and route authentication hold for tool dispatch. Today they fail, so S1–S3
+  are not evaluable. The vertical slice V is evaluable without them, because it widens nothing.
+- **P0.6:** step 0's containment holds. A floor shell command creating a file under the super-repo leaves no
+  file and no commit.
 - **P0.5:** every runner step leaves a record of its shapes and its impulse ids (track 5).
 
 **Criteria** (track 5 §4). Each runs on both nodes, as a standing check, with positive and must-fail controls:
@@ -286,34 +343,47 @@ S12 REUSE    next time S1 finds it by shape signature (ceiling), or S9 finds it 
 `web_search`, use it, answer with a dated `human_presentation` consuming the results, mint the chain, and on
 its next dispatch reach through the ceiling.
 
-## 6. What the substrate can do itself now ((b)), and what needs you
+## 6. What the substrate can do itself ((b)), and what needs you — after the user rules
 
-**(b), each with a class2 falsifier from the track file:**
-1. R0: take the search shapes off the deny list, and the catalogue-entries-are-callable row. Cheapest, and it
-   makes the loss detectable.
-2. R2 search: `activity_search` as the typed union.
-3. R2 ranker: `discover-by-shapes` ranks resolver shapes.
-4. R3 offer filter (write, re-entry, ancestor).
-5. Fix the `activity` resolver (outputs, impulses, tags, cycle chain, budget), or retire it (decision 2).
-6. Fix the stale nested-execution test, which conflicts with `8f1343c` (track 3 P5).
-7. From agentic-floor: the development-vessel wrapper's transcript forward.
+Nothing is dispatched until the user rules (coordinator, 10-02).
 
-**(a), needing your clearance:** the goal-host halves of R3–R4, and llm-resolver's pending-tool-calls mode.
+**(b) items in the slice:**
+1. V1: the `/deliverable-shapes` gate.
+2. V5: the extractor copies edges.
 
-**Inside the human-surface grant:** unchanged (the best-output run view).
+**(b) items after the slice:**
+3. R0, with the scan's prescription changed in the same landing.
+4. R2a: `activity_search` over activities.
+5. Retire the goal-only writers as data.
+6. `goal-target-inference.ts` items (failure memory into inference; rejecting unadvertised targets).
+7. Fix or retire the `activity` resolver (decision 2).
+8. Fix the stale nested-execution test.
+9. The development-vessel wrapper's transcript forward (agentic-floor step 1). This goes **after step 0**.
 
-## 7. Gap ledger
+**Held until §9.0.1:** R2b's resolver ranking; R3's offer filter, which is only useful with R3.
+
+**(a), needing your clearance:**
+- step 0's sandboxed-shell seam, if it lands in `scripts/substrate` or goal-host;
+- V2, V3, V4 and V6;
+- the goal-host half of agentic-floor steps 1–2;
+- retention and `answerBody`;
+- later, R3–R4 and llm-resolver's pending-tool-calls mode.
+
+**Inside the human-surface grant:** the best-output run view.
+
+## 7. Gap ledger (proposals only; no ledger writes until the user rules)
 
 | Gap | Action |
 |---|---|
-| **Missing: the runner capability** | **File once** (R0), consolidating the floor-family gaps. Falsifier: §5 S1–S6. |
-| Satisfier re-baseline gap named by goal-host's interlock | **Restore.** Missing from the live store, and R2's posterior term is blocked on it. |
-| `orphaned-capability-scan` `META_DENY` | **Remove the exemption** (R0). |
+| `floor-shell-tool-still-writes-and-commits-in-the-live-super-repo-past-the-containment-fix` | **Filed by qa (critical).** Step 0. |
+| `floor-tools-counter-reads-zero-…` | **Extend; this replaces "file a new runner gap"** (qa).<br>• Widen its scope.<br>• Add S1–S6 to its falsifier.<br>• Name the superseded families (step 4 of "After the slice"). |
+| Satisfier re-baseline gap named by goal-host's interlock | **Before restoring it, run a positive control** that the gap-store read finds a known-present gap (qa). Then restore it if it is truly absent. |
+| `orphaned-capability-scan` `META_DENY` | **Remove the exemption and change the prescription in the same landing** (R0). |
 | `keyword_extractor` catalogue entry (opened and closed 09-30) | **Cite** as R0's must-fail control. |
 | Failing nested-execution contract test (filed 09-30) | **Fix the test,** not the code (track 3 P5). |
 | validator-dispatch 586/586 failures | **Port the template lookup, or retire it** (decision 2). |
-| `shape_producer_inventory` always "0 producers" | **New finding** (§9): it reads `vessels` where discovery returns `content.vessels`. |
-| agentic-floor and output-shapes ledgers | Stand as written. |
+| `shape_producer_inventory` always "0 producers" | **New finding** (§10): it reads `vessels` where discovery returns `content.vessels`. |
+| output-shapes and agentic-floor ledgers | Stand as amended there (reopen and close rules per qa). |
 
 ## 8. Proposed REALIGNMENT amendments (for the coordinator)
 

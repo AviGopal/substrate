@@ -12,7 +12,13 @@ REALIGNMENT.md. §8 lists the amendments it proposes.
 - [E — the history of attempts](E-history-of-attempts.md)
 
 **Sources.**
-- Line numbers are the live goal-host source, which is identical to `origin/dev` `76bb373`.
+- Line numbers are the goal-host source at `76bb373`.
+  - Live is now `a72918f` (the containment fix), which adds 1 line at `:399` and 8 at `:8350`.
+  - So refs between `:399` and `:8348` are +1 and refs after `:8348` are +9. Re-pin at build time.
+
+**qa review (10-02): accepted with changes, and the changes are applied here.** The order of record is now
+[agentic-runner/APPROACH.md §4](../agentic-runner/APPROACH.md). This document's steps are referenced from
+there, and its own order below is kept only as the floor-internal sequence.
 - REALIGNMENT is read from `origin/dev` `e028a7f9`, the version with §9.
 - Windows: journals from 09-26 (node 1 11:22Z, node 2 09:57Z) to 10-01; trace-store counts from 09-10 to 10-01, unless a row says otherwise.
 
@@ -128,6 +134,28 @@ So feeding the floor in is necessary but not sufficient: §2.0b's "output chaini
 - the controls are in the track file named;
 - no item widens what is addressable or writable before §9.0, except where marked.
 
+### Step 0 — contain the floor's shell before anything else (qa: HIGH, a live hole)
+
+**The hole.** The floor's `shellResult` resolves to local-tools `shell`, which runs `bash -c` with its working
+directory in the **live super-repo**. That path is not covered by the 10-02 containment fix:
+- development-vessel `c6262c3f`;
+- local-tools `3815e9e7`;
+- goal-host `a72918fd`, which makes walks refuse fs write and commit **shapes**.
+
+A shell command is not a write shape. `GPT-5.md` (09-30 01:47Z, run `27c1c600`) predates the fix, and nothing
+stops a repeat today.
+
+**The gap:** qa filed it as critical, `floor-shell-tool-still-writes-and-commits-in-the-live-super-repo-past-the-containment-fix`.
+
+**The rule:** step 0 precedes step 1. Making calls visible adds no capability, but every later step makes the
+floor's tool use more effective, and a more effective floor with an unconfined shell is a worse hole.
+
+**The seam is the gap's to name.** It is the sandboxed-run primitive (REALIGNMENT §2.5) applied to the shell the
+floor reaches: a private root and tmp, no live env or credentials, a residue manifest, and a canary.
+
+**Must-fail control:** a floor shell command that creates a file under the super-repo leaves no file there and
+no commit.
+
 ### Step 1 — make every floor tool call visible (b, then a). The prerequisite.
 
 - **(b) development-vessel `llm-completion-dispatch.ts:450-492`.** Pass llm-resolver's executed records through under a **new key** (e.g. `tool_transcript`), each stamped with the dispatch's execution id. llm-resolver already returns them, so it needs no change.
@@ -140,7 +168,8 @@ So feeding the floor in is necessary but not sufficient: §2.0b's "output chaini
 2. **Never into the floor row's `tasks[]`.** A reached floor row with all-successful tasks becomes ribosome-eligible, and `learned-universal-tool-fallback` is re-minted under its constant id. Guard: no `activity` row id matches `universal-tool-fallback`.
 
 **Controls:**
-- **Positive:** a `27c1c600`-style run, or the line-count control, shows `tools=N/N` and `groundedOk>0`.
+- **Positive:** the **sandboxed** line-count control (REALIGNMENT §1 R1-15, run under §2.5's sandbox) shows `tools=N/N` and `groundedOk>0`.
+  - A `27c1c600`-style run is **not** an acceptable control: it reproduces the uncontained write (step 0).
 - **Must-fail:** a `tools: []` request yields an empty transcript.
 
 **Side effect:** the transcript also settles where the correct date enters the dispatch path (A §4).
@@ -197,7 +226,9 @@ So feeding the floor in is necessary but not sufficient: §2.0b's "output chaini
 - **Gated on two things:**
   - step 1's positive control;
   - a baseline-first parity battery (E A7) on the same goal set. The flat-prompt protocol may cost answer quality and prompt caching, and the 07-27 failure class (silent degradation to memory answers) must not recur.
-- **Widening the tools to registry shapes with descriptions comes after §9.0.** `ufResolveUrl` takes the first non-libp2p row with no locality check.
+  - **The battery's output goes to a sandboxed store**, never the live memory, gap or trace stores (§2.5; the 09-28 test-residue class).
+- **Widening the tools to registry shapes with descriptions comes after §9.0.1** (shape locality). `ufResolveUrl` takes the first non-libp2p row with no locality check.
+  - "Read-only" is a label, not a property. `shellResult` is labelled read-only and wrote `GPT-5.md`.
   - `web_search` alone, as a one-shape exception, is a decision (§9).
 
 ## 5. Acceptance (E §4, with P0 restated)
@@ -242,7 +273,8 @@ Each needs a class2 falsifier for admission (live `autonomyScope`).
 
 | Gap | Action |
 |---|---|
-| `floor-tools-counter-reads-zero-…` | **Extend.** A, B and D supply its falsifier. Step 1 is its fix. Add both guards. |
+| `floor-shell-tool-still-writes-and-commits-in-the-live-super-repo-past-the-containment-fix` | **Filed by qa (critical, 10-02).** This is step 0. |
+| `floor-tools-counter-reads-zero-…` | **Extend.** A, B and D supply its falsifier, and step 1 is its fix; add both guards.<br>Per qa, **this is also the gap the runner capability extends** (agentic-runner R0). No new gap is minted. |
 | `minted-copy-of-the-floor-shadows-the-floor` | **Becomes a standing must-fail** (no row id matching `universal-tool-fallback`), not a closed item. Record that the template was deleted with no trace. |
 | `severed-joint-ribosome-extraction` | **Close on recovery** (C6). Its detector cannot close today. |
 | `ribosome-extraction-subsumed-by-goalhost-mint-retire-decision` | **Decision** (§9): unify the gate or retire one owner. |
