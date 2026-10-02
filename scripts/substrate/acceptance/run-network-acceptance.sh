@@ -108,8 +108,14 @@ key_sub_from='ANTHROPIC_API_KEY=sk-ant-…'; key_sub_to="${ACCEPTANCE_PROVIDER_V
 [ -n "${ACCEPTANCE_PROVIDER_KEY:-}" ] || { key_sub_from='ANTHROPIC_API_KEY=sk-ant-… '; key_sub_to=''; }
 
 # ── 1. The hub, by the page's hub blocks ──────────────────────────────────────────
+# Both nodes run the hold channel as declared acceptance installs, so the run judges the
+# image it names: a fresh canary converges to origin/dev within minutes of boot and
+# restarts what it moves under the checks. The pair is throwaway and the spoke (itself on
+# hold, with no push token) is the hub's only peer, so nothing outside it lands into the
+# hub's gap store, which is what lets the hub, its holder, hold.
 log "installing the hub from the page's install:hub blocks (public address $host_ip)"
 SUBSTRATE_NAME="$HUB_NAME" SUBSTRATE_PORT_PREFIX="$HUB_PREFIX" SUBSTRATE_IMAGE="$IMAGE" \
+SUBSTRATE_ACCEPTANCE=1 SUBSTRATE_UPDATE_CHANNEL=hold \
 METABOB_CONFIG_PATH="$root/hub-config.json" \
   run_case hub "$root/hub" "$key_sub_from" "$key_sub_to" '<address spokes reach>' "$host_ip"
 hub_rc=$?
@@ -141,6 +147,7 @@ spoke_rc=99
 if [ -n "$join_token" ]; then
   log "installing the spoke from the page's install:spoke blocks, with the hub's join token"
   SUBSTRATE_NAME="$SPOKE_NAME" SUBSTRATE_PORT_PREFIX="$SPOKE_PREFIX" SUBSTRATE_IMAGE="$IMAGE" \
+  SUBSTRATE_ACCEPTANCE=1 SUBSTRATE_UPDATE_CHANNEL=hold \
   METABOB_CONFIG_PATH="$root/spoke-config.json" \
     run_case spoke "$root/spoke" '<join token from the hub>' "$join_token"
   spoke_rc=$?
@@ -239,6 +246,22 @@ for c in "$HUB_C" "$SPOKE_C"; do
   eng exec "$c" sh -c 'journalctl -b -u federation-relay --no-pager -n 1500' >"$RESULT_DIR/diag/relay-$c.log" 2>&1 || true
   eng exec "$c" sh -c 'curl -s -m5 http://127.0.0.1:8401/health' >"$RESULT_DIR/diag/transport-health-$c.json" 2>&1 || true
 done
+# Last: both nodes still run the code the image baked (substrate-status compares each
+# vessel's src/ hash with the image's build-time marker). hold stops pull-sync, but other
+# writers can still change /vessels, and a verdict about a moved tree is not about the image.
+ic='{}'
+for c in "$HUB_C" "$SPOKE_C"; do
+  eng exec "$c" substrate-status --level live --json >"$RESULT_DIR/diag/status-end-$c.json" 2>/dev/null || true
+  ic="$(jq -c --arg c "$c" --slurpfile s "$RESULT_DIR/diag/status-end-$c.json" '. + {($c): (
+          if ($s | length) > 0 and ($s[0].vessels | type) == "array" then
+            {moved: [$s[0].vessels[] | select(.running == "moved") | .vessel],
+             unchecked: [$s[0].vessels[] | select(.running == "unknown") | .vessel],
+             channel: $s[0].update_channel.channel, enforced: $s[0].update_channel.enforced}
+          else {why: "substrate-status gave no vessel rows"} end)}' <<<"$ic" 2>/dev/null || echo "$ic")"
+done
+if jq -e 'to_entries | length == 2 and all(.value.moved != null and (.value.moved | length) == 0 and (.value.unchecked | length) == 0)' <<<"$ic" >/dev/null 2>&1; then
+  set_check image_code pass "$ic"
+else set_check image_code fail "$ic"; fi
 for f in "$RESULT_DIR"/diag/*; do [ -f "$f" ] && { t="$(cat "$f")"; redact "$t" >"$f"; }; done
 
 failed="$(jq -r '[to_entries[] | select(.value.result == "fail") | .key] | join(",")' <<<"$checks")"

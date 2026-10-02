@@ -34,6 +34,10 @@
 #                  Podman), the launched container carries a healthcheck, the image
 #                  carries its revision label and file, and the container's stop timeout
 #                  covers the longest vessel drain plus the datastore flush
+#   6. image code  at the end of the run, every vessel still runs the code the image
+#                  baked (substrate-status's per-vessel src/ hash against the build-time
+#                  marker). The fleet is installed on the hold channel as a declared
+#                  acceptance install, so a verdict is about the image, not about dev.
 #
 # MODES
 #
@@ -51,7 +55,8 @@
 #
 # The only inputs a fence sees are HOME (fresh), PATH, the locale, XDG_RUNTIME_DIR and
 # DBUS_SESSION_BUS_ADDRESS for rootless Podman, the provider key under the page's
-# variable name, SUBSTRATE_IMAGE, and for the hub and spoke cases the values the
+# variable name, SUBSTRATE_IMAGE, SUBSTRATE_ACCEPTANCE=1 with SUBSTRATE_UPDATE_CHANNEL=hold,
+# and for the hub and spoke cases the values the
 # page leaves as placeholders (PUBLIC_IP; DISCOVERY_ENDPOINT + METABOB_API_KEY).
 # Two kinds of substitution are applied to the page text and counted in the result:
 #   - the page's public image reference (INSTALL_IMAGE_REF) becomes the digest under
@@ -165,6 +170,12 @@ fence_env=(
   "LANG=C.UTF-8"
   "TERM=dumb"
   "SUBSTRATE_IMAGE=$IMAGE"
+  # Judge the image this run names, not what dev has become: a fresh canary converges to
+  # origin/dev within minutes of boot, so without hold the verdict was "image plus dev"
+  # (and that convergence restarted discovery under the usable probe). Each fleet here is
+  # throwaway and declared so; that declaration is what lets its gap-store holder hold.
+  "SUBSTRATE_ACCEPTANCE=1"
+  "SUBSTRATE_UPDATE_CHANNEL=hold"
 )
 # Rootless Podman on cgroups v2 needs the user's runtime dir and session bus.
 [ -n "${XDG_RUNTIME_DIR:-}" ] && fence_env+=("XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR")
@@ -623,6 +634,22 @@ if [ "$have_container" -eq 1 ]; then
     eng exec "$ACCEPTANCE_CONTAINER" journalctl -u substrate-pull-sync --no-pager -n 400 >"$RESULT_DIR/diag/pull-sync.log" 2>&1 || true
     grep -E 'testgate|test gate|pull-sync-testgate-' "$RESULT_DIR/diag/pull-sync.log" >"$RESULT_DIR/diag/pull-sync-testgate.txt" 2>/dev/null || true
   fi
+  # The verdict is about the image only if every vessel still runs what it baked. hold
+  # stops pull-sync converging, but other writers can still change /vessels (a release
+  # checkout, drift repair, a cutover), so this is read last, after the pull-sync tick
+  # above: substrate-status compares each vessel's src/ content hash with the image's
+  # build-time marker. A vessel it cannot check (no marker line) is named, not passed.
+  eng exec "$ACCEPTANCE_CONTAINER" substrate-status --level live --json >"$RESULT_DIR/diag/status-end.json" 2>/dev/null || true
+  if jq -e '.vessels | type == "array"' "$RESULT_DIR/diag/status-end.json" >/dev/null 2>&1; then
+    ic="$(jq -c '{moved: [.vessels[] | select(.running == "moved") | .vessel],
+                  unchecked: [.vessels[] | select(.running == "unknown") | .vessel],
+                  channel: .update_channel.channel, enforced: .update_channel.enforced}' "$RESULT_DIR/diag/status-end.json")"
+    if [ "$(jq '.moved | length' <<<"$ic")" = 0 ] && [ "$(jq '.unchecked | length' <<<"$ic")" = 0 ]; then
+      set_check image_code pass "$ic"
+    else set_check image_code fail "$ic"; fi
+  else
+    set_check image_code fail '{"why":"substrate-status gave no vessel rows at the end of the run"}'
+  fi
 else
   status_note="the install page launched no container named $ACCEPTANCE_CONTAINER"
 fi
@@ -631,7 +658,7 @@ digest="$(eng image inspect --format '{{json .RepoDigests}}' "$IMAGE" 2>/dev/nul
 
 # ── Judgement ──────────────────────────────────────────────────────────────────
 judged_levels=(live seeded served)
-judged_checks=(cold extraction image_format healthcheck revision stop_timeout)
+judged_checks=(cold extraction image_format healthcheck revision stop_timeout image_code)
 if [ "$mode" = "gating" ]; then
   judged_levels+=(usable connected)
   judged_checks+=(client_config auth_request cockpit_query)
