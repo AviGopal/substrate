@@ -450,6 +450,36 @@ else
   set_check revision unknown '{"detail":"image not present to inspect"}'
 fi
 
+# 5d. Contained runner for drafted tests (development-vessel falsify-authored-test.ts). gap_falsify's
+# authored_test rule runs model-written test files; the module refuses to run one unless, inside the same
+# sandbox, its probes prove uid 65534, no network, a read-only vessel, a private /tmp, a scrubbed env and
+# unwritable live stores. Its containmentSelfCheck proves those probes against THIS image in THIS
+# (privileged) container: the full sandbox runs a harmless fixture, and each single layer disabled — and a
+# world-writable store path — is refused with the fixture never executed. A skip here is a failure: the
+# acceptance container is privileged, so "containment unavailable" means the boundary is broken. Judged
+# only when the image carries the module (an image built before it has nothing to prove).
+contained_runner_judged=0
+CR_MODULE=/vessels/development-vessel/src/resolvers/falsify-authored-test.ts
+if [ "$have_container" -eq 1 ]; then
+  if eng exec "$ACCEPTANCE_CONTAINER" test -f "$CR_MODULE" 2>/dev/null; then
+    contained_runner_judged=1
+    cr_rc=0
+    timeout 600 env -i "${fence_env[@]}" "$ENGINE" exec "$ACCEPTANCE_CONTAINER" sh -c \
+      'PATH=/root/.bun/bin:/usr/local/bin:/usr/bin:/bin; cd /vessels/development-vessel && exec bun -e "$1"' sh \
+      "const m = await import(\"$CR_MODULE\"); const r = await m.containmentSelfCheck(); console.log(JSON.stringify(r)); process.exit(r.ok ? 0 : (r.skipped ? 2 : 1));" \
+      >"$RESULT_DIR/diag/contained-runner.txt" 2>&1 || cr_rc=$?
+    cr_json="$(grep -a '^{"ok":' "$RESULT_DIR/diag/contained-runner.txt" | tail -n 1)"
+    jq -e . >/dev/null 2>&1 <<<"$cr_json" || cr_json='null'
+    cr_r=fail; [ "$cr_rc" -eq 0 ] && [ "$(jq -r '.ok // false' <<<"$cr_json")" = true ] && cr_r=pass
+    set_check contained_runner "$cr_r" "$(jq -nc --argjson rc "$cr_rc" --argjson r "$cr_json" \
+      '{exit: $rc, skipped: ($r.skipped // null), checks: (($r.checks // []) | map({name, ok})), log: "diag/contained-runner.txt"}')"
+  else
+    set_check contained_runner unknown "$(jq -nc --arg m "$CR_MODULE" '{detail: ("not judged: the image has no " + $m)}')"
+  fi
+else
+  set_check contained_runner unknown '{"detail":"no container to inspect"}'
+fi
+
 # 5d. Stop timeout versus the drain budget.
 #   budget = the longest vessel drain (any *_DRAIN_MS a unit is started with)
 #          + the datastore's own stop timeout (its flush allowance)
@@ -675,6 +705,7 @@ digest="$(eng image inspect --format '{{json .RepoDigests}}' "$IMAGE" 2>/dev/nul
 # ── Judgement ──────────────────────────────────────────────────────────────────
 judged_levels=(live seeded served)
 judged_checks=(cold extraction image_format healthcheck revision stop_timeout image_code glue_tests)
+[ "$contained_runner_judged" = 1 ] && judged_checks+=(contained_runner)
 if [ "$mode" = "gating" ]; then
   judged_levels+=(usable connected)
   judged_checks+=(client_config auth_request cockpit_query)
