@@ -21,7 +21,7 @@ The substrate develops itself, so the same thing that lands a change has to deci
   - no new failure class in the canary's journal compared with before the change.
 
   If all of that passes, it fast-forwards `fleet` to that revision in each repository it covered, and writes the verdict as a trace. If it fails, it files a gap that names the revision and its evidence, and `fleet` does not move.
-- **A landing node's clones stay on `dev`, whatever its channel.** `vessel-mitosis-cutover` builds commits on the clone's HEAD and pushes them to `origin dev`, so clones that converged to `fleet` would build landings on the wrong base. The design separates "the revision a node runs" (`/vessels`, mirrored from the channel's ref) from "the revision a node develops on" (the push clones, always `dev`).
+- **A landing node's clones stay on `dev`, whatever its channel.** `vessel-mitosis-cutover` builds commits on the clone's HEAD and pushes them to `origin dev`, so clones that converged to `fleet` would build landings on the wrong base. On non-canary nodes, pull-sync keeps two trees per vessel (`design.md`): the push clone on `dev` for developing, grounding and closure, and a runtime source at the channel's ref that is the only thing mirrored into `/vessels`. Every runtime comparison (skip, last-good, revert) moves to the runtime source.
 - **The human interface is one value.** Changing a node's channel is a single `.env` line followed by the install command. `substrate-status` shows the channel, the revision the node runs, the head of the channel's ref, and the gap between them.
 
 ## What This Does Not Change
@@ -36,6 +36,8 @@ The substrate develops itself, so the same thing that lands a change has to deci
 |---|---|
 | `2026-05-23-substrate-self-deployment` (canary regressions, `revert-self-deployed-change`) | 0 of 36 tasks. Its safety was a post-merge revert. REALIGNMENT §7 (R1-12) counts it among five unbuilt revert specifications, superseded by contained-self-development 8.3/8.4. |
 | contained-self-development 8.3/8.4 (settlement-triggered lane revert) | The carried revert path. Still a revert *after* every node runs the change. |
+| `self_fact_reconcile` (development-vessel) | Already a canary-shaped positive control: it checks a live fact on a node after convergence. It judges facts, not deployments. Advancing reuses this pattern as its §2.1 rows rather than minting a new judge. |
+| Post-land suite, pull-sync `TEST REGRESSION` | Per-commit test evidence after landing. They run on every node at once, so they detect a regression only once it is everywhere; their output never reached settlement (REALIGNMENT §7). Advancing keeps them on canaries, where a regression stays local. |
 
 What differs: nothing here reverts. A change reaches `fleet` nodes only after it is judged on canaries, so the default for a bad change is "it never left the canaries", not "it is undone everywhere". This complements 8.3/8.4 rather than replacing it: revert still matters for a change that passed the canary judgement and was wrong anyway.
 

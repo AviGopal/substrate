@@ -2,31 +2,68 @@
 
 ### Branches, not a release file
 
-The advanced state is a git ref, `fleet`, per repository. It is not a manifest of revisions kept somewhere else. `pull-sync` already converges to `origin/$BRANCH`, along with its divergence and last-good handling, so a ref keeps that logic unchanged.
+The verified state is a git ref, `fleet`, per repository. It is not a manifest of revisions kept somewhere else. A ref keeps git's own fetch, ancestry and fast-forward semantics. The cost is that one advance moves up to 19 refs (super-repo plus vessels), and those moves are not atomic; see "What advancing moves" for why that is safe.
 
-The cost is that one advance moves up to 19 refs (super-repo plus vessels), and those moves are not atomic. A node that fetches halfway through sees some repositories advanced and others not. Two things limit the harm:
-- Advancing moves refs in dependency order: shared packages first, then vessels, then the super-repo.
-- Each repository's `fleet` only ever fast-forwards to a revision that has already run on canaries, so a partial state is a mix of verified revisions, never an unverified one.
+### Two trees per vessel on a fleet node: the clone develops, the runtime source runs
 
-### Running revision vs development revision
+Today one tree per vessel does everything. `pull-sync` keeps the push clone on `origin/dev`, then:
+- skips a vessel when the clone's content hash equals `/vessels/<v>` (`:887`);
+- mirrors the clone into `/vessels`;
+- pins last-good to the clone's HEAD (`:893`, `:1748`, `:1875`) and reverts to it when a vessel comes up unhealthy.
 
-Today one clone serves two purposes:
-- it is the source `pull-sync` mirrors into `/vessels` (what runs);
-- it is the base `vessel-mitosis-cutover` commits on before `git push origin dev` (what develops).
+The marker, `DIST_RETRY` and the owed-restart record all key on that one tree. If the clone stays on `dev` but `/vessels` follows `fleet`, every one of those comparisons is between the wrong pair:
+- the skip never fires;
+- an unhealthy revert would restore a `dev` pin onto a `fleet` node.
 
-The rollout needs those to diverge on `fleet`-channel nodes. The clones stay on `dev`, and `pull-sync` mirrors `/vessels` from `git archive origin/<channel ref>` (or a worktree at that ref) instead of from the clone's working tree. Divergence handling, last-good pins and the test gate keep operating on the clone, unchanged. The mirror step is the only thing that reads the channel.
+So on a node whose channel is not `canary`, `pull-sync` keeps two trees per vessel:
+- **The push clone** is unchanged: on `dev`, fetched, rebased and pushed as today. Grounding, composing, check-first and closure read it.
+- **The runtime source** is a worktree at `origin/<channel ref>` under `/workspace/.pull-sync/runtime/<v>`. It is the only tree mirrored into `/vessels`.
+
+Every runtime-side comparison moves to the runtime source:
+- the skip compares runtime-source hash to `/vessels`;
+- last-good records the runtime source's SHA, per channel;
+- an unhealthy revert restores the previous runtime-source SHA;
+- the marker, `DIST_RETRY` and owed-restart are keyed on `(channel, runtime SHA)`.
+
+On a `canary` node the runtime source *is* the clone, so today's code path is unchanged there.
+
+The super-repo glue layer follows the same rule. Scripts, the federation wrapper and pull-sync's own self-update converge to the channel's ref. A fleet node therefore runs a pull-sync that canaries have already run.
+
+### The test gate runs on canaries only
+
+`tracked_fail_names` (`:116`) decides "red on purpose" from the files one commit changed. A `fleet` delta spans many `dev` commits, so that per-commit reasoning doesn't apply there.
+- **Canaries:** run the gate exactly as today, per `dev` commit.
+- **Fleet and hold nodes:** do not run it. The revisions they receive were judged on canaries, and re-judging a multi-commit delta with per-commit logic would produce false regressions.
+- **Test-only restart skip** (`afb2af1e`): on fleet nodes it classifies the mirrored ref's delta (previous runtime SHA to new runtime SHA), not the clone's `PREV_GOOD..HEAD`.
 
 ### Verification of landings always reads `dev`
 
-The landing path judges `dev`, never a node's channel. The gap sweep closes landings as `landed_verified` by re-running a gap's class-2 check. That check, `evidence_resolve`, and pull-sync's check-first subtraction all evaluate at `origin/dev`, in the push clone or a worktree at that ref. A node on `fleet` or `hold` must not see a fresh landing as "absent", and must not judge it against the tree it happens to run. The gap-store holder (node 1 today) may be on any channel without changing what closure sees.
+The landing path judges `dev`, never a node's channel. The gap sweep closes landings as `landed_verified` by re-running a gap's class-2 check. That check, `evidence_resolve`, and the check-first subtraction all evaluate in the push clone, which is on `dev` on every node. A node on `fleet` or `hold` must not see a fresh landing as "absent", and must not judge it against the tree it happens to run. The gap-store holder (node 1 today) may be on any channel without changing what closure sees.
 
-### What the lane grounds on vs what runs
+### Masked but owned vessels: fetch the clone, never mirror
 
-Two sources, two rules:
-- **Grounding** (the source a compose or edit reads and anchors on) follows the push clone: always `dev`.
-- **Runtime** (`/vessels`, what the unit executes) follows the channel.
+`pull-sync` skips a vessel whose unit is masked before it even fetches (`:888`), so the push clone of a vessel this node lands for, but runs elsewhere, goes stale. That is the cause of `node2-compose-grounds-from-a-stale-runtime-mirror-of-a-masked-owned-vessel-so-edits-miss-their-anchor`.
 
-A vessel that a node owns for landing but has masked (it runs elsewhere) still gets its source mirrored from `dev` for grounding, with no restart. This absorbs the filed gap `node2-compose-grounds-from-a-stale-runtime-mirror-of-a-masked-owned-vessel-so-edits-miss-their-anchor`: node 2 owns activity-api's lane but never mirrored it because the unit is masked, and its edits failed with `anchor_not_found`.
+The fix is to fetch and fast-forward that vessel's push clone, so the lane grounds on current `dev`. Nothing is mirrored into `/vessels`. A `dev` tree in `/vessels` on a fleet node would run unverified code the moment the unit is unmasked.
+
+### A missing ref fails closed
+
+If a node's channel ref does not exist on the remote (for example, `fleet` before task 4.1), `pull-sync`:
+- mirrors nothing;
+- records `ref_missing: true` in `/workspace/.pull-sync/channel.json`;
+- files one gap per tick window, not per tick.
+
+`substrate-status` reports `channel_ref_missing`. It never falls back to `dev`: a silent fallback would make every node a canary while status said `fleet`. Task 4.1 (creating the refs) is therefore ordered before task 2 deploys.
+
+### The convergence record
+
+Each tick, `pull-sync` writes `/workspace/.pull-sync/channel.json`: `{channel, ref, sha, at, ref_missing}`, with the super-repo's runtime SHA and a per-vessel `{vessel: sha}` map. `substrate-status` reads `enforced` from this record (`0263d724`): true only when it names the declared channel and the ref exists. It never infers enforcement from pull-sync's source.
+
+### `hold` is a channel and a shaped override
+
+As an install input, the channel is placement, legitimate bootstrap like `PROFILE` (law 1, law 11). Freezing a node for a drain or a rebuild is behaviour, though, so `pull-sync` also reads a time-limited `updateHold` impulse (`{node, until, reason}`). A hold impulse overrides any channel until it expires. It is visible in traces, and it does not need a recreate. Setting `hold` in `.env` remains available for a node that should never update.
+
+## Advancing
 
 ### What advancing judges, and where
 
@@ -36,21 +73,32 @@ Advancing runs on a canary node because that is where the change is already runn
 2. **Across the constellation:** a known-answer goal dispatched from the canary whose producer is chosen by discovery on another node, reached and graded.
 3. **No new failure class:** the journal's error classes in the settle window, compared with the window before convergence. One that's new and recurring (for example, a SurrealDB timeout class, or a fallback warning that fires every sweep) refuses advancing.
 
-**The judgement does not touch what the learning loop grades.** The known-answer goal is a battery run (REALIGNMENT §2.5, §7.8). Its traces, memory and gaps go to a sandboxed store, never the stores the loop grades. It feeds no `goal_paths` and mints no templates: on 10-01, acceptance runs minted two wrong templates on node 2 from a reach through an unreadable write, and they had to be retired.
+Each check is registered as a REALIGNMENT §2.1 expectation row with a must-fail control. A check that cannot fail is not a check. The advance verdict is written as a `goal_verification_label`, the same channel every other verdict uses (§2.2).
 
-**A failed advance leaves a settlement row** that the contained-self-development 8.4 reader can act on, as well as a gap. Revert stays 8.3/8.4's job; this change adds no second revert path.
+**The judgement touches nothing the learning loop grades.** The known-answer goal is a battery run (§2.5, §7.8). It needs the sandboxed run that §2.5 specifies: today `run-isolated-verification.sh` is not on `origin/dev` and `sandboxedRun` does not exist. Task 3.5 depends on them and does not invent a store. Until they exist, advancing cannot run check 2 and so cannot advance. That is deliberate: an advance without the cross-node check is the CI-shaped gap this change exists to close.
 
-The settle window is a tuning parameter (default 30 min). It is not an env constant, because when to advance is behaviour (law 1).
+### What advancing moves
 
-### Hold, and how a human sees it
+It moves the exact per-repository SHA set the canary's convergence record showed running throughout the settle window. It never moves the `dev` head at the time of advancing (law 12: what was observed, not what exists now). Refs move in dependency order: shared packages, then vessels, then the super-repo. Each `fleet` only fast-forwards to a SHA that ran on the canary, so a fetch that lands mid-advance sees a mix of SHAs the canary ran together or ran earlier. It never sees an unverified one.
 
-`hold` exists for an operator who needs a node frozen while something runs: a drain, a rebuild, a demo. `substrate-status` reports:
-- `channel`;
-- `running` (the per-vessel revision, as today);
-- `channel_head`;
-- `behind` (commits between them).
+**One advance at a time.** Two canaries could judge different `dev` revisions concurrently. Advancing takes a lease (the existing lease mechanism, `/leases`), so only the holder moves refs, and a canary whose observed set is older than `fleet` already is abstains.
 
-That way a held or lagging node is visible, not silent.
+**Canaries need push scope for `fleet`.** The pushPolicy's landing scope covers `dev`. Advancing pushes `fleet`, which is a separate grant recorded in the policy, not implied by landing scope.
+
+### What a failure records
+
+A failed advance names the SHA range (`fleet`..observed set), the failing check and its evidence. It does not guess which commit in the range caused it; narrowing it down is the gap's work.
+- **Gap:** written through the gap store's resolve, so it is fleet-wide.
+- **Settlement:** contained-self-development 8.4's reader does not exist yet (8.3 unbuilt, 8.4 deferred), and settlement rows are per-node JSONL, so a canary that is not the gap-store holder writes rows nobody reads. Until 8.4 has a reader, the gap is the record, and the settlement row is written to the gap-store holder through the same resolve.
+
+### The no-canary watchdog runs everywhere
+
+Advancing runs only on canaries, so it cannot notice that no canary exists. Every non-canary node's `pull-sync` already knows its `behind` count: commits from its channel ref to `dev`. When `behind` exceeds a tuning threshold for longer than a tuning window, it files one gap ("fleet has not advanced in N hours, M commits behind").
+
+### Builder and trust
+
+- **Builder:** a change to `fleet_advance`, to the channel logic in `pull-sync`, or to the advance checks is a change to the judge of the substrate's own deployment. These are builder **(a)** (operator-authored; the lane may draft, not land), like discovery and identity in REALIGNMENT §2.4.
+- **Precondition (REALIGNMENT §9.0):** development-vessel's resolve route is unauthenticated, and policy reads span peers. So the settle window and failure-class tolerance (tuning parameters) could be set by a peer. Advancing reads them only after policy writes are authenticated. Until then, they are constants in the image, deliberately, and listed as such.
 
 ## Open question: constellations the network does not have
 
@@ -59,5 +107,5 @@ Live advancing tests the constellation that exists (today: one hub, two peers, s
 ## Risks
 
 - **A canary that is also the hub.** If the hub converges to `dev` first, a bad change hits the node everything depends on. The hub defaults to `fleet`, and canaries are leaf-ish nodes that still exercise cross-node paths.
-- **No canary online.** `fleet` stops moving and every `fleet` node falls behind, while landings keep accumulating on `dev`. `substrate-status` on any node shows `behind` growing, and the advancing activity files a gap when no canary has reported within its window.
-- **The advancing check is too lenient.** Same failure class as a hollow reach. The CI witness and the gap triple measure it: a regression first seen after advancing is a gap in the advancing check.
+- **The advancing check is too lenient.** Same failure class as a hollow reach. The must-fail controls, the CI witness and the gap triple measure it: a regression first seen after advancing is a gap in the advancing check.
+- **Two trees per vessel cost disk and fetch time** on fleet nodes. A worktree shares the clone's object store, so the cost is one checkout per vessel, not one clone.
