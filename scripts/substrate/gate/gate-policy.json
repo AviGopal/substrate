@@ -1,0 +1,22 @@
+{
+  "_doc": "Gate policy as DATA (law 1/2). Read by gate-runner (staging) and candidate.sh (classification) from the ACCEPTED copy only. gate_paths: what the accepted gate holds; a candidate touching one is shadow-evaluated, never installed or run until promoted. fixture_paths: the accepted corpus; a candidate may ADD (ordinary) but any other status is a widening (H2). Removing an entry from gate_paths or fixture_paths is a widening. soak_ticks: consecutive passing shadow ticks before promote.request. canary_order: root-code rollout order (H5), informational for P. Globs: shell case patterns, '*' crosses '/'.",
+  "version": 1,
+  "gate_paths": [
+    "scripts/substrate/substrate-pull-sync.sh",
+    "scripts/substrate/mirror-to-live.sh",
+    "scripts/substrate/gate/*",
+    "scripts/substrate/units/substrate-pull-sync.*",
+    "scripts/substrate/units/vessel.d/*",
+    "validation/scripts/gate/*"
+  ],
+  "fixture_paths": [
+    "validation/scripts/gate/fixtures/*"
+  ],
+  "classifier": {
+    "fixture_ordinary_status": ["A"]
+  },
+  "soak_ticks": { "default": 3 },
+  "canary_order": ["compose2-live", "substrate-live", "pubspoke", "syzygy"],
+  "history_keep": 5,
+  "body_fail_limit": 3
+}

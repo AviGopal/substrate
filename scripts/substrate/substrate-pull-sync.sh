@@ -31,6 +31,25 @@ PULLSYNC_ARGS=("$@")
 # measured against the unit timeout, which the exec does not reset.
 if [ "${PULLSYNC_REEXECED:-}" = 1 ] && [ -n "${PULLSYNC_T0:-}" ]; then :; else PULLSYNC_T0="$(date +%s)"; fi
 GEN_QUEUE=""
+# PINNED JUDGE (scripts/substrate/gate/). gate-runner (substrate-pull-sync.service's ExecStart)
+# runs THIS file from /workspace/.gate/accepted/ — a `git archive` of the accepted sha — and
+# sets PULLSYNC_ACCEPTED_DIR to that copy. In that mode (the "gated" mode):
+#   - SELF-CONVERGE FIRST no longer installs or execs the pulled pull-sync (the 847025e2
+#     run-on-arrival path). A new pull-sync, like any change to a gate path in the accepted
+#     MANIFEST, is a CANDIDATE: candidate.sh (from accepted/) classifies it and shadow-runs the
+#     accepted fixture corpus against it; a pass that soaks N ticks writes promote.request, and
+#     only the runner swaps it in. The code that applies a change is always the accepted one.
+#   - every staged glue tree has its gate paths replaced by the ACCEPTED copies (gate_overlay),
+#     so no install reads a candidate's gate file; other paths keep converging as before.
+#   - mirror-to-live runs from accepted/, never from /usr/local/bin.
+# Unset (the image's pre-bootstrap tick, the tests) = the old behaviour, unchanged.
+PULLSYNC_ACCEPTED_DIR="${PULLSYNC_ACCEPTED_DIR:-}"
+PULLSYNC_GATE_DIR="${PULLSYNC_GATE_DIR:-${PULLSYNC_ACCEPTED_DIR:+${PULLSYNC_ACCEPTED_DIR%/*}}}"
+GATE_LIBEXEC_DIR="${PULLSYNC_LIBEXEC_DIR:-/usr/local/libexec/substrate}"
+MIRROR_BIN=/usr/local/bin/mirror-to-live
+if [ -n "$PULLSYNC_ACCEPTED_DIR" ] && [ -f "$PULLSYNC_ACCEPTED_DIR/scripts/substrate/mirror-to-live.sh" ]; then
+  MIRROR_BIN="$PULLSYNC_ACCEPTED_DIR/scripts/substrate/mirror-to-live.sh"
+fi
 
 CLONE_DIR="${MITOSIS_PUSH_CLONE_DIR:-/workspace/git/vessels}"
 RUNTIME_DIR="${MITOSIS_RUNTIME_DIR:-/vessels}"
@@ -409,6 +428,48 @@ glue_divergence_gap() { # super path what
   fi
 }
 
+# gate_overlay <stage-dir> <sha> (gated mode only): every gate path in the staged tree
+# (MANIFEST.gate_paths of the ACCEPTED copy) is replaced by the accepted file, a gate path
+# the accepted version lacks is removed, and an accepted gate file the commit deleted comes
+# back. Installs below then never read a candidate's gate file; candidate.sh judges it.
+gate_overlay() {
+  local d="$1" sha="$2" rel g n=0 globs=()
+  mapfile -t globs < <(jq -r '.gate_paths[]?' "$PULLSYNC_ACCEPTED_DIR/MANIFEST.json" 2>/dev/null)
+  [ "${#globs[@]}" -gt 0 ] || { log "gate: !!! the accepted MANIFEST names no gate_paths"; return 1; }
+  while IFS= read -r rel; do
+    for g in "${globs[@]}"; do
+      [[ "$rel" == $g ]] || continue
+      if [ -f "$PULLSYNC_ACCEPTED_DIR/$rel" ]; then
+        cmp -s "$PULLSYNC_ACCEPTED_DIR/$rel" "$d/$rel" || { rm -f "$d/$rel"; cp -p "$PULLSYNC_ACCEPTED_DIR/$rel" "$d/$rel" || return 1; n=$((n+1)); }
+      else
+        rm -f "$d/$rel" || return 1; n=$((n+1))
+      fi
+      break
+    done
+  done < <(cd "$d" && find scripts ! -type d 2>/dev/null)
+  while IFS= read -r rel; do
+    [ -e "$d/$rel" ] && continue
+    mkdir -p "$d/$(dirname "$rel")" && cp -p "$PULLSYNC_ACCEPTED_DIR/$rel" "$d/$rel" || return 1; n=$((n+1))
+  done < <(cd "$PULLSYNC_ACCEPTED_DIR" && find scripts -type f 2>/dev/null)
+  [ "$n" -gt 0 ] && log "gate: $n gate path(s) in ${sha:0:10} differ from the accepted gate — installing the ACCEPTED copies; the candidate is judged by shadow evaluation"
+  return 0
+}
+
+# gate_candidate <sha> (gated mode only): judge a super-repo commit with candidate.sh from
+# accepted/. It never installs or runs the candidate; its GAP lines are filed here.
+gate_candidate() {
+  local out line cs="$PULLSYNC_ACCEPTED_DIR/scripts/substrate/gate/candidate.sh"
+  [ -f "$cs" ] || { log "gate: !!! no classifier in the accepted gate — gate candidates are NOT evaluated (and never installed)"; return 0; }
+  out="$(bash "$cs" --gate-dir "$PULLSYNC_GATE_DIR" --super "$SUPER_DIR" --candidate "$1" 2>&1)"
+  while IFS= read -r line; do
+    case "$line" in
+      'GAP '*) emit_gap "${line#GAP }" ;;
+      '') ;;
+      *) log "gate: $line" ;;
+    esac
+  done <<< "$out"
+}
+
 # stage_committed_glue <super-dir> — sets PULLSYNC_GLUE_STAGE to a directory whose
 # scripts/substrate is the committed tree. Returns 1 (and installs nothing) when it
 # cannot. Staged once per (clone, commit) per run.
@@ -455,6 +516,10 @@ stage_committed_glue() {
       log "glue: !!! DIVERGENCE — $path is $what in $super; NOT installed (the committed copy from ${sha:0:10} is)"
       glue_divergence_gap "$super" "$path" "$what"
     done <<< "$dirty"
+  fi
+  if [ -n "${PULLSYNC_ACCEPTED_DIR:-}" ] && ! gate_overlay "$dir" "$sha"; then
+    log "glue: !!! could not overlay the accepted gate paths — installing NOTHING this tick"
+    return 1
   fi
   PULLSYNC_GLUE_KEY="$super@$sha"
   PULLSYNC_GLUE_KEY_DIR="$dir"
@@ -598,7 +663,18 @@ if [ "${PULLSYNC_REEXECED:-}" != 1 ] && [ "$SUPER_FETCH_OK" = 1 ]; then
   _se_self="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || true)"
   if [ -n "$_se_self" ] && [ -r "$_se_self" ] && stage_committed_glue "$SUPER_DIR"; then
     _se_src="$PULLSYNC_GLUE_STAGE/scripts/substrate"
-    if [ -f "$_se_src/substrate-pull-sync.sh" ] && ! cmp -s "$_se_src/substrate-pull-sync.sh" "$_se_self"; then
+    if [ -n "$PULLSYNC_ACCEPTED_DIR" ]; then
+      # GATED: no run-on-arrival. The helpers converge from the overlaid stage (a gate-path
+      # helper such as mirror-to-live is the ACCEPTED copy there); the pulled commit is judged.
+      for _se_pair in "mirror-to-live.sh:mirror-to-live" "self-recovery-tick.sh:self-recovery-tick"; do
+        _se_from="$_se_src/${_se_pair%%:*}"; _se_to="$BIN_DIR/${_se_pair#*:}"
+        [ -f "$_se_from" ] && [ -e "$_se_to" ] || continue
+        cmp -s "$_se_from" "$_se_to" && continue
+        install -m 0755 "$_se_from" "$_se_to.new" 2>/dev/null && mv -f "$_se_to.new" "$_se_to" 2>/dev/null \
+          && log "self: converged $(basename "$_se_to")"
+      done
+      gate_candidate "${PULLSYNC_GLUE_KEY##*@}"
+    elif [ -f "$_se_src/substrate-pull-sync.sh" ] && ! cmp -s "$_se_src/substrate-pull-sync.sh" "$_se_self"; then
       if ! _se_syn="$(bash -n "$_se_src/substrate-pull-sync.sh" 2>&1)"; then
         log "self: !!! the committed substrate-pull-sync.sh does not parse — NOT installed; this tick finishes on the running code: $(printf '%s' "$_se_syn" | tr '\n' ' ' | cut -c1-300)"
         emit_gap "$(jq -n -c --arg s "pull-sync refused to install the committed scripts/substrate/substrate-pull-sync.sh because bash -n rejects it: $(printf '%s' "$_se_syn" | tr '\n' ' ' | cut -c1-300). The node keeps converging on its installed copy until a parsing commit lands." \
@@ -2240,7 +2316,8 @@ EOF
   # Taken BEFORE the mirror: what the running unit's non-test code is, vs the clone's.
   RUNTIME_NONTEST="$(content_hash_nontest "$RUNTIME_DIR/$v")"; CLONE_NONTEST="$(content_hash_nontest "$d")"
   log "$v: content ${RUNTIME_HASH:0:10} -> ${CLONE_HASH:0:10} (git ${HEAD:0:10}) — mirroring into $RUNTIME_DIR"
-  if ! /usr/local/bin/mirror-to-live "$v" "$CLONE_DIR"; then
+  # Gated: the ACCEPTED mirror-to-live, never /usr/local/bin's (the literal stays for the slice tests).
+  if ! { if [ -n "${PULLSYNC_ACCEPTED_DIR:-}" ]; then bash "$MIRROR_BIN" "$v" "$CLONE_DIR"; else /usr/local/bin/mirror-to-live "$v" "$CLONE_DIR"; fi; }; then
     log "$v: mirror failed — skipping"; failed=$((failed+1)); continue
   fi
   echo "$CLONE_HASH" > "$MARKER"
@@ -2493,7 +2570,7 @@ EOF
         REVERT_OK=0; REVERT_WHY=""; REVERT_HEALTH=""
         if [ -z "$PREV_GOOD" ]; then
           REVERT_WHY="no last-good pin recorded"
-        elif ! /usr/local/bin/mirror-to-live "$v" "$CLONE_DIR" "$PREV_GOOD" "$PREV_GOOD"; then
+        elif ! { if [ -n "${PULLSYNC_ACCEPTED_DIR:-}" ]; then bash "$MIRROR_BIN" "$v" "$CLONE_DIR" "$PREV_GOOD" "$PREV_GOOD"; else /usr/local/bin/mirror-to-live "$v" "$CLONE_DIR" "$PREV_GOOD" "$PREV_GOOD"; fi; }; then
           REVERT_WHY="mirror-to-live of ${PREV_GOOD:0:10} failed"
         elif ! revert_target_hashes "$d" "$PREV_GOOD" "$RUNTIME_DIR/$v"; then
           REVERT_WHY="$RT_WHY"
@@ -2771,6 +2848,27 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
         echo "$SHEAD" > "$LAST_GOOD_DIR/super-repo"
         synced=$((synced+1))
       fi
+    fi
+  fi
+fi
+
+# THE GATE RUNNER ARRIVES BEFORE THE UNIT THAT NAMES IT (ungated mode only: the last
+# run-on-arrival tick, stated). substrate-pull-sync.service's ExecStart runs
+# $GATE_LIBEXEC_DIR/gate-runner; installing that unit with the runner absent would stop
+# self-update on this node. The unit also guards it (see its ExecStart). Once gated, the
+# runner is bootstrap tier: image, or this path on a node not yet bootstrapped.
+if [ -z "$PULLSYNC_ACCEPTED_DIR" ] && [ "$SUPER_FETCH_OK" = 1 ] && stage_committed_glue "${SUPER_REPO_DIR:-/workspace/git/super-repo}"; then
+  _gr_src="$PULLSYNC_GLUE_STAGE/scripts/substrate/gate/gate-runner.sh"
+  if [ -f "$_gr_src" ] && ! cmp -s "$_gr_src" "$GATE_LIBEXEC_DIR/gate-runner" 2>/dev/null; then
+    if _gr_syn="$(sh -n "$_gr_src" 2>&1)" && mkdir -p "$GATE_LIBEXEC_DIR" 2>/dev/null \
+       && install -m 0755 "$_gr_src" "$GATE_LIBEXEC_DIR/.gate-runner.new" 2>/dev/null \
+       && mv -f "$GATE_LIBEXEC_DIR/.gate-runner.new" "$GATE_LIBEXEC_DIR/gate-runner" 2>/dev/null; then
+      log "gate: installed $GATE_LIBEXEC_DIR/gate-runner — the next tick runs the accepted gate (bootstrap)"
+      # Exists before the lane units' next restart, so their InaccessiblePaths= binds (a '-'
+      # path absent at namespace build is skipped). entrypoint.sh does the same on boot.
+      mkdir -p -m 0700 /workspace/.gate 2>/dev/null || true
+    else
+      log "gate: !!! could not install $GATE_LIBEXEC_DIR/gate-runner ${_gr_syn:+(sh -n: $(printf '%s' "$_gr_syn" | tr '\n' ' ' | cut -c1-200))}"
     fi
   fi
 fi

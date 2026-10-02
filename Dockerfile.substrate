@@ -250,6 +250,9 @@ COPY scripts/substrate/substrate-config.sh /usr/local/bin/substrate-config
 # docker-cp / bind-mount path is load-bearing.
 COPY scripts/substrate/substrate-pull-sync.sh /usr/local/bin/substrate-pull-sync
 COPY scripts/substrate/mirror-to-live.sh /usr/local/bin/mirror-to-live
+# The pinned judge's core (bootstrap tier): substrate-pull-sync.service runs it; it executes
+# only the accepted gate staged under /workspace/.gate (scripts/substrate/gate/).
+COPY scripts/substrate/gate/gate-runner.sh /usr/local/libexec/substrate/gate-runner
 # Fleet-membership tooling ships IN the image (2026-07-02): install/uninstall/
 # sync a dynamic vessel from the in-container git clones — runnable natively
 # in-container (and dispatchable via local-tools' shell resolver), no host
@@ -381,7 +384,7 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         /usr/local/bin/substrate-pull-sync /usr/local/bin/mirror-to-live \
         /usr/local/bin/vessel-ctl /usr/local/bin/apply-llm-arms \
         /usr/local/bin/render-unit /usr/local/bin/discovery-deregister \
-        /usr/local/bin/self-recovery-tick && \
+        /usr/local/bin/self-recovery-tick /usr/local/libexec/substrate/gate-runner && \
     systemctl enable \
         git-push-setup.service \
         identity-seeder.service \

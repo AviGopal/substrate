@@ -35,6 +35,10 @@ echo "[substrate] generating /etc/substrate/env"
 # self-recovery, pull-sync and vessel-ctl all prefer $FLEET_DIR.
 FLEET_DIR=/workspace/substrate/fleet
 mkdir -p "$FLEET_DIR"
+# The pinned judge's state dir exists BEFORE any unit starts: InaccessiblePaths=-/workspace/.gate
+# (vessel.d drop-in) skips a path that is absent when a unit's namespace is built, so a gate dir
+# created later by gate-runner would stay visible to every lane unit until its next restart.
+mkdir -p -m 0700 /workspace/.gate
 for f in vessels.inventory.json vessels.manifest.json; do
   if [ ! -f "$FLEET_DIR/$f" ] && [ -f "/usr/local/share/substrate/$f" ]; then
     cp "/usr/local/share/substrate/$f" "$FLEET_DIR/$f"
