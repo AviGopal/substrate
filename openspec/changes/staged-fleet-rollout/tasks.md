@@ -1,9 +1,9 @@
 ## 1. Channel as an install input (deployment lane)
 
-- [ ] 1.1 Add `SUBSTRATE_UPDATE_CHANNEL` (`canary` | `fleet` | `hold`, default `fleet`) to the manifest's install inputs, and carry it in the installer.
-- [ ] 1.2 Make gen-env render it into `/etc/substrate/env` and refuse an unknown value, naming the three.
-- [ ] 1.3 Add `channel`, `channel_head` and `behind` to `substrate-status --json` and its text output.
-- [ ] 1.4 Add a README § Installation usage row: change a node's channel with one `.env` line plus the install command.
+- [x] 1.1 Add `SUBSTRATE_UPDATE_CHANNEL` (`canary` | `fleet` | `hold`, default `fleet`) to the manifest's install inputs, and carry it in the installer.
+- [x] 1.2 Make gen-env render it into `/etc/substrate/env` and refuse an unknown value, naming the three.
+- [x] 1.3 Add `channel` and `enforced` (whether pull-sync reads it; `channel_head` and `behind` follow task 2) to `substrate-status --json` and its text output.
+- [x] 1.4 Add a README § Installation usage row: change a node's channel with one `.env` line plus the install command.
 
 ## 2. Mirror from the channel's ref (pull-sync; coordinator)
 
