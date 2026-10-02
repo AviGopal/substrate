@@ -28,7 +28,7 @@ ReadOnlyPaths=-/workspace/git/super-repo/repos
 # paths at runtime. Credentialed git (fetch/push of a private remote) belongs to
 # development-vessel's own process, not to this shell.
 # The leading '-' keeps the unit starting on a node where a path does not exist.
-# /workspace/.substrate-secrets and .substrate-secrets.d are blocked by the shared
+# /workspace/.substrate-private/substrate-secrets and .substrate-secrets.d are blocked by the shared
 # drop-in local-tools-vessel.service.d/10-secrets-out-of-reach.conf (-> vessel.d/);
 # /etc/substrate is this unit's own, extra block.
 InaccessiblePaths=-/etc/substrate

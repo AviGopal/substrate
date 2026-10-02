@@ -1302,7 +1302,7 @@ async function main() {
   // class label, so summary is the only field in which a filer's predicate survives.
   const FALSIFIERS: Record<string, string> = {
     hardcoded_peer_endpoint_in_image: 'no shipped unit or drop-in sets a routing endpoint containing a literal IP, and `systemctl show discovery-vessel -p Environment` contains no IP literal.',
-    bootstrap_env_precedence_inversion: 'no routing anchor (HUB_DISCOVERY_URL, DISCOVERY_ENDPOINT, IDENTITY_VESSEL_URL, ACTIVITY_API_ENDPOINT) differs between /workspace/.substrate-secrets and /etc/substrate/env.',
+    bootstrap_env_precedence_inversion: 'no routing anchor (HUB_DISCOVERY_URL, DISCOVERY_ENDPOINT, IDENTITY_VESSEL_URL, ACTIVITY_API_ENDPOINT) differs between the persisted secrets store and /etc/substrate/env.',
     // Deliberately an INTERVAL predicate, not an instantaneous one: this unit reports
     // ActiveState=active with Result=success during its up-phase, so an instant snapshot
     // is satisfiable by a unit that is still crash-looping. Closure requires NRestarts

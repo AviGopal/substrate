@@ -35,6 +35,14 @@ probe_url() { # probe_url <URL> <DESCRIPTION>
 # METABOB_API_KEY is a bootstrap value replaced by identity-vessel after seeding.
 set -euo pipefail
 
+# The persisted secrets store lives in ONE stable root-only directory of the workspace
+# volume, masked as a directory by every unit (units/service.d drop-in): a mask on the
+# FILE went stale the first time a writer replaced it by rename. The old flat path is
+# migrated in after the guards below (render-secret-scope --migrate-store-only) and kept
+# as a symlink into the directory for images that predate the move.
+SECRETS_STORE="/workspace/.substrate-private/substrate-secrets"
+LEGACY_SECRETS_STORE="/workspace/.substrate-secrets"   # legacy-path
+
 # ── INSTALL-INPUT GUARDS: refuse before anything is written ──────────────────
 #
 # Everything in this block reads inputs and, at most, exits. Nothing above it
@@ -52,7 +60,7 @@ set -euo pipefail
 # persisted secrets it writes, the clones the substrate pushes from, or the
 # datastore.
 _fresh_volume=1
-for _fv in /workspace/.substrate-secrets /workspace/git/super-repo /workspace/git/vessels /var/lib/surrealdb/data.db; do
+for _fv in "$SECRETS_STORE" "$LEGACY_SECRETS_STORE" /workspace/git/super-repo /workspace/git/vessels /var/lib/surrealdb/data.db; do
   if [ -e "$_fv" ]; then _fresh_volume=0; break; fi
 done
 _refuse() { # _refuse <headline> [detail lines...] — print and exit 1
@@ -276,7 +284,11 @@ esac
 # before the refusal.
 _persisted_has() { # _persisted_has <NAME> — 0 when the persisted secrets hold a non-empty NAME
   # A quoted empty value ("") counts as empty, like an unquoted one.
-  [ -f /workspace/.substrate-secrets ] && grep -qE "^$1=(\"[^\"]|[^\"])" /workspace/.substrate-secrets 2>/dev/null
+  # Before migration the store may still be at the flat path (read-only here).
+  local _s; for _s in "$SECRETS_STORE" "$LEGACY_SECRETS_STORE"; do
+    [ -f "$_s" ] && { grep -qE "^$1=(\"[^\"]|[^\"])" "$_s" 2>/dev/null; return; }
+  done
+  return 1
 }
 if [ -n "${SUBSTRATE_GIT_PAT:-}" ] && [ -z "${SUBSTRATE_REPO_OWNER:-}" ] \
    && ! _persisted_has SUBSTRATE_REPO_OWNER && ! _persisted_has SUBSTRATE_GIT_PAT; then
@@ -286,6 +298,19 @@ if [ -n "${SUBSTRATE_GIT_PAT:-}" ] && [ -z "${SUBSTRATE_REPO_OWNER:-}" ] \
     "No default owner is assumed for a substrate gaining push capability."
 fi
 # ── end of install-input guards ──────────────────────────────────────────────
+
+# First write of this script: move a flat-layout store into its stable directory
+# (rename; values travel) and leave the flat path as a symlink. Same code pull-sync
+# runs on a live node every tick, so there is one migration, not two.
+_rss=""
+for _c in "$(dirname "$0")/render-secret-scope.sh" /usr/local/bin/render-secret-scope; do
+  [ -x "$_c" ] && { _rss="$_c"; break; }
+done
+if [ -z "$_rss" ]; then
+  echo "[gen-env] ERROR: render-secret-scope is not installed; it owns the secrets store's directory and the trust-root files." >&2
+  exit 1
+fi
+"$_rss" --migrate-store-only || { echo "[gen-env] ERROR: could not establish the secrets store directory; refusing to boot." >&2; exit 1; }
 
 # A SPOKE (DISCOVERY_ENDPOINT names a REMOTE hub) inherits LLM capability from the
 # hub's arms through discovery — it needs NO local provider key. Only a root/standalone
@@ -316,7 +341,7 @@ esac
 # NOTE: the guard itself now runs AFTER the persisted-secret fallback below —
 # see "_llm_key_guard" near the provider-secret resolution. Testing the raw
 # environment here declared a container dead while a perfectly good key sat in
-# /workspace/.substrate-secrets, which is exactly the round-trip the docs
+# /workspace/.substrate-private/substrate-secrets, which is exactly the round-trip the docs
 # promise ("a docker rm + recreate *without* -e retains them"). The spoke
 # discrimination is computed here because the values it reads are inputs, but
 # the decision is deferred until the effective key is known.
@@ -345,7 +370,7 @@ _llm_guard_needed="$_is_spoke"
 # secret > fresh random. Persisted values are grep-extracted field-by-field
 # (never `source`d — see the SUBSTRATE_GIT_PAT comment below for why).
 #
-# The old logic consulted /workspace/.substrate-secrets ONLY when
+# The old logic consulted /workspace/.substrate-private/substrate-secrets ONLY when
 # METABOB_API_KEY was absent from the environment. A container recreate that
 # passed -e METABOB_API_KEY therefore regenerated SURREAL_PASS at random while
 # the surreal datastore on the persisted volume kept the ORIGINAL root
@@ -368,7 +393,7 @@ _llm_guard_needed="$_is_spoke"
 # The value below is exactly what the Makefile passes, so both paths agree.
 SUBSTRATE_ROOT="${SUBSTRATE_ROOT:-/workspace/git/super-repo}"
 
-SECRETS_FILE="/workspace/.substrate-secrets"
+SECRETS_FILE="$SECRETS_STORE"
 
 # ── PROVENANCE ───────────────────────────────────────────────────────────────
 # Record WHERE each value came from, so an operator can ask "did my -e win, and
@@ -507,7 +532,7 @@ fi
 if [[ "$SURREAL_PASS_SOURCE" == "generated" ]] && [[ -e /var/lib/surrealdb/data.db ]]; then
   echo "[gen-env] WARNING: generated a fresh SURREAL_PASS but /var/lib/surrealdb/data.db already exists." >&2
   echo "[gen-env] WARNING: SurrealDB ignores --pass once a root user exists — DB auth WILL fail." >&2
-  echo "[gen-env] WARNING: restore the original SURREAL_PASS (env or /workspace/.substrate-secrets) or reset the datastore root user." >&2
+  echo "[gen-env] WARNING: restore the original SURREAL_PASS (env or /workspace/.substrate-private/substrate-secrets) or reset the datastore root user." >&2
 fi
 
 # API key signing secret: the HMAC key identity-vessel uses to sign AND verify
@@ -535,7 +560,7 @@ if [[ -z "$API_KEY_SECRET" ]]; then
     else
       echo "[gen-env] ERROR: no persisted API_KEY_SECRET on an existing datastore." >&2
       echo "[gen-env] ERROR: falling back to the legacy public default ('dev-secret-change-in-production') would make every issued key forgeable, and two substrates that both fall back would share one trust space (the shared-API_KEY_SECRET federation hazard)." >&2
-      echo "[gen-env] ERROR: refusing to boot insecure. Fix: set a strong API_KEY_SECRET (e.g. 'openssl rand -hex 32'), persist it to /workspace/.substrate-secrets, and re-issue keys." >&2
+      echo "[gen-env] ERROR: refusing to boot insecure. Fix: set a strong API_KEY_SECRET (e.g. 'openssl rand -hex 32'), persist it to /workspace/.substrate-private/substrate-secrets, and re-issue keys." >&2
       echo "[gen-env] ERROR: to keep the legacy insecure behavior for an existing deployment, set ALLOW_INSECURE_API_KEY_SECRET=1." >&2
       exit 1
     fi
@@ -594,7 +619,7 @@ fi
 
 # Bootstrap key: used only for the initial identity-vessel signup call.
 # After seed-identity.ts runs, vessels use the HMAC keys it issues.
-# Stored in /workspace/.substrate-secrets so restarts reuse the same value.
+# Stored in /workspace/.substrate-private/substrate-secrets so restarts reuse the same value.
 METABOB_API_KEY="${METABOB_API_KEY:-$(persisted_secret METABOB_API_KEY)}"
 
 # ★ A SPOKE MUST NOT MINT ITS OWN JOIN CREDENTIAL.
@@ -725,7 +750,7 @@ SUBSTRATE_GIT_AUTHOR_EMAIL="${SUBSTRATE_GIT_AUTHOR_EMAIL:-substrate-autonomous@s
 
 # LLM / provider credentials — durable pass-through secrets. Precedence matches
 # the internal secrets above: explicit env (docker run -e) > persisted volume
-# (/workspace/.substrate-secrets) > empty. Persisting them means a container
+# (/workspace/.substrate-private/substrate-secrets) > empty. Persisting them means a container
 # RECREATE that does NOT re-pass -e KEY keeps the provider working (the same
 # regression that bit SURREAL_PASS on 2026-07-02). To add a new provider (e.g. a
 # second OpenAI-wire service like chutes), add its *_API_KEY in the THREE marked
@@ -750,7 +775,7 @@ VLLM_ENDPOINTS="${VLLM_ENDPOINTS:-$(persisted_secret VLLM_ENDPOINTS)}"
 # It used to sit ~165 lines above, before the persisted_secret fallbacks that
 # immediately precede it. The consequence: a container recreated without -e
 # died at boot — "No LLM provider key found" — while a valid key sat in
-# /workspace/.substrate-secrets and the docs advertised that exact round-trip
+# /workspace/.substrate-private/substrate-secrets and the docs advertised that exact round-trip
 # as a guarantee. The guard was reading the operator's input when the thing
 # that matters is what the resolution produced.
 #
@@ -776,7 +801,7 @@ VLLM_ENDPOINTS="${VLLM_ENDPOINTS:-$(persisted_secret VLLM_ENDPOINTS)}"
 # producer instead of being pre-empted at boot.
 if [[ "$_llm_guard_needed" = "0" && -z "${ANTHROPIC_API_KEY:-}" && -z "${OPENAI_API_KEY:-}" ]]; then
   echo "[gen-env] WARNING: no LLM provider key found; booting without local LLM arms." >&2
-  echo "[gen-env]   Checked: the run environment AND persisted values in /workspace/.substrate-secrets." >&2
+  echo "[gen-env]   Checked: the run environment AND persisted values in /workspace/.substrate-private/substrate-secrets." >&2
   echo "[gen-env]   Consequence: no llmCompletion producer registers. Shapes needing one will not" >&2
   echo "[gen-env]   resolve locally — query the registry for llmCompletion to see this directly." >&2
   echo "[gen-env]   Set ANTHROPIC_API_KEY (or OPENAI_API_KEY + OPENAI_BASE_URL) to add local arms," >&2
@@ -1092,7 +1117,7 @@ PEER_FANOUT_MODE="${PEER_FANOUT_MODE:-union}"
 # KNOWN LIMIT, shared with every other persisted value in this file: `${VAR:-…}`
 # cannot distinguish "unset" from "explicitly emptied", so `-e MAX_PEER_DEPTH=`
 # does NOT un-peer a substrate — the persisted value comes back. Verified.
-# Un-peering means editing /workspace/.substrate-secrets. The Makefile solved the
+# Un-peering means editing /workspace/.substrate-private/substrate-secrets. The Makefile solved the
 # same problem for provider keys with RECREATE_CARRY_PRESENT (carry by presence,
 # not by value); doing it here would need the same treatment applied to all ~20
 # persisted names at once, not three of them.
@@ -1704,7 +1729,7 @@ done
 # silently and only at the next boot. Merge instead: keys this run knows about
 # win, and any key already persisted that this revision has never heard of is
 # carried through untouched.
-_SECRETS_TMP="$(mktemp)"
+_SECRETS_TMP="$(mktemp "$SECRETS_STORE.tmp.XXXXXX")"   # same directory: the install is a rename
 # NB backticks and $( ) are FORBIDDEN below, comments included — <<SECRETS is
 # unquoted (it has to be: the body interpolates ${VAR}), so bash expands the
 # whole body, and a backticked span in a COMMENT is still command substitution.
@@ -1787,7 +1812,7 @@ fi
 # so a secret written by a different revision of the list above survives. Keys
 # this run does emit always win, including deliberate blanks. Comments and blank
 # lines come from the freshly generated side only.
-if [[ -f /workspace/.substrate-secrets ]]; then
+if [[ -f "$SECRETS_STORE" ]]; then
   _known="$(grep -oE '^[A-Za-z_][A-Za-z0-9_]*=' "$_SECRETS_TMP" | tr -d '=' || true)"
   _carried=0
   _dropped=0
@@ -1832,11 +1857,11 @@ if [[ -f /workspace/.substrate-secrets ]]; then
       _carried=$((_carried + 1))
       echo "[gen-env] carried over unrecognised persisted secret: $_k" >&2
     fi
-  done < /workspace/.substrate-secrets
+  done < "$SECRETS_STORE"
   # Keep one generation of history: this is the only copy of anything the merge
   # mishandles, and it costs nothing.
-  cp -p /workspace/.substrate-secrets /workspace/.substrate-secrets.prev 2>/dev/null || true
-  chmod 600 /workspace/.substrate-secrets.prev 2>/dev/null || true
+  cp -p "$SECRETS_STORE" "$SECRETS_STORE.prev" 2>/dev/null || true
+  chmod 600 "$SECRETS_STORE.prev" 2>/dev/null || true
   [[ "$_carried" -gt 0 ]] && echo "[gen-env] merged $_carried secret(s) this revision does not emit" >&2
   [[ "$_dropped" -gt 0 ]] && echo "[gen-env] dropped $_dropped persisted routing anchor(s); the copy kept in .substrate-secrets.prev is the only record" >&2
 fi
@@ -1844,9 +1869,9 @@ fi
 # Install atomically, so an interrupted write cannot leave a truncated file that
 # the next boot reads as "this secret was never persisted".
 chmod 600 "$_SECRETS_TMP"
-mv -f "$_SECRETS_TMP" /workspace/.substrate-secrets
-chmod 600 /workspace/.substrate-secrets
-echo "[gen-env] persisted secrets to /workspace/.substrate-secrets"
+mv -f "$_SECRETS_TMP" "$SECRETS_STORE"
+chmod 600 "$SECRETS_STORE"
+echo "[gen-env] persisted secrets to $SECRETS_STORE"
 
 # ── Scoped secrets: the trust-root names only their consumers load ───────────
 # The shared file above is loaded by EVERY unit, so anything written there sits in
@@ -1886,7 +1911,7 @@ fi
 # was empty, so an env-supplied value provably won.
 {
   echo "# Provenance of /etc/substrate/env, written by gen-env.sh at boot."
-  echo "# source: env=operator-supplied | persisted=/workspace/.substrate-secrets"
+  echo "# source: env=operator-supplied | persisted=/workspace/.substrate-private/substrate-secrets"
   echo "#         generated=minted this boot | derived=computed from another value"
   echo "# Absent from this file = UNATTRIBUTED: either a hardcoded literal, or a"
   echo "# mint site gen-env.sh does not yet instrument. Absence is not evidence of"

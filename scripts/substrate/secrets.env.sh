@@ -8,7 +8,7 @@
 # Consumed two ways:
 #   1. `gen-env.sh` sources this, so every declared secret flows into /etc/substrate/env
 #      (which every systemd unit reads via EnvironmentFile=/etc/substrate/env) and is
-#      persisted to /workspace/.substrate-secrets (survives container restart).
+#      persisted to /workspace/.substrate-private/substrate-secrets (survives container restart).
 #   2. `vessel-ctl.sh` sources this when installing a vessel, so a vessel's declared
 #      `secrets` are guaranteed present + persisted at install time.
 #
@@ -16,7 +16,7 @@
 # secret VALUES (those come from the environment / the persisted .substrate-secrets).
 set -a  # export everything declared below
 
-SECRETS_FILE="${SECRETS_FILE:-/workspace/.substrate-secrets}"
+SECRETS_FILE="${SECRETS_FILE:-/workspace/.substrate-private/substrate-secrets}"
 [[ -f "$SECRETS_FILE" ]] && source "$SECRETS_FILE" || true
 
 # ── LLM provider (operator-supplied; at least one required) ───────────────────
@@ -65,7 +65,7 @@ set +a
 # to stop truncating. Preserve every key we do not manage.
 if [[ "${SECRETS_PERSIST:-1}" == "1" ]]; then
   umask 077
-  mkdir -p "$(dirname "$SECRETS_FILE")" 2>/dev/null || true
+  [ -d "$(dirname "$SECRETS_FILE")" ] || mkdir -p -m 0700 "$(dirname "$SECRETS_FILE")" 2>/dev/null || true
   _tmp="${SECRETS_FILE}.tmp.$$"
   {
     echo "# Substrate secrets — auto-generated on first run, reused on restart. DO NOT commit."

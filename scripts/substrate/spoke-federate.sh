@@ -36,7 +36,7 @@ HUB=$(cexec 'source /etc/substrate/env 2>/dev/null || true; echo "${HUB_DISCOVER
   echo "  make up API_KEY=<hub-issued-key> DISCOVERY_ENDPOINT=http://<hub>:18100"
   exit 1
 }
-KEY=$(cexec 'source /etc/substrate/env 2>/dev/null || true; source /workspace/.substrate-secrets 2>/dev/null || true; echo "${METABOB_API_KEY:-}"')
+KEY=$(cexec 'source /etc/substrate/env 2>/dev/null || true; source /workspace/.substrate-private/substrate-secrets 2>/dev/null || true; echo "${METABOB_API_KEY:-}"')
 
 hub_resolve() { # <pointer-json>
   curl -sm 10 -X POST "$HUB/resolve" -H 'Content-Type: application/json' \

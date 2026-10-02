@@ -89,7 +89,7 @@ substrate itself; the cockpit adds node/npx and [Bun](https://bun.sh) (the cockp
 |---|---|---|---|
 | **Host** | the container engine; `docker-compose.yml`; `.env` (install inputs only) | the operator, once | the host |
 | **Container** | systemd + the vessel fleet; `/etc/substrate/env` (generated each boot) | the image, at boot | nothing: regenerated every boot |
-| **Workspace volume** `<name>-workspace` | `.substrate-secrets`, git clones, the memoryNote store, the dynamic-vessel registry (`installed.json`), gap store, snapshots | the substrate | recreate and upgrade |
+| **Workspace volume** `<name>-workspace` | `.substrate-private/` (the persisted secrets store; root-only, masked from every unit), git clones, the memoryNote store, the dynamic-vessel registry (`installed.json`), gap store, snapshots | the substrate | recreate and upgrade |
 | **Datastore volume** `<name>-surreal` | traces, posteriors, concept graph, identity | the substrate | recreate and upgrade |
 | **Hub** | the network's identity, trace store, learner, gap store, concept graph | the hub fleet | independently of spokes |
 | **Git origin** (`SUBSTRATE_REPO_OWNER`) | the code every fleet converges to at boot | substrates with push capability, operators | always |
@@ -150,7 +150,7 @@ the surface on the local host, and `SUBSTRATE_PUBLISH_IP=127.0.0.1` keeps every 
 |---|---|---|---|---|
 | **Install inputs** | the eight below | host `.env` | at boot, by gen-env | no (bootstrap, by design) |
 | **Advanced bootstrap** | extra providers, `LLM_ARMS`, retention, federation overrides, `DISABLED_VESSELS`, `RELAY_PORT`, the `MITOSIS_DIRECT_PUSH` kill switch | host `.env`, forwarded by the manifest; documented only in [`docs/operations/CONFIGURATION_SURFACE.md`](docs/operations/CONFIGURATION_SURFACE.md) | at boot | no |
-| **Generated secrets** | `JWT_SECRET`, `SURREAL_PASS`, API-key signing secret, the operator key | workspace `.substrate-secrets` | at boot | n/a (never hand-edited) |
+| **Generated secrets** | `JWT_SECRET`, `SURREAL_PASS`, API-key signing secret, the operator key | workspace `.substrate-private/substrate-secrets` | at boot | n/a (never hand-edited) |
 | **Runtime policy** | vessel additions (`vessel-ctl install`), `pushPolicy`, `llmModelPolicy`, rhythms | impulses in the substrate | at use time | **yes** |
 | **Client** | endpoint + key | `~/.metabob/config.json` (override: `METABOB_CONFIG_PATH`; a project-local `.metabob/config.json` shadows it) | by the cockpit | n/a |
 

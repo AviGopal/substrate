@@ -51,7 +51,7 @@ resolve_identity() {
   [[ -n "$ORG_ID" && -n "$USER_ID" ]] || die "operator key did not validate: $v"
 }
 
-SECRETS_FILE="${SECRETS_FILE:-/workspace/.substrate-secrets}"
+SECRETS_FILE="${SECRETS_FILE:-/workspace/.substrate-private/substrate-secrets}"
 
 # Round-trip an admin-scoped mint into SUBSTRATE_ADMIN_KEY.
 #

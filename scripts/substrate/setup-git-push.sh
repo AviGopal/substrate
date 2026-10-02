@@ -25,7 +25,8 @@ set -uo pipefail
 
 # Load env + persisted secrets (PAT lives in one or both).
 [ -f /etc/substrate/env ] && . /etc/substrate/env 2>/dev/null || true
-[ -f /workspace/.substrate-secrets ] && . /workspace/.substrate-secrets 2>/dev/null || true
+# The store lives in its masked directory; this unit is a declared exemption (units/service.d/EXEMPT).
+[ -f /workspace/.substrate-private/substrate-secrets ] && . /workspace/.substrate-private/substrate-secrets 2>/dev/null || true
 export SUBSTRATE_GIT_PAT="${SUBSTRATE_GIT_PAT:-}"
 
 # Never block on an interactive credential/terminal prompt. With no (or an

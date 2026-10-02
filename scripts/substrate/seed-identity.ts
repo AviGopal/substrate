@@ -12,7 +12,7 @@ const IDENTITY_URL = process.env.IDENTITY_VESSEL_URL ?? "http://127.0.0.1:8101";
 const DISCOVERY_URL = process.env.DISCOVERY_VESSEL_ENDPOINT ?? "http://127.0.0.1:8100";
 const SEED_KEY = process.env.METABOB_API_KEY ?? "";
 const JWT_SECRET = process.env.JWT_SECRET ?? "";
-const SECRETS_FILE = "/workspace/.substrate-secrets";
+const SECRETS_FILE = "/workspace/.substrate-private/substrate-secrets"; // masked directory; identity-seeder is a declared exemption
 
 if (!SEED_KEY || !JWT_SECRET) {
   console.error("[seed-identity] METABOB_API_KEY and JWT_SECRET must be set");

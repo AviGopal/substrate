@@ -41,7 +41,7 @@ Usage: substrate-config [--container <name>] [--unmask] [--json] [FILTER]
 
 Source column:
   env        operator-supplied (-e / compose / make) — your value won
-  persisted  came from /workspace/.substrate-secrets (a PREVIOUS boot's value)
+  persisted  came from /workspace/.substrate-private/substrate-secrets (a PREVIOUS boot's value)
   generated  minted this boot
   derived    computed from another value
   hardcoded  a literal in gen-env.sh — NOT settable (see: it ignores your input)

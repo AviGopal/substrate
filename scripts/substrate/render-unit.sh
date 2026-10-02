@@ -85,7 +85,7 @@ Type=simple
 # ORDER IS LOAD-BEARING: systemd applies EnvironmentFile= directives in listing
 # order, so a LATER file overrides an earlier one. /etc/substrate/env is listed
 # LAST and is therefore authoritative for every rendered vessel.
-# /workspace/.substrate-secrets is NOT loaded: it is a restart cache holding every
+# /workspace/.substrate-private/substrate-secrets is NOT loaded: it is a restart cache holding every
 # trust-root secret (secrets-manifest.json), and gen-env re-emits its non-scoped
 # names into /etc/substrate/env. (While it loaded last, a stale HUB_DISCOVERY_URL
 # carried forward from an older gen-env revision outranked env on every boot.)

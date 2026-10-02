@@ -1,4 +1,4 @@
-# Units that read /workspace/.substrate-secrets or /workspace/.substrate-secrets.d
+# Units that read the persisted store (/workspace/.substrate-private/, formerly the flat .substrate-secrets file) or /workspace/.substrate-secrets.d
 # AT RUNTIME (not via EnvironmentFile=, which needs no exception) and therefore
 # do NOT carry vessel.d/10-secrets-out-of-reach.conf. One list; nothing implicit.
 # Format: <unit> <reason>. Read by validation/scripts/vessel-secrets-dropin.test.sh:
@@ -6,7 +6,7 @@
 #
 # No VESSEL unit is excepted. The entries below are the non-vessel units known to
 # read or write the secret paths, declared so the boundary is explicit:
-git-push-setup.service      setup-git-push sources /workspace/.substrate-secrets for the push credential
+git-push-setup.service      setup-git-push sources the persisted store (/workspace/.substrate-private/substrate-secrets) for the push credential
 identity-seeder.service     reseed-restart -> seed-identity writes METABOB_API_KEY / SUBSTRATE_ADMIN_KEY back into it
 substrate-pull-sync.service runs vessel-ctl install, which sources secrets.env.sh, which merges into the file
 #

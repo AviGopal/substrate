@@ -40,6 +40,8 @@
 #   --strip-shared  (recover only) afterwards remove a name from the shared env, but
 #                   only once every consumer unit installed on this node is verified
 #                   to load its scoped file — otherwise the consumer would lose it.
+#   --migrate-store-only  establish the persisted store's directory and migrate a flat
+#                   store into it, then exit (gen-env runs this before its first write).
 #   --retire-legacy afterwards remove the flat-layout files (see MIGRATION). pull-sync
 #                   passes it only on its post-converge call, so a unit that still
 #                   names a flat path is never left without its file mid-tick.
@@ -50,7 +52,9 @@ set -euo pipefail
 _here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MANIFEST=""
 ENV_DIR="/etc/substrate"
-STORE="/workspace/.substrate-secrets"
+STORE=""            # default: the manifest's store_dir/store_file
+LEGACY_STORE="-"    # default: the manifest's legacy_store, only when --store is not given
+MIGRATE_STORE_ONLY=0
 PEER_FILE="${PEER_CREDENTIALS_FILE:-/workspace/.peer-credentials}"
 MODE="values"
 STRIP=0
@@ -61,6 +65,8 @@ while [ $# -gt 0 ]; do
     --manifest)  MANIFEST="$2"; shift 2 ;;
     --env-dir)   ENV_DIR="$2"; shift 2 ;;
     --store)     STORE="$2"; shift 2 ;;
+    --legacy-store) LEGACY_STORE="$2"; shift 2 ;;
+    --migrate-store-only) MIGRATE_STORE_ONLY=1; shift ;;
     --peer-file) PEER_FILE="$2"; shift 2 ;;
     --mode)      MODE="$2"; shift 2 ;;
     --strip-shared) STRIP=1; shift ;;
@@ -79,6 +85,51 @@ case "$MODE" in values|recover) ;; *) echo "[secret-scope] ERROR: --mode must be
 [ "$STRIP" = 1 ] && [ "$MODE" != recover ] && { echo "[secret-scope] ERROR: --strip-shared is a recover-mode step" >&2; exit 2; }
 command -v jq >/dev/null 2>&1 || { echo "[secret-scope] ERROR: jq is required" >&2; exit 1; }
 jq -e '.secrets | type == "object"' "$MANIFEST" >/dev/null || { echo "[secret-scope] ERROR: $MANIFEST has no .secrets object" >&2; exit 1; }
+
+# ── the persisted store's stable directory ──────────────────────────────────
+# Same rule as the private directory below, in the workspace volume (the store must
+# survive a recreate). A flat-layout store at legacy_store is a REGULAR file only when a
+# writer that predates this layout produced it (an older image, a not-yet-converged
+# script), so it is the newest copy: it is moved in over the directory's copy (rename,
+# values travel) and the flat path becomes a symlink again. The symlink stays: images
+# that predate the move still find the store through it, and a masked process that
+# follows it lands in the masked directory.
+_store_rel_link() { # <flat path> <real path>: atomic relative symlink
+  local _rel; _rel="$(realpath -m --relative-to="$(dirname "$1")" "$2")"
+  ln -sfn "$_rel" "$1.tmp.$$" && mv -Tf "$1.tmp.$$" "$1"
+}
+if [ -z "$STORE" ]; then
+  _sd="$(jq -r '.store_dir // empty' "$MANIFEST")"; _sf="$(jq -r '.store_file // empty' "$MANIFEST")"
+  [ -n "$_sd" ] && [ -n "$_sf" ] || { echo "[secret-scope] ERROR: $MANIFEST must name store_dir and store_file" >&2; exit 1; }
+  STORE="$_sd/$_sf"
+  [ "$LEGACY_STORE" = "-" ] && LEGACY_STORE="$(jq -r '.legacy_store // empty' "$MANIFEST")"
+fi
+[ "$LEGACY_STORE" = "-" ] && LEGACY_STORE=""
+# Only the steps that own the store migrate it: gen-env's --migrate-store-only (before
+# its first write) and recover mode (pull-sync, every tick). Values mode never reads it.
+[ "$MIGRATE_STORE_ONLY" = 1 ] || [ "$MODE" = recover ] || LEGACY_STORE=""
+if [ -n "$LEGACY_STORE" ]; then
+  _sdir="$(dirname "$STORE")"
+  if [ -L "$_sdir" ] || { [ -e "$_sdir" ] && [ ! -d "$_sdir" ]; }; then
+    echo "[secret-scope] ERROR: $_sdir exists and is not a real directory; refusing to keep the secrets store behind it" >&2; exit 1
+  fi
+  if [ ! -d "$_sdir" ]; then
+    mkdir -p "$(dirname "$_sdir")"; (umask 077; mkdir -p -m 0700 "$_sdir")
+    echo "[secret-scope] created $_sdir (0700)"
+  fi
+  chmod 0700 "$_sdir"
+  for _sfx in "" ".prev"; do
+    _old="$LEGACY_STORE$_sfx"; _new="$STORE$_sfx"
+    if [ -f "$_old" ] && [ ! -L "$_old" ]; then
+      mv -f "$_old" "$_new"; chmod 600 "$_new"
+      _store_rel_link "$_old" "$_new"
+      echo "[secret-scope] moved store $_old -> $_new (flat path kept as a symlink)"
+    elif [ -e "$_new" ] && [ ! -e "$_old" ] && [ ! -L "$_old" ]; then
+      _store_rel_link "$_old" "$_new"
+    fi
+  done
+fi
+[ "$MIGRATE_STORE_ONLY" = 1 ] && exit 0
 
 SHARED="$ENV_DIR/env"
 PRIVATE_REL="$(jq -r '.private_dir // empty' "$MANIFEST")"

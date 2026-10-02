@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# secret-mask-probe.sh — prove BY EFFECT that the scoped-secrets directory is out of
-# reach inside unit namespaces. Names, paths and dev:inode pairs only: it never opens,
+# secret-mask-probe.sh — prove BY EFFECT that the secret directories (the scoped
+# trust-root files, /etc/substrate/private, and the persisted store's directory,
+# /workspace/.substrate-private) are out of reach inside unit namespaces. Names, paths and dev:inode pairs only: it never opens,
 # prints or hashes a secret file, and never reads /proc/*/environ or cmdline.
 #
 # WHY. A unit's InaccessiblePaths= is applied when the unit STARTS and binds whatever
@@ -25,7 +26,8 @@
 #       rename (the renderer, recover mode), and asserts neither probe can see any of
 #       them; then the positive control: every manifest consumer, started as a copy
 #       of its own EnvironmentFile=/InaccessiblePaths= lines, still receives every
-#       name of its scoped file. Writes only scoped files (re-rendered from their own
+#       name of its scoped file; and every declared exemption (the store's runtime
+#       readers) still sources the store and receives every name in it. Writes only scoped files (re-rendered from their own
 #       values), /run/systemd/system/secret-mask-*.service and scratch under /var/tmp.
 # Both modes first run a MUST-FAIL CONTROL: a throwaway unit masking a scratch FILE
 # that is then replaced by rename must be reported visible (else the probe is blind),
@@ -61,11 +63,22 @@ PRIV=""; [ -n "$PRIV_REL" ] && PRIV="$ENV_DIR/$PRIV_REL"
 UNIT_TMPL="$(jq -r '.unit_file // "env.d/{unit}.env"' "$MANIFEST")"   # legacy-path: an older manifest has no private_dir
 ADMIN="$ENV_DIR/$(jq -r '.admin_file // "admin.env"' "$MANIFEST")"     # legacy-path
 CONSUMERS="$(jq -r '[.secrets[].units[]?, .patterns[]?.units[]?] | unique | .[]' "$MANIFEST")"
+# The persisted store: its own stable directory in the workspace volume (an older manifest
+# has none; the flat path is then the store).
+STORE_DIR="$(jq -r '.store_dir // empty' "$MANIFEST")"
+LEGACY_STORE="$(jq -r '.legacy_store // "/workspace/.substrate-secrets"' "$MANIFEST")"   # legacy-path
+STORE="$LEGACY_STORE"; [ -n "$STORE_DIR" ] && STORE="$STORE_DIR/$(jq -r '.store_file' "$MANIFEST")"
+MASK_DIRS=""; [ -n "$PRIV" ] && MASK_DIRS="$PRIV"; [ -n "$STORE_DIR" ] && MASK_DIRS="$MASK_DIRS $STORE_DIR"
+is_gating() { # <path>: one of the secret directories, under one, or a secret file
+  local d; for d in $MASK_DIRS; do [ "$1" = "$d" ] || [[ "$1" == "$d"/* ]] && return 0; done
+  scoped_files | grep -qxF "$1"
+}
 scoped_files() { _scoped_files | sort -u; }
 _scoped_files() { # every scoped file the manifest implies, plus the flat-layout paths if present
   echo "$ADMIN"
   local u; for u in $CONSUMERS; do echo "$ENV_DIR/${UNIT_TMPL//\{unit\}/$u}"; done
   [ -e "$ENV_DIR/admin.env" ] && echo "$ENV_DIR/admin.env"            # legacy-path
+  local s; for s in "$STORE" "$STORE.prev" "$LEGACY_STORE" "$LEGACY_STORE.prev"; do [ -e "$s" ] && echo "$s"; done
   for u in "$ENV_DIR"/env.d/*.env; do [ -e "$u" ] && echo "$u"; done   # legacy-path
   return 0
 }
@@ -106,28 +119,30 @@ control() {
 # ── check: every running service ─────────────────────────────────────────────
 check() {
   local u pid ip p f n_ok=0 n_ex=0
-  if [ -n "$PRIV" ]; then
-    if [ -L "$PRIV" ] || [ ! -d "$PRIV" ]; then say "FAIL $PRIV is not a real directory"; FIND=1
-    else [ "$(stat -c '%a %u' "$PRIV")" = "700 0" ] || { say "FAIL $PRIV is $(stat -c '%a uid=%u' "$PRIV") (want 700 uid=0)"; FIND=1; }; fi
-  fi
+  local d
+  for d in $MASK_DIRS; do
+    if [ -L "$d" ] || [ ! -d "$d" ]; then say "FAIL $d is not a real directory"; FIND=1
+    else [ "$(stat -c '%a %u' "$d")" = "700 0" ] || { say "FAIL $d is $(stat -c '%a uid=%u' "$d") (want 700 uid=0)"; FIND=1; }; fi
+  done
   while read -r u _; do
     case "$u" in *.service) ;; *) continue ;; esac
     case "$u" in secret-mask-*) continue ;; esac
     pid="$(mainpid "$u")"; [ -n "$pid" ] && [ "$pid" != 0 ] || continue
     ip=" $(systemctl show -p InaccessiblePaths --value "$u" 2>/dev/null) "
-    if [ -n "$PRIV" ] && ! { [[ "$ip" == *" $PRIV "* ]] || [[ "$ip" == *" -$PRIV "* ]]; }; then
+    local missing=""
+    for d in $MASK_DIRS; do [[ "$ip" == *" $d "* ]] || [[ "$ip" == *" -$d "* ]] || missing="$missing $d"; done
+    if [ -n "$missing" ]; then
       if systemctl show -p DropInPaths --value "$u" 2>/dev/null | tr ' ' '\n' | grep -q "/$u.d/$DROPIN_NAME\$"; then
         say "EXEMPT $u (declared override of $DROPIN_NAME)"; n_ex=$((n_ex + 1))
       else
-        say "UNMASKED $u: its InaccessiblePaths= does not name $PRIV and it is not a declared exemption"; FIND=1
+        say "UNMASKED $u: its InaccessiblePaths= does not name$missing and it is not a declared exemption"; FIND=1
       fi
       continue
     fi
     for p in $ip; do
       p="${p#-}"
       visible "$pid" "$p" || continue
-      if [ -n "$PRIV" ] && { [ "$p" = "$PRIV" ] || [[ "$p" == "$PRIV"/* ]]; }; then say "VISIBLE $u $p"; FIND=1
-      elif scoped_files | grep -qxF "$p"; then say "VISIBLE $u $p"; FIND=1
+      if is_gating "$p"; then say "VISIBLE $u $p"; FIND=1
       else say "VISIBLE-OTHER $u $p"; OTHER=1; fi
     done
     while read -r f; do visible "$pid" "$f" && { say "VISIBLE $u $f"; FIND=1; }; done < <(scoped_files)
@@ -153,13 +168,15 @@ selftest() {
   # The write pattern that defeated the file mask: re-render every scoped file by rename,
   # AFTER the probes built their namespaces.
   bash "$R" --mode recover --manifest "$MANIFEST" --env-dir "$ENV_DIR" >/dev/null 2>&1 || { say "FAIL the re-render failed"; FIND=1; }
+  # The store's writers (gen-env, seed-identity, secrets.env.sh) replace it the same way.
+  for f in "$STORE" "$STORE.prev"; do [ -f "$f" ] && rewrite "$f"; done
   for pr in vessel tick; do
     pid="$(wait_pid "secret-mask-selftest-$pr.service")" || continue
     local seen=0 n=0
     while read -r f; do
       [ -e "$f" ] || continue; n=$((n + 1))
       visible "$pid" "$f" && { say "VISIBLE $pr-probe $f (after rename-rewrite)"; seen=1; FIND=1; }
-    done < <(scoped_files; [ -n "$PRIV" ] && echo "$PRIV")
+    done < <(scoped_files; for f in $MASK_DIRS; do echo "$f"; done)
     [ "$seen" = 0 ] && say "ok $pr-probe: none of $n scoped path(s) visible after the re-render"
   done
   # Positive control: each consumer, as a copy of its own environment and mask lines.
@@ -173,7 +190,7 @@ selftest() {
       echo "[Service]"; echo "Type=oneshot"
       systemctl cat "$u.service" 2>/dev/null | grep -E '^[[:space:]]*EnvironmentFile[[:space:]]*='
       for f in $(systemctl show -p InaccessiblePaths --value "$u.service"); do echo "InaccessiblePaths=$f"; done
-      echo "ExecStart=/bin/sh -c 'env | cut -d= -f1 | sort > /run/secret-mask-selftest/$u.names; { [ -e \"$want\" ] && echo visible || echo masked; } > /run/secret-mask-selftest/$u.sight'"
+      echo "ExecStart=/bin/sh -c 'env | cut -d= -f1 | sort > /run/secret-mask-selftest/$u.names; { [ -e \"$want\" ] || [ -e \"$STORE\" ] && echo visible || echo masked; } > /run/secret-mask-selftest/$u.sight'"
     } > "$sd/secret-mask-consumer-$u.service"
     # A declared exemption is mirrored, so the copy sees exactly what the unit sees.
     if systemctl show -p DropInPaths --value "$u.service" | tr ' ' '\n' | grep -q "/$u.service.d/$DROPIN_NAME\$"; then
@@ -195,11 +212,41 @@ selftest() {
     else say "ok consumer $u: every name in its scoped file reached its environment ($(grep -cE '^[A-Z_][A-Z0-9_]*=' "$want") name(s))"; fi
     if [ -e "/run/secret-mask-selftest/$u.exempt" ]; then
       say "ok consumer $u: a declared exemption (service.d/EXEMPT); it opens $want at runtime by design"
-    elif [ "$(cat "/run/secret-mask-selftest/$u.sight")" = masked ]; then say "ok consumer $u: its own process cannot see $want"
-    else say "VISIBLE consumer $u sees $want from inside"; FIND=1; fi
+    elif [ "$(cat "/run/secret-mask-selftest/$u.sight")" = masked ]; then say "ok consumer $u: its own process cannot see $want or the store"
+    else say "VISIBLE consumer $u sees $want or the store from inside"; FIND=1; fi
   done
+  # Positive control for the store's runtime readers: every declared exemption, as a copy
+  # with its own mask lines and its exemption mirrored, sources the store the way its
+  # script does and must receive every NAME the store holds (values never leave the copy).
+  local ex=""; for f in /usr/lib/systemd/system/service.d/EXEMPT /etc/systemd/system/service.d/EXEMPT; do [ -f "$f" ] && ex="$f"; done
+  if [ -n "$STORE_DIR" ] && { [ ! -f "$STORE" ] || [ -z "$ex" ]; }; then
+    say "FAIL no persisted store at $STORE or no installed service.d/EXEMPT: the store readers cannot be proven"; FIND=1
+  fi
+  if [ -n "$STORE_DIR" ] && [ -f "$STORE" ] && [ -n "$ex" ]; then
+    for u in $(sed -e 's/#.*//' "$ex" | awk 'NF{print $1}'); do
+      u="${u%.service}"
+      systemctl cat "$u.service" >/dev/null 2>&1 || { say "skip store reader $u: not installed"; continue; }
+      {
+        echo "[Service]"; echo "Type=oneshot"
+        for f in $(systemctl show -p InaccessiblePaths --value "$u.service"); do echo "InaccessiblePaths=$f"; done
+        echo "ExecStart=/bin/sh -c 'env -i sh -c \". $STORE; set | cut -d= -f1\" | sort -u > /run/secret-mask-selftest/$u.store-names'"
+      } > "$sd/secret-mask-reader-$u.service"
+      mkdir -p "$sd/secret-mask-reader-$u.service.d"; printf '[Service]\n' > "$sd/secret-mask-reader-$u.service.d/$DROPIN_NAME"
+    done
+    systemctl daemon-reload
+    for u in $(sed -e 's/#.*//' "$ex" | awk 'NF{print $1}'); do
+      u="${u%.service}"; [ -f "$sd/secret-mask-reader-$u.service" ] || continue
+      systemctl start "secret-mask-reader-$u.service" 2>/dev/null || { say "FAIL store reader $u: the copy did not run"; FIND=1; continue; }
+      local miss="" nm n=0
+      for nm in $(grep -oE '^[A-Za-z_][A-Za-z0-9_]*=' "$STORE" | tr -d '=' | sort -u); do
+        n=$((n + 1)); grep -qx "$nm" "/run/secret-mask-selftest/$u.store-names" || miss="$miss $nm"
+      done
+      if [ -n "$miss" ]; then say "FAIL store reader $u could not read:$(echo $miss | wc -w) name(s)"; FIND=1
+      else say "ok store reader $u (declared exemption): sources the store and receives all $n name(s)"; fi
+    done
+  fi
   for pr in vessel tick; do systemctl stop "secret-mask-selftest-$pr.service" >/dev/null 2>&1; done
-  rm -rf "$sd"/secret-mask-selftest-* "$sd"/secret-mask-consumer-* /run/secret-mask-selftest
+  rm -rf "$sd"/secret-mask-selftest-* "$sd"/secret-mask-consumer-* "$sd"/secret-mask-reader-* /run/secret-mask-selftest
   systemctl daemon-reload
 }
 

@@ -1,4 +1,4 @@
-# Units that open /etc/substrate/private AT RUNTIME and therefore override the
+# Units that open /etc/substrate/private or /workspace/.substrate-private AT RUNTIME and therefore override the
 # default-deny drop-in service.d/05-secret-dir-out-of-reach.conf with a same-named
 # file in their own <unit>.service.d/. One list; nothing implicit. (systemd reads only
 # *.conf in a drop-in directory, so this file configures nothing.)
@@ -6,5 +6,6 @@
 # every override has its entry. A unit that only LOADS a secret (EnvironmentFile=)
 # needs no exemption and must not have one.
 # Format: <unit> <reason>
-identity-seeder.service      seed-identity writes the minted SUBSTRATE_ADMIN_KEY into private/admin.env and its consumers' private/env.d files
-substrate-pull-sync.service  renders, migrates and retires the scoped files (render-secret-scope), writes them on vessel-ctl install, and runs secret-mask-probe check, which must stat the real files
+identity-seeder.service      seed-identity writes the minted SUBSTRATE_ADMIN_KEY / METABOB_API_KEY into private/admin.env, its consumers' private/env.d files and the persisted store
+substrate-pull-sync.service  renders, migrates and retires the scoped files and the store (render-secret-scope), vessel-ctl install merges into both (secrets.env.sh), and runs secret-mask-probe check, which must stat the real files
+git-push-setup.service       setup-git-push sources the persisted store for the push credential (SUBSTRATE_GIT_PAT)

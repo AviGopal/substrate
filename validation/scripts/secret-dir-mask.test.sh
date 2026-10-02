@@ -26,6 +26,12 @@
 #       across runs, refuses a symlinked directory, and writes 0600 files in 0700 dirs
 #   (g) negative controls: the pre-fix drop-in (file-level lines only) fails (c), a
 #       unit naming the flat path fails (a), and rm/mv of the directory fails (e)
+#   (h) the persisted store: lives in store_dir (a second stable directory), every
+#       reference to the flat store path is a legacy-path line or a stale compiled
+#       sibling of a .ts that does not use it, both drop-ins mask store_dir, nothing
+#       removes or renames it, and the renderer migrates a flat store in (values intact,
+#       flat path left as a symlink, a later flat REGULAR file wins as the newest copy,
+#       directory inode stable, a symlinked store_dir refused)
 # The by-effect proof (a live namespace cannot stat the files after a rename) needs
 # systemd as PID1 and runs in install acceptance: secret-mask-probe.sh selftest.
 #
@@ -157,6 +163,48 @@ printf '[Service]\nEnvironmentFile=/etc/substrate/env.d/x.env\n' > "$CT/scripts/
 [ -n "$(flat_refs "$CT")" ] && ok "(g) control: a unit naming the flat path is caught by (a)" || bad "(g) control: (a) missed a unit naming the flat path"
 printf 'rm -rf "$PRIVATE"\n' > "$CT/scripts/substrate/a.sh"; printf 'mv /etc/substrate/%s /tmp/x\n' "$PRIV_REL" > "$CT/scripts/substrate/b.sh"
 [ "$(destroy_refs "$CT" | wc -l)" = 2 ] && ok "(g) control: removing or renaming the directory is caught by (e)" || bad "(g) control: (e) missed a removal/rename of the directory"
+
+# ── (h) the persisted store ──────────────────────────────────────────────────
+SD="$(jq -r '.store_dir // empty' "$MAN")"; SF="$(jq -r '.store_file // empty' "$MAN")"; LS="$(jq -r '.legacy_store // empty' "$MAN")"
+[ -n "$SD" ] && [ -n "$SF" ] && [ -n "$LS" ] && ok "(h) manifest names store_dir, store_file, legacy_store" || bad "(h) manifest lacks store_dir/store_file/legacy_store"
+store_refs() { # <tree-root> -> offending references to the flat store path
+  ( cd "$1" && grep -rnE '/workspace/\.substrate-secrets([^.d]|$)' -- scripts/substrate Dockerfile.substrate 2>/dev/null ) \
+    | grep -v 'legacy-path' | grep -v '"legacy_store"' \
+    | grep -vE '^scripts/substrate/units/vessel\.d/10-secrets-out-of-reach\.conf:[0-9]+:InaccessiblePaths=-/workspace/\.substrate-secrets$' \
+    | while IFS= read -r l; do f="${l%%:*}"; case "$f" in *.js) [ -f "$1/${f%.js}.ts" ] && ! grep -q '/workspace/\.substrate-secrets\b' "$1/${f%.js}.ts" && continue ;; esac; printf '%s\n' "$l"; done
+}
+_sr="$(store_refs "$ROOT")"
+[ -z "$_sr" ] && ok "(h) nothing names the flat store path outside legacy-path lines" || { bad "(h) flat store path referenced:"; printf '       %s\n' "$_sr" | head -20; }
+grep -qxE "InaccessiblePaths=-?$SD/?" "$D" && ok "(h) the default-deny drop-in masks $SD" || bad "(h) the default-deny drop-in does not mask $SD"
+grep -qxE "InaccessiblePaths=-?$SD/?" "$S/units/vessel.d/10-secrets-out-of-reach.conf" && ok "(h) the vessel drop-in masks $SD" || bad "(h) the vessel drop-in does not mask $SD"
+_sdd="$(cd "$ROOT" && grep -rnE "(\brm\b|\brmdir\b|\bmv\b|\bln\b)[^|;&]*($SD|\\\$_sdir|\\\$\{_sdir\})(/?[\"' ]|/?\$)" -- scripts/substrate 2>/dev/null || true)"
+[ -z "$_sdd" ] && ok "(h) nothing removes, renames or relinks $SD itself" || { bad "(h) $SD replaced by:"; printf '       %s\n' "$_sdd"; }
+grep -q '_SECRETS_TMP="$(mktemp "$SECRETS_STORE.tmp' "$S/gen-env.sh" && ok "(h) gen-env stages the store inside its directory (the install is a rename there)" || bad "(h) gen-env stages the store outside its directory"
+W="$T/ws"; mkdir -p "$W"; E4="$T/etc4"; mkdir -p "$E4"; : > "$E4/env"
+{ for n in $SC; do echo "$n=$(fake "$n")"; done; echo 'SUBSTRATE_GIT_PAT=maskfake-pat'; } > "$W/.substrate-secrets"; cp "$W/.substrate-secrets" "$W/.substrate-secrets.prev"; chmod 600 "$W"/.substrate-secrets*
+srun() { bash "$RSS" --mode recover --manifest "$MAN" --env-dir "$E4" --store "$W/.substrate-private/substrate-secrets" --legacy-store "$W/.substrate-secrets" --peer-file "$T/none" "$@"; }
+if srun > "$T/s1.log" 2>&1; then ok "(h) renderer ran with a flat store present"; else bad "(h) renderer failed: $(tail -n1 "$T/s1.log")"; fi
+grep -q maskfake "$T/s1.log" && bad "(h) the renderer printed a store value"
+SP="$W/.substrate-private"
+[ -d "$SP" ] && [ ! -L "$SP" ] && [ "$(stat -c %a "$SP")" = 700 ] && ok "(h) the store directory is a real 0700 directory" || bad "(h) the store directory is missing or not 0700"
+v="$(env -i sh -c '. "$1"; printf %s "$SUBSTRATE_GIT_PAT"' _ "$SP/substrate-secrets" 2>/dev/null)"
+[ "$v" = maskfake-pat ] && [ "$(stat -c %a "$SP/substrate-secrets")" = 600 ] && ok "(h) the store moved in with its values, 0600" || bad "(h) the store did not move in intact"
+[ -f "$SP/substrate-secrets.prev" ] && ok "(h) the store's .prev moved in too" || bad "(h) the store's .prev was left behind"
+[ -L "$W/.substrate-secrets" ] && [ "$(realpath "$W/.substrate-secrets")" = "$(realpath "$SP/substrate-secrets")" ] && ok "(h) the flat store path is now a symlink into the directory" || bad "(h) the flat store path is not a symlink into the directory"
+v="$(env -i sh -c '. "$1"; printf %s "$API_KEY_SECRET"' _ "$E4/$(jq -r '.unit_file' "$MAN" | sed 's/{unit}/identity-vessel/')" 2>/dev/null)"
+[ "$v" = "$(fake API_KEY_SECRET)" ] && ok "(h) recover mode read the moved store (identity's value rendered from it)" || bad "(h) recover mode did not read the moved store"
+_si="$(stat -c %i "$SP")"
+# an older writer replaces the flat symlink with a regular file: it is the newest copy and wins
+{ echo 'SUBSTRATE_GIT_PAT=maskfake-newer'; } > "$W/.substrate-secrets.tmp"; mv -f "$W/.substrate-secrets.tmp" "$W/.substrate-secrets"
+srun > "$T/s2.log" 2>&1
+v="$(env -i sh -c '. "$1"; printf %s "$SUBSTRATE_GIT_PAT"' _ "$SP/substrate-secrets" 2>/dev/null)"
+[ "$v" = maskfake-newer ] && [ -L "$W/.substrate-secrets" ] && ok "(h) a flat regular file written by an older writer is migrated in and the symlink restored" || bad "(h) a flat regular file from an older writer was not migrated"
+[ "$(stat -c %i "$SP")" = "$_si" ] && ok "(h) the store directory keeps its inode across runs" || bad "(h) the store directory was replaced"
+W2="$T/ws2"; mkdir -p "$W2" "$T/elsewhere2"; ln -s "$T/elsewhere2" "$W2/.substrate-private"
+bash "$RSS" --migrate-store-only --manifest "$MAN" --store "$W2/.substrate-private/substrate-secrets" --legacy-store "$W2/.substrate-secrets" > "$T/s3.log" 2>&1 \
+  && bad "(h) a symlinked store directory was accepted" || ok "(h) a symlinked store directory is refused"
+CT2="$T/ctree2"; mkdir -p "$CT2/scripts/substrate"; printf '. /workspace/.substrate-secrets\n' > "$CT2/scripts/substrate/x.sh"   # legacy-path (negative fixture)
+[ -n "$(store_refs "$CT2")" ] && ok "(g) control: a script sourcing the flat store path is caught by (h)" || bad "(g) control: (h) missed a script sourcing the flat store path"
 
 echo
 [ "$fails" -eq 0 ] && { echo "PASSED"; exit 0; } || { echo "FAILED ($fails)"; exit 1; }

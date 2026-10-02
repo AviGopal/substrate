@@ -39,7 +39,7 @@
 #
 # Three outputs per lane:
 #   1. the names emitted into /etc/substrate/env      (what vessels can read)
-#   2. the names persisted to /workspace/.substrate-secrets  (what survives recreate)
+#   2. the names persisted to /workspace/.substrate-private/substrate-secrets  (what survives recreate)
 #   3. the value of each sentinel                     (accepted vs silently discarded)
 #
 # USAGE
@@ -221,7 +221,7 @@ probe_lane() {  # $1 = lane name; writes $WORK/<lane>.{env,secrets,values}
       cat /etc/substrate/env /etc/substrate/private/env.d/*.env /etc/substrate/private/admin.env 2>/dev/null \
         | grep -oE '^[A-Z_][A-Z0-9_]*=' | tr -d '=' | sort -u
       echo '===SECRETS==='
-      grep -oE '^[A-Z_][A-Z0-9_]*=' /workspace/.substrate-secrets 2>/dev/null | tr -d '=' | sort -u
+      grep -oE '^[A-Z_][A-Z0-9_]*=' /workspace/.substrate-private/substrate-secrets 2>/dev/null | tr -d '=' | sort -u
       echo '===VALUES==='
       # READ AT THE CONSUMING LAYER, not off the raw line. Grepping the file text
       # judged the STORED form, so once gen-env began correctly escaping quotes

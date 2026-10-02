@@ -998,6 +998,8 @@ converge_fleet_defs() {
     "render-unit.sh:$BIN_DIR/render-unit" \
     "vessel-ctl.sh:$BIN_DIR/vessel-ctl" \
     "substrate-key.sh:$BIN_DIR/substrate-key" \
+    "seed-identity.ts:/vessels/seed-identity.ts" \
+    "setup-git-push.sh:$BIN_DIR/setup-git-push" \
     "secrets.env.sh:$SHARE_DIR/secrets.env.sh"; do
     _cf_from="${_cf_pair%%:*}"
     _cf_to="${_cf_pair#*:}"
@@ -1019,6 +1021,8 @@ converge_fleet_defs() {
         _cf_when="takes effect on the NEXT INVOCATION — this is re-executed from disk each time" ;;
       apply-inventory)
         _cf_when="takes effect at next container start, or immediately via 'vessel-ctl apply'" ;;
+      seed-identity.ts|setup-git-push)
+        _cf_when="takes effect the next time its unit (identity-seeder / git-push-setup) runs" ;;
       *)
         _cf_when="takes effect at next container start — this runs pre-systemd" ;;
     esac
@@ -1056,7 +1060,7 @@ converge_fleet_defs() {
   fi
 
   # secrets.env.sh — sourced by vessel-ctl on every manifest-vessel install, so
-  # it runs at BOOT and it WRITES /workspace/.substrate-secrets. The image copy
+  # it runs at BOOT and it WRITES /workspace/.substrate-private/substrate-secrets. The image copy
   # truncated that file to the six keys it owns, deleting API_KEY_SECRET, which
   # gen-env had persisted. A container in that state runs indefinitely and then
   # refuses to boot when restarted. The repaired merge-version has to reach a

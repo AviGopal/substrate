@@ -11,7 +11,7 @@ Type=simple
 # of truth for where this substrate is pointed — when it was listed last, a
 # stale HUB_DISCOVERY_URL pinned to a decommissioned droplet outranked env on
 # every boot and crash-looped the federation transport.
-# The persisted store (/workspace/.substrate-secrets) is NOT loaded: it holds every
+# The persisted store (/workspace/.substrate-private/substrate-secrets) is NOT loaded: it holds every
 # trust-root secret (secrets-manifest.json), and gen-env re-emits each non-scoped name
 # it carries into /etc/substrate/env, which is authoritative anyway.
 EnvironmentFile=/etc/substrate/env

@@ -6,12 +6,12 @@ After=network.target discovery-vessel.service federation-relay.service
 Type=simple
 # ORDER IS LOAD-BEARING: systemd lets a LATER EnvironmentFile override an
 # earlier one, so /etc/substrate/env is listed LAST and is authoritative.
-# This unit is the reason the rule is written down: /workspace/.substrate-secrets
+# This unit is the reason the rule is written down: /workspace/.substrate-private/substrate-secrets
 # had carried a stale HUB_DISCOVERY_URL (a decommissioned droplet) since an older
 # revision of gen-env, and because it loaded last it beat the empty/derived value
 # in /etc/substrate/env — no relay anchor resolved and the transport hard-exited
 # every 5s, parked in `activating`, never `failed`.
-# The persisted store (/workspace/.substrate-secrets) is NOT loaded: it holds every
+# The persisted store (/workspace/.substrate-private/substrate-secrets) is NOT loaded: it holds every
 # trust-root secret (secrets-manifest.json), and gen-env re-emits each non-scoped name
 # it carries into /etc/substrate/env, which is authoritative anyway.
 EnvironmentFile=/etc/substrate/env
