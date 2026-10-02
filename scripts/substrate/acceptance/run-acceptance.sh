@@ -480,6 +480,43 @@ else
   set_check contained_runner unknown '{"detail":"no container to inspect"}'
 fi
 
+# 5e. Secret directory masked BY EFFECT (secret-mask-probe.sh). The scoped trust-root secrets live in
+# /etc/substrate/private, masked as a directory by every unit but the declared writers. Config text cannot
+# prove that: InaccessiblePaths= binds what existed when each unit started, and a file mask goes stale at
+# the first rename. So, inside THIS privileged container (systemd PID1, the image under test):
+#   selftest  a must-fail control (a file mask + rename is seen), a vessel-style and a tick-style probe that
+#             must not see any scoped file after the renderer rewrites them all by rename, and the positive
+#             control: every manifest consumer, as a copy of its own EnvironmentFile=/mask lines, still
+#             receives every name of its scoped file;
+#   check     every running service of the booted fleet: nothing it masks is visible from its namespace,
+#             and no unit is unmasked unless it is a declared exemption.
+# Names, paths and dev:inode only. Judged when the image carries the probe; a blind probe is a failure.
+secret_mask_judged=0
+if [ "$have_container" -eq 1 ]; then
+  if eng exec "$ACCEPTANCE_CONTAINER" test -x /usr/local/bin/secret-mask-probe 2>/dev/null; then
+    secret_mask_judged=1
+    sm_st=0; sm_ck=0
+    timeout 300 env -i "${fence_env[@]}" "$ENGINE" exec "$ACCEPTANCE_CONTAINER" secret-mask-probe selftest \
+      --renderer /usr/local/bin/render-secret-scope >"$RESULT_DIR/diag/secret-mask-selftest.txt" 2>&1 || sm_st=$?
+    timeout 300 env -i "${fence_env[@]}" "$ENGINE" exec "$ACCEPTANCE_CONTAINER" secret-mask-probe check \
+      >"$RESULT_DIR/diag/secret-mask-check.txt" 2>&1 || sm_ck=$?
+    # check exit 3 = only OTHER masked paths visible (VISIBLE-OTHER, e.g. the persisted store, still
+    # masked as a file): recorded as its own check, secret_mask_other, which is reported but not
+    # judged, so the directory fix is gated on what it fixes while the store's leak stays visible.
+    sm_r=fail; [ "$sm_st" -eq 0 ] && { [ "$sm_ck" -eq 0 ] || [ "$sm_ck" -eq 3 ]; } && sm_r=pass
+    set_check secret_mask "$sm_r" "$(jq -nc --argjson s "$sm_st" --argjson c "$sm_ck" \
+      --arg f "$(grep -hE '^(VISIBLE |UNMASKED|FAIL|BLIND)' "$RESULT_DIR/diag/secret-mask-selftest.txt" "$RESULT_DIR/diag/secret-mask-check.txt" | head -n 20)" \
+      '{selftest_exit: $s, check_exit: $c, findings: ($f | split("\n") | map(select(length > 0))), log: ["diag/secret-mask-selftest.txt", "diag/secret-mask-check.txt"]}')"
+    sm_o=pass; [ "$sm_ck" -eq 3 ] && sm_o=fail; { [ "$sm_ck" -eq 1 ] || [ "$sm_ck" -eq 2 ]; } && sm_o=unknown
+    set_check secret_mask_other "$sm_o" "$(jq -nc --arg f "$(grep -hE '^VISIBLE-OTHER' "$RESULT_DIR/diag/secret-mask-check.txt" | head -n 20)" \
+      '{judged: false, findings: ($f | split("\n") | map(select(length > 0))), log: "diag/secret-mask-check.txt"}')"
+  else
+    set_check secret_mask unknown '{"detail":"not judged: the image has no /usr/local/bin/secret-mask-probe"}'
+  fi
+else
+  set_check secret_mask unknown '{"detail":"no container to inspect"}'
+fi
+
 # 5d. Stop timeout versus the drain budget.
 #   budget = the longest vessel drain (any *_DRAIN_MS a unit is started with)
 #          + the datastore's own stop timeout (its flush allowance)
@@ -706,6 +743,7 @@ digest="$(eng image inspect --format '{{json .RepoDigests}}' "$IMAGE" 2>/dev/nul
 judged_levels=(live seeded served)
 judged_checks=(cold extraction image_format healthcheck revision stop_timeout image_code glue_tests)
 [ "$contained_runner_judged" = 1 ] && judged_checks+=(contained_runner)
+[ "$secret_mask_judged" = 1 ] && judged_checks+=(secret_mask)
 if [ "$mode" = "gating" ]; then
   judged_levels+=(usable connected)
   judged_checks+=(client_config auth_request cockpit_query)

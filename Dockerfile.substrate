@@ -205,7 +205,8 @@ COPY repos/relevance-sink-vessel/src ./relevance-sink-vessel/src
 COPY repos/relevance-sink-vessel/tsconfig.json ./relevance-sink-vessel/
 
 # --- Substrate runtime config ---
-RUN mkdir -p /etc/substrate /workspace /var/lib/surrealdb /scripts
+RUN mkdir -p /etc/substrate /workspace /var/lib/surrealdb /scripts \
+ && mkdir -p -m 0700 /etc/substrate/private
 
 # Vendor units in /usr/lib/systemd/system (not /etc): /etc outranks every other
 # unit dir, so units living there can never be masked — apply-inventory's role
@@ -218,6 +219,9 @@ COPY scripts/substrate/gen-env.sh /usr/local/bin/gen-env
 # gen-env renders the trust-root secrets into per-consumer files through this, from
 # secrets-manifest.json (copied with the fleet definitions below). It refuses to boot without it.
 COPY scripts/substrate/render-secret-scope.sh /usr/local/bin/render-secret-scope
+# Proves by effect that no unit namespace can see /etc/substrate/private (pull-sync runs
+# `check` after every render; install acceptance runs `selftest`).
+COPY scripts/substrate/secret-mask-probe.sh /usr/local/bin/secret-mask-probe
 COPY scripts/substrate/setup-git-push.sh /usr/local/bin/setup-git-push
 COPY scripts/substrate/git-hooks-ledger/ /usr/local/share/substrate/git-hooks-ledger/
 # Self-bootstrap + self-diagnosis (2026-07-02): readiness gate, doctor, and the
@@ -377,7 +381,7 @@ RUN set -e; chmod +x /usr/local/bin/vessel-tree-hash; \
     done > /usr/local/share/substrate/vessel-tree.sha256; \
     { printf '%s\n' $VESSEL_REVISIONS | grep '=' || true; } > /usr/local/share/substrate/vessel-revisions
 
-RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/local/bin/render-secret-scope /usr/local/bin/setup-git-push \
+RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/local/bin/render-secret-scope /usr/local/bin/secret-mask-probe /usr/local/bin/setup-git-push \
         /usr/local/bin/substrate-ready /usr/local/bin/substrate-doctor /usr/local/bin/reseed-restart \
         /usr/local/bin/substrate-status /usr/local/bin/substrate-connect /usr/local/bin/substrate-manifest /usr/local/bin/substrate-install \
         /usr/local/bin/substrate-config \

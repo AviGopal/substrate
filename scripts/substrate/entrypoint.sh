@@ -39,6 +39,10 @@ mkdir -p "$FLEET_DIR"
 # (vessel.d drop-in) skips a path that is absent when a unit's namespace is built, so a gate dir
 # created later by gate-runner would stay visible to every lane unit until its next restart.
 mkdir -p -m 0700 /workspace/.gate
+# Same rule for the scoped-secrets directory (gen-env above renders into it and creates it;
+# this is the belt). It is masked as a DIRECTORY by every unit, so it must exist before the
+# first unit starts and must never be replaced: mkdir -p only, never rm/mv/re-mkdir.
+mkdir -p -m 0700 /etc/substrate/private
 for f in vessels.inventory.json vessels.manifest.json; do
   if [ ! -f "$FLEET_DIR/$f" ] && [ -f "/usr/local/share/substrate/$f" ]; then
     cp "/usr/local/share/substrate/$f" "$FLEET_DIR/$f"

@@ -43,20 +43,20 @@ function upsertEnvVar(path: string, key: string, value: string): void {
 // /etc/substrate/env (loaded by every unit, development-vessel's lane code
 // included). secrets-manifest.json names the files that carry it — the operator /
 // bootstrap admin.env plus each consumer unit's env.d file — so this writer
-// follows the manifest rather than a list of its own. Falls back to admin.env.
+// follows the manifest rather than a list of its own. Falls back to private/admin.env.
 function scopedFiles(name: string): string[] {
   for (const m of ["/usr/local/share/substrate/secrets-manifest.json", `${import.meta.dir}/secrets-manifest.json`]) {
     try {
       const j = JSON.parse(readFileSync(m, "utf-8"));
       const e = j?.secrets?.[name];
       if (!e) continue;
-      const tmpl: string = j.unit_file ?? "env.d/{unit}.env";
+      const tmpl: string = j.unit_file ?? "private/env.d/{unit}.env";
       const files = (e.units ?? []).map((u: string) => `/etc/substrate/${tmpl.replace("{unit}", u)}`);
-      if ((e.scripts ?? []).length > 0) files.push(`/etc/substrate/${j.admin_file ?? "admin.env"}`);
+      if ((e.scripts ?? []).length > 0) files.push(`/etc/substrate/${j.admin_file ?? "private/admin.env"}`);
       return files;
     } catch {}
   }
-  return ["/etc/substrate/admin.env"];
+  return ["/etc/substrate/private/admin.env"];
 }
 function persistAdminKey(key: string): void {
   for (const f of scopedFiles("SUBSTRATE_ADMIN_KEY")) upsertEnvVar(f, "SUBSTRATE_ADMIN_KEY", key);

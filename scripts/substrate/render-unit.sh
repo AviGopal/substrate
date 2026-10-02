@@ -40,14 +40,16 @@ env_lines="$(echo "$e" | jq -r '.env // {} | to_entries[] | "Environment=\(.key)
 after="$(echo "$e" | jq -r '(.depends_on // []) | map(. + ".service") | join(" ")')"
 
 # Scoped trust-root secrets: a vessel the secrets manifest names as a consumer loads
-# its own /etc/substrate/env.d/<name>.env (rendered by render-secret-scope.sh), after
+# its own /etc/substrate/private/env.d/<name>.env (rendered by render-secret-scope.sh), after
 # the shared file and without '-'. Every other rendered vessel gets none of them.
 SECRETS_MANIFEST="${SECRETS_MANIFEST:-$(dirname "$MANIFEST")/secrets-manifest.json}"
 [ -f "$SECRETS_MANIFEST" ] || SECRETS_MANIFEST=/usr/local/share/substrate/secrets-manifest.json
 scoped_env=""
 if [ -f "$SECRETS_MANIFEST" ] && jq -e --arg n "$VESSEL" \
      '[.secrets[].units[]?, .patterns[]?.units[]?] | index($n) != null' "$SECRETS_MANIFEST" >/dev/null 2>&1; then
-  scoped_env="EnvironmentFile=/etc/substrate/env.d/$VESSEL.env"
+  _ut="$(jq -r '.unit_file // empty' "$SECRETS_MANIFEST")"
+  [ -n "$_ut" ] || { echo "render-unit: $SECRETS_MANIFEST names no unit_file" >&2; exit 1; }
+  scoped_env="EnvironmentFile=/etc/substrate/${_ut//\{unit\}/$VESSEL}"
 fi
 
 # A vessel whose workdir is inside the SUPER-REPO CLONE cannot start — or install

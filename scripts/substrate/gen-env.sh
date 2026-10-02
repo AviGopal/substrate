@@ -1852,11 +1852,14 @@ echo "[gen-env] persisted secrets to /workspace/.substrate-secrets"
 # The shared file above is loaded by EVERY unit, so anything written there sits in
 # every vessel's process env, development-vessel (where autonomously landed code
 # runs) included. secrets-manifest.json names each trust-root secret's consumers;
-# the renderer writes /etc/substrate/env.d/<unit>.env per consumer unit and
-# /etc/substrate/admin.env for the bootstrap/operator scripts, atomically, 0600,
+# the renderer writes /etc/substrate/private/env.d/<unit>.env per consumer unit and
+# /etc/substrate/private/admin.env for the bootstrap/operator scripts, atomically, 0600,
 # from exactly the values resolved above (the API_KEY_SECRET_PREVIOUS bridge and
 # the fingerprint check included). Consumer units load their file WITHOUT '-', so
 # a render failure must stop the boot here rather than start identity keyless.
+# /etc/substrate/private is the one directory every unit masks (service.d drop-in);
+# the renderer creates it once and never replaces it. --retire-legacy clears the flat
+# layout a restarted container may still carry (no unit has started yet).
 _rss=""
 for _c in "$(dirname "$0")/render-secret-scope.sh" /usr/local/bin/render-secret-scope; do
   [ -x "$_c" ] && { _rss="$_c"; break; }
@@ -1869,7 +1872,7 @@ for _pk in $PEER_KEY_NAMES; do export "$_pk"; done
 if ! API_KEY_SECRET="$API_KEY_SECRET" API_KEY_SECRET_PREVIOUS="${API_KEY_SECRET_PREVIOUS:-}" \
      SUBSTRATE_ADMIN_KEY="${SUBSTRATE_ADMIN_KEY:-}" FEDERATION_SIGNING_SECRET="${FEDERATION_SIGNING_SECRET:-}" \
      PEER_CREDENTIALS="${PEER_CREDENTIALS:-}" \
-     "$_rss" --mode values --env-dir /etc/substrate; then
+     "$_rss" --mode values --retire-legacy --env-dir /etc/substrate; then
   echo "[gen-env] ERROR: rendering the scoped secret files failed; refusing to boot with consumers that cannot load them." >&2
   exit 1
 fi

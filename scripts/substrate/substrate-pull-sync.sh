@@ -631,7 +631,7 @@ fi
 # the super-repo pull, so the first tick after a merge ran the OLD script against the
 # NEW super-repo content. Observed 10-02 with 3b7b31b9: the old converge_units (no
 # secret renderer) installed new identity/discovery units whose non-"-"
-# EnvironmentFile=/etc/substrate/env.d/<unit>.env did not exist yet, so any restart of
+# EnvironmentFile=<scoped file> did not exist yet, so any restart of
 # those units would have failed until the next tick. Any new step a commit adds to the
 # converger has the same hole: it can never apply to the tick that pulls it.
 #
@@ -781,7 +781,7 @@ converge_units() {
   stage_committed_glue "$_cu_super" || return 0
   _cu_root="$PULLSYNC_GLUE_STAGE"
   [ -d "$_cu_root/scripts/substrate/units" ] || return 0
-  # SCOPED SECRETS FIRST. Consumer units load /etc/substrate/env.d/<unit>.env WITHOUT
+  # SCOPED SECRETS FIRST. Consumer units load /etc/substrate/private/env.d/<unit>.env WITHOUT
   # '-' (secrets-manifest.json), but gen-env renders those files only at boot. A unit
   # converged onto a node booted before the split, then restarted (identity-vessel is,
   # whenever its repo advances), would fail on the missing file. So render them here,
@@ -865,9 +865,35 @@ converge_units() {
       || log "units: !!! daemon-reload FAILED — unit changes are on disk but NOT active"
   fi
   if [ -f "$_cu_rss" ] && [ -f "$_cu_envdir/env" ]; then
-    bash "$_cu_rss" --mode recover --strip-shared --env-dir "$_cu_envdir" \
+    # --retire-legacy only here, after the units converged: a flat-layout file an
+    # installed unit still names becomes a symlink into the private directory, the
+    # rest are removed (render-secret-scope.sh MIGRATION).
+    bash "$_cu_rss" --mode recover --strip-shared --retire-legacy --env-dir "$_cu_envdir" \
       --unit-dirs "/etc/systemd/system /run/systemd/system $UNIT_DIR /lib/systemd/system" 2>&1 \
-      | grep -E 'removed from the shared env|kept ' | while IFS= read -r _l; do log "units: $_l"; done || true
+      | grep -E 'removed from the shared env|kept |retired |moved |created ' | while IFS= read -r _l; do log "units: $_l"; done || true
+  fi
+  # THE MASK, BY EFFECT, AFTER EVERY RENDER. A unit's InaccessiblePaths= binds what
+  # existed when it started, so neither the drop-in text nor `systemctl show` can say
+  # whether a running vessel can open the secrets: only a stat from inside its mount
+  # namespace can (secret-mask-probe.sh; dev:inode only, never contents). It runs its
+  # own must-fail control first (a renamed file under a file mask must be seen), so a
+  # blind probe is reported as blind, never as a pass. Every tick renders, so this is
+  # also the rhythm. A finding is a gap with a stable id per tick-independent cause.
+  _cu_smp="$_cu_root/scripts/substrate/secret-mask-probe.sh"
+  if [ -f "$_cu_smp" ] && [ "${PULLSYNC_SECRET_MASK_PROBE:-1}" = 1 ] && [ "$_cu_envdir" = /etc/substrate ]; then
+    _cu_smp_rc=0
+    bash "$_cu_smp" check --env-dir "$_cu_envdir" > "$_cu_envdir/.secret-mask-probe.out" 2>&1 || _cu_smp_rc=$?
+    if [ "$_cu_smp_rc" != 0 ]; then
+      _cu_smp_lines="$(grep -E '^(VISIBLE|UNMASKED|FAIL|BLIND)' "$_cu_envdir/.secret-mask-probe.out" | head -n 20)"
+      # rc 1 = the scoped-secrets directory; 3 = another masked path (a file mask gone stale); 2 = blind
+      log "units: !!! secret-mask-probe rc=$_cu_smp_rc: $(printf '%s' "$_cu_smp_lines" | tr '\n' ';')"
+      if command -v jq >/dev/null 2>&1; then
+        case "$_cu_smp_rc" in 2) _cu_smp_kind=blind ;; 3) _cu_smp_kind=other-path-leak ;; *) _cu_smp_kind=leak ;; esac
+        emit_gap "$(jq -n -c --arg id "secret-mask-probe-$_cu_smp_kind" --arg l "$_cu_smp_lines" --arg k "$_cu_smp_kind" \
+          --arg s "secret-mask-probe found the scoped-secrets directory reachable from inside a unit namespace, or could not prove it is not ($_cu_smp_kind). A unit started before the mask existed needs a restart; an UNMASKED unit needs the default-deny drop-in or a declared exemption (units/service.d/EXEMPT). Findings name units and paths only." \
+          '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"security",source:"substrate_detected",summary:$s,classification_metadata:{kind:$k,findings:$l},status:"open"}}}}')"
+      fi
+    fi
   fi
   # CONVERGING A TIMER'S FILE DOES NOT MAKE IT FIRE.
   #
@@ -957,6 +983,7 @@ converge_fleet_defs() {
   # converged gen-env without them would brick the next container start.
   for _cf_pair in \
     "render-secret-scope.sh:$BIN_DIR/render-secret-scope:0755" \
+    "secret-mask-probe.sh:$BIN_DIR/secret-mask-probe:0755" \
     "secrets-manifest.json:$SHARE_DIR/secrets-manifest.json:0644"; do
     IFS=: read -r _cf_from _cf_to _cf_mode <<< "$_cf_pair"
     [ -f "$_cf_src/$_cf_from" ] || continue
@@ -970,6 +997,7 @@ converge_fleet_defs() {
     "gen-env.sh:$BIN_DIR/gen-env" \
     "render-unit.sh:$BIN_DIR/render-unit" \
     "vessel-ctl.sh:$BIN_DIR/vessel-ctl" \
+    "substrate-key.sh:$BIN_DIR/substrate-key" \
     "secrets.env.sh:$SHARE_DIR/secrets.env.sh"; do
     _cf_from="${_cf_pair%%:*}"
     _cf_to="${_cf_pair#*:}"
@@ -987,7 +1015,7 @@ converge_fleet_defs() {
     # The wrong message told a maintainer their tool could not have changed under
     # them, which is exactly what it had done.
     case "$(basename "$_cf_to")" in
-      vessel-ctl|gen-env|render-unit)
+      vessel-ctl|gen-env|render-unit|substrate-key)
         _cf_when="takes effect on the NEXT INVOCATION — this is re-executed from disk each time" ;;
       apply-inventory)
         _cf_when="takes effect at next container start, or immediately via 'vessel-ctl apply'" ;;

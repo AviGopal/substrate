@@ -37,7 +37,7 @@ ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 
 DROPIN=10-secrets-out-of-reach.conf
-PATHS=(/workspace/.substrate-secrets /workspace/.substrate-secrets.d)
+PATHS=(/workspace/.substrate-secrets /workspace/.substrate-secrets.d /etc/substrate/private)
 
 # Mirror the image layout: units/ -> <root>/usr/lib/systemd/system (cp -a keeps symlinks).
 U="$T/usr/lib/systemd/system"; mkdir -p "$U"

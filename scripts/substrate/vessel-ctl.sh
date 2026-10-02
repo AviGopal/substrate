@@ -246,7 +246,7 @@ case "$ACTION" in
 
     # 2. Ensure declared secrets exist where their consumer reads them. A name the
     # secrets manifest scopes (a trust-root secret) goes ONLY to this vessel's
-    # /etc/substrate/env.d/<vessel>.env, and only if the manifest names this vessel
+    # /etc/substrate/private/env.d/<vessel>.env (the manifest's unit_file), and only if the manifest names this vessel
     # as its consumer; writing it to /etc/substrate/env would hand it to every unit.
     # Every other declared name stays in the shared env, as before.
     secs=$(echo "$e" | jq -r '.secrets[]?' | tr '\n' ' ')
@@ -256,7 +256,7 @@ case "$ACTION" in
            for k in $secs; do v=\"\${!k:-}\"; [ -n \"\$v\" ] || continue; f=/etc/substrate/env; \
              if [ -f \"\$sm\" ] && jq -e --arg k \"\$k\" '.secrets[\$k] != null' \"\$sm\" >/dev/null 2>&1; then \
                if ! jq -e --arg k \"\$k\" --arg u '$VESSEL' '.secrets[\$k].units | index(\$u) != null' \"\$sm\" >/dev/null 2>&1; then echo \"[vessel-ctl] not writing scoped secret \$k: $VESSEL is not its declared consumer\" >&2; continue; fi; \
-               f=/etc/substrate/env.d/$VESSEL.env; mkdir -p -m 700 /etc/substrate/env.d; [ -f \"\$f\" ] || { : > \"\$f\"; chmod 600 \"\$f\"; }; v=\"\\\"\$v\\\"\"; \
+               f=/etc/substrate/\$(jq -r '.unit_file' \"\$sm\" | sed 's/{unit}/$VESSEL/'); [ -d /etc/substrate/private ] || mkdir -p -m 700 /etc/substrate/private; mkdir -p -m 700 \"\$(dirname \"\$f\")\"; [ -f \"\$f\" ] || { : > \"\$f\"; chmod 600 \"\$f\"; }; v=\"\\\"\$v\\\"\"; \
                { grep -v \"^\$k=\" /etc/substrate/env || true; } > /etc/substrate/env.tmp && chmod 600 /etc/substrate/env.tmp && mv /etc/substrate/env.tmp /etc/substrate/env; fi; \
              { grep -v \"^\$k=\" \"\$f\" || true; echo \"\$k=\$v\"; } > \"\$f.tmp\" && chmod 600 \"\$f.tmp\" && mv \"\$f.tmp\" \"\$f\"; done"
     fi

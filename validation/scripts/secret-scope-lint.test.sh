@@ -14,7 +14,7 @@
 #   4. every declared consumer loads its scoped file, without '-', after the shared env
 #   5. no unit loads admin.env
 #   6. identity-vessel's resolved env carries API_KEY_SECRET with the rendered value
-#   7. rendered files are 0600 in a 0700 env.d
+#   7. rendered files are 0600 in a 0700 private dir
 #   8. recover mode on a node booted before the split: values carried from the old
 #      shared env byte-for-byte, then stripped from it once the consumers load env.d
 # Prints names only. Exit 0 = all pass.
@@ -33,6 +33,8 @@ echo "== secret-scope-lint ($ROOT)"
 [ -f "$RSS" ] || bad "no renderer at scripts/substrate/render-secret-scope.sh"
 
 SCOPED="$(jq -r '.secrets | keys[]' "$MAN")"
+UT="$(jq -r '.unit_file' "$MAN")"; AF="$(jq -r '.admin_file' "$MAN")"; PD="$(jq -r '.private_dir' "$MAN")"
+ufile() { printf '%s' "${UT//\{unit\}/$1}"; }   # manifest-relative scoped file of a unit
 PEER_NAME="LINT_PEER_API_KEY"   # a pattern-matched name, as PEER_CREDENTIALS would carry
 consumers_of() { # <NAME> -> units, one per line
   if [ "$1" = "$PEER_NAME" ]; then jq -r '.patterns[0].units[]?' "$MAN"; else jq -r --arg n "$1" '.secrets[$n].units[]?' "$MAN"; fi
@@ -94,7 +96,7 @@ resolve() { # <unit> -> NAME=value lines (scoped names only)
 for uf in "$U"/*; do
   u="$(basename "$uf")"; un="${u#rendered:}"
   grep -q '^EnvironmentFile=-\?/workspace/.substrate-secrets$' "$uf" && bad "$u loads the persisted store /workspace/.substrate-secrets"
-  grep -q '^EnvironmentFile=-\?/etc/substrate/admin.env$' "$uf" && bad "$u loads admin.env (operator/bootstrap scripts only)"
+  grep -qx "EnvironmentFile=-\?/etc/substrate/$AF" "$uf" && bad "$u loads $AF (operator/bootstrap scripts only)"
   env_now="$(resolve "$u")"
   for n in $SCOPED $PEER_NAME; do
     printf '%s\n' "$env_now" | grep -q "^$n=." || continue
@@ -104,7 +106,7 @@ done
 for un in $(jq -r '[.secrets[].units[]?, .patterns[]?.units[]?] | unique | .[]' "$MAN"); do
   for uf in "$U/$un" "$U/rendered:$un"; do
     [ -f "$uf" ] || continue
-    want="EnvironmentFile=/etc/substrate/env.d/$un.env"
+    want="EnvironmentFile=/etc/substrate/$(ufile "$un")"
     if ! grep -qx "$want" "$uf"; then bad "$(basename "$uf") is a declared consumer but does not load $want (without '-')"; continue; fi
     [ "$(grep -nx "$want" "$uf" | cut -d: -f1)" -gt "$(grep -nE '^EnvironmentFile=-?/etc/substrate/env$' "$uf" | cut -d: -f1 | head -1)" ] \
       && ok "$(basename "$uf") loads its scoped file after the shared env" || bad "$(basename "$uf") loads its scoped file BEFORE the shared env"
@@ -125,9 +127,10 @@ for u in development-vessel local-tools-vessel; do
 done
 
 # ── 7 ────────────────────────────────────────────────────────────────────────
-if [ -d "$E/env.d" ]; then
-  [ "$(stat -c %a "$E/env.d")" = 700 ] && ok "env.d is 0700" || bad "env.d is $(stat -c %a "$E/env.d")"
-  _m=""; for f in "$E"/env.d/*.env "$E/admin.env"; do [ "$(stat -c %a "$f")" = 600 ] || _m="$_m $(basename "$f")"; done
+if [ -d "$E/$PD" ]; then
+  _d=""; while IFS= read -r f; do [ "$(stat -c %a "$f")" = 700 ] || _d="$_d ${f#"$E"/}"; done < <(find "$E/$PD" -type d)
+  [ -z "$_d" ] && ok "$PD/ and its subdirectories are 0700" || bad "not 0700:$_d"
+  _m=""; while IFS= read -r f; do [ "$(stat -c %a "$f")" = 600 ] || _m="$_m $(basename "$f")"; done < <(find "$E/$PD" -type f)
   [ -z "$_m" ] && ok "every rendered file is 0600" || bad "not 0600:$_m"
 fi
 
@@ -139,9 +142,9 @@ R="$T/recover"; mkdir -p "$R/etc" "$R/units"
 for f in "$S"/units/*.service; do cp "$f" "$R/units/"; done
 if [ -f "$RSS" ] && bash "$RSS" --mode recover --strip-shared --manifest "$MAN" --env-dir "$R/etc" --store "$R/store" \
      --peer-file "$R/none" --unit-dirs "$R/units" > "$T/recover.log" 2>&1; then
-  v="$(env -i sh -c '. "$1"; printf %s "$API_KEY_SECRET"' _ "$R/etc/env.d/identity-vessel.env")"
+  v="$(env -i sh -c '. "$1"; printf %s "$API_KEY_SECRET"' _ "$R/etc/$(ufile identity-vessel)")"
   [ "$v" = "legacy-$(fake API_KEY_SECRET)" ] && ok "recover: identity's API_KEY_SECRET carried from the old shared env unchanged" || bad "recover: identity's API_KEY_SECRET changed"
-  v="$(env -i sh -c '. "$1"; printf %s "$LINT_PEER_API_KEY"' _ "$R/etc/env.d/discovery-vessel.env")"
+  v="$(env -i sh -c '. "$1"; printf %s "$LINT_PEER_API_KEY"' _ "$R/etc/$(ufile discovery-vessel)")"
   [ "$v" = "legacy-peer" ] && ok "recover: the peer key reached discovery-vessel's file" || bad "recover: the peer key did not reach discovery-vessel's file"
   _left="$(grep -oE "^($(echo $SCOPED $PEER_NAME | tr ' ' '|'))=" "$R/etc/env" | tr -d '=' | tr '\n' ' ')"
   [ -z "$_left" ] && ok "recover: scoped names stripped from the shared env" || bad "recover: still in the shared env: $_left"

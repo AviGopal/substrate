@@ -1,0 +1,10 @@
+# Units that open /etc/substrate/private AT RUNTIME and therefore override the
+# default-deny drop-in service.d/05-secret-dir-out-of-reach.conf with a same-named
+# file in their own <unit>.service.d/. One list; nothing implicit. (systemd reads only
+# *.conf in a drop-in directory, so this file configures nothing.)
+# Read by validation/scripts/secret-dir-mask.test.sh: every entry has its override,
+# every override has its entry. A unit that only LOADS a secret (EnvironmentFile=)
+# needs no exemption and must not have one.
+# Format: <unit> <reason>
+identity-seeder.service      seed-identity writes the minted SUBSTRATE_ADMIN_KEY into private/admin.env and its consumers' private/env.d files
+substrate-pull-sync.service  renders, migrates and retires the scoped files (render-secret-scope), writes them on vessel-ctl install, and runs secret-mask-probe check, which must stat the real files

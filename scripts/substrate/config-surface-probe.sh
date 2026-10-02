@@ -218,7 +218,7 @@ probe_lane() {  # $1 = lane name; writes $WORK/<lane>.{env,secrets,values}
       echo '===ENV==='
       # A vessel can read the shared env AND, if it consumes one, its scoped file
       # (secrets-manifest.json): both count as emitted.
-      cat /etc/substrate/env /etc/substrate/env.d/*.env /etc/substrate/admin.env 2>/dev/null \
+      cat /etc/substrate/env /etc/substrate/private/env.d/*.env /etc/substrate/private/admin.env 2>/dev/null \
         | grep -oE '^[A-Z_][A-Z0-9_]*=' | tr -d '=' | sort -u
       echo '===SECRETS==='
       grep -oE '^[A-Z_][A-Z0-9_]*=' /workspace/.substrate-secrets 2>/dev/null | tr -d '=' | sort -u
@@ -228,7 +228,7 @@ probe_lane() {  # $1 = lane name; writes $WORK/<lane>.{env,secrets,values}
       # (as it must for JSON values) a perfectly delivered value stopped matching
       # its own sentinel and was reported HARDCODED. What a vessel sees is the
       # SOURCED value; compare that. env -i so nothing is inherited.
-      env -i sh -c 'set -a; for f in /etc/substrate/env /etc/substrate/env.d/*.env /etc/substrate/admin.env; do [ -f "\$f" ] && . "\$f"; done 2>/dev/null; set +a; env' 2>/dev/null \
+      env -i sh -c 'set -a; for f in /etc/substrate/env /etc/substrate/private/env.d/*.env /etc/substrate/private/admin.env; do [ -f "\$f" ] && . "\$f"; done 2>/dev/null; set +a; env' 2>/dev/null \
         | grep -E '^[A-Z_][A-Z0-9_]*=.*PROBEVAL' | sort
     " > "$WORK/$lane.raw" 2> "$WORK/$lane.err"
   local rc=$?

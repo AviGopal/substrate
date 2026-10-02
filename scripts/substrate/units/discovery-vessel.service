@@ -8,7 +8,7 @@ EnvironmentFile=/etc/substrate/env
 # Scoped trust-root secrets (secrets-manifest.json; rendered by render-secret-scope.sh).
 # After the shared file, and WITHOUT '-': a missing file must fail this unit, not
 # start it without the secret it exists to hold.
-EnvironmentFile=/etc/substrate/env.d/discovery-vessel.env
+EnvironmentFile=/etc/substrate/private/env.d/discovery-vessel.env
 Environment=PORT=8100
 Environment=HOST=127.0.0.1
 WorkingDirectory=/vessels/discovery-vessel

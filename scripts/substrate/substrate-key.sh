@@ -34,7 +34,7 @@ set -a; source /etc/substrate/env 2>/dev/null || true; set +a
 # The trust-root secrets this CLI needs (SUBSTRATE_ADMIN_KEY, API_KEY_SECRET) are not in
 # the shared env, which every unit loads: they live in the operator/bootstrap file that
 # secrets-manifest.json scopes them to. No vessel unit loads it.
-set -a; source /etc/substrate/admin.env 2>/dev/null || true; set +a
+set -a; source /etc/substrate/private/admin.env 2>/dev/null || true; set +a
 IDENTITY="${IDENTITY_VESSEL_URL:-http://127.0.0.1:8101}"
 
 die() { echo "[substrate-key] ERROR: $*" >&2; exit 1; }
@@ -75,16 +75,16 @@ SECRETS_FILE="${SECRETS_FILE:-/workspace/.substrate-secrets}"
 # .substrate-secrets with `cut -d= -f2-`, so a quoted value there would be
 # recovered WITH its quotes and silently corrupt the key.
 # The env-format targets are the files secrets-manifest.json scopes SUBSTRATE_ADMIN_KEY
-# to (admin.env + each consumer unit's env.d file) — never the shared /etc/substrate/env.
+# to (private/admin.env + each consumer unit's private/env.d file) — never the shared /etc/substrate/env.
 admin_key_files() {
   local m
   for m in /usr/local/share/substrate/secrets-manifest.json "$(dirname "$0")/secrets-manifest.json"; do
     [[ -f "$m" ]] || continue
-    jq -r '(.unit_file // "env.d/{unit}.env") as $t | .secrets.SUBSTRATE_ADMIN_KEY as $e
+    jq -r '(.unit_file // "private/env.d/{unit}.env") as $t | .secrets.SUBSTRATE_ADMIN_KEY as $e
            | ([$e.units[]? as $u | "/etc/substrate/" + ($t | sub("\\{unit\\}"; $u))]
-              + (if (($e.scripts // []) | length) > 0 then ["/etc/substrate/" + (.admin_file // "admin.env")] else [] end))[]' "$m" && return 0
+              + (if (($e.scripts // []) | length) > 0 then ["/etc/substrate/" + (.admin_file // "private/admin.env")] else [] end))[]' "$m" && return 0
   done
-  echo /etc/substrate/admin.env
+  echo /etc/substrate/private/admin.env
 }
 persist_admin_key() { # $1=key
   local k="$1" f line t
@@ -203,7 +203,7 @@ case "$cmd" in
     #
     # Reachable only from inside the container: identity-vessel refuses this
     # endpoint unless the request arrives on loopback AND presents API_KEY_SECRET,
-    # which lives in root-only /etc/substrate/admin.env (secrets-manifest.json). Anyone who can satisfy both
+    # which lives in root-only /etc/substrate/private/admin.env (secrets-manifest.json). Anyone who can satisfy both
     # already owns the box — this routes that existing authority through an
     # audited, logged path instead of a hand-forged admin JWT.
     #

@@ -7,7 +7,26 @@
 # landed code runs. The manifest names each secret's consumers; this script writes
 #   <env-dir>/env.d/<unit>.env   for every unit consumer (the unit loads it, no '-')
 #   <env-dir>/admin.env          for script consumers (bootstrap tier, operator CLI)
-# and nothing else. Every file the manifest implies is ALWAYS written, empty values
+# and nothing else.
+#
+# ONE STABLE DIRECTORY. Every file above lives under <env-dir>/<private_dir>
+# (manifest; "private"), root 0700. Units run as root, so modes stop nothing; what
+# keeps a unit away from these files is InaccessiblePaths= on THAT DIRECTORY
+# (units/service.d/05-secret-dir-out-of-reach.conf, every unit but the declared
+# writers). A mask on a FILE binds the inode the path named when the unit started,
+# and this script replaces files by rename, so a file-level mask goes stale at the
+# first render and the unit reads the live file (measured 10-02: inode inside the
+# vessel == inode outside). A directory overmount does not care what happens inside
+# it. So this script creates the directory once (mkdir, never -p over a symlink),
+# only ever chmods it in place, and never removes, renames or recreates it; a
+# directory that is not a real directory is refused.
+#
+# MIGRATION from the flat layout (<env-dir>/admin.env, <env-dir>/env.d/*.env) runs on
+# every invocation: a flat file whose private counterpart is absent is MOVED in
+# (rename: its values travel, nothing is re-derived). --retire-legacy then removes
+# each flat file; one that an installed unit still names in EnvironmentFile= becomes
+# a symlink into the private directory instead, so that unit keeps loading it (the
+# manager reads it before namespacing) while the content stays behind the mask. Every file the manifest implies is ALWAYS written, empty values
 # included, so a consumer unit never fails on a missing file and a later writer
 # (seed-identity, substrate-key) always has a file to upsert into.
 #
@@ -21,6 +40,9 @@
 #   --strip-shared  (recover only) afterwards remove a name from the shared env, but
 #                   only once every consumer unit installed on this node is verified
 #                   to load its scoped file — otherwise the consumer would lose it.
+#   --retire-legacy afterwards remove the flat-layout files (see MIGRATION). pull-sync
+#                   passes it only on its post-converge call, so a unit that still
+#                   names a flat path is never left without its file mid-tick.
 #
 # Prints names and file paths only, never a value. Writes are temp + rename, 0600.
 set -euo pipefail
@@ -32,6 +54,7 @@ STORE="/workspace/.substrate-secrets"
 PEER_FILE="${PEER_CREDENTIALS_FILE:-/workspace/.peer-credentials}"
 MODE="values"
 STRIP=0
+RETIRE=0
 UNIT_DIRS="/etc/systemd/system /run/systemd/system /usr/lib/systemd/system /lib/systemd/system"
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -41,6 +64,7 @@ while [ $# -gt 0 ]; do
     --peer-file) PEER_FILE="$2"; shift 2 ;;
     --mode)      MODE="$2"; shift 2 ;;
     --strip-shared) STRIP=1; shift ;;
+    --retire-legacy) RETIRE=1; shift ;;
     --unit-dirs) UNIT_DIRS="$2"; shift 2 ;;
     *) echo "[secret-scope] unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -57,9 +81,61 @@ command -v jq >/dev/null 2>&1 || { echo "[secret-scope] ERROR: jq is required" >
 jq -e '.secrets | type == "object"' "$MANIFEST" >/dev/null || { echo "[secret-scope] ERROR: $MANIFEST has no .secrets object" >&2; exit 1; }
 
 SHARED="$ENV_DIR/env"
-UNIT_TMPL="$(jq -r '.unit_file // "env.d/{unit}.env"' "$MANIFEST")"
-ADMIN_FILE="$ENV_DIR/$(jq -r '.admin_file // "admin.env"' "$MANIFEST")"
+PRIVATE_REL="$(jq -r '.private_dir // empty' "$MANIFEST")"
+UNIT_TMPL="$(jq -r '.unit_file // empty' "$MANIFEST")"
+ADMIN_REL="$(jq -r '.admin_file // empty' "$MANIFEST")"
+[ -n "$PRIVATE_REL" ] && [ -n "$UNIT_TMPL" ] && [ -n "$ADMIN_REL" ] \
+  || { echo "[secret-scope] ERROR: $MANIFEST must name private_dir, unit_file and admin_file" >&2; exit 1; }
+case "$PRIVATE_REL" in /*|*..*|*/*) echo "[secret-scope] ERROR: private_dir must be one plain directory name" >&2; exit 1 ;; esac
+case "$UNIT_TMPL" in "$PRIVATE_REL"/*) ;; *) echo "[secret-scope] ERROR: unit_file ($UNIT_TMPL) is outside private_dir ($PRIVATE_REL): it would not be masked" >&2; exit 1 ;; esac
+case "$ADMIN_REL" in "$PRIVATE_REL"/*) ;; *) echo "[secret-scope] ERROR: admin_file ($ADMIN_REL) is outside private_dir ($PRIVATE_REL): it would not be masked" >&2; exit 1 ;; esac
+PRIVATE="$ENV_DIR/$PRIVATE_REL"
+ADMIN_FILE="$ENV_DIR/$ADMIN_REL"
 unit_file() { printf '%s/%s' "$ENV_DIR" "${UNIT_TMPL//\{unit\}/$1}"; }
+
+# ── the stable private directory ─────────────────────────────────────────────
+# Created once; afterwards only chmod'ed in place (same inode). Never removed,
+# renamed or recreated here or anywhere else (validation/scripts/secret-dir-mask.test.sh).
+if [ -L "$PRIVATE" ] || { [ -e "$PRIVATE" ] && [ ! -d "$PRIVATE" ]; }; then
+  echo "[secret-scope] ERROR: $PRIVATE exists and is not a real directory; refusing to write secrets through it" >&2; exit 1
+fi
+if [ ! -d "$PRIVATE" ]; then
+  mkdir -p "$ENV_DIR"
+  mkdir -p -m 0700 "$PRIVATE"
+  echo "[secret-scope] created $PRIVATE (0700)"
+fi
+chmod 0700 "$PRIVATE"
+
+# ── migration from the flat layout ───────────────────────────────────────────
+# legacy-path: the flat layout this replaces. Read here only to move it in / retire it.
+LEGACY_ADMIN="$ENV_DIR/admin.env"            # legacy-path
+LEGACY_UNIT_DIR="$ENV_DIR/env.d"             # legacy-path
+legacy_pairs() { # prints "<flat path>\t<private path>" for every flat file present
+  [ -e "$LEGACY_ADMIN" ] || [ -L "$LEGACY_ADMIN" ] && printf '%s\t%s\n' "$LEGACY_ADMIN" "$ADMIN_FILE"
+  local f
+  for f in "$LEGACY_UNIT_DIR"/*.env; do
+    [ -e "$f" ] || [ -L "$f" ] || continue
+    printf '%s\t%s\n' "$f" "$(unit_file "$(basename "$f" .env)")"
+  done
+  return 0
+}
+flat_link() { # <flat path> <private path>: atomically make the flat path a relative symlink
+  local _rel; _rel="$(realpath -m --relative-to="$(dirname "$1")" "$2")"
+  ln -sfn "$_rel" "$1.tmp.$$" && mv -Tf "$1.tmp.$$" "$1"
+}
+umask 077
+while IFS=$'\t' read -r _old _new; do
+  [ -n "$_old" ] || continue
+  [ -f "$_old" ] && [ ! -L "$_old" ] || continue          # a symlink is already migrated
+  [ -e "$_new" ] && continue                              # the private copy is authoritative
+  mkdir -p "$(dirname "$_new")"
+  mv -f "$_old" "$_new"                                   # same filesystem: a rename, values travel
+  chmod 600 "$_new"
+  # The flat path never disappears mid-tick: until --retire-legacy (after the units
+  # converge) it is a symlink to the moved file, so a unit still naming it loads it.
+  flat_link "$_old" "$_new"
+  echo "[secret-scope] moved $_old -> $_new"
+done < <(legacy_pairs)
 
 _esc() { printf '%s' "${1-}" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 
@@ -162,8 +238,36 @@ for _f in "${!FILE_NAMES[@]}"; do
   _set=""; for _n in ${FILE_NAMES[$_f]}; do [ -n "${VAL[$_n]-}" ] && _set="$_set $_n"; done
   echo "[secret-scope] wrote $_f (set:${_set:- none})"
 done
-# env.d holds nothing but scoped secrets: root-only. ($ENV_DIR itself is left as it is.)
-[ -d "$ENV_DIR/env.d" ] && chmod 700 "$ENV_DIR/env.d" 2>/dev/null || true
+# Everything under the private directory is root-only. ($ENV_DIR itself is left as it is.)
+find "$PRIVATE" -mindepth 1 -type d -exec chmod 700 {} + 2>/dev/null || true
+
+# ── retire the flat layout ───────────────────────────────────────────────────
+# Each flat file is removed, unless an installed unit file or drop-in still names it
+# in EnvironmentFile= (an /etc shadow rendered before this layout, say): then it
+# becomes a relative symlink to its private counterpart, so that unit still starts
+# and loads it, while a process inside a masked namespace that follows the link
+# lands in the masked directory.
+if [ "$RETIRE" = 1 ]; then
+  while IFS=$'\t' read -r _old _new; do
+    [ -n "$_old" ] || continue
+    if [ ! -e "$_new" ]; then echo "[secret-scope] kept $_old: no private counterpart $_new to point at" >&2; continue; fi
+    _incont="/etc/substrate/${_old#"$ENV_DIR"/}"            # what a unit would name
+    _ref=""
+    for _d in $UNIT_DIRS; do
+      [ -d "$_d" ] || continue
+      _ref="$( { grep -rlsE "^[[:space:]]*EnvironmentFile[[:space:]]*=[[:space:]]*-?$_incont[[:space:]]*\$" "$_d" 2>/dev/null || true; } | head -n1)"
+      [ -n "$_ref" ] && break
+    done
+    if [ -n "$_ref" ]; then
+      [ -L "$_old" ] || flat_link "$_old" "$_new"
+      echo "[secret-scope] kept $_old as a symlink into $PRIVATE_REL (still named by $_ref)"
+    else
+      rm -f "$_old"
+      echo "[secret-scope] retired $_old (removed)"
+    fi
+  done < <(legacy_pairs)
+  rmdir "$LEGACY_UNIT_DIR" 2>/dev/null || true             # only when nothing is left in it
+fi
 
 # ── recover-mode: take the scoped names out of the shared env ─────────────────
 if [ "$STRIP" = 1 ] && [ -f "$SHARED" ]; then
