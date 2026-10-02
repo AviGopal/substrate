@@ -266,7 +266,7 @@ gen_failing_test_gaps() {
     if [ -n "${FAILTEST_GEN_DEADLINE:-}" ] && [ $(( $(date +%s) + 170 )) -gt "$FAILTEST_GEN_DEADLINE" ]; then log "$v: failing-test generator: tick budget spent; $id left for a later tick"; break; fi
     local ar ao keep passed
     ar="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-alone-XXXXXX")"
-    ao="$(cd "$dir" && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$ar" timeout --kill-after=15 150 "$BUN_BIN" test "./$tf" --timeout 20000 > "$ar.out" 2>&1; cat "$ar.out"; rm -f "$ar.out")"
+    ao="$(cd "$dir" && scrubbed_env "$ar" timeout --kill-after=15 150 "$BUN_BIN" test "./$tf" --timeout 20000 > "$ar.out" 2>&1; cat "$ar.out"; rm -f "$ar.out")"
     ao="$(printf '%s\n' "$ao" | sed 's/\x1b\[[0-9;]*m//g; s/ \[[0-9.]*m*s\]$//; s/[[:space:]]*$//')"
     rm -rf "$ar" 2>/dev/null
     # A run that printed no bun summary (unloadable alone, crashed, timed out) proves nothing: neither red nor
@@ -304,6 +304,17 @@ emit_gap() {
     2*) ;;
     *) log "emit_gap FAILED http=${code:-000} — gap NOT filed (detector fired but nothing is queryable): $(printf '%s' "${body%$'\n'*}" | tr -d '\n' | cut -c1-200)" ;;
   esac
+}
+
+# ONE SCRUBBED ENVIRONMENT FOR EVERYTHING THAT RUNS A CANDIDATE'S CODE. This unit loads
+# /etc/substrate/env (secrets) and runs as root; a suite, or a `bun install` whose
+# manifest a commit just changed, must see neither the secrets nor the live
+# WORKSPACE_ROOT (a suite once refreshed 16 fixture rows in the live gap store). The
+# suite runners, the failing-test generator and the clone dependency install all run
+# under this one construction so they cannot drift apart.
+scrubbed_env() { # throwaway-workspace-root cmd... -> runs cmd under env -i with a minimal environment
+  local _se_root="$1"; shift
+  env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_se_root" "$@"
 }
 
 # AN OVERWRITE OF CONTENT PULL-SYNC DID NOT WRITE MUST BE RECOVERABLE AND LOUD.
@@ -922,6 +933,174 @@ content_hash_nontest() { # vessel-root -> md5 over src/ sql/ scripts/ minus test
      2>/dev/null | sort | xargs -r md5sum | md5sum | cut -d' ' -f1)
 }
 
+# THE TEST GATE RUNS THE CLONE'S SUITE AGAINST THE CLONE'S node_modules, AND NOTHING
+# EVER INSTALLED THEM. mirror-to-live reinstalls the RUNTIME (/vessels/<v>) when its
+# package.json changes; the clone (/workspace/git/vessels/<v>) — whose node_modules
+# run_suite uses directly and run_suite_at symlinks into its worktree — kept whatever
+# the image or an operator left there. Measured on the hub: goal-host-vessel's clone
+# node_modules dated from 2026-08-10 and lacked @avigopal/ias-executor-ts, so every
+# test importing src/index.ts failed to LOAD (10 unnamed failures carried in the
+# baseline); one more such test made it 11 and the gate refused a correct commit 3x,
+# quiescing goal-host each time, before the starvation break blinded it.
+#
+# So before the gate, the clone's node_modules must satisfy its manifest. Install when
+#   - node_modules is missing, or
+#   - a declared dependency (dependencies + devDependencies) is absent from it, or
+#   - package.json / bun.lock changed since the last install recorded here.
+# A missing marker with every dependency present is ADOPTED, not reinstalled: the
+# first tick after this lands must not reinstall the whole fleet.
+#
+# THE MANIFEST IS THE CANDIDATE'S, AND NOTHING HAS JUDGED IT YET. This runs before any
+# gate, as root, in a unit that loads the substrate's secrets, so a commit's lifecycle
+# script would execute with all of that. The install therefore runs under scrubbed_env
+# (the suite's own environment) with --ignore-scripts. A package that needs a native
+# postinstall is then unbuilt pre-gate; its tests fail to load and the unresolvable-
+# module rule in the gate handles them. The post-gate runtime install (mirror-to-live)
+# is unchanged.
+#
+# Otherwise the same install as mirror-to-live (`bun install --silent`), with clone-side
+# differences: bun.lock is TRACKED in every clone, so --no-save and any tracked manifest
+# the install dirties is restored (a dirty tree breaks the ff-only pull); file: paths
+# stay RELATIVE — in the clone file:../<dep> correctly names the sibling clone, which is
+# the rewrite mirror-to-live has to undo for /vessels. A working node_modules is never
+# deleted: it is moved aside (outside the clone, so bun test never scans it) only when
+# an in-place install left a dependency missing, and restored if the clean retry fails.
+#
+# FAIL CLOSED. A missing file: target (never fabricated) or a failed install files a
+# gap and the caller does NOT converge v this tick: a gate over test files that cannot
+# load measures nothing, and converging ungated is how a commit escapes it. A failed
+# manifest is not retried every tick (each try costs up to 2 x the install timeout,
+# sequentially, inside a 900 s unit): the failing hash and time are recorded and the
+# same manifest is suppressed for CLONE_DEPS_RETRY_BACKOFF_SECONDS or until it changes.
+#
+# -> sets CD_STATE (ok|adopted|installed|failed|suppressed) and CD_WHY; returns 0 for
+# ok/adopted/installed and 1 otherwise (the caller must NOT converge v this tick).
+# Test: validation/scripts/pull-sync-clone-deps.test.sh.
+clone_dep_missing() { # clone-dir -> missing declared dependency names, one per line
+  local _cdm_d="$1" _cdm_n
+  command -v jq >/dev/null 2>&1 || return 0
+  jq -r '[(.dependencies // {}), (.devDependencies // {})] | add // {} | keys[]' "$_cdm_d/package.json" 2>/dev/null \
+    | while IFS= read -r _cdm_n; do
+        [ -n "$_cdm_n" ] || continue
+        [ -e "$_cdm_d/node_modules/$_cdm_n" ] || [ -L "$_cdm_d/node_modules/$_cdm_n" ] || printf '%s\n' "$_cdm_n"
+      done
+}
+clone_deps_install() { # clone-dir log-file -> bun's exit status; candidate code never runs, secrets never visible
+  local _cdi_root _cdi_rc
+  _cdi_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" || return 1
+  (cd "$1" && scrubbed_env "$_cdi_root" timeout --kill-after=15 "${CLONE_DEPS_INSTALL_TIMEOUT_SECONDS:-180}" \
+     "$BUN_BIN" install --silent --no-save --ignore-scripts) >> "$2" 2>&1; _cdi_rc=$?
+  rm -rf "$_cdi_root" 2>/dev/null || true
+  return "$_cdi_rc"
+}
+clone_deps_gap() { # id-prefix vessel why summary-lead
+  local _cg_json
+  _cg_json="$(jq -n -c --arg id "$1$2" --arg why "$3" --arg lead "$4" \
+    '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"systematic_failure",source:"substrate_detected",status:"open",summary:($lead + " " + $why)}}}}' 2>/dev/null)" \
+    || _cg_json="{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"$1$2\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"status\":\"open\",\"summary\":\"$4\"}}}}"
+  emit_gap "$_cg_json"
+}
+ensure_clone_deps() { # vessel clone-dir
+  local _cd_v="$1" _cd_d="${2%/}" _cd_mark _cd_fail _cd_hash _cd_why="" _cd_missing _cd_log _cd_rc _cd_dirty_before _cd_dirty_after
+  local _cd_name _cd_spec _cd_target _cd_unres="" _cd_aside _cd_fhash="" _cd_ftime="" _cd_now
+  CD_STATE=ok; CD_WHY=""
+  [ -f "$_cd_d/package.json" ] || return 0
+  _cd_mark="$MARKER_DIR/$_cd_v.clone-deps"; _cd_fail="$MARKER_DIR/$_cd_v.clone-deps-failed"
+  _cd_aside="$MARKER_DIR/$_cd_v.node_modules-prev"
+  rm -rf "$_cd_d/node_modules.pullsync-prev" 2>/dev/null || true
+  _cd_hash="$(cat "$_cd_d/package.json" "$_cd_d/bun.lock" "$_cd_d/bun.lockb" 2>/dev/null | md5sum | cut -d' ' -f1)"
+  command -v jq >/dev/null 2>&1 || log "$_cd_v: jq missing — clone dependency presence unchecked; installing only on a missing node_modules or a manifest change"
+  _cd_missing="$(clone_dep_missing "$_cd_d")"
+  if [ ! -d "$_cd_d/node_modules" ]; then
+    _cd_why="node_modules missing"
+  elif [ -n "$_cd_missing" ]; then
+    _cd_why="declared dependencies absent from node_modules: $(printf '%s' "$_cd_missing" | tr '\n' ' ' | sed 's/ $//')"
+  elif [ -f "$_cd_mark" ] && [ "$(cat "$_cd_mark" 2>/dev/null)" != "$_cd_hash" ]; then
+    _cd_why="package.json/bun.lock changed since the last clone install"
+  fi
+  if [ -z "$_cd_why" ]; then
+    if [ ! -f "$_cd_mark" ]; then echo "$_cd_hash" > "$_cd_mark" 2>/dev/null || true; CD_STATE=adopted; fi
+    rm -f "$_cd_fail" 2>/dev/null || true
+    return 0
+  fi
+  # file: dependencies must name something that exists BEFORE bun is asked to link it.
+  if command -v jq >/dev/null 2>&1; then
+    while IFS=$'\t' read -r _cd_name _cd_spec; do
+      [ -n "$_cd_name" ] || continue
+      case "$_cd_spec" in file:*) ;; *) continue ;; esac
+      _cd_target="$(realpath -m "$_cd_d/${_cd_spec#file:}" 2>/dev/null || echo "$_cd_d/${_cd_spec#file:}")"
+      [ -d "$_cd_target" ] || _cd_unres="${_cd_unres}${_cd_unres:+, }$_cd_name -> $_cd_target"
+    done < <(jq -r '[(.dependencies // {}), (.devDependencies // {})] | add // {} | to_entries[] | "\(.key)\t\(.value)"' "$_cd_d/package.json" 2>/dev/null)
+  fi
+  if [ -n "$_cd_unres" ]; then
+    CD_STATE=failed; CD_WHY="install needed ($_cd_why) but file: dependency target(s) do not exist: $_cd_unres"
+    log "$_cd_v: !!! CLONE DEPENDENCIES UNSATISFIABLE — $CD_WHY; not fabricating them, NOT converging $_cd_v this tick"
+    clone_deps_gap pull-sync-clone-dep-target-missing- "$_cd_v" "$CD_WHY." \
+      "Repair needed: pull-sync cannot satisfy $_cd_v's clone node_modules, so its test gate cannot measure the candidate and $_cd_v is not converged until it can. The clone layout must provide every file: dependency the manifest names (a sibling clone, or the shared packages directory at that relative path)."
+    return 1
+  fi
+  # BACKOFF: the same manifest that failed recently is not retried.
+  [ -f "$_cd_fail" ] && { read -r _cd_fhash _cd_ftime < "$_cd_fail"; } 2>/dev/null || true
+  _cd_now="$(date +%s)"
+  case "$_cd_ftime" in ''|*[!0-9]*) _cd_ftime="" ;; esac
+  if [ -n "$_cd_ftime" ] && [ "$_cd_fhash" = "$_cd_hash" ] && [ $((_cd_now - _cd_ftime)) -lt "${CLONE_DEPS_RETRY_BACKOFF_SECONDS:-3600}" ]; then
+    CD_STATE=suppressed; CD_WHY="install suppressed (same manifest failed at $(date -u -d "@$_cd_ftime" -Iseconds 2>/dev/null || echo "$_cd_ftime"); retry after ${CLONE_DEPS_RETRY_BACKOFF_SECONDS:-3600}s or a package.json/bun.lock change)"
+    log "$_cd_v: $CD_WHY — still NOT converging $_cd_v this tick ($_cd_why)"
+    return 1
+  fi
+  _cd_log="$(mktemp "${TMPDIR:-/tmp}/pullsync-clonedeps-XXXXXX")"
+  _cd_dirty_before="$(git -C "$_cd_d" status --porcelain -- package.json bun.lock bun.lockb 2>/dev/null || true)"
+  log "$_cd_v: clone node_modules does not satisfy its manifest ($_cd_why) — bun install in the clone before the test gate (scrubbed env, --ignore-scripts)"
+  clone_deps_install "$_cd_d" "$_cd_log"; _cd_rc=$?
+  _cd_missing="$(clone_dep_missing "$_cd_d")"
+  if { [ "$_cd_rc" -ne 0 ] || [ -n "$_cd_missing" ]; } && [ -d "$_cd_d/node_modules" ]; then
+    # The in-place install did not produce a satisfying tree; only now is a clean one needed.
+    rm -rf "$_cd_aside" 2>/dev/null || true
+    if mv "$_cd_d/node_modules" "$_cd_aside" 2>/dev/null; then
+      log "$_cd_v: in-place clone install left it unsatisfied (rc=$_cd_rc) — retrying clean with the old node_modules moved aside to $_cd_aside"
+      clone_deps_install "$_cd_d" "$_cd_log"; _cd_rc=$?
+      _cd_missing="$(clone_dep_missing "$_cd_d")"
+      if [ "$_cd_rc" -eq 0 ] && [ -z "$_cd_missing" ] && [ -d "$_cd_d/node_modules" ]; then
+        rm -rf "$_cd_aside" 2>/dev/null || true
+      else
+        rm -rf "$_cd_d/node_modules" 2>/dev/null || true
+        mv "$_cd_aside" "$_cd_d/node_modules" 2>/dev/null || true
+      fi
+    fi
+  fi
+  _cd_dirty_after="$(git -C "$_cd_d" status --porcelain -- package.json bun.lock bun.lockb 2>/dev/null || true)"
+  if [ -z "$_cd_dirty_before" ] && [ -n "$_cd_dirty_after" ]; then
+    git -C "$_cd_d" checkout -- package.json bun.lock bun.lockb >/dev/null 2>&1 \
+      || git -C "$_cd_d" checkout -- package.json bun.lock >/dev/null 2>&1 || true
+    log "$_cd_v: clone install modified tracked manifests ($(printf '%s' "$_cd_dirty_after" | tr '\n' ' ')) — restored so the ff-only pull stays clean"
+  fi
+  if [ "$_cd_rc" -eq 0 ] && [ -z "$_cd_missing" ] && [ -d "$_cd_d/node_modules" ]; then
+    echo "$_cd_hash" > "$_cd_mark" 2>/dev/null || true
+    rm -f "$_cd_fail" 2>/dev/null || true
+    CD_STATE=installed; CD_WHY="$_cd_why"
+    log "$_cd_v: clone dependencies installed ($_cd_why)"
+    rm -f "$_cd_log" 2>/dev/null || true
+    return 0
+  fi
+  echo "$_cd_hash $_cd_now" > "$_cd_fail" 2>/dev/null || true
+  CD_STATE=failed
+  CD_WHY="clone bun install rc=$_cd_rc ($_cd_why)${_cd_missing:+; still missing: $(printf '%s' "$_cd_missing" | tr '\n' ' ' | sed 's/ $//')}; output tail: $(grep -v '^[[:space:]]*$' "$_cd_log" 2>/dev/null | tail -5 | tr '\n' '|' | cut -c1-400)"
+  rm -f "$_cd_log" 2>/dev/null || true
+  log "$_cd_v: !!! CLONE DEPENDENCY INSTALL FAILED — $CD_WHY; NOT converging $_cd_v this tick (its test gate cannot measure the candidate); this manifest is not retried for ${CLONE_DEPS_RETRY_BACKOFF_SECONDS:-3600}s unless it changes"
+  clone_deps_gap pull-sync-clone-deps-install-failed- "$_cd_v" "$CD_WHY" \
+    "Repair needed: pull-sync could not install $_cd_v's clone node_modules before its test gate, so it refused to converge $_cd_v (a gate over unloadable test files measures nothing)."
+  return 1
+}
+
+# Module names a test run could not resolve ("Cannot find module 'x' from …" /
+# "Cannot find package 'x' …"), sorted unique. bun counts each such file as one UNNAMED
+# failure and drops every test in it.
+unresolved_modules() { # test-output -> names, one per line
+  printf '%s' "$1" | sed 's/\x1b\[[0-9;]*m//g' \
+    | grep -oE "Cannot find (module|package) ['\"][^'\"]+['\"]" \
+    | sed -E "s/^Cannot find (module|package) ['\"]//; s/['\"]\$//" | sort -u || true
+}
+
 synced=0; skipped=0; failed=0
 for d in "$CLONE_DIR"/*/; do
   [ -d "$d/.git" ] || continue
@@ -1472,6 +1651,13 @@ EOF
     emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-testgate-skipped-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"Repair needed: pull-sync converged $v to ${HEAD:0:10} with NO test gate — the per-tick budget (${GATE_BUDGET_SECONDS:-900}s) was exhausted after ${GATE_ELAPSED}s, so the suite never ran. This is not a passing gate, it is an absent one, and it is absent precisely when a tick is slow, which is when convergence is riskiest. Repair the capability by raising the budget, sharding the gate across ticks, or running the suite before the tick's other work.\",\"status\":\"open\"}}}}"
     BUN_BIN=""
   fi
+  # The gate measures the clone's suite against the clone's node_modules: satisfy the
+  # manifest first (see ensure_clone_deps). Unsatisfiable, failed or backed-off -> gap
+  # (filed there) and NO convergence this tick: fail closed, never ungated.
+  GATE_BLIND_WHY=""; U_EXCL=0
+  if [ -n "$BUN_BIN" ]; then
+    if ! ensure_clone_deps "$v" "$d"; then skipped=$((skipped + 1)); continue; fi
+  fi
   count_pf() { printf '%s' "$1" | grep -oE "^ *[0-9]+ $2" | grep -oE '[0-9]+' | tail -1 || true; }
   # The SET of failing test names, sorted and stripped of timings/colour. A regression is a
   # test that USED TO PASS AND NOW FAILS — which a count cannot express and this can. See the
@@ -1515,7 +1701,7 @@ EOF
   # captured through $( ) ~45% of the output was lost, cut inside the end-of-run failure list before the totals
   # (324,504 of ~594,000 bytes, mid-line). The same run redirected to a file keeps its summary. That race was the
   # ~40% "TEST GATE BLIND" rate: exit 1 (a normal red), not a timeout, kill or crash.
-  run_suite() { (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && _rs_t0=$(date +%s) && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test > "$_rs_out" 2>&1; _rs_rc=$?; cat "$_rs_out"; echo "__PULLSYNC_RC=$_rs_rc wall=$(( $(date +%s) - _rs_t0 ))s"; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true; }
+  run_suite() { (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && _rs_t0=$(date +%s) && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test > "$_rs_out" 2>&1; _rs_rc=$?; cat "$_rs_out"; echo "__PULLSYNC_RC=$_rs_rc wall=$(( $(date +%s) - _rs_t0 ))s"; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true; }
   # Run the suite at an arbitrary ref, NOW, under this tick's conditions.
   #
   # The stored baseline is a snapshot taken at some earlier tick; test outcomes here depend on
@@ -1545,7 +1731,7 @@ EOF
       rm -rf "$_rsa_wt" 2>/dev/null || true; return 1
     fi
     [ -d "$d/node_modules" ] && ln -s "$d/node_modules" "$_rsa_wt/node_modules" 2>/dev/null || true
-    _rsa_out="$( (cd "$_rsa_wt" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test > "$_rs_out" 2>&1; cat "$_rs_out"; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true )"
+    _rsa_out="$( (cd "$_rsa_wt" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test > "$_rs_out" 2>&1; cat "$_rs_out"; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true )"
     git -C "$d" worktree remove --force "$_rsa_wt" >/dev/null 2>&1 || rm -rf "$_rsa_wt" 2>/dev/null || true
     git -C "$d" worktree prune >/dev/null 2>&1 || true
     printf '%s' "$_rsa_out"
@@ -1570,7 +1756,46 @@ EOF
     fi
   else
     T_OUT="$(run_suite)"; T_FAIL="$(count_pf "$T_OUT" fail)"; T_PASS="$(count_pf "$T_OUT" pass)"
-    if [ -z "$T_FAIL" ]; then
+    # UNRESOLVABLE MODULES THE PARENT SHARES ARE EXCLUDED, NOT CARRIED AS A SHARED COUNT. A
+    # test file that cannot resolve an import is one UNNAMED failure that hides every test in
+    # it. When the parent, measured now under identical conditions, cannot resolve the same
+    # module, the environment (not the commit) is what fails to load those files, and the
+    # load-error gate's count comparison compares two blind spots: it carried 10 such failures
+    # on the hub as if they were a baseline, then refused a correct commit when a new test
+    # importing the same module made it 11. So the modules are named in one gap, the files
+    # failing on them are subtracted from the unnamed count (U_EXCL, never written into the
+    # baseline), and the name-set gate still judges every file that DID load. Only when no
+    # test loaded at all (no pass, no named failure) is the gate blind and v converged ungated.
+    # Modules only the candidate cannot resolve were introduced by the commit: not excluded.
+    U_MODS=""
+    if [ -n "$T_FAIL" ]; then
+      U_MODS="$(unresolved_modules "$T_OUT")"
+      if [ -n "$U_MODS" ]; then
+        U_PARENT_REF="$(git -C "$d" rev-parse --verify --quiet "${HEAD}^" 2>/dev/null || true)"
+        U_P_MODS=""
+        [ -n "$U_PARENT_REF" ] && U_P_MODS="$(unresolved_modules "$(run_suite_at "$U_PARENT_REF" || true)")"
+        U_SHARED="$(comm -12 <(printf '%s\n' "$U_MODS") <(printf '%s\n' "$U_P_MODS") 2>/dev/null | grep . || true)"
+        if [ -n "$U_SHARED" ]; then
+          U_EXCL="$(printf '%s' "$T_OUT" | sed 's/\x1b\[[0-9;]*m//g' | grep -oE "Cannot find (module|package) ['\"][^'\"]+['\"]" \
+            | sed -E "s/^Cannot find (module|package) ['\"]//; s/['\"]\$//" | grep -cxF -f <(printf '%s\n' "$U_SHARED") || true)"
+          case "$U_EXCL" in ''|*[!0-9]*) U_EXCL=0 ;; esac
+          U_WHY="test files cannot resolve module(s) at both the parent ${U_PARENT_REF:0:10} and the candidate ${HEAD:0:10}: $(printf '%s' "$U_SHARED" | tr '\n' ' ' | sed 's/ $//')"
+          if [ "${T_PASS:-0}" -eq 0 ] && [ -z "$(fail_names "$T_OUT")" ]; then
+            GATE_BLIND_WHY="$U_WHY; no test file loaded at all"
+            log "$v: !!! TEST GATE BLIND — $GATE_BLIND_WHY; converging UNGATED (baseline untouched)"
+          else
+            log "$v: $U_WHY — excluding $U_EXCL file(s) that fail to load on them from the unnamed-failure count; the files that loaded are still gated"
+          fi
+          emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg why "$U_WHY" --arg mode "$([ -n "$GATE_BLIND_WHY" ] && echo "The gate is BLIND: no test file loaded, so $v converged ungated." || echo "The $U_EXCL file(s) failing on them are excluded from the gate; files that loaded are still judged.")" --arg mods "$(printf '%s' "$U_SHARED" | tr '\n' ',' | sed 's/,$//')" \
+            '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-unresolvable-modules-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",
+              summary:("Repair needed: pull-sync test gate for " + $v + " at " + $head + ": " + $why + ". Every test file importing them fails to load and hides its tests, so neither side measured them. " + $mode + " Usually the clone node_modules does not satisfy package.json, or a dependency needs a build step the pre-gate install (scripts disabled) does not run."),
+              classification_metadata:{unresolvable_modules:($mods | split(",")),head:$head}}}}}' 2>/dev/null)"
+        fi
+      fi
+    fi
+    if [ -n "$GATE_BLIND_WHY" ]; then
+      : # blind (above): no verdict, no baseline write
+    elif [ -z "$T_FAIL" ]; then
       log "$v: !!! TEST GATE BLIND — suite produced no countable result (errored or absent); converging ungated"
       # A blind verdict that discards its output cannot be diagnosed: the same command run
       # by hand, in the unit's cgroup, TasksMax and PATH, printed a summary every time, so
@@ -1626,7 +1851,7 @@ EOF
       # what this gate actually reasons about.
       B_NAMED="$(grep -c . "$B_NAMES_FILE" 2>/dev/null || true)"; B_NAMED="${B_NAMED:-0}"
       T_NAMED="$(printf '%s' "$T_NAMES" | grep -c . || true)"; T_NAMED="${T_NAMED:-0}"
-      T_UNNAMED=$((T_FAIL - T_NAMED)); [ "$T_UNNAMED" -ge 0 ] || T_UNNAMED=0
+      T_UNNAMED=$((T_FAIL - T_NAMED - U_EXCL)); [ "$T_UNNAMED" -ge 0 ] || T_UNNAMED=0
       # A FILE THAT STOPS LOADING READS AS AN IMPROVEMENT TO A NAME-SET GATE. bun counts a test
       # file that fails to load as ONE failure with no "(fail)" name, and drops every test in it.
       # So the named set SHRINKS (its failing names vanish), its passing tests vanish, and the
@@ -1644,7 +1869,7 @@ EOF
       if [ -s "$B_NAMES_FILE" ] && [ -n "$B_UNNAMED" ]; then
         if [ "$T_UNNAMED" -gt "$B_UNNAMED" ]; then
           L_OUT="$(run_suite)"; L_FAIL="$(count_pf "$L_OUT" fail)"
-          L_NAMED="$(fail_names "$L_OUT" | grep -c . || true)"; L_NAMED="${L_NAMED:-0}"
+          L_NAMED="$(fail_names "$L_OUT" | grep -c . || true)"; L_NAMED="$(( ${L_NAMED:-0} + U_EXCL ))"
           if [ -n "$L_FAIL" ] && [ $((L_FAIL - L_NAMED)) -gt "$B_UNNAMED" ]; then
             REG="test file(s) no longer load: unnamed failures $B_UNNAMED -> $T_UNNAMED, $((L_FAIL - L_NAMED)) on a re-run (a file that fails to load hides its failing names and drops its passing tests; pass ${T_PASS:-?})"
             REG_F="$T_FAIL"; REG_P="${T_PASS:-0}"; REG_U="$T_UNNAMED"
