@@ -223,6 +223,16 @@ export function RunView({ dispatchId }: { dispatchId: string }): ReactNode {
             <Rendered content={fromText("goal_reach_reason", reason)} density="inline" header={false} region="run_reason" />
           </div>
         ) : null}
+        {reason && segments.length > 1 ? (
+          // The record's reason is the REPORTED attempt's, which is not always the
+          // last one. Until goal-host serves attempts[] (asked 10-02), the attempt
+          // is matched the way the provenance trace already matches it.
+          <p className="sf-note sf-muted sf-run-reason-attempt">
+            {reportedSeg
+              ? `This reason is from attempt ${reportedSeg.number} of ${segments.length}${reportedSeg.number === segments.length ? "" : ", not the last one"} — each attempt's own verdict is in Provenance.`
+              : `This run made ${segments.length} attempts; which one this reason belongs to could not be determined — each attempt's verdict is in Provenance.`}
+          </p>
+        ) : null}
         {walk.humanReachNotes ? <p className="sf-run-reason-full">“{walk.humanReachNotes}”</p> : null}
       </header>
 

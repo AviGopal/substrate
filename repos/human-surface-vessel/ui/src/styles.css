@@ -1778,6 +1778,12 @@ body { overflow: hidden; }
 .sf-chain-unused > summary, .sf-chain-routes > summary { cursor: pointer; color: var(--sf-ink-2); }
 .sf-chain-routes ol { margin: var(--sf-space-2) 0 0; padding-left: var(--sf-space-6); }
 .sf-provenance > summary { cursor: pointer; }
+.sf-credit-badge { font-size: var(--sf-text-xs); padding: 0 var(--sf-space-1); border-radius: var(--sf-radius-sm); border: 1px solid var(--sf-rule); color: var(--sf-ink-2); white-space: nowrap; }
+.sf-credit-badge[data-credit="credited"] { border-color: var(--sf-ok, var(--sf-rule-strong)); color: var(--sf-ok, var(--sf-ink)); }
+.sf-chain-credit { margin-top: var(--sf-space-4); font-size: var(--sf-text-sm); }
+.sf-chain-credit > summary { cursor: pointer; color: var(--sf-ink-2); }
+.sf-chain-credit ul { margin: var(--sf-space-2) 0 0; padding-left: var(--sf-space-6); }
+.sf-run-reason-attempt { margin: var(--sf-space-1) 0 0; }
 .sf-answer-basis > summary { cursor: pointer; color: var(--sf-ink-2); }
 .sf-attempt-nav { display: flex; gap: var(--sf-space-1); margin-bottom: var(--sf-space-3); font-size: var(--sf-text-xs); }
 .sf-attempt-nav a { padding: var(--sf-space-1) var(--sf-space-2); border: 1px solid var(--sf-rule); border-radius: var(--sf-radius-sm); color: var(--sf-ink-2); text-decoration: none; font-variant-numeric: tabular-nums; }

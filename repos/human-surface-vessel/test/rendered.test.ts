@@ -143,6 +143,31 @@ describe("<Chain>", () => {
     expect(el.querySelector(".sf-chain-routes")?.textContent).toContain("obsidian:write_note");
   });
 
+  test("each node shows the credit its producer earned, and the run's credit is summarised", async () => {
+    const { Chain } = await import("../ui/src/components/Chain");
+    const walk = {
+      ...base,
+      reached: true,
+      poolProvenance: [
+        entry("s", "web_search", "satisfier:web_search", '{"shape":"webSearchResult","results":[]}'),
+        entry("a", "llm_completion", "satisfier:llm_completion", "Today is Thursday, 1 October 2026.", ["s"]),
+      ],
+      learning: {
+        alphaBetaDelta: [
+          { templateId: "satisfier:llm_completion", dAlpha: 1, dBeta: 0 },
+          { templateId: "satisfier:web_search", dAlpha: 1, dBeta: 0 },
+        ],
+        gapsFiled: [],
+        goalPathRecorded: true,
+      },
+    };
+    const el = await mount(React.createElement(Chain, { walk, hasAnswer: false }));
+    expect(el.querySelector(".sf-chain-output .sf-credit-badge")?.textContent).toContain("credited +1 α");
+    expect(el.querySelector(".sf-chain-input .sf-credit-badge")?.textContent).toContain("credited +1 α");
+    expect(el.querySelector(".sf-chain-credit summary")?.textContent).toContain("2 credited, 0 penalised");
+    expect(el.querySelector(".sf-chain-credit summary")?.textContent).toContain("path recorded");
+  });
+
   test("a run the server has blanked says 'not retained', not empty", async () => {
     const { Chain } = await import("../ui/src/components/Chain");
     const el = await mount(React.createElement(Chain, { walk: { ...base, poolProvenance: [] }, hasAnswer: false }));

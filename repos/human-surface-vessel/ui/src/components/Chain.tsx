@@ -9,6 +9,7 @@
 import type { ReactNode } from "react";
 import type { GoalWalkState, RouteAround } from "../api/types";
 import { buildChains, inputsOf, isSeed, type ChainNode, type RunChains } from "../lib/chain";
+import { creditFor, readCredit, type CreditRow, type RunCredit } from "../lib/credit";
 import { fromProvenance } from "../lib/content";
 import { Rendered } from "./Rendered";
 
@@ -23,7 +24,24 @@ function producerLabel(n: ChainNode): string | null {
   return n.producedBy;
 }
 
-function NodeContent({ n, density }: { n: ChainNode; density: "full" | "inline" }): ReactNode {
+function deltaText(r: CreditRow): string {
+  const parts: string[] = [];
+  if (r.dAlpha) parts.push(`+${r.dAlpha} α`);
+  if (r.dBeta) parts.push(`+${r.dBeta} β`);
+  return parts.join(" ");
+}
+
+/** The credit the node's producer received in this run, shown where the reviewer reads the node. */
+function CreditBadge({ row }: { row: CreditRow | null }): ReactNode {
+  if (!row) return null;
+  return (
+    <span className="sf-credit-badge" data-credit={row.dAlpha > 0 ? "credited" : "penalised"} title={`learning delta for ${row.templateId}`}>
+      {row.dAlpha > 0 ? "credited" : "penalised"} {deltaText(row)}
+    </span>
+  );
+}
+
+function NodeContent({ n, density, credit }: { n: ChainNode; density: "full" | "inline"; credit: RunCredit | null }): ReactNode {
   const content = fromProvenance(n.raw);
   if (!content) return null;
   return (
@@ -31,13 +49,18 @@ function NodeContent({ n, density }: { n: ChainNode; density: "full" | "inline" 
       content={content}
       density={density}
       region="run_chain"
-      extraHeader={n.producerExecutionId ? <span className="sf-muted sf-mono">{n.producerExecutionId}</span> : null}
+      extraHeader={
+        <>
+          {n.producerExecutionId ? <span className="sf-muted sf-mono">{n.producerExecutionId}</span> : null}
+          <CreditBadge row={creditFor(n.producedBy, credit)} />
+        </>
+      }
     />
   );
 }
 
 /** A collapsed input: one line until opened. */
-function InputRow({ n, chains, depth, seen }: { n: ChainNode; chains: RunChains; depth: number; seen: ReadonlySet<string> }): ReactNode {
+function InputRow({ n, chains, depth, seen, credit }: { n: ChainNode; chains: RunChains; depth: number; seen: ReadonlySet<string>; credit: RunCredit | null }): ReactNode {
   const content = fromProvenance(n.raw);
   const producer = producerLabel(n);
   return (
@@ -47,18 +70,19 @@ function InputRow({ n, chains, depth, seen }: { n: ChainNode; chains: RunChains;
           <span className="sf-shape-badge">{n.shape}</span>
           {isSeed(n) ? <span className="sf-muted">from the request</span> : producer ? <span className="sf-mono sf-muted">{producer}</span> : null}
           <span className="sf-muted">{n.chars > 0 ? `${count(n.chars)} chars` : "no content"}</span>
+          <CreditBadge row={creditFor(n.producedBy, credit)} />
           {content ? <Rendered content={content} density="row" /> : null}
         </summary>
         <div className="sf-chain-input-body">
-          <NodeContent n={n} density="inline" />
-          <Inputs n={n} chains={chains} depth={depth + 1} seen={seen} />
+          <NodeContent n={n} density="inline" credit={credit} />
+          <Inputs n={n} chains={chains} depth={depth + 1} seen={seen} credit={credit} />
         </div>
       </details>
     </li>
   );
 }
 
-function Inputs({ n, chains, depth, seen }: { n: ChainNode; chains: RunChains; depth: number; seen: ReadonlySet<string> }): ReactNode {
+function Inputs({ n, chains, depth, seen, credit }: { n: ChainNode; chains: RunChains; depth: number; seen: ReadonlySet<string>; credit: RunCredit | null }): ReactNode {
   if (n.consumedIds.length === 0 || depth > MAX_DEPTH || seen.has(n.id)) return null;
   const { inputs, missing } = inputsOf(n, chains);
   const next = new Set(seen).add(n.id);
@@ -67,7 +91,7 @@ function Inputs({ n, chains, depth, seen }: { n: ChainNode; chains: RunChains; d
       <p className="sf-chain-label">consumed</p>
       <ul>
         {inputs.map((i) => (
-          <InputRow key={i.id} n={i} chains={chains} depth={depth} seen={next} />
+          <InputRow key={i.id} n={i} chains={chains} depth={depth} seen={next} credit={credit} />
         ))}
       </ul>
       {missing.length > 0 ? (
@@ -110,8 +134,41 @@ function RouteArounds({ items }: { items: readonly RouteAround[] }): ReactNode {
   );
 }
 
+/** What the run taught the learner, from the record's learning sink. */
+function CreditSection({ credit, reached }: { credit: RunCredit | null; reached: boolean | null }): ReactNode {
+  if (!credit) return null;
+  const facts = [
+    credit.goalPathRecorded === true ? "path recorded" : credit.goalPathRecorded === false ? "path not recorded" : null,
+    credit.gapsFiled > 0 ? `${credit.gapsFiled} gap${credit.gapsFiled === 1 ? "" : "s"} filed` : null,
+    credit.oracleLabelWritten === true ? "oracle label written" : null,
+  ].filter((f): f is string => f !== null);
+  return (
+    <details className="sf-chain-credit" open={credit.rows.some((r) => r.dAlpha > 0)}>
+      <summary>
+        Credit ·{" "}
+        {credit.rows.length === 0
+          ? reached === true
+            ? "nothing credited"
+            : "no credit or penalty recorded"
+          : `${credit.rows.filter((r) => r.dAlpha > 0).length} credited, ${credit.rows.filter((r) => r.dAlpha <= 0).length} penalised`}
+        {facts.length > 0 ? <span className="sf-muted"> · {facts.join(" · ")}</span> : null}
+      </summary>
+      {credit.rows.length > 0 ? (
+        <ul>
+          {credit.rows.map((r) => (
+            <li key={r.templateId}>
+              <span className="sf-mono">{r.templateId}</span> <CreditBadge row={r} />
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </details>
+  );
+}
+
 export function Chain({ walk, hasAnswer }: { walk: GoalWalkState; hasAnswer: boolean }): ReactNode {
   const chains = buildChains(walk);
+  const credit = readCredit(walk.learning);
   const routes = walk.routeArounds ?? [];
   const terminal = walk.status !== "running";
 
@@ -122,6 +179,7 @@ export function Chain({ walk, hasAnswer }: { walk: GoalWalkState; hasAnswer: boo
         <p className="sf-note">
           Not retained — the server keeps the content of its newest 100 runs, and this run is older.
         </p>
+        <CreditSection credit={credit} reached={walk.reached} />
         <RouteArounds items={routes} />
       </section>
     ) : null;
@@ -141,8 +199,8 @@ export function Chain({ walk, hasAnswer }: { walk: GoalWalkState; hasAnswer: boo
 
       {lead.map((n) => (
         <article key={n.id} className="sf-chain-output">
-          <NodeContent n={n} density="full" />
-          <Inputs n={n} chains={chains} depth={0} seen={new Set()} />
+          <NodeContent n={n} density="full" credit={credit} />
+          <Inputs n={n} chains={chains} depth={0} seen={new Set()} credit={credit} />
         </article>
       ))}
 
@@ -153,12 +211,13 @@ export function Chain({ walk, hasAnswer }: { walk: GoalWalkState; hasAnswer: boo
           </summary>
           <ul>
             {chains.unused.map((n) => (
-              <InputRow key={n.id} n={n} chains={chains} depth={MAX_DEPTH} seen={new Set()} />
+              <InputRow key={n.id} n={n} chains={chains} depth={MAX_DEPTH} seen={new Set()} credit={credit} />
             ))}
           </ul>
         </details>
       ) : null}
 
+      <CreditSection credit={credit} reached={walk.reached} />
       <RouteArounds items={routes} />
     </section>
   );
