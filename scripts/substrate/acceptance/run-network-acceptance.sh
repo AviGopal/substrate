@@ -16,6 +16,11 @@
 #   hub_to_spoke      the hub reads a file that exists only on the spoke, through that
 #                     producer, over the relay (the spoke's data serving the network).
 #                     Both are addressed by shape: which vessels a node runs is placement.
+#   leave_no_foreign_answer, leave_deadvertised, rejoin
+#                     a second spoke joins; the first stops (compose stop). A read addressed
+#                     to the stopped spoke must not return the second spoke's (or the hub's)
+#                     copy of the file; within 60 s the hub stops offering it; after a start
+#                     it is registered again and reads its own marker
 #   spoke_goal        with a provider key only: a goal dispatched on the spoke reaches,
 #                     and its trace is in the hub's trace store (the network learns
 #                     from the spoke's work); unjudged without a key
@@ -43,11 +48,13 @@ for tool in jq curl awk; do command -v "$tool" >/dev/null 2>&1 || { echo "run-ne
 
 mkdir -p "$RESULT_DIR/diag"; RESULT_DIR="$(cd "$RESULT_DIR" && pwd)"
 root="$(mktemp -d "${RUNNER_TEMP:-/tmp}/network-acceptance.XXXXXX")"
-bin_dir="$root/bin"; mkdir -p "$bin_dir" "$root/hub" "$root/spoke"
+bin_dir="$root/bin"; mkdir -p "$bin_dir" "$root/hub" "$root/spoke" "$root/spoke2"
 log() { printf '[network %s %s] %s\n' "$ENGINE" "$(date -u +%H:%M:%S)" "$*" >&2; }
 
-HUB_NAME=nethub; HUB_PREFIX=25; SPOKE_NAME=netspoke; SPOKE_PREFIX=27
-HUB_C="${HUB_NAME}-live"; SPOKE_C="${SPOKE_NAME}-live"
+# Prefixes are overridable for a run on a host that already uses some of them.
+HUB_NAME=nethub; HUB_PREFIX="${NET_HUB_PREFIX:-25}"; SPOKE_NAME=netspoke; SPOKE_PREFIX="${NET_SPOKE_PREFIX:-27}"
+SPOKE2_NAME=netspoke2; SPOKE2_PREFIX="${NET_SPOKE2_PREFIX:-29}"
+HUB_C="${HUB_NAME}-live"; SPOKE_C="${SPOKE_NAME}-live"; SPOKE2_C="${SPOKE2_NAME}-live"
 
 # The page says `docker`; on the Podman leg it means Podman (same shim as run-acceptance).
 if [ "$ENGINE" = "podman" ]; then
@@ -236,8 +243,92 @@ if [ "$spoke_rc" = 0 ] || [ "$spoke_rc" = 20 ]; then
   fi
 fi
 
+# ── 5. A spoke leaves, and comes back ─────────────────────────────────────────────
+# Joining is half of membership. A second spoke that serves the same shape, with its own
+# copy of the marker path, is what a departure is judged against: when the first spoke
+# stops, a read ADDRESSED to it must fail honestly, never come back with the second
+# spoke's file (the transport's fallback once settled on any live circuit that answered,
+# so node-local data was silently served from the wrong node). Then the hub must stop
+# offering the departed spoke, and a restart must bring it back under the same identity.
+#   leave_no_foreign_answer  an addressed read to the stopped spoke returns neither the
+#                            second spoke's marker nor the hub's decoy
+#   leave_deadvertised       within 60 s the hub no longer offers the stopped spoke
+#   rejoin                   after a start, the spoke is registered again and an addressed
+#                            read returns its own marker
+if [ -n "${target:-}" ] && [ -n "${hub_key:-}" ]; then
+  spoke2_key=""; spoke2_token=""
+  if [ "$ENGINE" = "podman" ]; then
+    spoke2_key="$(eng exec "$HUB_C" substrate-key issue network-acceptance-spoke2 2>/dev/null | tail -1 | tr -d '[:space:]')"
+    [ -n "$spoke2_key" ] && spoke2_token="sj1.$(printf '%s\n%s' "$join_url" "$spoke2_key" | base64 -w0 | tr '+/' '-_' | tr -d '=')"
+  else
+    spoke2_token="$(eng exec "$HUB_C" substrate-key join network-acceptance-spoke2 2>/dev/null | tail -1 | tr -d '[:space:]')"
+  fi
+  secrets+=("$spoke2_key" "$spoke2_token")
+  first_target="$target"; first_id="$spoke_id"; second_target=""; spoke_dir=""
+  spoke2_rc=99
+  if [ -n "$spoke2_token" ]; then
+    log "installing a second spoke, so a departure has another producer of the same shape"
+    SUBSTRATE_NAME="$SPOKE2_NAME" SUBSTRATE_PORT_PREFIX="$SPOKE2_PREFIX" SUBSTRATE_IMAGE="$IMAGE" \
+    SUBSTRATE_ACCEPTANCE=1 SUBSTRATE_UPDATE_CHANNEL=hold \
+    METABOB_CONFIG_PATH="$root/spoke2-config.json" \
+      run_case spoke "$root/spoke2" '<join token from the hub>' "$spoke2_token"
+    spoke2_rc=$?
+  fi
+  spoke2_id="$(eng exec "$SPOKE2_C" sh -c 'sed -n "s/^FED_SUBSTRATE_ID=//p" /etc/substrate/env | tr -d "\""' 2>/dev/null | head -1)"
+  marker2="second-spoke-$(date +%s)-$RANDOM"
+  eng exec "$SPOKE2_C" sh -c "mkdir -p /workspace/validation && printf '%s\n' '$marker2' > $marker_path" >/dev/null 2>&1
+  spoke_id="$spoke2_id"
+  if [ "$spoke2_rc" != 0 ] && [ "$spoke2_rc" != 20 ] || [ -z "$spoke2_id" ] || ! poll 300 registered; then
+    for c in leave_no_foreign_answer leave_deadvertised rejoin; do
+      set_check "$c" unknown "$(jq -nc --argjson e "$spoke2_rc" '{note: "the second spoke did not join, so a departure has nothing to be judged against", spoke2_install_exit: $e}')"
+    done
+  else
+    second_target="$target"
+    # A departure is only a test of the fallback if the hub holds a live circuit to another
+    # spoke, as it does whenever traffic has flowed. Read the second spoke's own marker
+    # first: it proves that spoke is reachable and opens the circuit the fallback walks.
+    target="$second_target"; marker_saved="$marker"; marker="$marker2"
+    poll 120 read_via_spoke >/dev/null 2>&1 || log "warn: the second spoke's own marker was not readable before the departure"
+    marker="$marker_saved"; target="$first_target"
+    # The installer writes the fleet into a directory of its own; the container's compose
+    # label names it (docker and podman both set it), so stop and start run where the
+    # fleet lives rather than where the page's blocks ran.
+    spoke_dir="$(eng container inspect -f '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' "$SPOKE_C" 2>/dev/null)"
+    log "stopping the first spoke the way an operator does (compose stop in its fleet directory ${spoke_dir:-?})"
+    ( cd "${spoke_dir:-/nonexistent}" && eng compose stop ) >"$RESULT_DIR/diag/spoke-stop.txt" 2>&1
+    spoke_id="$first_id"; target="$first_target"
+  fi
+  # A departure that did not happen cannot be judged: every leave check would pass on a
+  # spoke that is still answering. So the stop itself must be observed first.
+  if [ -n "${second_target:-}" ] && [ "$(eng container inspect -f '{{.State.Running}}' "$SPOKE_C" 2>/dev/null)" = true ]; then
+    for c in leave_no_foreign_answer leave_deadvertised rejoin; do
+      set_check "$c" fail "$(jq -nc --arg d "${spoke_dir:-}" '{note: "the first spoke was still running after compose stop, so the departure was never exercised", fleet_dir: $d, log: "diag/spoke-stop.txt"}')"
+    done
+  elif [ -n "${second_target:-}" ]; then
+    gone() { ! registered; }
+    if poll 60 gone; then set_check leave_deadvertised pass null
+    else set_check leave_deadvertised fail "$(jq -nc --arg t "$first_target" '{still_offered: $t, within_s: 60}')"; fi
+    target="$first_target"
+    leave_answer="$(eng exec "$HUB_C" curl -s -m40 -H 'Content-Type: application/json' -X POST \
+      "http://127.0.0.1:8401/egress/resolve?vessel=${first_target}" \
+      -d "{\"pointer\":{\"type\":\"fileContent\",\"path\":\"$marker_path\"}}" 2>/dev/null)"
+    leave_by="$(printf '%s' "$leave_answer" | jq -r '.content.produced_by // empty' 2>/dev/null)"
+    case "$leave_answer" in
+      *"$marker2"*) set_check leave_no_foreign_answer fail "$(jq -nc --arg t "$first_target" --arg b "$leave_by" '{addressed: $t, answered_by: $b, served: "the second spoke'"'"'s file"}')" ;;
+      *hub-copy-must-not-be-read*) set_check leave_no_foreign_answer fail "$(jq -nc --arg t "$first_target" --arg b "$leave_by" '{addressed: $t, answered_by: $b, served: "the hub'"'"'s decoy"}')" ;;
+      *) set_check leave_no_foreign_answer pass "$(jq -nc --arg t "$first_target" --arg a "$(printf '%s' "$leave_answer" | head -c 200)" '{addressed: $t, answer: $a}')" ;;
+    esac
+    log "starting the first spoke again"
+    ( cd "${spoke_dir:-/nonexistent}" && eng compose start ) >>"$RESULT_DIR/diag/spoke-stop.txt" 2>&1
+    spoke_id="$first_id"
+    if poll 240 registered && poll 120 read_via_spoke; then set_check rejoin pass "$(jq -nc --arg t "$target" '{vessel: $t}')"
+    else set_check rejoin fail "$(jq -nc --arg t "${target:-}" --arg a "$(printf '%s' "${answer:-}" | head -c 200)" '{vessel: $t, answer: $a}')"; fi
+  fi
+fi
+
 # ── Diagnostics and the verdict ───────────────────────────────────────────────────
-for c in "$HUB_C" "$SPOKE_C"; do
+for c in "$HUB_C" "$SPOKE_C" "$SPOKE2_C"; do
+  eng container inspect "$c" >/dev/null 2>&1 || continue
   eng exec "$c" substrate-status --quick >"$RESULT_DIR/diag/status-$c.txt" 2>&1 || true
   # Whole-boot logs: a circuit that never forms is decided minutes before the check
   # gives up, and 120 lines held only the re-dial loop, not its cause. The relay runs
@@ -250,7 +341,8 @@ done
 # vessel's src/ hash with the image's build-time marker). hold stops pull-sync, but other
 # writers can still change /vessels, and a verdict about a moved tree is not about the image.
 ic='{}'
-for c in "$HUB_C" "$SPOKE_C"; do
+for c in "$HUB_C" "$SPOKE_C" "$SPOKE2_C"; do
+  [ "$c" = "$SPOKE2_C" ] && ! eng container inspect "$c" >/dev/null 2>&1 && continue
   eng exec "$c" substrate-status --level live --json >"$RESULT_DIR/diag/status-end-$c.json" 2>/dev/null || true
   ic="$(jq -c --arg c "$c" --slurpfile s "$RESULT_DIR/diag/status-end-$c.json" '. + {($c): (
           if ($s | length) > 0 and ($s[0].vessels | type) == "array" then
@@ -259,7 +351,7 @@ for c in "$HUB_C" "$SPOKE_C"; do
              channel: $s[0].update_channel.channel, enforced: $s[0].update_channel.enforced}
           else {why: "substrate-status gave no vessel rows"} end)}' <<<"$ic" 2>/dev/null || echo "$ic")"
 done
-if jq -e 'to_entries | length == 2 and all(.value.moved != null and (.value.moved | length) == 0 and (.value.unchecked | length) == 0)' <<<"$ic" >/dev/null 2>&1; then
+if jq -e 'to_entries | length >= 2 and all(.value.moved != null and (.value.moved | length) == 0 and (.value.unchecked | length) == 0)' <<<"$ic" >/dev/null 2>&1; then
   set_check image_code pass "$ic"
 else set_check image_code fail "$ic"; fi
 for f in "$RESULT_DIR"/diag/*; do [ -f "$f" ] && { t="$(cat "$f")"; redact "$t" >"$f"; }; done
