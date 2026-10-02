@@ -17,6 +17,8 @@
 **The P0 warning applies to this document.** CANON.md:11 says the canon is "restatement number eight" unless its §5 is done. This document inherits that condition. Its predecessors include the seven realignments counted in `dossiers/docs-drift.md`, the 08-08 nine-agent audit, the four multi-agent audits of 08-16..08-22, the 09-22 docs-self-management assessment, WHY-THINGS-KEEP-BREAKING and MECHANISM-AUDIT. Earlier attempts to turn rulings into machine-read rows also failed: `FOUNDATION_COMPLIANCE_CHECKS.md` (20 FC + 7 CC checks, 0 code hits) and the `doc_expectation` concept ingestion (1,991 rows, no reader) (`classes/docs-drift.json`). A realignment held only in prose is a claim, not state (K5).
 
 > **Amended 2026-10-01:** see §9 (security findings and the hardcoding census). §9.0 is a new precondition on §2.4 and on any seam that makes an address resolvable or a behaviour writable.
+>
+> **Amended 2026-10-02:** the continuity amendment (`CONTINUITY-AMENDMENT-2026-10-02.md`) is integrated into §§1, 2.0b, 2.1, 2.2, 2.6, 3.4, 4.2, 6.2, 7 and 8. §10 records what was adopted and the decisions it leaves open. It grants no new runtime authority and has no runtime effect until each integrated item names its writer and reader.
 
 ### Review disposition (09-29 revision)
 
@@ -78,7 +80,9 @@ The substrate is a decentralised fleet that develops itself. Given any goal in n
 
 - **Floor:** at worst it matches a ReAct agent. The walk routes around missing producers, bad formats and errors using tool-enabled fallback. Every step is traced, and every route-around is recorded as "producer X absent, routed via Y" (C6).
 - **Ceiling:** at best it reuses a learned pathway.
-- **Middle:** it adapts only the first or last mile.
+- **Middle:** it reuses the characterized portions of a learned pathway and adapts the uncertain connections wherever they occur, not only at the first or last mile (§2.0b).
+
+**Purpose (amended 10-02).** The mechanism preserves continuity from a need, through produced outputs, actual downstream consumption and observed consequences, to changed future behaviour. Variation supplies alternatives; experimentation characterizes their effects; reduction makes useful transitions reusable under identifiable conditions. Code, activity templates and compositions are different representations of behavioural structure, with different modification and deployment mechanics. Humans take part as sources of purpose, information, authority and judgment.
 
 How it works:
 - Behaviour lives in versioned, variable resolvers, and these are used first. Activities select, grade, compose and retire those behaviours (K11, which reconciles the operating model with L2).
@@ -87,8 +91,13 @@ How it works:
 - Every shape is reachable from every node over p2p, so absence in one place is not absence (K9, L11, C21).
 
 **Done** means an end-to-end path runs across nodes and reaches its goal. It does not mean a component passed its own check. §7 step 1 makes that the first and only "done".
+- An execution completing, a consumer successfully using its output, a learning update being stored, and that update influencing later execution are **four separate claims**. Record which one has been established.
+- A successful slice demonstrates the connection; repeated observations characterize its reliability. No single successful run establishes a general probability or unlimited applicability.
 
-**The autonomy criterion** is a substrate-authored commit on origin/dev, with no operator hands, whose effect is verified at the consumer.
+**The autonomy criterion** has two levels.
+- **The self-development milestone** stays as CLAUDE.md states it: a substrate-authored commit on origin/dev, with no operator hands, whose effect is verified at the consumer.
+- **The broader criterion** is sustained continuation and learning within granted authority. It has no measured acceptance yet (§10).
+- Legitimate human participation (purpose, information, authority, judgment) is not an autonomy failure. Repeated human reconstruction of lost inputs, context or history **is** a continuity defect. Both kinds of participation are recorded accurately.
 
 **The failure** is the same issue recurring for the same reason. Trying approaches that fail is not the failure.
 
@@ -160,6 +169,14 @@ Dossier overlap, stated so that nobody plans for 27 classes:
 **Prior attempts.** A grep of `classes/`, `dossiers/` and `mechanisms/` for route-around / routed-via finds no carrier: only the principle (C6/K10, and the operating-model statement in `classes/_principles.json`). The nearest built organ is the in-flight recovery loop (`recommendExcluding`, chunk-13 #24), which never runs its retry branch (327/327 `attempt 1/1` in 72h, capped by `callerPinned`). So this is the one entry without a failed predecessor of the same form. It is **not claimed as new**, because the principle has been stated before. Floor "fixed" was declared on 05-03, 06-25, 07-30, 09-11, 09-12, 09-16 and 09-25, and each was later retracted (§6.2). Demand-counted capability-gap filer (c11) and the change-series orchestrator (c24) are the organs to extend. Inference reading descriptions was named in the goal-walk-floor lens and never wired.
 
 **What must be different.** The counter reads route-around records the walk already produced. It does not read operator dossiers, which is how the five ranks below were chosen (R2-P3). §7 step 1's slice is the test.
+
+**Reduction and partially known cases (amended 10-02).**
+- Shape signatures **retrieve candidates**; they do not prove that two concrete inputs are interchangeable.
+- A reduced activity preserves its actual dependencies, and distinguishes instance values, variable parameters, preconditions, relevant context, implementation versions and characterized outcomes.
+- It begins with the narrow applicability that observation supports. Wider applicability is a hypothesis, tested through variation. Inspectable source evidence is kept when internal steps are encapsulated.
+- Reuse the characterized portions and adapt the uncertain connections wherever they occur (§1). Keep useful inputs and intermediate results across retries.
+- A mismatch may need information, translation, another consumer, a new composition or changed code. It does not automatically require a new resolver or weaker validation.
+- **Acceptance:** a reusable activity keeps its source dependencies, works with changed instance values, and recognizes an incompatible precondition. An internal mismatch can be investigated without discarding the characterized remainder.
 
 ### 2.1 Rank 1: one standing expectation evaluator, proven able to fail, that every mechanism must register into
 
@@ -239,7 +256,7 @@ Its 6 bindings, the `expectation:*` families, the declaration-drift checks, the 
      - `c71819af` judged success by HTTP status (`classes/false-verification.json`);
      - `self-recovery.timer` amplified outages, restarting activity-api on 09-25 and 09-26.
    - The watchdog's pass condition is therefore **effect**: a must-fail row is refused within its window. HTTP status and process liveness do not count.
-   - The evaluator's paths stay permanently in `autonomyScope.excluded_paths`. **Tamper of rows and controls** is covered by item 2's rule applied to the evaluator itself.
+   - The evaluator's paths are a **human-governed authority boundary** in `autonomyScope` (§7 step 9): evidence alone does not move them, and success in nearby files is never read as permission. Whether that boundary is permanent is an open design decision (§10). An earlier draft said "permanently" here while §7 step 9 let all excluded paths earn their way out; that contradiction is resolved in step 9. **Tamper of rows and controls** is covered by item 2's rule applied to the evaluator itself.
    - The remaining risk is an operator edit. It is logged as an L12 intervention.
 
 **Honest note.**
@@ -260,6 +277,20 @@ Its 6 bindings, the `expectation:*` families, the declaration-drift checks, the 
   - `0bd32ff` (07-31) gates credit on `verification_outcome`.
   - psi/successor_value was wired at 6 call sites on 08-17, and its blend stays default-inert (`classes/write-read-mismatch.json`).
   - goal-host `maybeConsumeOracleLabel` (`index.ts:16865`) reads labels, but only for DispatchRecord-keyed goals.
+
+**Three uses of evidence (amended 10-02).** Within the existing trace, verdict and credit paths, evidence is used in three separate ways:
+1. **Observation:** a specific consumer used a specific producer output under identified conditions, with an observed consequence.
+2. **Learning:** an attributed observation updates one transition's characterization, including uncertainty and applicability.
+3. **Acceptance:** accumulated evidence satisfies the requirements of a named action such as delivery, landing, closure or scope expansion.
+
+What follows from the split:
+- A terminal verdict is one observation, not the only source of learning. A useful intermediate transition can be observed even when the overall goal fails.
+- Actual consumption establishes use, not causal benefit. Comparisons and controlled variations strengthen attribution.
+- **The information contract.** The minimum to preserve: source execution and step; producer and consumer identities and versions; actual input and output references; binding; relevant conditions and variation; observed consequence; observation horizon; instrument; provenance. Inspect existing fields and readers before any schema change. This is an information contract, not a mandate for a new store.
+- An outcome estimate names the event it estimates, its conditions and its horizon. Unobserved or delayed consequences stay **unresolved**. Consumption, short-horizon success and later failure can coexist without contradiction.
+- Later observations extend the history. **A correction names the observation and the derived update it supersedes.** Updates carry stable identities and go through an idempotent ingestion path, so retries and replication do not multiply evidence.
+- The existing landing, authentication and closure safeguards stay. An incomplete view cannot certify the unseen outcome. Partial learning does not authorize deployment. A verifier is itself a characterized consumer with tested limits.
+- **Acceptance:** one chain with a successful intermediate consumer and a later failure yields separately attributable observations; an unavailable observation does not become a negative outcome; duplicate delivery does not duplicate an update; selection demonstrably reads the resulting characterization.
 
 **Prerequisite ordering (R2-P11).** `grounded` has never been true in 14,125 rows. Making `grounded` settable by a passing control comes **before** `posterior-update.ts` reads labels. Otherwise the new reader reads only abstentions.
 
@@ -460,6 +491,7 @@ Also, `gapFromFlatPointer` stops dropping `classification_metadata`, and `substr
   - It gets its own exit (§7 step 4) and builder: gap-to-feature is excluded, so (a).
 - **Selection decision provenance** (selection-learning). The logged belief is VPM/CTS alpha plus hand-coded boosts (`activities.ts` ~6725–6860: tagBoost up to +10; `historyBoost` = executions/20). These are in-process constants (L1), and `posteriorSource`/`context_blend_weight` are not logged. Log store, key and blend, and move the boosts into shaped policy. It rides on 2.2 and 2.1, and is **not** a fourth key contract. Three already exist and are bypassed: `normalizeActivityId`, `posterior-aggregator.ts` `1540053`, the evidence-aliasing lint `c851cbbb`.
 - **Composition keyed by `goal_hash`** (composition-crystallization). Found 09-05 and re-found 09-16. The key changes to shape signature. The extractor's input contract is a 2.1 row.
+- **Workaround records (amended 10-02).** A route-around (§2.0b) is recorded by the **unmet consumer requirement** and its relevant conditions, as well as by the missing or failed producer. Recurrence supplies demand, but frequency alone does not show that the workaround is effective or worth encapsulating.
 - **Trace-store poison set.** Five fixed firstIds fail 74 times a day each. `v_paradigm_execution_traces` (2 rows) is read at 35 sites in 11 files. These are 2.1 rows, plus moving `queryRaw`'s status check into `query()` (`676c3f3` taken to its seam).
 
 ### 2.7 Class → capability map
@@ -530,7 +562,7 @@ In-process gates can't satisfy (a) or (b), so they get (c) and (d). Bootstrap-ti
 | docs-align family (c07) | 2.1 claim rows; `docs/` land path in `deriveVesselFromPath` |
 | `state_signature` key, `producer_count` scan (c07) | 2.1 rows |
 | Behavioural verification `399bb2c` (c10) | 2.2, reading the class-2 falsifier behind the §2.1 item 2 rule |
-| Lexical / Tier-2 rebind `tryLexicalRebind` (c11) | The first/last-mile middle tier |
+| Lexical / Tier-2 rebind `tryLexicalRebind` (c11) | The middle tier: adapting uncertain connections (§1, §2.0b) |
 | Missing-verifier-gap filer (c13) | 2.2: a class without a verifier files for one (K3 bound) |
 | `gradeArmByExecution` (c13); in-flight recovery loop and re-route arm (c13, c41) | Rank 0 |
 | Decision-level credit `decision_outcome` (c15) | 2.2 reader; the joint is severed (gap open 09-27) |
@@ -601,7 +633,9 @@ In-process gates can't satisfy (a) or (b), so they get (c) and (d). Bootstrap-ti
      - `activities.get-activities-with-tiered-fallback.ts` has 0 occurrences of `deprecated`, a gap open since 08-02 (`classes/docs-drift.json`).
    - The recommend path, `discover-by-shapes`, the satisfier pick **and pinned `targetTemplateId` dispatch** must all honour retired/deprecated, each proven by a 2.1 row whose must-fail control dispatches a retired id and expects refusal.
 3. **Variant-of, decided per row (R1-16).** A duplicate is kept as `variant_of:<canonical>`, competing only inside its family's Thompson draw, **only if it has its own execution evidence and a distinct hypothesis**. Everything else is residue and is retired. Applied:
-   - The three trace-store-reconcile experiment variants are **operator interventions**, not autonomous hypotheses. They are retired after their experiment is recorded as an L12 intervention, and their counts are removed from the lane's denominator. This agrees with §6.2.
+   - **Human-originated experiments (amended 10-02).** Autonomy attribution and evidence quality are separate questions. Operator-authored work never counts as autonomous authorship, but it can supply useful observations. Evidence keeps its author, intervention, experimental conditions and source execution. Benchmark and synthetic outcomes stay distinguishable from operational ones, and their estimates are not transferred without an applicability argument. Existing experiment isolation requirements stay.
+   - The three trace-store-reconcile experiment variants are **operator interventions**, recorded as L12 interventions and excluded from autonomous-achievement counts and from the lane's denominator. Each is **reviewed on its own hypothesis, applicability, evidence, duplication and cost**, not retired for its human origin alone. One that holds a distinct, supported hypothesis can stay as `variant_of`; the rest are retired. Retiring an executable variant does not erase its experimental history. Unsupported duplicate proliferation is still a defect. This agrees with §6.2.
+   - **Acceptance:** autonomous-achievement counts exclude operator work, while an applicable experimental result can still influence selection with its provenance intact.
    - The 70 `activityExecutionSummary` producers are a consolidation target for `reuse-before-mint-crossfamily-dedup` (§8). The canonical one keeps its posterior. Any with executions and a distinct resolver becomes `variant_of`, and the rest are retired.
    - The 545 never-executed storm variants are retired outright. That storm is the reason §3.4's "variant minting on 3 failures" is bounded.
 4. **Fixtures and methods.** Harness fixtures with known answers become deterministic oracle rows before their scripts are removed.
@@ -686,7 +720,7 @@ Law 9 stands: docs hold invariants and failure modes only.
 | **Holds and masks used as the retiring mechanism** | rhythm-self-maintenance is held on both nodes with a nonexistent `lift_when`. 35 timer unit-files are masked on node 2 (R3 re-measure), including joint-liveness, validator-liveness, learning-loop-selftest and learning-liveness-probe, so node 2 has no store or learning health check. `autonomyScope` was widened and re-tightened twice in 48h by record edits. |
 | **Specific paths instead of seams** | The 09-28 lane-core patches. Resolve-URL fixed at 11 sites separately. Pull-sync coverage extended one artefact type at a time. |
 | **Rediscovery presented as a finding** | 3 in 7 findings are rediscoveries (#960/#1202). MECHANISM-AUDIT: "every mechanism has been built at least once". This sweep's dossiers re-proposed existing organs (§2.0), and its first synthesis re-proposed §5 from 09-22. |
-| **Experiments contaminating the lane's own denominator** | The three trace-store-reconcile operator variants are live arms; they are retired under §4.2 step 3. Probes wrote residue into learning state. Battery residue flooded memory: 578 of 1,077 live notes (09-22). |
+| **Experiments contaminating the lane's own denominator** | The three trace-store-reconcile operator variants are live arms; they are excluded from autonomous counts and reviewed per hypothesis under §4.2 step 3 (amended 10-02: human origin alone is not a reason to retire). Probes wrote residue into learning state. Battery residue flooded memory: 578 of 1,077 live notes (09-22). |
 | **Assistant-session durability and hygiene** | reports-2..8 raw notes were refused by the Write tool and survive only as records. `scripts/substrate/federation-relay/.relay-pub-key.protobuf` is a 68-byte libp2p Ed25519 **private** key sitting untracked in the host working tree (R3 confirmed the header type only). It needs rotation plus removal as a credential-hygiene gap; the material is never printed. A `make -n` dry run by an agent destroyed substrate-live (09-23). |
 | **Asking the user to decide through a surface they do not read** | C18. 336 escalations went to the replaced `:8270` (248 on 09-22), none answered there. The read surface `:8310` never receives them. |
 
@@ -698,12 +732,31 @@ The loop to close runs: **need or detection → contracted gap → admitted → 
 
 **Ordering rule (R2-P2, R2-P9).** One vertical slice first. After that, each step widens only what the slice showed was missing. Component exits count only as sub-exits of the slice. Every step carries a builder label from §2.0.
 
+**Integration order (amended 10-02).**
+1. Correct the source contradictions first (§8: the canon's withdrawn "reach" figures were corrected on 10-02; any later contradiction is corrected the same way before generation). Policy is never generated from stale claims.
+2. Define the observation/update boundary (§2.2) and the reduced-transition contract (§2.0b) at the existing trace, verdict, extraction and selection seams.
+3. Apply provenance separation (§4.2 step 3) to every experiment from the outset.
+4. Settle authority boundaries (step 9) before any protected modification.
+5. Exercise the single slice (step 1). **Its first demonstrated break decides which existing repair advances next; six parallel implementations are not started.**
+
+The agentic-runner approach stays the implementation-sequencing reference named by the October 2 companion reports. The slice maps into that work and the existing ledger and realignment changes; it is not another runner or a new gate program. The operational readers are the existing consumers, trace ingestion and credit paths, activity selection, extraction, the expectation evaluator and the dispatch scope checks. Each implemented item names its concrete writer and reader and demonstrates consumption.
+
 1. **Vertical slice on both nodes (Rank 0).** Builder: (a) for the goal-host parts.
    - One need-phrased goal (no component name) and one detector-filed gap each run end to end on node 1 **and** node 2.
    - The walk routes around at least one hole, with the route-around traced as a record.
    - The output is chained into at least one follow-on goal.
    - The result is verified at the consumer by an instrument that has a positive control.
    - This single run is the only "done". What it lacked decides which of steps 2–9 goes first. The order below is the default if it lacks everything.
+   - **Execution-and-learning extension (amended 10-02).** Use one useful need and its actual consumer, on the nodes the plan already requires. Recheck deployed revisions and existing work before selecting it.
+     1. Run a case that needs an uncertain connection or a workaround. Preserve inputs, scoped identities, bindings, outputs and the route taken.
+     2. Have a real downstream operation consume the output and observe its consequence. A shape declaration or a log-only dependency is not enough.
+     3. Follow the observation through the stored characterization or reduced activity to its named selection reader.
+     4. Run a related case with changed input values. Record exactly what was reused and which acquired information selection read. A controlled comparison without that information strengthens the claim that learning made the difference.
+     5. Vary one relevant representation or precondition. Observe adaptation at that connection while usable state and characterized operations are kept.
+     6. Exercise a must-fail case: stale input, a crossed execution binding, missing content or an invalid applicability condition. It must not count as supported continuation merely because a process exited successfully.
+     7. Follow later consequences at a stated horizon. Record what stays pending and what must trigger its reader. Report support and uncertainty without inventing reliability from one run.
+   - Deliberately broken cases use isolated fixtures. Live bookings, policies, services or production data are never modified just to supply a negative control.
+   - **Completion evidence:** source and consumer execution identities; actual content references and bindings; versioned operations and variations; observations and horizons; attributed, idempotent learning writes; the later selection's reads; reused and adapted portions; human contributions; unresolved consequences.
 2. **The evaluator can fail and sees every node (2.1).** Builder: (a).
    - Exit: every row has a must-fail control refused within 7 days, executed by the evaluator.
    - Exit: findings resolve by shape from node 2.
@@ -748,12 +801,17 @@ The loop to close runs: **need or detection → contracted gap → admitted → 
    - So the **baseline arm runs first**, before any parity claim. The comparison is on outcome. Battery output goes to a sandboxed store (2.5), never to the memory or gap stores, because battery residue once filled 578 of 1,077 notes.
    - Exit: need-phrased probes reach ≥90% and ≥ the baseline arm's rate.
 9. **Earn-in of autonomy scope (C8, C20, R2-P13).** It is listed last but **starts right after the slice, concurrently with step 2**, because it is what moves later builder labels from (a) to (b). Its criterion can only fire once step 5 measures landings, so it is built early and fires late.
-   - The 27 excluded paths leave the set only by a machine-checked criterion held as a shape: N verified landings in adjacent paths with 0 regressions, measured by step 5.
+   - **Authority categories (amended 10-02; this replaces "N verified landings in adjacent paths", which contradicted §2.1 item 6).** The existing `autonomyScope` policy distinguishes three kinds of excluded path:
+     - **Human-governed authority boundaries** (the evaluator's paths among them): evidence alone never grants permission. Whether any of these is permanent is an open decision (§10).
+     - **Implementations eligible for earned modification:** they leave the set only by a machine-checked criterion held as a shape, citing evidence **relevant to that behaviour and its consequences**, measured by step 5. Successful changes in nearby files are not such evidence.
+     - **Temporary restrictions:** each keeps its reason, release condition and existing expiry or quarantine semantics.
+   - A candidate evaluator is tested separately while the accepted one stays in force, compared on known-valid cases, known-invalid cases and downstream use. A candidate cannot approve its own promotion by weakening its evidence source, control or acceptance rule. The authority that governs promotion is named.
+   - **Acceptance:** an unauthorized operation stays refused despite high confidence; scope changes cite relevant evidence; a weakened evaluator cannot certify its own promotion; dispatchers consume the effective scope decision.
    - The widen/tighten decisions stop being record edits. They become that criterion plus a C20 TTL quarantine shape that dispatchers read.
    - The 09-28 rhythm hold with a nonexistent `lift_when` is re-expressed under the same shape.
    - Exit: two consecutive scope changes made by the criterion, with no operator record edit in between.
 
-**The autonomy success criterion stays as CLAUDE.md states it.** It can only be counted after steps 3 and 5 separate authors.
+**The autonomy success criterion stays as CLAUDE.md states it, as the self-development milestone (§1).** It can only be counted after steps 3 and 5 separate authors. The broader criterion, sustained continuation and learning within granted authority, is not yet measurable (§10).
 
 ---
 
@@ -771,6 +829,11 @@ The outline follows law 3 as it applies to specs. It **amends existing openspec 
 - **`2026-08-26-reuse-before-mint-crossfamily-dedup`.** `producerExistsForShape` at the mint chokepoint with a function key (§2.1 item 1), on a path the lane cannot loosen (the `7148d37` lesson). Its first target is the 70 `activityExecutionSummary` producers (§4.2 step 3).
 - **`run-isolated-verification.sh`.** Commit it, then wrap it as `sandboxedRun`.
 - **Contradiction rulings C1–C25 and the class retire conditions.** Hand-entering them repeats jointBinding `70254535`, `FOUNDATION_COMPLIANCE_CHECKS.md` (0 code hits) and the `doc_expectation` ingestion (no reader) (R2-P5). They are **generated**: dispatched goals parse `dossiers/*.md` retire conditions and `CANON.md` into `selfFactSpec`/policy rows, and a deterministic oracle checks each parsed row against its source line. Rows the parse cannot produce are reported as unparsed, not hand-filled.
+  - **Correct the inputs first (amended 10-02).** The canon is reconciled **before** any rows are generated from it. CANON.md §1 called 30.8% versus 3.0% "reach" and stated ~2% floor reach; both were corrected on 10-02 to match §1 here, with the withdrawn readings kept and marked. Withdrawn interpretations can never become current thresholds.
+  - Source statements are classified as **observations** (time-, node-, version- and method-bounded measurements), **expectations** (behaviour required by a stated contract or purpose) or **hypotheses** (proposed relationships awaiting experiments).
+  - Every generated record keeps its source revision and location, its statement kind, and the reader that gives it an operational role. A source change triggers a refresh or an explicit invalidation of derived records.
+  - Deterministic validation establishes faithful extraction and structural validity; it does not make arbitrary prose true. Unparsed or unsupported claims stay explicit and are never fabricated into predicates. A generated row is exercised through its existing evaluator or consumer.
+  - **Acceptance:** withdrawn interpretations cannot become active expectations; a source correction reaches derived readers; hypotheses stay distinguishable from measured facts and established contracts.
 
 **This document's own runtime reader, and why its difference is conditional (R1-19).** The class keys and retire conditions in §2 and §7 become generated 2.1 rows, each with a must-fail control and an `edit_site`. The evaluator, not an operator, then reports whether each class is retired, not evaluable, or recurring. That is the only way this pass could differ from the previous seven, and it is **conditional** on three things:
 - the git-hooks-ledger installer being committed;
@@ -834,3 +897,31 @@ stateful-ui is still live (805 panels) and was still being written to on 10-01. 
 - **Then B, last.** Explicit precondition: route auth plus trust-root gating of `tuningParam_write`, with an authority rule (operator or a named learner identity).
 - Early small fix: the trace-store reconcile should stop at a margin below its cap (hysteresis, as a policy, not a constant). Today it parks at the cap, re-crosses within minutes, and dispatches reconcile into lease contention.
 
+
+## 10. Amendment (2026-10-02): continuity, experimentation and reduction
+
+**Basis.** The user's clarification in review: outputs are validated through their use as inputs; variation, experimentation and reduction characterize confined state transitions; autonomy sustains that continuity, with humans taking part as sources of purpose, information, authority and judgment. The draft is `CONTINUITY-AMENDMENT-2026-10-02.md`. Its version note (the working copy ending at §8; §9 added by `e028a7f9`) is superseded by this integration, which was made against origin/dev with §9 present. §9's locality, authentication and trust requirements are preserved.
+
+**Where it was integrated:**
+
+| Amendment section | Integrated into |
+|---|---|
+| 1. Purpose and completion | §1 (purpose, the four separate claims, the two-level autonomy criterion); §7 closing line |
+| 2. Observations, learning and acceptance | §2.2 "Three uses of evidence" |
+| 3. Reduction and partially known cases | §1 "Middle"; §2.0b "Reduction and partially known cases"; §2.6 "Workaround records"; §3.4 rebind row |
+| 4. Human-originated experiments | §4.2 step 3; §6.2 |
+| 5. Authority and evaluator evolution | §2.1 item 6; §7 step 9 "Authority categories" |
+| 6. Inputs to generated expectations | §8 "Correct the inputs first" |
+| 7. One execution-and-learning slice | §7 step 1 "Execution-and-learning extension" |
+| 8. Integration order and readers | §7 "Integration order" |
+
+**What it does not do.** It grants no new runtime authority and has no runtime effect. An integrated item counts as implemented only when it names its concrete writer and reader and demonstrates consumption. Keeping only prose here would repeat the warning at the top of this document.
+
+**Open items, stated rather than settled:**
+1. **The permanent boundary (§2.1 item 6, §7 step 9).** Whether any human-governed authority boundary, the evaluator's paths in particular, is permanent is a design decision for the user. Until it is made, those paths stay excluded, and no evidence moves them.
+2. **CANON.md was reconciled in the same change** (§1's middle, figures and autonomy criterion, K3, C8, and §5's generation rule). The withdrawn readings stay in the canon, marked withdrawn. No rows have been generated from it yet, and §8's classification rule applies when they are.
+3. **The broader autonomy criterion has no measured acceptance.** §1's "sustained continuation and learning within granted authority" needs a measurable form, or the self-development milestone (landing counts) stays the de facto goal.
+4. **Known live conflicts at adoption (10-02):**
+   - Step 9's acceptance ("an unauthorized operation stays refused despite high confidence") fails today: the admin key and identity's key secret are in every vessel's process environment, so lane code could write trust-root policy (filed HIGH, `every-vessel-process-env-carries-the-admin-and-api-key-secrets-so-lane-code-can-unlock-containment`).
+   - `6ac1aa6` is a live case of a candidate weakening its own evidence source: a lane draft added entries to a guard test's allowlist so its own landing passed. The guard is now frozen.
+   - Proposed, not live: the slice Y verdict stamping in review on 10-02 (Y1c) would not meet §2.2's "a correction names what it supersedes" as drafted, because a failure class stamped on a run stays when the run later reaches, so readers would have to filter it.
