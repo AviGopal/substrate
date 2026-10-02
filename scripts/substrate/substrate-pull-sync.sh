@@ -757,6 +757,42 @@ content_hash() { # vessel-root -> md5 over sorted src/ + sql/ + scripts/ (.ts/.j
   (cd "$1" && find src sql scripts -type f \( -name '*.ts' -o -name '*.json' -o -name '*.surql' -o -name '*.sh' \) -not -path '*/node_modules/*' 2>/dev/null | sort | xargs -r md5sum | md5sum | cut -d' ' -f1)
 }
 
+# A TEST-ONLY RANGE OWES NO RESTART. clone-dir from-sha to-sha -> 0 iff the diff
+# from..to is computable, non-empty, and every changed path is a test file
+# (*.test.ts, *.spec.ts, or under a test/ or tests/ directory). Anything else —
+# empty range, unknown sha, a single non-test path — returns 1, i.e. restart as
+# before. The range is the last-good pin (the sha the running unit was last
+# converged to) .. HEAD, so a deferred or reverted non-test commit stays inside
+# it. --no-renames so src/x.ts -> test/x.ts shows its departed source path.
+# Why: the check-first repair pattern lands every fix as two commits (test, then
+# fix); each restarted the vessel, and a hub restart is minutes of outage for a
+# commit whose runtime code is byte-identical.
+test_only_range() {
+  [ -n "${2:-}" ] && [ -n "${3:-}" ] || return 1
+  _tor_paths="$(git -C "$1" diff --no-renames --name-only "$2" "$3" 2>/dev/null)" || return 1
+  [ -n "$_tor_paths" ] || return 1
+  while IFS= read -r _tor_p; do
+    case "$_tor_p" in
+      *.test.ts|*.spec.ts|test/*|tests/*|*/test/*|*/tests/*) ;;
+      *) return 1 ;;
+    esac
+  done <<EOF
+$_tor_paths
+EOF
+  return 0
+}
+# content_hash with test files excluded (same patterns as test_only_range).
+# The last-good pin lives on the volume while /vessels can come from a rebuilt
+# image, so the pin alone cannot say what the unit runs: a test-only range after
+# a rebuild would skip the restart onto older baked code. Equal non-test hashes
+# of the PRE-mirror runtime and the clone are the evidence that it doesn't.
+content_hash_nontest() { # vessel-root -> md5 over src/ sql/ scripts/ minus tests; "none" if missing
+  [ -d "$1" ] || { echo none; return; }
+  (cd "$1" && find src sql scripts -type f \( -name '*.ts' -o -name '*.json' -o -name '*.surql' -o -name '*.sh' \) \
+     -not -path '*/node_modules/*' -not -name '*.test.ts' -not -name '*.spec.ts' -not -path '*/test/*' -not -path '*/tests/*' \
+     2>/dev/null | sort | xargs -r md5sum | md5sum | cut -d' ' -f1)
+}
+
 synced=0; skipped=0; failed=0
 for d in "$CLONE_DIR"/*/; do
   [ -d "$d/.git" ] || continue
@@ -1627,6 +1663,8 @@ EOF
   rm -f "$MARKER_DIR/$v.testgate-refusals" 2>/dev/null || true
 
   PREV_GOOD="$(cat "$LAST_GOOD_DIR/$v" 2>/dev/null || true)"
+  # Taken BEFORE the mirror: what the running unit's non-test code is, vs the clone's.
+  RUNTIME_NONTEST="$(content_hash_nontest "$RUNTIME_DIR/$v")"; CLONE_NONTEST="$(content_hash_nontest "$d")"
   log "$v: content ${RUNTIME_HASH:0:10} -> ${CLONE_HASH:0:10} (git ${HEAD:0:10}) — mirroring into $RUNTIME_DIR"
   if ! /usr/local/bin/mirror-to-live "$v" "$CLONE_DIR"; then
     log "$v: mirror failed — skipping"; failed=$((failed+1)); continue
@@ -1806,7 +1844,16 @@ EOF
     emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"unit-masked-while-active-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"Repair needed: $UNIT is MASKED and in state ${UNIT_ACTIVE_STATE} (MainPID $MP). A masked unit cannot be restarted, cannot be recovered by Restart=on-failure, and cannot receive converged code, so this process is serving traffic that no mechanism can update or revive — while is-active reports it healthy. Repair the capability by unmasking it if this deployment should run it (the running process is untouched by unmask), or by stopping it if the role excludes it.\",\"status\":\"open\"}}}}"
   fi
 
-  if [ -n "$UNIT" ] && [ "${UNIT%.service}" != "$UNIT" ] && systemctl is-active "$UNIT" >/dev/null 2>&1; then
+  # The mirror and the suite gate above ran as for any commit; only the restart is
+  # skipped, and only when ALL hold: the pre-mirror runtime's non-test content equals
+  # the clone's (the unit already runs this code — the pin alone can't say so after
+  # an image rebuild), no restart is owed, and PREV_GOOD..HEAD is test-only.
+  # Anything uncomputable fails toward restart.
+  if [ -n "$UNIT" ] && [ "${UNIT%.service}" != "$UNIT" ] && systemctl is-active "$UNIT" >/dev/null 2>&1 \
+     && ! { [ "$RUNTIME_NONTEST" != none ] && [ "$RUNTIME_NONTEST" = "$CLONE_NONTEST" ] \
+            && [ ! -e "$MARKER_DIR/$v.restart-pending" ] \
+            && test_only_range "$d" "$PREV_GOOD" "$HEAD" \
+            && log "$v: restart SKIPPED — ${PREV_GOOD:0:10}..${HEAD:0:10} is test-only (mirrored; $UNIT keeps running identical non-test code)"; }; then
     # IN-FLIGHT WORK ON THE ORCHESTRATING VESSEL DEFERS ITS RESTART.
     #
     # The authoring markers above protect the vessel being EDITED. Nothing
