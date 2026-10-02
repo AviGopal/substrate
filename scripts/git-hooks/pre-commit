@@ -498,4 +498,58 @@ EOF
   done
 fi
 
+# ── glue tests: the validation/scripts tests run on every commit touching what they cover ──
+#
+# WHY THIS IS A GATE. validation/scripts/*.test.{sh,ts} guard pull-sync, the unit drop-ins
+# and the seeder — glue that runs before any substrate exists to host a validating
+# activity. Run only by hand, they were gates with no call sites: nothing could observe
+# them fail, so their passes proved nothing.
+#
+# WHAT IT JUDGES: the STAGED tree, never the working tree. The index is exported with
+# `git checkout-index -a --prefix` into a temp dir and the STAGED run-glue-tests.sh runs
+# against that export (--root), so an unstaged fix cannot rescue a staged break and an
+# unstaged break cannot fail a clean commit. Gitlinks export as empty dirs, so tests that
+# read a submodule worktree SKIP here (counted, never reported as passed); the
+# verdict-token block above judges that pin from the object store instead.
+#
+# WHEN: a staged path under scripts/substrate/, validation/scripts/, the seeder, the
+# vendored packages, or this hook. Full run (measured ~28s, under the 60s budget); set
+# GLUE_TESTS_FAST=1 to run the declared --fast subset (~7s) instead.
+mapfile -t GLUE_STAGED < <(
+  git diff --cached --name-only --diff-filter=ACMRD \
+    | grep -E '^(scripts/substrate/|validation/scripts/|scripts/bootstrap-seeder\.ts$|packages/(verdict-token|write-containment)/|scripts/git-hooks/pre-commit$)' || true
+)
+if [[ ${#GLUE_STAGED[@]} -gt 0 ]]; then
+  if ! git cat-file -e :validation/scripts/run-glue-tests.sh 2>/dev/null; then
+    printf '\n%s\n' "${RED}━━━ glue tests: validation/scripts/run-glue-tests.sh is not in the index ━━━${NC}"
+    printf '%s\n' "staged: ${GLUE_STAGED[*]}"
+    exit 1
+  fi
+  GLUE_TREE="$(mktemp -d "${TMPDIR:-/tmp}/glue-staged.XXXXXX")"
+  GLUE_LOGS="$(mktemp -d "${TMPDIR:-/tmp}/glue-logs.XXXXXX")"
+  trap 'rm -rf "$GLUE_TREE"' EXIT
+  git checkout-index -a --prefix="$GLUE_TREE/"
+  GLUE_ARGS=(--root "$GLUE_TREE" --log-dir "$GLUE_LOGS")
+  [[ "${GLUE_TESTS_FAST:-0}" == 1 ]] && GLUE_ARGS+=(--fast)
+  printf '%s\n' "${DIM}glue tests: running against the staged tree (${GLUE_STAGED[0]}$([[ ${#GLUE_STAGED[@]} -gt 1 ]] && echo " +$(( ${#GLUE_STAGED[@]} - 1 ))"))${NC}"
+  glue_rc=0
+  glue_out="$(bash "$GLUE_TREE/validation/scripts/run-glue-tests.sh" "${GLUE_ARGS[@]}" 2>&1)" || glue_rc=$?
+  printf '%s\n' "$glue_out"
+  if [[ $glue_rc -ne 0 ]]; then
+    printf '\n%s\n' "${RED}━━━ glue tests failed against the staged tree ━━━${NC}"
+    printf '%s\n' "$glue_out" | grep -E '^(FAIL|failed:)' | sed 's/^/  /' || true
+    cat <<EOF
+
+Each failing test's full output is in ${GLUE_LOGS}/<test>.log. The tests ran against the
+index, not the working tree: fix the staged content (git add) and commit again.
+Run by hand: bash validation/scripts/run-glue-tests.sh
+
+Bypass (only when the failure is known and unrelated to this commit):
+  git commit --no-verify
+EOF
+    exit 1
+  fi
+  rm -rf "$GLUE_LOGS"
+fi
+
 exit 0

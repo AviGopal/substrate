@@ -205,6 +205,22 @@ set_check() {  # name result [detail-json]
   checks="$(jq -c --arg n "$1" --arg r "$2" --argjson d "$detail" '.[$n] = ({result: $r} + $d)' <<<"$checks")"
 }
 
+# ── 0. Glue tests (validation/scripts/run-glue-tests.sh) ───────────────────────
+# The pull-sync / unit / seeder tests guard glue that ships in this image; run them on
+# every acceptance run so they always have a caller. Hermetic: no engine, network or
+# container. Bun tests use the cockpit's bun when given (never added to the fences' PATH)
+# and SKIP when bun or a submodule worktree is absent; a skip is recorded, never a pass.
+glue_rc=0
+GLUE_TESTS_BUN="${COCKPIT_BUN_DIR:+$COCKPIT_BUN_DIR/bun}" \
+  bash "$repo_root/validation/scripts/run-glue-tests.sh" --log-dir "$RESULT_DIR/diag/glue-tests" \
+  >"$RESULT_DIR/diag/glue-tests.txt" 2>&1 || glue_rc=$?
+glue_failed="$(sed -n 's/^FAIL .*s  \([^ ]*\)  (exit.*/\1/p' "$RESULT_DIR/diag/glue-tests.txt" | jq -R . | jq -sc .)"
+glue_skipped="$(sed -n 's/^SKIP .*-  \([^ ]*\)  (.*/\1/p' "$RESULT_DIR/diag/glue-tests.txt" | jq -R . | jq -sc .)"
+glue_r=fail; [ "$glue_rc" -eq 0 ] && glue_r=pass
+set_check glue_tests "$glue_r" "$(jq -nc --argjson rc "$glue_rc" --argjson f "$glue_failed" --argjson s "$glue_skipped" \
+  '{exit: $rc, failed: $f, skipped: $s, log: "diag/glue-tests.txt"}')"
+log "glue tests: $glue_r ($(tail -n 1 "$RESULT_DIR/diag/glue-tests.txt" 2>/dev/null))"
+
 # ── 1. Cold host ───────────────────────────────────────────────────────────────
 warm=()
 eng version >"$RESULT_DIR/diag/engine-version.txt" 2>&1 || warm+=("engine does not answer '$ENGINE version' in the fence environment")
@@ -658,7 +674,7 @@ digest="$(eng image inspect --format '{{json .RepoDigests}}' "$IMAGE" 2>/dev/nul
 
 # ── Judgement ──────────────────────────────────────────────────────────────────
 judged_levels=(live seeded served)
-judged_checks=(cold extraction image_format healthcheck revision stop_timeout image_code)
+judged_checks=(cold extraction image_format healthcheck revision stop_timeout image_code glue_tests)
 if [ "$mode" = "gating" ]; then
   judged_levels+=(usable connected)
   judged_checks+=(client_config auth_request cockpit_query)
