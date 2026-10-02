@@ -25,12 +25,16 @@ The known-answer goal SHALL run as a sandboxed battery run. It SHALL write no tr
 - **WHEN** the sandboxed run is unavailable on a canary
 - **THEN** advancing does not run check 2 and does not advance
 
-### Requirement: One advance at a time, from observation
-Advancing SHALL move the exact per-repository revision set observed running on the canary, never the `dev` head at advance time, and SHALL push each ref as a fast-forward only. A canary whose push is rejected as non-fast-forward SHALL re-fetch, and abstain if `fleet` is already at or past its observed set.
+### Requirement: One atomic advance, from observation
+An advance SHALL be one commit on the super-repo's `fleet` branch whose tree and gitlinks are the super-repo and vessel revisions observed running on the canary, never the `dev` head at advance time. It SHALL be pushed as a fast-forward of `fleet`'s own history. A canary SHALL advance only if every observed revision is at or after the revision the current `fleet` commit names, and SHALL abstain otherwise.
 
 #### Scenario: Two canaries judge at once
-- **WHEN** two canaries on different nodes finish their settle windows at the same time
-- **THEN** the first fast-forward wins, and the other is rejected, re-fetches and abstains
+- **WHEN** two canaries finish their settle windows at the same time
+- **THEN** the first push wins; the other is rejected, re-fetches, and advances only if its whole observed set is at or after the new `fleet` commit
+
+#### Scenario: A mixed set
+- **WHEN** a canary's observed set is newer than `fleet` in one repository and older in another
+- **THEN** it abstains
 
 ### Requirement: A fleet that stops advancing is reported
 A `fleet` node that is not under a hold SHALL file one gap when it has been behind `dev` by more than a threshold for longer than a window. `hold` nodes and nodes under an active `updateHold` SHALL NOT.

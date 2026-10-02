@@ -10,17 +10,17 @@ The substrate develops itself, so the same thing that lands a change has to deci
 
 ## What Changes
 
-- **Two refs per repository: `dev` (where landings go) and `fleet` (what most nodes run).** Landings keep pushing to `dev` exactly as today. `fleet` only ever fast-forwards, and only to a `dev` revision that passed verification.
+- **`dev` (where landings go) and one `fleet` manifest (what consumer nodes run).** Landings keep pushing to `dev` exactly as today. `fleet` is a single branch in the super-repo whose commits name verified vessel revisions; it moves only by an advance.
 - **Every node declares an update channel: `SUBSTRATE_UPDATE_CHANNEL`.** It's an install input, set in `.env`, carried by the installer and reported by `substrate-status`. It has three values:
-  - `canary`: converge to `dev`. These nodes run a change first.
-  - `fleet`, the default: converge to `fleet`.
+  - `canary`, the default (today's behaviour): converge to `dev`. Every node that lands code, and the gap-store holder, is a canary.
+  - `fleet`: converge to the `fleet` manifest. These nodes consume and do not land.
   - `hold`: converge to nothing. The node keeps what it runs and reports how far behind it is.
 - **Advancing is an activity the substrate runs, not a human step and not CI.** On a canary node, after it converges to a `dev` revision, the activity waits a settle window, then judges the change across the live constellation:
   - the canary's own `substrate-status` levels;
   - a known-answer goal dispatched from the canary that reaches across nodes;
   - no new failure class in the canary's journal compared with before the change.
 
-  If all of that passes, it fast-forwards `fleet` to that revision in each repository it covered, and writes the verdict as a trace. If it fails, it files a gap that names the revision and its evidence, and `fleet` does not move.
+  If all of that passes, it pushes one `fleet` commit naming exactly the revisions it observed, and writes the verdict as a trace. If it fails, it files a gap that names the revision and its evidence, and `fleet` does not move.
 - **A node that lands code is a canary.** Drafting and grounding read the running tree, and landings are committed onto `dev`, so an authoring node must run `dev`. gen-env enforces it: such a node defaults to `canary` and refuses `fleet` or `hold`. A non-canary node therefore only consumes, and pull-sync converges its single tree per vessel to the channel's ref (`design.md`).
 - **The human interface is one value.** Changing a node's channel is a single `.env` line followed by the install command. `substrate-status` shows the channel, the revision the node runs, the head of the channel's ref, and the gap between them.
 
@@ -46,6 +46,6 @@ Naming: "advance" is used for moving the `fleet` ref, because "promotion" alread
 ## Impact
 
 - `scripts/substrate/gen-env.sh`, `docker-compose.yml` (manifest input), `substrate-install.sh` and `substrate-status.sh`: the channel input and its reporting (deployment lane).
-- `scripts/substrate/substrate-pull-sync.sh`: converge `/vessels` to the channel's ref while keeping push clones on `dev`. This is the coordinator's file.
+- `scripts/substrate/substrate-pull-sync.sh`: on consumer nodes, converge to the `fleet` manifest instead of `dev`. This is the coordinator's file.
 - development-vessel: a `fleet_advance` activity and its producer shape (code; goes through the landing path).
-- Git remotes: a `fleet` branch per repository, created once at `dev`'s current head. That's an outward action, done once with the user's approval.
+- Git remotes: one `fleet` branch in the super-repo, created once from `dev`'s current tree and vessel heads. That's an outward action, done once with the user's approval.

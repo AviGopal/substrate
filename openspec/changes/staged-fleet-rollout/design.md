@@ -1,8 +1,14 @@
 ## Decisions
 
-### Branches, not a release file
+### One ref: the super-repo's `fleet` branch is the manifest
 
-The verified state is a git ref, `fleet`, per repository. It is not a manifest of revisions kept somewhere else. A ref keeps git's own fetch, ancestry and fast-forward semantics. The cost is that one advance moves up to 19 refs (super-repo plus vessels), and those moves are not atomic; see "What advancing moves" for why that is safe.
+The verified state is a single git ref, `fleet` in the super-repo. Each commit on it is an advance:
+- its tree is the super-repo tree a canary ran;
+- its gitlinks name the exact vessel revisions the canary ran with it.
+
+`fleet` nodes converge the super-repo clone to that commit, and each vessel clone to the revision its gitlink names. Vessel repositories need no `fleet` branch.
+
+This makes an advance atomic (qa review 3, item 3). With one ref per repository, two canaries advancing different repositories at once could leave `fleet` at a combination neither ran. With one ref, an advance is one push, and the super-repo's `fleet` history is the single compare-and-swap point. The branch has its own linear history: each advance commit's parent is the previous advance, not a `dev` commit.
 
 ### Authoring nodes are canaries (decided by the user, 2026-10-02)
 
@@ -12,13 +18,16 @@ Two answers were possible:
 - move every authoring reader to a `dev` worktree (6+ code paths, held consistent forever);
 - or make every authoring node run `dev`.
 
-The second was chosen: **a node that lands code is a canary.** gen-env enforces it (`ddbecca4`). A node with `SUBSTRATE_GIT_PAT` and `MITOSIS_DIRECT_PUSH` unset or `1` defaults to `canary`, and an explicit `fleet` or `hold` is refused. A node stops landing by dropping the token or setting `MITOSIS_DIRECT_PUSH=0`.
+The second was chosen: **a node that lands code is a canary.** gen-env enforces it (`f3596a2c`, correcting `ddbecca4`). What makes a node author is the landing switch, not a token: with `MITOSIS_DIRECT_PUSH` anything but `0`, the cutover still commits into the push clone, and `2` lands through host sync. So:
+- **No channel:** `canary`, which is today's behaviour (every node follows `dev`). Nothing changes until a node opts in.
+- **`fleet` or `hold`:** the node consumes. An unset `MITOSIS_DIRECT_PUSH` is set to `0`; an explicit `1` or `2` is refused.
+- **The gap-store holder** (`GAP_STORE_ENDPOINT` empty) is refused on `fleet` or `hold` (qa item 4). It judges `dev` landings against its own clones, so it must run `dev`. Pointing `GAP_STORE_ENDPOINT` at an authoring node's gap store makes a node a non-holder.
 
 Consequences:
-- **A non-canary node has one tree per vessel, and it follows the channel's ref.** pull-sync converges the clone to `origin/<channel ref>` instead of `origin/dev`. Its skip, last-good pin, unhealthy revert, marker, `DIST_RETRY` and owed-restart all already key on that one tree, so they stay mutually consistent. No two-tree split is needed.
-- **The super-repo follows the same rule.** On a non-canary node, the super-repo clone (the glue layer, pull-sync's own self-update, and the reach-oracle source) follows the channel's ref. A fleet node therefore runs a pull-sync that canaries already ran.
+- **A non-canary node has one tree per vessel, and it follows the manifest.** pull-sync converges each vessel clone to the revision the super-repo `fleet` commit names, instead of `origin/dev`. Its skip, last-good pin, unhealthy revert, marker, `DIST_RETRY` and owed-restart all already key on that one tree, so they stay mutually consistent. No two-tree split is needed.
+- **The super-repo follows the same rule.** On a non-canary node, the super-repo clone (the glue layer, pull-sync's own self-update, and the reach-oracle source) converges to `fleet`. A fleet node therefore runs a pull-sync that canaries already ran.
 - **Landing verification is a canary's job.** The gap sweep, `evidence_resolve` and check-first all run on authoring nodes, which run `dev`. The gap-store holder lands code (node 1 today), so it is a canary.
-- **The hub stays on `fleet` by not authoring.** syzygy today holds a git token. Keeping it on `fleet` means setting `MITOSIS_DIRECT_PUSH=0` (or removing the token) when its channel is set in task 2.
+- **The hub stays on `fleet` by not authoring and not holding a gap store.** syzygy today lands code and holds its own gap store (a second store, separate from node 1's). Keeping it on `fleet` means setting its channel to `fleet`, which turns its landing off, and pointing `GAP_STORE_ENDPOINT` at an authoring node (task 3.7).
 
 ### The test gate runs on canaries only
 
@@ -44,6 +53,8 @@ Each run, pull-sync writes `/workspace/.pull-sync/channel.json`: `{channel, ref,
 
 As an install input, the channel is placement, legitimate bootstrap like `PROFILE` (law 1, law 11). Freezing a node for a drain or a rebuild is behaviour, though, so pull-sync also reads a time-limited `updateHold` impulse (`{node, until, reason}`). A hold impulse overrides any channel until it expires. It is visible in traces, and it does not need a recreate. Setting `hold` in `.env` remains available for a node that should never update.
 
+**Open (qa item 2): freezing a canary.** `hold` is a consumer channel, so an authoring node cannot use it without stopping landing, and `updateHold` waits on §9.0 (task 4.2). Today the only way to stop a canary taking a bad landing is `MITOSIS_DIRECT_PUSH=0` plus a recreate, and that stops landing, not updating. This needs a decision; see `tasks.md` 2.4.
+
 ### Out of scope: masked but owned vessels on authoring nodes
 
 qa traced `node2-compose-grounds-from-a-stale-runtime-mirror-of-a-masked-owned-vessel-so-edits-miss-their-anchor` to grounding reading `/vessels`. Masked push clones are already fetched (pull-sync fetches before the mask check), but a masked unit's `/vessels` copy is never refreshed. That happens on authoring nodes, which are canaries under this design, so the rollout neither causes nor fixes it. It stays its own gap. The likely repair is to mirror a masked owned vessel's source on canaries without restarting the unit, which is safe there because a canary runs `dev` anyway.
@@ -64,9 +75,13 @@ Each check is registered as a REALIGNMENT §2.1 expectation row with a must-fail
 
 ### What advancing moves
 
-It moves the exact per-repository SHA set the canary's convergence record showed running throughout the settle window. It never moves the `dev` head at the time of advancing (law 12: what was observed, not what exists now). Refs move in dependency order: shared packages, then vessels, then the super-repo. Each `fleet` only fast-forwards to a SHA that ran on the canary, so a fetch that lands mid-advance sees a mix of SHAs the canary ran together or ran earlier. It never sees an unverified one.
+One commit on the super-repo's `fleet` branch:
+- its tree is the super-repo revision the canary's convergence record showed running throughout the settle window;
+- its gitlinks are the vessel revisions shown running alongside it.
 
-**Mutual exclusion is the remote's.** Canaries on different nodes hold no shared local lease, since the maintenance lease is a per-node file. Instead, each ref is pushed as a fast-forward only. A canary whose push is rejected as non-fast-forward has been overtaken: it re-fetches, and abstains if `fleet` is already at or past its observed set.
+It never moves the `dev` head at the time of advancing (law 12: what was observed, not what exists now). Because it is one push, a fetch never sees a partial advance.
+
+**Mutual exclusion and abstaining are defined on the whole set.** An advance is allowed only if, for every repository, the observed revision is at or after the revision the current `fleet` commit names. If any repository is behind, the canary abstains (it is judging something older), and it re-judges after its next convergence. The push is a normal fast-forward of `fleet`'s own history, so a concurrent advance is rejected as non-fast-forward. The loser re-fetches and applies the same whole-set rule to the new `fleet` commit.
 
 **Pushing `fleet` is its own grant.** The pushPolicy's landing scope covers `dev`. Advancing pushes `fleet`, which is a separate grant recorded in the policy, not implied by landing scope.
 

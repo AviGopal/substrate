@@ -7,20 +7,21 @@
 
 ## 2. Refs exist before anything reads them (needs the user's approval: outward git action)
 
-- [ ] 2.1 Create a `fleet` branch at the current `dev` head in the super-repo and every vessel repository.
+- [ ] 2.1 Create the super-repo `fleet` branch: one commit whose tree is the current `dev` tree and whose gitlinks are each vessel's current `dev` head. No vessel repository needs a `fleet` branch.
 - [ ] 2.2 Record the grant to push `fleet` in the pushPolicy, as its own scope, separate from landing scope.
-- [ ] 2.3 Choose the first canaries. Proposed: one spoke and node 1; the hub stays on `fleet`.
+- [ ] 2.3 Choose the first `fleet` nodes (everything else stays `canary`, today's behaviour). Proposed: syzygy, the hub.
+- [ ] 2.4 Decide how a canary is frozen (qa item 2; see design §"hold").
 
 ## 3. Converge to the channel (pull-sync; coordinator; builder (a))
 
-- [x] 3.0 Authoring nodes are canaries: gen-env defaults a node that lands code to `canary` and refuses `fleet`/`hold` there (ddbecca4).
-- [ ] 3.1 On a non-canary node, converge each vessel clone and the super-repo clone to `origin/<channel ref>` instead of `origin/dev`. Skip, last-good, revert, marker, `DIST_RETRY` and owed-restart are unchanged; they already key on that one tree.
+- [x] 3.0 Authoring nodes are canaries: no channel means `canary`; `fleet`/`hold` turn landing off, refuse an explicit landing switch, and refuse the gap-store holder (f3596a2c, correcting ddbecca4).
+- [ ] 3.1 On a non-canary node, converge the super-repo clone to `origin/fleet`, and each vessel clone to the revision that commit's gitlink names, instead of `origin/dev`. Skip, last-good, revert, marker, `DIST_RETRY` and owed-restart are unchanged; they already key on that one tree.
 - [ ] 3.2 Run the check-first test gate only on canaries.
 - [ ] 3.3 On a missing channel ref, converge nothing, record `ref_missing`, and file one gap per window. Never fall back to `dev`.
 - [ ] 3.4 Write `/workspace/.pull-sync/channel.json` each run (channel, ref, super-repo and per-vessel SHAs, at, ref_missing).
 - [ ] 3.5 Read a time-limited `updateHold` impulse that overrides the channel until it expires (after 4.2).
 - [ ] 3.6 On `fleet` nodes not under hold, file one gap when `behind` exceeds its threshold for longer than its window (the no-canary watchdog).
-- [ ] 3.7 Set syzygy (the hub) to `fleet` with `MITOSIS_DIRECT_PUSH=0`, after 2.1.
+- [ ] 3.7 Set syzygy (the hub) to `fleet` (which turns its landing off) and point its `GAP_STORE_ENDPOINT` at an authoring node, after 2.1 and 3.1.
 
 ## 4. Preconditions for advancing (other owners)
 
@@ -31,7 +32,7 @@
 
 - [ ] 5.1 Register the three checks (levels, cross-node known-answer goal, new failure class) as §2.1 expectation rows, each with a must-fail control.
 - [ ] 5.2 Run the known-answer goal through the 4.1 sandbox: no graded store, no `goal_paths`, no template minting.
-- [ ] 5.3 `fleet_advance`: advance the exact per-repo SHA set observed running through the settle window, in dependency order, by fast-forward push only. On a non-fast-forward rejection, re-fetch and abstain if `fleet` is already at or past the observed set.
+- [ ] 5.3 `fleet_advance`: push one super-repo `fleet` commit (observed super-repo tree, observed vessel gitlinks) as a fast-forward of `fleet`'s own history. Only if every observed revision is at or after the current `fleet` commit's; otherwise abstain. On a non-fast-forward rejection, re-fetch and re-apply that rule.
 - [ ] 5.4 Write the verdict as a `goal_verification_label`.
 - [ ] 5.5 On failure: one fleet-wide gap naming the SHA range, the failing check and its evidence. Leave `fleet` where it is. (No settlement row until 8.4 has a reader.)
 
@@ -40,6 +41,6 @@
 - [ ] 6.1 Positive control: a harmless landing on `dev` reaches the canaries, is advanced, then reaches `fleet` nodes. Each node's `channel.json` shows the advanced SHA.
 - [ ] 6.2 Negative control: a canary-only change that breaks a status level is refused, files a gap, and never reaches `fleet` nodes.
 - [ ] 6.3 Unhealthy revert on a fleet node restores the previous `fleet` SHA, not a `dev` pin.
-- [ ] 6.3b A node with a git token and `SUBSTRATE_UPDATE_CHANNEL=fleet` is refused at boot (done in ddbecca4's image test; repeat on a live node).
-- [ ] 6.4 Missing-ref control: a node pointed at a nonexistent ref mirrors nothing and reports `channel_ref_missing`.
+- [ ] 6.4 A node with an explicit landing switch, or the gap-store holder, is refused `fleet` at boot (image test in f3596a2c; repeat on a live node).
+- [ ] 6.5 Missing-ref control: a node pointed at a nonexistent ref mirrors nothing and reports `channel_ref_missing`.
 - [ ] 6.6 An `updateHold` impulse freezes the hub during a drain and expires on its own.

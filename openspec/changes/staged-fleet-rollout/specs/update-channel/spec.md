@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Each node declares an update channel
-A node SHALL declare which revision it runs with one install input, `SUBSTRATE_UPDATE_CHANNEL`, whose value is `canary`, `fleet` (the default) or `hold`. An unknown value SHALL be refused at boot, naming the three values, before anything is written.
+A node SHALL declare which revision it runs with one install input, `SUBSTRATE_UPDATE_CHANNEL`, whose value is `canary` (the default), `fleet` or `hold`. An unknown value SHALL be refused at boot, naming the three values, before anything is written.
 
 #### Scenario: A typo in the channel
 - **WHEN** a node boots with `SUBSTRATE_UPDATE_CHANNEL=fleeet`
@@ -9,17 +9,25 @@ A node SHALL declare which revision it runs with one install input, `SUBSTRATE_U
 
 #### Scenario: No channel given
 - **WHEN** a node boots without the input
-- **THEN** its channel is `fleet`
+- **THEN** its channel is `canary`, today's behaviour
 
-### Requirement: A node that lands code is a canary
-A node that can land code (a git token, and the landing kill switch unset or 1) SHALL run `dev`. With no channel given it SHALL be a canary, and an explicit `fleet` or `hold` SHALL be refused at boot, naming both ways out.
+### Requirement: A node that authors or judges landings is a canary
+A node whose landing switch (`MITOSIS_DIRECT_PUSH`) is anything but `0`, and the node that holds its gap store, SHALL run `dev`. On `fleet` or `hold`, an unset landing switch SHALL be set to `0`. An explicit non-zero landing switch, or being the gap-store holder, SHALL be refused at boot, naming the way out.
 
-#### Scenario: An authoring node set to fleet
-- **WHEN** a node with `SUBSTRATE_GIT_PAT` boots with `SUBSTRATE_UPDATE_CHANNEL=fleet`
-- **THEN** gen-env exits non-zero and says to use `canary` or stop landing (remove the token, or set `MITOSIS_DIRECT_PUSH=0`)
+#### Scenario: fleet with landing on
+- **WHEN** a node boots with `SUBSTRATE_UPDATE_CHANNEL=fleet` and `MITOSIS_DIRECT_PUSH=2`
+- **THEN** gen-env exits non-zero and says to use `canary` or set `MITOSIS_DIRECT_PUSH=0`
 
-### Requirement: A non-canary node runs its channel's ref
-On a node whose channel is `fleet`, pull-sync SHALL converge every vessel clone and the super-repo clone to the channel's ref, and every runtime comparison (skip, last-good, unhealthy revert) SHALL use that tree.
+#### Scenario: fleet on the gap-store holder
+- **WHEN** a node with no `GAP_STORE_ENDPOINT` boots with `SUBSTRATE_UPDATE_CHANNEL=fleet`
+- **THEN** gen-env exits non-zero and says to use `canary` or point `GAP_STORE_ENDPOINT` at an authoring node
+
+#### Scenario: A consumer node
+- **WHEN** a node with a remote `GAP_STORE_ENDPOINT` boots with `SUBSTRATE_UPDATE_CHANNEL=fleet` and no landing switch
+- **THEN** its channel is `fleet` and its landing switch is `0`
+
+### Requirement: A non-canary node runs the fleet manifest
+On a node whose channel is `fleet`, pull-sync SHALL converge the super-repo clone to the super-repo `fleet` commit, and each vessel clone to the revision that commit's gitlink names, and every runtime comparison (skip, last-good, unhealthy revert) SHALL use that tree.
 
 #### Scenario: A landing on dev, seen from a fleet node
 - **WHEN** a commit lands on `dev` and has not been advanced
