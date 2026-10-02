@@ -1,0 +1,19 @@
+{
+  "id": "conservation-residual-trend-divergence",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "source_divergence",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The substrate has detected a diverging trend in a conservation residual. This is being treated as a horizon to cross rat",
+  "description": "The substrate has detected a diverging trend in a conservation residual. This is being treated as a horizon to cross rather than a defect to patch, requiring a new approach to resolution.",
+  "goal_text": "The substrate has detected a diverging trend in a conservation residual. This is being treated as a horizon to cross rather than a defect to patch, requiring a new approach to resolution.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "conservation-residual-trend-divergence",
+  "source_gap_source": "substrate_detected"
+}

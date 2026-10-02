@@ -1,0 +1,10 @@
+{
+  "status": 200,
+  "data": {
+    "success": true,
+    "data": {
+      "valid": false,
+      "error": "Invalid API key signature"
+    }
+  }
+}

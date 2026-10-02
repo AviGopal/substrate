@@ -1,0 +1,17 @@
+[Unit]
+Description=Operator-goal generator timer (convergent enabler)
+
+[Timer]
+# Modest cadence so it EXERCISES the machinery without burning LLM budget or flooding
+# goal-host: first fire 5 min after activation, then every 12 minutes. Type=oneshot, so
+# a still-running dispatch (one multi-step goal) blocks the next fire. The enrichment
+# (ψ richness ↑, reach-rate ↑) accrues over hours of this loop running, not in one fire.
+OnBootSec=5min
+OnActiveSec=5min
+OnUnitActiveSec=12min
+Persistent=true
+AccuracySec=30s
+Unit=operator-goal-generator.service
+
+[Install]
+WantedBy=timers.target

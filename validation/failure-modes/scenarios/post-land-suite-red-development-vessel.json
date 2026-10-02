@@ -1,0 +1,19 @@
+{
+  "id": "post-land-suite-red-development-vessel",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Post-landing suite for development-vessel reports 95 failing / 1615 passing after 5de9aeb987 (gap pwt-development-vessel",
+  "description": "Post-landing suite for development-vessel reports 95 failing / 1615 passing after 5de9aeb987 (gap pwt-development-vessel-rhythm-conductor-tick.ts-97b91956, proposal mitosis-2026-08-17T10-46-12-356Z). Failing: (fail) seed-templates dry-run > development-vessel:coverage-tick — all task configs carry a matching type field ; (fail) seed-templates dry-run > development-vessel:learning-transfer-gap-tick — all task configs carry a matching type field ; (fail) seed-templates dry-run > development-vessel:substrate-health-tick — all task configs carry a matching type field ; (fail) seed-templates dry-run > devel",
+  "goal_text": "Post-landing suite for development-vessel reports 95 failing / 1615 passing after 5de9aeb987 (gap pwt-development-vessel-rhythm-conductor-tick.ts-97b91956, proposal mitosis-2026-08-17T10-46-12-356Z). Failing: (fail) seed-templates dry-run > development-vessel:coverage-tick — all task configs carry a matching type field ; (fail) seed-templates dry-run > development-vessel:learning-transfer-gap-tick — all task configs carry a matching type field ; (fail) seed-templates dry-run > development-vessel:substrate-health-tick — all task configs carry a matching type field ; (fail) seed-templates dry-run > devel",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "post-land-suite-red-development-vessel",
+  "source_gap_source": "substrate_detected"
+}

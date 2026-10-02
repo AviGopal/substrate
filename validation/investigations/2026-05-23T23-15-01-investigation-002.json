@@ -1,0 +1,269 @@
+{
+  "investigation_id": "2026-05-23T23-15-01-investigation-002",
+  "generated_at": "2026-05-23T23:15:01Z",
+  "investigator_session_id": "loop-iteration-002",
+  "prior_investigation_id": "2026-05-23T23-12-41-investigation-001",
+  "substrate_target": {
+    "endpoint": "filesystem-only (local substrate at http://localhost:18080 not queried this iteration)",
+    "kind": "repo-static-audit"
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "claim": "The LIFT CANDIDATE criteria remain gateable on proposal-file existence alone; cycle-8 reports consecutive_zero_debt_cycles=4 with debt_zero=true and gap_count_decreasing=true.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq '.lift_kpi' validation/failure-modes/cycles/cycle-8.json",
+          "excerpt": "{ debt_zero: true, gap_count_decreasing: true, consecutive_zero_debt_cycles: 4 }",
+          "verified_at": "2026-05-23T23:15:01Z"
+        },
+        {
+          "kind": "file_ref",
+          "location": "validation/scripts/progression-driver.ts:256-260",
+          "excerpt": "if (consecutiveZero >= 3 && gapDecreasing && autonomousPresent) { summary.notes.push(`LIFT CANDIDATE: ...`); }",
+          "verified_at": "2026-05-23T23:15:01Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Ship 2026-05-23-lift-criterion-hardening; gate on external anchors instead of internal counters."
+    },
+    {
+      "id": "F-002",
+      "claim": "progression-driver still uses regex fallback to recover proposal envelopes from malformed JSON.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "file_ref",
+          "location": "validation/scripts/progression-driver.ts:110-120",
+          "excerpt": "// make_activity_autonomous proposals embed an unescaped markdown template string in the `template` field, making the outer JSON invalid. Extract just the `proposal` envelope via regex as a fallback.",
+          "verified_at": "2026-05-23T23:15:01Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Either fix the proposal author to emit valid JSON, or refuse-on-parse-fail to surface malformed output as a failure_mode."
+    },
+    {
+      "id": "F-003",
+      "claim": "Provenance categories already coexist in proposal files: 6 carry authored_by: 'make_activity_autonomous' with epoch-zero timestamps; 3 carry authored_by: 'subagent' with no timestamp at all. The lift criterion gates only on the former; nothing prevents an author from writing either string.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "for f in validation/failure-modes/proposals/*.json; do jq -r '.proposal.authored_by // .authored_by' \"$f\"; done | sort | uniq -c",
+          "excerpt": "Observed 6 'make_activity_autonomous' and 3 'subagent'",
+          "verified_at": "2026-05-23T23:15:01Z"
+        },
+        {
+          "kind": "command",
+          "command": "jq '{authored_by, created_at, registration_status}' validation/failure-modes/proposals/proposal-fm-43-attribution-cascade-witness-check.json (via .proposal envelope)",
+          "excerpt": "authored_by: 'subagent', created_at: missing, registration_status: 'blocked_operator'",
+          "verified_at": "2026-05-23T23:15:01Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Couple to substrate-identity-resolution: signed proposals using issued vessel credentials make the authored_by string verifiable instead of self-declared."
+    },
+    {
+      "id": "F-004",
+      "claim": "Six failure-mode scenarios on disk; the 63-mode matrix referenced in CLAUDE.md remains aspirational.",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/scenarios/ | wc -l",
+          "excerpt": "6",
+          "verified_at": "2026-05-23T23:15:01Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Hand-author the remaining ~57 scenarios or let topology-discovery find them; the current 6 cannot ground a meaningful lift claim."
+    },
+    {
+      "id": "F-005",
+      "claim": "cycle-8.json does not record its substrate target. The lift stamp is not bound to any specific substrate.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq '{cycle, target, kind}' validation/failure-modes/cycles/cycle-8.json",
+          "excerpt": "{ cycle: null, target: null, kind: null }",
+          "verified_at": "2026-05-23T23:15:01Z"
+        },
+        {
+          "kind": "file_ref",
+          "location": "validation/baselines/local-substrate-cold.json",
+          "excerpt": "Cold baseline reports 6/6 gap against the local container substrate",
+          "verified_at": "2026-05-23T23:15:01Z"
+        }
+      ],
+      "status": "regressed",
+      "operator_remediation": "Either bind every cycle report to a substrate identity (target.endpoint, target.kind, target.substrate_id) or reject lift stamps from substrate-unanchored cycles."
+    },
+    {
+      "id": "F-006",
+      "claim": "Hardcoded deployment defaults (metabob.com, svc.cluster.local) remain in three identified files.",
+      "category": "deployment",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -n 'metabob.com\\|svc.cluster.local' repos/identity-vessel/src/services/trace.ts repos/identity-vessel/src/services/jwt.ts repos/discovery-vessel/src/middleware/auth.ts",
+          "excerpt": "trace.ts:6 ACTIVITY_API_ENDPOINT default; jwt.ts:15 JWT_ISSUER default; auth.ts:63 IDENTITY_VESSEL_URL default",
+          "verified_at": "2026-05-23T23:15:01Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Ship 2026-05-23-substrate-identity-resolution to delete defaults and force boot-time resolution."
+    },
+    {
+      "id": "F-007",
+      "claim": "The Trailblazing primitive remains documented in the foundation as 'never implemented; remains only in archived docs.'",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "file_ref",
+          "location": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md:904",
+          "excerpt": "**\"Trailblazing\"** — never implemented; remains only in archived docs.",
+          "verified_at": "2026-05-23T23:15:01Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Either implement or remove the language; the foundation should not own primitives that don't operationally exist."
+    },
+    {
+      "id": "F-008",
+      "claim": "The mythic three-state language has no operational referent in source.",
+      "category": "idiom",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "doc_quote",
+          "location": "investigation-001 narrative",
+          "excerpt": "The 'process-of-becoming' framing dignifies a perfectly ordinary event loop.",
+          "verified_at": "2026-05-23T23:15:01Z"
+        }
+      ],
+      "status": "unverifiable",
+      "operator_remediation": "Philosophical/framing finding; no code-level verification possible. Carried forward."
+    },
+    {
+      "id": "F-009",
+      "claim": "22 openspec changes are dated 2026-05-23 (revised up from 21 in the prior report). Across the five key changes audited, zero DEV tasks are marked complete.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls openspec/changes/ | grep ^2026-05-23 | wc -l",
+          "excerpt": "22",
+          "verified_at": "2026-05-23T23:15:01Z"
+        },
+        {
+          "kind": "command",
+          "command": "for c in substrate-identity-resolution substrate-self-replacement-pipeline external-resolver-vesselization external-resolver-grounding lift-criterion-hardening; do grep -c '^- \\[x\\]' openspec/changes/2026-05-23-$c/tasks.md; done",
+          "excerpt": "0 0 0 0 0 — zero tasks complete across all five",
+          "verified_at": "2026-05-23T23:15:01Z"
+        }
+      ],
+      "status": "regressed",
+      "operator_remediation": "Track DEV progress; the count of proposals is not the problem, the gap between drafted and deployed is."
+    },
+    {
+      "id": "F-010",
+      "claim": "Root remains clean. 13 entries, no PNGs.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls -1 | wc -l && ls *.png 2>&1 | head",
+          "excerpt": "13; ls: cannot access '*.png': No such file or directory",
+          "verified_at": "2026-05-23T23:15:01Z"
+        }
+      ],
+      "status": "resolved",
+      "operator_remediation": "Maintained. Pre-commit hook blocks regression."
+    },
+    {
+      "id": "F-011",
+      "claim": "Zero of the five highest-leverage 2026-05-23 changes have any completed DEV task. Lift-criterion-hardening — the change that would address F-001 — sits at zero progress despite F-001 being known.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -c '^- \\[x\\]' openspec/changes/2026-05-23-lift-criterion-hardening/tasks.md",
+          "excerpt": "0",
+          "verified_at": "2026-05-23T23:15:01Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Start DEV on lift-criterion-hardening; it is the change most directly remediating the highest-severity finding in this investigation."
+    },
+    {
+      "id": "F-012",
+      "claim": "Cycle reports do not record their substrate target. cycle-8 has null cycle, target, and kind fields — the lift stamp cannot be attributed to any specific substrate.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq 'keys' validation/failure-modes/cycles/cycle-8.json | head -20",
+          "excerpt": "cycle, target, kind fields absent or null at top level",
+          "verified_at": "2026-05-23T23:15:01Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Add required substrate_target {endpoint, kind, substrate_id} field to cycle report schema; refuse lift stamps without it."
+    },
+    {
+      "id": "F-013",
+      "claim": "Two distinct authored_by tags coexist in the proposal directory: 'make_activity_autonomous' (6 files, epoch-zero timestamps) and 'subagent' (3 files, no timestamp). The lift criterion only requires the former to be present. Nothing prevents an author from writing either string — both are self-declared.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "for f in validation/failure-modes/proposals/*.json; do jq -r '.proposal.authored_by // .authored_by' \"$f\"; done | sort | uniq -c",
+          "excerpt": "6 make_activity_autonomous; 3 subagent",
+          "verified_at": "2026-05-23T23:15:01Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Until signed credentials gate proposal authorship, treat authored_by as an unverifiable string. Investigations should report both counts and the count of unsigned proposals."
+    }
+  ],
+  "regressions_since_prior": ["F-005", "F-009"],
+  "resolutions_since_prior": [],
+  "new_findings": ["F-011", "F-012", "F-013"],
+  "open_questions": [
+    "Why do 3 'subagent'-authored proposals carry no timestamp at all? Worse provenance than epoch-zero (silent vs explicit).",
+    "Did the cycle-8 report ever record its substrate target, or has the schema always been substrate-anonymous?",
+    "Will any of the 22 same-day proposals reach a checked DEV task before the next investigation?"
+  ],
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "reason": "LIFT CANDIDATE remains stamped on substrate-anonymous cycle data; new findings F-011 to F-013 widen the provenance gap. Wake at 30 minutes to catch any new cycle-9 stamp or DEV progress on lift-criterion-hardening."
+  }
+}

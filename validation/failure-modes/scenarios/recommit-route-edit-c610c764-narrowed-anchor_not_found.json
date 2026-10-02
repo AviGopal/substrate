@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-c610c764-narrowed-anchor_not_found",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-c610c764] The gap store unexpectedly reduced from 4,113 rows to 44 due to loadGaps() returning",
+  "description": "[narrowed from route-edit-c610c764] The gap store unexpectedly reduced from 4,113 rows to 44 due to loadGaps() returning an EMPTY array on read or parse failures, risking silent data loss.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 242-247 of 1160, VERBATIM:\\n242:  */\\n243: function hasClassifiableId(g: SubstrateGap): boolean {\\n244:   return typeof g.id === \n- syntax_break: src/resolvers/substrate-gap.ts(770,5): error TS1128: Declaration or statement expected. | src/resolvers/substrate-gap.ts(980,3): error TS1128: Declaration or statement expected. | src/resolvers/substr\n- syntax_break: src/resolvers/substrate-gap.ts(776,8): error TS1128: Declaration or statement expected. | src/resolvers/substrate-gap.ts(833,3): error TS1128: Declaration or statement expected. | src/resolvers/substr\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-c610c764-narrowed repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 197-202 of 1205, VERBATIM:\\n197: }\\n198: \\n199: const GAPS_PATH = () => join(wo. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "[narrowed from route-edit-c610c764] The gap store unexpectedly reduced from 4,113 rows to 44 due to loadGaps() returning an EMPTY array on read or parse failures, risking silent data loss.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 242-247 of 1160, VERBATIM:\\n242:  */\\n243: function hasClassifiableId(g: SubstrateGap): boolean {\\n244:   return typeof g.id === \n- syntax_break: src/resolvers/substrate-gap.ts(770,5): error TS1128: Declaration or statement expected. | src/resolvers/substrate-gap.ts(980,3): error TS1128: Declaration or statement expected. | src/resolvers/substr\n- syntax_break: src/resolvers/substrate-gap.ts(776,8): error TS1128: Declaration or statement expected. | src/resolvers/substrate-gap.ts(833,3): error TS1128: Declaration or statement expected. | src/resolvers/substr\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-c610c764-narrowed repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 197-202 of 1205, VERBATIM:\\n197: }\\n198: \\n199: const GAPS_PATH = () => join(wo. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-c610c764-narrowed-anchor_not_found",
+  "source_gap_source": "substrate_detected"
+}

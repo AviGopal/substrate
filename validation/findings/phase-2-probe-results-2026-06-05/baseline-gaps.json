@@ -1,0 +1,17 @@
+{
+  "activity_lifecycle": 61,
+  "architectural_pattern": 84,
+  "auto_draft_authored": 1,
+  "auto_draft_fallback_recommend": 54,
+  "auto_draft_triggered": 57,
+  "detector_output_shape_mismatch": 1,
+  "missing_capability": 28,
+  "missing_concept": 13,
+  "missing_idiom": 1,
+  "novel_failure_mode_detected": 13,
+  "other": 31,
+  "resolver_distribution": 40,
+  "responsibility_misallocation": 17,
+  "silent_failure_at_message_sink": 1,
+  "trace_quality": 98
+}

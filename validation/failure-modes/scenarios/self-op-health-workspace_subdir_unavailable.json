@@ -1,0 +1,19 @@
+{
+  "id": "self-op-health-workspace_subdir_unavailable",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "operational_health",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "6 required workspace subdir(s) missing (proposals, patterns, observations, metrics, git/vessels, git/super-repo) → goals",
+  "description": "6 required workspace subdir(s) missing (proposals, patterns, observations, metrics, git/vessels, git/super-repo) → goals that fs_write to them fail with ENOENT/EACCES until created (an fs_write that does not mkdir -p its parent is the usual trigger). Lower-severity than a root fault: only that class of goal fails.",
+  "goal_text": "6 required workspace subdir(s) missing (proposals, patterns, observations, metrics, git/vessels, git/super-repo) → goals that fs_write to them fail with ENOENT/EACCES until created (an fs_write that does not mkdir -p its parent is the usual trigger). Lower-severity than a root fault: only that class of goal fails.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "self-op-health:workspace_subdir_unavailable",
+  "source_gap_source": "substrate_detected"
+}

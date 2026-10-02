@@ -1,0 +1,19 @@
+{
+  "id": "recommit-the-executor-does-not-resolve-bound-values-in-non-llm-task-configs-anchor_not_found",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap the-executor-does-not-resolve-bound-values-in-non-llm-task-configs repeated already-recorded failure cla",
+  "description": "compose for gap the-executor-does-not-resolve-bound-values-in-non-llm-task-configs repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 292-297 of 409, VERBATIM:\\n292: }\\n293: \\n294: function mapTask(raw: RawTask): ",
+  "goal_text": "compose for gap the-executor-does-not-resolve-bound-values-in-non-llm-task-configs repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 292-297 of 409, VERBATIM:\\n292: }\\n293: \\n294: function mapTask(raw: RawTask): ",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-the-executor-does-not-resolve-bound-values-in-non-llm-task-configs-anchor_not_found",
+  "source_gap_source": "substrate_detected"
+}

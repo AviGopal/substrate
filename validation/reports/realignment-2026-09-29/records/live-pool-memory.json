@@ -1,0 +1,434 @@
+{
+ "source": "live-pool-memory",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/live-pool-memory.md",
+ "coverage": "Read-only, measured 2026-09-29 ~04:00 UTC.\n- Memory: all notes.json files on node 1 (substrate-live) and node 2 (compose2-live), plus node 1's 3 .bak files, copied out with docker cp and parsed on the host. Also read: memory-note.ts from the live dev-vessel clone, the dev-vessel journal from 09-25 13:10 to 09-26 05:13, and one live memoryNote resolve on node 2.\n- Pool: standing.json on both nodes. Parsed 4 of the 21 orphaned tmp snapshots on node 1. Aggregated the full drain-log on both nodes and the watchdog-log on node 1. Replayed boredom's two read requests on node 1 :8090.\n- Runtime state: policies/, state/, leases/ on both nodes.\n- Concept-db: SQL counts and group-bys on concept and concept_usage, plus a listing of the 57 compose_lessons.\n- Not read: node 1 gaps/ contents, trace-spool, concept_edge beyond a count, mitosis-applied.jsonl, the other 17 tmp snapshots, node 2's watchdog log.",
+ "attempts": [
+  {
+   "key": "memory-recall",
+   "title": "Merge the two memory stores at file level (1077 + 680 into 1788)",
+   "where": "node1 /workspace/git/super-repo/memory/notes.json.pre-merge.1790118911018.bak",
+   "date": "2026-09-22",
+   "tried": "Merged the unread 680-note /workspace/memory store, created by the WORKSPACE_ROOT unit/env fork of 07-25, into the super-repo store",
+   "outcome": "reverted",
+   "evidence": "The store was wiped to 0 on 09-26 between 05:11:20 and 05:12:02 UTC; only 4 of the 59 live ids appear in the 09-23 bak"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Memory retire primitive",
+   "where": "development-vessel 19ae84e / b5ed109",
+   "date": "2026-09-22",
+   "tried": "Added retire:true by id to memoryNote_write",
+   "outcome": "worked",
+   "evidence": "552 battery notes retired 09-23 (1788 to 1236); the primitive is still in memory-note.ts:166-190. Its result was wiped 09-26."
+  },
+  {
+   "key": "memory-recall",
+   "title": "The checker retires its own probe notes",
+   "where": "d4171b1",
+   "date": "2026-09-22",
+   "tried": "Trend checker POSTs a retire for each probe note",
+   "outcome": "failed",
+   "evidence": "Sent a bare {type,note} body; the endpoint returned 400 'pointer.type is required' and the call was a silent no-op (hollow write)"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "memory-note reads WORKSPACE_ROOT at use time",
+   "where": "development-vessel 5dc8ab8",
+   "tried": "The unit test had been writing to the real store; the resolver now reads the path at call time",
+   "outcome": "partial",
+   "evidence": "Fixed the test self-poisoning. The single shared notes.json.tmp path and the swallow-to-[] load are unchanged."
+  },
+  {
+   "key": "memory-recall",
+   "title": "Need-level dispatch: recover the system's own memory",
+   "where": "dispatch 879c4bc6",
+   "date": "2026-09-29",
+   "tried": "Natural-language need with done-when recall checks",
+   "outcome": "failed",
+   "evidence": "Target inference returned no shapes (confidence 0); the walk ran pool leftovers and ended hollow with an unfilled {{cwd}}. The store still had 58 notes, oldest 09-26."
+  },
+  {
+   "key": "stale-whole-rewrite",
+   "title": "Fix rhythm-reality-sync rewriting the whole rhythm body from a stale read",
+   "where": "development-vessel 329fc5c",
+   "date": "2026-09-26",
+   "tried": "Autonomous fix: staleness-only sync writes",
+   "outcome": "failed",
+   "evidence": "Wiped the 09-26 containment (project-intake budget 1.5 and its pause). The seed tick re-seeded defaults (0.2, \u03b138.5); the 05:26 recursion storm followed. The operator re-contained at 09-27 03:03."
+  },
+  {
+   "key": "calibration-seal",
+   "title": "autonomyScope stage 1 containment and falsifier-class admission",
+   "where": "pool autonomyScope (node1 09-27 08:43, node2 08:50)",
+   "date": "2026-09-27..09-28",
+   "tried": "Excluded 27 core paths; required class1/2 \u2192 dropped class1 \u2192 widened to all classes \u2192 re-tightened to class1/2",
+   "outcome": "partial",
+   "evidence": "The reason field records admission going from ~250 to ~17 to 2-5, then being widened. Of the 8 autonomous landings after the widening, 1 was an improvement. Re-tightened 09-28 23:30Z."
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "spendEnvelope at $2/h",
+   "where": "pool spendEnvelope",
+   "date": "2026-09-27",
+   "tried": "Hourly USD cap; paused after 3 refuted landings, then reopened",
+   "outcome": "partial",
+   "evidence": "85 refusals on node 1 between 09-28 23:34 and 00:28; operator directed landings draw from the same envelope"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "remedy-livelock gaps for the redispatch loop",
+   "where": "gaps remedy-livelock-db-performance-\u2026-2026-09-25, remedy-livelock-trace-store-reconcile-\u2026-2026-09-25",
+   "date": "2026-09-25",
+   "tried": "Filed remedy gaps for the livelocked gaps",
+   "outcome": "failed",
+   "evidence": "4 dispatches each. trace-store-reconcile-\u2026T11 dispatches peaked at 767 on 09-28 (node 1) and 550 (node 2)."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Hold the self-maintenance rhythm",
+   "where": "pool timeShapedRhythm self-maintenance hold (both nodes)",
+   "date": "2026-09-28",
+   "tried": "Operator hold after detect-drift committed 422 .bun cache binaries plus gaps.json and learning-mode-state.json into dev-vessel (9d839e0)",
+   "outcome": "partial",
+   "evidence": "Same family as 4e4170a8 (09-07). Lift condition not met: the commit step must stage only src/."
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Scrub compose test-run env (env -i)",
+   "where": "f451e42",
+   "date": "2026-09-29",
+   "tried": "Stop compose bun test runs from inheriting GAP_STORE_ENDPOINT and similar live endpoints",
+   "outcome": "partial",
+   "evidence": "4 fixture rows were rewritten at 01:42-01:43 after it landed; a second channel via default discovery remains (CHECKINS 02:20)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Untrack state/learning-mode-state.json",
+   "where": "super-repo 50830bec",
+   "date": "2026-09-28",
+   "tried": "Remove runtime state from git",
+   "outcome": "failed",
+   "evidence": "The pull deleted the file in node 1's clone; the runtime recreated it fresh, resetting learning-mode state"
+  },
+  {
+   "key": "node-locality",
+   "title": "Operator rhythm rebaseline",
+   "where": "pool timeShapedRhythm (operator-rebaseline-2026-09-27)",
+   "date": "2026-09-27",
+   "tried": "Rebaselined \u03b1/\u03b2 from 7-day ledger evidence",
+   "outcome": "partial",
+   "evidence": "Applied on node 1 only. Node 2 gap-closing is still \u03b1755.5/\u03b22 against node 1's 67/23. The restore source rebaseline-snapshot-20260926T092807Z.json is no longer found."
+  }
+ ],
+ "problems": [
+  {
+   "key": "memory-recall",
+   "symptom": "The authoritative memory holds 59 notes, the oldest from 09-26 05:12. The 1184 knowledge notes from before the wipe survive only in an unread .bak. Recall ignores topic.",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "A flat JSON store with an env-derived path. Recall is newest-N. loadNotes swallows errors and returns [], and saveNotes then persists that. All writers share one .tmp path. The store is per node. The 09-26 wipe cause is UNVERIFIED; the window is 05:11:20\u201305:12:02 UTC."
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Memory, rhythm posteriors, jointBindings, llm-model-policy (rev 25 vs 9) and policy files all differ between node 1 and node 2. Operator containment and rebaselines reach node 1 only.",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 5,
+   "root_cause": "Every node keeps its own super-repo runtime dirs (pool, memory, policies, state). No shape carries the learning state to the hub."
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "All 1805 boredomSelectionSnapshots record open_gap_count 0 and rhythms_consulted [].",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "root_cause": "The snapshot writer reads top-level total/items, but the data is under body.gaps/body.impulses (confirmed by replay). The scorer reads correctly: two readers of one seam with divergent envelopes."
+  },
+  {
+   "key": "stale-whole-rewrite",
+   "symptom": "Whole-body or whole-file rewrites lose concurrent or omitted data: the rhythm containment wiped by 329fc5c, the memory store wiped, gap store keys carried forward, torn pool tmps.",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-26",
+   "recurrences": 4,
+   "root_cause": "Read-modify-write of an entire record or file, with no versioning and no fail-closed read"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Since 09-22, 99.6% of the 2256 dispatches on node 1 went to 3 gaps; the db_performance gap has been re-detected every tick for 11 days",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Gaps with falsifier none are re-detected and re-dispatched with no terminal disposition. The remedy-livelock gaps did not stop it."
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Autonomy admission was widened and tightened twice in 48h: ~250 to 2-5, then widened, then 8 landings with 1 improvement, then tightened again",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "root_cause": "No machine-measurable criterion decides supply against quality; the operator hand-edits one pool record"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "The gap-compose watchdog restarts with ok:true while the stall continues (stalled_min up to 241, 383 open intents); the expectation-scan heartbeat reports checked:0; discardedLandingReport is always 0",
+   "first_seen": "2026-08-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Detectors act or report without checking that their action changed the condition"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Walks satisfy memoryNote_write by writing files named memoryNote* into the super-repo root; schema-echo pool rows (id 'string', body 'object'); 15 identical 'Investigation of Slow Queries' notes",
+   "first_seen": "2026-09-23",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "root_cause": "shellResult satisfiers and LLM notes count as producing the shape"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Runtime residue: 21 orphaned standing.json.tmp files (~100MB); an unbounded 180MB drain-log; 1805 never-retired snapshots; 30+ residue files in the super-repo root; {{placeholder}} files and titles; compiled .js beside .ts in boredom src",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "root_cause": "No retention or cleanup for runtime logs and snapshots; template placeholders are not rendered before writes"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "None of the 57 compose_lessons has a success credit, though 42 were loaded (up to 85 times); lessons are duplicated (anchor_not_found \u22655 variants) and some are empty boilerplate",
+   "first_seen": "2026-07-31",
+   "last_seen": "2026-09-26",
+   "recurrences": 1,
+   "root_cause": "Lesson efficacy is never credited back (PLAUSIBLE); a new lesson is minted per failure instead of reinforcing an existing one"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "A capability-level need ('the system cannot remember') found no target shape and ended hollow",
+   "first_seen": "2026-09-29",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "root_cause": "Target inference cannot map capability words to the memoryNote shape that the same node serves"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "detect-drift commit-and-push committed 422 .bun cache binaries and runtime state into dev-vessel",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "root_cause": "The commit step stages runtime and cache paths"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The untrack commit 50830bec deleted learning-mode-state.json on pull, resetting learning mode; the pool's oldest record is 09-27, and the absence of records from 09-22 to 09-26 is unexplained",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "root_cause": "Runtime state lives inside a git clone that pulls mutate"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "The memory path depends on WORKSPACE_ROOT, which the unit sets to /workspace and the env file sets to /workspace/git/super-repo (both still present); policy files are missing on node 2",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "root_cause": "Store locations and behavior tunables live in env and files, not in shapes"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "memoryNote flat-JSON store",
+   "location": "development-vessel/src/resolvers/memory-note.ts",
+   "purpose": "Authoritative system memory (law 10)",
+   "status": "broken",
+   "general": true,
+   "evidence": "Wiped 09-26 (about 1236 notes to 0); 59 notes now; one store per node; swallow-to-[] load; shared .tmp path"
+  },
+  {
+   "name": "memory retire primitive",
+   "location": "memory-note.ts:166-190 (19ae84e)",
+   "purpose": "Retire a note by id",
+   "status": "live-used",
+   "general": true,
+   "evidence": "552 notes retired 09-23"
+  },
+  {
+   "name": "session-hook memory mirror",
+   "location": ".claude hooks \u2192 memoryNote_write",
+   "purpose": "Mirror operator memory files into the substrate store",
+   "status": "live-used",
+   "general": true,
+   "evidence": "8 operator files since 09-26 and 7 operator-mirror notes live"
+  },
+  {
+   "name": "timeShapedRhythm + boredom due-score scorer",
+   "location": "pool; boredom-vessel/src/index.ts:2549-2616",
+   "purpose": "Condition-driven cadence (law 5)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Reads body.impulses correctly; posteriors diverge per node"
+  },
+  {
+   "name": "boredomSelectionSnapshot",
+   "location": "boredom-vessel/src/index.ts:57-115",
+   "purpose": "Law-5 observability record",
+   "status": "broken",
+   "general": false,
+   "evidence": "1805 snapshots all open_gap_count 0 and rhythms []; envelope mismatch confirmed by replay"
+  },
+  {
+   "name": "rhythm-reality-sync",
+   "location": "development-vessel/src/resolvers/rhythm-reality-sync.ts",
+   "purpose": "Sync rhythm \u03b1/\u03b2 and staleness",
+   "status": "broken",
+   "general": true,
+   "evidence": "329fc5c wiped the operator containment on 09-26"
+  },
+  {
+   "name": "autonomyScope",
+   "location": "pool shape (operator-authored)",
+   "purpose": "Containment: excluded_paths plus require_falsifier_classes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "27 excluded paths; oscillated 4 times in 48h"
+  },
+  {
+   "name": "spendEnvelope",
+   "location": "pool shape",
+   "purpose": "USD per hour cap and pause",
+   "status": "live-used",
+   "general": true,
+   "evidence": "$2/h; 85 refusals 09-28 23:34-00:28"
+  },
+  {
+   "name": "jointBinding severed-joint detectors",
+   "location": "pool shape, node 1 only",
+   "purpose": "Detect severed producer-to-reader joints (sql_newest, gap_count, discovery_*)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "5 records on node 1, 0 on node 2; boredom selects gap-goal:severed-joint-* 9 times"
+  },
+  {
+   "name": "operator_pause field",
+   "location": "timeShapedRhythm body",
+   "purpose": "Pause a rhythm",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Its own text says 'no reader today'"
+  },
+  {
+   "name": "gap-compose/funnel-drain watchdog",
+   "location": "pool/watchdog-log.jsonl",
+   "purpose": "Restart stalled compose flows",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "5097 restarts; stalled_min 202 then 210 after restart, 383 open intents"
+  },
+  {
+   "name": "drain-log",
+   "location": "pool/drain-log.jsonl",
+   "purpose": "Record gap-drain actions",
+   "status": "live-used",
+   "general": false,
+   "evidence": "180MB, 1.09M lines, unbounded"
+  },
+  {
+   "name": "remedy-livelock gaps",
+   "location": "gap store",
+   "purpose": "Break a redispatch livelock",
+   "status": "broken",
+   "general": false,
+   "evidence": "Livelock peaked 09-28 after they were filed 09-25"
+  },
+  {
+   "name": "expectation-scan heartbeat",
+   "location": "memoryNote expectation-scan-heartbeat",
+   "purpose": "Expectation violation scan",
+   "status": "dormant",
+   "general": false,
+   "evidence": "checked:0 on both nodes, every minute"
+  },
+  {
+   "name": "discardedLandingReport",
+   "location": "pool/discarded-landings.json(l)",
+   "purpose": "Hourly count of discarded landings",
+   "status": "unknown",
+   "general": false,
+   "evidence": "Always total 0 (704 rows)"
+  },
+  {
+   "name": "policies/*.json runtime policy files",
+   "location": "super-repo/policies",
+   "purpose": "walk-budget, pathway reuse, extraction depth, llm-model-policy arms",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Node 1 has 6 files, node 2 has 2 (rev 25 vs 9); they are files, not shapes"
+  },
+  {
+   "name": "learning-mode-state",
+   "location": "super-repo/state/learning-mode-state.json",
+   "purpose": "Learning-mode driver",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Reset 09-28 by the 50830bec untrack"
+  },
+  {
+   "name": "maintenance leases",
+   "location": "super-repo/leases",
+   "purpose": "Mutual exclusion for maintenance",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Expired lease files from 09-25 and 09-26 left on disk"
+  },
+  {
+   "name": "compose_lesson concepts",
+   "location": "concept-db concept (57)",
+   "purpose": "Drafter-facing class lessons recalled at prompt-build",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Loaded up to 85 times; times_succeeded 0 on all; duplicated",
+   "duplicates_of": "anchor_not_found \u00d75, syntax_break \u00d73, typecheck_dangling \u00d73, hollow_write \u00d72"
+  },
+  {
+   "name": "concept_usage grading",
+   "location": "concept-db concept_usage",
+   "purpose": "Grade concept usefulness",
+   "status": "live-used",
+   "general": true,
+   "evidence": "3726 rows, 96% neutral"
+  },
+  {
+   "name": "pool standing.json atomic write",
+   "location": "development-vessel pool-impulse",
+   "purpose": "Persist the pool",
+   "status": "live-used",
+   "general": true,
+   "evidence": "21 orphaned tmp files, 3 of 4 parsed are torn"
+  },
+  {
+   "name": "pre-wipe memory backup",
+   "location": "node1 memory/notes.json.pre-op-retire.1790140094.bak",
+   "purpose": "The only complete copy of 1184 knowledge notes (05-27..09-23)",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Unread by any recall path"
+  },
+  {
+   "name": "May\u2013July memory store",
+   "location": "node1 /workspace/memory/notes.json",
+   "purpose": "680 notes from the 07-25 fork",
+   "status": "fossil",
+   "general": false,
+   "evidence": "676 of its ids are contained in the 09-23 bak"
+  }
+ ],
+ "principles": [
+  "autonomous work may not land on what lands, verifies, grades or constrains autonomy; the learner earns its core after landing cleanly on the periphery (autonomyScope.reason 09-27)",
+  "a landing without a pre-existing machine check cannot be credited (autonomyScope 09:15Z)",
+  "budget>1 is never affordable = the effective pause; containment works through budget, not a pause field (project-intake rhythm)",
+  "Law 5 observability: each tick's condition-driven selection is published as a snapshot (boredom index.ts:53); the intent is right but the record is hollow",
+  "read WORKSPACE_ROOT at use time; behaviour frozen at process start is invisible to traces (memory-note.ts:55-73)",
+  "the commit step stages only source trees, never runtime or cache paths (self-maintenance lift_when)",
+  "a store whose path is env-derived can silently fork; recency-window recall plus an unbounded writer = amnesia by displacement (operator 09-22)",
+  "derived: a store that turns a failed read into an empty write converts any transient fault into total loss; fixes that leave the storage primitive unchanged get undone by the next incident"
+ ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-402d9af5",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/development-vessel/src/vacuous-edit.ts to satisfy the following request. The relevant code is in the region \"",
+  "description": "Edit repos/development-vessel/src/vacuous-edit.ts to satisfy the following request. The relevant code is in the region \"vacuousEditReason\". If that file is the wrong target, say so rather than editing it.\n\nClose substrate gap gap-vacuous-edit-stripper-deletes-the-file-it-judges: vacuousEditReason counts references in a codeOnly view built by three whole-file regex string-strippers.",
+  "goal_text": "Edit repos/development-vessel/src/vacuous-edit.ts to satisfy the following request. The relevant code is in the region \"vacuousEditReason\". If that file is the wrong target, say so rather than editing it.\n\nClose substrate gap gap-vacuous-edit-stripper-deletes-the-file-it-judges: vacuousEditReason counts references in a codeOnly view built by three whole-file regex string-strippers.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-402d9af5",
+  "source_gap_source": "substrate_detected"
+}

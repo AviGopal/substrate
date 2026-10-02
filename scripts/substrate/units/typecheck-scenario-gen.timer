@@ -1,0 +1,15 @@
+[Unit]
+Description=Typecheck-scenario generator timer
+
+[Timer]
+# Fire 8 min after activation, then every 45 min. tsc over a few vessels takes
+# 2-4 min; 45 min is well above that and lets the funnel drain what it produced
+# (and lets dev-vessel cutover-restarts settle) before regenerating.
+OnActiveSec=8min
+OnUnitActiveSec=45min
+Persistent=true
+AccuracySec=60s
+Unit=typecheck-scenario-gen.service
+
+[Install]
+WantedBy=timers.target

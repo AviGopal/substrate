@@ -1,0 +1,11 @@
+In repos/development-vessel/src/discovery-registration.ts, advertise an endpoint other nodes can dial, using the same precedence as the shared registration loop in packages/vessel-discovery-client/src/registration-loop.ts. In buildRegistrationPayload, replace exactly this line (it occurs once):
+
+    endpoint: `http://${config.host === "0.0.0.0" ? "localhost" : config.host}:${config.port}`,
+
+with:
+
+    endpoint: (process.env["VESSEL_ADVERTISE_ENDPOINT"] ?? "").replace(/\/+$/, "")
+      || (process.env["SUBSTRATE_ADVERTISE_HOST"] ? `http://${process.env["SUBSTRATE_ADVERTISE_HOST"]}:${config.port + Number(process.env["SUBSTRATE_ADVERTISE_PORT_OFFSET"] ?? 10_000)}` : "")
+      || `http://${config.host === "0.0.0.0" ? "localhost" : config.host}:${config.port}`,
+
+Measured: development-vessel hardcodes a loopback endpoint, so on a second node its feature_compose row is http://localhost:8090, and a peer's discovery drops it as undialable; neither node can route a compose to the other. With neither variable set the endpoint is unchanged. Change nothing else.

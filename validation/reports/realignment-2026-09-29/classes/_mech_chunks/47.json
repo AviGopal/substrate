@@ -1,0 +1,18 @@
+{
+ "area": "workbench",
+ "items": [
+  {
+   "name": "workbench React app",
+   "location": "repos/workbench",
+   "purpose": "First human/observer surface",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Last commit 05-24, 0 autonomous commits, no unit; still referenced in docs/LIVE_DEVELOPMENT.md and docs/README.md",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  }
+ ]
+}

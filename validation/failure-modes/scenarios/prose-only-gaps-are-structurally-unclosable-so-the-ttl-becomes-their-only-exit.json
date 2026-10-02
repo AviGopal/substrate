@@ -1,0 +1,19 @@
+{
+  "id": "prose-only-gaps-are-structurally-unclosable-so-the-ttl-becomes-their-only-exit",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "A gap filed without a machine-checkable predicate can never be closed by measurement, so it stays open however well it i",
+  "description": "A gap filed without a machine-checkable predicate can never be closed by measurement, so it stays open however well it is fixed, and the 336h TTL sweep becomes its only exit.",
+  "goal_text": "A gap filed without a machine-checkable predicate can never be closed by measurement, so it stays open however well it is fixed, and the 336h TTL sweep becomes its only exit.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "prose-only-gaps-are-structurally-unclosable-so-the-ttl-becomes-their-only-exit",
+  "source_gap_source": "substrate_detected"
+}

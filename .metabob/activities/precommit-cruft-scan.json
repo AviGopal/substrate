@@ -1,0 +1,67 @@
+{
+  "variant_id": "precommit:cruft-scan-resolver",
+  "activity_id": "precommit:cruft-scan",
+  "variant_name": "LLM Cruft Scanner (Resolver-Based)",
+  "description": "Scan for LLM-generated cruft patterns using bash resolver - no LLM needed",
+  "category": "tool",
+  "tags": ["precommit.cruft", "resolver.bash", "deterministic"],
+  "tag_prefixes": ["precommit", "precommit.cruft", "resolver", "resolver.bash"],
+  "scope": "org",
+  "org_id": "metabob_internal",
+  "task_steps": [
+    {
+      "id": "get-staged-files",
+      "description": "Get list of staged TypeScript files",
+      "resolver": "bash",
+      "config": {
+        "command": "git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\\.(ts|tsx|js|jsx)$' || echo 'NO_STAGED_FILES'",
+        "timeout": 5000
+      },
+      "outputShapes": ["staged_files"]
+    },
+    {
+      "id": "scan-todo-llm",
+      "description": "Scan for TODO.*LLM patterns",
+      "resolver": "bash",
+      "config": {
+        "command": "git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\\.(ts|tsx|js|jsx)$' | xargs -r grep -nE 'TODO.*LLM|FIXME.*generated|TODO.*remove' 2>/dev/null || echo 'CLEAN'",
+        "timeout": 30000
+      },
+      "dependencies": ["get-staged-files"],
+      "outputShapes": ["todo_cruft"]
+    },
+    {
+      "id": "scan-unused-placeholders",
+      "description": "Scan for _unused variable patterns",
+      "resolver": "bash",
+      "config": {
+        "command": "git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\\.(ts|tsx|js|jsx)$' | xargs -r grep -nE '_unused[A-Z]|_deprecat' 2>/dev/null || echo 'CLEAN'",
+        "timeout": 30000
+      },
+      "dependencies": ["get-staged-files"],
+      "outputShapes": ["unused_cruft"]
+    },
+    {
+      "id": "scan-removed-comments",
+      "description": "Scan for // removed or // DEPRECATED comments",
+      "resolver": "bash",
+      "config": {
+        "command": "git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\\.(ts|tsx|js|jsx)$' | xargs -r grep -nE '// removed|// DEPRECATED|// legacy' 2>/dev/null || echo 'CLEAN'",
+        "timeout": 30000
+      },
+      "dependencies": ["get-staged-files"],
+      "outputShapes": ["removed_cruft"]
+    },
+    {
+      "id": "generate-summary",
+      "description": "Generate scan summary",
+      "resolver": "bash",
+      "config": {
+        "command": "echo '=== CRUFT SCAN SUMMARY ===' && echo 'Staged files:' && git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\\.(ts|tsx|js|jsx)$' | wc -l && echo 'Cruft patterns found:' && (git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\\.(ts|tsx|js|jsx)$' | xargs -r grep -lE 'TODO.*LLM|FIXME.*generated|_unused[A-Z]|// removed|// DEPRECATED' 2>/dev/null | wc -l) && echo '=========================='",
+        "timeout": 30000
+      },
+      "dependencies": ["scan-todo-llm", "scan-unused-placeholders", "scan-removed-comments"],
+      "outputShapes": ["summary"]
+    }
+  ]
+}

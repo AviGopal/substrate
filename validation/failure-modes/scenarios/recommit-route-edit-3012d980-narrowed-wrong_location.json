@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-3012d980-narrowed-wrong_location",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap route-edit-3012d980-narrowed repeated already-recorded failure class wrong_location: The patch duplicate",
+  "description": "compose for gap route-edit-3012d980-narrowed repeated already-recorded failure class wrong_location: The patch duplicates the `recordDeterministicLabel` call but doesn't prevent the function from returning without recording when `earlyLandedSha` is fa",
+  "goal_text": "compose for gap route-edit-3012d980-narrowed repeated already-recorded failure class wrong_location: The patch duplicates the `recordDeterministicLabel` call but doesn't prevent the function from returning without recording when `earlyLandedSha` is fa",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-3012d980-narrowed-wrong_location",
+  "source_gap_source": "substrate_detected"
+}

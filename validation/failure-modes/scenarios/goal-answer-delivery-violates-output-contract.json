@@ -1,0 +1,19 @@
+{
+  "id": "goal-answer-delivery-violates-output-contract",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "MCP pilot sorting dispatch 40964fb1-96ce-481a-b719-862c03a1fd6b delivered Markdown fences despite JSON-only request. Agg",
+  "description": "MCP pilot sorting dispatch 40964fb1-96ce-481a-b719-862c03a1fd6b delivered Markdown fences despite JSON-only request. Aggregation d3b0f186-f5b7-40ae-aeb3-c4a16be6cc8d and repeated arithmetic 589b73aa-6d1c-4896-afc5-ec820e74c49e delivered headings, verifier rationale and internal basis despite integer-only requests. Internal values are correct. Dispatch 9155aca4-ade5-436c-b0e7-b3af4075c3e9 is a positive control returning exactly 27161. Reuse the successful delivery route where appropriate. Closure: final answerBody matches requested machine-readable contract across satisfier and fallback routes; preserve execution evidence separately.",
+  "goal_text": "MCP pilot sorting dispatch 40964fb1-96ce-481a-b719-862c03a1fd6b delivered Markdown fences despite JSON-only request. Aggregation d3b0f186-f5b7-40ae-aeb3-c4a16be6cc8d and repeated arithmetic 589b73aa-6d1c-4896-afc5-ec820e74c49e delivered headings, verifier rationale and internal basis despite integer-only requests. Internal values are correct. Dispatch 9155aca4-ade5-436c-b0e7-b3af4075c3e9 is a positive control returning exactly 27161. Reuse the successful delivery route where appropriate. Closure: final answerBody matches requested machine-readable contract across satisfier and fallback routes; preserve execution evidence separately.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "goal-answer-delivery-violates-output-contract",
+  "source_gap_source": "operator_narration"
+}

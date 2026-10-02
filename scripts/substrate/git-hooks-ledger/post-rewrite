@@ -1,0 +1,9 @@
+#!/bin/sh
+# stdin: "<old-sha> <new-sha> [extra]" per rewritten commit (rebase, amend).
+. "$(dirname "$0")/_record.sh"
+input=$(cat)
+printf '%s\n' "$input" | while read -r old new _rest; do
+  [ -n "$new" ] || continue
+  ledger_emit rewrite "$(ledger_commit_fields "$new" | jq -c --arg old "$old" --arg how "$1" '. + {rewritten_from:$old, rewrite_kind:$how}')"
+done
+printf '%s\n' "$input" | ledger_chain post-rewrite "$@"

@@ -1,0 +1,25 @@
+[Unit]
+Description=Rhythm cadence — restore the registry if empty, then run the conductor
+# Two steps, in order, both idempotent:
+#   1. rhythm-seed-tick   — no-op unless the rhythm registry is EMPTY, in which case it
+#                           restores the pre-outage set recovered verbatim from the
+#                           2026-09-07 pool snapshot. The 2026-09-07 seeding was done by
+#                           hand with no retained script, so a power outage on 2026-09-09
+#                           recreated the pool empty and nothing noticed.
+#   2. rhythm-conduct-tick — runs rhythm_conductor_tick and journals
+#                           considered/enqueued/skipped/bucket_load.
+#
+# Runs from a timer rather than from the pool ON PURPOSE. rhythm_conductor_tick was
+# registered only as satisfier:rhythm_conductor_tick, a Thompson-selected activity, and
+# had 11 executions ever. A scheduler cannot be scheduled by the thing it schedules; per
+# CLAUDE.md, a check cannot be scheduled by the mechanism it exists to recover. This is
+# that stated bootstrap-tier exception.
+After=activity-api.service surrealdb.service development-vessel.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/rhythm-seed-tick.ts
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/rhythm-conduct-tick.ts
+StandardOutput=journal
+StandardError=journal

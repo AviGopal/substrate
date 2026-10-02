@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-2f81a8f1",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap the-semantic-gate-structurally-disfavours-information-availability-fixes: MEASURED 2026-09",
+  "description": "investigate and decompose gap the-semantic-gate-structurally-disfavours-information-availability-fixes: MEASURED 2026-09-12 over 260 compose reports in 24h. Edit repos/development-vessel/src/resolvers/feature-compose.ts. SECOND INSTANCE 2026-09-12, which takes this from n=1 to n=2 and sharpens the class. Dispatch 90a38c01-1087-4726-a9a8-df1fe9793f4a, 3 edits in one file, refused 2/2 at confidence 0.90 and 1.00: 'the fetch operation in Edit 3 is entirely dependent on the execution of lastDraftModel",
+  "goal_text": "investigate and decompose gap the-semantic-gate-structurally-disfavours-information-availability-fixes: MEASURED 2026-09-12 over 260 compose reports in 24h. Edit repos/development-vessel/src/resolvers/feature-compose.ts. SECOND INSTANCE 2026-09-12, which takes this from n=1 to n=2 and sharpens the class. Dispatch 90a38c01-1087-4726-a9a8-df1fe9793f4a, 3 edits in one file, refused 2/2 at confidence 0.90 and 1.00: 'the fetch operation in Edit 3 is entirely dependent on the execution of lastDraftModel",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-2f81a8f1",
+  "source_gap_source": "substrate_detected"
+}

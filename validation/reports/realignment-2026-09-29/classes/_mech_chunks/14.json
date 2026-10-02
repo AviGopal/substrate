@@ -1,0 +1,84 @@
+{
+ "area": "goal-host-vessel",
+ "items": [
+  {
+   "name": "deterministic verify*Reach oracles (verifyCountFilesReach + 15 siblings)",
+   "location": "repos/goal-host-vessel/src/index.ts ~1232/1602/1628",
+   "purpose": "recompute answer instead of LLM judge",
+   "status": "live-used",
+   "general": false,
+   "evidence": "fires only on (repos|vessels)/ paths; no directory-count oracle; the pattern is worth keeping",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "goal-host auto_draft closed-gap writer",
+   "location": "repos/goal-host-vessel/src/index.ts:16887",
+   "purpose": "Record a dispatch-completion decision as a closed substrateGap",
+   "status": "dormant",
+   "general": false,
+   "evidence": "3372 records 09-18..09-22, none after 2026-09-22T02:36Z; the code line is still present",
+   "source": "openspec-8",
+   "mentions": 1,
+   "sources": [
+    "openspec-8"
+   ]
+  },
+  {
+   "name": "landedShaForGoal",
+   "location": "repos/goal-host-vessel/src/index.ts:28",
+   "purpose": "Attach the landed git SHA to goal paths",
+   "status": "broken",
+   "general": false,
+   "evidence": "401 on 5,015 of 5,126 calls. goal_path_sha has no producer.",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "Ribosome extraction",
+   "location": "ribosome vessel + goal-host in-process",
+   "purpose": "Mint templates from reached executions",
+   "status": "broken",
+   "general": true,
+   "evidence": "1,788 errored runs/7d; retired template; empty-shape registration rejected; no template since 09-22; code landings bypass",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "tryLexicalRebind + reached-command cache",
+   "location": "src/index.ts:4119; /workspace/.goal-host-reached-commands.jsonl",
+   "purpose": "Middle-tier first/last-mile reuse",
+   "status": "broken",
+   "general": true,
+   "evidence": "0/3,456 selected, all shape-mismatch; cache 10,624 lines still written",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "goal-host on inventory spoke",
+   "location": "syzygy-local-inventory goal-host-vessel",
+   "purpose": "Local dispatch",
+   "status": "fossil",
+   "general": false,
+   "evidence": "goal-host-dispatches.json is [] after 6.4 days. Its LLM is pinned to a masked 127.0.0.1:8220. It is still advertised to the hub.",
+   "duplicates_of": "goal-host-vessel@syzygy-hub",
+   "source": "syzygy",
+   "mentions": 1,
+   "sources": [
+    "syzygy"
+   ]
+  }
+ ]
+}

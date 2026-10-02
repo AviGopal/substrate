@@ -1,0 +1,24 @@
+{
+ "attempts": [],
+ "problems": [
+  {
+   "key": "llm-plane-misdiagnosis",
+   "symptom": "The LLM plane was declared totally dead or quota-exhausted repeatedly while the hub was funded or free keys were simply unset.",
+   "first_seen": "2026-07-20",
+   "last_seen": "2026-09-14",
+   "recurrences": 5,
+   "root_cause": "Policy arms were disjoint from keyed models; llm-completion-dispatch had no failover; llmQuotaState reports key presence, not reachability; a provider 401 sets no cooldown.",
+   "source": "memory-3"
+  },
+  {
+   "key": "operator-instrument-fault",
+   "symptom": "Operator declares breakage or landing from a mis-addressed, self-matching, truncated or wrong-clock probe (grep -c lines, || echo 0, wrong WORKSPACE_ROOT, wrong unit, X-Api-Key vs Authorization, host-local vs UTC, client timeout read as server work)",
+   "first_seen": "2026-09-05",
+   "last_seen": "2026-09-18",
+   "recurrences": 40,
+   "root_cause": "Negatives have two generators (absent vs mis-addressed); no positive control through the same address; the rule was written 09-16 and violated again 09-17",
+   "source": "transcripts-3"
+  }
+ ],
+ "claims": []
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-ccd969ce",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/activity-api/src/routes/impulses.ts, the single switch statement on pointer.type has eight `case 'goal_verifica",
+  "description": "In repos/activity-api/src/routes/impulses.ts, the single switch statement on pointer.type has eight `case 'goal_verification_label':` arms. Only the FIRST arm (around line 2847) is reachable; a JavaScript switch executes only the first matching case, so the seven later duplicate `case 'goal_verification_label':` arms (around lines 3053, 3096, 3139, 3179, 3219, 3259, 3299) are unreachable dead code. Remove only those seven later duplicate arms, preserving the first arm and every other distinct case unchanged.",
+  "goal_text": "In repos/activity-api/src/routes/impulses.ts, the single switch statement on pointer.type has eight `case 'goal_verification_label':` arms. Only the FIRST arm (around line 2847) is reachable; a JavaScript switch executes only the first matching case, so the seven later duplicate `case 'goal_verification_label':` arms (around lines 3053, 3096, 3139, 3179, 3219, 3259, 3299) are unreachable dead code. Remove only those seven later duplicate arms, preserving the first arm and every other distinct case unchanged.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-ccd969ce",
+  "source_gap_source": "substrate_detected"
+}

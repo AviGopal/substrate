@@ -1,0 +1,851 @@
+{
+ "area": "scripts-substrate",
+ "items": [
+  {
+   "name": "substrate-memory-mirror hook",
+   "location": ".claude/hooks/substrate-memory-mirror.sh + scripts/substrate/mirror-memory-note.ts",
+   "purpose": "Mirror operator memory files to memoryNote_write",
+   "status": "live-used",
+   "general": true,
+   "evidence": "876 created / 863 updated in the log. Durability is not checked.",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "runtime-drift watchdog",
+   "location": "63b48175 (scripts/substrate)",
+   "purpose": "Restore /vessels from committed source",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "pull-sync mirror-to-live",
+   "evidence": "bb217e5e repair defaults OFF",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "identical-failure invariant",
+   "location": "a172e235 (scripts/substrate)",
+   "purpose": "Flag (activity, failure-class) runs with no open gap",
+   "status": "unknown",
+   "general": true,
+   "evidence": "No later evidence in window",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "host-pull-sync / host-sync-poller",
+   "location": "deleted (scripts/substrate/host-*.sh)",
+   "purpose": "Host-side sync and mitosis cutover",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Deleted 08-11 (a267367e) after an add/delete/re-add cycle",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "config-surface-probe.sh",
+   "location": "scripts/substrate",
+   "purpose": "config delivery probe",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Makefile:159 comment only; open-decisions \u00a77",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "model-reality-audit.ts / recompute-poisoned-posteriors.ts",
+   "location": "scripts/substrate",
+   "purpose": "aggregate model-vs-reality detection and posterior repair",
+   "status": "unknown",
+   "general": true,
+   "evidence": "06-17 operator-run; no scheduled caller seen",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "self-recovery-tick / timer",
+   "location": "scripts/substrate",
+   "purpose": "Restart unhealthy units, escalate",
+   "status": "broken",
+   "general": true,
+   "evidence": "Timer inert (08-11); ESCALATE writes a log line only (19,348 restarts, 09-11).",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "substrate-doctor / readiness",
+   "location": "scripts/substrate",
+   "purpose": "Fleet health",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Missed restart loops ('activating', not failed); compose 'healthy' means discovery answered",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "substrate-pull-sync",
+   "location": "scripts/substrate",
+   "purpose": "Converge runtime to clone and mirror drift",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Repaired goal-host drift 09-26 07:25; broken on node 2 (cpg-inference-ts build)",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "substrate-pull-sync + mirror-to-live + .last-good",
+   "location": "scripts/substrate",
+   "purpose": "deploy vessel commits into runtime",
+   "status": "live-used",
+   "general": true,
+   "evidence": "skips dirty submodules; dev-vessel runs from git tree, not /vessels (08-08)",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "substrate-ready.sh",
+   "location": "scripts/substrate",
+   "purpose": "Fleet readiness verdict",
+   "status": "broken",
+   "general": true,
+   "evidence": "#30 reports ready for a Created (not running) container",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "self-observation KPI scripts / composition-edge-reconcile",
+   "location": "scripts/substrate (8 scripts)",
+   "purpose": "Autonomy metrics",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Read a table frozen 42 days until 3c1bf965; lift gate read a fossil heartbeat path (8e59ae6c)",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "gap-compose-tick / compose-teacher / funnel-drain named scripts",
+   "location": "scripts/substrate (ExecStart overridden)",
+   "purpose": "Per SOFTWARE \u00a75: route gaps, bootstrap composites, fire funnel",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Overridden by watchdog.conf; compose-teacher runs only as RESTART_EXEC",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "gap-store-census-tick",
+   "location": "scripts/substrate (d055f18e)",
+   "purpose": "detect gap store loss (high-water mark)",
+   "status": "live-used",
+   "general": false,
+   "evidence": "hourly timer",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "substrate-pull-sync + mirror-to-live",
+   "location": "scripts/substrate (pull-sync, mirror-to-live)",
+   "purpose": "The only path from committed code to the running fleet; tests, restart deferral, fan-out",
+   "status": "live-used",
+   "general": true,
+   "evidence": "73 commits in window; R1-R3 chains",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "self-operational-health.ts",
+   "location": "scripts/substrate (timer)",
+   "purpose": "Detect operational faults, emit gaps",
+   "status": "broken",
+   "general": true,
+   "evidence": "Watches 14 timers and 0 service units (09-19).",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "joint-liveness-tick",
+   "location": "scripts/substrate + timer daa2632c",
+   "purpose": "detect severed learning joints",
+   "status": "unknown",
+   "general": true,
+   "evidence": "installed 08-25 checked=1 severed=0; not verified after",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "substrate-doctor / readiness checks",
+   "location": "scripts/substrate doctor (c8ffbae5..a5dd4b24)",
+   "purpose": "Fleet health verdict",
+   "status": "live-used",
+   "general": true,
+   "evidence": "False verdicts fixed 0baff728, 26ae3d94, 1d3785de, a5dd4b24",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "pull-sync quiesce",
+   "location": "scripts/substrate pull-sync",
+   "purpose": "deploy without killing in-flight units",
+   "status": "live-used",
+   "general": true,
+   "evidence": "misread as stalled twice 09-05",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "pull-sync test gate (failing-name-set delta)",
+   "location": "scripts/substrate pull-sync",
+   "purpose": "Refuse convergence on vessel test regressions",
+   "status": "broken",
+   "general": true,
+   "evidence": "Dead 08-31->09-28 (b7dab713); fails open (5d9a7867)",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "substrate-pull-sync content-hash drift restore + quiesce",
+   "location": "scripts/substrate pull-sync (/usr/local/bin in container)",
+   "purpose": "Converge live vessels to origin/dev and restore drift",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Caught unverified live drift 08-15. The quiesce deadlock was fixed by 25aad2cc; it wipes hot patches every ~10 min",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "pull-sync content-hash convergence",
+   "location": "scripts/substrate pull-sync (596fd717, 11ec70dc)",
+   "purpose": "Converge runtime to origin/dev",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Destroys unpushed commits, restarts vessels on every push, refuses on divergence with no consumer of the refusal, and wedged twice (08-10, 09-22).",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "pull-sync mirror + restart",
+   "location": "scripts/substrate pull-sync (in-container)",
+   "purpose": "Converge runtime to origin/dev",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Repeated defects: .timer skip (41182490), reset --hard destroys tracked runtime files, deferral windows, dist skew, restarts llm-resolver while healing the tree",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "runtime-drift-tick",
+   "location": "scripts/substrate runtime-drift-tick.ts",
+   "purpose": "detect runtime vs clone divergence",
+   "status": "live-used",
+   "general": true,
+   "evidence": "reports only, not armed to repair; blind to in-tree vessels; reader added 76113293",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "self-recovery-tick watchdog",
+   "location": "scripts/substrate self-recovery",
+   "purpose": "Restart unhealthy vessels.",
+   "status": "broken",
+   "general": true,
+   "evidence": "Masks stalls with an ever-incrementing recovered counter; caused the 08-08 livelock",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "self-recovery-tick",
+   "location": "scripts/substrate self-recovery.timer",
+   "purpose": "restart unhealthy vessels",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-04 restarted 3 stop incidents; masked on UI spoke 08-10 until redeploy",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "spectral-gap / coherence-metric / coherence-recover / m1-trainer / model-reality-audit",
+   "location": "scripts/substrate timers",
+   "purpose": "\u03bb\u2082/star-ratio, orthogonality, embedding prior, model-vs-reality audit",
+   "status": "live-used",
+   "general": true,
+   "evidence": "201 publishes, rows written, demotions",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "vessel-ctl single management surface",
+   "location": "scripts/substrate vessel-ctl (008f3ab9)",
+   "purpose": "Replace ~40 hand-enumerated make targets",
+   "status": "live-used",
+   "general": true,
+   "evidence": "23042561: 63 .PHONY ghosts exited 0",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "vessel-ctl selection_override",
+   "location": "scripts/substrate vessel-ctl.sh",
+   "purpose": "Make an injected selection win over the env file",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Verified with a 4-way test (inventory audit)",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "Inventory role taxonomy (full/hub/spoke/infra/autonomy) + apply-inventory",
+   "location": "scripts/substrate vessels.inventory.json",
+   "purpose": "Place units by profile",
+   "status": "live-used",
+   "general": true,
+   "evidence": "autonomy role in no hub/spoke group, so 42 units ran nowhere; 6d9e611d moved self-observation to infra",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "config-surface-probe.sh / warn-baseline-drift.sh / failure-mode-harness.ts",
+   "location": "scripts/substrate, validation/scripts",
+   "purpose": "Law-1 and config drift detection; failure-mode validation",
+   "status": "fossil",
+   "general": true,
+   "evidence": "PROCESS_MAP H28: 0 call sites; the harness crashes on 118/125 scenarios; CLAUDE.md still names it",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "bootstrap-remote-google-arm.sh",
+   "location": "scripts/substrate/",
+   "purpose": "Temporary LLM conduit while local keys were credit-dead",
+   "status": "fossil",
+   "general": false,
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "config-surface-probe.sh",
+   "location": "scripts/substrate/",
+   "purpose": "Measure config channels, precedence, drift",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Makefile-only; no validating activity",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "gap-compose-tick.ts / funnel-drain.ts",
+   "location": "scripts/substrate/",
+   "purpose": "Original timer bodies",
+   "status": "fossil",
+   "general": false,
+   "evidence": "ExecStart is overridden by the watchdog drop-in and the restart goes through an impulse, so these are never executed",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "import-operator-memory.ts",
+   "location": "scripts/substrate/",
+   "purpose": "Bulk import operator memory cache into memoryNote",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Manual only, no invoker",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "joint-liveness / validator-liveness / compose-drift detectors",
+   "location": "scripts/substrate/*-tick.ts",
+   "purpose": "Detect severed write->read joints, stalled validators and composer drift",
+   "status": "broken",
+   "general": true,
+   "evidence": "Healthy on node 1 per the audit. On node 2 they failed 'Unable to connect' every run and were hand-masked 09-28 05:56.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "tracked tsc emit (.js/.d.ts)",
+   "location": "scripts/substrate/*.js, *.d.ts (48+48)",
+   "purpose": "none",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Added by the autonomous commit 4e4170a8 on 09-07",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "compiled artefacts in git",
+   "location": "scripts/substrate/*.js|.d.ts|.map (192), packages/, validation/scripts, openspec/changes",
+   "purpose": "none (tsc output)",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Added by autonomous drift commits 4e4170a8 and 796fac89",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "substrate-status / connect / manifest",
+   "location": "scripts/substrate/*.sh",
+   "purpose": "five-level readiness verdict and client config",
+   "status": "live-unused",
+   "evidence": "used in CI; absent from the running node-1 image",
+   "source": "openspec-10",
+   "mentions": 1,
+   "sources": [
+    "openspec-10"
+   ]
+  },
+  {
+   "name": "acceptance harness",
+   "location": "scripts/substrate/acceptance/",
+   "purpose": "Execute README install fences per published digest",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Tasks 1.2/1.4 pending the published-digest run",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "apply-inventory plus entrypoint render gate",
+   "location": "scripts/substrate/apply-inventory.sh, entrypoint.sh",
+   "purpose": "Select units by profile or role",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Not re-run after pull-sync; rendered units invisible to the inventory; typo fail-open fixed 08-20",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "compose-drift-tick",
+   "location": "scripts/substrate/compose-drift-tick.ts",
+   "purpose": "detect composer degradation (median baseline)",
+   "status": "live-used",
+   "general": false,
+   "evidence": "true positive on first run",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "compose-drift-tick",
+   "location": "scripts/substrate/compose-drift-tick.ts + compose-drift.timer (13176c29)",
+   "purpose": "Detect composer self-degradation against a median self-baseline",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Timer last fired 2026-09-29 01:28. Whether its gaps are consumed is unknown.",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "compose-teacher",
+   "location": "scripts/substrate/compose-teacher.ts via watchdog",
+   "purpose": "Teaching loop that reinforces composites",
+   "status": "dormant",
+   "general": false,
+   "evidence": "teaching-loop.jsonl last written 09-23. 15 fires ever",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "compose-teacher spectral-gap staleness guard",
+   "location": "scripts/substrate/compose-teacher.ts:355-375",
+   "purpose": "Treat the lambda2 reading as absent after 6h without a write",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Added after the 9-day stale reading caused by 4e4170a8",
+   "source": "openspec-8",
+   "mentions": 1,
+   "sources": [
+    "openspec-8"
+   ]
+  },
+  {
+   "name": "composition-edge-reconcile",
+   "location": "scripts/substrate/composition-edge-reconcile.ts",
+   "purpose": "Derive composition edges from traces",
+   "status": "live-used",
+   "general": true,
+   "evidence": "204/205 runs upsert 0",
+   "source": "docs-2",
+   "mentions": 2,
+   "sources": [
+    "docs-2",
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "composition-edge-reconcile batch job",
+   "location": "scripts/substrate/composition-edge-reconcile.ts + timer",
+   "purpose": "Backfill composition edges",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Masked. Last edges 2026-07-14; last_full_at written after the loop, so one abort pins full mode. Demoted per law 4",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "db-maintenance-tick",
+   "location": "scripts/substrate/db-maintenance-tick.ts",
+   "purpose": "Autonomous DB remediation",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "actions [] on every tick. The metrics jsonl is read only by its writer",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "deprecated launch shims",
+   "location": "scripts/substrate/deploy-hub.sh, deploy-hub-pull.sh, deploy-remote.sh, ui-only-up.sh",
+   "purpose": "Back-compat wrappers over deploy.sh/profiles",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "deploy.sh",
+   "evidence": "Headers say DEPRECATED; no caller except each other",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "hub self-anchor auto-enable",
+   "location": "scripts/substrate/entrypoint.sh (hub profile relay+transport)",
+   "purpose": "PROFILE=hub brings up relay+transport",
+   "status": "dormant",
+   "general": false,
+   "evidence": "No production node runs PROFILE=hub",
+   "source": "federation-relay",
+   "mentions": 1,
+   "sources": [
+    "federation-relay"
+   ]
+  },
+  {
+   "name": "federation transport/relay/probe oracle",
+   "location": "scripts/substrate/federation-relay/",
+   "purpose": "libp2p federation plane and its oracle",
+   "status": "live-used",
+   "general": true,
+   "evidence": "55 and 22 commits; a vessel hosted outside the submodule authoring loop",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "federation transport sidecar + host relay",
+   "location": "scripts/substrate/federation-relay/; host relay.ts",
+   "purpose": "Cross-substrate resolve.",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Phantom-strike ea5882bd; relay outside volumes",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "federation-probe-tick",
+   "location": "scripts/substrate/federation-relay/federation-probe-tick.ts",
+   "purpose": "external-vantage federation oracle filing fed:<class> gaps",
+   "status": "live-used",
+   "general": true,
+   "evidence": "fed:* gaps updated 09-29 03:47",
+   "source": "openspec-7",
+   "mentions": 1,
+   "sources": [
+    "openspec-7"
+   ]
+  },
+  {
+   "name": "federation-probe-tick oracle",
+   "location": "scripts/substrate/federation-relay/federation-probe-tick.ts via federation_verification_report shape + rhythm-federation-verification",
+   "purpose": "Independent ephemeral-peer verification, fed:<class> gaps",
+   "status": "live-used",
+   "general": true,
+   "evidence": "18 sweeps on node 2 09-26..09-29, all identical; vantage-limited",
+   "source": "federation-relay",
+   "mentions": 1,
+   "sources": [
+    "federation-relay"
+   ]
+  },
+  {
+   "name": "federation /bootstrap, direct-only, registerAtHub, substrateBootstrap",
+   "location": "scripts/substrate/federation-relay/federation-transport-server.ts",
+   "purpose": "Point-and-go join and overlay bootstrap",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Scripts tier, not the repo named in FEDERATION.md",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "federation transport registerAtHub (local->hub mirror)",
+   "location": "scripts/substrate/federation-relay/federation-transport-server.ts",
+   "purpose": "Publish local vessels to hub",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-24; no importHubShapes (one direction)",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "federation-transport-server",
+   "location": "scripts/substrate/federation-relay/federation-transport-server.ts",
+   "purpose": "One libp2p identity per substrate; per-vessel hub mirror rows; ingress proxy by _fedTargetVessel; egress",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Active on syzygy-local-* with reservations; on node 2 active but undialable; absent on node 1",
+   "source": "federation-relay",
+   "mentions": 1,
+   "sources": [
+    "federation-relay"
+   ]
+  },
+  {
+   "name": "federation-transport-vessel on hub",
+   "location": "scripts/substrate/federation-relay/federation-transport-server.ts",
+   "purpose": "libp2p overlay reachability",
+   "status": "dormant",
+   "general": true,
+   "evidence": "node1 unit disabled/inactive; node2 active",
+   "source": "openspec-7",
+   "mentions": 1,
+   "sources": [
+    "openspec-7"
+   ]
+  },
+  {
+   "name": "Federation per-vessel hub mirror + SELF_MIRROR + withdrawal diff",
+   "location": "scripts/substrate/federation-relay/federation-transport-server.ts:928-1011",
+   "purpose": "Register each local vessel as <id>@<substrate> at the hub",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Log line still says mirror disabled on hub",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "circuit relay",
+   "location": "scripts/substrate/federation-relay/relay.ts",
+   "purpose": "Reachability anchor",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Only on the remote droplet 104.236.0.175:30333; not installed on node 1/2",
+   "source": "federation-relay",
+   "mentions": 1,
+   "sources": [
+    "federation-relay"
+   ]
+  },
+  {
+   "name": "gap-compose watchdog",
+   "location": "scripts/substrate/gap-compose-tick.ts; gap-compose.timer both nodes",
+   "purpose": "Restart the gap_to_feature lane when open intents stall",
+   "status": "broken",
+   "general": false,
+   "evidence": "The only action ever logged is watchdog_restart: 1417 on node 1 and 36 on node 2. Every one returns ok:true, yet the stall persists.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "gap-store-census",
+   "location": "scripts/substrate/gap-store-census-tick.ts",
+   "purpose": "Flag gap store collapse against its 14-day high-water mark",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Hourly on node 2, reads 6278 gaps through dev-vessel resolve (hub store).",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "gap-store-census-tick",
+   "location": "scripts/substrate/gap-store-census-tick.ts + timer (d055f18e)",
+   "purpose": "Detect silent gap-store collapse against a 14-day high-water mark",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Timer fired 2026-09-29 03:26",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "gen-env fresh-deploy detection",
+   "location": "scripts/substrate/gen-env.sh",
+   "purpose": "generate or reuse secrets",
+   "status": "broken",
+   "general": true,
+   "evidence": "reads the store volume, writes the workspace volume; rotated secrets 09-17; :298 stale env preferred",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "gen-env / .substrate-secrets persistence",
+   "location": "scripts/substrate/gen-env.sh, secrets.env.sh",
+   "purpose": "Bootstrap env and durable secrets",
+   "status": "live-used",
+   "general": true,
+   "evidence": "R6: 8 defect commits",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  }
+ ]
+}

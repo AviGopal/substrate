@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-cc033470-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-cc033470] investigate and decompose gap route-edit-63890428: Edit repos/activity-api/src/route",
+  "description": "[narrowed from route-edit-cc033470] investigate and decompose gap route-edit-63890428: Edit repos/activity-api/src/routes/impulses.ts to satisfy the following request. Edit repos/activity-api/src/routes/impulses.ts.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: adversarial refuters agreed 2/2 (conf 0.90, 0.90): The patch introduces a surface-only change by renaming and transforming `writePointer.goalData` into `normalizedGoalData` on lines 2827-2828 without \n- syntax_break: src/routes/impulses.ts(2844,7): error TS1128: Declaration or statement expected. | src/routes/impulses.ts(2844,29): error TS1005: ';' expected. | src/routes/impulses.ts(2859,7): error TS1128: Declarat\n- syntax_break: src/routes/impulses.ts(3931,44): error TS1005: ',' expected. | src/routes/impulses.ts(3931,54): error TS1005: ',' expected. | src/routes/impulses.ts(3931,58): error TS1005: ',' expected. | src/routes/\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-cc033470] investigate and decompose gap route-edit-63890428: Edit repos/activity-api/src/routes/impulses.ts to satisfy the following request. Edit repos/activity-api/src/routes/impulses.ts.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: adversarial refuters agreed 2/2 (conf 0.90, 0.90): The patch introduces a surface-only change by renaming and transforming `writePointer.goalData` into `normalizedGoalData` on lines 2827-2828 without \n- syntax_break: src/routes/impulses.ts(2844,7): error TS1128: Declaration or statement expected. | src/routes/impulses.ts(2844,29): error TS1005: ';' expected. | src/routes/impulses.ts(2859,7): error TS1128: Declarat\n- syntax_break: src/routes/impulses.ts(3931,44): error TS1005: ',' expected. | src/routes/impulses.ts(3931,54): error TS1005: ',' expected. | src/routes/impulses.ts(3931,58): error TS1005: ',' expected. | src/routes/\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-cc033470-narrowed",
+  "source_gap_source": "substrate_detected"
+}

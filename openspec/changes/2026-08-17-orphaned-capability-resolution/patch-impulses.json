@@ -1,0 +1,5 @@
+
+{
+  "path": "repos/development-vessel/src/routes/impulses.ts",
+  "patch": "--- a/repos/development-vessel/src/routes/impulses.ts\n+++ b/repos/development-vessel/src/routes/impulses.ts\n@@ -1,1 +1,8 @@\n \n+import { AnyPointer } from \"../types\";\n+import { resolveOrphanedCapabilityResolution } from \"../resolvers/orphaned-capability-resolution\";\n+\n+export async function dispatch(pointer: AnyPointer) {\n+  if (pointer.shape === \"orphaned-capability-resolution\") {\n+    return await resolveOrphanedCapabilityResolution();\n+  }\n+}\n"
+}

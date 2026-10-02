@@ -1,0 +1,19 @@
+{
+  "id": "fed-stale_foreign_rows_advertised",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architecture",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "FALSIFIER (closure predicate — carried here because substrateGap_write discards a free-text falsifier): no foreign <vess",
+  "description": "FALSIFIER (closure predicate — carried here because substrateGap_write discards a free-text falsifier): no foreign <vessel>@<substrate> row is returned by discovery with a lastSeen inside the TTL while a dial to the circuit that row advertises fails. || DETECTED BY: federation-probe-tick, an independent ephemeral-peer oracle; witnessed by cross-vantage , never by the transport's own health report. || CONFIRMED OVER 2 consecutive QUIESCENT sweeps (no unit changed MainPID or NRestarts during them), so this is not a cutover artefact. || EVIDENCE (sweep-2026-09-18T07:15:25.315Z): I8_cross_boundary_deadvertise: {\"stale\":[{\"substrate\":\"spoke-41ab2dad\",\"fresh_rows\":3,\"dial_target\":\"/ip4/138.197.116.56/tcp/30333/p2p/12D3KooWJ9JdvMHo8JyR9q78FxLdr5Ghr9EhmzJExVDSwhC42mUJ/p2p-circuit/p2p/12D3KooWPNoYBdLaPUR9VMqkpB384ARV8kZGnXFDRZQEqxxF9XQg\",\"error\":\"failed to connect via relay with status NO_RESERVATION\"}],\"live_peers\":[\"spoke-40c731a3\"],\"note\":\"these rows are inside their TTL and still being returned by discovery, but the peer behind them does not answer — a resolve routed here selects a dead producer\"} || CONTEXT: part of the federation overlay break tracked as host-independent-federation-join-broken and specified in openspec/changes/2026-09-12-host-independent-federation-join/proposal.md. This row is the re-measured, self-detected form — it closes when the probe says so, not when someone says it landed.",
+  "goal_text": "FALSIFIER (closure predicate — carried here because substrateGap_write discards a free-text falsifier): no foreign <vessel>@<substrate> row is returned by discovery with a lastSeen inside the TTL while a dial to the circuit that row advertises fails. || DETECTED BY: federation-probe-tick, an independent ephemeral-peer oracle; witnessed by cross-vantage , never by the transport's own health report. || CONFIRMED OVER 2 consecutive QUIESCENT sweeps (no unit changed MainPID or NRestarts during them), so this is not a cutover artefact. || EVIDENCE (sweep-2026-09-18T07:15:25.315Z): I8_cross_boundary_deadvertise: {\"stale\":[{\"substrate\":\"spoke-41ab2dad\",\"fresh_rows\":3,\"dial_target\":\"/ip4/138.197.116.56/tcp/30333/p2p/12D3KooWJ9JdvMHo8JyR9q78FxLdr5Ghr9EhmzJExVDSwhC42mUJ/p2p-circuit/p2p/12D3KooWPNoYBdLaPUR9VMqkpB384ARV8kZGnXFDRZQEqxxF9XQg\",\"error\":\"failed to connect via relay with status NO_RESERVATION\"}],\"live_peers\":[\"spoke-40c731a3\"],\"note\":\"these rows are inside their TTL and still being returned by discovery, but the peer behind them does not answer — a resolve routed here selects a dead producer\"} || CONTEXT: part of the federation overlay break tracked as host-independent-federation-join-broken and specified in openspec/changes/2026-09-12-host-independent-federation-join/proposal.md. This row is the re-measured, self-detected form — it closes when the probe says so, not when someone says it landed.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "fed:stale_foreign_rows_advertised",
+  "source_gap_source": "substrate_detected"
+}

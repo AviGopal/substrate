@@ -1,0 +1,19 @@
+{
+  "id": "db_performance_slow_queries_2026-08-21T14",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "db_performance",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Slow queries exceeded threshold (1115)",
+  "description": "Slow queries exceeded threshold (1115)",
+  "goal_text": "Slow queries exceeded threshold (1115)",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "db_performance_slow_queries_2026-08-21T14",
+  "source_gap_source": "substrate_detected"
+}

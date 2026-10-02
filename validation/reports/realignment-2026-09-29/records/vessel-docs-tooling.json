@@ -1,0 +1,521 @@
+{
+ "source": "vessel-docs-tooling",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/vessel-docs-tooling.md",
+ "coverage": "All 112 .md at depth<=3 under repos/* were inventoried. CLAUDE.md/README for the live repos were read and checked against the live fleet: activity-api, development-vessel, concept-db, discovery, identity (OPEN-FINDINGS), stateful-ui, human-surface ui, ias-executor, cpg, libp2p and obsidian. The 67 fossil docs in gitignored K8s-era repos (deployment, workbench, terminal, react-renderer, user-vessel, metabob-cloud-dashboard) were only classified in bulk, not read one by one. Everything in .claude was checked: all four hooks (run or log-analysed; the edit gate was measured with the bypass on and off), settings.json and settings.local.json, all 6 skills, the 4 opsx commands, and the MCP config. Live checks covered the listen sockets, discovery registry, memoryNote store, concept-db upkeep and health, goal-host and ribosome journals, the SurrealDB activity tables, and gh CI runs for activity-api and concept-db. Node 2 was only spot-checked (bootstrap, health, image binaries). Not established: when the localhost/IPv6 pasta failure began; the cause of the 09-26 memory loss; whether trace-table ORDER BY results are reliable; a live re-probe of the identity findings. No goal-host docs exist, so its source was only sampled where a doc claim led there.",
+ "attempts": [
+  {
+   "key": "memory-recall",
+   "title": "Session-start hook injects substrate memory + concept priors",
+   "where": ".claude/hooks/substrate-session-start.sh (f259d9bd 06-15, 118d341f 07-19, 62559ca6 09-22)",
+   "tried": "curl memoryNote from dev-vessel at localhost:18090, fetch feedback by type, concept_select_for_prompt via localhost:18100",
+   "outcome": "failed",
+   "date": "2026-09-29",
+   "evidence": "With default endpoints it emits 0 bytes and exits 0. With 127.0.0.1 overrides it emits 10,085 chars, but the store has only 59 notes (feedback:2, oldest 09-26) versus the 91 feedback notes cited in the hook comment."
+  },
+  {
+   "key": "memory-recall",
+   "title": "Memory-mirror hook: operator memory file -> memoryNote_write",
+   "where": ".claude/hooks/substrate-memory-mirror.sh + scripts/substrate/mirror-memory-note.ts",
+   "tried": "PostToolUse mirror of every memory .md write",
+   "outcome": "partial",
+   "date": "2026-09-29",
+   "evidence": "Log shows 876 created, 863 updated and 490 failed. The writes succeed, but the store lost them (59 notes remain, oldest 09-26). Nothing reads the store back to check."
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Session-end memory consolidation dispatch",
+   "where": ".claude/hooks/substrate-session-end.sh",
+   "tried": "Dispatch 'Consolidate the most recent operator memoryNotes...' to goal-host at every session end since 06-16",
+   "outcome": "failed",
+   "date": "2026-09-29",
+   "evidence": "171 dispatches. Dispatch b6ca2bad went HOLLOW (declarative: missing activityTemplate, learningSummary), then satisfier memoryNote 'output is empty', then a floor reach by reading memoryNote. goal-host reuses this pathway as '4/5 reached'."
+  },
+  {
+   "key": "env-gating",
+   "title": "Vessel edit gate (dispatch, don't edit)",
+   "where": ".claude/hooks/substrate-vessel-edit-gate.sh + .claude/settings.local.json",
+   "tried": "PreToolUse deny on repos/*/src edits, with an S3 intervention_evaluate push-away",
+   "outcome": "failed",
+   "date": "2026-09-29",
+   "evidence": "settings.local.json has held env SUBSTRATE_ALLOW_DIRECT_EDIT=1 since at least 09-06 (mtime). A measured pair: with =1 the hook allows silently; with =0 it returns the generic deny. dev-vessel logged 0 intervention_evaluate calls since 09-25 because localhost:18090 is dark."
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "MCP cockpit TRACK/INSPECT planes",
+   "where": ".mcp.json -> metabob-mcp; .metabob/config.json endpoint localhost:18080",
+   "tried": "goal_status / registry_query via discovery derived at localhost:18100",
+   "outcome": "failed",
+   "date": "2026-09-29",
+   "evidence": "registry_query failed with 'socket connection was closed unexpectedly'. goal_status returned 'could not find goal-host-vessel via discovery'."
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Discovery register payload validation",
+   "where": "repos/discovery-vessel 7cc9da4 (09-19)",
+   "tried": "Reject malformed registrations, including an empty shapes array",
+   "outcome": "partial",
+   "date": "2026-09-19",
+   "evidence": "ribosome-vessel registers shapes:[] by design and has been rejected with 400 5,240 times since 09-25 13:11 (the journal start). It is absent from the fleet census. Shape routing is unaffected."
+  },
+  {
+   "key": "hollow-landing",
+   "title": "landedShaForGoal on every recordGoalPath",
+   "where": "repos/goal-host-vessel/src/index.ts:28,6096 (f375f10, Substrate Autonomous, 09-12)",
+   "tried": "Resolve the goal_path_sha shape via discovery to attach a landed SHA to goal paths",
+   "outcome": "failed",
+   "date": "2026-09-12",
+   "evidence": "The call sends no auth header, so it gets 401. 5,015 of 5,126 recordGoalPath calls failed since 09-25. No producer of goal_path_sha exists in repos/* or the registry."
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Discovery /bootstrap point-and-go door",
+   "where": "repos/discovery-vessel/CLAUDE.md; src/index.ts",
+   "tried": "Public bootstrap returning relay_multiaddrs, identity and discovery endpoint",
+   "outcome": "dormant",
+   "date": "2026-09-29",
+   "evidence": "On both node 1 and node 2, relay_multiaddrs is [] and discovery_endpoint is ''."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "concept-db upkeep Thompson activities",
+   "where": "repos/concept-db CLAUDE.md; /upkeep/status",
+   "tried": "Five upkeep activities on a 5-minute scheduler",
+   "outcome": "dormant",
+   "date": "2026-09-29",
+   "evidence": "totalTrials are 0,0,3,0,0. /health reports upkeep.enabled:false while /upkeep/status reports enabled:true."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "dev-vessel bootstrap templates (ship-change, scaffold-new-vessel, coverage-tick, substrate-health-tick, ...)",
+   "where": "repos/development-vessel/src/seed; activity table",
+   "tried": "Seed templates that route commits and measure lift",
+   "outcome": "dormant",
+   "date": "2026-09-28",
+   "evidence": "1 row each with total_executions=0, re-seeded 09-28 08:18. No row in activity_execution_traces matched by substring. Caveat: the recency of that table is not established."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Image self-reports readiness (substrate-status/connect)",
+   "where": "Dockerfile.substrate 76d548d1 (09-23)",
+   "tried": "Ship readiness and connection binaries in the image",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "The node 1 ghcr image (built 09-24 04:11Z) lacks both binaries. The node 2 local image has them."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "activity-api K8s-era CI",
+   "where": "repos/activity-api/.github/workflows/ci-webhook.yml, sync-to-deployment.yml",
+   "tried": "CI on push to dev",
+   "outcome": "failed",
+   "date": "2026-09-28",
+   "evidence": "200 of 200 runs failed at 'Build Docker image' (08-22 to 09-28). concept-db failed 50 of 50."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "openspec change pipeline (skills + opsx)",
+   "where": ".claude/skills/openspec-*, .claude/commands/opsx",
+   "tried": "propose/apply/archive lifecycle",
+   "outcome": "partial",
+   "date": "2026-09-29",
+   "evidence": "98 recognised changes of 176 dirs: 67 in-progress, 31 no-tasks, 0 complete, 4 archived."
+  }
+ ],
+ "problems": [
+  {
+   "key": "endpoint-routing",
+   "symptom": "Host tools using 'localhost' get a connection reset for vessels bound IPv4-only (8090, 8100, 8260, 8270, 8310), because pasta forwards ::1. This breaks the session-start hook, the edit-gate S3 branch and the MCP goal_status/registry_query. 127.0.0.1 works.",
+   "root_cause": "Vessels bind hostname 0.0.0.0 (v4-only). Hooks and MCP default to localhost:18xxx and none read the substrate-connect config.",
+   "first_seen": "unknown (post podman migration)",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "The authoritative memory store holds 59 notes (oldest 09-26) against 750 cache files. The 680-note store at /workspace/memory/notes.json is still unread.",
+   "root_cause": "The store lives at a gitignored path inside the super-repo clone, and the EnvironmentFile overrides WORKSPACE_ROOT. The 09-26 loss cause is not established.",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 3
+  },
+  {
+   "key": "env-gating",
+   "symptom": "The edit gate exits 0 silently in every session",
+   "root_cause": "settings.local.json env SUBSTRATE_ALLOW_DIRECT_EDIT=1 persisted since at least 09-06. Transcripts claim it was 'restored to 0 after'.",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-29",
+   "recurrences": 2
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "The session-end consolidation goal 'reaches' only by reading memoryNote. The pathway is learned as 4/5 reached.",
+   "root_cause": "No oracle requires a concept-graph write, and the satisfier/floor reach counts a read as a reach",
+   "first_seen": "2026-06-16",
+   "last_seen": "2026-09-29",
+   "recurrences": 171
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Every recordGoalPath logs 'Failed to resolve SHA ... 401' (5,015 in 4 days)",
+   "root_cause": "Autonomous f375f10 added a reader of the unserved shape goal_path_sha with no auth header",
+   "first_seen": "2026-09-12",
+   "last_seen": "2026-09-29",
+   "recurrences": 5015
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Ribosome register gets 400 every minute. The vessel is missing from the discovery census.",
+   "root_cause": "7cc9da4 requires non-empty shapes, while ribosome registers shapes:[] by design",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 5240
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Seed prompts tell drafted activities to POST substrateGap_write to 127.0.0.1:8270 (stateful-ui)",
+   "root_cause": "The endpoint is pinned in seed text. Only development-vessel serves substrateGap_write.",
+   "first_seen": "unknown",
+   "last_seen": "2026-09-29",
+   "recurrences": 2
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "stateful-ui (the replaced surface) still accretes panels (480 on 09-22, 794 now). All 8 of its shapes are duplicated by human-surface in discovery.",
+   "root_cause": "The old vessel was never retired. dev-vessel still has 8270 defaults (compute-state-signature.ts:46, docs-decision-answer-scan.ts:151).",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "recurrences": 2
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Vessel CLAUDE.md files claim tables, deprecations, LLM-free resolvers, shape budgets and open findings that reality contradicts",
+   "root_cause": "Docs are written at build time and never re-verified. The docs-align loop does not cover repos/*/.md.",
+   "first_seen": "2026-05-17",
+   "last_seen": "2026-09-29",
+   "recurrences": 8
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "67 of 112 vessel .md files sit in gitignored K8s-era repos. Live CLAUDE.md files point at repos/deployment. CI is 100% red.",
+   "root_cause": "The fossil repos were left in the working tree and their CI workflows were never removed",
+   "first_seen": "2026-04-30",
+   "last_seen": "2026-09-28",
+   "recurrences": 1
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "The ten core vessels (goal-host, boredom, llm-resolver, local-tools, ribosome, light-dispatch, metric-collector, analysis, relevance-sink, clock) have no .md at all",
+   "root_cause": "Expectations are written for old vessels, not for the ones running the loop",
+   "first_seen": "unknown",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The node 1 image lacks substrate-status/substrate-connect, which CLAUDE.md, the skills and the HEALTHCHECK all assume",
+   "root_cause": "The ghcr image was built from a pre-76d548d1 tree or context. Node 2 was built locally and has them.",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "/bootstrap returns empty relay_multiaddrs and discovery_endpoint on both nodes",
+   "root_cause": "not established (no relay anchor configured as a shape)",
+   "first_seen": "unknown",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "94% of concept-db searches are dense_true_empty (24,207 of 25,651)",
+   "root_cause": "not established; the concept graph lacks recall for walk and prompt queries",
+   "first_seen": "unknown",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "substrate-session-start hook",
+   "location": ".claude/hooks/substrate-session-start.sh",
+   "purpose": "Inject substrate memoryNotes and concept priors into each operator session",
+   "status": "broken",
+   "general": true,
+   "evidence": "0 bytes with default localhost endpoints. Works with 127.0.0.1."
+  },
+  {
+   "name": "substrate-memory-mirror hook",
+   "location": ".claude/hooks/substrate-memory-mirror.sh + scripts/substrate/mirror-memory-note.ts",
+   "purpose": "Mirror operator memory files to memoryNote_write",
+   "status": "live-used",
+   "general": true,
+   "evidence": "876 created / 863 updated in the log. Durability is not checked."
+  },
+  {
+   "name": "substrate-session-end hook",
+   "location": ".claude/hooks/substrate-session-end.sh",
+   "purpose": "Dispatch memory consolidation at session end",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "171 dispatches, all hollow or floor reaches. No consolidation achieved."
+  },
+  {
+   "name": "substrate-vessel-edit-gate hook",
+   "location": ".claude/hooks/substrate-vessel-edit-gate.sh",
+   "purpose": "Force code changes through run_goal; S3 push-away via intervention_evaluate",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Bypassed by settings.local.json env =1. The S3 branch has never reached dev-vessel (0 calls)."
+  },
+  {
+   "name": "metabob MCP cockpit",
+   "location": ".mcp.json -> /home/avi/documents/work/metabob-mcp",
+   "purpose": "ACT/TRACK/REASON/FEEDBACK/INSPECT planes",
+   "status": "broken",
+   "general": true,
+   "evidence": "goal_status and registry_query fail via localhost:18100. Two tool namespaces are exposed.",
+   "duplicates_of": "mcp__plugin_metabob_metabob__* plugin namespace"
+  },
+  {
+   "name": "opsx commands",
+   "location": ".claude/commands/opsx/*",
+   "purpose": "openspec propose/apply/archive/explore",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": ".claude/skills/openspec-*",
+   "evidence": "4 commands mirror 4 skills"
+  },
+  {
+   "name": "deploy skill / vessel-ctl",
+   "location": ".claude/skills/deploy; /usr/local/bin/vessel-ctl",
+   "purpose": "Reload, sync and install vessels",
+   "status": "live-used",
+   "general": true,
+   "evidence": "All verbs present on node 1. The substrate-status verify step is missing on node 1."
+  },
+  {
+   "name": "shape-dispatch-check lint",
+   "location": "packages/shape-dispatch-check/check.ts via repos/*/scripts/check-shape-dispatch.ts",
+   "purpose": "Enforce agreement between config shapes and dispatch cases",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Invoked by dev-vessel patch-with-tools.ts and vessel-mitosis-evaluate.ts"
+  },
+  {
+   "name": "discovery /bootstrap door",
+   "location": "repos/discovery-vessel/src/index.ts",
+   "purpose": "Point-and-go federation join",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Empty relay and discovery_endpoint on both nodes"
+  },
+  {
+   "name": "discovery register validation",
+   "location": "repos/discovery-vessel/src/index.ts:320-340 (7cc9da4)",
+   "purpose": "Reject malformed registrations",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Also rejects ribosome's legitimate shapes:[] (5,240 times)"
+  },
+  {
+   "name": "landedShaForGoal",
+   "location": "repos/goal-host-vessel/src/index.ts:28",
+   "purpose": "Attach the landed git SHA to goal paths",
+   "status": "broken",
+   "general": false,
+   "evidence": "401 on 5,015 of 5,126 calls. goal_path_sha has no producer."
+  },
+  {
+   "name": "concept-db upkeep scheduler",
+   "location": "repos/concept-db upkeep",
+   "purpose": "Autonomous concept-graph maintenance via Thompson",
+   "status": "dormant",
+   "general": false,
+   "evidence": "3 trials total. /health and /upkeep/status disagree on whether it is enabled."
+  },
+  {
+   "name": "stateful-ui-vessel",
+   "location": "repos/stateful-ui-vessel :8270",
+   "purpose": "Legacy human surface / panel pool",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "human-surface-vessel :8310",
+   "evidence": "All 8 shapes are duplicated in discovery. 794 panels are still accreting."
+  },
+  {
+   "name": "activity-api /v2/vessels/* endpoints",
+   "location": "repos/activity-api/src/routes/vessels.ts",
+   "purpose": "Legacy vessel registry proxy",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Promised 410 by 07-01; still 401-routed"
+  },
+  {
+   "name": "activity_template / activity_metrics / activity_templates tables",
+   "location": "SurrealDB learning_loop",
+   "purpose": "Documented template and metrics storage",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "activity table (4,010 rows)",
+   "evidence": "0 / 0 / 2 rows"
+  },
+  {
+   "name": "dev-vessel bootstrap templates (ship-change etc.)",
+   "location": "repos/development-vessel/src/seed",
+   "purpose": "Commit routing, scaffolding, lift measurement",
+   "status": "dormant",
+   "general": false,
+   "evidence": "total_executions=0; no matching traces; re-seeded 09-28"
+  },
+  {
+   "name": "activity-api/concept-db GitHub CI",
+   "location": "repos/*/.github/workflows/ci-webhook.yml, sync-to-deployment.yml",
+   "purpose": "K8s-era canary pipeline",
+   "status": "fossil",
+   "general": false,
+   "evidence": "200/200 and 50/50 failures"
+  },
+  {
+   "name": "fossil K8s repos",
+   "location": "repos/{deployment,workbench,terminal,react-renderer,user-vessel,metabob-cloud-dashboard,conversation-vessel}",
+   "purpose": "Pre-substrate deployment and UI",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Gitignored, not submodules, last commits 04-30..08-17; hold 67 of 112 vessel .md"
+  },
+  {
+   "name": "memory store /workspace/memory/notes.json",
+   "location": "substrate-live volume",
+   "purpose": "Original memoryNote store",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "/workspace/git/super-repo/memory/notes.json",
+   "evidence": "680 notes, last written Sep 7; unread by the live resolver"
+  }
+ ],
+ "principles": [
+  "Fail-open hooks must emit a visible signal on failure; a silent 0-byte exit reads as 'memory injected' and has hidden an empty teaching channel.",
+  "Bind the host-facing channel to one config source (substrate-connect output) and 127.0.0.1 or dual-stack listeners. Fix the seam once instead of fixing each of the four consumers.",
+  "Any 'restored/fixed' claim about operator config (bypass env, open findings, merged stores) must be re-measured by state, not recalled from prose.",
+  "A goal whose reach can be satisfied by reading the shape it should write is hollow by construction. Consolidation needs a write-side oracle.",
+  "Before adding a reader of a shape, confirm a producer exists in the registry; an unserved shape plus a missing auth header produced 17 days of silent 401s.",
+  "Validation hardening at a shared seam (discovery register) must be run against every existing caller, including legitimate edge cases like consumer-only vessels with no shapes.",
+  "Docs belong to the vessels that run the loop. Ten core vessels have none while fossil repos hold 60% of vessel docs.",
+  "Retire replaced producers: a duplicate shape producer (stateful-ui vs human-surface) keeps absorbing writes nobody reads."
+ ],
+ "claims": [
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-05-01",
+   "claim": "activity-api /v2/vessels/* return 410 Gone from 2026-07-01",
+   "where": "repos/activity-api/CLAUDE.md",
+   "later": "Still routed on 09-29 (401)"
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-05-15",
+   "claim": "ias-executor-ts is a Milestone A scaffold",
+   "where": "repos/ias-executor-ts/README.md",
+   "later": "7 live vessels depend on it"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-05-17",
+   "claim": "concept-db upkeep rules are autonomous Thompson activities creating traces",
+   "where": "repos/concept-db/CLAUDE.md",
+   "later": "3 trials total; /health says disabled"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-06-15",
+   "claim": "Claude memory and the dev workflow are cut over to the substrate (f259d9bd)",
+   "where": ".claude/hooks",
+   "later": "Store has 59 notes from 09-26; session-start injects nothing via localhost"
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-07-09",
+   "claim": "dev-vessel ships zero LLM-tier resolvers; 19 to 23 shapes",
+   "where": "repos/development-vessel/CLAUDE.md",
+   "later": "51 LLM-referencing files; 264 advertised shapes"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-07-19",
+   "claim": "Concept priors are injected at session start (118d341f)",
+   "where": ".claude/hooks/substrate-session-start.sh",
+   "later": "Works only with a 127.0.0.1 override; 94% of concept searches are dense-empty"
+  },
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-07-19",
+   "claim": "discovery /bootstrap is the single point-and-go federation door",
+   "where": "repos/discovery-vessel/CLAUDE.md",
+   "later": "relay_multiaddrs [] and discovery_endpoint '' on both nodes"
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-08-21",
+   "claim": "identity findings 1 and 3 still open",
+   "where": "repos/identity-vessel/docs/OPEN-FINDINGS.md",
+   "later": "Fixed by c8bf5d9 (08-22) and a9db360 (08-25); doc never updated"
+  },
+  {
+   "key": "env-gating",
+   "claimed_at": "2026-08-28",
+   "claim": "SUBSTRATE_ALLOW_DIRECT_EDIT=1 set in settings.local.json and restored to 0 after",
+   "where": "operator transcripts",
+   "later": "Still 1 on 09-29 (mtime 09-06); the gate is inert"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-02",
+   "claim": "Reach asks git for a late landing before grading edit goals (50f7560)",
+   "where": "repos/goal-host-vessel",
+   "later": "Defeated by f375f10's unauthenticated goal_path_sha call (401 every time)"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-12",
+   "claim": "Autonomous route-edit-ea3a308d landed via mitosis cutover (f375f10)",
+   "where": "repos/goal-host-vessel/src/index.ts",
+   "later": "5,015 of 5,126 recordGoalPath calls log a 401; goal_path_sha has no producer"
+  },
+  {
+   "key": "directed-overshoot",
+   "claimed_at": "2026-09-19",
+   "claim": "Discovery register payloads validated (7cc9da4)",
+   "where": "repos/discovery-vessel/src/index.ts",
+   "later": "ribosome rejected with 400 every minute since (5,240 in the journal)"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-09-22",
+   "claim": "Conventions fetched by type; 91 feedback notes exist (62559ca6)",
+   "where": ".claude/hooks/substrate-session-start.sh",
+   "later": "2 feedback notes exist on 09-29"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-09-22",
+   "claim": "Two memory stores merged at file level",
+   "where": "operator memory index",
+   "later": "Live store begins 09-26 (59 notes); the 680-note store is still unread beside it"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-23",
+   "claim": "The image reports its own readiness and connection (76d548d1)",
+   "where": "Dockerfile.substrate",
+   "later": "substrate-status/connect absent in the node 1 image"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-06-16",
+   "claim": "The session-end hook consolidates session learnings into durable knowledge",
+   "where": ".claude/hooks/substrate-session-end.sh",
+   "later": "171 dispatches; latest HOLLOW followed by a floor reach through a memoryNote read; learned as a '4/5 reached' pathway"
+  }
+ ]
+}

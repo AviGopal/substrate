@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-ec608650",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/goal-host-vessel/src/index.ts, inside verifyRecompute, at the reconcile step that abstains with \"only one deriv",
+  "description": "In repos/goal-host-vessel/src/index.ts, inside verifyRecompute, at the reconcile step that abstains with \"only one derivation produced a usable measurement\" (the branch after the reconcileDerivations call when reconciled.truth is null), add a bounded RESCUE clause BEFORE returning null: when _useRecipe is true AND side a (the recipe derivation) produced a non-null numeric value greater than 0 AND side b is null (it failed to produce a measurement — NOT a disagreeing value) AND the recipe is strongly proven (_recipe.agreed >= 10 && _recipe.agreed > _recipe.disagreed * 4), then set truth = a.value and continue (do not abstain). Do NOT increment the recipe's agreed counter for a rescue. Leave all other cases unchanged — a disagreeing side b still abstains, and degenerate truth (0) is never rescued. Add a console.log noting a recipe rescue occurred.",
+  "goal_text": "In repos/goal-host-vessel/src/index.ts, inside verifyRecompute, at the reconcile step that abstains with \"only one derivation produced a usable measurement\" (the branch after the reconcileDerivations call when reconciled.truth is null), add a bounded RESCUE clause BEFORE returning null: when _useRecipe is true AND side a (the recipe derivation) produced a non-null numeric value greater than 0 AND side b is null (it failed to produce a measurement — NOT a disagreeing value) AND the recipe is strongly proven (_recipe.agreed >= 10 && _recipe.agreed > _recipe.disagreed * 4), then set truth = a.value and continue (do not abstain). Do NOT increment the recipe's agreed counter for a rescue. Leave all other cases unchanged — a disagreeing side b still abstains, and degenerate truth (0) is never rescued. Add a console.log noting a recipe rescue occurred.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-ec608650",
+  "source_gap_source": "substrate_detected"
+}

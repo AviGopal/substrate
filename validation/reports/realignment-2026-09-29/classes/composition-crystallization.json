@@ -1,0 +1,1185 @@
+{
+ "attempts": [
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome as the template extractor",
+   "where": "ribosome-vessel (HEAD 5a374df 09-02); activity ribosome-extract",
+   "tried": "Extract reached traces into templates",
+   "outcome": "dormant",
+   "evidence": "README: applyExtraction defaults false, nothing registered; live 1459 ribosome-extract + 620 compose-auto-bridge-...-to-ribosome-extract executions in 14d; CLAUDE.md/foundation still describe it as the minting path",
+   "date": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Learned pathway replay recommendReachingPath",
+   "where": "goal-host-vessel/src/pathway-head.ts, pathway-rank.ts; goal_execution_paths",
+   "tried": "Replay prior reaching path keyed by goal_hash",
+   "outcome": "partial",
+   "evidence": "7d learned_pathway 901 executions, 461 success_count (51%) - the only tier near half; fresh_derivation 0.8%, satisfier 1.7%, feature_compose 0/54",
+   "date": "2026-09-21..28",
+   "source": "docs-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Variant creation / retirement",
+   "where": "activity-api shouldCreateVariant, checkAndRetireTemplate",
+   "tried": "3 consecutive failures -> variant; 20 runs <30% -> retire",
+   "outcome": "worked",
+   "evidence": "1228 of 4010 activity rows retired",
+   "source": "docs-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "composition-edge-reconcile deriving edges from traces",
+   "where": "scripts/substrate/composition-edge-reconcile.ts (timer)",
+   "tried": "Incremental reconcile of activity_composition_graph edges from traces",
+   "outcome": "partial",
+   "evidence": "In the 7-day journal, 204 of 205 runs have upserted:0 and 1 run upserted 161. The latest runs report batch_traces:0 even with recent_ids=287.",
+   "source": "docs-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "ribosome-extract lifecycle template",
+   "where": "repos/ias-executor-ts/src/templates/lifecycle/ribosome-extract.json",
+   "tried": "Subscribe to lifecycle:activity:postExecution and emit extractedTemplate",
+   "outcome": "failed",
+   "evidence": "No emitter produces postExecution; the only hit is the template itself. The live path is the ribosome-vessel WS consumer. GLOSSARY describes the template path as live, contradicting CORE_IDIOMS.",
+   "source": "docs-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Fleet-wide five-level readiness and vessel-ctl",
+   "where": "docs/testing/QUICK_VERIFICATION_GUIDE.md, docs/SUBSTRATE.md",
+   "tried": "substrate-status levels live/seeded/served/usable/connected; vessel-ctl install/sync",
+   "outcome": "unknown",
+   "evidence": "Documented; not re-verified in this shard",
+   "source": "docs-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Composition edge learner: built, abandoned, rebuilt",
+   "where": "063/046 composition_edge -> fcf9499/169 retire (07-22) -> 516fc73 derive at ingest (08-11)",
+   "tried": "Replace the writer with no caller by ingest-time derivation",
+   "outcome": "worked",
+   "date": "2026-08-22",
+   "evidence": "POST /composition still has 0 callers; activity_composition_graph had frozen.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome-extracted templates were hollow",
+   "where": "d1bb036, ac40337, 3ccc65f, 6ee45ea (07-31), 8d969b4 (07-21)",
+   "tried": "Derive output shapes from tasks, backfill 218 plus 160 templates, gate extraction on reach",
+   "outcome": "worked",
+   "date": "2026-07-31",
+   "evidence": "tool_output placeholders and hollow task configs were backfilled.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "compose-topology cadence",
+   "where": "06c48140 \u2192 f1348751",
+   "tried": "Dedicated timer to drive the organic edge-former",
+   "outcome": "reverted",
+   "date": "2026-06-22",
+   "evidence": "Added and reverted the same day",
+   "source": "git-deployment"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Reuse-before-mint at the mint chokepoint",
+   "where": "407e3ed (06-21 shadow), 900bc69 (06-26 enforce), 7148d37 (07-12 substrate loosened it)",
+   "tried": "Query discover-by-shapes before minting a Beta(1,1) cell.",
+   "outcome": "partial",
+   "date": "2026-06-26",
+   "evidence": "The off/shadow env override remains. The substrate loosened the gate for its own detector mints.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Landing traces graded reached for ribosome",
+   "where": "c5f3f09",
+   "tried": "Grade cutover traces reached:true",
+   "outcome": "worked",
+   "date": "2026-08-29",
+   "evidence": "learned-activity-learned-feature-compose 233 execs",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "pull-sync-unhealthy-activity-api gap-closing loop",
+   "where": "d1a52b1, af1d3db, 405de7f",
+   "tried": "Landed 3x",
+   "outcome": "failed",
+   "date": "2026-09-05..09-07",
+   "evidence": "gap-closing template executed 1490 times in about 7d",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome reach->mint does not actually mint (4 recurrences)",
+   "where": "15620e7, 337d223, f88ba8f, 8d960a8, d48a963, ef48012, 4a4af5e",
+   "date": "2026-06-22..08-17",
+   "tried": "Make the mint run, stamp lifecycle.status, fix the mint tag, arm the recursion gate.",
+   "outcome": "partial",
+   "evidence": "Each fix said the previous path never minted.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Learned pathway with a satisfier head is dropped",
+   "where": "3d2e52a, 579f365, c37df24, 49b884e, 91c042b",
+   "date": "2026-09-23..09-25",
+   "tried": "5 autonomous landings on one gap family.",
+   "outcome": "partial",
+   "evidence": "49b884e: acceptance is intermittent, and 1/3 of transform walks still write before computing.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Lexical rebind (middle-tier first/last-mile reuse)",
+   "where": "d38eaa9, 831dafb, ~12 rebind fixes on 08-08 (d9a2597, eefa75e, 9a68d17, 1df0e02, 6b0701a/91df0e7, 65b7c81/88480c0, 8aa17cc/c477e07)",
+   "date": "2026-07-24..08-12",
+   "tried": "Reuse learned commands across goals that differ in content.",
+   "outcome": "dormant",
+   "evidence": "0 selected of 3,456 in 7 days, all shape-mismatch. The cache holds 10,624 lines and is still written.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Reuse ceiling and middle barriers",
+   "where": "6082c2e, 7cd8952, 7d6ea64, 0a532d2, 2d980fe, 35fb2f6, 785293c, d45aa3d",
+   "date": "2026-07-31..08-28",
+   "tried": "Close reuse-hop barriers, lineage, Wilson ranking. Satisfier-plane reuse ordering was disabled on evidence.",
+   "outcome": "partial",
+   "evidence": "'DISABLED ON EVIDENCE' at 9870 (0/4 vs 3/4).",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome emits config:{} so compositions cannot be replayed",
+   "where": "ias-executor-ts 0bbd488(07-31), 3b95072, 5a5aa41, 9518d4e, 5030377, f71bb56 (08-17)",
+   "tried": "Harden derivation rule, record resolvedConfig at push sites, forward it through the sink, fix the prompt skeleton, rename the key",
+   "outcome": "partial",
+   "date": "2026-07-31..08-17",
+   "evidence": "The 9518d4e body says a fifth inert layer was found; f71bb56 says the fix itself named a nonexistent field (write/read mismatch in prose)",
+   "source": "git-mid"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "ribosome self-extraction recursion",
+   "where": "ribosome b6a430f (08-05)",
+   "tried": "depth bound from the learned- prefix count",
+   "outcome": "worked",
+   "evidence": "learned-learned-learned-auto-bridge-shellresult selected by a live walk",
+   "source": "git-small"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "ribosome extraction dispatch storms/dead path",
+   "where": "ribosome 43a6d0b (07-30), 079c160, f0322c3 (08-02)",
+   "tried": "route probe, dedup, recursion safety, remove drain dispatch",
+   "outcome": "partial",
+   "evidence": "3,746/3,746 failed over 27 days; 906/934 at 0% success; goal-host mintReachedTrace duplicates the path",
+   "source": "git-small"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome implemented four times",
+   "where": "e5b04851, 57e92c06, 3a3ef840, 892c342b",
+   "date": "2026-03-27..06-30",
+   "tried": "microplastic, then activity-api, then ribosome-vessel, then goal-host reach-to-mint chain",
+   "outcome": "partial",
+   "evidence": "output_shapes not set until d105e1ae (06-30), so earlier mints were not discoverable",
+   "source": "git-super-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "composition-edge reconciler",
+   "where": "9b193f88, 65836817",
+   "date": "2026-06-17",
+   "tried": "ongoing edge reconciler",
+   "outcome": "failed",
+   "evidence": "aborted every run (account_id_version) with no detector",
+   "source": "git-super-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "autonomous minting 'demonstrated' 08-13",
+   "where": "31f0972a, 4689117b, f590ad76, 94dc3d5f, 4d417b6e",
+   "tried": "Fix composite mint tag/shapes/signatures/task layers and claim dozens of learned-* templates",
+   "outcome": "reverted",
+   "date": "2026-08-13",
+   "evidence": "11859d57 (08-21): the ribosome's entire output was 2 templates, and activity_templates has 1 writer and 0 readers. debc3da3 (09-27): ribosome dispatch targets a retired template",
+   "source": "git-super-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "composition-edge write after ten causes on one function",
+   "where": "cf5370e8 (after 4f1e6b7c, 64b63cf9, 7bdf427e, 276cae6e, 07fd07a3)",
+   "tried": "Serial lookup/PERMISSIONS/id-form/UPSERT/auth-context fixes",
+   "outcome": "worked",
+   "date": "2026-08-21",
+   "evidence": "Composition edges 1999 -> 2004, 49 derive_ok",
+   "source": "git-super-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "pathway reuse chain (v1..v3b, explore-mode fix)",
+   "where": "9b929eb6, 0aca3cc8 (vessel 579f365, c37df24, 249ff89)",
+   "tried": "Pathway head, satisfier order, rebind skip, bindBody guard, explore-branch fix",
+   "outcome": "worked",
+   "date": "2026-09-23",
+   "evidence": "20/20 goals accept the pathway and reach on the first verdict",
+   "source": "git-super-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Organic composition minting (compose-*, compose-auto-bridge-*)",
+   "where": "development-vessel, June 2026",
+   "tried": "Mint compositions of producer\u2192consumer edges, including compositions of compositions",
+   "outcome": "failed",
+   "date": "2026-06",
+   "evidence": "compose-* 220 rows, 98 never ran, 36 runs 0 ok in 5d; compose-auto-bridge-* 2,815 runs 33 ok",
+   "source": "live-activities"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome extraction of learned-composition chains",
+   "where": "ribosome-extract; learned-composition-* (148 rows)",
+   "tried": "Extract reached executions into reusable chain templates",
+   "outcome": "partial",
+   "evidence": "ribosome-extract 1,459/1,456 ok in 5d; the minted chains average 23% ok; 65 live arms have \u226520 runs and 0 successes (codereadresult\u2192concept-write 5,464/0; git-status\u2192git-diff\u2192concept-write 4,365/0)",
+   "source": "live-activities"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Learned pathway with satisfier head dropped",
+   "where": "goal-host; 579f365, c37df24, 3d2e52a, 9c376b2, 249ff89",
+   "tried": "order fix, binding fix, recommender fix, explore keeps exploit candidate",
+   "outcome": "partial",
+   "date": "2026-09-23",
+   "evidence": "parent closed landed_verified (20/20 accepted); narrowed child FAILED after 3d2e52a, still open",
+   "source": "live-gaps"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Template provider blanks every placeholder at load, so chained templates fail",
+   "where": "repos/ias-executor-ts/src/adapters/activity-api-provider.ts",
+   "tried": "fix 2893a93",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "closed predicate_verified_by_operator; narrowed child left open",
+   "source": "live-gaps"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome read-side contradiction fix",
+   "where": "ribosome-vessel 86aebdf",
+   "date": "2026-09-02",
+   "tried": "Prefer tag reached:true over column false (one-directional)",
+   "outcome": "partial",
+   "evidence": "Recovers read side; write-side cause unidentified; satisfier MATCHED NO ROW (5/5 reached=true) still loses; 44 skipped, 0 extractions",
+   "source": "memory-10"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Variant minting unblock",
+   "where": "ias-executor-ts 948d085; ribosome-extract.json applyExtraction",
+   "date": "2026-08-02",
+   "tried": "Default undeclared gate variable",
+   "outcome": "partial",
+   "evidence": "Loud UNRESOLVABLE_GATE became silent skip; nothing minted; admin scope needed for activityTemplate_write",
+   "source": "memory-10"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Causal intent goalSignature on pool impulses",
+   "where": "goal-host mkImpulse c9e38e8 -> 5b8812f",
+   "date": "2026-07-25",
+   "tried": "Substrate-landed stamp; precise re-dispatch after hollow-correct",
+   "outcome": "worked",
+   "evidence": "First landing bound wrong value and passed gate; precise goal fixed it",
+   "source": "memory-10"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "walk_tier persistence",
+   "where": "activity-api e6bf483 + migration 181",
+   "date": "2026-07-24",
+   "tried": "Self-authored coordinated 3-file fix",
+   "outcome": "worked",
+   "evidence": "476 rows tagged; operator duplicate 8c47914 dropped; latent ?? null bind",
+   "source": "memory-10"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome extraction honesty gate isHonestlyReached",
+   "where": "activity-api 8d969b4 ribosome.ts",
+   "tried": "Gate extraction on reach tag + satellite id guard + provenance",
+   "outcome": "worked",
+   "date": "2026-07-21",
+   "evidence": "Hollow template 374\u21922; only 23 of 62,968 success rows honestly reached",
+   "source": "memory-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Seven + eighth capability families as learned activities",
+   "where": "activity-api templates learned-composition-*, composed-cap-*",
+   "tried": "Curriculum walks + ribosome extract + repaired composed-cap authoring",
+   "outcome": "partial",
+   "date": "2026-07-14",
+   "evidence": "Declared 7/7; 08-02 found activityDispatch never existed and mintReachedTrace made 0 mints; walk-route authoring stayed open",
+   "source": "memory-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome drain-timer storm removal",
+   "where": "ribosome-vessel f0322c3",
+   "tried": "Delete the lifecycle-less dispatch, keep eviction",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "3,407 drain fires \u2192 0; the storm was caused by operator census fix 572cd6c",
+   "source": "memory-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Reuse ceiling-vs-floor A/Bs",
+   "where": "ablation.disableReuse; d9a2597, 1df0e02, 0468f9c",
+   "tried": "7 experiments; rebind slots; value-checking verifier",
+   "outcome": "partial",
+   "date": "2026-08-08",
+   "evidence": "REBOUND fired after 1df0e02, but value-only reach was 12/16 vs 11/16 (p=1.0). Reuse transfers mechanical form, not insight.",
+   "source": "memory-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "composition_edge retire vs revive",
+   "where": "activity-api fcf9499 + mig 169 (07-22); a5aed3e (08-03)",
+   "tried": "Retire the table as a fossil, then fix 046 so fn::update_composition_edge exists",
+   "outcome": "superseded",
+   "date": "2026-08-03",
+   "evidence": "Contradictory: retired one day, first created two weeks later; activity_composition_graph is the live surface",
+   "source": "memory-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Composed seam-extraction capability minted from prose",
+   "where": "author_composed_capability; fixes 86f35d8, 2bbd88a9, d5562108, 1e2087a, 09dc380, 1a626c8, ef54c05 (hand)",
+   "tried": "Cleared 7 authoring obstacles, then walked the composite read->llm->write->edit->typecheck.",
+   "outcome": "dormant",
+   "date": "2026-07-15",
+   "evidence": "Reached 5/5 once (dc00c441) and was handed to the boredom rolling-pool (48ebb26, 184e2214). No autonomous firing recorded. The root fix ef54c05 was hand-applied.",
+   "source": "memory-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome applyExtraction never passed",
+   "where": "ribosome-vessel src/index.ts:153, 5f96ba4",
+   "tried": "One-line no-hands fix passing applyExtraction.",
+   "outcome": "worked",
+   "date": "2026-08-03",
+   "evidence": "13 learned-* templates minted by 03:5x and 16 of 19 used. variant_promote is documented but not implemented anywhere.",
+   "source": "memory-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Wilson pathway ranking + goal-paths ?? null fix",
+   "where": "goal-host 785293c; activity-api 86a776d",
+   "tried": "Rank by Wilson lower bound; stop binding NULL into option<string>",
+   "outcome": "worked",
+   "date": "2026-08-29",
+   "evidence": "Cross-goal reuse 24/24 observed. Every fresh pathway write had been returning 500 (third failure mode of the same field family).",
+   "source": "memory-4"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "learned-* input_shapes pinned [] / output_shapes from tasks",
+   "where": "activity-api 8b88856, d1bb036",
+   "tried": "Stop prose-keyword shape inference for learned templates",
+   "outcome": "partial",
+   "date": "2026-07-31",
+   "evidence": "New mints are bindable. ~83 and 266 old rows remain poisoned; the lossy sink root is still open.",
+   "source": "memory-4"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Crystallization replay + strike eviction",
+   "where": "goal-host reached-command cache; 2e8b4cc (substrate), 6eed100",
+   "tried": "Replay verified command by goal hash; evict only on deterministic failure",
+   "outcome": "worked",
+   "date": "2026-09-18",
+   "evidence": "Consult lines 20\u21924, survives restart, variant transfer; cached classes 8/8 under model collapse",
+   "source": "memory-4"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Verifier-recipe reuse",
+   "where": "goal-host index.ts:4183 _useRecipe",
+   "tried": "Operator re-dispatched proven families to test reuse",
+   "outcome": "dormant",
+   "date": "2026-08-27",
+   "evidence": "0/4 proven recipes used; the store stayed at 35 lines; candidates never mature",
+   "source": "memory-4"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Composition edge endpoint repair",
+   "where": "activity-api fc61e61, 5b65456",
+   "tried": "Thread org_id explicitly and omit null account_id.",
+   "outcome": "partial",
+   "date": "2026-07-31",
+   "evidence": "The endpoint persists edges now, but no live edge writer exists and the graph has been frozen since 07-28.",
+   "source": "memory-5"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Responsibility cycle and self-minted trend commitments",
+   "where": "goal-host c6f4c9ca, 0fbfcaac; dev-vessel 84ca65088, 707dd248, b7aa62d3, 810c660d",
+   "tried": "Expectation impulses, an observation loop, and self-close on recovery.",
+   "outcome": "worked",
+   "date": "2026-09-20",
+   "evidence": "The system self-minted expectation-trend:uppercase and the checker adopted it.",
+   "source": "memory-5"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Mint only grounded reaches",
+   "where": "goal-host 411417b isGroundedHonestReach",
+   "date": "2026-07-23",
+   "tried": "gate ribosome mint on executed evidence",
+   "outcome": "partial",
+   "evidence": "stops new pollution; broken templates (109 picks/110 failures) not deprecated; grounded-but-unfaithful slips",
+   "source": "memory-6"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "reachedCommandCache exact replay",
+   "where": "goal-host aef85f8",
+   "date": "2026-07-24",
+   "tried": "reuse verified command on identical goal_hash",
+   "outcome": "partial",
+   "evidence": "substrate-authored; in-process only, lost on restart; write-terminal satisfiers never record",
+   "source": "memory-6"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Inline selectors + primitive factories",
+   "where": "goal-host 5fa3fc8, 6ba5c6c, b307589; landing 926b42b",
+   "date": "2026-07-31",
+   "tried": "new reach class = one ClassRow of vetted primitives",
+   "outcome": "worked",
+   "evidence": "926b42b substrate-authored no-hands on origin/dev, golden 86 pass",
+   "source": "memory-6"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome gate: durable task census instead of WS counter",
+   "where": "ribosome-vessel 572cd6c, a5390db, 079c160",
+   "tried": "Consult durable task record; dedupe; recursion exclusion; pass lifecycle",
+   "outcome": "partial",
+   "date": "2026-08-02",
+   "evidence": "0->7 dispatches/15min then 334 all failing; ribosome-extract 1051 execs success 0 yet alpha 8.5; later extraction verified 08-25 but live 16 learned execs/24h",
+   "source": "memory-7"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome field-nesting fix (substrate-authored)",
+   "where": "ribosome-vessel ff292c6",
+   "tried": "Read msg.data.* for task events",
+   "outcome": "partial",
+   "date": "2026-07-23",
+   "evidence": "gate fired; next layer: direct activity-api dispatch refused use_vessel_discovery 220x, 0 dispatches",
+   "source": "memory-7"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "mintReachedTrace lifecycle.status 'completed' not 'success'",
+   "where": "goal-host f88ba8f",
+   "tried": "Stamp status verbatim to pass ribosome-extract hard gate",
+   "outcome": "worked",
+   "date": "2026-07-31",
+   "evidence": "only 1/1000 templates ribosome-earned before; 436 learned-* by 08-25",
+   "source": "memory-7"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Compositional reuse diagnosed as 'never recorded'",
+   "where": "goal-host f84a7d9",
+   "tried": "else-if recording path when trace-gated block skipped",
+   "outcome": "failed",
+   "date": "2026-08-06",
+   "evidence": "inert (repeats predicate); root was ranked-window reader artifact; revert candidate",
+   "source": "memory-7"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Bridge sink resolves goal's own write shape + title parse",
+   "where": "goal-host bf818b7, c41f365, 17efbee",
+   "tried": "Resolve terminal write via discovery; parseGoalNoteTitle",
+   "outcome": "partial",
+   "date": "2026-08-06",
+   "evidence": "artifact correct on read-back; terminal-write-before-compute ordering race NOT fixed",
+   "source": "memory-7"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Composite inputShapes from predecessor shape",
+   "where": "goal-host 27cc619",
+   "tried": "inputShapes: prevSh ? [prevSh] : []",
+   "outcome": "partial",
+   "date": "2026-07-25",
+   "evidence": "A/B bindable; 383/472 legacy rows still leaked; template_repair preserves broken contract; bulk backfill would wipe goalSignature",
+   "source": "memory-7"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Partial-coverage guard + composition preference + walk_tier record",
+   "where": "goal-host 6d64e62, activity-api e6bf483",
+   "tried": "Flip reach on strict subset; prefer covering composition",
+   "outcome": "partial",
+   "date": "2026-07-24",
+   "evidence": "guard fired live; preference probe not observed firing; commit commingled by parallel session",
+   "source": "memory-7"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Lexical rebind threshold lowering",
+   "where": "goal-host tryLexicalRebind (0.5->0.25->0.15)",
+   "tried": "Lower scaffold threshold",
+   "outcome": "failed",
+   "date": "2026-08-10",
+   "evidence": "0/112 above 0.15; 0 fires in 12h with 635 donors; third lowering refused",
+   "source": "memory-7"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Route-as-data ClassRows",
+   "where": "goal-host e8caa37, ef5c645",
+   "tried": "SELECTORS colocate shell+js; class as data row",
+   "outcome": "worked",
+   "date": "2026-07-31",
+   "evidence": "countBelowMean 174 + 79 = 253; mitosis gate runs typecheck not golden test (drift risk for autonomous rows)",
+   "source": "memory-7"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Tier-2 lexical rebind + persistent command cache",
+   "where": "goal-host d38eaa9, 831dafb, 0527471, b21388a",
+   "tried": "Zero-LLM diff-alignment rebind",
+   "outcome": "worked",
+   "date": "2026-07-25",
+   "evidence": "0 false reuses. Fired again on 09-11.",
+   "source": "memory-8"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Pathway reuse at the policy bar",
+   "where": "goal-host 0c7f10e, cd011e3, d8b1d92, abb07ea",
+   "tried": "Deterministic compute green, rebind punctuation fix, artifact oracle",
+   "outcome": "worked",
+   "date": "2026-09-11",
+   "evidence": "Reached in 4-7s vs 60-90s. Operator-drafted.",
+   "source": "memory-8"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Change-series orchestrator",
+   "where": "11ebf40, 157e662; 225ab19",
+   "tried": "One step per rhythm tick",
+   "outcome": "partial",
+   "date": "2026-08-07",
+   "evidence": "Landed a cruft removal. The first run corrupted a file. Nothing authors plans.",
+   "source": "memory-8"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Pathway head chain for product goals",
+   "where": "goal-host 9c376b2, 579f365, c37df24, dac3c2c, bindBody guard, 249ff89",
+   "date": "2026-09-23",
+   "tried": "six layers fixed under one gap",
+   "outcome": "worked",
+   "evidence": "20/20 reached on first verdict; explore mode had been dropping the best candidate",
+   "source": "memory-9"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Exemplar supply via trace digests",
+   "where": "activity-api insertTraceDigest c241629+39e005a",
+   "date": "2026-09-12",
+   "tried": "dual-write digest from the second execution route",
+   "outcome": "partial",
+   "evidence": "digest rate 0.9->9/min; feature_compose 2491 execs had 0 digests; execution_exemplar still has no production consumer",
+   "source": "memory-9"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Concept recall routed via discovery",
+   "where": "goal-host 53d9080, c68233d",
+   "date": "2026-08-08",
+   "tried": "shortened query; route via discovery; write concept on verified reach",
+   "outcome": "partial",
+   "evidence": "recall 0/4 -> 2/4; cross-node transfer observed; dense recall off, AND-matched lexical",
+   "source": "memory-9"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Reuse-before-mint compose spec",
+   "where": "dev-vessel 2f45204 trace-recurring-pattern-scan",
+   "tried": "compose existing producers instead of minting",
+   "outcome": "worked",
+   "date": "2026-06-22",
+   "evidence": "4-task composition completed where duplicate mint failed; enforce left in shadow",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Substrate explicit vessels + VesselDaemon toolkit",
+   "where": "openspec/changes/2026-05-23-substrate-explicit-vessels; commit daf81ce4",
+   "tried": "goal-host, llm-resolver, local-tools, ribosome, boredom vessels as systemd units",
+   "outcome": "worked",
+   "date": "2026-05-24",
+   "evidence": "48/53 tasks; vessels live in substrate-live",
+   "source": "openspec-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Non-obsidian trace-pattern feeder for draft-activity-from-pattern (goal[45])",
+   "where": "development-vessel resolvers/trace-recurring-pattern-scan.ts; boredom src/index.ts:707",
+   "tried": "Mine success traces by output-shape signature, with a self-reference guard, and dispatch the author",
+   "outcome": "partial",
+   "date": "2026-06-14",
+   "evidence": "Live and wired; by design mostly has_pattern=false ('correct-but-quiet'); /workspace/patterns holds 128 files",
+   "source": "openspec-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Generalize the author\u2192exercise\u2192promote loop to all system-authored activities",
+   "where": "boredom goal[9] (src/index.ts:385); activity-api routes/activities.ts:3733,3751",
+   "tried": "A: exercise any proposed activity; B: trace-store evidence fallback in auto-promote; C: fix vpm_key underscore join; D: input-shape exercisability",
+   "outcome": "partial",
+   "date": "2026-06-14",
+   "evidence": "A is live. B graduated 62 stuck activities (first hot-deployed uncommitted; now in live source). C unfixed: replace(/_/g,':') still at :3733. D not addressed",
+   "source": "openspec-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Code-locality cued recall (shadow mode)",
+   "where": "dev-vessel src/resolvers/code-locality.ts, code-locality-mining-tick.ts (37d4c13, 3c5b4f1); /workspace/locality",
+   "tried": "Mine traces into family->locator index, shadow-predict alongside compose, promote on posterior",
+   "outcome": "dormant",
+   "date": "2026-07-05..09-29",
+   "evidence": "Built in dev-vessel not activity-api (locality_associations absent); shadow-log 8060 entries, 28 ever found:true, 0/1000 recent; index stale since Sep 18; tasks 2-7 unchecked",
+   "source": "openspec-4"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Rebind slot punctuation, compute-artifact oracle, bridge non-clobber",
+   "where": "goal-host cd011e3, d8b1d92, abb07ea",
+   "date": "2026-09-11",
+   "tried": "Rebind adapted one operand; judge rejected 307127; answer mirror clobbered named note",
+   "outcome": "worked",
+   "evidence": "Reuse 7s vs 30-90s; new operands 811x977 via shape_signature borrow; but no pinned tests for these three",
+   "source": "reports-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Satisfier-headed pathway reuse, six layers",
+   "where": "goal-host 3d2e52a 579f365 c37df24 401cee9; development-vessel dac3c2c; activity-api 9c376b2 249ff89",
+   "date": "2026-09-23",
+   "tried": "Honour head, terminal set, refuse donor rebind body, numeric body, bindBody guard, recommender borrow, explore keeps best",
+   "outcome": "worked",
+   "evidence": "20/20 product goals honoured and reached on first verdict (19:46-19:53Z); one family only",
+   "source": "reports-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Path-record losses: duplicate array element and NULL state_signature",
+   "where": "activity-api 39a8cb0 (wrong diagnosis), d6205d5, c7c01ea",
+   "date": "2026-09-23",
+   "tried": "Index rebuild migration 211 (no effect); dedupe arrays; ?? undefined",
+   "outcome": "worked",
+   "evidence": "195+202 path-record 500s/day -> 0; closed by falsifier",
+   "source": "reports-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Rule 9a top-level input_shapes in extraction contract",
+   "where": "ias-executor ribosome-extract.json",
+   "date": "2026-08-16",
+   "tried": "Believed input_shapes:[] denied credit",
+   "outcome": "superseded",
+   "evidence": "37/38 compositions correctly self-contained; diagnosis wrong, rule kept for accuracy; rule inert 11 days due to stale dist",
+   "source": "reports-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Write-boundary guards against malformed templates + retire sweep",
+   "where": "activity-api (activity-id guard, precondition guard, retire-malformed sweep)",
+   "date": "2026-08-17",
+   "tried": "14% of store malformed",
+   "outcome": "partial",
+   "evidence": "Guards landed; sweep not on hub (404); malformed halves success (18.5% vs 38%) but not dominant cause",
+   "source": "reports-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Operator repair of crystallized trace-store-reconcile variants (#14)",
+   "where": "activityTemplate_update on 4 variants; backups in causal-attempt-ledger/backup-trace-store-reconcile/",
+   "tried": "Restore ttl_ms 300000 and the {{extract_lease_token_text}} placeholder, which extraction had redacted to the literal '[redacted]'.",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "#19: reconcile still fails every run with 'lease_token is required' and leaks the global change_window lease for 5 min per run. Live 09-29 open gaps: a-failing-trace-store-reconcile-re-takes-the-single-global-change-window..., the-trace-store-reconcile-remedy-pins-the-base-template-id..., template-input-lint-development-vessel_trace-store-reconcile.",
+   "source": "reports-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "End-to-end composition on arbitrary goal",
+   "where": "goal-host local :8210 dispatch f11349f0 + 45818d0",
+   "date": "2026-08-13",
+   "tried": "Composition-ask phrasing, deterministic composition-ask recovery when recall down",
+   "outcome": "partial",
+   "evidence": "2-step and 3-step fan-in chains reached with data flow and ribosome-extract, and reuse accepted a 10/10 pathway. Only works for the isCompositionAsk phrasing and resolver-served intermediates; per-step alpha withheld; first battery 1/5",
+   "source": "reports-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Complexity ladder",
+   "where": "validation/scripts/complexity-ladder-harness.ts",
+   "date": "2026-08-11",
+   "tried": "4 rungs of 1-4 transformations plus 3 must-fail controls",
+   "outcome": "failed",
+   "evidence": "Controls 3/3. Reach 3/4 but externally correct 1/4, with 0 producer steps at every rung (all satisfier:*). Rung 1 and rung 3 had identical path_signature 4502429f46",
+   "source": "reports-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Activity producing jev typed-decision shapes",
+   "where": "activity-api templates jev-typed-decision, jev-goal-intent-decision, jev-create-intent-decision; dispatch 6b7b4f3d",
+   "tried": "Operator-declared templates over bounded_shell; composition via aaec7681",
+   "outcome": "partial",
+   "date": "2026-09-18",
+   "evidence": "Activity plane executed ($0.000022); variables did not bind on target_template_id path (malformed JSON sent); reach verdict anti-correlated (e002e0d1 malformed reached:true, 6b7b4f3d correct reached:false); composition only at walk step 25 via bridge; not reached so nothing extracted; net-new resolver refused by grounding gate feature-compose.ts:3818. Templates operator-declared (law 4 hollow).",
+   "source": "reports-4"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "validator-dispatch runs 1 of 5 tasks; no validators discoverable",
+   "where": "ias-executor-ts validator-dispatch.json; operator-registered reliability:validate-task-output-v1",
+   "tried": "Filed a gap; dispatched a coax goal 15300e0f; the operator hand-registered a validator via POST /templates",
+   "outcome": "partial",
+   "date": "2026-08-24",
+   "evidence": "discover total goes from 0 to 1 for a content parent. The validator lives only in the DB volume, not in SHARED_TEMPLATES. [LIVE 09-28] executionSucceeded is still hardcoded false.",
+   "source": "reports-5"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Jev activity authoring first try (7 pre-registered attempts)",
+   "where": "validation/reports/jev-one-goal-probe/FIRSTTRY-*",
+   "tried": "Concept seeding, then direct resolve, description fix, validator rule, literal subject, then information-complete (schema in goal plus idiom in description)",
+   "outcome": "partial",
+   "date": "2026-09-18",
+   "evidence": "Unaided 0/5. Information-complete 2/2 first try (jev_decision_v2, gap_triage_decision, about $0.000019 each). No compounding between the two, the output has no consumer, and the probe templates are unretired [LIVE 09-28].",
+   "source": "reports-5"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Walk-composite mint: 4 stacked defects",
+   "where": "goal-host 8d960a8; ias-executor f3c7028; activity-api 62acd51, fc559be",
+   "tried": "The composite was tagged reached:false, per-task shapes were dropped (empty to empty), impulses_by_id was empty because satisfier reaches persist no impulse rows, and an 8 s impulse-resolve timeout. Fixed layer by layer.",
+   "outcome": "worked",
+   "date": "2026-08-13/14",
+   "evidence": "PROCESS_MEANT: learned-composition-vessel-health... went from 404 to 200 on the hub. The 08-13 'DEMONSTRATED' claim was retracted first.",
+   "source": "reports-6"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Execution-minted composition edges: 12 causes on one function",
+   "where": "activity-api 18c1490, 7b1071d, 99284cf, d7963d1, 9fda916, adc0c38, queryRaw",
+   "tried": "Eleven deploy cycles guessing statement forms; the case was settled by running the function in isolation.",
+   "outcome": "worked",
+   "date": "2026-08-21/22",
+   "evidence": "Edges 1999 to 2004, the first in the system's history. Causes 7, 8 and 12 were defects in the operator's own instrument; cause 10 (query() never checks statement status) is fleet-wide.",
+   "source": "reports-6"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome extraction",
+   "where": "ribosome e5b04851 (03-27), reach-to-mint 15620e7 (06-22)",
+   "tried": "Extract reached executions into templates",
+   "outcome": "failed",
+   "date": "2026-09-28",
+   "evidence": "1,788 extract executions in 7 d, all execution_error, pinned to a retired template. 0 templates since 09-22. Registration returns 400 every minute. Self-development has never crystallised.",
+   "source": "reports-7"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Verifier-recipe rescue / Option A retry-once / layer-2 stdout render",
+   "where": "44a75483 2026-08-27T11:49 goal-host 26f4ecb, f91f8f2",
+   "tried": "rescue clause (inert, reverted); retry fresh derivation; render shellResult stdout",
+   "outcome": "partial",
+   "date": "2026-08-27",
+   "evidence": "rescue in wrong branch; Option A + layer 2 durable; n=2 clean reaches, no rate; 4 families ever",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Reuse attribution storable",
+   "where": "ce71b42c 2026-08-29T02:13 activity-api 4e0d27a mig 204, goal-host d45aa3d",
+   "tried": "store reuse fields end-to-end incl response schema",
+   "outcome": "worked",
+   "date": "2026-08-29",
+   "evidence": "POST/GET round trip 200; E2 then falsified ceiling (proven pathway never reused)",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Make shape-blind pathways addressable",
+   "where": "goal_execution_paths donor index",
+   "tried": "1,644 pathways made addressable via vetted repair catalogue",
+   "outcome": "partial",
+   "date": "2026-09-06",
+   "evidence": "donors 1,539->3,186; reuse rate did not move",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Execution exemplar extraction brought alive",
+   "where": "35537c7e @ 2026-09-11 summary",
+   "tried": "fix 4 stacked defects in exemplar-selector (7c34185 etc.)",
+   "outcome": "partial",
+   "evidence": "execution_exemplar 0->719 across 82 activities, but no consumer was ever designed (gap exemplars-are-produced-but-no-production-path-consumes-them)",
+   "date": "2026-09-11",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Digest dual-write on second ingest route",
+   "where": "35537c7e @ 2026-09-12 summary",
+   "tried": "add trace_digest write to /v2/activities/executions (activities.ts:1910)",
+   "outcome": "worked",
+   "evidence": "feature_compose 2,491 executions/0 digests -> digests 0->43+; exemplars formed",
+   "date": "2026-09-12",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Eviction guard for reached-command cache",
+   "where": "35537c7e @ 2026-09-12 summary",
+   "tried": "77d318b: do not evict on unknown/infra verdicts",
+   "outcome": "partial",
+   "evidence": "env-cited evictions 0 after activation, but live cache flat 108->109->110->109; 'removes one drain, doesn't create gains'",
+   "date": "2026-09-12",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Crystallization proof, 4 runs",
+   "where": "80ab9659 @ 2026-09-18T10:19",
+   "tried": "novel -> identical -> after restart -> variant goal",
+   "outcome": "superseded",
+   "evidence": "declared 'Proven'; user asked for a trend not a sample; trial v2 replay 7/18, rebind 0/146; class-compounding claim retracted",
+   "date": "2026-09-18",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Exact-hit selection and eviction discipline",
+   "where": "80ab9659 @ 2026-09-18 summary and 12:45-15:44",
+   "tried": "6eed100 exact-hit (operator), 4c5534d unconfirmed-vs-disconfirmed (operator), 2e8b4cc strike counter (substrate, dictated diff)",
+   "outcome": "worked",
+   "evidence": "mul 12/12; pow strike->retain->replay live; final slice 9/12, every miss explained",
+   "date": "2026-09-18",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Publish composition reused against vessel repo",
+   "where": "validation/findings/2026-06-02-substrate-publishes-to-vessel-repos.md",
+   "tried": "same 7-task composition with a different cwd",
+   "outcome": "worked",
+   "date": "2026-06-02",
+   "evidence": "exec_mt2w5985, development-vessel PR #1; composition absent from later trace window",
+   "source": "validation-other-1"
+  }
+ ],
+ "problems": [
+  {
+   "key": "composition-crystallization",
+   "symptom": "composition-edge-reconcile upserts 0 edges in 204/205 runs; batch_traces:0 with recent_ids=287",
+   "root_cause": "Not discriminated (watermark or filter mismatch suspected)",
+   "last_seen": "2026-09-29",
+   "recurrences": 204,
+   "source": "docs-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Reached executions don't mint; learned pathways dropped; middle-tier rebind never selects",
+   "first_seen": "2026-06-30",
+   "last_seen": "2026-09-25",
+   "recurrences": 6,
+   "root_cause": "The mint path was gated on fields no producer set. The rebind cache is keyed to shapes the walk no longer targets (shape-mismatch).",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Ribosome extraction dead for weeks, then storming, recursive self-extraction, duplicate path with goal-host",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-09-29",
+   "recurrences": 6,
+   "root_cause": "no single authoritative reach signal; duplicate extraction owners",
+   "source": "git-small"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "ribosome and composition re-implemented 4 times; composition_chain empty; edge reconciler aborting",
+   "first_seen": "2026-03-27",
+   "last_seen": "2026-06-30",
+   "recurrences": 6,
+   "root_cause": "each platform generation rebuilds the mechanism instead of reusing it; mints not discoverable (no output_shapes)",
+   "source": "git-super-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Minting claimed working, found inert. The ribosome emitted 2 templates ever and later targeted a retired template",
+   "root_cause": "Writer and reader tables differ (activity_templates vs activity_template); reach tag not on the execution record",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-27",
+   "recurrences": 4,
+   "source": "git-super-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Minted composites unbindable (input_shapes leak), variant minting silent skip, ribosome skips reached executions (satisfier no row; false-as-terminal), self-dev pipeline unextractable, donor pathway record frozen",
+   "root_cause": "Extraction gated on verdicts that arrive late or never; resolver-implemented behaviours have no task census (law 2 violated for self-development)",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-09-02",
+   "recurrences": 6,
+   "source": "memory-10"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Learned composites persist but are unbindable, duplicated or never reused; reuse fires but doesn't compound",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-08-29",
+   "recurrences": 5,
+   "root_cause": "A lossy sink drops per-task shapes, prose shape inference, the path store is keyed on goal-text hash, pathway writes returned 500 on NULL, and no verifier means no donors",
+   "source": "memory-4"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Learned pathways not reused or reused broken",
+   "root_cause": "exact goal_hash keying, satisfier-headed paths not pinnable, write-terminal paths unrecorded, mint ungated on honesty, raw-count ranking",
+   "first_seen": "2026-07-19",
+   "last_seen": "2026-09-16",
+   "recurrences": 6,
+   "source": "memory-6"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "The ribosome extracts about nothing, composites are unbindable, and reuse is starved or concentrated on one donor",
+   "root_cause": "Stacked plumbing defects (WS counter, field nesting, status vocabulary, gates). Walk impulse ids leak as inputShapes. The satisfier short-circuit bypasses compositions. recommendReachingPath is only called from recovery",
+   "first_seen": "2026-07-23",
+   "last_seen": "2026-08-25",
+   "recurrences": 10,
+   "source": "memory-7"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "The same two activities are minted as \u22656 distinct one-shot compositions (learned-topology-snapshot \u2194 substrate-health-tick), plus reverse-named duplicate chains (90/84 executions).",
+   "root_cause": "Auto-mint does not dedupe by shape signature or composition edge set (law 3).",
+   "first_seen": "2026-07",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "source": "openspec-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Code-locality recall never finds a family (0/1000 recent)",
+   "root_cause": "Index keyed by family that predictions never match; index not refreshed since Sep 18; never promoted from shadow",
+   "first_seen": "2026-07-05",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "openspec-4"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Learned pathways recommended then discarded; valid compositions bank no edge; extraction starved; path records rejected",
+   "root_cause": "Satisfier pseudo-ids unpinnable; satisfier steps declare no inputs; phantom unique index and NULL state_signature; rebind lacks typed parameters",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-23",
+   "recurrences": 6,
+   "source": "reports-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Seed and learned templates drift from source (TTL, redacted placeholders). bootstrap-seeder refuses 19 templates.",
+   "root_cause": "The seeder skips a populated catalogue. Extraction redacts placeholders. The learning_track field is required but unset.",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29 (open)",
+   "recurrences": 3,
+   "source": "reports-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Walk performs 0 producer steps; all satisfiers; no producer->producer edges for dominant targets",
+   "root_cause": "Target inference flattens to [shellResult]@0.6 before vocabulary/LLM; producers declare input_shapes []; floor persists compositionChain []; ribosome mints nodes not edges",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-14",
+   "recurrences": 2,
+   "source": "reports-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Learned plane only knows the substrate: human goals matched into vessel-health compositions; no producer turns webSearchResult into an answer; reuse found only by walk-time bridge",
+   "first_seen": "2026-08-18",
+   "last_seen": "2026-09-19",
+   "recurrences": 2,
+   "root_cause": "All crystallized pathways extracted from self-directed work; target inference drops intermediates; last-mile producers missing.",
+   "source": "reports-4"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Extraction yield ~0.1%; the middle tier never fires; mints don't compound; activities are 76% duplicate families with 1.2% provenance",
+   "root_cause": "Ribosome eligibility is a literal list naming 1-of-5-task templates; extraction outputs a trace description; proposal minting outpaces earned minting",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "source": "reports-5"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "The edgeless graph (bridges with input ['goal']); edit-intent composes never reach mintReachedTrace; 0 templates since 09-22",
+   "root_cause": "Edit-intent routes before the walk; chain-guarded credit and extraction; the ribosome is pinned to a retired template",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "source": "reports-7"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Proven pathway never reused; 63.5% of accepted pathways satisfier-only and discarded; ribosome 1.1% eligible",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-03",
+   "recurrences": 3,
+   "root_cause": "satisfier pseudo-ids can't be pinned; raw-count top-1 ranking; ungraded executions",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Learned pathways do not compound: paths keyed by goal_hash (11.9x pooling lost), exemplars write-only, cache evicted on noise, rebind 0/146",
+   "first_seen": "2026-09-05",
+   "last_seen": "2026-09-18",
+   "recurrences": 3,
+   "root_cause": "Instance key instead of shape signature (found 09-05 and again 09-16); grader false negatives evict proven entries",
+   "source": "transcripts-3"
+  }
+ ],
+ "claims": [
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-05-28",
+   "claim": "Lift milestone: substrate authored 4+ gap-closing templates autonomously",
+   "where": "devbob percolation_2026_05_28_lift_achieved",
+   "later": "06-06: 193/193 drafter proposals unconsumable; the day's commit ceb3098 came from an operator-dropped proposal",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-06-21",
+   "claim": "feature_compose lands autonomously; full detect-to-land loop closed",
+   "where": "finding_2026_06_21_autonomous_loop_closed_land_via_cutover",
+   "later": "06-28 one-hour review 0 lands, all UNFAVORABLE (then 'criterion met \u2014 corrected')",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-06-28",
+   "claim": "Full unsupervised self-development loop complete and running",
+   "where": "finding_2026_06_28_autonomous_self_development_loop_complete_and_running",
+   "later": "07-08 dev-vessel crash-loop deadlock; 07-31 activity table stuck at 3,464, last real mint 07-27",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-06-30",
+   "claim": "Capstone: genuine multi-vessel composition reaches AND mints",
+   "where": "finding_2026_06_30_mint_drought_stale_process_and_composition_arc",
+   "later": "07-31 capability set stagnant; honest reach about 17-19%",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-08-27T02:03",
+   "claim": "Component 2 (gaining ground) demonstrated: 34 minted recipe lines",
+   "where": "44a75483",
+   "later": "02:20: 4 families ever; 23 lines are one goal; later rescue fix inert and reverted",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-08-29T20:19",
+   "claim": "Learning loop closed end-to-end; 538 learned-composition executions",
+   "where": "0f5cd43b",
+   "later": "same day E2 ceiling experiment FALSIFIED-b; ribosome 1.1% eligible on 09-03",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-09-06T05:35",
+   "claim": "First-mile adaptation fired for the first time in system history",
+   "where": "0b1032b5",
+   "later": "06:43 existence proof, refuted as a rate; reuse rate unchanged after 1,644 pathways made addressable",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-09-16",
+   "claim": "Signature keying is the missing parametrization (11.9x pooling)",
+   "where": "35537c7e @ 2026-09-16T20:52 summary",
+   "later": "Same finding filed 09-05 (re-key paths by path_signature); not landed in window; recurrence",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-09-18",
+   "claim": "Proven: crystallization works, durable, compounds to the class",
+   "where": "80ab9659 @ 2026-09-18T10:19",
+   "later": "User: trend not sample; trial v2 replay 7/18, rebind 0/146; class-compounding claim retracted",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-09-18",
+   "claim": "Strike-counter fix substrate-landed 2e8b4cc (full coax loop working)",
+   "where": "80ab9659 @ 2026-09-18T14:32",
+   "later": "Landed only after the operator dictated a three-edit diff into the gap (attempt 1 failed typecheck)",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-09-18",
+   "claim": "Conformance loop converged; nothing has died since the oracle went live",
+   "where": "80ab9659 @ 2026-09-18T15:44",
+   "later": "Rebind 0/146 and lesson-vocabulary gaps remain open; MEMORY.md flags that a FAVORABLE compose replaced a branch",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-06-04",
+   "claim": "substrate authored 2 templates end to end",
+   "where": "validation/findings/substrate-self-repair-observation-post-bootstrap-2026-06-03",
+   "later": "neither was executed afterwards",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-05-30",
+   "claim": "author->execute->promote loop closed; first gap-closing template graduated",
+   "where": "commit 7833ed73",
+   "later": "The registry holds gap-closing:precondition-rejection templates (05-31..06-02) analyzing draft-gap-closing-activity's own precondition rejections; the loop was never re-verified because the audit stopped 05-30",
+   "source": "validation-other-2"
+  }
+ ]
+}

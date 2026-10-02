@@ -1,0 +1,19 @@
+{
+  "id": "gap-to-feature-narrowing-guard-blind-to-recommit-lineage",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "add a regression test in repos/development-vessel/test/resolvers/ covering the bumpFailedAttempts narrowing guard in rep",
+  "description": "add a regression test in repos/development-vessel/test/resolvers/ covering the bumpFailedAttempts narrowing guard in repos/development-vessel/src/resolvers/gap-to-feature.ts. The guard is: const willExceedThreshold = fa >= 3 && !meta0.parent_gap_id && !meta0.re_commit && !meta0.source_gap_id; Add a test asserting that a gap whose classification_metadata has re_commit:true and source_gap_id set (i.e. a recommit- gap) is NOT narrowed (no child gap emitted) even when failed_attempts reaches 3+, and that a genuine root gap (no parent_gap_id, no re_commit, no source_gap_id) IS still narrowed at failed_attempts>=3 as before. This is a one-line-guard fix landed to close an alternation loop between feature-compose.ts's recommit-depth cap and this narrowing guard that was causing a CPU/thermal emergency (Tctl 100C) on 2026-08-29/30; the branch currently has zero test coverage.",
+  "goal_text": "add a regression test in repos/development-vessel/test/resolvers/ covering the bumpFailedAttempts narrowing guard in repos/development-vessel/src/resolvers/gap-to-feature.ts. The guard is: const willExceedThreshold = fa >= 3 && !meta0.parent_gap_id && !meta0.re_commit && !meta0.source_gap_id; Add a test asserting that a gap whose classification_metadata has re_commit:true and source_gap_id set (i.e. a recommit- gap) is NOT narrowed (no child gap emitted) even when failed_attempts reaches 3+, and that a genuine root gap (no parent_gap_id, no re_commit, no source_gap_id) IS still narrowed at failed_attempts>=3 as before. This is a one-line-guard fix landed to close an alternation loop between feature-compose.ts's recommit-depth cap and this narrowing guard that was causing a CPU/thermal emergency (Tctl 100C) on 2026-08-29/30; the branch currently has zero test coverage.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-to-feature-narrowing-guard-blind-to-recommit-lineage",
+  "source_gap_source": "substrate_detected"
+}

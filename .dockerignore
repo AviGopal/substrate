@@ -1,0 +1,49 @@
+# .dockerignore for Dockerfile.substrate
+# Exclude heavy/irrelevant paths from the build context
+
+# node_modules everywhere
+**/node_modules
+**/.git
+
+# Repos not needed in the substrate container
+repos/deployment
+repos/metabob-analysis-api
+repos/metabob-cloud-dashboard
+repos/metabob-internal-dashboard
+repos/metabob-dashboard
+repos/activity-dashboard
+repos/workbench
+# repos/concept-db is needed by substrate (Phase 1b)
+repos/conversation-vessel
+# repos/obsidian-vessel is built in-substrate (substrate-obsidian stage) — do NOT ignore
+repos/react-renderer
+repos/terminal
+repos/metabob-mcp
+repos/metabob-opencode
+repos/metabob-proto
+repos/metabob-rpc-api
+repos/k8s-activity-executor
+repos/vessels
+# repos/ias-executor-ts is needed by minibob
+# repos/cpg-inference-ts is needed by analysis-vessel
+repos/user-vessel
+repos/activity-monitor
+repos/metabob-cli
+
+# Validation / test artifacts (reports, demo captures, harness evidence — never baked)
+validation
+*.png
+*.jpg
+*.pdf
+docs/assets
+
+# Local workspace (mounted at runtime, not baked in)
+workspace
+
+# Operator-side Obsidian vault (gitignored runtime state). The obsidian
+# image builds its vault skeleton from the plugin at build time — no host dep.
+vault
+
+# Secret files never enter the image: scripts/substrate is copied wholesale, so a stray .env there would be baked in.
+.env
+**/.env

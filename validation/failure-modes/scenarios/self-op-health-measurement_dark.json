@@ -1,0 +1,19 @@
+{
+  "id": "self-op-health-measurement_dark",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "operational_health",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Measurement stream spectral-gap.jsonl is 779m stale (>60m) → its collector timer is likely dead; autonomy is unobservabl",
+  "description": "Measurement stream spectral-gap.jsonl is 779m stale (>60m) → its collector timer is likely dead; autonomy is unobservable on this axis until restored.",
+  "goal_text": "Measurement stream spectral-gap.jsonl is 779m stale (>60m) → its collector timer is likely dead; autonomy is unobservable on this axis until restored.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "self-op-health:measurement_dark",
+  "source_gap_source": "substrate_detected"
+}

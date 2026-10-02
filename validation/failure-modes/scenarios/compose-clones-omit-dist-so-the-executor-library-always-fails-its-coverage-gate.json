@@ -1,0 +1,19 @@
+{
+  "id": "compose-clones-omit-dist-so-the-executor-library-always-fails-its-coverage-gate",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Every compose against ias-executor-ts fails its own coverage gate regardless of the diff, because the compose clone omit",
+  "description": "Every compose against ias-executor-ts fails its own coverage gate regardless of the diff, because the compose clone omits the `dist/` build its test suite requires. Edit repos/development-vessel/src/resolvers/feature-compose.ts.",
+  "goal_text": "Every compose against ias-executor-ts fails its own coverage gate regardless of the diff, because the compose clone omits the `dist/` build its test suite requires. Edit repos/development-vessel/src/resolvers/feature-compose.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "compose-clones-omit-dist-so-the-executor-library-always-fails-its-coverage-gate",
+  "source_gap_source": "substrate_detected"
+}

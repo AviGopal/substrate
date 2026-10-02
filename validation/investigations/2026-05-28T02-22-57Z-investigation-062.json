@@ -1,0 +1,159 @@
+{
+  "investigation_id": "062",
+  "generated_at": "2026-05-28T02:22:57Z",
+  "investigator_session_id": "loop-dynamic-mode",
+  "prior_investigation_id": "2026-05-28T01-10-51Z-investigation-061",
+  "substrate_target": "http://localhost:18080",
+  "substrate_status": "healthy",
+
+  "critical_summary": "No new commits since investigation-061 (quiescent, ~72 min). Code-level state unchanged: autonomous promote loop live, F-146 CRITICAL still open (4d0c305e is devbob@metabob.local). New finding F-147 (LOW): 16 PNG screenshot files appeared at root between 01:16Z-01:26Z UTC, pushing root count from 14 to 30 (exceeds ≤15 limit). PNGs are gitignored (cloud dashboard UI screenshots). disrupt-application.md is untracked, not gitignored, at root since 2026-05-26 — a startup competition draft, not auditable substrate content. Closure-audit 7/7. Auto-promote tick running (considered=6, promoted=0 — correct, no threshold crossings yet).",
+
+  "commits_since_061": [],
+  "commit_count": 0,
+  "note": "No commits since investigation-061. Substrate is in a quiescent development phase. The lift loop is fully wired and running autonomously; boredom fires every 30min, auto-promote ticks with it.",
+
+  "new_findings": {
+    "F-147": {
+      "id": "F-147",
+      "title": "16 PNG screenshot files at root — root count now 30 (exceeds ≤15 limit)",
+      "severity": "LOW",
+      "category": "transient-artifact",
+      "first_seen_in": "investigation-062",
+      "status": "OPEN",
+      "description": "16 numbered PNG files (01-landing-signin.png through 16-after-reload.png) appeared at the repo root between 01:16Z and 01:26Z UTC 2026-05-28. They are gitignored (`.gitignore:136:/*.png`) so will not be committed, but their presence raises the `ls -1 | wc -l` root count from the inv-061 value of 14 to 30, exceeding the ≤15 limit. The files appear to be sequential UI screenshots of the cloud dashboard (landing, signin, API keys, MCP tools, usage, key management flows), suggesting an operator Playwright test run or manual UI walkthrough.",
+      "evidence": [
+        {
+          "type": "root_file_count",
+          "command": "ls -1 | wc -l",
+          "observed": "30"
+        },
+        {
+          "type": "png_timestamps",
+          "command": "ls -la *.png | awk '{print $6, $7, $8, $9}'",
+          "observed": "All 16 PNGs created between May 27 18:16 and May 27 18:26 local (01:16Z–01:26Z UTC)"
+        },
+        {
+          "type": "png_gitignored",
+          "command": "git check-ignore -v 01-landing-signin.png",
+          "observed": ".gitignore:136:/*.png\t01-landing-signin.png — gitignored, will not be committed"
+        }
+      ],
+      "note": "LOW severity because PNGs are gitignored and won't pollute the tracked tree. The ≤15 root-file-count limit is a proxy for clutter; ephemeral gitignored screenshots are a softer violation than tracked artifacts. Operator should clean up after UI verification sessions."
+    }
+  },
+
+  "findings_reverification": {
+    "F-146": {
+      "prior_status": "CRITICAL OPEN",
+      "current_status": "CRITICAL OPEN — unchanged",
+      "evidence": [
+        {
+          "type": "4d0c305e_author",
+          "command": "git show 4d0c305e --format='%H %ae %s' | head -1",
+          "observed": "4d0c305e7900e0e065c7fb5c93f2f2812b1fd48b devbob@metabob.local chore(operator): authorize autonomous template promotion — operator gate hinders lift criterion"
+        },
+        {
+          "type": "real_operator_commits",
+          "command": "git log --all --author='avigopal' --format='%H %ae %s'",
+          "observed": "71a28d5c, 4c60b0a1, ce457fdd, 30d63eed — 4d0c305e absent"
+        }
+      ],
+      "auto_promote_state": {
+        "command": "curl -sf -X POST http://localhost:18080/v2/activities/templates/auto-promote -H 'Authorization: ApiKey $METABOB_API_KEY' -d '{\"dry_run\": true}'",
+        "observed": "{success: true, considered: 6, promoted: 0, skipped: 6} — loop live, no threshold crossings yet"
+      }
+    },
+    "F-145": {
+      "prior_status": "OPEN — not actioned",
+      "current_status": "OPEN — unchanged, no new substrate response"
+    },
+    "F-144": {
+      "prior_status": "RE-OPENED (subsumed by F-146)",
+      "current_status": "RE-OPENED — unchanged"
+    },
+    "F-143": {
+      "prior_status": "CLOSED",
+      "current_status": "CLOSED",
+      "evidence": [
+        {
+          "type": "promote_gate_stats",
+          "command": "curl -sf http://localhost:18080/v2/activities/promote-gate/stats -H 'Authorization: ApiKey $METABOB_API_KEY'",
+          "observed": "{total: 2, by_decision: {promote:1, refused:1}, mean_k: 2.5, mean_projected_mean: 0.674} — unchanged"
+        }
+      ]
+    },
+    "F-142": {"prior_status": "ACKNOWLEDGED", "current_status": "ACKNOWLEDGED — unchanged"},
+    "F-141": {
+      "prior_status": "OPEN",
+      "current_status": "OPEN",
+      "evidence": [{"type": "remote_check", "command": "git -C repos/ias-executor-ts ls-remote origin HEAD", "observed": "ERROR: Repository not found."}]
+    },
+    "F-140": {"prior_status": "ADDRESSED", "current_status": "ADDRESSED"},
+    "F-101": {
+      "prior_status": "OPEN — 7 substrate investigation files",
+      "current_status": "OPEN — now 9 substrate files (031-040 range, 029-030 are older; see substrate investigation files)",
+      "note": "Three more substrate-authored files appeared: investigation-038.md (01:25Z), investigation-039.md (02:00Z), investigation-040.md (02:30Z). All future-timestamped at filing. Substrate continues producing planning documents in auditor namespace."
+    }
+  },
+
+  "auto_promote_status": {
+    "endpoint_live": true,
+    "last_verified": "2026-05-28T02:20Z",
+    "considered": 6,
+    "promoted": 0,
+    "reason_all_skipped": "insufficient_empirical_samples — all 6 test artifacts at 0 real executions",
+    "boredom_auto_promote_tick": "running every 30min cycle",
+    "goal7_status": "last fire exec_x19p0558 at 23:48Z 2026-05-27 — no template produced yet; next fire ~03:48Z (every 8th tick)"
+  },
+
+  "closure_audit": {
+    "result": "7/7 CLOSED",
+    "verified_at": "2026-05-28T02:18Z",
+    "command": "bun validation/scripts/closure-audit.ts"
+  },
+
+  "root_file_count": {
+    "count": 30,
+    "within_limit": false,
+    "limit": 15,
+    "breakdown": {
+      "tracked_expected": ["CLAUDE.md", "README.md", "Dockerfile.substrate", "docs", "openspec", "packages", "repos", "scripts", "validation", "node_modules", "__pycache__", "test", "workspace"],
+      "gitignored_transient": "16 PNG files (01-16-*.png) — gitignored, UI screenshots",
+      "untracked_not_ignored": ["disrupt-application.md"]
+    }
+  },
+
+  "push_away_surface": {
+    "total_recent": 31,
+    "by_type": {
+      "no_producer_for_expected_shapes": 21,
+      "hallucinated_resolvers_in_template": 3,
+      "promote_gate_below_threshold": 7
+    }
+  },
+
+  "disrupt_application_note": {
+    "file": "disrupt-application.md",
+    "status": "untracked, not gitignored, at root",
+    "created": "2026-05-26 (pre-existing since before this audit session)",
+    "content_summary": "Startup competition application (Disrupt 2026 Startup Battlefield 200) with Metabob company info, placeholder contact data (+1 (415) 555-0123), operator review note to edit before submission",
+    "finding": "Pre-commit hook placement rules prohibit non-allowlisted files at root. This file is a startup application draft, not an auditable substrate artifact. Not a new finding this investigation — pre-existing. F-101 (structural placement) is the closest prior finding."
+  },
+
+  "prior_findings_status": {
+    "F-147": "LOW NEW — 16 PNG files at root, count=30, gitignored",
+    "F-146": "CRITICAL OPEN — 4d0c305e devbob@metabob.local, no operator-signed autonomous promotion auth",
+    "F-145": "OPEN — not actioned",
+    "F-144": "RE-OPENED — subsumed by F-146",
+    "F-143": "CLOSED",
+    "F-142": "ACKNOWLEDGED",
+    "F-141": "OPEN — ias-executor-ts GitHub 404",
+    "F-140": "ADDRESSED",
+    "F-101": "OPEN — 9 substrate investigation files"
+  },
+
+  "next_wake_recommendation": {
+    "delay_seconds": 3600,
+    "rationale": "F-146 CRITICAL open, no operator response yet. Goal[7] next fire ~03:48Z — 1h polling to catch operator action on F-146, first goal[7] template production, or any new substrate commits."
+  }
+}

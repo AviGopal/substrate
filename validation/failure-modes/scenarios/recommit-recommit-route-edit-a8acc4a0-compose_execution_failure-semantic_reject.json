@@ -1,0 +1,19 @@
+{
+  "id": "recommit-recommit-route-edit-a8acc4a0-compose_execution_failure-semantic_reject",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap recommit-route-edit-a8acc4a0-compose_execution_failure repeated already-recorded failure class semantic_",
+  "description": "compose for gap recommit-route-edit-a8acc4a0-compose_execution_failure repeated already-recorded failure class semantic_reject: The patch only modifies a log message within a catch block, which does not address the 'no_unique_anchor' error in fs_edit operations.",
+  "goal_text": "compose for gap recommit-route-edit-a8acc4a0-compose_execution_failure repeated already-recorded failure class semantic_reject: The patch only modifies a log message within a catch block, which does not address the 'no_unique_anchor' error in fs_edit operations.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-recommit-route-edit-a8acc4a0-compose_execution_failure-semantic_reject",
+  "source_gap_source": "substrate_detected"
+}

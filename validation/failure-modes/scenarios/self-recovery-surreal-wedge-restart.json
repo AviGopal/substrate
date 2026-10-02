@@ -1,0 +1,19 @@
+{
+  "id": "self-recovery-surreal-wedge-restart",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "db_contention",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "self-recovery RESTARTED surrealdb after 2 consecutive ticks of a cheap RETURN 1 liveness probe timing out — the shared d",
+  "description": "self-recovery RESTARTED surrealdb after 2 consecutive ticks of a cheap RETURN 1 liveness probe timing out — the shared datastore was wedged in the MemoryHigh throttle zone (unresponsive without an OOM-kill, so it never self-restarted). Durable fix needed: bound the activity_execution_traces working set (retention) so the RocksDB footprint stays under the block-cache cap.",
+  "goal_text": "self-recovery RESTARTED surrealdb after 2 consecutive ticks of a cheap RETURN 1 liveness probe timing out — the shared datastore was wedged in the MemoryHigh throttle zone (unresponsive without an OOM-kill, so it never self-restarted). Durable fix needed: bound the activity_execution_traces working set (retention) so the RocksDB footprint stays under the block-cache cap.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "self-recovery-surreal-wedge-restart",
+  "source_gap_source": "substrate_detected"
+}

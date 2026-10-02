@@ -1,0 +1,7 @@
+run	dispatch	V20s	verdict_s	reached	reason	body_match
+1	1ed2a861-8b7b-4545-b9a7-22e0dd45fa74	PASS(exec=none,walkLog=5)	80	true/completed	deterministic:transform-verified — sha256(trendeight-demo-2026-09-19) = ae20bb1f69491f1789ac176f9426386ab8484163e3b959	MATCH
+2	31b272d9-7205-4ad7-9bde-aafd3f0d9c1f	PASS(exec=walk-satisfier-1-1789845910736,walkLog=9)	20	true/completed	deterministic:verified-compute-artifact — recomputed the arithmetic in-process (null) and resolved the named note "": 	MATCH
+3	d1b3ccd5-4ce5-41c3-8289-fb45ba651670	PASS(exec=none,walkLog=10)	71	true/completed	deterministic:transform-verified — product(631*487) = 307297 found in produced content	MATCH
+4	e82de65a-32d6-4b42-958e-bc335a93d1d2	PASS(exec=none,walkLog=8)	70	true/completed	deterministic:transform-verified — base64(settled) = c2V0dGxlZA== found in produced content	MATCH
+5	de7399d7-9375-4a7a-8db3-a40db4ba129b	PASS(exec=none,walkLog=7)	30	true/completed	deterministic:transform-verified — lettercount(mellifluous) = 11 found in produced content	MATCH
+6	f429f120-aef9-4661-81af-beae11825285	PASS(exec=universal-tool-fallback-9b346484-1789846106772,walkLog=9)	20	true/completed	deterministic:transform-verified — lowercase(VESSEL) = vessel found in produced content	MATCH

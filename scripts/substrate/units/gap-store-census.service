@@ -1,0 +1,29 @@
+[Unit]
+Description=Gap-store census — flags the gap store collapsing against its own high-water mark
+# Records how many gaps the substrateGap resolver serves and reports a drop below
+# half the highest count seen in the preceding 14 days. Closed gaps keep their
+# rows, so this series is monotonic apart from deliberate pruning and a large drop
+# is not attrition. Precedent: 2026-09-09, 4,113 gaps at 14:35 and 44 at 22:59
+# across a vessel restart, unreported; recovery depended on orphaned atomic-write
+# temps that happened to still be parseable.
+#
+# It asks the resolver rather than reading gaps.json: WORKSPACE_ROOT differs
+# between this script's environment and the vessel process's, and several stale
+# copies of that file exist on the box — one with a fresh mtime over months-old
+# records. The resolver is by definition serving the copy the substrate uses.
+#
+# It observes and does not guard. Refusing a destructive write is the real repair,
+# but a guard that can reject gap writes creates a deadlock that cannot be fixed
+# from inside — you cannot file a gap about being unable to file gaps — so
+# changing write semantics stays an operator decision.
+#
+# Bootstrap tier for the usual reason: the store this watches is where a detector
+# would otherwise record its own findings, so the watcher cannot depend on it.
+After=development-vessel.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/gap-store-census-tick.ts
+StandardOutput=journal
+StandardError=journal

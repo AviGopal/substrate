@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-2487f4d2-narrowed-syntax_break",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-2487f4d2] The gap store unexpectedly reduced from 4,113 rows to 44 due to loadGaps() returning",
+  "description": "[narrowed from route-edit-2487f4d2] The gap store unexpectedly reduced from 4,113 rows to 44 due to loadGaps() returning an EMPTY array on read or parse failures, risking silent data loss.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/resolvers/substrate-gap.ts(772,7): error TS1109: Expression expected.\n- syntax_break: src/resolvers/substrate-gap.ts(774,5): error TS1128: Declaration or statement expected. | src/resolvers/substrate-gap.ts(774,21): error TS1005: ';' expected. | src/resolvers/substrate-gap.ts(1037,3): \n- verify_failed: src/resolvers/substrate-gap.ts(778,1): error TS1184: Modifiers cannot appear here.\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-2487f4d2-narrowed repeated already-recorded failure class syntax_break: src/resolvers/substrate-gap.ts(788,5): error TS1128: Declaration or statement expected. | src/resolvers/substrate-gap.ts(1045,3): error TS1128: Declar. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "[narrowed from route-edit-2487f4d2] The gap store unexpectedly reduced from 4,113 rows to 44 due to loadGaps() returning an EMPTY array on read or parse failures, risking silent data loss.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/resolvers/substrate-gap.ts(772,7): error TS1109: Expression expected.\n- syntax_break: src/resolvers/substrate-gap.ts(774,5): error TS1128: Declaration or statement expected. | src/resolvers/substrate-gap.ts(774,21): error TS1005: ';' expected. | src/resolvers/substrate-gap.ts(1037,3): \n- verify_failed: src/resolvers/substrate-gap.ts(778,1): error TS1184: Modifiers cannot appear here.\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-2487f4d2-narrowed repeated already-recorded failure class syntax_break: src/resolvers/substrate-gap.ts(788,5): error TS1128: Declaration or statement expected. | src/resolvers/substrate-gap.ts(1045,3): error TS1128: Declar. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-2487f4d2-narrowed-syntax_break",
+  "source_gap_source": "substrate_detected"
+}

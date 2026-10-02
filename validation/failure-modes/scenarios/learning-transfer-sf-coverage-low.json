@@ -1,0 +1,19 @@
+{
+  "id": "learning-transfer-sf-coverage-low",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "performance_inefficiency",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Successor-feature transfer coverage is low: 2242/4493 variant cells (49.9%) carry a ψ transfer vector (< floor 50%). Thi",
+  "description": "Successor-feature transfer coverage is low: 2242/4493 variant cells (49.9%) carry a ψ transfer vector (< floor 50%). This is NOT a writer/backfill problem — updateSuccessorFeatures UPSERTs healthily on every trace store. The uncovered cells are STRUCTURALLY INELIGIBLE: their traces carry no v1 state-signature (gate lib/successor-features.ts:172) and/or no output_impulse_shapes (gate lib/successor-features.ts:181), so no ψ row is ever written for them. Canonical case: validator-dispatch has ~650k executions yet zero ψ rows (signature=null, output_impulse_shapes=null). The eligible (v1-signature × template) population is already ~fully covered, so the constant writes only re-UPSERT existing cells. LEVER — do NOT author a ψ backfill (the cells are ineligible, not un-computed); instead (a) attach v1 state-signatures to high-volume plumbing traces (validator-dispatch, sig-less slot-binding, …), (b) make those cells emit output_impulse_shapes, or (c) deliberately relax the two eligibility gates.",
+  "goal_text": "Successor-feature transfer coverage is low: 2242/4493 variant cells (49.9%) carry a ψ transfer vector (< floor 50%). This is NOT a writer/backfill problem — updateSuccessorFeatures UPSERTs healthily on every trace store. The uncovered cells are STRUCTURALLY INELIGIBLE: their traces carry no v1 state-signature (gate lib/successor-features.ts:172) and/or no output_impulse_shapes (gate lib/successor-features.ts:181), so no ψ row is ever written for them. Canonical case: validator-dispatch has ~650k executions yet zero ψ rows (signature=null, output_impulse_shapes=null). The eligible (v1-signature × template) population is already ~fully covered, so the constant writes only re-UPSERT existing cells. LEVER — do NOT author a ψ backfill (the cells are ineligible, not un-computed); instead (a) attach v1 state-signatures to high-volume plumbing traces (validator-dispatch, sig-less slot-binding, …), (b) make those cells emit output_impulse_shapes, or (c) deliberately relax the two eligibility gates.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "learning-transfer-sf-coverage-low",
+  "source_gap_source": "substrate_detected"
+}

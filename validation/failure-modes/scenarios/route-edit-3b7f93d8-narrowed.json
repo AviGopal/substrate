@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-3b7f93d8-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-3b7f93d8] investigate and decompose gap route-edit-3c6b2eb6: A compose cutover for one gap com",
+  "description": "[narrowed from route-edit-3b7f93d8] investigate and decompose gap route-edit-3c6b2eb6: A compose cutover for one gap committed another gap's staged edit under its own attribution, and mirrored only its own files — leaving the swept-in change present in git and absent from the running tree.\n\nOBSERVED 2026-09-10 11:11:17. An operator dispatch edited repos/development-vessel/src/resolvers/patch-with-tools.ts, adding a diagnostic to the semantic gate's PASSED log line. It reached\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- typecheck_dangling_reference: (fail) resolveGapToFeature cooldown logic > a non-attempt compose result should clear the cooldown for immediate re-eligibility [0.09ms] | (fail) resolveGapToFeature cooldown logic > a genuine non-lan\n- semantic_reject: The patch adds a new constant `GAP_ATTRIBUTION_TRACKING` and modifies a log message by adding `pointer.gap_id`. Neither change directly addresses the core issue of a compose cutover mirroring only its\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-3b7f93d8] investigate and decompose gap route-edit-3c6b2eb6: A compose cutover for one gap committed another gap's staged edit under its own attribution, and mirrored only its own files — leaving the swept-in change present in git and absent from the running tree.\n\nOBSERVED 2026-09-10 11:11:17. An operator dispatch edited repos/development-vessel/src/resolvers/patch-with-tools.ts, adding a diagnostic to the semantic gate's PASSED log line. It reached\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- typecheck_dangling_reference: (fail) resolveGapToFeature cooldown logic > a non-attempt compose result should clear the cooldown for immediate re-eligibility [0.09ms] | (fail) resolveGapToFeature cooldown logic > a genuine non-lan\n- semantic_reject: The patch adds a new constant `GAP_ATTRIBUTION_TRACKING` and modifies a log message by adding `pointer.gap_id`. Neither change directly addresses the core issue of a compose cutover mirroring only its\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-3b7f93d8-narrowed",
+  "source_gap_source": "substrate_detected"
+}

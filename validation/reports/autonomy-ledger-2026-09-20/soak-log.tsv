@@ -1,0 +1,2 @@
+utc	open_gaps	closed_gaps	substrate_detected_open	hb_age_s	trend_scores	view_rows	gh_commit	dv_commit	ground_refusals_1h	oracle_verdicts_1h	restarts
+2026-09-20T06:24	373	1218	320	216	deterministic-battery=1/3,base64=3/3,product=3/3,uppercase=1/3	725	65aa372	175b9f1	5	21	0//0//0/

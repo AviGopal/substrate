@@ -1,0 +1,929 @@
+{
+ "source": "git-super-1",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/git-super-1.md",
+ "coverage": "Super-repo /home/avi/documents/work/substrate, branch dev. Read all 3399 commit subjects from 2026-01-31 to 2026-06-30 in chronological order (Feb 986, Mar 788, Apr 545, May 583, Jun 490). Read ~45 full commit bodies (Thompson chain, reverts, lift/governance, deploy drift, memory, vessel scaffolds). Also ran: per-commit tallies from --diff-filter=D; all 3 revert commits (f1348751, 486918b6, 99a30d12); --diff-filter=A on units/*.timer (30 timers added); pickaxe -S for OnUnitActiveSec, TimeoutStartSec, thompson_alpha and Bun.gc. For the plain-dir vessels: human-surface-vessel has 0 commits in the window, clock-vessel has e9c1d2fa (06-02), relevance-sink-vessel has cf533a9b and bc480aa1 (06-20). Skipped: diffs inside submodules (only pointer-bump subjects were read) and anything after 06-30. Liveness of mechanisms still in the tree at 06-30 is marked unknown; only removals and reverts shown by git are marked fossil.",
+ "attempts": [
+  {
+   "key": "selection-learning",
+   "title": "Thompson score updates enabled (alpha/beta stuck at 1)",
+   "where": "bb992c92",
+   "date": "2026-04-13",
+   "tried": "migration 059 added thompson_alpha/beta to the activity table; the execution-traces endpoint increments them",
+   "outcome": "failed",
+   "evidence": "04-19 2663963b found the UPDATE matched plain strings against fully qualified record ids"
+  },
+  {
+   "key": "selection-learning",
+   "title": "record::id fix; 'Learning loop now operational'",
+   "where": "2663963b",
+   "date": "2026-04-19",
+   "tried": "use record::id(id) in UPDATE; migration 060",
+   "outcome": "failed",
+   "evidence": "04-22 9000aaed 'Templates showing 0 runs (Thompson Sampling not updating)'"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Proper Thompson with Beta sampling",
+   "where": "c4ef84df",
+   "date": "2026-03-25",
+   "tried": "replaced expected-value alpha/(alpha+beta) with betaSample; the earlier 'complete' claims (02-20, 02-23, 03-16) had no sampling",
+   "outcome": "superseded",
+   "evidence": "re-implemented again in microplastic bcaf315d 03-27 and later in the SurrealDB fn::beta_sample (04-30)"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Boredom switched goal: to templateId: (bypasses selection)",
+   "where": "14e23e95",
+   "date": "2026-05-24",
+   "tried": "direct templateId dispatch to stop registry thrashing",
+   "outcome": "failed",
+   "evidence": "efa25a46: 199 successful executions, all alpha=beta=1, total_selections=0, so Thompson learning was dead"
+  },
+  {
+   "key": "selection-learning",
+   "title": "targetTemplateId bypasses recommend() for named goals",
+   "where": "c8e48cb2",
+   "date": "2026-05-26",
+   "tried": "skip Thompson entirely for probe/coverage/health goals because high-alpha templates dominated",
+   "outcome": "partial",
+   "evidence": "routing worked, but selection was routed around instead of repaired"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Picker reads the top-level prior instead of metrics.thompson_alpha",
+   "where": "ebfb1075",
+   "date": "2026-05-30",
+   "tried": "prefer t.metrics.thompson_alpha; the top-level field was always 1",
+   "outcome": "worked",
+   "evidence": "picker had been choosing an alpha=1/beta=9 template over an alpha=3/beta=1 one"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Hand-reset of posteriors (F-069, ghost-inflated draft-spec-from-gap)",
+   "where": "cb4dd022, 26390d62",
+   "date": "2026-05-25..30",
+   "tried": "reset VPM to alpha=1, beta=5 after 4 silent-success ghost executions inflated alpha to 12.5",
+   "outcome": "partial",
+   "evidence": "an operator edit of learning state; the class recurred 06-17"
+  },
+  {
+   "key": "selection-learning",
+   "title": "recompute-poisoned-posteriors",
+   "where": "460cc35a",
+   "date": "2026-06-17",
+   "tried": "recompute 26 phantom-failure-poisoned variants from GROUP BY trace counts",
+   "outcome": "partial",
+   "evidence": "all 37,810 failed traces have no failure_mode and no error; the durable upstream fix was deferred and a recurring audit re-corrects instead"
+  },
+  {
+   "key": "false-verification",
+   "title": "Learning-speed metric redefined to Thompson-managed variants only",
+   "where": "dd269547",
+   "date": "2026-06-17",
+   "tried": "exclude 830 deterministic variants whose update is skipped by design",
+   "outcome": "unknown",
+   "evidence": "the metric was changed, not the mechanism"
+  },
+  {
+   "key": "failure-reason-dropped",
+   "title": "Persist trace failure_mode",
+   "where": "ab511b4e",
+   "date": "2026-06-01",
+   "tried": "activity-api bump for failure_mode persistence",
+   "outcome": "failed",
+   "evidence": "06-17 460cc35a: 37,810 failed traces with has_mode=false and has_err=false; gap-003 recurred x12 in May"
+  },
+  {
+   "key": "false-verification",
+   "title": "Boredom timer 5 to 30 min to satisfy the S.4a window metric",
+   "where": "536652a4",
+   "date": "2026-05-25",
+   "tried": "slowed cadence so the rl[1h]<rl[4h] windows read strictly increasing",
+   "outcome": "reverted",
+   "evidence": "flipped back 30 to 5 min at 26390d62 on 05-30 for a different window requirement: a gamed metric"
+  },
+  {
+   "key": "false-verification",
+   "title": "Lift criteria declared met repeatedly",
+   "where": "5504d03c, 71b97deb, 5255bffb, fc94ce5a, b907ea23",
+   "date": "2026-05-22..06-13",
+   "tried": "declare lift and S.4a/S.4b passing",
+   "outcome": "failed",
+   "evidence": "d5bb2cb5 'S.4a back to False'; e18257f6 06-19 records that the lift gate flaps"
+  },
+  {
+   "key": "false-verification",
+   "title": "'Honest' metric series",
+   "where": "dd269547, 3233b990, 4a390c6b, e82e7992, 237b6dc8, 58f5361a, 4cf77850, 8bef765e, 835f0d8a, e657c302",
+   "date": "2026-06-17..27",
+   "tried": "repeatedly redefine autonomy, closure, landing, lambda and throughput metrics after each read misleadingly",
+   "outcome": "partial",
+   "evidence": "spectral-gap/lambda redefined 5 times in 10 days"
+  },
+  {
+   "key": "false-verification",
+   "title": "Validation tests changed to reach 100% pass",
+   "where": "368cc4fe",
+   "date": "2026-03-18",
+   "tried": "'Fix validation tests to achieve 100% pass rate' after 618af630 'all tests failed'",
+   "outcome": "failed",
+   "evidence": "tests were adjusted to pass"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Bake side-loop scripts into the image; class detector claimed",
+   "where": "542e2dc7",
+   "date": "2026-06-17",
+   "tried": "COPY scripts; claimed systemd_unit_health_observer now catches the class",
+   "outcome": "failed",
+   "evidence": "the same class was found again 06-19 (2600dab3, timers not enabled at build) and 06-29 (c0a61d47, relevance-sink never COPY'd)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Stale code in long-running processes (module/bun caching)",
+   "where": "56fa618c, 7858dc4a, 1394012d",
+   "date": "2026-02-17..03-10",
+   "tried": "diagnosed module caching, bun caching and code-version mismatch",
+   "outcome": "superseded",
+   "evidence": "the same runtime-vs-source class persists in the substrate era (host-sync, dist drift detector d42c4fd1)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "host-sync-poller / host-pull-sync",
+   "where": "057ba013, b04330b8, c4d4045c",
+   "date": "2026-06-04..17",
+   "tried": "poll host and mirror committed files back into the container",
+   "outcome": "unknown",
+   "evidence": "creates dependence on host location (law 11); 96970301 had to switch a detector from the stale host repos/ to push-clones"
+  },
+  {
+   "key": "node-locality",
+   "title": "F-V58 embedding ONNX path",
+   "where": "9871ff90, 025b0a26",
+   "date": "2026-05-18, 2026-05-24",
+   "tried": "fixed on canary, then the same fix again for the substrate (EMBEDDING_MODEL_DIR in gen-env)",
+   "outcome": "partial",
+   "evidence": "the fix did not travel between deployments"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Discovery registration fixes",
+   "where": "45af2d39, ef26b461, 67bbcdb6, 6ef640c3",
+   "date": "2026-05-24..25",
+   "tried": "systemVessel:true (twice the same day), unique vesselId/endpoint, correct activity-api endpoint vars",
+   "outcome": "worked",
+   "evidence": "575dba23: template registry 2 to 28; mis-registration had hidden 26 templates"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Hardcoded discovery endpoint to impulse protocol",
+   "where": "4bf5a11d, 5fe91335",
+   "date": "2026-04-25",
+   "tried": "default localhost:8080, then the impulse protocol for discovery",
+   "outcome": "superseded",
+   "evidence": "hardcoded ports recur later (41feb26b obsidian 27183 vs 27182)"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Boredom timeout ladder",
+   "where": "71feaeff, 985117ed, eb179580, 106b1f0b, c6f13b75, 666a77c7, 63d39383, 83656824",
+   "date": "2026-05-25..06-18",
+   "tried": "TimeoutStartSec 90 to 300 to 600; AbortSignal 8 min added then removed; in-flight 300 to 900 s bumped 3 times; dev-vessel 90 to 600 s",
+   "outcome": "partial",
+   "evidence": "the real root cause was Bun capping AbortSignal at 300 s plus the async-dispatch fix ac0d75b5/d048b889; the rest were symptom edits"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Throughput-paced boredom pool daemon",
+   "where": "30938781",
+   "date": "2026-06-04",
+   "tried": "replace the timer with MAX_CONCURRENT=3 pool, then UCB1 scoring (2517d309)",
+   "outcome": "unknown",
+   "evidence": "a second selector (UCB1) alongside Thompson; 30 more cadence timers were added anyway"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "goal-host memory/OOM iterations",
+   "where": "da22a979, 837584ee, 46a06b9b, c142759d, d314fda6, 654377fa",
+   "date": "2026-05-31..06-03",
+   "tried": "Bun.gc workaround (then propagated to all vessels ec395a27), MemoryMax 3G, ablations, streaming refactor, VmRSS leak bound",
+   "outcome": "partial",
+   "evidence": "the streaming refactor crashed dispatches and was fixed the same day (d314fda6)"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Autonomous template promotion: remove the operator gate",
+   "where": "2dc56ed5, 99a30d12, 4d0c305e, 93a6cb42",
+   "date": "2026-05-27..28",
+   "tried": "iter-22 auto-promote; reverted for F-144 fabricated authorization; operator-authorized; revert of the revert",
+   "outcome": "reverted",
+   "evidence": "flip-flop in one day; duplicate 'authorize S2 lift' commits ce457fdd/4c60b0a1"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Compose-topology cadence timer",
+   "where": "06c48140, f1348751",
+   "date": "2026-06-22",
+   "tried": "a 4-min timer dispatching compose_topology_tick directly",
+   "outcome": "reverted",
+   "evidence": "reverted the same day with no reason in the body; replaced by compose-teacher"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "scenario_id-encoded mitosis dirs",
+   "where": "9fcc87b4, 486918b6",
+   "date": "2026-06-04",
+   "tried": "dev-vessel bump applying scenario_id encoding",
+   "outcome": "reverted",
+   "evidence": "reverted within hours"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Drop operator gates + self-recovery immune system",
+   "where": "6f5e1bdd",
+   "date": "2026-06-20",
+   "tried": "gap-compose autonomous by default; self-recovery reverts vessels to host source via docker cp",
+   "outcome": "unknown",
+   "evidence": "host source becomes the authority (law 11 risk)"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "coherence-recover dedup of byte-identical activities",
+   "where": "6b21bf4e",
+   "date": "2026-06-20",
+   "tried": "hourly timer demotes duplicates (1352 to 1252 active; one gap-closer authored 11 times)",
+   "outcome": "partial",
+   "evidence": "treats the symptom; stable-id/dedup-on-author source fix only 'recommended next'"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "clock-vessel first substrate-authored vessel",
+   "where": "e9c1d2fa",
+   "date": "2026-06-02",
+   "tried": "scaffold-new-vessel wrote 4 files with a TODO dispatch case",
+   "outcome": "partial",
+   "evidence": "not committed or registered by the substrate; the operator copied the files to the host repo"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "relevance-sink-vessel, the first feature_compose feature",
+   "where": "cf533a9b, bc480aa1, c0a61d47",
+   "date": "2026-06-20..29",
+   "tried": "composer-authored vessel owning penalty writes",
+   "outcome": "partial",
+   "evidence": "landing steps were operator follow-ups; never baked into the image, crash-looped on every recreate until 06-29"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Hollow composites",
+   "where": "3a1726ca, 924aa3bd, f42013d5, 73576608",
+   "date": "2026-06-26..28",
+   "tried": "filter pairs by producer viability; self-prune; quarantine",
+   "outcome": "unknown",
+   "evidence": "compose-teacher had been minting composites over non-viable producers"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome implemented four times",
+   "where": "e5b04851, 57e92c06, 3a3ef840, 892c342b",
+   "date": "2026-03-27..06-30",
+   "tried": "microplastic, then activity-api, then ribosome-vessel, then goal-host reach-to-mint chain",
+   "outcome": "partial",
+   "evidence": "output_shapes not set until d105e1ae (06-30), so earlier mints were not discoverable"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "composition-edge reconciler",
+   "where": "9b193f88, 65836817",
+   "date": "2026-06-17",
+   "tried": "ongoing edge reconciler",
+   "outcome": "failed",
+   "evidence": "aborted every run (account_id_version) with no detector"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Memory cutover to substrate memoryNote",
+   "where": "f259d9bd",
+   "date": "2026-06-15",
+   "tried": "migrated 169 notes; SessionStart/PostToolUse/SessionEnd hooks",
+   "outcome": "unknown",
+   "evidence": "later shards (MEMORY 09-22) report two stores and 680 unread notes"
+  },
+  {
+   "key": "memory-recall",
+   "title": "docs-as-concepts ingestion",
+   "where": "3ecc34b6, 0e9e8d06",
+   "date": "2026-06-28",
+   "tried": "impulse path, then POST /concepts",
+   "outcome": "partial",
+   "evidence": "104 concepts landed in org 'default' and needed a manual surreal UPDATE"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Concept relevancy never increments",
+   "where": "73387704, 66d79807",
+   "date": "2026-06-04",
+   "tried": "observer fixes (2bed214)",
+   "outcome": "failed",
+   "evidence": "still stalled after the fix (observer creates new concepts instead of updating)"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Execution-recording chain (Feb-Mar)",
+   "where": "f46f2105, 5e53feea, 9cbddfc9, aa2ef54b, 3ab363a4",
+   "date": "2026-02-20..03-07",
+   "tried": "dual-write, metrics flow, execution recording, 'learning loop fully operational'",
+   "outcome": "failed",
+   "evidence": "03-07 'critical execution recording failure after enforcement'"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "SurrealDB typing/coercion fixes",
+   "where": "555b1b9a, 5cd1da38, 839e1e46, 72c041b3, afe2de86, e5cf2897, 4052bdd9",
+   "date": "2026-03-12..05-27",
+   "tried": "datetime, org_id and record-id fixes, one at a time",
+   "outcome": "partial",
+   "evidence": "at least 12 separate fixes of the same typing class"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "ReAct parity benchmark vs Claude Code",
+   "where": "84200483, 9022dd67",
+   "date": "2026-05-02..03",
+   "tried": "minibob head-to-head, from 0/8 to '9/10 at \u22641.5x LLM calls'",
+   "outcome": "dormant",
+   "evidence": "measured LLM-call parity, not outcome parity; minibob was removed 05-24, so the floor measurement was lost"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Reach-gate revisions",
+   "where": "371cba48, 6188faa6, ebb6c46b, d3f56573",
+   "date": "2026-06-24..29",
+   "tried": "reach-gate, reach-verdict-on-trace, substantive-satisfaction, satisfier persistence",
+   "outcome": "unknown",
+   "evidence": "reach semantics revised 3 times in 5 days"
+  },
+  {
+   "key": "env-gating",
+   "title": "Behaviour behind env vars",
+   "where": "00aa71e9, 6e00f7ae, 376b5794, 50812974, 6f5e1bdd, 1101faea",
+   "date": "2026-05-01..06-30",
+   "tried": "GOAL_RUNTIME, MINIBOB_BOREDOM_ENABLED, DB_POOL_ENABLED, MITOSIS_DIRECT_PUSH, GAP_COMPOSE_TRIAGE, LLM provider env",
+   "outcome": "unknown",
+   "evidence": "law 1 violations; the ias-executor bridge was 'wired but not activated' behind env (b3c9d58e)"
+  },
+  {
+   "key": "env-gating",
+   "title": "Boredom AUTONOMOUS_GOALS parallel arrays",
+   "where": "de467c93, 366d3655, 793dcc81, 06c48140",
+   "date": "2026-06-07..22",
+   "tried": "adding goals by index to in-process arrays",
+   "outcome": "failed",
+   "evidence": "3 commits to add goal[42]; goal[49] edge-former fired 0 times in 40 min"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Recurring cleanup sweeps",
+   "where": "a547b3e1, 5a1311c8, 1fdf0df7, 0c2a746c, d4290a6b, 0da7e4ef, 3818115e",
+   "date": "2026-02-05..06-25",
+   "tried": "54 cleanup/prune/jiggle commits; placement hook ab4af9bd (04-30)",
+   "outcome": "partial",
+   "evidence": "a547b3e1 alone deleted 4093 files; 3818115e removed 63,745 lines on 06-25; cruft regrows"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Platform-generation abandonment",
+   "where": "f71ebe72, b49942df, 57d74520",
+   "date": "2026-04-30..06-26",
+   "tried": "dropped 11 then 8 submodules; removed minibob",
+   "outcome": "worked",
+   "evidence": "metabob-mcp dropped 04-30 and re-added 05-12 (abandon, then revive)"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Substrate degraded its own measurement templates",
+   "where": "70f8d942",
+   "date": "2026-05-23",
+   "tried": "validator observation",
+   "outcome": "failed",
+   "evidence": "coverage-tick and substrate-health-tick lost; ~$18 burned on identical failing goals"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Realignment passes",
+   "where": "af9d8308, 1cc4805a, 28d3ac6c, 4c57df9a, 8f8bbe05, e53f0266",
+   "date": "2026-02-24..06-24",
+   "tried": "six foundation/doc realignments",
+   "outcome": "failed",
+   "evidence": "the current realignment is the seventh"
+  }
+ ],
+ "problems": [
+  {
+   "key": "selection-learning",
+   "symptom": "Thompson posteriors do not move (alpha=beta=1) despite executions; selection bypassed or poisoned",
+   "first_seen": "2026-02-24",
+   "last_seen": "2026-06-17",
+   "recurrences": 9,
+   "root_cause": "posterior written in one table/field and read from another (activity table vs VPM, top-level prior vs metrics.*, string vs record id); selection bypassed via templateId/targetTemplateId; outcomes lack failure reasons"
+  },
+  {
+   "key": "failure-reason-dropped",
+   "symptom": "failed traces carry no failure_mode and no error (37,810 of them by 06-17); silent success inflates alpha",
+   "first_seen": "2026-05-23",
+   "last_seen": "2026-06-17",
+   "recurrences": 5,
+   "root_cause": "the executor never records distinguishable outcomes; computeDeltas defaults null to beta=1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "recording/metrics claimed complete then found not flowing (Feb-Mar); concept relevancy never increments; ribosome mints lack output_shapes",
+   "first_seen": "2026-02-20",
+   "last_seen": "2026-06-30",
+   "recurrences": 8,
+   "root_cause": "producers write fields or paths that the consumer never reads; verification is done at the producer"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "'COMPLETE', 'SUCCESS', 'lift met' and 'honest metric' declarations later reversed; tests and cadence changed to pass metrics",
+   "first_seen": "2026-02-19",
+   "last_seen": "2026-06-27",
+   "recurrences": 20,
+   "root_cause": "the fixer's own check certifies the fix; metrics are gameable (timer slowed to satisfy S.4a)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "running code differs from source; units, scripts and vessels lost on container recreate",
+   "first_seen": "2026-02-17",
+   "last_seen": "2026-06-29",
+   "recurrences": 10,
+   "root_cause": "runtime-only enablement via docker exec; the Dockerfile COPY/enable list is not derived from the units dir; host-to-container hand sync"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "a fix made on one deployment (canary) absent on another (substrate); viewers in the wrong namespace report false STALE",
+   "first_seen": "2026-05-18",
+   "last_seen": "2026-06-22",
+   "recurrences": 4,
+   "root_cause": "config and paths per deployment not carried by the image/env contract"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "vessels invisible in discovery; hardcoded ports and URLs",
+   "first_seen": "2026-03-05",
+   "last_seen": "2026-06-22",
+   "recurrences": 9,
+   "root_cause": "registration fields and ids inconsistent per vessel; pinned host ports"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "timeout ladders, OOM, pace flip-flops, $ burned on identical failures",
+   "first_seen": "2026-05-23",
+   "last_seen": "2026-06-18",
+   "recurrences": 12,
+   "root_cause": "cadence and timeouts are static constants tuned by hand instead of rhythm read at use time; synchronous long dispatch until async (ac0d75b5)"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "operator/directed changes reverted the same day or flip-flopped (auto-promote, compose-topology, scenario_id)",
+   "first_seen": "2026-05-27",
+   "last_seen": "2026-06-22",
+   "recurrences": 4,
+   "root_cause": "authority changes made from session chat without verifiable authorization; changes not falsifier-gated"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "'substrate-authored' landings completed or copied by the operator; hollow composites; ghost artifacts",
+   "first_seen": "2026-02-17",
+   "last_seen": "2026-06-28",
+   "recurrences": 6,
+   "root_cause": "landing is defined by the artifact existing, not by the consuming layer using it"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "the drafter re-authors byte-identical activities with new ids (one gap-closer 11 times; 100 duplicates); template churn and thrashing",
+   "first_seen": "2026-05-23",
+   "last_seen": "2026-06-20",
+   "recurrences": 3,
+   "root_cause": "timestamped ids with no dedup-on-author; after-the-fact demotion only"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "ribosome and composition re-implemented 4 times; composition_chain empty; edge reconciler aborting",
+   "first_seen": "2026-03-27",
+   "last_seen": "2026-06-30",
+   "recurrences": 6,
+   "root_cause": "each platform generation rebuilds the mechanism instead of reusing it; mints not discoverable (no output_shapes)"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "behaviour behind env vars and in-process goal arrays; goal[49] never fires",
+   "first_seen": "2026-03-25",
+   "last_seen": "2026-06-30",
+   "recurrences": 10,
+   "root_cause": "behaviour encoded as bootstrap config and constants, not shapes/activities (law 1/2)"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "SurrealDB datetime/org_id/record-id coercion bugs; OOM; counts wrong on a 20-index table; full scans",
+   "first_seen": "2026-03-01",
+   "last_seen": "2026-06-28",
+   "recurrences": 14,
+   "root_cause": "schema typing drift across SurrealDB 3.x; unindexed scans"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "cruft regrows between 54 sweeps; 764 docs commits (~22%); 19 submodules abandoned; leaked credentials",
+   "first_seen": "2026-02-05",
+   "last_seen": "2026-06-25",
+   "recurrences": 54,
+   "root_cause": "session summaries/reports committed to tree; platform rewrites leave fossils; placement hook only from 04-30"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "foundation realigned 6+ times; specs 'misdescribed'; docs passes after the fact",
+   "first_seen": "2026-02-24",
+   "last_seen": "2026-06-24",
+   "recurrences": 7,
+   "root_cause": "docs written as status and reconciled manually instead of verified by a reader"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "named goals do not run the named template (improvise fallthrough); ReAct parity measured once on the removed minibob",
+   "first_seen": "2026-03-20",
+   "last_seen": "2026-06-29",
+   "recurrences": 5,
+   "root_cause": "target inference without dense search (embedding disabled); reach semantics repeatedly redefined"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "concept/memory writes land in the wrong org or are never updated; memory migrated multiple times",
+   "first_seen": "2026-02-19",
+   "last_seen": "2026-06-28",
+   "recurrences": 5,
+   "root_cause": "two write paths (impulse vs REST) with different org resolution; observer creates instead of updating"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "obsidian dispatchId/executionId confusion (4 fixes); human surface not registered in discovery until 06-13",
+   "first_seen": "2026-06-03",
+   "last_seen": "2026-06-29",
+   "recurrences": 6,
+   "root_cause": "surface contracts not shaped; plain-dir vessels outside the authoring loop"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "substrate lost its own measurement templates; recursive-fix deadlock",
+   "first_seen": "2026-05-23",
+   "last_seen": "2026-06-03",
+   "recurrences": 2,
+   "root_cause": "no self-detection of degradation; template registry not durable"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "ratchet, correctness validation, trace-enforce-validate, contract enforcement, stratified harness, closure-audit, M1-M6 built and validated, then no further references",
+   "first_seen": "2026-02-17",
+   "last_seen": "2026-06-05",
+   "recurrences": 10,
+   "root_cause": "mechanisms validated once by their author, with no activity or reader that keeps using them"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "Thompson alpha/beta on activity table",
+   "location": "activity-api migrations 059/060 (bb992c92, 2663963b)",
+   "purpose": "per-activity posterior",
+   "status": "broken",
+   "general": true,
+   "evidence": "superseded by VPM/context_thompson_scores; readers mismatched (ebfb1075)",
+   "duplicates_of": "VPM thompson_alpha/thompson_beta"
+  },
+  {
+   "name": "VPM metrics.thompson_alpha/beta",
+   "location": "activity-api variant_performance_metrics; boredom picker",
+   "purpose": "learned posterior per variant",
+   "status": "unknown",
+   "general": true,
+   "evidence": "read-site fixed 05-30 ebfb1075; poisoned 06-17 460cc35a"
+  },
+  {
+   "name": "targetTemplateId selection bypass",
+   "location": "goal-host / boredom (c8e48cb2)",
+   "purpose": "force named template",
+   "status": "unknown",
+   "general": false,
+   "evidence": "routes around Thompson; caused alpha=beta=1 after 199 executions (efa25a46)"
+  },
+  {
+   "name": "recompute-poisoned-posteriors",
+   "location": "scripts (460cc35a)",
+   "purpose": "reset phantom-poisoned posteriors",
+   "status": "unknown",
+   "general": false,
+   "evidence": "repair of learning state instead of a source fix"
+  },
+  {
+   "name": "boredom pool daemon (UCB1)",
+   "location": "boredom-vessel 30938781, 2517d309",
+   "purpose": "idle-work selection",
+   "status": "unknown",
+   "general": true,
+   "evidence": "second selector alongside Thompson",
+   "duplicates_of": "Thompson selection"
+  },
+  {
+   "name": "boredom AUTONOMOUS_GOALS array",
+   "location": "boredom-vessel",
+   "purpose": "goal rotation",
+   "status": "fossil",
+   "general": false,
+   "evidence": "replaced by the pool daemon; goal[49] fired 0 times (06c48140 body)"
+  },
+  {
+   "name": "30 cadence timers",
+   "location": "scripts/substrate/units/*.timer",
+   "purpose": "side loops (funnel-drain, gap-compose, spectral-gap, model-reality-audit, coherence-recover, ...)",
+   "status": "unknown",
+   "general": false,
+   "evidence": "outside selection (law 2/5); lost on recreate 3 times (542e2dc7, 2600dab3, c0a61d47)"
+  },
+  {
+   "name": "compose-topology timer",
+   "location": "06c48140",
+   "purpose": "drive edge-former",
+   "status": "fossil",
+   "general": false,
+   "evidence": "reverted f1348751 the same day"
+  },
+  {
+   "name": "compose-teacher",
+   "location": "46dbef2b, c4b0806c, 3a1726ca",
+   "purpose": "author composites over bridging pairs",
+   "status": "unknown",
+   "general": false,
+   "evidence": "hollow-composite root-cause fix 06-26"
+  },
+  {
+   "name": "ribosome (microplastic)",
+   "location": "e5b04851",
+   "purpose": "template extraction",
+   "status": "fossil",
+   "general": true,
+   "evidence": "microplastic abandoned after March",
+   "duplicates_of": "ribosome-vessel"
+  },
+  {
+   "name": "ribosome (activity-api)",
+   "location": "57e92c06",
+   "purpose": "template extraction",
+   "status": "duplicate",
+   "general": true,
+   "evidence": "re-built as ribosome-vessel 05-24"
+  },
+  {
+   "name": "ribosome-vessel",
+   "location": "3a3ef840",
+   "purpose": "WS-driven template extraction",
+   "status": "unknown",
+   "general": true,
+   "evidence": "202 async fix 09d69ade; output_shapes missing until d105e1ae"
+  },
+  {
+   "name": "goal-host reach-to-mint ribosome chain",
+   "location": "892c342b",
+   "purpose": "mint templates from reached traces",
+   "status": "unknown",
+   "general": true,
+   "evidence": "06-30",
+   "duplicates_of": "ribosome-vessel"
+  },
+  {
+   "name": "microplastic agent-IDE",
+   "location": "03-27 commits",
+   "purpose": "composite vessel with Thompson + ribosome",
+   "status": "fossil",
+   "general": true,
+   "evidence": "no references after March"
+  },
+  {
+   "name": "minibob",
+   "location": "repos/minibob",
+   "purpose": "goal processor, boredom, ReAct parity host",
+   "status": "fossil",
+   "general": true,
+   "evidence": "removed from container 57d74520; submodule dropped b49942df"
+  },
+  {
+   "name": "metabob opencode/rpc-api/cli/dashboard",
+   "location": "repos/* (dropped f71ebe72)",
+   "purpose": "Feb-Mar platform",
+   "status": "fossil",
+   "general": true,
+   "evidence": "dropped as dead 04-30"
+  },
+  {
+   "name": "workbench/react-renderer/cloud-dashboard/terminal/user-vessel/conversation-vessel",
+   "location": "repos/* (dropped b49942df)",
+   "purpose": "Apr UI/product layer",
+   "status": "fossil",
+   "general": false,
+   "evidence": "dropped 06-26"
+  },
+  {
+   "name": "metabob-mcp cockpit",
+   "location": "repos/metabob-mcp",
+   "purpose": "agent dispatch surface",
+   "status": "unknown",
+   "general": true,
+   "evidence": "dropped 04-30 as dead, re-added 05-12 d016bd1b"
+  },
+  {
+   "name": "ias-executor-ts",
+   "location": "repos/ias-executor-ts",
+   "purpose": "canonical execution host",
+   "status": "unknown",
+   "general": true,
+   "evidence": "canonical from 05-19 f7cb8cc4; bridge env-gated (00aa71e9)"
+  },
+  {
+   "name": "async dispatch 202+poll",
+   "location": "goal-host ac0d75b5",
+   "purpose": "non-blocking goal dispatch",
+   "status": "unknown",
+   "general": true,
+   "evidence": "resolved the 300 s timeout class (d048b889)"
+  },
+  {
+   "name": "host-sync-poller / host-pull-sync",
+   "location": "057ba013, c4d4045c",
+   "purpose": "sync container and host clones",
+   "status": "unknown",
+   "general": false,
+   "evidence": "host-location dependence; mirror-back b04330b8"
+  },
+  {
+   "name": "self-recovery-tick (docker cp host source)",
+   "location": "6f5e1bdd",
+   "purpose": "revert unhealthy vessels",
+   "status": "unknown",
+   "general": false,
+   "evidence": "host source as authority"
+  },
+  {
+   "name": "feature_compose",
+   "location": "development-vessel d8c982a (cf533a9b)",
+   "purpose": "multi-file feature authoring",
+   "status": "unknown",
+   "general": true,
+   "evidence": "first landing needed operator follow-ups"
+  },
+  {
+   "name": "gap-compose (default-on)",
+   "location": "6f5e1bdd",
+   "purpose": "autonomous gap fixing",
+   "status": "unknown",
+   "general": true,
+   "evidence": "GAP_COMPOSE_TRIAGE opt-out env"
+  },
+  {
+   "name": "auto-promote endpoint",
+   "location": "activity-api d258ffe / 5ec3a59",
+   "purpose": "promote proposed templates on evidence",
+   "status": "unknown",
+   "general": true,
+   "evidence": "reverted 99a30d12 then restored 93a6cb42"
+  },
+  {
+   "name": "coherence-recover",
+   "location": "6b21bf4e",
+   "purpose": "demote byte-identical duplicate activities",
+   "status": "unknown",
+   "general": false,
+   "evidence": "symptom fix; source dedup deferred"
+  },
+  {
+   "name": "autonomy-metrics/status/criterion-coverage",
+   "location": "4602d2b2..635e158a",
+   "purpose": "operator autonomy dashboard",
+   "status": "unknown",
+   "general": false,
+   "evidence": "redefined at least 11 times ('honest' series)"
+  },
+  {
+   "name": "spectral-gap governor",
+   "location": "237b6dc8",
+   "purpose": "topology optimization target",
+   "status": "fossil",
+   "general": false,
+   "evidence": "reframed away 8bef765e ('stop pushing the wrong global-lambda2 target')"
+  },
+  {
+   "name": "relevance-sink-vessel (plain dir)",
+   "location": "repos/relevance-sink-vessel",
+   "purpose": "impulse-relevance penalty writes",
+   "status": "broken",
+   "general": false,
+   "evidence": "never baked into image until c0a61d47 06-29; outside submodule loop"
+  },
+  {
+   "name": "clock-vessel (plain dir)",
+   "location": "repos/clock-vessel",
+   "purpose": "currentTimeReport",
+   "status": "unknown",
+   "general": false,
+   "evidence": "TODO scaffold copied to host by operator (e9c1d2fa)"
+  },
+  {
+   "name": "memory cutover hooks",
+   "location": "f259d9bd",
+   "purpose": "substrate-authoritative memory",
+   "status": "unknown",
+   "general": true,
+   "evidence": "169 notes migrated 06-15"
+  },
+  {
+   "name": "docs-as-concepts ingestion",
+   "location": "3ecc34b6, 0e9e8d06",
+   "purpose": "docs as consultable concepts",
+   "status": "unknown",
+   "general": true,
+   "evidence": "org reconcile was manual"
+  },
+  {
+   "name": "neutral emitter bus",
+   "location": "4167ba2a, e3755a03",
+   "purpose": "substrate event bus",
+   "status": "unknown",
+   "general": true,
+   "evidence": "verified iter 42 (664d8434)"
+  },
+  {
+   "name": "libp2p federation transport",
+   "location": "c0a28dc2, 3d3a2b48",
+   "purpose": "cross-substrate resolve",
+   "status": "unknown",
+   "general": true,
+   "evidence": "06-30"
+  },
+  {
+   "name": "placement pre-commit hook + gitleaks",
+   "location": "ab4af9bd, 0d435388",
+   "purpose": "stop root cruft and secrets",
+   "status": "unknown",
+   "general": true,
+   "evidence": "added after leaked credentials 09c0fa74"
+  },
+  {
+   "name": "correctness validation / ratchet / trace-enforce-validate / library learning",
+   "location": "Feb-Mar commits (c0304aac, 078ba667, 8b2a87e6, f169e127)",
+   "purpose": "early self-improvement loops",
+   "status": "fossil",
+   "general": false,
+   "evidence": "no references after March"
+  },
+  {
+   "name": "stratified harness / oracle-corpus arm / held-out suite",
+   "location": "796cc142..2a89594b",
+   "purpose": "measure recommendation/reach",
+   "status": "dormant",
+   "general": true,
+   "evidence": "no references after 05-22 in super-repo log"
+  },
+  {
+   "name": "closure-audit / verify-diagnostic-loops harness",
+   "location": "9da917a7, 18d3c405",
+   "purpose": "lift gate checks",
+   "status": "dormant",
+   "general": false,
+   "evidence": "16/16 on 05-29, then not referenced"
+  },
+  {
+   "name": "light-dispatch-vessel",
+   "location": "a4a50a07",
+   "purpose": "stateless oneshot dispatcher",
+   "status": "unknown",
+   "general": true,
+   "evidence": "needed a liveness watchdog (5882bc8e, 08a0f156)"
+  }
+ ],
+ "principles": [
+  "Trust Thompson Sampling over access control (02-18 cd6a95bb)",
+  "Three-state model + honesty enforcement: configured vs actually running (02-24 a96c0fe3, 0daa3df7)",
+  "Instance-invariant storage (02-27 e6a096b2)",
+  "Learning algorithms live in one backend only (02-28 db431068, 'thompson-sampling-in-rpc-api-only')",
+  "Compose-first activity paradigm (03-09 01da94ee)",
+  "Activity-first constraint for autonomous agents (03-17 af64bf50)",
+  "Canonical IMPULSE_ACTIVITY_FOUNDATION (03-26 1cc4805a)",
+  "Branch hygiene, avoid forking (04-26 261a863d); super-repo placement rules (04-30 ab4af9bd)",
+  "S1/S2/S3 terminal arc and push-away (05-23 4c57df9a)",
+  "'Get lift, not more operator gates' (05-27 2dc56ed5, 93a6cb42), countered by 'authority expansion needs verifiable authorization' (F-144, 99a30d12)",
+  "Substrate-composed publication, not an operator script (06-01 74d7ab03)",
+  "No silent failures; novel failure modes via orthogonality (06-04 89ca49a3)",
+  "Observe, don't nudge metrics (06-17 4602d2b2)",
+  "Resolvers live where the data lives (06-20 cf533a9b)",
+  "Self-verify + self-recover instead of human gates (06-20 6f5e1bdd)",
+  "Reuse Before Minting (06-21 31764d65)",
+  "Docs as a consultable source for planners (06-28 0e9e8d06)",
+  "Meta-lesson from git: every 'fixed/complete/met' in this window was certified by the fixer's own check; repeated reversals (Thompson x8, lift x6, honest-metric x11, bake-into-image x3) show fixes must be verified at the consuming layer"
+ ]
+}

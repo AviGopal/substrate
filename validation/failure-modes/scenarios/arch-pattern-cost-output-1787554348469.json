@@ -1,0 +1,19 @@
+{
+  "id": "arch-pattern-cost-output-1787554348469",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architectural_pattern",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "architectural_pattern cost_output_mismatch (high): 20 recent failed traces burned >=5s with task_count<=1 — high cost fo",
+  "description": "architectural_pattern cost_output_mismatch (high): 20 recent failed traces burned >=5s with task_count<=1 — high cost for zero meaningful output (likely preflight rejection or chain-truncation at task 0).",
+  "goal_text": "architectural_pattern cost_output_mismatch (high): 20 recent failed traces burned >=5s with task_count<=1 — high cost for zero meaningful output (likely preflight rejection or chain-truncation at task 0).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "arch-pattern-cost-output-1787554348469",
+  "source_gap_source": "substrate_detected"
+}

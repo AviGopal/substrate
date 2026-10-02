@@ -1,0 +1,19 @@
+{
+  "id": "ingest-docs-comment-claims-unimplemented-doc-expectation-tie",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "documentation_drift",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "scripts/substrate/ingest-docs-as-concepts.ts asserts TWICE (header line 8, and line 146) that docs-align-scan.ts dense-s",
+  "description": "scripts/substrate/ingest-docs-as-concepts.ts asserts TWICE (header line 8, and line 146) that docs-align-scan.ts dense-searches source_type=doc_expectation to find which docs 'expect' a landed code change -- described as 'the dynamic doc<->code tie'. FALSE: docs-align-scan.ts contains zero concept-db references; it scans an in-memory corpus handed to it by docs-align-tick. A grep for doc_expectation across repos/ and scripts/ returns only ingest-docs-as-concepts.ts itself (lines 8, 146, 157): it WRITES the field and nothing anywhere READS it. Repair is either direction -- implement the tie in docs-align-scan, or correct the two comments -- but the claim and the code must stop disagreeing. CLASS NOTE: the docs_align_scan accuracy invariant structurally cannot catch this, because the scanner reads only .md files and never source comments; a checker that covers source-comment claims about sibling modules does not exist. FALSIFIER: a reader of source_type=doc_expectation outside ingest-docs-as-concepts.ts, or the comments no longer making the claim.",
+  "goal_text": "scripts/substrate/ingest-docs-as-concepts.ts asserts TWICE (header line 8, and line 146) that docs-align-scan.ts dense-searches source_type=doc_expectation to find which docs 'expect' a landed code change -- described as 'the dynamic doc<->code tie'. FALSE: docs-align-scan.ts contains zero concept-db references; it scans an in-memory corpus handed to it by docs-align-tick. A grep for doc_expectation across repos/ and scripts/ returns only ingest-docs-as-concepts.ts itself (lines 8, 146, 157): it WRITES the field and nothing anywhere READS it. Repair is either direction -- implement the tie in docs-align-scan, or correct the two comments -- but the claim and the code must stop disagreeing. CLASS NOTE: the docs_align_scan accuracy invariant structurally cannot catch this, because the scanner reads only .md files and never source comments; a checker that covers source-comment claims about sibling modules does not exist. FALSIFIER: a reader of source_type=doc_expectation outside ingest-docs-as-concepts.ts, or the comments no longer making the claim.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "ingest-docs-comment-claims-unimplemented-doc-expectation-tie",
+  "source_gap_source": "operator_narration"
+}

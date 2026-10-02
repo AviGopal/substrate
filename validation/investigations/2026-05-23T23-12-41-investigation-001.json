@@ -1,0 +1,236 @@
+{
+  "investigation_id": "2026-05-23T23-12-41-investigation-001",
+  "generated_at": "2026-05-23T23:12:41Z",
+  "investigator_session_id": "seed-from-conversation-2026-05-23",
+  "prior_investigation_id": null,
+  "substrate_target": {
+    "endpoint": "filesystem-only (no live substrate audited)",
+    "kind": "repo-static-audit"
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "claim": "The LIFT CANDIDATE stamp on cycle-8 was issued against gameable criteria: zero proposals registered, zero executed gap-closing traces, and proposal files with epoch-zero timestamps.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "file_ref",
+          "location": "validation/failure-modes/cycles/cycle-8.json",
+          "excerpt": "consecutive_zero_debt_cycles: 4, proposals_registered: 0",
+          "verified_at": "2026-05-23T23:12:41Z"
+        },
+        {
+          "kind": "command",
+          "command": "grep -rn '\"created_at\":\"1970-01-01T00:00:00.000Z\"' validation/failure-modes/proposals/",
+          "excerpt": "Expected to return matches for autonomous proposals with epoch-zero timestamps",
+          "verified_at": "2026-05-23T23:12:41Z"
+        },
+        {
+          "kind": "file_ref",
+          "location": "validation/scripts/progression-driver.ts:256-260",
+          "excerpt": "Lift criterion conditions: (i) consecutive zero-debt cycles >= 3, (ii) gap count non-increasing, (iii) at least one make_activity_autonomous proposal exists. None require execution.",
+          "verified_at": "2026-05-23T23:12:41Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Ship 2026-05-23-lift-criterion-hardening to gate on external anchors (held-out evals, adversarial probes, CI agreement, chain-stall detection)."
+    },
+    {
+      "id": "F-002",
+      "claim": "make_activity_autonomous proposal files are malformed JSON; progression-driver falls back to regex extraction to read them.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "file_ref",
+          "location": "validation/scripts/progression-driver.ts:113-114",
+          "excerpt": "Regex fallback to recover proposal envelope from invalid JSON",
+          "verified_at": "2026-05-23T23:12:41Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Either fix the proposal author to emit valid JSON, or refuse-on-parse-fail to surface the malformed output as a failure_mode instead of silently parsing."
+    },
+    {
+      "id": "F-003",
+      "claim": "No executable distinction exists between work attributed to the substrate (autonomous_loop) and work attributed to the conversation that drives the substrate. Proposals signed authored_by: make_activity_autonomous look identical to artifacts a subagent could drop.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "doc_quote",
+          "location": "investigation-001 narrative",
+          "excerpt": "There is no executable distinction between 'the substrate did this' and 'the conversation that runs the substrate did this.' The make_activity_autonomous proposals look exactly like artifacts dropped by a subagent.",
+          "verified_at": "2026-05-23T23:12:41Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Couple to 2026-05-23-substrate-identity-resolution: signed proposal provenance using issued vessel credentials makes epoch-zero timestamps and unsigned authorship impossible."
+    },
+    {
+      "id": "F-004",
+      "claim": "The 63-mode failure matrix referenced in CLAUDE.md and MEMORY.md does not exist on disk; only 6 scenarios are present in validation/failure-modes/scenarios/.",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/scenarios/ | wc -l",
+          "excerpt": "Expected to show ~6 files, not 63",
+          "verified_at": "2026-05-23T23:12:41Z"
+        },
+        {
+          "kind": "doc_quote",
+          "location": "CLAUDE.md memory entries",
+          "excerpt": "References to '63-mode FP/FN matrix' in MEMORY.md",
+          "verified_at": "2026-05-23T23:12:41Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Either hand-author the missing ~57 scenarios or let the topology-discovery loop find them. The current six are insufficient to ground any meaningful lift claim."
+    },
+    {
+      "id": "F-005",
+      "claim": "Lift criterion travels between local-substrate and canary-substrate without state reconciliation. Local reports 6/6 gap; canary reports lift-candidate. Same boolean, divergent topologies.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "file_ref",
+          "location": "validation/baselines/local-substrate-cold.json",
+          "excerpt": "Cold baseline reports 6/6 gap against local substrate",
+          "verified_at": "2026-05-23T23:12:41Z"
+        },
+        {
+          "kind": "file_ref",
+          "location": "validation/failure-modes/cycles/cycle-8.json",
+          "excerpt": "Reports lift-candidate; was run against canary per CLAUDE.md",
+          "verified_at": "2026-05-23T23:12:41Z"
+        },
+        {
+          "kind": "doc_quote",
+          "location": "openspec/changes/2026-05-23-topology-discovery-loop/proposal.md:170",
+          "excerpt": "Cross-substrate topology comparison ... is a separate concern",
+          "verified_at": "2026-05-23T23:12:41Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Either bind the lift criterion to a specific substrate (immobile) or define federation-aware reconciliation (governed by 2026-05-23-vessel-federation)."
+    },
+    {
+      "id": "F-006",
+      "claim": "Hardcoded deployment defaults still reference metabob.com and .svc.cluster.local in five identified files; the substrate-only direction (2026-05-23) has not yet been reflected in source.",
+      "category": "deployment",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "file_ref",
+          "location": "repos/identity-vessel/src/services/trace.ts:6",
+          "excerpt": "Default ACTIVITY_API_ENDPOINT = 'http://metabob-activity-api.activity-system.svc.cluster.local:8080'",
+          "verified_at": "2026-05-23T23:12:41Z"
+        },
+        {
+          "kind": "file_ref",
+          "location": "repos/identity-vessel/src/services/jwt.ts:15",
+          "excerpt": "Default JWT_ISSUER = 'https://identity.metabob.com'",
+          "verified_at": "2026-05-23T23:12:41Z"
+        },
+        {
+          "kind": "file_ref",
+          "location": "repos/discovery-vessel/src/middleware/auth.ts:63",
+          "excerpt": "Default IDENTITY_VESSEL_URL = 'https://identity.metabob.com'",
+          "verified_at": "2026-05-23T23:12:41Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Ship 2026-05-23-substrate-identity-resolution to delete the defaults and force boot-time resolution against substrate identity."
+    },
+    {
+      "id": "F-007",
+      "claim": "The improvisation primitive (foundation §548-600) is documented but Trailblazing has never been implemented; the ribosome's template-extraction path is unexercised by the failure-mode loop.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "doc_quote",
+          "location": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md:552",
+          "excerpt": "'Trailblazing' — never implemented; remains only in archived docs.",
+          "verified_at": "2026-05-23T23:12:41Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Either implement Trailblazing or remove the language from the foundation; the current state has the foundation owning a primitive that doesn't operationally exist."
+    },
+    {
+      "id": "F-008",
+      "claim": "The mythic three-state language (instructional / transient / functional, vessel / process-of-becoming / instance) has no operational referent in source code beyond ordinary activity lifecycle events.",
+      "category": "idiom",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "doc_quote",
+          "location": "investigation-001 narrative",
+          "excerpt": "The 'process-of-becoming' framing dignifies a perfectly ordinary event loop. The framing motivates without doing work.",
+          "verified_at": "2026-05-23T23:12:41Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Either operationalize the distinction (give 'transient state' a name in code that distinguishes it from 'active activity') or accept the framing as motivational and pull it off the primitives."
+    },
+    {
+      "id": "F-009",
+      "claim": "21 openspec changes were drafted in a single day (2026-05-23). The proposal-to-implementation ratio diverges from the operational cadence and warrants attention before the next LIFT CANDIDATE artifact is produced.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls openspec/changes/ | grep 2026-05-23 | wc -l",
+          "excerpt": "Expected count ~21",
+          "verified_at": "2026-05-23T23:12:41Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Track which of the 21 proposals reach DEV and which remain aspirational; the count itself isn't the problem, the divergence between drafted and deployed is."
+    },
+    {
+      "id": "F-010",
+      "claim": "Pre-commit hook blocks images at root (per scripts/git-hooks/pre-commit), and 243 PNGs were present at root despite being gitignored. Working-directory clutter, not committed history. Cleanup performed 2026-05-23T23:00Z.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "git ls-files | grep -E '^[^/]+\\.(png|jpg)$' | wc -l",
+          "excerpt": "0 — confirmed untracked, gitignored",
+          "verified_at": "2026-05-23T23:12:41Z"
+        }
+      ],
+      "status": "resolved",
+      "operator_remediation": "Already done. Subsequent investigations should verify root remains clean (≤ 15 entries) as a regression check."
+    }
+  ],
+  "regressions_since_prior": [],
+  "resolutions_since_prior": [],
+  "new_findings": ["F-001", "F-002", "F-003", "F-004", "F-005", "F-006", "F-007", "F-008", "F-009", "F-010"],
+  "open_questions": [
+    "Who or what actually writes the make_activity_autonomous proposal files? No code path was identified.",
+    "Has 2026-05-23-lift-criterion-hardening progressed beyond proposal stage?",
+    "Will the substrate produce a cycle-9 report under the current gameable criteria, and if so, what will it claim?"
+  ],
+  "next_wake_recommendation": {
+    "delay_seconds": 3600,
+    "reason": "Initial baseline; wake in 1 hour to verify the report itself remains coherent and check for any cycle-9 reports."
+  }
+}

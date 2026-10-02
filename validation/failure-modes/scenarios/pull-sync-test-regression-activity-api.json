@@ -1,0 +1,19 @@
+{
+  "id": "pull-sync-test-regression-activity-api",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "pull-sync test gate: activity-api at 5c57ff9811 regressed its own suite (baseline 181 fail/1154 pass -> 183 fail/1160 pa",
+  "description": "pull-sync test gate: activity-api at 5c57ff9811 regressed its own suite (baseline 181 fail/1154 pass -> 183 fail/1160 pass (best of 2)), confirmed on a second run. Refusal 1 of 3; the runtime stays on the code it is already running until this is repaired or the refusal bound is reached.",
+  "goal_text": "pull-sync test gate: activity-api at 5c57ff9811 regressed its own suite (baseline 181 fail/1154 pass -> 183 fail/1160 pass (best of 2)), confirmed on a second run. Refusal 1 of 3; the runtime stays on the code it is already running until this is repaired or the refusal bound is reached.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "pull-sync-test-regression-activity-api",
+  "source_gap_source": "substrate_detected"
+}

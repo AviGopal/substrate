@@ -1,0 +1,19 @@
+{
+  "id": "systematic-failure-satisfier_test_suite-zero",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Capability \"satisfier:test_suite\" fails systematically at task \"(no tasks)\" (0/0 tasks ok, failure_mode: execution_error",
+  "description": "Capability \"satisfier:test_suite\" fails systematically at task \"(no tasks)\" (0/0 tasks ok, failure_mode: execution_error) across 3 recent traces — author an improvement so it reaches.",
+  "goal_text": "Capability \"satisfier:test_suite\" fails systematically at task \"(no tasks)\" (0/0 tasks ok, failure_mode: execution_error) across 3 recent traces — author an improvement so it reaches.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "systematic-failure-satisfier_test_suite-zero",
+  "source_gap_source": "substrate_detected"
+}

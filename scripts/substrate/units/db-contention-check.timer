@@ -1,0 +1,14 @@
+[Unit]
+Description=DB-contention monitor timer
+
+[Timer]
+# Contention moves faster than model drift — check every 5 min (first run 2 min
+# after activation). Cheap (one HTTP read + threshold check). Type=oneshot, no overlap.
+OnActiveSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+AccuracySec=30s
+Unit=db-contention-check.service
+
+[Install]
+WantedBy=timers.target

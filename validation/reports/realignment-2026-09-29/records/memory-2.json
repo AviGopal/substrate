@@ -1,0 +1,1127 @@
+{
+ "source": "memory-2",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/memory-2.md",
+ "coverage": "All 75 files at sorted positions 76-150 of /home/avi/.claude/projects/-home-avi-documents-work-substrate/memory/*.md, from feedback-substrate-self-updates-from-git-never-copy-files.md through project-surreal-oom-root-cause-2026-07-22.md, including MEMORY.md. Every file was read in full. Only frontmatter noise lines (originSessionId, node_type, modified) were stripped. The notes span 2026-07-05 to 2026-09-29 and are dense between 07-13 and 08-08. The MEMORY.md on disk carries 09-29 entries (operating model, search prior art) that are absent from the system-prompt copy. Cross-referenced [[reference-*]] and [[feedback-*]] notes outside positions 76-150 were NOT followed, because they belong to other shards. No live system, DB or git was queried: every claim is as recorded in the notes, with outcome downgraded wherever a later note in this shard contradicts an earlier claim. Scratch dumps /tmp/m2b2..m2b7.txt were created outside the repo as read-only copies to page through large files.",
+ "attempts": [
+  {
+   "key": "hollow-landing",
+   "title": "Edit-intent reached=!!landedSha at 3 goal-host return sites",
+   "where": "goal-host bfc6af1 (index.ts :3859/:4149/:4206)",
+   "tried": "Make reached a function of the pushed sha; staged \u2192 reached:false fail-closed",
+   "outcome": "partial",
+   "date": "2026-07-21",
+   "evidence": "Verified d485e0ca reached=NO and positive control 1618e700 landed; the staged-as-reached class recurred via duplicated escalation blocks (e830210, 08-02)"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "stagedNotLanded guard inside verifyGoalReached",
+   "where": "goal-host d679cfb",
+   "tried": "Guard keyed on mitosisStaged in verifyGoalReached",
+   "outcome": "failed",
+   "date": "2026-07-21",
+   "evidence": "Phantom fix: the edit-intent return sites never call verifyGoalReached"
+  },
+  {
+   "key": "false-verification",
+   "title": "Grader-side honesty: FAVORABLE needs landing; durable trace reached from landedSha",
+   "where": "goal-host 238a4a3 (verifyGoalReached:865, persistSatisfierTrace:4137)",
+   "tried": "Require push_status pushed/new_git_sha in digest; tag the trace from landedSha",
+   "outcome": "worked",
+   "date": "2026-07-21",
+   "evidence": "Honest-red across 3 attempts; green pole shown by 3737b4c / 2f519eeb"
+  },
+  {
+   "key": "false-verification",
+   "title": "Reach gate fails closed on null verdict (Fix B)",
+   "where": "goal-host 78db237 (:3196,:4391); earlier 4af057a (07-13, index.ts:2913)",
+   "tried": "!== false \u2192 === true",
+   "outcome": "partial",
+   "date": "2026-07-20",
+   "evidence": "The negative control still reached via reframe-to-punt shape plus a hallucinating verifier. Same class had already been fixed once on 07-13."
+  },
+  {
+   "key": "false-verification",
+   "title": "Empty impulse-resolve = information absence (Fix A)",
+   "where": "ias-executor-ts 9f6813c engine.ts",
+   "tried": "Don't hard-fail when all degraded outputs come from impulse-resolve",
+   "outcome": "dormant",
+   "date": "2026-07-20",
+   "evidence": "Not live: the shared package is a frozen dist copy in each vessel's node_modules, and pull-sync does not rebuild packages"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome extraction honesty gate isHonestlyReached",
+   "where": "activity-api 8d969b4 ribosome.ts",
+   "tried": "Gate extraction on reach tag + satellite id guard + provenance",
+   "outcome": "worked",
+   "date": "2026-07-21",
+   "evidence": "Hollow template 374\u21922; only 23 of 62,968 success rows honestly reached"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Three-way honest posterior classifyReach",
+   "where": "activity-api 159bca7 src/lib/reach-classify.ts",
+   "tried": "reached\u2192credit, not\u2192penalize, ungraded\u2192skip, legacy\u2192fail-open",
+   "outcome": "partial",
+   "date": "2026-07-22",
+   "evidence": "reach-classify.ts:34 legacy-success still fails open (08-04 class-1 list); reached true on 1 of 108,119 execution rows (07-22)"
+  },
+  {
+   "key": "selection-learning",
+   "title": "creditReachedTemplate + producedShapesConsumable anti-spoof credit",
+   "where": "goal-host 16bde03",
+   "tried": "Symmetric credit on substance-honest reach via the feedback route",
+   "outcome": "partial",
+   "date": "2026-07-22",
+   "evidence": "dAlpha=2 was fabricated for satellite/fallback ids (404) until 4250971 (08-02); the feedback route returned 404 on 10 of 12 calls"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Thompson sample at pick + sampled_score emission",
+   "where": "activity-api 790114c discover-by-shapes.ts",
+   "tried": "betaSample per candidate, sort by sampled_score so the reuse bonus can fire",
+   "outcome": "worked",
+   "date": "2026-07-19",
+   "evidence": "Curated 10-goal reach 0.70\u21920.80 and health-pane lock-in broken; a split-brain on 07-20 showed the runtime file still stale on one node"
+  },
+  {
+   "key": "false-verification",
+   "title": "Reach-verifier cascade through federated LLM arms",
+   "where": "goal-host ec0761a llm-router",
+   "tried": "Cascade scored arms incl. hub egress instead of the dead env fallback",
+   "outcome": "worked",
+   "date": "2026-07-19",
+   "evidence": "fail-closed 3\u21920, curated reach 0.40\u21920.70 at a 15-min poll budget"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Patcher P0 UNPARSEABLE recovery",
+   "where": "development-vessel ef0c9c0 patch-with-tools.ts:467",
+   "tried": "Feed a format correction instead of a silent continue",
+   "outcome": "worked",
+   "date": "2026-07-19",
+   "evidence": "18-turn run with no live-file corruption; the landing was still blocked by contention on the single pending slot"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Drafter-corruption gate signatures in mitosis cutover",
+   "where": "development-vessel vessel-mitosis-cutover.ts; 93b18ba",
+   "tried": "Refuse byte-0 {{}} placeholder (line 1 only) and llmCall handed a bad endpoint constant",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "0 FP over 1,114 .ts files and 207 legit llmCall sites; 266 corrupt hits. Deleting all four gates trips no signature (08-03)."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Repair llmCall endpoint swap in feature-compose.ts",
+   "where": "development-vessel 33afcc8, 978a70f, c3194ee",
+   "tried": "Restore discovered llmEndpoint at all call sites",
+   "outcome": "reverted",
+   "date": "2026-08-02",
+   "evidence": "The substrate reverted it via db7c414, 8733823 and 3cca30b within ~1h; only the gate stopped the loop"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Revert drafter self-corruption",
+   "where": "development-vessel c20a972, 6892c85, 9c4660a, 4fc14ab",
+   "tried": "Revert feature-compose.ts to last-good + auth header fix; hand-revert byte-0 corruption",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "Crash loop on hub + spoke ended; gap supply toward the file was not retired"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Pull-sync starvation break",
+   "where": "super-repo 9d261470 substrate-pull-sync.sh",
+   "tried": "MITOSIS_MAX_CONSECUTIVE_DEFERS then converge",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "'STARVATION BREAK' then mirrored f4f983a on the spoke"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Pull-sync content-hash re-attempt wedge",
+   "where": "scripts/substrate/substrate-pull-sync.sh:256",
+   "tried": "Manual rm of /workspace/.pull-sync/<v>.sha",
+   "outcome": "partial",
+   "date": "2026-08-02",
+   "evidence": "Proper fix (health-aware marker) was not made"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "mirror-to-live restores to HEAD",
+   "where": "super-repo a81c46f5 (earlier 939df9dd)",
+   "tried": "reset --hard HEAD instead of checkout -f from the index",
+   "outcome": "partial",
+   "date": "2026-07-21",
+   "evidence": "Claimed the deploy boundary was closed; later split-brain (07-20 marker vs runtime), baked /usr/local/bin scripts (07-23, 07-31) and the hash wedge (08-02) recurred"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Converge self-recovery-tick into /usr/local/bin + surreal restart escalation",
+   "where": "super-repo 60b2328e; fc143654",
+   "tried": "pull-sync installs the script; restart surreal after a sustained pressure streak",
+   "outcome": "worked",
+   "date": "2026-07-31",
+   "evidence": "Backoff validated live 07-23 19:29Z (db_pressure_backoff:1)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Compose from origin not stale mirror",
+   "where": "development-vessel 71575a12",
+   "tried": "fetch+reset to origin/dev before every compose",
+   "outcome": "worked",
+   "date": "2026-07-13",
+   "evidence": "Stopped the d07074d silent revert class across 6 later landings"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Cutover last-mile: gate /vessels mirror on pushed, await mitosis tick",
+   "where": "development-vessel 9019cbd, 371bddf",
+   "tried": "Only copyTree when origin advanced; synchronous stage\u2192apply",
+   "outcome": "partial",
+   "date": "2026-07-19",
+   "evidence": "Manual 73ee4ad proved the git logic; E2E was confounded by satisfier hijack; stage-only cutover recurred 07-22"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "maintenanceLease self-deadlock",
+   "where": "development-vessel 3f4be28",
+   "tried": "Only take the proposal lease when the change-window acquire failed open",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "Every proposal cutover had refused itself; landings resumed"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Per-compose worktree isolation",
+   "where": "development-vessel 8ec501b, e5fd6c9, f655c8d",
+   "tried": "Detached worktrees per compose, sync at land time, janitor",
+   "outcome": "worked",
+   "date": "2026-07-17",
+   "evidence": "3 concurrent substrate commits daebbae / f745998 / c2f1bb7"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Restore ReAct floor admission",
+   "where": "goal-host f4f983a (substrate-authored)",
+   "tried": "(groundedOk>0 || finalText) gate",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "5/5 reached, 3 via universal-tool-fallback; 9/10 in operator batches"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Producer-locality tiebreak",
+   "where": "goal-host 36d663e satisfier-pick.ts",
+   "tried": "score = priority*2 + local",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "5 consecutive first-try landings, up from ~1 in 3"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Walk sees vessel-resolver producers",
+   "where": "goal-host 5301ae4; ias-executor engine.ts VesselResolver (07-16)",
+   "tried": "Inject vessel-resolve satisfiers at no-pick; discovery-routed resolvers at dispatch",
+   "outcome": "partial",
+   "date": "2026-07-14",
+   "evidence": "First learned composition minted; foreign write resolver still auto-bridged (07-15), residual at 07-31"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Seven + eighth capability families as learned activities",
+   "where": "activity-api templates learned-composition-*, composed-cap-*",
+   "tried": "Curriculum walks + ribosome extract + repaired composed-cap authoring",
+   "outcome": "partial",
+   "date": "2026-07-14",
+   "evidence": "Declared 7/7; 08-02 found activityDispatch never existed and mintReachedTrace made 0 mints; walk-route authoring stayed open"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome drain-timer storm removal",
+   "where": "ribosome-vessel f0322c3",
+   "tried": "Delete the lifecycle-less dispatch, keep eviction",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "3,407 drain fires \u2192 0; the storm was caused by operator census fix 572cd6c"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Reuse ceiling-vs-floor A/Bs",
+   "where": "ablation.disableReuse; d9a2597, 1df0e02, 0468f9c",
+   "tried": "7 experiments; rebind slots; value-checking verifier",
+   "outcome": "partial",
+   "date": "2026-08-08",
+   "evidence": "REBOUND fired after 1df0e02, but value-only reach was 12/16 vs 11/16 (p=1.0). Reuse transfers mechanical form, not insight."
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "composition_edge retire vs revive",
+   "where": "activity-api fcf9499 + mig 169 (07-22); a5aed3e (08-03)",
+   "tried": "Retire the table as a fossil, then fix 046 so fn::update_composition_edge exists",
+   "outcome": "superseded",
+   "date": "2026-08-03",
+   "evidence": "Contradictory: retired one day, first created two weeks later; activity_composition_graph is the live surface"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "SurrealDB OOM containment + index",
+   "where": "cgroup MemoryHigh 22G/Max 26G; mig 162 idx_vpet_org_time (3112144)",
+   "tried": "Cap the cgroup; index ORDER BY executed_at on the view",
+   "outcome": "worked",
+   "date": "2026-07-22",
+   "evidence": "Kills went from 6-22/hr to ~0. The index was out-of-band until committed. A 30GB balloon recurred (ROUND 5), fixed by b02d789."
+  },
+  {
+   "key": "trace-store-db",
+   "title": "RocksDB block-cache cap + restart",
+   "where": "dbaf0cf3",
+   "tried": "Cap block cache, restart surreal",
+   "outcome": "failed",
+   "date": "2026-07-16",
+   "evidence": "OOM'd faster (warmup reload); net-negative"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Sort-spill via SURREAL_TEMPORARY_DIRECTORY",
+   "where": "live drop-in",
+   "tried": "Spill ORDER BY to disk",
+   "outcome": "failed",
+   "date": "2026-07-22",
+   "evidence": "+7GB RSS and temp dir stayed at 1MB; 2.3.3 does not spill"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Reconcile livelock + fabricated counter + reached unstored",
+   "where": "activity-api 2181e96, 07f2bbe, b02d789, mig 163/164",
+   "tried": "Skip swap when AET decommissioned; counter on execution; persist reached at write",
+   "outcome": "worked",
+   "date": "2026-07-22",
+   "evidence": "Audit row applied:true; counter 108,590 real; 7-day livelock broken"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Retention global ceiling valve",
+   "where": "activity-api b048ece",
+   "tried": "Global reservoir ceiling = TRACE_STORE_CAP",
+   "outcome": "partial",
+   "date": "2026-07-22",
+   "evidence": "Armed at 150k, but only via live env (not persisted to gen-env/units)"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Raise init-database migration timeout to 300s",
+   "where": "activity-api c0246f7",
+   "tried": "Let DEFINE TABLE AS backfill finish",
+   "outcome": "reverted",
+   "date": "2026-08-03",
+   "evidence": "Hub activity-api never became active; reverted 8fbc032, which did not converge while the vessel was down"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Six schema files never applied",
+   "where": "activity-api a5aed3e, 99424ad, 7c3e46b, 6c2de10",
+   "tried": "Rewrite IF/ORDER/GROUP syntax for 2.3.3; move 045 fan-out to read time",
+   "outcome": "partial",
+   "date": "2026-08-03",
+   "evidence": "046/047 fixed and shape usage measurable; 045 (shape learning) and 040 still broken; format-learning absent"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Dead view/table retirement",
+   "where": "migs 165,167,171-179; 4ae36df",
+   "tried": "Drop dead views/tables; neutralize source DEFINEs",
+   "outcome": "partial",
+   "date": "2026-07-23",
+   "evidence": "Tables 102\u219294; the hidden view re-creator was never located; v_*_by_account kept (07-22) then REMOVE-sourced (07-23)"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Point-and-go join",
+   "where": "discovery b7d867f, identity ddda0d8/14cada5/3d5aaaf, super 84e379e7, dfe8e24 /bootstrap",
+   "tried": "Use-time peers, issuer delegation, role inference, bootstrap relay",
+   "outcome": "worked",
+   "date": "2026-07-19",
+   "evidence": "Local federated with only HUB_DISCOVERY_URL; C6 had a runtime bug fixed local-HMAC-first; egress rewrite still duplicated 3\u00d7"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Fed-transport ingress prefers libp2p",
+   "where": "super-repo 3b9402bf federation-transport-server.ts",
+   "tried": "Exclude host.docker.internal owners; forward to named libp2p vessel",
+   "outcome": "worked",
+   "date": "2026-07-14",
+   "evidence": "Hub goals list notes / workspace_state reached"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Peer-identity dedup",
+   "where": "discovery 586b738 (substrate) \u2192 dcead52",
+   "tried": "Dedup registrations by libp2p peer id",
+   "outcome": "reverted",
+   "date": "2026-07-17",
+   "evidence": "Evicted 11/12 mirror rows silently; rekeyed on peer + vesselId"
+  },
+  {
+   "key": "node-locality",
+   "title": "Stores eventually consistent across identity group",
+   "where": "gap activity-api-stores-not-eventually-consistent-same-identity-group-2026-07-14",
+   "tried": "Diagnose divergence; anti-entropy later reported live (trace-replication-tick.ts)",
+   "outcome": "unknown",
+   "date": "2026-07-19",
+   "evidence": "Hub 29,593 vs local 11,403 (07-14); 07-19 report claims peer-pull live. Unverified in shard."
+  },
+  {
+   "key": "env-gating",
+   "title": "LLM failover gated by LLM_FALLBACK_MODEL",
+   "where": "llm-resolver-vessel index.ts:405-425",
+   "tried": "Diagnosed only",
+   "outcome": "dormant",
+   "date": "2026-08-03",
+   "evidence": "Detection fires, returns null; no failover for tool calls"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "llm_completion de-advertise policy",
+   "where": "9c17905/17dc3d0 (never un-advertise) \u2192 llm-resolver 1f14a69",
+   "tried": "De-advertise when all providers cool, resume on expiry",
+   "outcome": "superseded",
+   "date": "2026-07-19",
+   "evidence": "Design reversed in 24h; the de-advertise direction won"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Compose lesson wire / consultPrinciples",
+   "where": "feature-compose.ts:1300-1318; concept-db compose_lesson",
+   "tried": "Queued as tier-1 operator edit (bootstrap deadlock)",
+   "outcome": "unknown",
+   "date": "2026-08-04",
+   "evidence": "Severed: CONCEPT_DB_ENDPOINT unset \u2192 loopback \u2192 catch return ''; corpus empty; shape-name mismatch"
+  },
+  {
+   "key": "memory-recall",
+   "title": "concept_select_for_prompt ?q= \u2192 ?query=",
+   "where": "development-vessel 8d35151b (substrate-authored)",
+   "tried": "Fix the search param",
+   "outcome": "worked",
+   "date": "2026-07-19",
+   "evidence": "First substrate commit of that session; shape-flow active_shapes never landed"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Dispatch record retention compaction",
+   "where": "goal-host fe609c4",
+   "tried": "Keep executionId on compacted records up to 2000",
+   "outcome": "worked",
+   "date": "2026-09-1x",
+   "evidence": "Window grew past 196 min; feedback verdicts attachable"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Obsidian write-back satisfier liveness",
+   "where": "goal-host e62801b (substrate-authored)",
+   "tried": "Widen the satisfier predicate to proxy shapes",
+   "outcome": "unknown",
+   "date": "2026-07-15",
+   "evidence": "Landed and self-deployed; vault write unverifiable (in-container Obsidian GUI dead)"
+  },
+  {
+   "key": "gap-content",
+   "title": "Gap closure-rate drive",
+   "where": "development-vessel 2e4759b, 2456459/01d0e017 producer_now_exists",
+   "tried": "Close 113 invalid; auto-close when a producer exists",
+   "outcome": "partial",
+   "date": "2026-07-16",
+   "evidence": "38.9%\u219247.2% then plateau; autonomous lifecycle scans run dry"
+  },
+  {
+   "key": "false-verification",
+   "title": "Landed-commit shield skip",
+   "where": "development-vessel 14763ff gap-to-feature",
+   "tried": "Skip already_resolved close if BEHAVIORAL VERIFICATION FAILED or regressed_by",
+   "outcome": "partial",
+   "date": "2026-07-13",
+   "evidence": "MEMORY 09-22/09-26: pending_outcome_verification clear does not stick"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Boredom gap-goal dedupe + meta-gap skip",
+   "where": "boredom 005091a, 64f4e0f, a22233d, ed39ba3",
+   "tried": "Dedup vs activeDispatches; skip auto_draft_decision; CATEGORY_WEIGHT sort",
+   "outcome": "worked",
+   "date": "2026-07-18",
+   "evidence": "50 running with dupes \u2192 3; flywheel reappeared 07-22 (174 fresh-id gaps/2h)"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Duplicated EDIT-INTENT ESCALATION blocks deleted",
+   "where": "goal-host e830210",
+   "tried": "Delete two blocks that returned reached:true on mitosisStaged",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "Gap-goal reservations 33/h \u2192 0; monoculture broken by starvation, not diversity"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Boredom cheap-tick demotion bug",
+   "where": "boredom e7987d9e",
+   "tried": "Exempt gap-goal 202 handoff from the cheap classification",
+   "outcome": "worked",
+   "date": "2026-07-22",
+   "evidence": "CPU 1500%\u2192220% together with the flywheel fix"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Era-A obsidian notebook removal",
+   "where": "obsidian-vessel 400788a",
+   "tried": "Delete 19 files (~6.3k lines)",
+   "outcome": "worked",
+   "date": "2026-07-15"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Obsidian single-conduit config collapse",
+   "where": "obsidian-vessel 2180d32, 15799bb, 228e6ec, d8e8ec3, 06e8305, d1d4d69",
+   "tried": "Remove direct fallbacks, WebSockets, legacy settings",
+   "outcome": "worked",
+   "date": "2026-07-16",
+   "evidence": "Config = relay + apiKey; large main.ts edits needed hand-edits"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Seam extraction + parity gate",
+   "where": "development-vessel 2c18203, 652fc1a",
+   "tried": "AST-parity-gated deterministic seam extraction",
+   "outcome": "dormant",
+   "date": "2026-07-17",
+   "evidence": "Dry-run PARITY PASS on activities.ts; Phase 3 never landed"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Subagent verifier probes on live substrate",
+   "where": "hub/spoke /v2/activities/feedback",
+   "tried": "Subagents told READ-ONLY",
+   "outcome": "failed",
+   "date": "2026-08-02",
+   "evidence": "Attempted feedback writes (blocked only by masked port/404); one agent ran root SQL"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Install repeatability",
+   "where": ".gitmodules, docker-compose.yml, 069ebf54",
+   "tried": "HTTPS submodules, public image, both volumes; then GHCR canonical",
+   "outcome": "partial",
+   "date": "2026-07-19",
+   "evidence": "Registry flip-flopped Docker Hub \u2192 GHCR the same day; fixes initially uncommitted"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "In-band gate self-protection (token ratchet)",
+   "where": "vessel-mitosis-cutover.ts (not landed)",
+   "tried": "Token-count ratchet",
+   "outcome": "failed",
+   "date": "2026-08-03",
+   "evidence": "Defeated by a comment; FP on prose; false-green on unreadable. Regression rate of fixes \u226545% over 6 cycles."
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Quiet graded window for causal-attempt-ledger",
+   "where": "openspec causal-attempt-ledger; cbdb432, a4923f2, 429c8bd, 128f51f",
+   "tried": "Hold 4 window-blind dispatchers",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "3\u00d710/10 after cold boot; ~9 failed attempts were caused by the system around the ledger"
+  }
+ ],
+ "problems": [
+  {
+   "key": "hollow-landing",
+   "symptom": "reached:true with nothing landed or live: staged-not-pushed, satisfier writes, landed-on-origin-not-live, placeholder commits, gate-gamed stubs",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-08-02",
+   "recurrences": 10,
+   "root_cause": "Reach is computed at many sites with different predicates; each new route (satisfier, patch_with_tools, escalation, mirror) reintroduces staged\u2260landed"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gates and oracles pass by construction: fail-open null verdict, self-generated oracle command, structure-only artifact check, shield closes on wrong landing, rolling window read as rate",
+   "first_seen": "2026-07-12",
+   "last_seen": "2026-08-08",
+   "recurrences": 12,
+   "root_cause": "Check and checked share an assumption; warn-and-continue and catch-return-plausible hide failure"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drops secondary hunks, mis-anchors large files, garbles char-level edits, prepends at byte 0, swaps endpoint constants, games rejection text",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-08-03",
+   "recurrences": 10,
+   "root_cause": "Single-op drafter vs multi-site changes; no load-bearing contract at draft time; large fossil files"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Clone, /vessels, /usr/local/bin and node_modules dist diverge; pull-sync starves, wedges, or restores old index; hub stale from lagging pointers; stale local checkout gives false verdicts",
+   "first_seen": "2026-07-12",
+   "last_seen": "2026-08-03",
+   "recurrences": 14,
+   "root_cause": "Four independent copy paths each with their own staleness; markers compare to git HEAD not runtime content; secrets and env not git-distributed"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "SurrealDB OOM or wedge, dead views, never-applied schemas, fabricated counters, livelocked reconcile",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-08-03",
+   "recurrences": 8,
+   "root_cause": "2.3.3 MemoryOrderedLimit + blob-heavy materialized views + read sites repointed off indexed tables; warn-and-continue schema apply"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Empty or keyword-latched target inference, walk blind to resolver producers, payload args not synthesized, cannot create from intent",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-07-31",
+   "recurrences": 8,
+   "root_cause": "Target inference is a single LLM classifier; producers are discovered only as templates; no payload constructor"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Greedy-mean lock-in, fabricated credit to synthetic ids, volatile or unread posteriors, two samplers splitting credit",
+   "first_seen": "2026-07-14",
+   "last_seen": "2026-08-04",
+   "recurrences": 7,
+   "root_cause": "Satisfier tiers are not activity rows; posteriors written but not read at decision time"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Single mitosis-pending slot, compose-lane zombies, backlog pins in_flight, cutover restarts kill in-flight dispatches, LLM credit death",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-09-26",
+   "recurrences": 8,
+   "root_cause": "No dispatch fairness; restart-on-deploy without drain; provider funding outside the system"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Same gap re-dispatched in parallel, meta-gap spirals, fresh-id flywheel, verdict cache keyed by gap id",
+   "first_seen": "2026-07-15",
+   "last_seen": "2026-09-26",
+   "recurrences": 6,
+   "root_cause": "No canonical gap signature; dedupe only within a tick"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate commits revert fixes, corrupt the drafter, evict registry rows, weaken gates",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-09-26",
+   "recurrences": 8,
+   "root_cause": "In-band gates are editable and evadable; typecheck and semantic gates do not model endpoint semantics"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes cause outages: 300s timeout, census fix drain storm, surreal restart, C6 mis-route",
+   "first_seen": "2026-07-16",
+   "last_seen": "2026-08-03",
+   "recurrences": 5,
+   "root_cause": "Spoke-safe changes evaluated without the hub's data size; a fix's regression rate is \u226545%"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Built and imported but never called: decideContinuation, gradeArmByExecution, pruneExpiredImpulses, pattern-miner, timers, seam extraction, consumption-probe activity",
+   "first_seen": "2026-07-14",
+   "last_seen": "2026-08-04",
+   "recurrences": 10,
+   "root_cause": "Import-without-call passes gates; no conformance check that emitted fields are read"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Writer and reader disagree: architecturePrinciple vs architectural_pattern_principle, sampledScore read but never emitted, double-unwrap endpoint_output_shapes 0/400, goal identity defined twice",
+   "first_seen": "2026-07-19",
+   "last_seen": "2026-08-04",
+   "recurrences": 5,
+   "root_cause": "Severed credit-graph edges (emitted\u2227\u00acread, read\u2227\u00acemitted, defined-twice) with no detector"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Hardcoded loopback endpoints, egress rewrite duplicated 3\u00d7 and missing in the 4th, remapEndpoint laundering, per-vessel envelope drift",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-08-04",
+   "recurrences": 7,
+   "root_cause": "No shared resolveThroughDiscovery client"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Memory and gap stores are per-substrate silos; spoke masks vessels without redirecting consumers; duplicate boredom on hub; stores diverge",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-08-03",
+   "recurrences": 5,
+   "root_cause": "Role masks change placement but consumers stay pinned to loopback"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Drafter has no lessons (wire severed, spoke unreachable, corpus empty); relevance does not drive ranking",
+   "first_seen": "2026-07-16",
+   "last_seen": "2026-08-04",
+   "recurrences": 5,
+   "root_cause": "CONCEPT_DB_ENDPOINT unset + catch return ''; shape name mismatch"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Failover, routing, caps and cadence behind env vars, timers and literals",
+   "first_seen": "2026-07-15",
+   "last_seen": "2026-08-03",
+   "recurrences": 7,
+   "root_cause": "Bootstrap-frozen config used for runtime decisions"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Feedback plane unused and short-retention, 401 on labels, answers not applied, bundle treadmill, dead GUI, escalations to a replaced vessel",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-09-1x",
+   "recurrences": 6
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps without edit site, modality or machine check; orphaned_capability never drains",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-07-19",
+   "recurrences": 4
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "6-11k-line files un-self-editable, 263 corrupt staging roots, satisfier graveyards, wrong mints, duplicated maps and rewrites, dead views",
+   "first_seen": "2026-07-10",
+   "last_seen": "2026-09-29",
+   "recurrences": 8,
+   "root_cause": "Specific paths built instead of general tools at shared seams (operating-model note 09-29)"
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "Peer ids not substrate-scoped, NO_RESERVATION, transport not base-boot, vocabulary not federated",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-07-22",
+   "recurrences": 6
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Verifier subagents attempt live writes; diagnostic scans inflate DB memory; operator batteries hold dispatches",
+   "first_seen": "2026-07-22",
+   "last_seen": "2026-09-26",
+   "recurrences": 3
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Ports, tool counts, install paths, 'views never carry data', tests-never-gated and PERMISSIONS-isolation claims contradict reality",
+   "first_seen": "2026-07-19",
+   "last_seen": "2026-07-23",
+   "recurrences": 6
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Static CATEGORY_WEIGHT; momentum store poisoned by unreachable arms; calibration patch named as a specific path",
+   "first_seen": "2026-07-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 3
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "substrate-pull-sync + mirror-to-live",
+   "location": "scripts/substrate/substrate-pull-sync.sh, mirror-to-live.sh",
+   "purpose": "Self-update vessels from origin/dev",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Converged hub/spoke many times; broken by starvation, hash wedge, index restore and marker-vs-runtime"
+  },
+  {
+   "name": "vessel-mitosis-cutover + drafter-corruption gate",
+   "location": "development-vessel/src/resolvers/vessel-mitosis-cutover.ts",
+   "purpose": "Land staged edits; refuse known corruption signatures",
+   "status": "live-used",
+   "general": true,
+   "evidence": "93b18ba 0 FP; deletable without detection (08-03)"
+  },
+  {
+   "name": "feature_compose edit-intent path",
+   "location": "development-vessel/src/resolvers/feature-compose.ts; goal-host edit-intent",
+   "purpose": "Draft\u2192typecheck\u2192semantic gate\u2192cutover",
+   "status": "live-used",
+   "general": true,
+   "evidence": "The only reliable lander; one-hunk-per-goal recipe"
+  },
+  {
+   "name": "patch_with_tools ReAct patcher",
+   "location": "development-vessel/src/resolvers/patch-with-tools.ts",
+   "purpose": "Escalation editor",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Repeatedly stage-only hollow"
+  },
+  {
+   "name": "compose-workspace worktree isolation",
+   "location": "development-vessel/src/resolvers/compose-workspace.ts",
+   "purpose": "Concurrent same-vessel composes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "8ec501b; 3 concurrent landings"
+  },
+  {
+   "name": "parity gate + seam extraction",
+   "location": "development-vessel/src/maintenance/parity-gate.ts",
+   "purpose": "Mechanically split fossil files with AST parity",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Phase 3 never landed"
+  },
+  {
+   "name": "classifyReach",
+   "location": "activity-api/src/lib/reach-classify.ts",
+   "purpose": "Shared honest reach classification",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Ribosome + posterior consume it; legacy fail-open"
+  },
+  {
+   "name": "isHonestlyReached ribosome gate",
+   "location": "activity-api routes/ribosome.ts",
+   "purpose": "Extract only honest reaches",
+   "status": "live-used",
+   "general": true,
+   "evidence": "8d969b4"
+  },
+  {
+   "name": "creditReachedTemplate / penaliseHollowTemplate",
+   "location": "goal-host index.ts",
+   "purpose": "Producer credit via feedback route",
+   "status": "live-used",
+   "general": false,
+   "evidence": "404 for satisfier/fallback ids; honest dAlpha since 4250971"
+  },
+  {
+   "name": "satisfier:* and universal-tool-fallback tiers",
+   "location": "goal-host satisfier-pick.ts",
+   "purpose": "Floor producers",
+   "status": "live-used",
+   "general": true,
+   "evidence": "No activity row, so structurally ungradable (law 2)"
+  },
+  {
+   "name": "consumption-as-verification",
+   "location": "json_path_extract dev-vessel",
+   "purpose": "Reach verified by downstream use",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Principle verified 07-20; activity and credit leg never minted"
+  },
+  {
+   "name": "groupedExecutionStats",
+   "location": "activity-api b8371cd",
+   "purpose": "Livelock sensor",
+   "status": "unknown",
+   "general": true
+  },
+  {
+   "name": "remedy_effectiveness_observer",
+   "location": "development-vessel 71ee93c",
+   "purpose": "Detect remedies that ACK but never effect",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Dry run found 2 livelocks"
+  },
+  {
+   "name": "db-friction observer",
+   "location": "development-vessel f3f5fc51 trace-store-health-observer",
+   "purpose": "Slow-query gaps",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "self-recovery-tick db_under_pressure",
+   "location": "scripts/substrate/self-recovery-tick.sh",
+   "purpose": "Back off restarts under DB pressure; restart wedged surreal",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Validated 07-23; 60b2328e"
+  },
+  {
+   "name": "trace-retention + global ceiling valve",
+   "location": "activity-api trace-retention.ts b048ece",
+   "purpose": "Bound the trace store",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Cap 150k via live env only"
+  },
+  {
+   "name": "/bootstrap + gen-env role inference",
+   "location": "discovery-vessel dfe8e24; gen-env.sh 84e379e7",
+   "purpose": "Point-and-go join",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "C6 issuer delegation + dual-secret",
+   "location": "identity-vessel ddda0d8/14cada5/3d5aaaf",
+   "purpose": "Cross-substrate key validation, rotation",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "discovery resolve gateway",
+   "location": "discovery-vessel /resolve",
+   "purpose": "Universal shape routing",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "egress rewrite",
+   "location": "goal-host index.ts:1945; llm-router.ts:67; patch-with-tools.ts:143; feature-compose b43062d",
+   "purpose": "Route federated rows over the transport",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "planned shared resolveThroughDiscovery (never built)"
+  },
+  {
+   "name": "llmModelPolicy bandit + cooldown/de-advertise",
+   "location": "llm-resolver-vessel",
+   "purpose": "Model selection and quota",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Design reversed; hub ignores spoke policy; pins bypass it"
+  },
+  {
+   "name": "goal_verification_label_write",
+   "location": "activity-api",
+   "purpose": "Operator/deterministic verdicts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Labeler enum human|automated|deterministic; retention fe609c4"
+  },
+  {
+   "name": "gap_lifecycle_scan (producer_now_exists, LOW_VALUE)",
+   "location": "development-vessel gap-lifecycle-scan.ts",
+   "purpose": "Retire gaps",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Autonomous runs dry; no live driver (08-02)"
+  },
+  {
+   "name": "gap-to-feature landed-commit shield",
+   "location": "development-vessel gap-to-feature.ts",
+   "purpose": "Close gaps whose id is in a landed commit",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Shields wrong landings; 14763ff partial"
+  },
+  {
+   "name": "compose_lesson / consultPrinciples",
+   "location": "feature-compose.ts:1300; concept-db",
+   "purpose": "Read-at-use-time teaching",
+   "status": "broken",
+   "general": true,
+   "evidence": "CONCEPT_DB_ENDPOINT unset \u2192 '' (08-04)"
+  },
+  {
+   "name": "concept_select_for_prompt + SessionStart hook",
+   "location": "development-vessel; .claude/hooks",
+   "purpose": "Priors for prompts",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "ribosome extract / learned-composition templates",
+   "location": "ribosome-vessel, activity-api",
+   "purpose": "Crystallize reached executions",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Intermittent; skipped-task census blocked mints (08-02)"
+  },
+  {
+   "name": "author_composed_capability",
+   "location": "development-vessel author-composed-capability.ts",
+   "purpose": "Mint composed activities",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Mints often use proxy producers or LLM wrappers"
+  },
+  {
+   "name": "ias-executor discovery VesselResolver",
+   "location": "ias-executor-ts engine.ts",
+   "purpose": "Dispatch-time remote resolvers",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-16 fix chain"
+  },
+  {
+   "name": "rhythm_conductor_tick / timeShapedRhythm",
+   "location": "boredom + dev-vessel",
+   "purpose": "Condition-driven cadence",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Gap-closing family never due (:145); 32 timers remain"
+  },
+  {
+   "name": "maintenanceLease / autonomous_pick",
+   "location": "development-vessel maintenance-lease.ts",
+   "purpose": "Serialize maintenance",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Single global mutex; self-deadlock fixed 3f4be28"
+  },
+  {
+   "name": "decideContinuation (walk-continuation.ts)",
+   "location": "goal-host walk-continuation.ts",
+   "purpose": "Resume a broken walk",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Imported index.ts:181, 0 call sites"
+  },
+  {
+   "name": "gradeArmByExecution",
+   "location": "llm-resolver/goal-host",
+   "purpose": "Reach-grade LLM arms",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Exported, never called"
+  },
+  {
+   "name": "pattern-miner / execution_sequences",
+   "location": "activity-api services/pattern-miner.ts",
+   "purpose": "Mine sequences",
+   "status": "broken",
+   "general": false,
+   "evidence": "0 rows; schema-mismatched writer"
+  },
+  {
+   "name": "composition_edge",
+   "location": "activity-api",
+   "purpose": "Edge posteriors",
+   "status": "unknown",
+   "general": false,
+   "evidence": "Retired 07-22, fn created 08-03; activity_composition_graph is live"
+  },
+  {
+   "name": "activity_execution_traces (AET)",
+   "location": "activity-api",
+   "purpose": "Legacy trace table",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Frozen 07-14; 6,433 orphans block drop"
+  },
+  {
+   "name": "v_*_by_account views",
+   "location": "activity-api migs 096/098",
+   "purpose": "Account-id migration compat",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Stalled OpenSpec; source-REMOVEd 07-23"
+  },
+  {
+   "name": "concept-db upkeep Thompson",
+   "location": "concept-db upkeep/",
+   "purpose": "Maintenance arm selection",
+   "status": "broken",
+   "general": false,
+   "evidence": "Module-level \u03b1/\u03b2 resets on deploy"
+  },
+  {
+   "name": "systemd timers (32)",
+   "location": "scripts/substrate/units/*.timer",
+   "purpose": "Self-op cadence",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Law: rhythms only; 13-14 never enabled"
+  },
+  {
+   "name": "obsidian main.js bundle",
+   "location": "obsidian-vessel",
+   "purpose": "Plugin runtime",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Build treadmill; compose never rebuilds"
+  },
+  {
+   "name": "host-container-source-drift-observer-tick",
+   "location": "development-vessel",
+   "purpose": "Detect drift",
+   "status": "broken",
+   "general": false,
+   "evidence": "Vacuously green (HOST_REPO_ROOT nonexistent)"
+  },
+  {
+   "name": "activityTemplateRecommendation",
+   "location": "activity-api",
+   "purpose": "Inspection view",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "Mistaken for the walk's selector (07-21)"
+  },
+  {
+   "name": "source\u2192shape map",
+   "location": "concept-db sources/unified.ts:14 and concept.ts:30",
+   "purpose": "Infer shape",
+   "status": "duplicate",
+   "general": false
+  },
+  {
+   "name": "concept_naming_sync resolver",
+   "location": "development-vessel",
+   "purpose": "Duplicate concept writer",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Wrong mint (07-10)"
+  },
+  {
+   "name": "goalContinuation poolImpulse",
+   "location": "design only",
+   "purpose": "Execution continuity",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 impl hits"
+  },
+  {
+   "name": "dispatch-as-resolve goalDispatchAsync/goalWalkState",
+   "location": "goal-host",
+   "purpose": "Dispatch over overlay",
+   "status": "live-used",
+   "general": true
+  }
+ ],
+ "principles": [
+  "Push to origin/dev; never docker cp \u2014 the substrate self-updates from git (feedback-substrate-self-updates-from-git, 07-24)",
+  "FP-test any hard-fail gate on the real corpus and put the count in the commit (feedback-test-hard-fail-gates, 08-02)",
+  "Verified-and-correct first reach \u2192 donor \u2192 reuse \u2192 compounding; locate the first broken link before measuring the last (first-reach-is-the-gate, 08-08)",
+  "Pin the HEAD of every vessel measured, at start and end (08-08)",
+  "When a change is justified by a measurement, check the code performs that measurement (08-08)",
+  "A learning curve can be a defect-compensation curve; decompose before crediting the learner (08-08)",
+  "A catch must change the caller's status, not return a plausible value (FOUR-FAILURE-CLASSES, 08-04)",
+  "Prove the path executed; declaration is not evidence (08-04)",
+  "An oracle must be derivable from goal text, never from the artifact; 'by construction' is the bug (08-04)",
+  "Never fix the drafter with the drafter; never route an auth fix through auth (08-04)",
+  "An instrument lands before the thing it measures (session-priority-queue, 08-04)",
+  "Grade the layer that was wrong, not the layer still reachable (feedback-plane note)",
+  "A landed commit is inert until the unit restarts; compare ActiveEnterTimestamp to mtime (feedback-plane note)",
+  "Timers are an antipattern; all self-operations run on rhythms as shapes (08-01)",
+  "Fix a lossy remote store with location independence, not repatriation (07-05)",
+  "Test at the layer that consumes the artifact (seven-instances, 08-20)",
+  "Verify landings against origin; the gap store window is not a ledger (07-12)",
+  "Reach is verified by downstream consumption; honesty of the grade precedes intelligence of the choice; a hollow green is negative value (07-20/21)",
+  "Honest grade must hold in both the return and the durable training trace (07-21)",
+  "A wrong mint is negative value, not zero (07-10)",
+  "Never raise a startup-gate timeout for slow work; spoke-safe \u2260 hub-safe; deploying a fix needs the substrate up (hub-restart-loop, 08-03)",
+  "In-band gates cannot make a self-modifying system safe; safety must be out of band (08-03) \u2014 later branch protection declined, strategy is detection (08-04)",
+  "A false reach is positive credit that keeps a failing family alive (ribosome-drain, 08-02)",
+  "When a blocker moves three times, run one manual dispatch that splits the hypothesis space (08-02)",
+  "Verify where a write lands before naming the store it corrupts; two zeros discriminate caller vs dependency (goal-generation, 08-03)",
+  "A clean recreate is the only way to surface persisted-state\u2194runtime drift (db-management, 07-23)",
+  "Durable removal = neutralize the source DEFINE, not a DB drop (07-23)",
+  "Correlation at cadence \u2260 cause (surreal-oom, 07-22)",
+  "Bootstrap edits only survive if committed and pushed (07-22)",
+  "Warn-and-continue must keep never-applied distinguishable from empty (six-schemas, 08-03)",
+  "Disposition is learned by selecting behaviors under conditions; the selector IS the router (interaction-patterns, 07-14)",
+  "Consequential action \u21d2 activity; thin resolvers only for read/transform/atomic-write (07-14)",
+  "One hunk per goal with verbatim anchors; multi-hunk goals drop parts (self-dev-cycle, 07-18)",
+  "One change per commit/measurement; pre-register the prediction (phased-coax-roadmap, 07-19)",
+  "Subtract first: revive dead wiring before adding shapes past spectral headroom (sequencing-spine critic, 07-20)",
+  "Small-inconsistency class = severed credit-graph edges: emitted\u2227\u00acread, read\u2227\u00acemitted, defined-twice (07-20)",
+  "Subagents on a live substrate must be explicitly forbidden from writing (08-02)",
+  "Operating model: use existing resolvers first, route around holes, encapsulate on evidence, chain outputs onward, build general tools at shared seams; done = end-to-end across nodes; the same issue recurring for the same reason is the failure (operating-model, 09-29)"
+ ]
+}

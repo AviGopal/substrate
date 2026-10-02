@@ -1,0 +1,10 @@
+[Unit]
+Description=obsidian-intake trigger — pick up operator requests every 2 min (responsive human↔substrate loop)
+
+[Timer]
+OnActiveSec=30s
+OnUnitActiveSec=2min
+Unit=obsidian-intake.service
+
+[Install]
+WantedBy=timers.target

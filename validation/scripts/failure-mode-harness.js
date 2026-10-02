@@ -1,0 +1,369 @@
+#!/usr/bin/env bun
+"use strict";
+/**
+ * failure-mode-harness.ts — lift-validation harness for the 63-mode failure matrix.
+ *
+ * For each scenario in validation/failure-modes/scenarios/, dispatches the
+ * declared goal_text to POST /v2/activities/recommend, then queries
+ * activity-api for traces that match the expected emergent activity
+ * signature. Scores per-scenario:
+ *
+ *   - emergence_class: 'reuse' | 'new' | 'gap'
+ *   - self_heal_seconds: time from dispatch to matching trace
+ *   - detection_signal_present: whether the failure pattern is detectable
+ *     from trace data alone, or requires replay / cross-trace witness
+ *
+ * Usage:
+ *   bun run validation/scripts/failure-mode-harness.ts \
+ *     [--scenario <file>] \
+ *     [--scenarios <dir>] \
+ *     [--label "<run label>"] \
+ *     [--out <report.json>] \
+ *     [--window-seconds <N>]
+ *
+ * Config: METABOB_ENDPOINT / METABOB_API_KEY env or ~/.metabob/config.json.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const promises_1 = require("node:fs/promises");
+const node_fs_1 = require("node:fs");
+const node_os_1 = require("node:os");
+const node_path_1 = require("node:path");
+const node_util_1 = require("node:util");
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
+async function loadConfig() {
+    const envEndpoint = process.env["METABOB_ENDPOINT"];
+    const envKey = process.env["METABOB_API_KEY"];
+    const configPath = (0, node_path_1.join)((0, node_os_1.homedir)(), ".metabob", "config.json");
+    if ((0, node_fs_1.existsSync)(configPath)) {
+        const raw = JSON.parse(await (0, promises_1.readFile)(configPath, "utf8"));
+        const endpoint = envEndpoint ?? raw.metabob?.endpoint;
+        const apiKey = envKey ?? raw.metabob?.apiKey ?? "";
+        if (!endpoint)
+            throw new Error("endpoint not set. Set METABOB_ENDPOINT env or metabob.endpoint in ~/.metabob/config.json");
+        if (apiKey)
+            return { endpoint, apiKey };
+    }
+    if (envEndpoint && envKey)
+        return { endpoint: envEndpoint, apiKey: envKey };
+    if (envEndpoint && !envKey)
+        throw new Error("METABOB_API_KEY not set. Set via env var or ~/.metabob/config.json");
+    throw new Error("endpoint not set. Set METABOB_ENDPOINT env or metabob.endpoint in ~/.metabob/config.json");
+}
+// ---------------------------------------------------------------------------
+// Scenario loading
+// ---------------------------------------------------------------------------
+async function loadScenarios(args) {
+    if (args.scenario) {
+        const text = await (0, promises_1.readFile)(args.scenario, "utf8");
+        return [JSON.parse(text)];
+    }
+    const dir = args.scenarios ??
+        (0, node_path_1.resolve)((0, node_path_1.dirname)(new URL(import.meta.url).pathname), "..", "failure-modes", "scenarios");
+    const files = (await (0, promises_1.readdir)(dir)).filter((f) => f.endsWith(".json"));
+    const out = [];
+    for (const f of files) {
+        out.push(JSON.parse(await (0, promises_1.readFile)((0, node_path_1.join)(dir, f), "utf8")));
+    }
+    return out;
+}
+// ---------------------------------------------------------------------------
+// Recommendation + trace queries
+// ---------------------------------------------------------------------------
+async function recommend(endpoint, apiKey, scenario) {
+    const body = {
+        task_description: scenario.goal_text,
+        goal_text: scenario.goal_text,
+        expected_output_shapes: scenario.expected_output_shapes ?? [],
+        impulse_shapes: scenario.expected_input_shapes ?? [],
+        limit: 10,
+    };
+    const res = await fetch(`${endpoint}/v2/activities/recommend`, {
+        method: "POST",
+        headers: {
+            "content-type": "application/json",
+            authorization: `ApiKey ${apiKey}`,
+        },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+        throw new Error(`recommend ${res.status}: ${await res.text()}`);
+    }
+    const json = (await res.json());
+    return json.recommendations ?? json.activities ?? json.templates ?? [];
+}
+async function discoverByOutputShapes(endpoint, apiKey, requiredShapes) {
+    if (requiredShapes.length === 0)
+        return [];
+    const res = await fetch(`${endpoint}/v2/activities/discover-by-shapes`, {
+        method: "POST",
+        headers: {
+            "content-type": "application/json",
+            authorization: `ApiKey ${apiKey}`,
+        },
+        body: JSON.stringify({
+            required_shapes: requiredShapes,
+            mode: "forward",
+            limit: 20,
+        }),
+    });
+    if (!res.ok)
+        return [];
+    const json = (await res.json());
+    // Normalize field names: discover-by-shapes uses output_schema.produces_shapes
+    // but matchSignature expects output_shapes.
+    return (json.activities ?? []).map((a) => ({
+        id: a.variant_id ?? a.activity_id ?? a.id,
+        template_id: a.variant_id ?? a.activity_id ?? a.id,
+        name: a.variant_name ?? a.name,
+        tags: a.tags ?? [],
+        output_shapes: a.output_shapes ?? a.output_schema?.produces_shapes ?? [],
+        input_shapes: a.input_shapes ?? a.input_schema?.required_shapes ?? [],
+        selection_metadata: a.selection_metadata,
+    }));
+}
+function matchSignature(rec, sig, opts = {}) {
+    const outShapes = rec.output_shapes ?? [];
+    const tags = rec.tags ?? [];
+    if (sig.output_shapes_must_include) {
+        for (const s of sig.output_shapes_must_include) {
+            if (!outShapes.includes(s))
+                return false;
+        }
+    }
+    if (sig.input_shapes_intersect && rec.input_shapes) {
+        // Only enforce intersection when the caller opted in (e.g. /recommend results
+        // have full input_shapes; discover-by-shapes results may use different naming).
+        if (opts.requireInputIntersect) {
+            const has = sig.input_shapes_intersect.some((s) => rec.input_shapes.includes(s));
+            if (!has)
+                return false;
+        }
+    }
+    if (sig.tags_pattern) {
+        // Skip tags check if tags are absent from the response (e.g. discover-by-shapes
+        // does not return tags) and caller did not require them.
+        if (tags.length > 0 || opts.requireTags) {
+            const re = new RegExp(sig.tags_pattern.replace(/\./g, "\\.").replace(/\*/g, ".*"));
+            if (!tags.some((t) => re.test(t)))
+                return false;
+        }
+    }
+    return true;
+}
+async function queryEmergentTrace(endpoint, apiKey, scenario, sinceIso) {
+    // executionTraceList — filter by output_shapes if backend supports it.
+    // Falls back to client-side filtering of recent traces.
+    const url = new URL(`${endpoint}/v2/activities/execution-traces`);
+    url.searchParams.set("limit", "50");
+    url.searchParams.set("since", sinceIso);
+    const res = await fetch(url.toString(), {
+        headers: { authorization: `ApiKey ${apiKey}` },
+    });
+    if (!res.ok)
+        return null;
+    const json = (await res.json());
+    const traces = json.traces ?? json.executions ?? [];
+    const need = scenario.expected_emergence.activity_signature
+        .output_shapes_must_include ?? [];
+    for (const t of traces) {
+        const shapes = t.output_shapes ?? [];
+        if (need.every((s) => shapes.includes(s)) && t.id && t.created_at) {
+            return { id: t.id, created_at: t.created_at };
+        }
+    }
+    return null;
+}
+// ---------------------------------------------------------------------------
+// Main per-scenario execution
+// ---------------------------------------------------------------------------
+async function runScenario(endpoint, apiKey, scenario) {
+    const dispatchedAt = new Date();
+    const notes = [];
+    let recs = [];
+    try {
+        recs = await recommend(endpoint, apiKey, scenario);
+    }
+    catch (err) {
+        notes.push(`recommend failed: ${err.message}`);
+    }
+    const match = recs.find((r) => matchSignature(r, scenario.expected_emergence.activity_signature, { requireTags: true, requireInputIntersect: true }));
+    let emergence;
+    let matchedId = null;
+    let traceId = null;
+    let healSeconds = null;
+    if (match) {
+        matchedId = match.template_id ?? match.activity_id ?? match.id ?? null;
+        const alpha = match.selection_metadata?.alpha ?? 0;
+        const min = scenario.expected_emergence.minimum_thompson_alpha;
+        if (min != null && alpha < min) {
+            emergence = "new";
+            notes.push(`match found but α=${alpha} < required minimum=${min}; counts as new`);
+        }
+        else {
+            emergence = "reuse";
+        }
+    }
+    else {
+        // Fallback: discover-by-shapes forward mode finds templates that PRODUCE the
+        // required output shapes. New templates aren't in top-N /recommend yet (no
+        // execution history), but they ARE discoverable by shape declaration.
+        const requiredShapes = scenario.expected_emergence.activity_signature.output_shapes_must_include ?? [];
+        let discoveredMatch;
+        if (requiredShapes.length > 0) {
+            try {
+                const discovered = await discoverByOutputShapes(endpoint, apiKey, requiredShapes);
+                discoveredMatch = discovered.find((r) => matchSignature(r, scenario.expected_emergence.activity_signature));
+            }
+            catch {
+                // non-fatal
+            }
+        }
+        if (discoveredMatch) {
+            matchedId = discoveredMatch.template_id ?? discoveredMatch.activity_id ?? discoveredMatch.id ?? null;
+            emergence = "reuse";
+            notes.push(`matched via discover-by-shapes (not yet ranked in /recommend)`);
+        }
+        else {
+            // No matching recommendation right now. Look for an emergent trace.
+            const emergent = await queryEmergentTrace(endpoint, apiKey, scenario, dispatchedAt.toISOString());
+            if (emergent) {
+                emergence = "new";
+                traceId = emergent.id;
+                healSeconds =
+                    (new Date(emergent.created_at).getTime() - dispatchedAt.getTime()) /
+                        1000;
+            }
+            else {
+                emergence = "gap";
+                notes.push(`no matching activity in /recommend or discover-by-shapes; no emergent trace within initial poll window`);
+            }
+        }
+    }
+    // detection_signal_present: trace-only detection is the only "fully self-
+    // sufficient" case; everything else requires external evidence.
+    const detectionPresent = scenario.detection.witness_required === "trace_only";
+    return {
+        scenario_id: scenario.id,
+        dispatched_at: dispatchedAt.toISOString(),
+        recommendations_returned: recs.length,
+        matched_existing_activity_id: matchedId,
+        emergence_class: emergence,
+        emergent_trace_id: traceId,
+        self_heal_seconds: healSeconds,
+        detection_signal_present: detectionPresent,
+        notes,
+    };
+}
+// ---------------------------------------------------------------------------
+// CLI
+// ---------------------------------------------------------------------------
+async function main() {
+    const { values } = (0, node_util_1.parseArgs)({
+        options: {
+            scenario: { type: "string" },
+            scenarios: { type: "string" },
+            label: { type: "string", default: "" },
+            out: { type: "string" },
+        },
+    });
+    const { endpoint, apiKey } = await loadConfig();
+    const scenarios = await loadScenarios({
+        scenario: values.scenario,
+        scenarios: values.scenarios,
+    });
+    console.log(`failure-mode-harness: ${scenarios.length} scenarios against ${endpoint}`);
+    // SKIP AND REPORT, DO NOT FATAL (2026-08-29).
+    //
+    // A scenario without `expected_emergence.activity_signature` threw a TypeError inside
+    // runScenario and killed the whole process, so ONE malformed scenario silenced the entire
+    // harness. Measured: 118 of 125 scenarios in validation/failure-modes/scenarios/ have
+    // `expected_emergence: null`, and the first one alphabetically is one of them — so the
+    // harness had been dead on arrival for every invocation, which is consistent with the
+    // substrate's own health report carrying `optimality_measured: false` and a last harness
+    // run of 2026-08-19.
+    //
+    // The 7 usable scenarios are the hand-authored 63-mode matrix entries (fm-17, fm-43, fm-44,
+    // fp-11, fp-12, fp-15, loop-c-*). The 118 unusable ones are AUTO-GENERATED from gaps — they
+    // carry source_gap_id / source_gap_source and timestamped ids. The system has been
+    // generating validation scenarios that its own validator cannot consume.
+    //
+    // A harness that dies cannot report its own coverage; a harness that skips can. That is the
+    // whole point: "94 of 125 scenarios are unusable" is a MEASUREMENT, and silence is not.
+    // Unusable scenarios are counted and named in the report rather than being dropped
+    // silently, because a shrinking denominator that nobody can see is how a validation gate
+    // reads green while validating nothing.
+    const outcomes = [];
+    const skipped = [];
+    for (const s of scenarios) {
+        const sig = s.expected_emergence?.activity_signature;
+        if (!sig) {
+            skipped.push({ id: s.id, reason: "no expected_emergence.activity_signature — cannot score emergence" });
+            console.log(`  ${s.id} … SKIPPED (no expected_emergence.activity_signature)`);
+            continue;
+        }
+        process.stdout.write(`  ${s.id} … `);
+        try {
+            const o = await runScenario(endpoint, apiKey, s);
+            outcomes.push(o);
+            console.log(`${o.emergence_class}${o.matched_existing_activity_id ? ` (${o.matched_existing_activity_id})` : ""}`);
+        }
+        catch (err) {
+            // One scenario's failure is a data point, not a reason to lose the other 124.
+            skipped.push({ id: s.id, reason: `threw: ${err.message.slice(0, 160)}` });
+            console.log(`THREW (${err.message.slice(0, 80)})`);
+        }
+    }
+    if (skipped.length) {
+        console.log(`\nfailure-mode-harness: ${outcomes.length}/${scenarios.length} scenarios SCORED, ${skipped.length} unusable — ` +
+            `the harness's effective coverage is ${((100 * outcomes.length) / Math.max(1, scenarios.length)).toFixed(0)}%, ` +
+            `not ${scenarios.length} scenarios.`);
+    }
+    const tally = { reuse: 0, new: 0, gap: 0 };
+    let totalHeal = 0;
+    let healCount = 0;
+    for (const o of outcomes) {
+        if (o.emergence_class === "reuse")
+            tally.reuse++;
+        else if (o.emergence_class === "new")
+            tally.new++;
+        else
+            tally.gap++;
+        if (o.self_heal_seconds != null) {
+            totalHeal += o.self_heal_seconds;
+            healCount++;
+        }
+    }
+    const report = {
+        generated_at: new Date().toISOString(),
+        label: values.label ?? "",
+        endpoint,
+        scenarios_run: outcomes.length,
+        scenarios: outcomes,
+        summary: {
+            reuse: tally.reuse,
+            new: tally.new,
+            gap: tally.gap,
+            avg_self_heal_seconds: healCount > 0 ? totalHeal / healCount : null,
+        },
+        // COVERAGE IS PART OF THE VERDICT, NOT A FOOTNOTE. Without these fields a report over 7
+        // scored scenarios is indistinguishable from a report over all 125 — the denominator
+        // disappears and a 94%-unusable harness reads as a clean run.
+        scenarios_offered: scenarios.length,
+        scenarios_skipped: skipped.length,
+        coverage_fraction: scenarios.length > 0 ? outcomes.length / scenarios.length : 0,
+        skipped: skipped.slice(0, 200),
+    };
+    const outPath = values.out ??
+        (0, node_path_1.join)("validation", "results", `${new Date().toISOString().slice(0, 10)}-failure-mode-report.json`);
+    await (0, promises_1.mkdir)((0, node_path_1.dirname)(outPath), { recursive: true });
+    await (0, promises_1.writeFile)(outPath, JSON.stringify(report, null, 2));
+    console.log(`\nReport: ${outPath}`);
+    console.log(`  reuse=${tally.reuse}  new=${tally.new}  gap=${tally.gap}  avg_heal=${report.summary.avg_self_heal_seconds}s`);
+}
+main().catch((err) => {
+    console.error("failure-mode-harness fatal:", err);
+    process.exit(1);
+});
+//# sourceMappingURL=failure-mode-harness.js.map

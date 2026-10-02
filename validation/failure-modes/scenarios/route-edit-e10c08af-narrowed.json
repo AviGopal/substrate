@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-e10c08af-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-e10c08af] investigate and decompose gap route-edit-d34bf868: In repos/goal-host-vessel/src/ind",
+  "description": "[narrowed from route-edit-e10c08af] investigate and decompose gap route-edit-d34bf868: In repos/goal-host-vessel/src/index.ts the registry oracle chooses which registry field to verify with a line that reads exactly: const field = /\\bvessels?\\b/.test(g) ? \"totalVessels\" and that line occurs exactly once in the file. The vessel test runs first and matches the word vessel ANYWHERE in the goal, including where it names the subject of an unrelated clause, so a goal asking how many SHAPE",
+  "goal_text": "[narrowed from route-edit-e10c08af] investigate and decompose gap route-edit-d34bf868: In repos/goal-host-vessel/src/index.ts the registry oracle chooses which registry field to verify with a line that reads exactly: const field = /\\bvessels?\\b/.test(g) ? \"totalVessels\" and that line occurs exactly once in the file. The vessel test runs first and matches the word vessel ANYWHERE in the goal, including where it names the subject of an unrelated clause, so a goal asking how many SHAPE",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-e10c08af-narrowed",
+  "source_gap_source": "substrate_detected"
+}

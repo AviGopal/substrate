@@ -1,0 +1,8 @@
+g	dispatch	verdict_s	reached	reason
+1	3a0e0193-f712-44d3-9724-4f2507dbeec1	80	true/completed	deterministic:transform-verified — product(613*941) = 576833 found in produced content 
+2	a1eb066a-73bb-48af-912a-3eed8530a972	89	true/completed	deterministic:transform-verified — sha256(generality-round1) = ee461cb9f8f62d613f9c610894dd842f2a08607272ad3467cc4fb7d8a787d7a1 
+3	c2e7f9b7-06ed-4bd6-9388-5e253d95ebb5	72	false/completed	deterministic:edit-intent-accepted-refused — routed edit-intent to feature_compose; verdict=REFUSED (op_count=?: Grounding windo
+4	ae37227a-d1ac-478e-926f-a07e04733d4b	32	false/failed	The output does not provide the line count from the file as required by the goal. 
+5	010b4ccc-7950-4b8d-99cb-6a13b7f245da	48	false/failed	The output does not contain the count of active systemd units matching *vessel*, so the goal is not met. 
+6	f10a3fa8-8829-4f93-93f0-e82948256026	32	true/completed	The output meaningfully conveys the intended content about the fixed point of all routing, storing it correctly in a memoryNote. 
+7	f1cdb7b8-fd13-4499-a9e4-b5e47200e230	120	false/completed	deterministic:edit-intent-accepted-refused — routed edit-intent to feature_compose; verdict=REFUSED (op_count=?: Grounding windo

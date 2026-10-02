@@ -1,0 +1,7 @@
+{
+  "summary": "Add new http-response-resolver.ts",
+  "description": "Add the new http-response-resolver.ts resolver file with updated logic.",
+  "path": "repos/development-vessel/src/resolvers/http-response.ts",
+  "action": "add",
+  "content_path": "openspec/changes/fix-http-response-resolver.ts"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "concept-db-saturated-on-walk-critical-path",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "concept-db is intermittently saturated while reporting healthy by every liveness signal: ActiveState=active, SubState=ru",
+  "description": "concept-db is intermittently saturated while reporting healthy by every liveness signal: ActiveState=active, SubState=running, NRestarts=0, yet GET /health does not answer within 10.9s. It sits on the goal walks critical path — goal-host walk-concepts recall timed out 37 times in 6 hours against a 12000ms budget with 3 attempts, so a stalled walk burns 36s and then proceeds WITHOUT its concepts, which is information starvation at the point of use. Positive control: recall succeeded 50 times in 24h returning rows=1..5, so the vessel is degraded rather than dead. concept-db logs show searchConcepts BM25 scores all zero with a term-frequency proxy fallback and the dense leg returning nothing within its 2000ms budget, at ~172 searchConcepts calls per 10 minutes.",
+  "goal_text": "concept-db is intermittently saturated while reporting healthy by every liveness signal: ActiveState=active, SubState=running, NRestarts=0, yet GET /health does not answer within 10.9s. It sits on the goal walks critical path — goal-host walk-concepts recall timed out 37 times in 6 hours against a 12000ms budget with 3 attempts, so a stalled walk burns 36s and then proceeds WITHOUT its concepts, which is information starvation at the point of use. Positive control: recall succeeded 50 times in 24h returning rows=1..5, so the vessel is degraded rather than dead. concept-db logs show searchConcepts BM25 scores all zero with a term-frequency proxy fallback and the dense leg returning nothing within its 2000ms budget, at ~172 searchConcepts calls per 10 minutes.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "concept-db-saturated-on-walk-critical-path",
+  "source_gap_source": "substrate_detected"
+}

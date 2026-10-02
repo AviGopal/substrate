@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-8444bbf4",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/development-vessel/src/resolvers/docs-align-scan.ts to stop the shape_existence invariant reporting vessel RO",
+  "description": "Edit repos/development-vessel/src/resolvers/docs-align-scan.ts to stop the shape_existence invariant reporting vessel ROLE names as unknown shape tokens.\n\nThe defect: shapeMarkerRx is /shape|type:|output_shapes|input_shapes/ and it matches the bare word \"shape\" anywhere on a line. docs/SUBSTRATE.md line 17 describes how each unit maps to a role and ends \"...compose those into deployable shapes:\", so the marker fires and every backticked token on that line is then tested as a shape token. The result is 14 false findings on correct documentation: store, control, api, compute, models, ui, transport, seed, infra, autonomy, registry, desktop, plus the role-group alias full.\n\nThe fix: inside the token loop, skip a token when the same line also refers to roles. Add a role-context regex such as /\\\\brole\\\\b|\\\\broles\\\\b|ENABLED_ROLES|role-group/i and, when that matches the line, do not emit a shape_existence finding for tokens on it. Keep every other behaviour identical.\n\nA validator that fails on correct documentation trains its readers to ignore it, which is worse than having no validator.",
+  "goal_text": "Edit repos/development-vessel/src/resolvers/docs-align-scan.ts to stop the shape_existence invariant reporting vessel ROLE names as unknown shape tokens.\n\nThe defect: shapeMarkerRx is /shape|type:|output_shapes|input_shapes/ and it matches the bare word \"shape\" anywhere on a line. docs/SUBSTRATE.md line 17 describes how each unit maps to a role and ends \"...compose those into deployable shapes:\", so the marker fires and every backticked token on that line is then tested as a shape token. The result is 14 false findings on correct documentation: store, control, api, compute, models, ui, transport, seed, infra, autonomy, registry, desktop, plus the role-group alias full.\n\nThe fix: inside the token loop, skip a token when the same line also refers to roles. Add a role-context regex such as /\\\\brole\\\\b|\\\\broles\\\\b|ENABLED_ROLES|role-group/i and, when that matches the line, do not emit a shape_existence finding for tokens on it. Keep every other behaviour identical.\n\nA validator that fails on correct documentation trains its readers to ignore it, which is worse than having no validator.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-8444bbf4",
+  "source_gap_source": "substrate_detected"
+}

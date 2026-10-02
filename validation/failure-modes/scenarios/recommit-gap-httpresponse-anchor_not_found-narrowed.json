@@ -1,0 +1,19 @@
+{
+  "id": "recommit-gap-httpresponse-anchor_not_found-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from recommit-gap-httpresponse-anchor_not_found] compose for gap gap-httpresponse repeated already-recorded fa",
+  "description": "[narrowed from recommit-gap-httpresponse-anchor_not_found] compose for gap gap-httpresponse repeated already-recorded failure class anchor_not_found: create_file refused: repos/development-vessel/src/resolvers/http-response.ts already exists (736 bytes) and the op would overwrite it with 417 bytes. ",
+  "goal_text": "[narrowed from recommit-gap-httpresponse-anchor_not_found] compose for gap gap-httpresponse repeated already-recorded failure class anchor_not_found: create_file refused: repos/development-vessel/src/resolvers/http-response.ts already exists (736 bytes) and the op would overwrite it with 417 bytes. ",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-gap-httpresponse-anchor_not_found-narrowed",
+  "source_gap_source": "substrate_detected"
+}

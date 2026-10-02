@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-38c180c0",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-3317f21a: In repos/activity-api/src/routes/db-admin-repair.ts add one new entry",
+  "description": "investigate and decompose gap route-edit-3317f21a: In repos/activity-api/src/routes/db-admin-repair.ts add one new entry to the vetted repair catalogue, immediately after the line `const REPAIR_PATTERNS: Record<string, RepairPattern> = {`. Edit repos/activity-api/src/routes/db-admin-repair.ts.",
+  "goal_text": "investigate and decompose gap route-edit-3317f21a: In repos/activity-api/src/routes/db-admin-repair.ts add one new entry to the vetted repair catalogue, immediately after the line `const REPAIR_PATTERNS: Record<string, RepairPattern> = {`. Edit repos/activity-api/src/routes/db-admin-repair.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-38c180c0",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-985a326a-syntax_break",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-e13aac10: In repos/goal-host-vessel/src/index.ts, make exactly ONE edit.\n\nVerba",
+  "description": "investigate and decompose gap route-edit-e13aac10: In repos/goal-host-vessel/src/index.ts, make exactly ONE edit.\n\nVerbatim anchor (a single line):\n              else if (editHollow) { opts.learningSink?.alphaBetaDelta.push(await penaliseHollowTemplate(\"feature_compose\", \"landed-edit-missing-requested-symbol\")); }\n\nInsert this single new line immediately AFTER that anchor line, verbatim:\n\n              recordDeterministicLabel(goal ?? \"\", [RETRY CONTEXT — compose for gap route-edit-985a326a repeated already-recorded failure class syntax_break: src/index.ts(12053,314): error TS1005: ')' expected.. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "investigate and decompose gap route-edit-e13aac10: In repos/goal-host-vessel/src/index.ts, make exactly ONE edit.\n\nVerbatim anchor (a single line):\n              else if (editHollow) { opts.learningSink?.alphaBetaDelta.push(await penaliseHollowTemplate(\"feature_compose\", \"landed-edit-missing-requested-symbol\")); }\n\nInsert this single new line immediately AFTER that anchor line, verbatim:\n\n              recordDeterministicLabel(goal ?? \"\", [RETRY CONTEXT — compose for gap route-edit-985a326a repeated already-recorded failure class syntax_break: src/index.ts(12053,314): error TS1005: ')' expected.. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-985a326a-syntax_break",
+  "source_gap_source": "substrate_detected"
+}

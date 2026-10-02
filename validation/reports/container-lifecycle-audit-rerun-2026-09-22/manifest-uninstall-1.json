@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-22T10:47:12.096203+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "vessel-ctl",
+    "uninstall",
+    "audit-fixture-vessel"
+  ],
+  "rc": 0,
+  "stdout": "{\"ok\":true,\"action\":\"uninstalled\",\"vessel\":\"audit-fixture-vessel\",\"container\":\"sla-0922r-80a33e-root-a\"}\n",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n[discovery-deregister] no registry entry matched 'audit-fixture-vessel' \u2014 nothing to remove\n"
+}

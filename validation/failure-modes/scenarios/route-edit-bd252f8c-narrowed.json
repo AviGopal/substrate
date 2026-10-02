@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-bd252f8c-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-bd252f8c] investigate and decompose gap route-edit-c911682c: When correctness depends on an ex",
+  "description": "[narrowed from route-edit-bd252f8c] investigate and decompose gap route-edit-c911682c: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16723, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- semantic_reject: The patch adds dead code that is never called from any execution path that would fix the gap's described behavior\n- verify_failed: src/index.ts(4799,10): error TS2393: Duplicate function implementation. | src/index.ts(4803,16): error TS2393: Duplicate function implementation. | src/index.ts(4809,17): error TS2448: Block-scoped va\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-bd252f8c] investigate and decompose gap route-edit-c911682c: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16723, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- semantic_reject: The patch adds dead code that is never called from any execution path that would fix the gap's described behavior\n- verify_failed: src/index.ts(4799,10): error TS2393: Duplicate function implementation. | src/index.ts(4803,16): error TS2393: Duplicate function implementation. | src/index.ts(4809,17): error TS2448: Block-scoped va\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-bd252f8c-narrowed",
+  "source_gap_source": "substrate_detected"
+}

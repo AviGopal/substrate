@@ -1,0 +1,19 @@
+{
+  "id": "self-op-health-repair_unit_dormant",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "operational_health",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "4 built repair unit(s) loaded but disabled/inactive: db-maintenance.timer, coherence-recover.timer, trace-store-health-c",
+  "description": "4 built repair unit(s) loaded but disabled/inactive: db-maintenance.timer, coherence-recover.timer, trace-store-health-check.timer, gap-compose.timer (inventory-declared: db-maintenance.timer, coherence-recover.timer, trace-store-health-check.timer, gap-compose.timer) → each is a repair mechanism that exists in the image yet never runs, with nothing else noticing. Not auto-enabled — dormancy needs a DISPOSITION: enable it (declare it in the fleet inventory / role selection) or retire the unit file; until then this repair capability is silently absent.",
+  "goal_text": "4 built repair unit(s) loaded but disabled/inactive: db-maintenance.timer, coherence-recover.timer, trace-store-health-check.timer, gap-compose.timer (inventory-declared: db-maintenance.timer, coherence-recover.timer, trace-store-health-check.timer, gap-compose.timer) → each is a repair mechanism that exists in the image yet never runs, with nothing else noticing. Not auto-enabled — dormancy needs a DISPOSITION: enable it (declare it in the fleet inventory / role selection) or retire the unit file; until then this repair capability is silently absent.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "self-op-health:repair_unit_dormant",
+  "source_gap_source": "substrate_detected"
+}

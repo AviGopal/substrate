@@ -1,0 +1,4 @@
+{
+  "status": 200,
+  "data": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <meta name=\"color-scheme\" content=\"light dark\" />\n    <!--\n      No <link> to any external host: no CDN, no Google Fonts, no remote\n      stylesheet. The type stack in the token package is system-only by design\n      (rule P12, and law 11 \u2014 a surface that fetches a font from the public\n      internet is not location-independent).\n    -->\n    <title>Surface \u2014 what do you want done?</title>\n    <script type=\"module\" crossorigin src=\"/assets/index-jb3glSCX.js\"></script>\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-Ve4kb90i.css\">\n  </head>\n  <body>\n    <div id=\"root\"></div>\n  </body>\n</html>\n"
+}

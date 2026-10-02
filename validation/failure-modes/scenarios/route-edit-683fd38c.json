@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-683fd38c",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/goal-host-vessel/src/independent-recompute.ts with a REPLACE operation. Find this exact function:\n\nexport fun",
+  "description": "Edit repos/goal-host-vessel/src/independent-recompute.ts with a REPLACE operation. Find this exact function:\n\nexport function reconcileDerivations(a: number | null, b: number | null): { truth: number } | { truth: null; reason: string } {\n  if (a === null || b === null) return { truth: null, reason: \"only one derivation produced a usable measurement\" };\n  if (a !== b) return { truth: null, reason: `two independent derivations disagree (${a} vs ${b}) — neither is ground truth` };\n  return { truth: a };\n}\n\nReplace it with this exact function (adds an optional recipeRescue parameter and a rescue clause; all other behavior identical):\n\nexport function reconcileDerivations(a: number | null, b: number | null, recipeRescue?: { agreed: number; disagreed: number }): { truth: number } | { truth: null; reason: string } {\n  if (a === null || b === null) {\n    if (recipeRescue && a !== null && a > 0 && b === null && recipeRescue.agreed >= 10 && recipeRescue.agreed > recipeRescue.disagreed * 4) {\n      return { truth: a };\n    }\n    return { truth: null, reason: \"only one derivation produced a usable measurement\" };\n  }\n  if (a !== b) return { truth: null, reason: `two independent derivations disagree (${a} vs ${b}) — neither is ground truth` };\n  return { truth: a };\n}",
+  "goal_text": "Edit repos/goal-host-vessel/src/independent-recompute.ts with a REPLACE operation. Find this exact function:\n\nexport function reconcileDerivations(a: number | null, b: number | null): { truth: number } | { truth: null; reason: string } {\n  if (a === null || b === null) return { truth: null, reason: \"only one derivation produced a usable measurement\" };\n  if (a !== b) return { truth: null, reason: `two independent derivations disagree (${a} vs ${b}) — neither is ground truth` };\n  return { truth: a };\n}\n\nReplace it with this exact function (adds an optional recipeRescue parameter and a rescue clause; all other behavior identical):\n\nexport function reconcileDerivations(a: number | null, b: number | null, recipeRescue?: { agreed: number; disagreed: number }): { truth: number } | { truth: null; reason: string } {\n  if (a === null || b === null) {\n    if (recipeRescue && a !== null && a > 0 && b === null && recipeRescue.agreed >= 10 && recipeRescue.agreed > recipeRescue.disagreed * 4) {\n      return { truth: a };\n    }\n    return { truth: null, reason: \"only one derivation produced a usable measurement\" };\n  }\n  if (a !== b) return { truth: null, reason: `two independent derivations disagree (${a} vs ${b}) — neither is ground truth` };\n  return { truth: a };\n}",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-683fd38c",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-861bc804",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/goal-host-vessel/src/goal-target-inference.ts, change the substring 'Return the 1-3 shapes from the KNOWN list ",
+  "description": "In repos/goal-host-vessel/src/goal-target-inference.ts, change the substring 'Return the 1-3 shapes from the KNOWN list whose production best satisfies the goal. Also provide a confidence value' to 'Return the 1-6 shapes from the KNOWN list whose production best satisfies the goal. Also provide a confidence value'. That exact substring occurs exactly once in the file. This is the PRIMARY instruction in the goal-routing prompt and it is what caps compositional depth: the model is told to return at most three target shapes, so a goal genuinely requiring four or more distinct output shapes is silently truncated and the resulting composition is shallower than the goal requires. A previous edit raised only the ALTERNATIVES clause and left this primary clause untouched, so the ceiling did not move. Nonce prompt-primary-6b1c.",
+  "goal_text": "In repos/goal-host-vessel/src/goal-target-inference.ts, change the substring 'Return the 1-3 shapes from the KNOWN list whose production best satisfies the goal. Also provide a confidence value' to 'Return the 1-6 shapes from the KNOWN list whose production best satisfies the goal. Also provide a confidence value'. That exact substring occurs exactly once in the file. This is the PRIMARY instruction in the goal-routing prompt and it is what caps compositional depth: the model is told to return at most three target shapes, so a goal genuinely requiring four or more distinct output shapes is silently truncated and the resulting composition is shallower than the goal requires. A previous edit raised only the ALTERNATIVES clause and left this primary clause untouched, so the ceiling did not move. Nonce prompt-primary-6b1c.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-861bc804",
+  "source_gap_source": "substrate_detected"
+}

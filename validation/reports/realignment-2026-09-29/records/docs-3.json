@@ -1,0 +1,497 @@
+{
+ "source": "docs-3",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/docs-3.md",
+ "coverage": "Shard docs 47-69 of `find docs -name '*.md' | sort` (23 files). Read fully or near-fully: impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md, impulse-types/thompson_posterior.md, learning/FAILURE_MODES.md, LIVE_DEVELOPMENT.md, MEMORY_AS_SUBSTRATE.md, QUALIFICATION.md, operations/CONFIGURATION_SURFACE.md, operations/FEDERATION_GENRES.md, README.md (docs index), SCHEMA_OWNERSHIP.md, self-development/DOC_INGESTION.md, shapes/README.md, validation/LEARNING_LOOP_SELFTEST.md, testing/README.md, testing/QUICK_VERIFICATION_GUIDE.md (first ~150 lines). Skimmed: SUBSTRATE.md (head + lines 685-940; middle by headings only), RBAC_GUIDE.md / RBAC_TROUBLESHOOTING.md (headings + head), the three specs/ docs ('what ships' blocks + headings; ~60% of design prose unread), SUBSTRATE_NARRATION_PROTOCOL.md (sections A-D), SUBSTRATE_PRESENTATION_2026_06.md (principles, slides 3-5, 8). Live checks on substrate-live only (compose2-live/node 2 NOT checked): grep of 44 doc-promised identifiers across /workspace/git/vessels/*; super-repo script existence and invokers; ingest-docs journal (75 runs since 09-25); gap store gaps.json (6,276 records) topic filters; SurrealDB 24h census of execution.failure_mode; trace_store_counters; legacy activity_execution_traces with a datetime control; memoryNote store files and backups; discovery /registry/shapes; rhythm-cadence unit. Not verified: cause of ingest updated:10 flapping, cause of memory-store loss, whether the selftest/harness seeds actually run to completion.",
+ "attempts": [
+  {
+   "key": "memory-recall",
+   "title": "09-22 merge of the two memoryNote stores at file level",
+   "where": "/workspace/git/super-repo/memory/notes.json (+ .bak files); docs/MEMORY_AS_SUBSTRATE.md",
+   "tried": "Merged the 680-note /workspace/memory store and the super-repo store into one file (pre-merge backup 1,077 notes; 1,788 notes by 09-23T05:08Z)",
+   "outcome": "reverted",
+   "date": "2026-09-22",
+   "evidence": "Current notes.json has 59 notes, earliest created 2026-09-26T05:12Z; /workspace/memory/notes.json (680 notes, May-Jul) orphaned; commit 44ab5fd4 independently observed memory holds nothing before 09-26"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Doc-ingest reap with 25% fraction guard",
+   "where": "scripts/substrate/ingest-docs-as-concepts.ts; ingest-docs.service/timer; gap docs-reap-refused",
+   "tried": "Delete concept-db sections not re-seen, refusing when reap set >25% of manifest to avoid truncated-walk mass deletion",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "75/75 journaled runs since 09-25: reap refused, reapCandidates 606 > limit 472 (of 1890); gap docs-reap-refused open since 2026-09-24T04:59Z; 606 stale concepts still eligible for consultPrinciples top-4"
+  },
+  {
+   "key": "docs-drift",
+   "title": "docs-align scan filing docs-drift-* gaps",
+   "where": "development-vessel/src/resolvers/docs-align-scan.ts; gap ids docs-drift-docs-*",
+   "tried": "Automatic detection of doc invariant violations filed as gaps",
+   "outcome": "partial",
+   "date": "2026-09-18",
+   "evidence": "24 docs-drift gaps, all open, 0 closed since 09-18; 6 for this shard (SUBSTRATE.md, README.md, NARRATION, shapes/README, QUICK_VERIFICATION 5 violations, testing/README 4)"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Six-member FailureModeSchema + outcome-conditional computeDeltas",
+   "where": "activity-api/src/models/schemas.ts, src/lib/posterior-update.ts; docs/learning/FAILURE_MODES.md",
+   "tried": "Differentiated posterior penalties by failure type",
+   "outcome": "dormant",
+   "evidence": "24h census of 21,058 execution rows: null 11,129; execution_error (not in union) 9,790, 7,727 of them on success=true; cascading 138 with 138/138 missing upstream_task_id; verifier_negative 3; four members 0 rows"
+  },
+  {
+   "key": "selection-learning",
+   "title": "classifyReach reach gate overrides exit status",
+   "where": "activity-api/src/lib/reach-classify.ts",
+   "tried": "reached/not-reached/ungraded/legacy-success verdicts; ungraded = {0,0}",
+   "outcome": "worked",
+   "evidence": "Used by posterior-update, ribosome route, grouped-execution-stats, goal-host, ribosome-vessel"
+  },
+  {
+   "key": "env-gating",
+   "title": "Thompson decay half-life read at use time from substrate_tuning_param, no env fallback",
+   "where": "activity-api/src/lib/posterior-update.ts resolveThompsonDecayHalfLifeDays",
+   "tried": "Move a behavioural constant from env to a runtime-steerable row",
+   "outcome": "worked",
+   "evidence": "Function present and referenced in activities.ts; model of law-1 compliance"
+  },
+  {
+   "key": "false-verification",
+   "title": "$auth -> $token PERMISSIONS sweep and jwt_external switch",
+   "where": "activity-api migrations 079/080/083; commit a20314a (2026-04-22)",
+   "tried": "Make PERMISSIONS work for API-key callers",
+   "outcome": "partial",
+   "date": "2026-04-22",
+   "evidence": "Undercut by executeAsAuth: API-key auth runs as root (impulses.ts:142), so PERMISSIONS do not apply to vessel traffic"
+  },
+  {
+   "key": "false-verification",
+   "title": "executeAsAuth root-credentials fallback for API-key auth",
+   "where": "activity-api/src/routes/impulses.ts:142",
+   "tried": "authType==='apikey' -> surrealDB.query as root with manual org_id predicates",
+   "outcome": "partial",
+   "evidence": "Contradicts CLAUDE.md, docs/README.md \u00a76, SCHEMA_OWNERSHIP.md, RBAC_GUIDE.md ('Mistake 1: Application-Level Only'); no gap in store (0 hits)"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Read execution directly after v_paradigm_execution_traces view froze",
+   "where": "activity-api/src/routes/execution-traces.ts (~line 1058 comment)",
+   "tried": "Replace frozen view with direct FROM execution",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "Code comment: view froze or vanished 09-22..09-28, detectors saw no new traces for ~6 days first"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Exclude routing anchors from .substrate-secrets",
+   "where": "scripts/substrate/gen-env.sh, secrets.env.sh; docs/operations/CONFIGURATION_SURFACE.md \u00a72",
+   "tried": "Stop persisting DISCOVERY_ENDPOINT etc. after an anchor pinned fleet to a decommissioned host (transport crash loop)",
+   "outcome": "worked",
+   "evidence": "Per doc; not re-verified live"
+  },
+  {
+   "key": "false-verification",
+   "title": "config-surface-probe self-lie guards",
+   "where": "scripts/substrate/config-surface-probe.sh (e375d716, 2026-09-23)",
+   "tried": "Guards against swallowed mounts denied (zero names), counting own abstentions, image-vs-worktree gen-env comparison",
+   "outcome": "partial",
+   "evidence": "Guards documented; probe invoked only by Makefile, no validating activity (script retention rule)"
+  },
+  {
+   "key": "docs-drift",
+   "title": "compositionEdge_write shape",
+   "where": "docs/impulse-types/LEARNING_LOOP_WRITE_RESOLVERS.md vs docs/shapes/README.md",
+   "tried": "Write composition edges via dedicated shape",
+   "outcome": "superseded",
+   "evidence": "Not advertised/dispatched in live activity-api; superseded by activityComposition_write; write-resolver doc still lists it"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Ranked lifecycle-subscriber dispatch",
+   "where": "ias-executor-ts/src/lifecycle-subscriber.ts HIGH_FREQUENCY_TOP_K",
+   "tried": "Thompson/relevance-ranked top-K subscriber firing",
+   "outcome": "dormant",
+   "evidence": "Constants exported, no consumer; every matching subscriber fires"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Cross-vessel delegation headers",
+   "where": "docs/specs/auth-token-source-field.md",
+   "tried": "X-Metabob-Delegation-Chain/Hop",
+   "outcome": "dormant",
+   "evidence": "grep NONE across live clones; auth_token_source field itself declared by 5 vessels"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Closure audit as hard lift gate",
+   "where": "validation/scripts/closure-audit.ts (86186cb4, 2026-05-27); docs/SUBSTRATE.md \u00a7Closure properties",
+   "tried": "Seven (property, external tool) closure probes, 3 nightly greens gate lift",
+   "outcome": "dormant",
+   "evidence": "No unit, timer, Makefile, hook or vessel invokes it"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Substrate-Narration Protocol + validation/gaps",
+   "where": "validation/scripts/substrate-narrator.ts (2026-05-23); validation/gaps/INDEX.md (2026-05-24)",
+   "tried": "Operator narration gap accumulation",
+   "outcome": "superseded",
+   "evidence": "No invoker; last record 05-24; superseded by gaps/gaps.json (6,276 records)"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "S2->S3 intervention measurement shapes",
+   "where": "docs/SUBSTRATE.md; development-vessel intervention-evaluate.ts",
+   "tried": "operatorIntervention, interventionRefused, interventionRateReport",
+   "outcome": "partial",
+   "evidence": "Only interventionRefused exists and is advertised; other two absent"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "O(1) trace counters + maintenanceLease + copy-forward reconcile",
+   "where": "activity-api trace-store-counters.ts, db-admin-reconcile.ts; development-vessel maintenance-lease.ts, trace-store-health-observer",
+   "tried": "Autonomous bounded trace store",
+   "outcome": "worked",
+   "evidence": "trace_store_counters:execution row_count 149,651 / cap 150,000, last_reconciled_at 2026-09-29T03:44Z"
+  },
+  {
+   "key": "env-gating",
+   "title": "Rhythm conductor for law-5 cadence",
+   "where": "development-vessel rhythm-conductor-tick.ts; rhythm-cadence.timer -> scripts/substrate/rhythm-seed-tick.ts, rhythm-conduct-tick.ts",
+   "tried": "Cadence as timeShapedRhythm impulses read by a conductor",
+   "outcome": "partial",
+   "evidence": "Conductor itself driven by a 15-min systemd timer; timeShapedRhythm not advertised in registry; 46-49 timers in container; gaps rhythm-cadence-registry_empty and rhythm-reality-sync-rewrites... (x2) open"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Fleet-wide five-level readiness and vessel-ctl",
+   "where": "docs/testing/QUICK_VERIFICATION_GUIDE.md, docs/SUBSTRATE.md",
+   "tried": "substrate-status levels live/seeded/served/usable/connected; vessel-ctl install/sync",
+   "outcome": "unknown",
+   "evidence": "Documented; not re-verified in this shard"
+  }
+ ],
+ "problems": [
+  {
+   "key": "docs-drift",
+   "symptom": "Doc-ingest reap refused on every run; 606 stale doc concepts stay eligible for the drafter's top-4 architecture slots; 24 docs-drift gaps open, none closed",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 75,
+   "root_cause": "25% fraction guard cannot tell a truncated walk from a real docs restructure, and no supervised-reap path has ever been exercised; docs-align scan detects but no repair closes"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "memoryNote store reset: 1,788 notes on 09-23 -> 59 notes all created after 09-26; 680-note /workspace/memory store orphaned; store path differs from MEMORY_AS_SUBSTRATE.md",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-26",
+   "recurrences": 2
+  },
+  {
+   "key": "false-verification",
+   "symptom": "API-key (all vessel) traffic runs as SurrealDB root in activity-api executeAsAuth, bypassing the PERMISSIONS tenancy that four docs and CLAUDE.md declare as the enforcement point; no gap tracks it",
+   "root_cause": "activity-api self-signed API-key JWTs historically not validatable by an ACCESS method; root fallback kept after a20314a"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Failure taxonomy mostly unemitted: 9,790/21,058 24h executions carry out-of-union execution_error (7,727 on success=true); 138/138 cascading lack upstream_task_id; four members never emitted",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Trace store at 149,651/150,000; docs name activity_execution_traces (last write 2026-07-14) as the store while the live store is execution; v_paradigm_execution_traces view froze 09-22..09-28 blinding detectors",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Cadence law implemented as a systemd timer that runs the rhythm conductor; 48 behavioural env names exist only in unit Environment= lines; ~451 env names read; TRACE_STORE_* and TEMPLATE_LIFECYCLE_MIN_* env-gated"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Doc-promised apparatus absent or uninvoked: forge vessel, operatorIntervention, interventionRateReport, memory-sync-tick, verify-merge-candidate, ciAgreementReport, restart-vessel (absent); closure-audit.ts, substrate-narrator.ts, import-operator-memory.ts (uninvoked); ranked lifecycle dispatch, delegation headers, 4/6 distribution_policy values (inert)"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "QUALIFICATION.md names gap class autonomous-landings-are-never-post-verified as the tracker for post-land verification; no such gap exists while the post-land suite was dead 08-31..09-28"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Default drift: SURREALDB_URL 5 defaults, SURREALDB_PASSWORD 4 (changeme vs root), DISCOVERY_ENDPOINT 4, GOAL_HOST_VESSEL_ENDPOINT :8210 x12 vs :8090 x1, FED_HEALTH_PORT 8401 vs 8402, 11 API-key aliases; doc examples hardcode activity.metabob.com"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "-narrowed twins (trace-persistence..., compose-lesson-writer-forges...), duplicate rhythm-reality-sync gaps, three mitosis-tick|cascading gaps within 12s keyed by timestamp"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Ingested docs that are fossils or pitches (SUBSTRATE_PRESENTATION_2026_06.md claims monotone capacity growth and LLM-free runtime; NARRATION protocol; testing/README.md pre-substrate vocabulary; SUBSTRATE.md closure/forge/self-deployment sections in present tense for unbuilt features)"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "QUICK_VERIFICATION_GUIDE.md pre-push smoke tells operators to run vessel bun test suites and host activity-api on :8080, which operator memory records as mutating live state"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "*_write learning-loop write resolvers (20 shapes)",
+   "location": "activity-api/src/routes/impulses.ts",
+   "purpose": "Learning-loop writes through POST /v2/impulses/resolve delegating to REST handlers",
+   "status": "live-used",
+   "general": true,
+   "duplicates_of": "REST endpoints /v2/activities/* (delegated)",
+   "evidence": "Advertised; compositionEdge_write listed in docs but absent"
+  },
+  {
+   "name": "executeAsAuth root fallback",
+   "location": "activity-api/src/routes/impulses.ts:142",
+   "purpose": "Run API-key-authenticated queries as root with manual org_id predicates",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Code confirmed; violates PERMISSIONS law stated in CLAUDE.md, docs/README.md \u00a76, SCHEMA_OWNERSHIP.md, RBAC_GUIDE.md"
+  },
+  {
+   "name": "thompson_posterior shape",
+   "location": "activity-api impulses.ts case",
+   "purpose": "Read alpha/beta posterior as a routable shape",
+   "status": "live-used",
+   "general": true,
+   "evidence": "In discovery registry shapes"
+  },
+  {
+   "name": "GET /v2/activities/:id/variant-scores",
+   "location": "activity-api",
+   "purpose": "REST posterior read kept for compatibility",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "thompson_posterior"
+  },
+  {
+   "name": "Posterior time decay via substrate_tuning_param",
+   "location": "activity-api/src/lib/posterior-update.ts",
+   "purpose": "Use-time steerable half-life (default 3d), applied on write and selection read",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "FailureModeSchema + computeDeltas",
+   "location": "activity-api/src/models/schemas.ts, lib/posterior-update.ts",
+   "purpose": "Outcome-conditional posterior step sizes",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "24h: 11,129 null, 9,790 out-of-union execution_error, 138 cascading w/o upstream, 3 verifier_negative"
+  },
+  {
+   "name": "classifyReach",
+   "location": "activity-api/src/lib/reach-classify.ts",
+   "purpose": "Reach verdict overrides exit status for credit",
+   "status": "live-used",
+   "general": true,
+   "evidence": "6 call sites across activity-api, goal-host, ribosome-vessel"
+  },
+  {
+   "name": "LifecycleSubscriberVessel",
+   "location": "ias-executor-ts/src/lifecycle-subscriber.ts",
+   "purpose": "Activities subscribe to 5 lifecycle shapes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Wired into goal-host and vessel-daemon hosts"
+  },
+  {
+   "name": "Ranked lifecycle dispatch (HIGH_FREQUENCY_TOP_K, defaultTopKForShape)",
+   "location": "ias-executor-ts/src/lifecycle-subscriber.ts",
+   "purpose": "Top-K Thompson-ranked subscriber firing",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Exported, no consumer"
+  },
+  {
+   "name": "auth_token_source registration field",
+   "location": "discovery-vessel registry + 5 vessels",
+   "purpose": "Declare which credential a caller must attach",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "Delegation headers X-Metabob-Delegation-*",
+   "location": "docs/specs/auth-token-source-field.md",
+   "purpose": "Cross-vessel user delegation",
+   "status": "fossil",
+   "general": true,
+   "evidence": "grep NONE"
+  },
+  {
+   "name": "concept-db write shapes (7)",
+   "location": "concept-db/src/config.ts, routes/impulses.ts",
+   "purpose": "Concept/edge/usage writes as impulses",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "shape-dispatch-check",
+   "location": "packages/shape-dispatch-check/check.ts; concept-db/scripts/check-shape-dispatch.ts",
+   "purpose": "Advertise-vs-dispatch invariant checker",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Exists; concept-db wired; fleet lint wiring not verified"
+  },
+  {
+   "name": "distribution_policy genres",
+   "location": "discovery-vessel registry/resolvers; goal-host satisfier-pick.ts; federation transport",
+   "purpose": "Producer-declared treatment of duplicate producers",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Only unique_authoritative and stateful_data_owner_pin steer; 4 values inert"
+  },
+  {
+   "name": "Federation per-vessel hub mirror + SELF_MIRROR + withdrawal diff",
+   "location": "scripts/substrate/federation-relay/federation-transport-server.ts:928-1011",
+   "purpose": "Register each local vessel as <id>@<substrate> at the hub",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Log line still says mirror disabled on hub"
+  },
+  {
+   "name": "Doc ingestion to concept-db + consultPrinciples top-4",
+   "location": "scripts/substrate/ingest-docs-as-concepts.ts; development-vessel feature-compose.ts",
+   "purpose": "Docs as runtime input to the drafter",
+   "status": "broken",
+   "general": true,
+   "evidence": "Reap refused 75/75 runs; 606 stale concepts; updated:10 every run; driven by systemd timer"
+  },
+  {
+   "name": "memoryNote store + session hooks",
+   "location": "development-vessel/src/resolvers/memory-note.ts; .claude/hooks/substrate-*.sh",
+   "purpose": "System-owned memory; operator files a cache",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Store at super-repo/memory/notes.json holds 59 notes (1,788 on 09-23); old 680-note store orphaned"
+  },
+  {
+   "name": "trace_store_counters + maintenanceLease + reconcile_trace_store + trace_store_health_observer",
+   "location": "activity-api trace-store-counters.ts, db-admin-reconcile.ts; development-vessel maintenance-lease.ts",
+   "purpose": "O(1) size accounting and leased copy-forward retention",
+   "status": "live-used",
+   "general": true,
+   "evidence": "149,651/150,000, reconciled 2026-09-29T03:44Z"
+  },
+  {
+   "name": "activity_execution_traces legacy table",
+   "location": "activity-api execution-traces.ts:2824 INSERT",
+   "purpose": "Old trace store",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "execution table",
+   "evidence": "18,135 rows, newest stored_at 2026-07-14T23:13Z"
+  },
+  {
+   "name": "Rhythm conductor (timeShapedRhythm, rhythmFamilyGoal)",
+   "location": "development-vessel rhythm-conductor-tick.ts; rhythm-cadence.timer",
+   "purpose": "Law-5 cadence as pool impulses",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Driven by 15-min systemd timer; timeShapedRhythm not advertised"
+  },
+  {
+   "name": "Qualification deterministic oracles verified-compute-answer / verified-gap-total",
+   "location": "goal-host-vessel/src/index.ts",
+   "purpose": "Deterministic verdict sources for probe families",
+   "status": "unknown",
+   "general": false,
+   "evidence": "Present in code; firing cadence not verified"
+  },
+  {
+   "name": "Selftest kit gate_self_probe / emit_shape / reach_graded",
+   "location": "development-vessel resolvers; activity-api execution-traces.ts",
+   "purpose": "Known-ground-truth probes mocked at the shape seam",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Present; rotation/completion not verified"
+  },
+  {
+   "name": "interventionRefused shape",
+   "location": "development-vessel intervention-evaluate.ts",
+   "purpose": "Record substrate refusals of operator actions",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Advertised in registry"
+  },
+  {
+   "name": "operatorIntervention, interventionRateReport, memory-sync-tick, verify-merge-candidate, ciAgreementReport, restart-vessel, forge vessel",
+   "location": "docs/SUBSTRATE.md (promised)",
+   "purpose": "Closure/S3 and self-deployment apparatus",
+   "status": "fossil",
+   "general": true,
+   "evidence": "grep NONE in live clones"
+  },
+  {
+   "name": "closure-audit.ts",
+   "location": "validation/scripts/closure-audit.ts",
+   "purpose": "Closure lift gate",
+   "status": "dormant",
+   "general": false,
+   "evidence": "No invoker"
+  },
+  {
+   "name": "substrate-narrator.ts + validation/gaps",
+   "location": "validation/",
+   "purpose": "Operator narration gap accumulation",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "gaps/gaps.json gap store",
+   "evidence": "Last record 2026-05-24"
+  },
+  {
+   "name": "import-operator-memory.ts",
+   "location": "scripts/substrate/",
+   "purpose": "Bulk import operator memory cache into memoryNote",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Manual only, no invoker"
+  },
+  {
+   "name": "config-surface-probe.sh",
+   "location": "scripts/substrate/",
+   "purpose": "Measure config channels, precedence, drift",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Makefile-only; no validating activity"
+  },
+  {
+   "name": "failure-mode-harness.ts / stratified-harness.ts",
+   "location": "validation/scripts/",
+   "purpose": "Failure classification and Thompson/MRR validation",
+   "status": "unknown",
+   "general": false,
+   "evidence": "Referenced by development-vessel seeds harness-check-scenario, docs-align-scan, substrate-health-tick; execution not verified"
+  },
+  {
+   "name": "Retired analysis shapes answering 410",
+   "location": "activity-api impulses.ts (@shape-dispatch:private)",
+   "purpose": "Compatibility stubs for moved resolvers",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "analysis-vessel shapes"
+  }
+ ],
+ "principles": [
+  "END GOAL (docs/README.md): every doc is an expectation the substrate holds about itself, ingested into concept-db and read by the drafter; nine architectural purposes: ontology, execution/walk, learning from traces, self-development, topology/federation, identity/trust, interface, operations, gap management",
+  "Four primitives only (impulse, pointer, resolver, vessel); a shape is a routing-and-reasoning key never a schema; a fifth primitive or a rename is drift (docs/README.md \u00a71; shapes/README.md)",
+  "Judge reached, not exit status; credit follows the reach verdict and ungraded outcomes are skipped, never credited or blamed (docs/README.md \u00a72-3; learning/FAILURE_MODES.md)",
+  "A document no reader consumes is an archive; docs/architecture headings are a frozen interface; keep sections >200 chars; load-bearing claim early (self-development/DOC_INGESTION.md)",
+  "A schema defines what may be recorded, it does not cause recording: census before reasoning; a zero is not a zero until a positive control shares the query (learning/FAILURE_MODES.md)",
+  "A warning collected into a structure the caller discards is observed by nobody: find its reader (learning/FAILURE_MODES.md)",
+  "Behavioural values are read at use time with no env fallback; configuration is the one region with no learning loop; config-surface size measures unfinished shaping (thompson_posterior.md; operations/CONFIGURATION_SURFACE.md \u00a73)",
+  "A probe that cannot run must say so, never produce a number; a check that reads one artifact and exercises another measures the gap between them (CONFIGURATION_SURFACE.md \u00a76)",
+  "A check nothing invokes cannot be trusted when it passes (CONFIGURATION_SURFACE.md \u00a77)",
+  "Qualification = deterministic-verdict correctness (LLM-judged green does not count), delivery, containment, and repair with executed post-land verification; an unverified landing is an activation not a repair; any operator hand disqualifies the cycle (QUALIFICATION.md)",
+  "Reuse without adaptation is memorization; adaptation without reuse means nothing was learned (QUALIFICATION.md)",
+  "Selftest = dispatched intervention with known ground truth, asserted at the consuming layer, controls mandatory, isolation by attribution not environment, falsifier anchors immutable once filed (validation/LEARNING_LOOP_SELFTEST.md)",
+  "The pool grades what it selects; a timer fires forever regardless of outcome, so timer-plane work cannot be learned away (SUBSTRATE.md dev-vessel specifics)",
+  "Memory about the system belongs to the system; operator files are a cache; memoryNote teaches the operator, concept-db teaches the drafter; name the runtime reader before writing a lesson (MEMORY_AS_SUBSTRATE.md)",
+  "Single table owner; read across, write through the owner's resolver; the owner migrates and owns PERMISSIONS; tenant isolation lives in the table; never hand-edit a live DB (SCHEMA_OWNERSHIP.md)",
+  "The producer declares how its duplicates are treated; the identity secret defines the namespace boundary (operations/FEDERATION_GENRES.md)",
+  "Advertise and dispatch together under a checker; a shape never resolved by a walk is a declaration not a capability; prefer adding a shape over renaming (shapes/README.md)",
+  "origin/dev is the only code channel; pushing is deployment; host docker-cp is not a delivery path; one unit property lives in one file (SUBSTRATE.md; CONFIGURATION_SURFACE.md \u00a71)",
+  "Specs should carry explicit 'what ships vs what is design' blocks naming the missing consumer (specs/*.md, thompson_posterior.md)",
+  "The substrate cannot self-declare S3; push-away with cited evidence is the signal (SUBSTRATE.md)"
+ ]
+}

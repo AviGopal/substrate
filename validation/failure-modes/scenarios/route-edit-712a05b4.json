@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-712a05b4",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-a3a71e00: In repos/relevance-sink-vessel/src/index.ts, the GET /health handler ",
+  "description": "investigate and decompose gap route-edit-a3a71e00: In repos/relevance-sink-vessel/src/index.ts, the GET /health handler must verify the SurrealDB dependency instead of reporting ok unconditionally (a miswired deployment currently passes every automatic health check while all writes fail; proven 2026-09-15, validation/reports/wiring-green-vs-miswired-proof). Find this exact anchor text:\n\n```ts\n      if (req.method === \"GET\" && url.pathname ===",
+  "goal_text": "investigate and decompose gap route-edit-a3a71e00: In repos/relevance-sink-vessel/src/index.ts, the GET /health handler must verify the SurrealDB dependency instead of reporting ok unconditionally (a miswired deployment currently passes every automatic health check while all writes fail; proven 2026-09-15, validation/reports/wiring-green-vs-miswired-proof). Find this exact anchor text:\n\n```ts\n      if (req.method === \"GET\" && url.pathname ===",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-712a05b4",
+  "source_gap_source": "substrate_detected"
+}

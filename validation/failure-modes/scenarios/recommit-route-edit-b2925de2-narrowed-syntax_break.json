@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-b2925de2-narrowed-syntax_break",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap route-edit-b2925de2-narrowed repeated already-recorded failure class syntax_break: == install ==\n== reso",
+  "description": "compose for gap route-edit-b2925de2-narrowed repeated already-recorded failure class syntax_break: == install ==\n== resolve ==\nDRYRUN_EXIT=0\n @types/bun@1.3.14\n typescript@5.9.3\n bun-types@1.3.14\n @types/node@25.9.1\n undici-types@7.24.6\n[2.00ms] don",
+  "goal_text": "compose for gap route-edit-b2925de2-narrowed repeated already-recorded failure class syntax_break: == install ==\n== resolve ==\nDRYRUN_EXIT=0\n @types/bun@1.3.14\n typescript@5.9.3\n bun-types@1.3.14\n @types/node@25.9.1\n undici-types@7.24.6\n[2.00ms] don",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-b2925de2-narrowed-syntax_break",
+  "source_gap_source": "substrate_detected"
+}

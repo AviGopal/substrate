@@ -1,0 +1,21 @@
+commit fdf197a253efc997a3ca64a5d5f7b22a0366fcd1
+Author:     Substrate Autonomous <substrate-autonomous@substrate.local>
+AuthorDate: Tue Sep 15 03:00:24 2026 +0000
+Commit:     Substrate Autonomous <substrate-autonomous@substrate.local>
+CommitDate: Tue Sep 15 03:00:24 2026 +0000
+
+    Stash local changes before cutover to origin/dev
+
+ compose-slots/slot-0.slot                          |   1 +
+ interactor-log/uiFeedback_write.jsonl              |  12 +
+ repos/activity-api                                 |   2 +-
+ repos/concept-db                                   |   2 +-
+ repos/development-vessel                           |   2 +-
+ repos/goal-host-vessel                             |   2 +-
+ repos/ias-executor-ts                              |   2 +-
+ repos/identity-vessel                              |   2 +-
+ repos/llm-resolver-vessel                          |   2 +-
+ repos/metric-collector-vessel                      |   2 +-
+ .../federation-transport-server.ts                 | 681 ++++++++++++++++++++-
+ state/learning-mode-state.json                     |   4 +-
+ 12 files changed, 683 insertions(+), 31 deletions(-)

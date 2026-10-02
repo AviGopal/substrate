@@ -1,0 +1,601 @@
+{
+ "source": "timers-readers",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/timers-readers.md",
+ "coverage": "Covered: every systemd timer and service on node 1 (substrate-live, 46 timers) and node 2 (compose2-live, 16 timers, 5 masked+failed). For each: the effective ExecStart after drop-ins, when it last ran, and its journal output over about 3.6 days (the node-1 journal only goes back to 09-25 13:12). Traced what each writes (file, shape, table or gap) and grepped for readers across the non-mitosis /vessels/*/src, /workspace/active-scripts, /usr/local/bin and super-repo scripts. Also checked the gap-store rows filed by timer detectors (live store on node 1, local copy on node 2) and the caller of every script in /workspace/active-scripts (the script-retention rule). Not covered or unverified: the 12-13 rhythm families were not listed one by one. The DB-side readers of coherence-recover demotions and of auto-describe descriptions come from script headers and were not checked in the DB. I did not verify whether any consumer excludes the synthetic executions from learning-liveness-probe and learning-loop-selftest from posteriors or metrics. The masked node-2 detectors were not re-run. No static reader exists for goalHostBehaviorModel, but it could be resolved dynamically by shape. The 9 gap-learning-loop-selftest-* gaps closed together at 09-28T01:27 were noted but not investigated. The node where the service-failure-* gaps came from was not established.",
+ "attempts": [
+  {
+   "key": "write-read-mismatch",
+   "title": "WORKSPACE_ROOT made durable = super-repo clone",
+   "where": "scripts/substrate/gen-env.sh (09d9baa6)",
+   "date": "2026-07-25",
+   "tried": "Set WORKSPACE_ROOT from SUBSTRATE_ROOT so every unit gets the same root (law 11)",
+   "outcome": "partial",
+   "evidence": "Split reads the same day: the watchdog log at /workspace/pool froze 07-20 while the live one is under /workspace/git/super-repo/pool; the pool standing.json froze 09-07; typecheck-scenario-gen writes to the frozen /workspace/gaps/gaps.json; self-operational-health falsely flags missing subdirs"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Per-site workaround in boredom-vessel for the frozen gaps.json",
+   "where": "repos/boredom-vessel/src/index.ts:2393",
+   "tried": "Read around the literal /workspace/gaps/gaps.json ('a copy frozen 2026-08-08')",
+   "outcome": "partial",
+   "evidence": "Fixed one reader. typecheck-scenario-gen and meta-closure-view still use the frozen path"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Repoint 8 KPI/self-dev scripts off the frozen trace table",
+   "where": "3c1bf965",
+   "date": "2026-08-25",
+   "tried": "Changed the table name the scripts read",
+   "outcome": "partial",
+   "evidence": "joint-liveness still files frozen-table-class gaps: severed-joint-* x5 open 09-27..09-28"
+  },
+  {
+   "key": "false-verification",
+   "title": "Watchdog demotion of compose/drain timers",
+   "where": "scripts/substrate/watchdog-tick.ts + units/*.service.d/watchdog.conf (887577bd)",
+   "date": "2026-07-08",
+   "tried": "Make the event drain primary. The timer fires the resolver only when the activity marker is older than STALL_MIN",
+   "outcome": "failed",
+   "evidence": "On 09-28/29: 711 gap_to_feature restarts, all ok:true http 200, while compose-lessons.jsonl stayed stale 151->230 min. compose-teacher has not run since 09-23 and operator-goal-generator since 09-09, because they read another flow's marker"
+  },
+  {
+   "key": "false-verification",
+   "title": "Retry the watchdog restart across a vessel restart",
+   "where": "watchdog-tick.ts (c71819af)",
+   "date": "2026-09-04",
+   "tried": "3 attempts with transport-level retry",
+   "outcome": "partial",
+   "evidence": "Transport failures are fixed. Success is still judged by HTTP status and never by the stall marker"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "--no-block plus in-flight guard on the gap-compose unit kick",
+   "where": "repos/development-vessel/src/resolvers/substrate-gap.ts:1207-1329",
+   "date": "2026-09-14",
+   "tried": "Stop the 115 s event-loop freeze on each gap write and the 27 concurrent typechecks",
+   "outcome": "partial",
+   "evidence": "gap-compose.service now starts every 1-7 min from gap writes. There are three redundant compose entry points (GapDrainObserver, in-process nudge, watchdog)"
+  },
+  {
+   "key": "false-verification",
+   "title": "Wire memory-budget-check 'and make it work where it runs'",
+   "where": "scripts/substrate/units/memory-budget-check.service (8dbea1d7)",
+   "date": "2026-08-17",
+   "tried": "Hourly memory-cap check",
+   "outcome": "failed",
+   "evidence": "Prints FAIL every hour ('65 of 69 units uncapped while the largest process IS capped'). SuccessExitStatus=0 1 turns that into success. Output goes only to the journal, with no gap and no reader"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "typecheck-scenario-gen as concrete fuel for the funnel",
+   "where": "scripts/substrate/typecheck-scenario-gen.ts (331abda3)",
+   "date": "2026-06-17",
+   "tried": "Turn tsc errors into scenario files and gap rows",
+   "outcome": "failed",
+   "evidence": "20 typecheck-* gaps from 09-11 to 09-26, including TS1005/TS1128 syntax errors in vessel-mitosis-cutover, exist only in the frozen /workspace/gaps/gaps.json. The live store has 0"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "surgical-gap-scan supply of landable gaps",
+   "where": "scripts/substrate/surgical-gap-scan.ts (459bf0ca; da76f061/807b92ef)",
+   "date": "2026-06-29",
+   "tried": "Deterministic source scan that emits single-edit gaps. A detector for resolve-path joins was added on 09-28",
+   "outcome": "failed",
+   "evidence": "91/91 runs had emitted_count 0. The 09-28 detector was added and reverted the same day"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "composition-edge-reconcile incremental watermark",
+   "where": "scripts/substrate/composition-edge-reconcile.ts (78eb6d91)",
+   "date": "2026-07-06",
+   "tried": "Incremental derivation of edges from traces",
+   "outcome": "superseded",
+   "evidence": "204/206 runs over 4 days had batch_traces 0 and upserted 0. graph_total still grows 13125->14953 through the inline write in activity-api routes/execution-traces.ts"
+  },
+  {
+   "key": "node-locality",
+   "title": "Node-2 detectors masked after failing",
+   "where": "compose2-live compose-drift/joint-liveness/validator-liveness/learning-loop-selftest",
+   "date": "2026-09-28",
+   "tried": "Units ran on the spoke. They failed ('Unable to connect': no local SurrealDB, and 'Module not found learning-loop-selftest-tick.ts') and were then masked",
+   "outcome": "failed",
+   "evidence": "The units are masked and failed. The signal was thrown away instead of placing the detectors correctly. The script is still missing from node 2's clone"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Obsidian intake/learn/collaborate loops",
+   "where": "obsidian-*.timer (d6bb951c)",
+   "date": "2026-06-29",
+   "tried": "Async human<->substrate loop through Obsidian",
+   "outcome": "dormant",
+   "evidence": "Over 7 days: 2562+222+169 ticks, 100% SKIPPED with 'no vessel advertises obsidian:note'"
+  },
+  {
+   "key": "env-gating",
+   "title": "runtime-drift detector",
+   "where": "scripts/substrate/runtime-drift-tick.ts",
+   "tried": "Detect runtime-vs-clone drift and repair it",
+   "outcome": "partial",
+   "evidence": "Detects that development-vessel resolvers/patch-with-tools.ts differs from the clone but does not repair it, because RUNTIME_DRIFT_REPAIR is unset. demo-vessel and relevance-sink-vessel are not covered"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "db-maintenance-tick autonomous DB maintenance",
+   "where": "/workspace/active-scripts/db-maintenance-tick.ts",
+   "tried": "Diagnose and remediate the DB on a cadence",
+   "outcome": "dormant",
+   "evidence": "actions:[] on every tick. Integrity findings acg_none_fk, cts_null_account_id and doubled_prefix_ids persist. prune_candidates 18135. slow_queries went 1764->2862"
+  }
+ ],
+ "problems": [
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Producers and consumers use different roots. Frozen copies of pool/standing.json, watchdog-log, drain-log and gaps.json under /workspace still receive writes or are read as if live, while live state is under /workspace/git/super-repo",
+   "root_cause": "09d9baa6 redefined WORKSPACE_ROOT from the volume root to the super-repo clone. Scripts that hardcode /workspace/... and scripts that join WORKSPACE_ROOT+relative now disagree. It was patched per site and never at the seam",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 7
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Units report success while doing no work or failing: 711 watchdog restarts with ok:true while the stall persists, memory-budget-check FAIL counted as success, self-operational-health checks only is-active, edge-reconcile succeeds with 0 work",
+   "root_cause": "Liveness is certified by the transport or scheduler signal (HTTP 200, systemd Result, timer active) and not by the effect the unit exists to produce",
+   "first_seen": "2026-07-08",
+   "last_seen": "2026-09-29",
+   "recurrences": 5
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "compose-teacher (last run 09-23) and operator-goal-generator (last run 09-09) never fire",
+   "root_cause": "watchdog-tick's default WATCHDOG_ACTIVITY_PATHS is another flow's drain log. Their 'is my flow alive' test reads a file that every drain appends to",
+   "first_seen": "2026-07-08",
+   "last_seen": "2026-09-29",
+   "recurrences": 2
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Node 2 runs 4 timers. 5 detectors are masked+failed. There is no self-recovery timer and no metrics dir. The gap store is an independent stale copy (70 rows, modified 09-26) that the node-2 gap-compose watchdog drains",
+   "root_cause": "Detectors open SurrealDB and read metric files directly instead of resolving by shape. The gap store and metrics are per-node JSON files",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 4
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps filed by timer detectors (db-contention since 09-18, model-reality-selector-unscored since 09-18, severed-joint-* x5, service-failure-* x3, learning-loop-selftest since 09-19) are refreshed every tick and never closed",
+   "root_cause": "The detectors emit no classification_metadata.edit_site or machine check, so re-detection only moves updated_at",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 11
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "trace-store-reconcile-2026-09-24T11 was filed by the health-check timer and then spawned -narrowed (09-28T03:16) and recommit-\u2026-semantic_reject (09-28T03:37) children",
+   "root_cause": "The detector's gap has no address. The compose lane retries through narrowing children instead of fixing",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 2
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Timers run with zero output: obsidian x3 (100% skipped), surgical-gap-scan (0/91), typecheck-scenario-gen (0 now, and wrongly addressed before), db-maintenance (actions []), rhythm-conduct (enqueued=0 on most ticks)",
+   "root_cause": "The target moved (the Obsidian surface was replaced), there is no supply, or the unit is diagnose-only by design. Nothing dispositions them",
+   "first_seen": "2026-06-29",
+   "last_seen": "2026-09-29",
+   "recurrences": 5
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "11 scripts exist only in the /workspace/active-scripts volume (not in the super-repo). 7 more have no caller. 48 .js and 48 .d.ts tsc outputs are tracked in scripts/substrate. 2519 orthogonal observation files. 3 stale standing.json.tmp.* files of 4MB each",
+   "root_cause": "The seeder and pull-sync run 'cp -f *.ts' with no prune. The autonomous commit 4e4170a8 (09-07) committed emit residue. Append-only file outputs have no retention",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-29",
+   "recurrences": 4
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Flow routing, repair arming and learning features live in env drop-ins: WATCHDOG_*, RUNTIME_DRIFT_REPAIR, EMBEDDING_PRIOR_ENABLED, BOREDOM_*, GAPS_PATH default",
+   "root_cause": "The timer and unit layer is configured with env, which violates law 1. Cadence is static OnUnitActiveSec, which violates law 5",
+   "first_seen": "2026-06-17",
+   "last_seen": "2026-09-29",
+   "recurrences": 5
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "embedding_prior_weights has 5131 rows, gaining about 96 per day from m1-trainer, while the reader uses only the latest",
+   "root_cause": "Append-only CREATE on a 15-min timer with no retention",
+   "first_seen": "2026-08-22",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "pull-sync refuses to converge vessels.inventory.json and manifest ('modified locally'). learning-loop-selftest-tick.ts is missing on node 2. Node 2's bin differs from node 1's",
+   "root_cause": "Local edits to fleet files block convergence. Clones on the two nodes diverge",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-29",
+   "recurrences": 3
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "watchdog-tick.ts (demoted-timer watchdog)",
+   "location": "scripts/substrate/watchdog-tick.ts; units/{gap-compose,funnel-drain,compose-teacher,operator-goal-generator}.service.d/watchdog.conf",
+   "purpose": "Restart a flow's resolver only when its activity marker is stale",
+   "status": "broken",
+   "general": true,
+   "evidence": "Success is judged by HTTP 200 rather than by the marker: 711 restarts in 2 days, all ok, while the marker stayed stale. Default marker paths are shared across flows. funnel-drain's marker is the frozen /workspace/pool/drain-log.jsonl"
+  },
+  {
+   "name": "substrate-gap.ts systemctl kick of gap-compose.service",
+   "location": "repos/development-vessel/src/resolvers/substrate-gap.ts:1262,1329",
+   "purpose": "Start a compose on every gap write",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "GapDrainObserver (services/gap-drain-observer.ts) and the watchdog",
+   "evidence": "The service starts every 1-7 min. The timer's own LastTrigger is 09-28 11:45"
+  },
+  {
+   "name": "GapDrainObserver",
+   "location": "repos/development-vessel/src/services/gap-drain-observer.ts",
+   "purpose": "Event-driven compose drain (the primary path)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Its websocket goes to the hub's activity-api, so it is unreachable from a spoke when the hub is down (per the substrate-gap.ts comment)"
+  },
+  {
+   "name": "self-recovery-tick",
+   "location": "/usr/local/bin/self-recovery-tick (self-recovery.timer, node 1 only)",
+   "purpose": "Restart unhealthy vessels",
+   "status": "live-used",
+   "general": true,
+   "evidence": "healthy 13, uninstalled_skipped 3. Present on node 2 but not scheduled there"
+  },
+  {
+   "name": "light-dispatch-healthcheck",
+   "location": "/usr/local/bin/light-dispatch-healthcheck",
+   "purpose": "Catch a hung light-dispatch",
+   "status": "live-used",
+   "general": true,
+   "evidence": "9945 ok runs in 3.6 days"
+  },
+  {
+   "name": "substrate-pull-sync",
+   "location": "/usr/local/bin/substrate-pull-sync",
+   "purpose": "Pull clones, mirror the runtime, reseed active-scripts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "synced=1. cp -f with no prune (line 1666). Refuses to converge the fleet files"
+  },
+  {
+   "name": "substrate-active-scripts-seed",
+   "location": "units/substrate-active-scripts-seed.service",
+   "purpose": "Seed the run-dir at boot",
+   "status": "live-used",
+   "general": true,
+   "evidence": "cp -f with no prune, so 11 deleted scripts persist in the volume"
+  },
+  {
+   "name": "obsidian-intake/learn/collaborate timers",
+   "location": "/usr/local/bin/obsidian-*-tick.sh",
+   "purpose": "Human loop through Obsidian",
+   "status": "dormant",
+   "general": false,
+   "evidence": "100% SKIPPED over 7 days (2953 ticks). The obsidian:note shape is not advertised"
+  },
+  {
+   "name": "typecheck-scenario-gen",
+   "location": "scripts/substrate/typecheck-scenario-gen.ts",
+   "purpose": "Turn tsc errors into gaps",
+   "status": "broken",
+   "general": false,
+   "evidence": "GAPS_PATH defaults to the frozen /workspace/gaps/gaps.json. 20 gaps were lost"
+  },
+  {
+   "name": "surgical-gap-scan",
+   "location": "scripts/substrate/surgical-gap-scan.ts",
+   "purpose": "Supply landable single-edit gaps",
+   "status": "dormant",
+   "general": false,
+   "evidence": "emitted_count 0 on 91/91 runs"
+  },
+  {
+   "name": "composition-edge-reconcile",
+   "location": "scripts/substrate/composition-edge-reconcile.ts",
+   "purpose": "Derive activity_composition_graph from traces",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "activity-api src/routes/execution-traces.ts inline edge write",
+   "evidence": "204/206 runs did zero work while the graph kept growing"
+  },
+  {
+   "name": "db-maintenance-tick",
+   "location": "scripts/substrate/db-maintenance-tick.ts",
+   "purpose": "Autonomous DB remediation",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "actions [] on every tick. The metrics jsonl is read only by its writer"
+  },
+  {
+   "name": "memory-budget-check",
+   "location": "scripts/substrate/memory-budget-check.sh + unit",
+   "purpose": "Memory cap sanity",
+   "status": "broken",
+   "general": false,
+   "evidence": "FAIL every hour, reported as success because SuccessExitStatus=0 1"
+  },
+  {
+   "name": "compose-teacher",
+   "location": "scripts/substrate/compose-teacher.ts via watchdog",
+   "purpose": "Teaching loop that reinforces composites",
+   "status": "dormant",
+   "general": false,
+   "evidence": "teaching-loop.jsonl last written 09-23. 15 fires ever"
+  },
+  {
+   "name": "operator-goal-generator",
+   "location": "scripts/substrate/operator-goal-generator.ts via watchdog",
+   "purpose": "Generate operator-class goals",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Last run 09-09. Its last line was a grounding TypeError"
+  },
+  {
+   "name": "operator-goal-signal.ts",
+   "location": "scripts/substrate/operator-goal-signal.ts",
+   "purpose": "Enrichment signal",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Named only in a unit comment. No caller"
+  },
+  {
+   "name": "model-reality-audit",
+   "location": "scripts/substrate/model-reality-audit.ts",
+   "purpose": "Aggregate model-vs-trace checks",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Re-detects C4.selector_unscored every hour. The gap has been open since 09-18 with no edit_site"
+  },
+  {
+   "name": "joint-liveness-tick",
+   "location": "scripts/substrate/joint-liveness-tick.ts",
+   "purpose": "Detect write->read-severed joints",
+   "status": "live-used",
+   "general": true,
+   "evidence": "severed=3-4 per tick. Masked+failed on node 2 (direct SQL)"
+  },
+  {
+   "name": "validator-liveness-tick",
+   "location": "scripts/substrate/validator-liveness-tick.ts",
+   "purpose": "Detect validators that stopped their cadence",
+   "status": "live-used",
+   "general": true,
+   "evidence": "SEVERED 10/97. Masked on node 2"
+  },
+  {
+   "name": "learning-loop-selftest-tick",
+   "location": "scripts/substrate/learning-loop-selftest-tick.ts",
+   "purpose": "End-to-end learning-chain probe",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1 RED link, posterior_delta. The script is missing on node 2"
+  },
+  {
+   "name": "learning-liveness-probe",
+   "location": "scripts/substrate/learning-liveness-probe.ts",
+   "purpose": "Probe that the posterior follows an execution",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Injects a real execution every 6h and moves the probe arm's posterior (test residue on a cadence)"
+  },
+  {
+   "name": "self-operational-health",
+   "location": "scripts/substrate/self-operational-health.ts",
+   "purpose": "Deployment-boundary invariants",
+   "status": "live-used",
+   "general": true,
+   "evidence": "The workspace_subdir_unavailable finding is false (it checks under the super-repo root). The timer check is only is-active"
+  },
+  {
+   "name": "self-repair-operational",
+   "location": "scripts/substrate/self-repair-operational.ts",
+   "purpose": "Re-enable allowlisted timers",
+   "status": "live-used",
+   "general": false,
+   "evidence": "0 repaired"
+  },
+  {
+   "name": "spectral-gap",
+   "location": "scripts/substrate/spectral-gap.ts",
+   "purpose": "Topology metric",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Read by 3 dev-vessel resolvers through a hardcoded node-local path. live_genuine is 0/0. There is no file on node 2"
+  },
+  {
+   "name": "runtime-drift-tick",
+   "location": "scripts/substrate/runtime-drift-tick.ts",
+   "purpose": "Runtime vs clone drift",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Detects but does not repair (env-gated). Output goes only to the journal"
+  },
+  {
+   "name": "trace-store-health-check",
+   "location": "scripts/substrate/trace-store-health-check.ts",
+   "purpose": "Row-count cap check",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Over the cap every tick. Blind to the 42GB of blobs, per its own open gap"
+  },
+  {
+   "name": "m1-trainer",
+   "location": "/vessels/activity-api/scripts/m1-train.ts",
+   "purpose": "Embedding-conditioned prior",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Read by prior-seed.ts behind EMBEDDING_PRIOR_ENABLED. 5131 rows, of which only the latest is used"
+  },
+  {
+   "name": "goal-host-behavior-scan",
+   "location": "repos/development-vessel/src/resolvers/goal-host-behavior-scan.ts",
+   "purpose": "Model goal directions",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "No static reader of goalHostBehaviorModel"
+  },
+  {
+   "name": "self-development-trend",
+   "location": "scripts/substrate/self-development-trend.ts",
+   "purpose": "Trend metric log",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "The jsonl is read only by its writer"
+  },
+  {
+   "name": "rhythm-cadence (seed+conduct)",
+   "location": "scripts/substrate/rhythm-{seed,conduct}-tick.ts",
+   "purpose": "Law-5 rhythm conductor",
+   "status": "live-used",
+   "general": true,
+   "evidence": "enqueued=0 on 260 of ~370 ticks. No per-family reason is given"
+  },
+  {
+   "name": "boredom-vessel.timer",
+   "location": "units/boredom-vessel.timer",
+   "purpose": "Periodic boredom pass",
+   "status": "fossil",
+   "general": false,
+   "evidence": "The service runs as a daemon, so OnUnitActive never elapses"
+  },
+  {
+   "name": "observe-orthogonal-refresh",
+   "location": "scripts/substrate/observe-orthogonal-refresh.ts",
+   "purpose": "Feed enact-orthogonal-decisions",
+   "status": "live-used",
+   "general": false,
+   "evidence": "0 decisions on most ticks. 2519 files accumulated"
+  },
+  {
+   "name": "volume-only fossil scripts (11)",
+   "location": "/workspace/active-scripts/{autonomy-metrics-view,autonomy-trend,backfill-composition-edges,composition-edge-backfill,criterion-coverage,docs-align-scan,docs-align-status,learning-to-learn-demo,meta-closure-view,prime-concept-db,recompute-poisoned-posteriors}.ts",
+   "purpose": "Old one-shots and views",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Absent from the super-repo, no caller, dated 08-02/08-05"
+  },
+  {
+   "name": "tracked tsc emit (.js/.d.ts)",
+   "location": "scripts/substrate/*.js, *.d.ts (48+48)",
+   "purpose": "none",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Added by the autonomous commit 4e4170a8 on 09-07"
+  },
+  {
+   "name": "gap-compose-tick.ts / funnel-drain.ts",
+   "location": "scripts/substrate/",
+   "purpose": "Original timer bodies",
+   "status": "fossil",
+   "general": false,
+   "evidence": "ExecStart is overridden by the watchdog drop-in and the restart goes through an impulse, so these are never executed"
+  }
+ ],
+ "principles": [
+  "A unit that ran is not a unit that worked: certify liveness by the effect the unit exists to produce (the marker moved, the row was read), never by an HTTP 200, a systemd Result or 'timer active'.",
+  "A failing check laundered into success (SuccessExitStatus=0 1, ok:false inside an exit-0 payload) is worse than no check.",
+  "Every scheduled output needs a named reader. A file or shape that only its writer references is an archive, not a signal. Grep for readers before adding a timer.",
+  "Fix path-root disagreements at the seam, since one variable redefinition (09d9baa6) produced at least seven 'new' bugs that were each patched per site.",
+  "A watchdog's stall marker must belong to its own flow. A shared or default marker makes one flow's cadence a function of another's.",
+  "A detector that files a gap without an edit_site or machine check just re-detects forever. Refreshing updated_at is not progress.",
+  "Masking a failing unit throws the signal away. Fix placement (resolve by shape) instead.",
+  "A copy-without-prune deploy step turns every deletion into a fossil that lives in the volume.",
+  "Node-local files (metrics, gap store) read through hardcoded paths make every spoke blind by construction."
+ ],
+ "claims": [
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-07-08",
+   "claim": "Watchdog demotion: the event drain is primary and the timer fires only on a demonstrated stall (887577bd)",
+   "where": "scripts/substrate/watchdog-tick.ts header",
+   "later": "On 09-28/29 there were 711 restarts, all ok:true, while stalled_min rose from 151 to 230. compose-teacher and operator-goal-generator are starved by the shared default marker"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-07-25",
+   "claim": "'set WORKSPACE_ROOT durably from SUBSTRATE_ROOT (law 11)' (09d9baa6)",
+   "where": "scripts/substrate/gen-env.sh",
+   "later": "At least 7 split-read instances remain live on 09-29 (watchdog log, pool, drain-log marker, gaps.json, subdir check, memory store, metrics path guessing)"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-17",
+   "claim": "'wire memory-budget-check, and make it work where it runs' (8dbea1d7)",
+   "where": "units/memory-budget-check.service",
+   "later": "FAIL every hour, reported as success via SuccessExitStatus=0 1. No reader"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-08-25",
+   "claim": "'repoint 8 KPI/self-dev scripts off the frozen trace table' (3c1bf965)",
+   "where": "scripts/substrate/*",
+   "later": "joint-liveness keeps filing frozen-table-class severed-joint-* gaps as of 09-28/29"
+  },
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-16",
+   "claim": "'restore spectral-gap from its truncation; make staleness as loud as absence' (7013d1cf)",
+   "where": "scripts/substrate/spectral-gap.ts, compose-teacher.ts",
+   "later": "live_genuine is 0 nodes and 0 edges on 09-29. Node 2 has no metrics file, and the dev-vessel resolvers that read it use a hardcoded node-1 path"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-06-17",
+   "claim": "typecheck-scenario-gen gives 'sustained concrete fuel for the autonomous funnel' (331abda3)",
+   "where": "scripts/substrate/typecheck-scenario-gen.ts",
+   "later": "From 09-11 to 09-26 it delivered 20 gaps to the frozen /workspace/gaps/gaps.json. 0 reached the live store"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-09-28",
+   "claim": "surgical-gap-scan detects endpoint + absolute resolve-path joins (da76f061)",
+   "where": "scripts/substrate/surgical-gap-scan.ts",
+   "later": "Reverted the same day (807b92ef). The scanner emitted 0 on 91/91 runs"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-14",
+   "claim": "In-code: the gap-compose marker compose-lessons.jsonl 'is never stale so the drain never fires'",
+   "where": "repos/development-vessel/src/resolvers/substrate-gap.ts ~1210",
+   "later": "On 09-29 the marker is 230 min stale and the watchdog fires every tick. Both states are documented in code and neither was verified"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-04",
+   "claim": "Watchdog retries make restarts survive a vessel restart (c71819af)",
+   "where": "scripts/substrate/watchdog-tick.ts",
+   "later": "Transport retries work, but a restart is still judged by HTTP status. The flow stayed stalled through 711 'ok' restarts"
+  },
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-28",
+   "claim": "Node-2 detectors disposed by masking",
+   "where": "compose2-live units",
+   "later": "The masked units still show as failed. The service-failure-* gaps (09-26) are open with no edit_site. learning-loop-selftest-tick.ts is still missing from node 2's clone"
+  },
+  {
+   "key": "gap-content",
+   "claimed_at": "2026-09-18",
+   "claim": "model-reality-audit lifts selector degradation into the gap ontology",
+   "where": "gap model-reality-selector-unscored",
+   "later": "Open for 11 days and re-detected hourly (updated 09-29T03:29). It has no edit_site and has not been repaired"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-28",
+   "claim": "9 gap-learning-loop-selftest-* gaps closed",
+   "where": "live gap store, closed at 09-28T01:27-01:29",
+   "later": "learning-loop-selftest still reports a RED posterior_delta link. learning-loop-selftest and learning-loop-selftest-probe-left-no-trace are still open (the mass close was not investigated)"
+  }
+ ]
+}

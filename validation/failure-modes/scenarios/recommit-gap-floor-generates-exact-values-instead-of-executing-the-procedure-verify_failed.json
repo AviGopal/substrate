@@ -1,0 +1,19 @@
+{
+  "id": "recommit-gap-floor-generates-exact-values-instead-of-executing-the-procedure-verify_failed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap gap-floor-generates-exact-values-instead-of-executing-the-procedure repeated already-recorded failure cl",
+  "description": "compose for gap gap-floor-generates-exact-values-instead-of-executing-the-procedure repeated already-recorded failure class verify_failed: src/index.ts(4838,13): error TS2353: Object literal may only specify known properties, and 'text' does not exist in type 'GoalSeekResult'.",
+  "goal_text": "compose for gap gap-floor-generates-exact-values-instead-of-executing-the-procedure repeated already-recorded failure class verify_failed: src/index.ts(4838,13): error TS2353: Object literal may only specify known properties, and 'text' does not exist in type 'GoalSeekResult'.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-gap-floor-generates-exact-values-instead-of-executing-the-procedure-verify_failed",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,41 @@
+[Unit]
+Description=goal-host-vessel
+After=activity-api.service discovery-vessel.service identity-vessel.service llm-resolver-vessel.service
+Wants=activity-api.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8210
+Environment=HOST=127.0.0.1
+Environment=GOAL_HOST_VESSEL_ID=goal-host-vessel
+Environment=LLM_VESSEL_ENDPOINT=http://127.0.0.1:8220
+# iter-8 ablation: disable WS subscriber to prevent idle RSS accumulation.
+# Polling fallback (60s) handles dev-vessel re-registration.
+Environment=GOAL_HOST_WS_SUBSCRIBER=off
+WorkingDirectory=/vessels/goal-host-vessel
+ExecStart=/root/.bun/bin/bun /vessels/goal-host-vessel/src/index.ts
+Restart=on-failure
+RestartSec=5
+
+# Memory isolation (2026-06-03): cap goal-host's cgroup so its OOM-cascade
+# (recurring during LLM-heavy dispatch chains: scaffold-mitosis-track,
+# enact-orthogonal-decisions, draft-gap-closing-activity) is contained to
+# goal-host itself rather than triggering container-wide pressure that
+# takes down sibling vessels. Observed cgroup peak: 22GB before this cap.
+# MemoryHigh applies pressure (encourages reclaim); MemoryMax is the
+# kernel-OOM threshold. After this cap, goal-host failures are scoped:
+# systemd restarts it cleanly, sibling vessels keep running, the substrate's
+# autonomous detection (service_oom_cascade_scan) gets observable signal.
+# Raised from 2G/3G: Bun cold footprint exceeds 2G at startup (2026-06-04).
+MemoryHigh=4G
+MemoryMax=6G
+# Also slow restart so we don't thrash through OOM/restart loops at speed.
+RestartSteps=3
+RestartMaxDelaySec=30
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

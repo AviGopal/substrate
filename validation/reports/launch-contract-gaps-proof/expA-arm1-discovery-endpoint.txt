@@ -1,0 +1,18 @@
+== ARM 1: DISCOVERY_ENDPOINT=http://syzygy.host:18100 (the documented point-and-go input) ==
+gen-env exit: 0
+--- wiring written to /etc/substrate/env:
+DISCOVERY_VESSEL_ENDPOINT="http://127.0.0.1:8100"
+ACTIVITY_API_ENDPOINT="http://syzygy.host:18080"
+IDENTITY_VESSEL_URL="http://syzygy.host:18101"
+HUB_DISCOVERY_URL="http://syzygy.host:18100"
+PEER_DISCOVERY_ENDPOINTS="http://syzygy.host:18100"
+ENABLED_ROLES="spoke"
+--- apply-inventory DRY_RUN selection plan (first lines):
+[apply-inventory] ENABLED_ROLES expands to: compute infra registry seed ui 
+[apply-inventory] DRY-RUN would disable: surrealdb.service
+[apply-inventory] DRY-RUN would disable: valkey.service
+[apply-inventory] DRY-RUN would disable: identity-vessel.service
+[apply-inventory] DRY-RUN would disable: activity-api.service
+[apply-inventory] DRY-RUN would disable: llm-resolver-vessel.service
+[apply-inventory] DRY-RUN would disable: concept-db.service
+[apply-inventory] DRY-RUN would disable: relevance-sink-vessel.service

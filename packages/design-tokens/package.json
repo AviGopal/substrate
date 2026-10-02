@@ -1,0 +1,23 @@
+{
+  "name": "@avigopal/design-tokens",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Single source for the human surface's design values. A colour literal outside this package is a conformance violation.",
+  "main": "index.ts",
+  "types": "index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./tokens.css": "./tokens.css"
+  },
+  "files": [
+    "index.ts",
+    "tokens.css",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "5.5"
+  }
+}

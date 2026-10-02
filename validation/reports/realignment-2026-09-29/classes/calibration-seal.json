@@ -1,0 +1,422 @@
+{
+ "attempts": [
+  {
+   "key": "calibration-seal",
+   "title": "Promote gate",
+   "where": "activity-api promote gate -> promote_gate_evaluations",
+   "tried": "Beta-projected promote threshold 0.6 at >=3 samples, neighbor evidence",
+   "outcome": "partial",
+   "evidence": "Since July 33,731 promote vs 100 refused; September: 19,853 evals over only 55 templates (~360 each), top evaluated 628x",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Hopeless/capacity seal fixes (multiple)",
+   "where": "gap ids 08-26..08-29 in the 09-07 snapshot",
+   "date": "2026-08-26",
+   "tried": "Close the triage-only-hopeless, hopeless-continue and busy-capacity-counted-as-failure gaps",
+   "outcome": "failed",
+   "evidence": "Recurred 08-31 (autonomous cleanup deleted the busy-requeue mechanism), 09-05 (hopeless seals at 8 attempts), 09-23, 09-24 (parked directed-gap FA penalty) and 09-28 (directed:true WITHHELD).",
+   "source": "gap-history"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Category-level self-knowledge deprioritises classes with 0 lands",
+   "where": "d1bb37a, 8a1a761, 7833b6a (06-29..30), e78f8da, eb450e4",
+   "tried": "Deprioritise categories with >=8 attempts and 0 lands, add a mispredict penalty, rank gaps by landability.",
+   "outcome": "superseded",
+   "date": "2026-06-30",
+   "evidence": "Origin of the class-posterior seal (memory 09-22 'seal permanent'). eb450e4 prefers classes that 'land' (orphaned_capability). 143212a: blockingWeight had the wrong sign.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "autonomyScope stage 1 containment and falsifier-class admission",
+   "where": "pool autonomyScope (node1 09-27 08:43, node2 08:50)",
+   "date": "2026-09-27..09-28",
+   "tried": "Excluded 27 core paths; required class1/2 \u2192 dropped class1 \u2192 widened to all classes \u2192 re-tightened to class1/2",
+   "outcome": "partial",
+   "evidence": "The reason field records admission going from ~250 to ~17 to 2-5, then being widened. Of the 8 autonomous landings after the widening, 1 was an improvement. Re-tightened 09-28 23:30Z.",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "hopeless() seals by category; bounded human exemption",
+   "where": "gap-to-feature hopeless(), /workspace/expectation-calibration.json",
+   "tried": "provide_information answers grant 3 attempts",
+   "outcome": "partial",
+   "date": "2026-09-15",
+   "evidence": "detector_coverage_gap 0/15, measurement_integrity 0/12, learning_loop 0/14 sealed; 5/9 operator gaps sealed on arrival. Per the index, 248 escalations went unanswered",
+   "source": "memory-1"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Unseal hopeless() category seal",
+   "where": "gap-to-feature.ts:778 (gaps filed unseal-documentation-drift\u2026, calibration-counts-killswitch\u2026)",
+   "tried": "Filed 6 gaps rather than hand-editing expectation-calibration.json",
+   "outcome": "unknown",
+   "date": "2026-08-27",
+   "evidence": "11+ categories were sealed at 8/0. By 08-28 detector_coverage_gap was sealed at 16/0, which makes operator measurement gaps unclosable.",
+   "source": "memory-4"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Flavour-masked timer disabled",
+   "where": "obsidian-learn.timer (runtime only)",
+   "tried": "systemctl disable --now.",
+   "outcome": "partial",
+   "date": "2026-09-02",
+   "evidence": "An image rebuild re-arms it. 49/53 hollows came from one dead dependency.",
+   "source": "memory-5"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Unseal node 2 pool via holder-held calibration",
+   "where": "development-vessel gap-to-feature.ts (76bf256, 094c230); /workspace/*calibration*.json on node 2",
+   "tried": "Holder-held calibration so node 2's admission would stop sealing (2 -> 59 admitted)",
+   "outcome": "failed",
+   "date": "2026-09-28",
+   "evidence": "09-29 04:xx node 2 log: '863 candidates \u2192 0 admitted {needs_information 436, autonomy_scope 271, not owned here 129, operator_hold 24}'. The node-local expectation-calibration still reads trace_store_reconciliation 400/0.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Category calibration moved to the gap-store holder (5.5 iv)",
+   "where": "dev-vessel 76bf256 (substrate-gap.ts + gap-to-feature.ts)",
+   "tried": "credit attempts and lands where the store is held; auto-pick reads the held table",
+   "outcome": "partial",
+   "date": "2026-09-28 18:12",
+   "evidence": "node-2 pool 2->59 at 18:30, then re-tightened to 7, now 0; gap-class-posteriors.json still node-local; there was a window where node 1 was credited twice",
+   "source": "openspec-10"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Env-vs-fix failure attribution",
+   "where": "07-09 C1; gap env-vs-fix-failure-attribution-2026-07-09",
+   "tried": "env failure classes skip bumpFailedAttempts/lessons/calibration",
+   "outcome": "partial",
+   "date": "2026-07-09",
+   "evidence": "env_change_window_held present in 2 dev-vessel files; tracking gap absent from store; tasks.md C1 unchecked",
+   "source": "openspec-4"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "autonomyScope containment (stage 1)",
+   "where": "gap-to-feature.ts, feature-compose.ts, pool record autonomy-scope",
+   "date": "2026-09-27",
+   "tried": "c110070, c27964b, d7ec192 require_falsifier_classes, 00c0e5f, bb51374, 28a69cf, 59bfc4c",
+   "outcome": "worked",
+   "evidence": "falsifier 1.5 PASSED 08:49; live admission 09-29 04:19 on both nodes: 863 candidates -> 0 admitted (not owned 426, needs_information 340, autonomy_scope 68)",
+   "source": "openspec-7"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Category-seal escape read-back repaired",
+   "where": "fe52076/9cb83d0",
+   "date": "2026-08-29",
+   "tried": "1755 escalations against read-back that could never see an answer",
+   "outcome": "worked",
+   "evidence": "hopeless_excluded 79->78; later MEMORY 09-22 248 escalations to replaced :8270 vessel (recurrence)",
+   "source": "reports-1"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Escalation escape valve links 1-3",
+   "where": "gap-to-feature.ts hopeless(); be891f3 (non-attempt compose releases cooldown)",
+   "tried": "Fix verb parse (underscored verbs), exemption priority weight, cooldown release on capacity refusal",
+   "outcome": "partial",
+   "date": "2026-08-29",
+   "evidence": "6/6 buckets: min inter-pick 9-18s vs 300s floor pre-fix, 58 releases, 0 not-held. Link 4 (provide_information applies nothing to edit_site) OPEN; gap absent from live store now. Capacity-refusal-counted-as-failure recurred 09-24 on directed path (failed_attempts 2->6).",
+   "source": "reports-4"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Rhythm conductor settles outcome, not fire",
+   "where": "development-vessel 55fba0e rhythm-conductor-tick.ts",
+   "tried": "fired gives staleness only; reached gives alpha; unreached gives beta via goal-host /executions",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "beta debits observed (federation-verification beta 6 to 22.5); capability-census credit was 94% on 0/10 reached",
+   "source": "reports-7"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Re-baseline rhythm and gap-closing alpha/beta from measured reach (user-approved)",
+   "where": "pool rhythm impulses; snapshots rebaseline-*-20260926/27",
+   "tried": "alpha = 1 + reached, beta = 1 + unreached over 7 d; gap-closing 755.5/2 to 63/23",
+   "outcome": "reverted",
+   "date": "2026-09-26",
+   "evidence": "Wiped by substrate commit 329fc5c (body-replace staleness write) and re-seeded to defaults at 01:06Z 09-27; re-applied 09-27 03:32Z with if_updated_at",
+   "source": "reports-7"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "requeueAfterNonAttempt (refusal feeds back into ranking)",
+   "where": "WORKING_SYSTEM_EXPECTATIONS 2026-09-02",
+   "tried": "Proposed as the single approval to unstick 19 pending_verification gaps absorbing 100% of picks",
+   "outcome": "unknown",
+   "date": "2026-09-02",
+   "evidence": "Pending ask-first in the source; the outcome is not in this shard",
+   "source": "reports-8"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "BUSY capacity refusal counted as failed attempt",
+   "where": "ff560216 2026-08-29T09:59 dev-vessel 5472e8b gap-to-feature.ts isNonAttemptComposeResult (3 sites)",
+   "tried": "Fold BUSY/environment into one non-attempt predicate at all bump sites",
+   "outcome": "worked",
+   "date": "2026-08-29",
+   "evidence": "16 refusals/26min -> 0 attempt increments; reach_grounding_gap frozen 6/0 for 40h; symbol present in source 09-28",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Escalation escape valve (reader, persistence, read-back, executor)",
+   "where": "ce71b42c 2026-08-28T23:57 6dc8107, becfa05, fe52076, 9cb83d0; 60722a6",
+   "tried": "give uiQuestion a reader and answers an effect; bounded 3-attempt exemption; 1.5x weight",
+   "outcome": "partial",
+   "date": "2026-08-29",
+   "evidence": "hopeless_excluded 79->78 on the answered gap; cycle 2 then BUSY 87/30min; answer stored as prose, edit_site not applied",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Stale post-land baseline seals cutover",
+   "where": "ce71b42c 2026-08-28T11:24 dev-vessel cf28f52",
+   "tried": "ignore baseline older than 24h (existing fail-open path)",
+   "outcome": "worked",
+   "date": "2026-08-28",
+   "evidence": "autonomous dev-vessel commits 2 in 71.5h -> 2 in 15min",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Operator answers escalations to unseal gaps",
+   "where": "35537c7e @ 2026-09-14/15 summaries",
+   "tried": "provide_information answers via uiFeedback_write + escalation_disposition_apply; d3e1ca2 answers become gap metadata",
+   "outcome": "partial",
+   "evidence": "escalations answered 3->31; applied:1-2; 2000-char truncation cut load-bearing scope; seal posts to pinned :8270 no human reads (MEMORY.md 09-22)",
+   "date": "2026-09-14",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Rhythm credit on outcome + re-baseline",
+   "where": "dev-vessel rhythm conductor",
+   "date": "2026-09-26T09:28Z",
+   "tried": "55fba0e beta on unreached; snapshot + reset alpha=1+reached beta=1+unreached; gap-closing 755.5->63/23",
+   "outcome": "partial",
+   "evidence": "Seed project-intake alpha42.5/beta1; rhythm-reality-sync whole-body rewrite race (66f62d5 partial, 667dd53 revert) wiped state; node 2 unaffected (node-local)",
+   "source": "transcripts-4"
+  }
+ ],
+ "problems": [
+  {
+   "key": "calibration-seal",
+   "symptom": "Promote gate re-evaluates the same 55 templates ~360x/month, 99.7% promote at minimum samples",
+   "root_cause": "Gate re-runs on already-promoted templates; threshold satisfied at n=3",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Capacity or busy refusals counted as failed attempts; hopeless categories sealed; landability < 0.25 auto-close",
+   "first_seen": "2026-08-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "root_cause": "Attempt accounting does not separate lane refusal from drafter failure. Category priors are consulted before per-gap evidence.",
+   "source": "gap-history"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Classes with 0 lands deprioritised; selection favours classes that land easily",
+   "first_seen": "2026-06-29",
+   "last_seen": "2026-08-06",
+   "recurrences": 4,
+   "root_cause": "Landability posteriors reward the easy/hollow classes and suppress hard classes indefinitely.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Autonomy admission was widened and tightened twice in 48h: ~250 to 2-5, then widened, then 8 landings with 1 improvement, then tightened again",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "root_cause": "No machine-measurable criterion decides supply against quality; the operator hand-edits one pool record",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Well-formed gaps are never selected because their category has attempts>=8 and lands=0",
+   "root_cause": "hopeless() keyed by category, not by gap; the only escape is human answers routed to an unread surface",
+   "first_seen": "2026-09-15",
+   "last_seen": "2026-09-22",
+   "recurrences": 2,
+   "source": "memory-1"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "hopeless() category seal excludes gap families permanently; only escape is a human verb that is never read or answered",
+   "root_cause": "Designed escape routed to an unread/unattended/replaced surface; answers are unseals with lane cost",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-22",
+   "recurrences": 3,
+   "source": "memory-10"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Static CATEGORY_WEIGHT; momentum store poisoned by unreachable arms; calibration patch named as a specific path",
+   "first_seen": "2026-07-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "source": "memory-2"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Categories seal at 8+ attempts with 0 lands. The only escape posts to an unread vessel (248 unanswered). Load-timeout false negatives feed calibration. New gaps filed into sealed categories escalate immediately.",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-22",
+   "recurrences": 4,
+   "root_cause": "The seal learns from mislabeled failures, and its human exit is pinned to a replaced peer.",
+   "source": "memory-3"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Whole gap categories permanently unselectable, including operator measurement findings",
+   "first_seen": "2026-08-27",
+   "last_seen": "2026-09-05",
+   "recurrences": 3,
+   "root_cause": "hopeless() hard-excludes by CATEGORY at 8/0; triage-only, kill-switch and relocation runs count as failures; the escalation answer is unread; recommit children inherit a healthy category",
+   "source": "memory-4"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Categories sealed (orphaned_capability 346/0, 13 sealed). The only escape (a human answer) never converts. 248 escalations were unanswered.",
+   "root_cause": "hopeless() reads the calibration file, and provide_information writes no field compose reads.",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-02",
+   "recurrences": 3,
+   "source": "memory-5"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "hopeless() seals 13 categories (481 attempts), concentrated on self-repair categories",
+   "first_seen": "2026-09-04",
+   "last_seen": "2026-09-05",
+   "recurrences": 1,
+   "root_cause": "Trained on the landed_commit evidence class (0/1030 holds); an 8-attempt threshold at a ~3% base rate false-seals 78-92%; immortal counters vs an expiring store; fragmented free-text categories",
+   "source": "memory-9"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Node 2 admits 0 of 863 hours after claims of 7 and 59 admitted",
+   "root_cause": "Node-local calibration plus scope/needs_information exclusions; the gap-compose watchdog cannot tell starvation from a hang",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-29",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Thompson rerank sorted by class theta first, so a score-0 gap in a fresh class won; three landability models, none calibrated; gap-landability-model.ts imported by nothing",
+   "root_cause": "calibration never scored against outcomes",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28",
+   "source": "openspec-10"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Gaps parked pending forever (432 picks, 0 composes); seal escape unreadable",
+   "root_cause": "Pending derived from git with no measurement predicate; only exit is human answer on unread channel or revert",
+   "first_seen": "2026-08-18",
+   "last_seen": "2026-09-22",
+   "recurrences": 3,
+   "source": "reports-1"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Posteriors sealed or inflated: gap-class alpha=1 on every class on both nodes; rhythm credit 94-98% on 0-20% reach; gap-closing alpha 755.5; env-gate gaps permanently debited",
+   "root_cause": "No closure-based reward event; credit on fire, not outcome; no debit decay",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-27",
+   "recurrences": 4,
+   "source": "reports-7"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "The category seals (346 attempts / 0 lands for orphaned_capability, 42 unrelated gaps unpickable) while each gap forgets. 19 pending_verification gaps absorb 100% of picks.",
+   "root_cause": "Amnesia at gap grain combined with permanent memory at category grain. Refusal does not feed back into ranking.",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-02",
+   "recurrences": 2,
+   "source": "reports-8"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Categories sealed at >=8 attempts / 0 lands; BUSY refusals and triage counted as attempts",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-08-29",
+   "recurrences": 4,
+   "root_cause": "counter written by one mechanism and read as evidence by another; lands recorded only at closure, which exclusion prevents",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "documentation_drift category sealed by hopeless() (11 attempts / 0 lands), escalated to human",
+   "first_seen": "2026-09-04",
+   "last_seen": "2026-09-04",
+   "recurrences": 1,
+   "root_cause": "attempts>=8 && lands==0 at gap-to-feature.ts:987",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "hopeless() seals by category; escalations unanswered or truncated at 2000 chars; 67 carry falsifier none",
+   "first_seen": "2026-09-14",
+   "last_seen": "2026-09-22",
+   "recurrences": 3,
+   "root_cause": "Seal's only escape posts to a pinned replaced vessel (MEMORY.md 09-22)",
+   "source": "transcripts-3"
+  }
+ ],
+ "claims": [
+  {
+   "key": "calibration-seal",
+   "claimed_at": "2026-08-29",
+   "claim": "a busy capacity refusal counted as failed attempt and sealing the category: closed",
+   "where": "gap a-busy-capacity-refusal-is-counted-as-a-failed-attempt-and-seals-the-category",
+   "later": "08-31 busy-requeue mechanism deleted by autonomous cleanup; 09-23, 09-24 parked FA-penalty gap, 09-28 directed:true WITHHELD",
+   "source": "gap-history"
+  },
+  {
+   "key": "calibration-seal",
+   "claimed_at": "2026-09-28 18:30",
+   "claim": "node 2 pool unsealed 2 -> 59 via holder-held calibration (76bf256, 094c230)",
+   "where": "a50d1196 CHECKINS",
+   "later": "09-29 ~04:00 node 2 admits 0 of 863.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "calibration-seal",
+   "claimed_at": "2026-09-28 23:40",
+   "claim": "node 2 admits 7 verifiable gaps under class1/class2",
+   "where": "7c1ffc8e CHECKINS",
+   "later": "0 of 863 admitted a few hours later.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "calibration-seal",
+   "claimed_at": "2026-09-28 18:12",
+   "claim": "5.5(iv) unseals node 2 via the holder's calibration",
+   "where": "value-per-cost tasks.md, 76bf256",
+   "later": "pool 2->59 at 18:30, 7 after the 23:30 re-tightening, 0 at 04:19; class posteriors still node-local",
+   "source": "openspec-10"
+  },
+  {
+   "key": "calibration-seal",
+   "claimed_at": "2026-09-27",
+   "claim": "Stage-1 containment falsifier PASSED; 164 then 9 admitted",
+   "where": "contained-self-development/tasks.md 1.5/1.6",
+   "later": "09-29 04:19: 863 candidates -> 0 admitted on both nodes",
+   "source": "openspec-7"
+  }
+ ]
+}

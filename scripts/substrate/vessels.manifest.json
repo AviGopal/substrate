@@ -1,0 +1,87 @@
+{
+  "_comment": "Declarative manifest of INSTALLABLE (dynamic) vessels — the single source of truth for vessel-ctl.sh install/uninstall. Built-in vessels are baked into the image; this file is for vessels added/removed at runtime (federation, future). Each vessel: name (== systemd unit name), workdir (run dir; supports $REPO_ROOT), exec (bun entrypoint, relative to workdir), env (STATIC literal Environment= lines), secrets (keys from secrets.env.sh that must be in /etc/substrate/env — supplied to the unit via EnvironmentFile, NOT Environment=), restart, health_port (for /health + self-recovery), self_recovery (add to self-recovery-tick VESSELS), post_install (optional shell run after start, e.g. capture a dynamic relay multiaddr into /etc/substrate/env).",
+  "vessels": [
+    {
+      "name": "metric-collector-vessel",
+      "description": "Substrate-authored sample collector (metricSample shapes; lift empirical test).",
+      "repo": "metric-collector-vessel",
+      "workdir": "$RUNTIME",
+      "exec": "src/index.ts",
+      "env": {
+        "PORT": "8300"
+      },
+      "secrets": [],
+      "restart": "always",
+      "health_port": 8300,
+      "self_recovery": true
+    },
+    {
+      "name": "human-surface-vessel",
+      "description": "Human-facing surface vessel — the UI a human resolver talks to; the only vessel a UI-only federated spoke needs to serve locally.",
+      "repo": "human-surface-vessel",
+      "workdir": "$REPO_ROOT/repos/human-surface-vessel",
+      "exec": "src/index.ts",
+      "_host_comment": "HOST is 0.0.0.0 because this vessel exists to be reached by a human from OUTSIDE the container. THE REASON THIS WORKS IS NOT LINE ORDER, and the previous wording here had the systemd rule backwards. render-unit.sh does emit these env lines after EnvironmentFile=/etc/substrate/env, but that buys nothing: systemd.exec states plainly that settings from EnvironmentFile= override settings made with Environment=, regardless of which line comes first. Line order decides only FILE-vs-FILE precedence (a later EnvironmentFile beats an earlier one — which is why /etc/substrate/env is now listed last, after .substrate-secrets). So if /etc/substrate/env ever carried a HOST= line, it would win and this 0.0.0.0 would be silently ignored. The bind holds only because gen-env.sh never emits HOST, PORT or VESSEL_ID into /etc/substrate/env — an accident of that file's contents, not a guarantee of this file's position. Anyone adding HOST/PORT/VESSEL_ID to gen-env's env heredoc breaks every vessel's Environment= bind at once. A 127.0.0.1 bind does not accept the DNAT'd traffic a `docker run -p` publish delivers from the container's bridge IP, so the host port mapping exists and is dead — the vessel answers /health in-container and nothing on the host. stateful-ui-vessel, which this vessel replaces, sets 0.0.0.0 for the same reason. Registration is unaffected: the discovery payload uses SELF_ENDPOINT = http://127.0.0.1:$PORT (src/config.ts), a constant independent of HOST.",
+      "env": {
+        "PORT": "8310",
+        "HOST": "0.0.0.0",
+        "VESSEL_ID": "human-surface-vessel"
+      },
+      "secrets": [],
+      "restart": "always",
+      "health_port": 8310,
+      "self_recovery": true,
+      "_post_install_comment": "SKIPS THE BUILD WHEN dist CAME FROM GIT, and that guard is load-bearing. ui/dist is now TRACKED, because the substrate updates itself by pulling and nothing rebuilds on pull — git is the delivery channel. A rebuild does not reproduce the committed bundle byte-for-byte (vite content-hashes, and the container's bun differs from the operator's: the same source produced CN--oDvm, Y3nhnr7c, CIgDXFb9 and aOP5YrJ- on four machines), so building over a tracked dist leaves MODIFIED tracked files, `git pull --ff-only` then refuses, and the vessel silently stops converging to origin/dev. That is the same wedge that stranded the hub's development-vessel 124 commits behind. Build ONLY when dist is absent — a fork building from a tree that predates the tracked bundle, or a source-only checkout. vessel-ctl runs `bun install` ONLY in the rendered WorkingDirectory (the server), never a build. Paths are LITERAL: post_install is handed to the container shell verbatim, so $REPO_ROOT/$RUNTIME are NOT expanded here (federation-relay's hook is literal for the same reason). HOME and the bun cache dir are pinned OUTSIDE the repo: a HOME redirected into the tree leaked a 146MB bun cache into it. vessel-ctl SWALLOWS this hook's stdout, stderr AND exit status (`csh \"$post\" >/dev/null 2>&1 || true`), so the hook writes its own log and a terminal OK/FAILED sentinel — that log is the only evidence a build failed, and callers should assert ui/dist exists rather than trust the install's ok:true.",
+      "post_install": "L=/workspace/human-surface-ui-build.log; D=/workspace/git/super-repo/repos/human-surface-vessel/ui/dist; if [ -f \"$D/index.html\" ]; then echo \"UI_BUILD_SKIPPED (dist came from git — rebuilding would dirty tracked files and wedge pull-sync)\" > \"$L\"; else { export HOME=/root; export BUN_INSTALL_CACHE_DIR=/root/.bun/install/cache; set -x; cd /workspace/git/super-repo/repos/human-surface-vessel/ui && /root/.bun/bin/bun install && /root/.bun/bin/bun run build && test -d dist; } > \"$L\" 2>&1 && echo UI_BUILD_OK >> \"$L\" || echo UI_BUILD_FAILED >> \"$L\"; fi"
+    },
+    {
+      "name": "federation-relay",
+      "description": "Public libp2p Circuit Relay v2 — the from-anywhere reachability anchor.",
+      "_workdir_comment": "IMAGE PATH, same trade as federation-transport-vessel below. The 2026-09-21 lifecycle audit's offline launch had no /workspace/git/super-repo (no credentials, and its image predated reliable seed-from-baked-copy), so the $REPO_ROOT form left the relay uninstallable out-of-box and the audit hand-repointed it to the baked source path to proceed. The baked copy is self-contained: Dockerfile.substrate materialises the real @avigopal/libp2p-federation-transport over bun's file: symlink stub at build time. Relay self-modification therefore requires an image rebuild — deliberate for the reachability anchor, per the transport-vessel rationale.",
+      "workdir": "/usr/local/share/substrate/super-repo/scripts/substrate/federation-relay",
+      "exec": "relay.ts",
+      "_listen_comment": "Listens on 30333 INSIDE the container; the launch manifest publishes it at host port <prefix>333 (RELAY_PORT overrides). relay.ts announces RELAY_ANNOUNCE_PORT, which gen-env derives from those same inputs, so the multiaddr it persists and /bootstrap advertises names the published address. An operator-supplied RELAY_MULTIADDR is never overwritten: gen-env records it as env-supplied in /etc/substrate/env.provenance, and both relay.ts and the post_install hook below leave it alone.",
+      "env": {
+        "RELAY_KEY_FILE": "/workspace/fed-relay-key.pb",
+        "RELAY_TCP_PORT": "30333"
+      },
+      "env_from_file": [
+        "FED_PUBLIC_IP",
+        "PUBLIC_IP",
+        "RELAY_ANNOUNCE_PORT"
+      ],
+      "secrets": [],
+      "restart": "always",
+      "health_port": null,
+      "self_recovery": false,
+      "post_install": "grep -qx 'RELAY_MULTIADDR=env' /etc/substrate/env.provenance 2>/dev/null && { echo 'RELAY_MULTIADDR supplied by the operator; leaving it'; exit 0; }; for i in $(seq 1 20); do m=$(grep -m1 'RELAY_MULTIADDR=' /workspace/fed-relay.log 2>/dev/null | sed 's/RELAY_MULTIADDR=//'); [ -n \"$m\" ] && { grep -v '^RELAY_MULTIADDR=' /etc/substrate/env > /etc/substrate/env.tmp && mv /etc/substrate/env.tmp /etc/substrate/env; echo \"RELAY_MULTIADDR=$m\" >> /etc/substrate/env; echo \"captured RELAY_MULTIADDR=$m\"; break; }; sleep 1; done"
+    },
+    {
+      "name": "federation-transport-vessel",
+      "description": "libp2p reachability + cross-substrate resolve-over-http + /health sensing surface.",
+      "_workdir_comment": "IMAGE PATH, second attempt 2026-09-18. The 2026-09-16 falsifier failed because the image's vendored @avigopal/libp2p-federation-transport was a symlink stub with no src, so bun could not resolve the module from the baked directory. Dockerfile.substrate now MATERIALISES the real package over the stub at build time (see the federation-relay RUN block), which was the stated prerequisite. The three measured failures of running from the workspace clone (enable-before-clone-exists, pull_cutover stashing deployed fixes, probe branch checkouts orphaning HEAD) are unchanged and remain the reason the clone path is wrong. The trade stands: transport self-modification now requires an image rebuild, deliberate for the vessel whose job is reachability.",
+      "workdir": "/usr/local/share/substrate/super-repo/scripts/substrate/federation-relay",
+      "exec": "federation-transport-server.ts",
+      "env": {
+        "FED_HEALTH_PORT": "8401",
+        "DISCOVERY_URL": "http://127.0.0.1:8100"
+      },
+      "env_from_file": [
+        "RELAY_MULTIADDR",
+        "FED_VESSEL_ID",
+        "FEDERATION_SIGNING_SECRET",
+        "FEDERATION_PEER_AUTH_MODE"
+      ],
+      "secrets": [
+        "FEDERATION_SIGNING_SECRET",
+        "FEDERATION_PEER_AUTH_MODE"
+      ],
+      "restart": "always",
+      "health_port": 8401,
+      "self_recovery": true,
+      "depends_on": [
+        "federation-relay"
+      ]
+    }
+  ]
+}

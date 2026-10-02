@@ -1,0 +1,21 @@
+{
+  "id": "model-opportunity-patch_convergence_probability",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architectural_pattern",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Forward-model opportunity: 'patch_convergence_probability' is acted on / observed but NOT predicted. Proposed model: P(p",
+  "description": "Forward-model opportunity: 'patch_convergence_probability' is acted on / observed but NOT predicted. Proposed model: P(patch_with_tools converges to a verified edit | proposal features: single-site vs multi-site, target-file LOC, has required_code_modifications, prior outcome on this file). Predict before dispatching apply. Payoff: convergence-miscalibration scan + lets apply skip/deprioritize proposals predicted un-convergeable (kills the no_op churn before it burns a turn budget). Adding it follows the predict→validate→residual template (like the live cost model) — every prediction becomes a free residual-detector, widening detectability.",
+  "goal_text": "Forward-model opportunity: 'patch_convergence_probability' is acted on / observed but NOT predicted. Proposed model: P(patch_with_tools converges to a verified edit | proposal features: single-site vs multi-site, target-file LOC, has required_code_modifications, prior outcome on this file). Predict before dispatching apply. Payoff: convergence-miscalibration scan + lets apply skip/deprioritize proposals predicted un-convergeable (kills the no_op churn before it burns a turn budget). Adding it follows the predict→validate→residual template (like the live cost model) — every prediction becomes a free residual-detector, widening detectability.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [
+    "repos/development-vessel/src/resolvers/apply-proposal-as-patch.ts"
+  ],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "model-opportunity-patch_convergence_probability",
+  "source_gap_source": "substrate_detected"
+}

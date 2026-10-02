@@ -1,0 +1,5 @@
+
+{
+  "path": "repos/development-vessel/src/config.ts",
+  "patch": "--- /dev/null\n+++ b/repos/development-vessel/src/config.ts\n@@ -0,0 +1,5 @@\n+// src/config.ts\n+export const shapes = [\n+  \"orphaned-capability-resolution\",\n+];\n"
+}

@@ -1,0 +1,883 @@
+# The memory store was split and flooded; the substrate repairs its own retire primitive
+
+Recorded 2026-09-22 (evening). Measured on the running substrate, not inferred.
+
+## What was wrong (three findings, one root each)
+
+1. **Two memory stores.** development-vessel's unit file declares
+   `Environment=WORKSPACE_ROOT=/workspace`; the generated `/etc/substrate/env` sets
+   `WORKSPACE_ROOT=/workspace/git/super-repo` (gen-env, 2026-07-25). systemd lets an
+   EnvironmentFile override `Environment=`, so since July 25 the vessel has read and
+   written `/workspace/git/super-repo/memory/notes.json` while 680 notes (87 feedback,
+   287 finding, 264 project — the system's actual knowledge, incl. 452 harness-mirrored
+   operator notes) stayed unread at `/workspace/memory/notes.json` (newest 2026-07-23).
+   No impulse names that file: the system could not see it.
+2. **Battery residue.** The expectation-trend checker (dev-vessel index.ts) mints a
+   `trendcheck-<fam>-<seed>-<i>` product note and goal-host's transform oracle mints an
+   `expectation:<title>` note per probe, every 120s tick, and nothing retires them:
+   578 of 1077 live notes (54%). The memoryNote store had no delete/retire primitive.
+3. **Recency window.** `resolveMemoryNote` sorts by updated_at and cuts at `limit`; the
+   session hook asked for the newest 500. The residue displaced every convention, so
+   session start reported "Feedback / conventions (0)" while 90 existed.
+
+## Operator interventions (labelled; not evidence of autonomy)
+
+- File-level merge of the orphaned store into the live one: 675 added, 1 id + 3 title
+  collisions and 1 malformed row skipped, timestamps preserved (a resolver write would
+  have stamped all 676 as fresh), provenance tag `merged-from:/workspace/memory/notes.json`,
+  backup `notes.json.pre-merge.*.bak` beside the live file, race check on re-read.
+  Result: 1752 notes; feedback 90 / finding 295 / project 281 now served (verified via the
+  resolver by note_type).
+- Session hook: conventions fetched by note_type separately (cannot be displaced).
+- The unit/env WORKSPACE_ROOT collision is FILED, not hand-edited.
+
+## The self-repair demonstration (gap → compose lane → verify by behaviour)
+
+**Gap 1** `the-memory-store-has-no-retire-primitive-so-battery-residue-accumulates-forever`
+(edit_site memory-note.ts, source human_reported, behavioural falsifier in the text).
+
+- Attempt 1: dispatched 23:16Z via gap_to_feature. Landed **b5ed109 (Substrate
+  Autonomous, 23:19Z)**, verdict FAVORABLE (typecheck, shape-dispatch, bun test),
+  cutover restarted the vessel. **Falsifier run at 23:21Z on the live vessel: FAILED.**
+  The branch read `pointer.retire`/`pointer.id` from the flat pointer only; the canonical
+  nested envelope `{ note: { id, retire: true } }` fell through to the title/body
+  rejection. Flat retire of a present note DID delete it (store 1753→1752) and flat
+  retire of a missing id returned not_found. Half right, green, hollow for its reader.
+- The failure was written back into the gap (attempt_1 sha/verdict/defect + the exact
+  fix: read `src.retire` and `pickString("id")` after the envelope is normalised) and the
+  lane re-dispatched at 23:2xZ. This is the loop the operator asked to see: the system's
+  own failed attempt becomes the next attempt's lesson, no hand edit.
+
+Gap 2 (the checker retires each probe's product + expectation note after grading) is
+filed only after attempt 2 verifies, so its drafter binds to a contract that works.
+
+## What "after" must show (pre-registered)
+
+- Nested and flat retire both pass the 6-step falsifier on the live vessel.
+- trendcheck/expectation note counts flat across ≥2 checker cycles (baseline 23:16Z:
+  429 / 149 of 1752).
+- Session start lists conventions (≥ 90 feedback).
+- Two substrate-authored commits on development-vessel origin/dev; gap 1 and gap 2
+  closed by behaviour, and not reopened.
+
+## Attempt 2 — how a failed falsifier is fed back (the protocol, learned by reading the lane)
+
+- Re-dispatch after annotating the gap in prose ("FAILED ITS FALSIFIER") was REFUSED:
+  verdict `pending_verification`, "landed once but unmeasured — held pending
+  verification; not re-composed". Correct guard (§12.6: a second landing would read as a
+  manufactured re-land). The prose was not a measurement to the lane.
+- The lane's own vocabulary (verifyGapCondition, Class-3 branch): a landing is treated as
+  regressed when the summary carries the literal token **`BEHAVIORAL VERIFICATION FAILED`**
+  or classification_metadata names **`regressed_by: <sha>`**. Re-filed with both, cleared
+  `pending_outcome_verification`. Pick-time check then passed and the symbol grounded at
+  memory-note.ts:168 (the retire branch) — the lane aimed at the right lines on its own.
+- Then `[compose-cap] REFUSING autonomous compose: 1 in flight — retried when there is
+  capacity` (verdict BUSY). Root: gap_to_feature does not forward `directed` into
+  feature_compose, so an operator dispatch cannot take the reserved directed slot. Filed as
+  `gap-to-feature-drops-the-directed-flag-so-an-operator-dispatch-competes-as-autonomous-work`.
+  The retire gap is left for the lane's own retry (no operator re-dispatch) — that retry IS
+  the demonstration.
+- 23:26:35Z the lane picked the retire gap ON ITS OWN (no operator re-dispatch), drafted
+  against memory-note.ts, and FAILED VERIFY: `TS2451: Cannot redeclare block-scoped
+  variable 'nested'` (169, 173) — the drafter inserted a second envelope normalisation
+  above the existing one. Rolled back (running file == b5ed109), `failure_lessons` gained
+  class=verify_failed with the exact tsc error, failed_attempts=2. The gate caught it; the
+  lesson is now in the gap and mirrored to concept-db for the next draft.
+- 23:28Z the lane picked the directed-flag gap, took an anchor_not_found lesson on the
+  first draft, and re-drafted via patch-with-tools (turns 2–22 visible). Both gaps are in
+  the system's hands; the operator is watching, not editing.
+- 23:3xZ two more picks of the retire gap were refused for capacity (the directed-flag
+  compose holds the single autonomous slot). The lane then declared the gap
+  "chronically stuck" and emitted a NARROWED CHILD — which is a verbatim copy of the
+  parent (same edit_site, same summary with a "[narrowed from …]" prefix). No new
+  information, one more arm competing for the same slot (law 3: a duplicate mint is a
+  fresh uninformed cell). Filed below as an observation, not acted on.
+- Attempt 3 (23:38Z, lane's own pick) also failed verify — but differently: the
+  per-gap lesson block DID reach the drafter (priorAttemptFeedbackBlock, verbatim tsc
+  output) and it stopped redeclaring `nested`; it still redeclared `src`/`pickString`.
+  Root: the localizer anchors every draft on the existing retire block at the TOP of the
+  function, and the correct fix is a MOVE below the envelope normalisation — not
+  expressible as one in-place region edit — so each draft copies the normalisation upward
+  and collides. Operator contribution (a lesson, not an edit): the gap text now states the
+  constraint — stay inside the existing block, local `retireSrc`/`retireId`, no new
+  top-level declarations. Left for the lane's own next pick.
+
+## Attempt 4 — LANDED AND VERIFIED (23:47–23:49Z)
+
+- After the gap text gained the in-place constraint, a goal hashed `0d323808` reached
+  goal-host with our gap record hydrated into it ("gap-hydration: injected record
+  the-memory-store-has-no-retire-primitive… cited file memory-note.ts"). It was NOT
+  dispatched by the operator (no operator tag; no operator goal named this file). Goal-host
+  routed it through EARLY EDIT-INTENT → feature_compose; the draft changed exactly two lines
+  inside the existing retire block (reads `pointer.note.retire` / `pointer.note.id` as
+  well as the flat pointer — the constraint was followed); verdict FAVORABLE; cutover;
+  pushed as **19ae84e (Substrate Autonomous)**. The commit is labelled with the synthesized
+  route-edit id, not the gap id — a provenance gap: the close-oracle cannot attribute this
+  landing to the gap it fixed.
+- **Falsifier on the live vessel (MainPID 1044575) — PASS 6/6:** nested retire of a present
+  note → `retired`, re-read absent; nested missing id → `not_found`; nested without id →
+  `missing_id`; flat missing → `not_found`; flat present → `retired`. Store size unchanged by
+  the rejections.
+- Gap 1 closed by measurement (closed_reason measured_by_operator, close_basis
+  operator_measured_behavioral, landed_sha 19ae84e). The duplicate "narrowed" child closed
+  as duplicate_of_closed_parent. Gap 2 (checker retires its probe notes; contract = nested
+  `{ note: { id, retire: true } }`) FILED for the lane.
+
+Score so far for the self-repair demonstration: 4 substrate drafts, 2 gated out by
+typecheck with lessons the next draft partly heeded, 1 hollow-green caught only by the
+behavioural falsifier, 1 correct landing after the operator supplied a *constraint* (never
+a diff). Operator hands on code: zero.
+
+## Directed-flag gap — first landing is a hollow_write (23:55Z)
+
+bbb83ff (Substrate Autonomous) added `const isDirected = …` above the compose call and
+never passed it: `directed: isDirected` absent, typecheck green (an unused const is
+legal), verdict FAVORABLE. Exactly the hollow_write class (a write nothing reads). Fed back
+with `BEHAVIORAL VERIFICATION FAILED` + `regressed_by: bbb83ff` and the one-line fix
+location. Also: the lane auto-minted
+`recommit-the-memory-store-…-verify_failed` from the CLOSED retire gap's old lessons and
+picked it at 23:56Z — a recommit that does not check its parent's status. Closed as
+superseded_parent_landed (the pick may already be composing; the falsifier will grade
+whatever it lands).
+
+## 00:13Z — the closed recommit reopened itself; a loop, and a gate inconsistency
+
+- `appendComposeLesson` (feature-compose.ts ~3180–3210) writes failure_lessons back with
+  `status: "open"` unconditionally and rewrites `source`; a failed compose on the CLOSED
+  recommit gap therefore reopened it (reopen_count 1) and the recommit mint never checks
+  whether the base gap is still open. With the parent landed and verified, every draft is a
+  no-op or duplicate → fails → reopens/re-mints itself. Filed
+  `the-compose-lesson-writer-force-reopens-closed-gaps-and-mints-recommits-for-landed-parents`.
+  Parked the looping gap through the lane's own candidate filter
+  (`pending_outcome_verification = 19ae84e`, which is TRUE), not by deleting it.
+- Directed-flag gap: the semantic gate REJECTED "adds isDirected but fails to pass it" at
+  23:37Z, then PASSED the same defect at 23:49Z (bbb83ff). Same-input opposite verdicts —
+  the judge-inconsistency class seen in goal-host earlier today.
+- Gap 2 first draft: anchor_not_found — the drafter anchored on the `expectation:`
+  violation scanner (lines 438–443) instead of the trendcheck grading loop (~529) the gap
+  quotes verbatim. Lane retrying on its own.
+
+## 01:0xZ — the lesson-writer gap reproduced its own defect
+
+First draft for `the-compose-lesson-writer-force-reopens-closed-gaps-…` failed
+anchor_not_found (drafter's old_string vs real text at 3159–3164), and appendComposeLesson
+immediately minted `recommit-the-compose-lesson-writer-…-anchor_not_found` — the loop the
+gap describes, now spawning from the gap that fixes it. Dominant failure class across all
+three open gaps tonight is anchor_not_found on the FIRST draft (2 of 3), then a corrected
+re-draft; the third landed hollow. Lane retrying all three on its own; no operator edits.
+
+# 02:00–02:30Z — why the lane stalled: three independent outages, one of them self-repaired
+
+Gap 2's directed compose died "BEFORE fc-plan: llmCall to :8220 returned error — no llm
+arm is currently servable". Working outward from that:
+
+1. **LLM plane — OpenRouter credits exhausted (operator blocker).** `/api/v1/credits`:
+   total_credits 1400, total_usage 1399.69. Paid models 402, free models
+   "429 free-models-per-day"; 3,901 "all completion providers cooling" events in 6 h;
+   first full outage 02:09:50Z. Only an OpenRouter key is configured (Anthropic/OpenAI/
+   Google/TypeSafe empty). Nothing the substrate can do; top-up or a second provider key.
+2. **Identity rate-limits the fleet as one bucket → activity-api called it a revoked key.**
+   identity `/v1/auth/resolve` limiter: 100/min per `ip:keyprefix`; every vessel is
+   127.0.0.1 with the same 8-char prefix → 6,505 429s in 30 min. activity-api
+   translated null verdicts into `INVALID_API_KEY`; goal-host's trace sink read that as
+   revocation and SPOOLED (bursts of 40/min). **The substrate diagnosed and fixed the
+   labelling itself**: gap `identity-rate-limit-on-a-fleet-shared-bucket-is-reported-by-
+   activity-api-as-a-revoked-api-key` → commit **4fc5f80 (Substrate Autonomous, 01:55Z)**
+   answers 503 IDENTITY_UNAVAILABLE for transient failures. Post-restart (02:21Z) goal-host
+   INVALID_API_KEY fell from ~40/min to 1. The identity bucket itself (edit_site
+   identity ratelimit.ts) is still open.
+3. **self-recovery restarts activity-api every 3 minutes.** 33 starts in 3 h, systemd
+   NRestarts=0 (all clean external stops), stops at 01:39:41 … 02:19:30 on a 3-min grid;
+   `self-recovery-tick`: "UNHEALTHY: activity-api (:8080) — restarting … recovered via
+   restart". Cause: 1,235 of 1,677 queries in 15 min took >10 s (recommend/FTS+dense over
+   919 templates, up to 40 s); bun is single-threaded so /health cannot answer during one;
+   the probe's budget is 10 s. /health answers in <10 ms when the loop is free. Each restart
+   kills in-flight work and opens a 401 warm-up window. Filed
+   `activity-api-recommend-queries-block-the-event-loop-…`.
+
+Collateral, measured: **17,587 traces (119 MB) spooled since 08-17 with no replayer** —
+4,500 on 09-16, 7,224 on 09-17, 3,256 on 09-23 — executions the learner never saw. Filed
+`the-trace-sink-spools-rejected-traces-to-disk-and-nothing-ever-replays-them`
+(edit_site ias-executor-ts trace sink; behavioural falsifier: spool count falls with
+activity-api up, never with it down).
+
+Also seen: `[human-surface] 1 vessel(s) advertise goal_execution; none answered a resolve
+call` during the churn — the human surface could not dispatch while goal-host's own
+recommend calls were failing.
+
+## Where the demonstration stands (02:30Z)
+
+- Retire primitive: landed 19ae84e, falsifier 6/6, gap closed by measurement. ✔
+- Gap 2 (checker retires probe notes), directed-flag, recommit-loop: open, in the lane's
+  queue; every draft now dies at the LLM call until credits return.
+- Residue: 445 / 151 at 02:15Z (baseline 429 / 149) — will keep rising until gap 2 lands.
+- Substrate self-repair observed tonight without operator hands: 19ae84e (retire, via
+  edit-intent), 4fc5f80 (auth labelling), plus f122f86 / 983ca92 / bbb83ff on its own gaps.
+
+## 02:31Z — funded; plane back; the anchor problem named
+
+- Operator topped up OpenRouter (1400 → 1500). First servable completion 02:31:53Z
+  (google/gemini-2.5-flash). No restart needed — the router re-probed on its own.
+- Gap 2's fourth attempt (02:32Z) failed the same way as the first three: the localizer
+  grounds on `EXPECTATION_SCAN_INTERVAL_MS` and every draft edits the `expectation:`
+  violation SCANNER (`if (liveBody === String(e.spec.expected))`, ~438–470) instead of
+  the trendcheck GRADING loop (`live.body.trim() === probe.expected`, line 529). The gap
+  prose quoted the right line; the localizer never read it. The lane then minted another
+  verbatim "narrowed" child (parked as duplicate).
+- Fix as information (law 8), not code: `classification_metadata.region` = the unique
+  grading line, which fc-scope reads as the grounding centre; plus an explicit forbidden
+  region. Re-dispatched directed at 02:36Z. Pre-registered: the draft's op path must be
+  index.ts with `old` containing `probe.expected`; then verify green; then residue count
+  flat across two checker ticks (baseline 445 / 151 at 02:32Z).
+
+## 02:36–02:55Z — the fourth outage: a poisoned discovery row emptied every grounding window
+
+Gap 2's region literal was honoured ("region->line: found at 1 site … grounding on line
+529") and the compose still refused: `Grounding window (0 bytes)`. Every compose after
+02:33Z had a 0-byte window. `groundVesselFiles` reads files through
+`discover("shellResult")`, and discovery resolved that shape — and code_read_lines,
+code_search, codeReadResult — to `http://127.0.0.1:24892`, where nothing listens.
+The row belongs to `local-tools-vessel` (the real one is PID 1620 on 8230, up since
+20:06Z). `last_writer.at` = 02:36:54Z, fleet key, claimed_vessel_id local-tools-vessel;
+discovery took 6 POST /register in that 10 s window, while feature_compose was verifying
+an edit to repos/local-tools-vessel in an isolated checkout. A transient instance
+registered its ephemeral port under the live id and exited; the live vessel's heartbeats
+(keyed by vesselId) kept the poisoned endpoint alive with confidence 1. The liveness
+guard (ffd1d58, running) checks lastSeen, which the heartbeats refresh — it cannot see an
+endpoint swap. local-tools never re-registers unless a heartbeat 404s.
+
+Operator remedy (reversible, no code): drain-restart local-tools so it re-registers 8230.
+Filed `a-transient-verify-instance-registers-an-ephemeral-endpoint-under-the-live-vessel-
+id-and-heartbeats-keep-it-alive` (edit_site discovery registry.ts: probe a changed
+endpoint before storing it; a heartbeat must not keep alive an endpoint it does not come
+from). Method note: "no producer" / empty grounding after a compose on a TOOLS vessel →
+resolve the shape with the API key and compare the endpoint to the unit's PORT.
+
+## 02:44Z — gap 2 finally drafts at the right line
+
+With the region literal honoured and a 54 KB window (`grounding_has_region: true`), the
+draft's op targets `if (live && …` at 529 — the first of five attempts to touch the
+grading loop. It failed verify with `TS1472 'catch' or 'finally' expected` (the
+replacement broke the enclosing try/catch); rolled back; lesson class `syntax_break`
+recorded with the exact tsc output. That is the gate doing its job and the lane holding
+the right site; the next draft carries the lesson. The registry row for local-tools had
+already re-flipped to 8230 by the time the operator restart ran (harmless). The lane has
+since picked the trace-spool replayer gap (31 KB window) and the registry-poison gap on
+its own. Queue is moving again: credits + registry were the two blockers.
+
+## 02:45–03:25Z — slot starvation, router self-corrected, proposal lane busy
+
+- After the plane returned, the first three drafts (gap 2, spool replayer, registry
+  poison) all failed `syntax_break` — malformed TypeScript, a class that was rare
+  before (2 in 4 h) and jumped after the router fell to gemini-2.5-flash (its Chutes TEE
+  arms 402: a second, separately funded provider; OpenRouter free arms 429 per-day).
+  deepseek-chat-v3 and gpt-4o-mini were servable when pinned. NOT hand-tuned: by 03:25Z
+  the router was serving deepseek-chat-v3 on its own (graded off flash). Credit burn
+  02:31→03:25: ~0.7.
+- 02:55→03:25Z: 23 `compose-cap REFUSING` vs 1 autonomous pick; the proposal-apply
+  lane (mitosis-*) landed 16 FAVORABLE cutovers in the same window, incl. 57c759a
+  "development-vessel-is-absent-from-the-discovery-registry…" (the registry class,
+  found by the substrate independently). None of the six operator-filed gaps got the
+  slot. Gap 2 re-dispatched directed with retries at 03:26Z (directed still not forwarded
+  — that gap is one of the six).
+- Residue 448 / 152 at 03:25Z (baseline 429 / 149).
+
+## 03:26–03:52Z — why directed retries saw 14 straight BUSY: contention plus self-restarts
+
+- Not a leaked counter: real composes held both slots (goal-host route-edit composes on the
+  directed slot; a 10-min autonomous compose on the other). Most of the "REFUSING" count
+  in that window was the operator's own retry loop — noted so the number is not misread.
+- development-vessel restarted ITSELF three times in 11 min (03:30 "observed 3 in flight,
+  LOSSY", 03:37, 03:41), each by its own landing cutover. Composes mid-draft at those
+  moments died silently (no verdict, no lesson). With ~16 self-landings per 30 min from
+  the proposal-apply lane, the vessel's restart cadence is shorter than a compose. Filed
+  `development-vessel-self-cutovers-restart-the-vessel-faster-than-a-compose-completes-…`
+  (edit_site vessel-mitosis-cutover.ts; defer self-restart while composes are in flight).
+- Router: serving deepseek-chat-v3 again on its own. Credits: 1400.59/1500 at 03:25Z.
+- Correction to the lossy-cutover gap after reading the site: the fc cutover path already
+  quiesces (marker → wait on /health in_flight → breadcrumb); the LOSSY restart at 03:30
+  came from the proposal-apply path (`mitosis-<ts>` id), which has no quiesce/wait — the
+  journal shows none for it, and the code comment at the site names the class ("fixed one
+  call site, missed the sibling"). Gap text and region literal corrected accordingly.
+
+## 03:56Z — gap 2 LANDED (d4171b1) … and is a silent no-op
+
+Fifth attempt, region-pinned, landed as d4171b1 (Substrate Autonomous), verdict FAVORABLE,
+vessel restarted 03:56:07. Placement and shape match the contract exactly (after the
+`r++` grading line, nested `note: { id, retire: true }`, both notes, warn-on-throw). One
+detail differs from every sibling call in the same file: the request body is bare
+`{ type, note }` instead of `{ impulse: { pointer: … } }`. Executing the exact landed body
+against the live resolver: HTTP 400 `pointer.type is required`; fetch does not throw, the
+catch never fires, the note stays. Green diff, absent behaviour — the third hollow_write
+tonight, and the second caught only by RUNNING the landed request rather than reading it.
+Fed back with `BEHAVIORAL VERIFICATION FAILED` + `regressed_by: d4171b1`, the exact
+envelope from expWrite, and a required `rr.ok` check so a refused retire cannot be silent.
+Re-dispatched directed. The two-tick residue measurement continues as the falsifier.
+
+## 04:05–04:32Z — the envelope fix landed first, and made the hollow retire real
+
+- Gap filed 04:00Z (`development-vessel-resolve-rejects-a-bare-type-body-…`, edit_site
+  src/routes/impulses.ts) LANDED 04:05Z as **3ed68a6 (Substrate Autonomous)**: tolerant
+  parse, deprecation log line. Falsifier on the live vessel: bare body 200 / `{}` 400 /
+  nested 200. **PASS.** Closed by measurement.
+- Consequence: the "silent no-op" retire calls from d4171b1 now succeed — 7 `bare pointer
+  body accepted` lines since 04:05Z. The checker tick at 04:25Z (uppercase, r=3/3) ran
+  three probes and the residue stayed **451 / 153**, identical to the 03:56Z baseline;
+  before tonight that tick added ~6 notes. One tick flat; the pre-registered criterion is
+  two — measurement running.
+- Gap 2's sixth attempt (correct envelope + `rr.ok` check) was judged correct by the
+  semantic gate and HELD: `env_change_window_held` — the change-window lease was held by
+  trace-store-reconcile and the vessel had restarted under it (3ed68a6's own cutover).
+  Proposal staged in /workspace/proposals; the apply lane retries. Gap 2 will close by
+  behaviour regardless once the second tick is flat.
+
+## 04:37Z — first tick verified with positive evidence (and one misread corrected)
+
+The 04:25Z uppercase tick used seed `mudllwm2` (goal-host handled
+trendcheck-uppercase-mudllwm2-0/-2). The store holds NO note with that seed and no
+uppercase product touched after 04:20Z; the newest uppercase product is dated
+2026-09-20. So the tick created its 3 products + 3 expectation records and the six
+bare-body retire calls at 04:24:14/04:24:34/04:25:04 removed them — net residue 451/153,
+unchanged. Replaying the exact landed retire body against a stale note: 200 `retired`.
+Misread corrected: six "surviving" notes I attributed to this tick carry a 09-20 seed and
+09-20 timestamps — I had printed only HH:MM:SS. Rule re-learned: print the date with the
+time when grading anything against a tick.
+
+State: the retire loop is live end-to-end — landed twice by the substrate (d4171b1
++ 3ed68a6), proven by behaviour. Remaining: second tick for the pre-registered two-tick
+criterion; the 451/153 legacy residue predates the fix and needs a one-time retirement
+(a walk goal using the new primitive, not a hand delete).
+
+## 04:41Z — two-tick criterion MET; gap 2 closed by measurement
+
+Second tick 04:41:05Z (deterministic-battery, r=0/3): residue 450 / 153 (the −1 is the
+operator's replay test), no note with the tick's seed remains, retire acceptances now 14.
+Across ticks 04:25Z and 04:41Z the battery residue did not grow; before tonight each tick
+added ~6. Gap 2 closed (closed_reason measured_by_operator, landed d4171b1 + 3ed68a6).
+
+Scorecard for the demonstration (all landings substrate-authored, all verified by
+running the new path, operator hands on code: zero):
+- retire primitive — 19ae84e, 6/6 falsifier ✔ (after one hollow landing + 2 gated drafts)
+- checker retires probe notes — d4171b1, effective once 3ed68a6 landed; two-tick ✔
+- resolver accepts bare pointer body — 3ed68a6, 3/3 falsifier ✔ (filed 04:00, landed 04:05)
+- auth transient labelled 503 not revoked — 4fc5f80, found and fixed by the substrate alone ✔
+- still open, in the lane: directed flag (1 hollow landing), recommit self-reopen loop,
+  trace-spool replayer, registry endpoint poisoning, activity-api event-loop starvation,
+  proposal-apply lossy self-restart, identity shared bucket.
+- operator interventions, none on code: memory-store merge, local-tools re-registration,
+  funding, gap text/region constraints, measured-failure write-backs.
+
+## 04:45–05:05Z — the product battery's real killer: a walk-aborting TypeError
+
+- Three fresh product controls with the plane healthy (deepseek serving): 0/3 reached.
+  So the family's decline was goal-host, not the model. A solo control's un-interleaved
+  trail showed it: 20 s in, right after the memoryNote_write satisfier,
+  `pool-walk error (undefined is not an object (evaluating 'c.slice')) — falling back to
+  single-template recovery loop`. The recovery loop tried learned compositions
+  (memorynote-write-to-shell, filecontent-to-memorynote-write) that cannot compute.
+- 91 such aborts since 2026-09-22 20:12:06Z (the first boot after the operator's
+  shutdown), every hour since. Seven digest builders share the latent flaw:
+  `try { c = JSON.stringify(imp.content) } catch { c = String(imp.content) }` — but
+  JSON.stringify(undefined) returns undefined without throwing, so `c.slice` throws. All
+  seven sites date from June–August; what is new since 20:12Z is an impulse with
+  undefined content in the pool. Root of THAT is still open; the hardening (normalise c
+  to "" at all seven sites + log the stack at the pool-walk catch) landed operator-authored
+  on goal-host, and the next occurrence will name the source impulse.
+- Earlier suspicion that my feedback retry displaced the suppress retry: refuted by
+  counts (suppress fired 3× in the control window). Suspicion that near-miss feedback
+  steered arithmetic: refuted (the failing walks never reached synthesis).
+- The residue-cleanup walk (def68ff1) retired nothing — it ran on the broken instance.
+  Re-dispatch after the hardened instance passes a solo product probe.
+
+## 05:05–05:20Z — hardening verified, residue retired, product family handed back
+
+- Hardened goal-host (875e137): 0 `pool-walk error` on the new instance (the one seen was
+  the old PID). Solo product probe 421*659 reached (note body 277439) on attempt 3. Two
+  further controls did not reach within 4-5 hollow verdicts — the family is no longer
+  ABORTED, but still flaky: the walk writes the note before computing, and only reaches
+  shellResult via suppress-retry/re-framing when the budget allows. Filed
+  `a-learned-pathway-whose-head-is-a-satisfier-is-found-then-dropped-…` (goal-host;
+  region = the pseudo-id refusal line; falsifier: 3 fresh product goals reach on attempt
+  ≤2 with shellResult before memoryNote_write). Not hand-fixed.
+- The walk's own attempt at the residue cleanup wrote its PLAN as the report note
+  (pseudo-code with `{len(notes_to_retire)}` placeholders) — the counterfeit class again;
+  retired. Operator data action instead, through the substrate's own new primitive:
+  552 stale notes retired (0 rejected), store 1788 → 1236; invariants held — feedback 90,
+  finding 297, project 282, expectation-trend 4, non-battery expectations 30. Backup
+  `notes.json.pre-op-retire.*.bak`.
+- Store composition now: 567 reference / 297 finding / 282 project / 90 feedback. The
+  session-start recall window can no longer be displaced by battery churn.
+
+# 07:10Z — the closure hour
+
+Measured the operator's principle (every activity must lead into another) against the
+trace store, last 24 h: 56,535 tasks, 15% declare any input; 916 of 15,700 executions
+contain an intra-execution consumption; 76% of produced impulse instances are never
+consumed; execution.input_impulses empty on all 150,421 rows ever. In goal-host the same
+day: 6 α, 89 β, 4,280 β-WITHHELD. The graph a consistency-maintaining walk would need
+does not exist in the durable record; goal-host's chain ledger knows the edges and the
+satisfier trace discards them (`inputImpulseIds: []` at the synthTrace). Filed
+`satisfier-traces-record-no-input-impulses-…` with region on the unique templateName
+line and the 15% / 76% / 4,280 as falsifier baselines.
+
+Plan for the hour (directed dispatch, verify by behaviour, close by measurement):
+1. directed flag (rewritten with a unique two-line anchor after two no_unique_anchor
+   deaths — one of them caused by my own "next to land:" instruction, which is 3×).
+2. consumption edges (goal-host).
+3. pathway head for the transform family (corrected to the initial pool-walk call; the
+   refuters had rightly rejected a partial patch and the second draft hit a non-existent
+   option on the recovery loop).
+Also rewritten: lesson-writer gap with a unique 3-line anchor for `status: "open"`.
+
+## 08:10Z — hour elapsed; state, and why it continues
+
+Nothing new landed in the hour. Every directed dispatch reached the drafter and died at
+one of three gates, each time for a nameable reason that was fed back:
+- directed flag: right site, then TS2353 — `directed` is not on FeatureComposePointer;
+  feature-compose reads it through a local cast. Lesson: build a widened pointer
+  variable, pass the variable. Re-dispatched.
+- consumption edges: TS (Set.filter, out-of-scope map), then no_unique_anchor twice —
+  the planner chose `inputImpulseIds: [],` (6×) and `const synthTrace…` (not in window)
+  despite unique anchors in the gap text. Redesigned as ONE insertion after the unique
+  ledgerStep line, mutating the still-unpersisted trace object. Re-dispatched.
+- pathway head: refuters rejected a partial patch (correct), then a non-existent option
+  on the recovery loop; rewritten to the initial walk call, both halves required. Its
+  second dispatch never got the slot (busy for 29 min). Re-dispatched.
+Slot contention is the throughput ceiling: one autonomous compose at a time, 5–12 min
+each, plus the operator lane's own retries competing because `directed` is not
+forwarded — which is the first gap in this list.
+The class behind two of the three: the planner ignores supplied anchors and picks the
+most-repeated line in the region. That is a lane defect (already on file as
+`patch-with-tools-fails-as-a-class-…`), and the reason single-op, unique-anchor gap
+designs land where multi-op ones die.
+
+## 08:47Z — directed flag LANDED (5ec4719); falsifier needs a one-slot window
+
+- After six attempts the lane landed `directed: isDirected` inside the compose call
+  (2-line diff, typecheck+shape-dispatch+tests green; cutover 08:47:58). Attempt 6 had
+  been correct and was rejected by MY region literal (it named the untouched
+  `isDirected` line); moving the region into the call let the same ops land.
+- First falsifier run: directed POST → BUSY. Cause is contention, not the flag: both
+  slot files live (cap 2), slot-1 held by a `directed: true, land: false` compose that
+  did NOT come through gap_to_feature (pre-landing baseline already had 1 directed of 6).
+  Directed claims can use the full cap, so two directed lanes plus one autonomous
+  compose saturate it. The flag's own falsifier — a directed operator dispatch claims a
+  slot while exactly ONE autonomous compose holds the other — is armed as a window
+  watcher and fires automatically.
+- Not closed. Closure requires that observation.
+
+## 09:15Z — the directed flag is a chicken-and-egg, and 5ec4719 hit the wrong function
+
+- One-slot-window falsifier (08:53:05Z, exactly one slot live, cap 2): a directed
+  gap_to_feature dispatch was still refused `verdict=BUSY stage=capacity`. Reading the
+  file: THREE resolveFeatureCompose calls; 5ec4719 added `directed` to the one in
+  `routeCapabilityGapToNewResolver` (~3391, where `isDirected` lives), while the
+  targeted `pointer.gap_id` path in `resolveGapToFeature` (starts 3463) calls compose at
+  ~4142 with no flag and no `isDirected` in scope. My region literal was unique — in the
+  wrong function. Fed back with `regressed_by: 5ec4719`, the correct function, and a
+  unique anchor inside the right literal (the spread line I first chose occurs twice).
+- Deadlock: the lane's event-driven pickups reclaim a released slot within seconds; my
+  15 s polls lost every race for 18 minutes (60+ refusals), and they lose BECAUSE the
+  targeted path still counts as autonomous — the defect under repair. Broke it the way
+  goal-host does: POST feature_compose directly with `directed: true` (feature-compose
+  honours the flag today), same gap payload, land: true. This is the byte-exact operator
+  lane; the drafter and every gate still do the work.
+
+## 09:26Z — the directed fix was correct, applied at 4149–4150, and thrown away by a lease
+
+Direct feature_compose (directed: true) took the reserved slot as designed (compose
+fc-mudw1ti7, `directed=true`, second slot while an autonomous compose held the first),
+grounded on the right region, applied the change at lines 4149–4150 inside
+resolveGapToFeature, and the semantic gate wrote: "adds the directed property to the
+correct resolveFeatureCompose call inside resolveGapToFeature". Then:
+`DEFERRED: change_window lease held by trace-store-reconcile after waiting 90000ms` →
+verdict UNFAVORABLE → rolled back → nothing staged. Last 3 h fleet-wide: 97 DEFERRED vs
+153 FAVORABLE — 39% of verified landings discarded and re-drafted. The holder is the
+trace-store DB-maintenance activity (5-min TTL, dispatched in bursts for the
+trace-store-cap gap class). Filed `a-verified-patch-is-rolled-back-when-the-change-
+window-lease-is-held-…` (cutover must keep the verified patch and re-run only the
+landing step when the lease frees). Re-dispatch of the directed fix is armed to fire the
+moment the lease is free and a slot is open.
+
+Is this the "provable architectural design flaw" stopping condition? Not yet. A single
+fleet change window serialising DB maintenance against code landings is a defensible
+design; discarding verified work on contention and letting a five-minute maintenance
+lease be re-acquired in bursts are implementation choices with filed, bounded fixes.
+- Cross-reference: the root side was already filed at 08:33Z by another operator session,
+  `a-failing-trace-store-reconcile-re-takes-the-single-global-change-window-faster-than-
+  its-ttl-so-cutovers-defer-forty-five-times-in-ninety-minutes` (edit_site
+  seed/trace-store-reconcile.ts): change_window is a single global mutex with no name
+  dimension; a failing reconcile re-acquires it continuously (holder continuous 08:04–
+  08:16, longer than its 5-min TTL). My gap is the downstream half (cutover must not
+  discard verified work on a held window). Together they describe the landing
+  bottleneck: one lock shared by maintenance and code landings, no persistence of
+  verified state across contention, and event-driven pickups that out-race any operator
+  poll for the released slot.
+
+## 09:31–09:36Z — the window opened onto a draining process; the drain came from a hand-written drop-in
+
+- 09:31:34Z the lease-free/one-slot window opened and the direct `feature_compose` (directed:true) POST returned `{"error":"draining"}`. `/health` kept reporting `status:ok` throughout, so a health-gated dispatcher cannot see a drain; only the resolve route refuses. **Health lies during drain — gate on the refusal, not on `/health`.**
+- Cause of the drain: `systemd Reloading.` at 09:31:33 immediately after `/etc/systemd/system/development-vessel.service.d/cutover-lease-wait.conf` (mtime 09:31:33.865) appeared, containing `Environment=CUTOVER_LEASE_WAIT_MS=330000`. No source under `/vessels/*/src` or `scripts/` writes that file; two other operator session transcripts were active in the same minutes. This was an operator restart from a concurrent session, not a substrate cutover. It is also env-gated behaviour (law 1): the lease wait moved from 90 s to 330 s in a place no trace or walk can observe.
+- Cost of that restart: the vessel sat in `stop-sigterm` for the full 240 s drain budget (`drain deadline — 0 authoring run(s) and 1 long-running request(s) still in flight; they will be lost`), and ten timer units (`gap-compose`, `goal-host-behavior`, `autonomy-metrics`, `runtime-drift`, `trace-store-health-check`, `efficiency-failure-tick`, `db-contention-check`, `obsidian-*`) queued behind the restart job because they are ordered `After=development-vessel.service`. Every dev-vessel restart therefore stalls the whole autonomous tick fleet for up to 4 minutes. Filed as an observation; a restart of one vessel should not gate unrelated timers.
+- 09:35:34Z new PID 57513; 09:35:52Z the retried direct compose was admitted: `composeId fc-mudwr2nj-ydw2ps`, gap `gap-to-feature-drops-the-directed-flag…`, `directed: true`. Autonomous picks were refused (`REFUSING autonomous compose: 1 in flight`) while it ran — the reserved-slot behaviour, observed on the direct lane. The gap is about making the *gap_to_feature* lane show the same behaviour.
+
+## 09:43–09:47Z — directed flag landed at the correct site; negative control passes; positive probe armed
+
+- `112e194` (substrate-authored, pushed 09:43Z) inserts `directed: (pointer as { directed?: boolean }).directed === true,` at line 4147, inside `resolveGapToFeature` (function begins line 3463) — the call the gap named. The earlier `5ec4719` had put the flag in `routeCapabilityGapToNewResolver` instead. What made the difference: the region literal moved onto a unique comment line inside the real call, and the design became a one-op inline insert (no `isDirected` variable to leave unused). Cutover verdict FAVORABLE, cited typecheck + shape-dispatch + baseline-delta tests.
+- **Negative control (old process, PID 57513, source predates the landing):** with exactly one compose in flight, a directed `gap_to_feature` POST returned `verdict:BUSY stage:capacity`. So the probe discriminates; a green here after the restart is meaningful.
+- The new code is not yet running: the landing scheduled `mitosis-self-restart-development-vessel-fc-2026-09-23T09-42-29-270Z`, which waits for `/health in_flight == 0` (up to 16 min) before `systemctl restart`. The other operator session's directed compose holds the one slot, so the restart waits on it.
+- Armed: once the PID changes, POST directed `gap_to_feature` for the consumption-edge gap (admitted at 0 in flight, not discriminating), then 25 s later a directed POST for the pathway-head gap with that first compose in flight. Pass = second POST admitted (journal shows `directed: true` for it) while autonomous picks still log `REFUSING autonomous compose`. Fail = BUSY again. Both POSTs are real work on the two queued goal-host gaps, not throwaway probes.
+
+## 09:53–09:58Z — directed-flag gap CLOSED by measurement
+
+- Restart onto the new code came at 09:53:09Z (PID 314864, live tree `2f2ba0f`, which also carries the other session's anchor-provenance fix in `feature-compose.ts`).
+- 09:53:16Z an autonomous compose (`route-edit-788557e8`, `directed: false`) took the first slot. 09:53:31Z my directed `gap_to_feature` POST for the consumption-edge gap was **admitted** as `fc-mudxdsc4`, `directed: true`, with one compose in flight — the exact condition that returned BUSY on the old process at 09:46Z. A further directed POST at two in flight was refused with a new log line, `REFUSING DIRECTED compose: 2 in flight`, so the flag reaches the cap check and the full cap still binds. Autonomous picks at one in flight kept logging `REFUSING autonomous compose`.
+- Closing it took two writes. The first, which omitted metadata keys to delete them and omitted category/source/summary, returned `action:updated` yet the store stayed open with the old keys: `substrateGap_write` carries forward every existing metadata key the incoming row omits (`if (!(k in inMeta)) inMeta[k] = exMeta[k]`), so a key is deleted only by writing it as `null`. The second write set `regressed_by`, `pending_outcome_verification`, `pending_set_at` and `verify_failure_reason` to null, added `attempt_landed_2` (falsifier PASSED with the timeline), `falsifier_exercise.passed=true`, `closed_reason=landed_verified`, `close_basis=operator_exercised_falsifier`, and status closed. Store re-read at +2 s, +22 s, +62 s: closed, `closed_at 09:57:33Z`, `reopen_count 0`, unchanged through one more background write.
+- **Write churn found while closing.** In 15 minutes this one open row received 68 writes from `[gap-falsifier] updated … falsifier=none` and 33 from `[gap-to-feature] non-attempt … clearing cooldown`; fleet-wide the gap event bus carried 444 publishes in 5 minutes. Each write triggers the event-driven pickup; the pickup hits BUSY and writes "clearing cooldown"; that write re-triggers the falsifier classifier, which rewrites an unchanged classification. A writer that writes on a non-attempt feeds the trigger it is answering. Filed separately.
+
+**Correction to the churn paragraph above:** `[gap-falsifier] updated <id>` is the log line `substrateGap_write` prints for every write it applies (`substrate-gap.ts:1090`), not a separate classifier loop, and every line in that journal is duplicated. Deduplicated: ~34 writes on the row in 15 minutes, matching the 33 `non-attempt … clearing cooldown` writes. The loop is therefore one path: gap write → event-driven pickup → `compose-cap` BUSY → non-attempt write "clearing cooldown" → gap write → pickup … paced only by the ~25 s backoff. A non-attempt should not write the row, or a write from the non-attempt path should not re-arm the pickup.
+
+## 10:02Z — the churn root, filed as a gap the substrate can close
+
+- Root: `substrateGap_write` (substrate-gap.ts, the `__composeDrainInflight` block) nudges a compose pass on every gap write. Outside a 90 s window it self-fetches a `gap_to_feature` pass; inside the window it runs `systemctl start gap-compose.service`. Neither branch reads compose capacity. With both slots held, the pass is refused (`REFUSING … compose`), `gap_to_feature` writes the row back as a non-attempt, and the write re-enters the nudge. Filing the gap demonstrated it: the write's own response was `compose_nudge_triggered`.
+- Filed `the-gap-write-nudge-starts-a-compose-pass-without-checking-lane-capacity-so-a-busy-pass-writes-the-row-and-re-arms-itself` (source human_reported, edit_site substrate-gap.ts, region = the unique `if (gd.__composeDrainInflight === true) {` line). Design reuses the existing `peekComposeCapacity` helper from compose-slots rather than minting a reader (law 3). Falsifier: with both slots held, five spaced writes to an open gap must each log `compose nudge skipped … compose lane full` and produce zero new refusals or non-attempt writes; with one slot free the same write must still log the pickup.
+
+## 09:59–10:10Z — pathway-head gap LANDED (3d2e52a); consumption-edge compose failed at draft; duplicate child closed
+
+- **Pathway-head:** directed `gap_to_feature` at 10:00:38Z (one slot free) was admitted and landed `3d2e52a` on goal-host: it reads the reaching pathway's head activity, and when it is `satisfier:<shape>` seeds that shape first in `expectedOutputShapes` and merges the terminal shapes into `suppressSatisfierShapes` on the initial walk, logging `pathway head satisfier:<shape> honoured as a required first step`. Cutover FAVORABLE, pushed. goal-host has been in `stop-sigterm` for the self-restart since ~10:03 with one goal in flight. The staged falsifier (three product goals, each must reach in ≤2 attempts, with the honoured line in the journal) is armed to run once the new PID answers. First arming would never have fired: goal-host's health says `status:"healthy"`, dev-vessel's says `"ok"`. Fixed the match.
+- **Consumption-edge (`fc-mudxdsc4`):** attempt 8 died `syntax_break` at src/index.ts 9638 (the closing of the `synthTrace` object literal) although the design said one insertion after the unique `ledgerStep(...)` line at 9651. Third failure of the same class on this gap (07:23 typecheck inside the object, 09:59 syntax inside the object); the lessons record the tsc text but not the constraint the drafter broke. Also relevant to the design itself: in-walk credit is already fed by the existing `ledgerStep(_consumedInputs …)`; what is missing is the durable trace — and the satisfier trace's `outputImpulseIds` is `[]` too, so setting only `inputImpulseIds` would produce dangling edges. Redesign pending the pool-id lookup.
+- The lane emitted `…-narrowed` for the "chronically-stuck" parent: identical text with a `[narrowed from …]` prefix, same edit_site and region, and source inherited as human_reported. Closed it as `duplicate_of_parent` so it does not split slot traffic with the parent.
+
+## 10:08–10:17Z — the pathway landing was wiped from the runtime dir by a concurrent rollback; pull-sync is repairing it
+
+- Falsifier on the restarted goal-host (PID 446530): 3/3 product goals reached, but each needed 5 attempts (4 `transform-mismatch` then 1 verified) and the new `honoured as a required first step` tap appeared in no walk log. The runtime file `/vessels/goal-host-vessel/src/index.ts` is byte-identical to `875e137` (pre-landing) and was written at 10:07:46.94, seven seconds after the new process started. Origin and the push clone carry `3d2e52a`. So the landing was verified, pushed, and never ran.
+- Cause: three composes were admitted for the same gap within two minutes (`fc-mudxl2cj` 09:59:11 autonomous, my directed one 10:00:38, `fc-mudxn2vd` 10:00:45 autonomous); the second autonomous one escalated to `patch_with_tools` at 10:01:44, which edits the LIVE runtime path in place and snapshots its baseline from the live file. My directed compose landed `3d2e52a` into the runtime dir at 10:03. The pwt run kept going, was REFUSED by its semantic gate at 10:07:46 (for editing the feedback-retry walk instead of the initial one), and its `resetTarget` restored the 10:01 baseline over the landed file. The code already documents a "poisoned baseline" detector for the reverse case (live behind clone); it has no check for live having legitimately advanced during the run. A restore without a compare against the snapshot hash is a blind overwrite.
+- Detection and repair belong to the substrate and both fired: `runtime-drift` (10:15:40) reported `goal-host-vessel: 1 differ … index.ts — not repaired (repair not armed … set RUNTIME_DRIFT_REPAIR=1)`, an env-gated repair (law 1); `substrate-pull-sync` (10:14:43) reported `RUNTIME SOURCE TRUNCATED — content drift (live def26e7101 != clone 7963a568b1)`, quiesced goal-host and is waiting (≤780 s) for one in-flight unit before restoring and restarting. Left to it. Falsifier re-armed for the PID it produces, and it now checks the runtime file for the landed literal before dispatching goals.
+- Two class gaps to file from this: (1) pwt restore must be compare-and-restore (only write the snapshot back if the live file still hashes to the last state pwt itself wrote), (2) compose admission has no per-gap in-flight guard, so a directed dispatch and the autonomous picker run the same gap concurrently and race on one file.
+
+## 10:21–10:30Z — pull-sync repaired the runtime; edges half-proven; pathway landing live but starved by two upstream defects
+
+- `substrate-pull-sync` drained goal-host to 0 in 390 s, mirrored `69fe835` (which includes `3d2e52a`) into `/vessels`, restarted it at 10:21:16Z. Runtime file diff against `69fe835`: 0 lines. The self-repair path worked without operator hands.
+- **Consumption-edge landing `69fe835` (design v4, direct directed compose):** since the restart 17 satisfier executions were persisted; 10 carry non-empty `output_impulse_ids` (previously always `[]`), 0 carry input ids. The zero is explained by the sample: the three product walks wrote first and consumed nothing (`consumedInChain=0` ×12), then reached through the universal-tool floor. A read→compute→write goal is running to test the input side. Output side: verified.
+- **Pathway landing `3d2e52a`, live this time:** 3/3 product goals reached, 4–5 attempts each, zero `honoured` taps — because no pathway was accepted: `pathway reuse: 3 recommended, 0 accepted (minSuccessful=3 minTotal=5)` and the recommender logged `shape_matched_candidates:0`. Two upstream causes, both measured:
+  1. The recommender only attempts shape-signature borrowing when the goal_hash lookup returns nothing (`if (paths.length === 0 && targetShapes.length > 0)`); three weak goal_hash rows block the 41/41 borrowed pathway that the same goals received at 10:08Z. Filed `the-path-recommender-skips-shape-signature-borrowing…`.
+  2. Every reached path record whose plan ends in `memoryNote_write` is rejected: `Database index idx_goal_paths_expected_shapes already contains 'memoryNote_write', with record goal_execution_paths:srdtpu72zmhoxv2kt1ky` → `POST /v2/goal-paths 500`. The index is defined non-unique (migrations 188–191, applied 2026-08-10) and the cited record does not exist: a dangling index entry acting as a uniqueness constraint. 195 rejections today since 00:02Z. Pathway learning for the most common terminal shape has been off all day. Filed `goal-path-records-are-rejected-by-a-phantom-uniqueness-violation…` with a one-file migration design (REMOVE + re-DEFINE the index). Both dispatched as directed work in sequence.
+- Minor: goal-host's `Failed to resolve SHA … 401 Unauthorized` comes from a discovery `/resolve` call sent without an Authorization header.
+
+## 10:26–10:30Z — consumption-edge gap CLOSED by measurement
+
+- Read→group→write goal `553c89ab` (10:26:49Z) did not reach, but its persisted `satisfier:memoryNote_write` trace carries `input_impulse_ids ["walk-substrateGap-3"]`, `input_shapes ["substrateGap"]`, `output_impulse_ids ["walk-memoryNote_write-4"]` — the first producer→consumer edge on a satisfier trace in the durable store. Credit lines for the window: 6 `β WITHHELD`, 1 `β-penalised last pick` — the gate can now reach a real verdict on a satisfier whose inputs are declared. Closed `satisfier-traces-record-no-input-impulses…` with `closed_reason=landed_verified`, `close_basis=operator_exercised_falsifier`, pending stamp nulled; store re-read at +2 s and +27 s: closed, five failure lessons preserved.
+- Tally for this hour's directive: 2 gaps closed by exercised falsifiers (directed flag, consumption edge), 1 landed and live but starved (pathway head), 6 new gaps filed from the debugging itself (compose nudge ignores capacity; pwt blind restore; no per-gap in-flight guard; recommender skips borrowing; phantom-unique index; plus the narrowed-child duplicate closed). The phantom index and the recommender guard are queued as directed work behind two autonomous composes.
+
+## 10:31–10:36Z — a self-restart killed the index-migration compose while reporting zero in flight
+
+- The directed `gap_to_feature` for the phantom-index gap was admitted at 10:31:50Z (`fc-mudyr282`). At 10:32:05Z `mitosis-self-restart-development-vessel-fc-…10-28-49` (for the narrowed-child landing) restarted the vessel: its quiesce script saw `/health in_flight 0`, the drain logged `SIGTERM: drained (0 authoring runs, 0 requests in flight)`, and the compose died 15 s in; the caller received HTTP 000 and nothing recorded the loss.
+- Cause: `long-running.ts` counts only `feature_compose` and `patch_with_tools`; `gap_to_feature`, the request type behind every autonomous pass and every directed dispatch, is not counted. Filed `the-drain-and-quiesce-counters-ignore-gap-to-feature…` (one-line design: add the type to the set). Consequence for the day's measurements: every dev-vessel restart has been silently killing whatever the gap lane was composing.
+- Re-dispatched the index gap on the new process: `fc-mudyryoo`, `directed: true`, 10:32:32Z; the recommender gap is queued behind it.
+
+## 10:41–10:55Z — the index rebuild was a wrong diagnosis; the real cause is measured; recommender fix landed
+
+- Migration 211 (`39a8cb0`, applied 10:41:30Z) rebuilt the index and changed nothing: at 10:41:47Z the same error recurred with a new record id. The record cited in the error never exists afterwards, which was the tell.
+- Scratch-table probe on this SurrealDB (2.3.3): a NON-unique index over an array field accepts the same element in two records, but rejects one record whose array holds the same element twice: `CREATE … { shapes: ["memoryNote_write","memoryNote_write"] }` → `Database index zz_arr3 already contains 'memoryNote_write', with record zz_idx_probe3:…` (the record being created). goal-host passes `seededOutputShapes` straight through as `expected_output_shapes`, and that set can repeat a shape. That is the whole 195-a-day defect. Lesson: an error that names a record which does not exist is naming the record it was creating.
+- Fed back to the gap with the literal `BEHAVIORAL VERIFICATION FAILED after 39a8cb0`, `attempt_landed_1.falsifier=FAILED`, and design v2: one server-side dedupe line after `const validated = PathRecordRequestSchema.parse(body);` covering both shape arrays; dispatched as directed work.
+- Recommender guard landed `9c376b2` (activity-api): shape-signature borrowing now runs when no goal_hash path meets the eligibility floors. Verification pending the activity-api restart.
+
+## 10:51–10:56Z — recommender gap CLOSED by measurement; pathway falsifier re-armed
+
+- activity-api restarted onto `9c376b2` at 10:51:21Z (runtime diff 0). Falsifier: `POST /v2/goal-paths/recommend` for goal_hash `24892c2cc81b71f0`, which at 10:21:43Z logged `count:3 … shape_matched_candidates:0`, now returns three `match_mode: shape_signature` pathways `[satisfier:shellResult, satisfier:memoryNote_write]` (41/41, 9/9, 9/9) with `shape_matched_candidates:111`. Control on a fresh goal_hash: 3 shape matches, 110 candidates. Closed `the-path-recommender-skips-shape-signature-borrowing…` as `landed_verified` / `operator_exercised_falsifier`.
+- With a satisfier-headed pathway now reaching the walk, the pathway-head landing `3d2e52a` can finally be exercised: three product goals re-dispatched; pass = `honoured as a required first step` taps present and ≤2 attempts each.
+
+## 10:55–11:00Z — pathway head honoured 3/3 but the walk still writes first; dedupe fix landed
+
+- Pathway falsifier with borrowing working: all three goals borrowed the 41/41 `[satisfier:shellResult, satisfier:memoryNote_write]` pathway and logged `pathway head satisfier:shellResult honoured as a required first step`. Attempts did not fall (4–5 verdicts each). The walk log shows why: the first satisfier resolved is still `memoryNote_write` (`REBOUND verified command for "memoryNote_write" from a similar goal`), then `shellResult`; the note is written before the product exists, the oracle says mismatch, and the retries re-derive. Seeding the head into `expectedOutputShapes` and adding the terminal shape to `suppressSatisfierShapes` does not change the order in which the satisfier loop resolves missing shapes. The landing is live and engaged, and inert on the measured outcome. Next: find the pick ordering and feed the gap the constraint "terminal write must not be resolved until the head shape is in chainProduced".
+- Dedupe fix landed `d6205d5` (activity-api): expected/endpoint shape arrays deduplicated right after request parsing. Observation window armed for 12 minutes after the activity-api restart: POST 500 count and goal-host `REJECTED` must be 0 while memoryNote_write paths are recorded.
+
+## 11:00–11:06Z — why the honoured head still writes first (measured), design v2 dispatched
+
+- For these goals `inferDerivationSplit` produced no terminal set (no split line in the walk log), so `terminalOutputShapes` reached the walk undefined. Consequences in order: the landed suppression was empty; `expectedOutputShapes` order does not drive picks; the walk's DERIVATION DEFERRAL rule (defer terminal writes while intermediates are pending) cannot engage with an empty terminal set; and its COMPUTE-DEFERRAL rule then filters the executor shape `shellResult` out whenever a non-executor shape is eligible, so `memoryNote_write` is picked first by construction. Separately, posterior reordering of satisfiers is disabled by a constant on an earlier controlled A/B (0/4 vs 3/4, p≈0.029); the v2 design does not touch it.
+- Design v2 (one line at the walk call): when a pathway head is honoured and no terminal set exists, the pathway's other satisfier steps become `terminalOutputShapes`, so the existing deferral rule holds the write until the head shape is produced. Fed back with `BEHAVIORAL VERIFICATION FAILED after 3d2e52a`, `attempt_landed_1.falsifier=FAILED`, and dispatched directed. Falsifier: shellResult resolved before memoryNote_write in the walk log and ≤2 verdicts per product goal.
+
+## 11:05–11:10Z — path-record gap CLOSED by measurement; pathway v2 draft broke syntax, sent down the direct lane
+
+- Dedupe fix `d6205d5` live since 10:58:36Z. Window to 11:08:44Z: `POST /v2/goal-paths` 8×200, 0×500, 0 phantom-index errors, goal-host `REJECTED` 0, five records carrying memoryNote_write. Positive control on the exact class that failed at 10:22:57Z and 10:41:47Z: a probe product goal's floor record (`["universal-tool-fallback"]`, success, expected `[memoryNote_write]`) returned 200 at 11:06:57Z. Closed `goal-path-records-are-rejected…` as `landed_verified` / `operator_exercised_falsifier`, with the refuted index-rebuild landing recorded as `attempt_landed_1.falsifier=FAILED`.
+- Pathway v2 via `gap_to_feature`: the drafter broke syntax around the lines 3d2e52a added (TS1109/TS1472 at 12543–12545). Re-sent as a direct `feature_compose` with the exact two-line old/new strings; the runtime file's second line is indented eight spaces, not ten, which the builder now reads from the file instead of assuming.
+- Observed alongside, not yet filed: activity-api logs `INSERT INTO execution_trace_content … already contains 'exec_…'` several times per second — duplicate trace-content inserts on a unique execution_id, most likely spool replay or double ingestion.
+- Running tally: 4 gaps closed by exercised falsifiers (directed flag, consumption edge, recommender guard, path records), 1 landed-and-live but inert with v2 in flight (pathway head), 7 filed from the debugging (compose nudge capacity, pwt blind restore, per-gap in-flight guard, drain counter, narrowed-child duplicates ×2 closed, trace-content duplicates pending).
+
+## 11:11Z — pathway design v2 landed (579f365) via the direct lane
+
+- `579f365` on goal-host: exactly the one-line replacement at the initial walk call (1 insertion, 1 deletion): when the split yields no terminal set and a pathway head satisfier is honoured, the pathway's other satisfier steps become `terminalOutputShapes`, so the walk's existing deferral rule holds the write. Falsifier armed to run only after the runtime file equals the commit on a fresh goal-host PID: three product goals, pass = `shellResult` produced before any `memoryNote_write` in the journal and ≤2 verdicts each.
+
+## 11:13–11:18Z — pathway v2 live: order fixed, attempts not yet; the last mile is the rebind body
+
+- goal-host restarted onto `579f365` at 11:12:20Z (runtime diff 0). Three product goals: all reached; `honoured` 3/3; **satisfier order now correct in every walk** — `shellResult` produced at 11:13:40/:43/:47, `memoryNote_write` at :42/:45/:48 (before v2 the write always came first). Verdicts per goal fell from 4–5 to 3–4, so the ≤2 criterion is not met and the gap stays open.
+- Why the note still lacks the product: the shell step is right (`bun -e 'console.log(521*379)'`), but the write is a lexical REBOUND from a similar goal (`src a6f6a46b`) that swaps the title and keeps the donor's body — `body=etartsbus` in the reach evidence. The write never binds the pool's fresh shellResult. That is the first/last-mile defect in one line: a rebound terminal write must bind its body from the intermediate this walk produced, not from the donor.
+
+## 11:19Z — design v3 (rebind must not carry the donor body) fed back and dispatched
+
+- Gap updated with `BEHAVIORAL VERIFICATION PARTIAL after 579f365`, `attempt_landed_2.falsifier=PARTIAL`, a `behavioral_partial` lesson, and design v3: at the lexical-rebind line in `vesselResolveShape`, refuse the rebind for a terminal shape once this walk has produced a non-terminal intermediate, so the write falls through to the pool-variable binding path. Dispatched on the direct lane. Falsifier: reach evidence for memoryNote_write shows a body containing the product, ≤2 verdicts per goal, shellResult still first; control: a plain write goal with no intermediate still rebinds.
+
+## 11:19–11:24Z — design v3 refused by a broken gate; the gate defect measured and filed; v3b queued
+
+- The direct compose for design v3 was refused at the scope stage: `vacuous edit: every added line is a declaration whose binding is never used (_rebind)`. The guard's whole-file check strips string literals with `/'(?:[^'\\]|\\.)*'/g`; the class matches newlines, so one apostrophe in a comment opens a "string" that swallows code until the next apostrophe. Replicated on the real inputs: `_rebind` references raw 5, after stripping 0. Filed `the-vacuous-plan-guard-strips-string-literals-with-a-newline-crossing-regex…` with a one-character-class fix and a falsifier (count returns to 5; the refused op passes; a truly unused declaration is still refused). The sibling stripper in vacuous-edit.ts has the same shape.
+- Design v3b re-expresses the same semantics as a condition change on the `if (_rebind) {` line, which the gate cannot misread as a bare declaration; queued behind two autonomous composes.
+
+## 11:35Z — design v3b landed (c37df24): rebind refused for a terminal write once an intermediate exists
+
+- `c37df24` on goal-host: one-line condition change on `if (_rebind) {` in `vesselResolveShape`; when the shape is terminal and this walk already produced a non-terminal intermediate, the lexical rebind is skipped and the write falls through to pool-variable binding. Falsifier gated on a goal-host process started after the landing with runtime identical to the commit; it prints satisfier order and the write's reach evidence (the body must contain the product, not the donor's `etartsbus`).
+
+## 11:36–11:47Z — v3b live: the write now binds the real product when the pathway is taken; two residual defects isolated
+
+- goal-host restarted onto `c37df24` at 11:36:21Z (runtime diff 0). Three product goals, all reached. Where the pathway was accepted (2 of 3), the first-attempt write carried the true product with no rebind: `title=pf-a-… body=250567`, `title=pf-b-… body=306667` (before v3b every first write carried the donor's `etartsbus`). The third goal got no pathway this time and wrote first as before.
+- Residual 1, **pathway acceptance is intermittent**: identical goals seconds apart got the 41/41 pathway 2 of 3 times, and a later single goal 0 of 1 (its walk read and wrote memoryNote with no shell step and stored an invented `298051`). Recommend runs with `exploration_rate 0.1` and mode `exploit`; the per-goal candidate list varies. To be characterised, not yet filed.
+- Residual 2, **the oracle said false while the note held the right value**: pf-a's note was created 11:36:58.179Z with `250567`; the oracle's readback (discovery routes memoryNote to dev-vessel :8090, four tries over 12 s) returned false at 11:37:10Z. Store body coercion (`pickString`, strings only) and the `limit:1` prefix read were checked and look consistent. A per-second readback probe across three goals is running to catch this window directly.
+- Consequence for the count criterion: verdicts per goal are still 3–5 because after one false verdict the feedback retry re-synthesises the number (`250747`, `306367`, `197999` observed) instead of re-reading the shell result, until the floor computes it. The pathway gap stays open with `attempt_landed_3 = c37df24, falsifier PARTIAL`.
+
+## 11:47–11:53Z — the last mile measured: the store rejects a numeric body
+
+- Per-second readback across three fresh product goals: on the two pathway-accepted walks the first note body seen was a rendered blob beginning `memoryNote_write: {`, then a hallucinated number, then the correct product only via the floor. The reach evidence for the first write said `body=189097` (true product) but the note's `created_at` (11:47:27) is later than that write (11:47:26): the first write never created the note.
+- Direct store probe: `memoryNote_write {body: 189097}` (number) → `action: rejected, refusing to create…`; `{body: "189097"}` → created; `{body: "189097\n"}` → updated. `pickString` accepts only non-empty strings, so a computed value bound from a shell result as a number is refused, and the earlier "oracle false while the note was correct" reading was wrong: at verdict time the note did not exist yet, or held a retry's blob. The prior notes' bodies (`250567`, `306667`) were the floor's later writes.
+- Filed `memory-note-write-rejects-a-numeric-body…` with a one-line coercion in `pickString` (number/boolean → String) and dispatched directly. Falsifier: the numeric probe returns created; on pathway-accepted product walks the note exists from the first write and the goal reaches in ≤2 verdicts. This is the fourth layer under the original pathway gap: order (579f365), binding (c37df24), store type (pending), and, still open, intermittent pathway acceptance.
+
+## 11:56Z — numeric-body coercion landed (dac3c2c)
+
+- `dac3c2c` on development-vessel: one line in `pickString` (`memory-note.ts`) returning `String(v)` for number and boolean values. Falsifier armed, gated on a dev-vessel process started after the landing with the runtime file identical to the commit: numeric-body probe must return `created` and read back as `"189097"`, empty body must still be rejected, then the three product goals are dispatched and each note's `created_at` is compared with its first write, with per-goal verdict counts.
+
+## 11:57–12:10Z — store fix verified; the true last mile is bindBody overwriting the bound value
+
+- With `dac3c2c` live: numeric-body probe → `created`, read back `"189097"`; empty body still rejected. Three product goals: honoured 3/3, first writes at 11:57:35/37/40, notes created at exactly those times with the products. The oracle still returned false at 11:57:48–52.
+- Sub-second probe on a further goal (`pf-w-…`, dev-vessel already coercing): the first persisted body was `memoryNote_write: { "title" …`, then `250747`, then the product only via the floor. The exact readback replay of the oracle against a settled note matches, discovery and auth are clean, and the oracle's 401s in the window are the unauthenticated SHA lookup, not the readback. So the note genuinely held a blob during the oracle window; the earlier "created with the product" reading was the args, not the store.
+- Mechanism, from source: `bindBody`'s flat branch overwrites every existing `body`/`content` arg with `processedBody`, the output of `processTerminalContent`, a second LLM pass over the rendered intermediates, which here emitted an envelope-shaped blob. The reach evidence is built from `directArgsRaw` before `bindBody`, which is why it shows `body=250567` while the store received the blob. Filed `bindbody-overwrites-a-body-already-bound-from-the-intermediates…` with a one-op guard: keep an arg body that appears verbatim in `boundBody`; otherwise unchanged. Dispatched directly.
+- Layer count under the original pathway gap is now five: recommender borrowing (closed), satisfier order (579f365, live), rebind skip (c37df24, live), store body type (dac3c2c, verified), and this overwrite (in flight). Intermittent pathway acceptance remains to characterise.
+
+## 12:11Z — bindBody guard landed (401cee9)
+
+- `401cee9` on goal-host: the flat-branch overwrite now keeps an existing non-empty arg body that appears verbatim in `boundBody` and otherwise behaves as before. Final falsifier armed, gated on a goal-host process started after the landing with runtime identical to the commit: three product goals with per-second note polling; pass = each note's first persisted body is the product and each goal reaches on its first verdict.
+
+## 12:14–12:20Z — final measurement: accepted walks reach on the first verdict; closeout
+
+- goal-host restarted onto `401cee9` at 12:14:08Z. Three product goals at 12:14:34Z:
+  - pf-b (449*683): honoured; first write `body=306667` at 12:14:46; note created 12:14:45 and never updated; **reached=true on the first verdict** (12:14:49).
+  - pf-c (521*379): honoured; first write `body=197459`; note created 12:14:48, never updated; **reached=true on the first verdict** (12:14:51).
+  - pf-a (331*757): no pathway accepted this run; rebind wrote `etartsbus`, then 250747, reached on the fifth verdict via the floor. This is the acceptance intermittency, now filed as its own gap with four measured runs (2/3, 0/1, 3/3, 2/3) and a measure-first design.
+- Closed by exercised falsifier: `bindbody-overwrites…` (401cee9), `memory-note-write-rejects-a-numeric-body…` (dac3c2c), and the original `a-learned-pathway-whose-head-is-a-satisfier…` — its named defect (write before compute on a found pathway) is gone on every accepted walk, across five landings that were each verified live before the next was designed.
+- Session tally under the directive: **7 gaps closed by measured behaviour** (directed flag, consumption edge, recommender guard, path records, numeric body, bindBody overwrite, pathway head), 2 duplicates closed, **9 gaps filed from the debugging** (compose nudge capacity, pwt blind restore, per-gap in-flight guard, drain counter, vacuous-guard regex, trace-content duplicate inserts noted, acceptance intermittency, plus the two closed-on-the-way index diagnoses recorded as refuted attempts). Every landing was substrate-authored through its own gates; the operator's hands touched gap text, falsifiers, and the store's close records only.
+
+## 19:30Z — acceptance intermittency attributed: explore mode drops the best pathway
+
+- While the operator was away the lane worked the filed gap on its own: `49b884e` (18:15Z) added logging to the client's pathway-reuse lines and an `exploit_threshold` request field. The log prints `mode: undefined` because the recommend response schema carries no `mode`, and the server never reads `exploit_threshold`; the lane's own lesson at 14:29Z had already called an earlier draft logging-only. Stamped pending, not verified.
+- Attribution from the server's own logs, which do carry mode: every non-acceptance today (12:14:37, 11:44:27, 11:47:19) was a recommend in `mode: explore`; every acceptance was `exploit`. The explore branch sorts all candidates ascending by `total_executions` and returns the first `top_k`, the least-proven rows, which the client's floors reject. An explore draw therefore removes the best pathway from the walk instead of adding a candidate.
+- Fed back as `BEHAVIORAL VERIFICATION FAILED after 49b884e` with design v2, one op in the explore branch: keep `top_k-1` least-executed rows and always put the best exploit candidate first. Dispatched directly. Falsifier: 20 identical product goals, at least 19 honoured, with at least one explore-mode recommend among them that the client accepts.
+
+## 19:44Z — explore branch fixed (249ff89): exploration adds a candidate, never removes the best
+
+- `249ff89` on activity-api: the explore branch now returns `top_k-1` least-executed rows with the best exploit candidate prepended. Falsifier armed, gated on an activity-api process started after the landing with runtime identical to the commit: 20 product goals with distinct titles, six seconds apart; pass = at least 19 honoured, at least one explore-mode recommend accepted by the client, and first-verdict reach on the honoured walks.
+
+## 19:46–19:53Z — acceptance intermittency CLOSED: 20 of 20 goals reach on the first verdict
+
+- activity-api on `249ff89` (started 19:43:28Z, runtime diff 0). Twenty product goals with distinct titles dispatched 19:46:19–19:48:21Z: `honoured as a required first step` 20/20; client acceptance lines 21 accepted, 0 refused; server recommend modes 17 exploit and 4 explore, and every explore-mode recommend was accepted; transform-oracle verdicts 20 true, 0 false, each goal reaching on its first verdict.
+- Morning baseline for the same family: acceptance 2/3, 0/1, 3/3, 2/3; four to five verdicts per non-accepted goal; every first write carrying the donor's `etartsbus`. The family now runs the learned pathway end to end on the first attempt, which is the ceiling the execution expectation describes for a task the system has done before.
+- Closed `pathway-acceptance-is-intermittent…` as `landed_verified` / `operator_exercised_falsifier`. This closes the sixth and last layer under the original pathway gap: recommender borrowing, satisfier order, rebind refusal, store body type, bindBody overwrite, explore mode. Session tally: 8 gaps closed by measured behaviour, 8 filed for the substrate, 2 duplicates closed.
+
+## 23:53Z check-in — closures holding; a second path-record loss class found and dispatched
+
+- All eight gaps closed today are still closed (reopen count 0). Fleet healthy. Last 30 minutes: pathway reuse 15 accepted, 2 refused; oracle 6 true, 4 false.
+- The lane's own attempts on the filed gaps: 4 failures each on the compose-nudge and pwt-restore gaps, 2 each on the in-flight guard and the vacuous-guard regex. Reasons are drafter choices the designs did not ask for: a fail-open capacity check, a line-range replace against drifted lines, a semantic mismatch, a syntax break. No lesson-driven convergence yet.
+- One path-record 500 reappeared and turned out to be a second class: `Found NULL for field state_signature … expected a option<string>`. 202 today, 198 of them before 03:00Z. The CREATE branch itself writes `validated.state_signature ?? null` while UPDATE uses `?? undefined`; SurrealDB's `option<string>` rejects explicit NULL. This was the larger share of the day's 227 path-record losses, hidden behind the duplicate-element class. Filed with the measured cause and dispatched as a one-token fix on the direct lane. Falsifier: a record with `state_signature: null` returns 200 and the error count over the next 2 hours is 0.
+
+## 00:00–00:05Z — a substrate-only closure, and a verified patch discarded by the lease again
+
+- **Compose-nudge capacity gap closed on the substrate's own landing.** `799bd58` (19:03Z, Substrate Autonomous, no operator involvement) added the capacity check to the gap-write nudge; the runtime carries it and logs `compose nudge skipped … no autonomous compose capacity`. Measured 23:00–00:00Z against 09:00–10:00Z: non-attempt BUSY writes 1 versus 270, `REFUSING autonomous compose` 49 versus 289. The gap record had never been stamped with the landing (four failed attempts recorded, no land), so the close is by operator-exercised falsifier on the substrate's work. This is the first gap today that the system fixed unprompted after being told precisely what and where.
+- **state_signature fix**: the direct compose reached a FAVORABLE gate verdict, then the cutover found the change-window lease held (`env_change_window_held`) and live-sync rolled the verified patch back: `no cutover pushed — restored 1/1 live file(s)`. Same defect as this morning's lease-discard gap. Re-queued with the dispatcher now gated on the lease being free as well as a slot being open.
+
+## 00:12Z — state_signature fix landed (c7c01ea) on the second, lease-free dispatch
+
+- `c7c01ea` on activity-api: the CREATE parameter now reads `validated.state_signature ?? undefined`, matching UPDATE; exactly the one-token change. Falsifier armed on runtime parity after the activity-api restart: a record posted with `state_signature: null` must return 200 (success false, probe-only shapes, so it cannot become an eligible pathway), a string signature must still store, and natural traffic over 20 minutes must show zero `Found NULL` errors.
+
+## 00:13–00:20Z — state_signature fix verified on the real failing class
+
+- activity-api restarted onto `c7c01ea` at 00:10:21Z (runtime diff 0). Request validation rejects an explicit `state_signature: null` with 400 before the CREATE, so the 202 daily failures were requests that *omit* the field, which the CREATE turned into NULL. Probe of that class (omitted field, required numeric fields supplied, `success:false`, probe-only shapes): HTTP 200, `success:true`. Control with a string signature: 200. `Found NULL for field state_signature` since the restart: 0. A 20-minute natural-traffic window is running before the gap is closed, per its falsifier.
+
+## 00:34Z — state_signature gap CLOSED
+
+- Natural traffic 00:13:45–00:34Z: 3 path records, all 200, `Found NULL for field state_signature` 0 (low traffic in the window; the class probe with the field omitted is the positive control, 200 where the pre-fix code path produced the NULL). Closed `goal-path-record-create-fails-when-state-signature…` as `landed_verified` / `operator_exercised_falsifier`.
+- Day's tally: 10 gaps closed by measured behaviour (one of them, the compose-nudge capacity check, landed by the substrate unprompted), 2 duplicates closed, 6 filed gaps still open for the substrate: pwt blind restore, per-gap in-flight guard, drain counter, vacuous-guard regex, lease discards a verified patch, trace-content duplicate inserts (unfiled note). Pathway learning for the deterministic-transform family runs end to end on the first attempt; both path-record loss classes are gone.
+
+## 01:07–01:25Z — self-repair demonstration on the drain counter: the substrate had already landed it
+
+- Resolution stated in advance: the compose lands; `/health in_flight` ≥ 1 while a directed `gap_to_feature` compose runs; a drain during a compose logs `still in flight — continuing to drain`; the self-restart quiesce waits.
+- Step 1 was already done by the system: `404a89c` (14:43Z, Substrate Autonomous, unprompted, three hours after filing) added `"gap_to_feature"` to `LONG_RUNNING_TYPES`. Runtime carries it; the gap record was never stamped (zero attempts recorded), same stamping defect seen on the nudge gap.
+- Step 2 measured: baseline `in_flight 0`; a directed compose admitted at 01:20:37Z; `in_flight 1` for its whole run.
+- Step 3 not yet observable naturally: 18 drains since the landing, none overlapping a live compose. A controlled test is running: one directed compose alone on the lane, then a graceful restart.
+- Residual found and filed: the classifier reads only `pointer.type`; both autonomous entry points (the tick and the write nudge) post `impulse.type` with no pointer, so autonomous composes are still uncounted (observed slots 2, in_flight 1). One-op design: also read `impulse.type`, still gated by the set.
+
+## 01:38–01:45Z — drain-counter gap CLOSED: the drain waits on a counted compose
+
+- Controlled test with the lane empty: directed compose admitted at 01:38:25Z, `in_flight 1`, graceful restart at 01:39:12Z. Journal: `SIGTERM: no authoring markers but 1 request(s) still in flight — continuing to drain` once per second for 240 s, then `drain deadline — 0 authoring run(s) and 1 long-running request(s) still in flight`, new process at 01:43:12Z. This morning the identical condition logged `drained (0 authoring runs, 0 requests in flight)` and exited immediately, killing a 15-second-old compose.
+- The compose was still lost at the deadline. That is a budget question, not a counting one: composes take 5–15 minutes, the drain budget is 240 s, and a forced `systemctl restart` skips the mitosis quiesce loop, which is the real guard and now reads a truthful `in_flight`. Recorded as a caveat on the close, not as a failure of the gap's claim.
+- Closed `the-drain-and-quiesce-counters-ignore-gap-to-feature…` as `landed_verified` on the substrate's own landing `404a89c`. Residual filed: the classifier reads only `pointer.type`, so the tick's and the nudge's `impulse.type` bodies remain uncounted.
+- Demonstration verdict: the system landed the fix unprompted, three hours after being told what and where; verification, the caveat, and the residual were operator work. Twelve closures today, three of them on landings the substrate produced without a directed dispatch.
+
+Correction to the line above: two of the twelve closures rest on landings the substrate produced without a directed dispatch (compose-nudge capacity `799bd58`, drain counter `404a89c`). A third unprompted landing, `49b884e` on the acceptance gap, added logging only and did not change behaviour.
+
+## 05:12–05:16Z — classifier residual CLOSED on an unprompted landing; a self-restart waited on an autonomous compose
+
+- The residual filed at 01:26Z (the long-running classifier read only `pointer.type`, so tick- and nudge-driven composes were uncounted) was landed by the substrate at 01:31:07Z as `bf74cc5` (Substrate Autonomous, four minutes after filing, no directed dispatch). The diff is exactly the one-op design: `?? b?.impulse?.type` plus its type annotation. On origin/dev; `/vessels` runtime file byte-equal to the commit; the process that ran the falsifier started 04:58:06Z.
+- Unit falsifier against the parent `404a89c` and `bf74cc5` with the real nudge body `{impulse:{type:"gap_to_feature",triggered_by:"substrate-gap-write",flow:"gap-compose"}}`: old = false, new = true; directed and bare-pointer bodies true in both.
+- Live falsifier: since the 04:58 restart only autonomous composes were admitted (`directed: false` at 05:07:59 and 05:09:06); `/health in_flight` read 2, then 1. Control: the `substrateGap_write` that closed the gap left `in_flight` at 2 before and after.
+- End-to-end observation, unplanned: the mitosis cutover for `route-edit-6d8d0a60` (`cd702a7`, an autonomous compose) started its quiesce timer at 05:13:23Z; the compose persisted its trace at 05:13:54Z; the restart fired at 05:13:58Z with `SIGTERM: drained (0 authoring runs, 0 requests in flight)`. Health answers in ~10 ms, so the 35 s wait was the quiesce loop holding for a counted autonomous request. Yesterday the same sequence restarted at once and killed the compose.
+- Closed `the-long-running-classifier-reads-only-pointer-type…` as `landed_verified` on `bf74cc5`. Three of the day's thirteen closures now rest on unprompted substrate landings.
+- Container note: `substrate-live` was recreated between 01:45Z and 05:12Z (journal host id changed); container `/tmp` scratch is gone, host scratchpad copies survive.
+
+## 05:17Z — vacuous-guard regex: byte-exact directed compose dispatched
+
+- The lane tried the gap twice on its own (04:39Z semantic gate: "patch is a no-op refactoring of code that strips line numbers"; 05:08Z a `-narrowed-syntax_break` child). The anchor in the gap design is still present and unique in the runtime file, so the failures are drafter choices, not a stale design.
+- Positive control before dispatch: stripping `repos/goal-host-vessel/src/index.ts` with the current regexes leaves 0 `_rebind` references of 5; with the single-line regexes, 5 of 5.
+- Directed compose `fc-muf2z8c9-nvqyha` admitted at 05:17:56Z with the two exact old/new lines in the spec. Waiting for the landing; falsifier is the 0→5 count on the landed file plus a genuinely vacuous op still refused.
+- 05:26Z negative control on the OLD runtime, through the lane itself: a directed dry-run compose asking for the single-line rewrite of `const _rebind = …` in goal-host (compose `fc-muf39krt-mzyvp4`) was refused with `[fc-vacuous] REFUSING plan: vacuous edit: every added line is a declaration whose binding is never used (_rebind)`. After the landing the same probe must be admitted with the "bound name is referenced in the target file — admitting" line; the vacuous-insert probe must still be refused.
+- The sibling gap's first falsifier did not discriminate (its added lines included a `return`, which exits `vacuousEditReason` before the stripper); rewritten with a version run through the exported function: old code reports `(total, other)` unused, control still refused.
+
+## 05:26–05:40Z — the byte-exact patch was applied, verified, passed by the judge, and rolled back by two refuters on a false claim
+
+- Compose `fc-muf2z8c9-nvqyha`: both edits applied at lines 4456–4457, `tsc` exit 0, bun test ok, first semantic judge PASSED ("correctly adds \n to the negated character classes"). Two refuters then agreed at confidence 1.00 that `\n` after `\\` inside a regex character class "matches a literal n, not a newline". That is false: in the vessel's own runtime, `/^[^'\\\n]$/.test("\n")` is false and `.test("a")` is true. The refuters' quotes render the same class with one, three and four backslashes inside one paragraph. Verdict UNFAVORABLE, `rolled_back: true`; the applied bytes are not stored anywhere (report holds spans only; no trace-content row), so the drafter's exact transcription cannot be recovered.
+- The false reason was written to the gap as `semantic_gate_reason`, which the next draft is fed. Cleared it through the store, appended the executable counter-fact to the gap and the spec, and re-dispatched. The vessel was draining for a pull-sync restart at 05:38Z; the post is queued behind it.
+- Filed `the-semantic-gate-lets-two-samples-of-one-refuter-prompt-overturn-a-passing-judge…` against `verifyPatchAddressesGap`: two draws of one prompt on one diff are not a quorum. Design: when every diff line appears verbatim in the gap text, the spec is the oracle and the refuters are not consulted. Sibling of the open patch-with-tools refuter gap.
+
+## 05:39–05:45Z — vacuous-guard regex LANDED on the re-dispatch
+
+- Compose `fc-muf3q57h-i45684` on the fresh process: semantic gate `addresses:true`, no SPLIT line and no agreed-refutation line, so the first judge's pass stood (the code prints nothing when no refuter refutes), cutover FAVORABLE, `326a983` (Substrate Autonomous, 05:44:48Z) on origin/dev. Diff is byte-exact to the design: the two character classes gain `\n` and nothing else. `/vessels` runtime file equals the commit.
+- Falsifier (a) on the landed file: stripping `repos/goal-host-vessel/src/index.ts` with the regexes read out of the runtime source keeps 5 of 5 `_rebind` references (negative control at 05:22Z on the old runtime: 0 of 5).
+- Same patch, same lane, twice: rejected at 05:26Z on a false refuter claim, landed at 05:44Z with the fact in the spec. The information was the difference, not the code.
+- Behavioural probes (b) real rewrite must be admitted past the gate, (c) vacuous insert must still be refused: queued to run on the process that comes up after the pending mitosis self-restart.
+
+## 05:45–05:53Z — vacuous-guard gap CLOSED; a Guard 2 residual surfaced by the fix
+
+- Process restarted onto `326a983` at 05:45:23Z (in_flight 0 at quiesce). Probe (b), a directed dry-run rewrite of the `const _rebind` line: `[fc-vacuous] plan looked vacuous but a bound name is referenced in the target file — admitting` (old runtime: REFUSING). Probe (c) as first phrased, an unreferenced `const _unused_probe = 1;` inserted right after the `_rebind` declaration, was ALSO admitted. Cause: Guard 2 harvests declared names from the whole new string, context lines included, so it found `_rebind` and admitted the op. The same insert anchored after a non-declaration line was refused. Before the fix the stripper masked this in any file with an apostrophe in a comment.
+- Closed the parent as `landed_verified` on `326a983` with (a) 5/5, (b) admitted, (c) refused on the corrected control; closed its three narrowed/recommit children as superseded. Filed the Guard 2 name-harvest residual with a one-op design (harvest from added lines only) and a falsifier that already has a measured baseline.
+- Dry-run probes landed nothing: goal-host origin/dev head unchanged.
+- Day tally: 14 gaps closed by measured behaviour, three on unprompted substrate landings, one on a lane landing that first needed a false refuter claim corrected in the spec.
+
+## 05:56–06:05Z — sibling stripper in vacuous-edit.ts CLOSED first try; Guard 2 residual dispatched
+
+- With the regex fact stated in the spec from the start, compose `fc-muf4cac1-wseexy` landed `212408a` (06:01:29Z) byte-exact: semantic gate `addresses:true`, no SPLIT and no agreed-refutation line. Runtime file equals the commit.
+- Falsifier through the exported `vacuousEditReason` on the runtime file: the case with `walk's` and `don't` around two added declarations returns null (05:24Z baseline: vacuous reason naming both); the unreferenced `const _unused` control is still refused. Closed as `landed_verified`. Day tally 15.
+- The four closed records of the vacuous parent family were re-read ten minutes after closing: all still closed, none reopened by the lesson writer.
+- Guard 2 name-harvest residual dispatched byte-exact (one line becomes three: harvest declared names from the added lines only). Falsifier is the already-measured pair: insert after `const _rebind` must now be refused, rewrite of that line must still be admitted.
+
+## 06:05–06:18Z — Guard 2 name-harvest residual CLOSED
+
+- Compose `fc-muf4oc06-3j7n86` landed `0874216` (06:12:47Z) byte-exact: one line becomes three, names harvested from the op's added lines only. Semantic gate `addresses:true`, no SPLIT and no agreed-refutation line. Runtime file equals the commit; process restarted onto it at 06:14:42Z.
+- Probes on the new process, through the live gate: the unreferenced insert after `const _rebind` is now `REFUSING plan (_unused_probe)` (baseline on `326a983`: admitting); the rewrite of the `const _rebind` line is still admitted. Neither probe landed anything.
+- Closed as `landed_verified`. Day tally: 16 gaps closed by measured behaviour. Three of today's landings (`326a983`, `212408a`, `0874216`) went through the lane's own gates end to end once the spec carried the byte-exact edit and the fact a refuter would otherwise confabulate against.
+
+## 06:20–06:26Z — refuter short-circuit dispatched; the lease-discard gap had lost its design
+
+- Dispatched the refuter-quorum fix byte-exact (`fc-muf57wf0-dtje12`): a spec-exact patch, every changed diff line quoted verbatim in the gap text, skips the refuter quorum and logs it. The semantic gate receives the full gap summary (`pointer.gap.summary`, untruncated), so the test can fire. Dry-run probes do not reach the semantic gate, so the falsifier is the next real byte-exact landing showing the log line.
+- The lease-discard gap's summary in the store had been reduced to a single sentence; the design and measurement were gone, and its eight failed attempts ran against that sentence. Re-measured from persisted compose reports: lease-held deferrals are 4 of 109 in 24 hours and 1 of 27 in the last 6 hours, down from two in five yesterday. Nothing consumes the cutover's `retry_after_ms`. Restored a two-edit design on the record (park the verified diff on deferral, re-apply it on the next pick) with a hand-held-lease falsifier. Not dispatched: low current rate, and it is not a one-op edit.
+
+## 06:24–06:28Z — refuter short-circuit LANDED
+
+- Compose `fc-muf57wf0-dtje12` landed `1746f5a` (06:27:00Z) byte-exact: a spec-exact patch (every changed diff line quoted verbatim in the gap text) skips the refuter quorum and logs `spec-exact patch: refuters not consulted`. Semantic gate `addresses:true`; runtime file equals the commit; pushed (push clone 0 ahead of origin). Restart onto it pending.
+- Falsifier: the next byte-exact landing after the restart must show that log line; an autonomous drafter landing must not. Closure waits for both observations.
+
+## 06:29–06:41Z — per-gap in-flight guard: the reachability floor refused a caller-less export
+
+- First compose for the compose-slots half (`fc-muf5j5xe-ek8ixx`) was refused deterministically, before any judge: "dead-code-only patch: every changed symbol (liveSlotForGap) has zero callers". Correct refusal: the export's only caller was to arrive in the next goal. The refuter short-circuit did not run because the gate returned earlier, so `1746f5a` is still unfalsified.
+- Redesigned so the first half carries its own caller: `acquireComposeSlot` takes `opts.gapId`, records `gap_id` in the slot file, and refuses a duplicate holder with `duplicateOf`; the feature-compose half only passes the gap id and names the refusal. Dispatched as `fc-muf5xsgy-eqhqsb`.
+
+## 06:41–07:11Z — compose-slots half: verify rejected on baseline failures, then the retry was lost to a restart
+
+- `fc-muf5xsgy-eqhqsb` applied all five edits, typechecked, and was rejected by verify on three tests: the malformed-row `substrateGap_write` case, `inertRegexEditRefusal`, and `changesAreTestOnly`. All three fail deterministically on the untouched push clone, twice in a row, alongside 22 other baseline failures (2288 pass / 25 fail). The baseline-delta gate should have waived them; it did not, and the baseline suite output is not persisted, so the reason cannot be read after the fact.
+- The identical payload was re-dispatched at 06:57Z (`fc-muf6j282-z5aasa`, all five edits present in its workspace). At ~06:59Z a restart was requested; the drain counted the compose, waited its full 240 s budget, then logged `drain deadline — 1 long-running request(s) still in flight; they will be lost` and restarted at 07:03:20Z. The counter works; the budget is still shorter than a compose, as recorded at 01:45Z.
+- Re-dispatched a third time on the fresh process.
+
+## 07:11–07:17Z — the restart budgets are shorter than a compose: the structural cap on the lane
+
+- Journal since the container recreate (04:14Z): development-vessel restarted 16 times in three hours, 9 by mitosis cutovers and 5 by pull-sync; 4 drains ended with `drain deadline — 1 long-running request(s) still in flight; they will be lost`. The counters landed today make each loss visible and attributed; they cannot prevent it.
+- Three budgets: the vessel's SIGTERM drain is 240 s (env default); pull-sync defers an owed restart while in-flight is non-zero for at most 3 of its 10-minute runs, then restarts "despite N in flight"; only the mitosis quiesce (16 min) is sized to the 15-minute compose ceiling. A count of busy polls breaks starvation against a lane that is never idle, not against a stuck compose: the 07:03Z restart saw a different compose each time and killed the third.
+- Filed `every-restart-budget-is-shorter-than-a-compose…` with the measurements: vessel-side one-op (drain default = ceiling + 60 s, needs the unit's stop timeout raised) and the operator-side pull-sync rule (key on the age of the oldest in-flight request, not a count). The pull-sync half lives in `scripts/substrate`, which the substrate cannot author; that half is an operator decision and is not applied here.
+
+## 07:13–07:24Z — third compose-slots dispatch: verify passed this time, the drafter dropped the caller
+
+- `fc-muf734m4-05mjh8`: typecheck, shape-dispatch and the suite all passed, with the same three baseline failures now correctly waived, so the 06:53Z verify rejection was a transient baseline capture, not a deterministic gate defect. The semantic gate then refused deterministically: `liveSlotForGap` has zero callers. Applied spans were lines 330, 267, 218 and 97; the fifth op, the caller at line 298, was not applied. Same drop as the 06:53Z run.
+- Redesigned without a new symbol: the duplicate scan is inlined in `acquireComposeSlot` after `countLive`, which has just reaped stale and dead holders, so four edits and nothing unreachable. Dispatched as `fc-muf7gwun-79ygfl`.
+
+## 07:24–07:40Z — the inline compose-slots patch passed every gate and was discarded by the lease; the refuter short-circuit's control failed
+
+- `fc-muf7gwun-79ygfl`: all four edits applied (two merged spans), typecheck and suite green, semantic judge PASS, and the short-circuit logged `spec-exact patch: refuters not consulted` — the positive half of `1746f5a`'s falsifier. The cutover then found the change_window lease held by `trace-store-reconcile` (acquired 07:33:26Z, 5-minute TTL) and refused without rollback; feature-compose's live-sync undo restored the file. A verified patch discarded, live, by the pair of open gaps filed earlier (reconcile re-takes the single global window; deferral parks nothing). Since 04:14Z: 3 lease deferrals, 3 live-sync rollbacks, so 3 verified landings lost to the lease in three hours on top of the 4 lost to restarts.
+- Negative control for `1746f5a` FAILED: at 07:26:51Z the short-circuit also fired for `route-edit-3364a190`, a prose goal with no quoted code lines. The route-edit workspace was already gone, so its diff could not be read; the likely mechanism is that the test accepts any non-empty changed line and checks it with `includes`, so punctuation-only lines are "quoted" by any text. That is a hypothesis until the three-compose control confirms it. Wrote `BEHAVIORAL VERIFICATION FAILED` onto the gap with the substantive-line rule (12+ non-space chars and an identifier, every such line quoted) and dispatched the one-op correction byte-exact.
+
+## 07:37–07:46Z — spec-exact correction LANDED; the lease holder's fix landed hours ago but may not be running
+
+- `fc-muf7ytv6-54unzc` landed `7ab6155` (07:43:15Z): the spec-exact test now counts only substantive changed lines (12+ non-space characters and an identifier) and requires every one quoted. Byte-exact, pushed, runtime equals the commit. Its own cutover took the change window at 07:42:38Z, so the lease was free at that moment. Closure of the refuter gap waits on the three-compose negative control.
+- The lease holder that discarded the compose-slots patch at 07:34Z is the trace-store-reconcile activity, whose root cause was already on its gap record: the executor's template provider blanked every placeholder, so the reconcile's `db_admin` step failed with `lease_token is required` and the lease was never released. That provider fix landed as `2893a93` at 05:30Z and reached the runtime tree at 06:04Z. The reconcile still held the window at 07:33Z, which points at a consumer process that has not restarted since the package changed. Checking which process executes the template and whether it predates 06:04Z.
+- Filed the baseline-capture gap for the verify gate (persist the baseline fail set and summary line; disable test-delta blame when the baseline run has no `Ran N tests` line).
+
+## 07:46–07:52Z — the lease holder, traced to the end
+
+- The reconcile's original defect (blanked placeholders) is fixed and the fix is what goal-host runs: its copied executor package carries the change and the process started after it. The activity now fails one step later, 12 of 12 runs since 04:14Z: the reconcile task is an `http_fetch` to activity-api's `db_admin reconcile_trace_store` with no timeout set, so the resolver's 15 s default aborts it. Server-side that operation is the trace-retention global-ceiling valve, deleting 25 rows per batch; a 5,166-row surplus took 376 s (activity-api: `POST /v2/impulses/resolve 200 376s`). The task fails, `release_lease` never runs, and the change window is held to its 5-minute TTL on every run.
+- The runs come every 10 minutes from `trace-store-health-check.timer`: the observer emits a gap whose remedy pins `target_template_id` to the base template, and the drain observer forwards that id verbatim to goal-host. The family-sampling fix `a8f457a` landed on gap-to-feature's route, which is not this path; it fired once all day. Three variants exist, one with a 15-minute fetch timeout, none with an execution row. The trace store sits at its cap (154,082 against 150,000) and refills between ticks, so the valve is a treadmill.
+- Net effect on the lane: the window is held roughly half of wall-clock time; three verified landings were refused against it since 04:14Z, each then rolled back. Two byte-exact fixes are authorable in development-vessel: the fetch timeout on the template (dispatched now) and a goal instead of a pinned id in the observer's remedy (staged, next). The unnamed global mutex shared by cutovers and the reconcile remains the design flaw behind both; it is on the reconcile gap's record as the durable fix.
+
+## 07:55–08:10Z — compose-slots half LANDED; the timeout fix was refused by the lease it fixes
+
+- `fc-muf8mlbo-3n60l0` landed `c8cfc38` (08:02:35Z): `acquireComposeSlot` records `gap_id` in the slot file and refuses a duplicate holder with `duplicateOf`; four edits, byte-exact, pushed, runtime equals the commit, spec-exact short-circuit logged. Unit falsifier on the runtime module with the vessel idle: a second acquisition for the same gap is refused naming the first (`duplicateOf probe-1`); a different gap is granted; after release the gap is granted again. The feature-compose half, which names the refusal `gap_in_flight`, is queued.
+- The reconcile fetch-timeout compose (`fc-muf8gf6u-r4u6za`) passed apply, verify and the judge, and its cutover was refused: the change window was held by the reconcile whose failure it fixes. Live-sync rolled the patch back. The lease is held from :x3:26 to :x8:26 every ten minutes, so the three remaining landings are now dispatched on ten-minute marks to put their cutovers in the free half.
+- Negative control for the spec-exact correction: one autonomous pick since the restart reached the semantic gate with no short-circuit line; one goal-host route-edit did trigger it and is being checked for quoted lines.
+
+## 08:10–08:48Z — two landings verified INERT or INEFFECTIVE; the deployment layer has its own hollow class
+
+- Reconcile fetch timeout `62e174a` (08:15:12Z) and observer remedy `651d10a` (08:27:42Z) both landed byte-exact, pushed, runtime-equal, through the window-timed dispatches. Neither changed behaviour:
+  - The seed unit logs `Catalogue already populated (>=2771) — skipping seed`; seed files are read only into an empty catalogue, so the template in activity-api still has no timeout and the 08:33 tick failed identically. Every provenance check passes on a change with no runtime effect. Recorded `BEHAVIORAL VERIFICATION FAILED` on the reconcile gap; re-filed the seed gap with the real mechanism and a hash-based upsert design.
+  - The bare goal in the observer's remedy made goal-host infer `trace_store_health_observer` as the target shape (confidence 0.9), walk eleven unrelated steps, and go hollow; no family member ran. Recorded the failed falsifier with the corrected design: `remedy: { impulse_type: "gap_to_feature" }`, which routes through the drain observer's impulse branch into gap-to-feature's category branch, the very sampler `a8f457a` added. Correction dispatched on the next ten-minute mark.
+- Per-gap guard: the compose-slots half is live (`c8cfc38`); the feature-compose half that names the refusal is composing.
+- Lesson for the record: "landed and running the commit" is not the end of verification when the artefact is a seed template or a dispatch body; the consumer that reads it must be exercised.
+
+## 08:44–09:02Z — observer correction LANDED; the sampler runs on the live path and sees one member
+
+- `fc-mufa75z9-uwj2f5` landed `2bccc64` (08:44:35Z): the observer's remedy is now `impulse_type: gap_to_feature`. Effect observed at the next ticks: `[gap-to-feature] trace-store-reconcile family sampled: 1 member(s) -> development-vessel:trace-store-reconcile`, three times. The live path now reaches the sampler `a8f457a` added, for the first time since it landed.
+- The family is short by three: the sampler lists templates with `?limit=2000`, and activity-api's `/templates` handler clamps `limit` to 100 (offset pagination only, no `variant_of` filter). With about 2,800 templates in the catalogue, the variants are not in the first page, so the base runs, fails at the 15 s fetch, and holds the window as before. Next edit: page through the listing in the sampler.
+- The feature-compose admission half was refused by the first semantic judge at 08:37Z on the claim that `acquireComposeSlot` does not return `duplicateOf`; it does, since `c8cfc38`. Re-dispatched with the four landed lines quoted as evidence.
+
+## 09:00–09:10Z — the admission half passed the judge and was refused by the lease; dispatch timing moved
+
+- Re-dispatched with the four landed `compose-slots.ts` lines quoted, the feature-compose admission half passed the semantic judge at ~09:05Z and its cutover was refused: the change window was held by the reconcile again (acquired 09:03:49Z). Live-sync rolled the verified patch back. That is the fourth verified landing the lease has discarded today.
+- Cutover latency is now 4–6 minutes after dispatch, and the reconcile's hold has drifted to :x3:49–:x8:49. Both remaining dispatches (admission half, sampler paging) are now scheduled at :x4:30 so their cutovers land in the free half.
+
+## 09:23–10:22Z — per-gap in-flight guard CLOSED (17); the sampler pages the listing and still finds one member
+
+- Both halves landed in the lease-free windows: `c8cfc38` (slot files carry `gap_id`, duplicate holders refused with `duplicateOf`) and `01d085d` (feature-compose passes the gap id and names the refusal `gap_in_flight`). Live falsifier at 10:21:42Z on the running process: two slot files held two different gaps; a directed duplicate for the slot-0 gap came back `BUSY stage gap_in_flight` and the journal logged `[compose-cap] REFUSING compose for <gap>: already in flight as <composeId>`; a duplicate for the slot-1 gap was refused the same way. Closed with its four recommit children. A pre-existing pending-verification check intercepts some duplicates even earlier.
+- The sampler paging fix landed as `2fd1dca`, and the lane had already landed a family-cache variant of the same fix, `a5b4772`, on a gap another session filed at 08:50Z. The access log shows 230 paged listing calls returning 200 since then. The family is still one member: the three variant rows satisfy the listing's own WHERE clause in the database (2,771 matching rows), yet no page of the API response contains them. Reading whether the un-ordered `LIMIT … START` pagination skips rows or a variants endpoint exists.
+- Resolved: paging the listing with the vessel's own key returns 2,771 rows but only 2,722 distinct ids, with 49 duplicates. The listing's `LIMIT … START` has no `ORDER BY`, so pages overlap and skip; the three variant rows are among the skipped. Paging a listing that is not ordered cannot enumerate it. activity-api has a dedicated `GET /v2/activities/:id/variants` route; the sampler should ask for the family by that route instead of scanning the catalogue.
+- The family route is the real primitive and it is closed to the caller: `GET /:id/variants` hands API-key callers' JWT to `getVariantFamily`, SurrealDB rejects that access method, and the route returns a synthesised base with `path: "new"` and a fresh timestamp, total 1. Under root the same queries return the base and three variants. `/templates` in the same file already special-cases API-key auth; the variants route does not. Filed on activity-api with the one-line design; a stable `ORDER BY` for the listing is the follow-up. Every vessel sees a family of one through the API, which also explains why variant promotion has nothing to compare.
+
+## 10:26–10:40Z — the substrate landed the family-route fix itself, three minutes after filing
+
+- My directed dispatches for the family-route gap were refused with `BUSY stage gap_in_flight` from 10:33:38Z: the lane had already picked the gap on the write nudge and was composing it. It landed `6a1b570` at 10:34:47Z, byte-identical to the one-line design, and activity-api restarted at 10:34:49Z. Fourth unprompted landing of the day, and the per-gap guard doing its job against the operator.
+- Falsifier at 10:36:41Z still returned total 1 with `path: "new"`. Under root, the route's own two queries with its own tenant filters return the base and the three variants. Checking whether the process that answered is on the landed file before reading further.
+- Runtime equals `6a1b570` and the process started on it. The route still falls to its singleton fallback (the API logged it twice). Cause, one layer down: the root branch calls `surrealDB.query`, whose wrapper returns only the first statement's result, and the family query is `LET …; RETURN array::union(…)`, so the first result is a `LET` and null. The JWT branch uses `queryWithAuth`, which returns every statement, so dashboard callers never saw it. Recorded the failed falsifier on the gap with the exposed defect and dispatched the one-line correction: use `queryRaw` in that branch.
+
+## 10:43–10:53Z — family route CLOSED (18): every vessel can now see its variant families
+
+- `97ff41d` (10:49:30Z, byte-exact `queryRaw` in the root branch) landed in the window; activity-api restarted onto it at 10:49:32Z. Falsifier with development-vessel's own key: total 4, the base with its real July creation time and the three variants with `variant_of` set; the no-variant control returns 1 with a real timestamp; the singleton-fallback warning has not fired since. Closed as `landed_verified` on `6a1b570` + `97ff41d`.
+- Recorded the failed falsifier for the paged sampler `2fd1dca` (unordered listing skips rows) and dispatched the last link of the chain: the sampler asks the family route instead of scanning the catalogue. Falsifier: "family sampled: 4 member(s)" and a variant execution within three ticks.
+
+## 10:53–11:50Z — the route-based sampler landed and is never read: the lane's own landing owns the loop
+
+- The sampler-to-route change reached the runtime (process 11:27:29Z). A direct trigger at 11:43:35Z still logged one member and activity-api saw no variants call. The lane's autonomous landing `a5b4772` had introduced a second family source, `familySample`, a paged read of the unordered listing with a three-minute cache, and pointed the posterior loop at it. The route-derived family is computed and never read. Two operator-visible lessons: a lane landing on a neighbouring gap can silently take over a code path, and "in the runtime file" is not "on the executed path".
+- Recorded the failed falsifier and dispatched a one-line correction: iterate the route family when it found variants, else the paged sample.
+
+## 11:53–12:15Z — the family is four
+
+- The loop-source correction landed in the 11:53 window and the vessel restarted onto it. At the 12:13Z tick the sampler logged `family sampled: 4 member(s)` for the first time since the sampler was written (`a8f457a`, 01:37Z). The chain from timer to variant is now: timer → observer gap with an impulse remedy → drain observer → gap-to-feature's family branch → the registry's variants route (API-key callers admitted, all statements read) → four candidates → Thompson draw → run-goal. The draw picked the base this tick; the variants start at α=β=1 while the base carries a day of failures, so a variant draw is expected within a few ticks. Watching for the first variant execution, which is the held gap's original closing condition.
+
+## 12:15–12:45Z — four members, base still drawn: the learner writes where the sampler does not read
+
+- Three ticks with four members all drew the base. The sampler reads `thompson_posterior` per member: the base answers `loaded:true, alpha 119.7`; the three variants answer `loaded:false` and default to α=β=1. A Beta(120, ~9) draw beats a uniform draw about 93% of the time, so the variants would surface roughly once in five ticks by luck and never by learning.
+- The base's 12 failures today each tried to add β+1 and every attempt logged `Thompson Sampling score update returned no results in either table`. The row the sampler reads and the row the learner updates are not the same row. That is the end of this chain and it is a design fault, not a drafter fault: the posterior the selector consults is not the posterior the outcomes update, so a failing template keeps a posterior it earned before it started failing, and its variants cannot be drawn.
+- Located the row: `variant_performance_metrics:⟨development-vessel_trace-store-reconcile⟩`, keyed by `variant_id`/`activity_id` = `development-vessel:trace-store-reconcile`, org `organizations:substrate`. It counts 304 executions, 120 successful and 184 failed, updated at 12:23Z today, and carries α=119.7, β≈9.0. The counts move on every run; the posterior does not. The learner's α/β update targets a different key than the row it counts on and logs `returned no results in either table` on every failure. The selector therefore draws from a belief that stopped learning long ago, while the same row's own counters say the template fails six times in ten. That is the design fault under this chain: two statements, two keys, one concept.
+
+## 12:45–13:05Z — the stopping condition: a template whose tasks throw is "ungraded", so selection cannot learn to leave it
+
+- Corrected the previous paragraph's mechanism after reading the updater: the counters and the posterior are written by different paths on purpose. Counters move on every run; α and β move only through `applyOutcomeToPosteriors`, which sets both deltas to zero when the reach verdict is `ungraded`. A run that fails inside a task never gets a reach verdict, so its failure is filed as "ungraded", not as a failure. For the reconcile template today: 47 posterior updates SKIPPED with `reach_ungraded`, 184 failures counted, β still 9.0, α still 119.7.
+- This is the architectural fault under the whole lease chain, and it is general: any template whose failure mode is an exception rather than a graded hollow keeps the posterior it earned before it broke, and its variants can never be drawn by learning. The family is now visible (four members), the route works, the loop reads it, and the draw still cannot move. Filed with a one-op design (an ungraded trace the executor marked failed counts as β+1) and a falsifier on this template's next run. Per the goal's stopping rule, this is where the chain stops for the operator: the rest is the substrate's to land and the next tick's to prove.

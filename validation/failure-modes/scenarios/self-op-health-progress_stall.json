@@ -1,0 +1,19 @@
+{
+  "id": "self-op-health-progress_stall",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "operational_health",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "0 forward progress over 24h on BOTH axes — code-landing (self_alteration.landed Δ=0) and topology (topology.nested Δ=0) ",
+  "description": "0 forward progress over 24h on BOTH axes — code-landing (self_alteration.landed Δ=0) and topology (topology.nested Δ=0) — though measurement timers are live. Continuous operation is ALIVE but not ADVANCING: goals dispatch + the reach gate rejects them as hollow, so nothing reaches → nothing mints → no cutover lands → topology stays flat. Liveness checks 1-4 stay green through this; this makes the EFFICACY axis visible in S (the authoring-ceiling frontier).",
+  "goal_text": "0 forward progress over 24h on BOTH axes — code-landing (self_alteration.landed Δ=0) and topology (topology.nested Δ=0) — though measurement timers are live. Continuous operation is ALIVE but not ADVANCING: goals dispatch + the reach gate rejects them as hollow, so nothing reaches → nothing mints → no cutover lands → topology stays flat. Liveness checks 1-4 stay green through this; this makes the EFFICACY axis visible in S (the authoring-ceiling frontier).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "self-op-health:progress_stall",
+  "source_gap_source": "substrate_detected"
+}

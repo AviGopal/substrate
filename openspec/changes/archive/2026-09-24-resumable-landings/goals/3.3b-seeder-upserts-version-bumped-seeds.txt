@@ -1,0 +1,61 @@
+In repos/development-vessel/src/cli.ts, let a seed template that its author version-bumped reach a running substrate (openspec 2026-09-24-resumable-landings task 3.3b; gap a-landing-in-a-seed-template-file-is-inert). seedTemplates() skips every seed once the catalogue is populated, so an edit to a seed file never reaches activity-api: src/seed/trace-store-reconcile.ts has carried timeoutMs 900_000 since 62e174a and now names its lease trace_store, yet the registered row still aborts at 15 s on the unnamed lease. Keep SEED-IF-EMPTY (it protects learned rows); add an explicit opt-in: a seed whose metadata.seed_version exceeds the registered row's is re-uploaded by id. Use exactly these two old->new edits (each old text occurs once in the file) and nothing else.
+EDIT 1 — old:
+async function seedTemplates(): Promise<void> {
+new:
+/**
+ * UPSERT A SEED WHOSE AUTHOR BUMPED ITS VERSION. Once the catalogue is populated the
+ * seed is skipped entirely (see SEED-IF-EMPTY below) so learned rows are not clobbered —
+ * which also made every edit to a seed file inert on a running substrate (the
+ * trace-store reconcile carried a 900 s timeout in source for hours while the registered
+ * row still aborted at 15 s). A seed opts in to an update by raising
+ * `metadata.seed_version`; it is re-uploaded only when that number exceeds the
+ * registered row's, so untouched seeds and rows the learning loop evolved stay as they are.
+ * Upserted by id straight to activity-api: this is an update of an existing template,
+ * not a mint, so the reuse-before-mint probe (which refuses a second producer of the same
+ * shapes) does not apply.
+ */
+async function upsertVersionBumpedSeeds(
+  templates: ReadonlyArray<unknown>,
+  endpoint: string,
+  apiKey: string | undefined,
+): Promise<void> {
+  const headers: Record<string, string> = { "Content-Type": "application/json", ...(apiKey ? { Authorization: `ApiKey ${apiKey}` } : {}) };
+  let upserted = 0;
+  let current = 0;
+  for (const t of templates) {
+    const tpl = t as { id?: string; metadata?: { seed_version?: unknown } };
+    const want = Number(tpl.metadata?.seed_version ?? 0);
+    if (!tpl.id || !Number.isFinite(want) || want <= 0) continue;
+    try {
+      const r = await fetch(`${endpoint}/v2/activities/templates/${encodeURIComponent(tpl.id)}`, { headers, signal: AbortSignal.timeout(10_000) });
+      const reg = r.ok ? ((await r.json()) as { metadata?: { seed_version?: unknown } }) : null;
+      const have = Number(reg?.metadata?.seed_version ?? 0);
+      if (reg && Number.isFinite(have) && have >= want) {
+        current++;
+        continue;
+      }
+      const body = { ...(t as Record<string, unknown>), proposed: false, org_id: "organizations:substrate" };
+      const w = await fetch(`${endpoint}/v2/activities/templates`, { method: "POST", headers, body: JSON.stringify(body), signal: AbortSignal.timeout(15_000) });
+      if (w.ok) {
+        upserted++;
+        console.log(`[seed] upserted ${tpl.id}: seed_version ${have} -> ${want}`);
+      } else {
+        console.warn(`[seed] upsert of ${tpl.id} refused: HTTP ${w.status} ${(await w.text()).slice(0, 200)}`);
+      }
+    } catch (e) {
+      console.warn(`[seed] version check for ${tpl.id} failed (skipped): ${(e as Error).message}`);
+    }
+  }
+  console.log(`[seed] populated catalogue: ${upserted} version-bumped seed(s) upserted, ${current} already current`);
+}
+
+async function seedTemplates(): Promise<void> {
+EDIT 2 — old:
+  if (!catalogueEmpty) return;
+new:
+  if (!catalogueEmpty) {
+    await upsertVersionBumpedSeeds(SEED_TEMPLATES, METABOB_ENDPOINT, METABOB_API_KEY);
+    return;
+  }
+Reviewer facts: METABOB_ENDPOINT and METABOB_API_KEY are already imported inside seedTemplates above this line; GET /v2/activities/templates/<id> returns the template object at top level (today without metadata, so the registered version reads 0); activity-api's POST /v2/activities/templates UPSERTs activity:<id> and persists body.metadata, and its name-dedup only applies to timestamp-suffixed names; seeds without metadata.seed_version are never touched.
+Falsifier: with trace-store-reconcile's metadata.seed_version set to 2, restarting development-vessel-seed logs "[seed] upserted development-vessel:trace-store-reconcile: seed_version 0 -> 2" and GET of that template then shows the named lease and the 900 s timeout; a second restart logs it as already current.

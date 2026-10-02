@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-e0ff53d0",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap ten-of-eleven-rhythm-families-have-no-staleness-driver: The rhythm registry was restored o",
+  "description": "investigate and decompose gap ten-of-eleven-rhythm-families-have-no-staleness-driver: The rhythm registry was restored on 2026-09-10 and the conductor reads all eleven families, yet nothing is ever enqueued. The cause is not the registry and not the conductor: ten of the eleven families have no mechanism by which their staleness can ever rise, so they can never become due.\n\nHOW DUE-NESS WORKS. A family is enqueued when its due score, credit_mean multiplied by staleness and divided",
+  "goal_text": "investigate and decompose gap ten-of-eleven-rhythm-families-have-no-staleness-driver: The rhythm registry was restored on 2026-09-10 and the conductor reads all eleven families, yet nothing is ever enqueued. The cause is not the registry and not the conductor: ten of the eleven families have no mechanism by which their staleness can ever rise, so they can never become due.\n\nHOW DUE-NESS WORKS. A family is enqueued when its due score, credit_mean multiplied by staleness and divided",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-e0ff53d0",
+  "source_gap_source": "substrate_detected"
+}

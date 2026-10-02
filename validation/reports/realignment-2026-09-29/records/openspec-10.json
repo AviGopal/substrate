@@ -1,0 +1,583 @@
+{
+ "source": "openspec-10",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/openspec-10.md",
+ "coverage": "The shard as actually listed (entries 163-179): 10 stray substrate-authored files (new-http-response-resolver.ts, new-simple-http-response-resolver.{ts,js,d.ts,maps}, patch-config-types.json, route-edit-9077062c-*.json), obsidian-legibility-surface, unified-install-interface, value-per-cost-selection, and archive/{2026-05-17-stratified-goal-generator-harness, 2026-05-30-autonomous-palette-write-resolvers, 2026-05-30-substrate-gap-drafter-wiring, 2026-09-24-resumable-landings}. Read in full: value-per-cost proposal, design and tasks (the goal files were only sampled); unified-install proposal, tasks (the committed version and the uncommitted working-tree diff) and evidence/prior-audit-ledger.md; design.md Decisions 6 and 7 only (interface.md, sources.md, current-interface.md and the specs/ files were not read); obsidian proposal; all four archive proposals and tasks (the resumable-landings design.md was not read). What I checked against the live system: I ran git merge-base on every value-per-cost hash against origin/dev (all present) and grepped HEAD for the key strings. I read the node-1 and node-2 journals (admission counts, fc-exact, fc-no-gap, all-edits floor, SPEND-RATE REFUSED, gap-drain-observer), the gh history for install-acceptance (51 runs) and the weekly harness (20 runs), the parked-landings directory, both gap stores, which vessel answers :8270, and execution counts for the drafter templates. Also read the CHECKINS.md rows for 09-27/28 for reopen context. NOT covered: the task text expected contained-self-development, decentralized-compose-ownership, live-self-view, consumer-side-landing-probes, causal-attempt-ledger, do-anything-surface and human-surface-stack, but those sit at other indexes in the real ordering. The output file was written with Write and later edited by python.",
+ "attempts": [
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Spend accounting phase 1 (cost end to end)",
+   "where": "llm-resolver 7d7bf0a,3c83a33; dev-vessel 98bc2b5,67a25ea; goal-host 4eaad89,44e5615,b880497,b7bda9c",
+   "tried": "return usage.cost_usd, in-memory llmSpendSummary per hour, caller attribution, a prompt-size ceiling (5 gemini fallback calls had taken 3.99M tokens, about 72% of spend)",
+   "outcome": "worked",
+   "date": "2026-09-26/27",
+   "evidence": "falsifiers passed: $4.2e-6 on a 12-token call; 209 exec rows $0.149/10min; unknown caller <1% at 08:30 (was 57-98%). 1.4 (ias-executor dist) still open"
+  },
+  {
+   "key": "node-locality",
+   "title": "Cross-node spend relay llmSpendSummaryNode (4.0a)",
+   "where": "dev-vessel e6f07a0,55c0649,c3c4041",
+   "tried": "each node's dev-vessel relays its own llm-resolver summary under a distinct shape; the envelope reader sums across discovery producers",
+   "outcome": "worked",
+   "date": "2026-09-27",
+   "evidence": "spent 0.14183 vs hand sum 0.14182 across 2 sources; 4.0 (per-node resolver identity, P220) stays open because it needs a container recreate"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Federated spend envelope gating auto-pick, nudge, conductor, apply-proposal, boredom",
+   "where": "dev-vessel 292aff1,054de6f,c313227,baa64cc; boredom f28bc06",
+   "tried": "a spendEnvelope pool impulse (usd_cap_per_hour, paused) read via discovery at use time; replaces budget>1 as the pause",
+   "outcome": "worked",
+   "date": "2026-09-27",
+   "evidence": "pause falsifier 07:15 on both nodes; the envelope was binding on 09-28 (50 refusals/h)"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Spend-rate breaker per goal hash (4.4)",
+   "where": "goal-host 76c8e60",
+   "tried": "in-process per-hash and global windows from the shaped dispatchRatePolicy; 429 before any LLM call",
+   "outcome": "partial",
+   "date": "2026-09-27",
+   "evidence": "1,380 (n1) / 727 (n2) refusals since 09-27 07:00; a single hash 0ee592d0 was refused 629 times, so the dispatcher never learns (3.4 negative facts unbuilt); counts reset on restart"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Dispatch termination: git probe, landed latch, Bun fetch timeout",
+   "where": "goal-host f3ffd7d,f9001e9,1942eaf",
+   "tried": "probe origin/dev for the route-edit id on timeout; latch the landed verdict; timeout:false (Bun's ~300s idle timeout had been overriding the 900s AbortSignal)",
+   "outcome": "worked",
+   "date": "2026-09-27 02:05-02:12",
+   "evidence": "root cause of the silent revert 98bc2b5, the double apply 194df79, the duplicate probe 7eae3a0 and the false failed verdict ec38999d"
+  },
+  {
+   "key": "gap-content",
+   "title": "Admission gates: push scope, actionable-only, LLM availability, landability floor",
+   "where": "dev-vessel 3cbf979,c23b601,bea12ec,96bf098",
+   "tried": "cheap deterministic cannot-succeed checks before drafting",
+   "outcome": "partial",
+   "date": "2026-09-27",
+   "evidence": "live 09-29 04:19: 863 candidates -> 0 admitted on both nodes (needs_information 340/436); 2.3 reorder and site-cap fix still open; 97% of open gaps are not actionable as filed"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Deterministic verbatim EDIT-block path (fc-exact, 2.7) and goal-supplied anchors (2.6)",
+   "where": "dev-vessel f70160f, c10e74a",
+   "tried": "apply goal-supplied old/new blocks with no LLM plan; accept a unique goal anchor outside the grounding window",
+   "outcome": "worked",
+   "date": "2026-09-27",
+   "evidence": "fc-exact applying 7 (n1)/86 (n2); byte-equal landings; prose goals still go through the planner"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "All-edits floor (3.5) and no-gap refusal (2.8)",
+   "where": "dev-vessel b9537eb, a188771",
+   "tried": "withhold FAVORABLE when applyFailed; refuse a free-text compose before planning (adhoc composes landed 0/122)",
+   "outcome": "worked",
+   "date": "2026-09-27",
+   "evidence": "WITHHELD FAVORABLE 1/11, fc-no-gap REFUSED 16/4 in journals; both boxes still [ ] in tasks.md; silent truncation ops.length=maxOps unfixed"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Category calibration moved to the gap-store holder (5.5 iv)",
+   "where": "dev-vessel 76bf256 (substrate-gap.ts + gap-to-feature.ts)",
+   "tried": "credit attempts and lands where the store is held; auto-pick reads the held table",
+   "outcome": "partial",
+   "date": "2026-09-28 18:12",
+   "evidence": "node-2 pool 2->59 at 18:30, then re-tightened to 7, now 0; gap-class-posteriors.json still node-local; there was a window where node 1 was credited twice"
+  },
+  {
+   "key": "selection-learning",
+   "title": "successYield without cost (5.2)",
+   "where": "activity-api 97adc04 (+test 1b3a3f7)",
+   "tried": "separate P(success) from cost; law-12 posterior snapshot taken",
+   "outcome": "unknown",
+   "date": "2026-09-27 07:31",
+   "evidence": "landed byte-equal; tasks box [ ]; no before/after comparison recorded; 5.1/5.3/5.4 value-per-cost selection not built"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Template listing DB load (4b)",
+   "where": "activity-api 626eb63, ba3408b, 79eaaef",
+   "tried": "honour FTS offset; in-process catalogue cache",
+   "outcome": "partial",
+   "date": "2026-09-27",
+   "evidence": "was 49 listings/min; post-restart falsifier not recorded; 4b.3 indexes open"
+  },
+  {
+   "key": "false-verification",
+   "title": "Install acceptance run as the class detector",
+   "where": ".github/workflows/install-acceptance.yml (fa7e9189), substrate-status.sh",
+   "tried": "a fresh CI runner per digest and engine runs the README install fences and judges five levels",
+   "outcome": "partial",
+   "date": "2026-09-23",
+   "evidence": "every one of 29+ 'success' runs 09-25..09-29 reports usable=fail on docker and podman ('no LLM arm servable'); promote skipped; ACCEPTANCE_HUB_URL/KEY empty so nothing is posted and no gap is filed; cause of usable=fail unattributed (possibly the CI secret)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Image-owned install contract (substrate-status/connect/manifest, profiles, OCI labels)",
+   "where": "scripts/substrate/*.sh, Dockerfile.substrate, vessels.inventory.json",
+   "tried": "one contract, one manifest, a five-level readiness verdict",
+   "outcome": "partial",
+   "date": "2026-09-23",
+   "evidence": "files exist; the node-1 running image lacks substrate-status/connect/manifest and /etc/substrate/image-revision; under Decision 7 nothing is closed until a pulled image passes"
+  },
+  {
+   "key": "docs-drift",
+   "title": "README Installation as the only setup page (5.1/5.2)",
+   "where": "README.md install:* fences, d043bde5",
+   "tried": "collapse 8 lanes to one page, with launch-command detectors in docs-align-tick",
+   "outcome": "partial",
+   "date": "2026-09-23",
+   "evidence": "committed tasks ticked; the uncommitted working tree 09-28 20:11 unticks them all"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Parked landings (resumable-landings 1.1-1.5)",
+   "where": "dev-vessel 873fd81,c1dd4c2,6ab8271,b789d9c,49b6b1c",
+   "tried": "park the verified diff before cutover, resume on the next pick, and count discards with a detector",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "resumes observed 09-24; 6ab8271 reverted a0ff3d3 (restored 7994841); 47 park files never reaped (newest 09-26); detector runs 292x/48h with total=0; discarded-landings-09-24/25/26 gaps still open"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Named change-window leases + age-based restart budgets",
+   "where": "dev-vessel ace49c0,e17ea38,80e168f,4e40707,0b06246,9ee5d9d,a2f7542,5475e11,c6213f1,0a8de60; activity-api 1055cba; pull-sync",
+   "tried": "a name dimension on maintenanceLease so cutover and trace_store no longer exclude each other; defer on in_flight_oldest_ms",
+   "outcome": "worked",
+   "date": "2026-09-24/25",
+   "evidence": "2992a23 pushed during a trace_store hold; 9 consecutive age-based deferrals; 3.1b union semantics re-broke cutovers until 3.2b; reconcile graded HOLLOW; executor failure-path (3.3c) absent"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Stratified goal-generator harness",
+   "where": "validation/scripts/stratified-harness.ts, goal-generator.ts, weekly workflow",
+   "tried": "stratified universality, reuse efficiency, refinement events, multi-witness",
+   "outcome": "dormant",
+   "date": "2026-05-17..07-01",
+   "evidence": "weekly CI 20/20 failed since 05-18 (METABOB_API_KEY not set, checked on the 6 latest); newest stratified result 05-17; no gap filed"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Autonomous palette write resolvers",
+   "where": "dev-vessel src/seed/draft-gap-closing-activity.ts:116-118",
+   "tried": "let the drafter mint concepts, links and gaps via http_fetch to hardcoded ports",
+   "outcome": "dormant",
+   "date": "2026-05-30",
+   "evidence": "the prompt still says substrateGap_write -> 127.0.0.1:8270, which is now stateful-ui-vessel (dev-vessel is 8090); 9 src files pin :8270; 3 executions retained"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "substrateGap -> drafter drain (drain-pending-substrate-gaps)",
+   "where": "dev-vessel seed + boredom goal[10]",
+   "tried": "a pull drainer from the gap store into draft-gap-closing-activity",
+   "outcome": "dormant",
+   "date": "2026-05-30",
+   "evidence": "1 execution retained; it probes /workspace/gaps/gaps.json, but the live store is /workspace/git/super-repo/gaps/gaps.json"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Obsidian legibility surface (clarify, reformulate, outcome note)",
+   "where": "openspec/changes/obsidian-legibility-surface",
+   "tried": "spec only",
+   "outcome": "dormant",
+   "date": "2026-07-18",
+   "evidence": "no implementation hits in goal-host, human-surface, obsidian or dev-vessel src"
+  }
+ ],
+ "problems": [
+  {
+   "key": "autonomous-regression",
+   "symptom": "Non-terminating dispatches re-apply or overwrite landings: 98bc2b5 silently reverted afc7d6d; 194df79 double-applied c23b601; 7eae3a0 added a duplicate probe; ec38999d false failed; 6ab8271 cutover reverted a0ff3d3",
+   "root_cause": "Bun default fetch idle timeout (~300s) overrode the 900s AbortSignal, so the fallback walk sent a second compose and the last return won; cutovers stage whole files from a stale base",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-27",
+   "recurrences": 5
+  },
+  {
+   "key": "node-locality",
+   "symptom": "A pause on node 1 was absent on node 2 (117 unsupervised composes); spend read from one node; node-2 category calibration sealed 126/128 gaps; gap-class-posteriors.json node-local; breaker counts in-process",
+   "root_cause": "state held in per-node files and processes rather than one discovery-routed authoritative shape",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 5
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Cost accounting absent: $0.52 recorded across 38,845 rows / 30.8M tokens",
+   "root_cause": "cost_usd 0 hardcoded at five hops",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-27",
+   "recurrences": 1
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "The same goal is re-dispatched endlessly (one hash refused 629x); the reconcile goal re-dispatched every 10 min",
+   "root_cause": "3.4 negative facts not built; failure memory drops deterministic refusals",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 1
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Value-per-cost selection (5.1 cost posteriors, 5.3 p/E[cost], 5.4 calibrated landability) unbuilt; route-edit class alpha1/beta195",
+   "root_cause": "requires SCHEMAFULL migrations and a discovery-routed close credit; deferred",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "Thompson rerank sorted by class theta first, so a score-0 gap in a fresh class won; three landability models, none calibrated; gap-landability-model.ts imported by nothing",
+   "root_cause": "calibration never scored against outcomes",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "97% of open gaps not actionable (61/2,340 with edit site + class1/2); live admission 0/863 on both nodes",
+   "root_cause": "gaps born without an edit site or machine check",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "FAVORABLE landings that applied 1/3, 1/3 and 4/5 edits; the plan is silently truncated at maxOps",
+   "root_cause": "the verdict read typecheckPass only; the applyFailed flag was read only by the report",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-27",
+   "recurrences": 3
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Install acceptance workflow green 29+ times while usable=fail on both engines; nothing posted, no gap filed",
+   "root_cause": "report-only green by design, plus an empty ACCEPTANCE_HUB_URL/KEY so the reader is absent; the usable failure cause is unattributed",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 29
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Weekly recommendation/stratified harness failed 20/20 scheduled runs since 05-18 in ~12s",
+   "root_cause": "METABOB_API_KEY secret not set; the CI failure never becomes a gap",
+   "first_seen": "2026-05-18",
+   "last_seen": "2026-09-28",
+   "recurrences": 20
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "The drafter prompt and 9 dev-vessel files POST to 127.0.0.1:8270, which is now stateful-ui-vessel",
+   "root_cause": "a hardcoded port in an LLM prompt and in resolvers instead of discovery routing",
+   "first_seen": "2026-05-30",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "A second gap store /workspace/gaps/gaps.json (830 rows) was still written on 09-26; the live store is /workspace/git/super-repo/gaps/gaps.json (6,278)",
+   "root_cause": "HYPOTHESIS: a writer resolving WORKSPACE_ROOT=/workspace, or a test run with the live env (writer not identified)",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-26"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Drift committer 4e4170a8 committed 2,134 untracked files (+59k lines) into the super-repo, incl. {{target_path}}, e.g, elements.html and 51 loose .ts/.js/.json in openspec/changes; it truncated compose-teacher.ts; the class recurred (9d839e0, held 09-28)",
+   "root_cause": "an automated 'vessel code drift detected and committed' sweep with no placement filter",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 2
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "47 orphaned park files in /workspace/parked-landings (up to 910KB), none reaped",
+   "root_cause": "park TTL drop not enforced; a noop already_applied resume keeps the park",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-26"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Live node 1 runs a pre-contract image (no substrate-status/connect/manifest, no image-revision)",
+   "root_cause": "install contract shipped in the tree/CI but the fleet was not recreated from a published image",
+   "first_seen": "2026-09-23",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "The test gate rolled back 2.2 because a test encoded the old policy; lease-test path leaked cutover holds into other tests (2/12 -> 14/0)",
+   "root_cause": "tests share /tmp and live env; fixed by 80e168f and WORKSPACE_ROOT=mktemp discipline",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-27",
+   "recurrences": 2
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Setup-audit ledger: 55 defects, 17 never fixed, 2 regressed; 37b18ec0 aligned the docs to the harness and added a false README claim",
+   "root_cause": "audits ran warm-state on one host with their own drivers; fixes landed outside the artifact",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-22",
+   "recurrences": 7
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "llmSpendSummary / llmSpendSummaryNode",
+   "location": "llm-resolver-vessel src/index.ts; dev-vessel routes/impulses.ts",
+   "purpose": "per-node spend window; cross-node relay",
+   "status": "live-used",
+   "general": true,
+   "evidence": "read by the envelope gate on both nodes"
+  },
+  {
+   "name": "spendEnvelope gate",
+   "location": "dev-vessel gap-to-feature.ts, substrate-gap.ts, rhythm-conductor-tick.ts, apply-proposal-as-patch.ts; boredom index.ts",
+   "purpose": "federated budget/pause shape",
+   "status": "live-used",
+   "general": true,
+   "evidence": "envelope refusals 09-28; paused falsifier"
+  },
+  {
+   "name": "dispatchRatePolicy spend-rate breaker",
+   "location": "goal-host index.ts",
+   "purpose": "refuse repeated dispatches before any LLM call",
+   "status": "live-used",
+   "general": true,
+   "evidence": "2,107 refusals; in-process, resets on restart"
+  },
+  {
+   "name": "fc-exact verbatim EDIT path",
+   "location": "dev-vessel feature-compose.ts",
+   "purpose": "deterministic application of goal-supplied edits",
+   "status": "live-used",
+   "general": true,
+   "evidence": "93 applications since 09-27"
+  },
+  {
+   "name": "all-edits floor / fc-no-gap refusal",
+   "location": "dev-vessel feature-compose.ts",
+   "purpose": "no partial or gapless FAVORABLE",
+   "status": "live-used",
+   "general": true,
+   "evidence": "journal hits on both nodes"
+  },
+  {
+   "name": "landed-verdict latch + route-edit git probe",
+   "location": "goal-host index.ts",
+   "purpose": "a landing is terminal",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "failure memory (.goal-host-failure-memory.jsonl)",
+   "location": "goal-host index.ts:4038-4111",
+   "purpose": "prompt-only failure recall; drops deterministic refusals",
+   "status": "live-used",
+   "general": false,
+   "evidence": "3.4 negative facts never added"
+  },
+  {
+   "name": "gap-landability-model.ts",
+   "location": "dev-vessel",
+   "purpose": "landability model",
+   "status": "fossil",
+   "evidence": "imported by nothing (design.md)"
+  },
+  {
+   "name": "gap-lifecycle-scan landability predictions",
+   "location": "dev-vessel gap-lifecycle-scan.ts:359-412",
+   "purpose": "predict landability",
+   "status": "live-unused",
+   "evidence": "written, nobody reads"
+  },
+  {
+   "name": "category calibration at gap-store holder",
+   "location": "dev-vessel substrate-gap.ts include_calibration",
+   "purpose": "network-wide hopeless() seal evidence",
+   "status": "live-used",
+   "general": true,
+   "evidence": "76bf256; node-2 pool unsealed"
+  },
+  {
+   "name": "gap-class-posteriors.json",
+   "location": "/workspace/gap-class-posteriors.json",
+   "purpose": "class rerank",
+   "status": "live-used",
+   "general": false,
+   "evidence": "node-local; alpha1/beta195"
+  },
+  {
+   "name": "parked landings",
+   "location": "dev-vessel feature-compose.ts, /workspace/parked-landings",
+   "purpose": "resume a verified patch after cutover interruption",
+   "status": "unknown",
+   "evidence": "0 park/resume log lines in 24h; 47 stale files"
+  },
+  {
+   "name": "discardedLandingReport detector",
+   "location": "dev-vessel gap-drain-observer",
+   "purpose": "count verified-then-discarded landings",
+   "status": "live-used",
+   "general": true,
+   "evidence": "292 runs/48h total=0; its 3 gaps never closed"
+  },
+  {
+   "name": "named maintenance leases",
+   "location": "dev-vessel maintenance-lease.ts; activity-api db-admin-reconcile.ts",
+   "purpose": "cutover vs trace_store windows",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "seed_version upsert in seeder",
+   "location": "dev-vessel cli.ts (c6213f1)",
+   "purpose": "re-seed changed templates",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "install acceptance workflow",
+   "location": ".github/workflows/install-acceptance.yml",
+   "purpose": "off-host install class detector",
+   "status": "broken",
+   "general": true,
+   "evidence": "usable=fail on every run; posting unwired (empty hub secrets); no gaps"
+  },
+  {
+   "name": "substrate-status / connect / manifest",
+   "location": "scripts/substrate/*.sh",
+   "purpose": "five-level readiness verdict and client config",
+   "status": "live-unused",
+   "evidence": "used in CI; absent from the running node-1 image"
+  },
+  {
+   "name": "stratified-harness / goal-generator",
+   "location": "validation/scripts",
+   "purpose": "arbitrary-goal universality measurement",
+   "status": "dormant",
+   "evidence": "20/20 weekly CI failures"
+  },
+  {
+   "name": "draft-gap-closing-activity palette",
+   "location": "dev-vessel src/seed/draft-gap-closing-activity.ts",
+   "purpose": "autonomous drafter composes writes",
+   "status": "broken",
+   "evidence": "substrateGap_write pinned to :8270 (stateful-ui)"
+  },
+  {
+   "name": "drain-pending-substrate-gaps",
+   "location": "dev-vessel seed; boredom goal[10]",
+   "purpose": "gap store -> drafter",
+   "status": "dormant",
+   "evidence": "1 execution retained"
+  },
+  {
+   "name": "drift committer (vessel code drift detected and committed)",
+   "location": "rhythm-self-maintenance family",
+   "purpose": "commit runtime drift",
+   "status": "broken",
+   "evidence": "4e4170a8 swept 2,134 files; held 09-28"
+  },
+  {
+   "name": "/workspace/gaps/gaps.json",
+   "location": "node-1 container volume",
+   "purpose": "legacy gap store",
+   "status": "duplicate",
+   "duplicates_of": "/workspace/git/super-repo/gaps/gaps.json",
+   "evidence": "830 rows, last written 09-26"
+  }
+ ],
+ "principles": [
+  "Keep the whole value-per-cost measurement/termination/budget stack (phases 1-4); its unbuilt core (3.4 negative facts, 5.1/5.3/5.4) is the next real work, not new mechanisms.",
+  "A green CI conclusion, a ticked task box and 'substrate-authored' in git author are not state: read run artefacts (usable=fail), falsifier logs, and directed-vs-autonomous attempt records.",
+  "A detector without a reader is dormant: install acceptance posts nowhere, the stratified harness has no key, landability predictions are unread. Wire the reader or retire the detector.",
+  "Every per-node file or in-process counter that selection reads (pause, spend, calibration, class posteriors, breaker counts) recurs as node-locality; hold it at one discovery-routed authoritative owner.",
+  "A dispatch must terminate at its landing; non-termination caused five regressions in two days.",
+  "Rate-limiting a repeated goal contains waste but teaches nothing; refusals must become durable negative facts with invalidation conditions.",
+  "Hardcoded ports in LLM prompts and seeds outlive the vessel they name; route by shape.",
+  "Automated committers need a placement filter; a sweep that commits every untracked file manufactures fossils and hides intent.",
+  "Setup/fix closes only on the artifact a newcomer pulls (Decision 7); warm-state single-host audits certified 55 defects' fixes that did not hold."
+ ],
+ "claims": [
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-23",
+   "claim": "Install acceptance run is the class detector; tasks 1.1-1.4 ticked; results post to the hub and failures file gaps",
+   "where": "openspec/changes/unified-install-interface/tasks.md (d043bde5/0a406621)",
+   "later": "29+ runs 09-25..09-29 all usable=fail on both engines; hub secrets empty; no gap filed; working-tree tasks.md unticked everything on 09-28 20:11"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-23",
+   "claim": "Image-owned contract tasks 2.1-2.14, 3.x, 4.1-4.3 done",
+   "where": "unified-install-interface tasks.md",
+   "later": "the running node-1 image lacks substrate-status/connect/manifest and image-revision; Decision 7 means none are closed"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-05-19..07-01",
+   "claim": "Stratified goal-generator harness DONE with weekly CI",
+   "where": "archive/2026-05-17-stratified-goal-generator-harness/tasks.md",
+   "later": "weekly workflow failed 20/20 since 05-18 (METABOB_API_KEY unset); no run since 05-17"
+  },
+  {
+   "key": "endpoint-routing",
+   "claimed_at": "2026-05-30",
+   "claim": "Palette write resolvers unlocked; drafter can mint gaps/concepts",
+   "where": "archive/2026-05-30-autonomous-palette-write-resolvers",
+   "later": "prompt still pins substrateGap_write to :8270 = stateful-ui-vessel today; stop-doing signal never evidenced"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-05-30",
+   "claim": "substrateGap -> drafter loop closed",
+   "where": "archive/2026-05-30-substrate-gap-drafter-wiring",
+   "later": "1 retained execution; it reads the /workspace/gaps store, not the live super-repo store"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "claimed_at": "2026-09-24",
+   "claim": "resumable-landings complete and archived",
+   "where": "archive/2026-09-24-resumable-landings",
+   "later": "47 orphan parks unreaped; 3.3c executor failure path absent; reconcile HOLLOW; discarded-landings gaps 09-24..26 still open"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-26 23:33",
+   "claim": "1.2 landed",
+   "where": "value-per-cost tasks.md",
+   "later": "it silently reverted 2.6 (afc7d6d); re-landed c10e74a 23:39"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-09-27 07:16",
+   "claim": "4.4 spend-rate breaker done",
+   "where": "value-per-cost tasks.md",
+   "later": "works, but one hash was refused 629x on node 1: containment without learning (3.4 absent)"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-27 21:47",
+   "claim": "Autonomy reopened at 2 USD/h under the envelope",
+   "where": "CHECKINS.md",
+   "later": "09-28 18:45: five autonomous landings missed, none an improvement or system-verifiable; 23:45 the system credited an inert landing; reach fell to ~8%/h; 09-29 04:19 0/863 admitted on both nodes"
+  },
+  {
+   "key": "calibration-seal",
+   "claimed_at": "2026-09-28 18:12",
+   "claim": "5.5(iv) unseals node 2 via the holder's calibration",
+   "where": "value-per-cost tasks.md, 76bf256",
+   "later": "pool 2->59 at 18:30, 7 after the 23:30 re-tightening, 0 at 04:19; class posteriors still node-local"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-27 07:09",
+   "claim": "3.5 all-edits floor landed, falsifier pending",
+   "where": "value-per-cost tasks.md",
+   "later": "floor observed firing (1 n1, 11 n2) but box still [ ]; maxOps truncation unfixed"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-27",
+   "claim": "value-per-cost commits authored 'substrate-authored: apply route-edit'",
+   "where": "git log dev-vessel/goal-host/activity-api/llm-resolver/boredom",
+   "later": "all were operator pre-validated directed edits; git author cannot distinguish them from autonomous landings"
+  }
+ ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "performance-inefficiency-execution_traces_list-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "performance_inefficiency",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from performance-inefficiency-execution_traces_list] Internal endpoint \"execution_traces_list\" (/v2/activities",
+  "description": "[narrowed from performance-inefficiency-execution_traces_list] Internal endpoint \"execution_traces_list\" (/v2/activities/execution-traces?limit=200) is inefficient: 1ms (request failed/timed out) >= threshold 5000ms — author a fix so the substrate manages this load efficiently.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/routes/execution-traces.ts(5071,43): error TS1434: Unexpected keyword or identifier.\nsrc/routes/execution-traces.ts(5071,52): error TS1128: Declaration or statement expected.\nsrc/routes/execution-\n- semantic_reject: The patch does not address the inefficiency of the 'execution_traces_list' endpoint as it modifies a different query unrelated to the specified gap.\n- semantic_reject: The patch modifies a query for a single execution trace by ID, not the 'execution_traces_list' endpoint that queries multiple traces and is experiencing performance issues due to date comparison and l\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from performance-inefficiency-execution_traces_list] Internal endpoint \"execution_traces_list\" (/v2/activities/execution-traces?limit=200) is inefficient: 1ms (request failed/timed out) >= threshold 5000ms — author a fix so the substrate manages this load efficiently.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/routes/execution-traces.ts(5071,43): error TS1434: Unexpected keyword or identifier.\nsrc/routes/execution-traces.ts(5071,52): error TS1128: Declaration or statement expected.\nsrc/routes/execution-\n- semantic_reject: The patch does not address the inefficiency of the 'execution_traces_list' endpoint as it modifies a different query unrelated to the specified gap.\n- semantic_reject: The patch modifies a query for a single execution trace by ID, not the 'execution_traces_list' endpoint that queries multiple traces and is experiencing performance issues due to date comparison and l\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "performance-inefficiency-execution_traces_list-narrowed",
+  "source_gap_source": "substrate_detected"
+}

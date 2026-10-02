@@ -1,0 +1,10 @@
+In repos/development-vessel/src/resolvers/self-fact-reconcile.ts, write the filed gap's Class-2 predicate with `zero_field` instead of `nonzero_field`, because divergence_count is a DEFECT count and the closure sweep reads nonzero_field as a HEALTH field (so divergence_count=1 read as resolved). Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+        // reads divergence_count; >0 = still present, 0 = resolved.
+        evidence_resolve: { shape: "self_fact_reconcile", input: { facts: [d.fact], key: d.key, plant_canary: false, file_gaps: false }, nonzero_field: "divergence_count" },
+new:
+        // reads divergence_count; >0 = still present, 0 = resolved. That is a DEFECT count, so it is
+        // zero_field — nonzero_field is the sweep's HEALTH form and read divergence_count=1 as resolved.
+        evidence_resolve: { shape: "self_fact_reconcile", input: { facts: [d.fact], key: d.key, plant_canary: false, file_gaps: false }, zero_field: "divergence_count" },
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

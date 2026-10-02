@@ -1,0 +1,19 @@
+{
+  "id": "auth-session-socket-leak-shared-template",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "resource_leak",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "createAuthenticatedClient() in activity-api and concept-db (repos/activity-api/src/db/surreal.ts, repos/concept-db/src/d",
+  "description": "createAuthenticatedClient() in activity-api and concept-db (repos/activity-api/src/db/surreal.ts, repos/concept-db/src/db/surreal.ts) called connect() before use()/authenticate() with no try/catch. Any auth-handshake failure (identity-vessel unreachable, JWT issues -- both observed live) leaked the already-open SurrealDB socket forever, since the caller's try/finally around queryWithAuth never started. Confirmed as the root cause of an unbounded SurrealDB connection growth (28->64+) driving a container CPU/thermal emergency (Tctl 100C) on 2026-08-29. Patched in both vessels (wrap connect/use/authenticate in try/catch, close() on failure, rethrow) and verified live -- connection count plateaus under load instead of climbing. NOT YET CHECKED: whether other vessels built from the same TypeScript vessel template (identity-vessel showed the same high-connection-count symptom) share this exact pattern in their own createAuthenticatedClient.",
+  "goal_text": "createAuthenticatedClient() in activity-api and concept-db (repos/activity-api/src/db/surreal.ts, repos/concept-db/src/db/surreal.ts) called connect() before use()/authenticate() with no try/catch. Any auth-handshake failure (identity-vessel unreachable, JWT issues -- both observed live) leaked the already-open SurrealDB socket forever, since the caller's try/finally around queryWithAuth never started. Confirmed as the root cause of an unbounded SurrealDB connection growth (28->64+) driving a container CPU/thermal emergency (Tctl 100C) on 2026-08-29. Patched in both vessels (wrap connect/use/authenticate in try/catch, close() on failure, rethrow) and verified live -- connection count plateaus under load instead of climbing. NOT YET CHECKED: whether other vessels built from the same TypeScript vessel template (identity-vessel showed the same high-connection-count symptom) share this exact pattern in their own createAuthenticatedClient.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "auth-session-socket-leak-shared-template",
+  "source_gap_source": "substrate_detected"
+}

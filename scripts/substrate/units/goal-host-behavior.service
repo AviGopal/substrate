@@ -1,0 +1,16 @@
+[Unit]
+Description=goal-host-behavior — model how the goal executor operates (side loop, 2026-06-15)
+After=development-vessel.service activity-api.service concept-db.service
+# Side loop: observes goal-host traces and builds an expectation model. No gating
+# (the substrate is self-prompted). Distinct from the boredom Thompson/absorption
+# loop — this learns the executor's BEHAVIOR, not per-template success.
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+Environment=GOAL_HOST_BEHAVIOR_WINDOW_HOURS=3
+Environment=GOAL_HOST_BEHAVIOR_LIMIT=400
+ExecStart=/usr/bin/bash /usr/local/bin/goal-host-behavior-tick.sh
+
+[Install]
+WantedBy=multi-user.target

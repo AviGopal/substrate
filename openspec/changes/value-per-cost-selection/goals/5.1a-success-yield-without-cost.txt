@@ -1,0 +1,12 @@
+In repos/activity-api/src/lib/posterior-update.ts, stop folding cost into the graded success yield: quality becomes 0.5 + 0.5 * productivity, so a costed success earns the same alpha/beta increment as a cost-free one of equal productivity (cost is tracked separately and divided in at selection). Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+  const quality = 0.5 * costScore + 0.5 * productivity;
+new:
+  // COST IS NOT SUCCESS (value-per-cost-selection 5.1). Selection divides a success-only P(value)
+  // by a separately tracked E[cost]; folding cost in here as well would count it twice and make
+  // one number of two. Before phase 1 every cost_usd was 0 (costScore 1), so this restores that
+  // behaviour exactly for cost-free rows and stops discounting costed successes.
+  void costScore;
+  const quality = 0.5 + 0.5 * productivity;
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

@@ -1,0 +1,12 @@
+[Unit]
+Description=Autonomy metrics collector timer
+
+[Timer]
+OnActiveSec=5min
+OnUnitActiveSec=20min
+Persistent=true
+AccuracySec=30s
+Unit=autonomy-metrics.service
+
+[Install]
+WantedBy=timers.target

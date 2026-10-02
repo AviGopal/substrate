@@ -1,0 +1,22 @@
+{
+  "title": "Add goal_summary dispatch to impulses.ts",
+  "description": "Adds a dispatch case for the goal_summary resolver in src/routes/impulses.ts to enable its invocation and resolve the orphaned-capability-goal_summary gap.",
+  "changes": [
+    {
+      "type": "edit_file",
+      "path": "repos/development-vessel/src/routes/impulses.ts",
+      "changes": [
+        {
+          "type": "insert_after",
+          "anchor": "switch (pointer.type) {",
+          "content": "    case \"goal_summary\":\n      return resolveGoalSummary();\n"
+        },
+        {
+          "type": "insert_before",
+          "anchor": "interface AnyPointer {",
+          "content": "import { resolveGoalSummary } from \"../resolvers/goal-summary.js\";\n"
+        }
+      ]
+    }
+  ]
+}

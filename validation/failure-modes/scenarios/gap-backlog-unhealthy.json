@@ -1,0 +1,19 @@
+{
+  "id": "gap-backlog-unhealthy",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architectural_pattern",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Gap store backlog unhealthy: 165/683 open gaps are stale (>48h untouched), 0 churned (drafted+failed+stale). Top stale c",
+  "description": "Gap store backlog unhealthy: 165/683 open gaps are stale (>48h untouched), 0 churned (drafted+failed+stale). Top stale categories: missing_capability=72, orphaned_capability=24, unreachable_producer=13, poison_producer=11, residual_shape_proposal=10. Many gaps never close — needs auto-close + a gap-emission audit (are detectors emitting un-actionable gaps?).",
+  "goal_text": "Gap store backlog unhealthy: 165/683 open gaps are stale (>48h untouched), 0 churned (drafted+failed+stale). Top stale categories: missing_capability=72, orphaned_capability=24, unreachable_producer=13, poison_producer=11, residual_shape_proposal=10. Many gaps never close — needs auto-close + a gap-emission audit (are detectors emitting un-actionable gaps?).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-backlog-unhealthy",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "landing-verdict-is-never-fed-back-to-the-originating-walk-execution",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "SCOPE: the ribosome extraction loop WORKS; this gap is narrow.",
+  "description": "SCOPE: the ribosome extraction loop WORKS; this gap is narrow.",
+  "goal_text": "SCOPE: the ribosome extraction loop WORKS; this gap is narrow.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "landing-verdict-is-never-fed-back-to-the-originating-walk-execution",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,7 @@
+run	dispatch	V20s	verdict_s	reached	reason	body_match
+1	7278b72b-ba20-4eff-a9cf-5f1b9fea571d	PASS(exec=none,walkLog=5)	75	true/completed	deterministic:transform-verified — sha256(trendseven-demo-2026-09-19) = 781900e71440bf07d2307d0f7fc59f1215fe8bc92bdc94	MATCH
+2	4e105c2e-4e7e-40fd-be32-e5e766019608	PASS(exec=none,walkLog=10)	30	true/completed	deterministic:verified-compute-artifact — recomputed the arithmetic in-process (null) and resolved the named note "": 	MATCH
+3	7948473c-d95a-4033-baa0-a3699b895403	PASS(exec=none,walkLog=6)	65	true/completed	deterministic:transform-verified — product(271*893) = 242003 found in produced content	MATCH
+4	a100df95-1d63-429d-923a-8f5ec45f2b80	PASS(exec=walk-satisfier-1-1789845525632,walkLog=7)	20	true/completed	deterministic:transform-verified — base64(queue-cleared) = cXVldWUtY2xlYXJlZA== found in produced content	MISMATCH(cXVldWUtY2xlYXJlZAo= )
+5	c8074e27-4719-485c-b584-7c375948c602	PASS(exec=none,walkLog=6)	30	true/completed	deterministic:transform-verified — lettercount(ephemeral) = 9 found in produced content	MISMATCH(8 )
+6	5cb39620-20a3-4233-b5d7-e093cf2714f8	PASS(exec=universal-tool-fallback-47037483-1789845578549,walkLog=9)	20	true/completed	deterministic:transform-verified — uppercase(quorum) = QUORUM found in produced content	MATCH

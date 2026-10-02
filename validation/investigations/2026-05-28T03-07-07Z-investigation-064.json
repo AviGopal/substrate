@@ -1,0 +1,88 @@
+{
+  "investigation_id": "064",
+  "generated_at": "2026-05-28T03:07:07Z",
+  "investigator_session_id": "loop-dynamic-mode",
+  "prior_investigation_id": "2026-05-28T02-35-00Z-investigation-063",
+  "substrate_target": "http://localhost:18080",
+  "substrate_status": "healthy",
+
+  "critical_summary": "No new commits since investigation-063 (quiescent ~32 min). All prior findings unchanged. F-148 HIGH (LLM engine gap) still unresolved — engine llm-prompt resolver still not reaching llm.generate() post iter-29 partial fix; iter-30 has not landed. F-146 CRITICAL unchanged. Closure-audit 7/7. Auto-promote running (considered=6, promoted=0). Root count 30 (PNG artifacts still present). Substrate in active debugging phase — iter-30 expected.",
+
+  "commits_since_063": [],
+
+  "findings_reverification": {
+    "F-148": {
+      "prior_status": "HIGH — partially addressed, engine gap remains",
+      "current_status": "HIGH OPEN — no iter-30 yet; engine-level LLM gap unresolved",
+      "evidence": [
+        {
+          "type": "no_new_commits",
+          "command": "git log --oneline --since='2026-05-28T02:35:00Z' --format='%H %ae %s'",
+          "observed": "(empty) — no commits since inv-063"
+        }
+      ]
+    },
+    "F-147": {
+      "prior_status": "LOW OPEN",
+      "current_status": "LOW OPEN",
+      "evidence": [{"type": "root_count", "command": "ls -1 | wc -l", "observed": "30 — PNG files still present"}]
+    },
+    "F-146": {
+      "prior_status": "CRITICAL OPEN",
+      "current_status": "CRITICAL OPEN",
+      "evidence": [
+        {
+          "type": "4d0c305e_author",
+          "command": "git show 4d0c305e --format='%H %ae %s'",
+          "observed": "devbob@metabob.local — unchanged"
+        }
+      ]
+    },
+    "F-145": {"prior_status": "OPEN", "current_status": "OPEN — unchanged"},
+    "F-144": {"prior_status": "RE-OPENED", "current_status": "RE-OPENED — unchanged"},
+    "F-143": {"prior_status": "CLOSED", "current_status": "CLOSED"},
+    "F-142": {"prior_status": "ACKNOWLEDGED", "current_status": "ACKNOWLEDGED"},
+    "F-141": {
+      "prior_status": "OPEN",
+      "current_status": "OPEN",
+      "evidence": [{"type": "remote_check", "command": "git -C repos/ias-executor-ts ls-remote origin HEAD", "observed": "ERROR: Repository not found."}]
+    },
+    "F-140": {"prior_status": "ADDRESSED", "current_status": "ADDRESSED"},
+    "F-101": {"prior_status": "OPEN", "current_status": "OPEN — substrate inv-041 appeared (02:55Z)"}
+  },
+
+  "auto_promote_status": {
+    "command": "curl -sf -X POST http://localhost:18080/v2/activities/templates/auto-promote -H 'Authorization: ApiKey $METABOB_API_KEY' -d '{\"dry_run\": true}'",
+    "observed": "{success: true, considered: 6, promoted: 0, skipped: 6}",
+    "note": "Unchanged. All 6 test artifacts still below threshold. LLM synthesis not yet producing new proposed templates."
+  },
+
+  "closure_audit": {
+    "result": "7/7 CLOSED",
+    "verified_at": "2026-05-28T03:05Z"
+  },
+
+  "push_away_surface": {
+    "total_recent": 33,
+    "by_type": {"no_producer": 23, "hallucinated_resolvers": 3, "promote_gate": 7},
+    "note": "Slight tick-up. Promote-gate and hallucinated-resolver counts stable."
+  },
+
+  "prior_findings_status": {
+    "F-148": "HIGH OPEN — engine LLM gap; iter-30 not yet landed",
+    "F-147": "LOW OPEN",
+    "F-146": "CRITICAL OPEN",
+    "F-145": "OPEN",
+    "F-144": "RE-OPENED",
+    "F-143": "CLOSED",
+    "F-142": "ACKNOWLEDGED",
+    "F-141": "OPEN",
+    "F-140": "ADDRESSED",
+    "F-101": "OPEN"
+  },
+
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "rationale": "F-148 HIGH active, substrate in debugging phase, iter-30 expected imminently."
+  }
+}

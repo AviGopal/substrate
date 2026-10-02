@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-0336047e",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/goal-host-vessel/src/goal-target-inference.ts the inferred target shapes are capped by three separate .slice(0,",
+  "description": "In repos/goal-host-vessel/src/goal-target-inference.ts the inferred target shapes are capped by three separate .slice(0, 3) calls. Introduce a single module-level constant MAX_TARGET_SHAPES = 3 and use it at all three call sites instead of the repeated literal. Behaviour must be unchanged; this only names the bound in one place. Nonce fix-cap-9b7e.",
+  "goal_text": "In repos/goal-host-vessel/src/goal-target-inference.ts the inferred target shapes are capped by three separate .slice(0, 3) calls. Introduce a single module-level constant MAX_TARGET_SHAPES = 3 and use it at all three call sites instead of the repeated literal. Behaviour must be unchanged; this only names the bound in one place. Nonce fix-cap-9b7e.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-0336047e",
+  "source_gap_source": "substrate_detected"
+}

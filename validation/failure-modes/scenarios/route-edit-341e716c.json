@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-341e716c",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "…easurement-predicate-closes-on-commit-provenance-even-if-that-commit-was-reverted: A substrateGap that declares no Clas",
+  "description": "…easurement-predicate-closes-on-commit-provenance-even-if-that-commit-was-reverted: A substrateGap that declares no Class-2 measurement predicate (classification_metadata.evidence_resolve or verify_shape) is closed by verifyGapCondition on LANDED-COMMIT PROVENANCE alone (gap-to-feature.ts:1250, 'Class 3 (sync): a substrate-authored commit referencing this gap id already exists'), writing resolution: \"already_resolved\" at :2572/:2651. Edit repos/development-vessel/src/resolvers/gap-to-feature.ts.",
+  "goal_text": "…easurement-predicate-closes-on-commit-provenance-even-if-that-commit-was-reverted: A substrateGap that declares no Class-2 measurement predicate (classification_metadata.evidence_resolve or verify_shape) is closed by verifyGapCondition on LANDED-COMMIT PROVENANCE alone (gap-to-feature.ts:1250, 'Class 3 (sync): a substrate-authored commit referencing this gap id already exists'), writing resolution: \"already_resolved\" at :2572/:2651. Edit repos/development-vessel/src/resolvers/gap-to-feature.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-341e716c",
+  "source_gap_source": "substrate_detected"
+}

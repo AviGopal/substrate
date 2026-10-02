@@ -1,0 +1,5 @@
+[project]
+name = "python-grep"
+version = "0.0.0"
+description = "Implement grep: search files for lines matching a pattern with flag support"
+requires-python = ">=3.10"

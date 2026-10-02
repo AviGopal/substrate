@@ -1,0 +1,149 @@
+{"proposal":{"scenario_id":"fm-17-resolver-budget-noncompliance","authored_by":"make_activity_autonomous","registration_status":"draft","created_at":"1970-01-01T00:00:00.000Z"},"template":"{
+  "id": "gap-closing:fm-17-resolver-budget-noncompliance",
+  "name": "Resolver Budget Compliance Audit",
+  "description": "Audits resolver executions to detect budget non-compliance where actual costs exceed declared budgets by ≥2x. Generates compliance reports and proposes budget corrections for impulses.",
+  "inputShapes": [
+    "activityExecutionTrace",
+    "resolverCostAnalysis"
+  ],
+  "outputShapes": [
+    "budgetComplianceReport",
+    "resolverComplianceScorecard",
+    "impulseBudgetCorrection"
+  ],
+  "tags": [
+    "audit.budget_compliance.resolver",
+    "audit.budget_compliance.impulse",
+    "self_healing"
+  ],
+  "tasks": [
+    {
+      "id": "task-1-fetch-execution-traces",
+      "name": "Fetch Recent Execution Traces",
+      "resolver": "activity_fetch",
+      "description": "Retrieve execution traces from the past 7 days to analyze resolver costs.",
+      "input": {
+        "query": "SELECT resolver_id, vessel_id, impulse_id, declared_budget_usd, cost_usd, tokens_used, latency_ms, created_at FROM impulse_resolutions WHERE created_at > now() - interval '7 days'",
+        "limit": 10000
+      },
+      "output": {
+        "shape": "activityExecutionTrace",
+        "binding": "execution_traces"
+      }
+    },
+    {
+      "id": "task-2-analyze-budget-overruns",
+      "name": "Analyze Budget Overruns",
+      "resolver": "llm_completion_dispatch",
+      "description": "Process execution traces to identify instances where actual cost exceeded declared budget by ≥2x.",
+      "input": {
+        "context": "execution_traces",
+        "prompt": "Analyze the provided execution traces. For each resolver, calculate the overrun_ratio = cost_usd / declared_budget_usd. Identify all rows where overrun_ratio >= 2.0. Group by resolver_id and vessel_id. Compute average overrun_ratio per resolver. Return JSON with fields: resolver_id, vessel_id, overrun_ratio, count_violations, avg_cost_usd, avg_declared_budget_usd, impulse_ids.",
+        "budget": 2000
+      },
+      "output": {
+        "shape": "resolverCostAnalysis",
+        "binding": "budget_overrun_analysis"
+      }
+    },
+    {
+      "id": "task-3-generate-compliance-report",
+      "name": "Generate Budget Compliance Report",
+      "resolver": "llm_completion_dispatch",
+      "description": "Create a structured compliance report summarizing budget violations per resolver.",
+      "input": {
+        "context": "budget_overrun_analysis",
+        "prompt": "Based on the budget overrun analysis, generate a comprehensive compliance report. Include: (1) Executive summary of total violations and average overrun ratio, (2) Per-resolver breakdown with overrun_ratio, violation_count, and severity classification (low/medium/high based on overrun_ratio), (3) List of most problematic impulse IDs, (4) Timestamp of report generation. Return as structured JSON.",
+        "budget": 1500
+      },
+      "output": {
+        "shape": "budgetComplianceReport",
+        "binding": "compliance_report"
+      }
+    },
+    {
+      "id": "task-4-compute-resolver-scorecard",
+      "name": "Compute Resolver Compliance Scorecard",
+      "resolver": "llm_completion_dispatch",
+      "description": "Generate a per-resolver compliance scorecard with metrics and recommendations.",
+      "input": {
+        "context": "compliance_report",
+        "prompt": "From the compliance report, create a resolver compliance scorecard. For each resolver with violations, calculate: (1) compliance_score = 100 * (1 - min(overrun_ratio - 1.0, 1.0)) [capped at 0-100], (2) risk_level based on overrun_ratio and violation_count, (3) recommended_action (audit/correction/throttle). Include timestamp and resolver metadata. Return as JSON array.",
+        "budget": 1500
+      },
+      "output": {
+        "shape": "resolverComplianceScorecard",
+        "binding": "compliance_scorecard"
+      }
+    },
+    {
+      "id": "task-5-propose-budget-corrections",
+      "name": "Propose Impulse Budget Corrections",
+      "resolver": "llm_completion_dispatch",
+      "description": "Generate correction proposals to update impulse budget metadata based on realized costs.",
+      "input": {
+        "context": "budget_overrun_analysis",
+        "prompt": "For each impulse_id with overrun_ratio >= 2.0, propose a budget correction. Calculate: (1) new_declared_budget = avg_cost_usd * 1.15 (15% safety margin), (2) correction_rationale = 'Realized cost exceeded declared budget by {overrun_ratio}x', (3) confidence_score based on sample size. Return JSON array with fields: impulse_id, old_budget_usd, new_budget_usd, overrun_ratio, sample_count, confidence_score, effective_date.",
+        "budget": 1500
+      },
+      "output": {
+        "shape": "impulseBudgetCorrection",
+        "binding": "budget_corrections"
+      }
+    },
+    {
+      "id": "task-6-write-compliance-report",
+      "name": "Write Compliance Report to File",
+      "resolver": "fs_write",
+      "description": "Persist the compliance report to the file system for audit trail.",
+      "input": {
+        "path": "audit_logs/budget_compliance_{timestamp}.json",
+        "content": "compliance_report"
+      },
+      "output": {
+        "shape": "auditLogReference",
+        "binding": "report_file_ref"
+      }
+    },
+    {
+      "id": "task-7-write-scorecard",
+      "name": "Write Resolver Scorecard to File",
+      "resolver": "fs_write",
+      "description": "Persist the resolver compliance scorecard for operational review.",
+      "input": {
+        "path": "audit_logs/resolver_scorecard_{timestamp}.json",
+        "content": "compliance_scorecard"
+      },
+      "output": {
+        "shape": "auditLogReference",
+        "binding": "scorecard_file_ref"
+      }
+    },
+    {
+      "id": "task-8-write-budget-corrections",
+      "name": "Write Budget Corrections to File",
+      "resolver": "fs_write",
+      "description": "Persist proposed budget corrections for implementation review.",
+      "input": {
+        "path": "audit_logs/budget_corrections_{timestamp}.json",
+        "content": "budget_corrections"
+      },
+      "output": {
+        "shape": "auditLogReference",
+        "binding": "corrections_file_ref"
+      }
+    }
+  ],
+  "successCriteria": [
+    "budgetComplianceReport is generated and contains at least one resolver with overrun_ratio >= 2.0",
+    "resolverComplianceScorecard includes compliance_score and risk_level for each flagged resolver",
+    "impulseBudgetCorrection proposals include new_budget_usd adjusted upward from realized costs",
+    "All three output shapes are populated and persisted to audit logs"
+  ],
+  "selfHealingConfig": {
+    "windowSeconds": 43200,
+    "triggerCondition": "overrun_ratio >= 2.0",
+    "autoCorrectThreshold": 3.0,
+    "notificationRequired": true
+  }
+}"}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-139b12bf",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Close substrate gap auto-minted-child-gaps-monopolize-the-cap-1-compose-lane. In repos/development-vessel/src/resolvers/",
+  "description": "Close substrate gap auto-minted-child-gaps-monopolize-the-cap-1-compose-lane. In repos/development-vessel/src/resolvers/gap-to-feature.ts, the auto-pick admission filter already tallies exclusion reasons such as phantom_anchor and identical_repeated_failure. Add one more exclusion of the same form: cap how many gaps may be admitted per distinct edit_site file in a single cycle, and record each excluded candidate under the reason edit_site_saturated so it appears in the admission tally. Do not close, delete or rewrite any gap; change admission only.",
+  "goal_text": "Close substrate gap auto-minted-child-gaps-monopolize-the-cap-1-compose-lane. In repos/development-vessel/src/resolvers/gap-to-feature.ts, the auto-pick admission filter already tallies exclusion reasons such as phantom_anchor and identical_repeated_failure. Add one more exclusion of the same form: cap how many gaps may be admitted per distinct edit_site file in a single cycle, and record each excluded candidate under the reason edit_site_saturated so it appears in the admission tally. Do not close, delete or rewrite any gap; change admission only.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-139b12bf",
+  "source_gap_source": "substrate_detected"
+}

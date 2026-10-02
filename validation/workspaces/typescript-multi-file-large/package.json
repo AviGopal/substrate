@@ -1,0 +1,11 @@
+{
+  "name": "typescript-multi-file",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  }
+}

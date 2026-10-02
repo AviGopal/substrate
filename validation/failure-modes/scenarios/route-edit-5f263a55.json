@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-5f263a55",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-90975084: Edit repos/development-vessel/src/resolvers/substrate-gap.ts. Make ON",
+  "description": "investigate and decompose gap route-edit-90975084: Edit repos/development-vessel/src/resolvers/substrate-gap.ts. Make ONE contiguous change inside resolveSubstrateGapWrite.\n\nImmediately after this exact existing line:\n\n      existingIdx = gaps.findIndex((g) => hasClassifiableId(g) && g.status !== \"closed\" && gapClassKey(g.id) === classKey);\n\nand after the closing brace of the `if` block that contains it, insert a guard that refuses an echoed",
+  "goal_text": "investigate and decompose gap route-edit-90975084: Edit repos/development-vessel/src/resolvers/substrate-gap.ts. Make ONE contiguous change inside resolveSubstrateGapWrite.\n\nImmediately after this exact existing line:\n\n      existingIdx = gaps.findIndex((g) => hasClassifiableId(g) && g.status !== \"closed\" && gapClassKey(g.id) === classKey);\n\nand after the closing brace of the `if` block that contains it, insert a guard that refuses an echoed",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-5f263a55",
+  "source_gap_source": "substrate_detected"
+}

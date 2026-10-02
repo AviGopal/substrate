@@ -1,0 +1,7 @@
+run	dispatch	V20s	verdict_s	reached	reason	body_match
+1	b4f6a321-2516-4e82-850c-c8dfb901219c	PASS(exec=none,walkLog=11)	25	false/failed	deterministic:transform-mismatch — goal determines e6090d52d683e57c4247a3d8a9e30a6d09f76d1a2ed26553a6a0394664b38f59 fo	MATCH
+2	3160d042-f7e0-4748-905c-01d18a83ceea	PASS(exec=none,walkLog=9)	35	true/completed	deterministic:verified-compute-artifact — recomputed the arithmetic in-process (null) and resolved the named note "": 	MATCH
+3	d990adba-2835-4298-b762-fcc7545bda43	PASS(exec=none,walkLog=12)	31	false/failed	deterministic:transform-mismatch — goal determines 606719 for product(739*821) but produced content does not contain i	MATCH
+4	9281905f-e29e-4d36-bd25-268d282cc584	PASS(exec=exec_qa23vxhe,walkLog=17)	20	false/failed	deterministic:transform-mismatch — goal determines ZXhwZWN0YXRpb24tbWV0 for base64(expectation-met) but produced conte	MATCH
+5	65342ac8-7616-4090-b4a2-f0a45f4b1a77	PASS(exec=none,walkLog=15)	30	false/failed	deterministic:transform-mismatch — goal determines 14 for lettercount(sesquipedalian) but produced content does not co	MISMATCH(15 )
+6	648c1def-dbb6-46f6-983f-0a6e1cc55479	PASS(exec=exec_wf4aa3t6,walkLog=19)	20	false/failed	deterministic:transform-mismatch — goal determines WHISPER for uppercase(whisper) but produced content does not contai	MATCH

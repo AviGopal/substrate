@@ -1,0 +1,15 @@
+{
+  "status": 200,
+  "data": {
+    "content": {
+      "shape": "audit_remote_only",
+      "vessels": [],
+      "found": false
+    },
+    "metadata": {
+      "shape": "vesselCapability",
+      "resolvedAt": "2026-09-22T10:44:51.541Z",
+      "cacheStatus": "miss"
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+ "frozen_at": "2026-09-20T04:57Z",
+ "source": "stateful-ui-vessel :8270 uiQuestion resolve",
+ "questions": [
+  {
+   "id": "needs-human-orphaned-capability-mcp:tool_call",
+   "title": "Gap needs a human decision",
+   "body": "Gap orphaned-capability-mcp:tool_call (orphaned_capability) has failed auto-repair 8+ times with 0 lands. It likely needs a human response: redefine the goal, provide missing information, grant access, or drop it. Summary: Resolver \"mcp:tool_call\" is a live registered capability but is invoked by 0 of the activity corpus (169/396 live resolvers are ever invoked). No file outside tests references \"mcp:tool_call\", so no rewire target was found. Author an activity that invokes it (deterministic tier \u2014 NOT an LLM re-deriv",
+   "kind": "gap_needs_human",
+   "importance": "high",
+   "visibility": "public",
+   "createdAt": 1787919287102,
+   "updatedAt": 1789879707934
+  },
+  {
+   "id": "needs-human-reach-gap-error-log",
+   "title": "Gap needs a human decision",
+   "body": "Gap reach-gap-error-log (unreachable_producer) has failed auto-repair 8+ times with 0 lands. It likely needs a human response: redefine the goal, provide missing information, grant access, or drop it. Summary: Reachability gap: shape \"error_log\" is advertised by a producer, but the walk could not reach it from cold \u2014 the producer's required input_shapes are not producible from the goal pool. If the producer's resolver self-grounds (does not consume that input), declare the gating input as optional_input_s",
+   "kind": "gap_needs_human",
+   "importance": "high",
+   "visibility": "public",
+   "createdAt": 1787919287104,
+   "updatedAt": 1789879707934
+  },
+  {
+   "id": "needs-human-reach-gap-test-report",
+   "title": "Gap needs a human decision",
+   "body": "Gap reach-gap-test-report (unreachable_producer) has failed auto-repair 8+ times with 0 lands. It likely needs a human response: redefine the goal, provide missing information, grant access, or drop it. Summary: Reachability gap: shape \"test_report\" is advertised by a producer, but the walk could not reach it from cold \u2014 the producer's required input_shapes are not producible from the goal pool. If the producer's resolver self-grounds (does not consume that input), declare the gating input as optional_input",
+   "kind": "gap_needs_human",
+   "importance": "high",
+   "visibility": "public",
+   "createdAt": 1787919287105,
+   "updatedAt": 1789879707934
+  },
+  {
+   "id": "needs-human-reach-gap-execution-trace",
+   "title": "Gap needs a human decision",
+   "body": "Gap reach-gap-execution-trace (unreachable_producer) has failed auto-repair 8+ times with 0 lands. It likely needs a human response: redefine the goal, provide missing information, grant access, or drop it. Summary: Reachability gap: shape \"execution_trace\" is advertised by a producer, but the walk could not reach it from cold \u2014 the producer's required input_shapes are not producible from the goal pool. If the producer's resolver self-grounds (does not consume that input), declare the gating input as optional_i",
+   "kind": "gap_needs_human",
+   "importance": "high",
+   "visibility": "public",
+   "createdAt": 1788012001622,
+   "updatedAt": 1789879707934
+  },
+  {
+   "id": "needs-human-performance-inefficiency-execution_traces_list",
+   "title": "Gap needs a human decision",
+   "body": "Gap performance-inefficiency-execution_traces_list (performance_inefficiency) has failed auto-repair 8+ times with 0 lands. It likely needs a human response: redefine the goal, provide missing information, grant access, or drop it. Summary: Internal endpoint \"execution_traces_list\" (/v2/activities/execution-traces?limit=200) is inefficient: 7460ms >= threshold 5000ms \u2014 author a fix so the substrate manages this load efficiently.",
+   "kind": "gap_needs_human",
+   "importance": "high",
+   "visibility": "public",
+   "createdAt": 1788998974731,
+   "updatedAt": 1789879707934
+  },
+  {
+   "id": "needs-human-reach-gap-git-diff",
+   "title": "Gap needs a human decision",
+   "body": "Gap reach-gap-git-diff (unreachable_producer) has failed auto-repair 8+ times with 0 lands. It likely needs a human response: redefine the goal, provide missing information, grant access, or drop it. Summary: Reachability gap: shape \"git_diff\" is advertised by a producer, but the walk could not reach it from cold \u2014 the producer's required input_shapes are not producible from the goal pool. If the producer's resolver self-grounds (does not consume that input), declare the gating input as optional_input_sh",
+   "kind": "gap_needs_human",
+   "importance": "high",
+   "visibility": "public",
+   "createdAt": 1789058960294,
+   "updatedAt": 1789879707934
+  }
+ ]
+}

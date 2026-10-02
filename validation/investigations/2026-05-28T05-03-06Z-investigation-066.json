@@ -1,0 +1,44 @@
+{
+  "investigation_id": "066",
+  "generated_at": "2026-05-28T05:03:06Z",
+  "investigator_session_id": "loop-dynamic-mode",
+  "prior_investigation_id": "2026-05-28T03-56-07Z-investigation-065",
+  "substrate_target": "http://localhost:18080",
+  "substrate_status": "healthy",
+
+  "critical_summary": "No new commits since investigation-065 (quiescent ~67 min; ~2h31m since iter-29). Substrate healthy. All findings carry forward unchanged. F-148 HIGH (engine LLM gap), F-146 CRITICAL (4d0c305e substrate-authored), F-141 OPEN unchanged. Auto-promote: considered=6, promoted=0. Root count 30. Extended quiescence — likely operator offline (PDT ~22:03). Next heartbeat raised to 7200s.",
+
+  "commits_since_065": [],
+
+  "findings_reverification": {
+    "F-148": {"prior_status": "HIGH OPEN", "current_status": "HIGH OPEN — 2h31m since iter-29, no iter-30"},
+    "F-147": {"prior_status": "LOW OPEN", "current_status": "LOW OPEN — root count 30"},
+    "F-146": {"prior_status": "CRITICAL OPEN", "current_status": "CRITICAL OPEN — unchanged"},
+    "F-145": {"prior_status": "OPEN", "current_status": "OPEN"},
+    "F-144": {"prior_status": "RE-OPENED", "current_status": "RE-OPENED"},
+    "F-143": {"prior_status": "CLOSED", "current_status": "CLOSED"},
+    "F-142": {"prior_status": "ACKNOWLEDGED", "current_status": "ACKNOWLEDGED"},
+    "F-141": {"prior_status": "OPEN", "current_status": "OPEN"},
+    "F-140": {"prior_status": "ADDRESSED", "current_status": "ADDRESSED"},
+    "F-101": {"prior_status": "OPEN", "current_status": "OPEN"}
+  },
+
+  "auto_promote_status": {
+    "command": "curl -sf -X POST http://localhost:18080/v2/activities/templates/auto-promote -H 'Authorization: ApiKey $METABOB_API_KEY' -d '{\"dry_run\": true}'",
+    "observed": "{considered: 6, promoted: 0}"
+  },
+
+  "substrate_health": "healthy",
+  "root_file_count": {"count": 30, "within_limit": false},
+
+  "prior_findings_status": {
+    "F-148": "HIGH OPEN", "F-147": "LOW OPEN", "F-146": "CRITICAL OPEN",
+    "F-145": "OPEN", "F-144": "RE-OPENED", "F-143": "CLOSED",
+    "F-142": "ACKNOWLEDGED", "F-141": "OPEN", "F-140": "ADDRESSED", "F-101": "OPEN"
+  },
+
+  "next_wake_recommendation": {
+    "delay_seconds": 7200,
+    "rationale": "2h31m quiescent, likely overnight gap. Monitor fires on any commit. 2h heartbeat to avoid polling nothing until morning."
+  }
+}

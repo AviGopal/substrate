@@ -1,0 +1,19 @@
+{
+  "id": "vessel-write-error-concept-db.service",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "activity_lifecycle",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Vessel concept-db.service logged 5 persistence-error lines in the last 30m matching /SurrealDB query failed|Found NULL f",
+  "description": "Vessel concept-db.service logged 5 persistence-error lines in the last 30m matching /SurrealDB query failed|Found NULL for field|expected a option/ — a repeating write failure that no trace surfaces (the class where concept-db dropped its write-audit on every mint).",
+  "goal_text": "Vessel concept-db.service logged 5 persistence-error lines in the last 30m matching /SurrealDB query failed|Found NULL for field|expected a option/ — a repeating write failure that no trace surfaces (the class where concept-db dropped its write-audit on every mint).\n\nRemediation hint: Inspect the failing INSERT/UPDATE in the named vessel. Common cause: SurrealDB NULL vs NONE on option<...> fields (pass NONE, not null). Mirrors the concept-db impulse-INSERT NULL→NONE fix.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "vessel-write-error-concept-db.service",
+  "source_gap_source": "substrate_detected"
+}

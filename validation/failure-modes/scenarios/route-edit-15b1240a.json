@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-15b1240a",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Create the new file repos/goal-host-vessel/src/goal-intent.creation-routing.test.ts. It should be a bun:test file that i",
+  "description": "Create the new file repos/goal-host-vessel/src/goal-intent.creation-routing.test.ts. It should be a bun:test file that imports isEditIntentGoal from './goal-intent' and asserts: isEditIntentGoal('Create repos/foo/bar.ts with a helper') is true; isEditIntentGoal('Author repos/x/y.ts') is true; and isEditIntentGoal('Summarise repos/x/y.ts') is false. This locks in the creation-verb routing added to isEditIntentGoal.",
+  "goal_text": "Create the new file repos/goal-host-vessel/src/goal-intent.creation-routing.test.ts. It should be a bun:test file that imports isEditIntentGoal from './goal-intent' and asserts: isEditIntentGoal('Create repos/foo/bar.ts with a helper') is true; isEditIntentGoal('Author repos/x/y.ts') is true; and isEditIntentGoal('Summarise repos/x/y.ts') is false. This locks in the creation-verb routing added to isEditIntentGoal.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-15b1240a",
+  "source_gap_source": "substrate_detected"
+}

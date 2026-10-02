@@ -1,0 +1,17 @@
+{
+  "_comment": "Declarative LLM-resolver arm list (operator ask #7, ratified 2026-07-19). render-llm-arms.sh renders ONE systemd unit + ONE single-provider env file per arm; each arm is enabled iff its provider key is present (ExecCondition, so a keyless host cleanly skips it — law 11 location independence). Each arm is one (model, provider) pinned instance: vessel_id == llm-resolver-<id>, its quota == its provider's quota, so it de-advertises through discovery when that provider cools and callers resolve to a live arm (LAW: resolve THROUGH discovery, quota-gated advertisement). Adding an arm = add one entry here; it registers through discovery and is selectable fleet-wide within the namespace, regardless of which host it runs on. Override the whole list at hub/deploy setup via the LLM_ARMS env var (a JSON array with the same shape as .arms) — nothing about the arm set is hardcoded in a unit file.",
+  "arms": [
+    { "id": "opus",   "model": "claude-opus-4-8",           "provider": "anthropic", "port": 8221 },
+    { "id": "haiku",  "model": "claude-haiku-4-5-20251001", "provider": "anthropic", "port": 8223 },
+    { "id": "google", "model": "gemini-2.5-flash",          "provider": "google",    "port": 8225 }
+  ],
+  "provider_key_env": {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "google": "GOOGLE_API_KEY",
+    "groq": "GROQ_API_KEY",
+    "mistral": "MISTRAL_API_KEY",
+    "chutes": "CHUTES_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY"
+  }
+}

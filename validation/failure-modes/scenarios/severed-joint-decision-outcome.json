@@ -1,0 +1,19 @@
+{
+  "id": "severed-joint-decision-outcome",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "decision_outcome",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The `decision_outcome` has not been written within 3600 seconds of the most recent execution row, indicating a gap in wr",
+  "description": "The `decision_outcome` has not been written within 3600 seconds of the most recent execution row, indicating a gap in writing decision outcomes while the fleet is active.",
+  "goal_text": "The `decision_outcome` has not been written within 3600 seconds of the most recent execution row, indicating a gap in writing decision outcomes while the fleet is active.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "severed-joint-decision-outcome",
+  "source_gap_source": "substrate_detected"
+}

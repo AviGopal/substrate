@@ -1,0 +1,992 @@
+{
+ "attempts": [
+  {
+   "key": "narrowing-duplicates",
+   "title": "Class dedup of substrateGap by volatile-stripped id",
+   "where": "development-vessel c8be5b1 / c214385",
+   "date": "2026-06-14",
+   "tried": "Dedup the 4522-gap detector flood by class id",
+   "outcome": "partial",
+   "evidence": "The flood was cleared, the store was reset on 07-22 anyway, and new floods followed (1724/day on 09-20), because new ids are minted per failure or goal (route-edit-<hash>, recommit-<parent>-<class>).",
+   "source": "gap-history"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Parked landing resume",
+   "where": "feature-compose.ts:114-133, gap-to-feature.ts:5257, /workspace/parked-landings",
+   "date": "2026-09-24",
+   "tried": "Park verified patches before cutover so they can resume",
+   "outcome": "partial",
+   "evidence": "47 parks, all verify=true and judge.addresses=true. 41 of their gaps are still open. 25 of the 47 target human-surface proxy.ts (an unauthorable vessel), duplicated per route-edit id and -narrowed copy.",
+   "source": "gap-history"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "recommit- recursion churn starved apply",
+   "where": "12e7611 (07-27)",
+   "tried": "Stop ingesting compose-report artifacts as proposals.",
+   "outcome": "partial",
+   "date": "2026-07-27",
+   "evidence": "1588 compose-reports vs 85 real proposals (~97% churn). 81/28/15/7/2 recommit depths. Chains up to depth 13 appear in landed gap ids.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "-narrowed child gaps",
+   "where": "5697f70 (substrate) reverted 3434f3e; 449949c (07-29)",
+   "tried": "Give the narrowed child an id so chronic-failure escalation fires.",
+   "outcome": "failed",
+   "date": "2026-07-29",
+   "evidence": "The -narrowed child re-landed the reverted 404 dep repair (9a34712). Memory 09-22: -narrowed = verbatim duplicate.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Dedup and penalty persistence attempts",
+   "where": "c214385, c8be5b1 (06-14), 486022e, 5f17869, cefddf5, c8a377d (06-30), bc6daac (07-21)",
+   "tried": "Class dedup, content-hash sentinels, TTL, preserve failed_attempts across re-emission, per-gap cooldown.",
+   "outcome": "partial",
+   "date": "2026-06-14..2026-07-21",
+   "evidence": "ff04a17: route-edit-62939765 re-applied 4x. service-failure-model-reality-audit landed twice.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Narrowing/recommit guard churn",
+   "where": "6304d64, b44dcad, ad38ca4, a57dc30, 72fdb1f, fcbd737, 2992a23, 415a903",
+   "tried": "7 guard edits",
+   "outcome": "partial",
+   "date": "2026-08-29..09-25",
+   "evidence": "62 narrowed and 68 recommit landings",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "gapClassKey 8-hex discriminator strip",
+   "where": "8cdb1a4, 14def70, 3a97d2f",
+   "tried": "Strip 8-hex ids so the consumption gate groups route-edit gaps",
+   "outcome": "reverted",
+   "date": "2026-09-14",
+   "evidence": "Removed by ca53600 the same night; never relanded",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Unaccounted-landing scan minted per-commit duplicate gaps",
+   "where": "eccd6d9 -> 617b12a, b6f0d14",
+   "tried": "Fold into per-repo aggregates",
+   "outcome": "worked",
+   "date": "2026-09-23..09-25",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Duplicate block inserted 10 times by repeated route-edit composes",
+   "where": "route-edit-26279b2b (e9fa970 + 10x20-line); 2d962de; 9a93e21",
+   "date": "2026-07-09",
+   "tried": "The gap-drain re-composed the same edit, and the operator deduped it.",
+   "outcome": "reverted",
+   "evidence": "The dedupe was itself re-inserted by a stale runtime cutover and re-deduped in 9a93e21.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "-narrowed child reverses its parent the same day",
+   "where": "39bef90 -> bc99f91",
+   "date": "2026-09-28",
+   "tried": "The parent landed a hardcoded scripts/substrate/->/substrate/ path rewrite in the goal hash. The narrowed child deleted it.",
+   "outcome": "failed",
+   "evidence": "Two 'landings', net zero, 30 minutes apart.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Duplicate in-flight goal dispatches",
+   "where": "055406c, 7e121c4, 7f0425d",
+   "date": "2026-07-21, 09-26",
+   "tried": "Coalesce in /run-goal, then refuse /resolve for a goal already being walked.",
+   "outcome": "partial",
+   "evidence": "Two guards at two entry points for one class.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Goal-text prefix accretion; sanitizeGoalText never committed",
+   "where": "boredom-vessel 6de8e4f",
+   "tried": "Commit sanitizeGoalText",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "11 doubled prefixes in 3h; the function existed only in a working tree",
+   "source": "git-mid"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "concept-db advertised shapes inserted repeatedly",
+   "where": "concept-db 9d7d715, 84cad4f, 1b7fe81 (09-01), 9e2c8a8 (09-11)",
+   "tried": "recommit/narrowed landings each appended the same shapes",
+   "outcome": "failed",
+   "date": "2026-09-01..11",
+   "evidence": "HEAD config.ts lists 6 shapes twice; 3 are both public and @shape-dispatch:private",
+   "source": "git-mid"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "missing-key gap landed 3x",
+   "where": "llm-resolver de3223d, 8e952f7, 0f9a160 (09-11/12), f4bae3c (09-15)",
+   "tried": "reportMissingKey, then duplicate warn+report lines, then a re-report loop, then removal of continue",
+   "outcome": "reverted",
+   "date": "2026-09-12",
+   "evidence": "duplicate lines; the re-report loop flooded the gap store; operator fixed it in 789853a",
+   "source": "git-small"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "stateful-ui panel overwrite: 5 landings on 7 lines",
+   "where": "stateful-ui bfccbaf, 4670c72, 1b447c6 (09-20), 48493bb (09-23), b9b5d8d (09-28)",
+   "tried": "fixed /api/panels only, then three guard re-shapes (hasOwn, null checks, typeof) on /resolve, then an existing-merge",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "only b9b5d8d reads existing; the middle three left the defaults that overwrite panels; sibling-call-site miss in landing 1",
+   "source": "git-small"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "unguarded choices[0] fixed twice",
+   "where": "llm-resolver 873b597, ae07375 (09-15)",
+   "tried": "throw on empty choices, then a guarded return, stacked",
+   "outcome": "superseded",
+   "evidence": "live code has throw + return + break on the same condition",
+   "source": "git-small"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "coherence-recover dedup of byte-identical activities",
+   "where": "6b21bf4e",
+   "date": "2026-06-20",
+   "tried": "hourly timer demotes duplicates (1352 to 1252 active; one gap-closer authored 11 times)",
+   "outcome": "partial",
+   "evidence": "treats the symptom; stable-id/dedup-on-author source fix only 'recommended next'",
+   "source": "git-super-1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "recommit/narrowed children churn",
+   "where": "8954e46c, 1bd6c614, 0add5b9d, 8141b538, d628779f",
+   "tried": "Lineage cap (failed_attempts>=6); narrowed children wait for the parent verdict (3df8ddd)",
+   "outcome": "partial",
+   "date": "2026-09-22..2026-09-28",
+   "evidence": "recommit-* took 46% of picks and landed 4% (4/92)",
+   "source": "git-super-2"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Discovery ephemeral-port registrant: one problem, 209 rows on registry.ts plus 6 named refiles",
+   "where": "gap-something-re-registers-local-tools-grounding-shapes-on-ephemeral-ports; edit_site repos/discovery-vessel/src/registry.ts",
+   "tried": "closed once, then REOPENED 09-20 18:4x with recurrence evidence; refiled as discovery-registration-* x4, discovery-registrations-carry-no-registrant-identity, a-transient-verify-instance-registers-an-ephemeral-endpoint",
+   "outcome": "failed",
+   "date": "2026-09-19..2026-09-28",
+   "evidence": "THIRD RECURRENCE 09-21 (ports 28905, 24257); 208 open; severed-joint-discovery-endpoints-healthy 09-28 (18801 dead)",
+   "source": "live-gaps"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "remedy-livelock gaps for the redispatch loop",
+   "where": "gaps remedy-livelock-db-performance-\u2026-2026-09-25, remedy-livelock-trace-store-reconcile-\u2026-2026-09-25",
+   "date": "2026-09-25",
+   "tried": "Filed remedy gaps for the livelocked gaps",
+   "outcome": "failed",
+   "evidence": "4 dispatches each. trace-store-reconcile-\u2026T11 dispatches peaked at 767 on 09-28 (node 1) and 550 (node 2).",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Boredom gap-goal dedupe + meta-gap skip",
+   "where": "boredom 005091a, 64f4e0f, a22233d, ed39ba3",
+   "tried": "Dedup vs activeDispatches; skip auto_draft_decision; CATEGORY_WEIGHT sort",
+   "outcome": "worked",
+   "date": "2026-07-18",
+   "evidence": "50 running with dupes \u2192 3; flywheel reappeared 07-22 (174 fresh-id gaps/2h)",
+   "source": "memory-2"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Duplicated EDIT-INTENT ESCALATION blocks deleted",
+   "where": "goal-host e830210",
+   "tried": "Delete two blocks that returned reached:true on mitosisStaged",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "Gap-goal reservations 33/h \u2192 0; monoculture broken by starvation, not diversity",
+   "source": "memory-2"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Per-gap then lineage-grain backoff",
+   "where": "dev-vessel b17eccd, b44dcad; capacity peek 289cf2f",
+   "tried": "Exponential backoff keyed on durable last_failed_at, summed over the parent/source lineage.",
+   "outcome": "worked",
+   "date": "2026-09-01",
+   "evidence": "Pick concentration broke. Waste had first moved to recommit lineages. Narrowing livelock was still reproduced 08-28.",
+   "source": "memory-3"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "-0.15 recommit down-weight experiment",
+   "where": "9b305d2",
+   "tried": "Pre/post comparison over 14.7h windows.",
+   "outcome": "unknown",
+   "date": "2026-09-11",
+   "evidence": "Unreadable: provider storm (exhausted 984->5148) plus operator directed goals in PRE.",
+   "source": "memory-3"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Stop autocatalytic route-edit nesting at mint site",
+   "where": "goal-host 154390b, 11ba16d, 2585053, 1d97038",
+   "tried": "Don't mint a sibling gap whose summary is a failed gap-closing goal",
+   "outcome": "partial",
+   "date": "2026-08-03",
+   "evidence": "Nested-summary gaps went 20/h\u21920 by 08-03, but the 08-06 audit found titles nested up to 81 levels (794 rows at depth\u22653; 3,606 execs at 5.6%)",
+   "source": "memory-4"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "bumpFailedAttempts child id (-narrowed)",
+   "where": "dev-vessel 449949c",
+   "tried": "Give the narrowed child a deterministic ${parentId}-narrowed id.",
+   "outcome": "partial",
+   "date": "2026-07-29",
+   "evidence": "This revived narrowing, and -narrowed/recommit children then became a churn source (09-13: family grew 1 to 3 and ate the compose slot; 09-19: moot-compose churn).",
+   "source": "memory-5"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Recommit depth cap",
+   "where": "feature-compose 12e7611",
+   "tried": "_recommitDepth<2",
+   "outcome": "partial",
+   "date": "2026-07-27",
+   "evidence": "deep lineages arrested; source gap still reopened unconditionally; 08-10 children close 4% vs originals 30%",
+   "source": "memory-7"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Failure-count disposition",
+   "where": "gap-lifecycle-scan d5b8968",
+   "tried": "Close gaps once failure_lessons reaches 8 (persistent_compose_failure)",
+   "outcome": "worked",
+   "date": "2026-07-29",
+   "evidence": "Substrate-authored. Matched an independent verification.",
+   "source": "memory-8"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Recommit lane yield",
+   "where": "compose reports corpus",
+   "tried": "Measured only",
+   "outcome": "unknown",
+   "date": "2026-09-10",
+   "evidence": "0.8% land rate on 26.5% of capacity, vs route-edit at 18.4%",
+   "source": "memory-8"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Retry of an already-landed edit applied twice",
+   "where": "goal-host 5a4ef1a+4dec1bc",
+   "tried": "Skip when the goal-hash commit is the file's latest commit",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "31d07cd and afea8de were double applies",
+   "source": "memory-8"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "gapClassKey 8-hex strip so consumption cap binds",
+   "where": "substrate-gap.ts:210; 8cdb1a4->7f0780e->14def70 (substrate-authored)",
+   "date": "2026-09-14",
+   "tried": "strip 8-hex tokens",
+   "outcome": "partial",
+   "evidence": "classes 1830->994; lane affixes (-narrowed, recommit-) still split families; lineage-root capping (160 families) not landed",
+   "source": "memory-9"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Operator resync of stale children",
+   "where": "gap store children of corrected parent",
+   "date": "2026-09-14",
+   "tried": "re-wrote parent summary onto children",
+   "outcome": "failed",
+   "evidence": "in-flight compose clobbered the resync; children copy the parent's text at mint time, so a stale child re-implemented landed fix 38e72ae and produced duplicate symbols",
+   "source": "memory-9"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Scenario class dedup plus prune",
+   "where": "gap-to-scenario-bridge.ts classKey",
+   "tried": "7,879 files down to 259 classes",
+   "outcome": "superseded",
+   "date": "2026-06-14",
+   "evidence": "left uncommitted on host; replaced by gapClassKey/consumption gate",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Ribosome id without timestamp",
+   "where": "ias-executor-ts fdcd0ec ribosome-extract synthesize rule 1",
+   "tried": "learned-<parent-slug> with UPSERT",
+   "outcome": "worked",
+   "date": "2026-06-25",
+   "evidence": "verified single row after two runs",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Preserve failed_attempts across re-emission",
+   "where": "dev-vessel substrate-gap.ts 2757099, gap-to-feature 63d6a67",
+   "tried": "merge-preserve counters on UPSERT",
+   "outcome": "worked",
+   "date": "2026-07-01",
+   "evidence": "counter survives re-emit; second code path found the same day",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "UUID class-dedup plus consumption gate K=3",
+   "where": "dev-vessel substrate-gap.ts 52810c0, env GAP_CLASS_OPEN_CAP",
+   "tried": "stop decision-log re-accumulation",
+   "outcome": "partial",
+   "date": "2026-07-04",
+   "evidence": "open 672 to 540; 09-22 -narrowed verbatim duplicates recur",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Concept-store per-execution noise janitor",
+   "where": "prune-per-execution-concepts, autocomplete-concept-writer fix",
+   "tried": "drain 6,119 exec-noise concepts",
+   "outcome": "failed",
+   "date": "2026-07-04",
+   "evidence": "live 09-29: 76,812 of 88,565 concepts are source_type impulse_signature; surrealdb_gotcha 582 rows / 8 distinct",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Narrowed child emission for chronically stuck gaps",
+   "where": "gap-to-feature.ts on both nodes",
+   "tried": "Emit a -narrowed child for trace-store-reconcile-2026-09-24T11",
+   "outcome": "failed",
+   "evidence": "Re-emitted 178x/24h on node 1 plus 117x on node 2. Parent and child are both open with edit_site null. The decomposer invents 'repos/vessel/src/trace-store-reconcile.ts'. Node 2 calibration: 400 attempts, 0 lands.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "gap_to_scenario_bridge class-level dedup + prune 7879 to 259",
+   "where": "development-vessel src/resolvers/gap-to-scenario-bridge.ts classKey()",
+   "tried": "Cut the gap id at its first timestamp/exec_ marker and skip existing classes; one-shot prune",
+   "outcome": "reverted",
+   "date": "2026-06-14",
+   "evidence": "Live 09-28: /workspace/validation/failure-modes/scenarios 4573 (+1532 vessel-scenarios); super-repo clone 3364 (+1509); 2275 tracked in git. The new id formats (route-edit-<hash>-step-N, typecheck-...-l2785-ts1005) defeat classKey",
+   "source": "openspec-3"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Gap lifecycle age-boundary re-verify + burial guard",
+   "where": "07-09 D1/D2; dev-vessel db90246a, cfd3dd89",
+   "tried": "Re-verify at 48h/7d/14d; escalate after 3 fix-failures; forbid landability auto-close on verified gaps",
+   "outcome": "unknown",
+   "date": "2026-07-09",
+   "evidence": "Commits resolve; later memory (09-15) shows autoCloseStaleGaps on idle still closes gaps",
+   "source": "openspec-4"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "~17 draft plans to close orphaned-capability-goal_summary",
+   "where": "openspec/changes/2026-08-17-*goal-summary*.json, 2026-08-17-add-summarize-goals-activity/proposal.json",
+   "date": "2026-08-17",
+   "tried": "Add summarize-goals activity (4 copies), register shape (already registered config.ts:764), file_create whole impulses.ts/config.ts/types.ts (clobbers), placeholder zero resolver (real one existed since dc18b62 07-01), and same-day opposite delete/remove plans",
+   "outcome": "failed",
+   "evidence": "src/activities/summarize-goals.ts does not exist; gap orphaned-capability-goal_summary still open, re-detected 2026-09-26 with reopen_count 0, falsifier none; sibling unreachable_producer gap on same shape also open",
+   "source": "openspec-5"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "13 contradictory drafts for orphaned-capability-goal_summary in 2 days",
+   "where": "openspec/changes/2026-08-17-*goal-summary*, 2026-08-18-*goal-summary* (entries 91-97,101-107)",
+   "date": "2026-08-17..18",
+   "tried": "The drafter proposed three directions for one gap: register and invoke goal_summary (#95 #97 #101 #105 #106 #107), delete the resolver, its test and its config entry (#91 #92 #93 #102 #103), or make it 'real' (#96 raise timeout 20s->60s, #104 rewrite with fake metrics). #106 is a byte-identical copy of #97; #107 're-applies' #95.",
+   "outcome": "failed",
+   "evidence": "None were applied. The live goal-summary.ts is unchanged (20000ms timeout, dc18b62 07-01). The gap is open again in the live store.",
+   "source": "openspec-6"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Deterministic refusals propagate to children; scope_refused lesson",
+   "where": "feature-compose.ts, gap-to-feature.ts",
+   "date": "2026-09-24",
+   "tried": "4.1 72fdb1f, 4.2a 2992a23, 4.2b fcbd737",
+   "outcome": "partial",
+   "evidence": "live; 4.2b falsifier unexercised; 714 recommit/narrowed-prefixed gaps still open in store",
+   "source": "openspec-7"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Directed flag forwarded through gap_to_feature",
+   "where": "development-vessel bbb83ff (hollow), 5ec4719 (wrong function), 112e194",
+   "date": "2026-09-22/23",
+   "tried": "Six attempts; region literal moved into the real call",
+   "outcome": "worked",
+   "evidence": "Negative control BUSY on old PID; admitted fc-mudxdsc4 with 1 in flight on new; closed 09:57Z",
+   "source": "reports-1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Compose-nudge capacity check",
+   "where": "substrate-gap.ts 799bd58 (Substrate Autonomous, unprompted)",
+   "date": "2026-09-23",
+   "tried": "Gap write nudge re-armed itself via BUSY non-attempt writes",
+   "outcome": "worked",
+   "evidence": "BUSY writes 270/h -> 1/h; REFUSING 289 -> 49",
+   "source": "reports-1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Per-gap in-flight guard",
+   "where": "development-vessel c8cfc38 + 01d085d",
+   "date": "2026-09-23",
+   "tried": "Three composes on one gap raced; pwt blind restore wiped 3d2e52a from runtime",
+   "outcome": "worked",
+   "evidence": "Duplicate refused BUSY stage gap_in_flight 10:21Z; pwt compare-and-restore still open",
+   "source": "reports-1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Fold per-commit unaccounted-landing gaps into one aggregate per repo (#52)",
+   "where": "gap store, sweepAttempts",
+   "tried": "One aggregate gap per repo; the legacy per-commit gaps become superseded with duplicate_of; the close predicate is 'the repo's next landing carries an attempt'.",
+   "outcome": "partial",
+   "date": "2026-09-25",
+   "evidence": "Live 09-29: 114 superseded and 14 aggregates open (13 repos plus unknown). The close predicate has closed none of them. Before the fold: 469 opened and 36 closed in 24 h.",
+   "source": "reports-2"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Narrowed child drops authorship/closure fields; no child without lessons",
+   "where": "gap-to-feature.ts a57dc30",
+   "tried": "v1 denylist (too wide, harness caught), v2 through anchor-gate fix, directed isolated land:true",
+   "outcome": "worked",
+   "date": "2026-09-23",
+   "evidence": "Probe A child 0/11 denylisted fields; probe B 'NOT narrowing ... no failure_lessons'. Took 11 orphaned cutovers, 39 lease deferrals, classifier denials. Live 09-29 still shows recommit-recommit-* chains (grandchild guard leak on recommit minter).",
+   "source": "reports-4"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Skip escalation of an already-landed edit",
+   "where": "goal-host 5a4ef1a, 4dec1bc",
+   "tried": "Do not patch_with_tools when the goal-hash commit is the file's latest change.",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "Verified live: SKIPPED on route-edit-bac6572c; this stopped double applies like afea8de and 31d07cd.",
+   "source": "reports-6"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Recommit lineage cap and per-file cooldown",
+   "where": "development-vessel 6fa5883, 61b4812",
+   "tried": "Exclude recommit lineages with 6 or more failed attempts; per-file cooldown.",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "Recommit picks were 46% of picks and 4% of landings; after the cooldown, proxy.ts share fell from 15/15 to 3/11.",
+   "source": "reports-6"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Narrowed children wait for the parent verdict",
+   "where": "development-vessel 3df8ddd",
+   "tried": "Skip a child while its parent is pending.",
+   "outcome": "unknown",
+   "date": "2026-09-29",
+   "evidence": "Two child landings had reversed their parents (39bef90 to bc99f91, b20274c to 9c86aff); a residual fail-open in chooseFirstActionable remains.",
+   "source": "reports-6"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Ledger aggregate gap rewritten only on change",
+   "where": "development-vessel cbdb432",
+   "tried": "Stop rewriting aggregate gaps every tick",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "0 aggregate gap rewrites (was about 86/min)",
+   "source": "reports-7"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Recommit retry down-weight",
+   "where": "landabilityScore 9b305d2 (-0.15 flat)",
+   "tried": "Penalise recommit gaps filed under new ids with failed_attempts=0",
+   "outcome": "unknown",
+   "date": "2026-09-10",
+   "evidence": "Recommit share fell 35.9% -> 19.3%, but the experiment was confounded by a 5.2x provider exhaustion storm and a change in operator activity (section U)",
+   "source": "reports-8"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "recommit/narrow alternation resets failed_attempts",
+   "where": "b1353836 2026-08-30T06:27 dev-vessel da69c2f->6304d64, da86fbb",
+   "tried": "Narrowing guard recognizes recommit lineage; shouldNarrowForChronicFailure + 5-case test",
+   "outcome": "partial",
+   "date": "2026-08-30",
+   "evidence": "0 narrowing events post-fix; but 08-29 a gap spawned verbatim -narrowed clone in 6 min, and memory 09-22 still lists -narrowed verbatim dup",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Escalation re-applied already-landed edit (no_unique_anchor -> patch_with_tools)",
+   "where": "goal-host index.ts ~13434",
+   "date": "2026-09-25T20:55Z",
+   "tried": "5a4ef1a + narrowing 4dec1bc; post-walk variant 44a5efa",
+   "outcome": "worked",
+   "evidence": "ESCALATION SKIPPED fired 22:18 on real traffic; earlier afea8de double landing",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Recommit lineage cap",
+   "where": "dev-vessel picker",
+   "date": "2026-09-26T10:13Z",
+   "tried": "6fa5883 exclude lineage failed >=6",
+   "outcome": "worked",
+   "evidence": "Recommits 46% of picks landing 4% -> retries 25%",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Demand-counting capability filer",
+   "where": "goal-host 4361247",
+   "date": "2026-09-28T01:32Z",
+   "tried": "record demanding goals; open only on second distinct demand; close 693 single-demand gaps",
+   "outcome": "worked",
+   "evidence": "697 gaps named 697 distinct one-off shapes; open 2,379->1,689; 22 writes silently dropped and re-sent",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "-narrowed child waits for parent verdict",
+   "where": "dev-vessel 3df8ddd",
+   "date": "2026-09-28T23:30Z",
+   "tried": "hold narrowed duplicate until parent landing judged",
+   "outcome": "unknown",
+   "evidence": "39bef90->bc99f91 and b20274c->9c86aff reversals same day",
+   "source": "transcripts-4"
+  }
+ ],
+ "problems": [
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "38 gap-closing templates for one tsc error (goal-host index l1445 TS2352); 1,925 of 4,010 activities are gap-closing:*",
+   "root_cause": "Each re-attempt mints a fresh timestamped template",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "480 -narrowed gaps (458 open); chains like boredom-re-runs-... -> -narrowed -> recommit-...-narrowed-compose_e",
+   "root_cause": "narrowing spawns children instead of closing parent; no falsifier",
+   "last_seen": "2026-09-28",
+   "recurrences": 480,
+   "source": "docs-1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "-narrowed twins (trace-persistence..., compose-lesson-writer-forges...), duplicate rhythm-reality-sync gaps, three mitosis-tick|cascading gaps within 12s keyed by timestamp",
+   "source": "docs-3"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "recommit-/-narrowed children grow 17 \u2192 104 \u2192 433 \u2192 746 and close at about 4%",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "root_cause": "A failed compose forks a new gap id instead of enriching the parent",
+   "source": "gap-history"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "recommit-recommit-*, -narrowed and pwt-* child gaps landing repeated micro-edits on one file",
+   "root_cause": "Failure verdicts spawn children rather than escalating or declining",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 30,
+   "source": "git-activityapi"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "recommit-/narrowed children re-file the same failure (depth up to 13); the same gap is re-landed 2-4x",
+   "first_seen": "2026-06-14",
+   "last_seen": "2026-08-12",
+   "recurrences": 8,
+   "root_cause": "Failure re-files as a new identity; penalties reset; closure never recorded for route-edit landings.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Narrowed and recommit children duplicate their parents; class dedupe inert for route-edit ids",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-25",
+   "recurrences": 7,
+   "root_cause": "Child minting policy patched ad hoc; the gapClassKey 8-hex strip was lost on 09-14.",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Same block inserted 10 times; the same change landed twice; duplicate in-flight dispatches",
+   "first_seen": "2026-07-09",
+   "last_seen": "2026-09-27",
+   "recurrences": 4,
+   "root_cause": "Gap drain re-composes without checking for an existing landing, and dedup guards exist per entry point.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "recommit/narrowed children re-apply the same insert (concept-db shapes listed twice), goal prefixes accrete, narrowed child lands after an operator close",
+   "first_seen": "2026-07-10",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "root_cause": "Narrowing re-dispatches the original edit without checking whether it already landed",
+   "source": "git-mid"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Same gap id landing 2-5 times; recommit-recommit-\u2026-semantic_reject chains",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "root_cause": "children of semantically closed or judge-rejected gaps are treated as fresh work; no depth bound; no already-fixed check",
+   "source": "git-small"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "the drafter re-authors byte-identical activities with new ids (one gap-closer 11 times; 100 duplicates); template churn and thrashing",
+   "first_seen": "2026-05-23",
+   "last_seen": "2026-06-20",
+   "recurrences": 3,
+   "root_cause": "timestamped ids with no dedup-on-author; after-the-fact demotion only",
+   "source": "git-super-1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "recommit/-narrowed children take 46% of picks and land 4%",
+   "root_cause": "Children do not wait for the parent verdict; no lineage cap",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "source": "git-super-2"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "learned-conservation-* duplicates conservation-*; learned-auto-bridge-* duplicates auto-bridge-*; 171 names with multiple live rows (1,501 rows)",
+   "root_cause": "The ribosome and learners mint copies of existing producers instead of sharpening the existing posterior (law 3 violation)",
+   "source": "live-activities"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "one problem becomes hundreds of rows (route-edit 625, recommit 430, narrowed 480, steps)",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 1535,
+   "root_cause": "unit of work is a text row keyed by a fresh id; no root-cause key; dedupe after filing; reopen_count does not track recurrence",
+   "source": "live-gaps"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Since 09-22, 99.6% of the 2256 dispatches on node 1 went to 3 gaps; the db_performance gap has been re-detected every tick for 11 days",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Gaps with falsifier none are re-detected and re-dispatched with no terminal disposition. The remedy-livelock gaps did not stop it.",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "route-edit x107 reappearing after close; recommit/-narrowed children; 45 duplicate goal copies; compose flapper 17x/h",
+   "root_cause": "Refused composes mint children; commits name the child gap; no per-unit dedup at the compose horizon; summary flap re-arms a global trigger",
+   "first_seen": "2026-07-11",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "source": "memory-1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "-narrowed/recommit/route-edit children re-carry the same intent; closing parent doesn't stop growth; reverted fixes relanded; 47-76% of cap=1 lane are children",
+   "root_cause": "Chronic-stuck escalation mints verbatim clones; recommit/narrow alternation slips between two guards; revert leaves demand open",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-09-22",
+   "recurrences": 6,
+   "source": "memory-10"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Same gap re-dispatched in parallel, meta-gap spirals, fresh-id flywheel, verdict cache keyed by gap id",
+   "first_seen": "2026-07-15",
+   "last_seen": "2026-09-26",
+   "recurrences": 6,
+   "root_cause": "No canonical gap signature; dedupe only within a tick",
+   "source": "memory-2"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "-narrowed or recommit children copy the parent verbatim with fa=0 and outrank it forever. Corrected re-dispatches reuse the same goal_hash. The gap store grew 7,323 -> 7,650 rows in one night. 391 recommit gaps were open.",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-09-14",
+   "recurrences": 6,
+   "root_cause": "Children reset attempt counts, and nothing checks whether the premise is still true. Operator retries seed the livelock.",
+   "source": "memory-3"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Failures mint child gaps (route-edit nesting, recommit, -narrowed verbatim copies) that monopolize the cap=1 compose lane",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-23",
+   "recurrences": 5,
+   "root_cause": "A failed attempt mints a new gap instead of attaching to its own; narrowing resets failed_attempts and copies metadata including authorship",
+   "source": "memory-4"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "-narrowed/recommit children multiply, burn the single compose slot, and launder the hopeless() attempt counter.",
+   "root_cause": "The child id resets failed_attempts. Closed and narrowed gaps keep composing.",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-19",
+   "recurrences": 5,
+   "source": "memory-5"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Recommit/route-edit churn; one defect under many gap ids; stale gaps compete; deferred gaps re-derived",
+   "root_cause": "failure reports written back as proposals; recommit children lack lessons; no live-tree freshness check at pick; hash includes line count",
+   "first_seen": "2026-07-27",
+   "last_seen": "2026-08-26",
+   "recurrences": 6,
+   "source": "memory-6"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Retry forks child gaps that close at 4% (originals close at 30%). Recommit fractal. Variant sprawl of 15+ producers",
+   "root_cause": "Failure forks a new gap that carries the frozen summary instead of enriching the original. The source gap is reopened unconditionally",
+   "first_seen": "2026-07-27",
+   "last_seen": "2026-08-25",
+   "recurrences": 5,
+   "source": "memory-7"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Recommit and narrowed children, same-id reopens, a goal-hash rejection ratchet, double-applied retries.",
+   "root_cause": "Retry lanes re-attempt failed work at very low yield, and goal-hash identity accumulates refusals against a gap.",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-25",
+   "recurrences": 6,
+   "source": "memory-8"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "recommit/-narrowed/route-edit families flood the store (51/day; 96 of 186 open), burying real self-reports; stale children redo landed fixes",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-09-23",
+   "recurrences": 6,
+   "root_cause": "gapClassKey parses ids (8-hex and lane affixes); children copy the parent summary at mint time; recommit is not breadth-capped; non-attempt writes re-trigger pickup",
+   "source": "memory-9"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Re-emitted gaps, scenarios, templates, and concepts multiply; counters wiped on re-emit",
+   "first_seen": "2026-06-14",
+   "last_seen": "2026-09-29",
+   "recurrences": 7,
+   "root_cause": "ids derived with volatile tokens; blind UPSERT overwrite; per-execution writers",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "trace-store-reconcile-2026-09-24T11 -narrowed child re-emitted by both nodes on every pass (178 + 117 per 24h)",
+   "root_cause": "Two owners run gap-to-feature on the same hub store with no emission idempotence in the log/decision; the gap has no edit_site",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-29",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "recommit-recommit-\u2026-narrowed gap ids three suffixes deep landed on fs-write.ts on 2026-08-30 (6586f17, 11ea1f6, 66bf1b8). Ribosome timestamp-variant ids caused template churn on 05-24.",
+   "root_cause": "Retries mint new gap and template identities instead of updating one.",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-08-30",
+   "recurrences": 2,
+   "source": "openspec-2"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Drafter scenario dirs re-bloated after the 7879\u2192259 prune; now 4573+1532 (/workspace) and 3364+1509 (super-repo), 2275 tracked in git",
+   "first_seen": "2026-06-14",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "root_cause": "dedup keyed on the surface syntax of id formats (timestamp/exec_ markers) instead of a stable class identity from the producer; two write roots",
+   "source": "openspec-3"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "One orphan gap drew 13 drafts in 2 days with contradictory directions (add, delete, make-real) and byte-identical duplicates; nothing converged.",
+   "root_cause": "Failed drafts left no reason for the next draft to read, so each attempt restarted blind. This is the same class as the 09-22 'failure side had no store' finding.",
+   "first_seen": "2026-08-17",
+   "last_seen": "2026-08-18",
+   "recurrences": 13,
+   "source": "openspec-6"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Four open composer-interruption gaps with four id schemes, plus a capability gap for the literal id template 'composer-interruption-<node>-<day>'",
+   "root_cause": "LLM walks author gap ids; no stable derived-id discipline outside the sweep; fixed bugs leave their walk-filed gaps open",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-26",
+   "recurrences": 5,
+   "source": "openspec-7"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Per-commit unaccounted-landing detector opened 469 gaps and closed 36 in 24h",
+   "root_cause": "one gap per commit; fixture scratch repo commits",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-25",
+   "recurrences": 1,
+   "source": "openspec-7"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Duplicate mints and duplicate applies: 4010 activity rows but only 1909 distinct names; 3 identical-subject substrate commits in the surface clone on 09-22",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-27",
+   "recurrences": 2,
+   "root_cause": "Gap-closing re-mints under new auto ids per gap child, and retries double-apply landed edits (also noted in memory 09-25).",
+   "source": "openspec-9"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Narrowed children are verbatim parent copies; recommits minted for landed parents; lesson writer reopens closed gaps; duplicate landings; telemetry rows fake close rate; synonym treadmill",
+   "root_cause": "Narrowing adds no information; lesson writer sets status open unconditionally; no per-gap guard until 09-23; re-land treated as verification",
+   "first_seen": "2026-08-18",
+   "last_seen": "2026-09-25",
+   "recurrences": 8,
+   "source": "reports-1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Narrowed/recommit children amplify pool (222 narrowed, 274 recommit/24h; inflow 391 vs outflow 16); children inherit detector/predicates; recommit-recommit chains persist",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "root_cause": "Recommit minter omits parent_gap_id read by anti-grandchild guard; narrowed guard reads caller meta; children copied metadata verbatim (fixed a57dc30 for narrowed only).",
+   "source": "reports-4"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "The hasSubstance fix spawned narrowed/recommit/recommit-recommit chains; narrowed children drop parent severity; failing gaps get refreshed updated_at",
+   "root_cause": "gap-to-feature rewrites the parent on failure and children lose priority",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-26",
+   "recurrences": 2,
+   "source": "reports-5"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "-narrowed and recommit children monopolise picks, double-land, or reverse their parents (1 to 1.4 to 1.8 escalation; recommit 46% of picks and 4% of lands; 42 composes in 5 min; child landings undo the parent).",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "root_cause": "Cooldowns and caps key on gap id, not class or file; children inherit metadata without re-deriving it; the store carries omitted keys forward; there is no parent-verdict wait until 3df8ddd.",
+   "source": "reports-6"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Recommit and narrowed children are filed under new ids with failed_attempts=0. Recommit is 31.6% of attempts for 11.6% of landings. Memory 09-22: -narrowed child is a verbatim duplicate.",
+   "root_cause": "Gap identity does not carry lineage into the landability penalty",
+   "first_seen": "2026-09-06",
+   "last_seen": "2026-09-22",
+   "recurrences": 3,
+   "source": "reports-8"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "trace-store-reconcile-2026-09-24T11 was filed by the health-check timer and then spawned -narrowed (09-28T03:16) and recommit-\u2026-semantic_reject (09-28T03:37) children",
+   "root_cause": "The detector's gap has no address. The compose lane retries through narrowing children instead of fixing",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "source": "timers-readers"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "recommit/-narrowed children reset failed_attempts, outrank parents, monopolize picks, loop on completed gaps",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-08-31",
+   "recurrences": 5,
+   "root_cause": "two caps keyed on different lineage fields; closure doesn't propagate to children",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "-narrowed child is verbatim duplicate with failed_attempts 0, outranks parent, alternates at queue head",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-08-29",
+   "recurrences": 2,
+   "root_cause": "Narrowing copies summary and resets counters",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "-narrowed/recommit/route-edit children re-land or reverse parents; per-commit gap floods",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28T23:31Z",
+   "recurrences": 6,
+   "root_cause": "Identity by goal hash/fresh ids; gap store carries forward omitted keys",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "26 gaps reprocessed ~5.3x in 4 min; new gap write lost; non-idempotent scenario bridge; -narrowed scenario twins",
+   "first_seen": "2026-06-05",
+   "last_seen": "2026-09-14",
+   "recurrences": 3,
+   "root_cause": "escalation marks nothing durable; falsifier=none never converges (unconfirmed)",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "664 -narrowed scenario files are verbatim copies plus a failure block. Duplicate compose rows differ only by timestamp. draft-gap-closing-activity and harness-check-scenario are each duplicated.",
+   "root_cause": "Narrowing mints a new id instead of annotating the existing gap",
+   "first_seen": "2026-06",
+   "last_seen": "2026-09-29",
+   "source": "validation-other-3"
+  }
+ ],
+ "claims": [
+  {
+   "key": "narrowing-duplicates",
+   "claimed_at": "2026-06-14",
+   "claim": "dedup substrateGap by CLASS fixes the detector flood",
+   "where": "development-vessel c8be5b1",
+   "later": "Store reset 07-22; floods of 808/1724/1403 per day on 09-19..21; 734-row manual bulk close on 09-28",
+   "source": "gap-history"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "claimed_at": "2026-07-04",
+   "claim": "P8/P9: class dedup, gate, and janitor stop duplicate re-accumulation and drain concept noise",
+   "where": "finding_2026_07_04_outcome_signal_economy_session",
+   "later": "09-22 -narrowed verbatim duplicates; 09-29 concept store 86.7% impulse_signature, surrealdb_gotcha 582 rows / 8 distinct",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "claimed_at": "2026-08-30T06:27",
+   "claim": "Narrowing loop closed; the storm's cause",
+   "where": "b1353836",
+   "later": "ff560216 07:59: the churn-generator framing was retracted (62/99 were real findings); post-window memory still reports -narrowed verbatim dups",
+   "source": "transcripts-1"
+  }
+ ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "pickmostlandable-continue-drops-hopeless-gaps-before-scoring",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "A single `continue` statement in pickMostLandable drops every gap in a hopeless category out of selection before scoring",
+  "description": "A single `continue` statement in pickMostLandable drops every gap in a hopeless category out of selection before scoring runs, which is why the documentation backlog is unreachable: 23 documentation_drift gaps are open and zero appear in any picker decision. Edit repos/development-vessel/src/resolvers/gap-to-feature.ts:817.",
+  "goal_text": "A single `continue` statement in pickMostLandable drops every gap in a hopeless category out of selection before scoring runs, which is why the documentation backlog is unreachable: 23 documentation_drift gaps are open and zero appear in any picker decision. Edit repos/development-vessel/src/resolvers/gap-to-feature.ts:817.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "pickmostlandable-continue-drops-hopeless-gaps-before-scoring",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-830a7634-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-830a7634] Please modify repos/goal-host-vessel/src/registry-field.ts to recognise \"count of\" a",
+  "description": "[narrowed from route-edit-830a7634] Please modify repos/goal-host-vessel/src/registry-field.ts to recognise \"count of\" as one of the counting triggers. The alternation presently covers how many, number of, and total only, and a question about the count of vessels is therefore turned away as an entity the registry does not track.",
+  "goal_text": "[narrowed from route-edit-830a7634] Please modify repos/goal-host-vessel/src/registry-field.ts to recognise \"count of\" as one of the counting triggers. The alternation presently covers how many, number of, and total only, and a question about the count of vessels is therefore turned away as an entity the registry does not track.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-830a7634-narrowed",
+  "source_gap_source": "substrate_detected"
+}

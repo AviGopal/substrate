@@ -1,0 +1,693 @@
+{
+ "source": "live-gaps",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/live-gaps.md",
+ "coverage": "Read the full live gap store on node 1 (substrate-live:/workspace/git/super-repo/gaps/gaps.json, 6,278 rows, 10.58 MB, snapshot 2026-09-29 ~03:58Z container time). Every row was parsed and clustered by id prefix, category, source, status, closed_reason, edit_site, failure_class, failure_lessons, regressed_by, pending_outcome_verification and operator_hold. Summaries were normalised to find same-text refiles, and keyword regexes approximated hat groups (reported as \u2248). Also read: the whole node-2 store (compose2-live, 70 rows, last written 09-26 12:07); row counts of 2 of the 14 orphaned gaps.json.*.tmp files; the tails of funnel-history.jsonl (47 lines) and landability_predictions.log (66,866 lines). Not read: auto-draft-decisions.jsonl, the body of landability_predictions.log, tmp-file contents or diffs, and 2 tmp files that do not parse (1667864.1734, 839455.339). The store holds almost nothing before 09-18 because of a documented collapse, so older history is not in this source.",
+ "attempts": [
+  {
+   "key": "false-verification",
+   "title": "Auto-draft telemetry written into gap store faked close rate",
+   "where": "goal-host auto_draft_decision:* rows; gap auto-draft-telemetry-records-pollute-the-gap-store-and-fake-the-close-rate",
+   "tried": "Writer stopped 2026-09-22 02:36Z",
+   "outcome": "partial",
+   "date": "2026-09-20",
+   "evidence": "3,372 closed telemetry rows remain; 09-19 had 117/135 closes as telemetry; the gap is still open; funnel close_rate 0.68 and median_latency_ms 0"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Capability-gap generator files confabulated shape names; bulk-closed by hand",
+   "where": "750 rows kind:capability_gap; closed_by operator:claude-avi",
+   "tried": "693 closed as walk_artifact on 09-28 ~01h",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "generator untouched; 17 new ones, latest 09-29T03:53Z; every missing_shape is unique (meaningful_content, learning-loop-results...)"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Discovery ephemeral-port registrant: one problem, 209 rows on registry.ts plus 6 named refiles",
+   "where": "gap-something-re-registers-local-tools-grounding-shapes-on-ephemeral-ports; edit_site repos/discovery-vessel/src/registry.ts",
+   "tried": "closed once, then REOPENED 09-20 18:4x with recurrence evidence; refiled as discovery-registration-* x4, discovery-registrations-carry-no-registrant-identity, a-transient-verify-instance-registers-an-ephemeral-endpoint",
+   "outcome": "failed",
+   "date": "2026-09-19..2026-09-28",
+   "evidence": "THIRD RECURRENCE 09-21 (ports 28905, 24257); 208 open; severed-joint-discovery-endpoints-healthy 09-28 (18801 dead)"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "asResolvePath fix overshot; resolve-URL joins recurred across 4 hats",
+   "where": "repos/goal-host-vessel/src/index.ts; gaps asresolvepath-discards..., rawresolve-concatenates..., seven-more-resolve-url-sites..., resolve-url-walk-path-sites-7457-15128",
+   "tried": "landed_verified 09-20; then per-site patches; steps 1-3 closed superseded_hollow_decomposition 09-28; resolve-url-walk-path-sites landed 09-28",
+   "outcome": "partial",
+   "date": "2026-09-20..2026-09-28",
+   "evidence": "seven-more-resolve-url-sites still open"
+  },
+  {
+   "key": "false-verification",
+   "title": "Class-2 predicate polarity inverted, so self-fact gaps flap closed/open",
+   "where": "verifyGapConditionAsync; self-fact-divergence-* rows",
+   "tried": "21 rows migrated to zero_field by operator; producer and consumer fixes landed directed",
+   "outcome": "failed",
+   "date": "2026-09-27",
+   "evidence": "5 self-fact-divergence gaps still open with reopen_count 23-26 and closed_reason predicate_verified_by_detector at 09-29 03:51; second occurrence cited from 09-01"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Autonomous landing fabricated the checked directory (b585a03)",
+   "where": "development-vessel b585a03; gap autonomous-landing-fabricated-the-checked-thing...",
+   "tried": "reverted by directed exact edit (12c7d9a)",
+   "outcome": "reverted",
+   "date": "2026-09-27",
+   "evidence": "semantic gate passed it; the sweep closed its gap as landed_verified"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Class-1 literal satisfied by an env-gated hollow write (a198907)",
+   "where": "development-vessel a198907; self-fact-divergence-authoring-root-obsidian-vessel-live-step-1",
+   "tried": "reverted 4068e7e",
+   "outcome": "reverted",
+   "date": "2026-09-27",
+   "evidence": "only reader is a log line; process.env.AUTHORING_ROOTS_PATH"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Four passing autonomous landings reverted by operator; no learning signal",
+   "where": "a198907, c4bb14d, 9cfdea4, af2c737; gap an-operator-verdict-that-a-passing-landing-regressed-has-no-reader",
+   "tried": "operator reverts plus regressed_by stamps",
+   "outcome": "reverted",
+   "date": "2026-09-28",
+   "evidence": "3 closed landed_verified; settlement, posterior and lesson never updated"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Global fetch monkey-patch landed through gates (goal-host 8c31cdb)",
+   "where": "gap a-landing-gate-passed-a-global-fetch-monkey-patch...; revert-8c31cdb-global-fetch-shim",
+   "tried": "revert gap filed",
+   "outcome": "reverted",
+   "date": "2026-09-25",
+   "evidence": "broke ledger_canary; landing 6ce1446 carried no gap"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Cutover silently reverted a newer landing (6ab8271 undid a0ff3d3)",
+   "where": "development-vessel feature-compose.ts",
+   "tried": "filed a-cutover-overwrites-a-newer-committed-landing...; then a-coalesced-retry-inherits-a-stale-base (09-26)",
+   "outcome": "failed",
+   "date": "2026-09-24",
+   "evidence": "class recurred 09-26; both open"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Compose gates read the stale super-repo submodule copy (7 hats)",
+   "where": "feature-compose.ts readers; four-compose-gates..., three-more-compose-readers..., anchor-band-centring, nontermination-simulation, co-located-test-discovery",
+   "tried": "targetFileOnDisk helper, then per-reader one-line edits",
+   "outcome": "partial",
+   "date": "2026-09-24..2026-09-25",
+   "evidence": "several readers still open; submodule pointer 100 commits behind (open)"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Self-restart kills in-flight compose, 9+ hats",
+   "where": "vessel-mitosis-cutover.ts, long-running.ts",
+   "tried": "404a89c (gap_to_feature long-running), bf74cc5 (impulse.type), selfRestartAlreadyOwed helper (26 failed attempts, closed)",
+   "outcome": "partial",
+   "date": "2026-09-20..2026-09-25",
+   "evidence": "every-restart-budget-is-shorter-than-a-compose (16 restarts, 4 lost composes in 3h) and consecutive-landings... still open"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "gap-to-feature directed flag",
+   "where": "gap-to-feature.ts; 5ec4719 then 112e194",
+   "tried": "5ec4719 failed behavioural verification; one-op redesign landed via mitosis cutover",
+   "outcome": "worked",
+   "date": "2026-09-22..2026-09-23",
+   "evidence": "closed measured: directed POST at 1 in flight admitted"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Learned pathway with satisfier head dropped",
+   "where": "goal-host; 579f365, c37df24, 3d2e52a, 9c376b2, 249ff89",
+   "tried": "order fix, binding fix, recommender fix, explore keeps exploit candidate",
+   "outcome": "partial",
+   "date": "2026-09-23",
+   "evidence": "parent closed landed_verified (20/20 accepted); narrowed child FAILED after 3d2e52a, still open"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Template provider blanks every placeholder at load, so chained templates fail",
+   "where": "repos/ias-executor-ts/src/adapters/activity-api-provider.ts",
+   "tried": "fix 2893a93",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "closed predicate_verified_by_operator; narrowed child left open"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Memory store had no retire primitive",
+   "where": "development-vessel memory-note; b5ed109 then 19ae84e",
+   "tried": "b5ed109 failed behavioural verification; 19ae84e",
+   "outcome": "worked",
+   "date": "2026-09-22",
+   "evidence": "measured_by_operator, falsifier 6/6"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Trend checker never retired probe notes",
+   "where": "d4171b1",
+   "tried": "substrate-authored retire calls",
+   "outcome": "worked",
+   "date": "2026-09-23",
+   "evidence": "first landing was a silent no-op; later measured by operator"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Federation classes closed by measurement over 2 quiescent sweeps",
+   "where": "federation-probe-tick; fed:punchthrough_unavailable, stale_foreign_rows_advertised, relay_dial_failed, registry_lost_local_rows",
+   "tried": "closure predicate with auto-reopen",
+   "outcome": "worked",
+   "date": "2026-09-18..2026-09-25",
+   "evidence": "4 closed; join_door_host_dependent and no_relay_anchor still open"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Compose lane anchor semicolon habit",
+   "where": "the-compose-lane-lands-under-nine-percent...",
+   "tried": "plan-time anchor check 8d165a9",
+   "outcome": "partial",
+   "date": "2026-09-22",
+   "evidence": "landed_verified, but the anchor-redraft stringified the prompt function; 85 anchor_not_found recommits remain"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Vacuous-plan guard regex fixes",
+   "where": "326a983, 212408a, 0874216",
+   "tried": "single-line quote strippers; harvest names from added lines",
+   "outcome": "worked",
+   "date": "2026-09-23..2026-09-24",
+   "evidence": "landed_verified with operator falsifiers; but log-level demotions and stub-detector false refusals are still open"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace-store reconcile remedy loop",
+   "where": "trace-store-reconcile-*, 62e174a, 2fd1dca, 2bccc64",
+   "tried": "timeout raise, paged listing, route via gap_to_feature",
+   "outcome": "failed",
+   "date": "2026-09-23..2026-09-24",
+   "evidence": "62e174a and 2fd1dca FAILED behavioural verification; remedy dispatched 47x in 6h; trace-store-reconcile-2026-09-24T11 open at 150,062 rows, 27 attempts"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Slow-query remedy pinned to nonexistent template",
+   "where": "db_performance_slow_queries_2026-09-18T16",
+   "tried": "gap-drain re-dispatch",
+   "outcome": "failed",
+   "date": "2026-09-18..2026-09-25",
+   "evidence": "118 failed attempts (store maximum); 39 of 53 unreached drains in 24h"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Hopeless-seal escalations to pinned :8270",
+   "where": "gap-to-feature hopeless(); resolveUiWritePassthrough",
+   "tried": "apply side repaired; delivery side never connected",
+   "outcome": "failed",
+   "date": "2026-09-20..2026-09-25",
+   "evidence": "248 needs-human, 0 answered; in-memory dedupe re-asks 37x per day"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Test fixtures write the live gap store and other live stores",
+   "where": "development-vessel substrate-gap.test.ts, resolver-schema.test.ts; human-surface tests; local-tools tests",
+   "tried": "gaps filed 09-26 and 09-28; nothing retired",
+   "outcome": "failed",
+   "date": "2026-09-19..2026-09-28",
+   "evidence": "gap-001 reopen 1614; falsifier-*-001 plus narrowed children; 72 ledger-u-probe unaccounted landings; 94,188 fake feedback records; residue on both nodes"
+  },
+  {
+   "key": "gap-store-integrity",
+   "title": "Gap store collapse and lost concurrent writes",
+   "where": "/workspace/git/super-repo/gaps/gaps.json",
+   "tried": "recovery from tmp files (09-09 precedent); gaps filed",
+   "outcome": "failed",
+   "date": "2026-09-18..2026-09-27",
+   "evidence": "9275 to 4636; 9 of 22 writes lost while reporting updated; 14 tmp orphans; pre-09-18 history gone"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Runtime drift repair gated by env var",
+   "where": "runtime-drift-* (13 open), runtime-source-truncated-* (10 open)",
+   "tried": "detection only; repair needs RUNTIME_DRIFT_REPAIR=1",
+   "outcome": "dormant",
+   "date": "2026-09-18..2026-09-27",
+   "evidence": "all 10 vessels drifted at least once"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync test gate skipped on tick budget",
+   "where": "scripts/substrate/substrate-pull-sync.sh",
+   "tried": "gaps filed",
+   "outcome": "failed",
+   "date": "2026-09-24..2026-09-25",
+   "evidence": "8 testgate-skipped gaps, 1 closed; converged without a suite"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Phantom-failure recording beta-penalises correct runs",
+   "where": "model-reality-phantom-failure-*",
+   "tried": "detector re-detects",
+   "outcome": "failed",
+   "date": "2026-09-18..2026-09-28",
+   "evidence": "8 open; auto-bridge-problem_detection 0% over 2,385 traces with 0 real errors"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Operator exact-edit goals vs autonomous drafts",
+   "where": "the-system-does-not-author-exact-edit-goals...",
+   "tried": "measurement",
+   "outcome": "unknown",
+   "date": "2026-09-25",
+   "evidence": "operator 4/4 (b56623a, 9387ca7, bf3f0bf, 53d8e77) vs autonomous 88/211 (42%)"
+  },
+  {
+   "key": "self-repair-conflict",
+   "title": "Self-repair re-enables funnel-drain.timer against operator holds",
+   "where": "self_repair_operational",
+   "tried": "auto re-enable",
+   "outcome": "unknown",
+   "date": "2026-09-25..2026-09-26",
+   "evidence": "54 resolved rows in 17h, all funnel-drain.timer"
+  },
+  {
+   "key": "false-verification",
+   "title": "landed_verified closes without close_basis",
+   "where": "closed_reason landed_verified",
+   "tried": "landing auto-close",
+   "outcome": "unknown",
+   "date": "2026-09-19..2026-09-28",
+   "evidence": "18 of 35 close_basis absent; 157 open pending_outcome_verification (125 with no measurement predicate)"
+  }
+ ],
+ "problems": [
+  {
+   "key": "gap-content",
+   "symptom": "96% of gaps have falsifier none; 157 landed-but-unmeasurable; confabulated capability gaps",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 750,
+   "root_cause": "detectors and the walk file gaps from text with no edit site or predicate; target inference invents shape names"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "one problem becomes hundreds of rows (route-edit 625, recommit 430, narrowed 480, steps)",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 1535,
+   "root_cause": "unit of work is a text row keyed by a fresh id; no root-cause key; dedupe after filing; reopen_count does not track recurrence"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "close rate dominated by telemetry and bulk closes; flapping predicate closes; unmeasured landed_verified",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 64,
+   "root_cause": "closure on landing without close_basis; class2 polarity unchecked at birth; class1 uniqueness guard fails open"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "landings that fabricate or log-only satisfy the check (b585a03, a198907, bb5d6b9, 49b884e)",
+   "first_seen": "2026-09-23",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "root_cause": "gates read diffs and never run the production path; no FABRICATE-TO-SATISFY lens"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "substrate landings broke things; the operator found every regression",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 9,
+   "root_cause": "no consumer-side probe per landing; operator revert does not feed back into settlement, posterior or lessons"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "fixes at one call site of a multi-site class; next site filed as new gap",
+   "first_seen": "2026-09-20",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "root_cause": "sibling call sites not grepped; one-op design limits edits per landing"
+  },
+  {
+   "key": "gap-store-integrity",
+   "symptom": "store collapsed 50%, lost writes reported as updated, 14 tmp orphans, templated rows",
+   "first_seen": "2026-09-09",
+   "last_seen": "2026-09-27",
+   "recurrences": 4,
+   "root_cause": "whole-file JSON rewrite with per-process lock; partial load then save; no compare-and-swap"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "fixture gaps, probe repos, fake feedback and phantom discovery rows in live stores on both nodes",
+   "first_seen": "2026-09-01",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "root_cause": "tests inherit live env and endpoints; store isolation does not cover HTTP writes"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "runtime /vessels drift from clones; stale super-repo copies read by gates; human surface on unmanaged release clone",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-27",
+   "recurrences": 45,
+   "root_cause": "multiple copies of source (live, push clone, super-repo submodule, release clone) with no single authority"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "restarts kill composes; single change-window lease contention; lane burned on repeat failures and phantom remedies",
+   "first_seen": "2026-09-20",
+   "last_seen": "2026-09-28",
+   "recurrences": 30,
+   "root_cause": "restart budgets shorter than a compose; remedy by pinned template id; no stop on repeated failure class"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "42GB unreclaimed blobs, duplicate ingest 63%, migrations fail every start, slow queries",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-28",
+   "recurrences": 25,
+   "root_cause": "synchronous ingest with retries past client timeout; blob GC off; migration runner in ExecStartPre"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "severed joints (decision_outcome, ribosome extraction 6.8d), fields with zero writers, placeholder rows",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-28",
+   "recurrences": 20,
+   "root_cause": "writers and readers evolve independently; no liveness check that works (joint-liveness itself broken)"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "node 2 gap store stale at 70 rows; closes measured on wrong node; node-local pauses and posteriors",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-27",
+   "recurrences": 7,
+   "root_cause": "writes forward to hub but reads do not; per-node records read as global"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "248 escalations unanswered; re-asks after restart; question cards lack context",
+   "first_seen": "2026-09-20",
+   "last_seen": "2026-09-26",
+   "recurrences": 8,
+   "root_cause": "escalation writer pins :8270 which no human surface reads; in-memory dedupe"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "target inference misreads goals; ReAct floor shapes unreachable from cold (llmcompletion, shell, websearch)",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 60,
+   "root_cause": "target inference rewrites paths or invents shapes; producers' required inputs unproducible"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "null Thompson scores, legacy score read matches no rows, beta not growing, credit on wrong arm, 67 composition islands",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-28",
+   "recurrences": 15,
+   "root_cause": "id format mismatch (activity:<> vs bare names); ungraded throws; satisfier steps withhold credit"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "9 dormant detectors, gap-compose.timer dormant, 8 detector units failing, 10/97 validators silent",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-28",
+   "recurrences": 20,
+   "root_cause": "built and validated once; no disposition; detectors fail without gapping on themselves"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "compose cap, trace retention, drift repair, authoring roots behind env vars",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-27",
+   "recurrences": 6,
+   "root_cause": "law 1 violations reintroduced by both operator and autonomous code"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "24 docs-drift gaps open since 09-18; harness path flagged missing though present on host",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-20",
+   "recurrences": 24,
+   "root_cause": "detector truth source (container super-repo) lags or wrong root; docs-align loop never closes them"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "51 orphaned resolvers, duplicate names (prune-stale-mitosis/prune_stale_mitosis, pushPolicy-write/_write), 66k-line prediction log",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-28",
+   "recurrences": 51,
+   "root_cause": "mint before reuse; no retirement path"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "ephemeral ports in discovery, host-mapped endpoints undialable in-container, pinned remedy targets",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-28",
+   "recurrences": 12,
+   "root_cause": "register accepts unverified endpoint changes under live id; pinned URLs and template ids"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "Gap store (gaps.json whole-file JSON, per-process lock, atomic rename)",
+   "location": "development-vessel substrate-gap.ts; /workspace/git/super-repo/gaps/gaps.json",
+   "purpose": "authoritative gap state",
+   "status": "broken",
+   "general": true,
+   "evidence": "9275 to 4636 collapse; 9 of 22 writes lost; 14 tmp orphans; 12 templated rows"
+  },
+  {
+   "name": "substrateGap_write validation",
+   "location": "development-vessel",
+   "purpose": "accept gap writes",
+   "status": "broken",
+   "general": true,
+   "evidence": "accepts {{...}} ids, drops operator field and free-text falsifier"
+  },
+  {
+   "name": "Narrowing/recommit/step minter",
+   "location": "gap-to-feature.ts, feature-compose.ts appendComposeLesson",
+   "purpose": "retry failed gaps with lessons",
+   "status": "live-used",
+   "general": true,
+   "evidence": "480 narrowed, 430 recommit (415 open); main row multiplier"
+  },
+  {
+   "name": "Class-1 expected_literal predicate plus uniqueness guard",
+   "location": "substrate-gap.ts predicateLiteralNotUnique",
+   "purpose": "verifiable closure",
+   "status": "broken",
+   "general": true,
+   "evidence": "guard reads nonexistent path, fails open; ui-legibility closed without fix"
+  },
+  {
+   "name": "Class-2 evidence_resolve closure sweep",
+   "location": "verifyGapConditionAsync",
+   "purpose": "measured closure",
+   "status": "broken",
+   "general": true,
+   "evidence": "polarity inversion; 5 gaps flapping 23-26 times"
+  },
+  {
+   "name": "federation-probe-tick closure",
+   "location": "federation probe",
+   "purpose": "close fed:* classes after 2 quiescent sweeps, auto-reopen",
+   "status": "live-used",
+   "general": false,
+   "evidence": "4 honest closes"
+  },
+  {
+   "name": "Observation loop (artifact expectation restore)",
+   "location": "development-vessel",
+   "purpose": "detect and restore violated artifacts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "12 closes; heartbeat has no reader"
+  },
+  {
+   "name": "Auto-draft telemetry to gap store",
+   "location": "goal-host auto_draft",
+   "purpose": "record draft decisions",
+   "status": "fossil",
+   "general": false,
+   "evidence": "stopped 09-22; 3,372 rows remain"
+  },
+  {
+   "name": "Capability-gap generator",
+   "location": "goal-host walk / detector",
+   "purpose": "file missing-producer gaps",
+   "status": "live-used",
+   "general": true,
+   "evidence": "750 confabulated shapes; 693 hand-closed; still filing 09-29"
+  },
+  {
+   "name": "self_repair_operational timer re-enable",
+   "location": "development-vessel",
+   "purpose": "re-enable allowlisted timers",
+   "status": "live-used",
+   "general": false,
+   "evidence": "funnel-drain re-enabled 54x in 17h against operator holds"
+  },
+  {
+   "name": "unaccounted_landing_scan",
+   "location": "development-vessel",
+   "purpose": "flag landings without gaps",
+   "status": "live-used",
+   "general": false,
+   "evidence": "138 rows, 72 from ledger-u-probe; per-sha flood"
+  },
+  {
+   "name": "self_fact_reconcile",
+   "location": "development-vessel",
+   "purpose": "reconcile facts vs copies",
+   "status": "live-used",
+   "general": true,
+   "evidence": "21 rows; flapping closes"
+  },
+  {
+   "name": "joint-liveness detector",
+   "location": "joint-liveness.service, jointBinding registry",
+   "purpose": "flag severed write-read joints",
+   "status": "broken",
+   "general": true,
+   "evidence": "unit failed; checked 1 of 1; cannot read registry"
+  },
+  {
+   "name": "Hopeless seal plus :8270 escalation",
+   "location": "gap-to-feature hopeless(), resolveUiWritePassthrough",
+   "purpose": "route stuck gaps to humans",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "248 asks, 0 answers"
+  },
+  {
+   "name": "Gap-drain remedy dispatch by pinned template id",
+   "location": "development-vessel gap-drain observer",
+   "purpose": "auto-remedy detector gaps",
+   "status": "broken",
+   "general": false,
+   "evidence": "phantom template, 118 attempts; bypasses family sampler"
+  },
+  {
+   "name": "pull-sync test gate",
+   "location": "scripts/substrate/substrate-pull-sync.sh",
+   "purpose": "gate convergence on tests",
+   "status": "broken",
+   "general": true,
+   "evidence": "skipped on budget 8x; blames environment tests"
+  },
+  {
+   "name": "runtime-drift repair",
+   "location": "development-vessel",
+   "purpose": "restore live tree from clone",
+   "status": "dormant",
+   "general": false,
+   "evidence": "armed only by RUNTIME_DRIFT_REPAIR=1"
+  },
+  {
+   "name": "gap-compose.timer",
+   "location": "systemd unit",
+   "purpose": "periodic gap compose",
+   "status": "dormant",
+   "general": false,
+   "evidence": "self-op-health:repair_unit_dormant"
+  },
+  {
+   "name": "9 dormant detector templates",
+   "location": "development-vessel (gap-lifecycle-tick, self-alteration-funnel-tick, selector-saturation-audit-tick, model-opportunity-tick, ui-legibility-audit-tick, dead-end-decision-scan-tick, ...)",
+   "purpose": "detection coverage",
+   "status": "dormant",
+   "general": false,
+   "evidence": "detector-coverage-dormant: never selected by UCB"
+  },
+  {
+   "name": "Ribosome extraction and registration",
+   "location": "ribosome-vessel",
+   "purpose": "extract reached executions into pathways",
+   "status": "broken",
+   "general": true,
+   "evidence": "extraction lags 591,566s; registers shapes:[] which discovery rejects"
+  },
+  {
+   "name": "decision_outcome writer",
+   "location": "activity-api",
+   "purpose": "decision calibration",
+   "status": "broken",
+   "general": true,
+   "evidence": "severed joint, lag 4,193s"
+  },
+  {
+   "name": "Orphaned resolvers (51)",
+   "location": "various vessels (code_* tools, gh_pr_*, pushPolicy*, llmModelPolicy*, docFixPolicy*, escalation_disposition_apply, fossilRankReport, ...)",
+   "purpose": "registered capabilities",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "invoked by 0 activities; duplicate names prune-stale-mitosis/prune_stale_mitosis, pushPolicy-write/pushPolicy_write"
+  },
+  {
+   "name": "Model-reality consistency audit",
+   "location": "development-vessel",
+   "purpose": "flag recording errors",
+   "status": "live-used",
+   "general": true,
+   "evidence": "re-detects phantom failures; never repaired"
+  },
+  {
+   "name": "funnel-history and landability_predictions logs",
+   "location": "/workspace/git/super-repo/gaps/",
+   "purpose": "gap funnel metrics",
+   "status": "unknown",
+   "general": false,
+   "evidence": "median_latency_ms 0; 66,866-line log with unknown reader"
+  },
+  {
+   "name": "Containment readers (autonomyScope, spendEnvelope)",
+   "location": "gap-to-feature.ts",
+   "purpose": "bound autonomous work",
+   "status": "live-used",
+   "general": true,
+   "evidence": "fail open when holding node missing from discovery"
+  },
+  {
+   "name": "compose_lesson to drafter",
+   "location": "feature-compose appendComposeLesson / concept-db",
+   "purpose": "teach drafter from failures",
+   "status": "live-used",
+   "general": true,
+   "evidence": "regressions never become lessons; failure credit posts to 404"
+  },
+  {
+   "name": "Node-2 local gap store",
+   "location": "compose2-live /workspace/git/super-repo/gaps/gaps.json",
+   "purpose": "local view",
+   "status": "fossil",
+   "general": false,
+   "evidence": "70 rows, last written 09-26; reads do not forward"
+  }
+ ],
+ "principles": [
+  "A gap with close_basis absent is never closed by a landing; mark it landed_unverified until its falsifier is exercised; operator_hold blocks auto-close (gap a-landed-sha-closes-a-gap-whose-close-basis-is-absent...)",
+  "A class-2 predicate filed while the defect is present must read present at birth; one that never read present never measured the defect (class2-predicate-polarity...)",
+  "A literal predicate counts only if a live non-logging path reads the literal (a-class1-literal-step-is-verified-by-a-hollow-write...)",
+  "Refuse diffs that fabricate the thing the falsifier checks for: FABRICATE-TO-SATISFY, sibling of DESTROY-TO-SATISFY (autonomous-landing-fabricated...)",
+  "Resolver tests must fail closed if the resolved store path is the live one (development-vessel-tests-rewrite-fixture-gaps...)",
+  "A writer that pins a peer cannot learn the peer was replaced; route by discovery (248-escalations...)",
+  "A metric satisfiable without fixing anything will be; telemetry does not belong in the gap store (auto-draft-telemetry-records-pollute...)",
+  "A skipped gate is not a passing gate (pull-sync-testgate-skipped-*)",
+  "A detector that cannot check must gap on itself (joint-liveness-detector-checks-nothing)",
+  "Skip a gap whose last two lessons share a class with no new information; reframe or escalate instead (a-gap-whose-last-two-drafts-failed-the-same-way...)",
+  "Turn a localized gap into a pre-validated exact-edit spec before composing; operator 4/4 vs autonomous 42% is information at dispatch time (the-system-does-not-author-exact-edit-goals...)",
+  "An operator revert must write back into settlement, class posterior, decision_outcome and compose_lesson (an-operator-verdict-that-a-passing-landing-regressed-has-no-reader)",
+  "Dormancy needs a disposition: enable or retire (self-op-health:repair_unit_dormant; detector-coverage-dormant)",
+  "Closure by measurement over 2 quiescent sweeps with auto-reopen is the model that held (fed:* closes)",
+  "A store is monotonic apart from deliberate pruning; a size drop is data loss, not attrition (gap-store-collapsed...)",
+  "A write should re-read its own row and report lost_update (gap-store-writes-are-lost...)",
+  "reopen_count is not a recurrence measure; recurrence lives in lineage and text (observed: 74 REOPENED rows carry reopen_count 0/None while fixture gap-001 carries 1614)"
+ ]
+}

@@ -1,0 +1,21 @@
+{
+  "health": {
+    "status": 0,
+    "error": "TypeError: Unable to connect. Is the computer able to access the url?"
+  },
+  "discovery": {
+    "status": 200,
+    "data": {
+      "content": {
+        "shape": "audit_fixture",
+        "vessels": [],
+        "found": false
+      },
+      "metadata": {
+        "shape": "vesselCapability",
+        "resolvedAt": "2026-09-22T10:47:13.949Z",
+        "cacheStatus": "miss"
+      }
+    }
+  }
+}

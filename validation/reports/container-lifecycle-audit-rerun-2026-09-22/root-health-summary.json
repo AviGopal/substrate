@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-22T10:48:24.067990+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "sh",
+    "-c",
+    "systemctl is-system-running; systemctl --failed --no-pager; substrate-key whoami; curl -s --max-time 3 http://127.0.0.1:8210/health"
+  ],
+  "rc": 0,
+  "stdout": "degraded\n  UNIT                     LOAD   ACTIVE SUB    DESCRIPTION\n\u25cf sys-kernel-config.mount  loaded failed failed Kernel Configuration File System\n\u25cf sys-kernel-debug.mount   loaded failed failed Kernel Debug File System\n\u25cf sys-kernel-tracing.mount loaded failed failed Kernel Trace File System\n\nLOAD   = Reflects whether the unit definition was properly loaded.\nACTIVE = The high-level unit activation state, i.e. generalization of SUB.\nSUB    = The low-level unit activation state, values depend on unit type.\n3 loaded units listed.\n{\n  \"valid\": true,\n  \"org_id\": \"organizations:substrate\",\n  \"user_id\": \"users:b04tmzwb9cplav7pwpv8\",\n  \"key_id\": \"key_ww3r7l4nrhZ7Dsip\",\n  \"scopes\": [\n    \"read\",\n    \"write\"\n  ],\n  \"role\": \"user\"\n}\n{\"status\":\"healthy\",\"in_flight\":0,\"drain_ms\":240000,\"vesselId\":\"goal-host-vessel\",\"vesselName\":\"Goal Host Vessel\",\"shapes\":[\"goal_execution\",\"activity_execution\",\"activeDispatches\",\"goalWalkState\",\"poolImpulse_write\",\"solicitationResponse_write\",\"solicitationHeartbeat_write\",\"goalDispatchAsync\",\"fleetActivityFeed\",\"bodyHonestyPolicy\",\"walkBudget\",\"lessonExecutionPolicy\",\"extractionPolicy\",\"pathwayReusePolicy\"],\"version\":\"0.1.0\",\"llm\":\"http-vessel:http://127.0.0.1:8220\"}",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-7b964a26-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-7b964a26] investigate and decompose gap route-edit-e4e29b18: Edit repos/goal-host-vessel/src/r",
+  "description": "[narrowed from route-edit-7b964a26] investigate and decompose gap route-edit-e4e29b18: Edit repos/goal-host-vessel/src/registry-field.ts. The const named counted holds a matchAll regex whose alternation is how many|number of|total|count of. Add quantity of as a fifth alternative in that same alternation. Leave the other regex, the one listing totalshapes|totalvessels|healthycount, exactly as it is.",
+  "goal_text": "[narrowed from route-edit-7b964a26] investigate and decompose gap route-edit-e4e29b18: Edit repos/goal-host-vessel/src/registry-field.ts. The const named counted holds a matchAll regex whose alternation is how many|number of|total|count of. Add quantity of as a fifth alternative in that same alternation. Leave the other regex, the one listing totalshapes|totalvessels|healthycount, exactly as it is.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-7b964a26-narrowed",
+  "source_gap_source": "substrate_detected"
+}

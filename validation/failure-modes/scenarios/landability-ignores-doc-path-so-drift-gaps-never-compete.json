@@ -1,0 +1,19 @@
+{
+  "id": "landability-ignores-doc-path-so-drift-gaps-never-compete",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "landabilityScore never lets a documentation_drift gap compete, so the docs backlog is never worked: zero drift gaps appe",
+  "description": "landabilityScore never lets a documentation_drift gap compete, so the docs backlog is never worked: zero drift gaps appear in 429 picker decisions over 24 hours. Edit repos/development-vessel/src/resolvers/gap-to-feature.ts:727.",
+  "goal_text": "landabilityScore never lets a documentation_drift gap compete, so the docs backlog is never worked: zero drift gaps appear in 429 picker decisions over 24 hours. Edit repos/development-vessel/src/resolvers/gap-to-feature.ts:727.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "landability-ignores-doc-path-so-drift-gaps-never-compete",
+  "source_gap_source": "substrate_detected"
+}

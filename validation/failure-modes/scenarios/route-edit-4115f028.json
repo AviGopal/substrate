@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-4115f028",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-ca73164a: Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts",
+  "description": "investigate and decompose gap route-edit-ca73164a: Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts so the existing post-land test-suite check also runs as a PRE-cutover gate. Today resolveTestSuite runs only AFTER the commit lands, near line 2311; its failing-test names are diffed against the per-vessel baseline under /workspace/post-land-baseline/ and a substrateGap is filed for newly-failing tests. That per-test attribution",
+  "goal_text": "investigate and decompose gap route-edit-ca73164a: Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts so the existing post-land test-suite check also runs as a PRE-cutover gate. Today resolveTestSuite runs only AFTER the commit lands, near line 2311; its failing-test names are diffed against the per-vessel baseline under /workspace/post-land-baseline/ and a substrateGap is filed for newly-failing tests. That per-test attribution",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-4115f028",
+  "source_gap_source": "substrate_detected"
+}

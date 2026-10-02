@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-51b5d824",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/metric-collector-vessel/src/config.ts: change the in-code PORT default from 8280 to 8300. The current line is",
+  "description": "Edit repos/metric-collector-vessel/src/config.ts: change the in-code PORT default from 8280 to 8300. The current line is `export const PORT = parseInt(process.env[\"PORT\"] ?? \"8280\", 10);` and the default \"8280\" collides with light-dispatch-vessel's default of 8280. The metric-collector unit file already sets PORT=8300, so changing the in-code default to 8300 makes the unit override redundant rather than load-bearing. Change only the \"8280\" string literal to \"8300\" on that one line.",
+  "goal_text": "Edit repos/metric-collector-vessel/src/config.ts: change the in-code PORT default from 8280 to 8300. The current line is `export const PORT = parseInt(process.env[\"PORT\"] ?? \"8280\", 10);` and the default \"8280\" collides with light-dispatch-vessel's default of 8280. The metric-collector unit file already sets PORT=8300, so changing the in-code default to 8300 makes the unit override redundant rather than load-bearing. Change only the \"8280\" string literal to \"8300\" on that one line.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-51b5d824",
+  "source_gap_source": "substrate_detected"
+}

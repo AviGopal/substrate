@@ -1,0 +1,19 @@
+{
+  "id": "gap-artifact-expectation-violated-cycle-demo-3-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "auto",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from gap-artifact-expectation-violated-cycle-demo-3] Observation loop found a verified artifact no longer vali",
+  "description": "[narrowed from gap-artifact-expectation-violated-cycle-demo-3] Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mu8uyqot-jccftz/goal-host-vessel/src/index.ts\"}\n- syntax_break: src/index.ts(2602,14): error TS1005: ';' expected. | src/index.ts(2603,17): error TS1005: ';' expected. | src/index.ts(2604,15): error TS1005: ';' expected. | src/index.ts(2605,8): error TS1005: ';' e\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from gap-artifact-expectation-violated-cycle-demo-3] Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mu8uyqot-jccftz/goal-host-vessel/src/index.ts\"}\n- syntax_break: src/index.ts(2602,14): error TS1005: ';' expected. | src/index.ts(2603,17): error TS1005: ';' expected. | src/index.ts(2604,15): error TS1005: ';' expected. | src/index.ts(2605,8): error TS1005: ';' e\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-artifact-expectation-violated-cycle-demo-3-narrowed",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,29 @@
+[Unit]
+Description=M1 embedding-prior trainer (concept_KKwxHmPfEMSY)
+# Train ridge-regression θ_α/θ_β heads against variant_performance_metrics ⨯
+# concept-db embeddings. Writes one row per run into embedding_prior_weights;
+# posterior-update.ts consumes the latest row when EMBEDDING_PRIOR_ENABLED=true.
+After=activity-api.service
+Wants=activity-api.service
+
+# Smoke test:
+#   docker exec substrate-live systemctl start m1-trainer.service
+#   docker exec substrate-live journalctl -u m1-trainer.service --no-pager
+#   # Confirm a fresh ridge-v1-* row landed:
+#   curl -s http://localhost:18080/v2/admin/embedding-prior-weights | jq '.[0].model_version'
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+WorkingDirectory=/vessels/activity-api
+ExecStart=/root/.bun/bin/bun /vessels/activity-api/scripts/m1-train.ts
+StandardOutput=journal
+StandardError=journal
+# Exit 2 = "no training samples yet" (variants lack concept-db embeddings for
+# their signature) — a starvation no-op, not a fault. Treat it as success so the
+# unit doesn't sit in `failed` and mask genuine failures (exit 1). The starvation
+# is still visible in the journal (m1_train_data_collected with_embedding:0).
+SuccessExitStatus=2
+
+[Install]
+WantedBy=multi-user.target

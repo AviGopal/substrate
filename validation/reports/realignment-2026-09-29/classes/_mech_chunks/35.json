@@ -1,0 +1,175 @@
+{
+ "area": "pool-records",
+ "items": [
+  {
+   "name": "poolImpulse_write if_updated_at CAS",
+   "location": "4cd270d",
+   "purpose": "Compare-and-set against lost updates on pool rows",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Landed 09-27; settleRhythm and rhythm-seed share the same race class",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "goalContinuation poolImpulse",
+   "location": "design only",
+   "purpose": "Execution continuity",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 impl hits",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "autonomyScope reader + admission/verdict floor",
+   "location": "gap-to-feature.ts, feature-compose.ts, pool record autonomy-scope",
+   "purpose": "keep autonomous work off the lane core; require a falsifier class",
+   "status": "live-used",
+   "general": true,
+   "evidence": "autonomy_scope 68 exclusions per admission pass on 09-29",
+   "source": "openspec-7",
+   "mentions": 1,
+   "sources": [
+    "openspec-7"
+   ]
+  },
+  {
+   "name": "Joint-liveness tick / joint registry",
+   "location": "joint-liveness-tick.ts (08-25), pool registry 70254535",
+   "purpose": "Detect writer->reader joints going quiet",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "1 joint for 34 days; now 6, flags 3 every 30 min, 0 closed; masked on node 2",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "create-shape-provider-goal",
+   "location": "pool",
+   "purpose": "Mint shape provider goals",
+   "status": "broken",
+   "general": false,
+   "evidence": "101,633 runs, 0 ok, last run 07-13, row still live",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "learned-auto-bridge-*",
+   "location": "pool (28)",
+   "purpose": "Learned copies of bridges",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "947 runs, 4 ok",
+   "duplicates_of": "auto-bridge-*",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "autonomyScope + spend-envelope + compose chokepoint",
+   "location": "pool records (both nodes); gap-to-feature; feature-compose 6c86595",
+   "purpose": "Contain autonomous work by path scope, falsifier class and USD per hour",
+   "status": "live-used",
+   "general": true,
+   "evidence": "The envelope binds most hours at $2/h; leaks closed one at a time; node 2 needed mirrored records",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "spendEnvelope",
+   "location": "pool shape",
+   "purpose": "USD per hour cap and pause",
+   "status": "live-used",
+   "general": true,
+   "evidence": "$2/h; 85 refusals 09-28 23:34-00:28",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "autonomyScope",
+   "location": "pool shape (operator-authored)",
+   "purpose": "Containment: excluded_paths plus require_falsifier_classes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "27 excluded paths; oscillated 4 times in 48h",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "jointBinding severed-joint detectors",
+   "location": "pool shape, node 1 only",
+   "purpose": "Detect severed producer-to-reader joints (sql_newest, gap_count, discovery_*)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "5 records on node 1, 0 on node 2; boredom selects gap-goal:severed-joint-* 9 times",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "discardedLandingReport",
+   "location": "pool/discarded-landings.json(l)",
+   "purpose": "Hourly count of discarded landings",
+   "status": "unknown",
+   "general": false,
+   "evidence": "Always total 0 (704 rows)",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "drain-log",
+   "location": "pool/drain-log.jsonl",
+   "purpose": "Record gap-drain actions",
+   "status": "live-used",
+   "general": false,
+   "evidence": "180MB, 1.09M lines, unbounded",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "gap-compose/funnel-drain watchdog",
+   "location": "pool/watchdog-log.jsonl",
+   "purpose": "Restart stalled compose flows",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "5097 restarts; stalled_min 202 then 210 after restart, 383 open intents",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  }
+ ]
+}

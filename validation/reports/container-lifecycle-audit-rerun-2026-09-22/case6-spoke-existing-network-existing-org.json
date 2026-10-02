@@ -1,0 +1,98 @@
+{
+  "identity": {
+    "valid": true,
+    "org_id": "organizations:substrate",
+    "user_id": "users:b04tmzwb9cplav7pwpv8",
+    "key_id": "key_ww3r7l4nrhZ7Dsip",
+    "scopes": [
+      "read",
+      "write"
+    ],
+    "role": "user"
+  },
+  "registry": {
+    "status": 200,
+    "data": {
+      "totalVessels": 5,
+      "totalShapes": 66,
+      "healthyCount": 5
+    }
+  },
+  "bootstrap": {
+    "status": 200,
+    "data": {
+      "relay_multiaddrs": [
+        "/ip4/10.89.0.2/tcp/30333/p2p/12D3KooWMuYuRagN2jeir8MCaQFnMwUH7NoBnDduzcP3JYAfHkQ1"
+      ],
+      "identity_endpoint": "http://sla-0922r-80a33e-root-a:8101",
+      "discovery_endpoint": "",
+      "prefer_transport": "libp2p"
+    }
+  },
+  "units": {
+    "at": "2026-09-22T10:44:58.759272+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-spoke-existing-org",
+      "systemctl",
+      "list-units",
+      "--type=service",
+      "--state=running",
+      "--no-pager",
+      "--plain"
+    ],
+    "rc": 0,
+    "stdout": "UNIT                                LOAD   ACTIVE SUB     DESCRIPTION\ndbus.service                        loaded active running D-Bus System Message Bus\ndiscovery-vessel.service            loaded active running discovery-vessel\nfederation-transport-vessel.service loaded active running libp2p reachability + cross-substrate resolve-over-http + /health sensing surface.\ngoal-host-vessel.service            loaded active running goal-host-vessel\nhuman-surface-vessel.service        loaded active running human-surface-vessel\njournald-stdout-forwarder.service   loaded active running Forward all vessel logs to container stdout\nlight-dispatch-vessel.service       loaded active running light-dispatch-vessel \u2014 stateless oneshot dispatcher (Stage 2.B)\nlocal-tools-vessel.service          loaded active running local-tools-vessel\nsystemd-journald.service            loaded active running Journal Service\nsystemd-logind.service              loaded active running User Login Management\n\nLOAD   = Reflects whether the unit definition was properly loaded.\nACTIVE = The high-level unit activation state, i.e. generalization of SUB.\nSUB    = The low-level unit activation state, values depend on unit type.\n10 loaded units listed.\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  "config": {
+    "at": "2026-09-22T10:44:58.979059+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-spoke-existing-org",
+      "substrate-config",
+      "--json",
+      "ENDPOINT"
+    ],
+    "rc": 0,
+    "stdout": "{\n  \"RUNPOD_ENDPOINT_ID\": {\"source\": \"unrecorded\", \"value\": \"(empty)\"},\n  \"VLLM_ENDPOINTS\": {\"source\": \"unrecorded\", \"value\": \"(empty)\"},\n  \"DISCOVERY_ENDPOINT\": {\"source\": \"env\", \"value\": \"http://127.0.0.1:8100\"},\n  \"DISCOVERY_VESSEL_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://127.0.0.1:8100\"},\n  \"ACTIVITY_API_ENDPOINT\": {\"source\": \"env\", \"value\": \"http://sla-0922r-80a33e-root-a:8080\"},\n  \"PRODUCER_DISCOVERY_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://sla-0922r-80a33e-root-a:8080\"},\n  \"METABOB_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://sla-0922r-80a33e-root-a:8080\"},\n  \"IDENTITY_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://sla-0922r-80a33e-root-a:8101\"},\n  \"PEER_DISCOVERY_ENDPOINTS\": {\"source\": \"unrecorded\", \"value\": \"http://sla-0922r-80a33e-root-a:8100\"},\n  \"OBSIDIAN_PLUGIN_ENDPOINT\": {\"source\": \"unrecorded\", \"value\": \"http://127.0.0.1:27182\"}\n}\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  "transport": {
+    "status": 200,
+    "data": {
+      "status": "ok",
+      "service": "federation-transport-vessel@spoke-0c6e8d51",
+      "transport": {
+        "peerId": "12D3KooWCdE5YJTqWWg19JMBHNoyjWPabvHxjdVSwXrTXLD1xE3A",
+        "activeReservations": 1,
+        "reservationTtlRemainingMs": 3597085,
+        "connections": [
+          {
+            "peer": "12D3KooWMuYuRagN2jeir8MCaQFnMwUH7NoBnDduzcP3JYAfHkQ1",
+            "addr": "/ip4/10.89.0.2/tcp/30333/p2p/12D3KooWMuYuRagN2jeir8MCaQFnMwUH7NoBnDduzcP3JYAfHkQ1",
+            "limited": false,
+            "bytesRemaining": null,
+            "secondsRemaining": null
+          }
+        ],
+        "holePunchSuccess": 0,
+        "holePunchFail": 0,
+        "streamResets": 0,
+        "redialCount": 0,
+        "egressNoReservationCount": 0,
+        "lastRedialReason": "",
+        "reservationsHeld": 1,
+        "reservationRelays": [
+          "12D3KooWMuYuRagN2jeir8MCaQFnMwUH7NoBnDduzcP3JYAfHkQ1"
+        ],
+        "reservationExpiresInMs": 3597587,
+        "phantomSuspected": false
+      },
+      "libp2p_peer_id": "12D3KooWCdE5YJTqWWg19JMBHNoyjWPabvHxjdVSwXrTXLD1xE3A",
+      "libp2p_multiaddr": "/ip4/10.89.0.2/tcp/30333/p2p/12D3KooWMuYuRagN2jeir8MCaQFnMwUH7NoBnDduzcP3JYAfHkQ1/p2p-circuit/p2p/12D3KooWCdE5YJTqWWg19JMBHNoyjWPabvHxjdVSwXrTXLD1xE3A"
+    }
+  }
+}

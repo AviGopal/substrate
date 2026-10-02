@@ -1,0 +1,36 @@
+== Exp C: goal-host with ACTIVITY_API_ENDPOINT=http://127.0.0.1:9999 (dead). Does any error NAME the dead address? ==
+--- POST /run-goal response:
+{"dispatchId":"d59f1e65-e99e-4e71-8fa0-317b35dff5b4","status":"running"}
+
+== dispatch d59f1e65 outcome (journal verbatim) ==
+Sep 16 00:54:21 7c1d7b2ebc7f bun[729]: [goal-host-vessel] started on port 8210 | activity-api: http://127.0.0.1:9999 | producer-discovery: http://127.0.0.1:9999 | discovery: http://127.0.0.1:8100 | llm: vessel(http://127.0.0.1:8220)
+Sep 16 00:54:21 7c1d7b2ebc7f bun[729]: [goal-host-vessel] failed to register dev-vessel proxies: Unable to connect. Is the computer able to access the url?
+Sep 16 00:54:21 7c1d7b2ebc7f bun[729]: [DiscoveryRegistrationLoop] register failed: 401 — vessel will be unreachable via discovery
+Sep 16 00:54:25 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] started on port 8210 | activity-api: http://127.0.0.1:9999 | producer-discovery: http://127.0.0.1:9999 | discovery: http://127.0.0.1:8100 | llm: vessel(http://127.0.0.1:8220)
+Sep 16 00:54:25 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] failed to register dev-vessel proxies: Unable to connect. Is the computer able to access the url?
+Sep 16 00:54:25 7c1d7b2ebc7f bun[1156]: [DiscoveryRegistrationLoop] register failed: 401 — vessel will be unreachable via discovery
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [known-shapes] discovery /registry/shapes answered 401 — keeping an EMPTY vocabulary (no cache yet), which disables goal->target inference entirely
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [walk-concepts] recall SKIPPED — discovery named no concept-db row (neither a local http row nor a libp2p peer row)
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [walk-concepts] recall SKIPPED — discovery named no concept-db row (neither a local http row nor a libp2p peer row)
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [walk-concepts] concept-db could not be asked (no producer or transport error) — recall unavailable, NOT an empty result
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: Failed to resolve SHA for goal 'attribution probe: report the current substrate st...': 401 Unauthorized
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] emitAuthoringDecision(auto_draft_fallback_recommend) failed: Unable to connect. Is the computer able to access the url?
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [goal-host] goal-path record FAILED for a 1-step path (reached=false); this walk will not inform future reuse: Unable to connect. Is the computer able to access the url?
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: [ActivityApiAdapter] recommend transport error: Unable to connect. Is the computer able to access the url?
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: 609 |                 throw new Error(`GoalHost.runGoal: no template id returned for goal "${goalText.slice(0, 80)}" ` +
+Sep 16 00:55:04 7c1d7b2ebc7f bun[1156]: error: GoalHost.runGoal: no template id returned for goal "attribution probe: report the current substrate status" (fallback_tier=null). Pass opts.targetTemplateId to bypass the recommend step.
+Sep 16 00:55:25 7c1d7b2ebc7f bun[1156]: [goal-host-vessel] failed to register dev-vessel proxies: Unable to connect. Is the computer able to access the url?
+Sep 16 00:55:25 7c1d7b2ebc7f bun[1156]: [DiscoveryRegistrationLoop] heartbeat HTTP 401 (failure #1)
+
+== analysis: mentions of dead address 9999 in ERROR lines: 0 (both occurrences are the boot banner); every error is generic (bun 'Unable to connect' with NO url, '401 Unauthorized' with no validator named); final error suggests 'Pass opts.targetTemplateId' — wrong remedy for the actual cause (template store unreachable)
+
+== caveats ==
+- The fleet was NOT silent: [DiscoveryRegistrationLoop] register failed: 401 recurred
+  (goal-host unreachable via discovery). The claim is about ATTRIBUTION, not silence:
+  zero emitted error lines name the dead endpoint, and the one remedy offered is wrong.
+- The throw site is dist ias-executor code (goal-host.js:609), not the worktree
+  goal-host-vessel line numbers cited earlier in conversation; the verbatim trace in
+  expC-full-journal.txt is the citation.
+== replay note ==
+Exp B under a fake HOME additionally requires DOCKER_HOST=unix:///home/avi/.docker/desktop/docker.sock
+(and bun is not needed when the image already exists): docker CLI context lives under $HOME.

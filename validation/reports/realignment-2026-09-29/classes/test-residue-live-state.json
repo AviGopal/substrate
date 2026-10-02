@@ -1,0 +1,730 @@
+{
+ "attempts": [
+  {
+   "key": "test-residue-live-state",
+   "title": "Tests calling live services fix",
+   "where": "gap vessel-tests-call-live-services-so-the-suite-failure-count-tracks-substrate-load",
+   "date": "2026-08-29",
+   "tried": "Closed as fixed",
+   "outcome": "failed",
+   "evidence": "The same fixture gap ids (some-real-gap, flat-*-probe, placeholder-scrub-probe, heal-probe, gap-001, ...) appear in the 09-07, live (09-19) and node-2 (09-25) stores. Re-filed 09-05, 09-26 and 09-28.",
+   "source": "gap-history"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Incomplete mock factory disabled 53 test files",
+   "where": "858a30b, 7f19b1a (08-17), 64a24dd (08-22), 4377b99 (09-02)",
+   "tried": "Complete the mocks and add a mock-completeness detector",
+   "outcome": "worked",
+   "date": "2026-08-17",
+   "evidence": "Suite went from 509 to 769 passing; 22 hidden failures surfaced.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "bounded_shell wrote into super-repo checkouts",
+   "where": "local-tools 11636e6, goal-host 60833b4, ae957b5e",
+   "tried": "Move bounded_shell cwd to scratch; make checkouts read-only to local-tools",
+   "outcome": "partial",
+   "date": "2026-09-24..2026-09-25",
+   "evidence": "A second residue writer (not local-tools) was found 09-25 (c8a4bb4e). The node-1 clone now has 1,629 dirty entries, including literal '{{target_path}}' and '{{out_path}}' files",
+   "source": "git-deployment"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Test suite wrote to the real memory store",
+   "where": "5dc8ab8 (08-06)",
+   "tried": "Read WORKSPACE_ROOT at use time.",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "evidence": "The suite was self-poisoning run over run ('created' then 'updated').",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Tests and fixtures writing live stores",
+   "where": "1813930, 08-29 sweep (~40 commits), d7135b7, fd86777, 2974205, 7061bda, f451e42",
+   "tried": "Hermeticity fixes, NODE_ENV guard, env -i verify",
+   "outcome": "partial",
+   "date": "2026-08-28..09-29",
+   "evidence": "Super-repo root litter: trendcheck-*, temp_file.ts, {{out_path}}",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Bare satisfier wrote to live vessel source",
+   "where": "bee05ca",
+   "date": "2026-08-06",
+   "tried": "Stop satisfier writes to live source.",
+   "outcome": "worked",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Test suite wrote into the live trace-retry spool",
+   "where": "ias-executor-ts fdc9100",
+   "tried": "Isolate the spool dir in tests",
+   "outcome": "worked",
+   "date": "2026-08-21",
+   "evidence": "81/83 spool files were exec_test_1 debris; real traces at ranks 64 and 73 were never retried",
+   "source": "git-mid"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Autonomous lane edits test fake store",
+   "where": "concept-db d844020",
+   "tried": "Add INSERT handlers to the write-shapes test fake",
+   "outcome": "unknown",
+   "date": "2026-09-28",
+   "evidence": "Could be a legitimately incomplete test double or test-appeasing; not judged",
+   "source": "git-mid"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "verify-suite ephemeral registrations blind compose",
+   "where": "discovery 7cc9da4 (09-19), ffd1d58 (09-22)",
+   "tried": "evict dead rows at resolve; registration liveness guard",
+   "outcome": "partial",
+   "evidence": "4 incidents 09-19/20 needing a manual local-tools restart; symptom-side fix",
+   "source": "git-small"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "tests/fixtures pollute live stores",
+   "where": "2b049b7a, 914828a2, 947c8729, c62651ba, a009e1d9",
+   "tried": "Scrubbed test env (e6936725), restore guards",
+   "outcome": "partial",
+   "date": "2026-09-15..2026-09-28",
+   "evidence": "A test run registered a dead 127.0.0.1:20236 row in live discovery. The test runner inherits live DB creds (8-16k events/min). Node-2 gaps.json = 70 fixture rows",
+   "source": "git-super-2"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Operator experiment variants of trace-store-reconcile",
+   "where": "development-vessel:trace-store-reconcile-lease-ttl-120s / -release-before-verify / -swap-timeout-15min (created 09-24)",
+   "tried": "Hand-made variants to test reconcile fixes",
+   "outcome": "failed",
+   "date": "2026-09-24",
+   "evidence": "171/23 and 166/19 ok; the base reconcile is 470/110; the variants are left live as residue",
+   "source": "live-activities"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Test fixtures write the live gap store and other live stores",
+   "where": "development-vessel substrate-gap.test.ts, resolver-schema.test.ts; human-surface tests; local-tools tests",
+   "tried": "gaps filed 09-26 and 09-28; nothing retired",
+   "outcome": "failed",
+   "date": "2026-09-19..2026-09-28",
+   "evidence": "gap-001 reopen 1614; falsifier-*-001 plus narrowed children; 72 ledger-u-probe unaccounted landings; 94,188 fake feedback records; residue on both nodes",
+   "source": "live-gaps"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "memory-note reads WORKSPACE_ROOT at use time",
+   "where": "development-vessel 5dc8ab8",
+   "tried": "The unit test had been writing to the real store; the resolver now reads the path at call time",
+   "outcome": "partial",
+   "evidence": "Fixed the test self-poisoning. The single shared notes.json.tmp path and the swallow-to-[] load are unchanged.",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Scrub compose test-run env (env -i)",
+   "where": "f451e42",
+   "date": "2026-09-29",
+   "tried": "Stop compose bun test runs from inheriting GAP_STORE_ENDPOINT and similar live endpoints",
+   "outcome": "partial",
+   "evidence": "4 fixture rows were rewritten at 01:42-01:43 after it landed; a second channel via default discovery remains (CHECKINS 02:20)",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "substrate-gap.test.ts writes into the live gap store",
+   "where": "development-vessel/src/resolvers/substrate-gap.test.ts",
+   "tried": "(defect) cleanup by closing rows",
+   "outcome": "failed",
+   "date": "2026-09-12",
+   "evidence": "some-real-gap, dupe-1786176268999 selectable; recurred as 'test-fixture leak found' 947c8729 (09-28)",
+   "source": "memory-1"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Agent make -n destroyed substrate-live",
+   "where": "scripts/substrate/Makefile clean-live",
+   "tried": "Dry run of lifecycle targets",
+   "outcome": "failed",
+   "date": "2026-09-23",
+   "evidence": "$(MAKE) lines execute under -n; docker rm -f SIGKILLed the container",
+   "source": "memory-1"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Subagent verifier probes on live substrate",
+   "where": "hub/spoke /v2/activities/feedback",
+   "tried": "Subagents told READ-ONLY",
+   "outcome": "failed",
+   "date": "2026-08-02",
+   "evidence": "Attempted feedback writes (blocked only by masked port/404); one agent ran root SQL",
+   "source": "memory-2"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Dev-vessel test-suite repair",
+   "where": "2cf00d1, 6dd0cd3, efe7cd3, 5b41234, a47e1ba, 5f06788, 5525797, c173011, 046a3c5 etc.",
+   "tried": "17 commits: fixtures, mocks, layout walk-up, inverted deleted-policy tests.",
+   "outcome": "worked",
+   "date": "2026-08-29",
+   "evidence": "95 -> 41 fails. Found env_gate_fulfilled calling a route that exists nowhere. 21/36 remaining were live-service timeouts.",
+   "source": "memory-3"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Test suite pollution",
+   "where": "efe7cd3, fbbfd9b",
+   "tried": "Restore the fetch mocks; release the leaked lease",
+   "outcome": "partial",
+   "date": "2026-08-29",
+   "evidence": "One leaked live lease was named. Combinatorial triggers remain.",
+   "source": "memory-8"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Hermetic tests for live-service test class",
+   "where": "dev-vessel tests 616ff68, 7f5f454, 93060ef, 1cecf14",
+   "date": "2026-08-29",
+   "tried": "stub fetch; inject paths",
+   "outcome": "worked",
+   "evidence": "0 timeouts, identical failing set across runs; one test had been writing /workspace/locality index",
+   "source": "memory-9"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "State-dependent test blame detector",
+   "where": "self_interference_scan 44904fa + fc7789c",
+   "date": "2026-09-13",
+   "tried": "flag tests blamed across >=3 unrelated gaps",
+   "outcome": "partial",
+   "evidence": "detects 55 offenders (69% of blame pairs); the gate's own blame logic is not fixed (self-referential blocker)",
+   "source": "memory-9"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Prune abandoned mitosis dirs autonomously",
+   "where": "dev-vessel f45b079 prune_stale_mitosis",
+   "tried": "245 to 1 dirs via boredom",
+   "outcome": "worked",
+   "date": "2026-06-13",
+   "evidence": "self-audit reach restored",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "db-admin-repair test rail assertion rewrite",
+   "where": "repos/activity-api/src/routes/db-admin-repair.test.ts",
+   "tried": "Test asserts the backup SELECT, relying on the snapshot dying on ENOENT",
+   "outcome": "failed",
+   "evidence": "On substrate boxes /workspace/db-backups exists, so every suite run writes fake backups: 391/391 files on node 2 (a node with no DB) and 1766/1769 on node 1, all affected_count 7 rows [{c:7}].",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "bounded_shell default cwd + 503 retryable instead of walk fall-through",
+   "where": "local-tools index.ts, goal-host index.ts",
+   "date": "2026-09-25",
+   "tried": "C1 scratch cwd, trigger fix",
+   "outcome": "worked",
+   "evidence": "local-tools 11636e6 falsifier MET 06:03Z; goal-host 60833b4 RETRYABLE CAPACITY present live; detector 2.2 still open",
+   "source": "openspec-7"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Probe restore path fix: strip repos/ in extractProbeFilePaths",
+   "where": "development-vessel author-producer.ts; RUN10-FAIL-1838",
+   "tried": "Map repos/<v>/... to /vessels/<v>/..., where local-tools actually writes, instead of /vessels/repos/<v>, which never exists.",
+   "outcome": "unknown",
+   "date": "2026-09-25",
+   "evidence": "Dispatched. The live canary had been overwritten by a validation probe. The probe's side effects (git commits) are still unsandboxed (#60).",
+   "source": "reports-2"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Container git hooks stopped recording /tmp checkouts (#16)",
+   "where": "container hooks _record.sh",
+   "tried": "Fix at the source.",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "About 900 events per hour from reland-verdict fixtures before the fix.",
+   "source": "reports-2"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Isolated verification runner",
+   "where": "scripts/substrate/run-isolated-verification.sh",
+   "tried": "Run tests in user/mount/net/PID namespaces with chroot.",
+   "outcome": "dormant",
+   "date": "2026-09-14",
+   "evidence": "self-care: validated boundary probes; not wired into feature-compose.",
+   "source": "reports-6"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Isolate systemd-restart.test.ts",
+   "where": "development-vessel 54c3c2df",
+   "tried": "Autonomous test isolation landing.",
+   "outcome": "failed",
+   "date": "2026-09-14",
+   "evidence": "1 pass / 5 fail under the PATH trap; still invoked restart on a nonexistent unit.",
+   "source": "reports-6"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Scrubbed test environment",
+   "where": "local-tools ea07298; development-vessel f451e42",
+   "tried": "Run bun test under env -i.",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "Fixture gaps still rewritten afterwards through default discovery to live localhost; the class is open.",
+   "source": "reports-6"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "substrate-gap test suite starts real gap-compose.service",
+   "where": "b1353836 2026-08-30T16:48 dev-vessel d7135b7",
+   "tried": "test seam guard on systemctl spawn",
+   "outcome": "worked",
+   "date": "2026-08-30",
+   "evidence": "deterministic guard-on/off test",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Isolate polluting tests",
+   "where": "activity-api tests; gap store",
+   "tried": "ddmin to maintenance-lease.test.ts; reject 8 falsifier-* rows as test_pollution",
+   "outcome": "worked",
+   "date": "2026-09-01",
+   "evidence": "activity-template.test.ts made real calls to live :8080",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Causal-attempt-ledger graded runs to 3x10/10",
+   "where": "openspec/changes/causal-attempt-ledger, FINISH_LINE.md, ~/.cache harness master21-28.sh",
+   "date": "2026-09-26T05:10Z",
+   "tried": "12+ graded runs, 5 amendments, pick lease, operator stopgaps (gap-compose mask, boredom/funnel-drain timers stopped)",
+   "outcome": "partial",
+   "evidence": "Met 09-26 05:10 but 'The pass depended on stopgaps'; 0/36 boxes ticked; forward-fixed regressions settled held credit-eligible; settle policy left at 2-min test value",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Operator ran vessel tests inside live node 2",
+   "where": "compose2-live local-tools tests",
+   "date": "2026-09-28T01:40Z",
+   "tried": "restart local-tools; test runner c24444a/537e6c0 (single file, dead discovery addr)",
+   "outcome": "partial",
+   "evidence": "Fake discovery registration broke all node-2 composes ~20 min; later f451e42 env scrub still leaked 01:42",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "substrate-gap-falsifier test isolation via WORKSPACE_ROOT",
+   "where": "repos/development-vessel/test/resolvers/substrate-gap-falsifier.test.ts",
+   "tried": "Set WORKSPACE_ROOT before import to isolate the suite",
+   "outcome": "failed",
+   "evidence": "The test's own comments say it lost the import race and wrote to /workspace/git/super-repo/gaps/gaps.json. 8 falsifier-* fixture gaps are open live (detected_at 2026-09-01T00:00:00Z), with narrowed children created 09-27 and mirrored scenarios.",
+   "source": "validation-other-3"
+  }
+ ],
+ "problems": [
+  {
+   "key": "test-residue-live-state",
+   "symptom": "22 scratch DBs on the live SurrealDB; 260 oracle labels on fixture goals; probe concepts in the lesson corpus",
+   "root_cause": "Bisect and test work run against the live server and store",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Live uiFeedback journal ends with probe-panel/ghost-ask record; 12 gaps with literal '{{status}}'-style template statuses; container super-repo has 1629 dirty status lines",
+   "root_cause": "probes/templates write into live stores without isolation",
+   "last_seen": "2026-09-22..28",
+   "source": "docs-1"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "QUICK_VERIFICATION_GUIDE.md pre-push smoke tells operators to run vessel bun test suites and host activity-api on :8080, which operator memory records as mutating live state",
+   "source": "docs-3"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Untracked, un-gitignored Ed25519 PRIVATE key scripts/substrate/federation-relay/.relay-pub-key.protobuf (peer 12D3KooWLvbz...) from an ad-hoc 09-16 relay experiment; relay default key path writes into the source tree",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "root_cause": "RELAY_KEY_FILE defaults to ./relay-key.protobuf in the CWD, which is the source tree; the experiment mounted the tree",
+   "source": "federation-relay"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Fixed set of test-probe gaps written into every live store on both nodes, plus the attempt-ledger canary in parked landings",
+   "first_seen": "2026-08-03",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "The test suite inherits live WORKSPACE_ROOT and endpoints; no hermetic default",
+   "source": "gap-history"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Mocks amputate modules (53 files dead); namespace TDZ; seed fixtures in live DB; tests now contradict autonomous code (trace-window-bounds)",
+   "root_cause": "Global mock.module; tests share live config",
+   "first_seen": "2026-04-22",
+   "last_seen": "2026-09-11",
+   "recurrences": 5,
+   "source": "git-activityapi"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Untracked residue accumulates in in-container clones: 1,629 entries on node 1, including literal {{target_path}}/{{out_path}} files and 1,552 failure-mode scenarios",
+   "root_cause": "Walks, tests and LLM tool steps write with cwd or paths inside the super-repo clone. Unrendered template bindings are used as file paths. The drift-commit family later commits them",
+   "first_seen": "2026-09-13",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "source": "git-deployment"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Test suite writes into the real memory store; tracked runtime files cause host-sync rejects",
+   "first_seen": "2026-06-05",
+   "last_seen": "2026-08-09",
+   "recurrences": 3,
+   "root_cause": "Config frozen at import; runtime state tracked in git.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Tests, fixtures and batteries write live gap store, ledger and workspace; canary commits pushed",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-29",
+   "recurrences": 7,
+   "root_cause": "Tests inherit the live env and paths; no enforced sandbox until env -i (f451e42).",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Tests wrote into the live /workspace/trace-spool (81/83 files debris)",
+   "first_seen": "2026-08-21",
+   "last_seen": "2026-08-21",
+   "recurrences": 1,
+   "root_cause": "Production default path used as the test default",
+   "source": "git-mid"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Verify-suite ephemeral registrations left dead rows in the live registry, blinding compose",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-22",
+   "recurrences": 4,
+   "root_cause": "test processes register into production discovery",
+   "source": "git-small"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Test runs write live discovery/DB/event bus; fixtures in the live gap store",
+   "root_cause": "The test runner inherits the full live environment",
+   "first_seen": "2026-09-15",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "source": "git-super-2"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Auth checks recorded as execution and decision_outcome rows (auth_resolve_v1: 561,660 lifetime, 5,462 ok, org unknown); probe ids in the store (falsifier-probe, nonexistent-*, __conformance_probe_nonexistent__, ias-executor-ts-canary-test)",
+   "root_cause": "Telemetry and probes share the learning trace table",
+   "source": "live-activities"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "fixture gaps, probe repos, fake feedback and phantom discovery rows in live stores on both nodes",
+   "first_seen": "2026-09-01",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "root_cause": "tests inherit live env and endpoints; store isolation does not cover HTTP writes",
+   "source": "live-gaps"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Tests, subagents and dry runs write into live stores and posteriors, or destroy the container",
+   "root_cause": "No store isolation in resolver tests; read-only prompts that do not enumerate write classes; make -n executes $(MAKE)",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "source": "memory-1"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Probe overwrote live template; overlay tests ran against live tree; fixtures expired; first test run in fresh tree differs; probe batteries flooded memory store (578 notes)",
+   "root_cause": "Tests/probes share live stores and paths; success paths write",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-22",
+   "recurrences": 5,
+   "source": "memory-10"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Verifier subagents attempt live writes; diagnostic scans inflate DB memory; operator batteries hold dispatches",
+   "first_seen": "2026-07-22",
+   "last_seen": "2026-09-26",
+   "recurrences": 3,
+   "source": "memory-2"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Tests call live services (timeouts), module-scope mocks pollute, layout-dependent tests fail, probes touch live learning surfaces, and pull-sync erases docker cp verification.",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-14",
+   "recurrences": 5,
+   "root_cause": "Tests are not hermetic, and suite counts are compared across different bun versions, paths and loads.",
+   "source": "memory-3"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Tests write tracked gaps.json, wipe the push clone mid-cutover, and leave test files and probe templates on live stores",
+   "first_seen": "2026-07-27",
+   "last_seen": "2026-09-23",
+   "recurrences": 5,
+   "root_cause": "Test suites run against live paths (/workspace/git/vessels, gaps/gaps.json)",
+   "source": "memory-4"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "A test-fixture probe string ('author_producer validation probe content.') was drafted as an infrastructure file body. Probe templates pollute cold walks. Synthetic probe edges and labels were left in live stores.",
+   "root_cause": "Probes and harnesses run against live stores without an eval tenant or TTL.",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-08-08",
+   "recurrences": 3,
+   "source": "memory-5"
+  },
+  {
+   "key": "concurrent-operator-sessions",
+   "symptom": "Parallel sessions land colliding/duplicate fixes; provenance confused",
+   "root_cause": "multiple operator contexts on same repo; Substrate Autonomous identity on hand commits",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-08-28",
+   "recurrences": 5,
+   "source": "memory-6"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Probes/demo edits/test runs leave residue in live stores or origin",
+   "root_cause": "tests and walks write live stores; demo landings not reverted",
+   "first_seen": "2026-07-22",
+   "last_seen": "2026-09-20",
+   "recurrences": 5,
+   "source": "memory-6"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Test fixture exec_test_1 / activity.test is durable in the production store and retried every 10s. Probe templates and labels are left in live tables",
+   "root_cause": "Tests and probes write to live stores with no cleanup",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-08-17",
+   "recurrences": 3,
+   "source": "memory-7"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Tests and probes write to live stores (memory store, live lease, human journal, deployed tree, live template).",
+   "root_cause": "Paths frozen at module load, and live state kept in git-tracked or shared locations.",
+   "first_seen": "2026-07-31",
+   "last_seen": "2026-09-26",
+   "recurrences": 6,
+   "source": "memory-8"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Tests write to the live gap store and locality index; a fixture's network retries dominate the journal; 69% of test-gate blame is not draft-caused",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-13",
+   "recurrences": 5,
+   "root_cause": "Tests call live services without stubs; module-scope env mutation; the flake guard confirms determinism, not causation",
+   "source": "memory-9"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Probes, mitosis dirs, AI-authored vessels, and scratch namespaces persist in live state",
+   "first_seen": "2026-06-13",
+   "last_seen": "2026-09-29",
+   "recurrences": 6,
+   "root_cause": "probe processes self-register and are mirrored; no teardown or retraction path",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Fixture backups in /workspace/db-backups (391/391 node 2, 1766/1769 node 1); 50,766 /tmp entries on node 2 (46,159 / 4.8 GB on node 1); node 2 fossil gaps.json full of probe rows; /tmp/probe-ws 9.5 MB gap store; 68 tracked Substrate/Projects test files rewritten at runtime",
+   "root_cause": "Suites run on live boxes (verify/post-land gates about 260 dev-vessel runs/day) write to real /workspace paths and never clean their tmp dirs",
+   "first_seen": "2026-09-06",
+   "last_seen": "2026-09-29",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "The test gate rolled back 2.2 because a test encoded the old policy; lease-test path leaked cutover holds into other tests (2/12 -> 14/0)",
+   "root_cause": "tests share /tmp and live env; fixed by 80e168f and WORKSPACE_ROOT=mktemp discipline",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-27",
+   "recurrences": 2,
+   "source": "openspec-10"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "The test template gap-closing:test-valid-1780148026306 was selected for a real operator goal.",
+   "root_cause": "Test fixture templates were resident in the live selection pool.",
+   "first_seen": "2026-05-30",
+   "last_seen": "2026-05-30",
+   "recurrences": 1,
+   "source": "openspec-2"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Walk bounded_shell sed -i edits the super-repo submodule checkout",
+   "root_cause": "local-tools DEFAULT_CWD = super-repo; edit-intent compose 503 fell through to the walk",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-25",
+   "recurrences": 2,
+   "source": "openspec-7"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Test runs wrote the live gap store and registered a phantom local-tools endpoint; ledger-u-probe scratch-repo gaps remain in the live store",
+   "root_cause": "module-load race in substrate-gap-falsifier.test.ts; tests inherit live DISCOVERY env",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "source": "openspec-7"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Probes/tests write into live stores (battery notes 54% of memory, null scenario files, orphan fixture copies) and gates run against polluted baselines (167 failing tests)",
+   "root_cause": "No retire path for probe artifacts; tests depend on ambient env; experiments share lanes and posteriors with production",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-24",
+   "recurrences": 6,
+   "source": "reports-1"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Verification and validation code writes to live stores: a phantom gap in live gaps.json, the live canary overwritten, real git commits from probes, placeholder-filled gaps.",
+   "root_cause": "Verify instances, author_producer validateProducesShape and draft execution run against live stores and the real producers without a sandbox. The probe restore path mapped the wrong root.",
+   "first_seen": "2026-09-24 (#20)",
+   "last_seen": "2026-09-25 (RUN10-FAIL-1838)",
+   "recurrences": 5,
+   "source": "reports-2"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Test fixture https://activity.test retried in production (81% of trace sink errors, ~500/h); probe rows left in tuning params; live-tree test runs EADDRINUSE",
+   "root_cause": "Fixture config leaking into live goal-host; no DELETE route; tests bind ports owned by running vessel",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-08-21",
+   "recurrences": 3,
+   "source": "reports-3"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Tests write into live stores and services (trace spool debris, fixture gaps, 94k fake feedback rows, real systemctl restarts, events burst 8-16k/min, phantom discovery registration).",
+   "first_seen": "2026-08-21",
+   "last_seen": "2026-09-29",
+   "recurrences": 8,
+   "root_cause": "Modules capture WORKSPACE_ROOT or env at import; test runs inherit the live env and default discovery; each channel is fixed separately (fdc9100, ea07298, f451e42) and another remains.",
+   "source": "reports-6"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Settle window left at the 120 s acceptance value; canary fixtures make up 21 of 40 regressed settlements; bun-test fixtures inflate gaps opened (5,416); exec_test_1 retry loop; junk gap 'g.id'; about 200 junk root files",
+   "root_cause": "Tests and acceptance runs write to live stores; the pre-commit hook is not installed in substrate clones",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "source": "reports-7"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Probe traffic inflates reach 2.5x (7 of 12 achieved = the same arithmetic probe). The dry-run gap_to_feature probe runs a real sweep. Operator lineage contaminates quiet windows.",
+   "root_cause": "Probes and fixtures write to the same label corpus and stores that the metrics read",
+   "first_seen": "2026-09-02",
+   "last_seen": "2026-09-11",
+   "recurrences": 3,
+   "source": "reports-8"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Tests hit live activity-api / systemctl / gap store",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-02",
+   "recurrences": 3,
+   "root_cause": "Tests without isolation of endpoints and WORKSPACE_ROOT",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Tests and fixtures write live gap store, discovery, canary files",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-29T02:23Z",
+   "recurrences": 6,
+   "root_cause": "Store path fixed at module load; environment not scrubbed; tests default to live discovery",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "audit/probe residue in live substrate; unit-conversion goal minted empty UI panels",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-08-10",
+   "recurrences": 2,
+   "root_cause": "probes write through live stores",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Test fixture gaps (falsifier-*) are open in the live store, get narrowed children, and get scenarios",
+   "root_cause": "config.ts snapshots WORKSPACE_ROOT at import. The bun test shared process loses the race, so the suite writes the live gaps.json.",
+   "first_seen": "2026-09-01",
+   "last_seen": "2026-09-27",
+   "recurrences": 10,
+   "source": "validation-other-3"
+  }
+ ],
+ "claims": [
+  {
+   "key": "test-residue-live-state",
+   "claimed_at": "2026-09-22",
+   "claim": "SurQL gate wedge closed; 26/26 met (bisect campaign)",
+   "where": "operator memory; audit-scratch namespace",
+   "later": "22 scratch DBs from the campaign remain on the live SurrealDB server",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "test-residue-live-state",
+   "claimed_at": "2026-08-29",
+   "claim": "vessel tests calling live services: closed",
+   "where": "gap vessel-tests-call-live-services-so-the-suite-failure-count-tracks-substrate-load",
+   "later": "Fixture gaps re-written into live (09-19) and node 2 (09-25); re-filed 09-05, 09-26, 09-28",
+   "source": "gap-history"
+  },
+  {
+   "key": "test-residue-live-state",
+   "claimed_at": "2026-09-29T01:37Z",
+   "claim": "Test-run leak into live gap store fixed (f451e42)",
+   "where": "ac8b0aad 2026-09-29T01:37Z",
+   "later": "Fixture rows rewritten again 01:42-01:43; second leak path via localhost services",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "test-residue-live-state",
+   "claimed_at": "test suite comments (date unknown)",
+   "claim": "substrate-gap-falsifier.test.ts isolates itself by setting WORKSPACE_ROOT before import",
+   "where": "repos/development-vessel/test/resolvers/substrate-gap-falsifier.test.ts",
+   "later": "The test's own comments admit it lost the import race. 8 falsifier-* fixture gaps are open live, and narrowed children were created 2026-09-27.",
+   "source": "validation-other-3"
+  }
+ ]
+}

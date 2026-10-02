@@ -1,0 +1,16 @@
+In repos/development-vessel/src/resolvers/llm-completion-dispatch.ts, forward the caller-supplied `caller`, `task_type` and `dispatch_id` pointer fields to llm-resolver alongside `execution_id` so its spend summary names the spender instead of `unknown`. Apply exactly these 1 edits; each old text occurs exactly once:
+
+EDIT 1
+old:
+```
+    ...(typeof (pointer as { execution_id?: unknown }).execution_id === "string" ? { execution_id: (pointer as { execution_id?: string }).execution_id } : {}),
+```
+new:
+```
+    ...(typeof (pointer as { execution_id?: unknown }).execution_id === "string" ? { execution_id: (pointer as { execution_id?: string }).execution_id } : {}),
+    ...(typeof (pointer as { caller?: unknown }).caller === "string" ? { caller: (pointer as { caller?: string }).caller } : {}),
+    ...(typeof (pointer as { task_type?: unknown }).task_type === "string" ? { task_type: (pointer as { task_type?: string }).task_type } : {}),
+    ...(typeof (pointer as { dispatch_id?: unknown }).dispatch_id === "string" ? { dispatch_id: (pointer as { dispatch_id?: string }).dispatch_id } : {}),
+```
+
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

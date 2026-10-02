@@ -1,0 +1,1 @@
+{"improvement":"Implement synchronization to preserve approved cutovers and prevent race conditions when multiple composes target the same file.","reason":"Add locking to prevent second compose from discarding first's approved cutover."}

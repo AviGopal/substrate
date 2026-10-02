@@ -1,0 +1,19 @@
+{
+  "id": "pull-sync-diverged-super-repo",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "source_divergence",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "super-repo clone at /workspace/git/super-repo diverged from origin/dev; pull-sync refuses to force — needs triage",
+  "description": "super-repo clone at /workspace/git/super-repo diverged from origin/dev; pull-sync refuses to force — needs triage",
+  "goal_text": "super-repo clone at /workspace/git/super-repo diverged from origin/dev; pull-sync refuses to force — needs triage",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "pull-sync-diverged-super-repo",
+  "source_gap_source": "substrate_detected"
+}

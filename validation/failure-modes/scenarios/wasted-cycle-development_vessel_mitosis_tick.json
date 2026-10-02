@@ -1,0 +1,19 @@
+{
+  "id": "wasted-cycle-development_vessel_mitosis_tick",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "wasted_cycle",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Template development-vessel:mitosis-tick dispatched 24× with 100% zero-work (idle/error/failure/no-output) — circulating",
+  "description": "Template development-vessel:mitosis-tick dispatched 24× with 100% zero-work (idle/error/failure/no-output) — circulating without closing a learning cycle.",
+  "goal_text": "Template development-vessel:mitosis-tick dispatched 24× with 100% zero-work (idle/error/failure/no-output) — circulating without closing a learning cycle.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "wasted-cycle-development_vessel_mitosis_tick",
+  "source_gap_source": "substrate_detected"
+}

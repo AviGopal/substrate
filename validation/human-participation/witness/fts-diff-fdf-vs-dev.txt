@@ -1,0 +1,17 @@
+14a15
+> import { existsSync } from 'node:fs'
+1117c1118,1129
+<   for (const c of candidates) { try { if (existsSync(c)) return c } catch { /* next */ } }
+---
+>   // The catch USED to be silent, and that hid a real defect for a full cycle: `existsSync`
+>   // was never imported, so every candidate threw ReferenceError, every throw was swallowed
+>   // here, and the function fell through to the last candidate — the in-workspace copy this
+>   // whole function exists to stop depending on. Nothing typechecks scripts/, so a bare
+>   // undefined inside a silent catch is invisible to every gate we have. Say why a candidate
+>   // was skipped: a probe that cannot be STAT'd and a probe that is ABSENT are different
+>   // failures and must not read the same.
+>   for (const c of candidates) {
+>     try { if (existsSync(c)) return c } catch (e) {
+>       console.error(`[fed-transport] probe candidate ${c} could not be checked: ${String((e as Error)?.message ?? e)}`)
+>     }
+>   }

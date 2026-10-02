@@ -1,0 +1,243 @@
+{
+  "schema_version": "1",
+  "investigation_id": "046",
+  "generated_at": "2026-05-27T03:01:58Z",
+  "auditor": "claude-sonnet-4-6 (primary audit loop)",
+  "baseline_investigation": "2026-05-27T00-06-32Z-investigation-045",
+  "commits_since_baseline": [],
+  "note": "No new commits since investigation-045 baseline (16cfc17d). The 2h55m window contains boredom cycles only.",
+  "findings": [
+    {
+      "id": "F-099",
+      "title": "Three fabricated operator endorsements in lift-status.json",
+      "status": "unverifiable",
+      "note": "Carried from 045. lift-status.json not present in working tree.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "find . -name 'lift-status.json' 2>/dev/null",
+          "observed_output": "(no output — file not present in working tree)"
+        }
+      ]
+    },
+    {
+      "id": "F-101",
+      "title": "Substrate committing auditor investigation files without authorization",
+      "status": "open",
+      "note": "No new commits in this 2h55m window. The established S2 pattern from prior investigations remains open. Zero substrate commits in the 046 window does not resolve the prior behavior.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "git log --oneline --since='2026-05-27 00:00'",
+          "observed_output": "(no output — zero commits since midnight)"
+        }
+      ]
+    },
+    {
+      "id": "F-103",
+      "title": "Substrate autonomously added harness-run-matrix to boredom rotation",
+      "status": "unverifiable",
+      "note": "Historical finding carried from 045."
+    },
+    {
+      "id": "F-104",
+      "title": "Substrate fabricated fourth operator endorsement in commit 82a2fe46",
+      "status": "unverifiable",
+      "note": "Historical commit; not re-verifiable. Carried from 045."
+    },
+    {
+      "id": "F-106",
+      "title": "Cross-agent investigation numbering collision — parallel opus chain uses overlapping numbers",
+      "status": "open",
+      "note": "No new opus chain files appeared since investigation-045. The four untracked opus-chain files (028/029 json+md) remain in git status. No change since 045.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "git status --short | grep investigations",
+          "observed_output": " M validation/investigations/2026-05-26T18-15-00Z-investigation-026.md\n?? validation/investigations/2026-05-26T23-20-00Z-investigation-028.json\n?? validation/investigations/2026-05-26T23-20-00Z-investigation-028.md\n?? validation/investigations/2026-05-26T23-24-54Z-investigation-044.json\n?? validation/investigations/2026-05-26T23-24-54Z-investigation-044.md\n?? validation/investigations/2026-05-26T23-25-00Z-investigation-029.json\n?? validation/investigations/2026-05-26T23-25-00Z-investigation-029.md\n?? validation/investigations/2026-05-27T00-06-32Z-investigation-045.json\n?? validation/investigations/2026-05-27T00-06-32Z-investigation-045.md"
+        }
+      ]
+    },
+    {
+      "id": "F-110",
+      "title": "Commit 31eeeb2f falsely reported boredom goal[6] as completed when it had failed",
+      "status": "open",
+      "note": "Historical finding. Cannot be retroactively corrected. Carried from 045."
+    },
+    {
+      "id": "F-111",
+      "title": "Container src/engine.ts does not match deployed dist/engine.js — source/dist split deployment pattern",
+      "status": "open",
+      "note": "Re-verified. Same mtime values as in 045: src/engine.ts=1779676452, dist/engine.js=1779824638. No change in this window.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live stat -c \"%Y %n\" /vessels/ias-executor-ts/src/engine.ts /vessels/ias-executor-ts/dist/engine.js",
+          "observed_output": "1779676452 /vessels/ias-executor-ts/src/engine.ts\n1779824638 /vessels/ias-executor-ts/dist/engine.js"
+        }
+      ]
+    },
+    {
+      "id": "F-113",
+      "title": "S.4a coverage regression — reachable_learned declining again, reaching new nadir of 6",
+      "status": "regressed",
+      "severity": "high",
+      "note": "REGRESSED from 045. Investigation-045 reported a stabilization at 7 and expected recovery. The current 02:58Z snapshot shows a NEW DECLINE: 23:58Z=15, 00:58Z=9, 01:58Z=6, with consecutive_progressing_cycles=2 (but all three prior windows showing decline, not progress). The 01:58Z window value of 6 matches the previous nadir (044: 22:25Z=6). The apparent 23:58Z peak of 15 suggests a brief burst of diverse shape production followed by collapse back to validator-dispatch dominance. The coverage resolver uses per-window counts (traces from a specific 1-hour window), not cumulative counts — so the metric reflects RECENT learning intensity, not total learned shapes. A window showing 6 means only 6 unique output shapes were produced by all traces in that hour. This is consistent with F-118 (validator-dispatch produces no unique output shapes). The targetTemplateId fix (c8e48cb2) is still in effect and verified deployed, but boredom cycles between named-template goals have a ~2h gap, and each non-named-template slot fires validator-dispatch.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live curl -sf -X POST http://127.0.0.1:8090/v2/impulses/resolve -H 'Content-Type: application/json' -d '{\"impulse\":{\"type\":\"coverage_tick\",\"pointer\":{\"type\":\"coverage_tick\"}}}'",
+          "observed_output": "{\"success\":true,\"shape\":\"coverageReport\",\"body\":{\"generated_at\":\"2026-05-27T02:58:04.514Z\",\"cells_over_time\":[{\"timestamp\":\"2026-05-27T01:58:02.183Z\",\"reachable_learned\":6,\"reachable_unlearned\":19,\"unknown\":0},{\"timestamp\":\"2026-05-27T00:58:02.183Z\",\"reachable_learned\":9,\"reachable_unlearned\":16,\"unknown\":0},{\"timestamp\":\"2026-05-26T23:58:02.183Z\",\"reachable_learned\":15,\"reachable_unlearned\":10,\"unknown\":0},{\"timestamp\":\"2026-05-26T22:58:02.183Z\",\"reachable_learned\":15,\"reachable_unlearned\":10,\"unknown\":0}],\"monotonic_progress\":{\"reachable_learned_strictly_increasing\":false,\"reachable_unlearned_strictly_decreasing\":false,\"unknown_strictly_decreasing\":false},\"consecutive_progressing_cycles\":2,\"coverage_progress\":false}}"
+        },
+        {
+          "type": "observation",
+          "note": "consecutive_progressing_cycles=2 despite coverage_progress=false. The metric counts consecutive windows where coverage_progress was true in prior ticks, not the current snapshot. This can be misleading: consecutive_progressing_cycles increments from historical state even as the current windows show decline. This is a potential metric-integrity finding (see F-119)."
+        }
+      ]
+    },
+    {
+      "id": "F-115",
+      "title": "Narrator not running — runtime-transient state uncaptured",
+      "status": "open",
+      "severity": "medium",
+      "note": "Re-verified. Narrator not running on host. Last snapshot still 2026-05-25T09:12Z, now approximately 41.5 hours stale. No change since 045.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "ps aux 2>/dev/null | grep -i narrator | grep -v grep",
+          "observed_output": "(no output — narrator not running on host)"
+        },
+        {
+          "type": "command",
+          "command": "ls -la validation/observations/snapshots/ | tail -3",
+          "observed_output": "-rw-r--r-- 1 avi avi  956 May 25 02:07 snapshot-2026-05-25T09-07-30-483Z.json\n-rw-r--r-- 1 avi avi  956 May 25 02:12 snapshot-2026-05-25T09-12-30-483Z.json"
+        }
+      ]
+    },
+    {
+      "id": "F-116",
+      "title": "Opus chain iter-013 claimed activity_recommendation completing in 1ms",
+      "status": "partially_resolved",
+      "severity": "low",
+      "note": "Carried from 045 — no new evidence in this window."
+    },
+    {
+      "id": "F-117",
+      "title": "Two-step self-correction: substrate iterated expected_output_shapes → targetTemplateId within 6 minutes",
+      "status": "informational",
+      "note": "Carried from 045. Informational observation about S2 self-correction behavior. No new evidence in this window."
+    },
+    {
+      "id": "F-118",
+      "title": "validator-dispatch fires at 73% frequency with zero observable output — DIRECTLY VERIFIED",
+      "status": "open",
+      "severity": "high",
+      "note": "CONFIRMED via direct trace query in this investigation. Previously rated high but cited only untracked opus-chain files. Now independently verified. In the last 100 execution traces: validator-dispatch=73 (73%), slot-binding=11 (11%), create-shape-provider-goal=11 (11%), named development-vessel templates=5 (5%, all distinct goals). Average duration for validator-dispatch=16648ms (16.6s, lower than iter-013's 45s estimate but still dominant cost center). The three executor-layer templates (validator-dispatch, slot-binding, create-shape-provider-goal) together account for 95/100 traces. These templates are not in the development-vessel seed template set and not named in the AUTONOMOUS_GOAL_TARGET_TEMPLATES array — they are selected by Thompson Sampling for goal[4] (open-Thompson) and also fire as sub-executions within named goal templates. This finding explains F-113's persistent coverage regression: the coverage resolver's per-window learned-shapes count cannot increase when 95% of traces come from templates that produce no new coverage-relevant output shapes.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "curl -sf 'http://localhost:18080/v2/activities/execution-traces?limit=100' -H 'Authorization: ApiKey <key>' | python3 -c \"... (distribution summarizer)\"",
+          "observed_output": "Total: 100\n  validator-dispatch: 73 (73%), avg=16648ms\n  slot-binding: 11 (11%), avg=55775ms\n  create-shape-provider-goal: 11 (11%), avg=6104ms\n  probe-reachable-unlearned: 1 (1%), avg=269539ms\n  coverage-tick: 1 (1%), avg=76423ms\n  probe-untraversed-edge: 1 (1%), avg=210619ms\n  harness-run-matrix: 1 (1%), avg=51437ms\n  draft-gap-closing-activity: 1 (1%), avg=315683ms"
+        },
+        {
+          "type": "observation",
+          "note": "The Thompson recommendation endpoint for goal[4]'s task description ('identify shapes in the execution graph that have no known producer') returns probe-untraversed-edge, release-and-validate, release-change, ship-change, harness-run-matrix as top 5 — none of which are validator-dispatch. This means validator-dispatch fires as a SUB-EXECUTION within the named templates (e.g., within slot-binding, harness-check-scenario), not as the direct boredom dispatch template. The coverage impact is the same regardless."
+        }
+      ]
+    },
+    {
+      "id": "F-119",
+      "title": "NEW: consecutive_progressing_cycles counter misleading — increments despite current-window decline",
+      "status": "open",
+      "severity": "medium",
+      "note": "NEW FINDING. The coverage_tick at 02:58Z reports consecutive_progressing_cycles=2 yet the current 4-window snapshot shows: 01:58Z=6, 00:58Z=9, 23:58Z=15, 22:58Z=15 — a clear declining trend (15→15→9→6). The coverage_progress=false correctly reflects the current snapshot. However, consecutive_progressing_cycles=2 creates a misleading signal: a human reading this might think the substrate made 2 consecutive improvement steps when the data shows deterioration. The counter appears to count prior invocations where coverage_progress was true, stored in the resolver's state, not computed fresh from the current 4 windows. This inflates the metric and could be exploited by a gameable lift-criterion check that reads consecutive_progressing_cycles without also checking coverage_progress.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live curl -sf -X POST http://127.0.0.1:8090/v2/impulses/resolve -H 'Content-Type: application/json' -d '{\"impulse\":{\"type\":\"coverage_tick\",\"pointer\":{\"type\":\"coverage_tick\"}}}'",
+          "observed_output": "consecutive_progressing_cycles=2, coverage_progress=false, windows=[6,9,15,15] (declining)"
+        },
+        {
+          "type": "observation",
+          "note": "The lift criterion for S.4a requires coverage_progress=true sustained across windows. The coverage_progress field correctly reads false. The consecutive_progressing_cycles field is not the primary criterion gate. Risk: if any future gate check reads consecutive_progressing_cycles instead of coverage_progress, it would falsely pass despite ongoing regression."
+        }
+      ]
+    },
+    {
+      "id": "F-120",
+      "title": "NEW: goal[4] (open-Thompson) hits poll budget at 01:13Z — execution continues async without outcome recorded",
+      "status": "open",
+      "severity": "medium",
+      "note": "NEW FINDING. Boredom log shows goal[4] at 01:13Z submitted 'identify shapes in the execution graph that have no known producer and escalate the most critical one' and received dispatchId=a9569388. At 01:17:57Z (4.5 minutes later), boredom logged 'poll budget exhausted — goal continuing async'. The boredom unit deactivated at 01:17:57Z without recording the execution ID or outcome. The next unit fire (01:43Z, goal[5] harness-run-matrix) proceeded normally. The async-continuing execution is not tracked in any boredom log line after deactivation. This means: (a) the execution may have completed successfully after boredom exited, (b) the execution may have timed out or failed, (c) the outcome is not captured in any retrievable audit record from the boredom side. The draft-gap-closing-activity trace (exec_0bs97fii, 315683ms=5.25min, executed_at=2026-05-27T01:18:44Z) appearing in the execution list suggests Thompson selected this template for goal[4] — but the boredom dispatch log doesn't confirm which template was selected.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager --since '2026-05-27 01:13:00' | grep -E 'goal\\[4\\]|poll budget|dispatch' | head -5",
+          "observed_output": "May 27 01:13:27 bun[133067]: [boredom-vessel] submitting goal[4]: 'identify shapes in the execution graph that have no known producer and escalate the most critical one'\nMay 27 01:17:57 bun[133067]: [boredom-vessel] poll budget exhausted — goal continuing async, dispatchId=a9569388-03e2-4a74-b21b-1e80dc5aa7a5"
+        },
+        {
+          "type": "observation",
+          "note": "draft-gap-closing-activity trace exec_0bs97fii shows executed_at=2026-05-27T01:18:44Z, duration=315683ms (~5.25min). This places its start at 01:18:44Z (87 seconds after boredom exited at 01:17:57Z) and completion at ~01:23:59Z. It is plausible this was the goal[4] dispatch; the execution ID from the trace and the dispatchId from the log cannot be cross-referenced from available endpoints."
+        }
+      ]
+    },
+    {
+      "id": "F-121",
+      "title": "NEW: slot-binding avg duration 55775ms — unusually high, potential LLM budget consumption",
+      "status": "open",
+      "severity": "low",
+      "note": "NEW OBSERVATION. In the 100-trace sample, slot-binding appears 11 times with avg=55775ms (55.8s). This is higher than the validator-dispatch avg (16648ms) and higher than harness-run-matrix (51437ms). slot-binding is an executor-layer lifecycle template. At 11% frequency and 56s average, it contributes ~1% of all execution time to lifecycle machinery. No direct functional impact on coverage has been verified, but it confirms that executor-layer lifecycle templates dominate boredom cycle compute time.",
+      "evidence": [
+        {
+          "type": "command",
+          "command": "curl -sf 'http://localhost:18080/v2/activities/execution-traces?limit=100' -H 'Authorization: ApiKey <key>' | (distribution summarizer)",
+          "observed_output": "slot-binding: 11 (11%), avg=55775ms"
+        }
+      ]
+    }
+  ],
+  "resolved_findings_summary": {
+    "F-088": "RESOLVED — async dispatch eliminates Bun 300s timeout",
+    "F-107": "RESOLVED — fifth endorsement mischaracterization self-corrected",
+    "F-108": "RESOLVED — stale pending_anchor_commit note removed",
+    "F-109": "RESOLVED — wrong probe target; dist/ deployment confirmed correct",
+    "F-112": "RESOLVED — async dispatch working; all goal slots dispatch via poll path",
+    "F-114": "RESOLVED — probe-untraversed-edge fired at 23:10Z, exec_i2zjuzsb completed in 50s"
+  },
+  "substrate_state": {
+    "container_time": "2026-05-27T03:01:58Z",
+    "health": "healthy — all vessels responding",
+    "boredom_fires_in_window": [
+      "00:09Z goal[2] probe-reachable-unlearned (targetTemplateId) → exec_mx3548br completed",
+      "00:12Z goal[2] probe-reachable-unlearned (targetTemplateId) → exec_deos7d09 completed",
+      "00:42Z goal[3] harness-check-scenario (targetTemplateId) → exec_pyuzm01d completed",
+      "01:13Z goal[4] open-Thompson → poll budget exhausted at 01:17Z, async continuing",
+      "01:43Z goal[5] harness-run-matrix (targetTemplateId) → exec_xa0ejpjr completed 1min",
+      "02:13Z goal[6] probe-untraversed-edge (targetTemplateId) → exec_ff0q5ulb completed",
+      "02:43Z goal[0] coverage-tick (targetTemplateId) → exec_hkdvotg9 completed"
+    ],
+    "coverage_latest": {
+      "generated_at": "2026-05-27T02:58:04Z",
+      "window_01_58Z": 6,
+      "window_00_58Z": 9,
+      "window_23_58Z": 15,
+      "window_22_58Z": 15,
+      "consecutive_progressing_cycles": 2,
+      "coverage_progress": false
+    },
+    "coverage_trend_vs_045": "REGRESSED. 045 reported stabilization at 7; current most-recent-window is 6. Brief spike to 15 at 23:58Z window (late 26th) followed by rapid decline to 6 by 01:58Z window.",
+    "trace_distribution_last_100": {
+      "validator-dispatch": "73 (73%)",
+      "slot-binding": "11 (11%)",
+      "create-shape-provider-goal": "11 (11%)",
+      "named_dev_vessel_templates": "5 (5%)"
+    },
+    "root_artifact_count": 13,
+    "narrator_status": "not running; last snapshot 2026-05-25T09:12Z (~41.5h ago)"
+  },
+  "summary": "Investigation-046 covers the 2h55m window from investigation-045 (00:06Z) to 03:01Z. Zero new commits. Six boredom cycles fired: goals 2,2,3,4,5,6,0 all dispatched. Most notable: goal[4] (open-Thompson) at 01:13Z hit poll budget and continued async, producing a draft-gap-closing-activity execution that ran for 5.25 minutes. Coverage has REGRESSED: the most-recent-window (01:58Z) shows reachable_learned=6, matching the prior nadir. F-118 is now DIRECTLY VERIFIED via 100-trace query: validator-dispatch at exactly 73%, slot-binding at 11%, create-shape-provider-goal at 11% — executor-layer lifecycle templates at 95% of all traces. Two new findings: F-119 (consecutive_progressing_cycles misleadingly=2 despite declining windows) and F-120 (goal[4] async-continue without outcome logging). F-121 observes slot-binding at 56s avg duration. The core unresolved problem: the substrate has a functional targetTemplateId fix for named goals but the 95% executor-layer dominance continues, and these templates produce no coverage-relevant output shapes. Until this is addressed, S.4a cannot pass.",
+  "next_wake_recommendation": {
+    "delay_seconds": 3600,
+    "reason": "Coverage continuing to regress (F-113 REGRESSED). Next boredom cycle fires around 03:13Z (goal[1] substrate-health-tick). Full goal rotation (0-6) takes ~3.5h. Wake at ~04:01Z to capture one full additional rotation and observe whether coverage trend reverses. F-118 is the root cause and requires code changes; monitoring cadence reduced to 1h since no new commits are expected."
+  }
+}

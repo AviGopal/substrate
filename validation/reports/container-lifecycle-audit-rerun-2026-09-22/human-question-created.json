@@ -1,0 +1,28 @@
+{
+  "status": 200,
+  "data": {
+    "resolved": true,
+    "success": true,
+    "shape": "uiQuestion_write",
+    "body": {
+      "id": "audit-required-question",
+      "title": "Audit: choose a deployment scope",
+      "body": {
+        "text": "Synthetic test. No real deployment will be authorized."
+      },
+      "kind": "question",
+      "importance": "medium",
+      "asks": [
+        {
+          "id": "scope",
+          "prompt": "Choose a scope",
+          "type": "text"
+        }
+      ],
+      "visibility": "public",
+      "revision": 1,
+      "createdAt": 1790074035316,
+      "updatedAt": 1790074035316
+    }
+  }
+}

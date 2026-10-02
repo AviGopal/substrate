@@ -1,0 +1,176 @@
+{
+ "area": "openspec",
+ "items": [
+  {
+   "name": "behaviorBaseline",
+   "location": "openspec 2026-05-31 fleet-federation R1.4.2",
+   "purpose": "Adaptive baselines for detectors",
+   "status": "dormant",
+   "general": true,
+   "evidence": "09-01 implemented in no vessel",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "observe-detect-resolve (guardian vessels, findings, resolution tiers)",
+   "location": "openspec only",
+   "purpose": "Security immune loop",
+   "status": "fossil",
+   "general": true,
+   "evidence": "9/10 shapes absent; doc says specified-not-implemented",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "stray openspec JSON drafts (7 in shard)",
+   "location": "openspec/changes/*.json",
+   "purpose": "drafter scratch plans for goal_summary/http_response",
+   "status": "fossil",
+   "general": false,
+   "evidence": "committed by 4e4170a8; read by nothing",
+   "source": "openspec-7",
+   "mentions": 1,
+   "sources": [
+    "openspec-7"
+   ]
+  },
+  {
+   "name": "openspec/changes http-response strays (fix-http-response-resolver, http-response-camel, httpResponse, new-*-http-response-resolver, http-response-types, http-response-resolver)",
+   "location": "openspec/changes/*.ts|.js|.d.ts|.map",
+   "purpose": "Drafted replacement resolvers",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "repos/development-vessel/src/resolvers/http-response.ts",
+   "evidence": "No readers (grep of repos/*/src and scripts); import paths invalid",
+   "source": "openspec-8",
+   "mentions": 1,
+   "sources": [
+    "openspec-8"
+   ]
+  },
+  {
+   "name": "openspec/changes http-response strays (17 in range, ~60 overall)",
+   "location": "openspec/changes/*http-response*, impulses-patch.json",
+   "purpose": "abandoned resolver drafts plus their tsc emit",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "repos/development-vessel/src/resolvers/http-response.ts",
+   "evidence": "none landed; the live fix is 5be029a",
+   "source": "openspec-9",
+   "mentions": 1,
+   "sources": [
+    "openspec-9"
+   ]
+  },
+  {
+   "name": "openspec/changes http-response resolver variants",
+   "location": "openspec/changes/*http-response*.ts/.js/.map (6 variants)",
+   "purpose": "Autonomous draft residue",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "Added 4e4170a8/796fac89",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "Stray goal-summary / http-response draft artifacts",
+   "location": "openspec/changes/2026-08-16-*, 2026-08-17-*.json",
+   "purpose": "Drafted change plans never applied",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Nothing reads them; delete",
+   "source": "openspec-5",
+   "mentions": 1,
+   "sources": [
+    "openspec-5"
+   ]
+  },
+  {
+   "name": "drafter ad-hoc edit-spec payloads (5 schemas)",
+   "location": "openspec/changes/2026-08-17-*.json, 2026-08-18-*.json and the stray dirs",
+   "purpose": "Edit payloads from gap-compose era drafting.",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Never applied; delete all 17 entries.",
+   "source": "openspec-6",
+   "mentions": 1,
+   "sources": [
+    "openspec-6"
+   ]
+  },
+  {
+   "name": "orphaned-capability-resolution placeholder shape",
+   "location": "openspec/changes/2026-08-17-orphaned-capability-resolution/",
+   "purpose": "Placeholder resolver returning constant resolved:true.",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Never applied; hollow by construction.",
+   "source": "openspec-6",
+   "mentions": 1,
+   "sources": [
+    "openspec-6"
+   ]
+  },
+  {
+   "name": "gap-msvqgv4y JSONs",
+   "location": "openspec/changes/gap-msvqgv4y-*.json",
+   "purpose": "Scenario, patch and closure for the uiPanel_write orphan gap",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Patch never applied; the gap is not in the store",
+   "source": "openspec-8",
+   "mentions": 1,
+   "sources": [
+    "openspec-8"
+   ]
+  },
+  {
+   "name": "parity gate tools seam-extract.ts / parity-check.ts",
+   "location": "operator job tmp; openspec 2026-07-15-vessel-maintenance-parity-gate",
+   "purpose": "Deterministic behavior-neutral file splits",
+   "status": "fossil",
+   "general": true,
+   "evidence": "Used for 5 operator cycles; never minted as activities.",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "change-window / autonomous_pick / trace_store leases",
+   "location": "resumable-landings (openspec archived 09-24)",
+   "purpose": "Hold autonomous work during windows; park and resume patches",
+   "status": "live-used",
+   "general": true,
+   "evidence": "e3768a74, 38508fad, 2f12cf01",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "Auto-revert",
+   "location": "specified in 5 openspec changes",
+   "purpose": "System reverts regressions",
+   "status": "fossil",
+   "general": true,
+   "evidence": "None since 08-01; never built per specs",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  }
+ ]
+}

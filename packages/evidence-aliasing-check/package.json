@@ -1,0 +1,9 @@
+{
+  "name": "@avigopal/evidence-aliasing-check",
+  "version": "0.1.0",
+  "description": "Lint check: a field consumed as evidence by an elapsed-time or accumulation computation must have exactly one writer",
+  "type": "module",
+  "scripts": {
+    "check": "bun check.ts"
+  }
+}

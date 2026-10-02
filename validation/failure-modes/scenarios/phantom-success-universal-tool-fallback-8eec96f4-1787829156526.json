@@ -1,0 +1,19 @@
+{
+  "id": "phantom-success-universal-tool-fallback-8eec96f4-1787829156526",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "trace_quality",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Phantom-success trace universal-tool-fallback-8eec96f4-1787829156526: status=success but task_count=0 (template=universa",
+  "description": "Phantom-success trace universal-tool-fallback-8eec96f4-1787829156526: status=success but task_count=0 (template=universal-tool-fallback, duration_ms=0). Engine pre-flight rejection credits success without a real task body, polluting Thompson posteriors.",
+  "goal_text": "Phantom-success trace universal-tool-fallback-8eec96f4-1787829156526: status=success but task_count=0 (template=universal-tool-fallback, duration_ms=0). Engine pre-flight rejection credits success without a real task body, polluting Thompson posteriors.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "phantom-success-universal-tool-fallback-8eec96f4-1787829156526",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,163 @@
+{
+  "investigation_id": "057",
+  "generated_at": "2026-05-27T22:27:28Z",
+  "investigator_session_id": "loop-iteration-session-continuation",
+  "prior_investigation_id": "2026-05-27T17-15-08Z-investigation-056",
+  "substrate_target": "http://localhost:18080",
+  "substrate_status": "healthy — 5h quiescent; boredom clean",
+
+  "critical_summary": "5h quiescent since investigation-056 (last commit a8f985b4 at 17:15Z). No new commits. Boredom operating cleanly: 10 successful fires, all 7 goals completing via async dispatch (no F-088 recurrence). S.4a coverage_progress=True with consecutive=4. Closure-audit 7/7 independently verified. Push-away surface shows 21 durable refusals in 24h. Two new findings: F-142 — dev-response-012 misrepresents test-gate-overlap as HTTP 200 promoted when all 3 durable records show cold_start_no_similar K=0 refusals; F-143 — promote-gate neighbor-lookup query returns K=0 for all candidates including templates with exact output_shape match (coverage-tick, output_shapes=['coverageReport']), rendering Beta-Binomial projection dead code.",
+
+  "new_findings": {
+    "F-142": {
+      "id": "F-142",
+      "title": "dev-response-012 misrepresents test-gate-overlap verification as HTTP 200 promoted",
+      "severity": "MEDIUM",
+      "category": "factual-misrepresentation",
+      "first_seen_in": "investigation-057",
+      "status": "open",
+      "claim": "dev-response-012 (2026-05-27T19:15Z) states: 'Test 2 — shape overlap with high-α producers: POST /templates/test-gate-overlap/promote → HTTP 200, action: promoted'. Refusal_events table shows test-gate-overlap was refused 3 times with cold_start_no_similar K=0 at 16:57Z, 18:52Z, and 19:09Z (6 minutes before the dev-response was written). Template test-gate-overlap no longer exists in registry. No promotion record exists for it.",
+      "evidence": [
+        {
+          "type": "durable_refusal_store",
+          "command": "curl -sf 'http://localhost:18080/v2/activities/refusals/stats?window_seconds=604800' -H 'Authorization: ApiKey $METABOB_API_KEY'",
+          "observed": "3 entries with task_description containing 'test-gate-overlap', all refusal_type='promote_gate_below_threshold', all reason='cold_start_no_similar K=0', at 16:57Z, 18:52Z, 19:09Z"
+        },
+        {
+          "type": "template_registry",
+          "command": "curl -sf 'http://localhost:18080/v2/activities/templates?q=test-gate' -H 'Authorization: ApiKey $METABOB_API_KEY'",
+          "observed": "{templates: [], total: 0} — test-gate-overlap not present in registry"
+        },
+        {
+          "type": "promote_gate_stats",
+          "command": "curl -sf 'http://localhost:18080/v2/activities/promote-gate/stats' -H 'Authorization: ApiKey $METABOB_API_KEY'",
+          "observed": "by_decision: {promote: 0, refused: 1} — no promotion decisions recorded in durable table"
+        }
+      ],
+      "pattern": "Same as F-102 (boredom health misrepresentation). Substrate states a passing test result in a verification section while the durable store records only failures."
+    },
+    "F-143": {
+      "id": "F-143",
+      "title": "Promote-gate neighbor-lookup returns K=0 for all templates including exact output-shape matches",
+      "severity": "MEDIUM",
+      "category": "implementation-defect",
+      "first_seen_in": "investigation-057",
+      "status": "open",
+      "claim": "The promote-gate's Jaccard similarity step is consistently returning K=0 neighbors for every template tested, including test-gate-overlap (output_shapes=['coverageReport']). Template coverage-tick exists in registry with proposed=False, output_shapes=['coverageReport'], and Jaccard similarity to test-gate-overlap = 1/5 = 0.2 > 0. Despite this, the gate reports K=0. This means the Beta-Binomial projection logic (the primary purpose of the gate) is never reached — every refusal is cold_start_no_similar. The promote-gate as implemented is a cold-start refuser, not a statistical projection gate.",
+      "evidence": [
+        {
+          "type": "coverage_tick_template",
+          "command": "curl -sf 'http://localhost:18080/v2/activities/templates?q=coverage-tick' -H 'Authorization: ApiKey $METABOB_API_KEY'",
+          "observed": "id='activity:\\u27e8development-vessel:coverage-tick\\u27e9', output_shapes=['coverageReport'], input_shapes=['activity_metrics','goal','trace'], proposed=False"
+        },
+        {
+          "type": "refusal_records",
+          "observed": "All 7 promote_gate_below_threshold refusals in refusal_events have K=0. No refusal with K>0 exists. Projection code unreachable."
+        },
+        {
+          "type": "promote_gate_stats",
+          "observed": "mean_k=0 across all evaluations recorded in promote_gate_evaluations table"
+        }
+      ],
+      "hypothesis": "SurrealDB candidate query uses tenant-scoped SELECT against 'activity' view but the org_id of the API key used by promote endpoint may not match the org_id of seeded development-vessel templates. Alternatively, the query syntax for proposed=false AND retired=false may be failing silently and returning empty. Either way the neighbor pool is empty for every probe."
+    }
+  },
+
+  "s4a_status": {
+    "coverage_progress": true,
+    "consecutive_progressing_cycles": 4,
+    "window_design": "non_overlapping_rolling_v2",
+    "cells": [
+      {"window": "21:24-22:24Z", "reachable_learned": 2, "trace_count": 2, "new_shapes": 1},
+      {"window": "20:24-21:24Z", "reachable_learned": 3, "trace_count": 3, "new_shapes": 3},
+      {"window": "19:24-20:24Z", "reachable_learned": 3, "trace_count": 2, "new_shapes": 3},
+      {"window": "18:24-19:24Z", "reachable_learned": 1, "trace_count": 2, "new_shapes": 1}
+    ],
+    "total_advertised_shapes": 34,
+    "total_learned_unique": 8,
+    "coverage_fraction": 0.235,
+    "meta_activities_excluded": ["validator-dispatch", "slot-binding", "create-shape-provider-goal"],
+    "verified_at": "2026-05-27T22:24:14Z",
+    "note": "coverage_progress=True is structurally correct — non-overlapping windows, 4 consecutive all showing new_shapes_introduced >= 1. This is a genuine positive signal."
+  },
+
+  "boredom_status": {
+    "since_investigation_056": "2026-05-27T17:15Z",
+    "fires": [
+      {"time": "17:15Z", "goal": "[6]", "result": "completed", "exec": "exec_8c6ln4cg"},
+      {"time": "17:45Z", "goal": "[2]", "result": "completed", "exec": "exec_vug9ceys"},
+      {"time": "18:14Z", "goal": "[3]", "result": "submitted (no dispatched log)"},
+      {"time": "18:45Z", "goal": "[4]", "result": "completed", "exec": "exec_jb854ocr"},
+      {"time": "19:15Z", "goal": "[5]", "result": "completed", "exec": "exec_x1kwbbf0"},
+      {"time": "19:45Z", "goal": "[6]", "result": "completed", "exec": "exec_wz92h0nq"},
+      {"time": "20:15Z", "goal": "[0]", "result": "completed", "exec": "exec_1nmt8w63"},
+      {"time": "20:45Z", "goal": "[1]", "result": "completed", "exec": "exec_ddta8bgx"},
+      {"time": "21:15Z", "goal": "[2]", "result": "completed", "exec": "exec_oi7rb58a"},
+      {"time": "21:48Z", "goal": "[3]", "result": "completed", "exec": "exec_40wyw86d"},
+      {"time": "22:15Z", "goal": "[4]", "result": "completed", "exec": "exec_75hnvkxt"}
+    ],
+    "f088_status": "CLOSED — async dispatch (ac0d75b5) eliminated Bun 300s timeout; 11 fires since investigation-056 with zero failures",
+    "note": "Goal[3] at 18:14Z shows no 'dispatched' log line within the grep window — likely completed outside the log capture range."
+  },
+
+  "closure_audit": {
+    "result": "7/7 CLOSED",
+    "verified_at": "2026-05-27T22:25Z",
+    "command": "bun validation/scripts/closure-audit.ts",
+    "properties": {
+      "operator-memory": "CLOSED — memoryNote resolver live",
+      "slash-skills": "CLOSED — 14 required resolver shapes present",
+      "subagents": "CLOSED — goal-host-vessel healthy",
+      "github-actions": "CLOSED — failure_mode_matrix_score resolver present",
+      "operator-shell": "CLOSED — systemd_restart + substrate_health_tick present",
+      "operator-spec-authoring": "CLOSED — 5 spec-authoring shapes present",
+      "push-away": "CLOSED — refusal pathway + stats endpoint + durable recording verified"
+    }
+  },
+
+  "push_away_surface": {
+    "total_refusals_24h": 21,
+    "by_type": {
+      "no_producer_for_expected_shapes": 12,
+      "promote_gate_below_threshold": 7,
+      "hallucinated_resolvers_in_template": 2
+    },
+    "promote_gate_stats": {
+      "total_in_durable_table": 1,
+      "by_decision": {"promote": 0, "refused": 1},
+      "by_reason": {"cold_start_no_similar": 1},
+      "mean_k": 0,
+      "note": "Durable promote_gate_evaluations table (migration 141) only has 1 record — iter-21 test at 22:07Z. Prior promote-gate refusals (7 in refusal_events) predate migration 141 and are not mirrored."
+    },
+    "note": "Push-away surface functional and durable. However F-143 shows the promote-gate's projection engine is unreachable (K always 0). Gate is operating as a cold-start blocker only, not as the Beta-Binomial projection gate the substrate claims."
+  },
+
+  "new_proposals": {
+    "count": 0,
+    "note": "No new proposal files. 9 proposals from 2026-05-22 remain in validation/failure-modes/proposals/. draft-gap-closing-activity goal[5] fires at 19:15Z (exec_x1kwbbf0) — this was harness-run-matrix, not draft-gap-closing. Boredom goal rotation doesn't include draft-gap-closing-activity in current targetTemplateId assignments.",
+    "draft_gap_closing_status": "goal[5] in current boredom rotation = harness-run-matrix (targetTemplateId=development-vessel:harness-run-matrix). The draft-gap-closing-activity was removed from boredom rotation in a prior investigation period."
+  },
+
+  "commits_since_056": {
+    "count": 0,
+    "last_commit": "a8f985b4",
+    "last_commit_time": "2026-05-27T22:08:58Z",
+    "quiescent_duration": "approximately 5h11m"
+  },
+
+  "prior_findings_status": {
+    "F-142": "NEW MEDIUM — dev-response-012 misrepresents test-gate-overlap as promoted",
+    "F-143": "NEW MEDIUM — promote-gate K=0 bug; projection engine unreachable",
+    "F-141": "open — ias-executor-ts no GitHub remote (operator action required)",
+    "F-140": "open — F-number namespace collision pattern (3rd occurrence)",
+    "F-101": "open — structural choice: historical substrate-authored files in validation/investigations/",
+    "F-088": "CLOSED — async dispatch eliminates Bun timeout; 11 clean fires since inv-056",
+    "F-099": "resolved — superseded by real operator commits",
+    "F-130": "resolved — dev-responses/ namespace created"
+  },
+
+  "next_wake_recommendation": {
+    "delay_seconds": 7200,
+    "rationale": "5h quiescent post-promote-gate iter 21. Coverage_progress=True for consecutive=4. Two new medium findings (F-142, F-143) don't require immediate action — F-143 is a latent defect in the promote-gate. No new proposals, no new commits. 2h polling appropriate."
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "precondition-rejection-activity-_compose-auto-bridge-source_code-to-ribosome-extract_-2026-09-19",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "missing_concept",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Template activity:⟨compose-auto-bridge-source_code-to-ribosome-extract⟩ pre-flight-rejected 1 time(s): duration 397-397m",
+  "description": "Template activity:⟨compose-auto-bridge-source_code-to-ribosome-extract⟩ pre-flight-rejected 1 time(s): duration 397-397ms, tasks_completed=0. Likely cause: unsatisfiable inputShapes (F25).",
+  "goal_text": "Template activity:⟨compose-auto-bridge-source_code-to-ribosome-extract⟩ pre-flight-rejected 1 time(s): duration 397-397ms, tasks_completed=0. Likely cause: unsatisfiable inputShapes (F25).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "precondition-rejection-activity:⟨compose-auto-bridge-source_code-to-ribosome-extract⟩-2026-09-19",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,1278 @@
+{
+ "attempts": [
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Unbounded gap-compose watchdog reflex",
+   "where": "scripts/substrate/watchdog-tick.ts; gap-compose.service journal",
+   "tried": "On stall, the watchdog fires gap_to_feature once per tick",
+   "outcome": "failed",
+   "date": "2026-09-29",
+   "evidence": "263 watchdog_restart actions and 0 other actions in 24 h. Each returns ok:200, yet stalled_min climbs 191\u2192195 and open_intents 376\u2192382. There is no global attempt budget or repetition bound (only a per-fire attempts counter at line 148), which violates SOFTWARE \u00a75's own reflex-tier rule. Two possible causes are not told apart: an operator quiet-window mask, or restarts that never touch WATCHDOG_ACTIVITY_PATHS.",
+   "source": "docs-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "self-recovery 'immune system'",
+   "where": "scripts/substrate/self-recovery-tick.sh (6f5e1bdd \u2192 16 commits)",
+   "tried": "Auto-restart unhealthy vessels and SurrealDB",
+   "outcome": "partial",
+   "date": "2026-06-20..2026-09-16",
+   "evidence": "Repeatedly autoimmune: 92b1b1fa, fc143654, 44250006, 1d9190eb ('holding the door shut on the cure'), ad9da780 ('bound the recovery reflex')",
+   "source": "git-deployment"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Compose concurrency and capacity slots",
+   "where": "8ec501b (07-16), 6ad3721, 68a26de, 84712c5, 070f71e, 36dd9b7, 5f965b8, bf7fac0 (08-10..11)",
+   "tried": "Worktree isolation, then a cross-process cap with a directed-goal reservation and BUSY semantics.",
+   "outcome": "worked",
+   "date": "2026-08-10",
+   "evidence": "36dd9b7 'REFUSED does not queue, it dies'. feature_compose now 1949 runs/7d at 19.6% ok, $30.87.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Change-window starvation and double restarts",
+   "where": "b001631, 62e174a, named leases (ace49c0...), 60f4469, 46d252c, 404a89c",
+   "tried": "Named leases, restart coalescing",
+   "outcome": "worked",
+   "date": "2026-09-23..09-24",
+   "evidence": "Cutovers deferred 45 times in 90 min before",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Compose BUSY/503 falls through to a walk (5 fixes)",
+   "where": "01ef41e, 4ba7bbd, eed0ccf, ee4622a, 2cc8af7, 60833b4",
+   "date": "2026-07-05..09-25",
+   "tried": "Refuse retryably on BUSY or draining.",
+   "outcome": "partial",
+   "evidence": "The edit-intent decision is duplicated at EARLY (12683) and late (13304/13365) routes. It reappeared on 09-25.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Boredom spend envelope duplicated from dev-vessel",
+   "where": "boredom-vessel f28bc06",
+   "tried": "About 85 lines reimplementing spendEnvelopeAllows",
+   "outcome": "unknown",
+   "date": "2026-09-27",
+   "evidence": "The comment names dev-vessel gap-to-feature.ts as the source it mirrors",
+   "source": "git-mid"
+  },
+  {
+   "key": "llm-plane-availability",
+   "title": "LLM plane dark, repeatedly",
+   "where": "llm-resolver d327b2d..b712872 (07-14), 17dc3d0 (07-17), 5b199b3 (07-22), 3fa37f0/cbf029a (07-24), b9b68d8/3839090 (07-31), 0768990 (08-07), c5e49d3/3068940/dd9d886 (08-10), d508933 (08-12), 3ea2136 (08-18)",
+   "tried": "fallback walks, model cooldowns, pin-as-preference, seeded arms, NaN fix, dark-plane gap, invalid-key failover",
+   "outcome": "partial",
+   "evidence": "43h fleet dry on an invalid key while openrouter was funded; the policy behaved as a single point of failure",
+   "source": "git-small"
+  },
+  {
+   "key": "llm-plane-availability",
+   "title": "savePolicy tmp-file race",
+   "where": "llm-resolver fce8203 (09-26 SA, live-only)",
+   "tried": "serialise saves with unique tmp paths",
+   "outcome": "worked",
+   "evidence": "157 arm outcomes lost in 2 min before",
+   "source": "git-small"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Boredom timeout ladder",
+   "where": "71feaeff, 985117ed, eb179580, 106b1f0b, c6f13b75, 666a77c7, 63d39383, 83656824",
+   "date": "2026-05-25..06-18",
+   "tried": "TimeoutStartSec 90 to 300 to 600; AbortSignal 8 min added then removed; in-flight 300 to 900 s bumped 3 times; dev-vessel 90 to 600 s",
+   "outcome": "partial",
+   "evidence": "the real root cause was Bun capping AbortSignal at 300 s plus the async-dispatch fix ac0d75b5/d048b889; the rest were symptom edits",
+   "source": "git-super-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Throughput-paced boredom pool daemon",
+   "where": "30938781",
+   "date": "2026-06-04",
+   "tried": "replace the timer with MAX_CONCURRENT=3 pool, then UCB1 scoring (2517d309)",
+   "outcome": "unknown",
+   "evidence": "a second selector (UCB1) alongside Thompson; 30 more cadence timers were added anyway",
+   "source": "git-super-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "goal-host memory/OOM iterations",
+   "where": "da22a979, 837584ee, 46a06b9b, c142759d, d314fda6, 654377fa",
+   "date": "2026-05-31..06-03",
+   "tried": "Bun.gc workaround (then propagated to all vessels ec395a27), MemoryMax 3G, ablations, streaming refactor, VmRSS leak bound",
+   "outcome": "partial",
+   "evidence": "the streaming refactor crashed dispatches and was fixed the same day (d314fda6)",
+   "source": "git-super-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "resumable landings + leases",
+   "where": "5489b05a..a9b7a913, 2f12cf01, e3768a74",
+   "tried": "Park verified patches, restart budgets, named trace_store lease, autonomous_pick lease",
+   "outcome": "worked",
+   "date": "2026-09-24..2026-09-25",
+   "evidence": "Park, resume and push observed end to end. 0 auto-picks inside the graded window",
+   "source": "git-super-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "value-per-cost envelope and containment",
+   "where": "143972d0..29597771, 065510a7, 4f830f37, 3d4ce31e, a1826314",
+   "tried": "A spend envelope of 1-2 USD/h, autonomyScope, a feature-compose chokepoint",
+   "outcome": "partial",
+   "date": "2026-09-26..2026-09-28",
+   "evidence": "Undirected composes bypassed the paused envelope until a1826314. Supply collapsed under containment (40fff5db)",
+   "source": "git-super-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Self-restart kills in-flight compose, 9+ hats",
+   "where": "vessel-mitosis-cutover.ts, long-running.ts",
+   "tried": "404a89c (gap_to_feature long-running), bf74cc5 (impulse.type), selfRestartAlreadyOwed helper (26 failed attempts, closed)",
+   "outcome": "partial",
+   "date": "2026-09-20..2026-09-25",
+   "evidence": "every-restart-budget-is-shorter-than-a-compose (16 restarts, 4 lost composes in 3h) and consecutive-landings... still open",
+   "source": "live-gaps"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Slow-query remedy pinned to nonexistent template",
+   "where": "db_performance_slow_queries_2026-09-18T16",
+   "tried": "gap-drain re-dispatch",
+   "outcome": "failed",
+   "date": "2026-09-18..2026-09-25",
+   "evidence": "118 failed attempts (store maximum); 39 of 53 unreached drains in 24h",
+   "source": "live-gaps"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "spendEnvelope at $2/h",
+   "where": "pool spendEnvelope",
+   "date": "2026-09-27",
+   "tried": "Hourly USD cap; paused after 3 refuted landings, then reopened",
+   "outcome": "partial",
+   "evidence": "85 refusals on node 1 between 09-28 23:34 and 00:28; operator directed landings draw from the same envelope",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Goal-host run-goal coalesce dedup",
+   "where": "goal-host 055406c, 7e121c4",
+   "tried": "Return the existing dispatchId for an identical running goal",
+   "outcome": "worked",
+   "date": "2026-07-21",
+   "evidence": "Pool 50->3; 45 concurrent copies before",
+   "source": "memory-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Compose-horizon cooldown map",
+   "where": "gap-to-feature.ts:1552 bc6daac",
+   "tried": "Per-gap GAP_COMPOSE_COOLDOWN_MS candidate filter",
+   "outcome": "worked",
+   "date": "2026-07-21",
+   "evidence": "Flapper 4/4 -> 1/4. Upstream global single-slot trigger + summary flap left open; 09-14 18 nudges/h dropped",
+   "source": "memory-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Anthropic-only drafting; credit outage",
+   "where": "feature-compose.ts:1228 7e1590f, patch-with-tools.ts:286 03e51d3, model-policy 517d75c, e149a18, 279496b",
+   "tried": "model 'auto' + per-(task_type x model) Thompson",
+   "outcome": "worked",
+   "date": "2026-07-16",
+   "evidence": "selectArm over 8 arms. Vestigial cascade ~727 not deletable (goal-host pins claude-haiku)",
+   "source": "memory-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Seed rhythm registry",
+   "where": "poolImpulse timeShapedRhythm; rhythm-conductor-tick",
+   "date": "2026-09-07",
+   "tried": "13 rhythms + meta-rhythm budget 0.05",
+   "outcome": "worked",
+   "evidence": "Auditors 241/day -> 1 per 10 min; fire->decay->yield verified",
+   "source": "memory-10"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "maintenanceLease self-deadlock",
+   "where": "development-vessel 3f4be28",
+   "tried": "Only take the proposal lease when the change-window acquire failed open",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "Every proposal cutover had refused itself; landings resumed",
+   "source": "memory-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Per-compose worktree isolation",
+   "where": "development-vessel 8ec501b, e5fd6c9, f655c8d",
+   "tried": "Detached worktrees per compose, sync at land time, janitor",
+   "outcome": "worked",
+   "date": "2026-07-17",
+   "evidence": "3 concurrent substrate commits daebbae / f745998 / c2f1bb7",
+   "source": "memory-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Boredom cheap-tick demotion bug",
+   "where": "boredom e7987d9e",
+   "tried": "Exempt gap-goal 202 handoff from the cheap classification",
+   "outcome": "worked",
+   "date": "2026-07-22",
+   "evidence": "CPU 1500%\u2192220% together with the flywheel fix",
+   "source": "memory-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Quiet graded window for causal-attempt-ledger",
+   "where": "openspec causal-attempt-ledger; cbdb432, a4923f2, 429c8bd, 128f51f",
+   "tried": "Hold 4 window-blind dispatchers",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "3\u00d710/10 after cold boot; ~9 failed attempts were caused by the system around the ledger",
+   "source": "memory-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "LLM plane diagnosed as 'all dead / quota death' repeatedly",
+   "where": "llmModelPolicy rev8; d08774a failover; hub arm policies",
+   "tried": "Shaped policy writes, llm-completion-dispatch failover, hub egress.",
+   "outcome": "partial",
+   "date": "2026-07-20",
+   "evidence": "Refuted 3+ times (07-20, 07-23, 07-26): the hub was funded and the roots were disjoint arms and no failover. On 09-11 the real cause was credentials: anthropic invalid, openrouter -$0.20, chutes $0, GROQ/MISTRAL keys empty.",
+   "source": "memory-3"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "spawnSync systemctl start froze dev-vessel on every gap write",
+   "where": "dev-vessel substrate-gap.ts ~1048, ca53600 (operator)",
+   "tried": "Added --no-block (operator-authored).",
+   "outcome": "worked",
+   "date": "2026-09-14",
+   "evidence": "Gap write 0.2s; 14/14 health checks 200; no wedge. Previously 36 picks/hour produced 0 cutovers. Five wrong explanations came first.",
+   "source": "memory-3"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Load-induced test timeouts charged to drafter",
+   "where": "feature-compose.ts classifyEnvironmentFailure (cutovers only)",
+   "tried": "Proposed an env_test_timeout label on verify.",
+   "outcome": "unknown",
+   "date": "2026-09-06",
+   "evidence": "Odds ratio 3.34; about 100 approvals lost (~10% of all FAVORABLE). bumpFailedAttempts also feeds the calibration seal.",
+   "source": "memory-3"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Concurrent composes on one path discard approved cutovers",
+   "where": "db-admin-repair.ts; hand-landed 8e0c579",
+   "tried": "Operator hand-landed after the same failure twice; filed a gap.",
+   "outcome": "partial",
+   "date": "2026-09-06",
+   "evidence": "2 in flight against a cap of 1. No reconciliation between FAVORABLE verdicts and pushed shas.",
+   "source": "memory-3"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Runaway satisfier shell commands",
+   "where": "local-tools-vessel sh() 6fb9282",
+   "tried": "Substrate-authored AbortSignal.timeout(30000); operator killed 5 awk processes.",
+   "outcome": "worked",
+   "date": "2026-07-24",
+   "evidence": "CPU 2183% -> 992%. Reaping of orphaned children was not verified.",
+   "source": "memory-3"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "change_window lease livelock by trace-store-reconcile",
+   "where": "trace-store-reconcile seed; ias-executor interpolateBoundValues 2893a93",
+   "tried": "Diagnosed 08-09; recurred 09-23; the root (946034c blanking {{\u2026}} \u2192 empty lease_token) was fixed by the substrate",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "Retention still removes ~76 rows/h against ~1,190/h ingest, so reconcile keeps re-running",
+   "source": "memory-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "LLM plane credit-dead / federation transport never installed",
+   "where": "repos/libp2p-federation-transport bun install; host relay migration",
+   "tried": "Install the missing deps and hand-migrate the host relay with the same peer id.",
+   "outcome": "partial",
+   "date": "2026-08-10",
+   "evidence": "32 completions in 15 min afterwards, but dead local arms stay selectable. Recurred 09-19 with an invalid key and an exhausted account.",
+   "source": "memory-5"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Rate-limit tier + funded arm seeding + provider reorder",
+   "where": "llm-resolver-vessel 3fa37f0, cbf029a, 9716cce",
+   "date": "2026-07-24",
+   "tried": "45s cooldown for 429, seed groq/mistral arms, failover insertion order",
+   "outcome": "superseded",
+   "evidence": "worked 07-24; 08-20 all groq slugs decommissioned => 6 phantom arms retired rev 14",
+   "source": "memory-6"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Apply-loop bounded retry + recommit cap",
+   "where": "development-vessel cd28e65, 12e7611",
+   "date": "2026-07-27",
+   "tried": "try K proposals per cycle; cap recommit depth",
+   "outcome": "partial",
+   "evidence": "proposals 1670->85; backlog was 97% failure reports; stage ~18%",
+   "source": "memory-6"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Cross-process compose cap",
+   "where": "development-vessel 6ad3721, 68a26de (compose-slots)",
+   "date": "2026-08-10",
+   "tried": "file-marker slots bound composes across processes; NaN fallback",
+   "outcome": "worked",
+   "evidence": "load 50.8->11.1 (and 25->4.8); duplicate in-process draft by parallel session",
+   "source": "memory-6"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Directed vs autonomous compose priority",
+   "where": "EDIT_INTENT_COMPOSE_TIMEOUT_MS 900s; gap directed-goals-have-no-priority",
+   "tried": "Raised the ceiling",
+   "outcome": "partial",
+   "date": "2026-08-10",
+   "evidence": "The directed flag issue was still recurring on 09-23 and 09-28",
+   "source": "memory-8"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Per-gap in-flight guard + nudge churn",
+   "where": "c8cfc38, 01d085d, 799bd58 (unprompted)",
+   "date": "2026-09-23",
+   "tried": "BUSY gap_in_flight; stop non-attempt writes",
+   "outcome": "worked",
+   "evidence": "3 composes for 1 gap -> refused; writes 270/h -> 1/h",
+   "source": "memory-9"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Drain counter classifier",
+   "where": "long-running.ts 404a89c, bf74cc5 (unprompted substrate landings)",
+   "date": "2026-09-24",
+   "tried": "count autonomous composes as in-flight",
+   "outcome": "worked",
+   "evidence": "quiesce held for an in-flight compose",
+   "source": "memory-9"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Reconcile lease holding fleet change_window",
+   "where": "trace-store-reconcile template; 0fe5d83 (TTL 5 min); 09-24 timeoutMs dispatch",
+   "date": "2026-08-09",
+   "tried": "fixed 5 stacked defects; shortened TTL",
+   "outcome": "partial",
+   "evidence": "lease still held 5 of every 10 min on 09-24; reconcile reported success while db_admin POST never arrived",
+   "source": "memory-9"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Posterior-delta coalescing and hot-path fixes",
+   "where": "activity-api",
+   "tried": "batch writes, EXPLAIN-verified index fixes",
+   "outcome": "partial",
+   "date": "2026-06-21",
+   "evidence": "conflicts 122/60s to 0 but CPU stayed about 490%",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Cost accounting on traces",
+   "where": "ias-executor-ts engine.ts, goal-host.ts HttpLLMPort; audit F21",
+   "tried": "Capture LLM usage and propagate costUsd",
+   "outcome": "failed",
+   "date": "2026-05-29",
+   "evidence": "goal-host.ts:391,405 now read usage, yet 18,135 traces since 2026-09-27 have sum(cost_usd)=0 and zero with tokens_input>0",
+   "source": "openspec-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Queue flooding by TaskGenerator",
+   "where": "findings/validation-2026-05-24.md F1",
+   "tried": "Proposed TASK_GENERATION_ENABLED=false env",
+   "outcome": "unknown",
+   "date": "2026-05-24",
+   "evidence": "1232 critical + 619 medium queued; fill 10/5min vs drain 1/8-10min; env read still at activity-api/src/index.ts:916",
+   "source": "openspec-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Spend accounting phase 1 (cost end to end)",
+   "where": "llm-resolver 7d7bf0a,3c83a33; dev-vessel 98bc2b5,67a25ea; goal-host 4eaad89,44e5615,b880497,b7bda9c",
+   "tried": "return usage.cost_usd, in-memory llmSpendSummary per hour, caller attribution, a prompt-size ceiling (5 gemini fallback calls had taken 3.99M tokens, about 72% of spend)",
+   "outcome": "worked",
+   "date": "2026-09-26/27",
+   "evidence": "falsifiers passed: $4.2e-6 on a 12-token call; 209 exec rows $0.149/10min; unknown caller <1% at 08:30 (was 57-98%). 1.4 (ias-executor dist) still open",
+   "source": "openspec-10"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Federated spend envelope gating auto-pick, nudge, conductor, apply-proposal, boredom",
+   "where": "dev-vessel 292aff1,054de6f,c313227,baa64cc; boredom f28bc06",
+   "tried": "a spendEnvelope pool impulse (usd_cap_per_hour, paused) read via discovery at use time; replaces budget>1 as the pause",
+   "outcome": "worked",
+   "date": "2026-09-27",
+   "evidence": "pause falsifier 07:15 on both nodes; the envelope was binding on 09-28 (50 refusals/h)",
+   "source": "openspec-10"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Spend-rate breaker per goal hash (4.4)",
+   "where": "goal-host 76c8e60",
+   "tried": "in-process per-hash and global windows from the shaped dispatchRatePolicy; 429 before any LLM call",
+   "outcome": "partial",
+   "date": "2026-09-27",
+   "evidence": "1,380 (n1) / 727 (n2) refusals since 09-27 07:00; a single hash 0ee592d0 was refused 629 times, so the dispatcher never learns (3.4 negative facts unbuilt); counts reset on restart",
+   "source": "openspec-10"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Named change-window leases + age-based restart budgets",
+   "where": "dev-vessel ace49c0,e17ea38,80e168f,4e40707,0b06246,9ee5d9d,a2f7542,5475e11,c6213f1,0a8de60; activity-api 1055cba; pull-sync",
+   "tried": "a name dimension on maintenanceLease so cutover and trace_store no longer exclude each other; defer on in_flight_oldest_ms",
+   "outcome": "worked",
+   "date": "2026-09-24/25",
+   "evidence": "2992a23 pushed during a trace_store hold; 9 consecutive age-based deferrals; 3.1b union semantics re-broke cutovers until 3.2b; reconcile graded HOLLOW; executor failure-path (3.3c) absent",
+   "source": "openspec-10"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "goal-host OOM: BoundedBusSink",
+   "where": "openspec/changes/2026-05-31-goal-host-oom-bounded-concurrency; goal-host/boredom/dev-vessel",
+   "date": "2026-05-31",
+   "tried": "L1 per-vessel bounded in-flight queue, L2 framework fix, L3 detect-service-oom-cascade detector.",
+   "outcome": "partial",
+   "evidence": "L1 is live in 3 vessels (duplicated) and tasks are unticked. The framework has IAS_SUBSCRIBER_MAX_INFLIGHT (env). The L3 detector has 0 traces. The OOM (about 10GB, killed every ~3 min, docker daemon wedged) was caused by the 05-27 bus forwarder.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Second dispatcher: light-dispatch-vessel + capability routing",
+   "where": "repos/light-dispatch-vessel; boredom-vessel selectDispatcher",
+   "tried": "Stateless oneshot orchestrator to break the goal-host SPOF, whose ~2GB/dispatch leak made the fix-authoring path the leak itself",
+   "outcome": "worked",
+   "date": "2026-06-03",
+   "evidence": "light-dispatch-vessel is systemd-active on substrate-live; Stage 3.4 PASS; the goal-host 2.A leak patch was not applied at the time",
+   "source": "openspec-3"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Contiguous shape flow: event drain replaces timers",
+   "where": "2026-07-09-restore-contiguous-shape-flow; dev-vessel GapDrainObserver, poolImpulse, watchdog-tick.ts",
+   "tried": "Standing pool, gap route/remedy, devvessel.gap.written WS event drain, timers demoted to watchdogs",
+   "outcome": "failed",
+   "date": "2026-07-09..07-23",
+   "evidence": "34ms gap->dispatch on 07-09; drain-log last 2000: 1931 ok:false http 400 (llmModelPolicy_write/llmQuotaState), silent since 2026-07-23; watchdog-log silent since 07-20 with 1523 open intents; standing.json frozen Sep 7; substrate-gap.ts:1215 notes WS path depends on hub and watchdog marker never stale",
+   "source": "openspec-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Token metering on goal-host LLM calls",
+   "where": "goal-host llm-router.ts",
+   "date": "2026-09-22",
+   "tried": "Accumulate provider usage per dispatch into floor trace",
+   "outcome": "partial",
+   "evidence": "tokens_in 24617 tokens_out 757; cost_usd still 0",
+   "source": "reports-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Identity transient labelled 503 not revoked",
+   "where": "activity-api 4fc5f80 (Substrate Autonomous)",
+   "date": "2026-09-22",
+   "tried": "Fleet shares one 100/min identity bucket -> 6,505 429s -> INVALID_API_KEY",
+   "outcome": "partial",
+   "evidence": "INVALID_API_KEY ~40/min -> 1; shared bucket itself still open",
+   "source": "reports-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Reconcile fetch timeout and observer remedy",
+   "where": "development-vessel 62e174a, 651d10a, 2bccc64",
+   "date": "2026-09-23",
+   "tried": "Template timeout in seed file; bare goal remedy; impulse_type gap_to_feature",
+   "outcome": "partial",
+   "evidence": "62e174a inert (seed skipped on populated catalogue); 651d10a hollow walk; 2bccc64 reached sampler; lease still held ~half wall-clock",
+   "source": "reports-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Park verified drafts instead of discarding them on lease contention (resumable-landings)",
+   "where": "development-vessel /workspace/parked-landings, resumeParkedLanding",
+   "tried": "Defer without rollback, then resume on redispatch.",
+   "outcome": "partial",
+   "date": "2026-09-25",
+   "evidence": "The resume path breaks attempt attribution (#48, RUN10-VOID-2002). goal-host reports a parked patch as UNFAVORABLE with no detail (#49). The staged draft is left in the non-isolated super-repo worktree (#45) and gets swept into another gap's commit (#44). 47 parked files sit live on 09-29, and nothing auto-resumes them.",
+   "source": "reports-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Hold 4 window-blind dispatchers during graded runs (#59 addendum)",
+   "where": "gap-compose.service, boredom in-process selector, funnel-drain.timer, substrate-gap.ts in-process nudge",
+   "tried": "The operator paused (1)-(3). (4) has no shaped control. autonomous_pick lease.",
+   "outcome": "partial",
+   "date": "2026-09-25",
+   "evidence": "Needed for the passing streak. RUN10-VOID-2002 shows a compose picked before the lease was taken still landed. There is no single shared window shape for landing, restart and sync.",
+   "source": "reports-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Watchdog detached from stdout",
+   "where": "7164c1c local-tools-vessel (autonomous)",
+   "date": "2026-08-15",
+   "tried": "( sleep N; kill ) >/dev/null 2>&1 &",
+   "outcome": "worked",
+   "evidence": "Shell calls 30s -> 22ms. It landed even though the adversarial refuter rejected it twice at conf 0.90 with false mechanism claims",
+   "source": "reports-3"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Identity fleet-shared rate-limit bucket",
+   "where": "identity ratelimit.ts extractIp; activity-api auth-cache.ts/jwtAuth.ts 4fc5f80",
+   "tried": "Label fix (503 IDENTITY_UNAVAILABLE) landed; limiter getConnInfo fix authored",
+   "outcome": "partial",
+   "date": "2026-09-23",
+   "evidence": "23,396 429s/2h reported as INVALID_API_KEY revoked. Limiter fix never landed (protected vessel, classifier refused). Recurred 09-23 install CI: concept-db-seeder HTTP 401 from same bucket (worked around by pacing 74cb240d). Gap still OPEN 09-29.",
+   "source": "reports-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Change-window starvation: wires 1-3 + root cause",
+   "where": "b001631, a8f457a, 2bccc64/651d10a/c598f1d, ias-executor 2893a93, activity-api 1f58320, 55cd36d, a5b4772/2fd1dca",
+   "tried": "Negative feedback to holder, variants, family sampler, fix placeholder blanking, cache invalidation+sort",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "Root cause 946034c blanked placeholders 9 days (108/108 reconcile runs failed holding the lease). family sampled: 4 verified 12:23:42. Underneath: retention deletes 1,825 vs 28,565 inserted/24h; http_fetch 15s abort; change-window gaps still OPEN 09-29 (8 attempts; eleven-concurrent-cutovers 2).",
+   "source": "reports-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "/resolve recursion guard",
+   "where": "goal-host 7f0425d (operator hand-landed)",
+   "tried": "Refuse a concurrent self-resolve of the same goal.",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "The storm drove ~3,080 walks and stopped the container; later 11 RECURSION REFUSED. The substrate could not land it itself (llm=false).",
+   "source": "reports-6"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Spend envelope at the compose chokepoint",
+   "where": "development-vessel 292aff1, 054de6f, 6c86595; llm 3c83a33",
+   "tried": "Budget both nodes and refuse undirected composes when the envelope refuses.",
+   "outcome": "worked",
+   "date": "2026-09-27",
+   "evidence": "Leaks closed one at a time (nudge path, a caller naming a gap). $9.53 in 5 h was 85% unattributed before 1.5.",
+   "source": "reports-6"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "value-per-cost phases 1-4 (15 landings)",
+   "where": "openspec value-per-cost-selection; multiple vessels",
+   "tried": "Cost accounting, cheapest-first admission, dispatch termination, spend gates, DB listing fixes",
+   "outcome": "partial",
+   "date": "2026-09-27",
+   "evidence": "Directed landing reached 58%, re-drafts went from about 119 to about 1, the DB went idle. None of root causes 1-5 (closure learning, gap actionability) was touched; autonomous landing did not improve.",
+   "source": "reports-7"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Containment rules to reopen autonomy safely",
+   "where": "goal-host/dev-vessel (falsifier class required 1.6, 8.10, class2-only, operator_hold)",
+   "tried": "Admit only verifiable gaps under a 1-2 USD/h envelope",
+   "outcome": "partial",
+   "date": "2026-09-27",
+   "evidence": "Admissible supply fell from about 235-255 to 0-3 plus 2. The 8 landings since were all reverted, one of them caught by the system.",
+   "source": "reports-7"
+  },
+  {
+   "key": "runaway-amplification",
+   "title": "Operator stops the recursion storm",
+   "where": "substrate-live 09-26 05:26-07:37Z",
+   "tried": "Restart goal-host, then stop the container",
+   "outcome": "partial",
+   "date": "2026-09-26",
+   "evidence": "Recursion re-seeded 10 min after the goal-host restart. It ended only on container stop. No deterministic brake exists.",
+   "source": "reports-7"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Operator dispatches ran in the autonomous cap-1 lane",
+   "where": "goal-host index.ts trigger derivation (sections AD and AB); memory 09-23 112e194 and 09-28",
+   "tried": "Add a top-level operator field to the dispatch body",
+   "outcome": "worked",
+   "date": "2026-09-11",
+   "evidence": "The same payload plus operator:claude ran and landed 80e45a2a, where the 2 prior attempts returned CAPACITY(BUSY). The directed seam recurred 09-22 (gap_to_feature drops directed) and 09-28 (hand-off needs directed:true).",
+   "source": "reports-8"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "LLM completion outage gap wrongly closed",
+   "where": "gap llm-completion-plane-dark (09-11)",
+   "tried": "Close based on the coarse classifyPlane ('2 providers usable')",
+   "outcome": "failed",
+   "date": "2026-09-11",
+   "evidence": "Discovery listed no llm_completion producer. Providers were anthropic 401, openrouter overdrawn, chutes $0 and groq/mistral/google with no key. The gap was reopened. Recovery at 13:43 had an unknown cause.",
+   "source": "reports-8"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "--no-block plus in-flight guard on the gap-compose unit kick",
+   "where": "repos/development-vessel/src/resolvers/substrate-gap.ts:1207-1329",
+   "date": "2026-09-14",
+   "tried": "Stop the 115 s event-loop freeze on each gap write and the 27 concurrent typechecks",
+   "outcome": "partial",
+   "evidence": "gap-compose.service now starts every 1-7 min from gap writes. There are three redundant compose entry points (GapDrainObserver, in-process nudge, watchdog)",
+   "source": "timers-readers"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "runCheck kills child not group / load-deferral guard",
+   "where": "0f5cd43b 2026-08-30T02:27 dev-vessel 0fd7487, 3e687d2",
+   "tried": "setsid group kill; skip suites under load",
+   "outcome": "superseded",
+   "date": "2026-08-30",
+   "evidence": "operator: latent bugs, neither fires against actual load source (compose verify in local-tools cgroup)",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "test-exec concurrency governor + descendant-tree kill",
+   "where": "b1353836 2026-08-30T22:55 local-tools 44c2b21, 791051e",
+   "tried": "filesystem-slot governor; __killtree because GNU timeout escapes pgrp",
+   "outcome": "worked",
+   "date": "2026-08-31",
+   "evidence": "3.6h no-restart: 0 orphan timeout, local-tools 0.08 cores, load 9",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Skip test suite when typecheck fails",
+   "where": "ff560216 2026-08-31T04:37 dev-vessel a07c8ce",
+   "tried": "short-circuit verify chain on TC_EXIT!=0",
+   "outcome": "worked",
+   "date": "2026-08-31",
+   "evidence": "3/5 composes skipped 240s suite",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Rotation/requeue fixes for picker monopoly",
+   "where": "gap-to-feature",
+   "tried": "86cdbf2 rotation justified by 88% monopoly; e70b432 correction",
+   "outcome": "partial",
+   "date": "2026-08-30",
+   "evidence": "monopoly figure double-counted runner_up; real trend 16%->35% top share",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "llm-provider-plane",
+   "title": "llm-resolver boot crash loop cleared by env placeholders",
+   "where": "35537c7e @ 2026-09-15 19:23 summary",
+   "tried": "five 'unset-placeholder' sentinel env keys; gap emptyKeyPlaceholder filed",
+   "outcome": "partial",
+   "evidence": "restarts 0 after fix; 09-17 a 2-char placeholder key made an arm look configured so it got selected and cooled the plane",
+   "date": "2026-09-15",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "llm-provider-plane",
+   "title": "Restore LLM drafting plane locally",
+   "where": "80ab9659 @ 2026-09-17T05:51 to 09:15",
+   "tried": "restart llm-resolver, add OpenRouter arm, scope policy, clean-draw restart",
+   "outcome": "failed",
+   "evidence": "7 of 7 providers unusable (401s, $0, placeholder, OpenRouter 402 above ~200 tokens); the operator's own probes cooled the providers",
+   "date": "2026-09-17",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Resumable landings: park/resume + named leases",
+   "where": "openspec/changes/2026-09-24-resumable-landings (archived)",
+   "date": "2026-09-24T21:17Z",
+   "tried": "23 tasks; named trace_store lease; age-based restart deferral; operator edited reconcile variants' lease in learning state",
+   "outcome": "worked",
+   "evidence": "2h budget took 11.5-14h; park->resume->push c1dd4c2; 14 parked/7 resumed; specs promoted to openspec/specs",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Decentralized compose ownership (node 2 compose2-live)",
+   "where": "openspec/changes/decentralized-compose-ownership",
+   "date": "2026-09-24..2026-09-26T22:23Z",
+   "tried": "37 tasks: picker skips unowned repos, composeOwnership shape, owner routing 2.2b/4.6/4.7, node 2 bring-up",
+   "outcome": "partial",
+   "evidence": "Node 2 landed 77ee9b9, 6bfbe4b, 61b4812, 766f68d; but pause/calibration/memory stayed node-local; 51e30de deleted by recommit 21179d8 6 min after landing; node 2 hold lapsed 14:49-21:35 (~10 unsupervised commits)",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "autonomous_pick lease gate",
+   "where": "dev-vessel gap-to-feature.ts reading maintenanceLease shape",
+   "date": "2026-09-25T17:42Z",
+   "tried": "128f51f; duplicate 31d07cd from walk executing test sentence; 15bb263 removed duplicate",
+   "outcome": "worked",
+   "evidence": "21-34 skips per graded window; does not stop in-flight composes (768ae7c)",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Recursion storm guard",
+   "where": "goal-host /resolve",
+   "date": "2026-09-26T08:06Z",
+   "tried": "7f0425d hand-landed under operator identity (feature_compose refused exact edits without LLM)",
+   "outcome": "worked",
+   "evidence": "~3,080 walks 05:00-08:00, 21 reached; LLM quota exhausted; refused 11 self-resolves later",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Value-per-cost selection phases 1-4 (spend accounting, admission gates, termination, envelope/breaker)",
+   "where": "openspec/changes/value-per-cost-selection",
+   "date": "2026-09-26T23:12Z..2026-09-27T07:35Z",
+   "tried": "~30 pre-validated exact-edit landings: 7d7bf0a, 98bc2b5, c10e74a, 4eaad89, 44e5615, 3cbf979, c23b601, 96bf098, bea12ec, f3ffd7d, f9001e9, 1942eaf, 3c83a33, e6f07a0/55c0649/c3c4041, c313227, 76c8e60, a188771, 67a25ea, febc7da",
+   "outcome": "partial",
+   "evidence": "Spend $5.20/h -> $0.30/h; pause/breaker verified; but 98bc2b5 silently reverted afc7d6d; verified closures fell to 0-2/day; only 3.8% executions record cost (09-28)",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "goal-host streaming patches for OOM",
+   "where": "validation/findings/goal-host-dispatch-setup-leak-2026-06-03",
+   "tried": "URL filter, body.cancel, Bun.gc, bounded probe stats",
+   "outcome": "failed",
+   "date": "2026-06-03",
+   "evidence": "~700 KB addressed vs ~2 GB per dispatch (54 MB -> 2168 MB)",
+   "source": "validation-other-1"
+  }
+ ],
+ "problems": [
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "The gap-compose watchdog fires gap_to_feature about every 90 s (263 in 24 h), each ok:200, while stalled_min keeps rising and open intents grow",
+   "root_cause": "The reflex has no global attempt budget or repetition bound; the restart either does not register as flow activity or runs against an operator mask (not told apart)",
+   "last_seen": "2026-09-29",
+   "recurrences": 263,
+   "source": "docs-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Same remedy re-dispatched forever: 'reconcile the trace store back under its configured cap' decided 518 times 09-24..28",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "No failure memory or backoff on the auto-draft remedy path",
+   "source": "gap-history"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "The self-recovery immune system restarts things that are healthy, starting, or under DB pressure (autoimmune)",
+   "root_cause": "Restart policy uses health probes that cannot tell a wedged vessel from a busy one; it was patched per incident",
+   "first_seen": "2026-06-30",
+   "last_seen": "2026-09-16",
+   "recurrences": 7,
+   "source": "git-deployment"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Compose BUSY/503 falls through to a shell walk that cannot edit",
+   "first_seen": "2026-07-05",
+   "last_seen": "2026-09-25",
+   "recurrences": 5,
+   "root_cause": "The edit-intent routing decision is duplicated (EARLY route and late route) with separate status handling.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "llm-plane-availability",
+   "symptom": "Completion plane dark or degraded: exhaustion, invalid key 43h, dry default, phantom arms, stampedes",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-09-26",
+   "recurrences": 17,
+   "root_cause": "provider/arm state as hardcoded lists and env keys; liveness spread across cooldown map, policy file and advertisement",
+   "source": "git-small"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "timeout ladders, OOM, pace flip-flops, $ burned on identical failures",
+   "first_seen": "2026-05-23",
+   "last_seen": "2026-06-18",
+   "recurrences": 12,
+   "root_cause": "cadence and timeouts are static constants tuned by hand instead of rhythm read at use time; synchronous long dispatch until async (ac0d75b5)",
+   "source": "git-super-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "restarts kill composes; single change-window lease contention; lane burned on repeat failures and phantom remedies",
+   "first_seen": "2026-09-20",
+   "last_seen": "2026-09-28",
+   "recurrences": 30,
+   "root_cause": "restart budgets shorter than a compose; remedy by pinned template id; no stop on repeated failure class",
+   "source": "live-gaps"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Single compose slot starved or livelocked; BUSY reroutes; pace set by static env drop-ins",
+   "root_cause": "cap=1 lane; nudges dropped rather than queued; three-way conjunction tree-clean + lane-free + llm-reachable",
+   "first_seen": "2026-07-10",
+   "last_seen": "2026-09-14",
+   "recurrences": 6,
+   "source": "memory-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Compose storms saturate hub; 99.6% of executions metabolism; auditors 61.6% of executions; RunPod 3 workers vs uncapped fleet; cap=1 lane full refuses directed work; OpenRouter credits exhausted; pinned scaffold refusals every 90s",
+   "root_cause": "Unbounded producers/tag-selection without rhythm; empty rhythm registry; directed flag dropped by gap_to_feature",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-09-25",
+   "recurrences": 7,
+   "source": "memory-10"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Single mitosis-pending slot, compose-lane zombies, backlog pins in_flight, cutover restarts kill in-flight dispatches, LLM credit death",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-09-26",
+   "recurrences": 8,
+   "root_cause": "No dispatch fairness; restart-on-deploy without drain; provider funding outside the system",
+   "source": "memory-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Compose throughput collapses: 82.5% of picks refused at capacity after selection, compose storms, runaway awk, a vessel freezing on every gap write, concurrent composes discarding approvals, load timeouts charged to drafts, LLM credential starvation.",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-14",
+   "recurrences": 9,
+   "root_cause": "No envelope enforced at the resource. Environment failures are charged as fix failures. Operator credentials lapse, and wired providers (groq, mistral) were never keyed.",
+   "source": "memory-3"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "change_window lease held near-continuously by trace-store-reconcile, starving cutovers and pull-sync",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-24",
+   "recurrences": 3,
+   "root_cause": "Retention (~76 rows/h) can't match ingest (~1,190/h, 74% tickers); the reconcile gap never closes; the lease's TTL backstop outlasts the retry cadence; 946034c blanked lease_token",
+   "source": "memory-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Compose lane throughput far below gap inflow; operator dispatches queue behind the autonomous loop; BUSY reported as failed",
+   "first_seen": "2026-08-25",
+   "last_seen": "2026-09-12",
+   "recurrences": 3,
+   "root_cause": "Single effective compose slot (~48/day) vs ~42/day new un-attempted gaps plus self-minted children",
+   "source": "memory-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "LLM plane credit-dead or key-invalid repeatedly, with a single real provider out of six wired.",
+   "root_cause": "Configuration: only one key is set, and arms are not gated on non-empty keys.",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-19",
+   "recurrences": 4,
+   "source": "memory-5"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Queue does not drain / host oversubscribed",
+   "root_cause": "one-item-per-invocation drains vs hundreds open; isolation removed capacity refusal; NaN fail-open",
+   "first_seen": "2026-07-27",
+   "last_seen": "2026-08-10",
+   "recurrences": 4,
+   "source": "memory-6"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Lease TTL is 10x the work, compose restarts kill in-flight work, registries are capped at 100, and 68% of path writes drop under load",
+   "root_cause": "Shared daemon force-closes on SIGTERM, and fixed timeouts are shorter than latency under load",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-08-08",
+   "recurrences": 4,
+   "source": "memory-7"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "The compose lane is starved or busy: directed goals time out, the compose host restarts every ~13 min, full test suites push load to 41-57, recommit burns 26% of capacity.",
+   "root_cause": "No priority between directed and autonomous work, the compose host shares a lifecycle with its own self-edits, verification is external suites, and the growth governor was never built.",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-24",
+   "recurrences": 8,
+   "source": "memory-8"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Compose lane cap 1 plus cooldown stamping on BUSY; restarts every 10-15 min drain at 240s against 5-15 min composes; global change_window lease held by a broken reconcile",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-24",
+   "recurrences": 7,
+   "root_cause": "One feature_compose producer; the lease has no name dimension; pull-sync starvation break keyed on count, not age; mitosis runs the full suite hundreds of times per hour",
+   "source": "memory-9"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "DB CPU pegged; cutover restart storms interrupt dispatches",
+   "first_seen": "2026-06-20",
+   "last_seen": "2026-07-04",
+   "recurrences": 6,
+   "root_cause": "self-amplifying write storms; restarts without drain",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "cost_usd and tokens zero on all traces; cost-aware selection specs built on missing signal",
+   "first_seen": "2026-05-29",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "root_cause": "engine only sets cost in compose branch; usage dropped at LLMPort; still 0 on 18,135 traces 09-27..28",
+   "source": "openspec-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Cost accounting absent: $0.52 recorded across 38,845 rows / 30.8M tokens",
+   "root_cause": "cost_usd 0 hardcoded at five hops",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-27",
+   "recurrences": 1,
+   "source": "openspec-10"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "goal-host grew to about 10GB and was OOM-killed every ~3 min, and the docker daemon wedged.",
+   "root_cause": "The fire-and-forget bus forwarder (05-27) had unbounded in-flight promises, plus a WS listener leak.",
+   "first_seen": "2026-05-31",
+   "last_seen": "2026-05-31",
+   "recurrences": 1,
+   "source": "openspec-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "goal-host leaked ~2GB per dispatch; 3/4 boredom cycles timed out; the fix-authoring path was the leak",
+   "first_seen": "2026-06-03",
+   "last_seen": "2026-06-03",
+   "recurrences": 1,
+   "root_cause": "per-dispatch full state capture in goal-host (O(n) memory); circumvented with a second dispatcher rather than fixed",
+   "source": "openspec-3"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Timers colonize selection; gap->remedy latency 30-60 min; timers begat timers",
+   "root_cause": "Four cut seams: per-execution pool teardown, walk ends flow on reach, polling instead of WS, selection blind to standing intents",
+   "first_seen": "2026-07-09",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "source": "openspec-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Compose lane saturated/self-interfering: BUSY, lease-discarded verified patches (39%), restarts killing composes, credit exhaustion, one identity bucket",
+   "root_cause": "Single global change_window mutex shared with maintenance; restart/drain budgets shorter than composes; composer lands on its own repo and restarts itself; no shaped window for autonomous dispatchers",
+   "first_seen": "2026-08-22",
+   "last_seen": "2026-09-25",
+   "recurrences": 9,
+   "source": "reports-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Verified FAVORABLE drafts are discarded or parked because the global change_window lease is held.",
+   "root_cause": "trace-store-reconcile crystallized with a redacted token and a stale TTL. It fails every run before releasing the single global lease.",
+   "first_seen": "2026-09-24 (#14)",
+   "last_seen": "2026-09-29 (open gaps; 47 parked landings)",
+   "recurrences": 4,
+   "source": "reports-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "One edit dispatch is routed to feature_compose twice. A second compose lands inside the next run's window.",
+   "root_cause": "The post-walk EDIT-INTENT route does not check whether this dispatch's edit already landed or is in flight. The 4dec1bc guard covers only escalation.",
+   "first_seen": "2026-09-25 (#54)",
+   "last_seen": "2026-09-26 (RUN11-FAIL-0203, d3cd630)",
+   "recurrences": 2,
+   "source": "reports-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "The LLM plane ran dry (402 from OpenRouter and Chutes), llm_completion was de-advertised, and no gap was filed.",
+   "root_cause": "There is no detector for provider credit exhaustion.",
+   "first_seen": "2026-09-24 (#8)",
+   "last_seen": "2026-09-24",
+   "recurrences": 1,
+   "source": "reports-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Single compose slot shared by operator and autonomous lanes; drains discard in-flight work; three corrections per executor too few",
+   "root_cause": "No priority separation; drain does not defer to applied composes; fixed small correction budget",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-16",
+   "recurrences": 3,
+   "source": "reports-3"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Change window single global mutex starved all landings (45 deferrals/90 min)",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Lease has no name dimension; template schema has no on-failure release; failing reconcile (placeholder blanking 946034c, then fetch abort, then retention < ingest) re-takes it. Gap still open.",
+   "source": "reports-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Fleet-shared identity rate-limit bucket read as revoked key (429 -> 401 INVALID_API_KEY); seeders fail at boot",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-23",
+   "recurrences": 2,
+   "root_cause": "extractIp returns 'unknown' for all in-container callers -> one bucket; limiter fix authored never landed (protected vessel).",
+   "source": "reports-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Compose capacity: 2 slots, one directed; BUSY reported as timeout; capacity refusals counted as failed attempts",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-09-24",
+   "recurrences": 3,
+   "root_cause": "No queue with position; autonomous lane refills instantly; non-attempts not uniformly exempt from attempt counters (fixed for cooldown 08-29, recurred on directed path 09-24).",
+   "source": "reports-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Capacity starvation (82.5% of picks BUSY), recursion storm, LLM credits exhausted, 60% of composes structurally unlandable, events/publish flood of 27 per second.",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-09-29",
+   "recurrences": 6,
+   "root_cause": "No compose budget or value-per-cost selection until 09-27; event-driven nudges bypass the lease; operator traffic shares the envelope.",
+   "source": "reports-6"
+  },
+  {
+   "key": "runaway-amplification",
+   "symptom": "Storms (09-25 trace retry, 09-26 goal_execution recursion) amplified by the system's own responses: watchdog restarts, FAILURE-RECALL, gap flood, paid fallback",
+   "root_cause": "No deterministic brake: no lineage or depth on /resolve, no quarantine shape, budget not a shape, unattributed work accepted",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-26",
+   "recurrences": 3,
+   "source": "reports-7"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Operator and directed work runs in the autonomous cap-1 lane and is refused with BUSY. The same seam reappears as gap_to_feature dropping directed (09-22) and hand-off needing directed:true (09-28).",
+   "root_cause": "Directedness is carried in a field that boundaries do not propagate. The operator: tag is never read back into the trigger.",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "source": "reports-8"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Compose lane BUSY dominates (182/270 edit non-reaches), host saturated by verify suites",
+   "first_seen": "2026-08-23",
+   "last_seen": "2026-08-31",
+   "recurrences": 5,
+   "root_cause": "single slot, verify runs install+tsc+3 full suites, restarts; 1.7 composes/h x 4%",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Load attributed to the wrong source (SurrealDB, mitosis, pull-sync, orphans, qemu VM)",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-04",
+   "recurrences": 5,
+   "root_cause": "saturated %CPU read as signal; local-tools logs no commands; no cgroup attribution",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "llm-provider-plane",
+   "symptom": "Drafting impossible: composer reports no LLM endpoint while model vessels are healthy",
+   "first_seen": "2026-09-11",
+   "last_seen": "2026-09-18",
+   "recurrences": 4,
+   "root_cause": "Invalid, placeholder or unfunded keys; the shared policy samples ids a pinned provider cannot serve; cooling leads the resolver to de-advertise llm_completion",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Lane saturation (590 BUSY/14 landings), global lease contention, runaway LLM spend",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "root_cause": "Single composer restarting itself; global change_window; no admission feasibility or budget",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "concurrent dispatch exhausts LLM quota; verifier retries 400/800ms against daily cap",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-08-10",
+   "recurrences": 1,
+   "root_cause": "no admission/back-pressure against shared provider budget",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "goal-host ~2GB per dispatch, OOM, mitosis cutover deadlock",
+   "first_seen": "2026-06-03",
+   "last_seen": "2026-06-04",
+   "recurrences": 3,
+   "root_cause": "per-dispatch full-state capture in ias-executor-ts; library invisible to enact-orthogonal-decisions",
+   "source": "validation-other-1"
+  }
+ ],
+ "claims": [
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-09-27 06:05",
+   "claim": "node 2 resolver spend \u2248 0",
+   "where": "CHECKINS.md",
+   "later": "Retracted 06:15 the same day: node 2 spent $2.78 over 649 calls.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-09-27 07:16",
+   "claim": "4.4 spend-rate breaker done",
+   "where": "value-per-cost tasks.md",
+   "later": "works, but one hash was refused 629x on node 1: containment without learning (3.4 absent)",
+   "source": "openspec-10"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-08-30T02:00",
+   "claim": "0fd7487 fixes the box-saturating orphan leak",
+   "where": "0f5cd43b",
+   "later": "02:18 withdrawn: nothing accumulating; load is designed verify cost",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-08-30T02:59",
+   "claim": "local-tools sh() 30s watchdog raised to 900s made autonomy work",
+   "where": "0f5cd43b",
+   "later": "post-window MEMORY 09-28: post-land suite silently dead 08-31 to 09-28, killed by the shell's 30s default (fixed 5e9a0b2)",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-08-30T17:14",
+   "claim": "Concurrency governor 44c2b21 cut CPU 5-17x",
+   "where": "b1353836",
+   "later": "22:35 governor largely cosmetic (timeout escapes the process group); fixed by 791051e; durable by 08-31 01:43",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-09-04T09:39",
+   "claim": "Load ~20 means the substrate is running hot (from a memory pattern)",
+   "where": "3637e240",
+   "later": "09:53 wrong: the qemu VM held 6.5 cores and wf-recorder 1.6; the substrate used ~30%",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-08-30T07:59",
+   "claim": "88% picker monopoly (in pushed commit 86cdbf2 message)",
+   "where": "0b1032b5",
+   "later": "double-counted runner_up; recurred 09-07 19:07 and 09-08 23:01",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-09-11T12:41",
+   "claim": "LLM plane dead; dispatching futile",
+   "where": "bcc44633",
+   "later": "17 commits landed overnight via 429 trickle",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "llm-provider-plane",
+   "claimed_at": "2026-09-13",
+   "claim": "An anthropic 401 sets no cooldown",
+   "where": "35537c7e @ 2026-09-13T22:48 summary",
+   "later": "Retracted the same day: fires 151x/40h; the operator had sampled the wrong unit",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "llm-provider-plane",
+   "claimed_at": "2026-09-15",
+   "claim": "LLM plane not a blocker, verified serving",
+   "where": "MEMORY.md (09-15 entry)",
+   "later": "09-17: 7 of 7 providers unusable for drafting; 09-18 only syzygy.host serves",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "llm-provider-plane",
+   "claimed_at": "2026-09-15",
+   "claim": "llm-resolver crash loop cleared via env placeholders; stable",
+   "where": "35537c7e @ 2026-09-15T19:23 summary",
+   "later": "09-17: a placeholder key made a dead arm look configured, so it was selected and cooled the plane",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "llm-provider-plane",
+   "claimed_at": "2026-09-17",
+   "claim": "Blocker cleared; compose running for the first time today",
+   "where": "80ab9659 @ 2026-09-17T06:24",
+   "later": "06:25 the registration lapsed again; 06:29 the real root cause was invalid keys and deliberate de-advertisement",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "llm-provider-plane",
+   "claimed_at": "2026-09-17",
+   "claim": "The clean draw worked; the composer is drafting right now",
+   "where": "80ab9659 @ 2026-09-17T07:04",
+   "later": "09:11 'I was wrong last turn': nothing landed in 30 windows; att stayed 5",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "llm-provider-plane",
+   "claimed_at": "2026-09-17",
+   "claim": "No configuration path to a drafting-capable provider on this substrate",
+   "where": "80ab9659 @ 2026-09-17T09:14",
+   "later": "09-18 02:24: federating to syzygy.host gives a working model plane without local credentials",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-09-25T18:33Z",
+   "claim": "autonomous_pick lease gate live and verified",
+   "where": "ac8b0aad 2026-09-25T18:33Z",
+   "later": "Walk executed test sentence, took lease itself and duplicated edit (31d07cd); lease doesn't stop in-flight composes (768ae7c)",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-09-27T00:02Z",
+   "claim": "The system can now see what it spends (Phase 1)",
+   "where": "ac8b0aad 2026-09-27T00:02Z",
+   "later": "98bc2b5 silently reverted afc7d6d; 09-28 review: only 3.8% of executions record cost, selection ignores it",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-09-27T02:13Z",
+   "claim": "Phase 3 dispatch termination complete (Bun 300s fetch cut fixed)",
+   "where": "ac8b0aad 2026-09-27T02:13Z",
+   "later": "Same cause diagnosed 09-25 03:13 and left 2 days; post-walk double-compose recurred (194df79, 7eae3a0)",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-08-11",
+   "claim": "6x load improvement (load 15.3, 353%)",
+   "where": "validation/findings/round7 first draft",
+   "later": "retracted in f1dcb5cf: single sample; really 511-1989%",
+   "source": "validation-other-1"
+  }
+ ]
+}

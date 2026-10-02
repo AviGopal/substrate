@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-61ade0b2",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Close substrate gap recommit-child-gaps-describe-the-failure-instead-of-the-change-wanted. Edit repos/development-vessel",
+  "description": "Close substrate gap recommit-child-gaps-describe-the-failure-instead-of-the-change-wanted. Edit repos/development-vessel/src/resolvers/feature-compose.ts.\n\nWhen a compose fails, it mints a recommit- child gap whose summary is built from the PREVIOUS FAILURE'S RAW OUTPUT rather than from the change that was wanted. Measured across 400 open gaps: recommit- children have a median summary of 253 characters with 90 percent under 300, against 448 for operator-filed gaps and 1178 for narrowed children. Some summaries are pure build log, for example '== install == == resolve == DRYRUN_EXIT=0'. A drafter handed a description of what went wrong instead of what to do cannot produce a targeted patch, and the semantic gate then correctly rolls the result back.\n\nThe parent gap object is already in scope at that line, so its summary — the specification of the change wanted — can be carried forward, with the failure attached only as trailing context.\n\nReplace this exact text, which occurs exactly once in the file:\nsummary: \"compose for gap \" + String(gap.id) + \" repeated already-recorded failure class \" + cls + \": \" + reason.slice(0, 150),\n\nwith this exact text:\nsummary: String((gap as { summary?: unknown }).summary ?? \"\") + \" [RETRY: the previous attempt failed with \" + cls + \" — \" + reason.slice(0, 150) + \". The change wanted is described above; do not treat this failure text as the specification.]\",\n\nThis is one substitution on one line. Declare no new variable and add no new statement. The replacement does not contain the anchor, so applying it twice is a no-op.",
+  "goal_text": "Close substrate gap recommit-child-gaps-describe-the-failure-instead-of-the-change-wanted. Edit repos/development-vessel/src/resolvers/feature-compose.ts.\n\nWhen a compose fails, it mints a recommit- child gap whose summary is built from the PREVIOUS FAILURE'S RAW OUTPUT rather than from the change that was wanted. Measured across 400 open gaps: recommit- children have a median summary of 253 characters with 90 percent under 300, against 448 for operator-filed gaps and 1178 for narrowed children. Some summaries are pure build log, for example '== install == == resolve == DRYRUN_EXIT=0'. A drafter handed a description of what went wrong instead of what to do cannot produce a targeted patch, and the semantic gate then correctly rolls the result back.\n\nThe parent gap object is already in scope at that line, so its summary — the specification of the change wanted — can be carried forward, with the failure attached only as trailing context.\n\nReplace this exact text, which occurs exactly once in the file:\nsummary: \"compose for gap \" + String(gap.id) + \" repeated already-recorded failure class \" + cls + \": \" + reason.slice(0, 150),\n\nwith this exact text:\nsummary: String((gap as { summary?: unknown }).summary ?? \"\") + \" [RETRY: the previous attempt failed with \" + cls + \" — \" + reason.slice(0, 150) + \". The change wanted is described above; do not treat this failure text as the specification.]\",\n\nThis is one substitution on one line. Declare no new variable and add no new statement. The replacement does not contain the anchor, so applying it twice is a no-op.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-61ade0b2",
+  "source_gap_source": "substrate_detected"
+}

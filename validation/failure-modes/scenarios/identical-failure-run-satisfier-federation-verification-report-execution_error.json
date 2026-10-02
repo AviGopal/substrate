@@ -1,0 +1,19 @@
+{
+  "id": "identical-failure-run-satisfier-federation-verification-report-execution_error",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "repair_not_failure_conditioned",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "satisfier:federation_verification_report has failed 27 times in the last 24h under a single failure class (execution_err",
+  "description": "satisfier:federation_verification_report has failed 27 times in the last 24h under a single failure class (execution_error), and NO OPEN GAP NAMES IT. The count is not the defect — the defect is that the system observed the same fact 27 times and changed nothing: it did not stop selecting the activity, did not open a gap against the cause, and did not try a different route. The class is recorded, so the typed-delta path applies; the open question is why the repetition itself never became a disposition. First action is to classify the failure, not to suppress the count: identical failures should not be possible, and where they occur they remain independent samples.",
+  "goal_text": "satisfier:federation_verification_report has failed 27 times in the last 24h under a single failure class (execution_error), and NO OPEN GAP NAMES IT. The count is not the defect — the defect is that the system observed the same fact 27 times and changed nothing: it did not stop selecting the activity, did not open a gap against the cause, and did not try a different route. The class is recorded, so the typed-delta path applies; the open question is why the repetition itself never became a disposition. First action is to classify the failure, not to suppress the count: identical failures should not be possible, and where they occur they remain independent samples.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "identical-failure-run-satisfier-federation-verification-report-execution_error",
+  "source_gap_source": "substrate_detected"
+}

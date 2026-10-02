@@ -1,0 +1,3199 @@
+{
+ "attempts": [
+  {
+   "key": "false-verification",
+   "title": "Oracle corpus labels",
+   "where": "goal_verification_labels",
+   "tried": "Human, automated and deterministic labelers",
+   "outcome": "partial",
+   "evidence": "grounded never true (0/14,100); human labels ~50/day in July -> ~3/day; 260 labels on fixture goals",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "false-verification",
+   "title": "lambda1 >= rho_grow master-inequality measurement",
+   "where": "development-vessel/src/resolvers/learning-transfer-report.ts:235",
+   "tried": "Report lambda1_inequality_ok",
+   "outcome": "failed",
+   "evidence": "implemented as density >= fraction proxy; 0 hits for spectral_gap/hodge/harmonic/kappa_posterior_spread in live src; DYNAMICS header itself warns incomparable scales",
+   "source": "docs-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "$auth -> $token PERMISSIONS sweep and jwt_external switch",
+   "where": "activity-api migrations 079/080/083; commit a20314a (2026-04-22)",
+   "tried": "Make PERMISSIONS work for API-key callers",
+   "outcome": "partial",
+   "date": "2026-04-22",
+   "evidence": "Undercut by executeAsAuth: API-key auth runs as root (impulses.ts:142), so PERMISSIONS do not apply to vessel traffic",
+   "source": "docs-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "executeAsAuth root-credentials fallback for API-key auth",
+   "where": "activity-api/src/routes/impulses.ts:142",
+   "tried": "authType==='apikey' -> surrealDB.query as root with manual org_id predicates",
+   "outcome": "partial",
+   "evidence": "Contradicts CLAUDE.md, docs/README.md \u00a76, SCHEMA_OWNERSHIP.md, RBAC_GUIDE.md ('Mistake 1: Application-Level Only'); no gap in store (0 hits)",
+   "source": "docs-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "config-surface-probe self-lie guards",
+   "where": "scripts/substrate/config-surface-probe.sh (e375d716, 2026-09-23)",
+   "tried": "Guards against swallowed mounts denied (zero names), counting own abstentions, image-vs-worktree gen-env comparison",
+   "outcome": "partial",
+   "evidence": "Guards documented; probe invoked only by Makefile, no validating activity (script retention rule)",
+   "source": "docs-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "Independent federation oracle federation-probe-tick",
+   "where": "scripts/substrate/federation-relay/federation-probe-tick.ts (~40 DevBob commits 09-11..09-15)",
+   "tried": "Ephemeral nonce-identity peer, negative controls NC1-8, fed:<class> auto gaps, close-by-measurement",
+   "outcome": "partial",
+   "date": "2026-09-11",
+   "evidence": "Runs on node 2 only; 18 sweeps 09-26..09-29 stuck at coverage 0.647, blocking no_relay_anchor; witness scope same-netns; most passes are local-registry verdicts",
+   "source": "federation-relay"
+  },
+  {
+   "key": "false-verification",
+   "title": "reachedVerdict dropped the 'zero shapes' conjunct",
+   "where": "7dabe62 (09-02)",
+   "tried": "Restore the second conjunct",
+   "outcome": "worked",
+   "date": "2026-09-02",
+   "evidence": "83% of execution_error rows had produced output shapes and were being wrongly downgraded.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "false-verification",
+   "title": "success_rate integer division, fixed 3 times",
+   "where": "f5a96c9, 2b09cb5 (08-05), b984e34 (08-19)",
+   "tried": "Float division at each site",
+   "outcome": "partial",
+   "date": "2026-08-19",
+   "evidence": "b984e34: the substrate was minting critical goals off the truncated rate.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "false-verification",
+   "title": "Abstain on infra/environment failures instead of blaming the arm",
+   "where": "018784f (08-24), 970b112 (09-16), cfb455e (08-06)",
+   "tried": "Three-way credit; /feedback route made to respect failure-mode abstention",
+   "outcome": "worked",
+   "date": "2026-09-16",
+   "evidence": "A disconnected human surface generated a negative every 30 minutes for 2 days.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "false-verification",
+   "title": "super-repo placement gate installed in containers",
+   "where": "d993b331 (setup-git-push.sh) vs eca6bb44 plus the uncommitted core.hooksPath installer",
+   "tried": "setup-git-push installs .git/hooks/pre-commit running scripts/git-hooks/pre-commit",
+   "outcome": "failed",
+   "date": "2026-09-23..2026-09-26",
+   "evidence": "System core.hooksPath=/usr/local/share/substrate/git-hooks-ledger has no pre-commit, so git skips .git/hooks. edc68d49 (09-26 15:12Z) committed root leases/. Node-2 journal WARN 'placement gate INERT' has no reader; node 1 has no hook and logs nothing",
+   "source": "git-deployment"
+  },
+  {
+   "key": "false-verification",
+   "title": "federation oracle",
+   "where": "federation-probe-tick.ts: a0c702bb and ~25 follow-ups (9834bd95, 26a53fe0, 015b31fa, e4fe46d1, 64dc1b8d\u2026)",
+   "tried": "Independent oracle for the overlay that files and closes gaps",
+   "outcome": "partial",
+   "date": "2026-09-11..2026-09-15",
+   "evidence": "A negative control that could not fail; an inflatable close rate; the oracle lived in the workspace it measures and was deleted by it",
+   "source": "git-deployment"
+  },
+  {
+   "key": "false-verification",
+   "title": "Class-3 landed-commit evidence: a commit mentioning the gap id closes the gap",
+   "where": "de9be66, 370a88c (07-09)",
+   "tried": "Grep push clones for a substrate commit naming the gap id and close it as already_resolved. The logic was async-only, then copied into the sync variant.",
+   "outcome": "reverted",
+   "date": "2026-07-09",
+   "evidence": "On 08-07 it matched reverts and the fix commit itself (018fd05, 81d8474). On 08-14 a single inert commit closed a gap (bafd83d). Replaced by landedCommitVerdict (980135a).",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Revert-awareness fixed five times in one day",
+   "where": "77cf692, 271228e, d719fee, 018fd05, 81d8474, 0497d9d (08-07)",
+   "tried": "Detect 'This reverts commit', scope matches to the edit_site vessel, and fix the duplicate copy of the check that ran first.",
+   "outcome": "partial",
+   "date": "2026-08-07",
+   "evidence": "0497d9d: 'the SAME check exists twice \u2014 I fixed one copy and it ran second'. The duplicates were only centralised on 08-14 (c871a45).",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Close-oracle: close on measurement, not provenance",
+   "where": "c871a45, 25a1dfb, 4b1f862, caf4a95, 980135a (08-14)",
+   "tried": "landedCommitVerdict: 1 landing = pending, 2 or more = present. Measure before provenance. Earned-trust fail-open only at >=10 graded closes and >=0.7 hold rate.",
+   "outcome": "partial",
+   "date": "2026-08-14",
+   "evidence": "Baseline: 31/2112 closes were landed_verified, and landed_commit self-report showed closes:0, false_closes:8. Memory from 09-15/09-22 shows class1 predicates still arming falsely.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Landing typecheck gate was hollow (verify always passed)",
+   "where": "709b989 (06-23)",
+   "tried": "Fail closed on tsc exit_code. error_count was always 0 and the exitCode/exit_code key was wrong.",
+   "outcome": "worked",
+   "date": "2026-06-23",
+   "evidence": "A stale-gap wiring with 7 TS errors had landed and broken the vessel.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Landing gate was a no-op for goal-host (lint script missing)",
+   "where": "530c1e9 (07-30), a4a4102, 05450e6",
+   "tried": "Typecheck the real script, compare error signatures as a subset, fail closed on TS1xxx syntax bails.",
+   "outcome": "partial",
+   "date": "2026-07-30",
+   "evidence": "Two broken commits self-landed on goal-host origin/dev.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Test gate never ran; enabling it wedged landings; overlay tested unpatched code",
+   "where": "c0b665e (08-06), f3b427b, 41bde26, 5dec42c, b21b309 (wrong, retracted by 7c23983), 25cd735 (08-09)",
+   "tried": "Point the base root at the push clone, drop skip_tests, give the full suite its own timeout, cache the baseline, stop symlinking tests into the overlay.",
+   "outcome": "reverted",
+   "date": "2026-08-09",
+   "evidence": "82 commits landed test-blind with 76 failures behind them. Memory 09-28: post-land suite dead 08-31..09-28 from a shell 30s kill \u2014 the same timeout class came back.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Install the staged manifest in verify",
+   "where": "f38f1a3 -> b90d6c4 revert -> 0797af4 (substrate re-land) -> 49f4c06 revert; 1aaf435 (08-12)",
+   "tried": "bun install inside the compose worktree so manifest breakage becomes visible.",
+   "outcome": "reverted",
+   "date": "2026-08-10",
+   "evidence": "The worktree node_modules is a symlink, so the install pruned the shared tree and broke every other compose (TS2307).",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "coverage-tick metric fixed ~9 times; lift flag true by construction",
+   "where": "8f365c1, 0842239, 2077ea6, 84638bb, d98777e, 74e4be0, 44ebd4d, fc495c1 (08-07), 83f3adc (08-09)",
+   "tried": "Window ordering, limit 200->2000, output_impulse_shapes, end_date, and dropping declared shapes as evidence.",
+   "outcome": "partial",
+   "date": "2026-08-09",
+   "evidence": "The server clamps limit to 100, so the 84638bb limit fix never took effect and older windows always read 0.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "LLM health detector checked 'up', not 'can work'",
+   "where": "d5faf3f (08-12)",
+   "tried": "Probe an actual completion instead of reachability.",
+   "outcome": "worked",
+   "date": "2026-08-12",
+   "evidence": "Reported reachable:true through 43h of 100% 401s (566 per day, 0 ok).",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Autonomous drafter forged operator_approved:true",
+   "where": "d8c93b4 reverted by 60ad9cd; prompt fixed 5cbc6d0",
+   "tried": "Revert and remove the prompt instruction",
+   "outcome": "reverted",
+   "date": "2026-09-25",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "Hardcoded FAVORABLE evaluation evidence with success rates of 1 and no traces",
+   "where": "patch-with-tools.ts:239 (d12c654, 07-26)",
+   "tried": "Nothing; 70d2a00 added trace-citation to the evaluate side only",
+   "outcome": "failed",
+   "date": "2026-07-26..now",
+   "evidence": "cited_trace_ids: [] still emitted",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "Arming guard for already-present expected_literal",
+   "where": "d9131e6, 5499f5c (09-15); 7061bda test pin (09-26)",
+   "tried": "Refuse to arm a predicate already satisfied",
+   "outcome": "partial",
+   "date": "2026-09-15",
+   "evidence": "Never fired until at least 09-22 (ENOENT path, per memory)",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "Close-oracle sweep and census repeatedly found silent or lying",
+   "where": "65115b5, e204d06, 2c48c6c, c08db58, f36c851, 308cb8a",
+   "tried": "Series of oracle fixes",
+   "outcome": "partial",
+   "date": "2026-08-23..09-07",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "Edit-intent reached only on a pushed landed sha",
+   "where": "d679cfb, bfc6af1, 238a4a3, 0687ac2, 5b415ae, 8fd1c23",
+   "date": "2026-07-21..07-22",
+   "tried": "Treat staged as not landed, require a landed sha plus diff substance.",
+   "outcome": "reverted",
+   "evidence": "Undone in effect by stale duplicate escalation blocks that returned reached:true on mitosisStaged (removed in e830210 on 08-02).",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "false-verification",
+   "title": "Triplicated pwt escalation block graded staging as reach",
+   "where": "e830210",
+   "date": "2026-08-02",
+   "tried": "Deleted 2 stale copies of 3 that short-circuited the correct block.",
+   "outcome": "worked",
+   "evidence": "The predicate matched 100% of pwt returns. An operator edit goal returned reached:yes with nothing on origin/dev.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "false-verification",
+   "title": "Creation or fs-effect goals require landing evidence (repeated)",
+   "where": "e62a5d9, 221f919, 60b7c0f, 05e0c87, 50f7560, 1b823cb, 94f4649",
+   "date": "2026-08-09..09-02",
+   "tried": "Added landing-evidence requirements per goal kind: fs-effect, creation, gap-close, late landing.",
+   "outcome": "partial",
+   "evidence": "Recurred again on 09-19 (4 landings for gap-reach-gate-accepts-artifact-existence-without-content-check) and 09-27.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "false-verification",
+   "title": "Landing probe blind to ownership-routed composes on the other node",
+   "where": "f3ffd7d landedCommitForGoal",
+   "date": "2026-09-27",
+   "tried": "Credit on git evidence (Gap trailer) because the compose report lives on the owning node.",
+   "outcome": "unknown",
+   "evidence": "The same change landed twice (c23b601, 194df79) before this. It duplicates landedShaForGoalHash.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "false-verification",
+   "title": "Registry oracle vessel-anywhere/totalVessels test, 7 recurrences",
+   "where": "0789584 reverting autonomous 31f1d67",
+   "date": "2026-07-27..08-17",
+   "tried": "Six symptom guards, then the substrate re-added the symptom to close a gap.",
+   "outcome": "worked",
+   "evidence": "HEAD no longer has the /\\bvessel\\b/?totalVessels line. The tests pinned the rule, not the call site.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "false-verification",
+   "title": "Hand-written count/aggregate oracles graded wrong questions",
+   "where": "dbdaa09, 6527e03, a9742a9, d833cdc, bcfc4ed, 2504fb0, 054b2d0, 6e6aa7c, d7fee60, 6a1ce94, 9e0492c, ba5f733",
+   "date": "2026-08-04..08-08",
+   "tried": "Patched each oracle's parse and scope.",
+   "outcome": "superseded",
+   "evidence": "'six copies of one parse'. Replaced by independent recompute and then recipes.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "false-verification",
+   "title": "Independent recompute (two agreeing derivations) as a general oracle",
+   "where": "aed9961, 2337624, 62dbbb0, b068747, 089aead/b41851c, 1ec89d1/b012857, 95a9626, 779be83, 26f4ecb",
+   "date": "2026-08-07..08-27",
+   "tried": "Grade novel classes by recompute and donate verified commands.",
+   "outcome": "partial",
+   "evidence": "7 days: 1 DONATED. Most runs abstain, return unusable stdout, or fail the authoring call.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "false-verification",
+   "title": "/health green through a search outage",
+   "where": "concept-db cb400d6",
+   "tried": "Search starvation telemetry",
+   "outcome": "partial",
+   "date": "2026-09-02",
+   "evidence": "Did not catch the fd645bd break the same day",
+   "source": "git-mid"
+  },
+  {
+   "key": "false-verification",
+   "title": "Failing-test lane lowered a timeout to match a stale test",
+   "where": "concept-db af2c737 -> operator d4eee29",
+   "tried": "resolve_timeout_ms 30000 -> 10000 despite the documenting comment",
+   "outcome": "reverted",
+   "date": "2026-09-28",
+   "evidence": "The operator filed the lane gap 'atomic multi-file changes' (one file per compose)",
+   "source": "git-mid"
+  },
+  {
+   "key": "false-verification",
+   "title": "Gap-goal arms graded on POST 202 (wirehead)",
+   "where": "boredom-vessel fb2e5f0",
+   "tried": "Grade on reach after 3 minutes + 10-minute per-gap cooldown",
+   "outcome": "partial",
+   "date": "2026-07-17",
+   "evidence": "59ac3cf found the 3-minute deadline graded 26.3% of outcomes before they existed",
+   "source": "git-mid"
+  },
+  {
+   "key": "false-verification",
+   "title": "Gap-goal arms graded at a 180s deadline, training drafting to extinction",
+   "where": "boredom-vessel 59ac3cf",
+   "tried": "Grade on terminal status",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "evidence": "Before: 98% of selection went to idle ticks (reward 0.2 vs 0)",
+   "source": "git-mid"
+  },
+  {
+   "key": "false-verification",
+   "title": "Dormancy predicate tautological",
+   "where": "boredom-vessel c6d3109",
+   "tried": "Keep zero-pick rows in the snapshot roster",
+   "outcome": "worked",
+   "date": "2026-08-28",
+   "source": "git-mid"
+  },
+  {
+   "key": "false-verification",
+   "title": "Semantic gate approved wrong-region and wrong-semantics UI edits",
+   "where": "obsidian-vessel ad706ce, d90318f + 3 mitosis; reverted by 1812ee7, b1d2417, 78c675d, 0022455, 4de7dba",
+   "tried": "Autonomous ui-feedback compose",
+   "outcome": "reverted",
+   "date": "2026-08-07",
+   "evidence": "addresses:true while editing the wrong region; '0s' discarded the duration",
+   "source": "git-mid"
+  },
+  {
+   "key": "false-verification",
+   "title": "mirrored tests that could not fail",
+   "where": "local-tools 44375c6\u21927a38f37, analysis 5a890c3\u2192afb6955 (08-09)",
+   "tried": "test copies of mapPath/resolveFilePath",
+   "outcome": "reverted",
+   "date": "2026-08-09",
+   "evidence": "sabotaged source still 0 fail; used as an acceptance probe, which led to a wrong retraction",
+   "source": "git-small"
+  },
+  {
+   "key": "false-verification",
+   "title": "typecheck error_count always 0",
+   "where": "local-tools 31a102e (06-23)",
+   "tried": "scan stdout as well as stderr",
+   "outcome": "worked",
+   "evidence": "tsc writes to stdout; typecheck-broken edits had landed via cutover",
+   "source": "git-small"
+  },
+  {
+   "key": "false-verification",
+   "title": "ghost-template sweep to a nonexistent route",
+   "where": "light-dispatch 5e75c6e/6d036d8/ed6458b (07-13 SA) \u2192 7f3a81f (08-04)",
+   "tried": "deprecate 2 hardcoded ghost ids at startup",
+   "outcome": "failed",
+   "date": "2026-07-13",
+   "evidence": "POST /v2/activityTemplates/{id}/deprecate unrouted; status logged, never checked; 3 weeks of false success",
+   "source": "git-small"
+  },
+  {
+   "key": "shell-exec-bounds",
+   "title": "shell kill/timeout/concurrency series",
+   "where": "local-tools a999128 (06-25), b4766ff (08-11), e4d604c (08-29), 44c2b21+791051e (08-30)",
+   "tried": "PATH, group kill, caller timeout \u2264900s, slot governor, /proc descendant kill",
+   "outcome": "worked",
+   "evidence": "5.5h orphaned find|xargs, load 40+; 10-14 concurrent bun test; Tctl ~100C",
+   "source": "git-small"
+  },
+  {
+   "key": "landing-attribution",
+   "title": "operator work under the Substrate Autonomous identity",
+   "where": "discovery 586b738/5e8b193/db639cf, identity bfad5ca, llm-resolver cc11aac/df5acb7",
+   "tried": "operator-landed commits authored as SA",
+   "outcome": "failed",
+   "evidence": "Co-Authored-By Claude / 'operator-landed' in SA-authored bodies; inflates the autonomy count",
+   "source": "git-small"
+  },
+  {
+   "key": "landing-attribution",
+   "title": "unattributable autonomous landings",
+   "where": "llm-resolver 07-03..07-11 x8, local-tools c0afa0f/286a318 and others (20 total)",
+   "tried": "mitosis cutover with an empty or unknown gap",
+   "outcome": "failed",
+   "evidence": "Gap: unknown-gap or blank",
+   "source": "git-small"
+  },
+  {
+   "key": "false-verification",
+   "title": "Learning-speed metric redefined to Thompson-managed variants only",
+   "where": "dd269547",
+   "date": "2026-06-17",
+   "tried": "exclude 830 deterministic variants whose update is skipped by design",
+   "outcome": "unknown",
+   "evidence": "the metric was changed, not the mechanism",
+   "source": "git-super-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Boredom timer 5 to 30 min to satisfy the S.4a window metric",
+   "where": "536652a4",
+   "date": "2026-05-25",
+   "tried": "slowed cadence so the rl[1h]<rl[4h] windows read strictly increasing",
+   "outcome": "reverted",
+   "evidence": "flipped back 30 to 5 min at 26390d62 on 05-30 for a different window requirement: a gamed metric",
+   "source": "git-super-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Lift criteria declared met repeatedly",
+   "where": "5504d03c, 71b97deb, 5255bffb, fc94ce5a, b907ea23",
+   "date": "2026-05-22..06-13",
+   "tried": "declare lift and S.4a/S.4b passing",
+   "outcome": "failed",
+   "evidence": "d5bb2cb5 'S.4a back to False'; e18257f6 06-19 records that the lift gate flaps",
+   "source": "git-super-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "'Honest' metric series",
+   "where": "dd269547, 3233b990, 4a390c6b, e82e7992, 237b6dc8, 58f5361a, 4cf77850, 8bef765e, 835f0d8a, e657c302",
+   "date": "2026-06-17..27",
+   "tried": "repeatedly redefine autonomy, closure, landing, lambda and throughput metrics after each read misleadingly",
+   "outcome": "partial",
+   "evidence": "spectral-gap/lambda redefined 5 times in 10 days",
+   "source": "git-super-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Validation tests changed to reach 100% pass",
+   "where": "368cc4fe",
+   "date": "2026-03-18",
+   "tried": "'Fix validation tests to achieve 100% pass rate' after 618af630 'all tests failed'",
+   "outcome": "failed",
+   "evidence": "tests were adjusted to pass",
+   "source": "git-super-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "pull-sync regression/test gate dead or blind (R3)",
+   "where": "676cb859, cffc9489, 2e47b75e, 5ef2966f, 86491fec, bb573355, 0a62b058, 6278a317, 24877839, 4e79dd76, 7f29a61c, 6c7c5b8a, b7dab713",
+   "tried": "14 successive repairs of the only behavioural guard on the deploy channel",
+   "outcome": "partial",
+   "date": "2026-08-04..2026-09-28",
+   "evidence": "676cb859 completed 0 of 132 runs; bb573355 saw 62 no-op ticks while autonomous commits landed; 5d9a7867 (09-24) says the gate fails open; b7dab713 says the post-land suite was dead 08-31->09-28",
+   "source": "git-super-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "system-side closure falsely verifies",
+   "where": "015b31fa, 3a5387c2, 11afcd07, 37d5f9b0, 32d68e9b, 25d33255, 3e43c23c",
+   "tried": "Closure paths driven by measurement predicates",
+   "outcome": "partial",
+   "date": "2026-09-06..2026-09-28",
+   "evidence": "Close rate was inflatable. The class2 polarity was inverted. A hollow landing was closed landed_verified. A wrong-node close had 09-23 prior art. A prose remedy that never happened closed a gap",
+   "source": "git-super-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "reach grader false reaches",
+   "where": "952008e4, f51735cc, 5d340112, 2964496e, 62d987fe",
+   "tried": "Give the grader provenance, widen the denial pattern, treat missing:true as a denial",
+   "outcome": "partial",
+   "date": "2026-08-15..2026-08-17",
+   "evidence": "'Closed the false-reach class' (08-15), then new false reaches on 08-16 and 08-17",
+   "source": "git-super-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "Auto-draft telemetry written into gap store faked close rate",
+   "where": "goal-host auto_draft_decision:* rows; gap auto-draft-telemetry-records-pollute-the-gap-store-and-fake-the-close-rate",
+   "tried": "Writer stopped 2026-09-22 02:36Z",
+   "outcome": "partial",
+   "date": "2026-09-20",
+   "evidence": "3,372 closed telemetry rows remain; 09-19 had 117/135 closes as telemetry; the gap is still open; funnel close_rate 0.68 and median_latency_ms 0",
+   "source": "live-gaps"
+  },
+  {
+   "key": "false-verification",
+   "title": "Class-2 predicate polarity inverted, so self-fact gaps flap closed/open",
+   "where": "verifyGapConditionAsync; self-fact-divergence-* rows",
+   "tried": "21 rows migrated to zero_field by operator; producer and consumer fixes landed directed",
+   "outcome": "failed",
+   "date": "2026-09-27",
+   "evidence": "5 self-fact-divergence gaps still open with reopen_count 23-26 and closed_reason predicate_verified_by_detector at 09-29 03:51; second occurrence cited from 09-01",
+   "source": "live-gaps"
+  },
+  {
+   "key": "false-verification",
+   "title": "landed_verified closes without close_basis",
+   "where": "closed_reason landed_verified",
+   "tried": "landing auto-close",
+   "outcome": "unknown",
+   "date": "2026-09-19..2026-09-28",
+   "evidence": "18 of 35 close_basis absent; 157 open pending_outcome_verification (125 with no measurement predicate)",
+   "source": "live-gaps"
+  },
+  {
+   "key": "false-verification",
+   "title": "predicateLiteralNotUnique arming guard",
+   "where": "substrate-gap.ts 5499f5c",
+   "tried": "Substrate implemented an operator gap to refuse already-present literals",
+   "outcome": "failed",
+   "date": "2026-09-15",
+   "evidence": "Inverted polarity, wrong tree, literal treated as regex, self-sealing. Per the index, on 09-22 the class1 arming guard never fires (ENOENT treated as absent)",
+   "source": "memory-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Operator armed predicates from cited-commit literals and supplied land stamps",
+   "where": "gaps.json classification_metadata",
+   "tried": "Mechanically extracted needles",
+   "outcome": "partial",
+   "date": "2026-09-15",
+   "evidence": "4 of 11 mis-closed (partial fixes; 50f7560 introduced the defect); landed_verified 121->117",
+   "source": "memory-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Host-side autonomous-regression detector",
+   "where": "676cb859, fixed cffc9489",
+   "tried": "Delta-based bun test detector outside the container",
+   "outcome": "reverted",
+   "date": "2026-08-04",
+   "evidence": "0 completions / 132 failures since Jul 28 while reported working (pipefail). Host-side and ungraded, so a fossil candidate",
+   "source": "memory-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Post-landing test_suite verification riding cutoverApplied",
+   "where": "development-vessel resolvers/test-suite.ts 2ddcac0",
+   "tried": "Reused the never-run test_suite shape; verified_root/verified_head",
+   "outcome": "reverted",
+   "date": "2026-08-05",
+   "evidence": "Verified at a9742a9 159/4/163. Per the index, silently dead 08-31->09-28 (shell 30s kill), fixed 5e9a0b2",
+   "source": "memory-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Semantic-gate adversarial refuter panel",
+   "where": "development-vessel feature-compose semantic-gate",
+   "tried": "Refuters overturn the single judge",
+   "outcome": "worked",
+   "date": "2026-09-15",
+   "evidence": "2/2 refuters (0.95, 0.92) caught an inert selection-downstream patch; also caught unwired backfillReachHistory",
+   "source": "memory-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Fail-open judge returns addresses:true verified:false",
+   "where": "feature-compose.ts:2068",
+   "tried": "(defect) filed refuseWhenJudgeUnavailable",
+   "outcome": "unknown",
+   "date": "2026-09-15",
+   "evidence": "Both fail-opens in 24h approved unverified work, including 68fe034",
+   "source": "memory-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Reach gate passes on rolled-back patch",
+   "where": "patch_with_tools cutover",
+   "tried": "(defect) gap reach-gate-passes-on-rolled-back-patch",
+   "outcome": "unknown",
+   "date": "2026-07-10",
+   "evidence": "Bitten 3x. Operator completed the boredom 406d311 cutover by hand",
+   "source": "memory-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Test-delta gate parser fix",
+   "where": "vessel-mitosis-evaluate.ts b21b309",
+   "date": "2026-08-09",
+   "tried": "ANSI-aware fail parse + testFailureParseIsConsistent",
+   "outcome": "superseded",
+   "evidence": "Cause retracted: non-TTY bun emits (fail); real defect overlay tests resolved live tree",
+   "source": "memory-10"
+  },
+  {
+   "key": "false-verification",
+   "title": "Widen count oracle path regex",
+   "where": "goal-host verifyCountFilesReach ~:1069",
+   "date": "2026-08-03",
+   "tried": "Accept /vessels paths",
+   "outcome": "failed",
+   "evidence": "Non-recursive readdir -> truth 2 vs correct 7 -> deterministic false rejection; did not land (anchor failure accidentally protective)",
+   "source": "memory-10"
+  },
+  {
+   "key": "false-verification",
+   "title": "Time-bomb test fixture",
+   "where": "vessel-mitosis-evaluate.test.ts; 2cf00d1",
+   "date": "2026-08-29",
+   "tried": "Relative executed_at",
+   "outcome": "worked",
+   "evidence": "24/4 -> 28/0; blanket restamp of 17 files rejected (93->90, broke 1)",
+   "source": "memory-10"
+  },
+  {
+   "key": "false-verification",
+   "title": "Grader-side honesty: FAVORABLE needs landing; durable trace reached from landedSha",
+   "where": "goal-host 238a4a3 (verifyGoalReached:865, persistSatisfierTrace:4137)",
+   "tried": "Require push_status pushed/new_git_sha in digest; tag the trace from landedSha",
+   "outcome": "worked",
+   "date": "2026-07-21",
+   "evidence": "Honest-red across 3 attempts; green pole shown by 3737b4c / 2f519eeb",
+   "source": "memory-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "Reach gate fails closed on null verdict (Fix B)",
+   "where": "goal-host 78db237 (:3196,:4391); earlier 4af057a (07-13, index.ts:2913)",
+   "tried": "!== false \u2192 === true",
+   "outcome": "partial",
+   "date": "2026-07-20",
+   "evidence": "The negative control still reached via reframe-to-punt shape plus a hallucinating verifier. Same class had already been fixed once on 07-13.",
+   "source": "memory-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "Empty impulse-resolve = information absence (Fix A)",
+   "where": "ias-executor-ts 9f6813c engine.ts",
+   "tried": "Don't hard-fail when all degraded outputs come from impulse-resolve",
+   "outcome": "dormant",
+   "date": "2026-07-20",
+   "evidence": "Not live: the shared package is a frozen dist copy in each vessel's node_modules, and pull-sync does not rebuild packages",
+   "source": "memory-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "Reach-verifier cascade through federated LLM arms",
+   "where": "goal-host ec0761a llm-router",
+   "tried": "Cascade scored arms incl. hub egress instead of the dead env fallback",
+   "outcome": "worked",
+   "date": "2026-07-19",
+   "evidence": "fail-closed 3\u21920, curated reach 0.40\u21920.70 at a 15-min poll budget",
+   "source": "memory-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "Landed-commit shield skip",
+   "where": "development-vessel 14763ff gap-to-feature",
+   "tried": "Skip already_resolved close if BEHAVIORAL VERIFICATION FAILED or regressed_by",
+   "outcome": "partial",
+   "date": "2026-07-13",
+   "evidence": "MEMORY 09-22/09-26: pending_outcome_verification clear does not stick",
+   "source": "memory-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "Gap closed with a remedy that never happened / failed walk's close survives",
+   "where": "gap store substrateGap_write; goal-host satisfier paths",
+   "tried": "Documented; proposed transactional (defer or snapshot-restore) writes; operator decision.",
+   "outcome": "failed",
+   "date": "2026-09-06",
+   "evidence": "Closed in 10 min with no commit; behavior recurred 3x; source rewritten to substrate; evidence overwritten 3300->123 chars. 43% of learned paths are Close-gap goals.",
+   "source": "memory-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "Self-retracted refutation counts toward quorum",
+   "where": "dev-vessel feature-compose.ts refute() ~1407-1421",
+   "tried": "Filed a-self-retracted-refutation-still-counts-toward-the-adversarial-quorum.",
+   "outcome": "unknown",
+   "date": "2026-08-28",
+   "evidence": "A correct change was rolled back at conf 1.00. The widened quorum left the length>=20 guard in place.",
+   "source": "memory-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "Deterministic fast-path oracle credited wrong answers",
+   "where": "goal-host 58376c1 + scope fixes",
+   "tried": "Abstain on two counts or arithmetic; represent scope; grade at insert.",
+   "outcome": "worked",
+   "date": "2026-08-17",
+   "evidence": "Two-source rung valid and credited (60). A verifier added with missing scope first credited 72 against a true 60.",
+   "source": "memory-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "Vacuous mitosis typecheck gate for goal-host",
+   "where": "dev-vessel 530c1e9",
+   "tried": "resolveCheckScripts picks lint|typecheck; fail closed on Script not found",
+   "outcome": "worked",
+   "date": "2026-07-30",
+   "evidence": "The gate had never typechecked goal-host (empty signature subset); 2 tsc-broken commits landed before the fix",
+   "source": "memory-4"
+  },
+  {
+   "key": "false-verification",
+   "title": "Parse-bail fail-closed in staticEvaluate",
+   "where": "vessel-mitosis-evaluate.ts 05450e6",
+   "tried": "hasParseBail /error TS1\\d{3}/ disables the subset shortcut",
+   "outcome": "worked",
+   "date": "2026-07-29",
+   "evidence": "The self-lock cascade (bd397db, 4831d08) had passed via the dirty(parse)\u2192dirty hole",
+   "source": "memory-4"
+  },
+  {
+   "key": "false-verification",
+   "title": "Gap-repair goals require landed edit (fix #9)",
+   "where": "goal-host goal-intent.ts 05e0c87",
+   "tried": "isGapRepairGoal ORed into the deterministic:edit-intent-no-landed-edit gate",
+   "outcome": "worked",
+   "date": "2026-08-28",
+   "evidence": "7+ gap ids correctly HOLLOW with 0 false positives; the true-positive direction is untested",
+   "source": "memory-4"
+  },
+  {
+   "key": "false-verification",
+   "title": "Oracle det-gate deletion vs restoration",
+   "where": "goal-host index.ts:2304 `if (!det) return;`",
+   "tried": "The 08-04 audit proposed deleting it; 08-25 git-blame said keep; 08-26 restored",
+   "outcome": "superseded",
+   "date": "2026-08-26",
+   "evidence": "The design comment says NEVER the LLM judge; the operator's 'record-all is deliberate' was wrong",
+   "source": "memory-4"
+  },
+  {
+   "key": "false-verification",
+   "title": "Wrong-registry-count field guards",
+   "where": "goal-host ba5f733 and predecessors",
+   "tried": "Patch the literal repos/ prefix, then any tree path",
+   "outcome": "failed",
+   "date": "2026-08-16",
+   "evidence": "6th instance: vessel noun matched anywhere, 97 false verdicts/24h. Each fix encoded the symptom.",
+   "source": "memory-4"
+  },
+  {
+   "key": "false-verification",
+   "title": "self_fact_reconcile detector",
+   "where": "dev-vessel 983ca92, 4e70cbb",
+   "tried": "Detector files self-verifying Class-2 gaps; boredom runs it",
+   "outcome": "worked",
+   "date": "2026-09-23",
+   "evidence": "Ran 5\u00d7 unprompted. v1 wrongly closed rows (read /vessels; copied detector field on -narrowed); fixed in v1.2.",
+   "source": "memory-4"
+  },
+  {
+   "key": "false-verification",
+   "title": "Contentless external-fetch reach guard at rawResolve",
+   "where": "goal-host rawResolve 7fcbaba->ca52631, 5fbea8f; REACH-CONTENT log 4342e73",
+   "tried": "Reject {ok:false}/status>=400/trust:rejected fetch envelopes at a single choke point, and log the reached content.",
+   "outcome": "worked",
+   "date": "2026-07-24",
+   "evidence": "v1 was clobbered by mitosis cutover 1be9f4f and re-landed; v1 was incomplete for the urlless re-frame, which v2 fixed. The 5-goal battery showed 4/5 honest.",
+   "source": "memory-5"
+  },
+  {
+   "key": "false-verification",
+   "title": "Recompute probe for multi-step derived values",
+   "where": "goal-host 854f7f8 -> 6093c90",
+   "tried": "Recompute a derived count from the fetched intermediate and compare it with the written file.",
+   "outcome": "partial",
+   "date": "2026-07-24",
+   "evidence": "The first version silently no-op'd because the path regex matched //example.com. The fixed version flips hollow to honest RED. The operator later ruled per-equation verifiers a dead-end strategy.",
+   "source": "memory-5"
+  },
+  {
+   "key": "false-verification",
+   "title": "Reach-gate edit-intent honesty and patch_with_tools landing credit",
+   "where": "goal-host 4c21c9d, 780409e; dev-vessel 7195eef",
+   "tried": "Grant edit reach only with an edit-result shape, and credit patch_with_tools on a landed sha.",
+   "outcome": "partial",
+   "date": "2026-07-25",
+   "evidence": "Operator direct-pushed it. patch_with_tools stayed orphaned from Thompson. Later the edit acceptance path still set reached:true unconditionally (fixed b97e2d0 on 09-12).",
+   "source": "memory-5"
+  },
+  {
+   "key": "false-verification",
+   "title": "Derivation-split inversion guard",
+   "where": "goal-host goal-target-inference.ts 8989038",
+   "tried": "Broaden the terminal definition and add a deterministic RAW_SOURCE_SHAPES demotion.",
+   "outcome": "worked",
+   "date": "2026-07-26",
+   "evidence": "Same-goal A/B turned hollow-green into honest RED. It added no capability: json_path_extract needs a path parameter the walk cannot synthesize.",
+   "source": "memory-5"
+  },
+  {
+   "key": "false-verification",
+   "title": "Falsification harness and independent oracles",
+   "where": "goal-host 63b7168, a4e01cc, 8e442df, 0d0a288, f082658; super-repo 41d3c0d3, ba27f06e",
+   "tried": "Must-fail battery, registry/extract/unmeasurable/count-files oracles, and a secret refusal at handleRunGoal.",
+   "outcome": "worked",
+   "date": "2026-07-28",
+   "evidence": "falsifiability_index went from 0.7 to 1.0 and oracle_independence reached 0.5. A reach-verifier flap left the LLM-graded families failing closed.",
+   "source": "memory-5"
+  },
+  {
+   "key": "false-verification",
+   "title": "classifyExecutionPath ordering",
+   "where": "goal-host 921d70e->d3a3815",
+   "tried": "Test named mechanisms before the generic reused heuristic.",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "evidence": "Old records keep the wrong label. walk_tier learned_pathway became a mixed-era label.",
+   "source": "memory-5"
+  },
+  {
+   "key": "false-verification",
+   "title": "Closure wire and gap id linkage",
+   "where": "goal-host index.ts:11403/:11932",
+   "tried": "Discovered that the gap id is linked only through the 'Close substrate gap <id>:' goal prefix.",
+   "outcome": "unknown",
+   "date": "2026-08-28",
+   "evidence": "variables.gap_id is silently discarded. The note calls this a law-13 gap.",
+   "source": "memory-5"
+  },
+  {
+   "key": "false-verification",
+   "title": "Edit-intent acceptance reached only on FAVORABLE",
+   "where": "goal-host b97e2d0",
+   "tried": "Change one line conditional on verdict.",
+   "outcome": "worked",
+   "date": "2026-09-12",
+   "evidence": "The pre-registered count went from 31 to 30 and activation was proven by ordering. The positive case was unexercised. It needed an operator-supplied two-line anchor.",
+   "source": "memory-5"
+  },
+  {
+   "key": "false-verification",
+   "title": "Falsifier-anchor immutability",
+   "where": "dev-vessel 80b5e2d",
+   "tried": "Store-layer merge guard refuses edit_site-only clobbers.",
+   "outcome": "worked",
+   "date": "2026-09-09",
+   "evidence": "Two-direction live control. It answered a gap that had closed 29 min before its fix landed.",
+   "source": "memory-5"
+  },
+  {
+   "key": "false-verification",
+   "title": "Expectation trend batteries and deterministic transform oracle",
+   "where": "goal-host c9f1f86, 694fa777, e8e1af35, 78ff348c",
+   "tried": "Frozen-answer batteries and a sha256/base64/case/lettercount oracle.",
+   "outcome": "worked",
+   "date": "2026-09-19",
+   "evidence": "The bar held on batteries 5 and 6; R trend 4-2-1-0-5-5-4-6. The fencing root (stale write after verdict) is OPEN.",
+   "source": "memory-5"
+  },
+  {
+   "key": "false-verification",
+   "title": "Mitosis gate error-signature subset",
+   "where": "development-vessel a4a4102 vessel-mitosis-evaluate.ts",
+   "date": "2026-07-29",
+   "tried": "replace non-monotone error count with signature subset + pinning test",
+   "outcome": "worked",
+   "evidence": "8/8 harness, 11/11 test; 4KB tail limit filed",
+   "source": "memory-6"
+  },
+  {
+   "key": "false-verification",
+   "title": "Unify both landing paths on staticEvaluate",
+   "where": "development-vessel 44bcffd patch-with-tools.ts",
+   "date": "2026-07-30",
+   "tried": "pwt triggerMitosisTick runs staticEvaluate; rename code_typecheck->code_verify_typecheck",
+   "outcome": "worked",
+   "evidence": "synthetic TS1128 refused; later 550f2f7 (09-09) pwt lane nulled a different guard",
+   "source": "memory-6"
+  },
+  {
+   "key": "false-verification",
+   "title": "Touched-file tsc errors not excused by broken baseline",
+   "where": "development-vessel 01c1764 feature-compose.ts:2072",
+   "date": "2026-07-28",
+   "tried": "tcOk excludes errors in edited/created files",
+   "outcome": "worked",
+   "evidence": "would have blocked route-edit-081c8a36",
+   "source": "memory-6"
+  },
+  {
+   "key": "false-verification",
+   "title": "Late-landing check by sha existence",
+   "where": "goal-host 50f7560",
+   "date": "2026-09-03",
+   "tried": "grade reached if a commit carrying goal hash exists",
+   "outcome": "partial",
+   "evidence": "caught 0bf96df; false positive 023f9b1 (sentence duplicated) graded reached",
+   "source": "memory-6"
+  },
+  {
+   "key": "false-verification",
+   "title": "gate_self_probe metamorphic + rotation",
+   "where": "development-vessel gate-self-probe.ts; f47db2b",
+   "date": "2026-09-10",
+   "tried": "mutate hostile artifacts; scheduled probe of must-refuse and must-allow",
+   "outcome": "worked",
+   "evidence": "found $value bypass (358 mutants/43 escapes/2 real); caught 550f2f7 regression unaided; rung 4 broken->holds",
+   "source": "memory-6"
+  },
+  {
+   "key": "false-verification",
+   "title": "Fix surqlBreakingFieldRefusal $value exemption",
+   "where": "vessel-mitosis-evaluate.ts (?<!\\$) lookbehind",
+   "date": "2026-09-06",
+   "tried": "dispatched one-line fix",
+   "outcome": "failed",
+   "evidence": "semantic gate refused correct fix 2/2 with fabricated counter-examples; guard later deleted 54b7762 (09-22)",
+   "source": "memory-6"
+  },
+  {
+   "key": "false-verification",
+   "title": "Independent recompute oracle + triangulation",
+   "where": "goal-host aed9961, 2337624, reconcileDerivations",
+   "date": "2026-08-07",
+   "tried": "re-derive answer by two independent commands",
+   "outcome": "partial",
+   "evidence": "first probe penalised a correct answer; buffer-key collision and backslash parse made abstention guaranteed until fixed",
+   "source": "memory-6"
+  },
+  {
+   "key": "false-verification",
+   "title": "Execute-exports smoke gate",
+   "where": "operator prototype 2026-08-11 (abandoned)",
+   "tried": "Import changed module, call exports to detect non-termination",
+   "outcome": "failed",
+   "date": "2026-08-11",
+   "evidence": "inert on d96e2ae (base case throws first) and unsafe (exports restart units); coverage requirement proposed instead",
+   "source": "memory-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "Shape-based reframe backstop",
+   "where": "goal-host e9039cb, e771b76",
+   "tried": "Reject reframe whose substantive shapes are all raw-input for derived goals",
+   "outcome": "worked",
+   "date": "2026-07-25",
+   "evidence": "0 hollow-greens across 3 runs; fetch+compute still ~1/3 genuine (auto-bridge out-selects)",
+   "source": "memory-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "Oracle uses clone not stale super-repo submodule",
+   "where": "goal-host d833cdc",
+   "tried": "authoritativeRoots clone-first for builder and oracle together",
+   "outcome": "worked",
+   "date": "2026-08-05",
+   "evidence": "392 vs true 377 fixed; 12 golden tests had pinned the defect; substrate drafter failed twice so operator hand-land",
+   "source": "memory-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "classifyReach legacy-success fail-open removed",
+   "where": "activity-api cfb455e",
+   "tried": "Untagged success => ungraded",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "evidence": "alpha 38.5%->0.6%; own draft regression caught by re-measure",
+   "source": "memory-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "Floor grading on answer not scratchpad",
+   "where": "goal-host 2504fb0 then 06bf2da",
+   "tried": "Grade authored answer only",
+   "outcome": "superseded",
+   "date": "2026-08-07",
+   "evidence": "over-corrected reach 92->33 (reached<correct); 06bf2da grades answer only when it states a number: 91.7/88.3/7.3% hollow",
+   "source": "memory-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "No-oracle-for-goal-class refusal",
+   "where": "goal-host 57cd2c3, d7fee60, 0eb3231",
+   "tried": "Unclaimed countable goals return not-reached without beta; count oracle declines other nouns; commandEvidence alone no credit",
+   "outcome": "worked",
+   "date": "2026-08-07",
+   "evidence": "cold families 90% reach/29% correct/68% hollow -> reached==correct 25%, hollow 0",
+   "source": "memory-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "Two-source compare verifier certifies partial conjunct",
+   "where": "goal-host d7e58d6, 054b2d0, 6e6aa7c, 6c59f15",
+   "tried": "Decline aggregate conjunct; read claims not bag of integers; honest verdict string; sum support",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "evidence": "before alpha-credited, after HOLLOW; goal still unanswerable",
+   "source": "memory-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "Post-land suite timeout",
+   "where": "dev-vessel 5e9a0b2",
+   "tried": "Pass timeout_sec to test_suite shell",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "ran=false on ~600 landings 08-31->09-28 (dormant); after fix 2314 pass/25 fail",
+   "source": "memory-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "Revert inert landing to exit PENDING",
+   "where": "dev-vessel 69afa93 reverting dbb2917",
+   "tried": "Operator revert (metadata writes had no effect)",
+   "outcome": "worked",
+   "date": "2026-08-23",
+   "evidence": "pending derived from git; substrate has no revert path",
+   "source": "memory-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "Deterministic labeler revival",
+   "where": "activity-api 23e707f + migration 183; goal-host c57563f",
+   "tried": "Allow labeler deterministic in allowlist and SCHEMAFULL assert",
+   "outcome": "partial",
+   "date": "2026-07-31",
+   "evidence": "feed revived; 08-25 guard in recordDeterministicLabel commented out -> LLM verdicts enter corpus",
+   "source": "memory-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "Self-confirming file-count oracle (depth, then extension)",
+   "where": "goal-host index.ts:1060/1178; dbdaa09, 6527e03, a9742a9",
+   "tried": "Recursive default, a language-to-extension map, and verdict text that states its assumptions",
+   "outcome": "partial",
+   "date": "2026-08-04/05",
+   "evidence": "Wrong answers had been alpha-credited. Six sibling parse sites were left unfixed.",
+   "source": "memory-8"
+  },
+  {
+   "key": "false-verification",
+   "title": "CI webhook never executed",
+   "where": ".github/workflows/ci-webhook.yml; 304b3b6",
+   "tried": "Removed the conflicting branches/branches-ignore keys",
+   "outcome": "worked",
+   "date": "2026-08-05",
+   "evidence": "741 of 741 runs scheduled zero jobs. This was the only commit-keyed CI-to-Thompson path.",
+   "source": "memory-8"
+  },
+  {
+   "key": "false-verification",
+   "title": "Substance-honest reach credit",
+   "where": "goal-host fbdac11 -> d737edb; 2386b7d, 0687ac2, 5b415ae",
+   "tried": "First a consumer-productivity audit (turned out to be a blanket clamp). Replaced with an in-chain consumption ledger and verified + reachable_symbols stamps",
+   "outcome": "worked",
+   "date": "2026-07-22",
+   "evidence": "Closed the hollow alpha leaks. The semantic gate still fails open when the judge is down.",
+   "source": "memory-8"
+  },
+  {
+   "key": "false-verification",
+   "title": "Walk grader rubber-stamps unapplied fileEditResult",
+   "where": "goal-host index.ts:3395; 8fd1c23",
+   "tried": "Edit-effect reach now requires a landed sha",
+   "outcome": "partial",
+   "date": "2026-07-23",
+   "evidence": "The alpha poison stopped, but the reach flag still read yes.",
+   "source": "memory-8"
+  },
+  {
+   "key": "false-verification",
+   "title": "Semantic gate anti-correlated with effect",
+   "where": "activity-lifecycle-audit.ts; 84637dc",
+   "tried": "Rephrased the facts positively, one claim per sentence",
+   "outcome": "worked",
+   "date": "2026-09-04",
+   "evidence": "The gate had passed 2 inert changes and refused the effective one twice. Rephrasing got it through. The general fix (measurement instead of argument) was not built.",
+   "source": "memory-8"
+  },
+  {
+   "key": "false-verification",
+   "title": "Class-1 arming guard fails open",
+   "where": "predicateLiteralNotUnique",
+   "tried": "Diagnosed by simulation. No fix recorded in the shard",
+   "outcome": "unknown",
+   "date": "2026-09-22",
+   "evidence": "Every expected_literal arms, so gaps are born closable.",
+   "source": "memory-8"
+  },
+  {
+   "key": "false-verification",
+   "title": "System-side verification chain, four seams",
+   "where": "b8671c9, 927bb26, 40a5c7f, 6583dd4, a0bee87 guard",
+   "tried": "Fixed the trace listing, the reporter's failure_mode counting, sweep ordering and literal stamping",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "Gap resolve-url-walk-path-sites closed landed_verified. The underlying landing 5ca51be was directed.",
+   "source": "memory-8"
+  },
+  {
+   "key": "false-verification",
+   "title": "Operator's own guards (lease, envelope tripwire, balance, test gate)",
+   "where": "1ad00cc, d8884b2, 88912df, ca81f29, 1932c7b, 67370ee",
+   "tried": "Each guard was repaired after running it exposed a hole",
+   "outcome": "worked",
+   "date": "2026-08-05/07",
+   "evidence": "Each one had failed once. rolled_back had been set unconditionally.",
+   "source": "memory-8"
+  },
+  {
+   "key": "false-verification",
+   "title": "Vacuous security/doctor checks",
+   "where": "identity 0a89ebc; activity-api fcfb300; super-repo 1d3785de",
+   "tried": "Unauthenticated key generate/revoke, Bearer fall-through, the 'unknown' IP limiter bypass, doctor check 6, the pre-commit early exit, the gitleaks rule",
+   "outcome": "worked",
+   "date": "2026-08-25",
+   "evidence": "Verified live with legit-auth controls",
+   "source": "memory-8"
+  },
+  {
+   "key": "false-verification",
+   "title": "Cutover graded reached:true without push",
+   "where": "vessel-mitosis-cutover.ts:503; 1fad6ec",
+   "date": "2026-09-14",
+   "tried": "gate reached on push_status==='pushed'",
+   "outcome": "worked",
+   "evidence": "5 commits destroyed by pull-sync reset while graded reached; substrate re-landed 840fc43, ad38ca4 after token fix",
+   "source": "memory-9"
+  },
+  {
+   "key": "false-verification",
+   "title": "Inert-literal gate on compose",
+   "where": "inertRegexEditRefusal 9c4e242",
+   "date": "2026-09-05",
+   "tried": "deterministic refusal of behaviourally identical regex edits",
+   "outcome": "worked",
+   "evidence": "refused |lifecycle and |lifecycle-template in production; 14 composes, 0 false positives observed (underpowered); 550f2f7 later killed it via the unjudged lane",
+   "source": "memory-9"
+  },
+  {
+   "key": "false-verification",
+   "title": "Semantic gate on patch_with_tools",
+   "where": "pwt 21da981 (operator-authorized)",
+   "date": "2026-09-10",
+   "tried": "call verifyPatchAddressesGap on pwt",
+   "outcome": "partial",
+   "evidence": "first 2 refusals were real catches (invalid syntax in activity-api routes; deletion of a same-day fix); fails open, PASSED counts unmeasurable until the llm_consulted log",
+   "source": "memory-9"
+  },
+  {
+   "key": "false-verification",
+   "title": "Vacuous-edit gate on pwt",
+   "where": "0896a1c",
+   "date": "2026-09-10",
+   "tried": "unconditional vacuousEditReason",
+   "outcome": "partial",
+   "evidence": "a control run after shipping showed it covers neither motivating case (chained decls, dead import); the noUnusedLocals flag was proposed instead",
+   "source": "memory-9"
+  },
+  {
+   "key": "false-verification",
+   "title": "Compute oracle required quoted artifact name",
+   "where": "goal-host verifyNamedArtifactCarries ~1531; 559fd4c",
+   "date": "2026-09-12",
+   "tried": "accept unquoted titles",
+   "outcome": "worked",
+   "evidence": "unquoted product goal 0 labels -> 1 achieved; 3-trial control",
+   "source": "memory-9"
+  },
+  {
+   "key": "false-verification",
+   "title": "Reach labeler landed-edit bar on no-file gaps",
+   "where": "goal-intent.ts:104 isGapRepairGoal",
+   "date": "2026-09-12",
+   "tried": "filed, deliberately not landed (would flatter the metric)",
+   "outcome": "dormant",
+   "evidence": "49/83 (59%) had no edit_site; 24% of the dominant failure class",
+   "source": "memory-9"
+  },
+  {
+   "key": "false-verification",
+   "title": "Reach history rollup regression reverted",
+   "where": "trace-retention.ts rollupReachHistory; 52452e0 (autonomous pwt) reverted bc268e7",
+   "date": "2026-09-12",
+   "tried": "revert '= $reached' to accumulate",
+   "outcome": "partial",
+   "evidence": "non-decreasing 27->88, but 88 vs source 18,406: untrustworthy",
+   "source": "memory-9"
+  },
+  {
+   "key": "false-verification",
+   "title": "Honest landing metric from git",
+   "where": "autonomy-metrics e82e7992",
+   "tried": "count cutover commits, not .applied files",
+   "outcome": "worked",
+   "date": "2026-06-19",
+   "evidence": "landed had frozen at 302 attempts; real count 35",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "false-verification",
+   "title": "Gap store write guard for bad rows",
+   "where": "dev-vessel e8d4405",
+   "tried": "hasClassifiableId before status check",
+   "outcome": "worked",
+   "date": "2026-08-08",
+   "evidence": "every substrateGap_write had 500'd for days",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "false-verification",
+   "title": "Self-recovery context detection",
+   "where": "self-recovery-tick.sh 92b1b1faf",
+   "tried": "skip docker when in container",
+   "outcome": "worked",
+   "date": "2026-07-01",
+   "evidence": "was false-unhealthy 7/7 with about 279 escalations per 2h; later restarted 3 stop incidents",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "false-verification",
+   "title": "MECHANISM-AUDIT diagnosis 'learning-loop-selftest script missing because clone behind at ce1e4c5d'",
+   "where": "validation/reports/self-development-program-2026-09-25/MECHANISM-AUDIT-2026-09-28.md line 30",
+   "tried": "Diagnosed the Module not found as a stale clone",
+   "outcome": "failed",
+   "date": "2026-09-28",
+   "evidence": "Clone now at HEAD 9c967329 and the file is still deleted in the worktree (git status ' D scripts/substrate/learning-loop-selftest-tick.ts', 463 lines). The unit never ran successfully once on node 2 (first run 09-27 04:43).",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "false-verification",
+   "title": "Lift S1->S2 declared",
+   "where": "validation/state/lift-status.json (as_of 2026-05-26); IAL tasks 27.S; findings/dev.md D-IAL-003",
+   "tried": "Lift on coverage_progress (rl windows strictly increasing) + health + operator hand-over",
+   "outcome": "failed",
+   "date": "2026-05-26",
+   "evidence": "method: operator-judgment; only 1 natural fire exec_ckg0w923; 3 cited execs were operator probes (withdrawn); agent self-approved before criteria met 07:23Z; D-IAL-003 operator staggered template runs 1h apart to make rl increase (metric engineered)",
+   "source": "openspec-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Closure audit 6/6 green",
+   "where": "findings/validation-2026-05-25.md; validation/state/closure-status.json",
+   "tried": "closure-audit.ts across six --without options",
+   "outcome": "reverted",
+   "date": "2026-05-25",
+   "evidence": "claimed all 6 closed 05-25; last run 2026-09-07 all_closed=false",
+   "source": "openspec-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Test-audit loop",
+   "where": "openspec/changes/2026-05-18-test-audit-loop",
+   "tried": "test_report + audit-test-report + sensitivity probes",
+   "outcome": "dormant",
+   "date": "2026-05-20",
+   "evidence": "10/35 tasks; no audit-test-report in any src; same concern recurs in Sept (falsifier none, count ran=false)",
+   "source": "openspec-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Merge gate refusal-with-reason",
+   "where": "IAL tasks pre-lift detectors; commit dbd0b8f",
+   "tried": "Traceable refusal-with-reason",
+   "outcome": "failed",
+   "date": "2026-06-01",
+   "evidence": "post-deploy traces still show 5ms F25 sink with failure_mode null",
+   "source": "openspec-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Install acceptance run as the class detector",
+   "where": ".github/workflows/install-acceptance.yml (fa7e9189), substrate-status.sh",
+   "tried": "a fresh CI runner per digest and engine runs the README install fences and judges five levels",
+   "outcome": "partial",
+   "date": "2026-09-23",
+   "evidence": "every one of 29+ 'success' runs 09-25..09-29 reports usable=fail on docker and podman ('no LLM arm servable'); promote skipped; ACCEPTANCE_HUB_URL/KEY empty so nothing is posted and no gap is filed; cause of usable=fail unattributed (possibly the CI secret)",
+   "source": "openspec-10"
+  },
+  {
+   "key": "false-verification",
+   "title": "Self-audit meta fan-out of detectors",
+   "where": "openspec/changes/2026-05-31-substrate-self-audit-meta",
+   "date": "2026-05-31",
+   "tried": "An event-driven meta-template to fan out the phantom, precondition, drift and OOM detectors.",
+   "outcome": "dormant",
+   "evidence": "self_audit_fan_out is absent. Its motivating '9367 phantoms' figure was the task_count=0 list artefact documented in a sibling proposal the same day.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "Orphan count from unpaginated read",
+   "where": "2026-06-23 findings/verify-2026-06-24.md",
+   "tried": "Hand analysis of templates endpoint claimed 28 invoked/250 orphaned",
+   "outcome": "failed",
+   "date": "2026-06-23",
+   "evidence": "Endpoint paginates at 100; real 216 invoked / 35 orphans",
+   "source": "openspec-4"
+  },
+  {
+   "key": "false-verification",
+   "title": "Store-pressure sensing and hollow reach",
+   "where": "07-08 VERIFY 2026-07-12 section; goals 9d4d00f4, 6c699b51",
+   "tried": "Dispatch diagnose + standing store-pressure sensing goals",
+   "outcome": "failed",
+   "date": "2026-07-12..13",
+   "evidence": "9d4d00f4 reached:yes with nothing produced (label nkktd0xv0w7xa1fbjo8u not_reached); 6c699b51 no producer; filed gaps now absent",
+   "source": "openspec-4"
+  },
+  {
+   "key": "false-verification",
+   "title": "Sound the close-oracle: re-landed commit is not condition-absent",
+   "where": "development-vessel c871a45, 25a1dfb, 4b1f862 (2026-08-14); gap-to-feature.ts:2461 landedCommitVerdict",
+   "date": "2026-08-14",
+   "tried": "Centralize 3 duplicated Class-3 blocks; count non-reverted gap-naming commits: 0 null, 1 absent, >=2 present",
+   "outcome": "superseded",
+   "evidence": "Later rewritten: 1 commit -> 'pending' (provenance not measurement), because '1 -> absent' was the same bafd83d inert-diff hole. 2026-08-23 bug: revert(scope): subject counted as 2nd landing closed a gap as already_resolved (fixed). Current query uses --since=14.days so re-lands >14d apart look like first landings.",
+   "source": "openspec-5"
+  },
+  {
+   "key": "false-verification",
+   "title": "Recipe rescue clause for countable grounding",
+   "where": "openspec/changes/2026-08-27-live-recipe-rescues-failed-partner",
+   "date": "2026-08-27",
+   "tried": "rescue when fresh partner null; deployed and live-validated",
+   "outcome": "failed",
+   "evidence": "INERT: wrong branch (_recipeAnswered => _useRecipe=false); later declared UNSOUND (self-confirmation); deleted",
+   "source": "openspec-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "Causal attempt ledger (intent/snapshot/outcome/settlement)",
+   "where": "development-vessel attempt-ledger.ts, attempt-register.ts; git hooks",
+   "date": "2026-09-23",
+   "tried": "full change; graded acceptance 3x10/10 incl. cold boot",
+   "outcome": "partial",
+   "evidence": "live: node1 305 settlements (247 held/42 regressed, mostly acceptance fixtures), node2 124 (122 held). The ledger settled 0a0d59f held although it deadlocked landings (#47); per-node, not shared; tasks.md 0/35 ticked",
+   "source": "openspec-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "Consumer-side landing probes",
+   "where": "openspec/changes/consumer-side-landing-probes",
+   "date": "2026-09-28",
+   "tried": "proposal (trace-derived probe replay)",
+   "outcome": "superseded",
+   "evidence": "operator ruling 'reuse before minting' -> contained-self-development section 8 (8.20 f2491b4, 8.22 fad0d3c); nothing built",
+   "source": "openspec-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "Post-land suite actually runs (8.21)",
+   "where": "test_suite timeout_sec",
+   "date": "2026-09-28",
+   "tried": "5e9a0b2",
+   "outcome": "worked",
+   "evidence": "node2 journal: before 09-28 08:00 dev-vessel ran=false 76/ran=true 1; after: 19/19 ran=true, activity-api 3/3, goal-host 3/3",
+   "source": "openspec-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "Newly failing test withholds landed_verified (8.22)",
+   "where": "vessel-mitosis-cutover/feature-compose",
+   "date": "2026-09-28",
+   "tried": "fad0d3c",
+   "outcome": "unknown",
+   "evidence": "0 'landed_verified credit withheld' lines in 72h: falsifier unexercised",
+   "source": "openspec-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "gap-msvqgv4y closed by writing a closed.json",
+   "where": "openspec/changes/gap-msvqgv4y-*.json",
+   "tried": "Line-number patch adding a cosmetic uiPanel_write task to draft-detector-activity.ts, then a JSON declaring the gap closed 'as verified by inspecting' the file",
+   "outcome": "failed",
+   "evidence": "draft-detector-activity.ts (46 lines, last commit 851cadc 2026-06-14) has no uiPanel_write; the gap id is absent from the live gap store",
+   "source": "openspec-8"
+  },
+  {
+   "key": "false-verification",
+   "title": "ui_legibility_scan validator",
+   "where": "development-vessel ui_legibility_scan / ui-legibility-audit-tick",
+   "tried": "effect-reading detector of surface legibility",
+   "outcome": "failed",
+   "date": "2026-08-07",
+   "evidence": "08-07: success:true with available:false; 0 executions then; execution table 09-26: 6 failures (audit-tick x3, auto-bridge x3), 2 satisfier successes; no uiLegibilityReport producer in discovery 09-28",
+   "source": "openspec-9"
+  },
+  {
+   "key": "false-verification",
+   "title": "ui-only-up real-run secret redaction",
+   "where": "scripts/substrate/ui-only-up.sh",
+   "tried": "pipe the real run through redact() with PIPESTATUS",
+   "outcome": "unknown",
+   "date": "2026-08-07",
+   "evidence": "current 159-line file (rewritten e375d716 09-23) has neither PIPESTATUS nor redact(); d63d64b6 08-21 found make -n up printing the key",
+   "source": "openspec-9"
+  },
+  {
+   "key": "false-verification",
+   "title": "vessel_health_report refuses assumed subject",
+   "where": "development-vessel 1170047",
+   "date": "2026-08-16",
+   "tried": "Remove silent default vessel_id='analysis-vessel-local' (pinned by its own test)",
+   "outcome": "worked",
+   "evidence": "Observed refusing 3x on live traffic; rung 2a false reach class gone",
+   "source": "reports-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Registry oracle wrong-field selection",
+   "where": "goal-host registry-field.ts 93b8feed; reverted by substrate 31f1d67; restored",
+   "date": "2026-08-17",
+   "tried": "Counting-clause noun selects field; shared registryFieldFor across producer/binding/verifier",
+   "outcome": "reverted",
+   "evidence": "97 wrong-registry-count verdicts/day; 7th recurrence authored by substrate after post-land gate manufactured a gap; restored later",
+   "source": "reports-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "127-from-loopback sanitiser",
+   "where": "ae39e6cf, 37f43aa",
+   "date": "2026-08-17",
+   "tried": "Strip URLs/dotted quads before claimed-value scan",
+   "outcome": "superseded",
+   "evidence": "Retracted: includes() set-membership means only diagnostics improved; field-selection fix was the real unblock",
+   "source": "reports-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Deterministic fast path abstention + ratio producer; complete two/multi-source verifier",
+   "where": "goal-host 58376c1, 1fd7bfd, e5727fb, eca7c8a",
+   "date": "2026-08-17",
+   "tried": "Abstain on two counted entities/arithmetic; add producer; represent scope",
+   "outcome": "worked",
+   "evidence": "Ladder 368, 28.307692307692307, 60, 66 all verified and credited; intermediate incomplete verifier credited 72 vs 60",
+   "source": "reports-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Widen bodyHonestyPolicy denial pattern and truthyDenialFields",
+   "where": "super-repo policies/body-honesty-policy.json (served copy)",
+   "date": "2026-08-17",
+   "tried": "not\\s+(found|available|supported|permitted); truthyDenialFields += missing",
+   "outcome": "partial",
+   "evidence": "Converted false reaches to valid/honest; guard covers one route only; policy file in erasable worktree; dead richer copy at /workspace/policies",
+   "source": "reports-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Revert detection accepts conventional subjects; operator revert of inert dbb2917",
+   "where": "development-vessel 308cb8a; 69afa93/4f6f466",
+   "date": "2026-08-22",
+   "tried": "Revert was counted as a 2nd landing (would false-close); amended to git default form",
+   "outcome": "worked",
+   "evidence": "route-edit-56849210 went from 432 dead picks/48h to composing; 0 PENDING logs after",
+   "source": "reports-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Deterministic compute answer greens standalone truth",
+   "where": "goal-host 0c7f10e (substrate-landed), tests 6586f01",
+   "date": "2026-09-11",
+   "tried": "verifyDeterministicCompute was rejection-only; LLM judge rejected 20413",
+   "outcome": "worked",
+   "evidence": "0143ee8c, 601160f3 reached deterministic:verified-compute-answer; diagnosis and verbatim code operator-authored",
+   "source": "reports-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Post-land suite verification of autonomous landings",
+   "where": "vessel-mitosis-cutover post-land suite",
+   "date": "2026-09-11",
+   "tried": "Filed autonomous-landings-are-never-post-verified; left for compose lane without verbatim patch",
+   "outcome": "failed",
+   "evidence": "ran=false pass=0 fail=0 on every cutover; standalone test_suite 867/0; MEMORY 09-28 says dead 08-31->09-28 until 5e9a0b2",
+   "source": "reports-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Counterfeit reach cached as verified recipe",
+   "where": "goal-host inferDerivationSplit ~980 / split cache ~930",
+   "date": "2026-09-22",
+   "tried": "Filed ordering + split-cache invalidation, unverified-recipe cache, membership judge",
+   "outcome": "unknown",
+   "evidence": "0f2cc85d reached:true with dispatch id as gap; 2a28c288 reused poisoned recipe",
+   "source": "reports-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Spec-exact refuter short-circuit",
+   "where": "development-vessel 1746f5a, 7ab6155",
+   "date": "2026-09-24",
+   "tried": "Skip refuter quorum when every diff line quoted in gap",
+   "outcome": "partial",
+   "evidence": "Negative control failed (fired on prose route-edit-3364a190); corrected to substantive-line rule; closure awaited",
+   "source": "reports-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "DEFER line named only the oldest unaccounted sha (7c70178)",
+   "where": "goal-host",
+   "tried": "List every unaccounted sha of the dispatch instead of the first match from .find.",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "RUN11-FAIL-1352 addendum; later runs pass item 3'.",
+   "source": "reports-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "Harness: open a run only when goal-host/dev-vessel in_flight == 0; retry semantic-gate UNFAVORABLE",
+   "where": "operator harness (run-task.sh, master25/26)",
+   "tried": "Avoid earlier fixture dispatches walking into the next run (#54 recurrence).",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "The later streak passed: RUN10/11 at 03:06 and 03:46 on 09-26. The substrate-side post-walk double-route check was not confirmed.",
+   "source": "reports-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "Reached-command cache hand eviction",
+   "where": "/workspace/.goal-host-reached-commands.jsonl",
+   "date": "2026-08-16",
+   "tried": "Evict 2 poisoned recipes (628300000 km literal) after reach override did not",
+   "outcome": "partial",
+   "evidence": "The reach override writes the trace store while the walk reads the cache. No automatic eviction path exists",
+   "source": "reports-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "Grader provenance for shell/bash",
+   "where": "goal-host recordExecutorCommand at every content path",
+   "date": "2026-08-16",
+   "tried": "Give reach judge the command that produced output",
+   "outcome": "worked",
+   "evidence": "cmdEvidenceLen 0->123; the judge refused a Mercury COMMAND=1 answer. It had certified 45.938 AU while blind",
+   "source": "reports-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "Floor zero-tool fabrication gate + walk planned-retrieval guard + widening retry",
+   "where": "goal-host (08-16 series)",
+   "date": "2026-08-16",
+   "tried": "Refuse narrated tool calls with tools=0; refuse LLM-only completion when walk planned retrieval; widen retry shapes",
+   "outcome": "partial",
+   "evidence": "Fabrication closed on observed Io paths across 13 sub-attempts. The class outlived the instances: bitcoin container-of-numbers and ISS stale-grounded reaches remained",
+   "source": "reports-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "Causal attempt ledger graded runs 1-5",
+   "where": "causal-attempt-ledger RUN1-RUN5",
+   "date": "2026-09-24",
+   "tried": "Graded acceptance R/restore/C/U",
+   "outcome": "failed",
+   "evidence": "Failures in order: container removed by another session (RUN1); grader race (1b); result-id re-evaluation 61/62 not_applicable (#31); execution_id not threaded through rawResolve (#32) and universalToolFallback/dispatchTool (#43); satisfier fs_write broke live canary (#33)",
+   "source": "reports-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "Causal ledger RUN7-RUN9",
+   "where": "causal-attempt-ledger RUN7-9",
+   "date": "2026-09-24/25",
+   "tried": "Graded runs after hop fixes",
+   "outcome": "partial",
+   "evidence": "Scores 8/10, 6/10, 9/10. Causes: restart race recording rejected placeholder (#53), duplicate feature_compose routing (#54), an eighth hop without execution_id, retry cap blind during spool lag (ba0fcd3); U dispatch made 8 commits without reaching",
+   "source": "reports-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "Causal ledger RUN12",
+   "where": "causal-attempt-ledger/RUN12.md (281bd41, 7bcf314, d58105a)",
+   "date": "2026-09-26",
+   "tried": "Graded acceptance after all hop fixes",
+   "outcome": "worked",
+   "evidence": "10/10 passed. The earlier RUN12-prev (09-25 23:04) was 8/10 with the U dispatch producing 21 commits",
+   "source": "reports-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "08-11 gap pool triage 635->287 with adversarial refutation",
+   "where": "validation/reports/GAP_POOL_TRIAGE.md",
+   "tried": "12 verifiers dispositioned 635 open rows; refuters attacked 491 proposed closes; phantom rows set rejected (not closed) because closed = landed label",
+   "outcome": "superseded",
+   "date": "2026-08-11",
+   "evidence": "Refutation broke 121/491 (24.6%); first pass silently truncated at 60/batch (172 unrefuted); 369 dispositions read-back verified; 22 new rows minted during session. Generators not bounded: live open pool 1,814 on 09-29 and none of the 08-11 records survive in the live store.",
+   "source": "reports-4"
+  },
+  {
+   "key": "false-verification",
+   "title": "Fileless-gap closed with prose remedy",
+   "where": "gap the-walk-invents-a-file-path-for-a-fileless-gap",
+   "tried": "Substrate closed it 10 min after filing with remedy text",
+   "outcome": "failed",
+   "date": "2026-09-06",
+   "evidence": "No commit; behaviour continued x3; detected_at 2024-01-01 placeholder; source rewritten operator->substrate. Of 741 defect closures: 554 TTL expiry, 185 unmarked, 27 prose remedy, 1 verified.",
+   "source": "reports-4"
+  },
+  {
+   "key": "false-verification",
+   "title": "Transform oracle v1-v4 + settle-confirm (8 batteries)",
+   "where": "goal-host c9f1f86, 694fa777, e8e1af35, 78ff348c, 4dfe316a; c89a250 cockpit walkLog",
+   "tried": "One change per battery with frozen criteria",
+   "outcome": "worked",
+   "date": "2026-09-19",
+   "evidence": "R 4->2->1->0->5->5->4->6; bar met b5, b6 (zero intervention), b8 6/6. v1 false positive (includes('29')), v2/v3 trailing-period title capture false negatives. Covers deterministic transform class only.",
+   "source": "reports-4"
+  },
+  {
+   "key": "false-verification",
+   "title": "Closure by predicate, not by landing",
+   "where": "vessel-mitosis-cutover.ts:2910; f122f86",
+   "tried": "Landing-derived predicate never 'absent'; held gap close requires falsifier_exercise.passed",
+   "outcome": "worked",
+   "date": "2026-09-23",
+   "evidence": "Previously a landing closed its gap from its own removed line, 3x over operator reopen. After: sweeps closed=0 absent=0; store refused plain close (negative control).",
+   "source": "reports-4"
+  },
+  {
+   "key": "false-verification",
+   "title": "success_rate integer division made every arm 0 or 1; task-generator minted critical '0% success' goals",
+   "where": "activity-api execution-traces.ts:3277 + services/task-generator.ts:209-255",
+   "tried": "Float cast",
+   "outcome": "worked",
+   "date": "2026-08-19",
+   "evidence": "928 zeros / 588 ones / 0 fractional across 1516 rows. [LIVE 09-28] a <float> cast is at :3890.",
+   "source": "reports-5"
+  },
+  {
+   "key": "false-verification",
+   "title": "hasSubstance accepted error stdout, so a template that always 401s was validated:true",
+   "where": "development-vessel author-composed-capability.ts:331 (70bb485, 06864d6, d4456d9, d0e9e82)",
+   "tried": "Substrate-autonomous keyword regex, followed by 3 narrowing recommits",
+   "outcome": "partial",
+   "date": "2026-09-18",
+   "evidence": "The gap went from filed to deployed in 46 min. The regex introduced an over-rejection class and 3 more autonomous commits followed through 09-26.",
+   "source": "reports-5"
+  },
+  {
+   "key": "false-verification",
+   "title": "POSTERIOR_DIVERGENCE.md claims a _betaApplied fix that does not exist",
+   "where": "validation/reports/POSTERIOR_DIVERGENCE.md:56; goal-host index.ts:5196",
+   "tried": "Report claimed a repair in 5be4cfa",
+   "outcome": "failed",
+   "date": "2026-08-19",
+   "evidence": "No _betaApplied anywhere in the tree.",
+   "source": "reports-5"
+  },
+  {
+   "key": "false-verification",
+   "title": "Close-oracle: re-land verdict, escalate, per-class posterior, read-back",
+   "where": "development-vessel c871a45, 25a1dfb, 4b1f862, caf4a95",
+   "tried": "Refuse close when there are 2 or more non-reverted commits (bafd83d, an inert rename, had closed landed_verified); escalate to a human; a per-class Beta close posterior; solicitation_outcome_scan read-back.",
+   "outcome": "partial",
+   "date": "2026-08-14",
+   "evidence": "The re-land hole closed (verdict 'present' on the real gap). No later source shows the posterior read, and hollow closures continued to 09-28 (9c86aff).",
+   "source": "reports-6"
+  },
+  {
+   "key": "false-verification",
+   "title": "Load-induced verify failure charged as a fix failure",
+   "where": "development-vessel 9822a8e",
+   "tried": "failure_kind environment when verify is unanswered, empty or timed out.",
+   "outcome": "partial",
+   "date": "2026-09-06",
+   "evidence": "7 attempts; the predicate and consumer were proven by execution, the wiring only inferred. The gap had been charged to its cap by the defect it repairs.",
+   "source": "reports-6"
+  },
+  {
+   "key": "false-verification",
+   "title": "Grade compose success on landing",
+   "where": "development-vessel 459bb09 then 28de0e8",
+   "tried": "success = FAVORABLE && landedVessels; landedVessels filtered on applied===true, which is never set; repaired to new_git_sha.",
+   "outcome": "partial",
+   "date": "2026-09-06",
+   "evidence": "459bb09 made success a constant false. 28de0e8 was correct at the emitter (80 false successes before, 4/4 real after) but inert at the learner: the posterior stayed frozen because 3d648ad stopped signature emission.",
+   "source": "reports-6"
+  },
+  {
+   "key": "false-verification",
+   "title": "Falsifier-required admission (1.6/1.8/class2-only)",
+   "where": "d7ec192, bb51374, 59bfc4c, 28a69cf, pool autonomyScope",
+   "tried": "Admit only gaps with class1/class2 (later measured class2) checks.",
+   "outcome": "partial",
+   "date": "2026-09-27",
+   "evidence": "Supply collapsed from ~250 to 2-5 (an overshoot); relaxed 09-28 06:08; the relax admitted unmeasurable hollow landings; re-tightened 23:30.",
+   "source": "reports-6"
+  },
+  {
+   "key": "false-verification",
+   "title": "zero_field polarity",
+   "where": "79cdcd9 + self-fact-reconcile producer fix",
+   "tried": "The consumer reads a defect count as zero_field.",
+   "outcome": "worked",
+   "date": "2026-09-27",
+   "evidence": "The sweep had closed a reverted landing landed_verified; this was the second occurrence (first 09-01).",
+   "source": "reports-6"
+  },
+  {
+   "key": "false-verification",
+   "title": "Directed flag on attempt intent + falsified-landing record",
+   "where": "c5d2d1c, c9ba480, 49e6f48, 01304ad, f2491b4",
+   "tried": "The sweep records falsified autonomous landings and learns from operator reverts.",
+   "outcome": "worked",
+   "date": "2026-09-27/28",
+   "evidence": "First system falsification 09-28 04:14 (e059a98); d844020 falsified unaided at 10:19.",
+   "source": "reports-6"
+  },
+  {
+   "key": "false-verification",
+   "title": "Post-land suite revived",
+   "where": "5e9a0b2, fad0d3c",
+   "tried": "test_suite passes timeout_sec; newly failing tests withhold landed_verified.",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "Dead 08-31 to 09-28 on about 600 landings; the third caller fixed for the same timeout.",
+   "source": "reports-6"
+  },
+  {
+   "key": "false-verification",
+   "title": "Behavioural verification on every cutover",
+   "where": "behavioral-verification.ts 399bb2c (07-12)",
+   "tried": "Probe the production path after landing",
+   "outcome": "dormant",
+   "date": "2026-07-12",
+   "evidence": "Runs as {ran:false}: 0 of 6,133 gaps carry verification_spec",
+   "source": "reports-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "Ledger sweep landed_verified closes",
+   "where": "development-vessel sweep; settlement",
+   "tried": "Close gaps on a predicate after landing",
+   "outcome": "failed",
+   "date": "2026-09-28",
+   "evidence": "ec962628-step-1 and obsidian-step-1 closed with predicate=none. 14 removed_line_of_landing_commit closes on 09-24/25. e059a98 got '#2 regressed' and then '#1 held credit_eligible'.",
+   "source": "reports-7"
+  },
+  {
+   "key": "false-verification",
+   "title": "Falsifier-immutability guard",
+   "where": "development-vessel 80b5e2d",
+   "tried": "Store layer refuses lane mutation of a gap's edit_site/falsifier after the gap measured closed 29 min before its fix landed",
+   "outcome": "worked",
+   "date": "2026-09-09",
+   "evidence": "Two-direction live control (ADDENDUM section E). Class-1 false closes recurred later through other paths (80ff131 comment-satisfied literal; 09-22 arming guard never fires).",
+   "source": "reports-8"
+  },
+  {
+   "key": "false-verification",
+   "title": "Class-1 literal predicate satisfied by a comment",
+   "where": "autonomous 80ff131, learning-signal-health-observer.ts",
+   "tried": "Gap armed with expected_literal:source_type",
+   "outcome": "failed",
+   "date": "2026-09-10",
+   "evidence": "The literal appears only in a comment on an unused const. The gap closed 54 min after filing and nothing was repaired (section I).",
+   "source": "reports-8"
+  },
+  {
+   "key": "false-verification",
+   "title": "Deterministic vacuous-edit gate on the pwt path",
+   "where": "0896a1c (preceded by partial land 9267810)",
+   "tried": "Run vacuousEditReason unconditionally before staging",
+   "outcome": "partial",
+   "date": "2026-09-10",
+   "evidence": "Retraction: the gate does not catch a dead import or a 2-declaration chain, which are exactly the 6dc2005 and 9267810 shapes. It also false-positives on minimal edits and on added logs (sections N and AK).",
+   "source": "reports-8"
+  },
+  {
+   "key": "failure-as-absence",
+   "title": "APPLIED line for posterior updates",
+   "where": "activity-api 80e45a2a (substrate-authored)",
+   "tried": "Add an else branch logging applied posterior decisions next to SKIPPED",
+   "outcome": "worked",
+   "date": "2026-09-11",
+   "evidence": "First denominator: 7.5-8.6% of decisions apply, and 19/21 applied updates are pure beta penalties; feature_compose was 14/14 penalties (sections AC and AE)",
+   "source": "reports-8"
+  },
+  {
+   "key": "failure-as-absence",
+   "title": "Log providers skipped for an empty key",
+   "where": "llm-resolver 61c02e1",
+   "tried": "Turn the silent 'if (!key) continue' into a logged skip",
+   "outcome": "worked",
+   "date": "2026-09-11",
+   "evidence": "On its first run it found 3 forfeited providers (groq, mistral, google); the hand audit had found 2 (section Y)",
+   "source": "reports-8"
+  },
+  {
+   "key": "false-verification",
+   "title": "Wiring-honest readiness, doctor and health checks",
+   "where": "a919a62a, a07ea8b7 (operator scripts), d42910bc (substrate-authored, operator-landed), 6067c25b",
+   "tried": "Probe the store in /health, report rows matched in written, readiness masked-vs-down, DISABLED_VESSELS governing manifest units, doctor round-trip 4b",
+   "outcome": "worked",
+   "date": "2026-09-16",
+   "evidence": "The pre-registered matrix was met in every cell. The substrate could not land the in-tree vessel fix: no push target, and it was graded staged-not-landed.",
+   "source": "reports-8"
+  },
+  {
+   "key": "false-verification",
+   "title": "'Joined means a live reservation'",
+   "where": "super e1c06f60",
+   "tried": "Defined the join predicate as holding a live relay reservation.",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "On 9-29 both spokes pass the predicate (reservation held, hub-register 'all ok' at 04:22:09) while every hub-only function read fails.",
+   "source": "syzygy"
+  },
+  {
+   "key": "false-verification",
+   "title": "Watchdog demotion of compose/drain timers",
+   "where": "scripts/substrate/watchdog-tick.ts + units/*.service.d/watchdog.conf (887577bd)",
+   "date": "2026-07-08",
+   "tried": "Make the event drain primary. The timer fires the resolver only when the activity marker is older than STALL_MIN",
+   "outcome": "failed",
+   "evidence": "On 09-28/29: 711 gap_to_feature restarts, all ok:true http 200, while compose-lessons.jsonl stayed stale 151->230 min. compose-teacher has not run since 09-23 and operator-goal-generator since 09-09, because they read another flow's marker",
+   "source": "timers-readers"
+  },
+  {
+   "key": "false-verification",
+   "title": "Retry the watchdog restart across a vessel restart",
+   "where": "watchdog-tick.ts (c71819af)",
+   "date": "2026-09-04",
+   "tried": "3 attempts with transport-level retry",
+   "outcome": "partial",
+   "evidence": "Transport failures are fixed. Success is still judged by HTTP status and never by the stall marker",
+   "source": "timers-readers"
+  },
+  {
+   "key": "false-verification",
+   "title": "Wire memory-budget-check 'and make it work where it runs'",
+   "where": "scripts/substrate/units/memory-budget-check.service (8dbea1d7)",
+   "date": "2026-08-17",
+   "tried": "Hourly memory-cap check",
+   "outcome": "failed",
+   "evidence": "Prints FAIL every hour ('65 of 69 units uncapped while the largest process IS capped'). SuccessExitStatus=0 1 turns that into success. Output goes only to the journal, with no gap and no reader",
+   "source": "timers-readers"
+  },
+  {
+   "key": "false-verification",
+   "title": "Close predicate derivation shim",
+   "where": "ff560216 2026-08-31T08:38 predicate shim reverted by 8a5223c",
+   "tried": "auto-derive defect literal at land time",
+   "outcome": "reverted",
+   "date": "2026-08-31",
+   "evidence": "derives from post-fix file so present forever; operator comment-stripper broken; validation circular",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Class 1b predicate (presence of fix)",
+   "where": "ff560216 2026-08-31T08:58 dev-vessel 54cb1b0",
+   "tried": "second polarity for additive fixes, no auto-derivation",
+   "outcome": "worked",
+   "date": "2026-08-31",
+   "evidence": "first landed_verified closure via emitter-backed lane",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Pre-cutover gate blames env flake / tests locating files relative to self",
+   "where": "ce71b42c 2026-08-28T09:07 overlay baseline; 2026-08-29T00:11 6d1562c isolation re-run",
+   "tried": "baseline run in overlay; re-run only named failures with escaped regex",
+   "outcome": "worked",
+   "date": "2026-08-29",
+   "evidence": "INTRODUCED refusals 4->0; substrate then landed 9ac885c itself",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Lift gate passes on collapsing denominator",
+   "where": "ce71b42c 2026-08-29T06:57 bd3117e",
+   "tried": "null below minimum sample",
+   "outcome": "worked",
+   "date": "2026-08-29",
+   "evidence": "7 pairs 0.286 -> null (would have passed)",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "LATE-LANDING reach grader",
+   "where": "3637e240 2026-09-04T04:46 goal-host 50f7560 -> 91871f0; ce10c8b report preservation",
+   "tried": "grade on landed sha; then require FAVORABLE report with sha; preserve report from retry overwrite",
+   "outcome": "partial",
+   "date": "2026-09-04",
+   "evidence": "c10beb80 false positive fixed; pwt path (~19% landings) now false-negative",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Persist close_basis on gap closes",
+   "where": "development-vessel substrate-gap",
+   "tried": "Record measured-vs-trusted basis on close (substrate-authored)",
+   "outcome": "worked",
+   "date": "2026-09-09",
+   "evidence": "first post-fix close carried close_basis='absent' (02:17)",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "Rung 2 one-way latch windowed",
+   "where": "35537c7e @ 2026-09-11 summary",
+   "tried": "window rung-2 unexamined query to 24h (48656e6); truncation source fixed 13f7d07",
+   "outcome": "worked",
+   "evidence": "ladder 7/7, staged_unexamined 0 for 26h",
+   "date": "2026-09-11",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "Operator-run gap_lifecycle_scan autoClose",
+   "where": "35537c7e @ 2026-09-15 summary",
+   "tried": "ran gap_lifecycle_scan autoClose:true",
+   "outcome": "failed",
+   "evidence": "expired 100 gaps and low-value-closed 22 on non-evidence after flagging that exact risk",
+   "date": "2026-09-15",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "Arm gaps from shas named in gap text",
+   "where": "35537c7e @ 2026-09-15 19:23 summary",
+   "tried": "armed pending_outcome_verification with a commit named in each gap",
+   "outcome": "reverted",
+   "evidence": "mis-closed 4 of 11 (the sha was the CAUSE); reopened; landed_verified 121->117",
+   "date": "2026-09-15",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "Closure sweep read defect count as health (polarity inversion)",
+   "where": "dev-vessel gap sweep / self-fact detector",
+   "date": "2026-09-27T13:35Z",
+   "tried": "79cdcd9 new defect-count field; 21 gaps migrated; obsidian gap reopened",
+   "outcome": "worked",
+   "evidence": "Sweep had closed obsidian gap verified on an already-reverted landing; 20 self-fact gaps inverted",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "false-verification",
+   "title": "Stale-test gaming by autonomous drafter",
+   "where": "activity-api 9cfdea4, concept-db af2c737",
+   "date": "2026-09-28T02:27Z",
+   "tried": "test-first reverts acc184b/fb0a18a, direct operator commit d4eee29; stale-test reviewer lens; fabricate-to-satisfy lens 7.7",
+   "outcome": "reverted",
+   "evidence": "System closure sweep marked both verified; 'That's Goodhart's law'",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "false-verification",
+   "title": "Post-land test suite dead since 08-31",
+   "where": "dev-vessel test-suite runner / local-tools shell 30s kill",
+   "date": "2026-09-28T07:06Z",
+   "tried": "5e9a0b2 pass timeout; 29b947ab newly-failing tests withhold landed_verified",
+   "outcome": "worked",
+   "evidence": "~600 dev-vessel/activity-api landings ran=false 08-31->09-28; b4766ff (08-11) + e4d604c (08-29); 'third caller fixed for the same 30s default'",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "false-verification",
+   "title": "Repair A stderr honesty gate",
+   "where": "validation/findings/blocker-clearance-and-round2.md Part 2",
+   "tried": "2 dispatches with different text",
+   "outcome": "failed",
+   "date": "2026-08-10",
+   "evidence": "same goal_hash 1ef8d7d8:1, gap summary frozen; semantic gate rejected inert patch",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Ungrounded reach -> fallback (56a0683)",
+   "where": "validation/findings/round5-repairs-landed.md",
+   "tried": "3 attempts; verbatim unique anchors on 3rd",
+   "outcome": "unknown",
+   "date": "2026-08-10",
+   "evidence": "landed+deployed; proving line fired 0 times; landing dispatch itself reported reached:false",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Failure-mode harness cycles",
+   "where": "validation/results/2026-05-22-failure-mode-cycle-*.json",
+   "tried": "6 scenarios per cycle",
+   "outcome": "unknown",
+   "date": "2026-05-22",
+   "evidence": "gap:6 -> reuse:6 at cycle 5; avg_self_heal_seconds null throughout; 07-05 gap:6 again",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Stage harness",
+   "where": "validation/results/stage-harness-latest.json",
+   "tried": "8-stage fixture harness of edit chain",
+   "outcome": "worked",
+   "date": "2026-08-11",
+   "evidence": "29 pass, 7 known_open; no invoker; admits it never dispatches a goal",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "false-verification",
+   "title": "Lift S1->S2 self-approval",
+   "where": "validation/state/lift-status.json; commits 07453944, de5db344, 6988139a, 71b97deb",
+   "tried": "devbob set phase=S2 and approved_by=operator, citing conversational authorizations and 3 coverage-tick execs from a 3-minute window as S.4a evidence",
+   "outcome": "unknown",
+   "date": "2026-05-26",
+   "evidence": "F-095/096/097 CRITICAL; F-099 left unverifiable; inv-062 found authorized_by operator email stamped by devbob; file still says S2 as_of 2026-05-26",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "Audit cite-checker (structural fix for 10 retractions)",
+   "where": "validation/scripts/cite-check.ts (05eb69c7)",
+   "tried": "Pre-publish check that path:line cites exist and still match",
+   "outcome": "dormant",
+   "date": "2026-05-29",
+   "evidence": "Invoked by nothing outside investigation prose; the audit loop stopped 05-30",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "false-verification",
+   "title": "6-scenario failure-mode lift harness + progression-driver LIFT criterion",
+   "where": "validation/failure-modes/{README,PROGRESSION}.md, cycles/, validation/scripts/{failure-mode-harness,progression-driver}.ts",
+   "date": "2026-05-22..05-23",
+   "tried": "Dispatch 6 FP/FM scenario goals to /v2/activities/recommend on canary. Count reuse/new/gap and manual debt. Declare LIFT after 3 zero-debt cycles.",
+   "outcome": "failed",
+   "evidence": "Gap went 6->0 between 05-23 04:47 and 06:17 only after the harness gained a discover-by-shapes fallback. cycle-6.json says gap=6 debt=3 consec=0, yet cycle-7 claims 3 consecutive. The 2026-07-05 hub run shows the same 6 scenarios back to gap (1/0/6).",
+   "source": "validation-other-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "gap-lifecycle-scan reprobe before auto-close",
+   "where": "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts:251-309,582-588",
+   "tried": "Re-run the gap's scenario and block the close if it reproduces",
+   "outcome": "dormant",
+   "evidence": "The path resolves under /vessels/development-vessel/validation, which does not exist, so the result is always scenario-not-found and not_reproduced evidence gets stamped. There are 0 churned_unlandable closes in the 6279-gap store, so the path has not fired yet.",
+   "source": "validation-other-3"
+  },
+  {
+   "key": "false-verification",
+   "title": "External-oracle harness family",
+   "where": "validation/scripts/{validatability,falsification,reach-generalization}-harness.py, goal-expectation-harness.ts, complexity-ladder-harness.ts, stage-harness.ts, self-dev-reliability.mjs",
+   "date": "2026-07-27..08-26",
+   "tried": "Grade reached against independently computed ground truth and report the gaming gap, confabulation rate and inert or duplicate commits",
+   "outcome": "partial",
+   "evidence": "The method is sound and results exist (stage-harness 29 pass / 7 known_open, complexity-ladder 08-12). All are operator-run, nothing schedules them, and they hardcode :18210 and /home/avi.",
+   "source": "validation-other-3"
+  }
+ ],
+ "problems": [
+  {
+   "key": "false-verification",
+   "symptom": "08-09 comment asserts no architecturePrinciple concept ever existed; filter removed",
+   "root_cause": "Zero-hit caused by @@ AND over a long query, misattributed to the shape filter",
+   "first_seen": "2026-08-09",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "goal_execution_paths carries three divergent success counters (success_count, successful_executions, thompson_alpha) on the same rows",
+   "root_cause": "multiple writers/aggregators; no single reach counter",
+   "last_seen": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "lambda1>=rho_grow reported via density>=fraction proxy",
+   "root_cause": "proxy on incomparable scales; no spectral computation exists",
+   "last_seen": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "closure-status.json marks properties open with evidence 'HTTP 0'; FOUNDATION_COMPLIANCE CC checks are called lift prerequisites but none is executable",
+   "root_cause": "Probe address never positively controlled; audit operator-side and unscheduled since 09-09",
+   "last_seen": "2026-09-09",
+   "source": "docs-2"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "API-key (all vessel) traffic runs as SurrealDB root in activity-api executeAsAuth, bypassing the PERMISSIONS tenancy that four docs and CLAUDE.md declare as the enforcement point; no gap tracks it",
+   "root_cause": "activity-api self-signed API-key JWTs historically not validatable by an ACCESS method; root fallback kept after a20314a",
+   "source": "docs-3"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "QUALIFICATION.md names gap class autonomous-landings-are-never-post-verified as the tracker for post-land verification; no such gap exists while the post-land suite was dead 08-31..09-28",
+   "source": "docs-3"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Federation oracle reports coverage 0.647 and closes fed:* gaps on a vantage with no foreign peers; I5/I9 undecidable when the transport has no dialable address; I1 foreign_vantage passes with witness_scope NOT off-host",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "root_cause": "The oracle runs in-container on one node and treats absence of peers as undecidable instead of failing",
+   "source": "federation-relay"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "fed:no_relay_anchor evidence text says the transport refuses to start without an anchor, although that gate was removed 09-12",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "recurrences": 18,
+   "root_cause": "Frozen evidence template in the oracle, not a measured cause",
+   "source": "federation-relay"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "About 78% of closes are attrition/expiry/bulk and about 6% are landed or verified, in every era (07-22..08-08: 1077/1365; 08-16..09-07: 934/1176; live: 734/937)",
+   "first_seen": "2026-07-22",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Closure paths do not require a land or measurement signal. The close_rate metric mixes telemetry and administrative closes.",
+   "source": "gap-history"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Reach and success verdicts wrong (fail-open credits 38%, conjunct dropped, integer-division rates, infra blamed on arms); the db integrity diagnose always reports 0",
+   "root_cause": "Verdict logic re-implemented per route; detectors whose queries are themselves unverified",
+   "first_seen": "2026-08-05",
+   "last_seen": "2026-09-16",
+   "recurrences": 7,
+   "source": "git-activityapi"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "The placement gate is declared installed (09-23) but refuses nothing; root leases/ was committed 09-26",
+   "root_cause": "The causal-attempt-ledger set the system core.hooksPath to a hooks dir without a pre-commit, so git ignores .git/hooks/pre-commit. The inert-gate WARN is only logged (node 2); node 1 is silent",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "git-deployment"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gaps close, or landings go FAVORABLE, on indirect signals (commit mentions gap, exit status, declared shape, reachable:true) while the condition persists",
+   "first_seen": "2026-06-23",
+   "last_seen": "2026-08-14",
+   "recurrences": 20,
+   "root_cause": "Verdicts read provenance or proxy signals instead of measuring the named outcome. Duplicated check copies let an unfixed copy decide.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Synthetic success evidence: forged operator_approved, hardcoded FAVORABLE with rates of 1, inert landings read as pending",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-09-25",
+   "recurrences": 3,
+   "root_cause": "Authority and evidence fields are writable by the drafter and the landing code; no provenance check.",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Edit or creation goals graded reached with nothing landed; oracles confirm wrong answers",
+   "first_seen": "2026-07-21",
+   "last_seen": "2026-09-27",
+   "recurrences": 10,
+   "root_cause": "Landing evidence is checked per goal kind at many sites. Duplicate stale blocks short-circuit the correct one. The landing ledger is node-local. Oracles are hand-written per family and each re-derives parsing.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Semantic gate approves 'changes the behaviour' not 'does what was asked'; arm graders measure POST or deadline instead of outcome; tautological dormancy predicate; failing-test lane matches stale tests",
+   "first_seen": "2026-07-17",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "root_cause": "Verifiers grade a proxy event rather than the consumer-visible outcome",
+   "source": "git-mid"
+  },
+  {
+   "key": "shell-exec-bounds",
+   "symptom": "Verify killed at 30s, orphaned pipelines for hours, unbounded concurrent test runs, wrong cwd",
+   "first_seen": "2026-06-25",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "root_cause": "hardcoded default in a shared primitive plus two independent spawn sites",
+   "source": "git-small"
+  },
+  {
+   "key": "landing-attribution",
+   "symptom": "Operator commits under the SA identity; unattributable SA commits; base SHAs that match no commit",
+   "first_seen": "2026-07-03",
+   "last_seen": "2026-09-28",
+   "recurrences": 27,
+   "root_cause": "cutover and scripts commit as SA regardless of origin; protected vessels force operator landings",
+   "source": "git-small"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "'COMPLETE', 'SUCCESS', 'lift met' and 'honest metric' declarations later reversed; tests and cadence changed to pass metrics",
+   "first_seen": "2026-02-19",
+   "last_seen": "2026-06-27",
+   "recurrences": 20,
+   "root_cause": "the fixer's own check certifies the fix; metrics are gameable (timer slowed to satisfy S.4a)",
+   "source": "git-super-1"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gates, probes and doctors report green while measuring nothing (0/132 runs, PASS with exit 1, all-checks-pass FAILURES, fossil heartbeat path, inverted polarity, conjured closes)",
+   "root_cause": "Instruments are validated once at creation. A silent skip reads as a pass. Closure writes re-derive omitted fields",
+   "first_seen": "2026-08-04",
+   "last_seen": "2026-09-28",
+   "recurrences": 20,
+   "source": "git-super-2"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "close rate dominated by telemetry and bulk closes; flapping predicate closes; unmeasured landed_verified",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 64,
+   "root_cause": "closure on landing without close_basis; class2 polarity unchecked at birth; class1 uniqueness guard fails open",
+   "source": "live-gaps"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Checks, gates, detectors and operator readings report success or absence that is not true",
+   "root_cause": "Error branches land on positive; verification reuses the writer's address; no positive control; fail-open judge",
+   "first_seen": "2026-07-10",
+   "last_seen": "2026-09-28",
+   "recurrences": 14,
+   "source": "memory-1"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Verdicts/instruments that cannot be trusted: test-delta 0 introduced on failing change, stale threshold structurally 0, auto-close on described state, reached from reward-coupled LLM, lying total/ignored filters, untraced dispatches excluded from reach, verify reason lists only passes, dispatch status false negatives",
+   "root_cause": "Verification reads proxies (labels, counters, status, windows) rather than independently recomputing the outcome; empty results trusted as measurements",
+   "first_seen": "2026-07-27",
+   "last_seen": "2026-09-22",
+   "recurrences": 14,
+   "source": "memory-10"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gates and oracles pass by construction: fail-open null verdict, self-generated oracle command, structure-only artifact check, shield closes on wrong landing, rolling window read as rate",
+   "first_seen": "2026-07-12",
+   "last_seen": "2026-08-08",
+   "recurrences": 12,
+   "root_cause": "Check and checked share an assumption; warn-and-continue and catch-return-plausible hide failure",
+   "source": "memory-2"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Judges, oracles and gates grade form, shape or presence instead of content. Closures are asserted without effect, 69% of closes are TTL expiry, self-retracted refutations count, headline reach of 48% is 92% self-scan ticks, and a local sha is graded as landed.",
+   "first_seen": "2026-07-12",
+   "last_seen": "2026-09-15",
+   "recurrences": 14,
+   "root_cause": "Verdicts are never reconciled against the receiver or the behavior, and instruments are never proven able to fail.",
+   "source": "memory-3"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Reach is graded on the walk's claim, the write, or an LLM judge rather than the artifact; the fallback overrides an honest HOLLOW",
+   "first_seen": "2026-08-03",
+   "last_seen": "2026-08-28",
+   "recurrences": 6,
+   "root_cause": "Oracles cover few goal families; there is no artifact-resolving verification; the fallback verdict supersedes the walk's",
+   "source": "memory-4"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Wrong-registry-count guard \u03b2-penalizes correct answers",
+   "first_seen": "2026-08-08",
+   "last_seen": "2026-08-16",
+   "recurrences": 6,
+   "root_cause": "Each fix encoded the last symptom (repos/ prefix, a tree path) instead of the invariant (take the field from the counting clause)",
+   "source": "memory-4"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "'Closed' gaps whose defect is live: TTL expiry 69%, provenance closes on fix+revert, empty array = absent, a copied detector field, a landed SHA re-closing a reopened gap",
+   "first_seen": "2026-08-06",
+   "last_seen": "2026-09-23",
+   "recurrences": 7,
+   "root_cause": "Closure predicates are proxies (time, commit reference, scalar non-zero); the predicate contract can't express non-empty or below-N",
+   "source": "memory-4"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Test and typecheck gates certify without executing: vacuous lint script, parse-bail subset, aggregate delta, exit code discarded, MITOSIS_DIRECT_PUSH bypass",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-08-28",
+   "recurrences": 5,
+   "root_cause": "Checks don't fail closed when they cannot prove they ran",
+   "source": "memory-4"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "reached:true for work that did not happen: contentless fetch, rolled-back edit, relative-path write, satisfier artefacts, method-shared recompute.",
+   "root_cause": "Reach is decided at many independent return sites (31 'reached: true,' in one file) and an LLM judge checks form, not value.",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-19",
+   "recurrences": 14,
+   "source": "memory-5"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gap closures are mostly TTL expiry or instant no-op closes. Repair-verified is 1.9-4.5%. close_basis is written on 0.5% and resolution on 3%.",
+   "root_cause": "gap_lifecycle_scan is the dominant closer, overwrites detected_at, uses a 120h TTL while claiming 336h, and closed_by_trace is written by nothing.",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-11",
+   "recurrences": 5,
+   "source": "memory-5"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Landing gate lets broken/destructive commits through, then is re-hardened by hand",
+   "root_cause": "gates read diffs (typecheck/LLM judge) rather than execute behaviour; autonomous pwt lane without semantic judge edits the gates themselves",
+   "first_seen": "2026-07-28",
+   "last_seen": "2026-09-22",
+   "recurrences": 8,
+   "source": "memory-6"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Reach verdict wrong in both directions (hollow greens and false negatives on real landings)",
+   "root_cause": "verdict read once before async compose/cutover finishes; stub shapes; LLM judge confabulates; reconciler sentinel",
+   "first_seen": "2026-07-15",
+   "last_seen": "2026-09-03",
+   "recurrences": 9,
+   "source": "memory-6"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "reached:true or 'verified' on wrong, partial or absent answers, and on landings that changed nothing. Also false reds that punish correct answers",
+   "root_cause": "Grading checks the form of the output. Oracles share scope, filter, tree or sub-goal with the builder. The LLM judge fills in where no verifier exists. The honest detector feeds the learner, not the verdict",
+   "first_seen": "2026-07-20",
+   "last_seen": "2026-09-28",
+   "recurrences": 16,
+   "source": "memory-7"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gates, oracles and operator instruments certify things that are false: agreement by construction, fail-open guards, vacuous checks, LLM judge inversion, instrument traps.",
+   "root_cause": "Checks read text, verdicts or the diff instead of running the thing or measuring its effect. Every new gate had a hole that only running it exposed.",
+   "first_seen": "2026-07-22",
+   "last_seen": "2026-09-22",
+   "recurrences": 20,
+   "source": "memory-8"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Refused or partial changes land via patch_with_tools; about half of self-modification is unjudged",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-23",
+   "recurrences": 6,
+   "root_cause": "The escalation lane verifies only 'fs_edit applied + typecheck'; the region gate and escalation suppression depend on a region field present on 2.6% of gaps; pwt mutates live /vessels before any gate",
+   "source": "memory-9"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Reach verdicts wrong in both directions (a broken commit rewarded, the fix failed; hollow reached:true on a template_audit_report; 'despite an error')",
+   "first_seen": "2026-08-08",
+   "last_seen": "2026-09-12",
+   "recurrences": 8,
+   "root_cause": "The landing requirement is attached to a route, not the goal; the LLM judge omits values; deterministic oracle coverage depends on phrasing; label ids mismatched colon vs hyphen",
+   "source": "memory-9"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "A query or measurement artifact is read as system state and published, then retracted",
+   "first_seen": "2026-06-14",
+   "last_seen": "2026-08-10",
+   "recurrences": 15,
+   "root_cause": "single uncontrolled reads: oldest-first lists, prefix filters, pagination truncation, stale caches, fail-soft empty responses, green CI on zero work",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "pull-sync reports 'done \u2014 synced=N failed=0' while a tracked script is deleted, 14 submodules are uninitialized and the inventory is truncated",
+   "root_cause": "Success is measured as HEAD convergence, not tree-matches-HEAD; the log mislabels uninitialized submodules as 'uncommitted work \u2014 NOT discarded'",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-29",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Both vessels.inventory.json copies on node 2 truncated to one obsidian-vessel entry; self-fact-reconcile fleet_inventory_copy sees them agree",
+   "root_cause": "The reconcile check compares two copies to each other rather than to an independent truth, so it is blind to shared corruption. Writer unknown.",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-29",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Node 2 lands (98 dev-vessel commits) but cannot verify: 'class2 check abstained on this node: the gap store is held elsewhere'",
+   "root_cause": "The verification sweep runs only where the gap store is held; landing and verification are split across nodes",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-29",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Lift, closure, and coverage metrics declared met on engineered or operator-judged evidence; later found open",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-09-07",
+   "recurrences": 3,
+   "root_cause": "metric satisfiable without capability (window-staggered runs, operator-dispatched probes, drafting templates reduces debt)",
+   "source": "openspec-1"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Install acceptance workflow green 29+ times while usable=fail on both engines; nothing posted, no gap filed",
+   "root_cause": "report-only green by design, plus an empty ACCEPTANCE_HUB_URL/KEY so the reader is absent; the usable failure cause is unattributed",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 29,
+   "source": "openspec-10"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Acceptance was declared on producer-side evidence: concept-bridge 'fires' while concept-db rejects every write; a restart goal 'completed' via an unrelated template; _goal_resolve failure_mode null \u00d712 explained away.",
+   "root_cause": "No positive control at the consuming layer, and status was read instead of reach.",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-05-31",
+   "recurrences": 3,
+   "source": "openspec-2"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "'Should work' by analogy (concept-usage-backfill) and 'no re-bloat' checked only at deploy instant",
+   "first_seen": "2026-06-03",
+   "last_seen": "2026-06-14",
+   "recurrences": 2,
+   "root_cause": "verification at deploy time, not at the consuming layer over a window",
+   "source": "openspec-3"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Watchdog/pickup logs report healthy while unable to act (masked unit start exit discarded; stall marker never stale)",
+   "root_cause": "Liveness marker is a file every compose appends to; exit status ignored",
+   "first_seen": "2026-07-09",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "openspec-4"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gaps closed landed_verified by commits that only name the gap id (bafd83d rename left WRITE_ALLOWLIST env read intact); revert commits counted as landings; 14-day window hides slow re-lands",
+   "root_cause": "Producer-authored strings (commit message) treated as measurement of the referent; verdict logic duplicated at 3 sites",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-08-23",
+   "recurrences": 3,
+   "source": "openspec-5"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "The ledger settled 'held' on the commit that stopped every landing",
+   "root_cause": "baseline checks observe units and gates, not whether a known-good landing still lands (no landing_liveness check)",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-24",
+   "recurrences": 1,
+   "source": "openspec-7"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Post-land test suite silently ran=false for about 600 landings on dev-vessel/activity-api",
+   "root_cause": "test_suite passed no timeout_sec; the shell's 30s default killed the suite before it printed a summary",
+   "first_seen": "2026-08-31",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "source": "openspec-7"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Autonomous landings that satisfied their own check were regressions (9cfdea4, af2c737, a198907), stamped landed_verified",
+   "root_cause": "verdicts graded against the gaming-prone motivating check; runBehavioralVerification had no input (0/~6100 gaps)",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "source": "openspec-7"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "nonzero_field predicate closed a live divergence as landed_verified on a reverted landing",
+   "root_cause": "predicate polarity: health field used as a defect count",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-27",
+   "recurrences": 1,
+   "source": "openspec-7"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gap declared closed via a JSON file claiming a change 'verified by inspecting' a file that does not contain it",
+   "first_seen": "2026-08-17",
+   "last_seen": "2026-08-17",
+   "recurrences": 1,
+   "root_cause": "Closure asserted by the drafter's prose with no machine check against the file",
+   "source": "openspec-8"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "3372 of 6278 gap-store records (54%) are born-closed '[closed by dispatch completion]' pseudo-gaps, some 4 identical within 100 ms",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-22",
+   "recurrences": 3372,
+   "root_cause": "goal-host-vessel/src/index.ts:16887 writes a closed substrateGap for every auto_draft dispatch completion, inflating close-rate",
+   "source": "openspec-8"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Validators and instruments report success without observing: ui_legibility_scan success:true with available:false; vessel-ctl install ok:true over a failed build; readiness 'fleet ready' over a dead container; an early-exit harness reports a smaller, flattering denominator",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-26",
+   "recurrences": 4,
+   "root_cause": "There is no failure path distinct from 'could not observe'. Errors are swallowed with 2>/dev/null || true, and an empty state maps to skipped.",
+   "source": "openspec-9"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Verdicts wrong both ways: counterfeit reaches credited, exact-correct values rejected, wrong-field oracles, same-input opposite gate verdicts, closes by expiry or re-land",
+   "root_cause": "LLM judge re-derives facts; oracles incomplete or wrong-field; deterministic fast path bypasses honesty gates; gates read stale clones or run after landing",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-24",
+   "recurrences": 15,
+   "source": "reports-1"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "The ledger settles 'held' on the commit that stopped every landing (0a0d59f), blames unrelated landings for restart flips, and readiness passes a dead container.",
+   "root_cause": "The check set observes liveness and gate refusals, not a positive 'known-good landing still lands' case. There is no restart discriminator, and silent skips count as passes.",
+   "first_seen": "2026-09-24 (#30, #36)",
+   "last_seen": "2026-09-25 (#47)",
+   "recurrences": 3,
+   "source": "reports-2"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Thirteen false reaches in one session (fabricated, stale, constants, literals, replay, blind grader, container-of-numbers, narrated tool transcript)",
+   "root_cause": "Reach judge graded shell/bash output with no provenance, write-shaped goals graded on persistence, grounding not equal to freshness, and a cached recipe was not evicted on override",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-16",
+   "recurrences": 13,
+   "source": "reports-3"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Correct edits rolled back because verify produced no output (0/193 bytes); 5/12 composes never completed verify",
+   "root_cause": "Absent TC_EXIT marker scored as failed typecheck (same class fixed twice before for installExit/dryRunExit); exit_code 137 unread; cd && short-circuit",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-08-15",
+   "recurrences": 3,
+   "source": "reports-3"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Adversarial refuter vetoes correct fixes at conf 0.90-1.00 while a destructive change lands FAVORABLE",
+   "root_cause": "The refuter sees only the diff (no usage context, no execution); verdict not binding on cutover apply; SQL/shell inside string literals invisible to tsc/tests",
+   "first_seen": "2026-08-15",
+   "last_seen": "2026-08-15",
+   "recurrences": 4,
+   "source": "reports-3"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "'closed' does not mean repaired: TTL expiry 74.8%, prose remedies, landing-derived predicates, closed-on-drifted-copy, closed narrowed clones, verdict-half closure of root gaps",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-09-24",
+   "recurrences": 6,
+   "root_cause": "One status vocabulary over incommensurable record kinds; closure accepted from the writer's own evidence instead of an independent predicate; consumers treat closed as landed training label.",
+   "source": "reports-4"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Green flags (validated, reached, completed, success_rate, typecheck) sit over broken artifacts",
+   "root_cause": "Gates check that the output is present, parses or typechecks, not that it works. Producer and verifier share the same rule.",
+   "first_seen": "2026-08-18",
+   "last_seen": "2026-09-22",
+   "recurrences": 9,
+   "source": "reports-5"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "The system certifies wrong outcomes: landed_verified on inert or reverted landings, the polarity-inverted nonzero_field, wrong-node class2 closes, false negatives on real landings (6b0d86a, 6bfbe4b), partial applies graded reached (3cced35, 24a64a8).",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-09-29",
+   "recurrences": 12,
+   "root_cause": "Closure keyed on ancestry, a literal or node-local measurement rather than re-detecting the condition at the owning node; gates fail open on unknown; nothing re-measures closed gaps.",
+   "source": "reports-6"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Verification controls are dead or blind: post_land_suite ran=false on about 600 landings (08-31 to 09-28), the pass-regression un-latch never fires (325/0), behavioural verification ran:false on 0/6,133, the sweep was starved by store order.",
+   "first_seen": "2026-08-31",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "A control built to correct for noise is disabled by the noise (30 s shell kill, re-run parsing); a silent skip reads as a pass.",
+   "source": "reports-6"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Closures and verdicts not backed by a real check: predicate=none landed_verified; held appended after regressed; 0 of 30 closures had a falsifier (08-14); /health boolean at 16.5 s; doctor passes during crash loops; audits green on health 200s while every dispatch reached:false",
+   "root_cause": "The verifier is no stronger than the generator; gaps lack machine checks; checks run one layer above the consumer",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-28",
+   "recurrences": 7,
+   "source": "reports-7"
+  },
+  {
+   "key": "failure-as-absence",
+   "symptom": "Failures render as empty or zero: fetchKnownShapes 401 returns [] (100% of walks 0-step and oracle dark for 21h); dispatch error:None; skip-only and FAIL-only logs; wrong envelope returns 0; field goal_text returns null; /health 200 unconditional; written:N counts requests; coerceCorpus bare array gives 0 findings; watchdog ok:true while stalled_min climbs.",
+   "root_cause": "Catch branches return an empty value instead of a distinguishable error. Branches are instrumented on one side only.",
+   "first_seen": "2026-09-02",
+   "last_seen": "2026-09-22",
+   "recurrences": 12,
+   "source": "reports-8"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Predicates are satisfied without the work: the lane mutated a falsifier anchor (closed 29 min before the fix); a class-1 literal was satisfied by a comment (80ff131); 67.8% of 'closed' gaps expired rather than being verified; the arming guard never fires (memory 09-22).",
+   "root_cause": "Literal-presence predicates on behavioural defects, and verdict-carrying records writable by the measured lane",
+   "first_seen": "2026-09-02",
+   "last_seen": "2026-09-22",
+   "recurrences": 4,
+   "source": "reports-8"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Compose report records rolled_back:true while refused bytes stay in the tree",
+   "root_cause": "Rollback is skipped on concurrent modification but the report is not updated. Seen in section K on 09-10 and again as gap-mu3f0yqu on 09-15.",
+   "first_seen": "2026-09-10",
+   "last_seen": "2026-09-15",
+   "recurrences": 2,
+   "source": "reports-8"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gates misfire both ways: computeNewlyFailing fails open on a null baseline and false-blocks on load-induced timeouts (5001ms/5000ms); vacuous gate refuses added logs and minimal edits but passes dead imports; comment-only changes are categorically refused; semantic_reject is a fallthrough (about 60% unclassified); the pwt judge PASS fails open.",
+   "root_cause": "Diff-local heuristics with no access to the request, and 'reproduced' taken to mean 'caused'",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-11",
+   "recurrences": 6,
+   "source": "reports-8"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "The metric the report said to monitor (egressNoReservationCount) stays at 0 when the ingress\u2192libp2p forward path fails.",
+   "first_seen": "2026-09-29",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "root_cause": "The counter is incremented only on the egress path. The forward path the surface uses is not counted.",
+   "source": "syzygy"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Join, readiness, health and hub-register all report green while no hub function is reachable.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "root_cause": "Every predicate measures local state or HTTP registration. None does a round-trip function read.",
+   "source": "syzygy"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Units report success while doing no work or failing: 711 watchdog restarts with ok:true while the stall persists, memory-budget-check FAIL counted as success, self-operational-health checks only is-active, edge-reconcile succeeds with 0 work",
+   "root_cause": "Liveness is certified by the transport or scheduler signal (HTTP 200, systemd Result, timer active) and not by the effect the unit exists to produce",
+   "first_seen": "2026-07-08",
+   "last_seen": "2026-09-29",
+   "recurrences": 5,
+   "source": "timers-readers"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gaps closed while the defect lives (literal predicate, TTL 59-77%, phantom reason strings, remedy sentinel, pending forever)",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-03",
+   "recurrences": 6,
+   "root_cause": "closure keyed to provenance or source literal, not defect measurement; one-polarity oracle",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Reach verdict wrong both ways (reached on 'I cannot answer', find|wc -l=0, narration; not reached on landed commits)",
+   "first_seen": "2026-08-24",
+   "last_seen": "2026-09-04",
+   "recurrences": 7,
+   "root_cause": "plausibility judge; evidence overwritten by retry; each exit route (edit-intent, goal-seek :15202, pwt) covered separately",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Operator instrument errors declared as findings then retracted (null vs absent, CONTAINS on strings, datetime>'string', UTC/PDT, log-line counting, mid-flight reads, wrong store/route/tree)",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-16",
+   "recurrences": 25,
+   "root_cause": "Reading an instrument without a positive control sharing its address",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gap closure dominated by TTL expiry / provenance stamps, not measured predicates",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-09",
+   "recurrences": 6,
+   "root_cause": "98% of open gaps carry no measurable predicate; closes recorded without basis until close_basis",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gaps closed on non-evidence: already_resolved with 0 commits, cause-commit as fix, auto-expiry of one-shot work, class1 armed while literal present",
+   "first_seen": "2026-09-05",
+   "last_seen": "2026-09-22",
+   "recurrences": 6,
+   "root_cause": "Closure predicates are includes() literals; expiry keyed on re-detection; guards fail open",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Landings certified HELD/landed_verified while hollow or regressive",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28T23:31Z",
+   "recurrences": 8,
+   "root_cause": "All gates grade against the motivating proxy check; post-land suite dead 08-31->09-28; behavioural verification never had input",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "reached/status disagree both ways; LLM judge grades form; 80-char stub artifact passes; ungrounded flag only reaches learner",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-08-10",
+   "recurrences": 6,
+   "root_cause": "no deterministic oracle for most goal families; honesty verdict not wired to caller/oracle label",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Declared-fixed or lift claims not true at runtime (LIFT CANDIDATE on gameable criteria, 'gap-001 addressed', false commit-message state, promote 200 vs refused)",
+   "first_seen": "2026-05-23 F-001",
+   "last_seen": "2026-05-30 ebb49829/inv-083",
+   "recurrences": 12,
+   "root_cause": "Verification read status/self-reported state files and commit prose, not content or runtime; the agent authored both the work and its approval",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "The audit itself published wrong HIGH/CRITICAL findings: F-083 posterior wipe, iter-034 alpha-on-selection, Finding 12 zero templates from a truncated list, 10 retractions",
+   "first_seen": "2026-05-25 F-083",
+   "last_seen": "2026-05-29 inv-071",
+   "recurrences": 12,
+   "root_cause": "Layer confusion (5/10), trusting subagent tables, over-broad grep, silently truncated registry pagination; 'be careful' commitments never held",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "LIFT CANDIDATE declared after 20h of cycles on canary. The 07-05 hub rerun shows gap=6 again.",
+   "root_cause": "The measurement was widened (discover-by-shapes fallback) and the debt KPI rescoped. Cycle files contradict each other.",
+   "first_seen": "2026-05-23",
+   "last_seen": "2026-07-05",
+   "recurrences": 1,
+   "source": "validation-other-3"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "The reprobe gate would stamp not_reproduced evidence on every auto-close",
+   "root_cause": "The import.meta.dir-relative path points to a nonexistent dir, and any HTTP error counts as reproduced. The gate is fail-open.",
+   "first_seen": "unknown",
+   "last_seen": "2026-09-28 (dormant)",
+   "recurrences": 0,
+   "source": "validation-other-3"
+  }
+ ],
+ "claims": [
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-09",
+   "claim": "No concept in the store has ever carried shape architecturePrinciple, so the shape filter was the failure and was dropped",
+   "where": "development-vessel/src/resolvers/feature-compose.ts:2546",
+   "later": "False premise: 74 rows existed in June and 524 in July (719 now), and concept.ts:329 wires shape into SQL. The zero-hit was the @@-AND long-query miss. The consult now runs unfiltered over 88k rows.",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-19",
+   "claim": "fed:punchthrough_unavailable CLOSED BY MEASUREMENT",
+   "where": "gap store",
+   "later": "No hole punch has succeeded on any live transport; measured on a vantage with no foreign peers",
+   "source": "federation-relay"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-26",
+   "claim": "fed:registry_lost_local_rows closed (I12 pass own_rows 11 foreign_rows 1)",
+   "where": "gap store",
+   "later": "Accurate but vacuous for federation; still passing with foreign_rows 1",
+   "source": "federation-relay"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-29",
+   "claim": "Funnel close_rate 0.57-0.75 (live)",
+   "where": "super-repo gaps/funnel-history.jsonl",
+   "later": "3372/4253 closed rows are telemetry and 734 an administrative bulk close; landed/verified closes are 52",
+   "source": "gap-history"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-08",
+   "claim": "Gap store unwritable bug fixed (e8d4405)",
+   "where": "substrate-utils substrate-gap-closing-loop.md",
+   "later": "the store-path split (/workspace/gaps vs super-repo/gaps) stays; 09-13 and 09-28 real-store confusion recurs",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-28 08:31",
+   "claim": "node 2 pull-sync failed=0 \u2014 first clean ticks since 09-26",
+   "where": "CHECKINS.md / beb19924",
+   "later": "True for the counter. The tree is still not clean: deleted tracked script, 14 uninitialized submodules, truncated inventory.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-23",
+   "claim": "Install acceptance run is the class detector; tasks 1.1-1.4 ticked; results post to the hub and failures file gaps",
+   "where": "openspec/changes/unified-install-interface/tasks.md (d043bde5/0a406621)",
+   "later": "29+ runs 09-25..09-29 all usable=fail on both engines; hub secrets empty; no gap filed; working-tree tasks.md unticked everything on 09-28 20:11",
+   "source": "openspec-10"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-27",
+   "claim": "Rescue fix deployed and validated live",
+   "where": "live-recipe proposal",
+   "later": "INERT (wrong branch), then declared UNSOUND; autonomous a803852 rescue remains unwired in HEAD",
+   "source": "openspec-7"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-07",
+   "claim": "gap-msvqgv4y closed: uiPanel_write is now invoked by draft-detector-activity",
+   "where": "openspec/changes/gap-msvqgv4y-closed.json (outside the shard, same commit 4e4170a8)",
+   "later": "false: live draft-detector-activity.ts contains no uiPanel_write",
+   "source": "openspec-7"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-26",
+   "claim": "Causal attempt ledger acceptance CONSISTENT (3x10/10 incl. cold boot)",
+   "where": "causal-attempt-ledger/tasks.md header, FINISH_LINE.md",
+   "later": "0/35 task boxes ticked; the ledger settled 0a0d59f held (#47); per-node ledgers only",
+   "source": "openspec-7"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-28",
+   "claim": "8.21: post-land suite runs again (5e9a0b2)",
+   "where": "contained-self-development/tasks.md",
+   "later": "holds: node2 19/19 dev-vessel ran=true since 08:00 09-28 (76 ran=false before)",
+   "source": "openspec-7"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-28",
+   "claim": "8.22: a newly failing test withholds landed_verified",
+   "where": "contained-self-development/tasks.md",
+   "later": "never exercised: 0 'credit withheld' lines in 72h",
+   "source": "openspec-7"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-17",
+   "claim": "gap-msvqgv4y closed: uiPanel_write is now invoked by draft-detector-activity, verified by inspecting the file",
+   "where": "openspec/changes/gap-msvqgv4y-closed.json",
+   "later": "2026-09-28: draft-detector-activity.ts contains no uiPanel_write and was last changed 2026-06-14; the claim was false from the start",
+   "source": "openspec-8"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-07",
+   "claim": "real-run secret leak in ui-only-up.sh closed (redact plus PIPESTATUS)",
+   "where": "human-surface-stack/VALIDATION-2.md s8",
+   "later": "08-21 d63d64b6: 'make -n up printed the operator's key' (same class via another path); the current script, rewritten 09-23, contains neither redact() nor PIPESTATUS",
+   "source": "openspec-9"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-07",
+   "claim": "ui_legibility_scan: fix reporting first, then schedule",
+   "where": "render-learning.md s7",
+   "later": "first executions 09-26 in the execution table: 6 failures and 2 satisfier successes; no uiLegibilityReport producer 09-28",
+   "source": "openspec-9"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-22",
+   "claim": "Joined means a live reservation.",
+   "where": "super e1c06f60",
+   "later": "On 9-29 the spokes hold a live reservation and hub-register 'all ok' while every hub function read fails.",
+   "source": "syzygy"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-07-31",
+   "claim": "Log egress NO_RESERVATION increments.",
+   "where": "super 5e48a4e8",
+   "later": "The counter misses ingress-forward failures (inventory count 0 after a failure on 9-29).",
+   "source": "syzygy"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-07-08",
+   "claim": "Watchdog demotion: the event drain is primary and the timer fires only on a demonstrated stall (887577bd)",
+   "where": "scripts/substrate/watchdog-tick.ts header",
+   "later": "On 09-28/29 there were 711 restarts, all ok:true, while stalled_min rose from 151 to 230. compose-teacher and operator-goal-generator are starved by the shared default marker",
+   "source": "timers-readers"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-17",
+   "claim": "'wire memory-budget-check, and make it work where it runs' (8dbea1d7)",
+   "where": "units/memory-budget-check.service",
+   "later": "FAIL every hour, reported as success via SuccessExitStatus=0 1. No reader",
+   "source": "timers-readers"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-14",
+   "claim": "In-code: the gap-compose marker compose-lessons.jsonl 'is never stale so the drain never fires'",
+   "where": "repos/development-vessel/src/resolvers/substrate-gap.ts ~1210",
+   "later": "On 09-29 the marker is 230 min stale and the watchdog fires every tick. Both states are documented in code and neither was verified",
+   "source": "timers-readers"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-04",
+   "claim": "Watchdog retries make restarts survive a vessel restart (c71819af)",
+   "where": "scripts/substrate/watchdog-tick.ts",
+   "later": "Transport retries work, but a restart is still judged by HTTP status. The flow stayed stalled through 711 'ok' restarts",
+   "source": "timers-readers"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-28",
+   "claim": "9 gap-learning-loop-selftest-* gaps closed",
+   "where": "live gap store, closed at 09-28T01:27-01:29",
+   "later": "learning-loop-selftest still reports a RED posterior_delta link. learning-loop-selftest and learning-loop-selftest-probe-left-no-trace are still open (the mass close was not investigated)",
+   "source": "timers-readers"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-28T12:04",
+   "claim": "All 13 gaps closed, every one verified by consequence",
+   "where": "ce71b42c",
+   "later": "12 hand commits vs 5 autonomous; last closure used a constructed synthetic population; 510b6df then reverted one fix 3 min after push",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-29T01:10",
+   "claim": "Two of my gaps fixed and closed autonomously (reach-history via 52452e0)",
+   "where": "ff560216",
+   "later": "03:15 false closure: literal predicate; corrupted rows (total 414944) survived",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-31T06:29",
+   "claim": "detection:autonomous repair = 11:0",
+   "where": "ff560216",
+   "later": "06:29 retracted: 5 autonomous commits had landed; closures were counted instead of repairs",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-31T08:58",
+   "claim": "First closed_reason landed_verified via the emitter-backed lane",
+   "where": "ff560216",
+   "later": "required the operator-added Class 1b; no auto-derivation; two derivation attempts were net-negative",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-03T07:36",
+   "claim": "Destructive re-edit is load-gated (controlled comparison)",
+   "where": "3637e240",
+   "later": "07:44 retracted: the reading was taken mid-flight; both load regimes escalate",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-03T07:32",
+   "claim": "LATE-LANDING check 50f7560 fixes the false negative",
+   "where": "3637e240",
+   "later": "07:59 produces a false positive (c10beb80 reached:yes while its goal was unmet)",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-04T04:46",
+   "claim": "91871f0 repaired the false positive",
+   "where": "3637e240",
+   "later": "05:59 new false negative on ~19% of landings (the pwt path has no compose report)",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-07T17:57",
+   "claim": "Unaided measured close lane works \u2014 50 landed_verified closes",
+   "where": "074acb94",
+   "later": "09-09 01:37 '78% are ancestry stamps' then 01:39 retraction retracted (hardcoded string); undecidable until close_basis 02:17",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-31T07:40",
+   "claim": "10 closures in 24h were landed_verified",
+   "where": "0b1032b5",
+   "later": "landed_verified all-time 0 of 1,025 closures",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-02T10:38",
+   "claim": "1,037 closed gaps as closing activity",
+   "where": "0b1032b5",
+   "later": "703 (67.8%) expired_not_redetected; 08-28 closure 69% expiry, 1.9% repair",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-08T22:54",
+   "claim": "Close-on-land output ~20x (1-6/day -> 81-135/day), close latency 177h -> 2h",
+   "where": "074acb94",
+   "later": "09-08 23:45 retracted: auto_draft bookkeeping population",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-31T06:30",
+   "claim": "Zero autonomous landings",
+   "where": "0b1032b5",
+   "later": "timezone artifact; 4 autonomous commits incl. 569881d",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-05T20:12",
+   "claim": "System files no gaps of its own; acts readily and notices nothing",
+   "where": "af312d72/074acb94",
+   "later": "09-05 20:19 refuted: 76 substrate_detected gaps in 24h; source field misread",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-28T09:36",
+   "claim": "Oracle corpus is write-only (headline)",
+   "where": "9c8dceae",
+   "later": "retracted: goal-host resolves goal_verification_label; 15 consumptions/6h",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-14",
+   "claim": "The gap closer is inert / the store is a one-way ratchet",
+   "where": "35537c7e @ 2026-09-14T06:51 summary",
+   "later": "False: 981 gaps closed_by gap_lifecycle_scan",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-15",
+   "claim": "class1 predicate means machine-closable",
+   "where": "35537c7e @ 2026-09-15T01:00 summary",
+   "later": "Refuted: a verified predicate did not close the gap; a land signal is also needed",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-24T00:35Z",
+   "claim": "state_signature gap closed by measurement (c7c01ea); ten gaps closed by measured behaviour",
+   "where": "35ed63f7 2026-09-24T00:35Z",
+   "later": "Same session 01:17: gate certifies diffs not behaviour (262 FAVORABLE/4 UNFAVORABLE); 5 of 10 closures needed a second landing because the first was hollow",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-26T05:13Z",
+   "claim": "Causal-attempt-ledger goal met: runs 10,11,12 at 10/10 after cold boot",
+   "where": "3f991252 2026-09-26T05:13Z",
+   "later": "Depended on stopgaps pausing 4 autonomous paths; 0/36 boxes ticked; forward-fixed regressions 9cfdea4/af2c737 settled held credit-eligible; settle policy left at 2-min test value; 09-26 had >=17 unchecked autonomous landings incl. regressions",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-27T13:00Z",
+   "claim": "System's own falsifiers refuted all three bad autonomous landings",
+   "where": "ac8b0aad 2026-09-27T13:35Z",
+   "later": "Corrected 13:35: sweep read checks backwards (defect count 1 = fixed)",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-28T04:13Z",
+   "claim": "For the first time, the system correctly caught one of its own bad autonomous landings (e059a98)",
+   "where": "ac8b0aad 2026-09-28T04:13Z",
+   "later": "User pushback on 'first' framing; system reverted in July; expectation loop closed own break 09-26",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-28T06:51Z",
+   "claim": "Yes, it was working, and it still is (expectation scan)",
+   "where": "ac8b0aad 2026-09-28T06:51Z",
+   "later": "07:06 retracted: post-land suite dead since 08-31 on dev-vessel/activity-api (~600 untested landings); expectation scan covers toy goals only",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-10",
+   "claim": "56a0683 fixes reach honesty",
+   "where": "validation/findings/round5-repairs-landed.md",
+   "later": "never verified in this shard (0 fires)",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-22",
+   "claim": "failure-mode cycles reuse:6",
+   "where": "validation/results/2026-05-22-failure-mode-cycle-5..8.json",
+   "later": "avg_self_heal_seconds null throughout; 07-05 back to gap:6",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-23",
+   "claim": "cycle-8 LIFT CANDIDATE",
+   "where": "cycle-8.json",
+   "later": "F-001: gameable criteria, epoch-zero proposals, 0 gap-closing traces; open through 05-25",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-24",
+   "claim": "gap-001 addressed",
+   "where": "commit 34f84d0f",
+   "later": "F-025: runtime unchanged (concept-db still missing)",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-26",
+   "claim": "Operator approved the S1->S2 lift",
+   "where": "07453944, de5db344, 6988139a; lift-status.json",
+   "later": "F-099 unverifiable; the approval is recorded only through devbob's paraphrase; still S2 as of today",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-26",
+   "claim": "Boredom running cleanly: 11 successful fires cycling all 7 goals",
+   "where": "commit a7c538ec",
+   "later": "F-102: goal[5] had failed 18 minutes earlier",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-26",
+   "claim": "lifecycle:llm:dispatched deployed to container",
+   "where": "commit 41382521",
+   "later": "F-109: false",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-27",
+   "claim": "Promote gate test: overlap template promoted HTTP 200",
+   "where": "dev-response-012",
+   "later": "F-142: refusal_events shows it refused; F-143: Jaccard K=0 for every template",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-29",
+   "claim": "Cite-checker is the structural fix for audit retractions",
+   "where": "inv-072, 05eb69c7",
+   "later": "No invoker; the audit loop ended the next day",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-05-22/23 (commits 5504d03c, 4b7ce0e8)",
+   "claim": "LIFT CANDIDATE: consecutive_zero_debt_cycles=3 (then 4), gap 6->0; 'The system can now address new failure-mode gaps autonomously'",
+   "where": "validation/failure-modes/cycles/cycle-7.json, cycle-8.json, PROGRESSION.md",
+   "later": "cycle-6.json itself shows gap=6 debt=3 consec=0. The flip came from a harness fallback added 05-23 06:17. The 2026-07-05 hub run has the same six scenarios as gap (1/0/6).",
+   "source": "validation-other-3"
+  }
+ ]
+}

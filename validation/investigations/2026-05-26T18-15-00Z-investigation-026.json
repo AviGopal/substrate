@@ -1,0 +1,77 @@
+{
+  "investigation_id": "2026-05-26T18-15-00Z-investigation-026",
+  "generated_at": "2026-05-26T18:15:00Z",
+  "investigator_session_id": "claude-opus-4-7-audit-iter-011",
+  "prior_investigation_id": "2026-05-26T17-45-00Z-investigation-025",
+  "loop_iteration": 11,
+  "framing": "foundation-alignment audit of iter-024 + iter-025; correction to both",
+  "substrate_target": "http://localhost:18080",
+  "subagent_inputs": [
+    {"task_id": "a5d45d0129b4b6404", "name": "Envelope vs foundation-native impulse design"}
+  ],
+  "foundation_anchors": [
+    {"line": "L43", "claim": "Shapes are not declared in a global registry; they are learned types — observed when vessels advertise resolvers, refined when traces show co-occurrence patterns, and pruned when no resolver claims them."},
+    {"line": "L124", "claim": "The metadata allows reasoners (LLM or otherwise) to understand the current state without loading all the raw data."},
+    {"line": "L65-67", "claim": "Forced REST endpoints, hardcoded routing, or non-impulse state shared between subsystems is evidence the four-primitive minimum is wrong."},
+    {"line": "L267-275", "claim": "Implicit vessels are evidence about the minimum set, not sins, but flagged as architectural debt."}
+  ],
+  "diagnosis_iter024_missed": {
+    "finding": "inputImpulses already exists on ResolverContext (engine.ts:154)",
+    "actual_bug": "llm-prompt resolver ignores it; reads only task.prompt.template + context.variables",
+    "executor_capability_gap": false,
+    "resolver_side_bug": true,
+    "fix_loc": "10 LOC patch on llm-prompt.ts"
+  },
+  "position_chosen": "C (hybrid) with tilt toward B (everything-is-impulse)",
+  "position_a_pure_envelope_rejected": {
+    "reason": "concept_directives is the most learning-fertile field; envelope strips co-occurrence signal, Thompson posteriors, impulse-relevance feedback",
+    "surface_area_claim_is_wrong": "task.inputShapes is already a list of shape names; adding one is one string",
+    "defensible_core_30_percent": ["composition_depth", "budget_remaining tier", "goal_class (borderline)"]
+  },
+  "position_b_pure_impulse_rejected": {
+    "operational_failure_1": "executor cannot write impulses pre-dispatch; engine has traceSink, not in-execution pool-writer addressable by other resolvers",
+    "operational_failure_2": "goal_class is category error as impulse — it's dispatch metadata not data; Thompson posterior over goalClassImpulse meaningless",
+    "operational_failure_3": "downstream consumers for synthesisOutcomeImpulse not yet wired"
+  },
+  "split_correction_to_iter025": [
+    {"field": "goal_class", "stays": "envelope", "rationale": "dispatch framing not data"},
+    {"field": "goal_class_chain", "stays": "envelope", "rationale": "framing"},
+    {"field": "composition_depth", "stays": "envelope", "rationale": "structural; executor-enforced cap"},
+    {"field": "budget_remaining tier", "stays": "envelope", "rationale": "framing tier"},
+    {"field": "variant_maturity.sample_count", "stays": "envelope", "rationale": "Thompson posteriors still REST per foundation L883"},
+    {"field": "gap_context.gap_type proximate", "stays": "envelope", "rationale": "framing; the executor's classification of WHY this dispatch"},
+    {"field": "gap_context.missing_shapes", "becomes": "gapClassificationImpulse", "rationale": "data, addressable, learnable"},
+    {"field": "parent_goal_text", "becomes": "impulse (existing goal shape)", "rationale": "content; existing shape works"},
+    {"field": "concept_directives", "becomes": "concept-db impulses via task.inputShapes", "rationale": "envelope carries reference IDs only"}
+  ],
+  "response_side_correction_load_bearing": {
+    "iter025_design": "wire-field LLMInvocationResponse",
+    "iter026_correction": "multi-impulse emission",
+    "shapes": ["synthesisOutcome", "synthesisBody (when synthesized)", "unmetRequirements (when not synthesized)"],
+    "implementation_cost_loc": "5-10",
+    "why_natively_correct": [
+      "llm-prompt.ts:90 already returns Impulse[]",
+      "trace sink already accumulates impulses",
+      "validator-dispatch already keys on shape",
+      "ribosome reads trace impulses",
+      "concept-extractor (Cβ) can write playbook on recurring (shape, reason)"
+    ],
+    "failure_mode_attribution_fix": "outcome != synthesized → failure_mode={type:'synthesis_failure'}; chain-credit propagation debits the synthesis variant, not the validator"
+  },
+  "most_uncomfortable_concession": {
+    "concession": "letting executor's missing pre-dispatch impulse-write capability dictate architecture",
+    "risk": "envelope ossifies like concept-db's REST surface did for two years",
+    "position_b_would_win_if": "executor gains pre-dispatch impulse-write within one development cycle AND llm-prompt.ts is patched to read context.inputImpulses before iter-024's 24h confabulation experiment runs"
+  },
+  "corrected_next_moves": [
+    "patch llm-prompt.ts to interpolate context.inputImpulses by shape name (~10 LOC)",
+    "make llm-prompt.ts emit Impulse[] with structured outcome shapes instead of single llmText (~5-10 LOC)",
+    "run iter-024 confabulation experiment",
+    "decide envelope opt-in/opt-out for framing fields only"
+  ],
+  "correction_notice_targets": [
+    {"investigation": "2026-05-26T17-30-00Z-investigation-024", "notice_added": true, "summary": "diagnosis off by one layer — observational findings remain valid"},
+    {"investigation": "2026-05-26T17-45-00Z-investigation-025", "notice_added": true, "summary": "~30% envelope correct, ~70% misplaced; response envelope entirely replaced by multi-impulse emission"}
+  ],
+  "next_wake_recommendation": "watch for llm-prompt.ts patch landing"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-fa81a3c6-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-fa81a3c6] investigate and decompose gap route-edit-5c62f01c: Nothing detects a git-TRACKED fil",
+  "description": "[narrowed from route-edit-fa81a3c6] investigate and decompose gap route-edit-5c62f01c: Nothing detects a git-TRACKED file that the substrate rewrites at runtime, so runtime state silently reverts on every sync. CLAUDE.md already states the invariant - runtime state belongs in the container volume and is gitignored, 'a file the substrate rewrites is not a file git should carry' - and .gitignore:232 even has a section headed 'Runtime state written under WORKSPACE_ROOT' with /gaps/\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch only adds a new optional field to an interface definition. It does not implement any logic to detect or act upon git-tracked files rewritten at runtime.\n- semantic_reject: The patch only adds detection for git-tracked files but doesn't implement the actual enforcement logic required by the gap description to prevent runtime state from being reverted on sync.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-fa81a3c6] investigate and decompose gap route-edit-5c62f01c: Nothing detects a git-TRACKED file that the substrate rewrites at runtime, so runtime state silently reverts on every sync. CLAUDE.md already states the invariant - runtime state belongs in the container volume and is gitignored, 'a file the substrate rewrites is not a file git should carry' - and .gitignore:232 even has a section headed 'Runtime state written under WORKSPACE_ROOT' with /gaps/\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch only adds a new optional field to an interface definition. It does not implement any logic to detect or act upon git-tracked files rewritten at runtime.\n- semantic_reject: The patch only adds detection for git-tracked files but doesn't implement the actual enforcement logic required by the gap description to prevent runtime state from being reverted on sync.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-fa81a3c6-narrowed",
+  "source_gap_source": "substrate_detected"
+}

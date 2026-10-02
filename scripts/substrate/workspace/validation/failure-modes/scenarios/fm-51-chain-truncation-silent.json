@@ -1,0 +1,76 @@
+{
+  "id": "fm-51-chain-truncation-silent",
+  "mode_class": "fp",
+  "stage": "execution",
+  "outcome_class": "FN",
+  "information_state": "known_known",
+  "title": "Silent task-chain truncation — execution failed mid-chain but failure_mode=null and trace omits the failure stage",
+  "description": "Activity execution halts partway through its task chain, status is recorded as failure, yet failure_mode is left null and the trace's tasks[] array is strictly shorter than the registered template's tasks[] array. The chain truncated silently — no validator fired, no budget breach was recorded, no upstream cascade was attributed — so the binding layer cannot learn which resolver tier or task position caused the halt. Detection requires comparing trace task length against template task length and inferring the missing stage. Cites concept_jyiAE_i4GXU7 (substrate_self_repair_for_chain_truncation): the meta-pattern is that detection of silent truncation must itself be a substrate-authored activity rather than a one-off operator probe, so each new truncation class becomes a recognizable shape rather than a discovery.",
+  "trigger": {
+    "preconditions": [
+      "execution row exists with status='failure' (or 'error') and failure_mode IS NONE/null",
+      "execution.tasks is a non-empty array",
+      "the registered activity_template referenced by execution.activity_template_id has more tasks than the trace recorded",
+      "no cascading attribution: parent_execution_id either null or parent has no propagated failure_mode"
+    ],
+    "synthetic_setup": {
+      "traces": [
+        {
+          "shape": "activityExecutionTrace",
+          "synthesize": "Inject an execution row with status='failure', failure_mode=null, tasks=[{task_id:'t0',success:true,resolver_id:'bash'},{task_id:'t1',success:false,resolver_id:'llm'}] against a template whose tasks=['t0','t1','t2','t3']. The trace truncates after t1 with no failure_mode classification."
+        },
+        {
+          "shape": "activityTemplate",
+          "synthesize": "Reference template must have at least 3 tasks; first n-1 tasks resolve normally; final task is omitted from the trace."
+        }
+      ]
+    }
+  },
+  "goal_text": "Detect executions where status='failure' and failure_mode is null and the trace's tasks array is strictly shorter than the registered template's tasks array. For each such execution, emit a chainTruncationFinding impulse describing the missing task ids, the last completed task's resolver, and a classification hypothesis (verifier_negative-but-unlabeled / budget_exhausted-but-unrecorded / cascading-but-unattributed / safety_breach-but-silent). Propose a detection activity that classifies future truncations into a non-null failure_mode at trace-write time.",
+  "expected_input_shapes": [
+    "activityExecutionTrace",
+    "activityTemplate"
+  ],
+  "expected_output_shapes": [
+    "chainTruncationFinding"
+  ],
+  "detection": {
+    "signal": "execution.status='failure' AND execution.failure_mode IS NONE AND array::len(execution.tasks) < array::len(activity_template.tasks) for the referenced template_id.",
+    "witness_required": "trace_only",
+    "query_template": "SELECT e.id AS execution_id, e.activity_template_id AS template_id, array::len(e.tasks) AS recorded_tasks, array::len(t.tasks) AS template_tasks, e.tasks[array::len(e.tasks)-1].resolver_id AS last_resolver FROM execution e, activity_template t WHERE e.activity_template_id = t.id AND e.status = 'failure' AND e.failure_mode IS NONE AND array::len(e.tasks) < array::len(t.tasks) ORDER BY e.created_at DESC LIMIT 100"
+  },
+  "expected_emergence": {
+    "class": "new",
+    "activity_signature": {
+      "input_shapes_intersect": ["activityExecutionTrace", "activityTemplate"],
+      "output_shapes_must_include": ["chainTruncationFinding"],
+      "tags_pattern": "detection.chain-truncation.*"
+    }
+  },
+  "self_heal_window_seconds": 86400,
+  "recovery_test": {
+    "regression_check": true,
+    "regression_query": "After the detect-chain-truncation activity is shipped, re-inject the trigger fixture and verify the new activity emits a chainTruncationFinding within the self_heal_window_seconds. Subsequent silent-truncation executions should produce a non-null failure_mode (or at minimum a chainTruncationFinding companion impulse) within the same window."
+  },
+  "subagent_investigation": {
+    "dispatched_at": "2026-06-01T00:00:00Z",
+    "findings_summary": "Cites concept_jyiAE_i4GXU7 (substrate_self_repair_for_chain_truncation). Today, when an activity execution halts partway through its registered task chain, the trace can land with status='failure' but failure_mode=null and tasks[] truncated to whatever ran before the halt. No activity correlates trace task length against template task length, so the missing-task signal never becomes a learnable shape. The substrate already mints concept_jyiAE_i4GXU7 naming this meta-pattern; what's missing is a detection activity (e.g. detect-chain-truncation) that consumes activityExecutionTrace + activityTemplate and emits chainTruncationFinding impulses keyed on {execution_id, template_id, missing_task_ids, last_completed_task_resolver, classification_hypothesis}. The substrate's draft-gap-closing-activity drafter can author this template from this scenario file without further operator input, closing the loop that concept_jyiAE_i4GXU7 specifies.",
+    "code_references": [
+      "repos/metabob-activity-api/src/models/schemas.ts (FailureModeSchema; verifier_negative / budget_exhausted / cascading / safety_breach / user_abort)",
+      "repos/metabob-activity-api/sql/schemas/020-paradigm-core-tables.surql (execution + activity_template tables)",
+      "repos/metabob-activity-api/sql/migrations/091-failure-mode-field.surql (failure_mode column)",
+      "vault/concept-db/extracted/Substrate Self Repair For Chain Truncation.md (concept_jyiAE_i4GXU7)"
+    ],
+    "current_gaps_in_codebase": [
+      "No activity correlates trace task count against template task count",
+      "No chainTruncationFinding shape advertised by any vessel; detection has no canonical output type",
+      "failure_mode is allowed to be null on failure rows — no DB-level CHECK enforces classification",
+      "Boredom palette does not include a truncation-audit goal that periodically sweeps recent failure rows"
+    ]
+  },
+  "metadata": {
+    "priority": "high",
+    "cost_asymmetry": "fn_corrosive",
+    "depends_on_scenarios": []
+  }
+}

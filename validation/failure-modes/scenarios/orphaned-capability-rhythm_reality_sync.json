@@ -1,0 +1,19 @@
+{
+  "id": "orphaned-capability-rhythm_reality_sync",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "orphaned_capability",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Resolver \"rhythm_reality_sync\" is a live registered capability but is invoked by 0 of the activity corpus (394/385 live ",
+  "description": "Resolver \"rhythm_reality_sync\" is a live registered capability but is invoked by 0 of the activity corpus (394/385 live resolvers are ever invoked). Author an activity that invokes resolver \"rhythm_reality_sync\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+  "goal_text": "Resolver \"rhythm_reality_sync\" is a live registered capability but is invoked by 0 of the activity corpus (394/385 live resolvers are ever invoked). Author an activity that invokes resolver \"rhythm_reality_sync\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": "substrate_expresses_the_full_capability_surface_it_advertises",
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "orphaned-capability-rhythm_reality_sync",
+  "source_gap_source": "substrate_detected"
+}

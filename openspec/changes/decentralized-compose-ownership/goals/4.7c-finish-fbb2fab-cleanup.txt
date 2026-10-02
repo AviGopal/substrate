@@ -1,0 +1,19 @@
+In repos/goal-host-vessel/src/index.ts, finish undoing fbb2fab's drafting defects in the post-walk EDIT-INTENT ownership routing. 3cced35 fixed the probe URL's doubled regex escape but left two of the three defects: two statements joined onto one line, and a mangled duplicate of the `if (v?.endpoint)` block (regex `/\/\/+$/`) placed above the original, so the block runs twice and logs its line twice. Apply exactly these 2 edits; each old text occurs exactly once.
+
+EDIT 1
+old:
+              const rows = (dj?.content?.vessels ?? []) as Array<import("./satisfier-pick.js").SatisfierProducer & { owned_repos?: string[]; vesselId?: string }>;              const targetVessel = /^repos\/([^/]+)\//.exec(editFile)?.[1] ?? "";
+new:
+              const rows = (dj?.content?.vessels ?? []) as Array<import("./satisfier-pick.js").SatisfierProducer & { owned_repos?: string[]; vesselId?: string }>;
+              const targetVessel = /^repos\/([^/]+)\//.exec(editFile)?.[1] ?? "";
+
+EDIT 2
+old:
+              if (v?.endpoint) {
+                composeUrl = `${v.endpoint.replace(/\/\/+$/, "")}${asResolvePath(v.resolve_endpoint)}`;
+                tap(`[goal-host-vessel] ${opts.surface}: EDIT-INTENT feature_compose producer resolved via discovery → ${composeUrl}`);
+              }
+              if (v?.endpoint) {
+new:
+              if (v?.endpoint) {
+Done when: the post-walk site has one `if (v?.endpoint)` block using `/\/+$/`, `targetVessel` is on its own line, and nothing else in the file changed.

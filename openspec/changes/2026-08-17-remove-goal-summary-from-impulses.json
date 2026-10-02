@@ -1,0 +1,16 @@
+{
+  "title": "Remove goal_summary import and dispatch from impulses.ts",
+  "description": "Removes the import statement for resolveGoalSummary and its dispatch case from impulses.ts.",
+  "change": [
+    {
+      "file_path": "repos/development-vessel/src/routes/impulses.ts",
+      "old_string": "import { resolveGoalSummary } from \"../resolvers/goal-summary.js\";\n",
+      "new_string": ""
+    },
+    {
+      "file_path": "repos/development-vessel/src/routes/impulses.ts",
+      "old_string": "    case \"goal_summary\":\n      return resolveGoalSummary(p as Parameters<typeof resolveGoalSummary>[0]);\n",
+      "new_string": ""
+    }
+  ]
+}

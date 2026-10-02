@@ -1,0 +1,19 @@
+{
+  "id": "pull-sync-testgate-baseline-degraded-ias-executor-ts",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "pull-sync test gate accepted a DEGRADED baseline for ias-executor-ts (baseline 29 fail/324 pass -> 30 fail/323 pass (bes",
+  "description": "pull-sync test gate accepted a DEGRADED baseline for ias-executor-ts (baseline 29 fail/324 pass -> 30 fail/323 pass (best of 2)) after 4 refusals. The gate is now blind to this regression until the suite is repaired and the baseline lowered.",
+  "goal_text": "pull-sync test gate accepted a DEGRADED baseline for ias-executor-ts (baseline 29 fail/324 pass -> 30 fail/323 pass (best of 2)) after 4 refusals. The gate is now blind to this regression until the suite is repaired and the baseline lowered.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "pull-sync-testgate-baseline-degraded-ias-executor-ts",
+  "source_gap_source": "substrate_detected"
+}

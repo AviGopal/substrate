@@ -1,0 +1,395 @@
+{
+  "investigation_id": "2026-05-25T12-01-47Z-investigation-023",
+  "generated_at": "2026-05-25T12:01:47Z",
+  "investigator_session_id": "claude-sonnet-4-6-audit-loop-38",
+  "prior_investigation_id": "2026-05-25T11-53-03Z-investigation-022",
+  "loop_iteration": 38,
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container"
+  },
+  "substrate_status": {
+    "container": "substrate-live",
+    "container_started_at": "2026-05-25T10:58:59Z",
+    "container_uptime_minutes": 62.8,
+    "health": "healthy",
+    "running_version": "1.20.9",
+    "restart_context": "Same container as investigations 020-022 (started 10:58:59Z). No new container-level restarts since 022. goal-host-vessel still on restart from 11:41:06Z — no new crashes since then. Bootstrap-seeder has NOT re-run since initial startup — Thompson posteriors continue accumulating without reset.",
+    "f069_fix_deployed": false,
+    "f069_fix_evidence": "docker exec substrate-live grep -n 'UPSERT activity' /vessels/activity-api/src/routes/activities.ts → line 1200: UPSERT activity:${activityId} CONTENT { and line 5268: UPSERT activity:${generated.id} CONTENT { — fix from c1364e4 (SET with ?? coalescing) is NOT in the running image. Unchanged from investigation-022.",
+    "posterior_reset_triggered": false,
+    "posterior_accumulation_confirmed": true,
+    "posterior_accumulation_evidence": "validator-dispatch: α=409 n=396 at 11:53Z (022) → α=469 n=454 at 12:01Z (023). +60 executions in ~8 minutes ≈ 7.5 execs/min. Monotonic growth confirmed. slot-binding: α=68 n=64 (was α=59 n=56 in 022). No bootstrap-seeder re-run since 10:59Z.",
+    "boredom_f088_recovery": "PARTIAL RECOVERY: goal[0] ('measure the substrate topology and report coverage progress') dispatched at 11:51:37Z completed successfully at 11:56:20Z (executionId=exec_60e9gci9, status=completed, 4m43s execution). This breaks the consecutive-timeout pattern from investigation-022. goal[1] ('probe unlearned shapes — find templates that have no execution traces and recommend the best one to run') launched at 11:57:15Z and is in-flight at report time."
+  },
+  "s4a_verdict": {
+    "window_anchor_utc": "2026-05-25T07:50:27Z",
+    "window_deadline_utc": "2026-05-25T11:50:27Z",
+    "now_utc": "2026-05-25T12:01:47Z",
+    "minutes_past_deadline": 11.3,
+    "window_status": "CLOSED — FAILED (confirmed). Window deadline 11:50:27Z passed 11.3 minutes ago. Verdict is final.",
+    "coverage_tick_successes_in_window": 0,
+    "coverage_tick_total_in_window": 0,
+    "coverage_tick_evidence": "Last 50 traces show zero coverage-tick entries. Activity distribution: validator-dispatch=38, create-shape-provider-goal=7, slot-binding=5. coverage-tick template remains at α=1 β=1 n=0. No change from investigation-022.",
+    "reachable_learned_final": "17/23 — unchanged since investigation-018. Six shapes remain unlearned: commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, vesselScaffolded.",
+    "structural_block_persists": true,
+    "final_verdict": "FAILED — CONFIRMED AND CLOSED",
+    "verdict_rationale": "S.4a window closed at 11:50:27Z, now 11.3 minutes past deadline. Verdict is final. Coverage-tick had zero executions in the window. reachable_learned flat at 17/23 with no movement. S.4a required 4 consecutive 1-hour windows with strictly-increasing reachable_learned. All three observable windows produced zero coverage-tick executions. The boredom timeout pattern (F-088) began blocking progress before the window closed; partial recovery (goal[0] success at 11:56:20Z) came 6 minutes too late.",
+    "post_window_actions_needed": [
+      "Investigate why simpler topology goals (goal[0]) succeed while complex escalation/health goals (goals[3],[4]) time out — goal complexity threshold appears to be a factor",
+      "Monitor goal[1] ('probe unlearned shapes') outcome to determine if boredom is now routing toward useful work",
+      "Define new S.4a evaluation window start once coverage-tick executes at least once",
+      "Manually bootstrap templates for the 6 unlearned shapes if autonomous routing cannot reach them"
+    ]
+  },
+  "findings": [
+    {
+      "id": "F-088",
+      "claim": "F-088 PARTIALLY RESOLVED: boredom-vessel goal-host timeout loop broke on goal[0]. Two consecutive timeout failures observed in investigation-022 (goals[3] and [4] at 11:46:37Z and 11:51:37Z). However, goal[0] 'measure the substrate topology and report coverage progress' dispatched at 11:51:37Z completed successfully at 11:56:20Z (executionId=exec_60e9gci9, status=completed, duration ~4m43s). Goal[1] 'probe unlearned shapes' then launched at 11:57:15Z and is in-flight. The pattern appears to be goal-complexity-dependent: topology measurement (simpler, more deterministic) succeeds; complex escalation/health-check goals that require more LLM reasoning hang.",
+      "category": "regression",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T11-53-03Z-investigation-022",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager -n 20 --since '11:45:00'",
+          "excerpt": "11:46:37 [boredom-vessel] goal-host-vessel unreachable: The operation timed out. 11:51:37 [boredom-vessel] goal-host-vessel unreachable: The operation timed out. 11:51:37 Starting boredom-vessel. 11:51:37 [boredom-vessel] submitting goal[0]: 'measure the substrate topology and report coverage progress'. 11:56:20 [boredom-vessel] dispatched — executionId=exec_60e9gci9 status=completed. 11:56:20 Deactivated successfully. 11:57:15 Starting boredom-vessel. 11:57:15 [boredom-vessel] submitting goal[1]: 'probe unlearned shapes — find templates that have no execution traces and recommend the best one to run'",
+          "verified_at": "2026-05-25T12:01:47Z"
+        }
+      ],
+      "status": "partial — goal-complexity-dependent failure",
+      "operator_remediation": "The loop is recovering on simpler goals. Monitor goal[1] outcome (should complete by ~12:02:15Z if pattern holds). If complex goals continue timing out, investigate LLM call depth or goal prompt complexity in boredom-vessel's goal rotation. The 5-minute timeout is boredom-vessel's own HTTP client timeout, not a configured goal budget."
+    },
+    {
+      "id": "F-089",
+      "claim": "NEW: goal[0] success reveals boredom is routing toward simpler topology goals that complete, while complex 'escalate' and 'health-check-with-restart' goals reliably timeout. The boredom goal rotation (goal[0]='measure topology', goal[1]='probe unlearned shapes') appears aligned with useful coverage work. However, zero coverage-tick executions means the boredom routing is not dispatching the coverage-tick template — it is dispatching its own natural-language goals to goal-host-vessel which then selects templates via Thompson Sampling, and Thompson heavily favors validator-dispatch (α=469 vs coverage-tick α=1).",
+      "category": "lift",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T12-01-47Z-investigation-023",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' http://localhost:18080/v2/activities/execution-traces?limit=50 | python3",
+          "excerpt": "Last 50 traces: validator-dispatch=38, create-shape-provider-goal=7, slot-binding=5, zero coverage-tick. Thompson monoculture: validator-dispatch α=469 dominates all other templates in sampling.",
+          "verified_at": "2026-05-25T12:01:47Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Thompson monoculture (validator-dispatch α=469) is preventing coverage-tick selection even when boredom submits coverage-oriented goals. Options: (1) Manually inject a coverage-tick execution to seed its posterior, (2) Boredom-vessel could specify template IDs explicitly rather than relying on Thompson selection, (3) Deploy c1364e4 fix + restart container (posteriors reset to α=1 for all) — removes monoculture but loses 400+ traces."
+    },
+    {
+      "id": "F-083",
+      "claim": "Thompson posterior reset bug (UPSERT CONTENT) — unchanged: fix still not in running image. Posteriors continue accumulating. validator-dispatch: α=469 β=1 n=454 (was α=409 n=396 in 022, +60 successes in ~8 minutes). At current rate of ~7.5 execs/min, 454 successful executions at risk on next container restart.",
+      "category": "regression",
+      "severity": "critical",
+      "first_seen_in": "2026-05-25T11-16-28Z-investigation-020",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n 'UPSERT activity.*CONTENT' /vessels/activity-api/src/routes/activities.ts",
+          "excerpt": "1200: UPSERT activity:`${activityId}` CONTENT { — STILL OLD CODE. 5268: UPSERT activity:`${generated.id}` CONTENT { — STILL OLD CODE. Lines 187, 200, 1238, 2277 contain 'preserv' comments but the UPSERT at lines 1200 and 5268 remains the reset-on-reregister path. No change from investigation-022.",
+          "verified_at": "2026-05-25T12:01:47Z"
+        },
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' http://localhost:18080/v2/activities/templates | python3 thompson_analysis",
+          "excerpt": "validator-dispatch: α=469 β=1 n=454. slot-binding: α=68 β=1 n=64. create-shape-provider-goal: α=1 β=73 n=67. All posteriors monotonically increasing from container-start baseline.",
+          "verified_at": "2026-05-25T12:01:47Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged. Rebuild Docker image from c1364e4 to deploy the SET with ?? fix. Next container restart will wipe all accumulated Thompson state (~454 validator-dispatch + ~64 slot-binding successes) unless fixed first. Risk escalating with time — now 62+ minutes of accumulation."
+    },
+    {
+      "id": "F-084",
+      "claim": "analysis-vessel discovery registration RESOLVED and STABLE: registered since 11:25:36Z hot-patch restart. Still showing in registry at 8 vessels / 112 shapes / healthyCount=8 (confirmed unchanged from investigation-022). 36+ minutes of continuous stability.",
+      "category": "regression",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T11-16-28Z-investigation-020",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live curl -s http://127.0.0.1:8100/registry/stats",
+          "excerpt": "{\"totalVessels\":8,\"totalShapes\":112,\"healthyCount\":8} — unchanged from investigation-022. analysis-vessel registered and healthy. 36+ minutes of stability since hot-patch.",
+          "verified_at": "2026-05-25T12:01:47Z"
+        }
+      ],
+      "status": "resolved",
+      "resolution_notes": "STABLE — analysis-vessel has been continuously registered for 36+ minutes since the hot-patch. No new heartbeat failures. All acceptance gates confirmed met in investigation-021 remain met."
+    },
+    {
+      "id": "F-087",
+      "claim": "goal-host-vessel on-failure crash (11:41:06Z) — no new crashes observed. goal-host-vessel has been continuously running since 11:41:06Z restart. Log shows no new stop/start events. Now active+running with boredom's goal[1] dispatched at 11:57:15Z.",
+      "category": "regression",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T11-34-08Z-investigation-021",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u goal-host-vessel.service --no-pager -n 30",
+          "excerpt": "Last log entries show startup at 11:41:06Z (PID 17794). No subsequent stop/fail/restart events. Last line: '[DiscoveryRegistrationLoop] registered goal-host-vessel at http://127.0.0.1:8100'. goal-host-vessel has been continuously running for 20+ minutes. systemctl is-active = active.",
+          "verified_at": "2026-05-25T12:01:47Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Root cause of 11:41Z crash (21.256s CPU time, OOM or runaway loop) still unknown. No recurrence in 20+ minutes. Monitor over subsequent cycles. May be related to goal complexity — the F-088 pattern suggests that complex multi-step goals can cause resource spikes."
+    },
+    {
+      "id": "F-079",
+      "claim": "F-069 posterior reset fix (c1364e4) not deployed in running image — unchanged from investigation-022. This is the same underlying bug as F-083; tracked separately for provenance.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-38-48Z-investigation-019",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n 'UPSERT activity.*CONTENT' /vessels/activity-api/src/routes/activities.ts",
+          "excerpt": "Lines 1200, 5268 still show UPSERT CONTENT pattern. c1364e4 fix not present.",
+          "verified_at": "2026-05-25T12:01:47Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Rebuild Docker image. Source ready at c1364e4."
+    },
+    {
+      "id": "F-068",
+      "claim": "task_count=0 bug persists unchanged. All execution traces show task_count=0 and tasks array length=0. Latest 3 traces at 12:01:02Z, 12:00:47Z, 12:00:30Z all show task_count=0 fm=None success=True.",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "prior investigation",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/execution-traces?limit=20' | python3",
+          "excerpt": "Latest 3: 2026-05-25T12:01:02Z success=True task_count=0 fm=None. 2026-05-25T12:00:47Z success=True task_count=0 fm=None. 2026-05-25T12:00:30Z success=True task_count=0 fm=None. Pattern unchanged.",
+          "verified_at": "2026-05-25T12:01:47Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged. Structural fix needed in goal-host-vessel trace recording."
+    },
+    {
+      "id": "F-075",
+      "claim": "S.4a structural block: reachable_learned flat at 17/23. Six shapes remain unlearned: commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, vesselScaffolded. S.4a window closed FAILED — this finding now represents the prerequisites for any future S.4a window attempt.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/execution-traces?limit=50' | python3",
+          "excerpt": "Last 50 traces: validator-dispatch=38, create-shape-provider-goal=7, slot-binding=5. Zero coverage-tick executions. No outputs producing the 6 missing shapes.",
+          "verified_at": "2026-05-25T12:01:47Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Post-S.4a-failure: manually bootstrap templates for the 6 unlearned shapes or seed initial executions to establish posterior priors that can compete with validator-dispatch's α=469 monoculture."
+    },
+    {
+      "id": "F-074",
+      "claim": "S.4a FAILED — window closed at 11:50:27Z, now 11.3 minutes past deadline. Final confirmed verdict: FAILED. This finding is now in post-mortem state.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "computed",
+          "command": "python3 -c 'deadline=11:50:27Z, now=12:01:47Z, delta=+11.3 min past deadline'",
+          "excerpt": "Window closed 11.3 minutes ago. Coverage-tick n=0. reachable_learned=17/23. FAILED final.",
+          "verified_at": "2026-05-25T12:01:47Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Define next S.4a attempt window criteria. Prerequisites: (1) resolve Thompson monoculture OR manually seed coverage-tick executions, (2) confirm boredom routing stabilizes post-F-088 recovery, (3) bootstrap the 6 zero-trace templates."
+    },
+    {
+      "id": "F-036",
+      "claim": "create-shape-provider-goal parent-fail-on-child-success pattern continuing. α=1 β=73 n=67 — 67 failures, 0 successes (was β=64 n=59 in 022, +8 failures in ~8 minutes ≈ 1.0 failures/minute). Rate increased vs 022's 0.5 failures/minute.",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T09-59-06Z-investigation-015",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' http://localhost:18080/v2/activities/templates | python3",
+          "excerpt": "Create Shape-Provider Goal: α=1 β=73 n=67. +8 failures since investigation-022. 67 failures, 0 successes. Consistent monotonic failure accumulation.",
+          "verified_at": "2026-05-25T12:01:47Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged. Structural bug in goal-host-vessel parent/child execution trace recording."
+    },
+    {
+      "id": "F-053",
+      "claim": "failure_mode=null on failures persists — no fix deployed.",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T09-42-37Z-investigation-014",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/execution-traces?limit=3' | python3",
+          "excerpt": "Latest 3 traces including success=True all show fm=None. Pattern unchanged.",
+          "verified_at": "2026-05-25T12:01:47Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Unchanged."
+    },
+    {
+      "id": "F-076",
+      "claim": "coverage-tick template still at α=1 β=1 n=0. Thompson monoculture (validator-dispatch α=469) prevents coverage-tick selection even when boredom submits coverage-oriented goals. The monoculture is the primary structural block on S.4a.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' http://localhost:18080/v2/activities/templates | python3",
+          "excerpt": "coverage-tick: α=1 β=1 n=0. No change. validator-dispatch dominates at α=469.",
+          "verified_at": "2026-05-25T12:01:47Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Thompson monoculture driven by 454 accumulated validator-dispatch successes. Without seeding coverage-tick's prior, Thompson sampling will never select it. Operator options: (1) seed coverage-tick manually via direct API call, (2) rebuild image with c1364e4 fix + restart (posteriors reset, removes monoculture but loses 454+ traces)."
+    }
+  ],
+  "thompson_state": {
+    "snapshot_time": "2026-05-25T12:01:47Z",
+    "total_templates": 13,
+    "templates_with_history": 9,
+    "validator_dispatch": {"alpha": 469, "beta": 1, "n": 454, "prior_alpha_in_022": 409, "prior_n_in_022": 396, "gained_since_022": 58},
+    "slot_binding": {"alpha": 68, "beta": 1, "n": 64, "prior_alpha_in_022": 59, "prior_n_in_022": 56, "gained_since_022": 8},
+    "create_shape_provider_goal": {"alpha": 1, "beta": 73, "n": 67, "prior_beta_in_022": 64, "gained_failures_since_022": 9},
+    "ribosome_extract": {"alpha": 4, "beta": 1, "n": 3},
+    "replace_activity": {"alpha": 4, "beta": 1, "n": 3},
+    "evolve_activity_template": {"alpha": 2, "beta": 1, "n": 1},
+    "repair_failed_activity": {"alpha": 2, "beta": 1, "n": 1},
+    "debug_failing_audit": {"alpha": 2, "beta": 1, "n": 1},
+    "forge_vessel_for_shape": {"alpha": 1, "beta": 2, "n": 1},
+    "zero_state_templates": ["coverage-tick", "core-activity-audit", "run-sensitivity-probe", "prune-activity"],
+    "posterior_reset_confirmed": false,
+    "posterior_loss_risk": "critical — UPSERT CONTENT fix not deployed; next container restart will wipe all state (~454 validator-dispatch + ~64 slot-binding successes, ~62 minutes of accumulation)",
+    "execution_rate_validator_dispatch": "~7.5 executions/minute (was ~9.5/min in investigation-022; slight slowdown)",
+    "execution_rate_create_shape_provider_goal": "~1.0 failures/minute (was ~0.5/min in 022; rate doubled)",
+    "monoculture_risk": "validator-dispatch α=469 will dominate Thompson sampling indefinitely without intervention — coverage-tick at α=1 has p(sample) ≈ 0.002 vs validator-dispatch"
+  },
+  "discovery_registry_status": {
+    "total_vessels": 8,
+    "total_shapes": 112,
+    "healthy_count": 8,
+    "analysis_vessel_registered": true,
+    "analysis_vessel_stable_since": "11:25:36Z",
+    "change_since_022": "no change — 8/112/8 same as 022. 36+ minutes of stability."
+  },
+  "boredom_vessel_status": {
+    "is_active_at_report_time": "activating — goal[1] submitted at 11:57:15Z ('probe unlearned shapes — find templates that have no execution traces and recommend the best one to run'), currently running",
+    "timeout_count_since_container_start": 2,
+    "timeout_count_since_022": 0,
+    "goals_since_022": [
+      {
+        "seq": 0,
+        "goal": "measure the substrate topology and report coverage progress",
+        "dispatched_at": "11:51:37Z",
+        "status": "completed",
+        "execution_id": "exec_60e9gci9",
+        "completed_at": "11:56:20Z",
+        "duration_seconds": "~283s (4m43s)",
+        "note": "First successful goal completion since investigation-021. Breaks the consecutive-timeout pattern from investigation-022."
+      },
+      {
+        "seq": 1,
+        "goal": "probe unlearned shapes — find templates that have no execution traces and recommend the best one to run",
+        "dispatched_at": "11:57:15Z",
+        "status": "in_progress",
+        "note": "Complexity level similar to goal[0] — should complete by ~12:02:15Z if pattern holds."
+      }
+    ],
+    "pattern_hypothesis": "Goal-complexity-dependent timeout: topology measurement goals (goal[0], goal[1]) complete in ~4-5 minutes. Complex escalation/health-check goals requiring vessel restart decisions (goals[3],[4]) hang goal-host-vessel for >5 minutes without completing. The distinction may be: simpler goals require fewer LLM reasoning steps; complex goals require more nested tool calls or longer LLM context.",
+    "note": "F-088 is partially resolved. boredom-vessel is routing through simpler goals successfully. The loop is alive and making forward progress. However, Thompson monoculture means the goal-host-vessel is selecting validator-dispatch for nearly all executions, not coverage-tick."
+  },
+  "substrate_explicit_vessels_progress": {
+    "completed_tasks": 48,
+    "open_tasks": 5,
+    "open_task_list": [
+      "1b.6 — Smoke test: curl localhost:8260/health returns 200; vessel appears in discovery",
+      "2.4 — Move ANTHROPIC_API_KEY / OPENAI_API_KEY env vars to separate vessel config",
+      "2.5 — Latency measurement: record p50/p99 LLM-call latency",
+      "6.3 — Delete ribosome lifecycle-meta path from minibob",
+      "8.3 — SUPERSEDED: minibob rename (crossed out)"
+    ],
+    "note": "Unchanged from investigation-022. No commits in super-repo since 022."
+  },
+  "service_status": {
+    "analysis_vessel": "active running (stable since 11:25:36Z, 36+ min)",
+    "boredom_vessel": "activating — goal[1] in progress at 11:57:15Z",
+    "concept_db": "active running",
+    "concept_db_seeder": "failed (persistent failure, pre-existing)",
+    "development_vessel": "active running",
+    "discovery_vessel": "active running",
+    "goal_host_vessel": "active running (last restart 11:41:06Z, no new restarts, 20+ min stable)",
+    "identity_vessel": "active running",
+    "llm_resolver_vessel": "active running (no recent errors, last log at 10:59:11Z startup)",
+    "local_tools_vessel": "active running",
+    "ribosome_vessel": "active running"
+  },
+  "hardcoded_refs_scan": {
+    "identity_vessel_src": [
+      "repos/identity-vessel/src/services/discovery-client.ts: return `http://${serviceName}.${namespace}.svc.cluster.local:${port}`; — Kubernetes internal DNS fallback. Acceptable as env-var-overridable default.",
+      "repos/identity-vessel/src/services/validation.test.ts: process.env.IDENTITY_ENDPOINT = 'https://identity-test.metabob.com'; — test file only, not production code."
+    ],
+    "discovery_vessel_src": [
+      "repos/discovery-vessel/src/middleware/auth.ts: process.env.IDENTITY_VESSEL_URL ?? 'https://identity.metabob.com' — production fallback. Acceptable as env-var-overridable default; local substrate sets IDENTITY_VESSEL_URL=http://127.0.0.1:8150."
+    ],
+    "verdict": "All hardcoded refs are env-var-overridable defaults. No raw hardcodes that would break the local substrate."
+  },
+  "new_commits_since_022": [],
+  "new_cycle_files": ["cycle-8.json (pre-existing in 022 timeframe)"],
+  "new_proposal_files": ["proposal-fp-15-missing-producer-stale-registration.json", "proposal-fp-15-vessel-health-corroboration.json"],
+  "regressions_since_prior": [],
+  "resolutions_since_prior": [
+    {
+      "finding": "F-088",
+      "description": "Partial resolution: boredom-vessel goal[0] completed successfully at 11:56:20Z (executionId=exec_60e9gci9). Consecutive-timeout pattern broken. F-088 downgraded from high severity to medium."
+    }
+  ],
+  "new_findings": ["F-089"],
+  "findings_tally": {
+    "open": 10,
+    "resolved": 1,
+    "regressed": 0,
+    "new_this_iteration": 1,
+    "prior_reconfirmed": ["F-083", "F-079", "F-087", "F-068", "F-075", "F-074", "F-036", "F-053", "F-076"],
+    "partial_resolution": "F-088 (downgraded to medium, pattern hypothesis added)",
+    "stable_resolved": "F-084 (analysis-vessel, 36+ min stable)",
+    "note": "F-088 severity downgraded to medium. F-089 (Thompson monoculture as coverage-tick block) added. Open count unchanged at 10 (F-088 remains open but at medium)."
+  },
+  "s4a_post_mortem": {
+    "all_windows_summary": "All three observable windows produced zero coverage-tick executions. Window 1 (pre-investigation-018): unknown. Window 2 (investigation-018 to ~10:50Z): zero coverage-tick. Window 3 (~10:50Z to 11:50:27Z): zero coverage-tick, plus boredom timeouts in last 20 minutes blocking any further progress.",
+    "primary_structural_block": "Thompson monoculture: validator-dispatch accumulated α=469 from 454 autonomous executions since container restart at 10:58:59Z (~62 minutes of learning). Coverage-tick at α=1 has sampling probability ≈ 0.002 — statistically unreachable without intervention.",
+    "secondary_block": "boredom-vessel timeout pattern (F-088): complex topology goals hung goal-host-vessel for exactly 5 minutes each, consuming 10 minutes of the 60-minute evaluation window without producing useful traces. Partial recovery began 6 minutes after window closed.",
+    "minimum_operator_intervention_for_window1_reset": [
+      "Option A (preserve posteriors): Use activity-api admin API to directly execute coverage-tick template once, seeding posterior at α=2 (still dwarfed by validator-dispatch at α=469). Then wait and observe.",
+      "Option B (reset posteriors, recommended): Rebuild Docker image with c1364e4 fix deployed. Restart container. All posteriors reset to α=1 β=1. Coverage-tick and validator-dispatch start on equal footing. Monitor boredom routing for coverage-tick selection within first evaluation window.",
+      "Option C (hybrid): Seed coverage-tick with α=50 β=1 manually via SurrealDB admin query to give it competitive prior against validator-dispatch."
+    ],
+    "next_window_prerequisites": [
+      "1. Confirm boredom-vessel goal routing stabilizes post-F-088 partial recovery",
+      "2. Ensure coverage-tick has a competitive Thompson prior (options A/B/C above)",
+      "3. Confirm goal-host-vessel crash root cause (F-087) will not recur with complex goals",
+      "4. Set explicit window start time and communicate to auditor loop"
+    ]
+  },
+  "open_questions": [
+    "Will goal[1] ('probe unlearned shapes') complete successfully or timeout? Expected by ~12:02:15Z.",
+    "Does the goal-host-vessel hang pattern correlate with LLM token depth? Complex goals like 'restart inactive vessels' likely require multi-step tool use chains that exhaust the LLM context budget.",
+    "Is exec_60e9gci9 (goal[0] success) traceable in the execution-traces API? Check if it landed as a trace with the expected template attribution.",
+    "What template did goal-host-vessel select for exec_60e9gci9? Was it validator-dispatch again, or did it route to a coverage/topology template?",
+    "Will the operator rebuild the Docker image with c1364e4 before the next container restart? Now at 454+ validator-dispatch accumulations — the risk is escalating.",
+    "With two new proposal files (fp-15 variants), are these actionable development proposals or just analysis artifacts?"
+  ],
+  "next_wake_recommendation": {
+    "delay_seconds": 270,
+    "reason": "goal[1] ('probe unlearned shapes') dispatched at 11:57:15Z should complete or timeout by ~12:02:15Z — verify outcome within 4 minutes to confirm F-088 recovery or re-open. Stay in cache window at 270s."
+  }
+}

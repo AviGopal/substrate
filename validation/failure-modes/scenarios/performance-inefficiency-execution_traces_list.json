@@ -1,0 +1,19 @@
+{
+  "id": "performance-inefficiency-execution_traces_list",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "performance_inefficiency",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Internal endpoint \"execution_traces_list\" (/v2/activities/execution-traces?limit=200) is inefficient: 6ms (request faile",
+  "description": "Internal endpoint \"execution_traces_list\" (/v2/activities/execution-traces?limit=200) is inefficient: 6ms (request failed/timed out) >= threshold 5000ms — author a fix so the substrate manages this load efficiently.",
+  "goal_text": "Internal endpoint \"execution_traces_list\" (/v2/activities/execution-traces?limit=200) is inefficient: 6ms (request failed/timed out) >= threshold 5000ms — author a fix so the substrate manages this load efficiently.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "performance-inefficiency-execution_traces_list",
+  "source_gap_source": "substrate_detected"
+}

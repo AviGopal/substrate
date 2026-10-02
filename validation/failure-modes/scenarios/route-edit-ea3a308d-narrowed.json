@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-ea3a308d-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-ea3a308d] investigate and decompose gap route-edit-36370504: In repos/goal-host-vessel/src/ind",
+  "description": "[narrowed from route-edit-ea3a308d] investigate and decompose gap route-edit-36370504: In repos/goal-host-vessel/src/index.ts, add one small self-contained helper function at the TOP LEVEL of the module, immediately before the line that reads `async function recordGoalPath(` — do not insert anything inside an existing function, and do not modify any existing code in this change. The helper is exactly this shape and must be balanced on its own: an async function named `landedShaForGo\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: == install ==\n== resolve ==\nDRYRUN_EXIT=0\n es-errors@1.3.0\n gopd@1.2.0\n es-errors@1.3.0\n function-bind@1.1.2\n delayed-stream@1.0.0\n[2.00ms] done\n== typecheck ==\n$ bunx tsc --noEmit --strict\nsrc/index.\n- semantic_reject: adversarial refuters agreed 2/2 (conf 0.90, 0.90): The patch adds a new async helper `landedShaForGoal` (lines starting with `+async function landedShaForGoal...`) and an export (`+export { landedShaF\n- semantic_reject: compose adds top-level function landedShaForGoal with zero readers, not exported and not wired — a write-only hollow addition; wire it, export it for a real consumer, or drop it\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-ea3a308d] investigate and decompose gap route-edit-36370504: In repos/goal-host-vessel/src/index.ts, add one small self-contained helper function at the TOP LEVEL of the module, immediately before the line that reads `async function recordGoalPath(` — do not insert anything inside an existing function, and do not modify any existing code in this change. The helper is exactly this shape and must be balanced on its own: an async function named `landedShaForGo\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: == install ==\n== resolve ==\nDRYRUN_EXIT=0\n es-errors@1.3.0\n gopd@1.2.0\n es-errors@1.3.0\n function-bind@1.1.2\n delayed-stream@1.0.0\n[2.00ms] done\n== typecheck ==\n$ bunx tsc --noEmit --strict\nsrc/index.\n- semantic_reject: adversarial refuters agreed 2/2 (conf 0.90, 0.90): The patch adds a new async helper `landedShaForGoal` (lines starting with `+async function landedShaForGoal...`) and an export (`+export { landedShaF\n- semantic_reject: compose adds top-level function landedShaForGoal with zero readers, not exported and not wired — a write-only hollow addition; wire it, export it for a real consumer, or drop it\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-ea3a308d-narrowed",
+  "source_gap_source": "substrate_detected"
+}

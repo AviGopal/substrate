@@ -1,0 +1,98 @@
+{
+  "proposal": {
+    "proposal_id": "proposal-fp-15-vessel-health-corroboration",
+    "scenario_id": "fp-15-missing-producer-stale-registration",
+    "closes_gap": true,
+    "template_name": "vessel-health-corroboration",
+    "authored_by": "subagent",
+    "authored_at": "2026-05-22",
+    "registration_status": "draft",
+    "notes": "Requires admin scope on activity-api to write the template; canary keys hold only read,write. Operator must register via Bearer JWT admin auth or seed via init-data."
+  },
+  "template": {
+    "id": "vessel-health-corroboration",
+    "name": "Vessel Health Corroboration",
+    "description": "Cross-reference discovery-vessel registrations against impulse_resolution_metrics over a 24h window to flag fresh registrations whose per-shape failure rate exceeds 80%. Emits a corroboration impulse listing (vessel_id, shape, failure_rate_pct, recommendation) so the binding layer can gate stale registrations from discovery results without removing them outright.",
+    "tags": [
+      "discovery.liveness.corroboration",
+      "discovery.health",
+      "registry.hygiene"
+    ],
+    "input_shapes": [
+      "vesselRegistry",
+      "vesselHealth",
+      "activityExecutionTrace"
+    ],
+    "output_shapes": [
+      "vesselHealthCorroboration",
+      "discoveryFreshnessAudit",
+      "registrationLivenessReport"
+    ],
+    "tasks": [
+      {
+        "id": "fetch_fresh_registrations",
+        "description": "Query discovery-vessel for all currently-registered vessels and their advertised shapes (TTL not expired).",
+        "resolver": "bash",
+        "config": {
+          "command": "curl -fsS -X POST \"${DISCOVERY_ENDPOINT:-https://discovery.metabob.com}/resolve\" -H 'Content-Type: application/json' -H \"Authorization: ApiKey ${METABOB_API_KEY}\" -d '{\"impulse\":{\"type\":\"vesselRegistry\",\"pointer\":{\"include_expired\":false}}}' > /tmp/fp15_registry.json",
+          "outputs": {
+            "registry_snapshot": "/tmp/fp15_registry.json"
+          }
+        },
+        "validation": {
+          "requiredFiles": ["/tmp/fp15_registry.json"],
+          "forbiddenPatterns": ["\"error\":", "Unauthorized"]
+        }
+      },
+      {
+        "id": "aggregate_resolution_failures",
+        "description": "Compute per-vessel x per-shape failure rate over the last 24h from impulse_resolution_metrics.",
+        "resolver": "bash",
+        "config": {
+          "command": "curl -fsS -X POST \"${ACTIVITY_API_ENDPOINT:-https://activity.metabob.com}/v2/impulses/resolve\" -H 'Content-Type: application/json' -H \"Authorization: ApiKey ${METABOB_API_KEY}\" -d '{\"impulse\":{\"type\":\"surrealQuery\",\"pointer\":{\"query\":\"SELECT vessel_id, requested_shape, count() AS attempts, count(success = false) AS failures, (count(success = false) * 100.0 / count()) AS failure_rate_pct FROM impulse_resolution_metrics WHERE timestamp > time::now() - 24h GROUP BY vessel_id, requested_shape\"}}}' > /tmp/fp15_failure_rates.json",
+          "outputs": {
+            "failure_rates": "/tmp/fp15_failure_rates.json"
+          }
+        },
+        "validation": {
+          "requiredFiles": ["/tmp/fp15_failure_rates.json"],
+          "requiredPatterns": ["failure_rate_pct"]
+        }
+      },
+      {
+        "id": "join_and_classify",
+        "description": "Join the fresh-registration snapshot against the 24h failure-rate aggregate and tag each (vessel,shape) pair with a recommendation.",
+        "resolver": "bash",
+        "config": {
+          "command": "node -e 'const reg=require(\"/tmp/fp15_registry.json\");const fr=require(\"/tmp/fp15_failure_rates.json\");const rows=(fr.result||fr.rows||fr);const advert=[];for(const v of (reg.vessels||reg.result||[])){for(const s of (v.shapes||v.advertised_shapes||[])){advert.push({vessel_id:v.vessel_id||v.id,shape:s});}}const idx=new Map();for(const r of rows){idx.set(r.vessel_id+\"|\"+r.requested_shape,r);}const out=[];for(const a of advert){const k=a.vessel_id+\"|\"+a.shape;const r=idx.get(k);if(!r){out.push({vessel_id:a.vessel_id,shape:a.shape,failure_rate_pct:null,recommendation:\"FORCE_LIVENESS_PROBE\"});continue;}const pct=Number(r.failure_rate_pct||0);if(pct>=95)out.push({vessel_id:a.vessel_id,shape:a.shape,failure_rate_pct:pct,recommendation:\"REMOVE_REGISTRATION\"});else if(pct>=80)out.push({vessel_id:a.vessel_id,shape:a.shape,failure_rate_pct:pct,recommendation:\"GATE_FROM_DISCOVERY\"});else if(r.attempts<5)out.push({vessel_id:a.vessel_id,shape:a.shape,failure_rate_pct:pct,recommendation:\"FORCE_LIVENESS_PROBE\"});}require(\"fs\").writeFileSync(\"/tmp/fp15_corroboration.json\",JSON.stringify({shape:\"vesselHealthCorroboration\",generated_at:new Date().toISOString(),window_hours:24,threshold_pct:80,entries:out},null,2));console.log(\"entries=\"+out.length);'",
+          "outputs": {
+            "corroboration": "/tmp/fp15_corroboration.json"
+          }
+        },
+        "validation": {
+          "requiredFiles": ["/tmp/fp15_corroboration.json"],
+          "requiredPatterns": ["vesselHealthCorroboration", "recommendation"]
+        }
+      },
+      {
+        "id": "emit_corroboration_impulse",
+        "description": "Persist the corroboration result as a vesselHealthCorroboration impulse for downstream binding-layer consumption.",
+        "resolver": "bash",
+        "config": {
+          "command": "curl -fsS -X POST \"${ACTIVITY_API_ENDPOINT:-https://activity.metabob.com}/v2/impulses/resolve\" -H 'Content-Type: application/json' -H \"Authorization: ApiKey ${METABOB_API_KEY}\" -d \"{\\\"impulse\\\":{\\\"type\\\":\\\"vesselHealthCorroboration_write\\\",\\\"pointer\\\":{\\\"body\\\":$(cat /tmp/fp15_corroboration.json)}}}\" > /tmp/fp15_write_ack.json",
+          "outputs": {
+            "write_ack": "/tmp/fp15_write_ack.json"
+          }
+        },
+        "validation": {
+          "requiredFiles": ["/tmp/fp15_write_ack.json"],
+          "forbiddenPatterns": ["\"error\":", "Unauthorized", "500"]
+        },
+        "retry": {
+          "max_attempts": 2,
+          "strategy": "linear"
+        }
+      }
+    ]
+  }
+}

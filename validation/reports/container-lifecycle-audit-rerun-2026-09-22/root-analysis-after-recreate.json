@@ -1,0 +1,33 @@
+{
+  "status": {
+    "at": "2026-09-22T10:50:50.601972+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-root-a",
+      "vessel-ctl",
+      "status",
+      "analysis-vessel"
+    ],
+    "rc": 0,
+    "stdout": "analysis-vessel.service                active       enabled    restarts=0\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  "health": {
+    "status": 200,
+    "data": {
+      "status": "healthy",
+      "vesselId": "analysis-vessel-local",
+      "vesselName": "Analysis Vessel",
+      "shapes": [
+        "source_code",
+        "error_log",
+        "problem_detection",
+        "code_quality",
+        "code_annotation",
+        "cpg_query_result"
+      ],
+      "version": "0.1.0"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-985a326a-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-985a326a] investigate and decompose gap route-edit-e13aac10: In repos/goal-host-vessel/src/ind",
+  "description": "[narrowed from route-edit-985a326a] investigate and decompose gap route-edit-e13aac10: In repos/goal-host-vessel/src/index.ts, make exactly ONE edit.\n\nVerbatim anchor (a single line):\n              else if (editHollow) { opts.learningSink?.alphaBetaDelta.push(await penaliseHollowTemplate(\"feature_compose\", \"landed-edit-missing-requested-symbol\")); }\n\nInsert this single new line immediately AFTER that anchor line, verbatim:\n\n              recordDeterministicLabel(goal ?? \"\",\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/index.ts(11872,15): error TS1135: Argument expression expected.\nsrc/index.ts(11916,11): error TS1005: 'try' expected.\nsrc/index.ts(11923,7): error TS1472: 'catch' or 'finally' expected.\nsrc/index.\n- verify_failed: src/index.ts(11873,15): error TS1135: Argument expression expected.\nSKIPPED_TYPECHECK_FAILED\nSKIPPED_TYPECHECK_FAILED\n- syntax_break: src/index.ts(12053,314): error TS1005: ')' expected.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-985a326a] investigate and decompose gap route-edit-e13aac10: In repos/goal-host-vessel/src/index.ts, make exactly ONE edit.\n\nVerbatim anchor (a single line):\n              else if (editHollow) { opts.learningSink?.alphaBetaDelta.push(await penaliseHollowTemplate(\"feature_compose\", \"landed-edit-missing-requested-symbol\")); }\n\nInsert this single new line immediately AFTER that anchor line, verbatim:\n\n              recordDeterministicLabel(goal ?? \"\",\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/index.ts(11872,15): error TS1135: Argument expression expected.\nsrc/index.ts(11916,11): error TS1005: 'try' expected.\nsrc/index.ts(11923,7): error TS1472: 'catch' or 'finally' expected.\nsrc/index.\n- verify_failed: src/index.ts(11873,15): error TS1135: Argument expression expected.\nSKIPPED_TYPECHECK_FAILED\nSKIPPED_TYPECHECK_FAILED\n- syntax_break: src/index.ts(12053,314): error TS1005: ')' expected.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-985a326a-narrowed",
+  "source_gap_source": "substrate_detected"
+}

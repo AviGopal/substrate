@@ -1,0 +1,2141 @@
+{
+ "attempts": [
+  {
+   "key": "sync-deploy-drift",
+   "title": "Untrack runtime state (gaps, pool, memory, policies) from the super-repo",
+   "where": "super-repo 8f8e87e7",
+   "date": "2026-08-02",
+   "tried": "Stop git add -A committing the gap store. Verified WORKSPACE_ROOT was absent, so readers used /workspace",
+   "outcome": "partial",
+   "evidence": "The untracking held. WORKSPACE_ROOT was set to the super-repo by 08-08, which produced the split brain.",
+   "source": "gap-history"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Host submodule lags the live clone",
+   "where": "repos/activity-api 41c9e89 vs live 39783b0",
+   "tried": "none",
+   "outcome": "unknown",
+   "date": "2026-09-28",
+   "evidence": "44 commits behind.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync content-hash/fingerprint coverage extended one artefact type at a time",
+   "where": "scripts/substrate/substrate-pull-sync.sh: 596fd717, 967e3d6e, cb28e450, 23ee216e, 392e1990, 5ddfc7e2, 7f97df70, 66cc9185, 31f15baf, 4bb21141",
+   "tried": "Make .json, .surql, units, selector, gen-env/secrets, timers (enable), scripts/ and declarations-only packages each deploy when changed",
+   "outcome": "partial",
+   "date": "2026-07-20..2026-09-28",
+   "evidence": "10+ separate fixes for the same 'changes of type X silently do not deploy' class; the fingerprint is still an allowlist",
+   "source": "git-deployment"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync in-flight/drain guard before restart",
+   "where": "c5db6415, 887577bd, e22271bd, 25907d96, 3c86768c, 379ef9f4, ad535830, 25aad2cc, 73a3b54c, 85bc103c, fd3d6871",
+   "tried": "Defer vessel restarts while dispatches are in flight, then by quiesce, then by age of the oldest request",
+   "outcome": "partial",
+   "date": "2026-07-04..2026-09-24",
+   "evidence": "25aad2cc: 'quiesce wait outlived the unit, so it converged nothing'; 73a3b54c: 'a deferred restart was permanent \u2014 mirrored code was never loaded'",
+   "source": "git-deployment"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "one dirty/masked vessel stops all convergence",
+   "where": "e8da4bfe, b0df07e3, cb5b0b24, 2e47b75e, 9d261470, 9333f0f7",
+   "tried": "Isolate per-vessel failures so one cannot block the others",
+   "outcome": "failed",
+   "date": "2026-08-01..2026-09-06",
+   "evidence": "On 09-28 node 2 has synced=0 because the cpg-inference-ts build fails (MECHANISM-AUDIT-2026-09-28)",
+   "source": "git-deployment"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync silent skip / silent failure",
+   "where": "65648ab5, 0b89a4ef, 24877839, 490b529d, 66cc9185",
+   "tried": "Stop swallowing failures; exit non-zero; log reasons",
+   "outcome": "failed",
+   "date": "2026-08-03..2026-09-24",
+   "evidence": "At 09-29 03:53Z node 2 pull-sync reports 'synced=0 skipped=0 failed=0' while its super-repo clone has vessels.inventory.json cut from 425 to 9 lines and learning-loop-selftest-tick.ts deleted",
+   "source": "git-deployment"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "runtime-drift watchdog repair path",
+   "where": "63b48175 \u2192 bb217e5e (scripts/substrate/runtime-drift-tick.ts)",
+   "tried": "Second repairer that restores /vessels from the committed source",
+   "outcome": "reverted",
+   "date": "2026-09-13",
+   "evidence": "Duplicated pull-sync's mirror-to-live and raced it; a truncated grep ('| head -15') hid the existing caller; repair now defaults OFF behind RUNTIME_DRIFT_REPAIR",
+   "source": "git-deployment"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "host-side sync pollers",
+   "where": "host-pull-sync.sh, host-sync-poller.sh (+units)",
+   "tried": "Host-side timers to pull and cut over mitosis changes",
+   "outcome": "superseded",
+   "date": "2026-06-04..2026-08-11",
+   "evidence": "Added 06-04/06-17, units deleted 06-25, re-added 06-26, all deleted 08-11 (a267367e)",
+   "source": "git-deployment"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "running image built from an uncommitted tree",
+   "where": "host working tree: Dockerfile.substrate, setup-git-push.sh, gen-env.sh, units/development-vessel*.service, Makefile",
+   "tried": "Ledger hooks installer, generic provider-secret carry, seed ordering and cutover lease wait, edited without commits",
+   "outcome": "unknown",
+   "date": "2026-09-25..2026-09-28",
+   "evidence": "HEAD has 0 occurrences of LEDGER_HOOKS in setup-git-push.sh and 0 of git-hooks-ledger in the Dockerfile, but the node-1 image installs them (journal 09-25 22:35Z). The uncommitted Makefile restores targets deleted by e375d716, and tasks.md 1.1\u20132.8 are un-ticked. All files share mtime 09-28 20:11:16",
+   "source": "git-deployment"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "single vessel-management surface",
+   "where": "008f3ab9 \u2192 25ee2162, 23042561, c809ffe5, 6c689441",
+   "tried": "vessel-ctl replaces ~40 Makefile targets; apply/drift verbs",
+   "outcome": "worked",
+   "date": "2026-08-20..2026-08-22",
+   "evidence": "Needed several follow-up fixes (five blockers, including one that disabled every LLM arm); vessel-ctl is live in the image today",
+   "source": "git-deployment"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Mitosis pending lock / freshness livelock fixed at least 6 times",
+   "where": "2cfc6b0 (06-19), db30efa (06-30), 9019cbd (07-19), b4e3d77->05829d6 revert->0c96b99 (07-29), 3f4be28 (08-01), c8b2e6e (08-02), 76c5ed0/24060e3 (08-11)",
+   "tried": "Clear pending on no-op, gate the mirror on push, clear on all exits, avoid lease self-deadlock, per-file base sha.",
+   "outcome": "partial",
+   "date": "2026-06-19..2026-08-11",
+   "evidence": "Each fix names a new exit path. Memory 09-24 staged_base_sha lane deadlock \u2014 same class again.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Self-restart kills in-flight work",
+   "where": "4ec9ce8 (06-23), b1192fa (08-05), a0e6692, ede3aeb, 9f06451, 5a41852, 644e7ee (08-11)",
+   "tried": "Defer the restart, then quiesce admission instead of restarting into live work.",
+   "outcome": "partial",
+   "date": "2026-08-11",
+   "evidence": "Three consecutive operator trials died interrupted. The dev-vessel self-cutover had never deployed before 06-23.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Compose gates read target files from a stale super-repo copy",
+   "where": "20a668b, a0ff3d3, 13841a4, 1d4ac1c, 996b841, 8abd573, 7994841, 5c31f5e",
+   "tried": "8 separate call-site landings, then the targetFileOnDisk helper",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "Gitlink still 22 behind; host submodule 300 behind",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Test/post-land suite killed by timeouts",
+   "where": "7ed1bf8, 8dcc6a0, c37aab5, 0fd7487, a07c8ce, 9822a8e, d8a5f84, 5e9a0b2",
+   "tried": "Per-call-site timeout raises",
+   "outcome": "partial",
+   "date": "2026-08-28..09-28",
+   "evidence": "Post-land suite dead 08-31->09-28 until 5e9a0b2",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Stale runtime cutover re-inserts removed code",
+   "where": "9a93e21, ca52631",
+   "date": "2026-07-09, 07-24",
+   "tried": "Re-dedupe and re-land.",
+   "outcome": "partial",
+   "evidence": "The base SHA at staging was stale.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Cutover restart leaks and drain races",
+   "where": "015d1ae, 53cce0b, b3ad44a, df4b700, 28b6fa9",
+   "date": "2026-07-26..08-08",
+   "tried": "Graceful drain before discovery stop, and clear leaked running records.",
+   "outcome": "worked",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Stale super-repo pins reset submodules under deploys",
+   "where": "super-repo c0e42fa3",
+   "tried": "Bump 5 pointers",
+   "outcome": "partial",
+   "date": "2026-08-09",
+   "evidence": "The same commit moved obsidian-vessel backwards 3364d47->aa4ae90 (verified ancestry)",
+   "source": "git-mid"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Live cutover not followed by a git landing",
+   "where": "boredom-vessel 312146d",
+   "tried": "Operator lands the substrate's live hot-fix",
+   "outcome": "worked",
+   "date": "2026-07-17",
+   "source": "git-mid"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "running-copy drift landed after the fact",
+   "where": "discovery 586b738 (07-17); identity c0692b9/14cada5 (07-19)",
+   "tried": "reconcile hot-cutover features into git; fix self-issuer 401 that pull-sync kept reverting",
+   "outcome": "worked",
+   "evidence": "features deployed but never committed; pull-sync reverted the vessel as unhealthy",
+   "source": "git-small"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Bake side-loop scripts into the image; class detector claimed",
+   "where": "542e2dc7",
+   "date": "2026-06-17",
+   "tried": "COPY scripts; claimed systemd_unit_health_observer now catches the class",
+   "outcome": "failed",
+   "evidence": "the same class was found again 06-19 (2600dab3, timers not enabled at build) and 06-29 (c0a61d47, relevance-sink never COPY'd)",
+   "source": "git-super-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Stale code in long-running processes (module/bun caching)",
+   "where": "56fa618c, 7858dc4a, 1394012d",
+   "date": "2026-02-17..03-10",
+   "tried": "diagnosed module caching, bun caching and code-version mismatch",
+   "outcome": "superseded",
+   "evidence": "the same runtime-vs-source class persists in the substrate era (host-sync, dist drift detector d42c4fd1)",
+   "source": "git-super-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "host-sync-poller / host-pull-sync",
+   "where": "057ba013, b04330b8, c4d4045c",
+   "date": "2026-06-04..17",
+   "tried": "poll host and mirror committed files back into the container",
+   "outcome": "unknown",
+   "evidence": "creates dependence on host location (law 11); 96970301 had to switch a detector from the stale host repos/ to push-clones",
+   "source": "git-super-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync content_hash blind to file kinds (R1)",
+   "where": "967e3d6e, cb28e450, 66cc9185",
+   "tried": "Extend the change fingerprint from .ts to .json, then sql/.surql, then scripts/. The 09-24 body says 'the third time the list fell behind the mirror'",
+   "outcome": "partial",
+   "date": "2026-07-25..2026-09-24",
+   "evidence": "Coverage is still a list, not derived from what mirror-to-live copies",
+   "source": "git-super-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "mirror decision by content, not marker sha",
+   "where": "596fd717",
+   "tried": "Replace 'clone HEAD == marker sha' with an md5 of the src tree compared against live",
+   "outcome": "worked",
+   "date": "2026-07-20",
+   "evidence": "goal-host/activity-api had run stale code while pull-sync skipped them forever",
+   "source": "git-super-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "restart deferral never converges (R2)",
+   "where": "379ef9f4, ad535830, 25aad2cc, 73a3b54c, 85bc103c, fd3d6871, 421653ab",
+   "tried": "Quiesce wait, then RESTART_DEFER_MAX, then defer by the oldest in-flight request's age, then restart every unit that runs the vessel's tree",
+   "outcome": "partial",
+   "date": "2026-08-10..2026-09-24",
+   "evidence": "4b2d6410 'backstop is not a backstop'; 73a3b54c goal-host served code 23h stale; 421653ab LLM arms served weeks-old code",
+   "source": "git-super-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "persisted secrets file clobbered/corrupted (R6)",
+   "where": "03720115, b749a2a5, a030952b, 38e4f79a, ae110fcd, fd9d1102, f32b2274, fdd5503f, e31e28dd",
+   "tried": "Serial fixes to gen-env/secrets.env.sh persistence and quoting",
+   "outcome": "partial",
+   "date": "2026-08-07..2026-09-26",
+   "evidence": "Two writers truncated each other. JSON arrived as invalid JSON. Quotes doubled on read. Node 2 reverted an uncommitted gen-env fix through pull-sync",
+   "source": "git-super-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Requires= coupling stops the fleet (R11)",
+   "where": "d19124c8, 94d12ed8, d08ebf5b, a45c540e, 699ad19c, 6bd4e1d0, c7b80f1f",
+   "tried": "Convert Requires to Wants in batches",
+   "outcome": "partial",
+   "date": "2026-07-09..2026-08-08",
+   "evidence": "d19124c8 missed goal-host. The same 13-unit fix was redone 07-23. 6bd4e1d0 'moved the blocker instead of removing it'",
+   "source": "git-super-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "human-surface loopback bind / publish / bake (R12)",
+   "where": "cf8f419a, c47f3843, e92d2e1b, 937c54a6, 9c39f411, 86436189, ddf8f289",
+   "tried": "Bind 0.0.0.0 in the manifest, publish 18310, bake into the image",
+   "outcome": "partial",
+   "date": "2026-08-07..2026-09-23",
+   "evidence": "c47f3843's diff lacked the claimed change. ddf8f289 (09-23) applied the same 0.0.0.0 fix to the baked unit, 47 days after cf8f419a",
+   "source": "git-super-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "stale/unpushed gitlinks misdiagnosed",
+   "where": "4ac80e01, c0e42fa3 -> ce80875f",
+   "tried": "Re-point gitlinks; claimed stale pointers were reverting deploys",
+   "outcome": "partial",
+   "date": "2026-07-27..2026-08-09",
+   "evidence": "ce80875f retracted: deploys come from /workspace/git/vessels, not super-repo submodules. 4ac80e01: an unpushed ref broke CI from 07-25",
+   "source": "git-super-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "30s shell kill 'BLOCKER 6 CLOSED'",
+   "where": "0c8705cd",
+   "tried": "Fix shell call latency, 30s to 22ms",
+   "outcome": "partial",
+   "date": "2026-08-15",
+   "evidence": "Cross-shard: operator memory records the post-land suite dead 08-31->09-28 from a shell 30s default (fixed in vessel 5e9a0b2). Suspected recurrence of the same class; verify in the vessel shard",
+   "source": "git-super-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync-unhealthy activity-api gap closer",
+   "where": "gap-closing:pull-sync-unhealthy-activity-api-1784251158497",
+   "tried": "Close the pull-sync-unhealthy gap via a gap-closer activity",
+   "outcome": "failed",
+   "evidence": "1,490 runs in 5 days (~300/day, 95% ok): the gap keeps reappearing or the closer is run as a tick; not durable",
+   "source": "live-activities"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Mitosis cutover of vessels",
+   "where": "vessel_mitosis_cutover, development-vessel:mitosis-tick",
+   "tried": "Cut over vessel versions in place",
+   "outcome": "partial",
+   "evidence": "cutover 589 runs, 391 ok; 60 failures are 'refusing cutover on protected vessel: discovery-vessel'; 790+62 in-flight failures from HTTP 503 draining",
+   "source": "live-activities"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Compose gates read the stale super-repo submodule copy (7 hats)",
+   "where": "feature-compose.ts readers; four-compose-gates..., three-more-compose-readers..., anchor-band-centring, nontermination-simulation, co-located-test-discovery",
+   "tried": "targetFileOnDisk helper, then per-reader one-line edits",
+   "outcome": "partial",
+   "date": "2026-09-24..2026-09-25",
+   "evidence": "several readers still open; submodule pointer 100 commits behind (open)",
+   "source": "live-gaps"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Runtime drift repair gated by env var",
+   "where": "runtime-drift-* (13 open), runtime-source-truncated-* (10 open)",
+   "tried": "detection only; repair needs RUNTIME_DRIFT_REPAIR=1",
+   "outcome": "dormant",
+   "date": "2026-09-18..2026-09-27",
+   "evidence": "all 10 vessels drifted at least once",
+   "source": "live-gaps"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync test gate skipped on tick budget",
+   "where": "scripts/substrate/substrate-pull-sync.sh",
+   "tried": "gaps filed",
+   "outcome": "failed",
+   "date": "2026-09-24..2026-09-25",
+   "evidence": "8 testgate-skipped gaps, 1 closed; converged without a suite",
+   "source": "live-gaps"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Untrack state/learning-mode-state.json",
+   "where": "super-repo 50830bec",
+   "date": "2026-09-28",
+   "tried": "Remove runtime state from git",
+   "outcome": "failed",
+   "evidence": "The pull deleted the file in node 1's clone; the runtime recreated it fresh, resetting learning-mode state",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Workspace-root split (WORKSPACE_ROOT vs env file)",
+   "where": "memory 09-22; dev-vessel fs_read/fs_edit",
+   "tried": "Merged the memory stores at file level (09-22)",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "In 5 days: fs_read 'path outside workspace root: /workspace/validation/...' 152 times, fs_edit '/vessels/...' 161 times; 7 more after 09-28T14. The files exist (4573 scenario files)",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Mitosis freshness gate hashes /vessels mirror, not origin",
+   "where": "vessel-mitosis-cutover.ts; 096c517 reverted operator 33afcc8 (re-landed 978a70f)",
+   "tried": "Relied on the base_sha freshness gate",
+   "outcome": "failed",
+   "date": "2026-08-02",
+   "evidence": "pull-sync in-flight deferral keeps the mirror stale and the gate passes. Recurred 09-24 (6ab8271 undid a0ff3d3; staged_base_sha deadlock 0a0d59f per index)",
+   "source": "memory-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync restart guard skipped .timer-mapped vessels",
+   "where": "super-repo 41182490",
+   "tried": "Prefer <vessel>.service when the inventory maps a .timer",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "boredom-vessel had run 25h-old code; exactly one remap",
+   "source": "memory-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Mitosis cutover left a dirty index and froze the super-repo clone",
+   "where": "vessel-mitosis-cutover.ts, c8b2e6e",
+   "tried": "Unstage on post-add failure paths",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "Clone was 10 commits and 11h behind, 37 silent ff-only failures, 126 staged hallucinated paths",
+   "source": "memory-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "make restart-<vessel> docker-cp from stale host clobbered substrate commits",
+   "where": "scripts/substrate/Makefile sync-* targets",
+   "tried": "Documented hot-reload path",
+   "outcome": "failed",
+   "date": "2026-08",
+   "evidence": "Reverted d7e58d6 (grep 1->0). Proposed fix: sync from the container clone. Whether the Makefile was fixed is unknown",
+   "source": "memory-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Credential-less boot seeded super-repo without .git; PAT could not upgrade it",
+   "where": "setup-git-push d3253945",
+   "tried": "init-in-place + fetch + checkout -f -B dev",
+   "outcome": "worked",
+   "date": "2026-07-12",
+   "evidence": "Proven on the anywhere-spoke",
+   "source": "memory-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Operator fix to ias-executor-ts not deployed by pull-sync (dist not rebuilt)",
+   "where": "8602362",
+   "tried": "Hand-built dist, health-gated fan-out to 6 consumers",
+   "outcome": "partial",
+   "date": "2026-07-21",
+   "evidence": "Deploy-boundary skew: plain pushes do not trigger a dist rebuild; only mitosis-cutover-rebuild does",
+   "source": "memory-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync dirty check ignores untracked",
+   "where": "scripts/substrate/substrate-pull-sync.sh 9333f0f7",
+   "date": "2026-09-07",
+   "tried": "--untracked-files=no",
+   "outcome": "worked",
+   "evidence": "Gate mirror 396 commits behind -> 0",
+   "source": "memory-10"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Lame-duck admission + slot-file in_flight",
+   "where": "development-vessel index.ts devDraining / in_flight counter",
+   "date": "2026-08-10",
+   "tried": "Refuse long-running work while draining; derive in_flight from slot files",
+   "outcome": "partial",
+   "evidence": "Operator's first counter substring-matched bodies (9x inflated) and drove restarts; correct source = compose-slots",
+   "source": "memory-10"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Requires->Wants unit decoupling",
+   "where": "super-repo d08ebf5b, activity-api 43d6d96, concept-db 388c69a",
+   "date": "2026-07-23",
+   "tried": "Soften unit deps; non-fatal bounded ExecStartPre",
+   "outcome": "worked",
+   "evidence": "activity-api rode not-ready SurrealDB; concept-db listener-first still open",
+   "source": "memory-10"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Compose verify typecheck in transient checkout",
+   "where": "image a07ea8b7",
+   "date": "2026-09-16",
+   "tried": "Global typescript + node->bun shim",
+   "outcome": "worked",
+   "evidence": "tsc exit 127 forever before",
+   "source": "memory-10"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Pull-sync starvation break",
+   "where": "super-repo 9d261470 substrate-pull-sync.sh",
+   "tried": "MITOSIS_MAX_CONSECUTIVE_DEFERS then converge",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "'STARVATION BREAK' then mirrored f4f983a on the spoke",
+   "source": "memory-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Pull-sync content-hash re-attempt wedge",
+   "where": "scripts/substrate/substrate-pull-sync.sh:256",
+   "tried": "Manual rm of /workspace/.pull-sync/<v>.sha",
+   "outcome": "partial",
+   "date": "2026-08-02",
+   "evidence": "Proper fix (health-aware marker) was not made",
+   "source": "memory-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "mirror-to-live restores to HEAD",
+   "where": "super-repo a81c46f5 (earlier 939df9dd)",
+   "tried": "reset --hard HEAD instead of checkout -f from the index",
+   "outcome": "partial",
+   "date": "2026-07-21",
+   "evidence": "Claimed the deploy boundary was closed; later split-brain (07-20 marker vs runtime), baked /usr/local/bin scripts (07-23, 07-31) and the hash wedge (08-02) recurred",
+   "source": "memory-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Converge self-recovery-tick into /usr/local/bin + surreal restart escalation",
+   "where": "super-repo 60b2328e; fc143654",
+   "tried": "pull-sync installs the script; restart surreal after a sustained pressure streak",
+   "outcome": "worked",
+   "date": "2026-07-31",
+   "evidence": "Backoff validated live 07-23 19:29Z (db_pressure_backoff:1)",
+   "source": "memory-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Compose from origin not stale mirror",
+   "where": "development-vessel 71575a12",
+   "tried": "fetch+reset to origin/dev before every compose",
+   "outcome": "worked",
+   "date": "2026-07-13",
+   "evidence": "Stopped the d07074d silent revert class across 6 later landings",
+   "source": "memory-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Library vessel self-deploy hook",
+   "where": "repos/ias-executor-ts/scripts/substrate-deploy.ts 0dcf370, 58c5638",
+   "tried": "Added a substrate:deploy hook run at cutover: rebuild dist, fan it out to consumer node_modules, restart providers first and goal-host last.",
+   "outcome": "worked",
+   "date": "2026-07-15",
+   "evidence": "#7 went live fleet-wide and was self-deployed; ledger ok:true. Development-vessel still cannot self-deploy its own resolvers (self-cutover does not push; mirror is selective).",
+   "source": "memory-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Unpushed local commit graded reached then destroyed by pull-sync",
+   "where": "a340697 (dev-vessel)",
+   "tried": "Measured the rate.",
+   "outcome": "superseded",
+   "date": "2026-09-14",
+   "evidence": "The '21%' headline was retracted to 5/1206 (0.41%). It came from counting journal lines instead of artifacts. The claim that it drives recommit churn was withdrawn.",
+   "source": "memory-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Deploy channel wedged by committed runtime state",
+   "where": "super-repo ff10d3a0 (08-10); 12 stranded autonomous commits (09-22)",
+   "tried": "Operator preserved them on evidence branches and reset to origin/dev.",
+   "outcome": "partial",
+   "date": "2026-09-22",
+   "evidence": "Recurred: 45 commits stale (08-10), 16h wedge (09-22). No divergence alarm was built.",
+   "source": "memory-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Masked-but-running units",
+   "where": "dev-vessel /etc override, concept-db, surrealdb",
+   "tried": "Operator unmasked and started.",
+   "outcome": "worked",
+   "date": "2026-08-15",
+   "evidence": "Instances fixed (dev-vessel had been dead 13 days; surrealdb full outage). The 'running unit not masked' detector was not built.",
+   "source": "memory-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Duplicate LLM arm units on same ports",
+   "where": "entrypoint.sh",
+   "tried": "Retire the static unit superseded by each rendered arm.",
+   "outcome": "worked",
+   "date": "2026-08-20",
+   "evidence": "NRestarts 95/40min -> 0. The doctor reported 'no failed units' throughout.",
+   "source": "memory-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Fan-out propagation hash check",
+   "where": "substrate-pull-sync.sh c6d2212a",
+   "tried": "Copy dist into non-symlinked consumers, hash each consumer, withhold LAST_GOOD on mismatch",
+   "outcome": "worked",
+   "date": "2026-08-16",
+   "evidence": "5/6 consumers had run a stale ias-executor dist for 11 days",
+   "source": "memory-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Stale-base cutover clobber",
+   "where": "vessel_mitosis_cutover (1be9f4f reverting 7fcbaba; 6ba576a)",
+   "tried": "Operator re-landed ca52631 and cherry-picked; filed a rebase-onto-HEAD fix class",
+   "outcome": "unknown",
+   "date": "2026-08-24",
+   "evidence": "Recurred 07-24, 08-24 and 09-24 (6ab8271 undid a0ff3d3 per index)",
+   "source": "memory-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Cold-boot dev seed ordering",
+   "where": "scripts/substrate/units/development-vessel-seed.service:20",
+   "tried": "Diagnosed (missing After=identity-seeder); deliberately not filed",
+   "outcome": "unknown",
+   "date": "2026-09-16",
+   "evidence": "121/121 templates got 401 on a cold boot and a warm volume hides it. No CI boots the image.",
+   "source": "memory-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Host pull-sync submodule detector",
+   "where": "scripts/substrate/host-pull-sync.sh bb573355",
+   "tried": "Compare per-submodule SHAs instead of the gitlink diff",
+   "outcome": "superseded",
+   "date": "2026-08-12",
+   "evidence": "host-pull-sync was retired permanently (no quiesce); the in-container pull-sync is authoritative",
+   "source": "memory-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Gates read stale submodule copy",
+   "where": "feature-compose guard 2 20a668b",
+   "tried": "targetFileOnDisk: the push clone wins over the super-repo submodule checkout",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "Sibling guards A/B/D and gitlink-sync filed; dev-vessel pointer was 100 commits behind",
+   "source": "memory-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Satisfier shell CWD",
+   "where": "/etc/substrate/env WORKSPACE_ROOT=/workspace/git/super-repo",
+   "tried": "Point local-tools at the canonical tree instead of the stale /workspace shadow",
+   "outcome": "worked",
+   "date": "2026-07-24",
+   "evidence": "Relative .sh count went 0\u219239. The same variable later split the memory stores (09-22 index).",
+   "source": "memory-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Clear pull-sync ff-only jam",
+   "where": "in-container clones goal-host and super-repo",
+   "tried": "git reset --hard origin/dev after checking ancestry.",
+   "outcome": "worked",
+   "date": "2026-07-25",
+   "evidence": "synced=2 and re-run clean. The prior diagnosis ('diverged/mitosis debris') was wrong.",
+   "source": "memory-5"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Operator make restart poisoned pwt baseline",
+   "where": "f06e1470",
+   "tried": "Sync targets warn and name the drifted path.",
+   "outcome": "worked",
+   "date": "2026-08-09",
+   "evidence": "The 'push credentials missing' claim was retracted.",
+   "source": "memory-5"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Mitosis lock orphan clear in finally",
+   "where": "vessel-mitosis-cutover.ts 0c96b99 (b4e3d77 reverted 05829d6)",
+   "date": "2026-07-29",
+   "tried": "clearPendingIfOwned ownership-scoped",
+   "outcome": "worked",
+   "evidence": "pull-sync fleet freeze 30min eliminated",
+   "source": "memory-6"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Graceful drain on goal-host restart",
+   "where": "goal-host 015d1ae, 53cce0b",
+   "date": "2026-07-26",
+   "tried": "drain in-flight walks; 503 new dispatches; single SIGTERM path",
+   "outcome": "partial",
+   "evidence": "controlled restart verified; 08-05 live TimeoutStopSec 60s < drain 80s",
+   "source": "memory-6"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Drain timeout drop-in",
+   "where": "scripts/substrate/units 9706f440",
+   "date": "2026-08-05",
+   "tried": "TimeoutStopSec=300, GOAL_HOST_DRAIN_MS=240000",
+   "outcome": "dormant",
+   "evidence": "never in effect: units baked at image build, pull-sync never syncs units",
+   "source": "memory-6"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Detector host-sync bounded steps",
+   "where": "86491fec, 3feff283",
+   "date": "2026-08-04",
+   "tried": "timeout every step, reconcile vessel list vs container",
+   "outcome": "worked",
+   "evidence": "after 56-min hang stopped timer permanently",
+   "source": "memory-6"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Restart exercised for first time",
+   "where": "gen-env.sh, secrets.env.sh, FED_SUBSTRATE_ID",
+   "tried": "Stop/start two spokes; fixed truncating writers, wrong converged file, identity churn",
+   "outcome": "worked",
+   "date": "2026-08-08",
+   "evidence": "self-resynced 4/4 after 4 fixes",
+   "source": "memory-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync dirty clone reset + clean",
+   "where": "super-repo cdee05bc; d1bc9ab7",
+   "tried": "reset --hard + clean -fd + checkout -B dev; submodule update after ff",
+   "outcome": "partial",
+   "date": "2026-07-31",
+   "evidence": "pull-sync binary image-baked, effective only next deploy; manual convergence restored reach 20%->50%",
+   "source": "memory-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Systemd drain drop-in committed to git",
+   "where": "super-repo 9706f440",
+   "tried": "TimeoutStopSec=300 + drain",
+   "outcome": "failed",
+   "date": "2026-08-05",
+   "evidence": "units image-baked; absent in container; shared daemon stop(true) force-closes anyway",
+   "source": "memory-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync skips masked vessels + in-flight guard normalised",
+   "where": "super-repo cb5b0b24",
+   "tried": "Skip masked entirely; fix ${INFLIGHT:-0} case",
+   "outcome": "worked",
+   "date": "2026-08-08",
+   "evidence": "16s vs 15-min SIGKILL; guard evaluated first time",
+   "source": "memory-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync json content hash + fan-out retry",
+   "where": "super-repo 967e3d6e, 53e81301",
+   "tried": "Hash .ts+.json; re-enter fan-out when last-good!=HEAD",
+   "outcome": "worked",
+   "date": "2026-07-25",
+   "evidence": "json template edit mirrored; residual health-gate too tight",
+   "source": "memory-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Source template fix deployed via seed",
+   "where": "dev-vessel 966c7a3",
+   "tried": "Substrate-authored drop of boredom_target_template tag in source",
+   "outcome": "superseded",
+   "date": "2026-07-31",
+   "evidence": "inert (seed-if-empty no-op); applied via runtime activityTemplate_update",
+   "source": "memory-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Flaky pre-cutover test gate",
+   "where": "substrate-pull-sync pre-cutover gate",
+   "tried": "Refuse on test regression at baseline",
+   "outcome": "failed",
+   "date": "2026-08-24",
+   "evidence": "refused correct 578b831; refusal silent in journald; workaround docker cp",
+   "source": "memory-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "change_window lease release in finally",
+   "where": "vessel-mitosis-cutover.ts ~1365",
+   "tried": "Release lease in in-process finally",
+   "outcome": "failed",
+   "date": "2026-08-05",
+   "evidence": "self-cutover restart kills process; pull-sync deferred ~40min logging Finished; bootstrap deadlock",
+   "source": "memory-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Six inert guards: runtime loads a private dist copy",
+   "where": "ias-executor-ts; 5 vessels' node_modules",
+   "tried": "Build, then docker cp into each vessel's node_modules dist",
+   "outcome": "worked",
+   "date": "2026-09-06",
+   "evidence": "dist:check validates only the shared dir",
+   "source": "memory-8"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync restarts kill composes",
+   "where": "379ef9f4; restart attribution 644e7ee/18a82bac",
+   "tried": "Defer restarts while work is in flight; add restart-attribution breadcrumbs",
+   "outcome": "partial",
+   "date": "2026-08-10/11",
+   "evidence": "The real killer was the HOST timer's make restart",
+   "source": "memory-8"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Reproducible build",
+   "where": "93cd10f8, 0d22fb2e, 7481a497, c8ffbae5",
+   "tried": "Relative submodule URLs, pointer bump, reproducibility gate",
+   "outcome": "worked",
+   "date": "2026-08-09",
+   "evidence": "A clean clone now builds",
+   "source": "memory-8"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Hub redeploy durability",
+   "where": "edccdc2f; deploy-hub scripts",
+   "tried": "Fixed the gen-env SUBSTRATE_ROOT, the relay pkill and the ghost gitlink",
+   "outcome": "worked",
+   "date": "2026-07-27",
+   "evidence": "Image-baked gen-env is still not pull-sync converged",
+   "source": "memory-8"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Container push credential shadowed by dead PAT",
+   "where": "credential helper ${SUBSTRATE_GIT_PAT:-$GITHUB_TOKEN}; gen-env.sh:298",
+   "date": "2026-09-14",
+   "tried": "installed host gh token into /etc/substrate/env + .substrate-secrets",
+   "outcome": "partial",
+   "evidence": "push restored; docker restart would re-break (env precedence); least-privilege PAT not done",
+   "source": "memory-9"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Coverage check read 25-day-old submodule tree",
+   "where": "feature-compose.ts coverage block; c349b27",
+   "date": "2026-09-10",
+   "tried": "clone-root fallback + two-segment needle + cap 2000",
+   "outcome": "worked",
+   "evidence": "covered_fraction 0.36->0.93 on new composes; first autonomous attempt landed as regression and was restored by hand",
+   "source": "memory-9"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Deploy recipe copied only index.ts",
+   "where": "Makefile docker cp; 50f10bb9",
+   "date": "2026-08-09",
+   "tried": "docker cp <src>/.",
+   "outcome": "worked",
+   "evidence": "6 vessels had shipped nothing for non-index changes while reporting success",
+   "source": "memory-9"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Runtime-drift watchdog",
+   "where": "scripts/substrate/runtime-drift-tick.ts 63b48175, 03dd7478",
+   "date": "2026-09-13",
+   "tried": "detect+repair runtime vs clone",
+   "outcome": "superseded",
+   "evidence": "duplicated pull-sync mirror-to-live (:1198); repair defaulted OFF; kept for naming divergence",
+   "source": "memory-9"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Add cadence timers to Dockerfile enable list",
+   "where": "Dockerfile.substrate 2600dab35",
+   "tried": "survive container recreation",
+   "outcome": "worked",
+   "date": "2026-06-19",
+   "evidence": "finding_2026_06_19_cadence_timer_durability",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Restart stale activity-api to end mint drought",
+   "where": "substrate-live activity-api unit",
+   "tried": "restart after committed-but-unloaded fixes",
+   "outcome": "worked",
+   "date": "2026-06-30",
+   "evidence": "minting resumed fleet-wide",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Make bump-submodules fail loudly",
+   "where": "AviGopal/substrate .github/workflows/bump-submodules.yml 851c472",
+   "tried": "exit non-zero when 0 resolved",
+   "outcome": "partial",
+   "date": "2026-08-08",
+   "evidence": "had reported green and never bumped; PAT grant still needed",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Redeploy UI spoke with paired .service units",
+   "where": "ui-only-up.sh fabeb82e",
+   "tried": "unmask pull-sync/self-recovery services",
+   "outcome": "worked",
+   "date": "2026-08-10",
+   "evidence": "pull-sync ran; spoke had been 42 commits behind",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "31f15baf pull-sync fix for the cpg-inference-ts build loop",
+   "where": "scripts/substrate/substrate-pull-sync.sh; node 2 pull-sync journal",
+   "tried": "Build declarations-only shared packages with their own build script. The loop had run 174 'dist stale \u2014 re-running fan-out' ticks and 42 BUILD FAILED (exit 127) over ~43h",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "Last BUILD FAILED 08:00:08 and last 'dist stale' 08:11:15; failed=0 on every tick since. The fix was blocked at 07:27 by a locally modified pull-sync.sh in node 2's clone (ff-only pull FAILED).",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Cross-execution pool contamination",
+   "where": "audit F23; ias-executor-ts engine.ts",
+   "tried": "Proposed visibleImpulseIds per-execution filter",
+   "outcome": "unknown",
+   "date": "2026-05-30",
+   "evidence": "engine.ts:363,372,577 still call runtime.store.all(); visibleImpulseIds absent",
+   "source": "openspec-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Parked landings + restart budgets + named change window",
+   "where": "openspec/specs/{parked-landing,restart-budgets,change-window-names}",
+   "tried": "Park verified patch before cutover, resume; drain by age; named leases",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "feature-compose.ts parkedLanding, gap-drain-observer.ts:349 discardedLandingReport live; restart-budgets in_flight_oldest_ms not found by grep (unverified)",
+   "source": "openspec-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Image-owned install contract (substrate-status/connect/manifest, profiles, OCI labels)",
+   "where": "scripts/substrate/*.sh, Dockerfile.substrate, vessels.inventory.json",
+   "tried": "one contract, one manifest, a five-level readiness verdict",
+   "outcome": "partial",
+   "date": "2026-09-23",
+   "evidence": "files exist; the node-1 running image lacks substrate-status/connect/manifest and /etc/substrate/image-revision; under Decision 7 nothing is closed until a pulled image passes",
+   "source": "openspec-10"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Vessel-binary redeploy on source drift",
+   "where": "openspec/changes/2026-05-30-vessel-binary-redeploy-on-source-drift",
+   "date": "2026-05-30",
+   "tried": "Specified a detect_binary_source_drift resolver, a redeploy-vessel-on-drift activity, vesselManifest authorship attribution, auto-substrate branches with a 24h admin hold, and a rollback-to-operator-ancestor path.",
+   "outcome": "failed",
+   "evidence": "0/16 tasks; none of the identifiers exist in the live code. Motivation: F26 concept-db a262475 was edited into /vessels but the binary stayed stale, and run_goal 'restart concept-db' picked gap-closing:test-valid-1780148026306 and completed in 1.2s without restarting anything. The class recurs later: post-land suite dead 08-31\u219209-28, the 'process started after newest commit' gate.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Template-list Redis cache hid coverage-tick",
+   "where": "activity-api 93cd621; topology-discovery-loop/findings/dev.md D-001",
+   "date": "2026-05-24",
+   "tried": "Raised the cache fill threshold from 80% to 100% so the full DB fallback runs when any entry is missing.",
+   "outcome": "worked",
+   "evidence": "The finding notes the fix needed a container restart to take effect.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "EMBEDDING_MODEL_DIR missing from gen-env.sh",
+   "where": "topology findings D-004",
+   "date": "2026-05-24",
+   "tried": "Hand-appended the variable to /etc/substrate/env, with a proposed durable fix in gen-env.sh.",
+   "outcome": "unknown",
+   "evidence": "The Dockerfile ENV and the generated env file had diverged, which disabled dense search.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Container-side direct push cutover (MITOSIS_DIRECT_PUSH)",
+   "where": "2026-06-16-substrate-self-persistence-and-direct-push; dev-vessel 2cad89c vessel-mitosis-cutover.ts",
+   "tried": "git identity + PAT helper + writable clones, host_repo_root=push clone, retire host-sync-poller",
+   "outcome": "worked",
+   "date": "2026-06-16",
+   "evidence": "push_status pushed; Substrate-Authored commit on AviGopal/development-vessel dev; still live",
+   "source": "openspec-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull_cutover convergence resolver",
+   "where": "dev-vessel pull-cutover.ts (d245022, 0ed07cd); boredom de87042/6561c67, goal-generation.ts:156",
+   "tried": "Substrate-authored resolver: pull origin/dev into clone, cp -aT to /vessels, restart; scheduled goal",
+   "outcome": "worked",
+   "date": "2026-07-05",
+   "evidence": "Live; boredom uses it as doom-signal repair goal; extend-to-all-vessels open",
+   "source": "openspec-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "targetFileOnDisk: compose readers read push clone",
+   "where": "feature-compose.ts",
+   "date": "2026-09-24",
+   "tried": "guard 2 then sites A/B/D",
+   "outcome": "worked",
+   "evidence": "20a668b, a0ff3d3, 13841a4, 1d4ac1c live; anchors supplied 100/122 candidates (0/7 before)",
+   "source": "openspec-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Cutover advances super-repo gitlink (live-self-view 2.1)",
+   "where": "vessel-mitosis-cutover.ts",
+   "date": "2026-09-24",
+   "tried": "spec'd",
+   "outcome": "superseded",
+   "evidence": "premise wrong: the gitlink advanced, but the WORKTREE was frozen by draft residue; writer = walk bounded_shell sed with default cwd super-repo",
+   "source": "openspec-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Restart coalescing selfRestartAlreadyOwed",
+   "where": "vessel-mitosis-cutover.ts",
+   "date": "2026-09-24",
+   "tried": "14 drafts, template literal broke builds; spec rewritten with unique anchors",
+   "outcome": "worked",
+   "evidence": "46d252c live; 12 landings, 0 pairs <60s, 4 coalescings (09-25 03:52Z)",
+   "source": "openspec-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "date": "2026-09-07",
+   "title": "Self-maintenance 'vessel code drift detected and committed' sweep",
+   "where": "super-repo 4e4170a8 (+0599ea34); generator rhythm-conductor-tick.ts:126",
+   "tried": "Rhythm prose goal: detect vessel code drift then run vessel-code-commit-and-push",
+   "outcome": "failed",
+   "evidence": "2134 files committed incl. root junk and {{dirPath}} dirs; it truncated spectral-gap's source (-45 lines), so spectral-gap.service failed 09-14 and served a 9-day-stale lambda2 (compose-teacher.ts:364)",
+   "source": "openspec-8"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "date": "2026-09-18",
+   "title": "vessel-code-commit-and-push sweeps 09-18/09-19",
+   "where": "super-repo 13c5d466, 796fac89",
+   "tried": "Same rhythm goal",
+   "outcome": "failed",
+   "evidence": "1909 files (1785 validation/failure-modes) and 412 files (tsc emit of openspec/*.ts, generate_report.js 6234 lines). The 796fac89 subject names cpg-inference-ts but the commit touched the super-repo",
+   "source": "openspec-8"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "feature_compose materializes in-tree vessels (authorability)",
+   "where": "development-vessel feature_compose; VALIDATION-3 s5",
+   "tried": "treat <super-repo>/repos/<name> as resident and symlink into runtime root; cutover hop left open",
+   "outcome": "superseded",
+   "date": "2026-08-07",
+   "evidence": "rediscovered 09-22 (memory); authorability later restored by a separate GitHub repo clone, super-repo copy remains plain files ~7 commits behind",
+   "source": "openspec-9"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Fan-out propagate by content + hash gate before LAST_GOOD",
+   "where": "scripts/substrate/substrate-pull-sync.sh c6d2212a (direct edit)",
+   "date": "2026-08-16/17",
+   "tried": "5 of 6 ias-executor consumers held real-file dist stale 11 days while fan-out logged healthy",
+   "outcome": "worked",
+   "evidence": "08-17 13:03 'REAL-FILE dist \u2014 copying new build in', hashes d70cfb9ab969 identical across consumers",
+   "source": "reports-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync --kill-after for SIGTERM-ignoring test suites",
+   "where": "substrate-pull-sync.sh",
+   "date": "2026-08-17",
+   "tried": "timeout without kill-after left $(run_suite) pipe open; ticks wedged 900s after surrealdb OOM",
+   "outcome": "worked",
+   "evidence": "20:06:29 done synced=1 in 20s vs 15-min wedges; 23 super-repo commits had been unpushed",
+   "source": "reports-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Drain/quiesce counters include gap_to_feature and impulse.type",
+   "where": "development-vessel long-running.ts 404a89c, bf74cc5 (both unprompted substrate)",
+   "date": "2026-09-23/24",
+   "tried": "Self-restarts killed uncounted composes",
+   "outcome": "partial",
+   "evidence": "Quiesce waited 35s for autonomous compose; drain budget 240s still shorter than 5-15 min composes",
+   "source": "reports-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Harness pre-run check reads push clone HEAD, not the live file (#38)",
+   "where": "operator harness",
+   "tried": "Stop grepping the live canary.",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "Run 0 and run 4 were both trapped by the staged live file.",
+   "source": "reports-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "make run-live volume inspect-before-create for podman (#29)",
+   "where": "scripts/substrate/Makefile (3 sites)",
+   "tried": "Inspect the volume first and create it only when absent.",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "Recreate exited 125 on podman, which explains why the 02:10 recreate after the docker rm -f never came back.",
+   "source": "reports-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "development-vessel-seed ordered after identity-seeder (#10)",
+   "where": "scripts/substrate/units/development-vessel-seed.service",
+   "tried": "Unit ordering.",
+   "outcome": "unknown",
+   "date": "2026-09-24",
+   "evidence": "Takes effect on the next image build; the file shows as modified in git status.",
+   "source": "reports-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Pull-sync quiesce deadlock fix",
+   "where": "25aad2cc scripts/substrate pull-sync",
+   "date": "2026-08-16",
+   "tried": "Cap QUIESCE_WAIT_S to remaining TimeoutStartSec",
+   "outcome": "partial",
+   "evidence": "The converge-anyway branch had been unreachable (900s wait inside 900s timeout). First placed at scripts/ while the unit ran /usr/local/bin, so it had to be hand-placed",
+   "source": "reports-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Dev-vessel mitosis shadow unit removed",
+   "where": "/etc/systemd/system/development-vessel.service + dynamic manifest (operator)",
+   "date": "2026-08-15",
+   "tried": "Move the override aside and drop the bogus manifest entry",
+   "outcome": "worked",
+   "evidence": "13 days crash-looping (2622 restarts, exit 0). The fix held across a pull-sync restart. Afterwards the gap store was readable and composition_flow_health_scan ran for the first time",
+   "source": "reports-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Cold boot run 1",
+   "where": "coldboot-proof-2026-09-19 image f70de0656d69",
+   "date": "2026-09-19",
+   "tried": "Fresh volumes, standalone, OpenRouter only, no repairs",
+   "outcome": "failed",
+   "evidence": "F1 pass (121-template seeding gap closed, 112/121 + 9 law-3 refusals). F2 fail: goal-host discovery registration 401 after identity reseed. F3 fail: net-new file grounding refusal",
+   "source": "reports-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Cold boot run 2 single intervention",
+   "where": "081e9cbd seed-identity writes per-vessel keys; image 2edb33af",
+   "date": "2026-09-19",
+   "tried": "Write keys the seeder previously only printed",
+   "outcome": "partial",
+   "evidence": "F2 pass (byte-correct, deterministic transform-verified), with 9 secondary-path 401s in a ~70s window. F3 still fails on net-new grounding",
+   "source": "reports-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Causal ledger RUN6",
+   "where": "causal-attempt-ledger/RUN6.md",
+   "date": "2026-09-24",
+   "tried": "Graded run",
+   "outcome": "failed",
+   "evidence": "R never landed because cutover freshness refused it: staged_base_sha 43fbb36e vs current_live_sha 16bb007e (edit already live-synced) (#45/#51)",
+   "source": "reports-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Drain 503 caller retry",
+   "where": "goal-host eed0ccf, ee4622a; development-vessel/src/index.ts:248 vs :309",
+   "tried": "Caller re-issues once after Retry-After on 503",
+   "outcome": "partial",
+   "date": "2026-08-11",
+   "evidence": "2/2 forced 503s re-issued then got 503 again: Retry-After:30 vs VESSEL_DRAIN_MS 240000. Producer half left for substrate; not observed fixed in shard.",
+   "source": "reports-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "self_fact_reconcile instrument (copy vs source)",
+   "where": "development-vessel 983ca92, bad7993 (v1.1 + re-stage after suite), 4e70cbb (v1.2)",
+   "tried": "Fact table (inventory copy, authoring root, checkout lag, lane coverage), keyed gaps closed only by exercised detector",
+   "outcome": "worked",
+   "date": "2026-09-23",
+   "evidence": "Boredom selected tick unprompted 03:00:02; closed obsidian authoring-root divergence by predicate 03:35:44. v1.1 closed on drifted runtime copy and on narrowed clones (fixed v1.2). Fact table in code = law-1 debt.",
+   "source": "reports-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Restart coalescing guard / self-restart on landing",
+   "where": "vessel-mitosis-cutover.ts; mitosis-self-restart-<id> units",
+   "tried": "12-13 drafts; spec fixed (duplicate first anchor line); helper selfRestartAlreadyOwed",
+   "outcome": "failed",
+   "date": "2026-09-24",
+   "evidence": "11 landings -> 18 restarts; 10/13 LOSSY false; 11+ min lame-duck. Helper gap closed 09-25, but live store 09-29 has >=10 open restart-class gaps (consecutive-landings... 14 attempts, goal-host-cutover-restart-fires-blind 12, every-restart-budget-shorter 8, dev-vessel-self-cutovers 6, pull-sync-defers-owed-restart, pull-sync-reopens-admission, seed-template-inert 10, development-vessel-restart-2026-09-26).",
+   "source": "reports-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Gates read stale super-repo submodule copy",
+   "where": "feature-compose four read sites; 20a668b, a0ff3d3, 13841a4, 1d4ac1c",
+   "tried": "Read push clone when it exists",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "Vacuous gate refused `offset` used on next line; after: '[fc-vacuous] ... admitting'. 100-commit lag was a frozen worktree from draft residue (same class hand-stashed 09-07). Sibling gap 'co-located-test-discovery ... stale super-repo copy' OPEN 09-29.",
+   "source": "reports-4"
+  },
+  {
+   "key": "install",
+   "title": "Install demo: 9 fresh launches peered",
+   "where": "install-demo-2026-09-23; 227ac65e, llm-resolver db8af1d, 421653ab, 2e34e161, c6e9ab83, 0a406621, 405d99c2, 74cb240d",
+   "tried": "manifest+.env+compose up, verdict substrate-status --wait usable, data-local goal",
+   "outcome": "worked",
+   "date": "2026-09-23",
+   "evidence": "9/9 usable 49-113s; data-local 6/8; image 139 layers broke Docker (flattened); routed llm_completion never worked on spokes before db8af1d; CI served on Docker+Podman.",
+   "source": "reports-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Tier 0-4 learning fixes landed but goal-host kept running 5be4cfa",
+   "where": "substrate-pull-sync.sh:1040/:519/~1204 (LEARNING_AUDIT_ROUND2)",
+   "tried": "Tier 0-4 fixes (3691ee7 alphaBetaDelta, b5e4b56 satellite, posterior_source guard)",
+   "outcome": "failed",
+   "date": "2026-08-19",
+   "evidence": "The marker is written before the restart, so the next tick short-circuits. The deferral counter is frozen at 1/3. A trace 38 min after the fix still carried reached:false.",
+   "source": "reports-5"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "12 stranded unpushed autonomous commits wedged super-repo pull-sync for 16h",
+   "where": "container super-repo; branch stranded-autonomous-2026-09-22",
+   "tried": "Preserved the commits on a branch and reset to origin/dev",
+   "outcome": "worked",
+   "date": "2026-09-22",
+   "evidence": "One commit had an unparseable store.ts, a crash-loop trap. Gap filed.",
+   "source": "reports-5"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "autonomous_pick lease",
+   "where": "development-vessel 128f51f, 15bb263",
+   "tried": "A window lease for in-process pickers.",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "Held with 0 picks; the ledger then ran 3x10/10 (09-26). The lease does not stop in-flight composes, and 3 of 3 landing paths had to be closed separately.",
+   "source": "reports-6"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "git-status read a .git file in a linked worktree",
+   "where": "development-vessel 29756da",
+   "tried": "Resolve 'gitdir:' indirection",
+   "outcome": "worked",
+   "date": "2026-09-11",
+   "evidence": "The worktree returns a commitHash, with an ordinary checkout as control. Every isolated compose of dev-vessel had failed on this; it was first misdiagnosed as a flake (section AJ).",
+   "source": "reports-8"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Unblocked substrate-pull-sync by deleting untracked files",
+   "where": "container super-repo, 09-10 (twice in 43 min)",
+   "tried": "Remove untracked copies that blocked the ff-pull",
+   "outcome": "partial",
+   "date": "2026-09-10",
+   "evidence": "Pull-sync reported synced=0 failed=0 while frozen. 22146522 (rhythm cadence) never reached the container until unblocked. The class recurred 09-22 (12 stranded commits wedged the pull for 16h).",
+   "source": "reports-8"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Emergency rejects applied to fossil gaps.json",
+   "where": "b1353836 2026-08-30T09:48 /workspace/gaps/gaps.json vs /workspace/git/super-repo/gaps/gaps.json",
+   "tried": "stop vessel, bulk-reject 34 storm gaps, merge data",
+   "outcome": "failed",
+   "date": "2026-08-30",
+   "evidence": "all data interventions hit a file frozen since 08-08; 'write-persistence bug' gap was a misdiagnosis, rejected do_not_fix",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Frozen activity_execution_traces repoint",
+   "where": "eb163c50 2026-08-25T10:18 super-repo 3c1bf965",
+   "tried": "7 scripts / 27 sites -> v_paradigm_execution_traces",
+   "outcome": "worked",
+   "date": "2026-08-25",
+   "evidence": "batch_traces 0->50; composition graph grew first time in 42 days",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync converge_units + drift watchdog",
+   "where": "scripts/substrate pull-sync",
+   "tried": "Fix skip, add drift detector timer",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "timer and census fired autonomously 05:35/05:51",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Restore container push",
+   "where": "35537c7e @ 2026-09-14 summary",
+   "tried": "a dead PAT shadowed a valid GITHUB_TOKEN via ${A:-$B}",
+   "outcome": "superseded",
+   "evidence": "on 09-18 03:08 the push PAT was dead again and substrate landings stayed container-local; gen-env.sh:298 prefers the stale env value over the persisted secret (pending since 09-14)",
+   "date": "2026-09-14",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "SurrealDB compaction by export/import",
+   "where": "80ab9659 @ 2026-09-17T23:15 to 09-18T00:24",
+   "tried": "export 4.6GB logical (37GB on disk) then re-import",
+   "outcome": "failed",
+   "evidence": "~1,000 rows/min meant ~8.8h downtime; abandoned; bulk DELETE blocked by classifier",
+   "date": "2026-09-17",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Migrate Docker Desktop to rootless podman",
+   "where": "80ab9659 @ 2026-09-18T01:06",
+   "tried": "loop-mount Docker.raw, podman volume import",
+   "outcome": "worked",
+   "evidence": "21 running/0 failed; 5/7 tables exact; IPv6 localhost split worked around in config",
+   "date": "2026-09-18",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Durable vessel membership across recreate",
+   "where": "7726f8bf @ 2026-09-22T08:54",
+   "tried": "installed.json + entrypoint reconcile + absent-workdir refusal (337c9226)",
+   "outcome": "worked",
+   "evidence": "recreate-membership acceptance passes; audit check dynamic_installed_unit_survives_recreate flipped",
+   "date": "2026-09-22",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Container lifecycle audit rerun",
+   "where": "7726f8bf @ 2026-09-22T10:52",
+   "tried": "12-stage harness on rebuilt image, same 26 checks",
+   "outcome": "worked",
+   "evidence": "26/26 MET (19b3e668); all 4 arrangements dispatch completed with reached:false and a null reason (not scored)",
+   "date": "2026-09-22",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync fingerprint omitted scripts/ so substrate fix never deployed",
+   "where": "scripts/substrate pull-sync + mirror-to-live",
+   "date": "2026-09-24T14:20Z",
+   "tried": "66cc9185 add scripts/ to fingerprint, log silent skip",
+   "outcome": "worked",
+   "evidence": "'third time this exact class has recurred, after .json and then sql/'",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Super-repo checkouts frozen by draft residue; writer hunt",
+   "where": "super-repo repos/<vessel>, local-tools bounded_shell, goal-host drain fallthrough",
+   "date": "2026-09-24..2026-09-25",
+   "tried": "manual stashes; writer theories (compose rollback, pwt shell) retracted; watcher proved bounded_shell sed -i; C1 11636e6 scratch cwd, 60833b4 no walk on 503/429, C2 ReadOnlyPaths ae957b5e",
+   "outcome": "partial",
+   "evidence": "Refroze within 5h of unfreeze; 09-24 goal-host index.ts bloated to 170MB (658,893 repeated lines); dev-vessel checkout 35-130 commits behind again later",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Drift-commit self-maintenance committed caches/runtime into dev-vessel",
+   "where": "development-vessel 9d839e0",
+   "date": "2026-09-28T11:26Z",
+   "tried": "user approved hold of family + cleanup",
+   "outcome": "reverted",
+   "evidence": "422 .bun/install/cache binaries + gaps.json + state; same family as 4e4170a8 (09-07); triggered by node-2 loops re-enabled 11:19",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Image self-reports readiness (substrate-status/connect)",
+   "where": "Dockerfile.substrate 76d548d1 (09-23)",
+   "tried": "Ship readiness and connection binaries in the image",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "The node 1 ghcr image (built 09-24 04:11Z) lacks both binaries. The node 2 local image has them.",
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "problems": [
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Host clones activity-api 44 behind and concept-db 7 behind; migrations 211/212 live but absent in host",
+   "root_cause": "Autonomous landings push to origin/dev; operator clone not pulled",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Running image lacks substrate-status/-connect/-manifest that README install requires; human-surface unit runs /vessels image layer not the live clone",
+   "root_cause": "image vs HEAD Dockerfile (227ac65e 09-23) divergence; ordering unknown",
+   "last_seen": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Restart or drain kills in-flight compose or dispatches",
+   "first_seen": "2026-09-05",
+   "last_seen": "2026-09-24",
+   "recurrences": 4,
+   "root_cause": "Restart and quiesce do not count all in-flight lanes. Filed, rejected, then re-filed after the reset.",
+   "source": "gap-history"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Deploy convergence silently fails to ship a change type, restarts the wrong units, blocks on one vessel, or skips in silence",
+   "root_cause": "pull-sync is a 1,777-line shell script whose deploy unit is an allowlist of artefact types and a hand-maintained unit\u2192source map. Each gap is found by an operator after the fact. Several parallel sync paths exist (pull-sync, mirror-to-live, runtime-drift repair, rhythm vessel-sync-and-health, cutovers)",
+   "first_seen": "2026-07-01",
+   "last_seen": "2026-09-29",
+   "recurrences": 65,
+   "source": "git-deployment"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The live image contains changes absent from origin/dev (ledger hooks installer and Dockerfile COPY); the host tree carries a large uncommitted Makefile regression",
+   "root_cause": "Images are built from the operator's dirty working tree, so a fresh build from the repo does not reproduce the running system (law 11)",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "source": "git-deployment"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Mitosis pending-lock livelocks and orphaned locks freeze pull-sync; self-restarts kill in-flight composes",
+   "first_seen": "2026-06-19",
+   "last_seen": "2026-08-11",
+   "recurrences": 12,
+   "root_cause": "Many terminal exits of the cutover path; a single global lease; runtime /vessels mirror diverges from origin.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Test and post-land gates killed by timeouts; the suite was silently dead 08-31->09-28",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "root_cause": "The shell tool's default 30 s timeout and load were fixed one call site at a time instead of at the shell seam.",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Compose read target files from a stale super-repo copy (100 commits behind)",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-24",
+   "recurrences": 9,
+   "root_cause": "Multiple copies of the vessel tree (runtime, push clone, super-repo gitlink, host submodule) with no single resolver until targetFileOnDisk.",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Stale-base cutover clobbers or re-inserts code; restarts leak in-flight dispatches",
+   "first_seen": "2026-07-09",
+   "last_seen": "2026-08-05",
+   "recurrences": 4,
+   "root_cause": "Full-file cutover staged against an old base SHA.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Landed != running: obsidian bundle never rebuilt, super-repo pins reset submodules, live cutover without a git landing, function only in a working tree",
+   "first_seen": "2026-07-17",
+   "last_seen": "2026-08-09",
+   "recurrences": 4,
+   "root_cause": "Deploy steps outside the lane (manual bundle, pull-sync submodule update)",
+   "source": "git-mid"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "running code differs from source; units, scripts and vessels lost on container recreate",
+   "first_seen": "2026-02-17",
+   "last_seen": "2026-06-29",
+   "recurrences": 10,
+   "root_cause": "runtime-only enablement via docker exec; the Dockerfile COPY/enable list is not derived from the units dir; host-to-container hand sync",
+   "source": "git-super-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Committed code is not what runs: marker lies, blind fingerprint, permanent deferral, masked/dirty vessel deadlock, arms left stale, node 2 never converging",
+   "root_cause": "The single deploy path (pull-sync) is list-driven and validated per incident; no invariant asserts runtime == committed per unit",
+   "first_seen": "2026-07-20",
+   "last_seen": "2026-09-28",
+   "recurrences": 25,
+   "source": "git-super-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The secrets/env file is clobbered, quote-corrupted or missing vars across recreate",
+   "root_cause": "Two writers and a hand-maintained heredoc list; uncommitted node edits reverted by self-update",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-26",
+   "recurrences": 8,
+   "source": "git-super-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "852 failures from 'development-vessel is draining' 503s; repeated cutover attempts on protected discovery-vessel; pull-sync-unhealthy closer re-run ~300/day",
+   "root_cause": "Restarts abort in-flight work; the gap is not durable",
+   "source": "live-activities"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "runtime /vessels drift from clones; stale super-repo copies read by gates; human surface on unmanaged release clone",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-27",
+   "recurrences": 45,
+   "root_cause": "multiple copies of source (live, push clone, super-repo submodule, release clone) with no single authority",
+   "source": "live-gaps"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The untrack commit 50830bec deleted learning-mode-state.json on pull, resetting learning mode; the pool's oldest record is 09-27, and the absence of records from 09-22 to 09-26 is unexplained",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "root_cause": "Runtime state lives inside a git clone that pulls mutate",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "fs_read/fs_edit refuse existing files as 'path outside workspace root' (313 in 5 days)",
+   "root_cause": "templates bound to /workspace/validation and /vessels roots; the dev-vessel workspace root differs (same root split as memory 09-22)",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Landed code not running, or reverted, across three drifting trees (clone, super-repo submodule, /vessels mirror) and the host checkout",
+   "root_cause": "Multiple sources of truth; pull-sync reset --hard, deferral windows, .timer skip, docker cp from stale host, dist not rebuilt",
+   "first_seen": "2026-07-12",
+   "last_seen": "2026-09-24",
+   "recurrences": 10,
+   "source": "memory-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Commits inert until restart; gate mirror 396 commits behind; staged debris blocks pull-sync; restarts kill mid-compose work; clean stop never recovered; hand-deploy poisons baseline; rolled_back with edit still in tree",
+   "root_cause": "Runtime tree vs clone vs mirror divergence; drain/admission signals miscounted; restart policy disagrees with shutdown path",
+   "first_seen": "2026-07-23",
+   "last_seen": "2026-09-16",
+   "recurrences": 9,
+   "source": "memory-10"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Clone, /vessels, /usr/local/bin and node_modules dist diverge; pull-sync starves, wedges, or restores old index; hub stale from lagging pointers; stale local checkout gives false verdicts",
+   "first_seen": "2026-07-12",
+   "last_seen": "2026-08-03",
+   "recurrences": 14,
+   "root_cause": "Four independent copy paths each with their own staleness; markers compare to git HEAD not runtime content; secrets and env not git-distributed",
+   "source": "memory-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Landed code not in effect, or effect not in git: mirror excluding sql, no-op activity-api cutovers, library dist not rebuilt, masked-running units, wedged pull-sync (runtime state committed, stranded commits), unpushed commits destroyed, restarts on every push killing composes.",
+   "first_seen": "2026-07-14",
+   "last_seen": "2026-09-22",
+   "recurrences": 15,
+   "root_cause": "Three trees (/vessels runtime, /workspace/git clone, host repos) joined by several ad-hoc sync paths. The only true deploy test is process_start > file_mtime.",
+   "source": "memory-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Mitosis cutover stale-base full-file snapshot reverts concurrent landings",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-24",
+   "recurrences": 4,
+   "root_cause": "Cutover writes a file snapshot from the dispatch-time base instead of rebasing hunks onto HEAD",
+   "source": "memory-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Landed \u2260 running: restart deferral, fan-out stale 11 days, units and /vessels baked in image, docker cp hides drift, self-cutover deploys one host only",
+   "first_seen": "2026-07-30",
+   "last_seen": "2026-09-22",
+   "recurrences": 6,
+   "root_cause": "Three propagation paths with different latencies; convergence is checked by content hash, not process identity",
+   "source": "memory-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Cutover restarts kill or lame-duck in-flight dispatches; self-edit dispatches false-fail",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-09-24",
+   "recurrences": 4,
+   "root_cause": "Immediate restart (fixed with quiesce), then drain waits of 11+ min block new composes",
+   "source": "memory-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Gates, detectors and instruments read the wrong copy (super-repo submodule, /vessels runtime, spoke localhost, host vs container file)",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-09-24",
+   "recurrences": 5,
+   "root_cause": "Multiple copies of the same source with no declared authoritative copy per consumer",
+   "source": "memory-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Fixes land but do not run: mirror without restart, three trees per vessel, detached HEADs, dirty clones blocking pull-sync.",
+   "root_cause": "The deploy topology has several copies, and pull-sync defers or never restarts.",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-19",
+   "recurrences": 9,
+   "source": "memory-5"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Fix in git/file but not running (stale clone, bundle not rebuilt, units not synced, /vessels vs /workspace, dist vs src)",
+   "root_cause": "multiple trees and baked-at-image artifacts; pull-sync syncs only source and skips silently",
+   "first_seen": "2026-07-15",
+   "last_seen": "2026-09-16",
+   "recurrences": 10,
+   "source": "memory-6"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Cutover restarts kill in-flight dispatches",
+   "root_cause": "SIGTERM handling and drain budget exceed unit TimeoutStopSec; unit fixes never deploy",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-08-10",
+   "recurrences": 3,
+   "source": "memory-6"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Landed commits do not run. The four copies (origin/dev, clone, mirror, running process) disagree, and convergence stalls without reporting a failure",
+   "root_cause": "Glue scripts and systemd units are image-baked. Seed-if-empty templates. Masked units starve pull-sync. Lease and marker leaks. Dirty or detached clones. A flaky pre-cutover gate. The converger was in none of its own convergence lists",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-09-24",
+   "recurrences": 15,
+   "source": "memory-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The artifact that runs differs from the one edited or verified: dist vs src, /vessels vs clone vs host, image-baked gen-env, submodule lag, stranded rebase.",
+   "root_cause": "There are several deploy layers and nothing asserts runtime == committed == origin. Many fixes were verified on the wrong layer.",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-26",
+   "recurrences": 15,
+   "source": "memory-8"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Checkers read a tree or path that nothing refreshes: a literal /workspace path vs WORKSPACE_ROOT, the submodule tree vs the clone vs /vessels",
+   "first_seen": "2026-08-05",
+   "last_seen": "2026-09-22",
+   "recurrences": 11,
+   "root_cause": "Three or four trees per vessel, each with its own consumer, and path defaults computed by different rules; pull-sync never runs submodule update and fails silently with failed=0",
+   "source": "memory-9"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Credentials dead or shadowed while health stays green (push PAT, per-vessel keys, operator key, bump-submodules CI)",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-14",
+   "recurrences": 6,
+   "root_cause": "Health checks validate the bootstrap key or the process rather than the provider; the ${A:-$B} precedence; the admin key is missing so it cannot be re-minted; nobody watches CI",
+   "source": "memory-9"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Committed fix not running (stale process, read-only bind, dirty-submodule skip, masked services, wrong branch, submodule bump never ran)",
+   "first_seen": "2026-06-16",
+   "last_seen": "2026-09-22",
+   "recurrences": 12,
+   "root_cause": "multiple deploy channels per vessel type with silent skip semantics",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Node 2 not reproducible from image+env+volumes: local image with unknown revision, boot-transient dev-vessel drop-in (VESSEL_ID, advertise endpoint), hand masks in /etc/systemd/system",
+   "root_cause": "Operator interventions applied to the container layer instead of image/profile/volume",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-29",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": ".last-good rollback anchors disagree with running code on both nodes (e.g. node 2 dev-vessel last-good 9c86aff while running f451e42)",
+   "root_cause": "The last-good marker is not advanced on mitosis-cutover landings",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-29",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "cpg-inference-ts build retry loop: 174 re-runs and 42 BUILD FAILED over ~43h; 241 failed=1 pull-sync ticks",
+   "root_cause": "Clones without node_modules / declarations-only package build (fixed 31f15baf/4bb21141)",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 241,
+   "source": "node2-runtime"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Fixes validated against stale images; restarts drop in-flight landings; shared GoalHost store across executions",
+   "first_seen": "2026-05-01",
+   "last_seen": "2026-09-24",
+   "recurrences": 3,
+   "root_cause": "runtime differs from source; no park or age-based drain until 09-24 specs",
+   "source": "openspec-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Live node 1 runs a pre-contract image (no substrate-status/connect/manifest, no image-revision)",
+   "root_cause": "install contract shipped in the tree/CI but the fleet was not recreated from a published image",
+   "first_seen": "2026-09-23",
+   "last_seen": "2026-09-29",
+   "source": "openspec-10"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "A source fix is committed or edited into the clone, but the running process keeps the old binary. The fix is declared landed while its effective behavior is unchanged (F26 concept-db, cache fix 93cd621, EMBEDDING_MODEL_DIR).",
+   "root_cause": "No activity compares the running binary to the source and redeploys; the redeploy spec was never built; config paths (Dockerfile ENV vs gen-env) diverge.",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "source": "openspec-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The /workspace bind-mount wedged with EMFILE, and the promotion fix was hot-deployed 'uncommitted / baked-image'",
+   "first_seen": "2026-06-14",
+   "last_seen": "2026-06-14",
+   "recurrences": 2,
+   "root_cause": "host-dependent workspace mount; live fixes applied outside the commit path",
+   "source": "openspec-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Hub commits on stale base; runtime drifts from origin/dev; self-recovery reverts mid-window",
+   "root_cause": "In-container plain git fetch lacks credential helper; cutover only converges local runtime",
+   "first_seen": "2026-06-16",
+   "last_seen": "2026-07-09",
+   "recurrences": 3,
+   "source": "openspec-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Compose gates read the target file from the stale super-repo submodule checkout while the edit applies in the push clone; the dev-vessel worktree was ~100 commits behind",
+   "root_cause": "two roots; only the operator's pull-sync advanced the worktree; draft residue froze it",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-25",
+   "recurrences": 3,
+   "source": "openspec-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Operator host repos/* checkouts are 5 days stale; host grep reports live mechanisms absent",
+   "root_cause": "host submodules not updated; liveness checked on the wrong tree",
+   "first_seen": "2026-09-23",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "openspec-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "A runtime state file tracked in the super-repo froze pull-sync 130 commits (learning-mode-state.json); more tracked runtime files on node 2",
+   "root_cause": "autonomous commit edc68d49 re-added the state file; runtime files are not gitignored",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "source": "openspec-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The container /workspace is a git repo whose origin points at an unrelated GitHub project, with 10212 dirty paths and 92 root scratch files (FINAL_ANSWER.txt, GOAL_COMPLETION_CERTIFICATE.txt, a file named 'and')",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "LLM walks write scratch to /workspace; no sweep or ignore policy",
+   "source": "openspec-8"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The human surface cannot be authored by the substrate, then later has two diverging sources of truth",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "root_cause": "repos/human-surface-vessel is a plain in-tree dir, not a submodule, and the edit/cutover path assumes a submodule clone. The fix was a separate GitHub repo that the super-repo never references.",
+   "source": "openspec-9"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "A staged-not-landed rolled-back draft left an uncommitted edit in substrate-live's worktree, blocking git pull --ff-only silently",
+   "first_seen": "2026-08-08",
+   "last_seen": "2026-08-08",
+   "recurrences": 1,
+   "root_cause": "Rollback of an UNFAVORABLE compose did not restore the working tree, and nothing reports a failure to converge to origin/dev.",
+   "source": "openspec-9"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Committed/pushed/mirrored code not running or overwritten: fan-out stale 11 days, fetched-not-mirrored, policy files erased, pwt blind restore, gen-env only at boot, stale clones",
+   "root_cause": "Multiple propagation paths with different latencies and success markers written on wrong evidence; worktree used for runtime state",
+   "first_seen": "2026-08-05",
+   "last_seen": "2026-09-25",
+   "recurrences": 12,
+   "source": "reports-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The live runtime tree holds uncommitted or rolled-back drafts. Pre-snapshots see the change, created files are orphaned, a vessel restarts onto a duplicate insert, and the harness is fooled.",
+   "root_cause": "feature_compose preLiveSync stages drafts into /vessels before the cutover. Rollback covers isolated vessels only and does not remove created files.",
+   "first_seen": "2026-09-23 (RUN0, #26)",
+   "last_seen": "2026-09-25 (#50); live open gap a-refused-surql-cutover-left-its-live-sync-in-the-live-tree",
+   "recurrences": 6,
+   "source": "reports-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "substrate-live was removed by a concurrent session (docker rm -f) and was down about 2 h. Nothing observed its absence.",
+   "root_cause": "Shared live container with no lease; observers run inside the thing that disappeared.",
+   "first_seen": "2026-09-24 02:10",
+   "last_seen": "2026-09-24",
+   "recurrences": 1,
+   "source": "reports-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Masked-but-running or shadowed units look healthy but cannot be restarted or updated (dev-vessel 13 days, concept-db frozen 34h, surrealdb unrecoverable, 67-unit batch mask)",
+   "root_cause": "Mitosis wrote an /etc override; masks applied by hand or via DISABLED_VESSELS; mask defeats Restart=, self-recovery and pull-sync at once; nothing asserts running units are unmasked",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-08-16",
+   "recurrences": 5,
+   "source": "reports-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Killed or failed composes leave unverified code in live runtime and residue in the shared clone (duplicate array entries, deleted bracket) that blocks every cutover for the vessel",
+   "root_cause": "No rollback on abort or between internal re-drafts; slot and in_flight markers leak; apply path writes live/shared trees before judgment",
+   "first_seen": "2026-08-15",
+   "last_seen": "2026-09-24 (preLiveSync, staged_base_sha vs live sha in causal ledger)",
+   "recurrences": 4,
+   "source": "reports-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Deploy channel silently stalls; operator hot patches wiped every ~10 min, voiding dispatches",
+   "root_cause": "QUIESCE_WAIT_S 900 inside TimeoutStartSec=900 made converge unreachable; QUIESCE_MAX_MS 20min vs 10min timer; pull-sync mirrors origin/dev over live",
+   "first_seen": "2026-08-15",
+   "last_seen": "2026-08-16",
+   "recurrences": 3,
+   "source": "reports-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Landed != live: uncommitted runtime edits, unit files re-copied from image, detached release checkout 11 behind, LLM arms serving 09-07 code, FAVORABLE applied to live tree without land, frozen submodule worktree 100 behind read by gates",
+   "first_seen": "2026-08-21",
+   "last_seen": "2026-09-24",
+   "recurrences": 6,
+   "root_cause": "Multiple copies of source (image /vessels, push clone, super-repo submodule, release checkout, unit files) with no single desired-state reconciler; each consumer reads a different copy.",
+   "source": "reports-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Self-restart on landing kills in-flight composes; overlapping quiesce, lame-duck windows, false LOSSY labels",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 12,
+   "root_cause": "Each cutover schedules its own restart unit; drain/quiesce counters and budgets shorter than a compose; env-set quiesce bound. >=10 distinct open gap ids for one mechanism on 09-29.",
+   "source": "reports-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Fixes land in git but the running process is older code, and every health signal stays green",
+   "root_cause": "Pull-sync writes its marker before the restart; converge_units never enables timers; stranded commits wedge the pull; IF NOT EXISTS schema divergence",
+   "first_seen": "2026-08-19",
+   "last_seen": "2026-09-22",
+   "recurrences": 5,
+   "source": "reports-5"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Fixed is not live: runtime mirror edits erased by pull-sync, walks writing live /vessels source, owed restarts starved, pointer bumps pinning reverted commits, super-repo 130 commits behind, 9d839e0 committing cache binaries and runtime state.",
+   "first_seen": "2026-08-22",
+   "last_seen": "2026-09-28",
+   "recurrences": 9,
+   "root_cause": "Three writers of runtime vs git (walk bridge, in-place patch_with_tools, compose staging); a shared staging tree; runtime state tracked in git; commit is not deployment.",
+   "source": "reports-6"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Fix at source but inert at runtime: apply-inventory not re-run after pull-sync; image-baked timer; GHCR :dev lags about 24 h; seed-ordering fix uncommitted; manifest frozen by a whitespace reformat",
+   "root_cause": "Three copies (repo, image, volume) with seed-if-absent; convergence without re-application",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-26",
+   "recurrences": 4,
+   "source": "reports-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Landed is not loaded: pull-sync frozen by untracked files and reports synced=0 failed=0 (09-10, twice); 22146522 never reached the container; ensureAdminKey fix not in image; /vessels goal-host diverges from HEAD by +1298/-128; clone index.ts is a 3-line stub; 3.5h stuck rebase undetected; memory 09-22 12 stranded commits wedged the pull for 16h.",
+   "root_cause": "The glue layer fails silently. Runtime tree, clone, image layer and origin are separate and unreconciled.",
+   "first_seen": "2026-09-09",
+   "last_seen": "2026-09-22",
+   "recurrences": 5,
+   "source": "reports-8"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The spokes run a frozen 9-22 image with no pull-sync. Goal-host, discovery and local-tools source differ from the repo, and goal-host has 31 commits since 9-21. substrate-live's human-surface hash differs from the repo, compose2 and the spokes.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "source": "syzygy"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "pull-sync refuses to converge vessels.inventory.json and manifest ('modified locally'). learning-loop-selftest-tick.ts is missing on node 2. Node 2's bin differs from node 1's",
+   "root_cause": "Local edits to fleet files block convergence. Clones on the two nodes diverge",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "source": "timers-readers"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Operator and system read a stale sibling path instead of $WORKSPACE_ROOT (gaps.json, policies, compose-slots, /vessels vs push clone)",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-04",
+   "recurrences": 4,
+   "root_cause": "WORKSPACE_ROOT set by env file while hardcoded /workspace fallbacks and stale copies remain; freshness gate hashed runtime copy while commit made in clone",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "In-tree vessels (relevance-sink) outside every repair/authoring path; dead vessel not repaired",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-16",
+   "recurrences": 1,
+   "root_cause": "Authoritative source = /workspace/git/vessels/<name>; re-declared MEMORY 09-22",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Runtime runs stale code while pull-sync reports synced=0 skipped=0 failed=0; docker cp erased by reset --hard; stale host submodules baked into image; 12 stranded commits wedge pull-sync 16h",
+   "first_seen": "2026-09-10",
+   "last_seen": "2026-09-22",
+   "recurrences": 6,
+   "root_cause": "Three or four trees per vessel with no by-effect convergence check; process_start > mtime is unsound under idempotent rewrite",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Substrate-authored commits stay container-local because the push PAT is dead",
+   "first_seen": "2026-09-14",
+   "last_seen": "2026-09-18",
+   "recurrences": 2,
+   "root_cause": "Credential lifecycle: gen-env.sh prefers the stale env value over the persisted secret; nothing detects push failure as a gap",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Host disk 100% / Docker VM death, then a missing kernel module tree; secrets rotated by an asymmetric mount",
+   "first_seen": "2026-09-17",
+   "last_seen": "2026-09-18",
+   "recurrences": 2,
+   "root_cause": "Sparse Docker.raw never shrinks (922G alloc / 399G used); gen-env's fresh-deploy detector reads the store volume and writes the workspace volume",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Runtime, clone, super-repo checkout and process disagree; frozen checkouts; stale copies read by drafter",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 9,
+   "root_cause": "Drafts/residue written into shared trees; pull-sync skip-and-log; tracked runtime files; stale-base whole-file cutovers",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "pull-sync ahead 2/behind 72, self-heal rejects own commits; runtime-only resolver overwritten by cutover skeleton",
+   "first_seen": "2026-07-03",
+   "last_seen": "2026-08-11",
+   "recurrences": 2,
+   "root_cause": "two substrate identities; runtime vs git drift",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Committed fixes not active in the running container; src vs dist split; submodule pointer lag; coordination file claims a reverted resolver is deployed",
+   "first_seen": "2026-05-23 F-014",
+   "last_seen": "2026-05-29 inv-077",
+   "recurrences": 9,
+   "root_cause": "No deploy-verification step between commit and runtime; image-layer /vessels synced manually",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The node 1 image lacks substrate-status/substrate-connect, which CLAUDE.md, the skills and the HEALTHCHECK all assume",
+   "root_cause": "The ghcr image was built from a pre-76d548d1 tree or context. Node 2 was built locally and has them.",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "claims": [
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-08-02",
+   "claim": "Runtime state untracked; live readers take /workspace since WORKSPACE_ROOT is absent",
+   "where": "super-repo 8f8e87e7",
+   "later": "WORKSPACE_ROOT set by 08-08 caused the split brain (08-09); fossil still written 09-26",
+   "source": "gap-history"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-28 00:19",
+   "claim": "31f15baf pull-sync fix: build declarations-only shared packages",
+   "where": "git super-repo",
+   "later": "It worked from 08:11, but first wedged its own delivery at 07:27 because a locally modified pull-sync.sh blocked the ff-only pull.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-23",
+   "claim": "Image-owned contract tasks 2.1-2.14, 3.x, 4.1-4.3 done",
+   "where": "unified-install-interface tasks.md",
+   "later": "the running node-1 image lacks substrate-status/connect/manifest and image-revision; Decision 7 means none are closed",
+   "source": "openspec-10"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-24",
+   "claim": "1.2 sites A/B/D landed, falsifier MET 16:49",
+   "where": "live-self-view/tasks.md",
+   "later": "code live, but the site-D gap is still open in the store (updated 09-24 16:53)",
+   "source": "openspec-7"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-07",
+   "claim": "Automated commit: vessel code drift detected and committed",
+   "where": "super-repo 4e4170a8",
+   "later": "The commit swept 2134 unrelated files and truncated spectral-gap source; the service failed 09-14 and the damage was found 09-16 (compose-teacher.ts:364)",
+   "source": "openspec-8"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-08-07",
+   "claim": "Authorability of the in-tree surface 'closed, up to the cutover'",
+   "where": "openspec/changes/human-surface-stack/VALIDATION-3.md s5",
+   "later": "rediscovered as 'the one vessel the substrate CANNOT author' on 09-22; worked around with a separate GitHub repo; the super-repo plain-file copy is ~7 commits behind on 09-28",
+   "source": "openspec-9"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-08-28T05:21",
+   "claim": "My audit probe wrote 40 substrateGaps",
+   "where": "ce71b42c",
+   "later": "05:27 wrong: detected_at is last-detection; the 40 pre-existed; closed then reopened with off-by-one",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-08-30T07:33",
+   "claim": "substrateGap_write reports success but does not persist \u2014 confirmed, reproducible",
+   "where": "b1353836",
+   "later": "09:48 misdiagnosis: read the fossil /workspace/gaps/gaps.json; the live store is super-repo/gaps",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-05T22:15",
+   "claim": "dev-vessel deploys silently stopped for 95 min / run hung",
+   "where": "0b1032b5",
+   "later": "retracted: pull-sync quiesced; run completed 22:16:49",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-16T06:07",
+   "claim": "In-tree vessels have no authoritative source for any repair mechanism",
+   "where": "8183a698",
+   "later": "re-declared as new MEMORY 09-22 'AUTHORABILITY = SUBMODULE MEMBERSHIP'",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-14",
+   "claim": "Container push restored",
+   "where": "35537c7e @ 2026-09-14T06:51 summary",
+   "later": "09-18 03:08: push PAT dead again; landings container-local until a new PAT at 03:16",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-15",
+   "claim": "Grounding restored; the root cause was delivery (stale runtime)",
+   "where": "35537c7e @ 2026-09-15T01:00 summary",
+   "later": "09-18 15:09: grounding empty again fleet-wide ~45 min from a dead-port discovery row (a different cause)",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-16",
+   "claim": "Disk is not full (df inside a container)",
+   "where": "35537c7e @ 2026-09-16T20:56",
+   "later": "09-17 22:50: host disk 100%; the in-container df was a sparse VM disk",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-17",
+   "claim": "Host disk full is the root cause of everything",
+   "where": "80ab9659 @ 2026-09-17T22:51",
+   "later": "09-18 00:35: 'bigger' root cause, the running kernel has no module tree, likely explaining the Docker instability",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-18",
+   "claim": "Migration to Podman complete",
+   "where": "80ab9659 @ 2026-09-18T01:06",
+   "later": "No in-window contradiction; the gap store was found NUL-filled (~251 lost) during recovery",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-22",
+   "claim": "Audit rerun 26/26 MET, full_lifecycle_acceptance true for the first time",
+   "where": "7726f8bf @ 2026-09-22T10:56",
+   "later": "No in-window contradiction; every arrangement's dispatch was reached:false with a null reason, which was not among the 26 checks",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-24T13:15Z",
+   "claim": "Substrate landed its own migration-runner fix fdb2fa6 with no operator hands",
+   "where": "833b5ef2 2026-09-24T13:15Z",
+   "later": "Missed sql/schemas 040/045; never deployed because pull-sync didn't fingerprint scripts/ (third recurrence of class)",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-25T05:22Z",
+   "claim": "Writer freezing checkouts is patch_with_tools shell edits (with evidence)",
+   "where": "ac8b0aad 2026-09-25T05:22Z",
+   "later": "05:39 retracted; 05:53 watcher proved draining-fallback bounded_shell sed -i; checkouts refroze within hours",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-23",
+   "claim": "The image reports its own readiness and connection (76d548d1)",
+   "where": "Dockerfile.substrate",
+   "later": "substrate-status/connect absent in the node 1 image",
+   "source": "vessel-docs-tooling"
+  }
+ ]
+}

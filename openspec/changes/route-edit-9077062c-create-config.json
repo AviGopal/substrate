@@ -1,0 +1,35 @@
+
+{
+  "change_id": "route-edit-9077062c-create-config",
+  "summary": "Create config.ts with httpResponse types and shapes",
+  "description": "This change creates the config.ts file, defining HttpResponsePointer, HttpResponse, ResolverResult, AnyPointer, and adding httpResponse to RESOLVER_SHAPES.",
+  "target_file": "repos/development-vessel/src/config.ts",
+  "patches": [
+    {
+      "type": "create_file",
+      "content": "export type AnyPointer = {
+  type: string;
+  [key: string]: any;
+};
+
+export type HttpResponsePointer = {
+  type: \"httpResponse\";
+  url: string;
+};
+
+export type HttpResponse = {
+  status: number;
+  body: string;
+};
+
+export type ResolverResult = {
+  shape: string;
+  body: any;
+};
+
+export const RESOLVER_SHAPES = [
+  \"httpResponse\",
+];"
+    }
+  ]
+}

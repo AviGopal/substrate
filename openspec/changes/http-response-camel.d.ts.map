@@ -1,0 +1,1 @@
+{"version":3,"file":"http-response-camel.d.ts","sourceRoot":"","sources":["http-response-camel.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,uBAAuB,CAAC;AAG5D;;;GAGG;AACH,wBAAsB,wBAAwB,CAC5C,OAAO,EAAE;IAAE,IAAI,EAAE,cAAc,CAAC;IAAC,GAAG,EAAE,MAAM,CAAC;IAAC,SAAS,CAAC,EAAE,MAAM,CAAC;IAAC,aAAa,CAAC,EAAE,MAAM,EAAE,CAAA;CAAE,GAC3F,OAAO,CAAC,cAAc,CAAC,CA2CzB"}

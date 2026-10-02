@@ -1,0 +1,19 @@
+In repos/development-vessel/src/resolvers/feature-compose.ts, refuse to start an undirected landing compose while the spend envelope refuses, because gap-to-feature checks the envelope only for auto-picks, so a caller naming a gap started an undirected land:true compose every 10 minutes while autonomy was paused. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+  const slot = await acquireComposeSlot(slotId, { directed: isDirected, gapId: _gapIdForSlot });
+new:
+  // SPEND ENVELOPE AT THE CHOKEPOINT (contained-self-development). gap-to-feature checks the envelope
+  // for auto-picks only; a caller naming a gap started an undirected land:true compose every 10
+  // minutes while autonomy was paused (09-27 14:55-15:25, db_performance_slow_queries). No
+  // undirected compose lands while the envelope refuses; directed and non-landing composes are unaffected.
+  if (!isDirected && (pointer as { land?: boolean }).land !== false) {
+    const { spendEnvelopeAllows } = await import("./gap-to-feature.js");
+    const envelope = await spendEnvelopeAllows();
+    if (!envelope.allow) {
+      console.log(`[feature-compose] undirected compose NOT started: spend envelope ${envelope.reason}`);
+      return { shape: "featureComposeReport", body: { ok: false, verdict: "BUSY", stage: "budget", error: `spend envelope: ${envelope.reason} (undirected compose not started)` } };
+    }
+  }
+  const slot = await acquireComposeSlot(slotId, { directed: isDirected, gapId: _gapIdForSlot });
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

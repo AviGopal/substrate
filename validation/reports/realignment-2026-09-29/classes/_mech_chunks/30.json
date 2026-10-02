@@ -1,0 +1,214 @@
+{
+ "area": "obsidian-vessel",
+ "items": [
+  {
+   "name": "obsidian-intake/learn/collaborate timers",
+   "location": "/usr/local/bin/obsidian-*-tick.sh",
+   "purpose": "Human loop through Obsidian",
+   "status": "dormant",
+   "general": false,
+   "evidence": "100% SKIPPED over 7 days (2953 ticks). The obsidian:note shape is not advertised",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "launch lanes (make up, run-live, run-live-obsidian, make run, root compose, docker run, deploy-remote, deploy-hub, deploy-hub-pull, cluster compose)",
+   "location": "Makefile, docker-compose*.yml, scripts/substrate/deploy-*",
+   "purpose": "Stand up a substrate",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "8 lanes, two spoke-derivation implementations, 3 healthchecks, 5 stop graces; recommendation is one compose lane",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "federation-relay orphan clients",
+   "location": "federation-relay/fed-federated-resolve.ts, fed-resolve-client.ts, obsidian-passthrough.ts",
+   "purpose": "Manual resolve clients / passthrough",
+   "status": "fossil",
+   "general": false,
+   "evidence": "No caller",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "obsidian main.js bundle",
+   "location": "obsidian-vessel",
+   "purpose": "Plugin runtime",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Build treadmill; compose never rebuilds",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "presentation-policy.ts Thompson",
+   "location": "obsidian-vessel",
+   "purpose": "Client-side form bandit",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "human-surface form learning",
+   "evidence": "Workaround for spoke constraint; do not port",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "obsidian_verify_output / assist feedback scan",
+   "location": "obsidian-vessel / dev-vessel",
+   "purpose": "independent output verification and reaction grading",
+   "status": "dormant",
+   "general": false,
+   "evidence": "06-22 unregistered; no tick dispatches",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "Attention\u2192reward presentation arms",
+   "location": "obsidian-vessel e6206e9",
+   "purpose": "Thompson-graded answer rendering from trusted attention",
+   "status": "live-used",
+   "general": false,
+   "evidence": "07-27 loop closed with a real human; per-human conditioning dormant (cts frozen)",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "obsidian panel bundle (main.js)",
+   "location": "obsidian-vessel main.js",
+   "purpose": "The runtime human surface",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Only the operator rebuilds (127 commits); 0/194 autonomous commits reached it; dev stopped 08-22",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "obsidian libp2p federation sidecar",
+   "location": "obsidian-vessel sidecar (4ae5ba0 + ~30 fixes)",
+   "purpose": "Surface-to-substrate conduit",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Surface superseded by human-surface-vessel",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "Obsidian solicitation_id stamping",
+   "location": "obsidian-vessel src (5 files)",
+   "purpose": "Attribute human interactions to soliciting outputs",
+   "status": "dormant",
+   "general": false,
+   "source": "openspec-4",
+   "mentions": 1,
+   "sources": [
+    "openspec-4"
+   ]
+  },
+  {
+   "name": "obsidian-vessel concept-db sync/writeback/canvas",
+   "location": "obsidian-vessel src/sync, canvas, concept-db-client.ts",
+   "purpose": "Human frontend for the concept graph",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Acceptance probes unchecked; superseded by human-surface-vessel",
+   "source": "openspec-2",
+   "mentions": 1,
+   "sources": [
+    "openspec-2"
+   ]
+  },
+  {
+   "name": "obsidian panel (self-explanation, DAG, grade panel, sidecar owner-merge)",
+   "location": "repos/obsidian-vessel",
+   "purpose": "Human surface",
+   "status": "live-used",
+   "general": false,
+   "evidence": "07-24..08-05; host plugin, manual build treadmill",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "obsidian federation sidecar",
+   "location": "repos/obsidian-vessel/sidecar/federation-sidecar.ts",
+   "purpose": "Obsidian vault libp2p ingress/owner-merge",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "federation-transport-server ingress",
+   "evidence": "711 lines, last change 07-30; no obsidian:note advertised anywhere",
+   "source": "federation-relay",
+   "mentions": 1,
+   "sources": [
+    "federation-relay"
+   ]
+  },
+  {
+   "name": "obsidian intake/learn/collaborate ticks",
+   "location": "scripts obsidian-*-tick.sh",
+   "purpose": "Human-surface loops",
+   "status": "fossil",
+   "general": false,
+   "evidence": "2,586 dead ticks since 07-07 reporting success (H11/H12)",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "fed-federated-resolve / fed-resolve-client / obsidian-passthrough",
+   "location": "scripts/substrate/federation-relay/",
+   "purpose": "Ad-hoc resolve clients / passthrough",
+   "status": "fossil",
+   "general": false,
+   "evidence": "No callers outside their own .d.ts",
+   "source": "federation-relay",
+   "mentions": 1,
+   "sources": [
+    "federation-relay"
+   ]
+  },
+  {
+   "name": "obsidian-intake/learn/collaborate timers",
+   "location": "substrate-live systemd timers",
+   "purpose": "Human-surface loops",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Every tick: 'SKIPPED: no vessel advertises obsidian:note'",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  }
+ ]
+}

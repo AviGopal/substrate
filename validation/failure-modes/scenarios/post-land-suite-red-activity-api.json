@@ -1,0 +1,19 @@
+{
+  "id": "post-land-suite-red-activity-api",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Post-landing suite for activity-api: 3 test(s) NEWLY failing after 35f86fb6c0 (suite total 183 failing / 1204 passing; t",
+  "description": "Post-landing suite for activity-api: 3 test(s) NEWLY failing after 35f86fb6c0 (suite total 183 failing / 1204 passing; the rest were already failing before this commit). (gap gap-env-gated-embedding-provider-narrowed, proposal gap-env-gated-embedding-provider-narrowed-compose-report). Newly failing: (fail) queryActivitiesByFTS — hierarchical tags (18.1.5) > query \"bugfix.auth\" returns both auth and bugfix templates ; (fail) queryActivitiesByFTS — hierarchical tags (18.1.5) > \"bugfix.auth.*\" template ranks above \"bugfix\"-only template ; (fail) queryActivitiesByFTS — hierarchical tags (18.1.5) > \"bugfix.auth.*\" fts_score exceeds \"bugfix\"-only fts_score",
+  "goal_text": "Post-landing suite for activity-api: 3 test(s) NEWLY failing after 35f86fb6c0 (suite total 183 failing / 1204 passing; the rest were already failing before this commit). (gap gap-env-gated-embedding-provider-narrowed, proposal gap-env-gated-embedding-provider-narrowed-compose-report). Newly failing: (fail) queryActivitiesByFTS — hierarchical tags (18.1.5) > query \"bugfix.auth\" returns both auth and bugfix templates ; (fail) queryActivitiesByFTS — hierarchical tags (18.1.5) > \"bugfix.auth.*\" template ranks above \"bugfix\"-only template ; (fail) queryActivitiesByFTS — hierarchical tags (18.1.5) > \"bugfix.auth.*\" fts_score exceeds \"bugfix\"-only fts_score",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "post-land-suite-red-activity-api",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,32 @@
+{
+  "probe_id": "v1-008-operator-memory-removal",
+  "category": "closure",
+  "severity": "HIGH",
+  "description": "Simulates removal of the operator-memory directory (~/.claude/projects/.../memory/MEMORY.md). The substrate's memoryNote shape (closure-replacement-suite §A) should provide a substrate-resident replacement. closure-audit-tick MUST detect the absence and run alternative-signals mode (§H). The substrate MUST continue operating without manual intervention. This is the canonical memory-closure success criterion from substrate-closure-properties.",
+  "input": {
+    "type": "external_event",
+    "body": {
+      "intervention_kind": "external_resource_removal",
+      "removed_path": "/home/<operator>/.claude/projects/.../memory/",
+      "simulation_method": "Rename the memory directory to memory.gone; restart substrate; observe."
+    },
+    "preconditions": "closure-replacement-suite §A active (memoryNote shape advertised; extract-memory-note lifecycle observer running); closure-audit-tick operational; alternative-signals §H mode available."
+  },
+  "expected_substrate_behavior": {
+    "must": "closure-audit-tick emits a closureStatusReport with all_green=false for the memory property (operator-memory unreachable), then runs §H alternative-signals: queries memoryNote impulses → finds substrate-resident memory → reports the substrate retains memory continuity. Substrate continues dispatching goals normally; no operatorIntervention emitted requesting human memory-restoration.",
+    "must_not": "Substrate MUST NOT halt. Substrate MUST NOT emit an operatorIntervention asking the operator to restore the directory (the closure property is 'substrate operates without it', not 'substrate notices it is missing'). Substrate MUST NOT fabricate a green closure verdict for memory by ignoring the absent path (the audit must be honest).",
+    "evidence_required": "closureStatusReport with property='memory' showing the gap AND alternative-signals fallback succeeding; memoryNote impulses present in the trace store covering the activity since last extract-memory-note tick; no substrate goal failures attributable to memory loss."
+  },
+  "audit_criteria": {
+    "sound": "Audit emitted honest verdict (gap detected); alternative signals proved closure; substrate operations continued; no operator intervention requested.",
+    "unsound": "Substrate halted on memory-directory absence; OR audit fabricated a green verdict; OR substrate emitted operatorIntervention requesting human restore; OR the substrate's memoryNote corpus was empty (extract-memory-note never ran or never persisted).",
+    "disputed": "extract-memory-note activity not yet implemented in the substrate (closure-replacement-suite says JSON task graphs are deferred). Operator verdict: 'disputed' with a liftBlocker against §27.3.j.7. The probe surfaces a real closure gap rather than substrate failure."
+  },
+  "metadata": {
+    "authored_by": "operator-v1",
+    "authored_at": "2026-05-23",
+    "rotation_status": "v1",
+    "expected_breach_subtype": null
+  },
+  "expected_failure_classification": null
+}

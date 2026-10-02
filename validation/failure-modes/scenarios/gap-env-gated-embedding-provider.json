@@ -1,0 +1,19 @@
+{
+  "id": "gap-env-gated-embedding-provider",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architectural_pattern",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "env-gated capability: EMBEDDING_PROVIDER is read by activity-api, unset in the running environment, and its unset branch",
+  "description": "env-gated capability: EMBEDDING_PROVIDER is read by activity-api, unset in the running environment, and its unset branch disables a capability or silently falls back (1 site(s), e.g. activity-api/src/services/embedding-service.ts:40). Vessel dependencies resolve via discovery; env-gated capability is substrate-invisible configuration.",
+  "goal_text": "env-gated capability: EMBEDDING_PROVIDER is read by activity-api, unset in the running environment, and its unset branch disables a capability or silently falls back (1 site(s), e.g. activity-api/src/services/embedding-service.ts:40). Vessel dependencies resolve via discovery; env-gated capability is substrate-invisible configuration.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-env-gated-embedding-provider",
+  "source_gap_source": "substrate_detected"
+}

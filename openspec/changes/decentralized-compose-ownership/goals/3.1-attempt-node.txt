@@ -1,0 +1,19 @@
+In repos/development-vessel/src/resolvers/attempt-register.ts, make the node stamp record the node. Measured: commit 1c7833b added `node: null,` to the attemptIntent record in registerAttempt and `node: intent.node,` to the outcome record, so every intent and outcome records null, and the settlement record has no node at all. Two edits in this one file:
+
+(1) Replace exactly the line (it occurs once)
+
+      node: null,
+
+with
+
+      node: process.env["SUBSTRATE_NAME"] ?? "substrate",
+
+(2) Directly after the line (it occurs once, in the settlementRecord object in sweepAttempts)
+
+              settlement_seq: 1,
+
+insert
+
+              node: (intent as { node?: string | null }).node ?? null,
+
+Change nothing else.

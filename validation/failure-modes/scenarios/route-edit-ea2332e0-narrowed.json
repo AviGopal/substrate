@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-ea2332e0-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-ea2332e0] repos/goal-host-vessel/src/index.ts\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most ",
+  "description": "[narrowed from route-edit-ea2332e0] repos/goal-host-vessel/src/index.ts\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 12889-12894 of 16583, VERBATIM:\\n12889:               completionShapes: [\\\"fileEditResult\\\"],\\n12890:               attempts: 1,\\\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- syntax_break: src/index.ts(11127,1): error TS1128: Declaration or statement expected.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-ea2332e0] repos/goal-host-vessel/src/index.ts\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 12889-12894 of 16583, VERBATIM:\\n12889:               completionShapes: [\\\"fileEditResult\\\"],\\n12890:               attempts: 1,\\\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- syntax_break: src/index.ts(11127,1): error TS1128: Declaration or statement expected.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-ea2332e0-narrowed",
+  "source_gap_source": "substrate_detected"
+}

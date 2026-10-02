@@ -1,0 +1,844 @@
+{
+ "area": "development-vessel",
+ "items": [
+  {
+   "name": "Vacuous-edit / reachability floor guards",
+   "location": "development-vessel vacuous-edit.ts, goal-host guard (326a983, 212408a, 0874216)",
+   "purpose": "Refuse inert or dead-code plans",
+   "status": "live-used",
+   "general": true,
+   "evidence": "falsifiers 09-24",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "Vacuous-edit gate",
+   "location": "development-vessel vacuous-edit.ts:439; guard 2 20a668b",
+   "purpose": "Refuse declaration-only/dead edits",
+   "status": "live-used",
+   "general": true,
+   "evidence": "False-refused 08-18 (apostrophe stripping 73%) and 09-24 (stale super-repo copy); both patched",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "validateEvidenceGate",
+   "location": "development-vessel variant-promote.ts, template-promote-tick.ts",
+   "purpose": "Posterior-evidence gate on deprecate/promote",
+   "status": "live-used",
+   "general": true,
+   "evidence": "The doc places it in activity-api impulses.ts (location drift)",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "Semantic gate + refuters + spec-exact short-circuit",
+   "location": "development-vessel verifyPatchAddressesGap (1746f5a, 7ab6155)",
+   "purpose": "Judge whether patch addresses gap",
+   "status": "live-used",
+   "general": true,
+   "evidence": "inconsistent verdicts; runs after land on some paths (08-17)",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "Vessel mitosis",
+   "location": "development-vessel vessel-mitosis-*.ts",
+   "purpose": "Land substrate-authored changes via cutover",
+   "status": "live-used",
+   "general": true,
+   "evidence": "About 77k tasks in 30 days; commits 'via mitosis cutover'",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "mitosis cutover landing",
+   "location": "development-vessel vessel-mitosis-*; /vessels/<v>-mitosis-*",
+   "purpose": "Stage, evaluate and cut over a landed compose into the runtime",
+   "status": "live-used",
+   "general": true,
+   "evidence": "98 dev-vessel landings in node 2's reflog, 113 restarts since 09-26. It leaves mitosis dirs behind, and its copies run through untraced local-tools shell calls.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "selfRestartAlreadyOwed",
+   "location": "development-vessel vessel-mitosis-cutover.ts",
+   "purpose": "coalesce owed self-restarts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "46d252c; 4 coalescings; 1 'already owed' on node2 in 72h",
+   "source": "openspec-7",
+   "mentions": 1,
+   "sources": [
+    "openspec-7"
+   ]
+  },
+  {
+   "name": "surqlBreakingFieldRefusal",
+   "location": "development-vessel vessel-mitosis-evaluate.ts",
+   "purpose": "Gate breaking .surql edits",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Broken 09-16..22 by 54b7762, restored in 1a18944",
+   "source": "reports-5",
+   "mentions": 1,
+   "sources": [
+    "reports-5"
+   ]
+  },
+  {
+   "name": "staticEvaluate landing gate",
+   "location": "development-vessel vessel-mitosis-evaluate.ts (44bcffd, a4a4102)",
+   "purpose": "shared landing gate for both paths",
+   "status": "live-used",
+   "general": true,
+   "evidence": "repeatedly weakened by autonomous lanes (550f2f7, 54b7762)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "systemLoadReport / load-aware boredom gate / db_contention_observer",
+   "location": "development-vessel, boredom",
+   "purpose": "Resource proprioception",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "09-01 static thresholds calibrated to miss",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "decomposition primitives (orderChangePlan, scoreSpliceability, parity-gate, seam-extraction)",
+   "location": "development-vessel/src/maintenance/ (796 lines)",
+   "purpose": "Order multi-file changes and split huge files.",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Only entry is scripts/run-seam-extraction.ts, invoked by nothing (08-06)",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "parity gate + seam extraction",
+   "location": "development-vessel/src/maintenance/parity-gate.ts",
+   "purpose": "Mechanically split fossil files with AST parity",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Phase 3 never landed",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "REUSE_BEFORE_MINT",
+   "location": "development-vessel/src/resolvers/activity-create-variant.ts",
+   "purpose": "Mint chokepoint reuse check",
+   "status": "live-used",
+   "general": false,
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "REUSE_BEFORE_MINT chokepoint",
+   "location": "development-vessel/src/resolvers/activity-create-variant.ts",
+   "purpose": "Prefer existing producer over mint",
+   "status": "unknown",
+   "general": true,
+   "evidence": "present; 150/323 resolvers uninvoked suggests minting still outpaces use",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "compose-workspace worktree isolation",
+   "location": "development-vessel/src/resolvers/compose-workspace.ts",
+   "purpose": "Concurrent same-vessel composes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "8ec501b; 3 concurrent landings",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "docs-align-tick / docs-align-scan / doc_drift_fix / docs_align_bridge",
+   "location": "development-vessel/src/resolvers/docs-align-*.ts, doc-drift-fix.ts",
+   "purpose": "Docs-as-expectation drift loop (law 9)",
+   "status": "broken",
+   "general": true,
+   "evidence": "existing_paths from scripts/ only -> false gaps; 0 closes; docs_align_bridge 0 invocations",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "parkedLanding resume",
+   "location": "development-vessel/src/resolvers/feature-compose.ts",
+   "purpose": "do not discard verified patches on refused cutover",
+   "status": "live-used",
+   "general": true,
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "targetFileOnDisk (clone-first target resolution)",
+   "location": "development-vessel/src/resolvers/feature-compose.ts",
+   "purpose": "compose gates read the file the edit applies to",
+   "status": "live-used",
+   "general": true,
+   "evidence": "20a668b/a0ff3d3/13841a4/1d4ac1c in live HEAD; anchors supplied on the cutover file",
+   "source": "openspec-7",
+   "mentions": 1,
+   "sources": [
+    "openspec-7"
+   ]
+  },
+  {
+   "name": "feature-compose emit-API gates",
+   "location": "development-vessel/src/resolvers/feature-compose.ts:1749-1836",
+   "purpose": "Refuse invented emit APIs and wrong resolve paths",
+   "status": "live-used",
+   "general": false,
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "feature_compose edit-intent path",
+   "location": "development-vessel/src/resolvers/feature-compose.ts; goal-host edit-intent",
+   "purpose": "Draft\u2192typecheck\u2192semantic gate\u2192cutover",
+   "status": "live-used",
+   "general": true,
+   "evidence": "The only reliable lander; one-hunk-per-goal recipe",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "landedCommitVerdict",
+   "location": "development-vessel/src/resolvers/gap-to-feature.ts:2461",
+   "purpose": "Single Class-3 close-oracle helper: count non-reverted gap-naming commits; 1=pending, >=2=present",
+   "status": "live-used",
+   "general": true,
+   "evidence": "5 call sites (1886,1981,2126,2153,2309); replaces 3 duplicated blocks",
+   "source": "openspec-5",
+   "mentions": 1,
+   "sources": [
+    "openspec-5"
+   ]
+  },
+  {
+   "name": "goal_summary resolver",
+   "location": "development-vessel/src/resolvers/goal-summary.ts; config.ts:764; routes/impulses.ts:952",
+   "purpose": "Substrate health/activity summary producer",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "0 invocations; orphaned-capability-goal_summary open 2026-09-26",
+   "source": "openspec-5",
+   "mentions": 1,
+   "sources": [
+    "openspec-5"
+   ]
+  },
+  {
+   "name": "intervention-evaluate",
+   "location": "development-vessel/src/resolvers/intervention-evaluate.ts",
+   "purpose": "operatorIntervention/interventionRefused",
+   "status": "unknown",
+   "general": false,
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "intervention_evaluate / interventionRefused",
+   "location": "development-vessel/src/resolvers/intervention-evaluate.ts",
+   "purpose": "Push-away with cited evidence",
+   "status": "dormant",
+   "general": true,
+   "evidence": "6 records in 2 split JSON stores",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "learning_policy + learning_policy_writeback",
+   "location": "development-vessel/src/resolvers/learning-policy-writeback.ts; substrate_tuning_param",
+   "purpose": "Self-tune TD_LAMBDA/YIELD_FLOOR",
+   "status": "dormant",
+   "general": true,
+   "evidence": "last write 09-16 on zero evidence",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "lambda1_inequality_ok proxy",
+   "location": "development-vessel/src/resolvers/learning-transfer-report.ts:235",
+   "purpose": "Master inequality readout",
+   "status": "broken",
+   "general": false,
+   "evidence": "density>=fraction on incomparable scales",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "memoryNote flat-JSON store",
+   "location": "development-vessel/src/resolvers/memory-note.ts",
+   "purpose": "Authoritative system memory (law 10)",
+   "status": "broken",
+   "general": true,
+   "evidence": "Wiped 09-26 (about 1236 notes to 0); 59 notes now; one store per node; swallow-to-[] load; shared .tmp path",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "memoryNote store + session hooks",
+   "location": "development-vessel/src/resolvers/memory-note.ts; .claude/hooks/substrate-*.sh",
+   "purpose": "System-owned memory; operator files a cache",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Store at super-repo/memory/notes.json holds 59 notes (1,788 on 09-23); old 680-note store orphaned",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "patch_with_tools",
+   "location": "development-vessel/src/resolvers/patch-with-tools.ts",
+   "purpose": "Byte-anchored multi-hunk ReAct patcher with its own cutover.",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Orphaned from Thompson; rescue path dead until 2a8ebf5; no isolation (edits /vessels)",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "patch_with_tools ReAct patcher",
+   "location": "development-vessel/src/resolvers/patch-with-tools.ts",
+   "purpose": "Escalation editor",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Repeatedly stage-only hollow",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "pwt semantic gate (verifyPatchAddressesGap shared with feature_compose)",
+   "location": "development-vessel/src/resolvers/patch-with-tools.ts:1460-1498 (21da981)",
+   "purpose": "Judge escalated byte-anchored patches",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Present at HEAD 09-23. First firings refused 2 real defects. It fails open, so a PASS is unmeasured.",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "rhythm-reality-sync",
+   "location": "development-vessel/src/resolvers/rhythm-reality-sync.ts",
+   "purpose": "Sync rhythm \u03b1/\u03b2 and staleness",
+   "status": "broken",
+   "general": true,
+   "evidence": "329fc5c wiped the operator containment on 09-26",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "vessel-mitosis-cutover + drafter-corruption gate",
+   "location": "development-vessel/src/resolvers/vessel-mitosis-cutover.ts",
+   "purpose": "Land staged edits; refuse known corruption signatures",
+   "status": "live-used",
+   "general": true,
+   "evidence": "93b18ba 0 FP; deletable without detection (08-03)",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "complete-vessel-scaffold",
+   "location": "development-vessel/src/seed/complete-vessel-scaffold.ts",
+   "purpose": "Canonical vessel template.",
+   "status": "broken",
+   "general": true,
+   "evidence": "Nested resolve_endpoint, no systemVessel, unfindable output (08-06)",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "trace_store_health_observer",
+   "location": "development-vessel/src/seed/trace-store-health-observer.ts",
+   "purpose": "Detect trace-store problems",
+   "status": "broken",
+   "general": false,
+   "evidence": "Checks only row_count against cap; blind to 89% garbage; mints the nonexistent remedy template db_performance_slow_queries hourly",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "discardedLandingReport sweep",
+   "location": "development-vessel/src/services/gap-drain-observer.ts:349",
+   "purpose": "count FAVORABLE-not-pushed composes as a gap",
+   "status": "live-used",
+   "general": true,
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "vacuous-edit deterministic checks",
+   "location": "development-vessel/src/vacuous-edit.ts (vacuousEditReason, truncatingRewriteReason, ...)",
+   "purpose": "Refuse dead declarations, diagnostic-only edits and truncating rewrites without a model",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Imported at patch-with-tools.ts:33 and called at :1438. It misses dead imports and 2-declaration chains, and false-positives on added logs and minimal edits.",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "concept_select_for_prompt + SessionStart hook",
+   "location": "development-vessel; .claude/hooks",
+   "purpose": "Priors for prompts",
+   "status": "live-used",
+   "general": true,
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "ui_legibility_scan / ui-legibility-audit-tick",
+   "location": "development-vessel; activity rows auto-bridge-ui_legibility_scan, development-vessel:ui-legibility-audit-tick",
+   "purpose": "independent effect-reading validator of surface legibility",
+   "status": "broken",
+   "general": false,
+   "evidence": "08-07 success-while-blind; 09-26: 6 failures plus 2 satisfier successes; no uiLegibilityReport producer 09-28",
+   "source": "openspec-9",
+   "mentions": 1,
+   "sources": [
+    "openspec-9"
+   ]
+  },
+  {
+   "name": "memoryNote resolver + memory-mirror hook",
+   "location": "development-vessel; ~/.claude hooks",
+   "purpose": "authoritative system memory",
+   "status": "live-used",
+   "general": true,
+   "evidence": "live store 59 notes, oldest 09-26; pre-09-26 history only in backups",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "variant_promote",
+   "location": "documented in development-vessel CLAUDE.md only",
+   "purpose": "Promote variants",
+   "status": "fossil",
+   "general": false,
+   "evidence": "No implementation in any repos/*/src (08-03).",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "expiry closer (autoCloseStaleGaps)",
+   "location": "gap-lifecycle-scan",
+   "purpose": "TTL-close stale gaps",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Live funnel shows expired=0 on every run while stale_open rose 0 to 1434; in earlier eras it produced 79% of closes",
+   "source": "gap-history",
+   "mentions": 1,
+   "sources": [
+    "gap-history"
+   ]
+  },
+  {
+   "name": "gap_falsify pass + pre-admission decomposition",
+   "location": "gap-lifecycle-scan.ts, gap-to-feature.ts",
+   "purpose": "make gaps verifiable",
+   "status": "live-used",
+   "general": true,
+   "evidence": "6 decompositions in 24h, mostly 'no valid step'",
+   "source": "openspec-7",
+   "mentions": 1,
+   "sources": [
+    "openspec-7"
+   ]
+  },
+  {
+   "name": "landability_predictions.log",
+   "location": "gap-lifecycle-scan.ts:404-414 (418d80d)",
+   "purpose": "Log predictions for later validation",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "No reader in repos or /vessels; 66,866 lines in 3 days",
+   "source": "gap-history",
+   "mentions": 1,
+   "sources": [
+    "gap-history"
+   ]
+  },
+  {
+   "name": "gap_lifecycle_scan gap triple",
+   "location": "gap-lifecycle-scan.ts:586-624",
+   "purpose": "Law-7 metrics",
+   "status": "dormant",
+   "general": true,
+   "evidence": "not run 48h on 08-22; series stale",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "funnel-history.jsonl",
+   "location": "gap-lifecycle-scan.ts:661-742",
+   "purpose": "Gap-triple series (close rate, latency, durability)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Reads the last 12 runs. Two series (old one orphaned 08-08, its line 1 is a TS code block). Live median_latency_ms=0 and expired=0 on all 47 runs.",
+   "source": "gap-history",
+   "mentions": 1,
+   "sources": [
+    "gap-history"
+   ]
+  },
+  {
+   "name": "autonomous_pick lease (maintenanceLease)",
+   "location": "goal-host / development-vessel",
+   "purpose": "Hold in-process auto-picks",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Gates only new picks; proposed generalisation into a TTL quarantine shape (openspec #59)",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "capability-gap demand ledger + producer_count",
+   "location": "goal-host 4361247; development-vessel 4d3381c",
+   "purpose": "File capability gaps only on repeated demand; per-shape measurement",
+   "status": "live-used",
+   "general": true,
+   "evidence": "693 walk-artifact gaps closed",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "verifyGoalReached reach gate",
+   "location": "goal-host-vessel + development-vessel (9 files)",
+   "purpose": "Judge reached vs exited cleanly",
+   "status": "live-used",
+   "general": true,
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "BoundedBusSink",
+   "location": "goal-host-vessel, boredom-vessel, development-vessel src",
+   "purpose": "Backpressure on in-flight bus forwards (OOM fix)",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "ias-executor-ts lifecycle-subscriber IAS_SUBSCRIBER_MAX_INFLIGHT cap",
+   "evidence": "Copied per vessel instead of being fixed in the framework; the cap is env-tuned",
+   "source": "openspec-2",
+   "mentions": 1,
+   "sources": [
+    "openspec-2"
+   ]
+  },
+  {
+   "name": "ribosome extraction / template minting",
+   "location": "ias-executor-ts / activity-api / development-vessel",
+   "purpose": "Extract reached executions into templates",
+   "status": "broken",
+   "general": true,
+   "evidence": "11859d57: 2 templates ever; debc3da3: targets a retired template; 70254535: joints severed",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "variant minting write (applyExtraction gate) / variant_promote",
+   "location": "ias-executor-ts ribosome-extract.json:165; development-vessel docs",
+   "purpose": "Birth variants from extraction",
+   "status": "dormant",
+   "general": true,
+   "evidence": "applyExtraction default false, lifecycle passes no variables; variant_promote unimplemented",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "consumption-as-verification",
+   "location": "json_path_extract dev-vessel",
+   "purpose": "Reach verified by downstream use",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Principle verified 07-20; activity and credit leg never minted",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "decentralized compose ownership",
+   "location": "openspec/changes/decentralized-compose-ownership; dev-vessel drop-in",
+   "purpose": "Route edit-intent composes to the owning node",
+   "status": "live-used",
+   "general": true,
+   "evidence": "'owner':'compose2' 93 picks/24h and 129 'not owned here' exclusions. Its config lives in a boot-transient drop-in.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "snapshot-state / restore-state",
+   "location": "planned development-vessel (never built)",
+   "purpose": "Off-host continuity of learned state",
+   "status": "fossil",
+   "general": true,
+   "evidence": "0 hits",
+   "source": "openspec-4",
+   "mentions": 1,
+   "sources": [
+    "openspec-4"
+   ]
+  },
+  {
+   "name": "probe-reachable-unlearned / coverage-tick / draft-gap-closing-activity / draft-spec-from-gap",
+   "location": "registry activity:development-vessel:*",
+   "purpose": "Topology discovery and gap-closing authoring",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Still in registry with organic compose variants; misroute sink in May",
+   "source": "validation-other-2",
+   "mentions": 1,
+   "sources": [
+    "validation-other-2"
+   ]
+  },
+  {
+   "name": "concept-bridge observer",
+   "location": "repos/development-vessel/src/observers/concept-bridge-observer.ts",
+   "purpose": "Record concept usage and upsert concepts from executions",
+   "status": "broken",
+   "general": true,
+   "evidence": "On node 2 it posts to default 127.0.0.1:8260 and gets ~1300 connection failures/24h.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "vessel_mitosis_start/evaluate/cutover + freshness gate",
+   "location": "repos/development-vessel/src/resolvers",
+   "purpose": "parallel-track self-modification",
+   "status": "live-used",
+   "general": true,
+   "evidence": "mitosis ticks 90-176 traces in July window; evaluate non-deterministic 06-05",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "rankSize + recent_count tie-break + paging",
+   "location": "repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts",
+   "purpose": "disjoint hot/cold arm sets",
+   "status": "live-used",
+   "general": false,
+   "evidence": "T3 overlap=0 over 2,668 templates",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "escalation_disposition_apply + human_exemption_attempts_remaining",
+   "location": "repos/development-vessel/src/resolvers/escalation-disposition-apply.ts, gap-to-feature.ts",
+   "purpose": "human answer unseals a hopeless gap for 3 attempts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "hopeless_excluded 79->78; answers stored as prose only",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "synthesizeVerbatimEditOps / 2.7 [fc-exact] exact-edit path",
+   "location": "repos/development-vessel/src/resolvers/feature-compose.ts (f70160f)",
+   "purpose": "Apply goal-supplied old/new edits with no LLM plan",
+   "status": "live-used",
+   "general": true,
+   "evidence": "0 fires in 3 days (09-06, blocked by the 2-fence rule and the refiner); live from 09-27, 3 byte-equal falsifier passes",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "gap-lifecycle-scan dispatchScenario reprobe",
+   "location": "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts:251",
+   "purpose": "Block auto-close if scenario reproduces",
+   "status": "broken",
+   "general": false,
+   "evidence": "Nonexistent path, so it always returns not_reproduced. The autoClose path has not fired (0 churned_unlandable).",
+   "source": "validation-other-3",
+   "mentions": 1,
+   "sources": [
+    "validation-other-3"
+   ]
+  },
+  {
+   "name": "isNonAttemptComposeResult",
+   "location": "repos/development-vessel/src/resolvers/gap-to-feature.ts",
+   "purpose": "BUSY/environment compose results do not bump failed_attempts or calibration",
+   "status": "live-used",
+   "general": true,
+   "evidence": "present in source 09-28; 13 'gap credit not bumped' firings 08-29",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "shouldNarrowForChronicFailure",
+   "location": "repos/development-vessel/src/resolvers/gap-to-feature.ts",
+   "purpose": "stop recommit/narrow alternation",
+   "status": "live-used",
+   "general": false,
+   "evidence": "present; da86fbb test",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "verifyGapConditionAsync + sweepPendingLandVerifications (predicate classes 1/1b/2/3)",
+   "location": "repos/development-vessel/src/resolvers/gap-to-feature.ts:1680",
+   "purpose": "close gaps only on measured absence of the defect in /vessels",
+   "status": "live-used",
+   "general": true,
+   "evidence": "landed_verified 50->60; starved because 98% of gaps have no predicate",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  }
+ ]
+}

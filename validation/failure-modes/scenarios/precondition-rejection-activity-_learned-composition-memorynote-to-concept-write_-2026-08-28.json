@@ -1,0 +1,19 @@
+{
+  "id": "precondition-rejection-activity-_learned-composition-memorynote-to-concept-write_-2026-08-28",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "missing_concept",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Template activity:⟨learned-composition-memorynote-to-concept-write⟩ pre-flight-rejected 2 time(s): duration 27-38ms, tas",
+  "description": "Template activity:⟨learned-composition-memorynote-to-concept-write⟩ pre-flight-rejected 2 time(s): duration 27-38ms, tasks_completed=0. Likely cause: unsatisfiable inputShapes (F25).",
+  "goal_text": "Template activity:⟨learned-composition-memorynote-to-concept-write⟩ pre-flight-rejected 2 time(s): duration 27-38ms, tasks_completed=0. Likely cause: unsatisfiable inputShapes (F25).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "precondition-rejection-activity:⟨learned-composition-memorynote-to-concept-write⟩-2026-08-28",
+  "source_gap_source": "substrate_detected"
+}

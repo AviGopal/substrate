@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-469c78fa",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/development-vessel/src/resolvers/gap-to-feature.ts to delete the single `continue;` statement inside the `if ",
+  "description": "Edit repos/development-vessel/src/resolvers/gap-to-feature.ts to delete the single `continue;` statement inside the `if (hopeless(g))` branch of pickMostLandable, so that a hopeless gap falls through and is pushed into actionableGaps and scored instead of being dropped before scoring. Locate it by this exact three-line block, which occurs EXACTLY ONCE in the file (six spaces before continue, four before the closing brace, four before actionableGaps):\n\n      continue;\n    }\n    actionableGaps.push(g);\n\nThe result must be those same lines with the `continue;` line removed, so the closing brace is immediately followed by `    actionableGaps.push(g);`. Do NOT use a bare `continue;` as the anchor — that string occurs twice in this file. Do not alter the hopeless() predicate, do not change any threshold, do not touch landabilityScore, and do not introduce any new symbol. Keep the uiQuestion_write escalation above it exactly as it is; the human is still asked. This exact patch was already drafted and approved on 2026-08-26: the semantic gate returned addresses:true and mitosis-cutover returned verdict=FAVORABLE, and it was lost only to a pre-cutover block citing two unrelated pre-existing test failures.",
+  "goal_text": "Edit repos/development-vessel/src/resolvers/gap-to-feature.ts to delete the single `continue;` statement inside the `if (hopeless(g))` branch of pickMostLandable, so that a hopeless gap falls through and is pushed into actionableGaps and scored instead of being dropped before scoring. Locate it by this exact three-line block, which occurs EXACTLY ONCE in the file (six spaces before continue, four before the closing brace, four before actionableGaps):\n\n      continue;\n    }\n    actionableGaps.push(g);\n\nThe result must be those same lines with the `continue;` line removed, so the closing brace is immediately followed by `    actionableGaps.push(g);`. Do NOT use a bare `continue;` as the anchor — that string occurs twice in this file. Do not alter the hopeless() predicate, do not change any threshold, do not touch landabilityScore, and do not introduce any new symbol. Keep the uiQuestion_write escalation above it exactly as it is; the human is still asked. This exact patch was already drafted and approved on 2026-08-26: the semantic gate returned addresses:true and mitosis-cutover returned verdict=FAVORABLE, and it was lost only to a pre-cutover block citing two unrelated pre-existing test failures.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-469c78fa",
+  "source_gap_source": "substrate_detected"
+}

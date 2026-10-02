@@ -1,0 +1,314 @@
+{
+  "investigation_id": "2026-05-24T03-22-13-investigation-002",
+  "generated_at": "2026-05-24T03:22:13Z",
+  "investigator_session_id": "loop-iteration-006",
+  "prior_investigation_id": "2026-05-24T02-28-30-investigation-001",
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container",
+    "version_reported": "1.20.9",
+    "auth_verified": true,
+    "narrator_state": "running ~3h52m; 48 snapshots; latest 2026-05-24T03:21:20Z"
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "claim": "Gameable lift criteria unchanged on cycle-8. STAGE: stamp persists despite current coverage reset (see F-026).",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq '.lift_kpi' validation/failure-modes/cycles/cycle-8.json",
+          "excerpt": "{ debt_zero: true, gap_count_decreasing: true, consecutive_zero_debt_cycles: 4 }",
+          "verified_at": "2026-05-24T03:22:13Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-002",
+      "claim": "6 of 9 proposal files still fail jq parse.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "for f in validation/failure-modes/proposals/*.json; do jq empty \"$f\" 2>/dev/null || echo INVALID; done | grep -c INVALID",
+          "excerpt": "6",
+          "verified_at": "2026-05-24T03:22:13Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-003",
+      "claim": "Live traces still lack signature/attestation. Carried.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [{"kind": "command", "command": "(trace schema unchanged)", "excerpt": "carried", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "open"
+    },
+    {
+      "id": "F-004",
+      "claim": "Six failure-mode scenarios.",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [{"kind": "command", "command": "ls validation/failure-modes/scenarios/ | wc -l", "excerpt": "6", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "open"
+    },
+    {
+      "id": "F-005",
+      "claim": "No new cycle report; cycle-8 still authoritative; live traces carry vessel_id.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [{"kind": "command", "command": "ls validation/failure-modes/cycles/*.json | wc -l", "excerpt": "8 (unchanged)", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "open"
+    },
+    {
+      "id": "F-006",
+      "claim": "Three files retain metabob.com defaults.",
+      "category": "deployment",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [{"kind": "command", "command": "grep -lE 'metabob.com|svc.cluster.local' repos/identity-vessel/src/services/trace.ts repos/identity-vessel/src/services/jwt.ts repos/discovery-vessel/src/middleware/auth.ts", "excerpt": "All three match", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "open"
+    },
+    {
+      "id": "F-007",
+      "claim": "Trailblazing unimplemented.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [{"kind": "file_ref", "location": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md:904", "excerpt": "unchanged", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "open"
+    },
+    {
+      "id": "F-008",
+      "claim": "Mythic language; unverifiable.",
+      "category": "idiom",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-009",
+      "claim": "Zero DEV tasks complete across five audited.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [{"kind": "command", "command": "(per-change grep -c)", "excerpt": "0 0 0 0 0", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "open"
+    },
+    {
+      "id": "F-010",
+      "claim": "13 root entries; clean.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [{"kind": "command", "command": "ls -1 | wc -l", "excerpt": "13", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "resolved"
+    },
+    {
+      "id": "F-011",
+      "claim": "Lift-criterion-hardening at zero DEV.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [{"kind": "command", "command": "grep -c '^- \\[x\\]' openspec/changes/2026-05-23-lift-criterion-hardening/tasks.md", "excerpt": "0", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "open"
+    },
+    {
+      "id": "F-012",
+      "claim": "Cycle-8 substrate-anonymous.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [{"kind": "command", "command": "(no new cycles)", "excerpt": "carried", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "open"
+    },
+    {
+      "id": "F-013",
+      "claim": "6 invalid JSON + 3 valid subagent-authored proposals.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [{"kind": "command", "command": "(inline counter)", "excerpt": "6 invalid + 3 subagent", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "open"
+    },
+    {
+      "id": "F-014",
+      "claim": "Embedding still disabled.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [{"kind": "command", "command": "curl /health | jq .checks.embedding.status", "excerpt": "\"disabled\"", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "open"
+    },
+    {
+      "id": "F-015",
+      "claim": "Trace list total: -1 sentinel.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [{"kind": "command", "command": "(unchanged)", "excerpt": "carried", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "open"
+    },
+    {
+      "id": "F-016",
+      "claim": "Narrator running ~3h52m; one process; 48 snapshots.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {"kind": "command", "command": "ps -eo pid,etime,cmd | grep substrate-narrator | grep -v grep", "excerpt": "PID 3604730 etime 03:51:55 — single process", "verified_at": "2026-05-24T03:22:13Z"},
+        {"kind": "command", "command": "ls validation/observations/snapshots/ | wc -l", "excerpt": "48", "verified_at": "2026-05-24T03:22:13Z"}
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-017",
+      "claim": "Ribosome firing — re-confirmed; live trace at 03:22:30 shows ribosome-extract execution.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [{"kind": "command", "command": "curl ... /v2/activities/execution-traces?limit=3", "excerpt": "Trace with template_id=ribosome-extract, reason='lifecycle hook: lifecycle:activity:postExecution'", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "open"
+    },
+    {
+      "id": "F-018",
+      "claim": "Snapshot-vs-runtime consistency.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [{"kind": "command", "command": "(carried)", "excerpt": "carried", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "resolved"
+    },
+    {
+      "id": "F-019",
+      "claim": "Discovery-vessel 401 in latest snapshot.",
+      "category": "deployment",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [{"kind": "command", "command": "jq '.discovery_vessel.error' validation/observations/snapshots/snapshot-2026-05-24T03-21-20-928Z.json", "excerpt": "\"HTTP 401\"", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "open"
+    },
+    {
+      "id": "F-020",
+      "claim": "Narrator WS event capture still inactive after ~4 hours. Validator independently filed gap-002 with the same evidence, classified as irreducibly_operator (minor).",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-49-08-investigation-004",
+      "evidence": [
+        {"kind": "command", "command": "ls validation/observations/events*", "excerpt": "No such file or directory", "verified_at": "2026-05-24T03:22:13Z"},
+        {"kind": "file_ref", "location": "validation/gaps/gap-002-ws-auth-rejects-substrate-internal-key.md", "excerpt": "Validator independently observed the same WS auth divergence", "verified_at": "2026-05-24T03:22:13Z"}
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-021",
+      "claim": "Concept-db endpoint still not running. Port 18120 returns Connection refused. The 'gap-001 addressed' claim in commit 34f84d0f refers only to spec acknowledgment in substrate-explicit-vessels, NOT to deployment. Validator independently filed gap-001.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-49-08-investigation-004",
+      "evidence": [
+        {"kind": "command", "command": "curl -v -m 2 http://localhost:18120/health", "excerpt": "Failed to connect to localhost port 18120: Connection refused", "verified_at": "2026-05-24T03:22:13Z"},
+        {"kind": "file_ref", "location": "validation/gaps/gap-001-no-concept-db-in-local-substrate.md", "excerpt": "Substrate runs activity-api, discovery-vessel, identity-vessel, minibob, dev-vessel, surrealdb. concept-db NOT among the running systemd units.", "verified_at": "2026-05-24T03:22:13Z"},
+        {"kind": "file_ref", "location": "validation/state/agent-coordination.json", "excerpt": "dev.current_focus: 'gap-001 addressed in substrate-explicit-vessels' — but spec acknowledgment ≠ runtime deployment", "verified_at": "2026-05-24T03:22:13Z"}
+      ],
+      "status": "regressed",
+      "operator_remediation": "Severity raised to high. The substrate has been claimed addressed in coordination state but the runtime gap is unchanged. Either deploy concept-db as a substrate unit (the validator's bridge_path) or correct the coordination claim. Spec-only 'addressing' of a runtime gap is exactly the doc-vs-runtime divergence pattern the auditor exists to catch."
+    },
+    {
+      "id": "F-022",
+      "claim": "Auditor clock-view discrepancy from iter-001 (today). Not re-observed this iteration; date -u was consistent in this run.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T02-28-30-investigation-001",
+      "evidence": [{"kind": "command", "command": "date -u (only one invocation this iter, returned 03:22:13Z; cross-verified against narrator snapshot at 03:21:20Z and minibob-boredom log at 03:22:30)", "excerpt": "Times consistent within seconds", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "resolved",
+      "operator_remediation": "Not reproduced; carrying forward as resolved unless re-observed."
+    },
+    {
+      "id": "F-023",
+      "claim": "Cycle-9 still has not landed after ~4 hours. See F-026 for related concern about cycle-8 being stale.",
+      "category": "lift",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T02-28-30-investigation-001",
+      "evidence": [{"kind": "command", "command": "ls validation/failure-modes/cycles/*.json | wc -l", "excerpt": "8 (still cycle-0..3, 5..8)", "verified_at": "2026-05-24T03:22:13Z"}],
+      "status": "open"
+    },
+    {
+      "id": "F-024",
+      "claim": "minibob-boredom timer is firing every 10 minutes (3 observed firings: 03:00, 03:10, 03:20) but ALL THREE return `{success: false, message: 'Goal not achieved'}`. The autonomous goal-firing mechanism is operational but the substrate cannot execute the topology-discovery chain it is asked to run.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [
+        {"kind": "command", "command": "docker exec substrate-live journalctl -u minibob-boredom.service --since='30 min ago' | tail -20", "excerpt": "3 firings, 3 'Goal not achieved' responses", "verified_at": "2026-05-24T03:22:13Z"},
+        {"kind": "command", "command": "curl ... /v2/activities/execution-traces?limit=10 | jq '.executions[] | select(.success == false)'", "excerpt": "Failed traces present in recent window", "verified_at": "2026-05-24T03:22:13Z"}
+      ],
+      "status": "open",
+      "operator_remediation": "Investigate WHY the topology-discovery chain (coverage-tick, substrate-health-tick, probe-reachable-unlearned) cannot complete. Likely candidates: missing prerequisite templates, schema mismatches, dependency on concept-db (F-021). The boredom timer driving the substrate to autonomously fail repeatedly is materially different from the substrate being quiescent — it is actively producing failure traces while LIFT CANDIDATE remains stamped."
+    },
+    {
+      "id": "F-025",
+      "claim": "Doc-vs-runtime divergence pattern: commit 34f84d0f's message states 'gap-001 addressed' but at runtime gap-001 (concept-db missing) is unchanged. Spec-only acknowledgment was rebranded as remediation. This is the cleanest example yet of the kind of drift the auditor exists to catch.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [
+        {"kind": "command", "command": "git show --stat 34f84d0f | head", "excerpt": "Only files changed: validation/state/agent-coordination.json. No new deployment manifests, no concept-db service file.", "verified_at": "2026-05-24T03:22:13Z"},
+        {"kind": "file_ref", "location": "validation/state/agent-coordination.json (dev.current_focus)", "excerpt": "'gap-001 addressed in substrate-explicit-vessels' — refers to spec, not deployment", "verified_at": "2026-05-24T03:22:13Z"},
+        {"kind": "command", "command": "curl http://localhost:18120/health", "excerpt": "Connection refused", "verified_at": "2026-05-24T03:22:13Z"}
+      ],
+      "status": "open",
+      "operator_remediation": "Commit messages and coordination state should distinguish between 'spec acknowledges the gap exists' and 'gap remediated at runtime'. Two states, different consequences."
+    },
+    {
+      "id": "F-026",
+      "claim": "Cycle-8's LIFT CANDIDATE stamp is on stale coverage data. Per validation/state/agent-coordination.json, current coverage_tick_cells = [0,0,0,0] ('prior trace aged out; timer fires at 23:59Z to start building coverage'). The substrate's current state does not support the criterion cycle-8 claims it satisfied.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [
+        {"kind": "file_ref", "location": "validation/state/agent-coordination.json (dev.substrate_state.coverage_tick_cells)", "excerpt": "[0,0,0,0] — prior trace aged out", "verified_at": "2026-05-24T03:22:13Z"},
+        {"kind": "command", "command": "jq '.lift_kpi' validation/failure-modes/cycles/cycle-8.json", "excerpt": "Still claims consecutive_zero_debt_cycles=4 etc.", "verified_at": "2026-05-24T03:22:13Z"}
+      ],
+      "status": "open",
+      "operator_remediation": "Either invalidate cycle-8's LIFT CANDIDATE stamp (since the underlying coverage has been reset) or re-run the harness to produce cycle-9 reflecting current coverage. A criterion satisfied at time T and then frozen-in-time is not a meaningful criterion."
+    },
+    {
+      "id": "F-027",
+      "claim": "Dev operator has made measurable progress: 3 new commits since iter-005 (a5e9d31a boredom timer; 34f84d0f coordination update; 10a4f35a substrate-explicit-vessels Q1). Boredom timer is installed and active in the container. Five highest-leverage 2026-05-23 changes still have zero DEV-task completions, but adjacent work is shipping.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T03-22-13-investigation-002",
+      "evidence": [
+        {"kind": "command", "command": "git log --oneline -5", "excerpt": "34f84d0f, a5e9d31a, 10a4f35a all dated 2026-05-23 evening", "verified_at": "2026-05-24T03:22:13Z"},
+        {"kind": "command", "command": "docker exec substrate-live systemctl list-units | grep boredom", "excerpt": "minibob-boredom.timer loaded active waiting", "verified_at": "2026-05-24T03:22:13Z"}
+      ],
+      "status": "open",
+      "operator_remediation": "Note: the operator is working on changes outside my five-change audit set. Consider expanding the audit set or accept that the audit is narrow. Either way, the operator is operational."
+    }
+  ],
+  "regressions_since_prior": ["F-021"],
+  "resolutions_since_prior": ["F-022"],
+  "new_findings": ["F-024", "F-025", "F-026", "F-027"],
+  "open_questions": [
+    "What specifically causes 'Goal not achieved' in the boredom-triggered topology-discovery chain? F-024 is high-severity and needs root-cause analysis.",
+    "Should cycle-8's LIFT CANDIDATE be retroactively invalidated given the coverage reset? F-026 makes the stamp stale.",
+    "Will the next cycle report (when it lands) reflect the current [0,0,0,0] coverage, and if so, will the lift criterion fail to fire?",
+    "Is concept-db deployment on any operator roadmap, or has the gap been documented-away rather than fixed?"
+  ],
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "reason": "Substrate is now ACTIVE (boredom timer driving every 10 min, failing every time). F-024 is high-severity and substrate state may evolve rapidly. 30-min cadence catches the next 2-3 boredom firings and any operator response."
+  }
+}

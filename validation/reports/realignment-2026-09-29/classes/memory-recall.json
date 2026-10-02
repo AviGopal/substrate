@@ -1,0 +1,1103 @@
+{
+ "attempts": [
+  {
+   "key": "memory-recall",
+   "title": "Concept search starvation fixes (9 operator commits)",
+   "where": "repos/concept-db 7df39d2 08-10, c9f083e/dee1f90 08-15, a4e353d 08-16, 62cbf1e 08-29, 78311ad/cb400d6/c404069/fd645bd 09-02",
+   "tried": "Fixed @@-is-AND, bounded dense leg, delayed dense until lexical fails, ladder subject, scalar-beside-KNN, cached query vectors, starvation telemetry, record-id hydrate, two-stage FTS",
+   "outcome": "partial",
+   "date": "2026-08-10..2026-09-02",
+   "evidence": "/health since 09-28 18:57: 25,636 searches, dense_true_empty 24,207 (94%); 15,333 dense-empty + 4,159 term relaxations in 6h hub log",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Compose-lesson mirror to concept-db",
+   "where": "feature-compose.ts:3280-3315",
+   "tried": "Mirror each failure class as a concept_create_write with a static guidance string; log both HTTP outcomes",
+   "outcome": "partial",
+   "date": "2026-07-04..2026-09-26",
+   "evidence": "45 rows; dedup returns existing, so nothing learned per incident; 6 boilerplate 'avoid repeating' rows; node 2: 26 mirror failures in 6h (Unable to connect)",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Query lessons by most recent failure class",
+   "where": "feature-compose.ts:3375-3400",
+   "tried": "Send only failureClasses[0] as query instead of none (the fixed-8 defect)",
+   "outcome": "partial",
+   "evidence": "Node 2 6h: 14 of 29 recalls still class=none; generic July lessons L=1984/1682/1518 while measured 09-xx lessons L=0",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "memory-recall",
+   "title": "ingest-docs reap of stale doc sections",
+   "where": "gap docs-reap-refused",
+   "tried": "Reap removed doc sections from the architecturePrinciple concept store",
+   "outcome": "failed",
+   "evidence": "refused to reap 606 stale sections (limit 472 of 1890) incl. CLAUDE.md#current-implementation-status-known-issues, deprecated three-state names; stale sections keep being retrieved into drafter prompts",
+   "date": "2026-09-29",
+   "source": "docs-1"
+  },
+  {
+   "key": "memory-recall",
+   "title": "09-22 merge of the two memoryNote stores at file level",
+   "where": "/workspace/git/super-repo/memory/notes.json (+ .bak files); docs/MEMORY_AS_SUBSTRATE.md",
+   "tried": "Merged the 680-note /workspace/memory store and the super-repo store into one file (pre-merge backup 1,077 notes; 1,788 notes by 09-23T05:08Z)",
+   "outcome": "reverted",
+   "date": "2026-09-22",
+   "evidence": "Current notes.json has 59 notes, earliest created 2026-09-26T05:12Z; /workspace/memory/notes.json (680 notes, May-Jul) orphaned; commit 44ab5fd4 independently observed memory holds nothing before 09-26",
+   "source": "docs-3"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Restore gap store after 97% loss at restart",
+   "where": "node1 super-repo gaps (ADDENDUM-2026-09-10 \u00a7F)",
+   "date": "2026-09-09",
+   "tried": "Recover from orphaned .tmp files and a pre-merge backup, going from 44 to 4187 rows",
+   "outcome": "superseded",
+   "evidence": "The whole store was lost again when the super-repo clone was rebuilt on 09-18. Only 256 of 3548 ids from 09-07 survive, and 0 of the real operator gaps.",
+   "source": "gap-history"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Narration gap records (validation/gaps)",
+   "where": "validation/gaps/*.md, validator iterations e9257033..fcf4c4e5",
+   "date": "2026-05-23",
+   "tried": "Hand-written gap records with recurrence counts and an INDEX",
+   "outcome": "superseded",
+   "evidence": "No commits after 05-24. The runtime store replaced them. gap-007 (hollow completion) is the origin of a class that is still open.",
+   "source": "gap-history"
+  },
+  {
+   "key": "memory-recall",
+   "title": "memoryNote write and recall defects",
+   "where": "9790c2f (07-26), 7761f47, 5dc8ab8 (08-06), abead92, 0b5b279 (08-09)",
+   "tried": "Tolerant intake, refuse blanking writes, use-time WORKSPACE_ROOT, fix the principle-search filter and AND semantics.",
+   "outcome": "partial",
+   "date": "2026-08-09",
+   "evidence": "An empty write could blank a good note. The principle search matched nothing for a 400-char spec. Memory 09-22 split store again.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Concept recall ladder over an unreliable relay",
+   "where": "53d9080, 5ab2a21, 1adbad4, 637c1f4, 373761a, 4afc7ac, 3faae36, 674a400, 09892ed, 668e16a, 2dcfc12, 060d2d0, c72ee75",
+   "date": "2026-08-07..08-17",
+   "tried": "Parallel, then serial, caching, retries, union of queries.",
+   "outcome": "partial",
+   "evidence": "The relay fails about 40% of the time. The success rate was unmeasurable until 060d2d0.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Failure memory keyed by goal_hash",
+   "where": "9e23455, cf8fd87, 4710f6c",
+   "date": "2026-09-22",
+   "tried": "Persist hollow verdicts and feed them into attempt 1.",
+   "outcome": "worked",
+   "evidence": "1,460 FAILURE-RECALL lines in 7 days.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "memory-recall",
+   "title": "concept-db BM25 on SurrealDB 3",
+   "where": "concept-db db765b0, 4325538, f4901a6, dec74f6, 2c6488a",
+   "tried": "@@ operator, split queries, literal term, TF fallback",
+   "outcome": "partial",
+   "date": "2026-04-28",
+   "evidence": "Lexical search broke again 08-10, 08-16 and 09-02",
+   "source": "git-mid"
+  },
+  {
+   "key": "memory-recall",
+   "title": "@@ is AND over every term, so real queries match nothing",
+   "where": "concept-db 7df39d2",
+   "tried": "Term ladder",
+   "outcome": "partial",
+   "date": "2026-08-10",
+   "evidence": "a4e353d: the ladder dropped the subject term",
+   "source": "git-mid"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Two-stage FTS perf fix broke lexical search for 24 days",
+   "where": "concept-db fd645bd(09-02) -> 278edae(09-26 autonomous)",
+   "tried": "Match on the index alone, then filter; the placeholder appears twice and .replace substitutes once",
+   "outcome": "partial",
+   "date": "2026-09-02",
+   "evidence": "278edae gap 'lexical-search-has-returned-nothing-since-09-02'; fixed with split/join",
+   "source": "git-mid"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Lexical search placeholder repair",
+   "where": "concept-db 278edae",
+   "tried": "split(PLACEHOLDER).join(esc)",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "Substrate-authored; no durable recall positive-control detector exists",
+   "source": "git-mid"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Half of concept writes lost to retryable conflict",
+   "where": "concept-db 945a667",
+   "tried": "Retry SurrealDB retryable transaction conflict",
+   "outcome": "worked",
+   "date": "2026-08-30",
+   "evidence": "6 identical writes alternated 200/400; the compose-lesson corpus was halved",
+   "source": "git-mid"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Memory cutover to substrate memoryNote",
+   "where": "f259d9bd",
+   "date": "2026-06-15",
+   "tried": "migrated 169 notes; SessionStart/PostToolUse/SessionEnd hooks",
+   "outcome": "unknown",
+   "evidence": "later shards (MEMORY 09-22) report two stores and 680 unread notes",
+   "source": "git-super-1"
+  },
+  {
+   "key": "memory-recall",
+   "title": "docs-as-concepts ingestion",
+   "where": "3ecc34b6, 0e9e8d06",
+   "date": "2026-06-28",
+   "tried": "impulse path, then POST /concepts",
+   "outcome": "partial",
+   "evidence": "104 concepts landed in org 'default' and needed a manual surreal UPDATE",
+   "source": "git-super-1"
+  },
+  {
+   "key": "memory-recall",
+   "title": "concept recall / session memory",
+   "where": "118d341f, df11194a, 0d71a55c, 1b68bb9e, 5300020a, 62559ca6, 44ab5fd4",
+   "tried": "Session-hook injection, recall retries, union queries, conventions fetched by type",
+   "outcome": "partial",
+   "date": "2026-07-19..2026-09-28",
+   "evidence": "Recall failed ~80% on 08-15. Lexical recall was broken 09-02..09-25. On 09-28 system memory held nothing before 09-26",
+   "source": "git-super-2"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Memory store had no retire primitive",
+   "where": "development-vessel memory-note; b5ed109 then 19ae84e",
+   "tried": "b5ed109 failed behavioural verification; 19ae84e",
+   "outcome": "worked",
+   "date": "2026-09-22",
+   "evidence": "measured_by_operator, falsifier 6/6",
+   "source": "live-gaps"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Trend checker never retired probe notes",
+   "where": "d4171b1",
+   "tried": "substrate-authored retire calls",
+   "outcome": "worked",
+   "date": "2026-09-23",
+   "evidence": "first landing was a silent no-op; later measured by operator",
+   "source": "live-gaps"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Merge the two memory stores at file level (1077 + 680 into 1788)",
+   "where": "node1 /workspace/git/super-repo/memory/notes.json.pre-merge.1790118911018.bak",
+   "date": "2026-09-22",
+   "tried": "Merged the unread 680-note /workspace/memory store, created by the WORKSPACE_ROOT unit/env fork of 07-25, into the super-repo store",
+   "outcome": "reverted",
+   "evidence": "The store was wiped to 0 on 09-26 between 05:11:20 and 05:12:02 UTC; only 4 of the 59 live ids appear in the 09-23 bak",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Memory retire primitive",
+   "where": "development-vessel 19ae84e / b5ed109",
+   "date": "2026-09-22",
+   "tried": "Added retire:true by id to memoryNote_write",
+   "outcome": "worked",
+   "evidence": "552 battery notes retired 09-23 (1788 to 1236); the primitive is still in memory-note.ts:166-190. Its result was wiped 09-26.",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "memory-recall",
+   "title": "The checker retires its own probe notes",
+   "where": "d4171b1",
+   "date": "2026-09-22",
+   "tried": "Trend checker POSTs a retire for each probe note",
+   "outcome": "failed",
+   "evidence": "Sent a bare {type,note} body; the endpoint returned 400 'pointer.type is required' and the call was a silent no-op (hollow write)",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Need-level dispatch: recover the system's own memory",
+   "where": "dispatch 879c4bc6",
+   "date": "2026-09-29",
+   "tried": "Natural-language need with done-when recall checks",
+   "outcome": "failed",
+   "evidence": "Target inference returned no shapes (confidence 0); the walk ran pool leftovers and ended hollow with an unfilled {{cwd}}. The store still had 58 notes, oldest 09-26.",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Failure memory keyed by goal_hash (FAILURE-RECALL)",
+   "where": "goal-host /run-goal (memory 09-22)",
+   "tried": "Feed prior hollow and near-miss verdicts into attempt 1",
+   "outcome": "partial",
+   "date": "2026-09-22",
+   "evidence": "4803 'walk' rows in the 30-day trace content carry FAILURE-RECALL text, so it is live. But task-level trace content stores no error text (0 of 5742 failed tasks since 09-27), and execution.failure_mode.reason survives only about 5 days (150k cap)",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Operator feedback log tracked in git and destroyed by reset --hard",
+   "where": "super-repo .gitignore:252-253, a009e1d9",
+   "tried": "gitignore + git rm --cached, with backup/restore",
+   "outcome": "worked",
+   "date": "2026-09-15",
+   "evidence": "9 panels destroyed before the fix; the fix itself wiped 127 lines on first sync and needed a restore",
+   "source": "memory-1"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Gap store lost a whole session's writes to a stale-snapshot wholesale write",
+   "where": "/workspace/git/super-repo/gaps/gaps.json",
+   "tried": "Re-filed from saved payloads in $CLAUDE_JOB_DIR/tmp",
+   "outcome": "partial",
+   "date": "2026-09-15",
+   "evidence": "16/16 gaps restored, but land stamps 12+->1 and exemptions 5->0. The gap describing the race was destroyed by the race",
+   "source": "memory-1"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Memory store merge + retire primitive",
+   "where": "notes.json merge; development-vessel 19ae84e",
+   "date": "2026-09-22",
+   "tried": "Merge forked stores; retire battery residue",
+   "outcome": "worked",
+   "evidence": "680 unread notes merged; 552 battery notes retired; hook fetches by note_type; root (EnvironmentFile override, unbounded writer) persists",
+   "source": "memory-10"
+  },
+  {
+   "key": "memory-recall",
+   "title": "consultPrinciples teaching wire",
+   "where": "feature-compose abead92, 0b5b279",
+   "date": "2026-08-09",
+   "tried": "Filter by source_type, shorter query",
+   "outcome": "partial",
+   "evidence": "Recall 0/4 -> 1/4; CONCEPT_DB_ENDPOINT unset on spokes unfixed; lessons still never credited (09-09)",
+   "source": "memory-10"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Compose lesson wire / consultPrinciples",
+   "where": "feature-compose.ts:1300-1318; concept-db compose_lesson",
+   "tried": "Queued as tier-1 operator edit (bootstrap deadlock)",
+   "outcome": "unknown",
+   "date": "2026-08-04",
+   "evidence": "Severed: CONCEPT_DB_ENDPOINT unset \u2192 loopback \u2192 catch return ''; corpus empty; shape-name mismatch",
+   "source": "memory-2"
+  },
+  {
+   "key": "memory-recall",
+   "title": "concept_select_for_prompt ?q= \u2192 ?query=",
+   "where": "development-vessel 8d35151b (substrate-authored)",
+   "tried": "Fix the search param",
+   "outcome": "worked",
+   "date": "2026-07-19",
+   "evidence": "First substrate commit of that session; shape-flow active_shapes never landed",
+   "source": "memory-2"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Concept-db dense leg dead 5 days (org filter defeats HNSW)",
+   "where": "concept-db adfe470",
+   "tried": "Two-stage KNN then filter in SQL.",
+   "outcome": "worked",
+   "date": "2026-08-30",
+   "evidence": "48s -> 840ms; consultPrinciples 74ms, composeLessonsBlock 257ms, so the drafter read channel is open.",
+   "source": "memory-3"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Compose lessons: JSONL writer stored install preamble; lessons in wrong auth scope",
+   "where": "dev-vessel 107a75c7; concept-db header scopes",
+   "tried": "Distil at the call site; re-mint in the Authorization: ApiKey scope.",
+   "outcome": "worked",
+   "date": "2026-09-11",
+   "evidence": "58% of rows lacked the error before the fix. 3 lessons were inert in the X-Api-Key scope. Class-grain lessons are still canned text (08-26).",
+   "source": "memory-3"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Relay concept recall retry",
+   "where": "dev-vessel 2dcfc12",
+   "tried": "3 attempts on null (bimodal failure)",
+   "outcome": "worked",
+   "date": "2026-08-16",
+   "evidence": "Miss probability ~40%\u2192~6%",
+   "source": "memory-4"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Causal intent goalSignature persistence",
+   "where": "a8005ba, 5c5a6b1, 530265c (substrate), migration 182 874104b",
+   "tried": "Four-layer onion down to SCHEMAFULL DEFINE FIELD metadata",
+   "outcome": "worked",
+   "date": "2026-07-25",
+   "evidence": "The probe round-trip returns metadata.goalSignature",
+   "source": "memory-4"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Drafter architectural grounding severed",
+   "where": "feature-compose.ts consultPrinciples",
+   "tried": "Diagnosed three severances (ingest-docs masked, concept-db masked on spoke, loopback endpoint); gap drafter-architectural-grounding-severed filed.",
+   "outcome": "unknown",
+   "date": "2026-08-04",
+   "evidence": "The fix was to follow the consultProducers discovery pattern. Landing is not recorded in this shard.",
+   "source": "memory-5"
+  },
+  {
+   "key": "memory-recall",
+   "title": "compose_lessons taught via concept-db",
+   "where": "concept-db compose_lesson rows 07-31",
+   "tried": "5 lessons at prompt-build channel",
+   "outcome": "failed",
+   "date": "2026-07-31",
+   "evidence": "lesson recall fell back to jsonl; 08-05/08-08 concept recall severed 100% on spoke (concept-db masked); wrong spec overrides lesson",
+   "source": "memory-7"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Teaching channel via concept-db compose_lesson",
+   "where": "concept-db; 3d6db3ab",
+   "tried": "Wrote 7 teaching concepts and amended CLAUDE.md",
+   "outcome": "dormant",
+   "date": "2026-07-30",
+   "evidence": "By 08-29 concept-db was restarted 132x/day and searches took 10-25s against an 8s budget, so lessons reached no one",
+   "source": "memory-8"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Unit test rewrote the live memory store",
+   "where": "config.ts; 5dc8ab8",
+   "tried": "Read the path at use time",
+   "outcome": "worked",
+   "date": "2026-08-07",
+   "evidence": "Unblocked self-development on dev-vessel",
+   "source": "memory-8"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Lesson recall query + concept search AND semantics",
+   "where": "6137257, 7df39d2",
+   "date": "2026-08-10",
+   "tried": "send query; fix @@ AND",
+   "outcome": "worked",
+   "evidence": "the same 8 rows had been returned for 132 composes",
+   "source": "memory-9"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Memory as substrate (memoryNote authoritative, files as cache)",
+   "where": "dev-vessel memoryNote, migrate-memory-to-substrate.ts",
+   "tried": "bridge path pending_sync plus bulk migration of about 70 notes",
+   "outcome": "superseded",
+   "date": "2026-05-23",
+   "evidence": "feedback_memory_as_substrate; the 680-note store stops 07-23 and was unread from 07-25",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Distill 374 findings into concept-db and archive them",
+   "where": "concept-db, devbob _archive_2026_07_03",
+   "tried": "move system knowledge to the concept graph",
+   "outcome": "partial",
+   "date": "2026-07-03",
+   "evidence": "live 09-29: 1 concept each for causal_discipline and selection_decision_shape, 4 containing MITOSIS_DIRECT_PUSH, 1 containing 'surgical gate'; no reader verified",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Merge two memory stores plus a retire primitive",
+   "where": "super-repo/memory/notes.json; dev-vessel b5ed109, 19ae84e, d4171b1",
+   "tried": "file-level merge 1077+680 to 1788, then retire residue",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "live store 59 notes, oldest 2026-09-26 05:12; the 1788-note backup survives as pre-op-retire.bak (09-23 05:08); one note has created_at '{{now}}'",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Memory need dispatched to the system",
+   "where": "goal-host dispatch 879c4bc6",
+   "tried": "plain-language need with done-when recall checks",
+   "outcome": "failed",
+   "date": "2026-09-29",
+   "evidence": "9c967329: target inference found no shape for memory/recall; walk went hollow",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Self-persistence snapshot/restore (Phase 0)",
+   "where": "2026-06-16-substrate-self-persistence-and-direct-push tasks 0.1-0.6",
+   "tried": "Planned snapshot-state/restore-state resolvers + off-host bundle to AviGopal/substrate-state",
+   "outcome": "dormant",
+   "date": "2026-06-16",
+   "evidence": "0 hits for snapshot_state/snapshotState in dev-vessel; state repo created empty; gap store history pre-09-18 lost",
+   "source": "openspec-4"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Failure memory store and cross-dispatch feedback",
+   "where": "goal-host 9e23455 cf8fd87 64ce0ac",
+   "date": "2026-09-22",
+   "tried": "Persist hollow verdict reasons by goal_hash; recall into attempt 1 with reuse disabled",
+   "outcome": "partial",
+   "evidence": "A/B f0e0a5f0 remember/recall PASS, defect not repeated, still hollow on count trap",
+   "source": "reports-1"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Memory store merge and retire primitive self-repair",
+   "where": "development-vessel b5ed109 (hollow), 19ae84e, d4171b1, 3ed68a6, dac3c2c; operator merge",
+   "date": "2026-09-22/23",
+   "tried": "Merge orphan 680 notes; retire primitive via lane with failure write-back (BEHAVIORAL VERIFICATION FAILED + regressed_by)",
+   "outcome": "worked",
+   "evidence": "6/6 falsifier; residue flat two ticks; 552 stale notes retired 1788->1236; unit/env WORKSPACE_ROOT collision left filed",
+   "source": "reports-1"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Qualification envelope rhythm and self-minted expectation commitments",
+   "where": "timeShapedRhythm qualification; development-vessel 707dd248; goal-host 0fbfcaac",
+   "date": "2026-09-11/20",
+   "tried": "Cadence via pool rhythm; self-mint trend commitment on first verified reach",
+   "outcome": "worked",
+   "evidence": "N=2 autonomous cycles; expectation-trend:uppercase self-minted 03:44:33 and adopted by checker 03:55:48",
+   "source": "reports-1"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Concept recall timeout 4s->10s",
+   "where": "b10c3f2 goal-host index.ts:9332/9333 (autonomous)",
+   "date": "2026-08-15",
+   "tried": "Raise recallConceptRows override from 4_000 to 10_000",
+   "outcome": "partial",
+   "evidence": "Recall went 0/32 -> 1/3. Search took 7.7s and later 32s under load. A human-filed gap had sat 21h misrouted to vessel=concept-db",
+   "source": "reports-3"
+  },
+  {
+   "key": "memory-recall",
+   "title": "concept-db dense leg bounded then made lazy",
+   "where": "c9f083e, dee1f90 concept-db",
+   "date": "2026-08-15/16",
+   "tried": "Bound ONNX dense search; start dense only when lexical finds nothing",
+   "outcome": "partial",
+   "evidence": "Promise.race bounded the wait, not the work. With the lazy dense leg, resolve went 11.97s -> 6-8.9s and live recall appeared for the first time; it was later undone by masked orphan, federation loop and DB saturation",
+   "source": "reports-3"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Hub SurrealDB restart",
+   "where": "hub surrealdb (operator)",
+   "date": "2026-08-16",
+   "tried": "Restart the pathological DB process (27GB on disk, 607% CPU)",
+   "outcome": "worked",
+   "evidence": "CPU 607%->0, query 13,340ms->16ms, recall 40s->0.79-1.14s, trace spool 16,771->3. Also delivered arg-synthesis lessons chars=1687 via=opts",
+   "source": "reports-3"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Gap store history lost before ~09-18 (live cross-check)",
+   "where": "substrate-live /workspace/git/super-repo/gaps/gaps.json; .gitignore:238; commit 8f8e87e7",
+   "tried": "Counted rows and first_detected_at dates; searched for ~20 gap ids filed in 08-11..09-06 reports",
+   "outcome": "failed",
+   "date": "2026-09-29",
+   "evidence": "6,276 rows; first_detected 212@09-18, 803@09-19, 1722@09-20, 1415@09-21, only ~20 rows earlier. Totals recorded in shard: 635 open (08-11) -> 2,817 total (09-06) -> 1,402/1,650 (09-19/20) -> 4,948 (09-24) -> 6,276: store SHRANK between 09-06 and 09-19. 0 rows for walk-never-asks, stores-questions, verb-whitelist, concept-recall, provide-information, anchor-region-vetoes, fileless, remedy-that-never-happened, one-closed-vocabulary, interface-gap-hides, drain-503. Gaps untracked by 8f8e87e7. Recurrence across the reset is undetectable by the system.",
+   "source": "reports-4"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Responsibility cycle: expectations as impulses + observer + watchdog",
+   "where": "c6f4c9ca, 84ca65088, b7aa62d3 (dev-vessel), 810c660d (goal-host)",
+   "tried": "Observer re-checks live artifacts on 5-min rhythm, files/closes own gaps, dispatches restoration",
+   "outcome": "worked",
+   "date": "2026-09-19",
+   "evidence": "Cases A-D chains; writer-reset hole found live and fixed b7aa62d3; compensates for open fencing defect. Scope: titled transforms.",
+   "source": "reports-4"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Seeded concepts to steer the authoring planner",
+   "where": "concept-db concept_s4FEj0mG3duk, concept_ZJErt8PLLFJE",
+   "tried": "Operator-seeded external_api_contract and pattern concepts",
+   "outcome": "failed",
+   "date": "2026-09-18",
+   "evidence": "They rank #1/#2 on the walk's recall, but author_composed_capability never reads concept-db (R4b falsified).",
+   "source": "reports-5"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Need-level memory repair dispatch",
+   "where": "dispatch 879c4bc6",
+   "tried": "A plain-language need: 'the system cannot remember before 09-26'.",
+   "outcome": "failed",
+   "date": "2026-09-29",
+   "evidence": "Target inference confidence 0; the walk ran pool leftovers and ended HOLLOW.",
+   "source": "reports-6"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Two-stage FTS in concept-db",
+   "where": "concept-db fd645bd",
+   "tried": "Stage-1 FTS ids, then stage-2 hydrate plus re-match",
+   "outcome": "failed",
+   "date": "2026-09-02",
+   "evidence": "Lexical recall dead for every query from 09-02 (0 lexical matches in 624+ searches): the placeholder was replaced only once, and stage-2 @0@ over record ids returns []. (a) is fixed now; (b) is apparently still present.",
+   "source": "reports-7"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Gap-store collapse detector",
+   "where": "scripts/substrate/gap-store-census-tick.ts d055f18e + timer",
+   "tried": "Resolver-served count vs a 14-day high-water mark",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "Synthetic positive control fired and the gap was retracted in state. Timer fires 09-29 03:26.",
+   "source": "reports-8"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Autonomous maintenance cadence",
+   "where": "44a75483 2026-08-24T09:14 dev-vessel a7749bd, 60a602e",
+   "tried": "drain orphaned boredom queue; rhythm decay keeps family; direct resolver dispatch",
+   "outcome": "worked",
+   "date": "2026-08-24",
+   "evidence": "three false 'resolved' calls first; funnel_history 8->9; autonomous revert 6ba576a hit mid-deploy",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Credit compose lessons in concept-db",
+   "where": "feature-compose.ts / concept-db /usage/:id/fail",
+   "tried": "Four dispatches of lesson-crediting fix incl. probe-proven contract in gap",
+   "outcome": "failed",
+   "date": "2026-09-09",
+   "evidence": "landed inert (five silent HTTP defects), then anchor_not_found",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Plain-language need to restore memory/recall",
+   "where": "goal-host walk",
+   "date": "2026-09-29T03:11Z",
+   "tried": "need dispatched without file paths",
+   "outcome": "failed",
+   "evidence": "Target inference confidence 0 for memory/recall; ran unrelated June activities; memory 58 notes since 09-26 node 1, 3 on node 2",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Concept relevance fix 2bed214",
+   "where": "validation/findings/concept-relevancy-investigation-2026-06-04, substrate-autonomous-10-fixes-2026-06-04",
+   "tried": "fix backfill template to increment times_succeeded",
+   "outcome": "failed",
+   "date": "2026-06-04",
+   "evidence": "ts_sum 22->22 while concepts 1263->1285; observer mints new concepts instead of incrementing",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Session-start hook injects substrate memory + concept priors",
+   "where": ".claude/hooks/substrate-session-start.sh (f259d9bd 06-15, 118d341f 07-19, 62559ca6 09-22)",
+   "tried": "curl memoryNote from dev-vessel at localhost:18090, fetch feedback by type, concept_select_for_prompt via localhost:18100",
+   "outcome": "failed",
+   "date": "2026-09-29",
+   "evidence": "With default endpoints it emits 0 bytes and exits 0. With 127.0.0.1 overrides it emits 10,085 chars, but the store has only 59 notes (feedback:2, oldest 09-26) versus the 91 feedback notes cited in the hook comment.",
+   "source": "vessel-docs-tooling"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Memory-mirror hook: operator memory file -> memoryNote_write",
+   "where": ".claude/hooks/substrate-memory-mirror.sh + scripts/substrate/mirror-memory-note.ts",
+   "tried": "PostToolUse mirror of every memory .md write",
+   "outcome": "partial",
+   "date": "2026-09-29",
+   "evidence": "Log shows 876 created, 863 updated and 490 failed. The writes succeed, but the store lost them (59 notes remain, oldest 09-26). Nothing reads the store back to check.",
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "problems": [
+  {
+   "key": "memory-recall",
+   "symptom": "Concept search fallback returns nothing: dense_true_empty 94% of 25,636 searches; drafter gets generic lessons and no principles",
+   "root_cause": "Single undifferentiated concept table (87% impulse_signature), AND lexical, KNN top-32 then post-filter by org/source_type/shape (PLAUSIBLE)",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-29",
+   "recurrences": 9,
+   "source": "concept-db-db"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "76 concepts (11 compose_lessons) in org 'default' vs substrate; duplicated lessons across the tenant split",
+   "root_cause": "Writers with different credentials; dedup is org-scoped (PLAUSIBLE)",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "606 stale doc sections (incl. retired CLAUDE.md sections) retained and retrievable by drafter",
+   "root_cause": "ingest-docs reap safety limit (25%) exceeded after doc restructuring; no supervised reap",
+   "last_seen": "2026-09-29",
+   "source": "docs-1"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "interventionRefused corpus split across /workspace/refusals and /workspace/git/super-repo/refusals (5+1 records)",
+   "root_cause": "WORKSPACE_ROOT resolves differently per process, the same class as the two memory stores",
+   "source": "docs-2"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "memoryNote store reset: 1,788 notes on 09-23 -> 59 notes all created after 09-26; 680-note /workspace/memory store orphaned; store path differs from MEMORY_AS_SUBSTRATE.md",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-26",
+   "recurrences": 2,
+   "source": "docs-3"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "The gap store is reborn every 4-6 weeks and loses its history: 06-14 dedup, 07-22 restart, 08-08 path move, 09-09 97% loss, 09-18 clone rebuild (256/3548 ids survive; 0 of 264 operator gaps except test fixtures)",
+   "first_seen": "2026-06-14",
+   "last_seen": "2026-09-18",
+   "recurrences": 5,
+   "root_cause": "File-backed JSON store lives inside a git clone or an env-selected path. No durable DB-backed store and no migration on rebuild.",
+   "source": "gap-history"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Memory notes blanked/split, lesson recall returns zero rows",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-08-10",
+   "recurrences": 5,
+   "root_cause": "The prose lesson corpus vs the code spec query mismatch; the store path frozen at import.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Concept recall slow, failing (relay ~40%) or hitting the wrong vessel or port",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-08-17",
+   "recurrences": 12,
+   "root_cause": "Recall crosses nodes through the relay; locality not handled.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "concept-db lexical search returns nothing (SurrealDB 3, AND semantics, ladder drops subject, placeholder replaced once), undetected for 24 days while /health was green",
+   "first_seen": "2026-04-28",
+   "last_seen": "2026-09-26",
+   "recurrences": 5,
+   "root_cause": "No recall positive-control probe at the consuming layer; perf changes validated on latency, not results",
+   "source": "git-mid"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "concept/memory writes land in the wrong org or are never updated; memory migrated multiple times",
+   "first_seen": "2026-02-19",
+   "last_seen": "2026-06-28",
+   "recurrences": 5,
+   "root_cause": "two write paths (impulse vs REST) with different org resolution; observer creates instead of updating",
+   "source": "git-super-1"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Recall late/failing; lexical recall broken for 3 weeks; memory empty before 09-26",
+   "root_cause": "Timeout mismatches, masked stores, split memory stores",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "source": "git-super-2"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "The authoritative memory holds 59 notes, the oldest from 09-26 05:12. The 1184 knowledge notes from before the wipe survive only in an unread .bak. Recall ignores topic.",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "A flat JSON store with an env-derived path. Recall is newest-N. loadNotes swallows errors and returns [], and saveNotes then persists that. All writers share one .tmp path. The store is per node. The 09-26 wipe cause is UNVERIFIED; the window is 05:11:20\u201305:12:02 UTC.",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "failure reasons are gone after about 5 days while success content persists 30+ days",
+   "root_cause": "reasons live only on the execution row (150k cap, mostly telemetry); execution_trace_content keeps tasks without errors",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Lessons recur under new surfaces; gap store and interactor log lose writes",
+   "root_cause": "Memory indexed by instance, not invariant; runtime state tracked in git; wholesale concurrent writes",
+   "first_seen": "2026-09-15",
+   "last_seen": "2026-09-22",
+   "recurrences": 4,
+   "source": "memory-1"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Teaching channel returned empty/ungraded; memory split across two notes.json since Jul 25; battery notes displaced conventions (recency recall); concept-db cannot prune/optimize",
+   "root_cause": "Env-derived store paths fork (EnvironmentFile overrides Environment=); unbounded writers with recency-window readers; usage counters doing double duty",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-22",
+   "recurrences": 4,
+   "source": "memory-10"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Drafter has no lessons (wire severed, spoke unreachable, corpus empty); relevance does not drive ranking",
+   "first_seen": "2026-07-16",
+   "last_seen": "2026-08-04",
+   "recurrences": 5,
+   "root_cause": "CONCEPT_DB_ENDPOINT unset + catch return ''; shape name mismatch",
+   "source": "memory-2"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Concepts stored but not consultable. The dense leg was dead for 5 days. Lessons were written to an unread scope or held a preamble. Class-grain lessons are canned. The memory store was down on the hub, forcing cache-only notes.",
+   "first_seen": "2026-07-20",
+   "last_seen": "2026-09-15",
+   "recurrences": 6,
+   "root_cause": "The read channel was never verified as the consumer. The auth scope splits the corpus. Rich critique is never promoted to class grain.",
+   "source": "memory-3"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Drafter and walk recall starve: concept recall fails ~70%, overloaded `concept` shape, false memoryNotes never retracted",
+   "first_seen": "2026-08-06",
+   "last_seen": "2026-09-03",
+   "recurrences": 4,
+   "root_cause": "Index-defeating queries, the bimodal relay, memoryNote having no tombstone or verdict link",
+   "source": "memory-4"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "The lesson channel was reported unreachable or empty from the wrong instance. Lessons were cached in operator memory (no runtime reader). The hub dev-vessel split memory.",
+   "root_cause": "The consumer resolves via discovery while the operator queries a different instance. Teaching goes to operator files.",
+   "first_seen": "2026-07-18",
+   "last_seen": "2026-08-12",
+   "recurrences": 4,
+   "source": "memory-5"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Drafter lesson recall returned same 8 rows; recall severed at hub; operator cache self-contradicts",
+   "root_cause": "query never sent / AND matching / port unpublished; cache not reconciled",
+   "first_seen": "2026-07-16",
+   "last_seen": "2026-09-15",
+   "recurrences": 5,
+   "source": "memory-6"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Drafter lessons and oracle corpus reach no runtime reader",
+   "root_cause": "concept-db is masked on the spoke and the endpoint is pinned. The corpus consumer and corpus write are commented out",
+   "first_seen": "2026-07-31",
+   "last_seen": "2026-08-25",
+   "recurrences": 4,
+   "source": "memory-7"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Lessons reach no reader: concept-db restarted and timing out, dense leg dead, memoryNote has no runtime reader, relevance not counterfactual.",
+   "root_cause": "The teaching channel shares a degraded vessel. The prescribed counterfactual relevance was implemented as a hit counter. There is no retention lifecycle.",
+   "first_seen": "2026-07-27",
+   "last_seen": "2026-08-30",
+   "recurrences": 5,
+   "source": "memory-8"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "The system's memory is split, archived, or reset; recall returns nothing old or ignores the topic",
+   "first_seen": "2026-05-23",
+   "last_seen": "2026-09-29",
+   "recurrences": 5,
+   "root_cause": "store path depends on WORKSPACE_ROOT resolution; bulk migrations and cleanups operate on the store without a preservation check; no shape entry point for 'memory' in goal inference",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "goal-host concept recall skipped on every node-2 walk: 2686 'recall SKIPPED \u2014 discovery named no concept-db row' since boot",
+   "root_cause": "Node 2 discovery lists 8 local vessels; federation reports 'no relay anchor \u2014 hub mirror skipped' (144x); federation-relay unit not-found on node 2 and MainPID=0 on node 1",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 2686,
+   "source": "node2-runtime"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Concept vocabulary was minted only by operator hand. Docs, commits and memory were never ingested, and pointer coverage stayed at 0%.",
+   "root_cause": "The ingestion templates never got past the LLM step, and there was no management layer.",
+   "first_seen": "2026-05-30",
+   "last_seen": "2026-05-30",
+   "recurrences": 1,
+   "source": "openspec-2"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Every gap id cited in June/July openspec VERIFY/design docs (13 checked) is absent from every gaps.json in the container; live store begins 2026-09-18",
+   "root_cause": "Gap store reset/replaced without migrating history; no snapshot/restore (06-16 Phase 0 never built)",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "openspec-4"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "System memory split (680 notes unread since 07-25), flooded by residue, recency window hides conventions; failures not remembered; false notes persist after rejected dispatch; recall over relay times out",
+   "root_cause": "Env precedence split store location; no retire primitive; only successes persisted; no tombstone on memoryNote",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-22",
+   "recurrences": 5,
+   "source": "reports-1"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Law-8 concept recall dark on ~80% of walks, so target inference picks fabricating llm_completion instead of http_fetch",
+   "root_cause": "Moved through several layers in turn: 4s cap, then BM25 IDF not persisted, then per-query ONNX embedding contending with surreal, then a masked stale orphan, then a federation ingress shape-collision loop, then a saturated hub DB. Null return conflated slow/absent/refused",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-08-16",
+   "recurrences": 6,
+   "source": "reports-3"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Gap store history lost/split: pre-09-18 gaps absent; total shrank 2,817 (09-06) -> 1,650 (09-20); August findings unrecoverable",
+   "first_seen": "2026-09-06",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "root_cause": "Runtime state untracked (8f8e87e7) and store reset/rewritten without migration; class-key recurrence excludes closed rows (substrate-gap.ts:460); no archive of prior demand. The system cannot see that a gap is a recurrence.",
+   "source": "reports-4"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Lessons are placed in channels the consumer never reads (concept-db vs the author planner; verbatim lessons fail closed)",
+   "root_cause": "Lessons are written before the runtime reader is named",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-18",
+   "recurrences": 3,
+   "source": "reports-5"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "System memory holds 58 notes, oldest 09-26; operator cache 748; topic recall ignores the topic; a need about memory has no entry point.",
+   "first_seen": "2026-08-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Store loss on 09-26 (cause unestablished; older copies in .bak and /workspace/memory); the mirror hook failed silently 66 times; target inference does not map 'memory' to memoryNote.",
+   "source": "reports-6"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Concept-db lexical recall dead since fd645bd (09-02); 0 of 45 lessons come from regressions; passive usage lowers lesson relevance; embed LRU thrash",
+   "root_cause": "Two-stage FTS defect; lessons written only for pre-land classes",
+   "first_seen": "2026-09-02",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "source": "reports-7"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "The gap store lost 97% of rows at a restart (4,113->44). At least 4 stale gaps.json copies; the live one sits under the process WORKSPACE_ROOT. The reached-command loader keeps 108 of 1,012 banked commands. Memory 09-22: two memory stores left 680 notes unread.",
+   "root_cause": "File-backed JSON stores with atomic-rename failures and a WORKSPACE_ROOT split between the unit and the env file. Tail-window replay evicts by log traffic.",
+   "first_seen": "2026-09-09",
+   "last_seen": "2026-09-22",
+   "recurrences": 3,
+   "source": "reports-8"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "In-memory learning or throttle state lost on every cutover (upkeep Thompson, solicitedHumanGaps)",
+   "first_seen": "2026-08-30",
+   "last_seen": "2026-08-31",
+   "recurrences": 3,
+   "root_cause": "state kept in process memory; cutover-per-push restarts 132-313/day",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Drafter receives empty or undiscriminating lessons (dense leg timeout, token semantic_reject matches all)",
+   "first_seen": "2026-09-03",
+   "last_seen": "2026-09-11",
+   "recurrences": 3,
+   "root_cause": "Recall keyed on class token; concept-db dense leg timeouts under load",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Memory split/unread, recall ignores topic, lexical concept search dead",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-29T03:11Z",
+   "recurrences": 3,
+   "root_cause": "Node-local memory file; concept-db lexical broken since 09-02; knowledge in operator-only reports",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "concept recall never succeeds; relevance never increments",
+   "first_seen": "2026-05-23",
+   "last_seen": "2026-08-10",
+   "recurrences": 4,
+   "root_cause": "search::score(0) with bare @@, SELECT * of embeddings vs 4s budget; observer calls concept_create not usage_record",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "The authoritative memory store holds 59 notes (oldest 09-26) against 750 cache files. The 680-note store at /workspace/memory/notes.json is still unread.",
+   "root_cause": "The store lives at a gitignored path inside the super-repo clone, and the EnvironmentFile overrides WORKSPACE_ROOT. The 09-26 loss cause is not established.",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "claims": [
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-08-10",
+   "claim": "A real query matched nothing because @@ is AND; fixed with a relaxing ladder",
+   "where": "concept-db 7df39d2",
+   "later": "4,159 term relaxations in 6h on 09-29; still the dominant path",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-08-15",
+   "claim": "Bounded the dense leg / don't start it until lexical fails; ONNX embedding held searches hostage",
+   "where": "concept-db c9f083e, dee1f90",
+   "later": "Dense leg only runs on lexical-empty queries and returns empty 94% of the time (24,207/25,636)",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-08-29",
+   "claim": "A scalar filter beside <|K,EF|> defeats HNSW; moved filters to a hydrate stage",
+   "where": "concept-db 62cbf1e",
+   "later": "HNSW works (positive control), but post-filtering a top-32 plausibly empties small corpora",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-09-02",
+   "claim": "The drafter's principle consult was timing out; fixed via query-vector cache, record-id hydrate (17,000x), two-stage FTS, starvation telemetry",
+   "where": "concept-db 78311ad, c404069, fd645bd, cb400d6",
+   "later": "Latency fixed (event-loop p50 2ms), but telemetry shows 94% dense-empty; principles unfiltered; node 2 consult unreachable",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-09-2x",
+   "claim": "Mirror now logs both outcomes; the corpus stuck at ONE row for 19 days is fixed",
+   "where": "feature-compose.ts:3300-3315",
+   "later": "Hub logs 'mirrored' but dedup returns the existing static row; node 2 has 26 mirror failures in 6h; 6 boilerplate lessons",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-09-10",
+   "claim": "Gap store restored to 4,187 rows with 0 missing",
+   "where": "ADDENDUM-2026-09-10-operational-evidence.md \u00a7F",
+   "later": "Entire store lost at the 09-18 clone rebuild; 256/3548 ids survive; 116 open operator gaps gone",
+   "source": "gap-history"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-07-03",
+   "claim": "374 temporal notes distilled into concept-db; memory lives in the substrate",
+   "where": "devbob MEMORY.md",
+   "later": "09-29: only a handful of matching concepts; authoritative memoryNote store oldest 09-26",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-09-22",
+   "claim": "Retire primitive landed, falsifier 6/6; stores merged",
+   "where": "substrate MEMORY.md index; dev-vessel b5ed109/19ae84e",
+   "later": "09-29: live store 59 notes, oldest 09-26; 1,788-note backup pre-op-retire 09-23 05:08 is the last full copy",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-08-24T07:05",
+   "claim": "Autonomous cadence blocker resolved end-to-end",
+   "where": "44a75483",
+   "later": "07:31 refuted (drained goal hollow); two more false resolved calls before 60a602e held at 09:14",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-09-08T23:49",
+   "claim": "Teaching channel closed end to end into drafter prompts",
+   "where": "074acb94",
+   "later": "09-09 lesson-crediting fix landed inert x4; 09-11 recall keyed on token semantic_reject matches everything; MEMORY 09-22 recall displaced conventions",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-09-29T02:23Z",
+   "claim": "Discovery worked from a plain-language need",
+   "where": "ac8b0aad 2026-09-29T02:23Z",
+   "later": "Same message: rejected at verification; 03:11 memory need failed outright (target inference confidence 0)",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-06-04",
+   "claim": "2bed214 unblocks concept relevance",
+   "where": "validation/findings/concept-relevancy-investigation-2026-06-04",
+   "later": "ts_sum 22->22 in the 06-05 window",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-08-10",
+   "claim": "recall blocked by the mask, then by BM25 IDF not persisted",
+   "where": "validation/findings/capability-validation.md \u00a71.2/\u00a74",
+   "later": "blocker-clearance Part 4: both wrong; real cause search::score(0) without @0@@ plus SELECT *; never dispatched",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-06-15",
+   "claim": "Claude memory and the dev workflow are cut over to the substrate (f259d9bd)",
+   "where": ".claude/hooks",
+   "later": "Store has 59 notes from 09-26; session-start injects nothing via localhost",
+   "source": "vessel-docs-tooling"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-07-19",
+   "claim": "Concept priors are injected at session start (118d341f)",
+   "where": ".claude/hooks/substrate-session-start.sh",
+   "later": "Works only with a 127.0.0.1 override; 94% of concept searches are dense-empty",
+   "source": "vessel-docs-tooling"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-09-22",
+   "claim": "Conventions fetched by type; 91 feedback notes exist (62559ca6)",
+   "where": ".claude/hooks/substrate-session-start.sh",
+   "later": "2 feedback notes exist on 09-29",
+   "source": "vessel-docs-tooling"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-09-22",
+   "claim": "Two memory stores merged at file level",
+   "where": "operator memory index",
+   "later": "Live store begins 09-26 (59 notes); the 680-note store is still unread beside it",
+   "source": "vessel-docs-tooling"
+  }
+ ]
+}

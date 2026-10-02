@@ -1,0 +1,6 @@
+== hub /bootstrap BEFORE relay install:
+{"relay_multiaddrs":[],"identity_endpoint":"http://127.0.0.1:8101","discovery_endpoint":"","prefer_transport":"libp2p"}
+== vessel-ctl install federation-relay (runtime add on hub):
+{"ok":true,"action":"installed","vessel":"federation-relay","container":"47d5816f2b47","active":"activating","self_recovery":false,"deps":"dependencies installed"}
+== hub /bootstrap AFTER relay install:
+{"relay_multiaddrs":["/ip4/172.17.0.12/tcp/30333/p2p/12D3KooWRAQTqoA4Yg9WgRShnkXVwJXw6JijdJTg6fbFGmXz8PQK"],"identity_endpoint":"http://172.17.0.12:18101","discovery_endpoint":"http://172.17.0.12:18100","prefer_transport":"libp2p"}

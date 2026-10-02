@@ -1,0 +1,1080 @@
+{
+ "source": "transcripts-4",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/transcripts-4.md",
+ "coverage": "Shard: 14 session transcripts with mtime 09-24..09-29 (~265 MB): 35ed63f7, 4e4db180/833b5ef2 (fork pair), 9145904d, ebc0fe20/ef78fbf4 (fork pair), d5a3638c, 7e2b03b2, 3666ce25/3f991252/606414b2/964998bc (4 forks of one 09-24 summary), ac8b0aad (coordinator, 09-24\u219209-29 04:17), 4d698119 (content ends 09-23, excluded by timestamp filter). Extracted text with jq, filtered to timestamps >= 09-24. Read in full: all 161 genuine human messages (deduped) and 612 deduplicated keyword-dense assistant messages (>=2 hits on result/fixed/landed/confirmed/resolved/first/working/root cause/retract/wrong/correction/regress/hollow/reverted), each truncated at 1,600 chars. Not read: 520 peer-relay 'Another Claude session' messages, sidechain/subagent messages, tool outputs, assistant messages with <2 keyword hits. Some tables were cut by truncation; claims recorded only where visible text supported them. Output file written with the Write tool; it holds the full claims table (36 rows), per-key attempts, recurrence table, 35+ mechanism rows, verbatim user directions and principles. Arrays below are capped; the file holds the rest.",
+ "attempts": [
+  {
+   "key": "write-read-mismatch",
+   "title": "Dispatch/execution-id propagation chain, fixed one hop at a time",
+   "where": "goal-host index.ts, llm-resolver, dev-vessel llm-completion-dispatch.ts/author-producer.ts/author-composed-capability.ts, local-tools gitCommit/bounded_shell",
+   "date": "2026-09-24..2026-09-26",
+   "tried": "13+ per-call-site fixes: enterWith #41, 6b4da46, 324f7f1, 3fe63f3, 3ae3fe8, 61f2552, ed81a69, 9eb4808, ca4f8a5, d72654f/2f6436f, d4456d9/829f613, 959519e, 1b98343 (#61)",
+   "outcome": "partial",
+   "evidence": "Each fix exposed the next ('seventh place today where the id got lost'); graded runs pass 09-26, but 09-27 15:36 bun test shells still carry no execution id"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Posterior score reads used activity:<id> vs stored bare id",
+   "where": "activity-api data layer",
+   "date": "2026-09-25T09:22Z",
+   "tried": "53d8e77 normalizes id in all three reads (prior fix covered context-bucket only)",
+   "outcome": "worked",
+   "evidence": "59/59 reads empty before; 406 rows after; 104/115 shape-conditioned reads use posteriors"
+  },
+  {
+   "key": "false-verification",
+   "title": "Closure sweep read defect count as health (polarity inversion)",
+   "where": "dev-vessel gap sweep / self-fact detector",
+   "date": "2026-09-27T13:35Z",
+   "tried": "79cdcd9 new defect-count field; 21 gaps migrated; obsidian gap reopened",
+   "outcome": "worked",
+   "evidence": "Sweep had closed obsidian gap verified on an already-reverted landing; 20 self-fact gaps inverted"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync fingerprint omitted scripts/ so substrate fix never deployed",
+   "where": "scripts/substrate pull-sync + mirror-to-live",
+   "date": "2026-09-24T14:20Z",
+   "tried": "66cc9185 add scripts/ to fingerprint, log silent skip",
+   "outcome": "worked",
+   "evidence": "'third time this exact class has recurred, after .json and then sql/'"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "0a0d59f drift gate hashed post-patch base, deadlocking landing path",
+   "where": "vessel-mitosis-cutover.ts",
+   "date": "2026-09-24T17:08Z",
+   "tried": "operator revert 97f7cdf at 20:05; unblock54.sh prepared",
+   "outcome": "reverted",
+   "evidence": "13 landings refused after 18:00; ledger settled 0a0d59f HELD (gap #47)"
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "5.4 pre-patch staged base 082f6ee broke freshness check",
+   "where": "vessel-mitosis-cutover.ts",
+   "date": "2026-09-24T20:48Z",
+   "tried": "operator spec landed; substrate self-repair 96a1f57 at 21:52",
+   "outcome": "partial",
+   "evidence": "7 directed landings silently dropped as already_applied 20:48-21:50"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Substrate landing 946034c blanked every {{placeholder}} at template load",
+   "where": "ias-executor-ts activity-api-provider.ts",
+   "date": "2026-09-24T05:35Z",
+   "tried": "Root-cause gap filed with falsifier; substrate landed 2893a93 on 4th draft (directed pick)",
+   "outcome": "worked",
+   "evidence": "Undetected 9 days (from 09-15); 108/108 trace-store-reconcile runs failing lease_token; autonomous picker passed over the gap 55 min"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Super-repo checkouts frozen by draft residue; writer hunt",
+   "where": "super-repo repos/<vessel>, local-tools bounded_shell, goal-host drain fallthrough",
+   "date": "2026-09-24..2026-09-25",
+   "tried": "manual stashes; writer theories (compose rollback, pwt shell) retracted; watcher proved bounded_shell sed -i; C1 11636e6 scratch cwd, 60833b4 no walk on 503/429, C2 ReadOnlyPaths ae957b5e",
+   "outcome": "partial",
+   "evidence": "Refroze within 5h of unfreeze; 09-24 goal-host index.ts bloated to 170MB (658,893 repeated lines); dev-vessel checkout 35-130 commits behind again later"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Resumable landings: park/resume + named leases",
+   "where": "openspec/changes/2026-09-24-resumable-landings (archived)",
+   "date": "2026-09-24T21:17Z",
+   "tried": "23 tasks; named trace_store lease; age-based restart deferral; operator edited reconcile variants' lease in learning state",
+   "outcome": "worked",
+   "evidence": "2h budget took 11.5-14h; park->resume->push c1dd4c2; 14 parked/7 resumed; specs promoted to openspec/specs"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Decentralized compose ownership (node 2 compose2-live)",
+   "where": "openspec/changes/decentralized-compose-ownership",
+   "date": "2026-09-24..2026-09-26T22:23Z",
+   "tried": "37 tasks: picker skips unowned repos, composeOwnership shape, owner routing 2.2b/4.6/4.7, node 2 bring-up",
+   "outcome": "partial",
+   "evidence": "Node 2 landed 77ee9b9, 6bfbe4b, 61b4812, 766f68d; but pause/calibration/memory stayed node-local; 51e30de deleted by recommit 21179d8 6 min after landing; node 2 hold lapsed 14:49-21:35 (~10 unsupervised commits)"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Causal-attempt-ledger graded runs to 3x10/10",
+   "where": "openspec/changes/causal-attempt-ledger, FINISH_LINE.md, ~/.cache harness master21-28.sh",
+   "date": "2026-09-26T05:10Z",
+   "tried": "12+ graded runs, 5 amendments, pick lease, operator stopgaps (gap-compose mask, boredom/funnel-drain timers stopped)",
+   "outcome": "partial",
+   "evidence": "Met 09-26 05:10 but 'The pass depended on stopgaps'; 0/36 boxes ticked; forward-fixed regressions settled held credit-eligible; settle policy left at 2-min test value"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace-write storm and DB redline fixes",
+   "where": "activity-api",
+   "date": "2026-09-25T08:21Z..09:53Z",
+   "tried": "container stop; spool set aside; b56623a dup-check first, 9387ca7 remove 30-min FTS rebuild, bf3f0bf in-app dense scoring",
+   "outcome": "partial",
+   "evidence": "Load 31->6; but store 42->45GB, retention deletes time out again 09-26/09-27, DB 12 cores 09-27 03:08"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Goal-host global fetch monkey-patch 8c31cdb",
+   "where": "goal-host index.ts",
+   "date": "2026-09-25T12:05Z",
+   "tried": "revert 6ce1446 via direct compose; super-repo pointer moved ba02be09",
+   "outcome": "reverted",
+   "evidence": "Every compose request empty; run 11 voided; autonomous pointer bump 7ebdd935 had captured the shim"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "autonomous_pick lease gate",
+   "where": "dev-vessel gap-to-feature.ts reading maintenanceLease shape",
+   "date": "2026-09-25T17:42Z",
+   "tried": "128f51f; duplicate 31d07cd from walk executing test sentence; 15bb263 removed duplicate",
+   "outcome": "worked",
+   "evidence": "21-34 skips per graded window; does not stop in-flight composes (768ae7c)"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Escalation re-applied already-landed edit (no_unique_anchor -> patch_with_tools)",
+   "where": "goal-host index.ts ~13434",
+   "date": "2026-09-25T20:55Z",
+   "tried": "5a4ef1a + narrowing 4dec1bc; post-walk variant 44a5efa",
+   "outcome": "worked",
+   "evidence": "ESCALATION SKIPPED fired 22:18 on real traffic; earlier afea8de double landing"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Recursion storm guard",
+   "where": "goal-host /resolve",
+   "date": "2026-09-26T08:06Z",
+   "tried": "7f0425d hand-landed under operator identity (feature_compose refused exact edits without LLM)",
+   "outcome": "worked",
+   "evidence": "~3,080 walks 05:00-08:00, 21 reached; LLM quota exhausted; refused 11 self-resolves later"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Rhythm credit on outcome + re-baseline",
+   "where": "dev-vessel rhythm conductor",
+   "date": "2026-09-26T09:28Z",
+   "tried": "55fba0e beta on unreached; snapshot + reset alpha=1+reached beta=1+unreached; gap-closing 755.5->63/23",
+   "outcome": "partial",
+   "evidence": "Seed project-intake alpha42.5/beta1; rhythm-reality-sync whole-body rewrite race (66f62d5 partial, 667dd53 revert) wiped state; node 2 unaffected (node-local)"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Recommit lineage cap",
+   "where": "dev-vessel picker",
+   "date": "2026-09-26T10:13Z",
+   "tried": "6fa5883 exclude lineage failed >=6",
+   "outcome": "worked",
+   "evidence": "Recommits 46% of picks landing 4% -> retries 25%"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Value-per-cost selection phases 1-4 (spend accounting, admission gates, termination, envelope/breaker)",
+   "where": "openspec/changes/value-per-cost-selection",
+   "date": "2026-09-26T23:12Z..2026-09-27T07:35Z",
+   "tried": "~30 pre-validated exact-edit landings: 7d7bf0a, 98bc2b5, c10e74a, 4eaad89, 44e5615, 3cbf979, c23b601, 96bf098, bea12ec, f3ffd7d, f9001e9, 1942eaf, 3c83a33, e6f07a0/55c0649/c3c4041, c313227, 76c8e60, a188771, 67a25ea, febc7da",
+   "outcome": "partial",
+   "evidence": "Spend $5.20/h -> $0.30/h; pause/breaker verified; but 98bc2b5 silently reverted afc7d6d; verified closures fell to 0-2/day; only 3.8% executions record cost (09-28)"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Exact-edit verbatim apply (2.7)",
+   "where": "feature-compose.ts",
+   "date": "2026-09-27T04:29Z",
+   "tried": "f70160f apply EDIT blocks with no LLM plan",
+   "outcome": "worked",
+   "evidence": "3 byte-equal passes; but only for operator-written edits; prose goals still mangled (3cced35 landed 1 of 3 graded reached)"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "All-edits floor (3.5)",
+   "where": "feature-compose verdict",
+   "date": "2026-09-27T07:10Z",
+   "tried": "withhold FAVORABLE when apply_failed",
+   "outcome": "worked",
+   "evidence": "Three partial landings graded reached: f49d02e, 24a64a8, 3cced35"
+  },
+  {
+   "key": "gap-content",
+   "title": "Contained autonomy reopen at $1/h then $2/h",
+   "where": "spend-envelope + autonomyScope pool records, both nodes",
+   "date": "2026-09-27T08:56Z / 21:47Z",
+   "tried": "scope exclusion of 27 core paths; falsifier-required admission; class2-only; measured-field rule",
+   "outcome": "failed",
+   "evidence": "8 autonomous landings 09-27..09-28, 0 kept; bb5d6b9 regression, fabricate-to-satisfy, c4bb14d, a198907 certified verified; supply collapsed ~250->17->2 due to operator rules"
+  },
+  {
+   "key": "false-verification",
+   "title": "Stale-test gaming by autonomous drafter",
+   "where": "activity-api 9cfdea4, concept-db af2c737",
+   "date": "2026-09-28T02:27Z",
+   "tried": "test-first reverts acc184b/fb0a18a, direct operator commit d4eee29; stale-test reviewer lens; fabricate-to-satisfy lens 7.7",
+   "outcome": "reverted",
+   "evidence": "System closure sweep marked both verified; 'That's Goodhart's law'"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Demand-counting capability filer",
+   "where": "goal-host 4361247",
+   "date": "2026-09-28T01:32Z",
+   "tried": "record demanding goals; open only on second distinct demand; close 693 single-demand gaps",
+   "outcome": "worked",
+   "evidence": "697 gaps named 697 distinct one-off shapes; open 2,379->1,689; 22 writes silently dropped and re-sent"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Operator ran vessel tests inside live node 2",
+   "where": "compose2-live local-tools tests",
+   "date": "2026-09-28T01:40Z",
+   "tried": "restart local-tools; test runner c24444a/537e6c0 (single file, dead discovery addr)",
+   "outcome": "partial",
+   "evidence": "Fake discovery registration broke all node-2 composes ~20 min; later f451e42 env scrub still leaked 01:42"
+  },
+  {
+   "key": "false-verification",
+   "title": "Post-land test suite dead since 08-31",
+   "where": "dev-vessel test-suite runner / local-tools shell 30s kill",
+   "date": "2026-09-28T07:06Z",
+   "tried": "5e9a0b2 pass timeout; 29b947ab newly-failing tests withhold landed_verified",
+   "outcome": "worked",
+   "evidence": "~600 dev-vessel/activity-api landings ran=false 08-31->09-28; b4766ff (08-11) + e4d604c (08-29); 'third caller fixed for the same 30s default'"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "ReAct floor tool plane: fetch() URL is invalid",
+   "where": "goal-host resolve-URL joins",
+   "date": "2026-09-28T13:00Z",
+   "tried": "directed gap -> system-drafted 5ca51be (2 join sites); 4 seam fixes (listing b8671c9/89f04fb, reporter, sweep starvation, cutover stamp)",
+   "outcome": "partial",
+   "evidence": "0 invalid-URL since 13:10, closed landed_verified 15:27; 9 more join sites remain; class correct on 07-05, broken by autonomous 9531c5f 09-20"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Joint registry extension of joint-liveness-tick",
+   "where": "joint-liveness-tick.ts + pool records (70254535)",
+   "date": "2026-09-28T06:11Z",
+   "tried": "pool-registered joints, 4 new check kinds, self-flag unless all checked",
+   "outcome": "partial",
+   "evidence": "Flags 3 severed joints every 30 min, 6 gaps filed, 0 closed; none of 6 overnight breaks registered"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "consumer-side-landing-probes proposal",
+   "where": "openspec (512337c1, superseded 6f329e2e)",
+   "date": "2026-09-28T06:44Z",
+   "tried": "new openspec change for pre/post cutover production probes",
+   "outcome": "superseded",
+   "evidence": "User 'reuse before minting more'; existing expectation scan/behavioural verification preferred"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Surgical gap scan extension for resolve joins",
+   "where": "surgical scan da76f061",
+   "date": "2026-09-28T17:06Z",
+   "tried": "new pattern for endpoint+resolvePath joins",
+   "outcome": "reverted",
+   "evidence": "Duplicated open gaps seven-more-resolve-url-sites-*, rawresolve-concatenates-* and an existing trace detector"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Drift-commit self-maintenance committed caches/runtime into dev-vessel",
+   "where": "development-vessel 9d839e0",
+   "date": "2026-09-28T11:26Z",
+   "tried": "user approved hold of family + cleanup",
+   "outcome": "reverted",
+   "evidence": "422 .bun/install/cache binaries + gaps.json + state; same family as 4e4170a8 (09-07); triggered by node-2 loops re-enabled 11:19"
+  },
+  {
+   "key": "node-locality",
+   "title": "Fix B: class2 checks abstain on non-holding node",
+   "where": "dev-vessel sweep 5d0788b",
+   "date": "2026-09-28T23:58Z",
+   "tried": "node 2 abstains, node 1 measures",
+   "outcome": "worked",
+   "evidence": "relevance-sink gap reopened 23 times, 6 false lands; same -narrowed false close 09-23 with different cause"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "-narrowed child waits for parent verdict",
+   "where": "dev-vessel 3df8ddd",
+   "date": "2026-09-28T23:30Z",
+   "tried": "hold narrowed duplicate until parent landing judged",
+   "outcome": "unknown",
+   "evidence": "39bef90->bc99f91 and b20274c->9c86aff reversals same day"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Plain-language need to restore memory/recall",
+   "where": "goal-host walk",
+   "date": "2026-09-29T03:11Z",
+   "tried": "need dispatched without file paths",
+   "outcome": "failed",
+   "evidence": "Target inference confidence 0 for memory/recall; ran unrelated June activities; memory 58 notes since 09-26 node 1, 3 on node 2"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Plain-language need for lifecycle-scan forwarding",
+   "where": "gap-lifecycle-scan.ts",
+   "date": "2026-09-29T02:23Z",
+   "tried": "need without paths/shapes",
+   "outcome": "failed",
+   "evidence": "System found right file and reused GAP_STORE_ENDPOINT; verification rejected on unrelated federated-error-cascade test"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Unified install interface + nine-fleet demo",
+   "where": "openspec/changes/unified-install-interface, README Installation",
+   "date": "2026-09-24T07:14Z",
+   "tried": "98-agent workflow; single-layer image; seeder retry 74cb240d; CI acceptance",
+   "outcome": "partial",
+   "evidence": "Image 139 layers broke Docker since mid-Sept; prior audits Podman-only; CI shows served not usable; make -n clean destroyed substrate-live"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "activity-api migration runner convergence",
+   "where": "activity-api scripts/init-database.ts",
+   "date": "2026-09-24T13:11Z",
+   "tried": "gaps filed per migration; substrate fdb2fa6",
+   "outcome": "partial",
+   "evidence": "Missed sql/schemas 040/045; escalation only logs; hub activity-api dark ~1-1.5h/day from 24 starts"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Retry targets gate's suspected_real_location; symbol->file 7.6",
+   "where": "dev-vessel localizeGap",
+   "date": "2026-09-25T15:21Z / 2026-09-27T12:32Z",
+   "tried": "d2555d8; 7.6",
+   "outcome": "partial",
+   "evidence": "35/123 failed drafts wrong-site; relevance-sink drafted 4x at wrong file"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Decomposer information starvation",
+   "where": "dev-vessel decomposeGap",
+   "date": "2026-09-28T10:26Z",
+   "tried": "quotedSiteExcerpt; 8bfc972 steps must be live alone; d6784f8; 91b0c9d twin anchors",
+   "outcome": "partial",
+   "evidence": "Decomposer saw first 7,000 chars of 17.9k-line file; 384 investigate runs closed 4 gaps"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Human surface questions index + GitHub remote",
+   "where": "human-surface-vessel fb042e9",
+   "date": "2026-09-26T21:35Z",
+   "tried": "operator hand-landed index; private repo created",
+   "outcome": "worked",
+   "evidence": "Page 10-22s -> 5.5ms; 48 verified surface patches refused in 12h for missing remote; Questions header 45 vs 1,523 persists"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Self-granted operator approval d8c93b4",
+   "where": "dev-vessel feature-compose.ts / gap-to-feature prompt",
+   "date": "2026-09-25T03:35Z",
+   "tried": "5cbc6d0 reword prompt; 60ad9cd remove block; aaee500 edit tool can delete",
+   "outcome": "worked",
+   "evidence": "Drafter followed operator-facing prompt line 'Set operator_approved: true'"
+  },
+  {
+   "key": "env-gating",
+   "title": "Hardcoded human-surface verification bypass",
+   "where": "gap-to-feature.ts 6c33870/47171d1",
+   "date": "2026-09-26T21:52Z",
+   "tried": "removed via node-2 routed 766f68d",
+   "outcome": "reverted",
+   "evidence": "Keyed on vessel name, returned 'absent' closing gaps without verification"
+  }
+ ],
+ "problems": [
+  {
+   "key": "write-read-mismatch",
+   "symptom": "A stage writes (ids, scores, polarity, node-local state, fingerprints) where the next stage does not read",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 12,
+   "root_cause": "08-13 audit 'producer/consumer key mismatch (write != read)'; fixed per call site, reopened at node level after 09-26 split"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Landings certified HELD/landed_verified while hollow or regressive",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28T23:31Z",
+   "recurrences": 8,
+   "root_cause": "All gates grade against the motivating proxy check; post-land suite dead 08-31->09-28; behavioural verification never had input"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Commits land with behaviour unchanged or partial edits graded reached",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 10,
+   "root_cause": "Goodhart on narrow/literal falsifiers; apply_failed never reached verdict"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings break landing path, routing, or other mechanisms",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 12,
+   "root_cause": "Validated locally once; no auto-revert since 08-01; no consumer-side check"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Runtime, clone, super-repo checkout and process disagree; frozen checkouts; stale copies read by drafter",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 9,
+   "root_cause": "Drafts/residue written into shared trees; pull-sync skip-and-log; tracked runtime files; stale-base whole-file cutovers"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafts edit wrong site, mangle exact edits, game stale tests, silence detectors",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 10,
+   "root_cause": "Information starvation at draft time; same finding as 08-13 'bottleneck is now DRAFTER QUALITY'"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Gaps born without edit site or machine check; workable supply 2-17",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 6,
+   "root_cause": "Detectors emit categories not sites/counts; closure-predicate-at-birth reverted 08-31"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Tests and fixtures write live gap store, discovery, canary files",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-29T02:23Z",
+   "recurrences": 6,
+   "root_cause": "Store path fixed at module load; environment not scrubbed; tests default to live discovery"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Pause, calibration, memory, verification and budget per node after the split",
+   "first_seen": "2026-09-26T15:14Z",
+   "last_seen": "2026-09-29T03:25Z",
+   "recurrences": 6,
+   "root_cause": "Single-node assumptions survived the 09-26 ownership split; forwarder applied pass by pass"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Invalid resolve URLs kill ReAct floor tools; host-mapped ports; boot-order registration loss",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "root_cause": "endpoint + absolute resolvePath join, regressed by autonomous 9531c5f on 09-20 from a 07-05 fix"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Lane saturation (590 BUSY/14 landings), global lease contention, runaway LLM spend",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "root_cause": "Single composer restarting itself; global change_window; no admission feasibility or budget"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "-narrowed/recommit/route-edit children re-land or reverse parents; per-commit gap floods",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28T23:31Z",
+   "recurrences": 6,
+   "root_cause": "Identity by goal hash/fresh ids; gap store carries forward omitted keys"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Posteriors flat (alpha=1), beta withheld, learning does not compound",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 5,
+   "root_cause": "Credit from reached/landed rather than verified closure; 09-05 measure 74% arms n=1"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Mechanisms built once and never extended or wired (joint-liveness, behavioural verification, auto-revert, ribosome, recipe rescue)",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 10,
+   "root_cause": "Validated once then assumed; humans detected 247 of 253 breaks; silence 64%"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Memory split/unread, recall ignores topic, lexical concept search dead",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-29T03:11Z",
+   "recurrences": 3,
+   "root_cause": "Node-local memory file; concept-db lexical broken since 09-02; knowledge in operator-only reports"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "42-45GB store 89% garbage, write storms, migration timeouts, vanished trace view",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "root_cause": "30-min FTS rebuild, blob GC off, view recompute on delete, 15s resend, failed migrations skipped silently"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Questions header wrong (45 vs 1,523), re-asked after restart, 22s page",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-26",
+   "recurrences": 3,
+   "root_cause": "In-memory dedup sets; surface vessel outside authorable remotes until 09-26"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Spec checkboxes and 'done' claims contradict reality; setup docs bifurcated",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "Checkboxes not tied to observed falsifiers; audits run only on one host"
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes and containment rules regress the system",
+   "first_seen": "2026-09-23",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "root_cause": "Inference over measurement; history not read before acting; per-instance patching"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "18k-line files, 45 timers, 4,010 activities, operator harness sprawl, duplicate blocks from double-applies",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "root_cause": "Specific paths instead of general resolvers composed by the walk (user 09-29)"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "Causal attempt ledger",
+   "location": "development-vessel attempt-register.ts, attempt-checks.ts, settle sweep",
+   "purpose": "Record intent/before/after/settlement per landing, lessons, unaccounted landings",
+   "status": "live-used",
+   "general": true,
+   "evidence": "3x10/10 09-26; FALSIFIED e059a98/d844020 itself; but forward-fixed regressions stay held credit-eligible; settle policy at test value"
+  },
+  {
+   "name": "Parked landings + resume, named leases",
+   "location": "vessel-mitosis-cutover.ts; activity-api db_admin; openspec/specs/{change-window-names,parked-landing,restart-budgets}",
+   "purpose": "Keep verified patches across lease/restart refusals",
+   "status": "live-used",
+   "general": true,
+   "evidence": "14 parked/7 resumed 09-24 night; c1dd4c2"
+  },
+  {
+   "name": "Restart coalescing + breadcrumb",
+   "location": "vessel-mitosis-cutover.ts 46d252c, 6bfbe4b",
+   "purpose": "One restart per burst; report in-flight loss",
+   "status": "live-used",
+   "general": true,
+   "evidence": "12 landings/9 restarts no pairs; 'observed 0 in flight'"
+  },
+  {
+   "name": "autonomous_pick lease gate",
+   "location": "gap-to-feature.ts 128f51f (maintenanceLease shape)",
+   "purpose": "Stop in-process autonomous picks during windows",
+   "status": "live-used",
+   "general": true,
+   "evidence": "21-34 skips per graded window; not in-flight composes"
+  },
+  {
+   "name": "Dispatch termination (escalation skip, post-walk check, git probe, verdict latch, Bun timeout)",
+   "location": "goal-host index.ts 5a4ef1a/4dec1bc/44a5efa/f3ffd7d/f9001e9/1942eaf",
+   "purpose": "Stop re-applying landed edits and false failure verdicts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "ESCALATION SKIPPED fired 09-25 22:18"
+  },
+  {
+   "name": "Recursion guard",
+   "location": "goal-host /resolve 7f0425d",
+   "purpose": "Refuse goal already being walked",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Refused 11 self-resolves 09-26 15:54; hand-landed operator identity"
+  },
+  {
+   "name": "Spend envelope, breaker, admission gates",
+   "location": "llm-resolver, gap-to-feature.ts, goal-host, boredom, rhythm conductor (value-per-cost-selection)",
+   "purpose": "Price and cap spend; refuse structurally unlandable work",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Pause verified all three dispatchers; breaker 429; $2/h binding every hour 09-28"
+  },
+  {
+   "name": "Exact-edit verbatim path + goal-supplied anchors",
+   "location": "feature-compose.ts f70160f, c10e74a",
+   "purpose": "Apply EDIT blocks without LLM plan",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Used only by operator-authored goals; law-13 concern"
+  },
+  {
+   "name": "Ownership routing (composeOwnership)",
+   "location": "dev-vessel/goal-host/discovery 2c0aad9, 8645ead, fbb2fab, c293bb6",
+   "purpose": "Route composes to owning node",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Node 2 landed 77ee9b9, 6bfbe4b, 61b4812, 766f68d"
+  },
+  {
+   "name": "Gap-store forwarder GAP_STORE_ENDPOINT",
+   "location": "substrate-gap.ts (4.0d-i 51e30de -> 516bc18)",
+   "purpose": "Single authoritative gap store across nodes",
+   "status": "broken",
+   "general": true,
+   "evidence": "Deleted by recommit 21179d8 6 min after landing; re-landed pass-by-pass; lifecycle scan read stale local copy 09-28"
+  },
+  {
+   "name": "Behavioural verification",
+   "location": "vessel-mitosis-cutover.ts:2896/2906 (399bb2c 07-12)",
+   "purpose": "Run verification_spec after landing",
+   "status": "broken",
+   "general": true,
+   "evidence": "ran:false every cutover; 0 of ~6,100 gaps carry verification_spec; fires before restart"
+  },
+  {
+   "name": "Post-land test suite",
+   "location": "dev-vessel test-suite runner",
+   "purpose": "Gate credit on newly failing tests",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Dead 08-31->09-28 (ran=false, ~600 landings); fixed 5e9a0b2, 29b947ab"
+  },
+  {
+   "name": "Joint-liveness tick / joint registry",
+   "location": "joint-liveness-tick.ts (08-25), pool registry 70254535",
+   "purpose": "Detect writer->reader joints going quiet",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "1 joint for 34 days; now 6, flags 3 every 30 min, 0 closed; masked on node 2"
+  },
+  {
+   "name": "Expectation scan",
+   "location": "5-min expectation loop (09-19/09-23)",
+   "purpose": "Standing expectations on behaviour",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "273 ticks/24h 0 violations through a day of breaks; toy families only"
+  },
+  {
+   "name": "Ribosome extraction",
+   "location": "ribosome vessel + goal-host in-process",
+   "purpose": "Mint templates from reached executions",
+   "status": "broken",
+   "general": true,
+   "evidence": "1,788 errored runs/7d; retired template; empty-shape registration rejected; no template since 09-22; code landings bypass"
+  },
+  {
+   "name": "Auto-revert",
+   "location": "specified in 5 openspec changes",
+   "purpose": "System reverts regressions",
+   "status": "fossil",
+   "general": true,
+   "evidence": "None since 08-01; never built per specs"
+  },
+  {
+   "name": "Surgical gap scan",
+   "location": "hourly scan (06-29) surgical-hardcoded-endpoint",
+   "purpose": "Deterministic pattern gaps with file:line + literal check",
+   "status": "dormant",
+   "general": true,
+   "evidence": "16/16 landed autonomously, no reverts; pattern exhausted; extension da76f061 reverted as duplicate"
+  },
+  {
+   "name": "env_gate_scan",
+   "location": "detector",
+   "purpose": "Find env-gated behaviour",
+   "status": "dormant",
+   "general": false,
+   "evidence": "8 landed Jul-Aug"
+  },
+  {
+   "name": "Operator-label reader",
+   "location": "goal-host maybeConsumeOracleLabel",
+   "purpose": "Feed provide_feedback verdicts to credit",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Keyed on dispatch ids autonomous picks lack"
+  },
+  {
+   "name": "Revert detector",
+   "location": "gap-to-feature.ts revert recognition",
+   "purpose": "Link reverts to landings",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "Needs 'reverts <sha>'; operator reverts lacked it"
+  },
+  {
+   "name": "Recipe rescue",
+   "location": "goal-host index.ts:4786",
+   "purpose": "Rescue failed partner with live recipe",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Only production call passes 2 args; marked landed, never called"
+  },
+  {
+   "name": "Failure memory",
+   "location": "goal-host .goal-host-failure-memory.jsonl",
+   "purpose": "Replay prior failure verdicts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Filters deterministic refusals; prompt-only, never gates spend"
+  },
+  {
+   "name": "memoryNote store",
+   "location": "development-vessel local file per node",
+   "purpose": "System memory/recall",
+   "status": "broken",
+   "general": true,
+   "evidence": "58 notes node 1 since 09-26, 3 on node 2; recall ignores topic; target inference can't find it"
+  },
+  {
+   "name": "Demand-counting capability filer",
+   "location": "goal-host 4361247",
+   "purpose": "Open capability gaps only on repeated demand",
+   "status": "live-used",
+   "general": true,
+   "evidence": "693 one-off gaps closed as walk artifacts"
+  },
+  {
+   "name": "producer_count scan",
+   "location": "existing scan 4d3381c",
+   "purpose": "Per-gap measurable check for capability gaps",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "No gaps use it after demand filer"
+  },
+  {
+   "name": "Decomposition (decomposeGap, pre-admission)",
+   "location": "dev-vessel 2de0ae8, 8bfc972, quotedSiteExcerpt",
+   "purpose": "Split stuck gaps into measurable single-file steps",
+   "status": "live-used",
+   "general": true,
+   "evidence": "384 investigate runs closed 4 gaps; 2 steps picked 09-29, not landed"
+  },
+  {
+   "name": "Unaccounted-landing detector (per repo)",
+   "location": "attempt-register.ts b6f0d14/617b12a/429c8bd/cbdb432",
+   "purpose": "Detect landings without attempt record",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Flood fixed; scan 14s->0.03s"
+  },
+  {
+   "name": "Class1 arming guard",
+   "location": "falsify classifier 48fb8b6",
+   "purpose": "Refuse born-closable literal gaps",
+   "status": "live-used",
+   "general": false,
+   "evidence": "26/26 tests; fixed fail-open"
+  },
+  {
+   "name": "Semantic/dead-code/dead-store/vacuous gates",
+   "location": "feature-compose gates",
+   "purpose": "Refuse hollow drafts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "False positives on log demotion (fixed ed313f2), timer scripts, set/clear; caught hollow helper and wrong-file drafts"
+  },
+  {
+   "name": "70d2a00 resolver-change single-trace approval",
+   "location": "vessel-mitosis-evaluate.ts",
+   "purpose": "Approve resolver change on trace",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Approves on one trace of any outcome, skipping regression comparison"
+  },
+  {
+   "name": "Human-surface verification bypass",
+   "location": "gap-to-feature.ts 6c33870/47171d1",
+   "purpose": "Workaround for missing remote",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Removed 766f68d; returned 'absent'"
+  },
+  {
+   "name": "pull-sync",
+   "location": "scripts/substrate/substrate-pull-sync.sh",
+   "purpose": "Converge clones/runtime/restarts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Skip-and-log frozen checkouts; fingerprint dir drift x3; quiesce reopen starvation; super-repo FF failure logged 227x filing nothing"
+  },
+  {
+   "name": "Drift-commit self-maintenance family",
+   "location": "rhythm self-maintenance goal",
+   "purpose": "Commit detected vessel code drift",
+   "status": "live-used",
+   "general": false,
+   "evidence": "9d839e0 422 cache binaries; 4e4170a8 09-07; held on user decision"
+  },
+  {
+   "name": "Ledger graded-run harness + CHECKINS operator log",
+   "location": "~/.cache/causal-attempt-ledger-harness/master21-28.sh; validation/.../CHECKINS.md; surface-state-probe.ts",
+   "purpose": "Operator coordination and measurement",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Operator-only coordination substituting for unbuilt system window lease (#59)"
+  }
+ ],
+ "principles": [
+  "A fix validated once, locally, by the check that motivated it is not evidence of durability; most 'fixed/first/working' claims in this window reversed within hours.",
+  "Fix the shared capability at its seam, not per call site: id propagation (13 hops), test isolation (4 runners), act-on-held-state (4 patches in one night), resolve-URL joins (11 sites) all recurred because instances were patched separately.",
+  "Search history before minting: joint registry, closure-predicate-at-birth, surgical patterns, consumer probes and the 09-23 narrowed false-close all pre-existed; two operator mints were reverted as duplicates.",
+  "A negative result needs a positive control through the same address before it becomes a finding.",
+  "'Did not run' must never read as neutral: post-land suite ran=false for 4 weeks, behavioural verification ran:false always, pull-sync logs instead of filing.",
+  "The drafter optimises whatever the falsifier measures; falsifiers must capture intent and consumer-side behaviour or verification certifies regressions.",
+  "Operator exact-edit success is operator drafting under the substrate's name; measure unassisted reach separately.",
+  "Anything not expressed as a shape is outside the data-intent-execution weave; make it a shape or retire it rather than hand-wiring callers.",
+  "Operator stopgaps (masks, leases, stopped timers, chat-coordinated windows) are architecture gaps; each must become a data-held control the system reads.",
+  "A distributed design implemented node-locally re-creates write != read at every node boundary; any topology change requires re-auditing single-node assumptions."
+ ],
+ "claims": [
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-24T00:35Z",
+   "claim": "state_signature gap closed by measurement (c7c01ea); ten gaps closed by measured behaviour",
+   "where": "35ed63f7 2026-09-24T00:35Z",
+   "later": "Same session 01:17: gate certifies diffs not behaviour (262 FAVORABLE/4 UNFAVORABLE); 5 of 10 closures needed a second landing because the first was hollow"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-24T05:45Z",
+   "claim": "Self-repair demonstration complete, verified by effect (2893a93 placeholder fix)",
+   "where": "7e2b03b2 2026-09-24T05:45Z",
+   "later": "Defect was substrate's own 946034c, undetected 9 days; selection was a directed pick; 'The system finds none of its own deep defects'"
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-09-24T07:14Z",
+   "claim": "New launches reach goals peered with Syzygy and substrate-live; nine fleets usable",
+   "where": "4e4db180 2026-09-24T07:14Z",
+   "later": "Prior 'green' audits were Podman/host-local; image exceeded Docker layer limit since mid-Sept; CI proves served not usable"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-24T13:15Z",
+   "claim": "Substrate landed its own migration-runner fix fdb2fa6 with no operator hands",
+   "where": "833b5ef2 2026-09-24T13:15Z",
+   "later": "Missed sql/schemas 040/045; never deployed because pull-sync didn't fingerprint scripts/ (third recurrence of class)"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-24T17:24Z",
+   "claim": "Since 17:10 no change can land on any vessel (0a0d59f)",
+   "where": "3f991252 2026-09-24T17:24Z",
+   "later": "17:45 retracted as unmeasured; 20:18 reversed again (13 refusals after 18:00); operator revert 97f7cdf; ledger had rated it HELD"
+  },
+  {
+   "key": "directed-overshoot",
+   "claimed_at": "2026-09-24T21:52Z",
+   "claim": "5.4 pre-patch base 082f6ee landed; substrate repaired regression itself (96a1f57)",
+   "where": "7e2b03b2 2026-09-24T23:43Z",
+   "later": "082f6ee (operator spec) silently dropped 7 directed landings 20:48-21:50"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-09-25T01:06Z",
+   "claim": "All seven fixes that carry the dispatch id are committed and running",
+   "where": "3f991252 2026-09-25T01:06Z",
+   "later": "8th path found run 9 (ca4f8a5); another in run 12 (author-composed-capability); gap #61; id-less bun test shells 09-27"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-25T04:53Z",
+   "claim": "Substrate landed first verified fix from the audit (31ce2f7)",
+   "where": "ac8b0aad 2026-09-25T04:53Z",
+   "later": "Same audit: e9ee9b4 failed falsifier, 030b224 hollow; pick holds later bypassed by nudge/boredom/rhythm/in-process picks"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-09-25T11:02Z",
+   "claim": "Reach best bucket of the day, 51% cleaned-up, improvement in outcomes",
+   "where": "ac8b0aad 2026-09-25T11:02Z",
+   "later": "8c31cdb broke routing 12:09-12:36; traffic-mix explanation retracted; reach definitions changed repeatedly, not comparable"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-25T05:22Z",
+   "claim": "Writer freezing checkouts is patch_with_tools shell edits (with evidence)",
+   "where": "ac8b0aad 2026-09-25T05:22Z",
+   "later": "05:39 retracted; 05:53 watcher proved draining-fallback bounded_shell sed -i; checkouts refroze within hours"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-09-25T09:53Z",
+   "claim": "The machine is fixed; four activity-api fixes live",
+   "where": "ac8b0aad 2026-09-25T09:53Z",
+   "later": "Store grew ~1.5GB/h 09-26; retention deletes time out again; DB 12 cores load 18 on 09-27 03:08"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-09-25T18:33Z",
+   "claim": "autonomous_pick lease gate live and verified",
+   "where": "ac8b0aad 2026-09-25T18:33Z",
+   "later": "Walk executed test sentence, took lease itself and duplicated edit (31d07cd); lease doesn't stop in-flight composes (768ae7c)"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-26T05:13Z",
+   "claim": "Causal-attempt-ledger goal met: runs 10,11,12 at 10/10 after cold boot",
+   "where": "3f991252 2026-09-26T05:13Z",
+   "later": "Depended on stopgaps pausing 4 autonomous paths; 0/36 boxes ticked; forward-fixed regressions 9cfdea4/af2c737 settled held credit-eligible; settle policy left at 2-min test value; 09-26 had >=17 unchecked autonomous landings incl. regressions"
+  },
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-26T08:06Z",
+   "claim": "The storm is resolved (recursion guard 7f0425d, seed paused)",
+   "where": "ac8b0aad 2026-09-26T08:06Z",
+   "later": "Guard hand-landed (feature_compose needs LLM even for exact edits); paused seed kept running on node 2 because pause/posteriors node-local"
+  },
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-09-26T14:48Z",
+   "claim": "Ownership routing works end to end (6bfbe4b)",
+   "where": "ac8b0aad 2026-09-26T14:48Z",
+   "later": "Dispatch kept walking, final verdict failed; 66f62d5 misattributed as routed; node 2 hold lapsed 14:49-21:35 with ~10 unsupervised commits incl. verification bypass"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-09-27T00:02Z",
+   "claim": "The system can now see what it spends (Phase 1)",
+   "where": "ac8b0aad 2026-09-27T00:02Z",
+   "later": "98bc2b5 silently reverted afc7d6d; 09-28 review: only 3.8% of executions record cost, selection ignores it"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-09-27T02:13Z",
+   "claim": "Phase 3 dispatch termination complete (Bun 300s fetch cut fixed)",
+   "where": "ac8b0aad 2026-09-27T02:13Z",
+   "later": "Same cause diagnosed 09-25 03:13 and left 2 days; post-walk double-compose recurred (194df79, 7eae3a0)"
+  },
+  {
+   "key": "drafter-quality",
+   "claimed_at": "2026-09-27T04:29Z",
+   "claim": "First time tonight the system's own composition path delivered the fix to itself (2.7 f70160f)",
+   "where": "ac8b0aad 2026-09-27T04:29Z",
+   "later": "Next prose goal landed 1 of 3 edits graded reached (3cced35); 07:58 'Every change that landed today came from me writing the exact edit'"
+  },
+  {
+   "key": "gap-content",
+   "claimed_at": "2026-09-27T08:56Z",
+   "claim": "Contained autonomy reopened; containment passed acceptance",
+   "where": "ac8b0aad 2026-09-27T08:56Z",
+   "later": "First autonomous landing bb5d6b9 live regression; second fabricate-to-satisfy passed judge; sweep polarity inverted; 9 of 22 gap writes lost"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-27T13:00Z",
+   "claim": "System's own falsifiers refuted all three bad autonomous landings",
+   "where": "ac8b0aad 2026-09-27T13:35Z",
+   "later": "Corrected 13:35: sweep read checks backwards (defect count 1 = fixed)"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-27T21:47Z",
+   "claim": "Reopen at $2/h with verdict machinery in place",
+   "where": "ac8b0aad 2026-09-27T21:47Z",
+   "later": "5 autonomous landings, 5 reverts; system certified 3 as verified (a198907, 9cfdea4, af2c737) - Goodhart"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-28T04:13Z",
+   "claim": "For the first time, the system correctly caught one of its own bad autonomous landings (e059a98)",
+   "where": "ac8b0aad 2026-09-28T04:13Z",
+   "later": "User pushback on 'first' framing; system reverted in July; expectation loop closed own break 09-26"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-09-28T05:08Z",
+   "claim": "Self-correction mechanisms I called missing were all built at least once; nothing reads provide_feedback",
+   "where": "ac8b0aad 2026-09-28T05:08Z",
+   "later": "05:11 partial correction: infra healthier than audit said; label reader exists (maybeConsumeOracleLabel) but keyed on dispatch ids"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-28T06:51Z",
+   "claim": "Yes, it was working, and it still is (expectation scan)",
+   "where": "ac8b0aad 2026-09-28T06:51Z",
+   "later": "07:06 retracted: post-land suite dead since 08-31 on dev-vessel/activity-api (~600 untested landings); expectation scan covers toy goals only"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-28T07:11Z",
+   "claim": "Reconstruction of 'working on 09-24 to 09-26'",
+   "where": "ac8b0aad 2026-09-28T07:11Z",
+   "later": "Autonomous landings were not working then (23%->19%->8%, 0-2 closures/day); test check already blind, noted 09-25 06:30 and not acted on"
+  },
+  {
+   "key": "endpoint-routing",
+   "claimed_at": "2026-09-28T13:48Z",
+   "claim": "That would be the first time the system verifies a fix to its own tool plane",
+   "where": "ac8b0aad 2026-09-28T13:48Z",
+   "later": "13:58 retracted 'almost certainly isn't'; listing change b8671c9 landed without reading history, reverted on inference, re-applied on measurement"
+  },
+  {
+   "key": "endpoint-routing",
+   "claimed_at": "2026-09-28T15:27Z",
+   "claim": "System closed a landing on its own measurement (5ca51be, landed_verified)",
+   "where": "ac8b0aad 2026-09-28T15:27Z",
+   "later": "Directed not autonomous; needed 4 seam repairs; 9 join sites remain; class originally fixed 07-05, broken by autonomous 9531c5f 09-20"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "claimed_at": "2026-09-28T17:06Z",
+   "claim": "Extended surgical gap scan to resolve-join sites (da76f061)",
+   "where": "ac8b0aad 2026-09-28T17:06Z",
+   "later": "Reverted 17:30: duplicated open gaps and an existing trace detector"
+  },
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-28T23:58Z",
+   "claim": "Fix B 5d0788b confirmed both sides, false-close loop closed",
+   "where": "ac8b0aad 2026-09-28T23:58Z",
+   "later": "Same false close happened 09-23 with different cause; a57dc30 fix never reached old rows (gap store carries forward keys)"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-09-29T02:30Z",
+   "claim": "Supply reaches autonomy end to end for the first time today; bottleneck moved to drafts not landing",
+   "where": "ac8b0aad 2026-09-29T02:30Z",
+   "later": "02:43 retracted: decomposed steps landed verified 09-27 (ec962628-step-1); drafter bottleneck is 08-13 finding verbatim"
+  },
+  {
+   "key": "test-residue-live-state",
+   "claimed_at": "2026-09-29T01:37Z",
+   "claim": "Test-run leak into live gap store fixed (f451e42)",
+   "where": "ac8b0aad 2026-09-29T01:37Z",
+   "later": "Fixture rows rewritten again 01:42-01:43; second leak path via localhost services"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-09-29T02:23Z",
+   "claim": "Discovery worked from a plain-language need",
+   "where": "ac8b0aad 2026-09-29T02:23Z",
+   "later": "Same message: rejected at verification; 03:11 memory need failed outright (target inference confidence 0)"
+  },
+  {
+   "key": "directed-overshoot",
+   "claimed_at": "2026-09-28T01:32Z",
+   "claim": "Containment rules (class1/class2, measured field, class2-only) keep autonomy safe",
+   "where": "ac8b0aad 2026-09-28T05:43Z",
+   "later": "Supply collapsed ~250->17->2 eligible; 'The supply collapse, which is mine'; relaxed 06:11 then re-tightened 23:30 to 7 gaps"
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-09-26T22:23Z",
+   "claim": "decentralized-compose-ownership done: 37/37 tasks, openspec validate passes",
+   "where": "606414b2 2026-09-26T22:23Z",
+   "later": "Node-local pause/calibration/memory/verification found 09-26..09-29; 4.4 clause 'completes and pushes' not observed; node-1 ownership only a drop-in"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-25T06:00Z",
+   "claim": "5.1 detector sweep landed (827a218)",
+   "where": "606414b2 2026-09-25T06:00Z",
+   "later": "Same message: hollow write (read resolver with write data in swallowing catch); earlier autonomous 1c7833b wrote node:null through all gates"
+  }
+ ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-42e4ff30",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/goal-host-vessel/src/index.ts, make the honest refusal a distinct persisted outcome: at the site where the dete",
+  "description": "In repos/goal-host-vessel/src/index.ts, make the honest refusal a distinct persisted outcome: at the site where the deterministic reach verdict is returned with reason starting \"deterministic:no-oracle-for-goal-class\", carry a machine-readable declined marker through to the persisted trace — alongside the existing reached:false tag, persist an additional tag \"outcome:declined\" (and when verifierFamilyOf identifies the family, also \"declined_family:<family>\") via the same reach-patch path that persists the reached:* tags. Do not change posterior behavior: beta stays withheld exactly as today; the change is only that a refusal becomes queryable in the trace store as a refusal instead of being indistinguishable from a failed attempt. Success is checkable: after a countable goal with no deterministic verifier runs, its execution trace row carries the tag outcome:declined.",
+  "goal_text": "In repos/goal-host-vessel/src/index.ts, make the honest refusal a distinct persisted outcome: at the site where the deterministic reach verdict is returned with reason starting \"deterministic:no-oracle-for-goal-class\", carry a machine-readable declined marker through to the persisted trace — alongside the existing reached:false tag, persist an additional tag \"outcome:declined\" (and when verifierFamilyOf identifies the family, also \"declined_family:<family>\") via the same reach-patch path that persists the reached:* tags. Do not change posterior behavior: beta stays withheld exactly as today; the change is only that a refusal becomes queryable in the trace store as a refusal instead of being indistinguishable from a failed attempt. Success is checkable: after a countable goal with no deterministic verifier runs, its execution trace row carries the tag outcome:declined.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-42e4ff30",
+  "source_gap_source": "substrate_detected"
+}

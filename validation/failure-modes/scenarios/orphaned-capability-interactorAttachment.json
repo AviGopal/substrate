@@ -1,0 +1,19 @@
+{
+  "id": "orphaned-capability-interactorAttachment",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "orphaned_capability",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Resolver \"interactorAttachment\" is a live registered capability but is invoked by 0 of the activity corpus (388/376 live",
+  "description": "Resolver \"interactorAttachment\" is a live registered capability but is invoked by 0 of the activity corpus (388/376 live resolvers are ever invoked). Author an activity that invokes resolver \"interactorAttachment\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+  "goal_text": "Resolver \"interactorAttachment\" is a live registered capability but is invoked by 0 of the activity corpus (388/376 live resolvers are ever invoked). Author an activity that invokes resolver \"interactorAttachment\" (deterministic tier — NOT an LLM re-derivation) and routes its output onward, so the substrate expresses the capability surface it advertises.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": "substrate_expresses_the_full_capability_surface_it_advertises",
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "orphaned-capability-interactorAttachment",
+  "source_gap_source": "substrate_detected"
+}

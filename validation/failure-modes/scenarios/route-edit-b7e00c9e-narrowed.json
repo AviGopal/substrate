@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-b7e00c9e-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-b7e00c9e] investigate and decompose gap cutover-empty-baseline-guard-one-line-addition: comput",
+  "description": "[narrowed from route-edit-b7e00c9e] investigate and decompose gap cutover-empty-baseline-guard-one-line-addition: computeNewlyFailing fails open on a MISSING baseline but treats an EMPTY one as 'nothing was failing', so an empty post-land baseline marks every currently-failing test as a regression and blocks every cutover for that vessel. In repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts the guard reads `if (prev === null) return [];` — correct when the file is absent or unreadable — but an",
+  "goal_text": "[narrowed from route-edit-b7e00c9e] investigate and decompose gap cutover-empty-baseline-guard-one-line-addition: computeNewlyFailing fails open on a MISSING baseline but treats an EMPTY one as 'nothing was failing', so an empty post-land baseline marks every currently-failing test as a regression and blocks every cutover for that vessel. In repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts the guard reads `if (prev === null) return [];` — correct when the file is absent or unreadable — but an",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-b7e00c9e-narrowed",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,8 @@
+{
+  "METABOB_API_KEY_sha256": "676fa7f5292d823942921fa27f045ba1a102e37fcf0c796ab4ac856edae761f0",
+  "API_KEY_SECRET_sha256": "02c46ceb933e0eef01ab7390f67d98ad4d2b0806f4375e99af26fd69204398b0",
+  "SURREAL_PASS_sha256": "f18f7e06c5feba8cdb42dfcef24afaf94ec2ce80ca0a1e90d0523118362b43ca",
+  "JWT_SECRET_sha256": "e95b6b84741987e3c5592ec2960e07756ce28d8d59b83988f31f164ff95b7ab1",
+  "/workspace/audit-marker": null,
+  "/workspace/substrate/fleet/vessels.inventory.json": "0c252d84b37750c53d871a41e8edb25e46624e6f3f3e9af39adee16d9907e1f6"
+}

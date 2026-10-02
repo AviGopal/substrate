@@ -1,0 +1,19 @@
+{
+  "id": "recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-narrowed-wrong_location-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-narrowed-wrong_",
+  "description": "[narrowed from recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-narrowed-wrong_location] compose for gap narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-narrowed repeated already-recorded failure class wrong_location: The patch removes the `[narrowed from ${parentId}]` prefix from the summary but otherwise still copies the parent summary verbatim. It does not introd",
+  "goal_text": "[narrowed from recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-narrowed-wrong_location] compose for gap narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-narrowed repeated already-recorded failure class wrong_location: The patch removes the `[narrowed from ${parentId}]` prefix from the summary but otherwise still copies the parent summary verbatim. It does not introd",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-narrowed-wrong_location-narrowed",
+  "source_gap_source": "substrate_detected"
+}

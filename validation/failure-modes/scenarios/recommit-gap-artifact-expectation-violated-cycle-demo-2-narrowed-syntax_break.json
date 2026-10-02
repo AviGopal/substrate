@@ -1,0 +1,19 @@
+{
+  "id": "recommit-gap-artifact-expectation-violated-cycle-demo-2-narrowed-syntax_break",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap gap-artifact-expectation-violated-cycle-demo-2-narrowed repeated already-recorded failure class syntax_b",
+  "description": "compose for gap gap-artifact-expectation-violated-cycle-demo-2-narrowed repeated already-recorded failure class syntax_break: src/index.ts(2604,1): error TS1472: 'catch' or 'finally' expected. | src/index.ts(16689,1): error TS1005: '}' expected.",
+  "goal_text": "compose for gap gap-artifact-expectation-violated-cycle-demo-2-narrowed repeated already-recorded failure class syntax_break: src/index.ts(2604,1): error TS1472: 'catch' or 'finally' expected. | src/index.ts(16689,1): error TS1005: '}' expected.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-gap-artifact-expectation-violated-cycle-demo-2-narrowed-syntax_break",
+  "source_gap_source": "substrate_detected"
+}

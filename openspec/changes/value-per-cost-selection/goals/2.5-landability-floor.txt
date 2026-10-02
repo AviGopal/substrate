@@ -1,0 +1,19 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, in pickMostLandable, drop candidates whose landabilityScore is below a 0.15 floor before the class-Thompson rerank, logging the count, and return null when the floor leaves no candidate, so an uninformed class posterior cannot lift a near-zero candidate over a well-scored one. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+    .sort((a, b) => b.s - a.s);
+  // CLASS-THOMPSON RERANK (Option B)
+new:
+    .sort((a, b) => b.s - a.s);
+  // LANDABILITY FLOOR (value-per-cost-selection 2.5). The class rerank below orders by a sampled
+  // class theta BEFORE score, so a fresh class's uninformed posterior lifted a score-0 candidate
+  // over a 0.9 one. Candidates below the floor are dropped before any posterior is consulted.
+  const LANDABILITY_FLOOR = 0.15;
+  const aboveFloor = ranked.filter((r) => landabilityScore(r.g) >= LANDABILITY_FLOOR);
+  if (aboveFloor.length < ranked.length) {
+    console.log(`[gap-to-feature] landability_floor excluded ${ranked.length - aboveFloor.length} of ${ranked.length} candidates (floor=${LANDABILITY_FLOOR})`);
+    ranked.splice(0, ranked.length, ...aboveFloor);
+  }
+  if (!ranked.length) return null;
+  // CLASS-THOMPSON RERANK (Option B)
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

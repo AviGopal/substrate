@@ -1,0 +1,850 @@
+{
+ "area": "other",
+ "items": [
+  {
+   "name": "rhythm conductor",
+   "location": "rhythm-conductor-tick.ts FAMILY_GOALS:125, rhythmFamilyGoal shape",
+   "purpose": "Law-5 cadence via due-score/affordability",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Empty (count 0) until seeded 09-07; auditors 241/day -> 1/10min",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "drift committer (vessel code drift detected and committed)",
+   "location": "rhythm-self-maintenance family",
+   "purpose": "commit runtime drift",
+   "status": "broken",
+   "evidence": "4e4170a8 swept 2,134 files; held 09-28",
+   "source": "openspec-10",
+   "mentions": 1,
+   "sources": [
+    "openspec-10"
+   ]
+  },
+  {
+   "name": "declarationDrift detector",
+   "location": "schema-assert-drift-scan 8636190/e85d3ab",
+   "purpose": "Detect declared-vs-live schema drift and hazards",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Prod-confirmed 09-05; filtering took it from 254 findings to 2 real ones",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "config-surface-probe",
+   "location": "scripts",
+   "purpose": "config verification",
+   "status": "dormant",
+   "general": false,
+   "evidence": "no scheduled caller (09-04)",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "recompute-poisoned-posteriors",
+   "location": "scripts (460cc35a)",
+   "purpose": "reset phantom-poisoned posteriors",
+   "status": "unknown",
+   "general": false,
+   "evidence": "repair of learning state instead of a source fix",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "bootstrap-seeder",
+   "location": "scripts (bootstrap tier)",
+   "purpose": "Seed the first activity templates",
+   "status": "broken",
+   "general": true,
+   "evidence": "#9: 19 templates refused because learning_track is missing",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "Evidence-aliasing and shape-dispatch lint",
+   "location": "scripts/check-evidence-aliasing.ts, check-shape-dispatch.ts",
+   "purpose": "Static contract gates",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1e30bbd: the documented gate had no caller until 08-21",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "gate-self-probe",
+   "location": "seed/gate-self-probe-tick.ts",
+   "purpose": "Substrate tests its own gates",
+   "status": "live-used",
+   "general": true,
+   "evidence": "37 execs",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "conservation-* observers and learned-conservation-* twins",
+   "location": "seeded plus learned rows",
+   "purpose": "Conservation audits and junction observers",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "~30k selections/7d, few executions",
+   "duplicates_of": "conservation-* seeded",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "self-fact-reconcile",
+   "location": "self-fact-reconcile.ts",
+   "purpose": "Diff the self-model against reality",
+   "status": "live-used",
+   "general": true,
+   "evidence": "574 tick execs",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "db_under_pressure probe",
+   "location": "self-recovery-tick.sh",
+   "purpose": "Back off restarts when the DB is the bottleneck",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Third form (337c3b81); the first two could not see congestion",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "Static regex goal classifier KEYWORD_TO_TAGS",
+   "location": "semantic-tags.ts",
+   "purpose": "Map goal text to tag prefixes for recommend",
+   "status": "unknown",
+   "general": false,
+   "evidence": "inv-054: emits the security tag but 0/39 templates carry it",
+   "source": "validation-other-2",
+   "mentions": 1,
+   "sources": [
+    "validation-other-2"
+   ]
+  },
+  {
+   "name": "compose slots capacity cap",
+   "location": "src/compose-slots.ts (6ad3721..5f965b8 08-10)",
+   "purpose": "Cross-process concurrency cap with directed reservation",
+   "status": "live-used",
+   "general": true,
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "canary fixture walk",
+   "location": "src/fixtures/attempt-ledger-canary.json",
+   "purpose": "Acceptance runs for the causal ledger",
+   "status": "live-used",
+   "general": false,
+   "evidence": "71 pushed commits pollute history",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "goal-file-resolution / searchWorkspaceForTerm",
+   "location": "src/goal-file-resolution.ts; src/index.ts:15643",
+   "purpose": "Resolve the edit site from goal text",
+   "status": "live-used",
+   "general": true,
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "verifyEphemerisDistanceReach",
+   "location": "src/index.ts (ephemeris)",
+   "purpose": "JPL Horizons distance oracle",
+   "status": "fossil",
+   "general": false,
+   "evidence": "6,479 ABSTAINED, 0 graded in 7 days, run on every goal",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "Edit-intent routing to feature_compose (EARLY + late)",
+   "location": "src/index.ts:12683, 13304/13365",
+   "purpose": "Route code-change goals to compose",
+   "status": "duplicate",
+   "general": true,
+   "evidence": "BUSY/503 fall-through fixed 5 times; env-gated by ROUTE_EDIT_INTENT_TO_COMPOSE",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "Diagnostic sinks and ablations (NoOp sink, disable-subscribers, fetch probe)",
+   "location": "src/index.ts:14425-14463",
+   "purpose": "Iteration diagnostics",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Env-gated, left in from ITER-4/iter-10",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "Hand-written verify*Reach oracles (22)",
+   "location": "src/index.ts:1519-3489",
+   "purpose": "Per-family reach oracles",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Most families have little or no verdict traffic in 7 days",
+   "duplicates_of": "ClassRow harness, independent recompute, verifier recipes",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "Auto-draft in handleRunGoal",
+   "location": "src/index.ts:16169-16242",
+   "purpose": "Draft new activity when no catalogue fit",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Env-gated default OFF since 429c7e5",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "ClassRow route-as-data harness",
+   "location": "src/index.ts:2553-2860",
+   "purpose": "Make a reach class a data row",
+   "status": "duplicate",
+   "general": true,
+   "evidence": "Only 2 families migrated; 20 legacy remain",
+   "duplicates_of": "verify*Reach",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "verifyGoalReached + deterministic verdict chain",
+   "location": "src/index.ts:3489-3937",
+   "purpose": "Reach judge (LLM plus deterministic oracles)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "7 days: edit-intent-no-landed-edit 1,111, code-investigation 927, transform ~521",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "asResolvePath + endpointForShape",
+   "location": "src/index.ts:448, 487",
+   "purpose": "Resolve URL construction and endpoint choice",
+   "status": "broken",
+   "general": true,
+   "evidence": "7 call sites still concatenate endpoint + absolute URL",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "recomputeIndependently",
+   "location": "src/index.ts:4649",
+   "purpose": "Two-derivation ground truth and command donation",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1 DONATED in 7 days; mostly abstains or fails authoring",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "universalToolFallback / runGroundedToolLoop (ReAct floor)",
+   "location": "src/index.ts:4934-5436",
+   "purpose": "Parity floor",
+   "status": "live-used",
+   "general": true,
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "recipeSeed in universalToolFallback",
+   "location": "src/index.ts:5127",
+   "purpose": "Seed the floor with a verified command",
+   "status": "dormant",
+   "general": false,
+   "evidence": "0 journal hits in 7 days",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "POST /update-failure-lessons",
+   "location": "src/index.ts:55; scripts/ and src/scripts/update-failure-lessons.ts",
+   "purpose": "Autonomously added lesson updater",
+   "status": "fossil",
+   "general": false,
+   "evidence": "0 callers; script duplicated",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "landedShaForGoalHash vs landedCommitForGoal",
+   "location": "src/index.ts:6192; f3ffd7d",
+   "purpose": "Confirm an edit landed",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "The new probe exists because the old one reads a node-local compose report",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "Satisfier-plane reuse ordering",
+   "location": "src/index.ts:9870",
+   "purpose": "Posterior reuse ordering",
+   "status": "dormant",
+   "general": true,
+   "evidence": "'DISABLED ON EVIDENCE' (35fb2f6)",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "Successor features psi",
+   "location": "src/jobs/successor-features-backfill.ts (06-27)",
+   "purpose": "Look-ahead value in recommend",
+   "status": "unknown",
+   "general": false,
+   "evidence": "4 autonomous touches, no consumer evidence",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "decision_outcome capture + /decision-calibration",
+   "location": "src/lib/decision-credit.ts",
+   "purpose": "Law-12 decision-to-outcome joins",
+   "status": "live-used",
+   "general": true,
+   "evidence": "608fe10/e2c7959/03e6c55",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "reach-classify three-way credit/penalize/abstain",
+   "location": "src/lib/reach-classify.ts",
+   "purpose": "Honest verdict gating of credit",
+   "status": "live-used",
+   "general": true,
+   "evidence": "159bca7, 018784f, 970b112; declined: rule thrashed 4 times 09-16..18",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "maintenance parity-gate + seam-extraction",
+   "location": "src/maintenance (2c18203, 652fc1a 07-16)",
+   "purpose": "Behaviour-neutral refactor verification",
+   "status": "unknown",
+   "general": true,
+   "evidence": "spliceability.ts (a substrate sibling) has 0 refs.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "Mock-module completeness + write-key-has-reader detector tests",
+   "location": "src/mock-module-completeness.test.ts, 5c57ff9",
+   "purpose": "Catch silent test and data amputation",
+   "status": "live-used",
+   "general": true,
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "quiesce / drain admission",
+   "location": "src/quiesce, long-running.ts (a0e6692 08-11)",
+   "purpose": "Close admission instead of restarting into live work",
+   "status": "live-used",
+   "general": true,
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "operator-review-patch, git-head-commit",
+   "location": "src/resolvers",
+   "purpose": "Review patch; head commit",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Never imported outside tests",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "apply_proposal_as_patch",
+   "location": "src/resolvers/apply-proposal-as-patch.ts (b5001aa 06-04)",
+   "purpose": "Landing path 1: drafter proposal to staged mitosis",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "feature_compose landing",
+   "evidence": "44bcffd had to unify it onto the hardened gate.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "state signature",
+   "location": "src/resolvers/compute-state-signature.ts",
+   "purpose": "Context for Thompson selection",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Revised 5x.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "feature_compose drafter",
+   "location": "src/resolvers/feature-compose.ts (d8c982a 06-20)",
+   "purpose": "General code-edit composer for edit-intent goals",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1,949 runs/7d, 382 ok (19.6%), $30.87. Self-edited 192x by the substrate.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "landedCommitVerdict / close-oracle with earned trust",
+   "location": "src/resolvers/gap-to-feature.ts (c871a45, 980135a 08-14)",
+   "purpose": "Grade gap closure on measurement; abstain and escalate on provenance-only evidence",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Replaced 3 duplicated Class-3 blocks. Baseline false_closes 8/8.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "gap-to-scenario-bridge-tick",
+   "location": "src/resolvers/gap-to-scenario-bridge.ts (492dd88 06-04)",
+   "purpose": "Bridge gaps to drafter scenarios",
+   "status": "fossil",
+   "general": false,
+   "evidence": "17,969 runs/7d at ~100% 'success' with no visible output. A June-era path still dominates trace volume.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "maintenanceLease",
+   "location": "src/resolvers/maintenance-lease.ts (9674cb8 07-08)",
+   "purpose": "Global change-window mutex",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Self-deadlocked 08-01 (3f4be28).",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "patch_with_tools",
+   "location": "src/resolvers/patch-with-tools.ts (c70b8d3 06-12)",
+   "purpose": "Landing path 2: tool-using patcher",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "feature_compose",
+   "evidence": "Its escalation never ran until 2a8ebf5 (08-10). e1f3656: no location check.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "prior-failed/successful-attempts",
+   "location": "src/resolvers/prior-*-attempts.ts",
+   "purpose": "Failure memory for drafting",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "attempt ledger; goal-host failure memory",
+   "evidence": "1 exec",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "vessel_mitosis_cutover + mitosis-tick",
+   "location": "src/resolvers/vessel-mitosis-cutover.ts (689cf99 06-02)",
+   "purpose": "Stage, gate, commit, push and deploy landings",
+   "status": "live-used",
+   "general": true,
+   "evidence": "589 cutovers/7d (66% ok). mitosis-tick 7,874/7d. Pending lock fixed at least 6x.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "mitosis cutover landing seam",
+   "location": "src/resolvers/vessel-mitosis-cutover.ts, patch-with-tools.ts",
+   "purpose": "Stage, evaluate, cutover and push autonomous patches",
+   "status": "live-used",
+   "general": true,
+   "evidence": "589 cutover execs in the retained window; 886 mitosis-applied rows",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "POST /composition writer",
+   "location": "src/routes/activities.ts",
+   "purpose": "Legacy edge writer",
+   "status": "fossil",
+   "general": false,
+   "evidence": "0 call sites fleet-wide (516fc73)",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "POST /header_added and probe headers",
+   "location": "src/routes/activities.ts:23-38,193,5415,5919",
+   "purpose": "None (hollow landings)",
+   "status": "fossil",
+   "general": false,
+   "evidence": "2157764, 6282954",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "Duplicate /conservation-audit-emit",
+   "location": "src/routes/activities.ts:6034",
+   "purpose": "Garbled splice of the lost residual-trend route",
+   "status": "broken",
+   "general": false,
+   "evidence": "53292c9",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "db_admin diagnose/repair/prune/snapshot",
+   "location": "src/routes/db-admin.ts, db-admin-repair.ts",
+   "purpose": "Self-managed DB integrity and repair",
+   "status": "broken",
+   "general": true,
+   "evidence": "safeCount filters on an invented field, so every count is 0 (live query returns []); gap-id regex in CATASTROPHIC_PATTERNS",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "Composition edge derived at ingest",
+   "location": "src/routes/execution-traces.ts (516fc73)",
+   "purpose": "Record parent-to-child compositions actually run",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Replaced the POST /composition writer, which has no caller",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "POST /reach single writer + applyOutcomeToPosteriors",
+   "location": "src/routes/execution-traces.ts, src/lib/posterior-update.ts",
+   "purpose": "Grade-to-credit edge of the learning loop",
+   "status": "live-used",
+   "general": true,
+   "evidence": "64b3997/2b4e18b; 17 autonomous edits since",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "goal_execution_paths reuse (work_signature, lineage)",
+   "location": "src/routes/goal-paths.ts",
+   "purpose": "Learned-pathway ceiling",
+   "status": "live-used",
+   "general": true,
+   "evidence": "48bc174, d553b39, 4e0d27a; acceptance 'intermittent' (249ff89)",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "Trace retention valve (rows + bytes)",
+   "location": "src/services/trace-retention.ts",
+   "purpose": "Bound the trace store",
+   "status": "live-used",
+   "general": true,
+   "evidence": "c0b9624/3cafd9c: the store-wedge root is not in the counted rows",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "trace-store-reconcile",
+   "location": "src/trace-store-reconcile.ts + seed (9674cb8)",
+   "purpose": "Self-managed DB reconciliation",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Could never run 07-08..08-09 (5dcfc60).",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "vacuous-edit guard",
+   "location": "src/vacuous-edit.ts",
+   "purpose": "Refuse behaviour-free edits",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Autonomously loosened (ed313f2)",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "vacuous-edit / hollow gates",
+   "location": "src/vacuous-edit.ts, feature-compose.ts (f960423..06fabe9)",
+   "purpose": "Refuse inert edits by surface form",
+   "status": "live-used",
+   "general": false,
+   "evidence": "At least 9 per-form gates. 06fabe9 was inert on arrival.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "Verifier recipes",
+   "location": "src/verifier-recipe.ts; /workspace/state/verifier-recipes.jsonl",
+   "purpose": "Verifiers as graded data",
+   "status": "dormant",
+   "general": true,
+   "evidence": "39 recipes, last written Aug 27; loads only",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "Designed-never-built primitives (origin_layer, resolver_registry_query, LiveExecutionFrame, goal_semantics, keywordMappingProposal)",
+   "location": "stream-B investigations 042-079",
+   "purpose": "Observability and mismatch detection",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 source hits today",
+   "source": "validation-other-2",
+   "mentions": 1,
+   "sources": [
+    "validation-other-2"
+   ]
+  },
+  {
+   "name": "substrate-doctor registry floor / registration starvation",
+   "location": "substrate-doctor check 4, 4b",
+   "purpose": "Detect drained registry",
+   "status": "unknown",
+   "general": false,
+   "evidence": "Would catch 08-10 drain; cadence unconfirmed; 4b first-boot false positives (09-16)",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "close_basis",
+   "location": "substrate-gap",
+   "purpose": "measured vs trusted close record",
+   "status": "live-used",
+   "general": true,
+   "evidence": "added 09-09 02:17",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "Gap-store forwarder GAP_STORE_ENDPOINT",
+   "location": "substrate-gap.ts (4.0d-i 51e30de -> 516bc18)",
+   "purpose": "Single authoritative gap store across nodes",
+   "status": "broken",
+   "general": true,
+   "evidence": "Deleted by recommit 21179d8 6 min after landing; re-landed pass-by-pass; lifecycle scan read stale local copy 09-28",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "predicateLiteralNotUnique arming guard",
+   "location": "substrate-gap.ts (5499f5c)",
+   "purpose": "Refuse already-present expected_literal",
+   "status": "broken",
+   "general": false,
+   "evidence": "Inverted, wrong tree; per the index on 09-22, never fires",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "Compose nudge capacity check",
+   "location": "substrate-gap.ts (799bd58)",
+   "purpose": "Stop self-re-arming write loop",
+   "status": "live-used",
+   "general": true,
+   "evidence": "BUSY writes 270/h -> 1/h",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "Class-1 expected_literal predicate plus uniqueness guard",
+   "location": "substrate-gap.ts predicateLiteralNotUnique",
+   "purpose": "verifiable closure",
+   "status": "broken",
+   "general": true,
+   "evidence": "guard reads nonexistent path, fails open; ui-legibility closed without fix",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  }
+ ]
+}

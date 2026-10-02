@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-5fcbe112",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/development-vessel/src/resolvers/selector-saturation-audit.ts, the `degenerate` verdict (around line 156) is co",
+  "description": "In repos/development-vessel/src/resolvers/selector-saturation-audit.ts, the `degenerate` verdict (around line 156) is computed as `saturatedFraction >= satThreshold && variance <= varThreshold` — an AND, so it only flags when the selector is BOTH saturated AND low-variance. This misses the core failure it exists to catch: when the sampled arms' posteriors are undifferentiated (variance_of_means at or below varThreshold, i.e. indistinguishable means / distinct_means <= 1) but saturated_fraction is low. In that case Thompson selection is effectively uniform-random yet the audit reports 'healthy'. Change the degeneracy logic so undifferentiated means (variance <= varThreshold past the existing cold-start guard) also flag as degenerate, preserving the cold-start guard (sampled < minSampled) unchanged. Keep the change minimal and confined to this resolver.",
+  "goal_text": "In repos/development-vessel/src/resolvers/selector-saturation-audit.ts, the `degenerate` verdict (around line 156) is computed as `saturatedFraction >= satThreshold && variance <= varThreshold` — an AND, so it only flags when the selector is BOTH saturated AND low-variance. This misses the core failure it exists to catch: when the sampled arms' posteriors are undifferentiated (variance_of_means at or below varThreshold, i.e. indistinguishable means / distinct_means <= 1) but saturated_fraction is low. In that case Thompson selection is effectively uniform-random yet the audit reports 'healthy'. Change the degeneracy logic so undifferentiated means (variance <= varThreshold past the existing cold-start guard) also flag as degenerate, preserving the cold-start guard (sampled < minSampled) unchanged. Keep the change minimal and confined to this resolver.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-5fcbe112",
+  "source_gap_source": "substrate_detected"
+}

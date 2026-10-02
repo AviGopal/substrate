@@ -1,0 +1,19 @@
+{
+  "id": "orphaned-capability-fossilRankReport-1784875561209",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "other",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Resolver \"fossilRankReport\" is registered in development-vessel but invoked by 0 activities in the corpus (388/390 live ",
+  "description": "Resolver \"fossilRankReport\" is registered in development-vessel but invoked by 0 activities in the corpus (388/390 live resolvers are ever invoked)",
+  "goal_text": "Resolver \"fossilRankReport\" is registered in development-vessel but invoked by 0 activities in the corpus (388/390 live resolvers are ever invoked)",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "orphaned-capability-fossilRankReport-1784875561209",
+  "source_gap_source": "substrate_detected"
+}

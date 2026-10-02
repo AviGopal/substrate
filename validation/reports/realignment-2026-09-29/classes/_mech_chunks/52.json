@@ -1,0 +1,18 @@
+{
+ "area": "relevance-sink-vessel",
+ "items": [
+  {
+   "name": "relevance-sink-vessel (plain dir)",
+   "location": "repos/relevance-sink-vessel",
+   "purpose": "impulse-relevance penalty writes",
+   "status": "broken",
+   "general": false,
+   "evidence": "never baked into image until c0a61d47 06-29; outside submodule loop",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "self-alteration-throughput-zero-apply",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architectural_pattern",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Self-alteration pipeline landed 0 cutovers in the last 6h despite 20 proposal(s) authored (staged=0, landed=0). Stuck at",
+  "description": "Self-alteration pipeline landed 0 cutovers in the last 6h despite 20 proposal(s) authored (staged=0, landed=0). Stuck at APPLY: proposals are NOT converting to staged mitoses — apply-proposal-as-patch is either fed non-actionable proposals (stale backlog: 322/2386 stale) or patch_with_tools cannot construct an edit. The loop is detecting work but not landing it.",
+  "goal_text": "Self-alteration pipeline landed 0 cutovers in the last 6h despite 20 proposal(s) authored (staged=0, landed=0). Stuck at APPLY: proposals are NOT converting to staged mitoses — apply-proposal-as-patch is either fed non-actionable proposals (stale backlog: 322/2386 stale) or patch_with_tools cannot construct an edit. The loop is detecting work but not landing it.\n\nRemediation hint: Make apply-proposal-as-patch PREFER fresh proposals carrying required_code_modifications/new_files and skip the stale/analytic backlog (freshness_violation / precondition-rejection / arch-pattern reports), so patch_with_tools converges on a real code fix instead of churning dead proposals.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [
+    "repos/development-vessel/src/resolvers/apply-proposal-as-patch.ts"
+  ],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "self-alteration-throughput-zero-apply",
+  "source_gap_source": "substrate_detected"
+}

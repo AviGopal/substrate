@@ -1,0 +1,19 @@
+{
+  "id": "severed-joint-decision_outcome-write",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "other",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Close substrate gap severed-joint-decision_outcome: Write->read joint SEVERED: `decision_outcome` (read by activity-api ",
+  "description": "Close substrate gap severed-joint-decision_outcome: Write->read joint SEVERED: `decision_outcome` (read by activity-api /decision-calibration + universal per-execution reach capture (migration 202)) has no write within 3600s of the newest `execution` row, while the fleet is active (last execution 0s ago).",
+  "goal_text": "Close substrate gap severed-joint-decision_outcome: Write->read joint SEVERED: `decision_outcome` (read by activity-api /decision-calibration + universal per-execution reach capture (migration 202)) has no write within 3600s of the newest `execution` row, while the fleet is active (last execution 0s ago).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "severed-joint-decision_outcome-write",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-aed7cfe8",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Create repos/goal-host-vessel/src/goal-intent.sweep-a.test.ts: a bun:test file importing { goalRequestsDurableArtifact }",
+  "description": "Create repos/goal-host-vessel/src/goal-intent.sweep-a.test.ts: a bun:test file importing { goalRequestsDurableArtifact } from './goal-intent'. Assert it returns true for the input 'save the findings' and false for the input 'hello world'.",
+  "goal_text": "Create repos/goal-host-vessel/src/goal-intent.sweep-a.test.ts: a bun:test file importing { goalRequestsDurableArtifact } from './goal-intent'. Assert it returns true for the input 'save the findings' and false for the input 'hello world'.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-aed7cfe8",
+  "source_gap_source": "substrate_detected"
+}

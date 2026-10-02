@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-f125b8be",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/activity-api/src/routes/execution-traces.ts: incoming execution traces carry the Thompson selection's correla",
+  "description": "Edit repos/activity-api/src/routes/execution-traces.ts: incoming execution traces carry the Thompson selection's correlation id only as a tag of the form 'correlation:<id>' in body.tags, never in body.correlation_id, so the selection-outcome join (which keys on correlation_id) is always empty and no Thompson selection can be joined to its outcome. Fix it: before the trace is written (upstream of both the CREATE and the UPSERT write paths), when body.correlation_id is absent, derive it from body.tags by finding the entry that starts with 'correlation:' and stripping that prefix, assigning the result to body.correlation_id.",
+  "goal_text": "Edit repos/activity-api/src/routes/execution-traces.ts: incoming execution traces carry the Thompson selection's correlation id only as a tag of the form 'correlation:<id>' in body.tags, never in body.correlation_id, so the selection-outcome join (which keys on correlation_id) is always empty and no Thompson selection can be joined to its outcome. Fix it: before the trace is written (upstream of both the CREATE and the UPSERT write paths), when body.correlation_id is absent, derive it from body.tags by finding the entry that starts with 'correlation:' and stripping that prefix, assigning the result to body.correlation_id.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-f125b8be",
+  "source_gap_source": "substrate_detected"
+}

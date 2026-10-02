@@ -1,0 +1,19 @@
+{
+  "id": "self-recovery-failed-federation-transport-vessel",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "service_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "federation-transport-vessel unhealthy and NOT recovered by restart+revert-from-git — needs deeper repair",
+  "description": "federation-transport-vessel unhealthy and NOT recovered by restart+revert-from-git — needs deeper repair",
+  "goal_text": "federation-transport-vessel unhealthy and NOT recovered by restart+revert-from-git — needs deeper repair",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "self-recovery-failed-federation-transport-vessel",
+  "source_gap_source": "substrate_detected"
+}

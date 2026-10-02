@@ -1,0 +1,425 @@
+{
+  "_comment": "Declarative vessel inventory for the substrate image. apply-inventory.sh reads this at boot (before systemd) to select which units run, so one image runs any SUBSET: a full local substrate, a minimal hub (store+control+api+transport), or a compute-only spoke. DEFAULT (no ENABLED_ROLES/ENABLED_VESSELS env) = every unit enabled, identical to today. Selection env: ENABLED_ROLES=comma,roles | ENABLED_VESSELS=comma,units (explicit, overrides roles) | DISABLED_VESSELS=comma,units (always off). Per-vessel fork remotes: repo_owner_default (or per-vessel repo_owner) + the `repo` field feed setup-git-push.sh so a fork can point vessels at its own GitHub org. NAMED PROFILE 'analysis-backend' (the minimum backend a white-labelled metabob-mcp client attaches to = discovery + concept-db + analysis-vessel + activity-api + store/identity/seed/infra deps) is not a role-group here because concept-db/analysis-vessel share the coarse 'compute' role; it is expressed as an explicit ENABLED_VESSELS list in scripts/substrate/deploy-analysis-backend.sh \u2014 keep that list in sync with the units below.",
+  "repo_owner_default": "AviGopal",
+  "branch_default": "dev",
+  "roles": {
+    "hub": [
+      "store",
+      "control",
+      "api",
+      "transport",
+      "seed",
+      "infra",
+      "registry",
+      "models"
+    ],
+    "spoke": [
+      "compute",
+      "ui",
+      "seed",
+      "infra",
+      "registry"
+    ],
+    "full": [
+      "store",
+      "control",
+      "api",
+      "compute",
+      "ui",
+      "transport",
+      "seed",
+      "infra",
+      "autonomy",
+      "registry",
+      "models",
+      "desktop"
+    ]
+  },
+  "_profiles_comment": "PROFILE=<name> selects one of these deployable compositions; apply-inventory is the only place a profile is expanded into units. PROFILE outranks ENABLED_VESSELS and ENABLED_ROLES; ENABLED_EXTRA_VESSELS adds to it and DISABLED_VESSELS subtracts from it afterwards. Two forms, one namespace. composed_profiles compose from role groups exactly as ENABLED_ROLES would, plus the units no role expression can select by itself: 'compute' names goal-host, development, light-dispatch, boredom, analysis, ribosome and local-tools together, so a profile that needs some of them names them. Composing from roles keeps a profile right as units are added, since a new unit joins every profile whose roles include its role. profiles holds explicit unit lists, for compositions that cut across roles. They are separate keys so a selector that predates composition finds no entry for a composed name and refuses loudly, instead of reading the object as a unit list and masking nearly everything. A profile is a named data locality, not a size: standalone holds everything; hub holds the network's learning state and dispatches and self-develops next to it (goal-host, the compute vessels it walks with, the autonomy role and boredom-vessel, the law-5 selector, and the learning-liveness and runtime-drift probes that detect a stalled learning loop or drifted running code where that state lives), because the walk reads posteriors every step and the self-development loop turns the gap store into commits; hub-minimal is the bare hub role for a control-plane or relay node; spoke runs the host's own data and tools and resolves identity, traces and models on its hub; surface and compute are the explicit rosters for a human's window and a worker. The default when PROFILE is unset is derived by gen-env from the anchor (standalone for a root, spoke for a remote anchor) and is expressed through the selection it already implies rather than by setting PROFILE. Manifest vessels (\"manifest\": true) are never selected or masked here: the federation relay and transport are enabled by the entrypoint for hub profiles and anchored spokes, and human-surface-vessel is installed by vessel-ctl. CAVEAT: apply-inventory can only govern units this file names, so a shipped unit absent from `vessels` below runs regardless of the profile; apply-inventory warns about any at boot.",
+  "composed_profiles": {
+    "standalone": {
+      "roles": ["full"]
+    },
+    "hub": {
+      "roles": ["hub", "autonomy"],
+      "vessels": [
+        "goal-host-vessel.service",
+        "development-vessel.service",
+        "local-tools-vessel.service",
+        "ribosome-vessel.service",
+        "analysis-vessel.service",
+        "light-dispatch-vessel.service",
+        "boredom-vessel.service",
+        "boredom-vessel.timer",
+        "learning-liveness-probe.service",
+        "learning-liveness-probe.timer",
+        "runtime-drift.service",
+        "runtime-drift.timer"
+      ]
+    },
+    "hub-minimal": {
+      "roles": ["hub"]
+    },
+    "spoke": {
+      "roles": ["spoke"]
+    }
+  },
+  "profiles": {
+    "surface": [
+      "discovery-vessel.service",
+      "light-dispatch-vessel.service",
+      "federation-transport-vessel.service",
+      "substrate-ready.service",
+      "journald-stdout-forwarder.service",
+      "git-push-setup.service"
+    ],
+    "compute": [
+      "discovery-vessel.service",
+      "goal-host-vessel.service",
+      "development-vessel.service",
+      "local-tools-vessel.service",
+      "analysis-vessel.service",
+      "light-dispatch-vessel.service",
+      "boredom-vessel.service",
+      "boredom-vessel.timer",
+      "federation-transport-vessel.service",
+      "substrate-ready.service",
+      "journald-stdout-forwarder.service",
+      "git-push-setup.service"
+    ],
+    "compute_node": [
+      "discovery-vessel.service",
+      "goal-host-vessel.service",
+      "development-vessel.service",
+      "local-tools-vessel.service",
+      "analysis-vessel.service",
+      "light-dispatch-vessel.service",
+      "boredom-vessel.service",
+      "boredom-vessel.timer",
+      "federation-transport-vessel.service",
+      "substrate-ready.service",
+      "journald-stdout-forwarder.service",
+      "git-push-setup.service"
+    ],
+    "surface_node": [
+      "discovery-vessel.service",
+      "light-dispatch-vessel.service",
+      "federation-transport-vessel.service",
+      "substrate-ready.service",
+      "journald-stdout-forwarder.service",
+      "git-push-setup.service"
+    ]
+  },
+  "_profile_aliases_comment": "surface_node and compute_node in profiles are the deprecated names of surface and compute, kept as unit lists identical to them so a selector that predates profile_aliases still reads the same roster. compute carries analysis-vessel and local-tools-vessel, the host's files and tools a worker exists to serve, and compute_node carries them too. A current apply-inventory follows profile_aliases instead, uses the replacement's definition, and reports the old name.",
+  "profile_aliases": {
+    "surface_node": "surface",
+    "compute_node": "compute"
+  },
+  "vessels": [
+    {
+      "unit": "surrealdb.service",
+      "role": "store",
+      "health_port": 8000,
+      "core": true
+    },
+    {
+      "unit": "valkey.service",
+      "role": "store",
+      "core": true
+    },
+    {
+      "unit": "discovery-vessel.service",
+      "role": "registry",
+      "repo": "discovery-vessel",
+      "health_port": 8100,
+      "core": true
+    },
+    {
+      "unit": "identity-vessel.service",
+      "role": "control",
+      "repo": "identity-vessel",
+      "health_port": 8101,
+      "core": true
+    },
+    {
+      "unit": "activity-api.service",
+      "role": "api",
+      "repo": "activity-api",
+      "health_port": 8080,
+      "core": true
+    },
+    {
+      "unit": "development-vessel.service",
+      "role": "compute",
+      "repo": "development-vessel",
+      "health_port": 8090
+    },
+    {
+      "_comment": "Template seeding, split out of development-vessel's start phase so it cannot hold multi-user.target. Same role, so any selection that runs the vessel runs its seed — and any that masks the vessel masks the seed with it, which matters because the seed Requires= the vessel.",
+      "unit": "development-vessel-seed.service",
+      "_comment": "role=seed, NOT compute. It seeds templates once and exits (Restart=no), but its unit is deliberately Type=simple — declared oneshot, systemd holds multi-user.target until it EXITS, and the boot then sits behind ~98 template uploads (measured, and the unit file records it). substrate-ready classifies a resting unit as healthy on `role=seed OR Type=oneshot`; under role=compute this matched neither, so a unit that had logged 'Catalogue already populated — skipping seed' and deactivated successfully was reported `down`. That made substrate-doctor print FAILURES with all seven checks passing, and a readiness gate that fails on healthy units gets ignored — worse than no gate. seed is in every role group (hub/spoke/full), so this changes no topology.",
+      "role": "seed",
+      "repo": "development-vessel"
+    },
+    {
+      "unit": "local-tools-vessel.service",
+      "role": "compute",
+      "repo": "local-tools-vessel",
+      "health_port": 8230,
+      "core": true
+    },
+    {
+      "_comment": "Role 'models', not 'compute'. The four llm-* units SERVE models; everything else under compute CONSUMES them through discovery. Bundled together, no role expression could say 'run work here, resolve models on the hub' — which is precisely what a spoke is, so every spoke enabled its own arms and the arms ran wherever a provider key happened to be persisted. Still 'core': a substrate that serves models must have this answering, and substrate-ready reports a unit that is neither enabled nor active as SKIPPED rather than down, so a spoke without the models role stays green. This is the shared BASE resolver on its own port. The per-model arms are rendered at boot from llm-arms.json as llm-<id>, are not inventory-named, and are governed by the entrypoint's arm pass; the static llm-resolver-{google,haiku,opus} siblings that once sat here were deleted because they duplicated those arms on the same ports.",
+      "unit": "llm-resolver-vessel.service",
+      "role": "models",
+      "repo": "llm-resolver-vessel",
+      "health_port": 8220,
+      "core": true
+    },
+    {
+      "unit": "goal-host-vessel.service",
+      "role": "compute",
+      "repo": "goal-host-vessel",
+      "health_port": 8210,
+      "core": true
+    },
+    {
+      "unit": "ribosome-vessel.service",
+      "role": "compute",
+      "repo": "ribosome-vessel",
+      "health_port": 8240
+    },
+    {
+      "unit": "concept-db.service",
+      "role": "store",
+      "repo": "concept-db",
+      "health_port": 8260
+    },
+    {
+      "unit": "analysis-vessel.service",
+      "role": "compute",
+      "repo": "analysis-vessel",
+      "health_port": 8250
+    },
+    {
+      "unit": "light-dispatch-vessel.service",
+      "role": "compute",
+      "repo": "light-dispatch-vessel",
+      "health_port": 8280
+    },
+    {
+      "unit": "relevance-sink-vessel.service",
+      "_comment": "role=store, NOT compute: this vessel is After=surrealdb.service and writes impulse_relevance_metrics to SurrealDB directly (src/index.ts:19-38), unlike every other compute vessel which reaches its data through a resolver. Under role=compute it was selected by the spoke group, which includes compute and excludes store — so on a federated spoke it started, registered, reported healthy, and every write it made failed silently against a datastore that was not there.",
+      "role": "store",
+      "repo": "relevance-sink-vessel",
+      "health_port": 8255
+    },
+    {
+      "unit": "boredom-vessel.timer",
+      "role": "compute",
+      "repo": "boredom-vessel"
+    },
+    {
+      "_comment": "The .service is the unit that actually runs the selection loop; the .timer above only pokes it. apply-inventory.sh masks by exact unit name, so listing only the .timer left boredom-vessel.service ungoverned by role selection — it ran on a hub whose role group excludes compute, where its only dispatch conduit (light-dispatch-vessel.service, compute, correctly masked) was absent. Every dispatch then failed to connect, and the connect-error path records a FAILURE OUTCOME per template, so infrastructure absence was written into the shared learning store as arm quality. Both units must carry the same role.",
+      "unit": "boredom-vessel.service",
+      "role": "compute",
+      "repo": "boredom-vessel"
+    },
+    {
+      "unit": "stateful-ui-vessel.service",
+      "role": "ui",
+      "repo": "stateful-ui-vessel",
+      "health_port": 8270
+    },
+    {
+      "unit": "human-surface-vessel.service",
+      "role": "ui",
+      "repo": "human-surface-vessel",
+      "health_port": 8310,
+      "manifest": true
+    },
+    {
+      "unit": "obsidian-intake.timer",
+      "role": "ui",
+      "repo": "obsidian-vessel"
+    },
+    {
+      "unit": "obsidian-learn.timer",
+      "role": "ui",
+      "repo": "obsidian-vessel"
+    },
+    {
+      "unit": "obsidian-collaborate.timer",
+      "role": "ui",
+      "repo": "obsidian-vessel"
+    },
+    {
+      "unit": "federation-relay.service",
+      "role": "transport",
+      "manifest": true
+    },
+    {
+      "unit": "federation-transport-vessel.service",
+      "role": "transport",
+      "manifest": true,
+      "repo": "libp2p-federation-transport",
+      "health_port": 8401
+    },
+    {
+      "unit": "bootstrap-seeder.service",
+      "role": "seed"
+    },
+    {
+      "unit": "identity-seeder.service",
+      "role": "seed"
+    },
+    {
+      "unit": "substrate-ready.service",
+      "role": "infra"
+    },
+    {
+      "unit": "substrate-pull-sync.timer",
+      "role": "infra"
+    },
+    {
+      "unit": "concept-db-seeder.service",
+      "role": "store"
+    },
+    {
+      "unit": "substrate-active-scripts-seed.service",
+      "role": "seed"
+    },
+    {
+      "unit": "git-push-setup.service",
+      "role": "seed"
+    },
+    {
+      "unit": "journald-stdout-forwarder.service",
+      "role": "infra"
+    },
+    {
+      "unit": "light-dispatch-healthcheck.timer",
+      "role": "infra"
+    },
+    {
+      "unit": "self-recovery.timer",
+      "role": "infra"
+    },
+    {
+      "unit": "m1-trainer.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "funnel-drain.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "composition-edge-reconcile.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "model-reality-audit.timer",
+      "role": "store"
+    },
+    {
+      "unit": "observe-orthogonal-refresh.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "spectral-gap.timer",
+      "role": "store"
+    },
+    {
+      "unit": "learning-liveness-probe.timer",
+      "role": "compute"
+    },
+    {
+      "unit": "runtime-drift.timer",
+      "role": "compute"
+    },
+    {
+      "unit": "autonomy-metrics.timer",
+      "role": "infra"
+    },
+    {
+      "unit": "self-operational-health.timer",
+      "role": "infra"
+    },
+    {
+      "unit": "self-repair-operational.timer",
+      "role": "infra"
+    },
+    {
+      "unit": "operator-goal-generator.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "auto-describe-resolvers.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "surgical-gap-scan.timer",
+      "role": "autonomy"
+    },
+    {
+      "unit": "ingest-docs.timer",
+      "role": "autonomy"
+    },
+    {
+      "_comment": "Below: 28 units that shipped in the image but were absent from this file, so apply-inventory could not disable them in ANY role — a UI-only container ran three LLM resolvers because of exactly this. Naming them here is what makes a role or profile mean something. Timer+service pairs list both: the service is what a stray `systemctl start` reaches.",
+      "unit": "coherence-metric.timer",
+      "role": "store"
+    },
+    { "unit": "coherence-metric.service", "role": "store" },
+    { "unit": "coherence-recover.timer", "role": "store" },
+    { "unit": "coherence-recover.service", "role": "store" },
+    { "unit": "compose-teacher.timer", "role": "autonomy" },
+    { "unit": "compose-teacher.service", "role": "autonomy" },
+    { "unit": "efficiency-failure-tick.timer", "role": "autonomy" },
+    { "unit": "efficiency-failure-tick.service", "role": "autonomy" },
+    { "unit": "gap-compose.timer", "role": "autonomy" },
+    { "unit": "gap-compose.service", "role": "autonomy" },
+    { "unit": "goal-host-behavior.timer", "role": "autonomy" },
+    { "unit": "goal-host-behavior.service", "role": "autonomy" },
+    { "unit": "self-development-trend.timer", "role": "infra" },
+    { "unit": "self-development-trend.service", "role": "infra" },
+    { "unit": "typecheck-scenario-gen.timer", "role": "autonomy" },
+    { "unit": "typecheck-scenario-gen.service", "role": "autonomy" },
+    { "unit": "memory-budget-check.timer", "role": "infra" },
+    { "unit": "memory-budget-check.service", "role": "infra" },
+    { "unit": "db-contention-check.timer", "role": "store" },
+    { "unit": "db-contention-check.service", "role": "store" },
+    { "unit": "db-maintenance.timer", "role": "store" },
+    { "unit": "db-maintenance.service", "role": "store" },
+    { "unit": "trace-store-health-check.timer", "role": "api" },
+    { "unit": "trace-store-health-check.service", "role": "api" },
+    { "unit": "novnc.service", "role": "desktop" },
+    { "unit": "obsidian-desktop.service", "role": "desktop", "repo": "obsidian-vessel" },
+    { "unit": "obsidian-xorg.service", "role": "desktop", "repo": "obsidian-vessel" },
+    {
+      "_comment": "Below: the .service half of timer-driven units whose .timer was already listed. Governed in EFFECT today (mask the timer and nothing schedules them), but not by name — so a stray `systemctl start <unit>` reaches a unit no role selected. Roles here are copied from each unit's own timer, never guessed, so a role that selects the timer selects the service with it.",
+      "unit": "auto-describe-resolvers.service",
+      "role": "autonomy"
+    },
+    { "unit": "autonomy-metrics.service", "role": "infra" },
+    { "unit": "composition-edge-reconcile.service", "role": "autonomy" },
+    { "unit": "funnel-drain.service", "role": "autonomy" },
+    { "unit": "ingest-docs.service", "role": "autonomy" },
+    { "unit": "light-dispatch-healthcheck.service", "role": "infra" },
+    { "unit": "m1-trainer.service", "role": "autonomy" },
+    { "unit": "model-reality-audit.service", "role": "store" },
+    { "unit": "observe-orthogonal-refresh.service", "role": "autonomy" },
+    { "unit": "obsidian-collaborate.service", "role": "ui", "repo": "obsidian-vessel" },
+    { "unit": "obsidian-intake.service", "role": "ui", "repo": "obsidian-vessel" },
+    { "unit": "obsidian-learn.service", "role": "ui", "repo": "obsidian-vessel" },
+    { "unit": "operator-goal-generator.service", "role": "autonomy" },
+    { "unit": "self-operational-health.service", "role": "infra" },
+    { "unit": "self-recovery.service", "role": "infra" },
+    { "unit": "self-repair-operational.service", "role": "infra" },
+    { "unit": "learning-liveness-probe.service", "role": "compute" },
+    { "unit": "runtime-drift.service", "role": "compute" },
+    { "unit": "spectral-gap.service", "role": "store" },
+    { "unit": "substrate-pull-sync.service", "role": "infra" },
+    { "unit": "surgical-gap-scan.service", "role": "autonomy" }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-ca73164a",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts so the existing post-land test-suite check also ru",
+  "description": "Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts so the existing post-land test-suite check also runs as a PRE-cutover gate. Today resolveTestSuite runs only AFTER the commit lands, near line 2311; its failing-test names are diffed against the per-vessel baseline under /workspace/post-land-baseline/ and a substrateGap is filed for newly-failing tests. That per-test attribution is correct and must be reused, not duplicated. Before promoting the mitosis track, run the same suite against the mitosis tree, compute the same newly-failing set difference against the vessel baseline, and refuse the cutover when that set is non-empty and the same tests still fail on a confirming re-run. Keep the existing post-land observation path unchanged as the fallback for when the pre-cutover run cannot execute. Closes substrate gap cutover-suite-observes-but-does-not-gate.",
+  "goal_text": "Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts so the existing post-land test-suite check also runs as a PRE-cutover gate. Today resolveTestSuite runs only AFTER the commit lands, near line 2311; its failing-test names are diffed against the per-vessel baseline under /workspace/post-land-baseline/ and a substrateGap is filed for newly-failing tests. That per-test attribution is correct and must be reused, not duplicated. Before promoting the mitosis track, run the same suite against the mitosis tree, compute the same newly-failing set difference against the vessel baseline, and refuse the cutover when that set is non-empty and the same tests still fail on a confirming re-run. Keep the existing post-land observation path unchanged as the fallback for when the pre-cutover run cannot execute. Closes substrate gap cutover-suite-observes-but-does-not-gate.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-ca73164a",
+  "source_gap_source": "substrate_detected"
+}

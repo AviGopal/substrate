@@ -1,0 +1,53 @@
+{
+  "id": "fp-12-partial-success-recorded-as-total",
+  "mode_class": "fp",
+  "stage": "validation",
+  "outcome_class": "FP",
+  "information_state": "known_unknown",
+  "title": "Partial success recorded as total success — downstream consumer fails later",
+  "description": "Activity creates file1.ts correctly and file2.ts malformed; task-level validation rules check file1.ts and pass. Activity posterior marks success. Days later, downstream activity that consumes file2.ts fails — but the cascade attribution mechanism blames the downstream activity, not the partial producer. Compounds FP-10 (cascade attribution) and FP-43 (attribution error).",
+  "trigger": {
+    "preconditions": [
+      "activity produces multiple output_impulse_ids in a single task",
+      "task validation rules only sample a subset of outputs",
+      "downstream activity exists that consumes the unsampled output"
+    ],
+    "synthetic_setup": {
+      "traces": [
+        {
+          "synthesize": "Walk composition_chain pairs (A→B) where A's success traces include output_impulse_ids the downstream B never successfully consumed within 24h of A's success."
+        }
+      ]
+    }
+  },
+  "goal_text": "Audit recent successful executions whose output impulses were never consumed (or only partially consumed) by any downstream activity. Identify cases where the activity's output_shapes contract claims production of impulses that subsequent traces show were unusable. Propose an output-utilization validator activity.",
+  "expected_input_shapes": [
+    "activityExecutionTrace",
+    "compositionSuccess",
+    "impulseRelevance"
+  ],
+  "expected_output_shapes": [
+    "unutilizedOutputReport",
+    "outputUtilizationValidator",
+    "thompson_posterior_correction"
+  ],
+  "detection": {
+    "signal": "Activity A's trace records success with output_impulse_ids=[I1, I2, I3]; but trace queries show no successful downstream activity ever consumed I2 or I3 within the next 7 days; AND impulse_relevance for (A, I2) and (A, I3) shows declining co-occurrence with successful downstream chains.",
+    "witness_required": "downstream_correlation",
+    "query_template": "SELECT activity_template_id, output_impulse_ids FROM activity_execution_traces a WHERE success = true AND NOT EXISTS (SELECT 1 FROM activity_execution_traces b WHERE b.input_impulse_ids CONTAINS a.output_impulse_ids[1])"
+  },
+  "expected_emergence": {
+    "class": "gap_accepted",
+    "activity_signature": {
+      "input_shapes_intersect": ["activityExecutionTrace", "compositionSuccess"],
+      "output_shapes_must_include": ["unutilizedOutputReport"],
+      "tags_pattern": "validation.output_utilization.*"
+    }
+  },
+  "self_heal_window_seconds": 86400,
+  "metadata": {
+    "priority": "critical",
+    "cost_asymmetry": "fp_corrosive",
+    "depends_on_scenarios": ["fp-11-silent-semantic-failure"]
+  }
+}

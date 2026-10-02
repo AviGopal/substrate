@@ -1,0 +1,72 @@
+{
+  "identity": {
+    "at": "2026-09-22T10:49:23.353674+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-new-network-existing-org",
+      "substrate-key",
+      "whoami"
+    ],
+    "rc": 0,
+    "stdout": "{\n  \"valid\": true,\n  \"org_id\": \"organizations:substrate\",\n  \"user_id\": \"users:b04tmzwb9cplav7pwpv8\",\n  \"key_id\": \"key_ww3r7l4nrhZ7Dsip\",\n  \"scopes\": [\n    \"read\",\n    \"write\"\n  ],\n  \"role\": \"user\"\n}\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  "registry": {
+    "status": 200,
+    "data": {
+      "totalVessels": 6,
+      "totalShapes": 373,
+      "healthyCount": 6
+    }
+  },
+  "goalhost": {
+    "status": 200,
+    "data": {
+      "status": "healthy",
+      "in_flight": 0,
+      "drain_ms": 240000,
+      "vesselId": "goal-host-vessel",
+      "vesselName": "Goal Host Vessel",
+      "shapes": [
+        "goal_execution",
+        "activity_execution",
+        "activeDispatches",
+        "goalWalkState",
+        "poolImpulse_write",
+        "solicitationResponse_write",
+        "solicitationHeartbeat_write",
+        "goalDispatchAsync",
+        "fleetActivityFeed",
+        "bodyHonestyPolicy",
+        "walkBudget",
+        "lessonExecutionPolicy",
+        "extractionPolicy",
+        "pathwayReusePolicy"
+      ],
+      "version": "0.1.0",
+      "llm": "http-vessel:http://127.0.0.1:8220"
+    }
+  },
+  "transport": {
+    "status": 0,
+    "error": "TypeError: Unable to connect. Is the computer able to access the url?"
+  },
+  "units": {
+    "at": "2026-09-22T10:49:24.352821+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-new-network-existing-org",
+      "systemctl",
+      "list-units",
+      "--type=service",
+      "--state=running",
+      "--no-pager",
+      "--plain"
+    ],
+    "rc": 0,
+    "stdout": "UNIT                              LOAD   ACTIVE SUB     DESCRIPTION\nactivity-api.service              loaded active running activity-api\nbootstrap-seeder.service          loaded active running bootstrap-seeder (seed shared activity templates)\nconcept-db.service                loaded active running concept-db\ndbus.service                      loaded active running D-Bus System Message Bus\ndevelopment-vessel.service        loaded active running development-vessel\ndiscovery-vessel.service          loaded active running discovery-vessel\ngoal-host-vessel.service          loaded active running goal-host-vessel\nhuman-surface-vessel.service      loaded active running human-surface-vessel\njournald-stdout-forwarder.service loaded active running Forward all vessel logs to container stdout\nlocal-tools-vessel.service        loaded active running local-tools-vessel\nsurrealdb.service                 loaded active running SurrealDB\nsystemd-journald.service          loaded active running Journal Service\nsystemd-logind.service            loaded active running User Login Management\nvalkey.service                    loaded active running Valkey (Redis-compatible cache)\n\nLOAD   = Reflects whether the unit definition was properly loaded.\nACTIVE = The high-level unit activation state, i.e. generalization of SUB.\nSUB    = The low-level unit activation state, values depend on unit type.\n14 loaded units listed.\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  }
+}

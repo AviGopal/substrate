@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-bfdcc501",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose goal: Close substrate gap recommit-route-edit-7dccfd08-semantic_reject: compose for gap route-",
+  "description": "investigate and decompose goal: Close substrate gap recommit-route-edit-7dccfd08-semantic_reject: compose for gap route-edit-7dccfd08 repeated already-recorded failure class semantic_reject: The request explicitly states that the edits are in test/resolvers/orphaned-capability-scan.test.ts, not the file provided in the edit_site (repos/lig Edit repos/light-dispatch-vessel/src/index.ts.",
+  "goal_text": "investigate and decompose goal: Close substrate gap recommit-route-edit-7dccfd08-semantic_reject: compose for gap route-edit-7dccfd08 repeated already-recorded failure class semantic_reject: The request explicitly states that the edits are in test/resolvers/orphaned-capability-scan.test.ts, not the file provided in the edit_site (repos/lig Edit repos/light-dispatch-vessel/src/index.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-bfdcc501",
+  "source_gap_source": "substrate_detected"
+}

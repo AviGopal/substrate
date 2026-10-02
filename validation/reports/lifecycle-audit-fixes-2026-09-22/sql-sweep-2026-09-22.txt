@@ -1,0 +1,304 @@
+OK 000-auth-schema.surql
+OK 001-init-schema.surql
+OK 002-learning-system-phase1.surql
+OK 003-goal-execution-paths.surql
+OK 004-execution-traces.surql
+OK 005-ci-integration.surql
+OK 005-dashboard-components.surql
+OK 005-impulse-data.surql
+ERR(4/95) 007-control-flow-data-flow-learning.surql :: Found NONE for field `steps[*].transformations`, with record `execution_step_patterns:pattern_fix_test_v1`, but expected a array<object>
+OK 008-impulse-resolution-metrics.surql
+OK 060-thompson-sampling-fields.surql
+HTTP-FAIL migrations/030-fix-org-id-format.surql :: "There was a problem with the database: Parse error: Unexpected token `EXISTS`, expected Eof
+  --> [76:27]
+   |
+76 | DEFINE TABLE OVERWRITE IF EXISTS activity_executions SCHEMAFULL
+   |           
+OK migrations/031-org-id-string-consistency.surql
+OK migrations/031-selection-correlation-id.surql
+OK migrations/032-fix-org-id-value-clause.surql
+OK migrations/033-migrate-category-to-tags.surql
+OK migrations/044-backfill-template-shapes.surql
+OK migrations/045-composition-graph-extended-fields.surql
+OK migrations/045-fix-flexible-fields.surql
+ERR(1/4) migrations/050-add-org-fields-to-metrics.surql :: The field 'org_id' already exists
+OK migrations/052-deprecate-minibob-instance.surql
+OK migrations/053-external-validation.surql
+OK migrations/054-fix-activity-flexible-schema.surql
+ERR(1/4) migrations/055-add-learning-table-permissions.surql :: The table 'activity_composition_graph' already exists
+OK migrations/055-add-session-context.surql
+HTTP-FAIL migrations/055-variant-tracking.surql :: "There was a problem with the database: Parse error: Invalid function/constant path, did you maybe mean `not`
+  --> [57:5]
+   |
+57 | max(variant_generation) AS max_generation,
+   | ^^^ 
+"}
+OK migrations/056-shape-registry.surql
+ERR(6/6) migrations/057-orchestrator-shapes.surql :: Found NULL for field `org_id`, with record `shape_definition:7iiz1ndsdlaxi1abi8am`, but expected a option<string>
+OK migrations/058-register-context-templates.surql
+OK migrations/059-add-thompson-sampling-fields.surql
+OK migrations/060-tool-argument-pattern-fields.surql
+OK migrations/061-add-state-signature.surql
+OK migrations/062-execution-patterns.surql
+OK migrations/063-composition-edges.surql
+OK migrations/064-add-apikey-token-access.surql
+OK migrations/065-impulse-budget-tracking.surql
+HTTP-FAIL migrations/065-state-aware-selection.surql :: "There was a problem with the database: Parse error: Unexpected token `CREATE`, expected the query to end
+  --> [73:3]
+   |
+73 | create WHERE org_id = $auth.org_id,
+   | ^^^^^^ maybe forgot a semi
+OK migrations/066-variant-confidence.surql
+OK migrations/067-add-resolver-tracking.surql
+HTTP-FAIL migrations/068-complete-permissions-coverage.surql :: "There was a problem with the database: Parse error: Unexpected token `OVERWRITE`, expected Eof
+  --> [42:40]
+   |
+42 | DEFINE TABLE impulse_relevance_metrics OVERWRITE SCHEMAFULL
+   |            
+OK migrations/069-fix-apikey-token-jwt-secret.surql
+ERR(1/12) migrations/069-paradigm-compat-views.surql :: The table 'v_activity_score' does not exist
+OK migrations/070-fix-impulse-metrics-org-id.surql
+HTTP-FAIL migrations/071-fix-paradigm-tables-root-access.surql :: "There was a problem with the database: Parse error: Unexpected token `OVERWRITE`, expected Eof
+  --> [13:22]
+   |
+13 | DEFINE TABLE impulse OVERWRITE SCHEMAFULL
+   |                      ^^^^^^^^
+ERR(1/7) migrations/072-add-resolver-tracking-to-impulse-relevance.surql :: The field 'pointer_type' does not exist
+OK migrations/073-add-times-failed-to-tool-argument-pattern.surql
+HTTP-FAIL migrations/074-fix-org-id-type-mismatch-comprehensive.surql :: "There was a problem with the database: Parse error: Unexpected token `OVERWRITE`, expected Eof
+  --> [34:23]
+   |
+34 | DEFINE TABLE activity OVERWRITE SCHEMAFULL
+   |                       ^^^^^^
+HTTP-FAIL migrations/075-fix-org-id-phase2-core-systems.surql :: "There was a problem with the database: Parse error: Unexpected token `OVERWRITE`, expected Eof
+  --> [23:25]
+   |
+23 | DEFINE TABLE tool_usage OVERWRITE SCHEMAFULL
+   |                         ^^
+ERR(10/10) migrations/076-register-resolver-shapes.surql :: Found NULL for field `org_id`, with record `shape_definition:xlx6drzk6yvwbdadkfnm`, but expected a option<string>
+ERR(1/1) migrations/077-upkeep-audit-shape.surql :: Found NULL for field `org_id`, with record `shape_definition:1zxx4qe5q1o9lnbzzlbd`, but expected a option<string>
+OK migrations/078-register-cleanup-templates.surql
+HTTP-FAIL migrations/079-fix-executions-permissions-use-token.surql :: "There was a problem with the database: Parse error: Unexpected token `OVERWRITE`, expected Eof
+  --> [29:40]
+   |
+29 | DEFINE TABLE activity_execution_traces OVERWRITE SCHEMAFULL
+   |            
+HTTP-FAIL migrations/080-fix-all-permissions-use-token.surql :: "There was a problem with the database: Parse error: Unexpected token `OVERWRITE`, expected Eof
+  --> [46:41]
+   |
+46 | DEFINE TABLE activity_composition_graph OVERWRITE SCHEMAFULL
+   |           
+OK migrations/081-composition-chain-on-traces.surql
+OK migrations/082-add-deprecated-field-to-activity.surql
+HTTP-FAIL migrations/083-fix-core-table-permissions.surql :: "There was a problem with the database: Parse error: Unexpected token `OVERWRITE`, expected Eof
+  --> [39:23]
+   |
+39 | DEFINE TABLE activity OVERWRITE SCHEMAFULL
+   |                       ^^^^^^
+HTTP-FAIL migrations/084-fix-execution-traces-permissions.surql :: "There was a problem with the database: Parse error: Unexpected token `OVERWRITE`, expected Eof
+  --> [30:40]
+   |
+30 | DEFINE TABLE activity_execution_traces OVERWRITE SCHEMAFULL
+   |            
+HTTP-FAIL migrations/085-fix-goal-paths-permissions.surql :: "There was a problem with the database: Parse error: Unexpected token `OVERWRITE`, expected Eof
+  --> [17:35]
+   |
+17 | DEFINE TABLE goal_execution_paths OVERWRITE SCHEMAFULL
+   |                 
+OK migrations/086-resolver-tracking-on-traces.surql
+HTTP-FAIL migrations/087-fix-global-template-permissions.surql :: "There was a problem with the database: Parse error: Unexpected token `OVERWRITE`, expected Eof
+  --> [23:23]
+   |
+23 | DEFINE TABLE activity OVERWRITE
+   |                       ^^^^^^^^^ 
+"}
+OK migrations/088-context-thompson-scores.surql
+OK migrations/089-net-value-score-on-impulse-relevance.surql
+OK migrations/090-relevance-feedback.surql
+OK migrations/091-failure-mode-taxonomy.surql
+ERR(2/3) migrations/092-goal-paths-endpoint-shapes.surql :: The index 'idx_goal_paths_endpoint_shapes' already exists
+ERR(1/4) migrations/093-impulse-resolutions-flexible.surql :: The field 'impulse_resolutions[*]' already exists
+OK migrations/094-impulse-resolutions-overwrite.surql
+OK migrations/095-account-id-additive.surql
+OK migrations/096-back-compat-account-views.surql
+OK migrations/097-account-id-additive-tier2.surql
+OK migrations/098-back-compat-account-views-tier2.surql
+HTTP-FAIL migrations/099-account-id-permissions.surql :: "There was a problem with the database: Parse error: Unexpected token `OVERWRITE`, expected Eof
+  --> [50:23]
+   |
+50 | DEFINE TABLE activity OVERWRITE
+   |                       ^^^^^^^^^ 
+"}
+OK migrations/100-cc1-scope-narrowing-assert.surql
+OK migrations/101-goal-verification-labels.surql
+OK migrations/102-execution-traces-perf-indexes.surql
+OK migrations/103-thompson-ev-computed.surql
+OK migrations/104-fn-beta-sample.surql
+OK migrations/105-shape-gap-resolution.surql
+OK migrations/106-hnsw-dense-embedding-index.surql
+OK migrations/107-thompson-ev-backfill.surql
+ERR(12/19) migrations/108-thompson-ev-float-fix.surql :: The field 'ev' already exists
+OK migrations/109-thompson-ev-overwrite.surql
+OK migrations/110-drop-hnsw-indexes.surql
+OK migrations/110-fn-beta-sample-marsaglia-tsang.surql
+HTTP-FAIL migrations/111-fts-bm25-highlights.surql :: "There was a problem with the database: Parse error: Unexpected token `an identifier`, expected Eof
+  --> [30:3]
+   |
+30 | FULLTEXT ANALYZER activity_analyzer BM25(1.2, 0.75) HIGHLIGHTS;
+   | ^^^^
+OK migrations/112-fix-apikey-token-jwt-secret-overwrite.surql
+OK migrations/113-aet-success-composite-indexes.surql
+ERR(15/17) migrations/114-trace-digest-table.surql :: The index 'idx_trace_digest_org_activity_time' already exists
+ERR(13/15) migrations/115-execution-trace-content-table.surql :: The index 'idx_etc_execution_id' already exists
+ERR(11/13) migrations/116-execution-system-traces-table.surql :: The index 'idx_est_parent_execution_id' already exists
+ERR(8/10) migrations/117-execution-exemplar-table.surql :: The index 'idx_exemplar_execution_id' already exists
+HTTP-FAIL migrations/118-aet-content-fields-drop.surql :: "There was a problem with the database: Parse error: Unexpected token `INFO` expected `)`
+  --> [21:20]
+   |
+21 | LET $aet = (INFO FOR TABLE activity_execution_traces).fields;
+   |                
+OK migrations/119-learning-track-field.surql
+OK migrations/120-fix-content-table-subfields.surql
+OK migrations/121-fix-trace-table-permissions-token.surql
+OK migrations/122-aet-org-time-index.surql
+OK migrations/123-remove-duplicate-org-time-index.surql
+OK migrations/124-trace-digest-org-time-index.surql
+OK migrations/125-remove-hnsw-activity-indexes.surql
+HTTP-FAIL migrations/126-activity-tags-fts.surql :: "There was a problem with the database: Parse error: Unexpected token `an identifier`, expected Eof
+  --> [21:3]
+   |
+21 | FULLTEXT ANALYZER activity_analyzer BM25(1.2, 0.75)
+   | ^^^^^^^^ 
+"}
+ERR(3/3) migrations/127-rebuild-all-fts-indexes.surql :: The index 'idx_activity_tags_fts' does not exist
+OK migrations/128-times-failed-on-impulse-relevance.surql
+HTTP-FAIL migrations/129-fix-variant-performance-metrics-permissions.surql :: "There was a problem with the database: Parse error: Unexpected token `OVERWRITE`, expected Eof
+  --> [27:42]
+   |
+27 | DEFINE TABLE variant_performance_metrics OVERWRITE SCHEMAFULL
+   |          
+OK migrations/130-state-space-signature.surql
+OK migrations/131-test-audit-loop-tables.surql
+OK migrations/132-signature-embedding.surql
+OK migrations/132-test-audit-loop-flexible-array-elements.surql
+OK migrations/133-signature-cluster-assignment.surql
+OK migrations/133-substrate-compat-optional-fields.surql
+OK migrations/134-activity-table-optional-thompson-fields.surql
+OK migrations/134-context-thompson-scores-cluster.surql
+OK migrations/135-signature-cluster-run.surql
+OK migrations/135-variant-metrics-optional-fields.surql
+OK migrations/136-activity-fts-indexes.surql
+OK migrations/137-aet-tags.surql
+OK migrations/138-execution-trace-content-optional-created-at.surql
+OK migrations/139-activity-proposed-flag.surql
+OK migrations/140-refusal-events.surql
+OK migrations/141-promote-gate-evaluations.surql
+OK migrations/142-activity-variables-field.surql
+OK migrations/143-embedding-conditioned-prior-weights.surql
+OK migrations/144-aet-activity-status-index.surql
+OK migrations/145-aet-signature-fields.surql
+OK migrations/146-composition-edge-kind.surql
+OK migrations/147-aet-reached-fields.surql
+OK migrations/148-composition-edge-shape-flow.surql
+OK migrations/149-successor-features.surql
+OK migrations/150-db-admin-audit.surql
+OK migrations/151-activity-proposed-default.surql
+OK migrations/152-substrate-tuning-param.surql
+OK migrations/153-repair-signature.surql
+OK migrations/154-optional-input-shapes.surql
+OK migrations/155-llm-router-decisions.surql
+OK migrations/156-goal-paths-inference-confidence.surql
+OK migrations/156-trace-store-counters.surql
+OK migrations/157-execution-lossless-origin.surql
+HTTP-FAIL migrations/158-extend-paradigm-exec-view.surql :: 
+OK migrations/159-replication-state.surql
+OK migrations/160-execution-reach-fields.surql
+OK migrations/161-optional-input-shapes-optional.surql
+OK migrations/162-vpet-org-time-index.surql
+OK migrations/163-execution-created-at-index.surql
+OK migrations/164-drop-dead-orphan-tables.surql
+OK migrations/165-drop-dead-v-activity-score-enhanced-view.surql
+OK migrations/166-drop-dead-account-scoped-views.surql
+OK migrations/167-drop-vpet-blob-columns.surql
+OK migrations/169-retire-composition-edge.surql
+OK migrations/170-finalize-account-view-withdrawal.surql
+OK migrations/171-drop-dead-paradigm-compat-views.surql
+OK migrations/172-vpet-executed-at-index.surql
+OK migrations/173-drop-dead-orphan-tables-round2.surql
+OK migrations/174-neutralize-regenerating-account-views.surql
+OK migrations/176-drop-dead-orphan-tables-round3.surql
+OK migrations/177-churn-dedup-cleanup.surql
+OK migrations/178-drop-dead-execution-git-indexes.surql
+OK migrations/179-drop-dead-execution-tree-view.surql
+OK migrations/180-add-execution-created-at-index.surql
+OK migrations/180-etc-created-at-index.surql
+OK migrations/181-goal-path-walk-tier.surql
+OK migrations/182-activity-metadata-field.surql
+OK migrations/182-solo-time-indexes-aux-retention.surql
+OK migrations/183-relax-goal-verification-labeler-assert.surql
+OK migrations/184-backfill-learned-output-shapes-from-tasks.surql
+OK migrations/185-backfill-learned-task-config-shape-routed.surql
+OK migrations/186-deflate-multiplicative-posterior-saturation.surql
+OK migrations/187-source-vessel-id-default-rename.surql
+OK migrations/188-goal-paths-expected-shapes.surql
+OK migrations/189-goal-paths-expected-shapes-idempotent.surql
+OK migrations/190-goal-paths-expected-shapes-overwrite.surql
+OK migrations/191-goal-paths-expected-shapes-diag-trigger.surql
+OK migrations/192-grounded-assertion-fields.surql
+OK migrations/193-drop-redundant-execution-id-index.surql
+OK migrations/194-restore-execution-id-index.surql
+OK migrations/195-goal-path-work-signature.surql
+OK migrations/196-rebuild-corrupt-activity-success-index.surql
+OK migrations/197-rebuild-corrupt-org-success-index.surql
+OK migrations/198-remove-boolean-composite-indexes-that-serve-zero.surql
+OK migrations/199-remove-boolean-success-index-that-discards-conjuncts.surql
+OK migrations/201-decision-outcome-capture.surql
+OK migrations/202-decision-outcome-execution-source.surql
+OK migrations/203-tuning-param-string-values.surql
+OK migrations/204-goal-path-reuse-lineage.surql
+OK migrations/205-restore-fields-lost-to-unapplied-migrations.surql
+OK migrations/206-correct-205-field-types-to-optional.surql
+OK migrations/210-execution-traces-declared-fields.surql
+OK migrations/211-goal-path-state-signature.surql
+OK schemas/011-executions.surql
+OK schemas/012-composition.surql
+OK schemas/013-impulse-tool-usage.surql
+OK schemas/014-ribosome-sequences.surql
+OK schemas/015-impulse-metadata.surql
+OK schemas/016-connection-slots.surql
+OK schemas/017-llm-resolution.surql
+OK schemas/018-patterns.surql
+OK schemas/020-paradigm-core-tables.surql
+HTTP-FAIL schemas/021-paradigm-computed-views-v3.surql :: "There was a problem with the database: Parse error: Unexpected token `.`, expected Eof
+   --> [191:28]
+    |
+191 | FROM execution, execution.input_impulses AS impulse_id
+    |                    
+HTTP-FAIL schemas/021-paradigm-computed-views.surql :: "There was a problem with the database: Parse error: Unexpected token `.`, expected Eof
+   --> [190:28]
+    |
+190 | FROM execution, execution.input_impulses AS impulse_id
+    |                    
+ERR(1/11) schemas/022-paradigm-compat-views-v3.surql :: The table 'v_activity_score' does not exist
+ERR(1/11) schemas/022-paradigm-compat-views.surql :: The table 'v_activity_score' does not exist
+OK schemas/023-shape-conditioned-scores.surql
+ERR(1/12) schemas/024-vessel-capabilities.surql :: The table 'vessel_capabilities' already exists
+OK schemas/025-validation-traces.surql
+OK schemas/026-activity-template-alias.surql
+ERR(8/20) schemas/027-vessel-registry.surql :: The table 'vessel' already exists
+OK schemas/028-resolver-architecture.surql
+OK schemas/029-tool-argument-patterns.surql
+ERR(18/106) schemas/030-circuit-breaker-health.surql :: The table 'circuit_breaker_trace' already exists
+OK schemas/040-fts-recommendation.surql
+OK schemas/041-vector-embeddings.surql
+OK schemas/042-enhanced-activity-score.surql
+OK schemas/043-impulse-shape-scoring.surql
+OK schemas/045-emergent-shape-stats.surql
+ERR(2/52) schemas/046-composition-graph.surql :: The table 'composition_chain' already exists
+OK schemas/046-selection-outcomes-view.surql
+OK schemas/047-progressive-determinism.surql
+OK schemas/048-goal-execution-alignment.surql
+OK schemas/049-api-key-direct-auth.surql
+OK schemas/050-dense-embeddings.surql
+OK schemas/051-impulse-relevance-net-value.surql
+ERR(48/53) schemas/060-trace-storage-redesign.surql :: The index 'idx_exemplar_execution_id' already exists

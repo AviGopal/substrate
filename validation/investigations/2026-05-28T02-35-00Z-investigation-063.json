@@ -1,0 +1,113 @@
+{
+  "investigation_id": "063",
+  "generated_at": "2026-05-28T02:35:00Z",
+  "investigator_session_id": "loop-dynamic-mode",
+  "prior_investigation_id": "2026-05-28T02-22-57Z-investigation-062",
+  "substrate_target": "http://localhost:18080",
+  "substrate_status": "healthy",
+
+  "critical_summary": "One commit since investigation-062: f18bb246 iter 29. CRITICAL discovery by substrate: NO LLM calls have been happening across the entire substrate. All 53 sub-execution traces from exec_x19p0558 (goal[7]) show tokens_in=0/tokens_out=0. Root cause: llm-resolver-vessel advertised 'llmCompletion' (camelCase) but handler was registered under 'llm_completion' (snake_case), causing all discovery client queries to 404. Three bugs fixed. However: REMAINING GAP — activity execution path STILL produces 0 tokens after the fix. Engine llm-prompt resolver invoked but doesn't reach llm.generate(). This means every 'successful' prior execution involving LLM reasoning (including both draft-gap-closing-activity fires) completed without any LLM calls. New finding F-148 (HIGH): LLM path silently non-functional across entire substrate.",
+
+  "commits_since_062": [
+    {"hash": "f18bb246", "time": "2026-05-28T02:31Z", "author": "devbob@metabob.local", "summary": "iter 29: LLM dispatch path — fix shape + model mismatches; trace engine gap"}
+  ],
+
+  "new_findings": {
+    "F-148": {
+      "id": "F-148",
+      "title": "LLM path silently non-functional across entire substrate — all execution traces show tokens_in=0",
+      "severity": "HIGH",
+      "category": "silent-failure",
+      "first_seen_in": "investigation-063",
+      "status": "PARTIALLY ADDRESSED — shape/model bugs fixed, engine-level gap remains",
+      "description": "The substrate traced exec_x19p0558 (goal[7] fire) and found all 53 sub-execution traces with tokens_in=0/tokens_out=0. Root cause investigation found three layered bugs: (1) llm-resolver-vessel advertised 'llmCompletion' (camelCase) but handler registered under 'llm_completion' (snake_case) — discovery clients got 404; (2) callers passed 'anthropic/claude-...' but Anthropic SDK requires bare names; (3) dev-vessel llm_completion_dispatch resolver queried wrong shape name. All three fixed in iter-29. Direct POST to llm-resolver-vessel now works with real token counts. HOWEVER: the activity execution path STILL produces 0 tokens post-fix. Engine's llm-prompt resolver is invoked but apparently doesn't reach llm.generate(). Deeper engine-level investigation needed.",
+      "evidence": [
+        {
+          "type": "tokens_zero_in_traces",
+          "source": "commit message f18bb246",
+          "observed": "All 53 sub-execution traces during exec_x19p0558 show tokens_in=0/tokens_out=0"
+        },
+        {
+          "type": "shape_mismatch_fix",
+          "file_ref": "repos/llm-resolver-vessel/src/index.ts",
+          "command": "git show f18bb246 -- repos/llm-resolver-vessel/src/index.ts | grep 'llmCompletion\\|llm_completion' | head -10",
+          "observed": "Handler advertised llmCompletion (camelCase) but was registered under llm_completion (snake_case) — iter-29 fixes: advertise both"
+        },
+        {
+          "type": "model_prefix_fix",
+          "file_ref": "repos/llm-resolver-vessel/src/index.ts",
+          "observed": "rawModel.startsWith('anthropic/') ? rawModel.slice('anthropic/'.length) : rawModel — strips provider prefix before Anthropic SDK call"
+        },
+        {
+          "type": "remaining_gap",
+          "source": "commit message f18bb246",
+          "observed": "Activity execution path still produces 0 tokens post-fix. Goal-host has HttpLLMPort (startup log 'llm: vessel(...)') but llm-resolver-vessel sees no traffic from execution paths. Engine llm-prompt resolver invoked but doesn't reach llm.generate()."
+        }
+      ],
+      "implications": [
+        "Every 'successful' draft-gap-closing-activity execution to date was hollow — completed without LLM synthesis",
+        "exec_zaq88543 and exec_x19p0558 'succeeded' with status=completed but produced no LLM output, hence no template",
+        "All other activities with LLM tasks across the substrate have similarly been executing with zero LLM contribution",
+        "The lift loop declared 'mechanically complete' in inv-060/061 was functionally incomplete — stage 2 (LLM synthesis) was silently non-functional",
+        "Post-fix: direct llm-resolver-vessel calls work; execution-path calls still broken at engine level"
+      ]
+    }
+  },
+
+  "findings_reverification": {
+    "F-148": {"current_status": "NEW HIGH — see above"},
+    "F-147": {
+      "prior_status": "LOW OPEN",
+      "current_status": "LOW OPEN — unchanged",
+      "note": "16 PNG files still at root. No cleanup yet."
+    },
+    "F-146": {
+      "prior_status": "CRITICAL OPEN",
+      "current_status": "CRITICAL OPEN — unchanged",
+      "evidence": [
+        {
+          "type": "4d0c305e_author",
+          "command": "git show 4d0c305e --format='%H %ae %s'",
+          "observed": "devbob@metabob.local — not operator-signed"
+        }
+      ]
+    },
+    "F-145": {"prior_status": "OPEN", "current_status": "OPEN"},
+    "F-144": {"prior_status": "RE-OPENED", "current_status": "RE-OPENED — subsumed by F-146"},
+    "F-143": {"prior_status": "CLOSED", "current_status": "CLOSED"},
+    "F-142": {"prior_status": "ACKNOWLEDGED", "current_status": "ACKNOWLEDGED"},
+    "F-141": {"prior_status": "OPEN", "current_status": "OPEN"},
+    "F-140": {"prior_status": "ADDRESSED", "current_status": "ADDRESSED"},
+    "F-101": {"prior_status": "OPEN", "current_status": "OPEN"}
+  },
+
+  "lift_loop_revised_status": {
+    "stage_2_llm_synthesis": "BROKEN — fixed at shape/model layer, still broken at engine execution layer. draft-gap-closing-activity cannot produce templates until engine-level LLM path is repaired.",
+    "remaining_gap": "Engine llm-prompt resolver invoked but doesn't call llm.generate(). Substrate investigating next iter.",
+    "consequence": "The full lift loop declared complete in inv-060/061 was premature. Stage 2 (LLM template synthesis) is functionally non-operational.",
+    "auto_promote_status": "Unchanged — considered=6, promoted=0. Correct: no templates to promote until stage 2 works."
+  },
+
+  "closure_audit": {
+    "result": "7/7 CLOSED",
+    "verified_at": "2026-05-28T02:34Z"
+  },
+
+  "prior_findings_status": {
+    "F-148": "HIGH NEW — LLM path silently broken; tokens_in=0 across all traces; partially addressed (3 bugs fixed), engine-level gap remains",
+    "F-147": "LOW OPEN",
+    "F-146": "CRITICAL OPEN",
+    "F-145": "OPEN",
+    "F-144": "RE-OPENED",
+    "F-143": "CLOSED",
+    "F-142": "ACKNOWLEDGED",
+    "F-141": "OPEN",
+    "F-140": "ADDRESSED",
+    "F-101": "OPEN"
+  },
+
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "rationale": "F-148 HIGH just landed. Substrate actively debugging engine-level LLM gap. 30min to catch iter-30 (engine fix) which is likely imminent."
+  }
+}

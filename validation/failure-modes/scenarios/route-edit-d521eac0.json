@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-d521eac0",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/identity-vessel/src/index.ts so that revoking an API key is reflected by the key-listing endpoint.\n\nThe defec",
+  "description": "Edit repos/identity-vessel/src/index.ts so that revoking an API key is reflected by the key-listing endpoint.\n\nThe defect is a write-read split across two stores. The revoke handler at app.post(\"/v1/keys/revoke\") calls revokeKey(), which is db/redis.ts revokeKey() and only does redis.setex(\"revoked:\" + keyId, ttl, \"1\"). The listing handler at app.get(\"/v1/keys\") reads SurrealDB: SELECT ... is_active ... FROM api_key, and derives status: r.is_active ? \"active\" : \"revoked\". Nothing ever sets is_active false, so a revoked key is listed as active forever.\n\nMeasured: after a successful revoke, POST /v1/keys/validate correctly returns valid:false with \"API key has been revoked\" (it consults Redis), while substrate-key list, run immediately and again ten seconds later, still shows that key as active. An operator following the documented revoke-then-list sequence sees \"active\" after a successful revoke and reasonably concludes the revoke failed.\n\nThe fix: in the revoke handler, after revokeKey() succeeds, also UPDATE the api_key row in SurrealDB to set is_active = false for the revoked key_id, using the same query helper the listing handler imports from ./db/surrealdb. Redis remains the fast path the validate route checks; SurrealDB becomes accurate rather than stale. Do not change the validate path.",
+  "goal_text": "Edit repos/identity-vessel/src/index.ts so that revoking an API key is reflected by the key-listing endpoint.\n\nThe defect is a write-read split across two stores. The revoke handler at app.post(\"/v1/keys/revoke\") calls revokeKey(), which is db/redis.ts revokeKey() and only does redis.setex(\"revoked:\" + keyId, ttl, \"1\"). The listing handler at app.get(\"/v1/keys\") reads SurrealDB: SELECT ... is_active ... FROM api_key, and derives status: r.is_active ? \"active\" : \"revoked\". Nothing ever sets is_active false, so a revoked key is listed as active forever.\n\nMeasured: after a successful revoke, POST /v1/keys/validate correctly returns valid:false with \"API key has been revoked\" (it consults Redis), while substrate-key list, run immediately and again ten seconds later, still shows that key as active. An operator following the documented revoke-then-list sequence sees \"active\" after a successful revoke and reasonably concludes the revoke failed.\n\nThe fix: in the revoke handler, after revokeKey() succeeds, also UPDATE the api_key row in SurrealDB to set is_active = false for the revoked key_id, using the same query helper the listing handler imports from ./db/surrealdb. Redis remains the fast path the validate route checks; SurrealDB becomes accurate rather than stale. Do not change the validate path.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-d521eac0",
+  "source_gap_source": "substrate_detected"
+}

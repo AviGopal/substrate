@@ -1,0 +1,97 @@
+{
+  "generated_at": "2026-05-23T09:23:06.413Z",
+  "label": "local-substrate-cold-20260523",
+  "endpoint": "http://localhost:18080",
+  "scenarios_run": 6,
+  "scenarios": [
+    {
+      "scenario_id": "fp-11-silent-semantic-failure",
+      "dispatched_at": "2026-05-23T09:23:05.840Z",
+      "recommendations_returned": 0,
+      "matched_existing_activity_id": null,
+      "emergence_class": "gap",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "no matching activity in /recommend or discover-by-shapes; no emergent trace within initial poll window"
+      ]
+    },
+    {
+      "scenario_id": "fp-12-partial-success-recorded-as-total",
+      "dispatched_at": "2026-05-23T09:23:05.984Z",
+      "recommendations_returned": 0,
+      "matched_existing_activity_id": null,
+      "emergence_class": "gap",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "no matching activity in /recommend or discover-by-shapes; no emergent trace within initial poll window"
+      ]
+    },
+    {
+      "scenario_id": "fp-15-missing-producer-stale-registration",
+      "dispatched_at": "2026-05-23T09:23:06.078Z",
+      "recommendations_returned": 0,
+      "matched_existing_activity_id": null,
+      "emergence_class": "gap",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "no matching activity in /recommend or discover-by-shapes; no emergent trace within initial poll window"
+      ]
+    },
+    {
+      "scenario_id": "fm-17-resolver-budget-noncompliance",
+      "dispatched_at": "2026-05-23T09:23:06.158Z",
+      "recommendations_returned": 0,
+      "matched_existing_activity_id": null,
+      "emergence_class": "gap",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": true,
+      "notes": [
+        "no matching activity in /recommend or discover-by-shapes; no emergent trace within initial poll window"
+      ]
+    },
+    {
+      "scenario_id": "fm-43-cascade-attribution-error",
+      "dispatched_at": "2026-05-23T09:23:06.241Z",
+      "recommendations_returned": 0,
+      "matched_existing_activity_id": null,
+      "emergence_class": "gap",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "no matching activity in /recommend or discover-by-shapes; no emergent trace within initial poll window"
+      ]
+    },
+    {
+      "scenario_id": "fm-44-silent-trace-loss",
+      "dispatched_at": "2026-05-23T09:23:06.326Z",
+      "recommendations_returned": 0,
+      "matched_existing_activity_id": null,
+      "emergence_class": "gap",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "no matching activity in /recommend or discover-by-shapes; no emergent trace within initial poll window"
+      ]
+    }
+  ],
+  "summary": {
+    "reuse": 0,
+    "new": 0,
+    "gap": 6,
+    "avg_self_heal_seconds": null
+  },
+  "description": "Cold-start local substrate baseline — all gap expected (no domain templates seeded yet, local activity-api fresh from migration only)",
+  "template_count": 0,
+  "trace_count": 36,
+  "substrate_version": "substrate-dev",
+  "note": "fm-17 shows detection_signal_present=true (budget field recognized); all others pure gap. Baseline for measuring autonomous warm-up progress."
+}

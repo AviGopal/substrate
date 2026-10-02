@@ -1,0 +1,289 @@
+{
+ "source": "openspec-8",
+ "coverage": "Range 127-144 read in full. It is NOT the recent active plans the task names: those sit at 108-115, 121, 123-125, 157, 169, 174-179 and belong to adjacent shards. What the range holds: 1 real proposal, do-anything-surface (proposal.md and design.md read in full; there is no tasks.md), and 17 substrate-authored stray files (all read: http-response variants, tsc emit, gap-msvqgv4y JSONs). Each was checked against the live state: human-surface-vessel source and units, the stateful-ui-vessel health endpoint, complete-vessel-scaffold.ts, draft-detector-activity.ts, the http-response.ts header, the gap store (6278 records), and the super-repo commits that added the strays (4e4170a8, 13c5d466, 796fac89, edc68d49, cleanup d993b331). Not verified: do-anything falsifiers 1, 2 and 5 (no measurement found), and the metric-collector port collision. Adjacent finding: 3372 born-closed pseudo-gaps from goal-host auto_draft.",
+ "attempts": [
+  {
+   "key": "human-surface-escalation",
+   "title": "do-anything-surface proposal (browser do-anything box with honest reached verdict)",
+   "where": "openspec/changes/do-anything-surface (9ea845d4 2026-08-07)",
+   "tried": "Reuse goal-host dispatch; add a browser box with starters, reached headline, artifact evidence, one-gesture grading, all traced; initially on stateful-ui-vessel, then superseded in part by human-surface-stack",
+   "outcome": "partial",
+   "evidence": "Realized in repos/human-surface-vessel: Surface.tsx:57, AskRegion.tsx:219 tag surface:do-anything, StarterChips/RunRow/GradeGesture, proxy.ts:654 /api/run-goal via goalDispatchAsync; :8310 healthy. Falsifiers 1/2/5 never measured; stateful-ui-vessel not retired (794 panels on :8270)."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "date": "2026-08-16",
+   "title": "Substrate re-drafted a generic httpResponse resolver into openspec/changes 3 times",
+   "where": "openspec/changes/{fix-http-response-resolver,http-response-camel,httpResponse,delete-old-http-response-new}*",
+   "tried": "LLM drafter wrote 5 competing resolver implementations plus delete instructions as loose files",
+   "outcome": "failed",
+   "evidence": "None landed or are read by anything; header of repos/development-vessel/src/resolvers/http-response.ts says '12 orphaned files, none landed'; the files were later committed by 4e4170a8/796fac89 with tsc emit"
+  },
+  {
+   "key": "write-read-mismatch",
+   "date": "2026-08-16",
+   "title": "Operator fix: http_response ignored its URL (hardcoded httpbin 404)",
+   "where": "repos/development-vessel/src/resolvers/http-response.ts (5be029a)",
+   "tried": "Delegate to resolveWebResource, keep the shape name",
+   "outcome": "worked",
+   "evidence": "Live resolver delegates. Followed by 4 narrowed/recommit substrate cutovers 08-17/18 (48db304, 9419b26, 5bed003, f0f340c)"
+  },
+  {
+   "key": "false-verification",
+   "title": "gap-msvqgv4y closed by writing a closed.json",
+   "where": "openspec/changes/gap-msvqgv4y-*.json",
+   "tried": "Line-number patch adding a cosmetic uiPanel_write task to draft-detector-activity.ts, then a JSON declaring the gap closed 'as verified by inspecting' the file",
+   "outcome": "failed",
+   "evidence": "draft-detector-activity.ts (46 lines, last commit 851cadc 2026-06-14) has no uiPanel_write; the gap id is absent from the live gap store"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "date": "2026-09-07",
+   "title": "Self-maintenance 'vessel code drift detected and committed' sweep",
+   "where": "super-repo 4e4170a8 (+0599ea34); generator rhythm-conductor-tick.ts:126",
+   "tried": "Rhythm prose goal: detect vessel code drift then run vessel-code-commit-and-push",
+   "outcome": "failed",
+   "evidence": "2134 files committed incl. root junk and {{dirPath}} dirs; it truncated spectral-gap's source (-45 lines), so spectral-gap.service failed 09-14 and served a 9-day-stale lambda2 (compose-teacher.ts:364)"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "date": "2026-09-18",
+   "title": "vessel-code-commit-and-push sweeps 09-18/09-19",
+   "where": "super-repo 13c5d466, 796fac89",
+   "tried": "Same rhythm goal",
+   "outcome": "failed",
+   "evidence": "1909 files (1785 validation/failure-modes) and 412 files (tsc emit of openspec/*.ts, generate_report.js 6234 lines). The 796fac89 subject names cpg-inference-ts but the commit touched the super-repo"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "date": "2026-09-23",
+   "title": "Root scratch cleanup and placement hook",
+   "where": "d993b331 (unified-install-interface)",
+   "tried": "Delete tracked root scratch; install the pre-commit placement hook in in-container clones",
+   "outcome": "partial",
+   "evidence": "Root junk removed, but the hook checks only top-level dirs: 77 strays remain in openspec/changes/, 142 .js emit files sit next to their .ts, and history.txt, run_scan.js and tsconfig.json remain at root; edc68d49 on 09-26 committed leases/ and state/ runtime files"
+  },
+  {
+   "key": "write-read-mismatch",
+   "date": "2026-08-07",
+   "title": "Scaffold registration payload defect identified (not filed or fixed)",
+   "where": "repos/development-vessel/src/seed/complete-vessel-scaffold.ts:213",
+   "tried": "Documented in do-anything design.md section 5 as 'worth filing separately'",
+   "outcome": "dormant",
+   "evidence": "Still nests resolverContract; grep systemVessel = 0; last commit bbf0e09 2026-07-12"
+  }
+ ],
+ "problems": [
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Loose drafts, tsc emit (.js/.d.ts/.map) and probe files committed into openspec/changes, root and validation by substrate sweeps",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-26",
+   "recurrences": 4,
+   "root_cause": "The rhythm prose goal 'vessel-code-commit-and-push' runs git add on whatever tree the LLM walk picks. The placement hook guards only top-level dir names, not content or emit residue."
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "A shape answers well-formed but ignores its input (http_response fetched hardcoded httpbin), so reuse-before-mint returns garbage and the drafter re-mints",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-08-16",
+   "recurrences": 3,
+   "root_cause": "Scaffold resolver advertised and dispatched with no content check; lint only enforces advertised==dispatched"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Vessels generated from the substrate's own scaffold register nested resolverContract with no systemVessel, so they are partially invisible to org-scoped discovery",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "Scaffold writes nested fields; the registry reads them flat; no check resolves scaffold output against the registry"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gap declared closed via a JSON file claiming a change 'verified by inspecting' a file that does not contain it",
+   "first_seen": "2026-08-17",
+   "last_seen": "2026-08-17",
+   "recurrences": 1,
+   "root_cause": "Closure asserted by the drafter's prose with no machine check against the file"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "3372 of 6278 gap-store records (54%) are born-closed '[closed by dispatch completion]' pseudo-gaps, some 4 identical within 100 ms",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-22",
+   "recurrences": 3372,
+   "root_cause": "goal-host-vessel/src/index.ts:16887 writes a closed substrateGap for every auto_draft dispatch completion, inflating close-rate"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Automated drift-commit truncated spectral-gap source; the service failed and consumers read a 9-day-stale value as current",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-16",
+   "recurrences": 1,
+   "root_cause": "Mass commit of a mid-edit working tree; the stale producer's last line kept being served with no staleness check"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "The replaced stateful-ui-vessel still runs and accumulates panels (480 on 09-22, 794 on 09-28) after human-surface-stack declared it retired",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "Supersession declared in docs but the unit was never masked; writers still pin :8270"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafter invents shape casing (httpResponse vs http_response), nonexistent import paths (../config/types from openspec) and delete targets for nonexistent files (http-response-new.ts)",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-08-17",
+   "recurrences": 5,
+   "root_cause": "No existence check on paths or shape names at draft time"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The container /workspace is a git repo whose origin points at an unrelated GitHub project, with 10212 dirty paths and 92 root scratch files (FINAL_ANSWER.txt, GOAL_COMPLETION_CERTIFICATE.txt, a file named 'and')",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "LLM walks write scratch to /workspace; no sweep or ignore policy"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "human-surface-vessel do-anything box",
+   "location": "repos/human-surface-vessel/ui/src/{Surface,components/AskRegion,StarterChips,RunRow,GradeGesture}.tsx, src/routes/proxy.ts:654",
+   "purpose": "Browser goal dispatch with a reached-first run view and grading",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Service active, :8310 healthy, dispatch tag surface:do-anything"
+  },
+  {
+   "name": "stateful-ui-vessel",
+   "location": "repos/stateful-ui-vessel, :8270",
+   "purpose": "Former human surface (panels, questions)",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "human-surface-vessel",
+   "evidence": "Still active with 794 panels; the retirement declared by human-surface-stack was not done"
+  },
+  {
+   "name": "complete-vessel-scaffold",
+   "location": "repos/development-vessel/src/seed/complete-vessel-scaffold.ts",
+   "purpose": "Substrate's canonical scaffold for new vessels",
+   "status": "broken",
+   "general": true,
+   "evidence": "Line 213 nests resolverContract; no systemVessel"
+  },
+  {
+   "name": "self-maintenance rhythm goal (detect-vessel-code-drift then vessel-code-commit-and-push)",
+   "location": "repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts:126",
+   "purpose": "Commit and push vessel clone drift",
+   "status": "broken",
+   "general": false,
+   "evidence": "Produced the 4e4170a8 (2134 files), 13c5d466 (1909) and 796fac89 (412) super-repo sweeps and a source truncation; still in source"
+  },
+  {
+   "name": "http_response resolver (delegating)",
+   "location": "repos/development-vessel/src/resolvers/http-response.ts",
+   "purpose": "http_response shape delegating to the trust-gated web_resource fetcher",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Wired in routes/impulses.ts:68"
+  },
+  {
+   "name": "openspec/changes http-response strays (fix-http-response-resolver, http-response-camel, httpResponse, new-*-http-response-resolver, http-response-types, http-response-resolver)",
+   "location": "openspec/changes/*.ts|.js|.d.ts|.map",
+   "purpose": "Drafted replacement resolvers",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "repos/development-vessel/src/resolvers/http-response.ts",
+   "evidence": "No readers (grep of repos/*/src and scripts); import paths invalid"
+  },
+  {
+   "name": "gap-msvqgv4y JSONs",
+   "location": "openspec/changes/gap-msvqgv4y-*.json",
+   "purpose": "Scenario, patch and closure for the uiPanel_write orphan gap",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Patch never applied; the gap is not in the store"
+  },
+  {
+   "name": "pre-commit placement hook",
+   "location": "scripts/git-hooks/pre-commit (installed by setup-git-push, d993b331)",
+   "purpose": "Reject root-level additions outside ALLOWED_TOPLEVEL_DIRS",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Blocks root files only; edc68d49 on 09-26 still committed leases/ and state/, and openspec/changes strays remain"
+  },
+  {
+   "name": "goal-host auto_draft closed-gap writer",
+   "location": "repos/goal-host-vessel/src/index.ts:16887",
+   "purpose": "Record a dispatch-completion decision as a closed substrateGap",
+   "status": "dormant",
+   "general": false,
+   "evidence": "3372 records 09-18..09-22, none after 2026-09-22T02:36Z; the code line is still present"
+  },
+  {
+   "name": "compose-teacher spectral-gap staleness guard",
+   "location": "scripts/substrate/compose-teacher.ts:355-375",
+   "purpose": "Treat the lambda2 reading as absent after 6h without a write",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Added after the 9-day stale reading caused by 4e4170a8"
+  }
+ ],
+ "principles": [
+  "A shape that answers well-formed output while ignoring its input is worse than a missing shape: reuse-before-mint consults it, gets garbage, and the drafter re-mints forever (http_response to 12+ orphan drafts).",
+  "Never give an LLM prose goal git-commit authority over an unscoped tree: 'commit drift' sweeps committed 4455 files in 3 commits and truncated live source.",
+  "A placement gate that checks directory names but not content lets the same bloat recur one directory down (openspec/changes, leases/, state/, tsc emit).",
+  "A closure written as a file ('closed.json \u2026 as verified by inspecting') is a claim, not a verification; closure needs a machine check against the edit site.",
+  "A supersession declared in a proposal is not a retirement until the old unit is masked and its pinned writers are re-pointed.",
+  "Minting born-closed records into the gap store corrupts the close-rate leg of the gap triple; segregate by source before any metric.",
+  "A defect noted in passing in a design doc ('worth filing separately') is lost unless it is filed; the scaffold defect has sat unfixed for 52 days.",
+  "A producer's last value must go stale loudly: a dead producer serving its final line reads as a fresh measurement."
+ ],
+ "claims": [
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-17",
+   "claim": "gap-msvqgv4y closed: uiPanel_write is now invoked by draft-detector-activity, verified by inspecting the file",
+   "where": "openspec/changes/gap-msvqgv4y-closed.json",
+   "later": "2026-09-28: draft-detector-activity.ts contains no uiPanel_write and was last changed 2026-06-14; the claim was false from the start"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-07",
+   "claim": "Automated commit: vessel code drift detected and committed",
+   "where": "super-repo 4e4170a8",
+   "later": "The commit swept 2134 unrelated files and truncated spectral-gap source; the service failed 09-14 and the damage was found 09-16 (compose-teacher.ts:364)"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "claimed_at": "2026-09-23",
+   "claim": "Root scratch removed; placement hook installed where the substrate commits, so new launches reject new root files",
+   "where": "d993b331",
+   "later": "Root holds; 77 strays remain in openspec/changes and runtime-state commits recurred 09-26 (edc68d49 leases/, state/)"
+  },
+  {
+   "key": "human-surface-escalation",
+   "claimed_at": "2026-08-07",
+   "claim": "stateful-ui-vessel and react-renderer retired in favour of one human-facing vessel (human-surface-stack, cited by do-anything-surface)",
+   "where": "openspec/changes/do-anything-surface/proposal.md",
+   "later": "2026-09-28: stateful-ui-vessel.service still active with 794 panels"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-08-16",
+   "claim": "http_response fixed to fetch the requested URL via the trust-gated fetcher",
+   "where": "repos/development-vessel 5be029a",
+   "later": "Live and still wired. 4 more substrate narrowed/recommit cutovers followed on 08-17/18; the drafts it provoked remain as fossils"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-08-07",
+   "claim": "Scaffold registration defect identified, 'worth filing separately'",
+   "where": "do-anything-surface/design.md section 5",
+   "later": "Unfixed on 2026-09-28 (complete-vessel-scaffold.ts:213)"
+  }
+ ],
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/openspec-8.md"
+}

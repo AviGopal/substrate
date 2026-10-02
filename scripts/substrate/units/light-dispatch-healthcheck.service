@@ -1,0 +1,11 @@
+[Unit]
+Description=light-dispatch-vessel liveness probe — restarts the vessel if it is alive-but-hung on :8280
+# Pairs with Restart=always in light-dispatch-vessel.service: that covers process
+# death, this covers a wedged-but-listening process. See light-dispatch-healthcheck.sh.
+After=light-dispatch-vessel.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/light-dispatch-healthcheck
+StandardOutput=journal
+StandardError=journal

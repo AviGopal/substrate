@@ -1,0 +1,19 @@
+{
+  "id": "reach-history-weekly-counter-inflated-beyond-total-executions-ever-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from reach-history-weekly-counter-inflated-beyond-total-executions-ever] in repos/activity-api/src/services/tr",
+  "description": "[narrowed from reach-history-weekly-counter-inflated-beyond-total-executions-ever] in repos/activity-api/src/services/trace-retention.ts, the rollupReachHistory function folds reach counts into reach_history with an additive UPSERT. The exact lines are:\n\n           reached = (reached ?? 0) + $reached,\n           total = (total ?? 0) + $total,\n\nBecause the bucket UPSERT is additive and the watermark UPSERT is a separate statement issued afterwards, any run whose bucket writes succeed while the watermark write fails or lags re-adds the same rows on the next run, inflating the weekly totals monotonically. Live evidence: week 2026-08-17 reports total=414944, which is 24x more execution rows than have ever existed in the retained store (17393). Make the weekly fold idempotent so re-scanning a row range cannot double-count.",
+  "goal_text": "[narrowed from reach-history-weekly-counter-inflated-beyond-total-executions-ever] in repos/activity-api/src/services/trace-retention.ts, the rollupReachHistory function folds reach counts into reach_history with an additive UPSERT. The exact lines are:\n\n           reached = (reached ?? 0) + $reached,\n           total = (total ?? 0) + $total,\n\nBecause the bucket UPSERT is additive and the watermark UPSERT is a separate statement issued afterwards, any run whose bucket writes succeed while the watermark write fails or lags re-adds the same rows on the next run, inflating the weekly totals monotonically. Live evidence: week 2026-08-17 reports total=414944, which is 24x more execution rows than have ever existed in the retained store (17393). Make the weekly fold idempotent so re-scanning a row range cannot double-count.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "reach-history-weekly-counter-inflated-beyond-total-executions-ever-narrowed",
+  "source_gap_source": "substrate_detected"
+}

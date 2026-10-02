@@ -1,0 +1,42 @@
+{
+  "variant_id": "precommit:detect-llm-cruft",
+  "activity_id": "precommit:detect-llm-cruft",
+  "variant_name": "Detect LLM Cruft",
+  "description": "Scan staged files for common LLM-generated patterns that should be cleaned up",
+  "category": "tool",
+  "tags": ["precommit.quality", "code.cleanup", "llm.patterns"],
+  "tag_prefixes": ["precommit", "precommit.quality", "code", "code.cleanup"],
+  "scope": "org",
+  "org_id": "metabob_internal",
+  "task_steps": [
+    {
+      "id": "get-staged-files",
+      "description": "Get list of staged TypeScript files",
+      "prompt": {
+        "template": "Run `git diff --cached --name-only --diff-filter=ACM | grep -E '\\.(ts|tsx|js|jsx)$'` to get staged code files. Return the list.",
+        "variables": []
+      },
+      "subagent": "Bash"
+    },
+    {
+      "id": "scan-for-cruft-patterns",
+      "description": "Scan files for LLM cruft patterns",
+      "dependencies": ["get-staged-files"],
+      "prompt": {
+        "template": "Search the staged files for these LLM cruft patterns:\n\n1. **Stale TODOs**: `TODO.*LLM`, `FIXME.*generated`, `TODO: remove`\n2. **Unused placeholders**: `_unused[A-Z]`, `_deprecat`\n3. **Backward-compat hacks**: `// removed`, `// legacy`, `// DEPRECATED`\n4. **Verbose comments**: Multi-line JSDoc on simple functions\n5. **Over-engineered**: Unnecessary abstractions, feature flags for removed features\n\nFor each file, use grep or read to find these patterns. Report:\n- File path\n- Line number\n- Pattern found\n- Suggestion to fix\n\nIf no cruft found, report success.",
+        "variables": []
+      },
+      "subagent": "general-purpose"
+    },
+    {
+      "id": "report-findings",
+      "description": "Generate summary report",
+      "dependencies": ["scan-for-cruft-patterns"],
+      "prompt": {
+        "template": "Summarize the findings:\n\n1. Total files scanned\n2. Total issues found per category\n3. Files that need attention\n4. Recommendation: PASS (no issues) or WARN (issues found)\n\nOutput a clear, actionable summary.",
+        "variables": []
+      },
+      "subagent": "general-purpose"
+    }
+  ]
+}

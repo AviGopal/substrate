@@ -1,0 +1,19 @@
+{
+  "id": "precondition-rejection-activity-_auto-bridge-problem_detection_-2026-09-01",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "missing_concept",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Template activity:⟨auto-bridge-problem_detection⟩ pre-flight-rejected 3 time(s): duration 1-8ms, tasks_completed=0. Like",
+  "description": "Template activity:⟨auto-bridge-problem_detection⟩ pre-flight-rejected 3 time(s): duration 1-8ms, tasks_completed=0. Likely cause: unsatisfiable inputShapes (F25).",
+  "goal_text": "Template activity:⟨auto-bridge-problem_detection⟩ pre-flight-rejected 3 time(s): duration 1-8ms, tasks_completed=0. Likely cause: unsatisfiable inputShapes (F25).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "precondition-rejection-activity:⟨auto-bridge-problem_detection⟩-2026-09-01",
+  "source_gap_source": "substrate_detected"
+}

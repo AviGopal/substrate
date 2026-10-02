@@ -1,0 +1,8 @@
+[Unit]
+Description=Substrate self-recovery — detect a broken vessel and revert it to last-good (the immune system)
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+# Image-baked script (never a host bind path — the substrate's immune system
+# must work on any host from just the image + volumes).
+ExecStart=/usr/local/bin/self-recovery-tick

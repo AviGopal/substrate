@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-dcb8f22e-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-dcb8f22e] investigate and decompose gap route-edit-500266e8: The gap store's row count dropped",
+  "description": "[narrowed from route-edit-dcb8f22e] investigate and decompose gap route-edit-500266e8: The gap store's row count dropped from 4,113 to 44 in a single day due to loadGaps() returning an empty array on any read or parse failure, resulting in a corrupt gaps.json file and leading to data loss.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch modifies a helper function's property assignment logic unrelated to the loadGaps function or its error handling, which is the source of the gap.\n- typecheck_dangling_reference: src/resolvers/substrate-gap.ts(557,31): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'. | src/resolvers/substrate-gap.ts(760,22): error TS2554: Expected 1 argument\n- typecheck_dangling_reference: src/resolvers/substrate-gap.ts(780,36): error TS2304: Cannot find name 'path'. | src/resolvers/substrate-gap.ts(783,5): error TS2322: Type 'any[]' is not assignable to type '{ early: ResolverResult; }\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-dcb8f22e] investigate and decompose gap route-edit-500266e8: The gap store's row count dropped from 4,113 to 44 in a single day due to loadGaps() returning an empty array on any read or parse failure, resulting in a corrupt gaps.json file and leading to data loss.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch modifies a helper function's property assignment logic unrelated to the loadGaps function or its error handling, which is the source of the gap.\n- typecheck_dangling_reference: src/resolvers/substrate-gap.ts(557,31): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'. | src/resolvers/substrate-gap.ts(760,22): error TS2554: Expected 1 argument\n- typecheck_dangling_reference: src/resolvers/substrate-gap.ts(780,36): error TS2304: Cannot find name 'path'. | src/resolvers/substrate-gap.ts(783,5): error TS2322: Type 'any[]' is not assignable to type '{ early: ResolverResult; }\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-dcb8f22e-narrowed",
+  "source_gap_source": "substrate_detected"
+}

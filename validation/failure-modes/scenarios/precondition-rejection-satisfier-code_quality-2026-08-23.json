@@ -1,0 +1,19 @@
+{
+  "id": "precondition-rejection-satisfier-code_quality-2026-08-23",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "missing_concept",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Template satisfier:code_quality pre-flight-rejected 1 time(s): duration 0-0ms, tasks_completed=0. Likely cause: unsatisf",
+  "description": "Template satisfier:code_quality pre-flight-rejected 1 time(s): duration 0-0ms, tasks_completed=0. Likely cause: unsatisfiable inputShapes (F25).",
+  "goal_text": "Template satisfier:code_quality pre-flight-rejected 1 time(s): duration 0-0ms, tasks_completed=0. Likely cause: unsatisfiable inputShapes (F25).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "precondition-rejection-satisfier:code_quality-2026-08-23",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,520 @@
+{
+ "area": "ias-executor-ts",
+ "items": [
+  {
+   "name": "trace-spool",
+   "location": "/workspace/trace-spool (ias-executor trace sink)",
+   "purpose": "Buffer traces when store refuses",
+   "status": "broken",
+   "general": true,
+   "evidence": "17,587 files/119MB since 08-17, no replayer",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "Neutral-emitter lifecycle bus",
+   "location": "activity-api routes/events.ts; ias-executor-ts adapters/bus-forwarder.ts; discovery event-bus.ts",
+   "purpose": "Neutral event publishing that consumers subscribe to",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "inv-077: zero lifecycle.* subscribers; BusForwardingEventSink still in 5 files",
+   "source": "validation-other-2",
+   "mentions": 1,
+   "sources": [
+    "validation-other-2"
+   ]
+  },
+  {
+   "name": "BusForwardingEventSink",
+   "location": "ias-executor adapters/bus-forwarder.ts",
+   "purpose": "Forward lifecycle events",
+   "status": "live-used",
+   "general": true,
+   "evidence": "~27/s; 3 event types with no subscriber; one shared API key",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "verify-dist-fresh (dist:check)",
+   "location": "ias-executor-ts",
+   "purpose": "Detect a stale dist",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "Existed but was ignored. Checks only the shared dir.",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "TranslatingTraceSink + disk spool",
+   "location": "ias-executor-ts / goal-host trace sink",
+   "purpose": "Deliver traces to hub with retry",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Turned into a self-sustaining storm (16,771 files) until quarantine; 81% of errors were test fixture activity.test",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "failure_mode_raw extras-bag",
+   "location": "ias-executor-ts activity-api-trace-sink.ts",
+   "purpose": "Preserve non-canonical failure diagnostics",
+   "status": "broken",
+   "general": true,
+   "evidence": "Removed by substrate-authored commit 3477cd6 on 2026-07-17",
+   "source": "validation-other-2",
+   "mentions": 1,
+   "sources": [
+    "validation-other-2"
+   ]
+  },
+  {
+   "name": "TranslatingTraceSink retry and spool",
+   "location": "ias-executor-ts adapters/activity-api-trace-sink.ts",
+   "purpose": "Deliver traces from every vessel",
+   "status": "live-used",
+   "general": true,
+   "evidence": "15 s abort caused 63% duplicates; now 120 s; 11,716-file spool since 08-17",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "BusForwardingEventSink / lifecycle hooks",
+   "location": "ias-executor-ts adapters/bus-forwarder.ts",
+   "purpose": "Neutral emitter bus",
+   "status": "live-used",
+   "general": true,
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "BusForwardingEventSink",
+   "location": "ias-executor-ts adapters; goal-host/dev-vessel/activity-api index",
+   "purpose": "Forward engine lifecycle events onto the bus",
+   "status": "live-used",
+   "general": true,
+   "evidence": "grep in 3 vessels",
+   "source": "openspec-2",
+   "mentions": 1,
+   "sources": [
+    "openspec-2"
+   ]
+  },
+  {
+   "name": "verify-dist-fresh (F-111)",
+   "location": "ias-executor-ts b6b58a2",
+   "purpose": "Detect dist drift",
+   "status": "fossil",
+   "general": false,
+   "evidence": "0 external refs",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "ias-executor discovery VesselResolver",
+   "location": "ias-executor-ts engine.ts",
+   "purpose": "Dispatch-time remote resolvers",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-16 fix chain",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "lifecycle subscription + BusForwardingEventSink",
+   "location": "ias-executor-ts engine.ts, adapters/bus-forwarder.ts",
+   "purpose": "Reactive behaviour as activities",
+   "status": "live-used",
+   "general": true,
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "Trace cost/tokens accounting",
+   "location": "ias-executor-ts engine.ts, hosts/goal-host.ts",
+   "purpose": "cost per execution",
+   "status": "broken",
+   "general": true,
+   "evidence": "0 cost, 0 tokens on 18,135 traces since 09-27",
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "agent_fill impulse preparation",
+   "location": "ias-executor-ts f685b16",
+   "purpose": "LLM slot filling",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Env-gated, default off; 0 external refs",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "Pinned-target posterior refusal",
+   "location": "ias-executor-ts goal-host.js:692",
+   "purpose": "Refuse a pinned template with a negative posterior",
+   "status": "live-used",
+   "general": true,
+   "evidence": "966 refusals in 7 days; the caller never adapts",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  },
+  {
+   "name": "ribosome-extract lifecycle subscriber",
+   "location": "ias-executor-ts goal-host.ts",
+   "purpose": "mint templates from reached traces",
+   "status": "live-used",
+   "general": true,
+   "evidence": "06-25: 106 templates, about 6/hr",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "dispatchTargetTemplateId bypass marker",
+   "location": "ias-executor-ts goal-host.ts:~897; audit-dispatch-target-drift",
+   "purpose": "Label every Thompson bypass",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "09-05: the right chokepoint for posterior checks; only audited",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "ias-executor k8s resolvers",
+   "location": "ias-executor-ts helmfile-sync, docker-build-push, wire-*, scaffold-vessel-skeleton",
+   "purpose": "k8s deploy/scaffold",
+   "status": "fossil",
+   "general": false,
+   "evidence": "0 traces in 30 days",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "two LLM prompt renderers (llm vs llm-prompt)",
+   "location": "ias-executor-ts hosts/goal-host.ts:145, llm-prompt.ts:92",
+   "purpose": "render inputs to LLM",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "divergent input visibility (08-25)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "impulse_relevance_metrics forward arm",
+   "location": "ias-executor-ts learning-signal-writer",
+   "purpose": "Grade impulses by relevance",
+   "status": "live-used",
+   "general": true,
+   "evidence": "0 rows on 05-28; 20714 rows on 09-28",
+   "source": "validation-other-2",
+   "mentions": 1,
+   "sources": [
+    "validation-other-2"
+   ]
+  },
+  {
+   "name": "forward arm validator-dispatch -> learning_signal_writer -> impulse-relevance",
+   "location": "ias-executor-ts resolvers/learning-signal-writer.ts; activity-api",
+   "purpose": "P(success|activity,shape) credit",
+   "status": "live-used",
+   "general": true,
+   "evidence": "validator-dispatch 5520/day; impulse_relevance_metrics 20,714 rows",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "template-provider load-time interpolation",
+   "location": "ias-executor-ts src/adapters/activity-api-provider.ts",
+   "purpose": "Bind values into non-LLM task configs",
+   "status": "broken",
+   "general": false,
+   "evidence": "946034c blanks placeholders; 3 layered fixes; 4 copies at HEAD",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "trace-sink retry + disk spool + replay",
+   "location": "ias-executor-ts src/adapters/activity-api-trace-sink.ts",
+   "purpose": "Durable trace delivery",
+   "status": "live-used",
+   "general": false,
+   "evidence": "4 landings 09-23..28, _quarantineFile2 duplicate, env-gated batch, retry duplicates (3cf29a3)",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "materialsConsulted trace attribution",
+   "location": "ias-executor-ts src/adapters/activity-api-trace-sink.ts:194",
+   "purpose": "Record read/changed material per task",
+   "status": "live-used",
+   "general": true,
+   "source": "openspec-4",
+   "mentions": 1,
+   "sources": [
+    "openspec-4"
+   ]
+  },
+  {
+   "name": "discovery-adapter URL construction",
+   "location": "ias-executor-ts src/adapters/discovery-adapter.ts",
+   "purpose": "Build fetchable resolve URLs from registry rows",
+   "status": "live-used",
+   "general": true,
+   "evidence": "d1ebb66; resolveVesselEndpoint helper in the same file is dead",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "ias forge resolvers + examples + Docker/Helm ports",
+   "location": "ias-executor-ts src/examples, src/resolvers/{docker-build-push,helmfile-sync,scaffold-vessel-skeleton,wire-*}",
+   "purpose": "Phase 22 vessel forge",
+   "status": "fossil",
+   "general": false,
+   "evidence": "VesselForgeHost/HelmfilePort 0 external refs; autonomous a07e8fd still edited examples",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "ribosome extraction / synthesize_template",
+   "location": "ias-executor-ts src/templates/lifecycle/ribosome-extract.json",
+   "purpose": "Mint templates from reached executions",
+   "status": "unknown",
+   "general": true,
+   "evidence": "About 12 repair commits 06-25..08-17; compounding not verified in this shard",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "slot-binding first-mile",
+   "location": "ias-executor-ts templates/lifecycle/slot-binding.json; engine.ts:569",
+   "purpose": "deterministic-first input binding",
+   "status": "live-used",
+   "general": true,
+   "evidence": "245,686 execs (09-10)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "validator-dispatch meta-activity",
+   "location": "ias-executor-ts templates/lifecycle/validator-dispatch.json",
+   "purpose": "Post-task validation plus learning signals",
+   "status": "broken",
+   "general": true,
+   "evidence": "Runs 1 of 5 tasks; [LIVE] executionSucceeded hardcoded false at :169",
+   "source": "reports-5",
+   "mentions": 1,
+   "sources": [
+    "reports-5"
+   ]
+  },
+  {
+   "name": "evaluateConditionalGate",
+   "location": "ias-executor-ts/src/engine.interpolation.ts:143",
+   "purpose": "Task conditional gates",
+   "status": "live-used",
+   "general": true,
+   "evidence": "CONDITIONAL_TASKS names evaluateTaskCondition with different semantics",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "Forge (VesselForgeHost + 6 resolvers)",
+   "location": "ias-executor-ts/src/examples/vessel-forge-host.ts",
+   "purpose": "create vessel for missing shape",
+   "status": "broken",
+   "general": false,
+   "evidence": "not registered in goal-host-vessel production host",
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "VesselDaemon/ResolverServer/DiscoveryRegistrationLoop/GoalHost",
+   "location": "ias-executor-ts/src/hosts/",
+   "purpose": "vessel glue toolkit",
+   "status": "live-used",
+   "general": true,
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "LifecycleSubscriberVessel",
+   "location": "ias-executor-ts/src/lifecycle-subscriber.ts",
+   "purpose": "Activities subscribe to 5 lifecycle shapes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Wired into goal-host and vessel-daemon hosts",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "Ranked lifecycle dispatch (HIGH_FREQUENCY_TOP_K, defaultTopKForShape)",
+   "location": "ias-executor-ts/src/lifecycle-subscriber.ts",
+   "purpose": "Top-K Thompson-ranked subscriber firing",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Exported, no consumer",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "impulse-resolve + pointerFromImpulseSlots",
+   "location": "ias-executor-ts/src/resolvers/impulse-resolve.ts",
+   "purpose": "Generic shape call from task JSON",
+   "status": "live-used",
+   "general": true,
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "forge-vessel-for-shape",
+   "location": "ias-executor-ts/src/templates/forge",
+   "purpose": "Build a producer for a missing shape",
+   "status": "dormant",
+   "general": false,
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "ribosome-extract lifecycle template",
+   "location": "ias-executor-ts/src/templates/lifecycle/ribosome-extract.json",
+   "purpose": "Trace\u2192template extraction via lifecycle hook",
+   "status": "broken",
+   "general": false,
+   "evidence": "Subscribes to postExecution, which nothing emits",
+   "duplicates_of": "ribosome-vessel WS consumer",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "ias-executor-ts",
+   "location": "repos/ias-executor-ts",
+   "purpose": "canonical execution host",
+   "status": "unknown",
+   "general": true,
+   "evidence": "canonical from 05-19 f7cb8cc4; bridge env-gated (00aa71e9)",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "substrate:deploy hook",
+   "location": "repos/ias-executor-ts/scripts/substrate-deploy.ts (0dcf370, 58c5638)",
+   "purpose": "Rebuild and redistribute library dist, restart consumers after cutover",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Took #7 live fleet-wide 07-15. Does not cover development-vessel's own resolvers.",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "Convergent validity checks at task success",
+   "location": "repos/ias-executor-ts/src/engine.ts ~L1027-1072 (ddcb402)",
+   "purpose": "Stop err_/degraded outputs from grading a task success",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Present in source today",
+   "source": "validation-other-2",
+   "mentions": 1,
+   "sources": [
+    "validation-other-2"
+   ]
+  }
+ ]
+}

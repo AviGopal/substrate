@@ -1,0 +1,19 @@
+{
+  "id": "triage-only-categories-are-permanently-marked-hopeless",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "A category whose closure path CANNOT land by design is permanently marked hopeless and hard-excluded from selection, whi",
+  "description": "A category whose closure path CANNOT land by design is permanently marked hopeless and hard-excluded from selection, which is self-fulfilling and unrecoverable without intervention. Edit repos/development-vessel/src/resolvers/gap-to-feature.ts:774.",
+  "goal_text": "A category whose closure path CANNOT land by design is permanently marked hopeless and hard-excluded from selection, which is self-fulfilling and unrecoverable without intervention. Edit repos/development-vessel/src/resolvers/gap-to-feature.ts:774.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "triage-only-categories-are-permanently-marked-hopeless",
+  "source_gap_source": "substrate_detected"
+}

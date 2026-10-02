@@ -1,0 +1,19 @@
+{
+  "id": "interactor-signals-never-convert-to-gaps",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "CORRECTED 2026-09-06 (earlier summary overstated the human signal count). Two independent defects in the human complaint",
+  "description": "CORRECTED 2026-09-06 (earlier summary overstated the human signal count). Two independent defects in the human complaint channel. (1) CONTAMINATION: of 384 records under WORKSPACE_ROOT/interactor-log/, only about 33 carry source stateful-ui-vessel and the human complaint grammar; the other ~351 have no source and carry execution-pool fields (dispatch_id, executionId, goal, filePath, fileContent, extract_*) - substrate-internal impulses written to interactor shapes, e.g. a full orphaned_capability_scan payload written as uiFeedback_write. The human complaint shape is being used as a dumping ground by the substrate itself. (2) NO READER: the gap store still contains zero gaps in any ui category, and the passthrough resolver in repos/development-vessel/src/resolvers/interactor-passthrough.ts states in its own header that the gap-consumer closes the loop 'when it learns to read the log files'. Consequence: even if a reader is built it would read mostly substrate noise, and of the genuine human records 26 of 33 are dismissals - the lowest-information human act. The system therefore has almost no evidence about what humans want from its surface, because the only instrument that would measure it is broken in two independent ways. Repair needs both a write-side guard that rejects non-interactor payloads on interactor shapes and a reader.",
+  "goal_text": "CORRECTED 2026-09-06 (earlier summary overstated the human signal count). Two independent defects in the human complaint channel. (1) CONTAMINATION: of 384 records under WORKSPACE_ROOT/interactor-log/, only about 33 carry source stateful-ui-vessel and the human complaint grammar; the other ~351 have no source and carry execution-pool fields (dispatch_id, executionId, goal, filePath, fileContent, extract_*) - substrate-internal impulses written to interactor shapes, e.g. a full orphaned_capability_scan payload written as uiFeedback_write. The human complaint shape is being used as a dumping ground by the substrate itself. (2) NO READER: the gap store still contains zero gaps in any ui category, and the passthrough resolver in repos/development-vessel/src/resolvers/interactor-passthrough.ts states in its own header that the gap-consumer closes the loop 'when it learns to read the log files'. Consequence: even if a reader is built it would read mostly substrate noise, and of the genuine human records 26 of 33 are dismissals - the lowest-information human act. The system therefore has almost no evidence about what humans want from its surface, because the only instrument that would measure it is broken in two independent ways. Repair needs both a write-side guard that rejects non-interactor payloads on interactor shapes and a reader.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "interactor-signals-never-convert-to-gaps",
+  "source_gap_source": "substrate_detected"
+}

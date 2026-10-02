@@ -1,0 +1,45 @@
+{
+  "variant_id": "precommit:lint-check-resolver",
+  "activity_id": "precommit:lint-check",
+  "variant_name": "Lint Check (Resolver-Based)",
+  "description": "Run lint checks using bash resolver - no LLM needed",
+  "category": "tool",
+  "tags": ["precommit.lint", "resolver.bash", "deterministic"],
+  "tag_prefixes": ["precommit", "precommit.lint", "resolver", "resolver.bash"],
+  "scope": "org",
+  "org_id": "metabob_internal",
+  "task_steps": [
+    {
+      "id": "check-lint-script",
+      "description": "Check if lint script exists in package.json",
+      "resolver": "bash",
+      "config": {
+        "command": "cat package.json 2>/dev/null | grep -q '\"lint\"' && echo 'HAS_LINT=true' || echo 'HAS_LINT=false'",
+        "timeout": 5000
+      },
+      "outputShapes": ["lint_availability"]
+    },
+    {
+      "id": "run-lint",
+      "description": "Run bun lint and capture results",
+      "resolver": "bash",
+      "config": {
+        "command": "bun run lint 2>&1 || true",
+        "timeout": 120000
+      },
+      "dependencies": ["check-lint-script"],
+      "outputShapes": ["lint_output"]
+    },
+    {
+      "id": "count-errors",
+      "description": "Count lint errors and warnings",
+      "resolver": "bash",
+      "config": {
+        "command": "bun run lint 2>&1 | grep -cE '(error|Error)' || echo '0'",
+        "timeout": 120000
+      },
+      "dependencies": ["check-lint-script"],
+      "outputShapes": ["error_count"]
+    }
+  ]
+}

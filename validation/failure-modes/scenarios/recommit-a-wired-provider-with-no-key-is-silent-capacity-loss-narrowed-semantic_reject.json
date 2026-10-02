@@ -1,0 +1,19 @@
+{
+  "id": "recommit-a-wired-provider-with-no-key-is-silent-capacity-loss-narrowed-semantic_reject",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed] A WIRED PROVIDER WITH NO KEY IS SILENT CAPACITY LOSS, AND NOTHING IN THE SUBSTRATE REPORTS IT. Edit repos/llm",
+  "description": "[narrowed] A WIRED PROVIDER WITH NO KEY IS SILENT CAPACITY LOSS, AND NOTHING IN THE SUBSTRATE REPORTS IT. Edit repos/llm-resolver-vessel/src/index.ts.",
+  "goal_text": "[narrowed] A WIRED PROVIDER WITH NO KEY IS SILENT CAPACITY LOSS, AND NOTHING IN THE SUBSTRATE REPORTS IT. Edit repos/llm-resolver-vessel/src/index.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-a-wired-provider-with-no-key-is-silent-capacity-loss-narrowed-semantic_reject",
+  "source_gap_source": "substrate_detected"
+}

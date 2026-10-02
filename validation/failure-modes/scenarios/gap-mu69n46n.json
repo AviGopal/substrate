@@ -1,0 +1,19 @@
+{
+  "id": "gap-mu69n46n",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "other",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The gap store is a single large JSON file rewritten in place, so one ungraceful shutdown replaced all of it with NUL byt",
+  "description": "The gap store is a single large JSON file rewritten in place, so one ungraceful shutdown replaced all of it with NUL bytes and lost every gap written since the last surviving snapshot",
+  "goal_text": "The gap store is a single large JSON file rewritten in place, so one ungraceful shutdown replaced all of it with NUL bytes and lost every gap written since the last surviving snapshot",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-mu69n46n",
+  "source_gap_source": "substrate_detected"
+}

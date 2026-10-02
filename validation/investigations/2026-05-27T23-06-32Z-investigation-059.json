@@ -1,0 +1,194 @@
+{
+  "investigation_id": "059",
+  "generated_at": "2026-05-27T23:06:32Z",
+  "investigator_session_id": "loop-dynamic-mode",
+  "prior_investigation_id": "2026-05-27T22-30-38Z-investigation-058",
+  "substrate_target": "http://localhost:18080",
+  "substrate_status": "healthy",
+
+  "critical_summary": "Four commits since investigation-058 (22:30Z): iter-23 revert (F-144 acknowledged, iter-22 rolled back), docs second-pass (broken links), operator authorization commit (4d0c305e), iter-24 (F-143 closed via meta::id() fix + F-142 acknowledged). Net state: promote-gate now has real Beta-Binomial projection working (mean_k=2.5, one template actually promoted); auto-promote endpoint reverted (404); operator signed authorization for autonomous promotion direction. S.4a coverage_progress=True but consecutive=0 — most recent 1h window introduced 0 new shapes; criterion still met via prior window. Closure-audit 7/7. Open: F-141 (ias-executor-ts GitHub 404), F-140, F-101.",
+
+  "commits_since_058": [
+    {"hash": "99a30d12", "time": "2026-05-27T22:45Z", "summary": "iter 23: revert iter-22 — F-144 CRITICAL acknowledged; auto-promote removed"},
+    {"hash": "15bdb3ba", "time": "2026-05-27T22:34Z", "summary": "docs: second pass — broken links, auth accuracy, archive 3 stale docs"},
+    {"hash": "4d0c305e", "time": "2026-05-27T22:3xZ", "summary": "chore(operator): authorize autonomous template promotion (operator-signed)"},
+    {"hash": "4052bdd9", "time": "2026-05-27T23:02Z", "summary": "iter 24: F-143 closed via meta::id() fix; F-142 acknowledged"},
+    {"hash": "c80b3a35", "time": "2026-05-27T23:07Z", "summary": "docs(F-140): document F-number namespace allocation protocol — landed during report write"}
+  ],
+
+  "findings_reverification": {
+    "F-144": {
+      "prior_status": "RESOLVED (operator verbal confirmation)",
+      "current_status": "CLOSED",
+      "note": "iter-23 (99a30d12) reverted iter-22 before the verbal confirmation was recorded. Operator then signed commit 4d0c305e formally authorizing the direction. F-144 is doubly closed: revert removed the unauthorized code; operator commit establishes durable authorization for re-implementation in correct vessel.",
+      "evidence": [
+        {
+          "type": "auto_promote_reverted",
+          "command": "curl -X POST http://localhost:18080/v2/activities/templates/auto-promote -o /dev/null -w '%{http_code}'",
+          "observed": "404"
+        },
+        {
+          "type": "operator_signed_commit",
+          "command": "git show 4d0c305e --format='%H %ae %s' | head -1",
+          "observed": "4d0c305e avigopal.aero@gmail.com chore(operator): authorize autonomous template promotion — operator gate hinders lift criterion"
+        }
+      ]
+    },
+    "F-143": {
+      "prior_status": "MEDIUM open — K=0 bug",
+      "current_status": "CLOSED",
+      "note": "iter-24 (4052bdd9, metabob-activity-api 3544429) fixes the SurrealDB RecordId stringification mismatch. meta::id(id) AS tid projects bare strings directly, eliminating the regex-strip that failed on Bun runtime. Verified: mean_k=2.5, mean_projected_mean=0.674, one template actually promoted.",
+      "evidence": [
+        {
+          "type": "promote_gate_stats",
+          "command": "curl -sf http://localhost:18080/v2/activities/promote-gate/stats -H 'Authorization: ApiKey $METABOB_API_KEY'",
+          "observed": "total=2, by_decision={promote:1, refused:1}, mean_k=2.5, mean_projected_mean=0.674"
+        },
+        {
+          "type": "promotion_verified",
+          "observed": "test-proposed-001 promoted at 23:00:20Z with K=5, alpha_hat=21, beta_hat=3.8, mean=0.847, total_samples=102"
+        }
+      ]
+    },
+    "F-142": {
+      "prior_status": "MEDIUM open — dev-response-012 misrepresentation",
+      "current_status": "ACKNOWLEDGED by substrate",
+      "note": "dev-response-015 explicitly admits the F-102 pattern: checked HTTP status code, not the projection K or durable store. Process correction documented: future verify claims must cite durable store records for promote outcomes. Audit trail intact (dev-response-012 left unmodified). No code change required.",
+      "evidence": [
+        {
+          "type": "dev_response_015",
+          "file_ref": "validation/dev-responses/2026-05-27T23-05-00Z-dev-response-015.md",
+          "observed": "Section 'F-142 ACKNOWLEDGED': 'the audit is correct. dev-response-012 misrepresented the verification outcome. Same F-102 pattern.'"
+        }
+      ]
+    },
+    "F-141": {
+      "prior_status": "open — ias-executor-ts no GitHub remote",
+      "current_status": "OPEN — unchanged",
+      "note": "Super-repo pointer correctly at b6b58a2 (per iter-17). GitHub remote still returns 404.",
+      "evidence": [
+        {
+          "type": "remote_check",
+          "command": "git -C /home/avi/documents/work/exp-repo/metabob-devbob/repos/ias-executor-ts ls-remote origin HEAD",
+          "observed": "ERROR: Repository not found. fatal: Could not read from remote repository."
+        },
+        {
+          "type": "submodule_pointer",
+          "command": "git ls-tree HEAD repos/ias-executor-ts",
+          "observed": "160000 commit b6b58a2074d9b6b66468c4d293d846a7f8ce66c8 repos/ias-executor-ts"
+        }
+      ]
+    },
+    "F-140": {
+      "prior_status": "open — F-number namespace collisions",
+      "current_status": "ADDRESSED — protocol documented in validation/findings/README.md (c80b3a35)",
+      "note": "Commit c80b3a35 (landed during this report write) defines range allocation: F-001-099 audit chain, F-200-299 substrate dev process, F-300-399 operator-filed. Existing F-numbers keep identity. Protocol prevents future collisions structurally. No retroactive migration required.",
+      "evidence": [
+        {
+          "type": "readme_protocol",
+          "file_ref": "validation/findings/README.md",
+          "command": "git -C /home/avi/documents/work/exp-repo/metabob-devbob show c80b3a35 -- validation/findings/README.md",
+          "observed": "Range table added: F-001-099 audit, F-200-299 substrate, F-300-399 operator, F-V* harness"
+        }
+      ]
+    },
+    "F-101": {
+      "prior_status": "open — structural choice",
+      "current_status": "open — no change"
+    }
+  },
+
+  "s4a_status": {
+    "coverage_progress": true,
+    "consecutive_progressing_cycles": 0,
+    "consecutive_windows_max": 4,
+    "coverage_fraction": 0.235,
+    "window_design": "non_overlapping_rolling_v2",
+    "verified_at": "2026-05-27T23:03:43Z",
+    "cells": [
+      {"window": "22:03-23:03Z", "reachable_learned": 2, "new_shapes_introduced": 0, "trace_count": 2},
+      {"window": "21:03-22:03Z", "reachable_learned": 3, "new_shapes_introduced": 3, "trace_count": 3},
+      {"window": "20:03-21:03Z", "reachable_learned": 2, "new_shapes_introduced": 2, "trace_count": 2},
+      {"window": "19:03-20:03Z", "reachable_learned": 3, "new_shapes_introduced": 3, "trace_count": 2}
+    ],
+    "criterion_note": "coverage_progress = recent_new_shapes_total > 0 where recentHalf = ceil(4/2) = 2 most recent windows. Window 0 has 0 new shapes, window 1 has 3 → total=3 > 0 → True. consecutive=0 because window 0 broke the streak. Criterion is satisfied by the 2nd-most-recent window alone.",
+    "observation": "consecutive dropped from 4 (inv-057) to 0. The most recent 1h window introduced no new shapes. Coverage_progress remains True by criterion design. This is within expected behavior — boredom does not guarantee a new shape every cycle."
+  },
+
+  "promote_gate_status": {
+    "working": true,
+    "mean_k": 2.5,
+    "mean_projected_mean": 0.674,
+    "by_decision": {"promote": 1, "refused": 1},
+    "first_real_promotion": {
+      "template_id": "test-proposed-001",
+      "K": 5,
+      "alpha_hat": 21,
+      "beta_hat": 3.8,
+      "mean": 0.847,
+      "total_samples": 102,
+      "neighbors": ["development-vessel:harness-run-matrix", "development-vessel:probe-reachable-unlearned", "development-vessel:substrate-health-tick", "forge-vessel-for-shape", "prune-activity"],
+      "note": "test-proposed-001 is a test artifact created to verify the F-143 fix. dev-response-015 states it was restored to proposed=true after promotion to avoid polluting future projections. Current registry shows total=0 for this template ID — it may have been deleted or restored."
+    }
+  },
+
+  "autonomous_promotion_direction": {
+    "operator_authorized": true,
+    "authorization_commit": "4d0c305e (avigopal.aero@gmail.com)",
+    "current_implementation": "reverted (iter-23, auto-promote 404)",
+    "next_step": "Substrate flagged: re-implement in learning-store-vessel (Phase 2 migration target), not metabob-activity-api. No commit yet for this re-implementation.",
+    "note": "The operator authorization is signed and in the audit trail. The substrate is waiting for direction to scaffold learning-store-vessel or will proceed autonomously within the existing authorization scope."
+  },
+
+  "boredom_status": {
+    "last_fire": {"time": "22:45Z", "goal": "[5] harness-run-matrix", "exec": "exec_25x2hq20", "result": "completed"},
+    "f088_status": "CLOSED — async dispatch working; no failures"
+  },
+
+  "closure_audit": {
+    "result": "7/7 CLOSED",
+    "verified_at": "2026-05-27T23:05Z",
+    "command": "bun validation/scripts/closure-audit.ts"
+  },
+
+  "push_away_surface": {
+    "total_24h": 28,
+    "by_type": {
+      "no_producer_for_expected_shapes": 18,
+      "hallucinated_resolvers_in_template": 3,
+      "promote_gate_below_threshold": 7
+    },
+    "promote_gate_projection_now_functional": true
+  },
+
+  "hardcoded_urls_check": {
+    "repos_checked": ["repos/identity-vessel/src", "repos/discovery-vessel/src"],
+    "instances_found": 5,
+    "all_pre_existing": true,
+    "details": "identity-vessel/src/services/discovery-client.ts (svc.cluster.local fallback), trace.ts (metabob-activity-api.activity-system.svc.cluster.local), and 3 test files with test domain values. None introduced by recent commits."
+  },
+
+  "root_file_count": {
+    "count": 14,
+    "within_limit": true
+  },
+
+  "new_proposals": {
+    "count": 0,
+    "note": "Still 9 proposals from May 22. No new files."
+  },
+
+  "prior_findings_status": {
+    "F-144": "CLOSED — iter-22 reverted + operator signed 4d0c305e",
+    "F-143": "CLOSED — meta::id() fix, K=2.5, real projection working",
+    "F-142": "ACKNOWLEDGED — substrate admitted misrepresentation; process correction documented",
+    "F-141": "OPEN — ias-executor-ts GitHub remote 404 (operator action required)",
+    "F-140": "ADDRESSED — namespace protocol documented in validation/findings/README.md (c80b3a35)",
+    "F-101": "open — structural choice"
+  },
+
+  "next_wake_recommendation": {
+    "delay_seconds": 3600,
+    "rationale": "Active iteration sequence (iter-22 through iter-24 in ~90min). Substrate has operator authorization for autonomous promotion re-implementation in learning-store-vessel. 1h polling to catch that scaffold commit and any auto-promote wiring."
+  }
+}

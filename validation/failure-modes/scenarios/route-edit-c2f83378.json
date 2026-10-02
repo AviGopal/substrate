@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-c2f83378",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/activity-api/src/config.ts so the ribosome-extract activity declares an output impulse shape that constitutes",
+  "description": "Edit repos/activity-api/src/config.ts so the ribosome-extract activity declares an output impulse shape that constitutes a minted activity template rather than executionTraceWithSignatures, which is only a description of a trace. Measured live: the ribosome dispatched 51 ALLOWED extractions in 24 hours and the learned corpus has gained nothing since 2026-08-21, while 90 of 102 extraction dispatches end reached:false while reporting status:success.",
+  "goal_text": "Edit repos/activity-api/src/config.ts so the ribosome-extract activity declares an output impulse shape that constitutes a minted activity template rather than executionTraceWithSignatures, which is only a description of a trace. Measured live: the ribosome dispatched 51 ALLOWED extractions in 24 hours and the learned corpus has gained nothing since 2026-08-21, while 90 of 102 extraction dispatches end reached:false while reporting status:success.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-c2f83378",
+  "source_gap_source": "substrate_detected"
+}

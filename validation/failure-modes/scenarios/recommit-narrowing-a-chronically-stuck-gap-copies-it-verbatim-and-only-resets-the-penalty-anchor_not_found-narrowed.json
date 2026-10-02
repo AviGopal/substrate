@@ -1,0 +1,19 @@
+{
+  "id": "recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-anchor_not_found-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-anchor_not_foun",
+  "description": "[narrowed from recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-anchor_not_found] compose for gap narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 3071, VERBATIM:\\n2005:           category: gap.category,\\n2006:   ",
+  "goal_text": "[narrowed from recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-anchor_not_found] compose for gap narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 3071, VERBATIM:\\n2005:           category: gap.category,\\n2006:   ",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-anchor_not_found-narrowed",
+  "source_gap_source": "substrate_detected"
+}

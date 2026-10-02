@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-47d7af38",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/identity-vessel/src/index.ts and no other file.\n\nIn the handler registered at app.post(\"/v1/keys/revoke\"), af",
+  "description": "Edit repos/identity-vessel/src/index.ts and no other file.\n\nIn the handler registered at app.post(\"/v1/keys/revoke\"), after the existing revokeKey() call succeeds, add an UPDATE against SurrealDB that sets is_active = false on the api_key row for the revoked key_id, using the same query helper that app.get(\"/v1/keys\") imports with: const { query } = await import(\"./db/surrealdb\").\n\nWhy: revokeKey() lives in db/redis.ts and only does redis.setex(\"revoked:\" + keyId, ttl, \"1\"). The listing handler reads SurrealDB and derives status from r.is_active, so nothing ever marks the row inactive and a revoked key is listed as active forever. Measured: after a successful revoke, /v1/keys/validate correctly returns valid:false \"API key has been revoked\", while substrate-key list still shows that key active.\n\nConstraints: change only repos/identity-vessel/src/index.ts. Do not modify db/redis.ts, db/surrealdb.ts, services/discovery-client.ts, or any import statement in any file. Do not change the validate path. A previous attempt was rolled back because it also rewrote an unrelated import in services/discovery-client.ts to a package that does not exist.",
+  "goal_text": "Edit repos/identity-vessel/src/index.ts and no other file.\n\nIn the handler registered at app.post(\"/v1/keys/revoke\"), after the existing revokeKey() call succeeds, add an UPDATE against SurrealDB that sets is_active = false on the api_key row for the revoked key_id, using the same query helper that app.get(\"/v1/keys\") imports with: const { query } = await import(\"./db/surrealdb\").\n\nWhy: revokeKey() lives in db/redis.ts and only does redis.setex(\"revoked:\" + keyId, ttl, \"1\"). The listing handler reads SurrealDB and derives status from r.is_active, so nothing ever marks the row inactive and a revoked key is listed as active forever. Measured: after a successful revoke, /v1/keys/validate correctly returns valid:false \"API key has been revoked\", while substrate-key list still shows that key active.\n\nConstraints: change only repos/identity-vessel/src/index.ts. Do not modify db/redis.ts, db/surrealdb.ts, services/discovery-client.ts, or any import statement in any file. Do not change the validate path. A previous attempt was rolled back because it also rewrote an unrelated import in services/discovery-client.ts to a package that does not exist.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-47d7af38",
+  "source_gap_source": "substrate_detected"
+}

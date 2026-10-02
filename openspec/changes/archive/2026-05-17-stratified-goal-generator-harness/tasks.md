@@ -1,0 +1,300 @@
+# Tasks: Stratified Goal-Generator Harness
+
+Phased rollout. Each phase has concrete deliverables and acceptance criteria. Checkbox
+style matches `2026-04-26-impulse-activity-loop/tasks.md`.
+
+---
+
+## Phase G1 — Goal Generator (foundation, no LLM)
+
+### G1.1 Stratification-axis enumerators
+
+- [x] G1.1.1 Implement `validation/scripts/lib/shape-signature-pool.ts` — scans
+  `executionTraceWithSignatures` over the last 30 days and emits the
+  `(input_shape_set, output_shape_set)` → count map. **Done 2026-05-19.** Graceful
+  degradation when traces are unavailable; fallback pool keeps callers unblocked.
+- [x] G1.1.2 ✅ **DONE** 2026-05-21. `lib/decomposition-depth.ts`: BFS over
+  discover-by-shapes backward mode; `computeDecompositionDepth` +
+  `computeDecompositionDepthBatch`. Returns Depth 0|1|2|3+ based on count of
+  unreachable target shapes after pool expansion. 6-fixture unit tests all
+  green. Commit `64b754a9`.
+- [x] G1.1.3 Implement `lib/topology-gap-band.ts` — classifies (A/B/C/D) per the
+  Phase 22 design. Reads discovery-vessel `/registry/shapes` + activity-api template
+  `output_shapes` index. **Done 2026-05-19.**
+- [x] G1.1.4 Implement `lib/shape-registry-hash.ts` — sorted-tuple SHA-256 over
+  `(shape, owning_vessel_id)`. **Done 2026-05-19.** Uses vesselRegistry pointer on
+  discovery-vessel to get per-vessel shape lists; deterministic via lexicographic sort.
+
+### G1.2 Deterministic generator (no LLM)
+
+- [x] G1.2.1 Write `validation/scripts/goal-generator.ts` accepting `--seed`,
+  `--count`, `--novelty-mix`, `--depth-mix`, `--scenario-mix`,
+  `--adversarial-fraction`, `--output`. Adversarial generation deferred to G1.3.
+  **Done 2026-05-19.**
+- [x] G1.2.2 Seeded RNG (xorshift64 — implemented inline, no external deps) drives
+  stratum allocation and goal-template selection. **Done 2026-05-19.** Same seed +
+  same registry hash → byte-identical output JSON across two runs.
+- [x] G1.2.3 Goal-text templates: 24 parameterised natural-language strings across
+  (novelty × depth × scenario) cells; parameter slots filled from chosen shape
+  signature. **Done 2026-05-19.** 24 templates verified.
+- [x] G1.2.4 Output schema includes `id`, `cell_id`, `shape_signature`, `goal_text`,
+  `expected_output_shapes`, `seed_impulse_pool`, `adversarial: false`,
+  `oracle_label_id: null`, `generator_seed`, `shape_registry_snapshot_hash`.
+  **Done 2026-05-19.**
+
+### G1.3 Adversarial-perturbation mode
+
+- [x] G1.3.1 ✅ **DONE** 2026-05-21. `lib/adversarial-mutate.ts`: `mutateGoal()` calls
+  `claude-haiku-4-5-20251001` at temperature=0 with a deterministic prompt derived from
+  the goal's stable fields; records `llm_model` + `prompt_hash` (first 16 chars of
+  SHA-256 of prompt). Supports `swap_output_shape` (replaces `expected_output_shapes`)
+  and `narrow_constraint` (appends to `goal_text`). 7 unit tests green (fetch-mock);
+  determinism test passes (identical input → identical `AdversarialGoal`).
+- [x] G1.3.2 ✅ **DONE** 2026-05-21. `generateGoals()` accepts `adversarialFraction`
+  and `anthropicApiKey`; after base generation selects uniformly-spaced goals and
+  applies `mutateGoal()`; falls back with warning when `ANTHROPIC_API_KEY` absent.
+  CLI reads `--adversarial-fraction` (default 0.0) + `ANTHROPIC_API_KEY` env.
+  Output JSON gains `adversarial_fraction` and `adversarial_count` fields.
+  `HarnessGoal = GeneratedGoal | AdversarialGoal` union exported for harness use.
+
+### G1.4 Held-out suite (OPEN)
+
+- [x] G1.4.1 ✅ **DONE** 2026-05-19. `--held-out` flag in `goal-generator.ts`: computes seed from `YYYY_WW_held_out_v1` string → SHA-256 first 8 bytes → BigInt. Count defaults to 8. Output → `<date>-held-out-goals.json`. Different ISO weeks produce different but independently reproducible goal sets.
+
+---
+
+## Phase G2 — Coverage-Matrix Reporting
+
+### G2.1 Harness driver
+
+- [x] G2.1.1 ✅ **DONE** 2026-05-19 (IAL 25.2.1). `validation/scripts/stratified-harness.ts`: 853 lines. Queries recommendations + traces for each generated goal; scores traces inline. First run: 10 goals, 7 cells, universality PASS. Commit `1bf08af8`.
+- [x] G2.1.2 ✅ **DONE** 2026-05-19. Per-goal results include `recommend_count`, `recommend_shape_match`, `trace_count`, and `scores[]` with `success`, `cost_usd`, `reuse_efficiency`, `improvise_share`, `decision_record_completeness`. Per-task `decision_record` field included (null when traces lack task data from list endpoint).
+
+### G2.2 Per-cell aggregation
+
+- [x] G2.2.1 ✅ **DONE** 2026-05-19 (inline in 25.2.1). Coverage matrix keyed by `cell_id`; `sample_count < 3` cells flagged `insufficient_sample`. Matrix sums verified = total goal count.
+- [x] G2.2.2 ✅ **DONE** 2026-05-19 (inline in 25.2.1). Per-cell floor evaluation: `floor_pass` per cell, `universality_pass` top-level. C∪D cells auto-`gated_on_phase_22`. Smoke test passed.
+
+### G2.3 Report output
+
+- [x] G2.3.1 ✅ **DONE** 2026-05-19 (inline in 25.2.1). `validation/results/<date>-stratified-report.json` emitted. First report: `2026-05-20-stratified-report.json`.
+- [x] G2.3.2 ✅ **DONE** 2026-05-21. `compare-reports.ts --stratified`: cell-by-cell
+  diff between two stratified reports. Sections: floor status table (PASS/FAIL
+  regressions/improvements), key metric deltas (success_rate/reuse_efficiency/
+  improvise_share/cost_p50), sample count changes, optimality ratio changes.
+  Shape-registry hash mismatch warning. Tested. Commit `64b754a9`.
+
+---
+
+## Phase G3 — Reuse Efficiency + Optimality Gap
+
+### G3.1 Reuse-efficiency metric
+
+- [x] G3.1.1 ✅ **DONE** 2026-05-19 (inline in 25.2.1, IAL 25.3.1). `scoreTasks()` computes `reuse_efficiency = reused_task_cost / total_cost` (cost-weighted). A task is "reused" when its `activity_id` is in the Thompson pool snapshot captured at run start.
+- [x] G3.1.2 ✅ **DONE** 2026-05-19. Wired into harness; cell value is `mean(reuse_efficiency_samples)`.
+
+### G3.2 Shortest-path cache
+
+- [x] G3.2.1 ✅ **DONE** 2026-05-19 (inline in 25.2.1). Shortest-path cache at `validation/state/shortest-paths.json` with 90-day eviction. `loadShortestPathCache()` + `evictStaleEntries()` + `saveShortestPathCache()`.
+- [x] G3.2.2 ✅ **DONE** 2026-05-19. Post-run update step wired; only shorter costs update the cache.
+
+### G3.3 Optimality-ratio reporting
+
+- [x] G3.3.1 ✅ **DONE** 2026-07-01. `optimality_ratios` in the report is now
+  `Record<cellId, { optimality_ratio, trend }>` (the shape `compare-reports.ts`
+  already consumed). Trend flags per design §D.4 (`closing` < 95% of prior,
+  `regressing` > 105%, `stable` within ±5%) computed by
+  `lib/refinement-detectors.ts:computeOptimalityTrend()` when `--baseline` is
+  supplied; `extractPriorOptimalityRatio()` accepts both the legacy bare-number
+  baseline form and the new object form. `trend: null` on first run / missing
+  prior. Unit tests green. Flags activate on the next two-run pair (baseline
+  run pending operator container restart).
+
+---
+
+## Phase G4 — Refinement-Event Detection
+
+### G4.1 Three detectors
+
+- [x] G4.1.1 ✅ **DONE** 2026-05-19 (E.1 inline in 25.2.1). Compression detector: fires when `success_rate` improves ≥ 0.10 AND `sample_count` grew vs prior cell. Event type `"compression"`.
+- [x] G4.1.2 ✅ **DONE** 2026-07-01 (with derivation caveat). **resolver_tier
+  availability re-checked live:** the field is structurally supported end-to-end
+  (write path `normalizePersistedTask` persists it into
+  `execution_trace_content.tasks`; the per-trace GET
+  `/v2/activities/execution-traces/:executionId` returns content tasks raw when
+  `content_source: "split"`), but it is **null on 100% of sampled live rows**
+  (3000-row `execution_trace_content` sample + `impulse_resolutions`; the walk
+  engine never sets `resolverTier`). Per-task `resolver_id` IS populated.
+  Implementation: harness hydrates slim list-endpoint traces via the per-trace
+  GET (≤3 per goal, budget-counted), classifies tiers with
+  `lib/refinement-detectors.ts:classifyResolverTier()` (explicit `resolver_tier`
+  wins; else derived from `resolver_id` — llm/pattern hints, other ids
+  deterministic), records per-cell `tier_distribution` in every report, and
+  `detectTierDescent()` fires when the llm share drops ≥ 0.30 between runs
+  (n ≥ 3 both sides). All tier-descent events carry `low_confidence: true` per
+  the Phase-21 gating note and are excluded from `refinement_event_density`.
+- [x] G4.1.3 ✅ **DONE** 2026-07-01. E.3 CI-narrowing via
+  `lib/refinement-detectors.ts:detectCiNarrowing()`. α/β source: the recommend
+  response's `selection_metadata.alpha/beta` (verified live — the only read
+  path carrying the real `variant_performance_metrics` posterior;
+  `thompson_posterior` / `variantMetricsSummary` aggregate the sparse
+  `execution` table and return Beta(1,1), and `GET /templates/:id/metrics` is
+  broken on SurrealDB 3.x: `GROUP BY time::format` parse error). Harness
+  snapshots per-cell dominant top-recommended activity as
+  `thompson_ci: { activity_id, alpha, beta, ci_width, observed_executions }`
+  (95% normal-approx Beta CI width); event fires when the SAME activity's
+  ci_width shrank ≥ 0.05 across runs AND observed executions grew ≥ 5.
+  Unit tests green; activates on the next two-run pair.
+
+### G4.2 Pairwise comparison wiring
+
+- [x] G4.2.1 ✅ **DONE** 2026-05-19 (inline in 25.2.1). `stratified-harness.ts` accepts `--baseline` flag. When set, runs compression detector (G4.1.1) per cell.
+- [x] G4.2.2 ✅ **DONE** 2026-05-19. Refinement events embedded in `stratified-report.json` top-level `refinement_event_count` + `refinement_event_density`. Separate `*-refinement-events.json` file emitted when events > 0.
+
+---
+
+## Phase G5 — Decision-Record Persistence
+
+### G5.1 Activity-API recommend handler change
+
+- [x] G5.1.1 ✅ **DONE** 2026-05-19. Added `decision_record` to `POST /v2/activities/recommend` response: `candidates` (winner + up to K=5 runners-up each with `activity_id`, `rrf_rank`, `thompson_alpha`, `thompson_beta`, `thompson_sample`, `shape_compatible`, `exploration_slot`, `score_source`), `selected_activity_id`, `rationale_tier`, `fallback_tier`, `total_candidates`. Commit `34cb5e7`. Deploy to canary to activate.
+- [x] G5.1.2 ✅ **DONE** 2026-05-19. Threaded `decision_record` through three paths: (1) `mcp.ts` `recommendActivities()` attaches `_decision_record` to `selection_metadata` of top recommendation; (2) `execution-adapter.ts` captures it in `_lastSelectionDecisionRecord`, injects as `selection_decision_record` in metadata; (3) `buildExecutionTraceWirePayload()` stamps onto all wire tasks that lack it; (4) `ActivityRecommendationResolver` surfaces it from output impulse metadata. Commit `f486361`. Deployed to canary + production.
+
+### G5.2 Completeness metric
+
+- [x] G5.2.1 ✅ **DONE** 2026-05-20. `validation/scripts/lib/decision-record-completeness.ts` implements the 3-criterion metric (A: Thompson-posterior keys, B: binding-rationale keys on binding tasks, C: failure_mode annotation on failures) as `scoreDecisionRecordCompleteness()` + `aggregateCompleteness()`. `stratified-harness.ts` imports from it; inline duplicate removed. **Note:** unit tests deferred — the acceptance criterion changed from "samples up to 5 tasks by cost" to the 3-criterion spec in 25.5.1 which is already covered by the harness smoke test.
+
+---
+
+## Phase G6 — Differential-Solve + Oracle + Validator Consensus
+
+### G6.1 Exclude-variant flag on recommend
+
+- [x] G6.1.1 ✅ **DONE** 2026-05-21. `exclude_variant` field added to body destructuring in
+  `POST /v2/activities/recommend` T4 filter block. When present, the named variant is added
+  to the excludeSet before Thompson sampling. Pushed to canary as `21f3ccc`.
+
+### G6.2 Witness pairing in harness
+
+- [x] G6.2.1 ✅ **DONE** 2026-05-21. `stratified-harness.ts` selects goals at
+  `index % 10 === 0` (deterministic, ~10%) for differential-solve. Calls
+  `runRecommendation(goal, ..., primaryTopId)` to get next-best candidate.
+  `DifferentialWitness { primary_top_id, alt_top_id, diverged }` stored per
+  `PerGoalResult`. Report includes `differential_witness_count` and
+  `differential_diverge_rate`.
+
+### G6.3 Output normalisers
+
+- [x] G6.3.1 ✅ **DONE** 2026-05-21. `validation/scripts/lib/output-normalizers.ts`:
+  `normalizeOutput(shape, body)`, `outputsAgree(shape, a, b)`, `diffOutputs(shape, a, b)`.
+  Built-in normalizers: `fileEdit` (CRLF→LF, trim trailing spaces, collapse blank lines),
+  `validation_result` (extract structural verdict fields, drop timestamps/messages),
+  `gitDiff` (CRLF-safe parser → sorted FilePatch[]), `directoryTree` (sort paths,
+  normalise separators). Unknown shapes fall back to deep-key-sorted canonical JSON.
+  22 unit tests green, each shape has agreeing + disagreeing pair.
+- [x] G6.3.2 ✅ **DONE** 2026-05-21. `stratified-harness.ts` imports `outputsAgree` +
+  `diffOutputs` from `lib/output-normalizers.ts`. Per-goal `witnesses: WitnessEntry[]`
+  emitted when ≥2 traces exist for the goal (shape: "output_shapes", agreed/diff on
+  sorted shape arrays). `witness_disagreement` metric added to `CellMetrics`
+  (fraction of goals-with-witnesses where any witness disagreed). Deep content
+  comparison (impulse bodies) deferred to G6.2.1 differential-solve run.
+
+### G6.4 Oracle-corpus arm
+
+- [x] G6.4.1 ✅ **DONE** 2026-05-21. `GeneratedGoal.oracle_label_id: string | null` and
+  `oracle_verdict?: "pass" | "fail"` fields added. Harness loop checks `oracle_label_id`:
+  if `oracle_verdict` is embedded (seed mode), uses it directly; otherwise fetches from
+  API via `fetchOracleLabel()`. Computes `oracle_disagree = (harnessPass !== oraclePass)`.
+  `CellMetrics.oracle_disagreement_rate` finalized in cell loop. Report includes
+  `oracle_goal_count` + `oracle_disagreement_rate`. `--oracle-seeds <file>` option
+  appends oracle goals from JSON array. Seed file: `validation/generated/oracle-seeds.json`
+  (3 goals: 2×pass, 1×fail).
+
+### G6.5 Validator-consensus arm
+
+- [x] G6.5.1 ✅ **DONE** 2026-05-21. `detectValidatorFalseNegative(trace)` checks
+  successful traces for any task with `resolver_id` or `activity_id` containing
+  "validator" that also has a non-null `failure_mode`. `TraceScores.validator_false_negative`
+  bool accumulated per-trace; `CellMetrics.validator_false_negative_rate` = fraction
+  of successful traces with a false negative. Finalized alongside witness_disagreement
+  in cell finalization loop. Note: uses task-level failure_mode as proxy (full
+  impulse-body fetch deferred to when `output_impulse_ids` are hydrated).
+
+---
+
+## Phase G7 — Held-Out Suite + Contamination Check
+
+### G7.1 Held-out execution path
+
+- [x] G7.1.1 ✅ **DONE** 2026-05-21. `stratified-harness.ts` accepts `--held-out`.
+  When set, auto-detects the most recent `*-held-out-goals.json` in
+  `validation/generated/`, runs `runGoalLoop()` on those goals BEFORE the
+  rolling-pool suite (which uses `--goals` as usual). Both runs share the same
+  Thompson snapshot and shortest-path cache. The main goal-loop extracted into
+  `runGoalLoop()` function; `stripSampleArrays()` helper added.
+- [x] G7.1.2 ✅ **DONE** 2026-05-21. Held-out report emitted to
+  `validation/results/<date>-held-out-report.json` with `suite: "held_out"` field.
+  Rolling-pool report gains `suite: "rolling_pool"` for contamination delta
+  comparison (G7.2). Regular (non-held-out) invocations unchanged.
+
+### G7.2 Contamination delta
+
+- [x] G7.2.1 ✅ **DONE** 2026-05-21. `lib/contamination-delta.ts`: `computeContaminationDelta()`
+  computes `mean(rolling-pool success_rate) - mean(held-out success_rate)` over
+  cells with sample_count ≥ 3 and not gated. Returns `{ delta, contamination_suspected }`.
+  Wired into `stratified-harness.ts` rolling-pool report as spread when
+  `heldOutLoopResult !== null`.
+- [x] G7.2.2 ✅ **DONE** 2026-05-21. `contamination_suspected: true` when delta > 0.15.
+  6 unit tests green (including synthetic rate fixtures, gated-cell exclusion,
+  low-sample exclusion). Acceptance criteria met.
+
+### G7.3 Promotion logic
+
+- [x] G7.3.1 ✅ **DONE** 2026-07-01. `lib/rolling-pool.ts`:
+  `promoteHeldOutToRollingPool()` (pure) + `isoWeekKey()` (same
+  Thursday-of-Jan-4 ISO-week algorithm as the held-out seed). After the
+  held-out loop, `stratified-harness.ts --held-out` appends that suite's goals
+  to `validation/generated/rolling-pool.json` keyed by ISO week of the goals
+  file's `generated_at` (`{ version, updated_at, weeks: { "YYYY-Www": {
+  promoted_at, source_file, goal_count, goals } } }`). Idempotent: an existing
+  week key is a no-op (`added: 0`), so re-running within a week does not
+  duplicate. Acceptance met by construction: pool grows by N = held-out count
+  once per week. 8 unit tests green.
+
+---
+
+## Phase G8 — Weekly CI Integration
+
+### G8.1 CI extension
+
+- [x] G8.1.1 ✅ **DONE** 2026-05-19. `run-weekly-harness.sh` extended: after sensitivity-probe sweep, runs (1) held-out suite (`goal-generator --held-out --count 8` → `stratified-harness --goals ... --label held-out`) then (2) rolling-pool suite (seed 12345, count 24). Neither gates overall exit — floor failures reported in JSON for audit-loop. Logs to `<date>-held-out.log` and `<date>-stratified.log`.
+- [x] G8.1.2 ✅ **DONE** 2026-05-19. `.github/workflows/weekly-recommendation-validation.yml` updated with three new artifact-upload steps: `stratified-reports-${{ github.run_number }}` (stratified + held-out + refinement-events JSONs, 90-day retention), `harness-state-${{ github.run_number }}` (shortest-paths.json, 90-day retention).
+
+### G8.2 First baseline
+
+- [x] G8.2.1 ✅ **DONE** 2026-05-20. First stratified harness run committed as `validation/baselines/2026-05-20-stratified.json`. Summary: 10 goals, 7 cells, `universality_pass: true`, `thompson_pool_size: 0`, `refinement_event_count: 0`. Future runs use `--baseline validation/baselines/2026-05-20-stratified.json`.
+
+---
+
+## Acceptance & Gating
+
+The change is complete when:
+
+- Phases G1–G4 run weekly on canary without manual intervention and emit per-cell
+  metrics. (Does not require Phase 22.)
+- Phase G5 (decision-record completeness) is live and the metric is > 0.50 on
+  rolling reports.
+- Phase G6 reports witness-disagreement, oracle-disagreement, and validator-disagreement
+  rates without crashing on shapes missing normalisers.
+- Phase G7's contamination delta is reported each week.
+
+**Phase 22 gating:** Scenario D cells stay `gated_on_phase_22` until 22.7.1–22.7.9
+(`2026-04-26-impulse-activity-loop/tasks.md:1234`) land. The harness MUST flag those
+cells in `summary.cells_gated_on_phase_22` and exclude them from the
+`universality_pass` AND.
+
+**State-space-signature gating:** Phase G4.1.2 (tier-descent detection) may produce
+false events until Phase 21's `impulse_state_space` signature is wired into trace
+emission (see `MEMORY.md` "Percolation 2026-05-16 (Phase 20 evidence + Phase 21)").
+Until then, tier-descent events are emitted but flagged `low_confidence: true` and
+do NOT count toward the refinement-event-density success criterion.

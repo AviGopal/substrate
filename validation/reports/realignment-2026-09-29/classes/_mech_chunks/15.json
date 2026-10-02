@@ -1,0 +1,849 @@
+{
+ "area": "activity-api",
+ "items": [
+  {
+   "name": "m1-trainer",
+   "location": "/vessels/activity-api/scripts/m1-train.ts",
+   "purpose": "Embedding-conditioned prior",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Read by prior-seed.ts behind EMBEDDING_PRIOR_ENABLED. 5131 rows, of which only the latest is used",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "ribosome (activity-api)",
+   "location": "57e92c06",
+   "purpose": "template extraction",
+   "status": "duplicate",
+   "general": true,
+   "evidence": "re-built as ribosome-vessel 05-24",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "fn::beta_sample + atomic alpha/beta",
+   "location": "SurrealDB DEFINE FUNCTION; activity-api/src/routes/activities.ts",
+   "purpose": "DB-side Thompson sampling, lossless updates",
+   "status": "live-used",
+   "general": true,
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "/conservation-audit second registration",
+   "location": "activity-api",
+   "purpose": "audit route",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "registered twice by two landings (09-07 22:35)",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "AET activity_execution_traces",
+   "location": "activity-api",
+   "purpose": "Old trace store",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Leftover counters, db-admin defaults and E33 destructive reconcile.",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "GET /v2/activities/:id/variant-scores",
+   "location": "activity-api",
+   "purpose": "REST posterior read kept for compatibility",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "thompson_posterior",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "M1 embedding prior",
+   "location": "activity-api",
+   "purpose": "posterior prior",
+   "status": "dormant",
+   "evidence": "EMBEDDING_PRIOR_ENABLED=false, hardcoded by gen-env",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "activityTemplateRecommendation",
+   "location": "activity-api",
+   "purpose": "Inspection view",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "Mistaken for the walk's selector (07-21)",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "activity_execution_traces (AET)",
+   "location": "activity-api",
+   "purpose": "Legacy trace table",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Frozen 07-14; 6,433 orphans block drop",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "activity_execution_traces table",
+   "location": "activity-api",
+   "purpose": "old trace table",
+   "status": "fossil",
+   "general": false,
+   "evidence": "frozen 07-14; 7 scripts repointed 3c1bf965",
+   "duplicates_of": "execution / v_paradigm_execution_traces",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "composition_edge",
+   "location": "activity-api",
+   "purpose": "Edge posteriors",
+   "status": "unknown",
+   "general": false,
+   "evidence": "Retired 07-22, fn created 08-03; activity_composition_graph is live",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "decision_outcome / decision-calibration",
+   "location": "activity-api",
+   "purpose": "Decision calibration",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "08-25 nothing recalibrates from it",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "decision_outcome writer",
+   "location": "activity-api",
+   "purpose": "decision calibration",
+   "status": "broken",
+   "general": true,
+   "evidence": "severed joint, lag 4,193s",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  },
+  {
+   "name": "execution_exemplar + /execution-traces/exemplars",
+   "location": "activity-api",
+   "purpose": "reuse exemplars",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "only reader is a self-test; 793 rows",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "goal_verification_label_write",
+   "location": "activity-api",
+   "purpose": "Operator/deterministic verdicts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Labeler enum human|automated|deterministic; retention fe609c4",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "goal_verification_labels oracle corpus",
+   "location": "activity-api",
+   "purpose": "Ground-truth reach labels",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "08-25 no runtime reader; guard commented out lets LLM labels in; 8 duplicate switch arms",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "groupedExecutionStats doom signal",
+   "location": "activity-api",
+   "purpose": "Detect livelocked families for escalation",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "0 selection-time consumers (07-21)",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "shouldCreateVariant / checkAndRetireTemplate",
+   "location": "activity-api",
+   "purpose": "Variant on 3 consecutive failures; retire at 20 runs <30%",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1228 retired",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "thompson_posterior shape / variantMetricsSummary",
+   "location": "activity-api",
+   "purpose": "Report posteriors",
+   "status": "broken",
+   "general": false,
+   "evidence": "07-27: counts the legacy execution table / derives fake \u03b1/\u03b2",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "exemplar selector",
+   "location": "activity-api (7c34185)",
+   "purpose": "Extraction-stage exemplars",
+   "status": "live-used",
+   "general": false,
+   "evidence": "0 -> 315 rows (09-10).",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "execution table as sole trace store",
+   "location": "activity-api (848e7e1..9d46962, migrations 157-160)",
+   "purpose": "Lossless authoritative traces",
+   "status": "live-used",
+   "general": true,
+   "evidence": "AET decommissioned 07-14. DUAL_WRITE_ENABLED=false is env-gated.",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "activity-api default-arm resolve gateway",
+   "location": "activity-api (defa169)",
+   "purpose": "Universal resolve front door",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "discovery-vessel resolve-forward",
+   "evidence": "Reverted",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "decision_outcome capture + decision-calibration reader",
+   "location": "activity-api (e2c7959 mig 202, 03e6c55)",
+   "purpose": "Per-execution prediction vs outcome calibration",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-24: 561 organic rows; the reader is read-only and not folded into credit",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "trace_failure_pattern_report reason_contains/matching_failures",
+   "location": "activity-api + reporter (927bb26, 40a5c7f, b8671c9)",
+   "purpose": "Class-level measured falsifier over traces",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Blind ~09-22 to 09-28 (view absent); now closes gaps on its own measurement",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "promote gate",
+   "location": "activity-api -> promote_gate_evaluations",
+   "purpose": "Promote templates by projected posterior",
+   "status": "live-used",
+   "general": true,
+   "evidence": "99.7% promote; 55 templates looped ~360x",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "conservation auditors + conservation-bridge-tick",
+   "location": "activity-api /conservation-audit + templates",
+   "purpose": "audit each junction, aggregate to gaps",
+   "status": "live-used",
+   "general": true,
+   "evidence": "690 rows; 61.6% runaway 09-07; 850 picks 09-16",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "variant minting / checkAndRetireByPosterior",
+   "location": "activity-api /executions route",
+   "purpose": "mint and retire variants",
+   "status": "dormant",
+   "general": true,
+   "evidence": "wired to an endpoint with 24 req/3h vs 82,629 on /execution-traces; zero variants ever",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "thompson_selection_log",
+   "location": "activity-api /recommend (activities.ts:7271)",
+   "purpose": "Selection-time correlation for credit",
+   "status": "live-used",
+   "general": false,
+   "evidence": "08-24: blind to walks and pathway reuse, which are most executions",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "auto-promote prune",
+   "location": "activity-api /templates/auto-promote called by boredom (prune_failed_out:true)",
+   "purpose": "Retire failed drafts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "09-05: protective scope (proposed only); widening would retire mitosis-tick",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "activityTemplate_update runtime impulse",
+   "location": "activity-api /v2/impulses/resolve",
+   "purpose": "Only deploy path for DB-seeded template fixes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-31 fixed draft-gap-closing-activity tags",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "/decision-calibration",
+   "location": "activity-api 03e6c55",
+   "purpose": "reader for decision_outcome",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "no consumer acts on it (08-24T21:36)",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "posterior time-decay + mint dedup",
+   "location": "activity-api 1b0c693",
+   "purpose": "Decay stale evidence; stop duplicate mints",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-31 deployed; 08-25 variant sprawl 15+ producers persists",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "CREDIT_PROPAGATION_EXCLUDED_ANCESTORS",
+   "location": "activity-api 5d28ded",
+   "purpose": "Exclude ubiquitous infra arms from ancestor credit",
+   "status": "dormant",
+   "general": false,
+   "evidence": "08-26: no-op until authored; authoring blocked (float-only tuning param)",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "QuerySemaphore",
+   "location": "activity-api 5dd2606; concept-db c3e16a8",
+   "purpose": "DB admission control",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Per client. identity-vessel and scripts bypass it.",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "context_thompson_scores",
+   "location": "activity-api DB",
+   "purpose": "Context- and cluster-conditioned posteriors",
+   "status": "live-used",
+   "general": true,
+   "evidence": "29,192 rows; cluster buckets written 09-28",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "variant_performance_metrics posterior store",
+   "location": "activity-api DB table variant_performance_metrics",
+   "purpose": "Lifetime per-activity Thompson posterior and counters",
+   "status": "live-used",
+   "general": true,
+   "evidence": "6,744 rows, updated 09-29; alpha/beta diverge from counters",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "GitHub CI ci-result lane",
+   "location": "activity-api POST /v2/activities/ci-result",
+   "purpose": "Commit-keyed CI outcome into posteriors",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Never executed in 741 runs",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "composition edge writer",
+   "location": "activity-api POST /v2/activities/composition",
+   "purpose": "Record producer-to-consumer edges.",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Endpoint fixed, no live writer, graph frozen since 07-28",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "shadow trace ledger",
+   "location": "activity-api POST /v2/activities/execution-traces legacy table",
+   "purpose": "trace ledger",
+   "status": "fossil",
+   "general": false,
+   "evidence": "newest row 2026-07-14 (09-08)",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "reach grading endpoint",
+   "location": "activity-api POST /v2/activities/execution-traces/reach",
+   "purpose": "Sole VPM posterior grader",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Widened 09-07; beta converging; satisfier walks MATCHED NO ROW",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "activity recommend state-conditioned Thompson",
+   "location": "activity-api POST /v2/activities/recommend (session-context.ts:154, activities.scoring.ts:113)",
+   "purpose": "Canonical learned selection primitive",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Named as the ALIGNED reference 07-21",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "edge_liveness_report",
+   "location": "activity-api a6f5b9c",
+   "purpose": "Census of edges that never succeeded.",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-09 census 17/59 never succeeded",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "Successor features psi / SF_BLEND ratchet",
+   "location": "activity-api accelerator-flag-tick.ts, activities.scoring.ts; goal-host psi-inputs.ts",
+   "purpose": "Composition-aware ranking",
+   "status": "dormant",
+   "general": true,
+   "evidence": "psiInputs returned {} at 9 call sites (8-hex vs 16-hex); nothing reads successor_value. SF_BLEND row=1.0 as of 09-25",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "learned-* shape guards",
+   "location": "activity-api activities.ts (8b88856, d1bb036)",
+   "purpose": "Keep minted composites bindable/selectable",
+   "status": "live-used",
+   "general": false,
+   "evidence": "07-26/31; old rows still poisoned",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "execution-sequences routes",
+   "location": "activity-api activities.ts:10238",
+   "purpose": "Sequence pattern learning",
+   "status": "fossil",
+   "general": false,
+   "evidence": "no callers, 0 rows",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "mint dedup gate",
+   "location": "activity-api activities.ts:145,792-800",
+   "purpose": "Merge timestamp-suffixed duplicates",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "131 groups / 1,012 duplicate rows remain",
+   "source": "reports-5",
+   "mentions": 1,
+   "sources": [
+    "reports-5"
+   ]
+  },
+  {
+   "name": "groupedExecutionStats",
+   "location": "activity-api b8371cd",
+   "purpose": "Livelock sensor",
+   "status": "unknown",
+   "general": true,
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "6 conservation auditor templates",
+   "location": "activity-api catalogue",
+   "purpose": "per-invariant audit runs",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "conservation-bridge-tick",
+   "evidence": "untagged; took 21% of executions",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "Environmental-failure abstention in computeDeltas",
+   "location": "activity-api computeDeltas (2ededef)",
+   "purpose": "Do not blame arms for transport/availability failures",
+   "status": "live-used",
+   "general": true,
+   "evidence": "2ededef 2026-08-22",
+   "source": "openspec-5",
+   "mentions": 1,
+   "sources": [
+    "openspec-5"
+   ]
+  },
+  {
+   "name": "auto-promote endpoint",
+   "location": "activity-api d258ffe / 5ec3a59",
+   "purpose": "promote proposed templates on evidence",
+   "status": "unknown",
+   "general": true,
+   "evidence": "reverted 99a30d12 then restored 93a6cb42",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "trace_digest vs activity_execution_trace_digest",
+   "location": "activity-api db",
+   "purpose": "narrow trace reads",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "07-08 note: the second is redundant dead code",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "queryRaw (per-statement status)",
+   "location": "activity-api db wrapper",
+   "purpose": "Detect writes the DB rejects",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Added 08-22 because query() returns result[0] unchecked fleet-wide; the default path is unchanged",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "INTEGRITY_SCANS safeCount, /selection-outcomes, /calibration-summary",
+   "location": "activity-api db-admin.ts",
+   "purpose": "integrity/calibration reads",
+   "status": "broken",
+   "general": false,
+   "evidence": "cannot fire / never returned (09-03)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "db-maintenance-tick",
+   "location": "activity-api db-maintenance-tick.ts",
+   "purpose": "Detect DB degradation, apply index/migration",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Detect-only for pruning: 29,354 prune candidates and 38,536 slow queries, actions []",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "queryWithAuth pooled branch",
+   "location": "activity-api db/surreal.ts:384",
+   "purpose": "Per-JWT session pool",
+   "status": "broken",
+   "general": true,
+   "evidence": "Hard-coded SELECT FROM template ignores sql (b1cd133, 07-17); still present 09-29; dormant only because DB_POOL_ENABLED is unset",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "UNTRIED_PRIOR_BETA",
+   "location": "activity-api discover-by-shapes (12e811e)",
+   "purpose": "Let earned arms beat untried uniform priors",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Deployed 08-11, never behaviourally validated",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "Composition graph / composition_score / successor_value / SF_BLEND",
+   "location": "activity-api discover-by-shapes, composition-graph.ts",
+   "purpose": "Chain-aware selection",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "walk never requests scored mode; zero callers 08-17",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "composition_score blend (discover-by-shapes + edge-blend)",
+   "location": "activity-api discover-by-shapes.ts:154-176; goal-host edge-blend.ts, producer-pick.ts",
+   "purpose": "Reward composed pathways at selection",
+   "status": "unknown",
+   "general": true,
+   "evidence": "08-21: computed but the picker does not order genuine producers by it; predecessor_activity_id never sent; possible record-vs-string mismatch",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "activity_execution_traces (AET)",
+   "location": "activity-api dual-write shadow, DUAL_WRITE_ENABLED default false",
+   "purpose": "Legacy trace ledger",
+   "status": "fossil",
+   "general": true,
+   "evidence": "0 rows after 2026-08-01; a reader (selection-calibration) joined it until 08-24",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "insertTraceDigest dual-write",
+   "location": "activity-api execution-traces + activities.ts (c241629, 39e005a)",
+   "purpose": "digest supply for extraction",
+   "status": "live-used",
+   "general": true,
+   "evidence": "10x digest rate",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "selection-outcome correlation join",
+   "location": "activity-api execution-traces deriveCorrelationIdFromTags (755dca9), aggregateSelectionCalibration (471febb/7413367)",
+   "purpose": "Attribute outcomes to decisions (law 12)",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Producer emits tag on 0/9,614; no credit consumer",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "execution-level resolver tracking (migration 067)",
+   "location": "activity-api execution-traces.ts",
+   "purpose": "Resolver/vessel selection learning",
+   "status": "broken",
+   "general": true,
+   "evidence": "0 of 85,720 rows populated; tier only in trace.tasks",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "/reach endpoint",
+   "location": "activity-api execution-traces.ts app.post('/reach')",
+   "purpose": "Late reach verdict write",
+   "status": "broken",
+   "general": false,
+   "evidence": "08-06: updates execution mirror and successor features only; no classifyReach/applyOutcomeToPosteriors",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "selection\u2192outcome correlation + decision_outcome",
+   "location": "activity-api execution-traces.ts deriveCorrelationIdFromTags, lib/decision-credit.ts, migration 201",
+   "purpose": "Law-12 decision-level credit record",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "The producer rarely fires (0/9614 rows) and no credit path consumes it",
+   "source": "reports-5",
+   "mentions": 1,
+   "sources": [
+    "reports-5"
+   ]
+  },
+  {
+   "name": "/reach sole VPM grader + honest-reach gate",
+   "location": "activity-api execution-traces.ts, posterior-update.ts:815-828",
+   "purpose": "Credit on reached, not exit status",
+   "status": "live-used",
+   "general": true,
+   "source": "reports-5",
+   "mentions": 1,
+   "sources": [
+    "reports-5"
+   ]
+  }
+ ]
+}

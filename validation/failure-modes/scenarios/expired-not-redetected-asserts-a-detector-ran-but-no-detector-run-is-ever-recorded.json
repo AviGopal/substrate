@@ -1,0 +1,19 @@
+{
+  "id": "expired-not-redetected-asserts-a-detector-ran-but-no-detector-run-is-ever-recorded",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "THE LEDGER'S DOMINANT CLOSURE REASON ASSERTS A FACT THE SYSTEM CANNOT CHECK. Edit repos/development-vessel/src/resolvers",
+  "description": "THE LEDGER'S DOMINANT CLOSURE REASON ASSERTS A FACT THE SYSTEM CANNOT CHECK. Edit repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts.",
+  "goal_text": "THE LEDGER'S DOMINANT CLOSURE REASON ASSERTS A FACT THE SYSTEM CANNOT CHECK. Edit repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "expired-not-redetected-asserts-a-detector-ran-but-no-detector-run-is-ever-recorded",
+  "source_gap_source": "substrate_detected"
+}

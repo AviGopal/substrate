@@ -1,0 +1,19 @@
+{
+  "id": "gap-mt0kcoyt",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "goal-host-vessel/src/index.ts:5196 returns { dAlpha: 0, dBeta: 2 } unconditionally.",
+  "description": "goal-host-vessel/src/index.ts:5196 returns { dAlpha: 0, dBeta: 2 } unconditionally.",
+  "goal_text": "goal-host-vessel/src/index.ts:5196 returns { dAlpha: 0, dBeta: 2 } unconditionally.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-mt0kcoyt",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,17 @@
+
+{
+  "scenario_id": "gap-msvqgv4y",
+  "summary": "Resolver 'uiPanel_write' is registered but not invoked by any activity.",
+  "description": "The 'uiPanel_write' resolver is a live capability designed for displaying UI panels to the operator. However, current telemetry shows it is invoked by 0 of the activity corpus. This gap needs to be closed by ensuring at least one substrate-authored activity successfully invokes 'uiPanel_write'. A simple way to achieve this is to modify an existing, frequently invoked activity to dispatch a 'uiPanel_write' impulse.",
+  "expected_emergence": {
+    "activity_signature": {
+      "output_shapes_must_include": ["patch_proposal"]
+    }
+  },
+  "target_file": "repos/development-vessel/src/seed/draft-detector-activity.ts",
+  "target_file_paths": ["repos/development-vessel/src/seed/draft-detector-activity.ts"],
+  "classification_metadata": {
+    "detector": "orphaned_capability_scan",
+    "category": "orphaned_capability"
+  }
+}

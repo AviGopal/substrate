@@ -1,0 +1,44 @@
+[Unit]
+Description=boredom-vessel — concurrent dispatch pool daemon (2026-06-04)
+After=activity-api.service goal-host-vessel.service light-dispatch-vessel.service
+# Wants= (was Requires=): a goal-host cutover restart must not stop-propagate
+# to boredom — each bounce re-hydrates persisted momentum and resets selection
+# state. Boredom tolerates a briefly-absent goal-host (dispatches fail soft).
+Wants=goal-host-vessel.service
+
+[Service]
+# Type=simple (was oneshot): boredom now runs as a long-lived daemon that
+# maintains MAX_CONCURRENT in-flight dispatches and reacts to WS completion
+# events. The 5-minute timer cadence is retired — throughput is paced by the
+# pool, not the systemd clock.
+#
+# Backwards-compat: BOREDOM_DAEMON_MODE=0 in the env file switches the binary
+# back to oneshot behaviour for rollback without touching the unit file.
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=GOAL_HOST_VESSEL_ENDPOINT=http://127.0.0.1:8210
+Environment=LIGHT_DISPATCH_ENDPOINT=http://127.0.0.1:8280
+Environment=DEV_VESSEL_ENDPOINT=http://127.0.0.1:8090
+Environment=BOREDOM_DAEMON_MODE=1
+Environment=BOREDOM_MAX_CONCURRENT=3
+Environment=BOREDOM_MIN_DISPATCH_INTERVAL_MS=2000
+Environment=BOREDOM_POOL_LOOP_INTERVAL_MS=5000
+Environment=BOREDOM_STATE_REFRESH_MS=30000
+Environment=BOREDOM_IN_FLIGHT_TIMEOUT_MS=900000
+Environment=BOREDOM_IDLE_WINDOW_SECONDS=300
+WorkingDirectory=/vessels/boredom-vessel
+ExecStart=/root/.bun/bin/bun /vessels/boredom-vessel/src/index.ts --daemon
+Restart=always
+RestartSec=10
+MemoryHigh=512M
+MemoryMax=1G
+StandardOutput=journal
+StandardError=journal
+
+# Smoke test:
+#   systemctl restart boredom-vessel.service
+#   journalctl -u boredom-vessel -f
+#   # Should log: "[pool] daemon starting:" then repeated "[pool] dispatched goal[N]"
+
+[Install]
+WantedBy=multi-user.target

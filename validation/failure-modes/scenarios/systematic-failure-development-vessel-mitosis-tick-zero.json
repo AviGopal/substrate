@@ -1,0 +1,19 @@
+{
+  "id": "systematic-failure-development-vessel-mitosis-tick-zero",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "mitosis-tick",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Capability \"development-vessel:mitosis-tick\" fails systematically with zero tasks (0/0) across 40 recent traces, resulti",
+  "description": "Capability \"development-vessel:mitosis-tick\" fails systematically with zero tasks (0/0) across 40 recent traces, resulting in a cascading failure. The gap reflects an empty task list and missing failure_mode classification, preventing any execution progress and blocking learning. It requires validation in ribosome-extract to detect empty task lists, set appropriate failure_mode, and implement a detect-chain-truncation activity to correlate trace and template task counts.",
+  "goal_text": "Capability \"development-vessel:mitosis-tick\" fails systematically with zero tasks (0/0) across 40 recent traces, resulting in a cascading failure. The gap reflects an empty task list and missing failure_mode classification, preventing any execution progress and blocking learning. It requires validation in ribosome-extract to detect empty task lists, set appropriate failure_mode, and implement a detect-chain-truncation activity to correlate trace and template task counts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "systematic-failure-development-vessel-mitosis-tick-zero",
+  "source_gap_source": "substrate_detected"
+}

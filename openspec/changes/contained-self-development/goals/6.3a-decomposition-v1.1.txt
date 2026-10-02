@@ -1,0 +1,24 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, tighten decomposeGap: the prompt allows only shapes that already exist and answer today as falsifiers (new behaviour uses a literal with a reader function) and forbids observation-only steps; validation refuses observation-only changes and requires the named reader to be a function defined or called in the file, not a type. Apply exactly these 3 edits; each old text occurs exactly once:
+EDIT 1
+old:
+Rules: prefer a shape-based falsifier; an expected_literal must not exist in the file yet and must be read by the named existing function; never propose removing, weakening or silencing a detector or check; the steps together must close the gap.`;
+new:
+Rules: a shape falsifier must name a shape that ALREADY exists and answers today (it currently reports this defect and stops reporting it after the change); a shape the change itself would introduce cannot be a falsifier — for new behaviour use expected_literal with a reader; the reader must be an existing FUNCTION in that file that is called on a live path and will call or read the literal (not a type, interface or comment); never propose a logging-only, comment-only or observation-only step; never propose removing, weakening or silencing a detector or check; the steps together must close the gap.`;
+EDIT 2
+old:
+    if (/\b(remove|delete|disable|silence|suppress|skip)\b[^.]{0,40}\b(detector|check|gate|falsifier|scan)\b/i.test(change)) { refusals.push(`step ${k}: would silence a detector or check`); continue; }
+new:
+    if (/\b(remove|delete|disable|silence|suppress|skip)\b[^.]{0,40}\b(detector|check|gate|falsifier|scan)\b/i.test(change)) { refusals.push(`step ${k}: would silence a detector or check`); continue; }
+    // v1.1: an observation-only step is a hollow write (a logging step with a type named as its
+    // "reader" passed v1 and was superseded before any draft).
+    if (/\b(log|logs|logging|console|comment|comments|document|observe|observation)\b/i.test(change) && !/\b(fix|change|replace|route|read|call|return|compute|select|validate|guard|reject|refuse|apply|use)\b/i.test(change)) { refusals.push(`step ${k}: observation-only change`); continue; }
+EDIT 3
+old:
+      if (!reader || !text.includes(reader)) { refusals.push(`step ${k}: reader ${reader || "(none)"} not found in ${stepSite}`); continue; }
+new:
+      if (!reader || !text.includes(reader)) { refusals.push(`step ${k}: reader ${reader || "(none)"} not found in ${stepSite}`); continue; }
+      // v1.1: the reader must be a FUNCTION in the file (defined or called), not a type or interface.
+      const readerRe = reader.replace(/[.*+?^${}()|[\]\\]/g, (ch) => "\\" + ch);
+      const readerIsFunction = new RegExp("(function\\s+" + readerRe + "\\b|\\b" + readerRe + "\\s*(=\\s*(async\\s*)?\\(|\\())").test(text);
+      if (!readerIsFunction) { refusals.push(`step ${k}: reader ${reader} is not a function in ${stepSite}`); continue; }
+Done when: all 3 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

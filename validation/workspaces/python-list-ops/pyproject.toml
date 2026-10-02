@@ -1,0 +1,5 @@
+[project]
+name = "python-list-ops"
+version = "0.0.0"
+description = "Implement list operations from scratch without built-ins"
+requires-python = ">=3.10"

@@ -1,0 +1,19 @@
+{
+  "id": "systematic-failure-development-vessel_mitosis-tick-zero",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Capability \"development-vessel:mitosis-tick\" fails systematically at task \"(no tasks)\" (0/0 tasks ok, failure_mode: unkn",
+  "description": "Capability \"development-vessel:mitosis-tick\" fails systematically at task \"(no tasks)\" (0/0 tasks ok, failure_mode: unknown) across 4 recent traces — author an improvement so it reaches.",
+  "goal_text": "Capability \"development-vessel:mitosis-tick\" fails systematically at task \"(no tasks)\" (0/0 tasks ok, failure_mode: unknown) across 4 recent traces — author an improvement so it reaches.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "systematic-failure-development-vessel_mitosis-tick-zero",
+  "source_gap_source": "substrate_detected"
+}

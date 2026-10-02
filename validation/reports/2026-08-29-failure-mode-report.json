@@ -1,0 +1,906 @@
+{
+  "generated_at": "2026-08-29T01:46:27.962Z",
+  "label": "falsification-2026-08-29",
+  "endpoint": "http://127.0.0.1:8080",
+  "scenarios_run": 7,
+  "scenarios": [
+    {
+      "scenario_id": "fp-15-missing-producer-stale-registration",
+      "dispatched_at": "2026-08-29T01:45:55.947Z",
+      "recommendations_returned": 10,
+      "matched_existing_activity_id": "activity:⟨gap-closing:fp-15-missing-producer-stale-registration-1779960487088⟩",
+      "emergence_class": "new",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "match found but α=-3 < required minimum=5; counts as new"
+      ]
+    },
+    {
+      "scenario_id": "fp-11-silent-semantic-failure",
+      "dispatched_at": "2026-08-29T01:46:00.551Z",
+      "recommendations_returned": 10,
+      "matched_existing_activity_id": "activity:⟨gap-closing:fp-11-silent-semantic-failure-1779960485757⟩",
+      "emergence_class": "reuse",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": []
+    },
+    {
+      "scenario_id": "fm-17-resolver-budget-noncompliance",
+      "dispatched_at": "2026-08-29T01:46:06.107Z",
+      "recommendations_returned": 10,
+      "matched_existing_activity_id": "activity:⟨gap-closing:fm-17-resolver-budget-noncompliance-1779960884797⟩",
+      "emergence_class": "reuse",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": true,
+      "notes": [
+        "matched via discover-by-shapes (not yet ranked in /recommend)"
+      ]
+    },
+    {
+      "scenario_id": "fm-43-cascade-attribution-error",
+      "dispatched_at": "2026-08-29T01:46:10.446Z",
+      "recommendations_returned": 10,
+      "matched_existing_activity_id": "activity:⟨gap-closing:fm-43-cascade-attribution-error-1779962148407⟩",
+      "emergence_class": "reuse",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": []
+    },
+    {
+      "scenario_id": "fp-12-partial-success-recorded-as-total",
+      "dispatched_at": "2026-08-29T01:46:14.270Z",
+      "recommendations_returned": 10,
+      "matched_existing_activity_id": "activity:⟨gap-closing:fp-12-partial-success-recorded-as-total-1780560985385⟩",
+      "emergence_class": "reuse",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "matched via discover-by-shapes (not yet ranked in /recommend)"
+      ]
+    },
+    {
+      "scenario_id": "loop-c-vessel-scaffold-dispatch-consumer",
+      "dispatched_at": "2026-08-29T01:46:18.687Z",
+      "recommendations_returned": 10,
+      "matched_existing_activity_id": "activity:⟨development-vessel:vessel-scaffold-trigger-tick⟩",
+      "emergence_class": "reuse",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": true,
+      "notes": [
+        "matched via discover-by-shapes (not yet ranked in /recommend)"
+      ]
+    },
+    {
+      "scenario_id": "fm-44-silent-trace-loss",
+      "dispatched_at": "2026-08-29T01:46:23.689Z",
+      "recommendations_returned": 0,
+      "matched_existing_activity_id": "activity:⟨gap-closing:fm-44-silent-trace-loss-1780417029598⟩",
+      "emergence_class": "reuse",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "matched via discover-by-shapes (not yet ranked in /recommend)"
+      ]
+    }
+  ],
+  "summary": {
+    "reuse": 6,
+    "new": 1,
+    "gap": 0,
+    "avg_self_heal_seconds": null
+  },
+  "scenarios_offered": 663,
+  "scenarios_skipped": 656,
+  "coverage_fraction": 0.010558069381598794,
+  "skipped": [
+    {
+      "id": "route-edit-60005a84",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "gap-daemon-timers-can-never-rearm",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-git_push",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-29f8f226-semantic_reject",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-gap-filelist-anchor_not_found",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-402d9af5-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-922ee550",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-a6b01910",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "pull-sync-testgate-skipped-development-vessel",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "detector-coverage-gap-unclassified_failure_learned_composition_codereadresult_to_concept_write",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-29f8f226-narrowed-semantic_reject-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "goal_host_inconsistent_direction-llmTextCompletion",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-concept",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-prune_stale_mitosis",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-narrowed-wrong_location",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-fb8d2f08-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "precondition-rejection-activity-_gap-closing-dispatch-target-drift-exec_b0wv6ao1-1781376493963_-2026-08-28",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-d1782a68",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "gap-picker-cannot-detect-its-own-livelock",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-e79f11fc-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-0605d0f8",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-29f8f226-typecheck_dangling_reference",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "decision-without-action-unknown-select_or_produce",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-compositionGraph",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-docs_decision_deliver",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-9077062c-syntax_break",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-9077062c-semantic_reject",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "self-recovery-surreal-wedge-restart",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-db8bd146-verify_failed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "pull-sync-test-regression-ias-executor-ts",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-error",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-60a9dce8",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "docs-drift-CLAUDE-md",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "prose-only-gaps-are-structurally-unclosable-so-the-ttl-becomes-their-only-exit",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-code_replace_lines",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "gap-backlog-unhealthy",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-config_file",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-861bc804-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-calibration-counts-killswitch-invocations-as-authoring-failures-narrowed-semantic_reject",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-code_verify_typecheck",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-4240c480",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-4ad6a328",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-sensitivity_evidence",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "self-op-health-push_credential_invalid",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-53b67042",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-e49e2f30-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-activeDispatches",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-830a7634-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "precondition-rejection-satisfier-discovery_vessel_registry_observer-2026-08-23",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "reach-gap-goalwalkstate",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-80aadcc0",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-fossilRankReport-1784875561209",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-cf34c6c0-anchor_not_found",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-770eefe2",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "docs-drift-docs-architecture-sequences-02-impulse-resolution-md",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "gap-env-gated-dev-operator-present",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "reach-gap-vessel-health-report",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "gap-edit-intent-compose-lane-lands-nothing",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-0b40ac10",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "detector-coverage-gap-unclassified_failure_development_vessel_cyclic_flow_scan_tick",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-29f8f226-narrowed-semantic_reject",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-7e17b26c",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-c770e288-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "pull-sync-diverged-super-repo",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-renderPolicy",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-narrowed-syntax_break-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-ca73164a-anchor_not_found-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-f585a51c",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-recommit-gap-filelist-anchor_not_found-typecheck_dangling_reference",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-cutover-empty-baseline-guard-one-line-addition-narrowed-semantic_reject",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-code_read_lines",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "docs-drift-docs-testing-README-md",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-docFixPolicy_write",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-code_find_import",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-d5e8a174-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-gap-filelist-semantic_reject",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-1d843a2a",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "posterior-drift-1784927206707",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-gap-filelist-syntax_break",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "systematic-failure-auto-bridge-code_quality-zero",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-817d87d8",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "vessel-write-error-activity-api.service",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-1c481b6a-semantic_reject",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-c0de0d59-semantic_reject",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "docs-drift-docs-shapes-README-md",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "goal_host_inconsistent_direction-substrateGap",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-f125b8be",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "activity-execution-core-audit-1",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-770eefe2-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-narrowed-anchor_not_found",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "runtime-source-truncated-activity-api",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "reach-gap-execution-trace",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-6a7afb2c-verify_failed-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-db8bd146-narrowed-syntax_break-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-db8bd146-narrowed-typecheck_dangling_reference-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-2e2655b0",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "precondition-rejection-satisfier-code_quality-2026-08-23",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-ccce460c-typecheck_dangling_reference-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-execution_trace",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-project_plan",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "no-gate-reads-what-a-diff-removes",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-d276bfa6-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-7fb27996",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-1c481b6a-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "model-opportunity-patch_convergence_probability",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-syntax_break",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "uiquestion-read-shape-has-no-producer",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-e40558ea",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-author_producer",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-recommit-route-edit-db8bd146-narrowed-verify_failed-narrowed-semantic_reject-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-922ee550-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-conceptSignatureUpsert_write",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-anchor_not_found-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-35e64bda",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-ccce460c-typecheck_dangling_reference",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-cluster",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-fae79130",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "docs-drift-docs-MEMORY-AS-SUBSTRATE-md",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-6b4da4c8-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-430450f8",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-groupedExecutionStats",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "docs-drift-docs-SUBSTRATE-md",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-code_insert_after_line",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-goalExecutionPath",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-recommit-recommit-gap-filelist-anchor_not_found-mis_localized_path-verify_failed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "detector-coverage-gap-unclassified_failure_auto_bridge_obsidian_note_with_project_list_content",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-0d422c03",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "novel-failure-development-vessel-scaffold-and-publish-vessel_unknown-1784927313534",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "triage-only-categories-are-permanently-marked-hopeless",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "novel-failure-development-vessel-cyclic-flow-scan-tick_unknown-1784931893718",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-conceptUsage_write",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "reach-gap-http-response",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-2d7a7130-narrowed-typecheck_dangling_reference",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-recommit-route-edit-db8bd146-narrowed-syntax_break-narrowed-semantic_reject-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "instrumentation-gap-dispatch-target-not-recorded",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-performance_reach_gate",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-170801a8",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "docs-drift-docs-API-V2-ACTIVITY-md",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-e79f11fc",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "runtime-source-truncated-light-dispatch-vessel",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-obsidian-note_with_project_list_content",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "runtime-source-truncated-goal-host-vessel",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-dc0bddb6",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-fileList",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-2d7a7130-semantic_reject-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-6a7afb2c-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-narrowing-a-chronically-stuck-gap-copies-it-verbatim-and-only-resets-the-penalty-narrowed-semantic_reject-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "runtime-source-truncated-ias-executor-ts",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-f856a29e",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-870c4368-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-learningPolicy",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "revert-detection-rejects-conventional-commit-subjects",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-solicitationHeartbeat_write",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-5a9ab0c8",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "reach-gap-composition-coverage-report",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "gap-registry-query-reports-false-absences",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-recommit-recommit-recommit-gap-filelist-anchor_not_found-mis_localized_path-mis_localized_path-mis_localized_path",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-9ad7cb9e",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-621dfa4a-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-98c27a74",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-renderPolicy_write",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-b7e00c9e-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-human_input",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-430450f8-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-c2f83378-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-d276bfa6",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-recommit-route-edit-9077062c-typecheck_dangling_reference-narrowed-semantic_reject",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-interactorEvent_write",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-29f8f226-syntax_break-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-9077062c-semantic_reject-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-recommit-gap-filelist-anchor_not_found-mis_localized_path",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-recommit-route-edit-9077062c-typecheck_dangling_reference-narrowed-semantic_reject-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-code_add_import",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-ca73164a",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-bf5778e9-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "selfdev-compose-cannot-author-small-file-edit-intent-routes-to-patch-with-tools",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-543181e7",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "reach-gap-gitstatus",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "self-alteration-throughput-zero-apply",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-b2925de2-narrowed-semantic_reject",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "reach-gap-activitytemplate",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-e74b4e60",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-interface_deploy_reach_check",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "precondition-rejection-satisfier-llm_completion_dispatch-2026-08-27",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-cutover-empty-baseline-guard-one-line-addition-semantic_reject",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-interactorAttachment",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-06f127ec-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-d521eac0",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-obsidian-ui_screenshot",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-ccce460c-narrowed-typecheck_dangling_reference-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "docs-drift-docs-operations-CONFIGURATION-SURFACE-md",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-resolver_schema",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-f7a9936c",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-cutover-empty-baseline-guard-one-line-addition-narrowed-semantic_reject-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "recommit-route-edit-ccce460c-narrowed-typecheck_dangling_reference",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "selection-entropy-sensor-tests-only-a-floor-so-uniform-selection-reads-healthy-narrowed",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-2951ebb0",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "novel-failure-development-vessel-draft-gap-closing-activity-1783049075304_unknown-1784927923538",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "orphaned-capability-llmModelPolicy_write",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    },
+    {
+      "id": "route-edit-402d9af5",
+      "reason": "no expected_emergence.activity_signature — cannot score emergence"
+    }
+  ]
+}

@@ -1,0 +1,290 @@
+{
+ "area": "activity-pool",
+ "items": [
+  {
+   "name": "root tsconfig.json (tsc --init template)",
+   "location": "/tsconfig.json",
+   "purpose": "none; re-added by substrate, deleted by operator 04-30",
+   "status": "fossil",
+   "general": false,
+   "evidence": "rootDir ./src does not exist; causes tsc emit beside every .ts",
+   "source": "openspec-9",
+   "mentions": 1,
+   "sources": [
+    "openspec-9"
+   ]
+  },
+  {
+   "name": "minted copies (learned-universal-tool-fallback; 4 substrateGap_write arms)",
+   "location": "activity catalogue",
+   "purpose": "Ribosome/auto-minted duplicates",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "3/32 vs the real floor; none of the 4 arms can succeed (08-05, 08-08)",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "composed seam-extraction capability",
+   "location": "activity composed-cap-author-a-behavior-neutral-seam-extractio",
+   "purpose": "Self-maintenance extract-module from existing resolvers",
+   "status": "dormant",
+   "general": true,
+   "evidence": "5/5 once (dc00c441); no autonomous run recorded.",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "learned-composition-uifeedback-write-to-shellresult",
+   "location": "activity store",
+   "purpose": "Autonomous ui composition",
+   "status": "broken",
+   "general": false,
+   "evidence": "404 executions, 368 fail, still firing every 30-60 min (09-20)",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "activity.thompson_alpha/beta",
+   "location": "activity table",
+   "purpose": "posteriors",
+   "status": "fossil",
+   "general": false,
+   "evidence": "never written; selection uses variant_performance_metrics/context_thompson_scores",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "detect-unclassified_failure_* auto-minted detectors",
+   "location": "activity table",
+   "purpose": "per-failure detectors",
+   "status": "duplicate",
+   "evidence": "136-145 traces each in July window for mitosis variants",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "activity.metrics.total_executions / activity.ev / success_rate columns",
+   "location": "activity table / VPM",
+   "purpose": "Execution stats display",
+   "status": "fossil",
+   "general": false,
+   "evidence": "0/3846 non-null (07-31); ev constant; success_rate truncated to {0,1} (08-16)",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "conservation-bridge-tick",
+   "location": "activity template (pure data)",
+   "purpose": "findings -> gaps",
+   "status": "live-used",
+   "general": false,
+   "evidence": "was built but uncalled until minted 09-08",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "trace-store-reconcile learned variants",
+   "location": "activity templates (4 variants)",
+   "purpose": "Periodic trace-store reconcile under the lease",
+   "status": "broken",
+   "general": false,
+   "evidence": "#19 fails every run and leaks the lease; open gaps 09-29",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "validator-dispatch",
+   "location": "activity validator-dispatch",
+   "purpose": "Validation fan-out",
+   "status": "unknown",
+   "general": true,
+   "evidence": "53% of executions, 1ms, metadata null \u2014 unauditable (08-29); chain dies task1->task2 (08-24)",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "reuse-before-mint",
+   "location": "activity-create-variant.ts (407e3ed, 900bc69)",
+   "purpose": "Reuse an existing producer before minting",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Env override remains. Loosened by the substrate on 07-12 (7148d37).",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "activity classifier",
+   "location": "activity.last_classified_at",
+   "purpose": "Assign learning tracks",
+   "status": "broken",
+   "general": true,
+   "evidence": "All rows classified 09-26 and all still 'unclassified'",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "retire primitive",
+   "location": "activity.retired",
+   "purpose": "Remove arms from selection",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Retired rows not executed; under-applied",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "activity-row learning columns",
+   "location": "activity.thompson_*/ev/*_executions/learning_track",
+   "purpose": "Per-activity posterior on the row",
+   "status": "fossil",
+   "general": true,
+   "evidence": "Constant defaults on all 4,010 rows",
+   "duplicates_of": "variant_performance_metrics",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "Drift auto-commit activity",
+   "location": "autonomous commits 4e4170a8, 796fac89",
+   "purpose": "Commit detected working-tree drift",
+   "status": "broken",
+   "general": true,
+   "evidence": "Commits residue (html, compiled js, probe txt, stray openspec JSON) into super-repo",
+   "source": "openspec-5",
+   "mentions": 1,
+   "sources": [
+    "openspec-5"
+   ]
+  },
+  {
+   "name": "empty schema tables",
+   "location": "composition_chain, composition_node, activity_template, execution_traces, goal_execution_path, pattern, execution_pattern, composite_sequence_patterns, execution_sequences, activity_metrics, routing_trace",
+   "purpose": "Earlier designs",
+   "status": "fossil",
+   "general": false,
+   "evidence": "0 rows each",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "gap-closing template factory",
+   "location": "gap-closing:* (1,742 identical skeletons)",
+   "purpose": "Per-gap closer activity",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Outputs report-style patch_proposal; 1,106 retired, 497 live never or stale",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "create-shape-provider-goal escalation",
+   "location": "goal/activity path",
+   "purpose": "Escalate an unbindable slot into a goal to produce the missing shape",
+   "status": "unknown",
+   "general": true,
+   "evidence": "751 traces in the July AET snapshot; not checked recently",
+   "source": "openspec-2",
+   "mentions": 1,
+   "sources": [
+    "openspec-2"
+   ]
+  },
+  {
+   "name": "try-direct-answer universal fallback",
+   "location": "registry activity try-direct-answer",
+   "purpose": "LLM attempt at any goal, emitting learning_needs",
+   "status": "unknown",
+   "general": true,
+   "evidence": "May: every call returned err_ (use_vessel_discovery); precondition-rejection gap-closing variants minted 2026-06-01",
+   "source": "validation-other-2",
+   "mentions": 1,
+   "sources": [
+    "validation-other-2"
+   ]
+  },
+  {
+   "name": "Template write-boundary rejects + mint dedup",
+   "location": "src/routes/activities.ts (1b0c693, 1af83ca, 9b25c93, 1baf8bb)",
+   "purpose": "Law-3 reuse-before-mint, reject unworkable templates",
+   "status": "live-used",
+   "general": true,
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "dispatch-latest-auto-draft / proposed_pattern_authored_*",
+   "location": "src/seed (V24, 06-08); draft-activity-from-pattern outputs",
+   "purpose": "June drafter chain and its authored templates",
+   "status": "fossil",
+   "general": false,
+   "evidence": "1,711 plus 1,554 runs/7d.",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "Template-list Redis cache + in-process catalogue cache",
+   "location": "src/utils/template-cache.ts",
+   "purpose": "Template listing performance",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "7 invalidation or ordering fixes; new layer added in ba3408b",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  }
+ ]
+}

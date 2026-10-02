@@ -1,0 +1,19 @@
+{
+  "id": "runtime-source-truncated-concept-db",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "pull-sync found live source under /vessels/concept-db collapsed to a fraction of its git content (content drift (live a5",
+  "description": "pull-sync found live source under /vessels/concept-db collapsed to a fraction of its git content (content drift (live a5aa3328f3 != clone 1433e25969)) while the unit was still active. A write tool truncated running vessel source; the vessel kept serving from its in-memory module, so nothing else noticed. Re-mirrored from the clone. Ops are applied against RUNTIME_ROOT (live source) rather than a scratch copy — that is the class to close.",
+  "goal_text": "pull-sync found live source under /vessels/concept-db collapsed to a fraction of its git content (content drift (live a5aa3328f3 != clone 1433e25969)) while the unit was still active. A write tool truncated running vessel source; the vessel kept serving from its in-memory module, so nothing else noticed. Re-mirrored from the clone. Ops are applied against RUNTIME_ROOT (live source) rather than a scratch copy — that is the class to close.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "runtime-source-truncated-concept-db",
+  "source_gap_source": "substrate_detected"
+}

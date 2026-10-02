@@ -1,0 +1,7 @@
+In repos/development-vessel/src/resolvers/test-suite.ts, run the tests with a scrubbed environment (only PATH, HOME, NODE_ENV=test and TZ), because tests run with the live environment published thousands of events a minute to the live bus, wrote to the live database and registered a phantom endpoint in live discovery; a unit test must not reach production, and one that needs a live service should fail, not write to it. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+DISCOVERY_ENDPOINT=http://127.0.0.1:9 DISCOVERY_VESSEL_ENDPOINT=http://127.0.0.1:9 timeout ${budgetSec} bun test
+new:
+env -i PATH="$PATH" HOME="$HOME" NODE_ENV=test TZ=UTC timeout ${budgetSec} bun test
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

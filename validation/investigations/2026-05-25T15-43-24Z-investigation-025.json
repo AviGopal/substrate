@@ -1,0 +1,432 @@
+{
+  "investigation_id": "2026-05-25T15-43-24Z-investigation-025",
+  "generated_at": "2026-05-25T15:43:24Z",
+  "investigator_session_id": "claude-sonnet-4-6-audit-loop-40",
+  "prior_investigation_id": "2026-05-25T12-29-57Z-investigation-024",
+  "loop_iteration": 40,
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container"
+  },
+  "substrate_status": {
+    "container": "substrate-live",
+    "health": "healthy",
+    "running_version": "1.20.9",
+    "uptime_seconds": null,
+    "registry_vessels": 8,
+    "registry_shapes": 112,
+    "registry_healthy": 8,
+    "f069_fix_deployed": false,
+    "f069_fix_evidence": "docker exec substrate-live grep -n 'UPSERT activity' /vessels/activity-api/src/routes/activities.ts -> lines 1200 and 5268 still show UPSERT CONTENT pattern. c1364e4 fix NOT in running image. 5+ hours since investigation-020 first flagged this. Unchanged across all 5 investigations.",
+    "posterior_reset_triggered": false,
+    "posterior_accumulation_confirmed": true,
+    "container_uptime_estimate": "~5 hours (started ~10:58:59Z host UTC)",
+    "container_timezone_note": "Container clock runs at UTC+3 relative to host UTC. All container log timestamps are UTC+3; subtract 3h for host UTC equivalents.",
+    "boredom_status": "Active cycling. Since investigation-024 (12:29Z): 41 ticks started, 22 completed, 7 explicit failures (status=failed), 12 SIGTERM timeouts (5-min limit), 1 exit=1 failure. Net: ~54% of dispatched ticks reached completion. Goal[0]=measure topology and goal[2]=topology chain completing reliably; goal[4]=health check and goal[1]=probe unlearned shapes failing with elevated frequency in 15:xx window.",
+    "new_commits_since_024": "None — no new commits since ad1221ee at 12:09:15Z host UTC"
+  },
+  "s4a_verdict": {
+    "window_status": "CLOSED — FAILED (final, from investigation-023). No new window opened.",
+    "verdict_final": true,
+    "elapsed_since_close": "~4 hours since S.4a closed at 11:50:27Z",
+    "next_window_prerequisites": [
+      "coverage-tick template must be re-seeded (still absent from registry — NOT DONE)",
+      "Thompson monoculture (validator-dispatch α=1878) must be broken or coverage-tick bootstrapped to competitive range",
+      "Six unlearned shapes must have producer templates: commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, vesselScaffolded",
+      "c1364e4 image deployed so posteriors survive restart (STILL NOT DONE)",
+      "S.4a definition requires natural substrate activity — not operator-seeded — producing a coverageReport with coverage_progress=true"
+    ],
+    "structural_blocker": "coverage-tick template is absent from the registry. S.4a requires that template to execute and emit a coverageReport. Without it, the criterion cannot be measured, let alone satisfied. This is the binding constraint for any future S.4a window."
+  },
+  "substrate_self_development": {
+    "last_commit": "ad1221ee",
+    "last_commit_time": "2026-05-25T12:09:15Z",
+    "new_commits_since_024": 0,
+    "gap_duration_hours": 3.57,
+    "gap_interpretation": "Operator quiescence (no operator activity since ~12:30Z) combined with substrate plateau (boredom cycling but not generating new proposals or code changes). Boredom-vessel is executing goals but producing completed/failed traces without new development artifacts. No new openspec proposals generated, no new commits authored.",
+    "development_vessel_status": "running — confirmed active service",
+    "proposals_in_tree": [
+      "proposal-fp-12-partial-success-recorded-as-total.json",
+      "proposal-fp-15-missing-producer-stale-registration.json",
+      "proposal-fp-15-vessel-health-corroboration.json"
+    ],
+    "new_proposals_since_024": 0,
+    "notes": "The substrate has 3 prior proposals in the tree from before investigation-024. None new in the 3h14m window. This is a substrate plateau: boredom is executing but not escalating to proposal/fix authoring. The self-development loop produced one fix (ad1221ee) at 12:09Z and has been quiet since."
+  },
+  "thompson_state": {
+    "snapshot_time": "2026-05-25T15:43:24Z",
+    "total_templates": 13,
+    "templates_with_history": 11,
+    "total_alpha_all_templates": 2410,
+    "total_beta_all_templates": 104,
+    "total_executions_all_templates": 2399,
+    "delta_from_024": {
+      "elapsed_minutes": 194,
+      "validator_dispatch_alpha_delta": 75,
+      "all_templates_alpha_delta": 147,
+      "all_templates_executions_delta": 82,
+      "rate_now_per_minute": 0.42,
+      "rate_at_024_per_minute": 46.0,
+      "rate_change_note": "Execution rate dropped dramatically from ~46/min (024) to ~0.42/min (025). This is a 99% rate reduction. Consistent with boredom-vessel timing out more frequently and the substrate entering a lower-frequency dispatch cycle. The pace slowdown reduces (but does not eliminate) posterior accumulation risk."
+    },
+    "validator_dispatch": {
+      "alpha": 1878,
+      "beta": 1,
+      "n": 1835,
+      "alpha_at_024": 1803,
+      "alpha_gained_since_024": 75,
+      "success_rate": 1.0
+    },
+    "slot_binding": {
+      "alpha": 267,
+      "beta": 1,
+      "n": 244,
+      "alpha_at_024": 263,
+      "alpha_gained_since_024": 4
+    },
+    "create_shape_provider_goal": {
+      "alpha": 200,
+      "beta": 84,
+      "n": 260,
+      "alpha_at_024": 197,
+      "beta_at_024": 84,
+      "n_at_024": 256,
+      "alpha_gained_since_024": 3,
+      "beta_gained_since_024": 0,
+      "success_rate_note": "F-036 fix holding — β stable at 84, α+3. Continuing to succeed."
+    },
+    "replace_activity": {"alpha": 10, "beta": 1, "n": 8},
+    "repair_failed_activity": {"alpha": 9, "beta": 1, "n": 8},
+    "ribosome_extract": {"alpha": 8, "beta": 1, "n": 7},
+    "prune_activity": {"alpha": 7, "beta": 1, "n": 6},
+    "core_activity_audit": {"alpha": 4, "beta": 1, "n": 5},
+    "debug_failing_audit": {"alpha": 4, "beta": 1, "n": 3},
+    "evolve_activity_template": {"alpha": 3, "beta": 1, "n": 2},
+    "forge_vessel_for_shape": {"alpha": 1, "beta": 7, "n": 5},
+    "run_sensitivity_probe": {"alpha": 1, "beta": 1, "n": 0},
+    "audit_test_report": {"alpha": 1, "beta": 1, "n": 0},
+    "coverage_tick": "ABSENT — not in registry (13 templates, none named coverage-tick)",
+    "posterior_loss_quantification": {
+      "total_alpha_at_risk": 2410,
+      "total_executions_at_risk": 2399,
+      "fix_deployed": false,
+      "image_fix_commit": "c1364e4",
+      "risk_level": "CRITICAL — unchanged from investigation-024. Every restart wipes 2410 alpha units across 13 templates. Container has been accumulating for 5 hours without fix.",
+      "rate_note": "Rate dropped from 46/min to 0.42/min since 024. At 0.42/min, ~25 more executions per hour at risk — much less than the 2760/hr rate at investigation-024 time. The lower rate reduces urgency marginally but the existing backlog (2410 alpha) remains fully at risk."
+    },
+    "monoculture_severity": "EXTREME but slowing — validator-dispatch α=1878 vs all others combined α=532. Selection probability for any non-validator-dispatch template: ~22%. coverage-tick selection probability: 0% (absent from registry)."
+  },
+  "boredom_dispatch_summary_since_024": {
+    "period": "12:30Z to 15:55Z (~205 minutes)",
+    "ticks_started": 41,
+    "ticks_completed": 22,
+    "ticks_failed_explicit": 7,
+    "ticks_sigterm_timeout": 12,
+    "ticks_exit1_failure": 1,
+    "completion_rate_pct": 54,
+    "goal_rotation_pattern": "goal[0]=measure topology, goal[1]=probe unlearned, goal[2]=topology chain, goal[3]=escalate shapes, goal[4]=health check. Rotating in 0-4 sequence.",
+    "recent_failures_15xx": "goal[0] at 15:32 status=failed; goal[4] at 15:29 status=failed; goal[3] at 15:50 status=failed; goal[4] at 15:53 status=failed. Uptick in explicit failures after 15:27Z. goal[4] (health check) timing out again at 15:48Z.",
+    "notable": "goal[1] (probe unlearned shapes) completed at 15:42Z (exec_56jpqjyl status=completed, 4m52s). This is a previously-timeout-prone goal — 5-min completion marginal. goal[2] (topology chain) currently in flight at observation time 15:43Z, timed out at 15:48Z."
+  },
+  "findings": [
+    {
+      "id": "F-083",
+      "claim": "Thompson posterior reset bug (UPSERT CONTENT) — UNCHANGED. c1364e4 still not deployed. 5+ hours of accumulation at risk. Current total: α=2410 across 13 templates (up 147 from 024's ~2263). Rate has dropped 99% (from 46/min to 0.42/min) due to boredom slowdown — reducing new accumulation risk. BUT: the 2410 existing alpha units remain fully exposed to wipe on next container restart. Validator-dispatch gained +75α in 3h14m (versus +1334α in 28min at 024 time).",
+      "category": "regression",
+      "severity": "critical",
+      "first_seen_in": "2026-05-25T11-16-28Z-investigation-020",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n 'UPSERT activity' /vessels/activity-api/src/routes/activities.ts | head -5",
+          "excerpt": "939: comment. 1200: UPSERT activity:`${activityId}` CONTENT {. 5268: UPSERT activity:`${generated.id}` CONTENT {. STILL old code. Unchanged across all investigations since 020.",
+          "verified_at": "2026-05-25T15:43:24Z"
+        },
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' http://localhost:18080/v2/activities/templates | python3",
+          "excerpt": "validator-dispatch: α=1878 β=1 n=1835 (was α=1803 at 024). All posteriors monotonically increasing. Rate: +75α in 194 min = ~0.39 α/min. Total α across all templates: 2410 (was ~2263 at 024).",
+          "verified_at": "2026-05-25T15:43:24Z"
+        }
+      ],
+      "status": "open",
+      "delta_from_024": "Rate dropped from 46/min to 0.42/min — 99% reduction. Existing backlog still fully at risk. Lower urgency for new accumulation but original 5h of state still unprotected.",
+      "operator_remediation": "Rebuild Docker image from c1364e4 (activity-api UPSERT fix) + ad1221ee (goal-host-vessel). The c1364e4 fix changes UPSERT CONTENT to UPSERT MERGE, preserving Thompson state across restarts. Priority remains CRITICAL for existing backlog protection."
+    },
+    {
+      "id": "F-089",
+      "claim": "Thompson monoculture and coverage-tick absence UNCHANGED. validator-dispatch α=1878 vs next-highest (slot-binding α=267). coverage-tick template is ABSENT from registry — 0 templates matching 'coverage' in 13-template registry. No path to S.4a without operator intervention to re-seed coverage-tick template. Monoculture gap widened from ~1803:263 to ~1878:267 (ratio stable at ~7:1).",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T12-01-47Z-investigation-023",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/templates?limit=200' | python3 (coverage filter)",
+          "excerpt": "coverage-tick: NOT FOUND in template registry. 13 templates total. None contain 'coverage' in name or id.",
+          "verified_at": "2026-05-25T15:43:24Z"
+        }
+      ],
+      "status": "open",
+      "delta_from_024": "No change. coverage-tick still absent. Monoculture ratio stable at ~7:1. Rate slowdown has not changed the structural blocker.",
+      "operator_remediation": "Re-seed coverage-tick template into registry. Even after seeding, α=1878 on validator-dispatch makes coverage-tick selection probability ~0. Consider: (1) deploy c1364e4 + restart to reset posteriors (loses 5h state but breaks monoculture), or (2) explicitly seed coverage-tick with initial α≥100 to bootstrap competitive range."
+    },
+    {
+      "id": "F-090",
+      "claim": "Substrate self-development PLATEAU. Last S1 self-dev event was ad1221ee at 12:09:15Z (3h34m ago). No new commits, no new proposals in the 3h14m window since investigation-024. Boredom-vessel is executing 41 ticks (22 completions) without producing any new code changes or escalation artifacts. The self-development loop produced one fix and has been silent since. This represents substrate plateau — autonomous execution without autonomous authorship.",
+      "category": "positive",
+      "severity": "info",
+      "first_seen_in": "2026-05-25T12-29-57Z-investigation-024",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "git -C /home/avi/documents/work/exp-repo/metabob-devbob log --since='2026-05-25T12:29:00' --oneline",
+          "excerpt": "(empty — no output). Zero commits since ad1221ee at 12:09:15Z.",
+          "verified_at": "2026-05-25T15:43:24Z"
+        },
+        {
+          "kind": "command",
+          "command": "ls /home/avi/documents/work/exp-repo/metabob-devbob/validation/failure-modes/proposals/ | sort | tail -3",
+          "excerpt": "proposal-fp-12-partial-success-recorded-as-total.json, proposal-fp-15-missing-producer-stale-registration.json, proposal-fp-15-vessel-health-corroboration.json — same 3 proposals as in investigation-024.",
+          "verified_at": "2026-05-25T15:43:24Z"
+        }
+      ],
+      "status": "monitoring — plateau phase",
+      "notes": "The 3h+ plateau is consistent with operator quiescence (no new goals driven by operator). Boredom is cycling through topology measurement and probing goals but not generating new development proposals. This may be expected: the self-dev system needs an identified gap to propose a fix, and the current visible gaps (F-083, F-089, F-068) require operator-side image rebuild or template seeding rather than in-substrate code changes.",
+      "quiescence_hypothesis": "Operator quiescence (stepped away ~12:30Z) is the primary driver of the development gap. The substrate's boredom goals do not escalate to self-development unless they detect a gap they can address via available resolvers. The remaining open issues (F-083, F-089) require operator action."
+    },
+    {
+      "id": "F-036",
+      "claim": "create-shape-provider-goal STABLE POST-FIX. α=200 β=84 n=260 — gained +3α and 0β since investigation-024. Success rate holding at ~70.5% (n=260: 200 successes, 60 failures from prior state + 84 total β). The fix from ad1221ee continues to hold across 41 boredom ticks.",
+      "category": "regression",
+      "severity": "low",
+      "first_seen_in": "prior investigations",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/templates?limit=200' | python3 (shape-provider filter)",
+          "excerpt": "Create Shape-Provider Goal (shape-provider-goal-creation) α=200 β=84 n=260. α+3, β+0, n+4 since investigation-024.",
+          "verified_at": "2026-05-25T15:43:24Z"
+        }
+      ],
+      "status": "substantially-resolved — fix holding, task_count=0 (F-068) prevents full verification",
+      "delta_from_024": "Stable. +3α, +0β. Fix continues holding over 194-minute window."
+    },
+    {
+      "id": "F-068",
+      "claim": "task_count=0 UNCHANGED. All 10 sampled recent traces show tasks=[] task_count=0. Affects all templates including the now-succeeding create-shape-provider-goal. Task-level observability remains fully absent. Cannot verify that resolver-level execution is proceeding correctly for any template.",
+      "category": "validation",
+      "severity": "medium",
+      "first_seen_in": "prior investigation",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/execution-traces?limit=10' | python3",
+          "excerpt": "All 10 traces: tasks=0 success=True/False. Timestamps 15:41Z-15:42Z (container). Templates: core-activity-audit, validator-dispatch, slot-binding, create-shape-provider-goal all show tasks=[].",
+          "verified_at": "2026-05-25T15:43:24Z"
+        }
+      ],
+      "status": "open",
+      "delta_from_024": "No change."
+    },
+    {
+      "id": "F-088",
+      "claim": "F-088 boredom timeout loop CONTINUING. In 194-minute window since investigation-024: 41 ticks, 12 SIGTERM timeouts (29%), 7 explicit failures (17%), 22 completions (54%). Recent pattern (15:xx): goal[0] at 15:32 status=failed; goal[2] at 15:43 (in-flight, subsequently timed out 15:48); goal[4] at 15:29 status=failed; goal[3] at 15:50 status=failed; goal[4] at 15:53 status=failed. Uptick in failures in last hour. Systematic pattern: goal[4] (health check with vessel liveness + restart) has highest failure rate.",
+      "category": "regression",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T11-53-03Z-investigation-022",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager --since '12:30:00' | grep -E 'tick start|status=|Failed to start'",
+          "excerpt": "12 SIGTERM timeouts (code=killed status=15/TERM). 1 exit=1. 22 status=completed. 7 status=failed. Total 41 ticks started in 194-min window.",
+          "verified_at": "2026-05-25T15:43:24Z"
+        }
+      ],
+      "status": "partial — topology goals completing, health/probe goals failing",
+      "delta_from_024": "Rate of completion steady at ~54%. Failure pattern stable. No regression or improvement."
+    },
+    {
+      "id": "F-084",
+      "claim": "analysis-vessel discovery registration STABLE. Registry shows 8 vessels / 112 shapes / healthyCount=8 — unchanged from investigations 021-024. 3h14m additional stability since investigation-024. concept-db-seeder.service remains failed (pre-existing, non-blocking).",
+      "category": "regression",
+      "severity": "info",
+      "first_seen_in": "2026-05-25T11-16-28Z-investigation-020",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live curl -s http://127.0.0.1:8100/registry/stats",
+          "excerpt": "{\"totalVessels\":8,\"totalShapes\":112,\"healthyCount\":8}",
+          "verified_at": "2026-05-25T15:43:24Z"
+        }
+      ],
+      "status": "resolved",
+      "resolution_notes": "4+ hours continuous stability. Fully resolved."
+    },
+    {
+      "id": "F-087",
+      "claim": "goal-host-vessel STABLE. No crashes since 12:08:54Z restart. goal-host-vessel active. No new log entries in 15:30Z-15:43Z window. Stable for 3h34m.",
+      "category": "regression",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T11-34-08Z-investigation-021",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u goal-host-vessel.service --no-pager -n 10 --since '15:30:00'",
+          "excerpt": "-- No entries -- (no activity in window). systemctl is-active = active.",
+          "verified_at": "2026-05-25T15:43:24Z"
+        }
+      ],
+      "status": "resolved — stable 3h34m"
+    },
+    {
+      "id": "F-075",
+      "claim": "reachable_learned FLAT at 17/23. Six unlearned shapes unchanged: commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, vesselScaffolded. No coverage-tick executions. S.4a window CLOSED FAILED. New window requires coverage-tick re-seeding + monoculture break.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "status": "open",
+      "delta_from_024": "No change in 3h14m."
+    },
+    {
+      "id": "F-079",
+      "claim": "F-069 posterior reset fix (c1364e4) not deployed in running image. UPSERT CONTENT lines 1200 and 5268 still present. Unchanged for 5+ hours across all investigations from 020-025.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-38-48Z-investigation-019",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n 'UPSERT activity' /vessels/activity-api/src/routes/activities.ts | head -5",
+          "excerpt": "939: comment. 1200: UPSERT activity:`${activityId}` CONTENT {. 5268: UPSERT activity:`${generated.id}` CONTENT {. STILL old code.",
+          "verified_at": "2026-05-25T15:43:24Z"
+        }
+      ],
+      "status": "open",
+      "delta_from_024": "No change."
+    },
+    {
+      "id": "F-074",
+      "claim": "S.4a FAILED — window closed at 11:50:27Z, now 4+ hours past deadline. Post-mortem. Final verdict.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "status": "closed — post-mortem"
+    },
+    {
+      "id": "F-053",
+      "claim": "F-053 (prior open finding) — no new evidence. Status unchanged.",
+      "category": "validation",
+      "severity": "low",
+      "first_seen_in": "prior investigations",
+      "status": "open — no change"
+    },
+    {
+      "id": "F-076",
+      "claim": "F-076 (prior open finding) — no new evidence. Status unchanged.",
+      "category": "validation",
+      "severity": "low",
+      "first_seen_in": "prior investigations",
+      "status": "open — no change"
+    }
+  ],
+  "substrate_explicit_vessels_progress": {
+    "tasks_complete": 48,
+    "tasks_open": 5,
+    "notes": "48/53 tasks complete. 5 remaining. Unchanged from investigation-024."
+  },
+  "repo_artifacts": {
+    "root_file_count": 13,
+    "cycle_files": ["cycle-7.json", "cycle-8.json"],
+    "proposal_files": [
+      "proposal-fp-12-partial-success-recorded-as-total.json",
+      "proposal-fp-15-missing-producer-stale-registration.json",
+      "proposal-fp-15-vessel-health-corroboration.json"
+    ],
+    "new_since_024": "None"
+  },
+  "hardcoded_endpoint_scan": {
+    "identity_vessel_trace_ts": "ACTIVITY_API_ENDPOINT defaults to 'http://metabob-activity-api.activity-system.svc.cluster.local:8080' — Kubernetes-internal URL used as fallback. Non-blocking for local substrate (env var overrides).",
+    "discovery_vessel_auth_middleware": "IDENTITY_VESSEL_URL defaults to 'https://identity.metabob.com' — canary URL used as fallback. Non-blocking for local substrate (env var IDENTITY_VESSEL_URL overrides).",
+    "severity": "low — both are guarded by env var overrides; local substrate sets correct values"
+  },
+  "quiescence_analysis": {
+    "type": "operator_quiescence_plus_substrate_plateau",
+    "evidence": [
+      "No operator-authored commits since ad1221ee at 12:09:15Z (3h34m gap)",
+      "No new openspec proposals (same 3 as in investigation-024)",
+      "Boredom executing 41 ticks without generating development artifacts",
+      "All vessel services stable — no spontaneous restarts or degradation"
+    ],
+    "substrate_interpretation": "The substrate is in a steady-state boredom loop executing topology measurement and probing goals. This represents S1 maintenance: autonomous goal dispatch continuing without human direction, but not reaching S1 development (authoring new fixes) because visible gaps (F-083, F-089) require operator-side actions. The substrate cannot rebuild the Docker image or re-seed coverage-tick without operator intervention.",
+    "s4a_reset_conditions": {
+      "required": [
+        "1. coverage-tick template re-seeded into activity registry",
+        "2. Docker image rebuilt with c1364e4 + ad1221ee (so posteriors survive restart)",
+        "3. New container restart from rebuilt image",
+        "4. Monoculture broken — either posterior reset or coverage-tick bootstrapped to α≥100",
+        "5. Wait for natural boredom execution to produce coverageReport with coverage_progress=true",
+        "6. Also verify S.4b: substrateHealthReport with health_verdict.overall_passing=true"
+      ],
+      "operator_must_do": [
+        "Rebuild Docker image (steps 2+3 above)",
+        "Re-seed coverage-tick template (step 1)",
+        "Optionally: inject initial coverage-tick executions to bootstrap posterior (step 4 alternative)"
+      ],
+      "substrate_can_do": "Steps 5+6 — if coverage-tick is present and competitive, boredom-vessel can naturally produce the required impulses"
+    }
+  },
+  "prioritized_actions": [
+    {
+      "priority": 1,
+      "action": "Rebuild Docker image with c1364e4 (activity-api UPSERT MERGE fix) + ad1221ee (goal-host-vessel impulse_cooccurrence stub) and restart container",
+      "rationale": "F-083 CRITICAL: 5+ hours of Thompson state (α=2410 across 13 templates) remains at risk on restart. Rate has slowed from 46/min to 0.42/min, reducing new accumulation — but existing backlog still fully exposed. The image rebuild also unblocks S.4a (F-089/F-083 reset) and should be combined with coverage-tick re-seeding.",
+      "urgency": "high",
+      "note": "Rate slowdown means container could run longer without catastrophic additional loss, but the existing 5h backlog remains the binding risk."
+    },
+    {
+      "priority": 2,
+      "action": "Re-seed coverage-tick template into registry (coordinate with image rebuild)",
+      "rationale": "coverage-tick is the structural prerequisite for any new S.4a window. Currently absent from registry. Without it, boredom cannot produce coverageReport impulses regardless of execution rate.",
+      "urgency": "high"
+    },
+    {
+      "priority": 3,
+      "action": "Increase boredom-vessel HTTP client timeout to 8-10 minutes",
+      "rationale": "F-088: 29% of ticks timeout at 5 minutes. goal[4] (health+restart) and goal[1] (probe unlearned) are the primary casualties. Increasing timeout would improve completion rate from ~54% to expected ~80%+.",
+      "urgency": "medium"
+    },
+    {
+      "priority": 4,
+      "action": "Investigate and fix F-068 (task_count=0)",
+      "rationale": "Task-level observability gap blocks verification of resolver-level behavior. Structural fix needed in goal-host-vessel trace recording.",
+      "urgency": "low"
+    }
+  ],
+  "key_delta_from_024": {
+    "positive": [
+      "F-036 holding stable post-fix (+3α, +0β in 194 min)",
+      "F-084 / F-087: analysis-vessel and goal-host-vessel stable for 3h34m additional",
+      "Thompson accumulation rate dropped 99% (46/min → 0.42/min) — reduced risk of new accumulation",
+      "Boredom executing 41 ticks / 22 completions — autonomous loop continuing",
+      "goal[1] (probe unlearned shapes) completed at 15:42Z after 4m52s — previously always timing out"
+    ],
+    "negative": [
+      "No new commits or proposals — 3h34m substrate plateau with no self-development activity",
+      "F-083 worsening (slowly): +147α, total now 2410 at risk vs ~2263 at 024",
+      "F-089 unchanged: coverage-tick still absent, no path to S.4a",
+      "F-088 failure rate elevated in 15:xx window: goal[4] failing multiple times; goal[2] timing out at 15:48Z",
+      "concept-db-seeder.service remains in failed state (pre-existing)"
+    ],
+    "unchanged": [
+      "F-068 task_count=0 on all traces",
+      "F-079 c1364e4 not deployed",
+      "F-075 reachable_learned flat at 17/23",
+      "coverage-tick absent from registry",
+      "F-074 S.4a closed FAILED (post-mortem)",
+      "substrate-explicit-vessels 48/53 tasks",
+      "repo root: 13 artifacts"
+    ]
+  },
+  "metrics": {}
+}

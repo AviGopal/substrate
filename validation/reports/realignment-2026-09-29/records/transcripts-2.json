@@ -1,0 +1,780 @@
+{
+ "source": "transcripts-2",
+ "coverage": "14 session transcripts with mtime 09-08..09-16 (0b1032b5, 9c8dceae, 35a31aa4, af312d72, 074acb94, 805b4ec0, 2c00ea45, bcc44633, 2a87a32c, 627b573e, 13801190, 28f8c594, 15dbb9e0, 8183a698; 7e005718 empty). Content spans 2026-08-28 -> 09-16 (about half predates the nominal window; all dates are transcript UTC timestamps). Several files are forked continuations sharing history (35a31aa4/9c8dceae/0b1032b5; af312d72/074acb94; 28f8c594/15dbb9e0), deduped by content. Mined user + assistant TEXT only (~11.4k assistant lines, 2,138 user msgs of which ~1,000 are Stop-hook re-injections, 380 unique utterances); 477 unique retraction contexts and 769 positive-claim contexts read. Tool results not mined; no live-DB cross-check. 'Later' evidence is from within these transcripts plus the operator MEMORY.md index dates.",
+ "attempts": [
+  {
+   "key": "write-read-mismatch",
+   "title": "Capture real exec_* id in feature-compose trace emission",
+   "where": "development-vessel feature-compose.ts (void fetch -> awaited)",
+   "tried": "Stop the fire-and-forget POST that minted its own id; carry the real execution id into the compose report",
+   "outcome": "worked",
+   "date": "2026-09-06",
+   "evidence": "09:15:37 execution_id=exec_1788686137787_aypktaaorip matched a real row; 40 firings verified"
+  },
+  {
+   "key": "selection-learning",
+   "title": "/reach ordering defect (verdict tag written before grade check)",
+   "where": "activity-api /execution-traces/reach",
+   "tried": "Grade before tagging so preVerdict is seen",
+   "outcome": "worked",
+   "date": "2026-09-07",
+   "evidence": "beta +14 over 13 monotone readings, believed rate 73.6%->59.2%; alpha frozen until adda1ef"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Reach delivery from autonomous lane (adda1ef)",
+   "where": "development-vessel -> activity-api",
+   "tried": "Post reach verdicts from compose lane",
+   "outcome": "worked",
+   "date": "2026-09-07",
+   "evidence": "alpha moved 54.39->55.13 at 20:36; later frozen again by 3d648ad"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Restore satisfier trace-id namespace after 3d648ad",
+   "where": "goal-host-vessel",
+   "tried": "One-line revert filed as gap restore-the-satisfier-trace-id-namespace-so-the-signature-lands",
+   "outcome": "unknown",
+   "date": "2026-09-09",
+   "evidence": "3d648ad landed 09-08 10:42 froze the v1 signature; outcome not observed in window"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Un-invert anchor-repair guard (bac7d00)",
+   "where": "feature-compose.ts ~4964",
+   "tried": "Fix autonomous f0cfb91 inverted `if (r.ok && ...)` guard",
+   "outcome": "worked",
+   "date": "2026-09-09",
+   "evidence": "anchor-failure 12%->19.0%->34.4% peak, back to 16.8% n=184 p<1e-6"
+  },
+  {
+   "key": "gap-content",
+   "title": "Verified-unique region arming (155 armed gaps) with RCT",
+   "where": "gap store regions / fc-anchors",
+   "tried": "Mechanically derive unique anchors from gap text; randomise 72 withheld",
+   "outcome": "failed",
+   "date": "2026-09-08",
+   "evidence": "observational p=0.002; RCT treatment 5/73=6.8% vs control 5/72=6.9%, p=1.0; 50 mislocalising anchors retracted"
+  },
+  {
+   "key": "false-verification",
+   "title": "Persist close_basis on gap closes",
+   "where": "development-vessel substrate-gap",
+   "tried": "Record measured-vs-trusted basis on close (substrate-authored)",
+   "outcome": "worked",
+   "date": "2026-09-09",
+   "evidence": "first post-fix close carried close_basis='absent' (02:17)"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Credit compose lessons in concept-db",
+   "where": "feature-compose.ts / concept-db /usage/:id/fail",
+   "tried": "Four dispatches of lesson-crediting fix incl. probe-proven contract in gap",
+   "outcome": "failed",
+   "date": "2026-09-09",
+   "evidence": "landed inert (five silent HTTP defects), then anchor_not_found"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Rotation/requeue fixes for picker monopoly",
+   "where": "gap-to-feature",
+   "tried": "86cdbf2 rotation justified by 88% monopoly; e70b432 correction",
+   "outcome": "partial",
+   "date": "2026-08-30",
+   "evidence": "monopoly figure double-counted runner_up; real trend 16%->35% top share"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Vacuous-edit gate on pwt lane (0896a1c)",
+   "where": "development-vessel",
+   "tried": "Refuse edits with no behavioural change on the typecheck-only lane",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "positive control fired; claim it would have prevented 6dc2005/9267810 retracted"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "learning-loop-selftest-tick with severed-link controls",
+   "where": "development-vessel",
+   "tried": "Per-link assertions as pure functions; controls turn exactly one link red",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "first run RED on trace_write with a real bug; runs every 6h"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "gate-self-probe wiring",
+   "where": "development-vessel:gate-self-probe-tick",
+   "tried": "Wire template onto rotation",
+   "outcome": "dormant",
+   "date": "2026-09-09",
+   "evidence": "executed exactly once ever (09-10 09:40); 8 hypotheses, 7 refuted on why"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Conservation auditors as activities + bridge",
+   "where": "activity-api /conservation-audit + six http_fetch templates",
+   "tried": "Six junction auditors, rhythm cadence, bridge aggregating to <=6 gaps",
+   "outcome": "partial",
+   "date": "2026-09-06",
+   "evidence": "runaway 61.6% of executions 09-07 until rhythm decay; 09-16 bridge 850 picks dominates selection"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Make shape-blind pathways addressable",
+   "where": "goal_execution_paths donor index",
+   "tried": "1,644 pathways made addressable via vetted repair catalogue",
+   "outcome": "partial",
+   "date": "2026-09-06",
+   "evidence": "donors 1,539->3,186; reuse rate did not move"
+  },
+  {
+   "key": "env-gating",
+   "title": "Fleet credential recovery after reboot / API_KEY unset",
+   "where": "/etc/substrate/env, identity-vessel, gen-env",
+   "tried": "Issue fresh keys under current secret (backup env.bak-preauthfix-2026-09-10)",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "13:51 oracle corpus writing again after 21h frozen; reach instrument valid for first time (7.9%)"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Spec refiner overwrote verbatim spec",
+   "where": "feature-compose.ts:3974",
+   "tried": "Stop refinement overwriting caller spec with REPLACE/ANCHOR tokens",
+   "outcome": "worked",
+   "date": "2026-09-06",
+   "evidence": "refinement 15->0; three consecutive byte-correct landings"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync converge_units + drift watchdog",
+   "where": "scripts/substrate pull-sync",
+   "tried": "Fix skip, add drift detector timer",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "timer and census fired autonomously 05:35/05:51"
+  },
+  {
+   "key": "node-locality",
+   "title": "Wiring green-vs-miswired fixes G1-G5",
+   "where": "relevance-sink-vessel d42910bc; bootstrap a919a62a/a07ea8b7/6067c25b",
+   "tried": "Health round-trips store; readiness/doctor/HEALTHCHECK discriminate miswired",
+   "outcome": "worked",
+   "date": "2026-09-16",
+   "evidence": "pre-registered matrix: miswired now 503/NOT ready/unhealthy"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Discovery /bootstrap reads relay anchor per request",
+   "where": "discovery-vessel",
+   "tried": "Three substrate attempts (misroute, semantic gate fail-closed, protected-vessel cutover refusal)",
+   "outcome": "partial",
+   "date": "2026-09-16",
+   "evidence": "operator-landed 0b7db2d after substrate bytes unrecoverable"
+  },
+  {
+   "key": "env-gating",
+   "title": "Keyless provider crash-loop / placeholder GOOGLE_API_KEY",
+   "where": "llm-resolver-vessel",
+   "tried": "Hot-patch running copy then substrate fix 61ae51b",
+   "outcome": "worked",
+   "date": "2026-09-16",
+   "evidence": "89 drafter 400s/30min before; compose lane restored"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Isolate polluting tests",
+   "where": "activity-api tests; gap store",
+   "tried": "ddmin to maintenance-lease.test.ts; reject 8 falsifier-* rows as test_pollution",
+   "outcome": "worked",
+   "date": "2026-09-01",
+   "evidence": "activity-template.test.ts made real calls to live :8080"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "verifyDeterministicCompute discarded its own recomputed truth",
+   "where": "goal-host",
+   "tried": "Repair through substrate; qualification probe cadence",
+   "outcome": "worked",
+   "date": "2026-09-11",
+   "evidence": "N=2 autonomous cycles, 653x379=247487 green"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Migration 205",
+   "where": "activity-api sql/migrations",
+   "tried": "Hand-apply migration",
+   "outcome": "reverted",
+   "date": "2026-09-04",
+   "evidence": "live side refuted premise; parked; 206 corrects field types"
+  }
+ ],
+ "problems": [
+  {
+   "key": "false-verification",
+   "symptom": "Operator instrument errors declared as findings then retracted (null vs absent, CONTAINS on strings, datetime>'string', UTC/PDT, log-line counting, mid-flight reads, wrong store/route/tree)",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-16",
+   "recurrences": 25,
+   "root_cause": "Reading an instrument without a positive control sharing its address"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Verdict->belief declared closed then posterior frozen again",
+   "first_seen": "2026-09-02",
+   "last_seen": "2026-09-10",
+   "recurrences": 5,
+   "root_cause": "Multiple distinct seams: /reach ordering, delivery lane, id namespace (3d648ad), decay under-application"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Gap closure dominated by TTL expiry / provenance stamps, not measured predicates",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-09",
+   "recurrences": 6,
+   "root_cause": "98% of open gaps carry no measurable predicate; closes recorded without basis until close_basis"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate-authored commits silently break learning/drafting (f0cfb91 inverted guard, 3d648ad signature freeze, 6fcdf40 junk awaits, c4ec7367 mangled rebase, relevance-sink double-apply)",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-16",
+   "recurrences": 5,
+   "root_cause": "Gates read diffs; nothing executes landed code post-land"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Landed changes typecheck and pass semantic gate but are inert",
+   "first_seen": "2026-09-02",
+   "last_seen": "2026-09-09",
+   "recurrences": 5,
+   "root_cause": "No gate executes the changed expression; post-land suite dead since 08-31 (per MEMORY 09-28)"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafter paraphrases located statement; anchors not found; mislocalised windows",
+   "first_seen": "2026-08-31",
+   "last_seen": "2026-09-11",
+   "recurrences": 6,
+   "root_cause": "Transcription failure, not truncation; partial/non-atomic application"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "-narrowed child is verbatim duplicate with failed_attempts 0, outranks parent, alternates at queue head",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-08-29",
+   "recurrences": 2,
+   "root_cause": "Narrowing copies summary and resets counters"
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Flat-pointer write drops edit_site/expected_literal/region/severity",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-12",
+   "recurrences": 3,
+   "root_cause": "walk_flat_pointer / gapFromFlatPointer field loss before classification"
+  },
+  {
+   "key": "calibration-seal",
+   "symptom": "documentation_drift category sealed by hopeless() (11 attempts / 0 lands), escalated to human",
+   "first_seen": "2026-09-04",
+   "last_seen": "2026-09-04",
+   "recurrences": 1,
+   "root_cause": "attempts>=8 && lands==0 at gap-to-feature.ts:987"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "In-flight recovery loop never runs: 193/193 attempts are 1/1",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-16",
+   "recurrences": 1,
+   "root_cause": "recommendExcluding/repairSignatureOf/exhaustion have no reachable caller; re-found MEMORY 09-22"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "In-tree vessels (relevance-sink) outside every repair/authoring path; dead vessel not repaired",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-16",
+   "recurrences": 1,
+   "root_cause": "Authoritative source = /workspace/git/vessels/<name>; re-declared MEMORY 09-22"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Timer plane escalates futile repairs indefinitely (23->36) while pool plane learned to stop",
+   "first_seen": "2026-09-04",
+   "last_seen": "2026-09-16",
+   "recurrences": 2,
+   "root_cause": "Watchdog not an activity; no grading; re-declared MEMORY 09-22 (248 escalations)"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Credentials: secrets file override, key dropped in rewrite, API_KEY unset fleet-wide, placeholder GOOGLE_API_KEY pins dead model arm",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-16",
+   "recurrences": 4,
+   "root_cause": "Env/secret layering at boot invisible to traces; no restart policy on substrate-live"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Miswired vessel reports healthy/ready everywhere while every write fails",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-16",
+   "recurrences": 2,
+   "root_cause": "Unconditional /health; readiness checks liveness not wiring"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Drafter receives empty or undiscriminating lessons (dense leg timeout, token semantic_reject matches all)",
+   "first_seen": "2026-09-03",
+   "last_seen": "2026-09-11",
+   "recurrences": 3,
+   "root_cause": "Recall keyed on class token; concept-db dense leg timeouts under load"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Paths keyed on goal_hash (text) \u2014 155 consecutive non-reaches on one hash; state_signature 0/96,747; v_shape_conditioned_score empty",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-16",
+   "recurrences": 1,
+   "root_cause": "Instance key instead of shape-signature parametrization"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Selection ~98% observation / 2% repair",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-16",
+   "recurrences": 2,
+   "root_cause": "UCB on information yield rewards detectors; auditors dominate"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Tests hit live activity-api / systemctl / gap store",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-02",
+   "recurrences": 3,
+   "root_cause": "Tests without isolation of endpoints and WORKSPACE_ROOT"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Docs annotations stale before push; bring-up script configures retired model; doc-contract on FeatureComposePointer.gap wrong",
+   "first_seen": "2026-09-09",
+   "last_seen": "2026-09-16",
+   "recurrences": 3,
+   "root_cause": "Docs carry instances (names, tables, counts) instead of invariants"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Duplicate route registrations, junk awaits, dead activity posterior fields, shadow ledger",
+   "first_seen": "2026-09-05",
+   "last_seen": "2026-09-10",
+   "recurrences": 4,
+   "root_cause": "Double-applied landings and unretired legacy paths"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "In-flight recovery loop (recommendExcluding, repairSignatureOf, exhaustion)",
+   "location": "goal-host walk; docs/architecture/sequences/04-improvisation-failure-modes.md:75",
+   "purpose": "retry with a genuinely different approach on miss",
+   "status": "dormant",
+   "general": true,
+   "evidence": "193/193 graded attempts 'attempt 1/1' over 8 days (09-16 07:33)"
+  },
+  {
+   "name": "gate-self-probe-tick",
+   "location": "development-vessel",
+   "purpose": "prove gates still fire",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "executed exactly once (09-10); in catalogue since 09-10 09:41"
+  },
+  {
+   "name": "learning-loop-selftest-tick",
+   "location": "development-vessel",
+   "purpose": "per-link assertions over execution->learning chain",
+   "status": "live-used",
+   "general": true,
+   "evidence": "controls pass, first run red with real bug (09-10)"
+  },
+  {
+   "name": "conservation auditors + conservation-bridge-tick",
+   "location": "activity-api /conservation-audit + templates",
+   "purpose": "audit each junction, aggregate to gaps",
+   "status": "live-used",
+   "general": true,
+   "evidence": "690 rows; 61.6% runaway 09-07; 850 picks 09-16"
+  },
+  {
+   "name": "/conservation-audit second registration",
+   "location": "activity-api",
+   "purpose": "audit route",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "registered twice by two landings (09-07 22:35)"
+  },
+  {
+   "name": "hopeless() calibration seal",
+   "location": "gap-to-feature.ts:987",
+   "purpose": "stop categories with attempts>=8, lands==0",
+   "status": "live-used",
+   "general": true,
+   "evidence": "documentation_drift sealed 11/0 (09-04)"
+  },
+  {
+   "name": "ingest-docs reap",
+   "location": "scripts/substrate/ingest-docs-as-concepts.ts",
+   "purpose": "evict stale doc concepts",
+   "status": "broken",
+   "general": false,
+   "evidence": "refused 18/18 runs, 596 vs limit 460"
+  },
+  {
+   "name": "docs-align-tick",
+   "location": "development-vessel",
+   "purpose": "docs vs reality",
+   "status": "dormant",
+   "general": true,
+   "evidence": "never executes (09-04)"
+  },
+  {
+   "name": "config-surface-probe",
+   "location": "scripts",
+   "purpose": "config verification",
+   "status": "dormant",
+   "general": false,
+   "evidence": "no scheduled caller (09-04)"
+  },
+  {
+   "name": "first-mile rebind adaptation",
+   "location": "goal-host",
+   "purpose": "reuse pathway with different entry",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "fired once 09-06; reuse rate unchanged"
+  },
+  {
+   "name": "v_shape_conditioned_score",
+   "location": "activity-api view",
+   "purpose": "shape-conditioned selection",
+   "status": "dormant",
+   "general": true,
+   "evidence": "no rows (09-16)"
+  },
+  {
+   "name": "state_signature contextual key",
+   "location": "execution rows",
+   "purpose": "contextual Thompson",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 of 96,747 rows (09-16)"
+  },
+  {
+   "name": "activity.thompson_alpha/beta",
+   "location": "activity table",
+   "purpose": "posteriors",
+   "status": "fossil",
+   "general": false,
+   "evidence": "never written; selection uses variant_performance_metrics/context_thompson_scores"
+  },
+  {
+   "name": "shadow trace ledger",
+   "location": "activity-api POST /v2/activities/execution-traces legacy table",
+   "purpose": "trace ledger",
+   "status": "fossil",
+   "general": false,
+   "evidence": "newest row 2026-07-14 (09-08)"
+  },
+  {
+   "name": "vacuous-edit gate",
+   "location": "development-vessel 0896a1c",
+   "purpose": "refuse no-behaviour edits",
+   "status": "live-used",
+   "general": true,
+   "evidence": "positive control 09-10"
+  },
+  {
+   "name": "semantic gate / adversarial refuters",
+   "location": "feature-compose",
+   "purpose": "judge patch addresses gap",
+   "status": "live-used",
+   "general": true,
+   "evidence": "PASSED fail-open uninterpretable (09-10); fails closed without gap context (09-16); self-retracted refutation counted (08-28)"
+  },
+  {
+   "name": "mitosis cutover",
+   "location": "development-vessel",
+   "purpose": "land + deploy",
+   "status": "live-used",
+   "general": true,
+   "evidence": "refuses protected vessels with no alternate lane; no push lane for in-tree vessels (09-16)"
+  },
+  {
+   "name": "escalation / patch_with_tools lane",
+   "location": "development-vessel",
+   "purpose": "land after gated refusal",
+   "status": "live-used",
+   "general": false,
+   "evidence": "lands fragments / non-atomic subsets (08-29, 09-10)"
+  },
+  {
+   "name": "runtime-drift-tick watchdog",
+   "location": "development-vessel runtime-drift-tick.ts",
+   "purpose": "repair runtime vs clone drift",
+   "status": "live-used",
+   "general": false,
+   "evidence": "exempts in-tree vessels at :281"
+  },
+  {
+   "name": "close_basis",
+   "location": "substrate-gap",
+   "purpose": "measured vs trusted close record",
+   "status": "live-used",
+   "general": true,
+   "evidence": "added 09-09 02:17"
+  },
+  {
+   "name": "boredom ucbScoreImpl",
+   "location": "boredom-vessel/src/index.ts:3413",
+   "purpose": "select next template by information yield",
+   "status": "live-used",
+   "general": true,
+   "evidence": "~98% observation, ~2% repair (09-16)"
+  },
+  {
+   "name": "requeueAfterNonAttempt",
+   "location": "gap-to-feature",
+   "purpose": "requeue on capacity non-attempt",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "three call sites (08-31)"
+  },
+  {
+   "name": "goal_verification_label consumption",
+   "location": "goal-host ~15113",
+   "purpose": "oracle corpus reach override",
+   "status": "live-used",
+   "general": true,
+   "evidence": "15 consumptions/6h (08-28); frozen 21h then restored 09-10"
+  },
+  {
+   "name": "pull-sync quiesce",
+   "location": "scripts/substrate pull-sync",
+   "purpose": "deploy without killing in-flight units",
+   "status": "live-used",
+   "general": true,
+   "evidence": "misread as stalled twice 09-05"
+  }
+ ],
+ "principles": [
+  "Every false alarm in these transcripts was caught by a control, never by re-reading; a negative is unattributed until a positive control shares its address (learned >=10 times before being written down).",
+  "Null/absent key != zero; SurrealDB CONTAINS is an array op; datetime > 'string' matches everything; NONE != NULL; default LIMIT with worst-first sort biases samples.",
+  "Local PDT vs container/commit UTC produced false zeros twice; query origin/dev, not a local un-fetched clone.",
+  "Intermediate states (stage->commit window, mid-write file, running dispatch) read as terminal \u2014 wait past the window.",
+  "Count registrations/rows, not a 200 or log lines; measure at the unit the selector selects over (output shape), not name stems.",
+  "A gate or detector must be proven to fire and to go red, not merely to exist; a gate that reads a diff cannot certify behaviour.",
+  "Retractions must reach state (status: rejected), not prose \u2014 a retracted-in-summary gap kept winning compose slots.",
+  "Under a standing 'find compounding' instruction with unlimited attempts something will look positive by chance; refuse to keep generating interventions (09-08).",
+  "User: 'It always seems like there is another problem of the same class just one stage earlier.' / 'every defect is the same one, one level up'.",
+  "User: 'termination is a failure mode, falling off the manifold' \u2014 detecting and crossing horizons is the core mechanism.",
+  "User: 'Don't put decisions to me\u2026 the system needs to know the consequences\u2026 causally associate its actions with observable changes on any horizon.'",
+  "User: 'cost is not a concern, truth is.'",
+  "User: an autonomous system should try alternate routes and verify when the obvious path is wrong or unavailable (what would a human do).",
+  "User: docs are invalid the second they are written; names, tables and implementation details are irrelevant \u2014 write invariants and failure modes.",
+  "User: bring-up should be: basic config, run container, everything works, vessel-ctl for inventory.",
+  "User: always sync with the remote; never copy files into the container.",
+  "Operator corrections were about abstraction level, not facts; token-level compliance that preserves the defect class is not a fix."
+ ],
+ "claims": [
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-06T10:43",
+   "claim": "Compose grading seam closed end to end \u2014 first-ever verdict on a real compose row (graded exec_* 0 -> 2)",
+   "where": "074acb94/0b1032b5",
+   "later": "09-06 12:04 retracted: feature_compose graded rows existed since 08-29"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-06T11:16",
+   "claim": "Posterior moved one second after first real verdict \u2014 full circuit observed",
+   "where": "0b1032b5",
+   "later": "09-07 00:07 falsified by own scorecard: posterior frozen while false verdicts rise"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-07T10:02",
+   "claim": "Verdict->belief CLOSED AND PROVEN (/reach ordering defect)",
+   "where": "074acb94",
+   "later": "worked for beta; 09-08 22:58 posterior frozen again by autonomous 3d648ad signature namespace change"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-08T22:58",
+   "claim": "The chain composes end to end (6fdcd71 emitter landed unaided)",
+   "where": "0b1032b5",
+   "later": "same message: posterior did not move; 09-09 02:17 cause 3d648ad; restore outcome not observed"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-07T17:57",
+   "claim": "Unaided measured close lane works \u2014 50 landed_verified closes",
+   "where": "074acb94",
+   "later": "09-09 01:37 '78% are ancestry stamps' then 01:39 retraction retracted (hardcoded string); undecidable until close_basis 02:17"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-31T07:40",
+   "claim": "10 closures in 24h were landed_verified",
+   "where": "0b1032b5",
+   "later": "landed_verified all-time 0 of 1,025 closures"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-02T10:38",
+   "claim": "1,037 closed gaps as closing activity",
+   "where": "0b1032b5",
+   "later": "703 (67.8%) expired_not_redetected; 08-28 closure 69% expiry, 1.9% repair"
+  },
+  {
+   "key": "gap-content",
+   "claimed_at": "2026-09-08T22:10",
+   "claim": "Verified-unique region arming raises landing (observational p=0.002)",
+   "where": "074acb94",
+   "later": "09-09 04:36 RCT 6.8% vs 6.9%, p=1.0; claim retracted"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-08T22:54",
+   "claim": "Close-on-land output ~20x (1-6/day -> 81-135/day), close latency 177h -> 2h",
+   "where": "074acb94",
+   "later": "09-08 23:45 retracted: auto_draft bookkeeping population"
+  },
+  {
+   "key": "drafter-quality",
+   "claimed_at": "2026-09-07T23:57",
+   "claim": "Instruction fidelity effectively done \u2014 three consecutive byte-correct landings",
+   "where": "0b1032b5",
+   "later": "09-09 08:07 autonomous f0cfb91 (09-07 10:42) had inverted the anchor-repair guard; failures peaked 34.4% 09-08; fixed bac7d00"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-10T07:15",
+   "claim": "Vacuous-edit gate would have prevented 6dc2005 and 9267810",
+   "where": "bcc44633",
+   "later": "retracted same report after coverage map"
+  },
+  {
+   "key": "composition-crystallization",
+   "claimed_at": "2026-09-06T05:35",
+   "claim": "First-mile adaptation fired for the first time in system history",
+   "where": "0b1032b5",
+   "later": "06:43 existence proof, refuted as a rate; reuse rate unchanged after 1,644 pathways made addressable"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-07T18:07",
+   "claim": "Hard autonomy criterion met end to end",
+   "where": "074acb94",
+   "later": "also claimed 08-30, 09-06, 09-07 23:52, 09-08, 09-16; same windows contain autonomous regressions f0cfb91, 3d648ad, c4ec7367, relevance-sink double-apply"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-31T06:30",
+   "claim": "Zero autonomous landings",
+   "where": "0b1032b5",
+   "later": "timezone artifact; 4 autonomous commits incl. 569881d"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-05T20:12",
+   "claim": "System files no gaps of its own; acts readily and notices nothing",
+   "where": "af312d72/074acb94",
+   "later": "09-05 20:19 refuted: 76 substrate_detected gaps in 24h; source field misread"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-08-28T09:36",
+   "claim": "Oracle corpus is write-only (headline)",
+   "where": "9c8dceae",
+   "later": "retracted: goal-host resolves goal_verification_label; 15 consumptions/6h"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-08-30T07:59",
+   "claim": "88% picker monopoly (in pushed commit 86cdbf2 message)",
+   "where": "0b1032b5",
+   "later": "double-counted runner_up; recurred 09-07 19:07 and 09-08 23:01"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "claimed_at": "2026-09-11T12:41",
+   "claim": "LLM plane dead; dispatching futile",
+   "where": "bcc44633",
+   "later": "17 commits landed overnight via 429 trickle"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-05T22:15",
+   "claim": "dev-vessel deploys silently stopped for 95 min / run hung",
+   "where": "0b1032b5",
+   "later": "retracted: pull-sync quiesced; run completed 22:16:49"
+  },
+  {
+   "key": "env-gating",
+   "claimed_at": "2026-09-10T20:19",
+   "claim": "Reach is 7.9% overall, 2.1% edit \u2014 for the first time a real number",
+   "where": "bcc44633",
+   "later": "all earlier reach figures void (fleet 401-dead since reboot 09-09; labeler discarded successes); 09-11 5.0%/2.4%"
+  },
+  {
+   "key": "selection-learning",
+   "claimed_at": "2026-09-08T23:47",
+   "claim": "Instrumentation compounding confirmed (credit 0.6%->71%, self-model 57.7->1.55 pts)",
+   "where": "074acb94",
+   "later": "capability flat: reach 4.4% over 72 readings, alpha +5.91 vs beta +364"
+  },
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-16T01:39",
+   "claim": "Wiring goal met \u2014 miswired fleets now red, all pre-registered cells satisfied",
+   "where": "28f8c594",
+   "later": "09-16 06:07 relevance-sink dead from mangled second application of the same landed fix; in-tree vessel unrepairable"
+  },
+  {
+   "key": "dormant-mechanism",
+   "claimed_at": "2026-09-16T07:33",
+   "claim": "Retry/recovery machinery earlier described as live is implemented but never ran (193/193 attempt 1/1)",
+   "where": "8183a698",
+   "later": "re-declared as new MEMORY 09-22 'failure side had no store'"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "claimed_at": "2026-09-16T06:07",
+   "claim": "In-tree vessels have no authoritative source for any repair mechanism",
+   "where": "8183a698",
+   "later": "re-declared as new MEMORY 09-22 'AUTHORABILITY = SUBMODULE MEMBERSHIP'"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-09T15:06",
+   "claim": "Every change passed typecheck + semantic gate; none executed by any gate",
+   "where": "074acb94",
+   "later": "MEMORY 09-28: post-land suite dead 08-31 -> 09-28 (shell 30s kill) \u2014 inside this window while gates were reported working"
+  },
+  {
+   "key": "memory-recall",
+   "claimed_at": "2026-09-08T23:49",
+   "claim": "Teaching channel closed end to end into drafter prompts",
+   "where": "074acb94",
+   "later": "09-09 lesson-crediting fix landed inert x4; 09-11 recall keyed on token semantic_reject matches everything; MEMORY 09-22 recall displaced conventions"
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-09-16T09:24",
+   "claim": "SUBSTRATE_AS_DYNAMICS annotation of a dead producer",
+   "where": "8183a698",
+   "later": "out of date before push (producer repaired same session); second fix swapped counts for symbol names \u2014 still instance-level"
+  }
+ ],
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/transcripts-2.md"
+}

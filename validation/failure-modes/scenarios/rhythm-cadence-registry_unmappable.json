@@ -1,0 +1,19 @@
+{
+  "id": "rhythm-cadence-registry_unmappable",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "other",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Rhythm registry is UNMAPPABLE: all 1 rhythm(s) were skipped with no_goal_mapping, so the conductor scores due-ness and h",
+  "description": "Rhythm registry is UNMAPPABLE: all 1 rhythm(s) were skipped with no_goal_mapping, so the conductor scores due-ness and has nothing to enqueue. Mount rhythmFamilyGoal pool impulses ({family, goal, member?}) for the affected families.",
+  "goal_text": "Rhythm registry is UNMAPPABLE: all 1 rhythm(s) were skipped with no_goal_mapping, so the conductor scores due-ness and has nothing to enqueue. Mount rhythmFamilyGoal pool impulses ({family, goal, member?}) for the affected families.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "rhythm-cadence-registry_unmappable",
+  "source_gap_source": "substrate_detected"
+}

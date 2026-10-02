@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-b3bbb146",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-a80b3450: THE 15% REACH RATE RUN DOWN. Edit repos/goal-host-vessel/src/index.ts",
+  "description": "investigate and decompose gap route-edit-a80b3450: THE 15% REACH RATE RUN DOWN. Edit repos/goal-host-vessel/src/index.ts.",
+  "goal_text": "investigate and decompose gap route-edit-a80b3450: THE 15% REACH RATE RUN DOWN. Edit repos/goal-host-vessel/src/index.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-b3bbb146",
+  "source_gap_source": "substrate_detected"
+}

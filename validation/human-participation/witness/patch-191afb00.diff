@@ -1,0 +1,1480 @@
+commit 191afb0012e04bb99aab34cabc422a014f92f619
+Author:     Substrate Autonomous <substrate-autonomous@substrate.local>
+AuthorDate: Sun Sep 20 02:36:13 2026 +0000
+Commit:     Substrate Autonomous <substrate-autonomous@substrate.local>
+CommitDate: Sun Sep 20 02:36:13 2026 +0000
+
+    Automated commit of vessel code changes
+
+diff --git a/drain-probe b/drain-probe
+new file mode 100644
+index 00000000..b7f58fcb
+--- /dev/null
++++ b/drain-probe
+@@ -0,0 +1 @@
++DRAINPROBE
+\ No newline at end of file
+diff --git a/prior-exp-0 b/prior-exp-0
+new file mode 100644
+index 00000000..0bcdb6e7
+--- /dev/null
++++ b/prior-exp-0
+@@ -0,0 +1 @@
++aGFyYm9yLWV4cDB=
+\ No newline at end of file
+diff --git a/prior-exp-1 b/prior-exp-1
+new file mode 100644
+index 00000000..ca263dd6
+--- /dev/null
++++ b/prior-exp-1
+@@ -0,0 +1 @@
++bGFudGVybi1leHAx
+\ No newline at end of file
+diff --git a/prior-exp-10 b/prior-exp-10
+new file mode 100644
+index 00000000..a118e01b
+--- /dev/null
++++ b/prior-exp-10
+@@ -0,0 +1 @@
++ZW1iZXIxMC1leHA=
+\ No newline at end of file
+diff --git a/prior-exp-11 b/prior-exp-11
+new file mode 100644
+index 00000000..02a8bf94
+--- /dev/null
++++ b/prior-exp-11
+@@ -0,0 +1 @@
++ZW1iZXIxMS1leHA=
+\ No newline at end of file
+diff --git a/prior-exp-2 b/prior-exp-2
+new file mode 100644
+index 00000000..fceefe4b
+--- /dev/null
++++ b/prior-exp-2
+@@ -0,0 +1 @@
++bWVhZG93LWVweDIA
+\ No newline at end of file
+diff --git a/prior-exp-3 b/prior-exp-3
+new file mode 100644
+index 00000000..075414e1
+--- /dev/null
++++ b/prior-exp-3
+@@ -0,0 +1 @@
++b3JjaGlkLWVwMzM=
+\ No newline at end of file
+diff --git a/prior-exp-4 b/prior-exp-4
+new file mode 100644
+index 00000000..e0fc680d
+--- /dev/null
++++ b/prior-exp-4
+@@ -0,0 +1 @@
++cGlsbGFyLWV4cDQ=
+\ No newline at end of file
+diff --git a/prior-exp-5 b/prior-exp-5
+new file mode 100644
+index 00000000..b8877340
+--- /dev/null
++++ b/prior-exp-5
+@@ -0,0 +1 @@
++cXVhcnQtZXA1
+\ No newline at end of file
+diff --git a/prior-exp-6 b/prior-exp-6
+new file mode 100644
+index 00000000..be371450
+--- /dev/null
++++ b/prior-exp-6
+@@ -0,0 +1 @@
++cnVzc2V0LWVweDY=
+\ No newline at end of file
+diff --git a/prior-exp-8 b/prior-exp-8
+new file mode 100644
+index 00000000..5d5f93b4
+--- /dev/null
++++ b/prior-exp-8
+@@ -0,0 +1 @@
++ZW1iZXI4LWV4cA==
+\ No newline at end of file
+diff --git a/prior-exp-9 b/prior-exp-9
+new file mode 100644
+index 00000000..6239d92a
+--- /dev/null
++++ b/prior-exp-9
+@@ -0,0 +1 @@
++ZW1iZXI5LWV4cA==
+\ No newline at end of file
+diff --git a/repos/concept-db b/repos/concept-db
+index a4e353dc..9e2c8a87 160000
+--- a/repos/concept-db
++++ b/repos/concept-db
+@@ -1 +1 @@
+-Subproject commit a4e353dc5d8d24927d69afea10854c231b7b9c22
++Subproject commit 9e2c8a87469296b4e2f3ae8ee7bba99edff96b77
+diff --git a/repos/identity-vessel b/repos/identity-vessel
+index 01af7992..bcbcc182 160000
+--- a/repos/identity-vessel
++++ b/repos/identity-vessel
+@@ -1 +1 @@
+-Subproject commit 01af7992323d02d1dd596f44ccb55535fc8f8cb0
++Subproject commit bcbcc182bd1736ffd2e8ef315881ab500e12f1be
+diff --git a/repos/metric-collector-vessel b/repos/metric-collector-vessel
+index 0d694ddb..6a93e222 160000
+--- a/repos/metric-collector-vessel
++++ b/repos/metric-collector-vessel
+@@ -1 +1 @@
+-Subproject commit 0d694ddb11b81cb187ccd59d6ade07628f6a1c4c
++Subproject commit 6a93e2224950903c7330ba4c6a9da1c416f7e7e5
+diff --git a/state/learning-mode-state.json b/state/learning-mode-state.json
+index a93ee923..96998501 100644
+--- a/state/learning-mode-state.json
++++ b/state/learning-mode-state.json
+@@ -1,7 +1,7 @@
+ {
+   "mode": "develop",
+-  "driver": "frontier(76 necessary-but-unavailable; top=sql_schema)",
++  "driver": "frontier(27 necessary-but-unavailable; top=capabilityCensusReport)",
+   "pending_driver": "develop",
+   "pending_count": 0,
+-  "updated_at": "2026-09-19T21:11:22.170Z"
++  "updated_at": "2026-09-20T02:35:56.394Z"
+ }
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/baseline-typecheck-broken-repos-boredom-vessel.json b/validation/failure-modes/scenarios/baseline-typecheck-broken-repos-boredom-vessel.json
+new file mode 100644
+index 00000000..91669e46
+--- /dev/null
++++ b/validation/failure-modes/scenarios/baseline-typecheck-broken-repos-boredom-vessel.json
+@@ -0,0 +1,19 @@
++{
++  "id": "baseline-typecheck-broken-repos-boredom-vessel",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "systematic_failure",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "feature_compose found the UNTOUCHED baseline of repos/boredom-vessel failing typecheck BEFORE drafting (1 pre-existing t",
++  "description": "feature_compose found the UNTOUCHED baseline of repos/boredom-vessel failing typecheck BEFORE drafting (1 pre-existing tsc errors, e.g. src/index.ts: error TS1109: Expression expected.). Environment fault (stale runtime copy or missing module), not a drafter fault: re-sync this vessel source from its repo baseline. Draft verdicts on this vessel use baseline-delta blame until the baseline is clean.",
++  "goal_text": "feature_compose found the UNTOUCHED baseline of repos/boredom-vessel failing typecheck BEFORE drafting (1 pre-existing tsc errors, e.g. src/index.ts: error TS1109: Expression expected.). Environment fault (stale runtime copy or missing module), not a drafter fault: re-sync this vessel source from its repo baseline. Draft verdicts on this vessel use baseline-delta blame until the baseline is clean.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "baseline-typecheck-broken-repos-boredom-vessel",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/gap-artifact-expectation-violated-prior-exp-10.json b/validation/failure-modes/scenarios/gap-artifact-expectation-violated-prior-exp-10.json
+new file mode 100644
+index 00000000..91069b8e
+--- /dev/null
++++ b/validation/failure-modes/scenarios/gap-artifact-expectation-violated-prior-exp-10.json
+@@ -0,0 +1,19 @@
++{
++  "id": "gap-artifact-expectation-violated-prior-exp-10",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "auto",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "Observation loop found a verified artifact no longer valid: memoryNote prior-exp-10 was verified to byte-equal ZW1iZXIxM",
++  "description": "Observation loop found a verified artifact no longer valid: memoryNote prior-exp-10 was verified to byte-equal ZW1iZXIxMC1leHA= (goal determines ZW1iZXIxMC1leHA= for base64(ember10-exp)) but now stores ZW1iZXIxMC1leHAK — the artifact and its recorded verification disagree (violation #1). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
++  "goal_text": "Observation loop found a verified artifact no longer valid: memoryNote prior-exp-10 was verified to byte-equal ZW1iZXIxMC1leHA= (goal determines ZW1iZXIxMC1leHA= for base64(ember10-exp)) but now stores ZW1iZXIxMC1leHAK — the artifact and its recorded verification disagree (violation #1). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "gap-artifact-expectation-violated-prior-exp-10",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/gap-route-edit-0cfa8cd0.json b/validation/failure-modes/scenarios/gap-route-edit-0cfa8cd0.json
+new file mode 100644
+index 00000000..26d5316a
+--- /dev/null
++++ b/validation/failure-modes/scenarios/gap-route-edit-0cfa8cd0.json
+@@ -0,0 +1,19 @@
++{
++  "id": "gap-route-edit-0cfa8cd0",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "route-edit-f3fa9300",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "memoryNote cycle-demo-3 is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that ",
++  "description": "memoryNote cycle-demo-3 is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.",
++  "goal_text": "memoryNote cycle-demo-3 is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "gap-route-edit-0cfa8cd0",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/gap-route-edit-b7fe489c.json b/validation/failure-modes/scenarios/gap-route-edit-b7fe489c.json
+new file mode 100644
+index 00000000..51401073
+--- /dev/null
++++ b/validation/failure-modes/scenarios/gap-route-edit-b7fe489c.json
+@@ -0,0 +1,19 @@
++{
++  "id": "gap-route-edit-b7fe489c",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "route-edit-b7fe489c",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously veri",
++  "description": "The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.",
++  "goal_text": "The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "gap-route-edit-b7fe489c",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/recommit-landed-commit-was-never-parse-checked-syntactically-invalid-file-pushed-semantic_reject.json b/validation/failure-modes/scenarios/recommit-landed-commit-was-never-parse-checked-syntactically-invalid-file-pushed-semantic_reject.json
+new file mode 100644
+index 00000000..59df39ff
+--- /dev/null
++++ b/validation/failure-modes/scenarios/recommit-landed-commit-was-never-parse-checked-syntactically-invalid-file-pushed-semantic_reject.json
+@@ -0,0 +1,19 @@
++{
++  "id": "recommit-landed-commit-was-never-parse-checked-syntactically-invalid-file-pushed-semantic_reject",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "systematic_failure",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "compose for gap landed-commit-was-never-parse-checked-syntactically-invalid-file-pushed repeated already-recorded failur",
++  "description": "compose for gap landed-commit-was-never-parse-checked-syntactically-invalid-file-pushed repeated already-recorded failure class semantic_reject: The patch only adds documentation about prior attempts without fixing the actual parsing error in boredom-vessel/src/index.ts",
++  "goal_text": "compose for gap landed-commit-was-never-parse-checked-syntactically-invalid-file-pushed repeated already-recorded failure class semantic_reject: The patch only adds documentation about prior attempts without fixing the actual parsing error in boredom-vessel/src/index.ts",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "recommit-landed-commit-was-never-parse-checked-syntactically-invalid-file-pushed-semantic_reject",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/recommit-route-edit-067b2f00-anchor_not_found.json b/validation/failure-modes/scenarios/recommit-route-edit-067b2f00-anchor_not_found.json
+new file mode 100644
+index 00000000..4ea4ccde
+--- /dev/null
++++ b/validation/failure-modes/scenarios/recommit-route-edit-067b2f00-anchor_not_found.json
+@@ -0,0 +1,19 @@
++{
++  "id": "recommit-route-edit-067b2f00-anchor_not_found",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "systematic_failure",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "compose for gap route-edit-067b2f00 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not f",
++  "description": "compose for gap route-edit-067b2f00 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4735-4740 of 16772, VERBATIM:\\n4735:         console.log(`[goal-host-vessel] fl",
++  "goal_text": "compose for gap route-edit-067b2f00 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4735-4740 of 16772, VERBATIM:\\n4735:         console.log(`[goal-host-vessel] fl",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "recommit-route-edit-067b2f00-anchor_not_found",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/recommit-route-edit-173e67c0-anchor_not_found.json b/validation/failure-modes/scenarios/recommit-route-edit-173e67c0-anchor_not_found.json
+new file mode 100644
+index 00000000..cda1c8f5
+--- /dev/null
++++ b/validation/failure-modes/scenarios/recommit-route-edit-173e67c0-anchor_not_found.json
+@@ -0,0 +1,19 @@
++{
++  "id": "recommit-route-edit-173e67c0-anchor_not_found",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "systematic_failure",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "compose for gap route-edit-173e67c0 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not f",
++  "description": "compose for gap route-edit-173e67c0 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2306-2311 of 16756, VERBATIM:\\n2306:     return { reason: `deterministic:verifi",
++  "goal_text": "compose for gap route-edit-173e67c0 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2306-2311 of 16756, VERBATIM:\\n2306:     return { reason: `deterministic:verifi",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "recommit-route-edit-173e67c0-anchor_not_found",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/recommit-route-edit-5c57d7b0-narrowed-typecheck_dangling_reference.json b/validation/failure-modes/scenarios/recommit-route-edit-5c57d7b0-narrowed-typecheck_dangling_reference.json
+new file mode 100644
+index 00000000..c486422a
+--- /dev/null
++++ b/validation/failure-modes/scenarios/recommit-route-edit-5c57d7b0-narrowed-typecheck_dangling_reference.json
+@@ -0,0 +1,19 @@
++{
++  "id": "recommit-route-edit-5c57d7b0-narrowed-typecheck_dangling_reference",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "systematic_failure",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "compose for gap route-edit-5c57d7b0-narrowed repeated already-recorded failure class typecheck_dangling_reference: src/i",
++  "description": "compose for gap route-edit-5c57d7b0-narrowed repeated already-recorded failure class typecheck_dangling_reference: src/index.ts(249,10): error TS2552: Cannot find name 'old_string'. Did you mean 'toString'? | src/index.ts(258,45): error TS2552: Cannot find name 'ol",
++  "goal_text": "compose for gap route-edit-5c57d7b0-narrowed repeated already-recorded failure class typecheck_dangling_reference: src/index.ts(249,10): error TS2552: Cannot find name 'old_string'. Did you mean 'toString'? | src/index.ts(258,45): error TS2552: Cannot find name 'ol",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "recommit-route-edit-5c57d7b0-narrowed-typecheck_dangling_reference",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/recommit-route-edit-5d589ca8-anchor_not_found.json b/validation/failure-modes/scenarios/recommit-route-edit-5d589ca8-anchor_not_found.json
+new file mode 100644
+index 00000000..7bebfbb2
+--- /dev/null
++++ b/validation/failure-modes/scenarios/recommit-route-edit-5d589ca8-anchor_not_found.json
+@@ -0,0 +1,19 @@
++{
++  "id": "recommit-route-edit-5d589ca8-anchor_not_found",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "systematic_failure",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "compose for gap route-edit-5d589ca8 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not f",
++  "description": "compose for gap route-edit-5d589ca8 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2598-2603 of 16770, VERBATIM:\\n2598:     const counts: number[] = [];\\n2599:   ",
++  "goal_text": "compose for gap route-edit-5d589ca8 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2598-2603 of 16770, VERBATIM:\\n2598:     const counts: number[] = [];\\n2599:   ",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "recommit-route-edit-5d589ca8-anchor_not_found",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/recommit-route-edit-81b0ec2a-narrowed-semantic_reject.json b/validation/failure-modes/scenarios/recommit-route-edit-81b0ec2a-narrowed-semantic_reject.json
+new file mode 100644
+index 00000000..72636167
+--- /dev/null
++++ b/validation/failure-modes/scenarios/recommit-route-edit-81b0ec2a-narrowed-semantic_reject.json
+@@ -0,0 +1,19 @@
++{
++  "id": "recommit-route-edit-81b0ec2a-narrowed-semantic_reject",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "systematic_failure",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "compose for gap route-edit-81b0ec2a-narrowed repeated already-recorded failure class semantic_reject: The patch removes ",
++  "description": "compose for gap route-edit-81b0ec2a-narrowed repeated already-recorded failure class semantic_reject: The patch removes code but doesn't address the memoryNote verification logic that's causing the artifact degradation",
++  "goal_text": "compose for gap route-edit-81b0ec2a-narrowed repeated already-recorded failure class semantic_reject: The patch removes code but doesn't address the memoryNote verification logic that's causing the artifact degradation",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "recommit-route-edit-81b0ec2a-narrowed-semantic_reject",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/recommit-route-edit-81b0ec2a-semantic_reject.json b/validation/failure-modes/scenarios/recommit-route-edit-81b0ec2a-semantic_reject.json
+new file mode 100644
+index 00000000..f893815c
+--- /dev/null
++++ b/validation/failure-modes/scenarios/recommit-route-edit-81b0ec2a-semantic_reject.json
+@@ -0,0 +1,19 @@
++{
++  "id": "recommit-route-edit-81b0ec2a-semantic_reject",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "systematic_failure",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "compose for gap route-edit-81b0ec2a repeated already-recorded failure class semantic_reject: The patch completely remove",
++  "description": "compose for gap route-edit-81b0ec2a repeated already-recorded failure class semantic_reject: The patch completely removes the independent deterministic-transform oracle block, which is responsible for verifying `memoryNote` artifacts related t",
++  "goal_text": "compose for gap route-edit-81b0ec2a repeated already-recorded failure class semantic_reject: The patch completely removes the independent deterministic-transform oracle block, which is responsible for verifying `memoryNote` artifacts related t",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "recommit-route-edit-81b0ec2a-semantic_reject",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/recommit-route-edit-cda5d21c-anchor_not_found.json b/validation/failure-modes/scenarios/recommit-route-edit-cda5d21c-anchor_not_found.json
+new file mode 100644
+index 00000000..ad37238a
+--- /dev/null
++++ b/validation/failure-modes/scenarios/recommit-route-edit-cda5d21c-anchor_not_found.json
+@@ -0,0 +1,19 @@
++{
++  "id": "recommit-route-edit-cda5d21c-anchor_not_found",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "systematic_failure",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "compose for gap route-edit-cda5d21c repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not f",
++  "description": "compose for gap route-edit-cda5d21c repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4686-4691 of 16791, VERBATIM:\\n4686:   let finalText = \\\"\\\";\\n4687:   const nam",
++  "goal_text": "compose for gap route-edit-cda5d21c repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4686-4691 of 16791, VERBATIM:\\n4686:   let finalText = \\\"\\\";\\n4687:   const nam",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "recommit-route-edit-cda5d21c-anchor_not_found",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/recommit-route-edit-cda5d21c-narrowed-anchor_not_found.json b/validation/failure-modes/scenarios/recommit-route-edit-cda5d21c-narrowed-anchor_not_found.json
+new file mode 100644
+index 00000000..44a9d747
+--- /dev/null
++++ b/validation/failure-modes/scenarios/recommit-route-edit-cda5d21c-narrowed-anchor_not_found.json
+@@ -0,0 +1,19 @@
++{
++  "id": "recommit-route-edit-cda5d21c-narrowed-anchor_not_found",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "systematic_failure",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "compose for gap route-edit-cda5d21c-narrowed repeated already-recorded failure class anchor_not_found: {\"error\":\"old_str",
++  "description": "compose for gap route-edit-cda5d21c-narrowed repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4739-4744 of 16799, VERBATIM:\\n4739:         continue;\\n4740:       }\\n4741:   ",
++  "goal_text": "compose for gap route-edit-cda5d21c-narrowed repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4739-4744 of 16799, VERBATIM:\\n4739:         continue;\\n4740:       }\\n4741:   ",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "recommit-route-edit-cda5d21c-narrowed-anchor_not_found",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/recommit-route-edit-ef265c48-anchor_not_found.json b/validation/failure-modes/scenarios/recommit-route-edit-ef265c48-anchor_not_found.json
+new file mode 100644
+index 00000000..ab911793
+--- /dev/null
++++ b/validation/failure-modes/scenarios/recommit-route-edit-ef265c48-anchor_not_found.json
+@@ -0,0 +1,19 @@
++{
++  "id": "recommit-route-edit-ef265c48-anchor_not_found",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "systematic_failure",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "compose for gap route-edit-ef265c48 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not f",
++  "description": "compose for gap route-edit-ef265c48 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4670-4675 of 16763, VERBATIM:\\n4670:       console.log(`[goal-host-vessel] floo",
++  "goal_text": "compose for gap route-edit-ef265c48 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4670-4675 of 16763, VERBATIM:\\n4670:       console.log(`[goal-host-vessel] floo",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "recommit-route-edit-ef265c48-anchor_not_found",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/recommit-route-edit-f18b7654-anchor_not_found.json b/validation/failure-modes/scenarios/recommit-route-edit-f18b7654-anchor_not_found.json
+new file mode 100644
+index 00000000..d7f8a23f
+--- /dev/null
++++ b/validation/failure-modes/scenarios/recommit-route-edit-f18b7654-anchor_not_found.json
+@@ -0,0 +1,19 @@
++{
++  "id": "recommit-route-edit-f18b7654-anchor_not_found",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "systematic_failure",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "compose for gap route-edit-f18b7654 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not f",
++  "description": "compose for gap route-edit-f18b7654 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4846-4851 of 16781, VERBATIM:\\n4846:   // recorded, so verification refuses the",
++  "goal_text": "compose for gap route-edit-f18b7654 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4846-4851 of 16781, VERBATIM:\\n4846:   // recorded, so verification refuses the",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "recommit-route-edit-f18b7654-anchor_not_found",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-067b2f00-narrowed.json b/validation/failure-modes/scenarios/route-edit-067b2f00-narrowed.json
+new file mode 100644
+index 00000000..66350c28
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-067b2f00-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-067b2f00-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-067b2f00] investigate and decompose gap route-edit-5fd583ac: The observation loop found a veri",
++  "description": "[narrowed from route-edit-067b2f00] investigate and decompose gap route-edit-5fd583ac: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- syntax_break: src/index.ts(4673,7): error TS1128: Declaration or statement expected. | src/index.ts(4682,5): error TS1005: 'try' expected. | src/index.ts(4807,1): error TS1472: 'catch' or 'finally' expected. | src/\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4735-4740 of 16772, VERBATIM:\\n4735:         console.log(`[goal-host-vessel] floor: dispatch FAILED http=${r.status} iter=${iter}\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-067b2f00] investigate and decompose gap route-edit-5fd583ac: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- syntax_break: src/index.ts(4673,7): error TS1128: Declaration or statement expected. | src/index.ts(4682,5): error TS1005: 'try' expected. | src/index.ts(4807,1): error TS1472: 'catch' or 'finally' expected. | src/\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4735-4740 of 16772, VERBATIM:\\n4735:         console.log(`[goal-host-vessel] floor: dispatch FAILED http=${r.status} iter=${iter}\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-067b2f00-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-0cfa8cd0-narrowed.json b/validation/failure-modes/scenarios/route-edit-0cfa8cd0-narrowed.json
+new file mode 100644
+index 00000000..a13bbbc6
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-0cfa8cd0-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-0cfa8cd0-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-0cfa8cd0] investigate and decompose gap gap-artifact-expectation-violated-cycle-demo-3: The ob",
++  "description": "[narrowed from route-edit-0cfa8cd0] investigate and decompose gap gap-artifact-expectation-violated-cycle-demo-3: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- verify_failed: src/index.ts(4680,9): error TS2448: Block-scoped variable 'observations' used before its declaration. | src/index.ts(4680,9): error TS2454: Variable 'observations' is used before being assigned.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-0cfa8cd0] investigate and decompose gap gap-artifact-expectation-violated-cycle-demo-3: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- verify_failed: src/index.ts(4680,9): error TS2448: Block-scoped variable 'observations' used before its declaration. | src/index.ts(4680,9): error TS2454: Variable 'observations' is used before being assigned.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-0cfa8cd0-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-173e67c0-narrowed.json b/validation/failure-modes/scenarios/route-edit-173e67c0-narrowed.json
+new file mode 100644
+index 00000000..660a7830
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-173e67c0-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-173e67c0-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-173e67c0] investigate and decompose gap route-edit-d739bd6a: Observation loop found a verified",
++  "description": "[narrowed from route-edit-173e67c0] investigate and decompose gap route-edit-d739bd6a: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2306-2311 of 16756, VERBATIM:\\n2306:     return { reason: `deterministic:verified-file-count \\\\u2014 counted ${truth} ${ext ? (\\\"\n- semantic_reject: The patch only adds an error message but doesn't fix the underlying discrepancy in letter counting for 'resilient'\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-173e67c0] investigate and decompose gap route-edit-d739bd6a: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2306-2311 of 16756, VERBATIM:\\n2306:     return { reason: `deterministic:verified-file-count \\\\u2014 counted ${truth} ${ext ? (\\\"\n- semantic_reject: The patch only adds an error message but doesn't fix the underlying discrepancy in letter counting for 'resilient'\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-173e67c0-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-173e67c0.json b/validation/failure-modes/scenarios/route-edit-173e67c0.json
+new file mode 100644
+index 00000000..f29ba670
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-173e67c0.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-173e67c0",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "investigate and decompose gap route-edit-d739bd6a: Observation loop found a verified artifact no longer valid: memoryNot",
++  "description": "investigate and decompose gap route-edit-d739bd6a: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
++  "goal_text": "investigate and decompose gap route-edit-d739bd6a: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-173e67c0",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-2bdcd63a-narrowed.json b/validation/failure-modes/scenarios/route-edit-2bdcd63a-narrowed.json
+new file mode 100644
+index 00000000..1bcbc889
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-2bdcd63a-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-2bdcd63a-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-2bdcd63a] investigate and decompose gap route-edit-de14af02: Observation loop found a verified",
++  "description": "[narrowed from route-edit-2bdcd63a] investigate and decompose gap route-edit-de14af02: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: zero behaviour delta — added lines are comment/whitespace-only — zero behaviour delta\n- compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mu90q11k-d2azzb/goal-host-vessel/src/index.ts\"}\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-2bdcd63a] investigate and decompose gap route-edit-de14af02: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: zero behaviour delta — added lines are comment/whitespace-only — zero behaviour delta\n- compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mu90q11k-d2azzb/goal-host-vessel/src/index.ts\"}\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-2bdcd63a-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-2bdcd63a.json b/validation/failure-modes/scenarios/route-edit-2bdcd63a.json
+new file mode 100644
+index 00000000..9d2f3bfb
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-2bdcd63a.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-2bdcd63a",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "investigate and decompose gap route-edit-de14af02: Observation loop found a verified artifact no longer valid: memoryNot",
++  "description": "investigate and decompose gap route-edit-de14af02: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
++  "goal_text": "investigate and decompose gap route-edit-de14af02: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-2bdcd63a",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-42ce3c84-narrowed.json b/validation/failure-modes/scenarios/route-edit-42ce3c84-narrowed.json
+new file mode 100644
+index 00000000..dac89e19
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-42ce3c84-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-42ce3c84-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-42ce3c84] investigate and decompose gap route-edit-cda5d21c: The rebind cache's content-swap c",
++  "description": "[narrowed from route-edit-42ce3c84] investigate and decompose gap route-edit-cda5d21c: The rebind cache's content-swap can reuse a PRIOR goal's write command with its stale payload: on dispatch for gen-g5b (count active vessel units, store the number), cmdEvidence shows memoryNote_write 'produced by RUNNING: (no command field; resolve args) title=gen-g5b body=etartsbus' - etartsbus is the REVERSED-STRING payload from an earlier, unrelated goal (reverse the string substrate). The\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16790, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- syntax_break: src/index.ts(4682,5): error TS1005: 'try' expected. | src/index.ts(4807,1): error TS1472: 'catch' or 'finally' expected. | src/index.ts(16798,1): error TS1005: '}' expected.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-42ce3c84] investigate and decompose gap route-edit-cda5d21c: The rebind cache's content-swap can reuse a PRIOR goal's write command with its stale payload: on dispatch for gen-g5b (count active vessel units, store the number), cmdEvidence shows memoryNote_write 'produced by RUNNING: (no command field; resolve args) title=gen-g5b body=etartsbus' - etartsbus is the REVERSED-STRING payload from an earlier, unrelated goal (reverse the string substrate). The\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16790, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- syntax_break: src/index.ts(4682,5): error TS1005: 'try' expected. | src/index.ts(4807,1): error TS1472: 'catch' or 'finally' expected. | src/index.ts(16798,1): error TS1005: '}' expected.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-42ce3c84-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-42ce3c84.json b/validation/failure-modes/scenarios/route-edit-42ce3c84.json
+new file mode 100644
+index 00000000..1f0e394a
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-42ce3c84.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-42ce3c84",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "investigate and decompose gap route-edit-cda5d21c: The rebind cache's content-swap can reuse a PRIOR goal's write comman",
++  "description": "investigate and decompose gap route-edit-cda5d21c: The rebind cache's content-swap can reuse a PRIOR goal's write command with its stale payload: on dispatch for gen-g5b (count active vessel units, store the number), cmdEvidence shows memoryNote_write 'produced by RUNNING: (no command field; resolve args) title=gen-g5b body=etartsbus' - etartsbus is the REVERSED-STRING payload from an earlier, unrelated goal (reverse the string substrate). The",
++  "goal_text": "investigate and decompose gap route-edit-cda5d21c: The rebind cache's content-swap can reuse a PRIOR goal's write command with its stale payload: on dispatch for gen-g5b (count active vessel units, store the number), cmdEvidence shows memoryNote_write 'produced by RUNNING: (no command field; resolve args) title=gen-g5b body=etartsbus' - etartsbus is the REVERSED-STRING payload from an earlier, unrelated goal (reverse the string substrate). The",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-42ce3c84",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-462a1a38-narrowed.json b/validation/failure-modes/scenarios/route-edit-462a1a38-narrowed.json
+new file mode 100644
+index 00000000..e346a125
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-462a1a38-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-462a1a38-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-462a1a38] investigate and decompose gap route-edit-959dc464: When correctness depends on an ex",
++  "description": "[narrowed from route-edit-462a1a38] investigate and decompose gap route-edit-959dc464: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- verify_failed: src/index.ts(4808,9): error TS2353: Object literal may only specify known properties, and 'finalText' does not exist in type 'GoalSeekResult'.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-462a1a38] investigate and decompose gap route-edit-959dc464: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- verify_failed: src/index.ts(4808,9): error TS2353: Object literal may only specify known properties, and 'finalText' does not exist in type 'GoalSeekResult'.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-462a1a38-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-462a1a38.json b/validation/failure-modes/scenarios/route-edit-462a1a38.json
+new file mode 100644
+index 00000000..b4748c80
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-462a1a38.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-462a1a38",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "investigate and decompose gap route-edit-959dc464: When correctness depends on an exact procedure, the universal tool fa",
++  "description": "investigate and decompose gap route-edit-959dc464: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool",
++  "goal_text": "investigate and decompose gap route-edit-959dc464: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-462a1a38",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-576b2d90-narrowed.json b/validation/failure-modes/scenarios/route-edit-576b2d90-narrowed.json
+new file mode 100644
+index 00000000..61be9069
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-576b2d90-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-576b2d90-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-576b2d90] investigate and decompose gap route-edit-ac873224: Edit repos/activity-api/src/route",
++  "description": "[narrowed from route-edit-576b2d90] investigate and decompose gap route-edit-ac873224: Edit repos/activity-api/src/routes/template-audit.ts to satisfy the following request. The relevant code is in the region \"hardcode\". If that file is the wrong target, say so rather than editing it.\n\nAdd TypeSafe's Jev as a decision provider for this substrate. The API key is already in the environment as TYPESAFE_API_KEY. Do not hardcode the endpoint, model name, request format, or credential\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/routes/template-audit.ts(435,19): error TS1308: 'await' expressions are only allowed within async functions and at the top levels of modules.\n- typecheck_dangling_reference: src/routes/template-audit.ts(627,61): error TS2339: Property 'deficiencies' does not exist on type 'Promise<TemplateAuditRow>'. | src/routes/template-audit.ts(631,57): error TS2345: Argument of type '\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-576b2d90] investigate and decompose gap route-edit-ac873224: Edit repos/activity-api/src/routes/template-audit.ts to satisfy the following request. The relevant code is in the region \"hardcode\". If that file is the wrong target, say so rather than editing it.\n\nAdd TypeSafe's Jev as a decision provider for this substrate. The API key is already in the environment as TYPESAFE_API_KEY. Do not hardcode the endpoint, model name, request format, or credential\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/routes/template-audit.ts(435,19): error TS1308: 'await' expressions are only allowed within async functions and at the top levels of modules.\n- typecheck_dangling_reference: src/routes/template-audit.ts(627,61): error TS2339: Property 'deficiencies' does not exist on type 'Promise<TemplateAuditRow>'. | src/routes/template-audit.ts(631,57): error TS2345: Argument of type '\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-576b2d90-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-576b2d90.json b/validation/failure-modes/scenarios/route-edit-576b2d90.json
+new file mode 100644
+index 00000000..ae5c9d3f
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-576b2d90.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-576b2d90",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "investigate and decompose gap route-edit-ac873224: Edit repos/activity-api/src/routes/template-audit.ts to satisfy the f",
++  "description": "investigate and decompose gap route-edit-ac873224: Edit repos/activity-api/src/routes/template-audit.ts to satisfy the following request. The relevant code is in the region \"hardcode\". If that file is the wrong target, say so rather than editing it.\n\nAdd TypeSafe's Jev as a decision provider for this substrate. The API key is already in the environment as TYPESAFE_API_KEY. Do not hardcode the endpoint, model name, request format, or credential",
++  "goal_text": "investigate and decompose gap route-edit-ac873224: Edit repos/activity-api/src/routes/template-audit.ts to satisfy the following request. The relevant code is in the region \"hardcode\". If that file is the wrong target, say so rather than editing it.\n\nAdd TypeSafe's Jev as a decision provider for this substrate. The API key is already in the environment as TYPESAFE_API_KEY. Do not hardcode the endpoint, model name, request format, or credential",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-576b2d90",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-5c57d7b0-narrowed.json b/validation/failure-modes/scenarios/route-edit-5c57d7b0-narrowed.json
+new file mode 100644
+index 00000000..3cad22f9
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-5c57d7b0-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-5c57d7b0-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-5c57d7b0] Edit repos/local-tools-vessel/src/index.ts so that the /health endpoint's JSON respo",
++  "description": "[narrowed from route-edit-5c57d7b0] Edit repos/local-tools-vessel/src/index.ts so that the /health endpoint's JSON response includes an additional field probe_generality set to the boolean true.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds 'probe_generality: true' to the return object of fsEdit, but the gap specifies that the /health endpoint's JSON response should include this field. These are distinct functionalities.\n- typecheck_dangling_reference: src/index.ts(255,25): error TS2552: Cannot find name 'text'. Did you mean 'nText'? | src/index.ts(255,45): error TS2552: Cannot find name 'old_string'. Did you mean 'toString'? | src/index.ts(258,23):\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-5c57d7b0] Edit repos/local-tools-vessel/src/index.ts so that the /health endpoint's JSON response includes an additional field probe_generality set to the boolean true.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds 'probe_generality: true' to the return object of fsEdit, but the gap specifies that the /health endpoint's JSON response should include this field. These are distinct functionalities.\n- typecheck_dangling_reference: src/index.ts(255,25): error TS2552: Cannot find name 'text'. Did you mean 'nText'? | src/index.ts(255,45): error TS2552: Cannot find name 'old_string'. Did you mean 'toString'? | src/index.ts(258,23):\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-5c57d7b0-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-5c57d7b0.json b/validation/failure-modes/scenarios/route-edit-5c57d7b0.json
+new file mode 100644
+index 00000000..a5310f50
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-5c57d7b0.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-5c57d7b0",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "Edit repos/local-tools-vessel/src/index.ts so that the /health endpoint's JSON response includes an additional field pro",
++  "description": "Edit repos/local-tools-vessel/src/index.ts so that the /health endpoint's JSON response includes an additional field probe_generality set to the boolean true.",
++  "goal_text": "Edit repos/local-tools-vessel/src/index.ts so that the /health endpoint's JSON response includes an additional field probe_generality set to the boolean true.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-5c57d7b0",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-5d589ca8-narrowed.json b/validation/failure-modes/scenarios/route-edit-5d589ca8-narrowed.json
+new file mode 100644
+index 00000000..673a982e
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-5d589ca8-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-5d589ca8-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-5d589ca8] investigate and decompose gap route-edit-ef265c48: The observation loop found a veri",
++  "description": "[narrowed from route-edit-5d589ca8] investigate and decompose gap route-edit-ef265c48: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16763, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2598-2603 of 16770, VERBATIM:\\n2598:     const counts: number[] = [];\\n2599:     const texts: string[] = [];\\n2600:     for (cons\n- verify_failed: src/index.ts(4674,9): error TS2448: Block-scoped variable 'observations' used before its declaration. | src/index.ts(4674,9): error TS2454: Variable 'observations' is used before being assigned.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-5d589ca8] investigate and decompose gap route-edit-ef265c48: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16763, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2598-2603 of 16770, VERBATIM:\\n2598:     const counts: number[] = [];\\n2599:     const texts: string[] = [];\\n2600:     for (cons\n- verify_failed: src/index.ts(4674,9): error TS2448: Block-scoped variable 'observations' used before its declaration. | src/index.ts(4674,9): error TS2454: Variable 'observations' is used before being assigned.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-5d589ca8-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-5d589ca8.json b/validation/failure-modes/scenarios/route-edit-5d589ca8.json
+new file mode 100644
+index 00000000..e020421a
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-5d589ca8.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-5d589ca8",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "investigate and decompose gap route-edit-ef265c48: The observation loop found a verified artifact (memoryNote cycle-demo",
++  "description": "investigate and decompose gap route-edit-ef265c48: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.",
++  "goal_text": "investigate and decompose gap route-edit-ef265c48: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-5d589ca8",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-5fd583ac-narrowed.json b/validation/failure-modes/scenarios/route-edit-5fd583ac-narrowed.json
+new file mode 100644
+index 00000000..5cc3022c
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-5fd583ac-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-5fd583ac-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-5fd583ac] investigate and decompose gap route-edit-0cfa8cd0: The observation loop found a veri",
++  "description": "[narrowed from route-edit-5fd583ac] investigate and decompose gap route-edit-0cfa8cd0: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- semantic_reject: The patch adds a comment but does not modify the behavior that caused the incorrect byte count for 'resilient'\n- compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mu8y7iii-41lemt/goal-host-vessel/src/index.ts\"}\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-5fd583ac] investigate and decompose gap route-edit-0cfa8cd0: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- semantic_reject: The patch adds a comment but does not modify the behavior that caused the incorrect byte count for 'resilient'\n- compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mu8y7iii-41lemt/goal-host-vessel/src/index.ts\"}\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-5fd583ac-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-5fd583ac.json b/validation/failure-modes/scenarios/route-edit-5fd583ac.json
+new file mode 100644
+index 00000000..bbe588a7
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-5fd583ac.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-5fd583ac",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "investigate and decompose gap route-edit-0cfa8cd0: The observation loop found a verified artifact (memoryNote cycle-demo",
++  "description": "investigate and decompose gap route-edit-0cfa8cd0: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.",
++  "goal_text": "investigate and decompose gap route-edit-0cfa8cd0: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-5fd583ac",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-6b6776df.json b/validation/failure-modes/scenarios/route-edit-6b6776df.json
+new file mode 100644
+index 00000000..eff48d9c
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-6b6776df.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-6b6776df",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "investigate and decompose gap route-edit-f18b7654: When correctness depends on an exact procedure, the universal tool fa",
++  "description": "investigate and decompose gap route-edit-f18b7654: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool",
++  "goal_text": "investigate and decompose gap route-edit-f18b7654: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-6b6776df",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-81b0ec2a-narrowed.json b/validation/failure-modes/scenarios/route-edit-81b0ec2a-narrowed.json
+new file mode 100644
+index 00000000..60a9a5c6
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-81b0ec2a-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-81b0ec2a-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-81b0ec2a] investigate and decompose gap gap-artifact-expectation-violated-cycle-demo-3: Observ",
++  "description": "[narrowed from route-edit-81b0ec2a] investigate and decompose gap gap-artifact-expectation-violated-cycle-demo-3: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mu8vfinf-aaknsb/goal-host-vessel/src/index.ts\"}\n- semantic_reject: The patch changes the default scrapeWidth value but does not alter the memoryNote verification logic that is explicitly characterized by the gap.\n- semantic_reject: The patch completely removes the independent deterministic-transform oracle block, which is responsible for verifying `memoryNote` artifacts related to transformations like 'lettercount', directly imp\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-81b0ec2a] investigate and decompose gap gap-artifact-expectation-violated-cycle-demo-3: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mu8vfinf-aaknsb/goal-host-vessel/src/index.ts\"}\n- semantic_reject: The patch changes the default scrapeWidth value but does not alter the memoryNote verification logic that is explicitly characterized by the gap.\n- semantic_reject: The patch completely removes the independent deterministic-transform oracle block, which is responsible for verifying `memoryNote` artifacts related to transformations like 'lettercount', directly imp\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-81b0ec2a-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-959dc464-narrowed.json b/validation/failure-modes/scenarios/route-edit-959dc464-narrowed.json
+new file mode 100644
+index 00000000..53546fae
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-959dc464-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-959dc464-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-959dc464] investigate and decompose gap route-edit-37441b1c: When correctness depends on an ex",
++  "description": "[narrowed from route-edit-959dc464] investigate and decompose gap route-edit-37441b1c: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- verify_failed: src/index.ts(4816,20): error TS2353: Object literal may only specify known properties, and 'measuredText' does not exist in type 'GoalSeekResult'.\n- syntax_break: src/index.ts(16760,1): error TS1005: '}' expected.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-959dc464] investigate and decompose gap route-edit-37441b1c: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- verify_failed: src/index.ts(4816,20): error TS2353: Object literal may only specify known properties, and 'measuredText' does not exist in type 'GoalSeekResult'.\n- syntax_break: src/index.ts(16760,1): error TS1005: '}' expected.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-959dc464-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-959dc464.json b/validation/failure-modes/scenarios/route-edit-959dc464.json
+new file mode 100644
+index 00000000..d7cfeba1
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-959dc464.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-959dc464",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "investigate and decompose gap route-edit-37441b1c: When correctness depends on an exact procedure, the universal tool fa",
++  "description": "investigate and decompose gap route-edit-37441b1c: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool",
++  "goal_text": "investigate and decompose gap route-edit-37441b1c: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-959dc464",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-ac873224-narrowed.json b/validation/failure-modes/scenarios/route-edit-ac873224-narrowed.json
+new file mode 100644
+index 00000000..843d0576
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-ac873224-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-ac873224-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-ac873224] Edit repos/activity-api/src/routes/template-audit.ts to satisfy the following reques",
++  "description": "[narrowed from route-edit-ac873224] Edit repos/activity-api/src/routes/template-audit.ts to satisfy the following request. The relevant code is in the region \"hardcode\". If that file is the wrong target, say so rather than editing it.\n\nAdd TypeSafe's Jev as a decision provider for this substrate. The API key is already in the environment as TYPESAFE_API_KEY. Do not hardcode the endpoint, model name, request format, or credential anywhere.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 259-264 of 669, VERBATIM:\\n259: // the `g` flag is new each call to avoid stateful lastIndex issues.\\n260: \\n261: function extrac\n- typecheck_dangling_reference: src/routes/template-audit.ts(381,5): error TS2353: Object literal may only specify known properties, and 'jev_decision' does not exist in type 'TemplateDeficiencies'. | src/routes/template-audit.ts(60\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-ac873224] Edit repos/activity-api/src/routes/template-audit.ts to satisfy the following request. The relevant code is in the region \"hardcode\". If that file is the wrong target, say so rather than editing it.\n\nAdd TypeSafe's Jev as a decision provider for this substrate. The API key is already in the environment as TYPESAFE_API_KEY. Do not hardcode the endpoint, model name, request format, or credential anywhere.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 259-264 of 669, VERBATIM:\\n259: // the `g` flag is new each call to avoid stateful lastIndex issues.\\n260: \\n261: function extrac\n- typecheck_dangling_reference: src/routes/template-audit.ts(381,5): error TS2353: Object literal may only specify known properties, and 'jev_decision' does not exist in type 'TemplateDeficiencies'. | src/routes/template-audit.ts(60\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-ac873224-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-ac873224.json b/validation/failure-modes/scenarios/route-edit-ac873224.json
+new file mode 100644
+index 00000000..663d549e
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-ac873224.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-ac873224",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "Edit repos/activity-api/src/routes/template-audit.ts to satisfy the following request. The relevant code is in the regio",
++  "description": "Edit repos/activity-api/src/routes/template-audit.ts to satisfy the following request. The relevant code is in the region \"hardcode\". If that file is the wrong target, say so rather than editing it.\n\nAdd TypeSafe's Jev as a decision provider for this substrate. The API key is already in the environment as TYPESAFE_API_KEY. Do not hardcode the endpoint, model name, request format, or credential anywhere.",
++  "goal_text": "Edit repos/activity-api/src/routes/template-audit.ts to satisfy the following request. The relevant code is in the region \"hardcode\". If that file is the wrong target, say so rather than editing it.\n\nAdd TypeSafe's Jev as a decision provider for this substrate. The API key is already in the environment as TYPESAFE_API_KEY. Do not hardcode the endpoint, model name, request format, or credential anywhere.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-ac873224",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-b7fe489c-narrowed.json b/validation/failure-modes/scenarios/route-edit-b7fe489c-narrowed.json
+new file mode 100644
+index 00000000..545388b9
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-b7fe489c-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-b7fe489c-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-b7fe489c] investigate and decompose gap route-edit-5d589ca8: The observation loop found a veri",
++  "description": "[narrowed from route-edit-b7fe489c] investigate and decompose gap route-edit-5d589ca8: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16763, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- verify_failed: src/index.ts(4673,7): error TS2448: Block-scoped variable 'observations' used before its declaration. | src/index.ts(4673,7): error TS2454: Variable 'observations' is used before being assigned.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-b7fe489c] investigate and decompose gap route-edit-5d589ca8: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16763, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- verify_failed: src/index.ts(4673,7): error TS2448: Block-scoped variable 'observations' used before its declaration. | src/index.ts(4673,7): error TS2454: Variable 'observations' is used before being assigned.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-b7fe489c-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-cda5d21c-narrowed.json b/validation/failure-modes/scenarios/route-edit-cda5d21c-narrowed.json
+new file mode 100644
+index 00000000..1fbb005a
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-cda5d21c-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-cda5d21c-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-cda5d21c] investigate and decompose gap gap-rebind-content-swap-reuses-a-prior-goals-write-bod",
++  "description": "[narrowed from route-edit-cda5d21c] investigate and decompose gap gap-rebind-content-swap-reuses-a-prior-goals-write-body: The rebind cache's content-swap can reuse a PRIOR goal's write command with its stale payload: on dispatch for gen-g5b (count active vessel units, store the number), cmdEvidence shows memoryNote_write 'produced by RUNNING: (no command field; resolve args) title=gen-g5b body=etartsbus' - etartsbus is the REVERSED-STRING payload from an earlier, unrelated goal (reverse the string substrate). The\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4686-4691 of 16791, VERBATIM:\\n4686:   let finalText = \\\"\\\";\\n4687:   const nameOf = (c: any): string => String(c?.tool_name ?? c\n- semantic_reject: The patch adds dead code in a budget fallback path (fetching from a non-existent 'previous-command-endpoint') that has nothing to do with the rebind cache's content-swap logic which reuses stale write\n- syntax_break: src/index.ts(4792,11): error TS1128: Declaration or statement expected. | src/index.ts(4812,1): error TS1128: Declaration or statement expected.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-cda5d21c] investigate and decompose gap gap-rebind-content-swap-reuses-a-prior-goals-write-body: The rebind cache's content-swap can reuse a PRIOR goal's write command with its stale payload: on dispatch for gen-g5b (count active vessel units, store the number), cmdEvidence shows memoryNote_write 'produced by RUNNING: (no command field; resolve args) title=gen-g5b body=etartsbus' - etartsbus is the REVERSED-STRING payload from an earlier, unrelated goal (reverse the string substrate). The\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4686-4691 of 16791, VERBATIM:\\n4686:   let finalText = \\\"\\\";\\n4687:   const nameOf = (c: any): string => String(c?.tool_name ?? c\n- semantic_reject: The patch adds dead code in a budget fallback path (fetching from a non-existent 'previous-command-endpoint') that has nothing to do with the rebind cache's content-swap logic which reuses stale write\n- syntax_break: src/index.ts(4792,11): error TS1128: Declaration or statement expected. | src/index.ts(4812,1): error TS1128: Declaration or statement expected.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-cda5d21c-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-cda5d21c.json b/validation/failure-modes/scenarios/route-edit-cda5d21c.json
+new file mode 100644
+index 00000000..c3aaebde
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-cda5d21c.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-cda5d21c",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "route-edit-f3fa9300",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "The rebind cache's content-swap can reuse a PRIOR goal's write command with its stale payload: on dispatch for gen-g5b (",
++  "description": "The rebind cache's content-swap can reuse a PRIOR goal's write command with its stale payload: on dispatch for gen-g5b (count active vessel units, store the number), cmdEvidence shows memoryNote_write 'produced by RUNNING: (no command field; resolve args) title=gen-g5b body=etartsbus' - etartsbus is the REVERSED-STRING payload from an earlier, unrelated goal (reverse the string substrate). The",
++  "goal_text": "The rebind cache's content-swap can reuse a PRIOR goal's write command with its stale payload: on dispatch for gen-g5b (count active vessel units, store the number), cmdEvidence shows memoryNote_write 'produced by RUNNING: (no command field; resolve args) title=gen-g5b body=etartsbus' - etartsbus is the REVERSED-STRING payload from an earlier, unrelated goal (reverse the string substrate). The",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-cda5d21c",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-d739bd6a-narrowed.json b/validation/failure-modes/scenarios/route-edit-d739bd6a-narrowed.json
+new file mode 100644
+index 00000000..c9466f5b
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-d739bd6a-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-d739bd6a-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-d739bd6a] investigate and decompose gap route-edit-81b0ec2a: Observation loop found a verified",
++  "description": "[narrowed from route-edit-d739bd6a] investigate and decompose gap route-edit-81b0ec2a: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- verify_failed: 180 |     expect(v).not.toBeNull(); | 181 |     expect(v.reached).toBe(false); | 182 |     expect(v.reason).toBe(`deterministic:avg-threshold-mismatch — authoritative value is ${what}, but the produce\n- syntax_break: src/index.ts(16761,1): error TS1005: '}' expected.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-d739bd6a] investigate and decompose gap route-edit-81b0ec2a: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- verify_failed: 180 |     expect(v).not.toBeNull(); | 181 |     expect(v.reached).toBe(false); | 182 |     expect(v.reason).toBe(`deterministic:avg-threshold-mismatch — authoritative value is ${what}, but the produce\n- syntax_break: src/index.ts(16761,1): error TS1005: '}' expected.\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-d739bd6a-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-d739bd6a.json b/validation/failure-modes/scenarios/route-edit-d739bd6a.json
+new file mode 100644
+index 00000000..f7352057
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-d739bd6a.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-d739bd6a",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "investigate and decompose gap route-edit-81b0ec2a: Observation loop found a verified artifact no longer valid: memoryNot",
++  "description": "investigate and decompose gap route-edit-81b0ec2a: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
++  "goal_text": "investigate and decompose gap route-edit-81b0ec2a: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-d739bd6a",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-de14af02-narrowed.json b/validation/failure-modes/scenarios/route-edit-de14af02-narrowed.json
+new file mode 100644
+index 00000000..3955e41d
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-de14af02-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-de14af02-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-de14af02] investigate and decompose gap route-edit-173e67c0: Observation loop found a verified",
++  "description": "[narrowed from route-edit-de14af02] investigate and decompose gap route-edit-173e67c0: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16763, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- verify_failed: 180 |     expect(v).not.toBeNull(); | 181 |     expect(v.reached).toBe(false); | 182 |     expect(v.reason).toBe(`deterministic:avg-threshold-mismatch — authoritative value is ${what}, but the produce\n- semantic_reject: the patch modifies a different code path (average threshold verification) than the memory note verification that's failing\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-de14af02] investigate and decompose gap route-edit-173e67c0: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16763, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- verify_failed: 180 |     expect(v).not.toBeNull(); | 181 |     expect(v.reached).toBe(false); | 182 |     expect(v.reason).toBe(`deterministic:avg-threshold-mismatch — authoritative value is ${what}, but the produce\n- semantic_reject: the patch modifies a different code path (average threshold verification) than the memory note verification that's failing\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-de14af02-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-de14af02.json b/validation/failure-modes/scenarios/route-edit-de14af02.json
+new file mode 100644
+index 00000000..3f563a38
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-de14af02.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-de14af02",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "investigate and decompose gap route-edit-173e67c0: Observation loop found a verified artifact no longer valid: memoryNot",
++  "description": "investigate and decompose gap route-edit-173e67c0: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
++  "goal_text": "investigate and decompose gap route-edit-173e67c0: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-de14af02",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-ef265c48-narrowed.json b/validation/failure-modes/scenarios/route-edit-ef265c48-narrowed.json
+new file mode 100644
+index 00000000..c583cbd9
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-ef265c48-narrowed.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-ef265c48-narrowed",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "[narrowed from route-edit-ef265c48] investigate and decompose gap route-edit-067b2f00: The observation loop found a veri",
++  "description": "[narrowed from route-edit-ef265c48] investigate and decompose gap route-edit-067b2f00: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4734-4739 of 16763, VERBATIM:\\n4734:         console.log(`[goal-host-vessel] floor: dispatch FAILED http=${r.status} iter=${iter}\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4670-4675 of 16763, VERBATIM:\\n4670:       console.log(`[goal-host-vessel] floor: walkBudget SHAPED iters=${MAX_ITERS} calls=${MA\n\nDo not repeat these failures. Address the specific cause named above.",
++  "goal_text": "[narrowed from route-edit-ef265c48] investigate and decompose gap route-edit-067b2f00: The observation loop found a verified artifact (memoryNote cycle-demo-3) that is no longer valid: it was previously verified to byte-equal 9, but now incorrectly states that 'The word resilient has 10 letters'. This disagreement indicates a violation in the artifact's integrity that requires investigation to determine the mechanism that caused the degradation.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 2005-2010 of 16756, VERBATIM:\\n2005:  * Measured over 16 sequential CSV/XML dispatches with external structural grading (file\\n20\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4734-4739 of 16763, VERBATIM:\\n4734:         console.log(`[goal-host-vessel] floor: dispatch FAILED http=${r.status} iter=${iter}\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 4670-4675 of 16763, VERBATIM:\\n4670:       console.log(`[goal-host-vessel] floor: walkBudget SHAPED iters=${MAX_ITERS} calls=${MA\n\nDo not repeat these failures. Address the specific cause named above.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-ef265c48-narrowed",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-f187ef8c.json b/validation/failure-modes/scenarios/route-edit-f187ef8c.json
+new file mode 100644
+index 00000000..7fc58582
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-f187ef8c.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-f187ef8c",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "investigate and decompose gap route-edit-2bdcd63a: Observation loop found a verified artifact no longer valid: memoryNot",
++  "description": "investigate and decompose gap route-edit-2bdcd63a: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
++  "goal_text": "investigate and decompose gap route-edit-2bdcd63a: Observation loop found a verified artifact no longer valid: memoryNote cycle-demo-3 was verified to byte-equal 9 (goal determines 9 for lettercount(resilient)) but now stores The word resilient has 10 letters. — the artifact and its recorded verification disagree (violation #3). One mechanism degraded it after verdict; determine which, restore the artifact, preserve the criterion.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-f187ef8c",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/route-edit-f18b7654.json b/validation/failure-modes/scenarios/route-edit-f18b7654.json
+new file mode 100644
+index 00000000..08171aa2
+--- /dev/null
++++ b/validation/failure-modes/scenarios/route-edit-f18b7654.json
+@@ -0,0 +1,19 @@
++{
++  "id": "route-edit-f18b7654",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "edit_intent_route",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "investigate and decompose gap route-edit-462a1a38: When correctness depends on an exact procedure, the universal tool fa",
++  "description": "investigate and decompose gap route-edit-462a1a38: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool",
++  "goal_text": "investigate and decompose gap route-edit-462a1a38: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "route-edit-f18b7654",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/scenarios/runtime-drift-local-tools-vessel.json b/validation/failure-modes/scenarios/runtime-drift-local-tools-vessel.json
+new file mode 100644
+index 00000000..dca8ca75
+--- /dev/null
++++ b/validation/failure-modes/scenarios/runtime-drift-local-tools-vessel.json
+@@ -0,0 +1,19 @@
++{
++  "id": "runtime-drift-local-tools-vessel",
++  "routing_class": "recombination",
++  "target_template_id": "development-vessel:draft-gap-closing-activity",
++  "mode_class": "systematic_failure",
++  "stage": "detection",
++  "outcome_class": "gap",
++  "title": "The live runtime tree of local-tools-vessel diverges from its committed source. 0 file(s) differ, 1 exist only in the ru",
++  "description": "The live runtime tree of local-tools-vessel diverges from its committed source. 0 file(s) differ, 1 exist only in the runtime tree: resolvers/echo-probe.ts. They parse, so this is an un-reverted edit rather than imminent breakage. NOT repaired (repair not armed (pull-sync owns mirroring; set RUNTIME_DRIFT_REPAIR=1 to arm)). /vessels is a mirror of committed source; divergence with no compose holding a slot means an edit was applied and never rolled back.",
++  "goal_text": "The live runtime tree of local-tools-vessel diverges from its committed source. 0 file(s) differ, 1 exist only in the runtime tree: resolvers/echo-probe.ts. They parse, so this is an un-reverted edit rather than imminent breakage. NOT repaired (repair not armed (pull-sync owns mirroring; set RUNTIME_DRIFT_REPAIR=1 to arm)). /vessels is a mirror of committed source; divergence with no compose holding a slot means an edit was applied and never rolled back.",
++  "expected_input_shapes": [],
++  "expected_output_shapes": [],
++  "cite_principle": null,
++  "target_file_paths": [],
++  "operator_seed": false,
++  "bridge_source": "gap_to_scenario_bridge",
++  "source_gap_id": "runtime-drift-local-tools-vessel",
++  "source_gap_source": "substrate_detected"
++}
+\ No newline at end of file
+diff --git a/validation/failure-modes/vessel-scenarios/gap-discovery-register-accepts-malformed-and-oversized-payloads.json b/validation/failure-modes/vessel-scenarios/gap-discovery-register-accepts-malformed-and-oversized-payloads.json
+new file mode 100644
+index 00000000..ec747fa4
+--- /dev/null
++++ b/validation/failure-modes/vessel-scenarios/gap-discovery-register-accepts-malformed-and-oversized-payloads.json
+@@ -0,0 +1 @@
++null
+\ No newline at end of file
+diff --git a/validation/failure-modes/vessel-scenarios/gap-federation-invariants-status.json b/validation/failure-modes/vessel-scenarios/gap-federation-invariants-status.json
+new file mode 100644
+index 00000000..ec747fa4
+--- /dev/null
++++ b/validation/failure-modes/vessel-scenarios/gap-federation-invariants-status.json
+@@ -0,0 +1 @@
++null
+\ No newline at end of file
+diff --git a/validation/failure-modes/vessel-scenarios/gap-federation-overlay-state-details.json b/validation/failure-modes/vessel-scenarios/gap-federation-overlay-state-details.json
+new file mode 100644
+index 00000000..ec747fa4
+--- /dev/null
++++ b/validation/failure-modes/vessel-scenarios/gap-federation-overlay-state-details.json
+@@ -0,0 +1 @@
++null
+\ No newline at end of file
+diff --git a/validation/failure-modes/vessel-scenarios/gap-federation-overlay-state.json b/validation/failure-modes/vessel-scenarios/gap-federation-overlay-state.json
+new file mode 100644
+index 00000000..ec747fa4
+--- /dev/null
++++ b/validation/failure-modes/vessel-scenarios/gap-federation-overlay-state.json
+@@ -0,0 +1 @@
++null
+\ No newline at end of file
+diff --git a/validation/failure-modes/vessel-scenarios/gap-typed-decision-response.json b/validation/failure-modes/vessel-scenarios/gap-typed-decision-response.json
+new file mode 100644
+index 00000000..ec747fa4
+--- /dev/null
++++ b/validation/failure-modes/vessel-scenarios/gap-typed-decision-response.json
+@@ -0,0 +1 @@
++null
+\ No newline at end of file

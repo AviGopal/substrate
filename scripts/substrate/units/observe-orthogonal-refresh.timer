@@ -1,0 +1,16 @@
+[Unit]
+Description=Orthogonal-observation refresh timer
+
+[Timer]
+# Fire 6 minutes after activation, then every 30 minutes. observe runs two pattern
+# aggregators (24h lookback) + one LLM synthesis (~10-20s); 30min keeps observations
+# fresh for enact-orthogonal-decisions without LLM-spamming. Type=oneshot so a
+# still-running refresh blocks the next fire.
+OnActiveSec=6min
+OnUnitActiveSec=30min
+Persistent=true
+AccuracySec=60s
+Unit=observe-orthogonal-refresh.service
+
+[Install]
+WantedBy=timers.target

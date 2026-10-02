@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-82ce0514",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-5688bb3c: In repos/goal-host-vessel/src/independent-recompute.ts, extend the ex",
+  "description": "investigate and decompose gap route-edit-5688bb3c: In repos/goal-host-vessel/src/independent-recompute.ts, extend the exported reconcileDerivations function to accept an optional third parameter `recipeRescue?: { agreed: number; disagreed: number }`. Keep the existing behavior identical when recipeRescue is undefined. When a is non-null but b is null (the \"only one derivation\" branch), AND recipeRescue is provided AND a > 0 AND recipeRescue.agreed",
+  "goal_text": "investigate and decompose gap route-edit-5688bb3c: In repos/goal-host-vessel/src/independent-recompute.ts, extend the exported reconcileDerivations function to accept an optional third parameter `recipeRescue?: { agreed: number; disagreed: number }`. Keep the existing behavior identical when recipeRescue is undefined. When a is non-null but b is null (the \"only one derivation\" branch), AND recipeRescue is provided AND a > 0 AND recipeRescue.agreed",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-82ce0514",
+  "source_gap_source": "substrate_detected"
+}

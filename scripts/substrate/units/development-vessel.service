@@ -1,0 +1,66 @@
+[Unit]
+Description=development-vessel
+After=activity-api.service git-push-setup.service
+Wants=activity-api.service
+
+[Service]
+Type=simple
+# ORDER IS LOAD-BEARING: systemd lets a LATER EnvironmentFile override an
+# earlier one, so /etc/substrate/env is listed LAST and is authoritative.
+# The persisted workspace file is a restart cache for SECRETS, never a source
+# of truth for where this substrate is pointed — when it was listed last, a
+# stale HUB_DISCOVERY_URL pinned to a decommissioned droplet outranked env on
+# every boot and crash-looped the federation transport.
+EnvironmentFile=-/workspace/.substrate-secrets
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8090
+Environment=HOST=0.0.0.0
+Environment=WORKSPACE_ROOT=/workspace
+Environment=VESSEL_ID=development-vessel-local
+Environment=VESSEL_ENDPOINT=http://127.0.0.1:8090
+# Self-development through repositories (container-side direct push). The cutover
+# commits+pushes to MITOSIS_PUSH_CLONE_DIR/<vessel> (writable AviGopal clone set
+# up by git-push-setup.service) and mirrors into MITOSIS_RUNTIME_DIR/<vessel>
+# (live runtime). SUBSTRATE_GIT_PAT arrives via the EnvironmentFiles above: it is
+# minted/reused in .substrate-secrets and re-emitted verbatim into
+# /etc/substrate/env by gen-env (persisted_secret), so the env copy — which now
+# loads last — carries the same value.
+Environment=MITOSIS_DIRECT_PUSH=1
+Environment=MITOSIS_RUNTIME_DIR=/vessels
+Environment=EXTRA_WORKSPACE_ROOTS=/vessels/packages
+Environment=MITOSIS_PUSH_CLONE_DIR=/workspace/git/vessels
+WorkingDirectory=/vessels/development-vessel
+# First-boot policy records (bootstrap tier): on a FRESH pool only (no pool file yet), write the initial
+# autonomyScope and spendEnvelope from the committed scripts/substrate/autonomy-scope.json; the policy
+# reads otherwise refuse them as absent. Before the vessel serves, so no writer races it; with this unit's
+# environment, so the pool path is the vessel's own. Bounded twice: the seeder's own 20 s timer, and
+# timeout(1) at 30 s (+5 s KILL) for a hang its event loop cannot see; both well inside TimeoutStartSec
+# below, which covers ExecStartPre and the start together. The leading '-' keeps a seeding failure or
+# timeout from stopping the vessel: the reads then refuse (fail closed).
+ExecStartPre=-/usr/bin/timeout -k 5 30 /root/.bun/bin/bun /scripts/bootstrap-seeder.ts --pool-policy
+ExecStart=/root/.bun/bin/bun /vessels/development-vessel/src/index.ts
+# Template seeding used to run here as ExecStartPost. It now lives in
+# development-vessel-seed.service.
+#
+# The reason is not that seeding was wrong, but that systemd holds a Type=simple
+# unit in `activating` until ExecStartPost returns — so a ≤45s health wait plus
+# ~98 template uploads kept multi-user.target unreachable for minutes, and every
+# unit ordered into it sat in `start waiting` behind this one. The old comment
+# here said a long start-post "does not block serving", which was true of this
+# vessel's own socket and false of the rest of the fleet. Measured on a restart
+# 2026-08-08: stateful-ui-vessel, boredom-vessel.timer, substrate-pull-sync.timer,
+# self-recovery.timer and substrate-ready were all queued behind it.
+#
+# 2026-06-18 (kept for the record): the default 90s start timeout used to kill
+# the whole cgroup when that seed overran it, which also SIGTERM'd in-flight
+# patch_with_tools attempts mid-edit. With the seed gone the start phase is just
+# the server coming up, so the generous budget below is no longer load-bearing —
+# it is left in place because lowering it buys nothing and risks re-opening that.
+TimeoutStartSec=600
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+{
+  "id": "capacity-refusals-increment-failed-attempts-and-trip-the-narrowing-threshold",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "⚠ CAUSAL CLAIM RETRACTED — DO NOT ACT ON THE TITLE. Edit repos/development-vessel/src/resolvers/gap-to-feature.ts.",
+  "description": "⚠ CAUSAL CLAIM RETRACTED — DO NOT ACT ON THE TITLE. Edit repos/development-vessel/src/resolvers/gap-to-feature.ts.",
+  "goal_text": "⚠ CAUSAL CLAIM RETRACTED — DO NOT ACT ON THE TITLE. Edit repos/development-vessel/src/resolvers/gap-to-feature.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "capacity-refusals-increment-failed-attempts-and-trip-the-narrowing-threshold",
+  "source_gap_source": "substrate_detected"
+}

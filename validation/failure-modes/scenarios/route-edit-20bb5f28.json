@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-20bb5f28",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap the-newly-failing-gate-attributes-load-sensitive-timeouts-to-the-draft: The newly-failing-",
+  "description": "investigate and decompose gap the-newly-failing-gate-attributes-load-sensitive-timeouts-to-the-draft: The newly-failing-test gate blocks correct changes by attributing load-sensitive TIMEOUTS to the draft under review. Its second-run reproduction check cannot tell a timeout apart from a regression, because a slow test stays slow on the retry.\n\nOBSERVED 2026-09-10 on compose route-edit-e2e2e592, a two-line dead-code removal in",
+  "goal_text": "investigate and decompose gap the-newly-failing-gate-attributes-load-sensitive-timeouts-to-the-draft: The newly-failing-test gate blocks correct changes by attributing load-sensitive TIMEOUTS to the draft under review. Its second-run reproduction check cannot tell a timeout apart from a regression, because a slow test stays slow on the retry.\n\nOBSERVED 2026-09-10 on compose route-edit-e2e2e592, a two-line dead-code removal in",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-20bb5f28",
+  "source_gap_source": "substrate_detected"
+}

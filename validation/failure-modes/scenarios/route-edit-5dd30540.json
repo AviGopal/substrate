@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-5dd30540",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/activity-api/src/routes/activities.ts, the call to applyOutcomeToPosteriors that begins at line 2438 builds its",
+  "description": "In repos/activity-api/src/routes/activities.ts, the call to applyOutcomeToPosteriors that begins at line 2438 builds its first argument as an object literal containing the properties activity_id, success, failure_mode, cost_usd and tags. Add one more property to that same object literal: metadata, set to the execution trace's metadata so that the information_yield field reaches the posterior update. The receiving type repos/activity-api/src/lib/posterior-update.ts TraceForPosterior now declares metadata?: { information_yield?: string } as an optional property, so passing it is type-safe and passing nothing keeps today's behaviour. Use whichever request-body or validated variable in that function already holds the trace metadata; if the handler validates a body into a variable named validated, the metadata is on that validated object. Do not change any other call site, do not change posterior-update.ts, and do not alter the existing five properties.",
+  "goal_text": "In repos/activity-api/src/routes/activities.ts, the call to applyOutcomeToPosteriors that begins at line 2438 builds its first argument as an object literal containing the properties activity_id, success, failure_mode, cost_usd and tags. Add one more property to that same object literal: metadata, set to the execution trace's metadata so that the information_yield field reaches the posterior update. The receiving type repos/activity-api/src/lib/posterior-update.ts TraceForPosterior now declares metadata?: { information_yield?: string } as an optional property, so passing it is type-safe and passing nothing keeps today's behaviour. Use whichever request-body or validated variable in that function already holds the trace metadata; if the handler validates a body into a variable named validated, the metadata is on that validated object. Do not change any other call site, do not change posterior-update.ts, and do not alter the existing five properties.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-5dd30540",
+  "source_gap_source": "substrate_detected"
+}

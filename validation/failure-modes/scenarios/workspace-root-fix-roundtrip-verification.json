@@ -1,0 +1,19 @@
+{
+  "id": "workspace-root-fix-roundtrip-verification",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "post-fix round-trip verification probe for the WORKSPACE_ROOT capture-at-call-time defect",
+  "description": "post-fix round-trip verification probe for the WORKSPACE_ROOT capture-at-call-time defect",
+  "goal_text": "post-fix round-trip verification probe for the WORKSPACE_ROOT capture-at-call-time defect",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "workspace-root-fix-roundtrip-verification",
+  "source_gap_source": "substrate_detected"
+}

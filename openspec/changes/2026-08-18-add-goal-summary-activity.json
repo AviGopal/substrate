@@ -1,0 +1,16 @@
+{
+  "id": "2026-08-18-add-goal-summary-activity",
+  "category": "activity_template",
+  "data": {
+    "id": "development-vessel:summarize-goals",
+    "tags": ["goal.summary", "system.monitoring"],
+    "description": "Invokes the goal_summary resolver to get a summary of substrate goals and capabilities.",
+    "tasks": [
+      {
+        "id": "get-goal-summary",
+        "type": "goal_summary",
+        "output_variable": "goalSummaryResult"
+      }
+    ]
+  }
+}

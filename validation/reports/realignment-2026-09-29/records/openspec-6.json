@@ -1,0 +1,224 @@
+{
+ "source": "openspec-6",
+ "coverage": "openspec/changes entries 91-108 (18 entries): 13 stray top-level .json files, 4 stray dirs (fix-goal-summary, invoke-interface-deploy-reach-check-activity, orphaned-capability-fix, orphaned-capability-resolution), each read in full including the compiled .js/.d.ts emit; plus 2026-08-26-consequence-verdict-into-credit/proposal.md (the only real proposal, with no design or tasks). Git provenance was checked for every entry (4e4170a8, 796fac89, fe00585e). Live checks on substrate-live:\n- dev-vessel clone: goal-summary.ts, config.ts:770, impulses.ts:987, orphaned-capability-scan.ts history.\n- activity-api posterior-update.ts: grep for goal_verification reads.\n- SurrealDB: the `activity` table for invoking templates; goal_verification_labels counts.\n- Live gaps.json: the two orphaned-capability gaps and the 51-gap orphaned-capability family.\nNot done: node 2 (compose2-live), and no full read of posterior-update.ts.",
+ "attempts": [
+  {
+   "key": "narrowing-duplicates",
+   "title": "13 contradictory drafts for orphaned-capability-goal_summary in 2 days",
+   "where": "openspec/changes/2026-08-17-*goal-summary*, 2026-08-18-*goal-summary* (entries 91-97,101-107)",
+   "date": "2026-08-17..18",
+   "tried": "The drafter proposed three directions for one gap: register and invoke goal_summary (#95 #97 #101 #105 #106 #107), delete the resolver, its test and its config entry (#91 #92 #93 #102 #103), or make it 'real' (#96 raise timeout 20s->60s, #104 rewrite with fake metrics). #106 is a byte-identical copy of #97; #107 're-applies' #95.",
+   "outcome": "failed",
+   "evidence": "None were applied. The live goal-summary.ts is unchanged (20000ms timeout, dc18b62 07-01). The gap is open again in the live store."
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Placeholder resolver minted as a new shape to 'resolve' orphaned capabilities",
+   "where": "openspec/changes/2026-08-17-orphaned-capability-resolution/",
+   "date": "2026-08-17",
+   "tried": "Mint shape 'orphaned-capability-resolution' whose resolver returns the constant {success:true,resolved:true,message:'placeholder'}. patch-config.json would create config.ts from /dev/null, overwriting it.",
+   "outcome": "failed",
+   "evidence": "Never applied. It is a fossil with 18 files including tsc emit."
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Confabulated APIs, doubled paths, and whole-file replacements in orphan fixes",
+   "where": "openspec/changes/2026-08-17-fix-goal-summary/, 2026-08-17-orphaned-capability-fix/, 2026-08-17-update-goal-summary-resolver.json",
+   "date": "2026-08-17",
+   "tried": "Imports of nonexistent packages (@dev-vessel/core 'set and get', @function-llama/substrate-client, @substrate/core); the doubled path ./repos/development-vessel/src/... imported from inside dev-vessel; literal '... // existing cases'; a 7-line replacement for an ~800-line config.ts; hardcoded fake metrics (avg_success_rate=0.37).",
+   "outcome": "failed",
+   "evidence": "The committed tsc emit contains 'const module_1 = require();'. Five different ad-hoc edit-spec schemas were used across the drafts."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Bridge activity for orphan interface_deploy_reach_check",
+   "where": "openspec/changes/2026-08-17-invoke-interface-deploy-reach-check-activity/ (commit 1bec4b88)",
+   "date": "2026-08-17",
+   "tried": "A proposal plus an activity_template.json invoking the interface_deploy_reach_check resolver; tasks 1/4 checked.",
+   "outcome": "failed",
+   "evidence": "The template was written into openspec, never registered: 0 activity rows reference the resolver. Gap orphaned-capability-interface_deploy_reach_check is open again, first_detected 2026-09-26, reopen_count 0."
+  },
+  {
+   "key": "hollow-landing",
+   "title": "goal_summary resolver minted to autoclose a capability gap",
+   "where": "development-vessel dc18b62 (2026-07-01) 'apply capgap-goal_summary-report.json via mitosis cutover'",
+   "date": "2026-07-01",
+   "tried": "Mint a producer for a missing shape so the capability gap closes.",
+   "outcome": "failed",
+   "evidence": "The resolver is live (config.ts:770, impulses.ts:987) but 0 activities invoke it. That is what spawned the orphan gap on 08-17, which reappeared 09-26."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Consequence verdict into credit (reader half)",
+   "where": "openspec/changes/2026-08-26-consequence-verdict-into-credit/proposal.md (fe00585e)",
+   "date": "2026-08-26",
+   "tried": "Proposed reading goal_verification_label by execution_id in posterior-update.ts and correcting reach-time alpha through propagateCreditAlongChain (A supersede vs B distinct; recommends A). Gated on the large-file-edit capability. Writer half filed as gap consequence-verdict-writer-missing-for-goal-verification-labels.",
+   "outcome": "dormant",
+   "evidence": "posterior-update.ts has no read of goal_verification_labels (14,100 rows: deterministic 12479, human 1089, automated 532). No design.md or tasks.md. The writer gap is absent from the live store. A/B is unsettled."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Adjacent consequence-aware work that does not revise the banked alpha",
+   "where": "activity-api/dev-vessel 6d0c16e, a245fee, fd4afe6 (09-05), 970b112 (09-16)",
+   "date": "2026-09-05..16",
+   "tried": "Counterfactual stamped at pick time; detector-yield retirement from consequence asymmetry ('landed is 24.5x too generous'); abstain from blaming an arm for its environment.",
+   "outcome": "partial",
+   "evidence": "None revises reach-time alpha for a pathway whose change was later reverted, which was the core ask of the 08-26 proposal."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Autonomous drift-sweep commits swept draft residue and tsc emit into git",
+   "where": "super-repo 4e4170a8 (2026-09-07, 2134 files +59401), 796fac89 (2026-09-19, 412 files +16104, mislabeled 'cpg-inference-ts')",
+   "date": "2026-09-07, 2026-09-19",
+   "tried": "'vessel code drift detected and committed' commits everything in the tree.",
+   "outcome": "failed",
+   "evidence": "All 17 stray openspec entries in this shard entered git this way, including .js/.d.ts/.map emit. openspec/changes has 77 stray top-level files and 60 compiled files overall."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "orphaned_capability_scan repairs (dry_run, rewire-before-mint, dual consumption surfaces)",
+   "where": "development-vessel 57f1ac4 (08-28), 786229b, 5693903 (08-29)",
+   "date": "2026-08-28..29",
+   "tried": "Fixed the detector's counting and prescribed rewiring before minting.",
+   "outcome": "partial",
+   "evidence": "Detection is live: 51 orphaned-capability gaps (open 38, rejected 8, closed 5); 173/323 resolvers invoked vs 28/262 on 06-23. The repair half never produced a registered bridge for goal_summary or interface_deploy_reach_check."
+  }
+ ],
+ "problems": [
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "One orphan gap drew 13 drafts in 2 days with contradictory directions (add, delete, make-real) and byte-identical duplicates; nothing converged.",
+   "root_cause": "Failed drafts left no reason for the next draft to read, so each attempt restarted blind. This is the same class as the 09-22 'failure side had no store' finding.",
+   "first_seen": "2026-08-17",
+   "last_seen": "2026-08-18",
+   "recurrences": 13
+  },
+  {
+   "key": "gap-content",
+   "symptom": "orphaned-capability-goal_summary and orphaned-capability-interface_deploy_reach_check are open with first_detected 2026-09-26, reopen_count 0, and falsifier 'none', although the same ids were worked on 2026-08-17.",
+   "root_cause": "Gap store history was reset or re-created, so recurrence is invisible to the durability metric; orphan gaps carry no machine-checkable close predicate.",
+   "first_seen": "2026-08-17",
+   "last_seen": "2026-09-26",
+   "recurrences": 2
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "goal_summary producer was minted (dc18b62) to close a missing-shape gap and has never been invoked. The follow-up fix drafts proposed more placeholder resolvers returning constant resolved:true.",
+   "root_cause": "Gap closure was keyed on 'a producer exists' rather than on the capability being consumed.",
+   "first_seen": "2026-07-01",
+   "last_seen": "2026-09-26"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafts invent packages and APIs, doubled paths, and literal placeholder comments; they replace 800-line files with 7-line ones and hardcode fake metrics; five ad-hoc edit-spec schemas.",
+   "root_cause": "The drafter had no contract for its output format and no real file or API context at draft time (information starvation, law 8).",
+   "first_seen": "2026-08-17",
+   "last_seen": "2026-08-18"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Draft payloads and tsc .js/.d.ts/.map emit accumulate in openspec/changes: 77 stray files, 60 compiled files, 20 goal_summary entries.",
+   "root_cause": "Drafts are written into the wrong directory; a tsc run emitted into the super-repo; autonomous drift-sweep commits (4e4170a8, 796fac89) commit the whole tree; the pre-commit gate only checks top-level dirs.",
+   "first_seen": "2026-08-17",
+   "last_seen": "2026-09-19"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Pathways that reached but produced inert or reverted changes keep reach-time credit, e.g. registryFieldFor rewritten 8x, each rewrite re-banking credit; confabulated blob 4eedb4de scored CORRECT.",
+   "root_cause": "Credit is banked at reach time by a surface-plausibility oracle; goal_verification_labels (14,100 rows) is never read by posterior-update.ts; the A/B supersede decision is unsettled.",
+   "first_seen": "2026-08-26",
+   "last_seen": "2026-09-28"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Detector finds orphans reliably but no bridge or retire action lands; goal_summary and interface_deploy_reach_check are still at 0 invocations 40+ days later.",
+   "root_cause": "repair_direction offers only rewire or mint, never retire. For a resolver that was itself a hollow mint, minting a bridge compounds the wrong mint (law 3).",
+   "first_seen": "2026-06-23",
+   "last_seen": "2026-09-26"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "The live goal_summary resolver hardcodes the fallback process.env.ACTIVITY_API_ENDPOINT ?? 'http://127.0.0.1:8080' and a similar one for the dev-vessel endpoint.",
+   "root_cause": "The substrate-authored resolver pins ports instead of routing through discovery.",
+   "first_seen": "2026-07-01",
+   "last_seen": "2026-09-28"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "orphaned_capability_scan + orphaned-capability-tick",
+   "location": "development-vessel src/resolvers/orphaned-capability-scan.ts, src/seed/orphaned-capability-tick.ts, activity development-vessel:orphaned-capability-tick",
+   "purpose": "Demand-side detector: live registered resolver shapes minus invoked resolvers; emits one substrateGap per orphan.",
+   "status": "live-used",
+   "general": true,
+   "evidence": "51 orphaned-capability-* gaps in live gaps.json; repaired in 57f1ac4/786229b/5693903; its repair side never lands a bridge for these orphans."
+  },
+  {
+   "name": "goal_summary resolver",
+   "location": "development-vessel src/resolvers/goal-summary.ts; config.ts:770; routes/impulses.ts:987",
+   "purpose": "Report of templates, composition graph and open gaps; minted 07-01 to autoclose a capability gap.",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "0 activity rows invoke it; gap orphaned-capability-goal_summary is open; hardcoded 127.0.0.1 fallbacks; duplicates other report producers. Retire candidate."
+  },
+  {
+   "name": "interface_deploy_reach_check resolver",
+   "location": "development-vessel src/resolvers/interface-deploy-reach-check.ts",
+   "purpose": "Score interface deploys against post-deploy interaction.",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "0 invoking activities; gap open again 09-26."
+  },
+  {
+   "name": "goal_verification_labels corpus + label read/write shapes",
+   "location": "activity-api src/routes/impulses.ts ~2842-3000; goal-host-vessel src/index.ts:3929; feature-compose.ts:4560",
+   "purpose": "Designed intake for independent or late verdicts (oracle corpus).",
+   "status": "live-used",
+   "general": true,
+   "evidence": "14,100 rows; read by goal-host's deterministic label feed but not by posterior-update.ts, so there is no credit revision."
+  },
+  {
+   "name": "propagateCreditAlongChain / posterior-update",
+   "location": "activity-api src/lib/posterior-update.ts",
+   "purpose": "Structural credit cascade (0.7^d) at reach time with an honest-reach gate.",
+   "status": "live-used",
+   "general": true,
+   "evidence": "No temporal or consequence revision path; the consequence-verdict proposal is dormant."
+  },
+  {
+   "name": "autonomous drift-sweep committer",
+   "location": "super-repo commits 4e4170a8 ('vessel code drift detected and committed'), 796fac89 ('vessel-code-commit-and-push')",
+   "purpose": "Commit and push drift in clones.",
+   "status": "broken",
+   "general": true,
+   "evidence": "Committed 2134 and 412 files including scratch drafts and tsc emit into openspec/changes; subject mislabels content."
+  },
+  {
+   "name": "drafter ad-hoc edit-spec payloads (5 schemas)",
+   "location": "openspec/changes/2026-08-17-*.json, 2026-08-18-*.json and the stray dirs",
+   "purpose": "Edit payloads from gap-compose era drafting.",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Never applied; delete all 17 entries."
+  },
+  {
+   "name": "orphaned-capability-resolution placeholder shape",
+   "location": "openspec/changes/2026-08-17-orphaned-capability-resolution/",
+   "purpose": "Placeholder resolver returning constant resolved:true.",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Never applied; hollow by construction."
+  }
+ ],
+ "principles": [
+  "The substrate expresses the full capability surface it advertises; an advertised-but-unexpressed resolver is a gap. (orphaned-capability-scan.ts header / gap cite_principle)",
+  "Prefer the deterministic resolver over an llm_completion_dispatch re-derivation. (orphan gap suggested_remediation)",
+  "Let what actually happened correct what the oracle guessed: reward must be revisable along the temporal axis (stayed / exercised / reverted / recurred). (2026-08-26-consequence-verdict-into-credit)",
+  "Consequence correction is keyed, never heuristic: it attaches to an execution_id or commit, or it does not write (law 12). (same proposal)",
+  "Asymmetric caution: reverts and keyed recurrence are confident negatives; not-yet-exercised is absence of evidence and abstains. (same proposal)",
+  "No double-count and no second credit system: the existing cascade is the carrier (precedent: decision_outcome kept read-only, 03e6c55). (same proposal)",
+  "Settle open design decisions in the spec; do not anchor them in code first. (same proposal)",
+  "Tension surfaced by this shard: 'express every advertised capability' vs law 3 'a wrong mint is negative value'. The orphan detector needs a retire direction for resolvers that were themselves hollow mints."
+ ],
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/openspec-6.md"
+}

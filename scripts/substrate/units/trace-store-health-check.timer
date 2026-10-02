@@ -1,0 +1,14 @@
+[Unit]
+Description=Trace-store size monitor timer
+
+[Timer]
+# Store growth is slow; the check is one O(1) HTTP read. Every 10 min, first run
+# 3 min after activation. Type=oneshot, no overlap.
+OnActiveSec=3min
+OnUnitActiveSec=10min
+Persistent=true
+AccuracySec=1min
+Unit=trace-store-health-check.service
+
+[Install]
+WantedBy=timers.target

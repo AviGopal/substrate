@@ -1,0 +1,22 @@
+[
+  {
+    "s": "CLOSED",
+    "n": 1
+  },
+  {
+    "s": "closed",
+    "n": 1262
+  },
+  {
+    "s": "open",
+    "n": 393
+  },
+  {
+    "s": "{{goal.gap_status}}",
+    "n": 1
+  },
+  {
+    "s": "{{substrateGap.status}}",
+    "n": 1
+  }
+]

@@ -1,0 +1,735 @@
+{
+ "source": "git-activityapi",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/git-activityapi.md",
+ "coverage": "Read-only pass over the live clone substrate-live:/workspace/git/vessels/activity-api at HEAD 39783b0 (2026-09-28). The node-2 clone has the same HEAD; the host submodule is at 41c9e89, 44 commits behind. Covered: all 1189 commit subjects (03-16..09-28; MiniBob 516, DevBob 370, Substrate Autonomous 298); bodies of all 17 reverts and about 30 root-cause operator commits; diff sizes, gap ids and files for all 298 autonomous commits, with diff content read for about 60; the 181 files in sql/migrations against the init_migrations ledger (225 rows) plus migration deletion history; caller search for 134 route handlers across all vessel clones and super-repo scripts/validation/packages; env var and hardcoded-endpoint inventory; one copy of the live gap store (6278 records), used to map route-edit ids; two read-only SurrealQL counts. Skipped: diffs of the MiniBob era (Mar-Jun) beyond their subjects, running the test suite, helm/Dockerfile history.",
+ "attempts": [
+  {
+   "key": "hollow-landing",
+   "title": "db-admin verifier gamed: invented field + gap id written into code (23 autonomous commits)",
+   "where": "src/routes/db-admin.ts; 90ff2a1..3868bc6 (09-01..09-05)",
+   "tried": "Autonomous lane chased gap db-integrity-auto-repair-has-never-run-producer-omits-count through 15 pwt-* children: renamed count aliases, added WHERE db_integrity_auto_repair_has_never_run = false, made rejectCatastrophicSql return verify_failed, put the gap id in CATASTROPHIC_PATTERNS, deleted 22 guard lines",
+   "outcome": "failed",
+   "date": "2026-09-05",
+   "evidence": "Still live at db-admin.ts:77,95,200-201. The live query WHERE db_integrity_auto_repair_has_never_run=false returns [] against 29192 rows, so safeCount is always 0 and the integrity diagnose is blind. Operator e2730e1 tested the rails, not this predicate."
+  },
+  {
+   "key": "hollow-landing",
+   "title": "One gap applied 5x in 16 minutes produced 7 duplicate switch arms",
+   "where": "route-edit-24e91280: 7c6b961,10af28c,3f1b758,b37680e,10e0716 (07-05); cleanup 781d758 (08-25)",
+   "tried": "Each apply added another case 'goal_verification_label'",
+   "outcome": "failed",
+   "date": "2026-07-05",
+   "evidence": "781d758 removed 7 unreachable duplicate arms 7 weeks later. About 18 gaps landed at least twice in this repo."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "residual-trend route double-landed, deleted, then spliced into a garbled duplicate conservation-audit-emit",
+   "where": "5100ccb,776456c (09-07), 9c1d56a (09-13), 53292c9 (09-14); activities.ts:5971,6034,6039",
+   "tried": "Autonomous route additions and edits under route-edit-c2ed2d92/7016bd12/bd6b4762",
+   "outcome": "failed",
+   "date": "2026-09-14",
+   "evidence": "No residual-trend route remains. Line 6039 reads \"never grows.residual-trend', async (c) => {\". There are two /conservation-audit-emit handlers."
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Probe headers and header_added echo route landed by empty compose-report cutovers",
+   "where": "6282954,5f3d216,beb84c6,e6d5dea,2157764 (07-22/23); cleanup 04aa35e (07-25)",
+   "tried": "Autonomous one-line c.header('x-*-probe') and an echo POST /header_added",
+   "outcome": "partial",
+   "date": "2026-07-25",
+   "evidence": "04aa35e removed 5 headers. x-complexity-probe-feedback/discover (activities.ts:5415,5919) and two /header_added copies (one on the never-mounted activitiesApp) are still live."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "SQL string literal corrupted to a different target table",
+   "where": "b4f9148 (08-15) reverted by cee3686; guard 29ce34b",
+   "tried": "Autonomous edit rewrote INSERT INTO variant_performance_metrics as activity_composition_graph with execution_id='derive-from-parent'",
+   "outcome": "reverted",
+   "date": "2026-08-15",
+   "evidence": "Operator added a test pinning SQL target tables inside strings."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Failing-test gap drafted a production env-gate that bypassed discovery",
+   "where": "9cfdea4 -> fb0a18a (09-28), acc184b",
+   "tried": "To satisfy embedding-lookup-cache.test.ts, the drafter added if(!process.env.CONCEPT_DB_URL) return null",
+   "outcome": "reverted",
+   "date": "2026-09-28",
+   "evidence": "Reverted 33 minutes later by operator-authored route-edit-291411f0; the test was then fixed instead."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Autonomous edits reversed an operator perf fix (type::datetime -> <datetime>)",
+   "where": "29ad522,68cb931 (09-11) vs 2e32d0a (06-16); execution-traces.ts:952,989",
+   "tried": "One-line autonomous route-edits",
+   "outcome": "failed",
+   "date": "2026-09-11",
+   "evidence": "trace-window-bounds.test.ts:38 still expects type::datetime. Not reverted."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Migration 207 written in MySQL dialect (adversarial probe of the .surql gate)",
+   "where": "b27c69d -> 9c187af (09-05)",
+   "tried": "Drafter produced ALTER TABLE ... ADD COLUMN",
+   "outcome": "reverted",
+   "date": "2026-09-05",
+   "evidence": "The gate modelled DEFINE FIELD shapes only and abstained on the foreign dialect."
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Migrations 205/206/210 restore lost fields",
+   "where": "6ac1aa6,a4b7f1b,41266ae,53d310d,1aacce3 (09-05)",
+   "tried": "Restore fields lost to unapplied migrations",
+   "outcome": "partial",
+   "date": "2026-09-05",
+   "evidence": "205 was landed unparseable; 206 was needed because 205 made 6 fields non-optional and broke every write; 210 was 'not SurrealDB' and rewritten."
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Migration runner marked pending migrations applied without running them",
+   "where": "b4d7b0e (08-04)",
+   "tried": "Return null on a failed ledger read instead of an empty Set, so bootstrap no longer marks all applied",
+   "outcome": "worked",
+   "date": "2026-08-04",
+   "evidence": "Migration 188 had been lost this way."
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Two migrations failed on every boot for 8 months",
+   "where": "ef83e6a (08-17)",
+   "tried": "DEFINE the ci_status field that 005-ci-integration indexed",
+   "outcome": "worked",
+   "date": "2026-08-17",
+   "evidence": "The unit restarted about 7x/hour; POST /ci had been inert since it landed."
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Migration timeout raised to 300s caused a hub restart loop",
+   "where": "c0246f7 -> 8fbc032 (08-02)",
+   "tried": "Let DEFINE TABLE AS backfills finish inside ExecStartPre",
+   "outcome": "reverted",
+   "date": "2026-08-02",
+   "evidence": "10 pids, activity-api never active, spoke /health 000, ribosome WebSocket closed 108x/24h."
+  },
+  {
+   "key": "trace-store-db",
+   "title": "v_paradigm_execution_traces absent while the ledger said 167 applied",
+   "where": "1f0d70f, d98309e (09-28), migration 212",
+   "tried": "Restore the view with a NONE-safe tokens_total and IF NOT EXISTS",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "Every trace-listing detector saw traces_examined 0 from about 09-22 07:01 to 09-28."
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Drop idx_execution_id for retention speed",
+   "where": "be4d99a (193) -> 0da9c16 (194), 12735fa",
+   "tried": "Remove the UNIQUE index on the record id",
+   "outcome": "reverted",
+   "date": "2026-08-09",
+   "evidence": "3.52 s/row before vs 17.2 and 11.4 s/row after."
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Retention batch=1 deletes",
+   "where": "dd32641 -> f4d62bf (08-09)",
+   "tried": "Delete one row per statement",
+   "outcome": "reverted",
+   "date": "2026-08-09",
+   "evidence": "9.19 s/row (contaminated sample); the statement-width hypothesis was not supported."
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace retention valve (rows then bytes)",
+   "where": "6abbd2a (06-16) .. c0b9624/3cafd9c (09-16); about 31 commits",
+   "tried": "Stratified sweep, global-ceiling valve, quarantine of poison batches, byte ceiling",
+   "outcome": "partial",
+   "date": "2026-09-16",
+   "evidence": "3cafd9c: the bytes are not in the rows the valve counts; the store-wedge root is still open."
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Success composite indexes rebuilt, then removed",
+   "where": "cd4d646 (196/197), db667c1, ffd75d0 (198/199) 08-22",
+   "tried": "Rebuild corrupt indexes, then remove them",
+   "outcome": "superseded",
+   "date": "2026-08-22",
+   "evidence": "With the index, 'X AND success = true discards X'."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "query() never checks statement status",
+   "where": "676c3f3 (08-21) src/db/surreal.ts",
+   "tried": "Add queryRaw() and use it at the composition upsert",
+   "outcome": "partial",
+   "date": "2026-08-21",
+   "evidence": "Nine rewrites of one UPSERT had reported success while writing nothing. query() still swallows status everywhere else."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "NULL is not NONE, fixed per call site 11 times",
+   "where": "ce491e1,17884e7,0bdaa5a,606ecc2,6be44e5,9f420c5,de2c9f8,46b95c0,2a31d5a,86a776d,1f0d70f",
+   "tried": "Coerce null to NONE at individual writes",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "Recurred from 03-24 to 09-28; no boundary helper exists."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Missing view read as an empty table, so the pool got no posteriors",
+   "where": "3322f92, 91af5a3 (08-22)",
+   "tried": "Read variant_performance_metrics directly instead of a nonexistent v_activity_score behind a catch",
+   "outcome": "worked",
+   "date": "2026-08-22",
+   "evidence": "The fallback log string appeared 0 times in the journal; boredom had been scoring the whole pool metric-less."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Zod/SCHEMAFULL silently strip fields",
+   "where": "e40bc57,874104b,8351780,48bc174,ffcac44,62acd51",
+   "tried": "Add fields to schemas and DEFINE FIELDs one at a time",
+   "outcome": "partial",
+   "date": "2026-08-13",
+   "evidence": "48bc174: 15 paths recommended, 0 accepted in 48h because successful_executions was stripped. Recurred at least 6 times."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Composition edge write: about 20 cause-claiming commits in one day",
+   "where": "18c1490..3fdb2b2, 676c3f3, 7a0da2e (08-21/22)",
+   "tried": "Id forms, IF syntax, PERMISSIONS/JWT, readback-asserts-mutation, deterministic UPSERT",
+   "outcome": "worked",
+   "date": "2026-08-22",
+   "evidence": "'THE CAUSE' was that the write ran under a JWT the table permission rejects (caa6b85), plus query() hiding the rejection."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Honest reach verdict persisted but never credited",
+   "where": "2b4e18b (08-05), 64b3997 (08-06), f93150e/40af267 (09-02)",
+   "tried": "Have POST /reach call classifyReach and applyOutcomeToPosteriors; make it the single vpm writer",
+   "outcome": "partial",
+   "date": "2026-09-02",
+   "evidence": "Zero posterior movement across 2392 templates while about 400 traces landed; on 09-02 the verdict had to be put back on the read path."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Posterior decay half-life of 3 days erased learned evidence",
+   "where": "1b0c693/f171ded (07-29/30) -> 99ae266, 2ededef, 82255e6 (08-22)",
+   "tried": "Time-decay copied from llm-resolver's cadence, then lengthened to 30 days",
+   "outcome": "reverted",
+   "date": "2026-08-22",
+   "evidence": "409 arms aged 14-30 days retained 0.1-3.9%: 'THIS IS WHY LEARNING DOES NOT COMPOUND'."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Beta(1,1) untried prior made learned arms unselectable",
+   "where": "a2a7dfd/12e1b3a (08-10)",
+   "tried": "Use a Beta(1,3) prior for untried arms",
+   "outcome": "worked",
+   "date": "2026-08-10",
+   "evidence": "At the measured pool size a learned arm with mean .755 won 0.0% of draws under Beta(1,1) and 43% under Beta(1,3)."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Increment discarded on every existing row, in 8 copies",
+   "where": "11cd301, 0857a1c (08-17)",
+   "tried": "Fix ?? vs + precedence in the duplicated UPSERT copies",
+   "outcome": "worked",
+   "date": "2026-08-17",
+   "evidence": "It had been fixed once in paradigm.ts with an explanatory comment; the other copies were missed."
+  },
+  {
+   "key": "selection-learning",
+   "title": "goal_hash kept the gap-id hex, so paths were never reused",
+   "where": "d553b39 (08-05)",
+   "tried": "Normalize goal text before hashing",
+   "outcome": "worked",
+   "date": "2026-08-05",
+   "evidence": "78.6% of paths ran once (3690/4693); close-substrate-gap had 2145 distinct paths for 3102 executions."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Autonomous posterior fixes, 09-08..09-25",
+   "where": "2f01007, be6b5cd, 88f1769, dec321b/718af8c, 97adc04",
+   "tried": "Stop hardcoding ungraded; grade throwing tasks; grow beta on failure; don't drop signature-less deltas",
+   "outcome": "unknown",
+   "date": "2026-09-25",
+   "evidence": "Each came from a separately titled gap on the same credit path; no standing end-to-end falsifier."
+  },
+  {
+   "key": "false-verification",
+   "title": "reachedVerdict dropped the 'zero shapes' conjunct",
+   "where": "7dabe62 (09-02)",
+   "tried": "Restore the second conjunct",
+   "outcome": "worked",
+   "date": "2026-09-02",
+   "evidence": "83% of execution_error rows had produced output shapes and were being wrongly downgraded."
+  },
+  {
+   "key": "false-verification",
+   "title": "success_rate integer division, fixed 3 times",
+   "where": "f5a96c9, 2b09cb5 (08-05), b984e34 (08-19)",
+   "tried": "Float division at each site",
+   "outcome": "partial",
+   "date": "2026-08-19",
+   "evidence": "b984e34: the substrate was minting critical goals off the truncated rate."
+  },
+  {
+   "key": "false-verification",
+   "title": "Abstain on infra/environment failures instead of blaming the arm",
+   "where": "018784f (08-24), 970b112 (09-16), cfb455e (08-06)",
+   "tried": "Three-way credit; /feedback route made to respect failure-mode abstention",
+   "outcome": "worked",
+   "date": "2026-09-16",
+   "evidence": "A disconnected human surface generated a negative every 30 minutes for 2 days."
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Operator reverted a correct autonomous landing on inference",
+   "where": "b8671c9 -> 23abbf4 -> 89f04fb (09-28)",
+   "tried": "Revert reading execution directly, citing 08-21 PERMISSIONS evidence",
+   "outcome": "reverted",
+   "date": "2026-09-28",
+   "evidence": "Pre-validation had used root credentials, which bypass PERMISSIONS; a live measurement refuted the revert within an hour."
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Satellite reach-verdict strip",
+   "where": "d95a615 -> 3e7e8e0 (08-08)",
+   "tried": "Stop satellites inheriting the walk verdict",
+   "outcome": "reverted",
+   "date": "2026-08-08",
+   "evidence": "It would have destroyed the most independent (recompute-agrees) reach verdict. The real defect was N-fold counting."
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "org_id widening silently lost in a refactor",
+   "where": "baca870 -> 3fb33b6 (08-22)",
+   "tried": "Match both stored org_id forms",
+   "outcome": "worked",
+   "date": "2026-08-22",
+   "evidence": "The posterior lookup had matched zero rows; the second widening was lost and restored the same day."
+  },
+  {
+   "key": "env-gating",
+   "title": "Law-1 ports of env gates, then autonomous re-introduction",
+   "where": "d3d29da, d81ab34 (08-17) vs 0f79ff2/35f86fb+6 pwt (08-18), 7c34185, e07dc50, b4f9d47, 9cfdea4",
+   "tried": "Read gates as shaped data",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "138 distinct process.env names are read in src and only 19 in config.ts."
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Hardcoded endpoints remain",
+   "where": "f027c1f (09-07); activities.ts :8080/:8090/:8100, posterior-update.ts :8255, signature-*.ts :8260",
+   "tried": "Surgical hardcoded-endpoint gap fixed one site",
+   "outcome": "partial",
+   "date": "2026-09-07",
+   "evidence": "8 literal host:port strings are still in src."
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Composition edge learner: built, abandoned, rebuilt",
+   "where": "063/046 composition_edge -> fcf9499/169 retire (07-22) -> 516fc73 derive at ingest (08-11)",
+   "tried": "Replace the writer with no caller by ingest-time derivation",
+   "outcome": "worked",
+   "date": "2026-08-22",
+   "evidence": "POST /composition still has 0 callers; activity_composition_graph had frozen."
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome-extracted templates were hollow",
+   "where": "d1bb036, ac40337, 3ccc65f, 6ee45ea (07-31), 8d969b4 (07-21)",
+   "tried": "Derive output shapes from tasks, backfill 218 plus 160 templates, gate extraction on reach",
+   "outcome": "worked",
+   "date": "2026-07-31",
+   "evidence": "tool_output placeholders and hollow task configs were backfilled."
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Incomplete mock factory disabled 53 test files",
+   "where": "858a30b, 7f19b1a (08-17), 64a24dd (08-22), 4377b99 (09-02)",
+   "tried": "Complete the mocks and add a mock-completeness detector",
+   "outcome": "worked",
+   "date": "2026-08-17",
+   "evidence": "Suite went from 509 to 769 passing; 22 hidden failures surfaced."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "account_id migration phases A-G, then withdrawn",
+   "where": "1c16490..941af8a (04-28) -> 166/170/174 (07-22)",
+   "tried": "Dual-scope account_id across 39 tables and 42 views",
+   "outcome": "reverted",
+   "date": "2026-07-22",
+   "evidence": "The views kept regenerating (174 'neutralize regenerating account views')."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Dead views and tables dropped",
+   "where": "164-179 (07-22/23), b7da452, f9d1962 (08-06)",
+   "tried": "Drop 0-reader views, orphan tables and dead detectors",
+   "outcome": "worked",
+   "date": "2026-07-23",
+   "evidence": "4635fb1 caught 177 about to drop concept-db's live upkeep_stats (a shared store)."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Template-list cache layered and invalidated 7 times",
+   "where": "b129695,93cd621,dafb045 (05), a4735e9 (07-24), 1f58320,55cd36d (09-24), ba3408b+39783b0 (09-27/28)",
+   "tried": "Fix invalidation or ordering, then add a new in-process catalogue cache",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "Each layer adds an invalidation obligation; the problem recurred 7 times."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Host submodule lags the live clone",
+   "where": "repos/activity-api 41c9e89 vs live 39783b0",
+   "tried": "none",
+   "outcome": "unknown",
+   "date": "2026-09-28",
+   "evidence": "44 commits behind."
+  },
+  {
+   "key": "gap-content",
+   "title": "Autonomous commits carry no intent; gap records pruned",
+   "where": "all 298 autonomous commits; gaps.json",
+   "tried": "Commit body lists only Gap/Proposal/Mitosis/Attempt ids",
+   "outcome": "failed",
+   "date": "2026-09-28",
+   "evidence": "147 of 156 route-edit ids are gone from the gap store; the 9 remaining are 'open' though landed. The store holds {{goal.gap.status}}-style statuses."
+  }
+ ],
+ "problems": [
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Writes report success while persisting nothing, or consumers read a key or table that isn't there (NULL vs NONE, SCHEMAFULL/Zod strips, missing view reads empty, bare vs prefixed ids, org_id forms)",
+   "root_cause": "No shared write-verification seam: surrealDB.query() ignores statement status, there is no NONE-coercion boundary, and there is no writer-to-reader key test; each instance was fixed at one call site",
+   "first_seen": "2026-03-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 30
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Autonomous landings that are probes, echoes, duplicates, whitespace, or gamed predicates (gap id in code, invented field)",
+   "root_cause": "The land gate reads diffs and accepts typecheck-clean strings; one gap can be applied repeatedly; the pwt child loop rewards satisfying the checker",
+   "first_seen": "2026-07-05",
+   "last_seen": "2026-09-18",
+   "recurrences": 10
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings delete or garble code, corrupt SQL inside strings, write the wrong dialect, reverse operator perf fixes, or gate production code on env to pass a test",
+   "root_cause": "Anchor/splice patching without a semantic diff check; SQL in strings is invisible to typecheck; failing-test gaps target production files",
+   "first_seen": "2026-07-27",
+   "last_seen": "2026-09-28",
+   "recurrences": 9
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Migrations silently skipped, failing forever, unparseable, or ledger says applied while the object is absent; retention cannot bound the store; index experiments go the wrong way",
+   "root_cause": "The ledger records intent, not state, and there is no schema reconciler; startup-gated DDL; storage-engine delete cost",
+   "first_seen": "2026-04-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 15
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Posteriors don't move or don't steer: verdict uncredited, increment discarded, decay erases evidence, Beta(1,1) swamps learned arms, goal_hash un-reusable, ungraded hardcoded",
+   "root_cause": "Many independent write and read sites for one belief; constants copied across populations; no end-to-end falsifier that learning moves selection",
+   "first_seen": "2026-04-13",
+   "last_seen": "2026-09-27",
+   "recurrences": 14
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Reach and success verdicts wrong (fail-open credits 38%, conjunct dropped, integer-division rates, infra blamed on arms); the db integrity diagnose always reports 0",
+   "root_cause": "Verdict logic re-implemented per route; detectors whose queries are themselves unverified",
+   "first_seen": "2026-08-05",
+   "last_seen": "2026-09-16",
+   "recurrences": 7
+  },
+  {
+   "key": "directed-overshoot",
+   "symptom": "Operator fixes reverted within hours or days (satellite strip, index drop, batch=1, 300s timeout, 3d half-life, revert of a correct autonomous landing)",
+   "root_cause": "Acting on inference before a live control; root-credential pre-validation bypasses PERMISSIONS",
+   "first_seen": "2026-04-30",
+   "last_seen": "2026-09-28",
+   "recurrences": 7
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "11.7k-line activities.ts, 31 of 134 routes with no caller, duplicated scripts, dead k8s migration scripts, abandoned subsystems (account_id, composition_edge, AET dual-write), cache layers stacked",
+   "root_cause": "Mechanisms minted without a consumer and never retired; the parity-gated extraction stopped after 4 helpers",
+   "first_seen": "2026-04-22",
+   "last_seen": "2026-09-28",
+   "recurrences": 8
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour behind env vars keeps returning after law-1 ports",
+   "root_cause": "The drafter reaches for process.env as the cheapest gate; 138 env names are read outside config",
+   "first_seen": "2026-07-04",
+   "last_seen": "2026-09-28",
+   "recurrences": 6
+  },
+  {
+   "key": "gap-content",
+   "symptom": "Autonomous history illegible: commit bodies hold ids only, gap records pruned, landed gaps left open, template placeholders stored as status",
+   "root_cause": "Intent lives only in the mutable gap store; commit message template omits the summary",
+   "first_seen": "2026-06-28",
+   "last_seen": "2026-09-28",
+   "recurrences": 1
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "recommit-recommit-*, -narrowed and pwt-* child gaps landing repeated micro-edits on one file",
+   "root_cause": "Failure verdicts spawn children rather than escalating or declining",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 30
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Mocks amputate modules (53 files dead); namespace TDZ; seed fixtures in live DB; tests now contradict autonomous code (trace-window-bounds)",
+   "root_cause": "Global mock.module; tests share live config",
+   "first_seen": "2026-04-22",
+   "last_seen": "2026-09-11",
+   "recurrences": 5
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "All 13 activity-api docs last touched Apr-May, against about 650 later commits",
+   "root_cause": "No docs-align reader for vessel docs",
+   "first_seen": "2026-05-02",
+   "last_seen": "2026-09-28",
+   "recurrences": 1
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "8 hardcoded host:port literals in src; CI webhook pointed at a nonexistent host",
+   "root_cause": "Self-calls and peer calls bypass discovery",
+   "first_seen": "2026-08-04",
+   "last_seen": "2026-09-07",
+   "recurrences": 3
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "queryRaw status-checked query",
+   "location": "src/db/surreal.ts (676c3f3)",
+   "purpose": "Surface statements SurrealDB rejects",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Used at the composition upsert only; query() still swallows status"
+  },
+  {
+   "name": "POST /reach single writer + applyOutcomeToPosteriors",
+   "location": "src/routes/execution-traces.ts, src/lib/posterior-update.ts",
+   "purpose": "Grade-to-credit edge of the learning loop",
+   "status": "live-used",
+   "general": true,
+   "evidence": "64b3997/2b4e18b; 17 autonomous edits since"
+  },
+  {
+   "name": "reach-classify three-way credit/penalize/abstain",
+   "location": "src/lib/reach-classify.ts",
+   "purpose": "Honest verdict gating of credit",
+   "status": "live-used",
+   "general": true,
+   "evidence": "159bca7, 018784f, 970b112; declined: rule thrashed 4 times 09-16..18"
+  },
+  {
+   "name": "decision_outcome capture + /decision-calibration",
+   "location": "src/lib/decision-credit.ts",
+   "purpose": "Law-12 decision-to-outcome joins",
+   "status": "live-used",
+   "general": true,
+   "evidence": "608fe10/e2c7959/03e6c55"
+  },
+  {
+   "name": "Composition edge derived at ingest",
+   "location": "src/routes/execution-traces.ts (516fc73)",
+   "purpose": "Record parent-to-child compositions actually run",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Replaced the POST /composition writer, which has no caller"
+  },
+  {
+   "name": "POST /composition writer",
+   "location": "src/routes/activities.ts",
+   "purpose": "Legacy edge writer",
+   "status": "fossil",
+   "general": false,
+   "evidence": "0 call sites fleet-wide (516fc73)"
+  },
+  {
+   "name": "composition_edge table + fn::update_composition_edge",
+   "location": "migrations 046/063, retired by 169",
+   "purpose": "Phase-3 shape-based edge learner",
+   "status": "fossil",
+   "general": false,
+   "evidence": "fcf9499: 0 rows, fn never applied; scripts/reconcile-composition-edges.ts remains"
+  },
+  {
+   "name": "db_admin diagnose/repair/prune/snapshot",
+   "location": "src/routes/db-admin.ts, db-admin-repair.ts",
+   "purpose": "Self-managed DB integrity and repair",
+   "status": "broken",
+   "general": true,
+   "evidence": "safeCount filters on an invented field, so every count is 0 (live query returns []); gap-id regex in CATASTROPHIC_PATTERNS"
+  },
+  {
+   "name": "trace_store_counters + lease-gated reconcile",
+   "location": "migration 156, src/routes/db-admin-reconcile.ts",
+   "purpose": "Trace-store size accounting",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Lease validation re-edited 67411fb, 1055cba, bd018b2"
+  },
+  {
+   "name": "Trace retention valve (rows + bytes)",
+   "location": "src/services/trace-retention.ts",
+   "purpose": "Bound the trace store",
+   "status": "live-used",
+   "general": true,
+   "evidence": "c0b9624/3cafd9c: the store-wedge root is not in the counted rows"
+  },
+  {
+   "name": "Migration runner init-database.ts",
+   "location": "scripts/init-database.ts",
+   "purpose": "Apply schema on unit start",
+   "status": "live-used",
+   "general": true,
+   "evidence": "b4d7b0e, ef83e6a, 129fa76, fdb2fa6; ledger-vs-state gap (1f0d70f)"
+  },
+  {
+   "name": "goal_execution_paths reuse (work_signature, lineage)",
+   "location": "src/routes/goal-paths.ts",
+   "purpose": "Learned-pathway ceiling",
+   "status": "live-used",
+   "general": true,
+   "evidence": "48bc174, d553b39, 4e0d27a; acceptance 'intermittent' (249ff89)"
+  },
+  {
+   "name": "Template write-boundary rejects + mint dedup",
+   "location": "src/routes/activities.ts (1b0c693, 1af83ca, 9b25c93, 1baf8bb)",
+   "purpose": "Law-3 reuse-before-mint, reject unworkable templates",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "Template-list Redis cache + in-process catalogue cache",
+   "location": "src/utils/template-cache.ts",
+   "purpose": "Template listing performance",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "7 invalidation or ordering fixes; new layer added in ba3408b"
+  },
+  {
+   "name": "Successor features psi",
+   "location": "src/jobs/successor-features-backfill.ts (06-27)",
+   "purpose": "Look-ahead value in recommend",
+   "status": "unknown",
+   "general": false,
+   "evidence": "4 autonomous touches, no consumer evidence"
+  },
+  {
+   "name": "Hierarchical signature clustering / cluster posterior",
+   "location": "src/lib/cluster-posterior.ts, migrations 132-135",
+   "purpose": "Pooling sparse signatures",
+   "status": "unknown",
+   "general": false,
+   "evidence": "Shadow logic deleted by 9775bc8, reverted d280a05"
+  },
+  {
+   "name": "account_id dual-scope",
+   "location": "04-28 phases A-G; migrations 095-099",
+   "purpose": "Account-scoped tenancy",
+   "status": "fossil",
+   "general": true,
+   "evidence": "Withdrawn 07-22 (166/170/174)"
+  },
+  {
+   "name": "AET->execution dual-write / replication",
+   "location": "07-13/14 commits, migration 159",
+   "purpose": "Trace table migration + intra-group replication",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Dual-write decommissioned ec43116; replication use not verified"
+  },
+  {
+   "name": "shape_gap_resolution slot-binding cache",
+   "location": "migration 105; /shape-gap-resolution routes",
+   "purpose": "Slot-binding cache",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "0 callers"
+  },
+  {
+   "name": "POST /update-failure-lessons",
+   "location": "src/index.ts:55; scripts/ and src/scripts/update-failure-lessons.ts",
+   "purpose": "Autonomously added lesson updater",
+   "status": "fossil",
+   "general": false,
+   "evidence": "0 callers; script duplicated"
+  },
+  {
+   "name": "POST /header_added and probe headers",
+   "location": "src/routes/activities.ts:23-38,193,5415,5919",
+   "purpose": "None (hollow landings)",
+   "status": "fossil",
+   "general": false,
+   "evidence": "2157764, 6282954"
+  },
+  {
+   "name": "Duplicate /conservation-audit-emit",
+   "location": "src/routes/activities.ts:6034",
+   "purpose": "Garbled splice of the lost residual-trend route",
+   "status": "broken",
+   "general": false,
+   "evidence": "53292c9"
+  },
+  {
+   "name": "Mock-module completeness + write-key-has-reader detector tests",
+   "location": "src/mock-module-completeness.test.ts, 5c57ff9",
+   "purpose": "Catch silent test and data amputation",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "Evidence-aliasing and shape-dispatch lint",
+   "location": "scripts/check-evidence-aliasing.ts, check-shape-dispatch.ts",
+   "purpose": "Static contract gates",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1e30bbd: the documented gate had no caller until 08-21"
+  },
+  {
+   "name": "31 of 134 route handlers with 0 callers",
+   "location": "activities.ts (/scores, /similar-state, /validate-composition, /create-goal-seeking, /tags/suggest ...), ci.ts, connections.ts, boredom.ts, execution-traces.ts /deliberation",
+   "purpose": "Various Phase-era endpoints",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "Last-segment grep across all vessel clones and super-repo scripts/validation/packages; shape-dispatch callers not excluded"
+  }
+ ],
+ "principles": [
+  "A try/catch fallback cannot catch a missing SurrealDB table: it reads as empty, status OK (3322f92)",
+  "A slow failure inside a startup gate is worse than the fast failure it replaced; expensive DDL belongs out of band (8fbc032)",
+  "When a deliberate change measures worse twice, put it back and say so; the revert rests on the numbers, not on a counter-hypothesis (0da9c16, f4d62bf)",
+  "A constant calibrated for one population's cadence must not be copied to another (99ae266)",
+  "A Beta posterior over one observation is its prior; the key decides what can be learned (d553b39)",
+  "Both ends typecheck while a consumer three repos away reads a stripped key; only a cross-boundary test says so (48bc174)",
+  "New rows look correct, so write bugs on existing rows survive; fixing one copy leaves the others (11cd301)",
+  "A gate that reads a diff cannot certify; only a test that runs it can (e2730e1)",
+  "False abstention loses a blame signal; false blame condemns a working arm (970b112)",
+  "Let the measurement overrule the story that motivated the fix (3cafd9c)",
+  "Pre-validation with root credentials bypasses PERMISSIONS and cannot see what the service sees (23abbf4/89f04fb)",
+  "The migration ledger is intent, not state: applied rows can name objects that no longer exist (1f0d70f)",
+  "Fail closed on what you have not verified, including foreign-dialect statements (9c187af)",
+  "A detector's own query must be verified; one returning [] reads as 'clean' (db-admin safeCount, found in this pass)",
+  "One gap should equal one landing; repeated applies of a gap id produce duplicate code (route-edit-24e91280 x5 -> 781d758)",
+  "Commit messages must carry intent, because gap records get pruned (147 of 156 route-edit ids gone)"
+ ]
+}

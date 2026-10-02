@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-3c6b2eb6",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-3c6b2eb6: A compose cutover for one gap committed another gap's staged edit und",
+  "description": "investigate and decompose gap route-edit-3c6b2eb6: A compose cutover for one gap committed another gap's staged edit under its own attribution, and mirrored only its own files — leaving the swept-in change present in git and absent from the running tree.\n\nOBSERVED 2026-09-10 11:11:17. An operator dispatch edited repos/development-vessel/src/resolvers/patch-with-tools.ts, adding a diagnostic to the semantic gate's PASSED log line. It reached",
+  "goal_text": "investigate and decompose gap route-edit-3c6b2eb6: A compose cutover for one gap committed another gap's staged edit under its own attribution, and mirrored only its own files — leaving the swept-in change present in git and absent from the running tree.\n\nOBSERVED 2026-09-10 11:11:17. An operator dispatch edited repos/development-vessel/src/resolvers/patch-with-tools.ts, adding a diagnostic to the semantic gate's PASSED log line. It reached",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-3c6b2eb6",
+  "source_gap_source": "substrate_detected"
+}

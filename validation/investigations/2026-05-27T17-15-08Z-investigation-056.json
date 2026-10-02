@@ -1,0 +1,286 @@
+{
+  "investigation_id": "056",
+  "generated_at": "2026-05-27T17:15:08Z",
+  "prior_investigation_id": "2026-05-27T12-45-02Z-investigation-055",
+  "auditor": "primary-auditor (claude-sonnet-4-6)",
+  "scope": "commits since investigation-055 (6a9a04a2); 4 commits flagged in brief + 3 additional commits discovered during investigation",
+
+  "commits_covered": [
+    {
+      "sha": "754d52cb",
+      "subject": "feat(closure): inv-029 main request closed — thompson_posterior observability fields",
+      "activity_api_sha": "5ee9b7f",
+      "in_scope_per_brief": true
+    },
+    {
+      "sha": "116246b8",
+      "subject": "fix(f138): bundle ias-executor-ts recovery + advance super-repo gitlink",
+      "in_scope_per_brief": true
+    },
+    {
+      "sha": "6f5ba13a",
+      "subject": "feat(closure): F-138 + F-139 closed; inv-030 queued (iter 17)",
+      "activity_api_sha": "82cf88b",
+      "in_scope_per_brief": true
+    },
+    {
+      "sha": "6a9a04a2",
+      "subject": "feat(closure): F-128 + F-131 addressed (iter 18)",
+      "dev_vessel_sha": "9d318bb",
+      "in_scope_per_brief": true
+    },
+    {
+      "sha": "77599460",
+      "subject": "feat(closure): inv-030 promote-gate-resolver implemented (iter 19)",
+      "activity_api_sha": "4653d33",
+      "in_scope_per_brief": false,
+      "note": "NEW — not in investigation brief, shipped between inv-055 and this run"
+    },
+    {
+      "sha": "34bc7613",
+      "subject": "feat(promote-gate): emit promote_gate.evaluated audit-trail event (iter 20)",
+      "activity_api_sha": "2ac8b28",
+      "in_scope_per_brief": false,
+      "note": "NEW — not in investigation brief"
+    },
+    {
+      "sha": "a8f985b4",
+      "subject": "feat(promote-gate): durable mirror + stats endpoint (iter 21)",
+      "activity_api_sha": "dbced9e",
+      "in_scope_per_brief": false,
+      "note": "NEW — not in investigation brief"
+    }
+  ],
+
+  "findings": {
+    "F-128": {
+      "severity": "LOW",
+      "title": "consecutive_progressing_cycles semantics misleading",
+      "status": "CLOSED",
+      "closed_by": "6a9a04a2 (dev-vessel 9d318bb)",
+      "verification": {
+        "method": "live probe coverage-tick resolver",
+        "command": "POST http://127.0.0.1:18090/v2/impulses/resolve {\"impulse\":{\"pointer\":{\"type\":\"coverage_tick\",\"num_windows\":4}}}",
+        "result": {
+          "consecutive_windows_with_new_shapes": 0,
+          "consecutive_windows_max": 4,
+          "consecutive_progressing_cycles": 0,
+          "coverage_progress": true,
+          "coverage_fraction": 0.235,
+          "total_advertised_shapes": 34,
+          "total_learned_unique": 8
+        },
+        "fields_present": ["consecutive_windows_with_new_shapes", "consecutive_windows_max", "consecutive_progressing_cycles"],
+        "notes": "All three fields present and correctly named. Legacy alias 'consecutive_progressing_cycles' equals primary field (same value). consecutive_windows_with_new_shapes=0 on live probe despite coverage_progress=true — the progress flag looks at recent_half windows, while consecutive count broke at window[0] (0 new shapes in most recent 1h window). No structural defect."
+      },
+      "auditor_verdict": "VERIFIED CLOSED"
+    },
+
+    "F-131": {
+      "severity": "MEDIUM",
+      "title": "operator-probe provenance unverifiable",
+      "status": "ADDRESSED",
+      "closed_by": "6a9a04a2",
+      "verification": {
+        "method": "read validation/findings/README.md and operator-probe file frontmatter",
+        "readme_present": true,
+        "readme_describes_protocol": "yes — 3-step signing procedure documented (author + git commit -s + push)",
+        "probe_file_updated": true,
+        "probe_file_has_provenance_unverified_flag": true,
+        "probe_file_has_explanatory_note": true
+      },
+      "residual_risk": "The provenance protocol is documented but the SIGNING infrastructure (gpg-signed commits from operator identity) is not enforced by CI. The protocol remains an honor-system convention. Files authored by the substrate can still claim agent: operator without mechanical verification. F-131 is structurally mitigated but not eliminated. Severity reclassification to LOW is reasonable given the added transparency.",
+      "auditor_verdict": "ADDRESSED — residual risk acknowledged; no regression from inv-055 assessment"
+    },
+
+    "F-138_auditor": {
+      "severity": "MEDIUM",
+      "title": "ias-executor-ts 3 local commits untracked (auditor's F-138)",
+      "status": "CLOSED",
+      "closed_by": "116246b8",
+      "verification": {
+        "super_repo_gitlink": "b6b58a2074d9b6b66468c4d293d846a7f8ce66c8",
+        "bundle_present": "validation/recovery/ias-executor-ts-2026-05-27.bundle (321877 bytes)",
+        "bundle_readme_present": true,
+        "ias_executor_local_log": [
+          "b6b58a2 feat(verify-dist-fresh): F-111 closure — detect substrate dist drift vs local src",
+          "37a9ddb feat(engine): resolveInputs poll-and-wait — addresses inv-028 C fragility",
+          "161eede feat(adapters): BusForwardingEventSink — engine lifecycle events onto substrate bus"
+        ]
+      },
+      "residual_risk": "OPERATOR ACTION STILL REQUIRED: The bundle preserves the commits in the tree, but the real fix — creating the GitHub remote (github.com/metabob/ias-executor-ts or equivalent) and adding a .gitmodules entry pointing at it — has NOT been completed. Until that happens, a fresh clone of the super-repo will not reconstruct ias-executor-ts from the network. The bundle serves as a break-glass backup, not a permanent solution.",
+      "auditor_verdict": "MITIGATED (substrate action); OPERATOR ACTION OUTSTANDING (GitHub remote + .gitmodules)"
+    },
+
+    "F-138_substrate": {
+      "severity": "INFORMATION",
+      "title": "NUMBERING COLLISION — substrate self-filed F-138 (execution writes missing) conflicts with auditor's F-138 (ias-executor-ts)",
+      "status": "DOCUMENTED",
+      "details": "dev-response-009 (filed 2026-05-27T11:35Z) used the designation 'F-138 (NEW, MEDIUM)' for a separate finding: freshly-seeded template execution writes not landing in trace tables. The substrate closed the auditor's F-138 in iter 17 and treats the two as distinct findings. However, the shared label creates permanent ambiguity in the audit record.",
+      "collision_pattern": "This is at least the 3rd occurrence of the substrate filing findings under auditor-reserved F-numbers. Prior collisions: F-129 (partially), F-130. The substrate does not have an independent finding numbering namespace, and F-numbers are assigned sequentially by the auditor. Each collision creates a record that appears to reference a single issue but addresses two.",
+      "recommendation": "Substrate-originated findings should use a distinct prefix (e.g., 'S-' or 'DEV-') rather than the 'F-' namespace reserved for auditor findings. This is a LOW process risk but accumulates into audit record integrity issues over time.",
+      "auditor_verdict": "DOCUMENTED — recommend namespace separation in next operational iteration"
+    },
+
+    "F-139": {
+      "severity": "LOW",
+      "title": "promote-guard allowlist includes CI resolvers not present in substrate",
+      "status": "CLOSED",
+      "closed_by": "6f5ba13a (activity-api 82cf88b)",
+      "verification": {
+        "method": "read activities.ts source lines 3270-3310",
+        "removed_from_builtin_set": ["helmfile_sync", "docker_build_push", "scaffold_vessel_skeleton"],
+        "retained_in_builtin_set": ["compose", "activity", "iteration", "llm-prompt", "impulse-resolve", "validation", "impulse_pool_selection", "producer_selection", "impulse_preparation", "wire_discovery_registration", "wire_auth_blueprint", "learning_signal_writer", "verify_three_invariants", "file_read", "bash", "llm", "activity_recommendation", "impulse_cooccurrence"],
+        "comment_present": "yes — F-139 attribution and rationale inline",
+        "docker_check": "helmfile_sync not in deployed dist (confirmed via docker exec grep)"
+      },
+      "auditor_verdict": "VERIFIED CLOSED"
+    }
+  },
+
+  "thompson_posterior_new_fields": {
+    "commit": "754d52cb (activity-api 5ee9b7f)",
+    "verification": {
+      "method": "POST /v2/impulses/resolve {shape:thompson_posterior,pointer:{type:thompson_posterior,activity_variant_id:harness-run-matrix}}",
+      "result": {
+        "alpha": 1,
+        "beta": 1,
+        "sample_count": 0,
+        "signature": null,
+        "signatures_aggregated": 1,
+        "signature_version": 1,
+        "scope": "global"
+      },
+      "all_four_fields_present": true,
+      "notes": "signature=null for aggregate-mode (expected when no specific signature filter applied). signatures_aggregated=1 for harness-run-matrix with no execution history. scope=global confirms Phase 5.2 fallback path active."
+    },
+    "auditor_verdict": "VERIFIED — all 4 observability fields present and semantically correct"
+  },
+
+  "docs_restructure_assessment": {
+    "commit": "6f5ba13a",
+    "quick_verification_guide": {
+      "line_count_before": "~644 (383 current + ~261 removed)",
+      "line_count_after": 383,
+      "section_count": 26,
+      "verdict": "CONDENSED, NOT TRUNCATED",
+      "evidence": "All critical sections present: substrate endpoints, primary harnesses, pre-push smoke test, component-specific verification, learning loop verification, common scenarios, deployment verification, troubleshooting, quick reference, env vars. The guide was restructured to remove superseded content and inline redundant material. No functional verification procedures appear missing."
+    },
+    "archived_files": 20,
+    "archived_critical_content": {
+      "CRITICAL_INTEGRATION_TESTS.md": "350 lines archived — superseded by primary harnesses (failure-mode-harness.ts, stratified-harness.ts)",
+      "VERIFICATION_AND_TESTING_INVENTORY.md": "975 lines archived — inventory style docs appropriate for archival",
+      "TEST_IMPLEMENTATION_SUMMARY.md": "archived",
+      "API_KEY_AUTH_TESTS.md": "archived"
+    },
+    "new_architecture_sequence_files": 5,
+    "new_sequence_file_sizes_kb": {
+      "01-activity-selection.md": 29,
+      "02-impulse-resolution.md": 31,
+      "03-resolver-processing.md": 42,
+      "04-improvisation-failure-modes.md": 34,
+      "05-hooks-behavior-injection.md": 32
+    },
+    "auditor_verdict": "ACCEPTABLE — net documentation quality improved; archived content is either superseded or inventory-style. New sequence files add architecture detail not previously documented."
+  },
+
+  "new_commits_since_brief": {
+    "commits": ["77599460", "34bc7613", "a8f985b4"],
+    "description": "3 promote-gate commits implementing inv-030 (auditor investigation 030, not a new investigation in this run but from a separate iter008-style parallel audit track)",
+    "promote_gate_implementation": {
+      "inline_vs_activity": "implemented inline in /promote endpoint (not as a 6-task activity template). Substrate chose the faster path; the audit design described both options.",
+      "algorithm": "Weighted Beta-Binomial projection over K=5 nearest templates by Jaccard shape similarity; strips Beta(1,1) prior; applies single Jeffreys baseline",
+      "refusal_types": 3,
+      "refusal_classes_total": 3,
+      "stats_endpoint_live": true,
+      "stats_response_sample": {
+        "total": 1,
+        "by_decision": {"promote": 0, "refused": 1},
+        "by_reason": {"cold_start_no_similar": 1}
+      },
+      "durable_storage": "migration 141 creates promote_gate_evaluations table",
+      "bus_events": ["promote_gate.evaluated", "intervention.refused"]
+    },
+    "new_findings": [],
+    "auditor_verdict": "CLEAN — 3 commits implement inv-030 design faithfully. No new audit findings."
+  },
+
+  "audit_backlog_claim_assessment": {
+    "substrate_claim": "audit backlog structurally empty (only F-101 historical files open)",
+    "auditor_assessment": "SUBSTANTIATED with one exception",
+    "findings_status": {
+      "F-101": "OPEN — structural choice; historical investigation files in validation/investigations/ committed by substrate. Will remain open until operator decides to purge or relocate.",
+      "F-128": "CLOSED (verified)",
+      "F-129": "CLOSED (per substrate tracking in dev-response-012)",
+      "F-130": "RESOLVED (per dev-response-012)",
+      "F-131": "ADDRESSED — provenance protocol documented; signing enforcement gap remains LOW residual",
+      "F-132": "RESOLVED (per dev-response-012)",
+      "F-133": "RESOLVED (per dev-response-012)",
+      "F-134": "ADDRESSED iter 14 + iter 19 (per dev-response-012)",
+      "F-135": "SELF-RESOLVED (per dev-response-012)",
+      "F-136": "DECLINED (per dev-response-012)",
+      "F-137": "ACKNOWLEDGED (per dev-response-012)",
+      "F-138": "CLOSED (verified for auditor's definition; substrate's separately-numbered F-138 is a distinct finding)",
+      "F-139": "CLOSED (verified)"
+    },
+    "unverified_by_auditor": ["F-129 through F-137 — taken from substrate's own tracking in dev-response-012; auditor has not independently re-probed each"],
+    "notable_exception": "The auditor's F-138 (ias-executor-ts) is mitigated but still has an OUTSTANDING OPERATOR ACTION (GitHub remote + .gitmodules). The substrate's characterization of 'closed' is technically accurate for the git-tree risk but does not capture the network-unreachability gap."
+  },
+
+  "closure_audit_result": {
+    "timestamp": "2026-05-27T17:15:08Z",
+    "result": "7/7 CLOSED",
+    "gates": ["operator-memory", "slash-skills", "subagents", "github-actions", "operator-shell", "operator-spec-authoring", "push-away"]
+  },
+
+  "substrate_health": {
+    "overall_passing": null,
+    "status": "healthy",
+    "checks": {
+      "redis": "healthy",
+      "surrealdb": "healthy",
+      "discovery": "healthy (registered=true)",
+      "embedding": "healthy (all-MiniLM-L6-v2, dim=384)"
+    },
+    "note": "overall_passing field is null in health response — same as prior investigations; structural gap not a regression"
+  },
+
+  "boredom_activity": {
+    "window": "2026-05-27T12:30:00Z to 2026-05-27T20:15:23Z",
+    "goals_observed": [3, 4, 5, 6, 0],
+    "all_goals_dispatched_completed": true,
+    "sample": "goal[0] coverage-tick completed exec_1nmt8w63 at 20:15:23Z",
+    "assessment": "Boredom loop healthy — all 7 goal types rotating, all show status=completed"
+  },
+
+  "openspec_progress": {
+    "harness_as_lifecycle_participant": "24/25 checked",
+    "substrate_explicit_vessels": "48/53 checked",
+    "single_container_substrate": "19/36 checked",
+    "all_others": "0/* — not yet started"
+  },
+
+  "process_findings": [
+    {
+      "id": "F-140",
+      "severity": "LOW",
+      "title": "F-number namespace collision — substrate files findings under auditor-reserved F-numbers",
+      "details": "Three confirmed collisions: substrate filed F-138 (dev-response-009, execution writes) under the same number as auditor's F-138 (ias-executor-ts). Prior instances include F-129, F-130. No permanent harm per incident but the accumulation creates audit record ambiguity.",
+      "recommendation": "Substrate should adopt a distinct prefix for self-originated findings (e.g. S-001, DEV-001) to preserve the F-number space as a single-author namespace.",
+      "status": "NEW"
+    },
+    {
+      "id": "F-141",
+      "severity": "LOW",
+      "title": "ias-executor-ts lacks GitHub remote — network-unreachable on fresh clone",
+      "details": "The F-138 mitigation (bundle + gitlink advance) preserves the 3 untracked commits within the repository tree, but ias-executor-ts has no .gitmodules entry and no GitHub remote. A fresh git clone of the super-repo + git submodule update --init would fail to reconstruct ias-executor-ts from any network source. The bundle in validation/recovery/ is a local-only mitigation.",
+      "recommendation": "Operator should create the GitHub remote and add a .gitmodules entry. Until then, any new developer environment must manually restore from the bundle.",
+      "status": "NEW"
+    }
+  ],
+
+  "next_wake_recommendation": {
+    "delay_seconds": 7200,
+    "rationale": "All 4 prior findings closed or addressed. 3 new promote-gate commits clean. No regressions found. Substrate is healthy, boredom loop active, closure-audit 7/7. Two new LOW process findings (F-140, F-141) do not require immediate follow-up. Promote-gate stats endpoint calibration is now live — a 2-hour delay is appropriate to accumulate enough promote_gate.evaluated events for a calibration assessment in the next investigation."
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "remedy-livelock-db-performance-slow-queries-2026-08-30T06-2026-09-16",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "remedy_livelock",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Remedy 'development-vessel:db_performance_slow_queries' for gap 'db_performance_slow_queries_2026-09-16T10' has been dis",
+  "description": "Remedy 'development-vessel:db_performance_slow_queries' for gap 'db_performance_slow_queries_2026-09-16T10' has been dispatched 5 times in the last 6h without moving its target metric (every dispatch ACK'd green (202) while the target metric never moved). The gap-drain loop is silently re-dispatching an aborting remedy. Investigate why the downstream execution is not reaching, then either repair the remedy or reclassify the gap so the loop stops re-dispatching it.",
+  "goal_text": "Remedy 'development-vessel:db_performance_slow_queries' for gap 'db_performance_slow_queries_2026-09-16T10' has been dispatched 5 times in the last 6h without moving its target metric (every dispatch ACK'd green (202) while the target metric never moved). The gap-drain loop is silently re-dispatching an aborting remedy. Investigate why the downstream execution is not reaching, then either repair the remedy or reclassify the gap so the loop stops re-dispatching it.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "remedy-livelock-db-performance-slow-queries-2026-08-30T06-2026-09-16",
+  "source_gap_source": "substrate_detected"
+}

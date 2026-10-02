@@ -1,0 +1,11 @@
+Create repos/development-vessel/src/resolvers/composer-interruption-sweep.ts exporting `resolveComposerInterruptionSweep(pointer: { type: "composerInterruptionReport"; hours?: number })`. It detects the class this change removes: a composer restarted by a cutover on a repo its node does not own.
+
+Behaviour:
+- Run `journalctl -u development-vessel --since -<hours ?? 1>h --no-pager -o cat` with Bun.spawn (stdout and stderr piped, as systemd-unit-health-observer.ts does), count every non-empty output line as `lines_read`, and keep lines containing `[restart-attribution] restarted by `.
+- Real line format: `[restart-attribution] restarted by mitosis-cutover: cutover development-vessel-fc-2026-09-25T02-00-06-419Z — it observed 2 in flight, so this restart was LOSSY`. Parse `requester` (the word after `restarted by `, before the colon), `vessel` (the cutover id's prefix before `-fc-` or `-resume-`, when the line contains `cutover `), `in_flight` (the number after `observed `, else 0) and `lossy` (the line contains `LOSSY`).
+- With `ownedVessels()` imported from "./gap-to-feature.js", a restart is a `foreign_cutover` when `vessel` is set and not owned.
+- Return `{ shape: "composerInterruptionReport", body: { node: process.env["SUBSTRATE_NAME"] ?? "substrate", hours, lines_read, restarts, lossy, foreign_cutovers, entries } }`, where `entries` holds the parsed restarts (at most 50).
+- When `lines_read` is 0, return `foreign_cutovers: null` with `detail: "journal unreadable"` and file nothing: an empty read must not look like a quiet hour.
+- When `foreign_cutovers > 0`, write the gap `composer-interruption-<node>-<YYYY-MM-DD>` through the existing substrateGap_write resolve path used elsewhere in this vessel (category "attempt_consequence", source "substrate_detected", status "open", a summary naming the count and the vessels, and classification_metadata `{ edit_site: "repos/development-vessel/src/resolvers/gap-to-feature.ts", foreign_cutovers, vessels }`).
+
+Measured: this node's composer restarted 14 times in 4 h through its own cutovers, each interrupting the lane's other composes, and nothing detects a restart caused by a cutover on a repo the node should not be landing.

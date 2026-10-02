@@ -1,0 +1,18 @@
+[Unit]
+Description=Learning-loop selftest timer
+
+[Timer]
+# Every six hours, matching the sibling liveness watchdogs. The chain either
+# conducts or it does not; this is not a rate that needs fine sampling, and each
+# run costs one real probe dispatch plus a 45-second settle, so running it often
+# would put probe traffic into the fleet for no additional information. Four
+# readings a day is enough to catch a severed link within a working session while
+# keeping the probe's footprint small enough to stay excludable by tag.
+OnActiveSec=20min
+OnUnitActiveSec=6h
+Persistent=true
+AccuracySec=1min
+Unit=learning-loop-selftest.service
+
+[Install]
+WantedBy=timers.target

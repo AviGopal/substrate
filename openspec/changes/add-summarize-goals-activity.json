@@ -1,0 +1,47 @@
+{
+  "id": "summarize-goals-activity",
+  "actor": {
+    "type": "system",
+    "id": "substrate"
+  },
+  "assumptions": [
+    "The activity API endpoint is available.",
+    "The development vessel endpoint is available.",
+    "A valid METABOB_API_KEY is configured."
+  ],
+  "context_pointers": [],
+  "name": "Summarize Goals Activity",
+  "description": "An activity that invokes the goal_summary resolver and routes its output onward, so the substrate expresses the capability surface it advertises.",
+  "status": "active",
+  "schema": {
+    "input": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "output": {
+      "type": "object",
+      "properties": {
+        "summary": {
+          "$ref": "goal_summary"
+        }
+      },
+      "required": ["summary"],
+      "additionalProperties": true
+    }
+  },
+  "steps": [
+    {
+      "name": "invoke_goal_summary",
+      "description": "Invoke the goal_summary resolver to get a summary of the current goals and capabilities.",
+      "resolver": {
+        "type": "goal_summary",
+        "parameters": {}
+      },
+      "outputs": {
+        "summary": "$.result"
+      }
+    }
+  ],
+  "version": "1.0.0"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-e0cfd390",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/development-vessel/src/resolvers/advertised-shape-coverage-scan.ts. TWO string replacements in that ONE file.",
+  "description": "Edit repos/development-vessel/src/resolvers/advertised-shape-coverage-scan.ts. TWO string replacements in that ONE file. Change nothing else.\n\nAn empty-string env var defeats the `??` default. This container exports some endpoint variables as EMPTY STRINGS, and `??` falls back only on null/undefined — never on \"\". So `process.env[\"DISCOVERY_VESSEL_ENDPOINT\"] ?? \"http://127.0.0.1:8100\"` yields \"\" and the fetch below is issued against an empty endpoint instead of the intended default. The repo already has the fix helper: `env(key, fallback)` in src/config.ts treats an empty/whitespace-only value as absent.\n\nEDIT 1 — replace this exact existing line:\n\nimport type { ResolverResult } from \"./types.js\";\n\nwith:\n\nimport type { ResolverResult } from \"./types.js\";\nimport { env } from \"../config.js\";\n\nEDIT 2 — replace this exact existing line:\n\n    const endpoint = process.env[\"DISCOVERY_VESSEL_ENDPOINT\"] ?? \"http://127.0.0.1:8100\";\n\nwith:\n\n    const endpoint = env(\"DISCOVERY_VESSEL_ENDPOINT\", \"http://127.0.0.1:8100\");\n\nDo not change the METABOB_API_KEY line beneath it: an API key is not an endpoint, and an empty key is a legitimate \"no credential\".\n\nThe change must typecheck (bun run lint). VERIFY BY CONSEQUENCE: with DISCOVERY_VESSEL_ENDPOINT exported as the empty string, `endpoint` is \"http://127.0.0.1:8100\" rather than \"\", so the request goes to the discovery vessel instead of to a relative path.",
+  "goal_text": "Edit repos/development-vessel/src/resolvers/advertised-shape-coverage-scan.ts. TWO string replacements in that ONE file. Change nothing else.\n\nAn empty-string env var defeats the `??` default. This container exports some endpoint variables as EMPTY STRINGS, and `??` falls back only on null/undefined — never on \"\". So `process.env[\"DISCOVERY_VESSEL_ENDPOINT\"] ?? \"http://127.0.0.1:8100\"` yields \"\" and the fetch below is issued against an empty endpoint instead of the intended default. The repo already has the fix helper: `env(key, fallback)` in src/config.ts treats an empty/whitespace-only value as absent.\n\nEDIT 1 — replace this exact existing line:\n\nimport type { ResolverResult } from \"./types.js\";\n\nwith:\n\nimport type { ResolverResult } from \"./types.js\";\nimport { env } from \"../config.js\";\n\nEDIT 2 — replace this exact existing line:\n\n    const endpoint = process.env[\"DISCOVERY_VESSEL_ENDPOINT\"] ?? \"http://127.0.0.1:8100\";\n\nwith:\n\n    const endpoint = env(\"DISCOVERY_VESSEL_ENDPOINT\", \"http://127.0.0.1:8100\");\n\nDo not change the METABOB_API_KEY line beneath it: an API key is not an endpoint, and an empty key is a legitimate \"no credential\".\n\nThe change must typecheck (bun run lint). VERIFY BY CONSEQUENCE: with DISCOVERY_VESSEL_ENDPOINT exported as the empty string, `endpoint` is \"http://127.0.0.1:8100\" rather than \"\", so the request goes to the discovery vessel instead of to a relative path.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-e0cfd390",
+  "source_gap_source": "substrate_detected"
+}

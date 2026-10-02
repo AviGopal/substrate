@@ -1,0 +1,5 @@
+{
+  "type": "markdownDocument",
+  "title": "Test Document",
+  "content": "# Test\n\nThis is a test document.\n\n## Section\n\nWith some content."
+}

@@ -1,0 +1,22 @@
+[Unit]
+Description=Substrate git-push setup (system git identity + credential helper + writable vessel clones)
+After=network-online.target
+Wants=network-online.target
+Before=development-vessel.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# ORDER IS LOAD-BEARING: systemd lets a LATER EnvironmentFile override an
+# earlier one, so /etc/substrate/env is listed LAST and is authoritative.
+# The persisted workspace file is a restart cache for SECRETS, never a source
+# of truth for routing anchors. SUBSTRATE_GIT_PAT/GITHUB_TOKEN are unaffected:
+# gen-env re-emits both verbatim into /etc/substrate/env.
+EnvironmentFile=-/workspace/.substrate-secrets
+EnvironmentFile=/etc/substrate/env
+ExecStart=/usr/local/bin/setup-git-push
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+In repos/goal-host-vessel/src/index.ts, fill in each feature_compose row's owned repos by asking the producer. Directly after the existing line
+
+            const earlyTargetVessel = /^repos\/([^/]+)\//.exec(earlyEditFile)?.[1] ?? "";
+
+insert:
+
+            if (earlyRows.length > 1 && !earlyRows.some((r) => Array.isArray(r.owned_repos))) {
+              await Promise.all(earlyRows.map(async (r) => {
+                try {
+                  const u = `${String(r.endpoint ?? "").replace(/\/+$/, "")}${asResolvePath(r.resolve_endpoint)}`;
+                  const res = await fetch(u, { method: "POST", headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) }, body: JSON.stringify({ impulse: { pointer: { type: "composeOwnership" } } }), signal: AbortSignal.timeout(3_000) });
+                  const j = await res.json() as { body?: { owned_repos?: unknown }; content?: { owned_repos?: unknown } };
+                  const owned = j?.body?.owned_repos ?? j?.content?.owned_repos;
+                  if (Array.isArray(owned)) r.owned_repos = owned.map(String);
+                } catch { /* a producer that does not answer claims nothing */ }
+              }));
+            }
+
+Measured: discovery's capability rows do not carry owned_repos (the discovery vessel is protected, so its projection cannot be changed autonomously), so earlyOwners is always empty and every edit goal logs `routed by pick`. With a single row nothing is fetched, so single-node routing is unchanged. Change nothing else.

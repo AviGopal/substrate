@@ -1,0 +1,12 @@
+{
+  "change_id": "route-edit-9077062c-author-my-resolver",
+  "summary": "Author a simple httpResponse resolver",
+  "description": "This change creates a new resolver that produces only the httpResponse shape with a static message.",
+  "target_file": "repos/development-vessel/src/resolvers/http-response.ts",
+  "patches": [
+    {
+      "type": "replace_file",
+      "content": "import { createResolver } from '@quilt/resolver';\n\nexport default createResolver({\n  name: 'myHttpResponseResolver',\n  produces: ['httpResponse'],\n  async resolve() {\n    return {\n      httpResponse: {\n        statusCode: 200,\n        headers: { 'Content-Type': 'application/json' },\n        body: JSON.stringify({ message: 'This is my new httpResponse resolver!' }),\n      },\n    };\n  },\n});"
+    }
+  ]
+}

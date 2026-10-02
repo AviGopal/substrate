@@ -1,0 +1,19 @@
+{
+  "id": "detector-coverage-dormant",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architectural_pattern",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Detector apparatus: 17 detector-class templates known to the pool, 4 exercised (3 have found signal), but 13 are DORMANT",
+  "description": "Detector apparatus: 17 detector-class templates known to the pool, 4 exercised (3 have found signal), but 13 are DORMANT (never selected by the UCB → cover nothing): docs-mgmt:docs-decision-answer-scan, development-vessel:detect-execution_error_repaired_compose_gap_closing_auto, development-vessel:detect-execution_error_ribosome_extract, development-vessel:detect-dead-path-template-v2-1783775024467, development-vessel:detect-poison-producer-1783759656208, development-vessel:detect-ui-spacing-drift, development-vessel:detect-poison-producer, gap-goal:the-fleet-completion-probe-that-replaced-liveness-has-no-test-coverage, learned-composition-advertised-shape-coverage-scan-to-resolver-distribution-audit-to, learned-composition-resolver-distribution-audit-to-advertised-shape-coverage-scan-to. Dormant detectors are blind spots-in-waiting — exercise them (exploration boost / scheduled tick) or prune. This is the substrate auditing its own detection coverage (Nth-order).",
+  "goal_text": "Detector apparatus: 17 detector-class templates known to the pool, 4 exercised (3 have found signal), but 13 are DORMANT (never selected by the UCB → cover nothing): docs-mgmt:docs-decision-answer-scan, development-vessel:detect-execution_error_repaired_compose_gap_closing_auto, development-vessel:detect-execution_error_ribosome_extract, development-vessel:detect-dead-path-template-v2-1783775024467, development-vessel:detect-poison-producer-1783759656208, development-vessel:detect-ui-spacing-drift, development-vessel:detect-poison-producer, gap-goal:the-fleet-completion-probe-that-replaced-liveness-has-no-test-coverage, learned-composition-advertised-shape-coverage-scan-to-resolver-distribution-audit-to, learned-composition-resolver-distribution-audit-to-advertised-shape-coverage-scan-to. Dormant detectors are blind spots-in-waiting — exercise them (exploration boost / scheduled tick) or prune. This is the substrate auditing its own detection coverage (Nth-order).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "detector-coverage-dormant",
+  "source_gap_source": "substrate_detected"
+}

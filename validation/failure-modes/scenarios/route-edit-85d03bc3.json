@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-85d03bc3",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/goal-host-vessel/src/index.ts, add one small self-contained helper function at the TOP LEVEL of the module, imm",
+  "description": "In repos/goal-host-vessel/src/index.ts, add one small self-contained helper function at the TOP LEVEL of the module, immediately before the line that reads `async function recordGoalPath(` — do not insert anything inside an existing function, and do not modify any existing code in this change. The helper is exactly this shape and must be balanced on its own: an async function named `landedShaForGoalHash` taking `(vessel: string, h: string)` and returning `Promise<string | null>`. Its body: if `!vessel || vessel.includes(\"..\") || !/^[0-9a-f]{8}$/.test(h)` return null; then inside a single try/catch that returns null on any error, spawn `Bun.spawn([\"git\", \"-C\", `/workspace/git/vessels/${vessel}`, \"log\", \"origin/dev\", \"-1\", \"--format=%H\", `--grep=route-edit-${h}`], { stdout: \"pipe\", stderr: \"pipe\" })`, read stdout with `await new Response(proc.stdout).text()`, `await proc.exited`, trim it, and return the trimmed value only if it matches `/^[0-9a-f]{40}$/`, otherwise null. Model the Bun.spawn call on the existing one at line 10907 which already runs `git -C dir show` the same way. This change adds a function and nothing else — no call sites, no edits to existing lines — so it must typecheck cleanly and cannot alter any current behavior. A previous attempt at this failed by inserting an unbalanced block into a nested try/catch inside the edit-intent escalation path and produced `Expected \"finally\" but found \"return\"`; adding a flat top-level function instead avoids that entirely.",
+  "goal_text": "In repos/goal-host-vessel/src/index.ts, add one small self-contained helper function at the TOP LEVEL of the module, immediately before the line that reads `async function recordGoalPath(` — do not insert anything inside an existing function, and do not modify any existing code in this change. The helper is exactly this shape and must be balanced on its own: an async function named `landedShaForGoalHash` taking `(vessel: string, h: string)` and returning `Promise<string | null>`. Its body: if `!vessel || vessel.includes(\"..\") || !/^[0-9a-f]{8}$/.test(h)` return null; then inside a single try/catch that returns null on any error, spawn `Bun.spawn([\"git\", \"-C\", `/workspace/git/vessels/${vessel}`, \"log\", \"origin/dev\", \"-1\", \"--format=%H\", `--grep=route-edit-${h}`], { stdout: \"pipe\", stderr: \"pipe\" })`, read stdout with `await new Response(proc.stdout).text()`, `await proc.exited`, trim it, and return the trimmed value only if it matches `/^[0-9a-f]{40}$/`, otherwise null. Model the Bun.spawn call on the existing one at line 10907 which already runs `git -C dir show` the same way. This change adds a function and nothing else — no call sites, no edits to existing lines — so it must typecheck cleanly and cannot alter any current behavior. A previous attempt at this failed by inserting an unbalanced block into a nested try/catch inside the edit-intent escalation path and produced `Expected \"finally\" but found \"return\"`; adding a flat top-level function instead avoids that entirely.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-85d03bc3",
+  "source_gap_source": "substrate_detected"
+}

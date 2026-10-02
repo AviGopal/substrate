@@ -1,0 +1,7 @@
+Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.
+[4m>>>> Executing external compose provider "/usr/bin/podman-compose". Please see podman-compose(1) for how to disable this message. <<<<
+
+[0m910fd05dc09c0dffd7e53a29fcfe186cd72317a29c29540677cb805b6a14cc09
+8f9f98f849a7e0e97d42efac475a74884bd210765c21b7a6d39f646016b151ce
+c7544efeef60b12430f01a0a84cad928fa8b49217069ffa6e045861f4e2f0fc9
+demo-syz-compute-live

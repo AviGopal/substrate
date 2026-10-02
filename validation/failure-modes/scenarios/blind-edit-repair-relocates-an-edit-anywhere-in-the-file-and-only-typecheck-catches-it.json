@@ -1,0 +1,19 @@
+{
+  "id": "blind-edit-repair-relocates-an-edit-anywhere-in-the-file-and-only-typecheck-catches-it",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "ROOT CAUSE, measured 2026-09-03 with a reproduction.",
+  "description": "ROOT CAUSE, measured 2026-09-03 with a reproduction.",
+  "goal_text": "ROOT CAUSE, measured 2026-09-03 with a reproduction.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "blind-edit-repair-relocates-an-edit-anywhere-in-the-file-and-only-typecheck-catches-it",
+  "source_gap_source": "substrate_detected"
+}

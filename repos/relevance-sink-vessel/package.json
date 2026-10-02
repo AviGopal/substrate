@@ -1,0 +1,12 @@
+{
+  "name": "relevance-sink-vessel",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "start": "bun src/index.ts"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "typescript": "^5"
+  }
+}

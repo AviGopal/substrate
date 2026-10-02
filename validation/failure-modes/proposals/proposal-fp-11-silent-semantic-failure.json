@@ -1,0 +1,157 @@
+{"proposal":{"scenario_id":"fp-11-silent-semantic-failure","authored_by":"make_activity_autonomous","registration_status":"draft","created_at":"1970-01-01T00:00:00.000Z"},"template":"{
+  "id": "gap-closing:fp-11-silent-semantic-failure",
+  "name": "Silent Semantic Failure Detection via Replay & Divergence",
+  "description": "Detects silent semantic failures by replaying recent successful LLM-resolver task executions with identical input impulses and comparing output divergence. Identifies candidates where exit_code=0 and rules pass but output is semantically wrong. Proposes semantic validators to gate future executions.",
+  "tags": [
+    "validation.semantic.replay",
+    "validation.semantic.divergence",
+    "failure-mode-detection",
+    "gap-closing"
+  ],
+  "inputShapes": [
+    "activityExecutionTrace",
+    "executionTraceWithSignatures"
+  ],
+  "outputShapes": [
+    "silentFailureCandidate",
+    "semanticValidatorProposal",
+    "gapClosingTrace"
+  ],
+  "tasks": [
+    {
+      "id": "task-fetch-recent-llm-executions",
+      "name": "Fetch recent successful LLM-resolver executions",
+      "description": "Query execution traces from the last 7 days where success=true and template uses LLM-tier resolver. Group by activity_id and input_impulse signature to identify candidates for replay.",
+      "resolver": "activity_fetch",
+      "inputShape": "executionTraceWithSignatures",
+      "outputShape": "activityExecutionTrace",
+      "params": {
+        "query_template": "SELECT id, activity_id, template_id, input_impulses, output_impulses, success, created_at, resolver_type FROM execution WHERE created_at > time::now() - 7d AND success = true AND resolver_type IN ('llm_completion_dispatch', 'llm_resolver') ORDER BY activity_id, created_at DESC",
+        "limit": 100,
+        "include_impulse_content": true
+      }
+    },
+    {
+      "id": "task-group-by-input-signature",
+      "name": "Group executions by input signature and template",
+      "description": "Identify sets of executions with identical input_impulse_ids but potentially different timestamps. These are candidates for replay comparison.",
+      "resolver": "llm_completion_dispatch",
+      "inputShape": "activityExecutionTrace",
+      "outputShape": "activityExecutionTrace",
+      "params": {
+        "prompt": "Analyze the provided execution traces. Group executions by (template_id, input_impulses_signature) where the same input impulse set was executed multiple times. For each group with 2+ executions, return the group metadata including template_id, input_impulse_ids, and list of execution_ids in chronological order. Output as JSON array of {template_id, input_signature_hash, execution_ids, count}.",
+        "context_shape": "activityExecutionTrace"
+      }
+    },
+    {
+      "id": "task-fetch-template-definitions",
+      "name": "Fetch template definitions for replay candidates",
+      "description": "Retrieve the activity template definitions for all identified replay candidates to enable re-execution.",
+      "resolver": "activity_fetch",
+      "inputShape": "activityExecutionTrace",
+      "outputShape": "activityExecutionTrace",
+      "params": {
+        "fetch_templates": true,
+        "include_resolver_config": true
+      }
+    },
+    {
+      "id": "task-replay-with-same-inputs",
+      "name": "Replay executions with identical input impulses",
+      "description": "For each template+input_signature group, re-execute the template against the same input_impulse_ids. Capture output for divergence analysis.",
+      "resolver": "llm_completion_dispatch",
+      "inputShape": "activityExecutionTrace",
+      "outputShape": "activityExecutionTrace",
+      "params": {
+        "prompt": "For each execution group provided, you have access to: (1) the original template definition, (2) the original input_impulses, (3) the original recorded output_impulses. Your task: simulate a re-execution of the template resolver against the SAME input_impulses. If the resolver is llm_completion_dispatch, call it with identical parameters. If the resolver is fs_read/fs_write/git_*, simulate the file operation outcome based on the input parameters. Return for each group: {template_id, input_signature, original_output_impulses, replay_output_impulses, divergence_score (Levenshtein or structural diff)}.",
+        "context_shape": "activityExecutionTrace",
+        "simulate_resolvers": [
+          "llm_completion_dispatch",
+          "fs_read",
+          "fs_write",
+          "fs_edit",
+          "git_status",
+          "git_diff",
+          "git_log"
+        ]
+      }
+    },
+    {
+      "id": "task-identify-divergence-candidates",
+      "name": "Identify silent failure candidates via divergence",
+      "description": "Flag execution groups where original output and replay output diverge significantly (Levenshtein distance > 0.4 on text, or structural diff on JSON). These are silent semantic failure candidates.",
+      "resolver": "llm_completion_dispatch",
+      "inputShape": "activityExecutionTrace",
+      "outputShape": "silentFailureCandidate",
+      "params": {
+        "prompt": "Analyze the divergence scores from the replay results. For each group with divergence_score > 0.4 (or structural mismatch on JSON outputs), classify as a silent semantic failure candidate. Return: {candidate_id, template_id, input_signature, original_output_summary, replay_output_summary, divergence_score, divergence_type (text|json_structure|semantic), severity (low|medium|high), suspected_cause (hallucination|placeholder_not_replaced|wrong_call_site|other)}. Output as JSON array of silentFailureCandidate objects.",
+        "divergence_threshold": 0.4,
+        "context_shape": "activityExecutionTrace"
+      }
+    },
+    {
+      "id": "task-propose-semantic-validators",
+      "name": "Propose semantic validators for affected templates",
+      "description": "For each silent failure candidate, design a semantic validation rule that would have caught the failure. Output as semanticValidatorProposal objects.",
+      "resolver": "llm_completion_dispatch",
+      "inputShape": "silentFailureCandidate",
+      "outputShape": "semanticValidatorProposal",
+      "params": {
+        "prompt": "For each silent failure candidate, propose a semantic validation rule that would detect the failure on future executions. The rule should check the OUTPUT CONTENT for semantic correctness, not just syntax. Consider: (1) LLM hallucinations (check if function names exist in codebase, validate identifiers), (2) Placeholder text (regex for TODO, FIXME, placeholder patterns), (3) Structural integrity (validate that refactored code removes exactly the intended call sites, not more or fewer), (4) Consistency checks (output must reference inputs consistently). Return for each candidate: {validator_id, template_id, validator_name, validator_type (regex|ast_check|semantic_check|cross_reference), rule_description, implementation_pseudocode, expected_failure_modes_caught, false_positive_risk}. Output as JSON array of semanticValidatorProposal objects.",
+        "context_shape": "silentFailureCandidate"
+      }
+    },
+    {
+      "id": "task-generate-correction-record",
+      "name": "Generate Thompson posterior correction record",
+      "description": "Create a thompson_posterior_correction record to adjust Thompson α for affected templates based on silent failure detection.",
+      "resolver": "llm_completion_dispatch",
+      "inputShape": "silentFailureCandidate",
+      "outputShape": "gapClosingTrace",
+      "params": {
+        "prompt": "For each silent failure candidate, generate a Thompson posterior correction. The system previously recorded these executions as successes (alpha incremented), but they were actually failures. Compute: (1) original alpha increment (from success record), (2) corrected alpha decrement (failure penalty), (3) net correction, (4) recommended thompson_prior adjustment for the template. Output: {correction_id, template_id, original_success_count, corrections_applied, alpha_rollback_value, new_thompson_alpha_prior, effective_date}. Also include a summary trace: {gap_closing_activity_id, timestamp, silent_failures_detected, validators_proposed, templates_affected, correction_records_generated}.",
+        "context_shape": "silentFailureCandidate"
+      }
+    }
+  ],
+  "validationRules": [
+    {
+      "type": "requiredFields",
+      "fields": [
+        "silentFailureCandidate",
+        "semanticValidatorProposal"
+      ]
+    },
+    {
+      "type": "forbiddenPatterns",
+      "patterns": [
+        "TODO.*validator",
+        "FIXME.*semantic",
+        "placeholder.*validation"
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "activity_id": "activity_fetch",
+      "reason": "Fetch execution traces and template definitions"
+    }
+  ],
+  "successCriteria": {
+    "must_produce": [
+      "silentFailureCandidate (count >= 0, if any divergence found)",
+      "semanticValidatorProposal (count >= 1 per candidate)",
+      "gapClosingTrace (with correction records)"
+    ],
+    "must_not_produce": [
+      "false positives on minor formatting divergence"
+    ]
+  },
+  "metadata": {
+    "priority": "critical",
+    "cost_asymmetry": "fp_corrosive",
+    "self_heal_window_seconds": 86400,
+    "regression_check": true,
+    "recovery_test_query": "After semantic-validator activity ships, re-run this activity and verify planted silent-failures are now classified as verifier_negative on affected template executions."
+  }
+}"}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-0e047254",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-557ff36c: In repos/development-vessel/src/resolvers/learning-signal-health-obse",
+  "description": "investigate and decompose gap route-edit-557ff36c: In repos/development-vessel/src/resolvers/learning-signal-health-observer.ts remove two dead declarations that were left behind by a refused change. Commit 6dc2005 landed the first hunk of a three-edit plan whose other two edits were refused by the semantic gate, so these two constants are computed and then never read by anything.\n\nDelete these two lines entirely. Each occurs exactly once in the",
+  "goal_text": "investigate and decompose gap route-edit-557ff36c: In repos/development-vessel/src/resolvers/learning-signal-health-observer.ts remove two dead declarations that were left behind by a refused change. Commit 6dc2005 landed the first hunk of a three-edit plan whose other two edits were refused by the semantic gate, so these two constants are computed and then never read by anything.\n\nDelete these two lines entirely. Each occurs exactly once in the",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-0e047254",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-db8bd146-verify_failed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap route-edit-db8bd146 repeated already-recorded failure class verify_failed: == install ==\n== resolve ==\nD",
+  "description": "compose for gap route-edit-db8bd146 repeated already-recorded failure class verify_failed: == install ==\n== resolve ==\nDRYRUN_EXIT=0\n es-errors@1.3.0\n gopd@1.2.0\n es-errors@1.3.0\n function-bind@1.1.2\n delayed-stream@1.0.0\n[1.00ms] done\n== ty",
+  "goal_text": "compose for gap route-edit-db8bd146 repeated already-recorded failure class verify_failed: == install ==\n== resolve ==\nDRYRUN_EXIT=0\n es-errors@1.3.0\n gopd@1.2.0\n es-errors@1.3.0\n function-bind@1.1.2\n delayed-stream@1.0.0\n[1.00ms] done\n== ty",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-db8bd146-verify_failed",
+  "source_gap_source": "substrate_detected"
+}

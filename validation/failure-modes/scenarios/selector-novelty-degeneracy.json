@@ -1,0 +1,19 @@
+{
+  "id": "selector-novelty-degeneracy",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "learning_signal_degeneracy",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "3 detector(s) are redundant-pinned (mean_novel_fraction=0.304) — they produce findings every run but nothing NEW, so poo",
+  "description": "3 detector(s) are redundant-pinned (mean_novel_fraction=0.304) — they produce findings every run but nothing NEW, so pool cycles are spent re-detecting known problems. Affected: development-vessel:model-opportunity-tick, development-vessel:self-alteration-funnel-tick, development-vessel:dead-end-decision-scan-tick.",
+  "goal_text": "3 detector(s) are redundant-pinned (mean_novel_fraction=0.304) — they produce findings every run but nothing NEW, so pool cycles are spent re-detecting known problems. Affected: development-vessel:model-opportunity-tick, development-vessel:self-alteration-funnel-tick, development-vessel:dead-end-decision-scan-tick.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "selector-novelty-degeneracy",
+  "source_gap_source": "substrate_detected"
+}

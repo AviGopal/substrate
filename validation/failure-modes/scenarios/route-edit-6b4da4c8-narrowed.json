@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-6b4da4c8-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-6b4da4c8] investigate and decompose gap reach-history-weekly-counter-inflated-beyond-total-exe",
+  "description": "[narrowed from route-edit-6b4da4c8] investigate and decompose gap reach-history-weekly-counter-inflated-beyond-total-executions-ever: In repos/activity-api/src/services/trace-retention.ts, rollupReachHistory can double-count weekly reach totals. Live evidence: week 2026-08-17 reports total=414944, which is 24x more execution rows than have ever existed in the retained store (17393).\n\nREAD THIS BEFORE PLANNING AN EDIT. The additive UPSERT is NOT the bug.\n\n  reached = (reached ?? 0) + $reached,\n  total = (total ?? 0) + $total,\n\nTh",
+  "goal_text": "[narrowed from route-edit-6b4da4c8] investigate and decompose gap reach-history-weekly-counter-inflated-beyond-total-executions-ever: In repos/activity-api/src/services/trace-retention.ts, rollupReachHistory can double-count weekly reach totals. Live evidence: week 2026-08-17 reports total=414944, which is 24x more execution rows than have ever existed in the retained store (17393).\n\nREAD THIS BEFORE PLANNING AN EDIT. The additive UPSERT is NOT the bug.\n\n  reached = (reached ?? 0) + $reached,\n  total = (total ?? 0) + $total,\n\nTh",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-6b4da4c8-narrowed",
+  "source_gap_source": "substrate_detected"
+}

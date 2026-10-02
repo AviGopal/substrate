@@ -1,0 +1,37 @@
+commit a6fbf4f48f5f512df7d21fc50b6dade189ec3a16
+Merge: fdf197a2 9f1d1c98
+Author:     Substrate Autonomous <substrate-autonomous@substrate.local>
+AuthorDate: Tue Sep 15 03:47:39 2026 +0000
+Commit:     Substrate Autonomous <substrate-autonomous@substrate.local>
+CommitDate: Tue Sep 15 03:47:39 2026 +0000
+
+    Resolve merge conflicts for merging dev into discovery-vessel
+
+diff --cc compose-slots/slot-0.slot
+index bdc16baa,3e556596..0ae66418
+--- a/compose-slots/slot-0.slot
++++ b/compose-slots/slot-0.slot
+@@@ -1,1 -1,1 +1,1 @@@
+- {"pid":3137818,"at":1789441109697,"composeId":"3137818-mu2318zi-2w8e36"}
+ -{"pid":1445425,"at":1789315103744,"composeId":"1445425-mu000i67-qqa7ot"}
+++{"pid":3137818,"at":1789443981703,"composeId":"3137818-mu24qt1j-8w1wes"}
+diff --cc state/learning-mode-state.json
+index 3ff99fb8,692c134d..d9f43ad0
+--- a/state/learning-mode-state.json
++++ b/state/learning-mode-state.json
+@@@ -1,7 -1,7 +1,7 @@@
+  {
+ -  "mode": "collect",
+ -  "driver": "frontier(11 necessary-but-unavailable; top=success_message)",
+ -  "pending_driver": "develop",
+ +  "mode": "develop",
+-   "driver": "frontier(10 necessary-but-unavailable; top=capabilityCensusReport)",
+-   "pending_driver": "develop",
+-   "pending_count": 0,
+-   "updated_at": "2026-09-15T03:00:05.270Z"
+++  "driver": "no_open_demand(routine collect)",
+++  "pending_driver": "collect",
++   "pending_count": 1,
+ -  "updated_at": "2026-09-13T15:59:54.162Z"
+++  "updated_at": "2026-09-15T03:47:24.661Z"
+  }

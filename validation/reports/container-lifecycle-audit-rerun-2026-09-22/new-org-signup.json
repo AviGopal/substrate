@@ -1,0 +1,19 @@
+{
+  "status": 200,
+  "data": {
+    "token": "[redacted]",
+    "user": {
+      "id": "users:npmdasdx5ie8od7vbsqe",
+      "email": "new-org@audit.invalid",
+      "name": "new-org@audit.invalid",
+      "org_id": "organizations:audit_new_org",
+      "role": "owner",
+      "account_id": "accounts:audit_new_org"
+    },
+    "user_id": "users:npmdasdx5ie8od7vbsqe",
+    "org_id": "organizations:audit_new_org",
+    "role": "owner",
+    "account_id": "accounts:audit_new_org",
+    "expires_at": "2026-09-22T10:58:35.000Z"
+  }
+}

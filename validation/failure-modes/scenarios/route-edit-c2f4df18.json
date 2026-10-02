@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-c2f4df18",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/development-vessel/src/cli.ts and no other file.\n\nIn the template seed loop, a result with shape \"structuredE",
+  "description": "Edit repos/development-vessel/src/cli.ts and no other file.\n\nIn the template seed loop, a result with shape \"structuredError\" is pushed onto failures unconditionally. One refusal it catches is activity-api declining a duplicate mint, whose detail reads like \"refused duplicate mint: 1 existing producer(s) ... route to <id> instead of minting a new Beta(1,1) cell\". That refusal is law 3 working as intended, and the post-condition seeding cares about - a producer for the shape exists - is already satisfied.\n\nMeasured on a clean first boot: 49 of 119 templates reported failed, of which 40 were this reuse refusal. Because failures.length > 0 triggers process.exit(1), development-vessel-seed.service ends failed and substrate-doctor reports FAILURES on a substrate behaving correctly.\n\nAdd an alreadyServed counter. When the structuredError detail matches /duplicate mint|existing producer|already[ _-]?exists/i, increment that counter, log the template with a distinct marker instead of the failure marker, and continue WITHOUT pushing onto failures. Include the count in the final summary line so it stays visible.\n\nConstraints: change only repos/development-vessel/src/cli.ts. Do not modify any import statement or any other file. Genuine failures must still count as failures and must still exit non-zero - specifically auth rejections, and validation rejections such as \"Invalid input_shapes: the composition declares a precondition it produces itself\".",
+  "goal_text": "Edit repos/development-vessel/src/cli.ts and no other file.\n\nIn the template seed loop, a result with shape \"structuredError\" is pushed onto failures unconditionally. One refusal it catches is activity-api declining a duplicate mint, whose detail reads like \"refused duplicate mint: 1 existing producer(s) ... route to <id> instead of minting a new Beta(1,1) cell\". That refusal is law 3 working as intended, and the post-condition seeding cares about - a producer for the shape exists - is already satisfied.\n\nMeasured on a clean first boot: 49 of 119 templates reported failed, of which 40 were this reuse refusal. Because failures.length > 0 triggers process.exit(1), development-vessel-seed.service ends failed and substrate-doctor reports FAILURES on a substrate behaving correctly.\n\nAdd an alreadyServed counter. When the structuredError detail matches /duplicate mint|existing producer|already[ _-]?exists/i, increment that counter, log the template with a distinct marker instead of the failure marker, and continue WITHOUT pushing onto failures. Include the count in the final summary line so it stays visible.\n\nConstraints: change only repos/development-vessel/src/cli.ts. Do not modify any import statement or any other file. Genuine failures must still count as failures and must still exit non-zero - specifically auth rejections, and validation rejections such as \"Invalid input_shapes: the composition declares a precondition it produces itself\".",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-c2f4df18",
+  "source_gap_source": "substrate_detected"
+}

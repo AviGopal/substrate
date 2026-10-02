@@ -1,0 +1,19 @@
+{
+  "id": "gap-env-gated-substrate-authoring-decision-emit",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architectural_pattern",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "env-gated capability: SUBSTRATE_AUTHORING_DECISION_EMIT is read by goal-host-vessel, unset in the running environment, a",
+  "description": "env-gated capability: SUBSTRATE_AUTHORING_DECISION_EMIT is read by goal-host-vessel, unset in the running environment, and its unset branch disables a capability or silently falls back (1 site(s), e.g. goal-host-vessel/src/index.ts:15245). Vessel dependencies resolve via discovery; env-gated capability is substrate-invisible configuration.",
+  "goal_text": "env-gated capability: SUBSTRATE_AUTHORING_DECISION_EMIT is read by goal-host-vessel, unset in the running environment, and its unset branch disables a capability or silently falls back (1 site(s), e.g. goal-host-vessel/src/index.ts:15245). Vessel dependencies resolve via discovery; env-gated capability is substrate-invisible configuration.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-env-gated-substrate-authoring-decision-emit",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,528 @@
+{
+  "investigation_id": "2026-05-25T09-18-16-investigation-012",
+  "generated_at": "2026-05-25T09:18:16Z",
+  "investigator_session_id": "claude-sonnet-4-6-iter-028",
+  "prior_investigation_id": "2026-05-25T09-10-48-investigation-011",
+  "loop_iteration": 28,
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container",
+    "substrate_reachable": true,
+    "substrate_version": "1.20.9",
+    "auth_verified": true,
+    "container_name": "substrate-live",
+    "container_status": "Up 14 minutes (restarted ~09:03:36Z)",
+    "health_check": {
+      "redis": "healthy",
+      "surrealdb": "healthy",
+      "discovery": "pending (registered: false — post-restart window)",
+      "embedding": "healthy (all-MiniLM-L6-v2, dim=384)",
+      "pool_size": 0
+    }
+  },
+  "commits_since_prior": {
+    "since": "2026-05-25T09:10:00Z",
+    "commits": [],
+    "note": "No new commits since iter-011. iter-22 narration (756a29ac) was pre-011."
+  },
+  "commit_756a29ac_analysis": {
+    "message": "validation iter-22: activity_recommendation resolver activated; substrate restarted; create-shape-provider-goal unblocked",
+    "what_was_blocking_create_shape_provider_goal": "The create-shape-provider-goal template requires an 'activity_recommendation' resolver to select the best shape-producer candidate. This resolver was NOT registered in GoalHost's built-in registry prior to commit 156f1c30. All executions failed with task_count=0 in ~0ms because the resolver was undefined. Fix: 156f1c30 adds registerBuiltinResolvers() to goal-host-vessel startup — registers activity_recommendation as pattern-tier resolver forwarding to activity-api /v2/activities/recommend.",
+    "validator_claim_unblocked": "PARTIALLY CORRECT — the resolver is now registered. However, live substrate still shows create-shape-provider-goal at n=35, α=1, β=2, 0 successes, avg_dur=0.19ms. The new executions post-restart have not yet appeared (35 is same count as iter-011 at 09:10:48). The resolver registration is confirmed but first successful execution not yet observed."
+  },
+  "thompson_audit": {
+    "verdict": "CONFIRMED CONVERGING — F-037 remains resolved",
+    "evidence": {
+      "validator_dispatch": {
+        "alpha": 2, "beta": 1, "execs": 285, "success_rate": 1.0,
+        "note": "Same as iter-011. Count stable because container restarted 14 min ago; new executions accumulating."
+      },
+      "slot_binding": {
+        "alpha": 2, "beta": 1, "execs": 39, "success_rate": 1.0,
+        "note": "Confirmed stable above baseline."
+      },
+      "evolve_activity_self_contained": {
+        "alpha": 2, "beta": 1, "execs": 2, "success_rate": 1.0,
+        "note": "Only active template in default listing — confirms α moves from 1 to 2 on first success."
+      },
+      "create_shape_provider_goal": {
+        "alpha": 1, "beta": 2, "execs": 35, "success_rate": 0,
+        "avg_duration_ms": 0.19,
+        "note": "No new executions post-restart. Still all pre-resolver-fix failures."
+      },
+      "coverage_tick": {
+        "alpha": 1, "beta": 2, "execs": 3, "success_rate": 0,
+        "note": "No new executions. Boredom not selecting it due to low posterior."
+      }
+    },
+    "f037_status": "RESOLVED (iter-011) — posteriors confirmed moving. normalizeActivityId fix active in Bun-interpreted source.",
+    "f043_status": "RESOLVED (iter-011)"
+  },
+  "boredom_f061_analysis": {
+    "goal_0_measure_topology": {
+      "exec_id": "exec_eoil758o",
+      "template_selected": "replace-activity",
+      "status": "completed",
+      "duration_ms": 226245,
+      "completed_at": "2026-05-25T09:09:24Z",
+      "semantic_mismatch": "replace-activity chosen for 'measure topology' goal — F-056 still open"
+    },
+    "goal_1_probe_unlearned_shapes": {
+      "exec_id": "exec_u720gpxp",
+      "template_selected": "activity:⟨replace-activity⟩",
+      "status": "completed",
+      "duration_ms": 232611,
+      "completed_at": "2026-05-25T09:14:37Z",
+      "note": "PREVIOUSLY failing in 1s (F-041). Now completing in ~3m52s. F-041 RESOLVED — goal[1] now completing successfully. Still selecting replace-activity (semantic mismatch)."
+    },
+    "goal_2_topology_chain": {
+      "status": "SIGTERM at 09:17:04Z",
+      "duration_before_sigterm_ms": 79000,
+      "previous_duration_before_sigterm_ms": 18000,
+      "note": "Duration improved from 18s to 79s. Still SIGTERMed but lasting longer now."
+    },
+    "goal_3_identify_shapes": {
+      "status": "goal-host unreachable at 09:17:51Z — exit code 1",
+      "note": "goal-host died at 09:17:04Z before goal[3] dispatched."
+    },
+    "f061_update": "SUBSTANTIALLY IMPROVED. Goals [0] and [1] both completing successfully now (previously only [0] was completing, and [1] was instant-failing in 1s). Goals [2] and [3] still affected by goal-host-vessel restart cascade."
+  },
+  "f031_f057_root_cause_confirmed": {
+    "finding": "SIGTERM root cause identified: boredom-vessel.service has 'Requires=goal-host-vessel.service'. When goal-host-vessel stops (for any reason — LLM timeout, OOM, or manual restart), systemd propagates STOP to boredom-vessel via the Requires dependency. This is NOT the 300s TimeoutStartSec.",
+    "evidence": [
+      "boredom-vessel.service unit: 'Requires=goal-host-vessel.service'",
+      "goal-host-vessel stopped at 09:17:04Z → boredom-vessel immediately SIGTERMed at 09:17:04Z",
+      "goal-host-vessel stopped at 09:02:56Z → boredom-vessel[1998] SIGTERMed at 09:02:56Z",
+      "The SIGTERM interval matches goal-host-vessel restart cycle (~13 min: 09:03:36 → 09:17:04)"
+    ],
+    "goal_host_restart_reason": "Unknown — goal-host-vessel ran from 09:03:36Z to 09:17:04Z (13m28s), consuming 7.492s CPU. Could be LLM completion timeout, OOM, or internal error. No error log visible.",
+    "fix": "Change boredom-vessel.service to 'Wants=goal-host-vessel.service' (not Requires) OR add 'Restart=on-failure' with boredom checking for goal-host availability before dispatching (already does check but exits with code 1 on failure)."
+  },
+  "f041_resolution": {
+    "prior_status": "OPEN — boredom goal[1] failing in 1s",
+    "current_status": "RESOLVED — goal[1] 'probe unlearned shapes' completed successfully at 09:14:37Z (232s). exec_u720gpxp = replace-activity, success=True.",
+    "resolution": "The activity_recommendation resolver registration (156f1c30) unblocked goal[1]. The 1s failure was the same missing-resolver issue as create-shape-provider-goal."
+  },
+  "template_count_f046": {
+    "total_in_index": 28,
+    "returned_by_default_get": 2,
+    "note": "Still returning 2/28. F-046 OPEN. Confirmed development-vessel /shapes advertises 30 shapes (coverage_tick, memoryNote, memoryNote_write, etc.). The 2 returned are non-dev-vessel templates (forge-vessel-for-shape, evolve-activity-self-contained). FTS/paradigm filter issue persists."
+  },
+  "development_vessel_shapes_note": {
+    "development_vessel_health": "http://localhost:18090/health → status=ok, version=0.1.0, discovery.registered=true",
+    "development_vessel_shapes": "30 shapes advertised: lift_demo_noop, git_status, git_add, git_commit, git_diff, git_log, fs_read, fs_write, fs_edit, activity_fetch, activity_create_variant, vessel_register_passthrough, code_introspect, propagate_judgment, llm_completion_dispatch, json_path_extract, activity_recommend, activity_discover_by_shapes, systemd_restart, learned_topology_snapshot, reachable_unlearned_report, unknown_shape_report, coverage_tick, substrate_health_tick, failure_mode_matrix_score, boredom_enqueue, memoryNote, memoryNote_write, fs_list, http_fetch",
+    "note": "memoryNote and memoryNote_write shapes ARE advertised by development-vessel (port 18090). Memory substrate migration path is available."
+  },
+  "service_status": {
+    "active": ["discovery-vessel", "identity-vessel"],
+    "inactive_dead": ["development-vessel", "goal-host-vessel (just restarted)", "local-tools-vessel", "ribosome-vessel"],
+    "deactivating": ["concept-db", "llm-resolver-vessel"],
+    "failed": ["boredom-vessel (exit-code 1 at 09:17:51 — goal-host unreachable)"],
+    "concept_db_seeder": "failed"
+  },
+  "trace_breakdown_last_50": {
+    "validator_dispatch": {"ok": 37, "fail": 0, "avg_dur_ms": 12318},
+    "slot_binding": {"ok": 6, "fail": 0, "avg_dur_ms": 37722},
+    "create_shape_provider_goal": {"ok": 0, "fail": 6, "avg_dur_ms": 2},
+    "replace_activity": {"ok": 1, "fail": 0, "avg_dur_ms": 232611}
+  },
+  "coverage_tick_status": {
+    "executions": 3,
+    "successes": 0,
+    "alpha": 1,
+    "beta": 2,
+    "s4a_status": "BLOCKED — no successful coverage-tick or coverage_progress=true impulse observed. Boredom goals [0] and [1] completing but selecting replace-activity (Thompson priors favour it: α=2 β=1 vs coverage-tick α=1 β=2). Coverage-tick must succeed to break cycle."
+  },
+  "s4a_window_status": {
+    "s1": "passed",
+    "s2": "passed",
+    "s3": "passed",
+    "s4a": "BLOCKED — requires coverage_progress=true in a coverageReport impulse. Zero successful coverage-tick or substrate_health_tick executions.",
+    "s4b": "BLOCKED — substrate-health-tick not executing.",
+    "cycle_files": "Last: cycle-8.json (2026-05-23). No cycle-9. Lift cycle count stalled.",
+    "new_memoryNote_finding": "development-vessel advertises memoryNote_write shape — memory substrate migration is unblocked."
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "claim": "Gameable lift; cycle-8 unchanged.",
+      "category": "lift",
+      "severity": "high",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z",
+      "note": "No cycle-9. Lift cycles stalled at 8."
+    },
+    {
+      "id": "F-002",
+      "claim": "6 malformed proposals (epoch-zero timestamps).",
+      "category": "provenance",
+      "severity": "high",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-003",
+      "claim": "Traces lack signature; task_count=0 on all traces via API.",
+      "category": "provenance",
+      "severity": "high",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-004",
+      "claim": "Only 8 failure-mode scenarios on disk (spec implies 63).",
+      "category": "validation",
+      "severity": "high",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-005",
+      "claim": "No cycle-9 generated. Lift cycle count stalled at 8.",
+      "category": "lift",
+      "severity": "high",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-006",
+      "claim": "Hardcoded identity.metabob.com and svc.cluster.local defaults.",
+      "category": "deployment",
+      "severity": "medium",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-007",
+      "claim": "Trailblazing unimplemented.",
+      "category": "operational",
+      "severity": "medium",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-008",
+      "claim": "Mythic language in substrate self-description.",
+      "category": "idiom",
+      "severity": "low",
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-009",
+      "claim": "substrate-explicit-vessels tasks still open (1b.6, 2.4, 2.5, 6.3).",
+      "category": "operational",
+      "severity": "low",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-011",
+      "claim": "Lift-criterion-hardening zero DEV iterations.",
+      "category": "operational",
+      "severity": "high",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-012",
+      "claim": "Cycle reports substrate-anonymous.",
+      "category": "lift",
+      "severity": "high",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-013",
+      "claim": "6 invalid + 3 subagent proposals remain.",
+      "category": "provenance",
+      "severity": "high",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-015",
+      "claim": "Progression-driver paused, S.2 not auto-advancing.",
+      "category": "lift",
+      "severity": "high",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-019",
+      "claim": "Development-vessel template seeder failing all 15 seeds at startup.",
+      "category": "operational",
+      "severity": "high",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-020",
+      "claim": "Coverage-tick: 0 successes across all iterations.",
+      "category": "execution",
+      "severity": "critical",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z",
+      "evidence_this_iter": "coverage-tick α=1 β=2 n=3 success_rate=0 — unchanged."
+    },
+    {
+      "id": "F-021",
+      "claim": "Boredom topology goals selecting wrong templates (Thompson deprioritizes coverage-tick due to β=2).",
+      "category": "execution",
+      "severity": "high",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z",
+      "evidence_this_iter": "goal[0] exec_eoil758o → replace-activity. goal[1] exec_u720gpxp → replace-activity. Both goals completing but selecting replace-activity (α=2 β=1) over coverage-tick (α=1 β=2). Semantic mismatch."
+    },
+    {
+      "id": "F-023",
+      "claim": "Template FTS index incomplete: GET /v2/activities/templates returns 2 of 28.",
+      "category": "operational",
+      "severity": "medium",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z",
+      "evidence_this_iter": "total=28, templates=[2]. Forge-vessel-for-shape + Evolve-activity-self-contained only."
+    },
+    {
+      "id": "F-025",
+      "claim": "Discovery-vessel unhealthy in activity-api /health.",
+      "category": "operational",
+      "severity": "medium",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z",
+      "note": "health check shows discovery: pending (registered: false). Post-restart window — may resolve as discovery registration completes."
+    },
+    {
+      "id": "F-026",
+      "claim": "Trace total returns -1 from API.",
+      "category": "operational",
+      "severity": "low",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z",
+      "evidence_this_iter": "GET /v2/activities/execution-traces?limit=1 → total=-1. Unchanged."
+    },
+    {
+      "id": "F-029",
+      "claim": "harness-check-scenario: 0% success across 5 executions.",
+      "category": "execution",
+      "severity": "medium",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-031",
+      "claim": "Boredom goals killed by SIGTERM within seconds of dispatch.",
+      "category": "execution",
+      "severity": "high",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z",
+      "root_cause_confirmed": "boredom-vessel.service has 'Requires=goal-host-vessel.service'. When goal-host-vessel restarts, systemd propagates STOP to boredom-vessel. SIGTERM is not TimeoutStartSec — it is the Requires dependency cascade. goal-host-vessel restarted at 09:17:04Z after 13m28s, killing boredom-vessel goal[2] at 79s into execution. Fix: change Requires to Wants."
+    },
+    {
+      "id": "F-036",
+      "claim": "Create-shape-provider-goal: instant failures, 0 successes.",
+      "category": "execution",
+      "severity": "high",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z",
+      "update": "Resolver (activity_recommendation) now registered. But n still =35, success_rate=0, avg_dur=0.19ms. No new executions observed post-restart. Next boredom cycle (after goal-host recovers) will reveal if resolver registration fixed the issue."
+    },
+    {
+      "id": "F-037",
+      "claim": "Thompson posteriors flat — normalizeActivityId fix not applied to running image.",
+      "category": "execution",
+      "severity": "critical",
+      "status": "resolved",
+      "resolved_at": "2026-05-25T09:10:48Z",
+      "resolution": "Confirmed in iter-011. Posteriors moving: validator-dispatch α=2, slot-binding α=2, evolve α=2."
+    },
+    {
+      "id": "F-039",
+      "claim": "Failure_mode null on all failure traces.",
+      "category": "provenance",
+      "severity": "medium",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z",
+      "evidence_this_iter": "Recent traces: create-shape-provider-goal failures have fm=None."
+    },
+    {
+      "id": "F-041",
+      "claim": "Boredom goal[1] 'probe unlearned shapes' fails in 1s.",
+      "category": "execution",
+      "severity": "medium",
+      "status": "resolved",
+      "resolved_at": "2026-05-25T09:18:16Z",
+      "resolution": "goal[1] exec_u720gpxp completed successfully at 09:14:37Z (232s). The 1s failure was caused by missing activity_recommendation resolver (same root cause as create-shape-provider-goal). Resolver registration fix (156f1c30) resolved this."
+    },
+    {
+      "id": "F-042",
+      "claim": "Boredom goal[0] topology goal hanging for 300s (HTTP timeout on goal-host).",
+      "category": "execution",
+      "severity": "high",
+      "status": "resolved",
+      "resolved_at": "2026-05-25T09:10:48Z",
+      "resolution": "goal[0] now completing in ~3m47s. Timeout resolved by activity_recommendation resolver registration."
+    },
+    {
+      "id": "F-043",
+      "claim": "Thompson alpha/beta not updating correctly.",
+      "category": "execution",
+      "severity": "critical",
+      "status": "resolved",
+      "resolved_at": "2026-05-25T09:10:48Z",
+      "resolution": "normalizeActivityId fix confirmed active. Posteriors moving."
+    },
+    {
+      "id": "F-045",
+      "claim": "Goal-host-vessel /shapes not returning activity_recommendation shape.",
+      "category": "operational",
+      "severity": "low",
+      "status": "resolved",
+      "resolved_at": "2026-05-25T09:10:48Z",
+      "resolution": "Category error — activity_recommendation is a resolver, not a shape. Startup log confirms registration."
+    },
+    {
+      "id": "F-046",
+      "claim": "Template list returns 2/28 templates via default GET.",
+      "category": "operational",
+      "severity": "medium",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z",
+      "evidence_this_iter": "total=28, templates=[2 items]. Confirmed."
+    },
+    {
+      "id": "F-047",
+      "claim": "Boredom trace not visible in execution-traces API.",
+      "category": "operational",
+      "severity": "medium",
+      "status": "resolved",
+      "resolved_at": "2026-05-25T09:10:48Z",
+      "resolution": "Boredom traces ARE visible. exec_eoil758o (replace-activity) and exec_u720gpxp confirmed in API."
+    },
+    {
+      "id": "F-050",
+      "claim": "Validator iter-21 create-shape-provider-goal success rate discrepancy.",
+      "category": "provenance",
+      "severity": "medium",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z",
+      "note": "Validator claimed 24% success (α~2), live shows 0% success (α=1 β=2 n=35). Discrepancy unresolved."
+    },
+    {
+      "id": "F-053",
+      "claim": "Failure_mode null on all failure traces.",
+      "category": "provenance",
+      "severity": "medium",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-055",
+      "claim": "Subagents gate closed via docker exec fallback, not host-mapped port.",
+      "category": "methodology",
+      "severity": "medium",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-056",
+      "claim": "Replace-activity selected for topology measurement goal (semantic mismatch).",
+      "category": "execution",
+      "severity": "medium",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z",
+      "update": "Both goal[0] and goal[1] now selecting replace-activity. Thompson correctly preferring high-α template, but semantics wrong. Coverage-tick needs a successful execution to fix its posterior."
+    },
+    {
+      "id": "F-057",
+      "claim": "Boredom goals [2],[3] still being SIGTERMed.",
+      "category": "execution",
+      "severity": "medium",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z",
+      "root_cause": "Confirmed: Requires=goal-host-vessel.service causes systemd propagation of stop. Fix: change Requires to Wants in boredom-vessel.service unit file.",
+      "improvement": "Goal[2] now lasting 79s before SIGTERM (was 18s) due to goal-host restart cycle being 13min not 5min post-fix."
+    },
+    {
+      "id": "F-059",
+      "claim": "Development-vessel seeder still failing all seeds on startup.",
+      "category": "operational",
+      "severity": "high",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-060",
+      "claim": "goal-host-vessel /shapes unreachable from outside container.",
+      "category": "operational",
+      "severity": "medium",
+      "status": "open",
+      "last_verified": "2026-05-25T09:18:16Z"
+    },
+    {
+      "id": "F-061",
+      "claim": "Boredom goal[0] topology goal hanging for 300s.",
+      "category": "execution",
+      "severity": "high",
+      "status": "resolved",
+      "resolved_at": "2026-05-25T09:10:48Z",
+      "resolution": "Goal[0] now completing in 226s. Goals [1] also now completing (232s). See F-041 resolved."
+    },
+    {
+      "id": "F-062",
+      "claim": "Thompson normalizeActivityId fix uncertain in running container image.",
+      "category": "execution",
+      "severity": "critical",
+      "status": "resolved",
+      "resolved_at": "2026-05-25T09:10:48Z",
+      "resolution": "Confirmed active. Bun interprets TS from /workspace source directly."
+    },
+    {
+      "id": "F-063",
+      "claim": "NEW: boredom-vessel.service 'Requires=goal-host-vessel.service' causes SIGTERM cascade when goal-host restarts.",
+      "category": "execution",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T09-18-16-investigation-012",
+      "status": "open",
+      "evidence": [
+        "boredom-vessel.service unit: Requires=goal-host-vessel.service",
+        "goal-host-vessel stopped at 09:17:04Z → boredom-vessel SIGTERMed at exact same timestamp",
+        "goal-host restart cycle: ~13min (09:03:36 → 09:17:04)",
+        "CPU consumed by goal-host: 7.492s total in 13m28s — OOM/internal error likely"
+      ],
+      "fix": "Change Requires= to Wants= in boredom-vessel.service. Or add restart resilience (boredom already checks goal-host availability and exits with code 1)."
+    },
+    {
+      "id": "F-064",
+      "claim": "NEW: memoryNote_write shape advertised by development-vessel but substrate migration not yet triggered.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T09-18-16-investigation-012",
+      "status": "open",
+      "evidence": "development-vessel /shapes: includes memoryNote and memoryNote_write. Memory substrate migration path is technically available but bulk migration script (validate/scripts/migrate-memory-to-substrate.ts) not yet run.",
+      "note": "Not a blocking issue. Low priority."
+    }
+  ],
+  "findings_tally": {
+    "open": 27,
+    "resolved": 39,
+    "partially_resolved": 0,
+    "regressed": 0,
+    "unverifiable": 1,
+    "total": 67,
+    "new_this_iteration": 2,
+    "resolved_this_iteration": 2,
+    "key_resolutions": ["F-041 (goal[1] now completing)", "F-061 (goals [0] and [1] both completing)"],
+    "key_new_findings": ["F-063 (SIGTERM root cause: Requires= cascade)", "F-064 (memoryNote_write available)"],
+    "critical_open": ["F-020 (coverage-tick 0 successes)", "F-036 (create-shape-provider-goal still 0 successes post-resolver-fix)"]
+  },
+  "next_wake_recommendation": {
+    "delay_seconds": 900,
+    "rationale": "Thompson converging (F-037 resolved). Goals [0] and [1] both completing. BUT: (1) create-shape-provider-goal still 0 successes post resolver fix — need to confirm first successful execution within 1-2 boredom cycles. (2) coverage-tick still 0 successes — S.4a remains blocked. (3) F-063 root cause confirmed (Requires→Wants fix needed). 900s = 15min gives 2-3 boredom cycles to accumulate evidence on create-shape-provider-goal post-fix status. If still 0 successes after 3 cycles, resolver fix may not be sufficient.",
+    "watch_for": [
+      "create-shape-provider-goal first successful execution (α should go to 2)",
+      "coverage-tick execution via boredom or forced trigger",
+      "goal-host-vessel restart cycle length (was 13min — if shorter means escalating OOM)",
+      "S.4a gate: coverage_progress=true in any coverageReport impulse"
+    ]
+  }
+}

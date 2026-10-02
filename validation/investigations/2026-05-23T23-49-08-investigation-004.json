@@ -1,0 +1,385 @@
+{
+  "investigation_id": "2026-05-23T23-49-08-investigation-004",
+  "generated_at": "2026-05-23T23:49:08Z",
+  "investigator_session_id": "loop-iteration-004",
+  "prior_investigation_id": "2026-05-23T23-32-45-investigation-003",
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container",
+    "version_reported": "1.20.9",
+    "auth_verified": true,
+    "narrator_state": "running; 5 snapshots produced; latest 2026-05-23T23:46:20.780Z"
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "claim": "Gameable lift criteria unchanged.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq '.lift_kpi' validation/failure-modes/cycles/cycle-8.json",
+          "excerpt": "{ debt_zero: true, gap_count_decreasing: true, consecutive_zero_debt_cycles: 4 }",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-002",
+      "claim": "Regex JSON fallback still required; verified by direct parse failures.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "for f in validation/failure-modes/proposals/*.json; do jq empty \"$f\" 2>/dev/null || echo INVALID; done | grep -c INVALID",
+          "excerpt": "6 files fail jq empty (invalid JSON)",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-003",
+      "claim": "Live traces still carry no signature/attestation. Unchanged from iter-003.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl ... /v2/activities/execution-traces?limit=1 | jq '.executions[0] | keys'",
+          "excerpt": "Keys lack signature, attestation_token, key_fingerprint",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-004",
+      "claim": "Six failure-mode scenarios; matrix unchanged.",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/failure-modes/scenarios/ | wc -l",
+          "excerpt": "6",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-005",
+      "claim": "cycle-8.json substrate-anonymous; live traces DO carry vessel_id and org_id. Unchanged.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq '{cycle, target, kind}' validation/failure-modes/cycles/cycle-8.json",
+          "excerpt": "all null",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-006",
+      "claim": "Three hardcoded defaults still present; grep -c returns 1, 1, 2.",
+      "category": "deployment",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -cE 'metabob.com|svc.cluster.local' repos/identity-vessel/src/services/trace.ts repos/identity-vessel/src/services/jwt.ts repos/discovery-vessel/src/middleware/auth.ts",
+          "excerpt": "trace.ts:1, jwt.ts:2, auth.ts:1",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-007",
+      "claim": "Trailblazing unimplemented; foundation:904 unchanged.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "file_ref",
+          "location": "docs/architecture/IMPULSE_ACTIVITY_FOUNDATION.md:904",
+          "excerpt": "**\"Trailblazing\"** — never implemented; remains only in archived docs.",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-008",
+      "claim": "Mythic three-state language; no operational referent. Unverifiable by code-level check.",
+      "category": "idiom",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-009",
+      "claim": "22 changes drafted 2026-05-23, zero DEV tasks complete across five audited.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "for c in substrate-identity-resolution substrate-self-replacement-pipeline external-resolver-vesselization external-resolver-grounding lift-criterion-hardening; do grep -c '^- \\[x\\]' openspec/changes/2026-05-23-$c/tasks.md; done",
+          "excerpt": "0 0 0 0 0",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-010",
+      "claim": "Root remains clean; 13 entries.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls -1 | wc -l",
+          "excerpt": "13",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-011",
+      "claim": "Lift-criterion-hardening at zero DEV progress.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "grep -c '^- \\[x\\]' openspec/changes/2026-05-23-lift-criterion-hardening/tasks.md",
+          "excerpt": "0",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-012",
+      "claim": "Cycle reports record no substrate target.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq 'keys' validation/failure-modes/cycles/cycle-8.json",
+          "excerpt": "No substrate_target, target, endpoint, kind",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-013",
+      "claim": "Sharpened: prior count '6 make_activity_autonomous + 3 subagent' was misleading. Actual state: 6 of 9 proposal files fail jq parse entirely (INVALID JSON); the 'make_activity_autonomous' tag is recovered only via progression-driver's regex fallback. The 3 valid-JSON files carry authored_by='subagent'. So the substrate's evidence of autonomous authorship is exclusively extracted from malformed files.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "for f in validation/failure-modes/proposals/*.json; do echo \"$(basename $f): $(jq -r '.proposal.authored_by // .authored_by // \"MISSING\"' \"$f\" 2>/dev/null || echo PARSE-FAIL)\"; done",
+          "excerpt": "6 PARSE-FAIL (intended make_activity_autonomous); 3 valid with authored_by=subagent",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "regressed",
+      "operator_remediation": "The regex-fallback-only path for 'autonomous' provenance is materially worse than I described in iter-002/003. Prior reports implied symmetric tagged provenance with a count divide; the truth is one channel is structured and the other is broken. The lift criterion accepts the broken-JSON evidence."
+    },
+    {
+      "id": "F-014",
+      "claim": "Embedding still disabled on running substrate; F-V58 fix not in effect.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -sf http://localhost:18080/health | jq '.checks.embedding.status'",
+          "excerpt": "\"disabled\"",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-015",
+      "claim": "Trace list still returns total: -1 sentinel.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl ... /v2/activities/execution-traces?limit=1 | jq '.total'",
+          "excerpt": "-1",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-016",
+      "claim": "Narrator process IS now running; 5 snapshots produced; latest 2026-05-23T23:46:20.780Z (~3 minutes before this investigation, within the 5-minute cadence).",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ps ax | grep substrate-narrator | grep -v grep | wc -l",
+          "excerpt": "1",
+          "verified_at": "2026-05-23T23:49:08Z"
+        },
+        {
+          "kind": "command",
+          "command": "ls validation/observations/snapshots/ | wc -l",
+          "excerpt": "5",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "resolved",
+      "operator_remediation": "No action needed; narrator restarted between iter-003 and iter-004. Split F-020 covers the still-absent event JSONL."
+    },
+    {
+      "id": "F-017",
+      "claim": "Ribosome firing remains positive evidence.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "(prior iter-003 trace query captured ribosome-extract execution)",
+          "excerpt": "Positive evidence carried forward",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-018",
+      "claim": "Snapshot template count (18) matches live query (18). Re-verified with latest snapshot.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq '.activity_api.templates | length' validation/observations/snapshots/snapshot-2026-05-23T23-46-20-831Z.json",
+          "excerpt": "18",
+          "verified_at": "2026-05-23T23:49:08Z"
+        },
+        {
+          "kind": "command",
+          "command": "curl ... /v2/activities/templates?limit=100 | jq '.templates | length'",
+          "excerpt": "18",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "resolved"
+    },
+    {
+      "id": "F-019",
+      "claim": "Discovery-vessel still returns 401 to the narrator's key; reproduced in latest snapshot.",
+      "category": "deployment",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-32-45-investigation-003",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq '.discovery_vessel' validation/observations/snapshots/snapshot-2026-05-23T23-46-20-831Z.json",
+          "excerpt": "{ endpoint: 'http://localhost:18100', reachable: false, stats: null, error: 'HTTP 401' }",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-020",
+      "claim": "Narrator is running but no event JSONL file has been written to validation/observations/. The WebSocket subscription to activity-api /ws appears to be silently inactive — five snapshots produced over ~16 minutes, no events captured.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-49-08-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls validation/observations/events* 2>&1",
+          "excerpt": "ls: cannot access 'validation/observations/events*': No such file or directory",
+          "verified_at": "2026-05-23T23:49:08Z"
+        },
+        {
+          "kind": "command",
+          "command": "ls validation/observations/snapshots/ | wc -l",
+          "excerpt": "5 (snapshots produced normally)",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Check narrator logs for WebSocket connection errors. The snapshot path uses HTTP GET (which works against activity-api with the configured key) but the event path uses WS authentication which may use a different credential or endpoint. F-019 (discovery 401) suggests cross-vessel auth divergence; WS may be hitting the same issue."
+    },
+    {
+      "id": "F-021",
+      "claim": "Concept-db endpoint is 'not configured' in the narrator snapshot. The substrate has a concept-db vessel registered (per repos/concept-db/) but the narrator has no URL for it, so the concept inventory is missing from snapshots. The substrate's t-0 knowledge surface (per SUBSTRATE_NARRATION_PROTOCOL.md §B.1) explicitly includes concept-db, but our captured surface excludes it.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-49-08-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "jq '.concept_db' validation/observations/snapshots/snapshot-2026-05-23T23-46-20-831Z.json",
+          "excerpt": "{ endpoint: null, reachable: false, concept_count: null, sample_concepts: [], error: 'not configured' }",
+          "verified_at": "2026-05-23T23:49:08Z"
+        },
+        {
+          "kind": "file_ref",
+          "location": "docs/SUBSTRATE_NARRATION_PROTOCOL.md (§B.1)",
+          "excerpt": "concept-db is named as substrate-side knowledge surface component",
+          "verified_at": "2026-05-23T23:49:08Z"
+        }
+      ],
+      "status": "open",
+      "operator_remediation": "Add CONCEPT_DB_URL to the narrator's environment (or to ~/.metabob/config.json under conceptDb.endpoint). Without it, snapshots are an incomplete picture of the substrate's knowledge surface."
+    }
+  ],
+  "regressions_since_prior": ["F-013"],
+  "resolutions_since_prior": ["F-016"],
+  "new_findings": ["F-020", "F-021"],
+  "open_questions": [
+    "Why is the WebSocket event capture inactive while HTTP snapshots succeed? Different auth path or different endpoint?",
+    "Will adding CONCEPT_DB_URL produce concept inventory in subsequent snapshots?",
+    "Will the dev operator make DEV progress on the five highest-leverage changes before the next iteration?",
+    "Did the regression on F-013 (sharper claim) cause downstream readers to underestimate the provenance gap?"
+  ],
+  "next_wake_recommendation": {
+    "delay_seconds": 2400,
+    "reason": "LIFT CANDIDATE stamped; F-013 regression and new F-020/F-021 are worth re-checking after 40 minutes. Substrate is producing snapshots steadily so the next iteration has meaningful new state to compare."
+  }
+}

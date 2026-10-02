@@ -1,0 +1,13 @@
+#!/bin/sh
+# $1: prepared | committed | aborted; stdin: "<old> <new> <ref>" per update.
+# Only committed updates to local branches are recorded: fetches move remote-tracking
+# refs constantly and carry no authorship.
+. "$(dirname "$0")/_record.sh"
+input=$(cat)
+if [ "$1" = "committed" ]; then
+  printf '%s\n' "$input" | while read -r old new ref; do
+    case "$ref" in refs/heads/*) ;; *) continue ;; esac
+    ledger_emit ref_update "$(jq -cn --arg old "$old" --arg new "$new" --arg ref "$ref" '{old:$old, new:$new, ref:$ref}')"
+  done
+fi
+printf '%s\n' "$input" | ledger_chain reference-transaction "$@"

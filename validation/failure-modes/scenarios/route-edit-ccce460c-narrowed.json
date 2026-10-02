@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-ccce460c-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-ccce460c] investigate and decompose gap route-edit-9077062c: investigate gap gap-httpresponse ",
+  "description": "[narrowed from route-edit-ccce460c] investigate and decompose gap route-edit-9077062c: investigate gap gap-httpresponse before composing (low_confidence_pick, predicted_p=0.25): Capability gap: the goal-walk needs a producer for shape \"httpResponse\" but no live resolver or activity produces it. AUTHOR a resolver that produces ONLY the shape \"httpResponse\" — do NOT expand scope, produce no other output shape. Put it",
+  "goal_text": "[narrowed from route-edit-ccce460c] investigate and decompose gap route-edit-9077062c: investigate gap gap-httpresponse before composing (low_confidence_pick, predicted_p=0.25): Capability gap: the goal-walk needs a producer for shape \"httpResponse\" but no live resolver or activity produces it. AUTHOR a resolver that produces ONLY the shape \"httpResponse\" — do NOT expand scope, produce no other output shape. Put it",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-ccce460c-narrowed",
+  "source_gap_source": "substrate_detected"
+}

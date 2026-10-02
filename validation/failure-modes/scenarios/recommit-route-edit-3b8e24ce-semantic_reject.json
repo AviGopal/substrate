@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-3b8e24ce-semantic_reject",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/development-vessel/src/resolvers/feature-compose.ts, recover a typecheck-repair anchor that differs from the fi",
+  "description": "In repos/development-vessel/src/resolvers/feature-compose.ts, recover a typecheck-repair anchor that differs from the file only by leading or trailing whitespace, instead of abandoning the repair round. Edit repos/development-vessel/src/resolvers/feature-compose.ts.",
+  "goal_text": "In repos/development-vessel/src/resolvers/feature-compose.ts, recover a typecheck-repair anchor that differs from the file only by leading or trailing whitespace, instead of abandoning the repair round. Edit repos/development-vessel/src/resolvers/feature-compose.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-3b8e24ce-semantic_reject",
+  "source_gap_source": "substrate_detected"
+}

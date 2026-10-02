@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-151d37f8-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-151d37f8] investigate and decompose gap route-edit-f4a73588: The execution engine's vessel res",
+  "description": "[narrowed from route-edit-151d37f8] investigate and decompose gap route-edit-f4a73588: The execution engine's vessel resolver treats a libp2p facade row's multiaddr as an HTTP URL, so every engine-level call to a federated vessel fails with 'fetch() URL is invalid' while walk-level calls to the same vessel succeed\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds dead code that isn't called from any execution path and doesn't modify the vessel resolver behavior that's actually causing the issue\n- syntax_break: src/engine.ts(190,9): error TS1135: Argument expression expected. | src/engine.ts(207,9): error TS1128: Declaration or statement expected.\n- verify_failed: src/engine.ts(224,79): error TS2353: Object literal may only specify known properties, and 'shape' does not exist in type 'Impulse'. | src/engine.ts(226,83): error TS2353: Object literal may only spec\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-151d37f8] investigate and decompose gap route-edit-f4a73588: The execution engine's vessel resolver treats a libp2p facade row's multiaddr as an HTTP URL, so every engine-level call to a federated vessel fails with 'fetch() URL is invalid' while walk-level calls to the same vessel succeed\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds dead code that isn't called from any execution path and doesn't modify the vessel resolver behavior that's actually causing the issue\n- syntax_break: src/engine.ts(190,9): error TS1135: Argument expression expected. | src/engine.ts(207,9): error TS1128: Declaration or statement expected.\n- verify_failed: src/engine.ts(224,79): error TS2353: Object literal may only specify known properties, and 'shape' does not exist in type 'Impulse'. | src/engine.ts(226,83): error TS2353: Object literal may only spec\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-151d37f8-narrowed",
+  "source_gap_source": "substrate_detected"
+}

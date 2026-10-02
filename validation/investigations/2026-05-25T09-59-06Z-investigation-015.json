@@ -1,0 +1,258 @@
+{
+  "investigation_id": "2026-05-25T09-59-06Z-investigation-015",
+  "generated_at": "2026-05-25T09:59:06Z",
+  "investigator_session_id": "claude-sonnet-4-6-iter-031",
+  "prior_investigation_id": "2026-05-25T09-42-37-investigation-014",
+  "loop_iteration": 31,
+
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container",
+    "substrate_reachable": true,
+    "substrate_version": "1.20.9",
+    "auth_verified": true,
+    "container_name": "substrate-live",
+    "container_status": "Up 44 minutes (as of 09:48:27Z)",
+    "health_at_investigation": {
+      "redis": "healthy",
+      "surrealdb": "healthy",
+      "discovery": "healthy, registered=true",
+      "embedding": "healthy, all-MiniLM-L6-v2 dim=384"
+    }
+  },
+
+  "commits_analyzed": [
+    {
+      "sha": "6ef640c3",
+      "message": "fix(substrate): register activity-api in discovery with correct endpoint vars",
+      "scope": "activity-api.service unit — added DISCOVERY_VESSEL_ENDPOINT=http://127.0.0.1:8100, VESSEL_ID=activity-api-local, VESSEL_ENDPOINT",
+      "claim": "After: 7 vessels / 107 shapes in discovery registry including activity-api-local"
+    },
+    {
+      "sha": "575dba23",
+      "message": "validation iter-27: BREAKTHROUGH — template registry 2→28 templates",
+      "scope": "validation/findings/iter-27-narration.md (new file, 131 lines)",
+      "claim": "topology templates now queryable; S.4a measurement unblocked"
+    },
+    {
+      "sha": "26eb6aa3",
+      "message": "chore(validation): update agent-coordination — discovery registry complete, coverage-tick confirmed",
+      "scope": "validation/state/agent-coordination.json update",
+      "claim": "7 vessels / 107 shapes in discovery. coverage-tick executed at 09:40 (44s). Thompson: validator-dispatch alpha=93, slot-binding alpha=15"
+    }
+  ],
+
+  "f025_resolution_audit": {
+    "finding": "F-025: activity-api not registering with discovery-vessel",
+    "prior_status": "OPEN (investigation-014: discovery.status=unhealthy, registered=false)",
+    "current_status": "RESOLVED",
+    "evidence": {
+      "activity_api_health": "discovery.status=healthy, registered=true (verified at 09:48:27Z)",
+      "discovery_vessel_port": "8100 internal, 18100 host (not 18090 — that is development-vessel on 8090)",
+      "registry_stats": "totalVessels=7, totalShapes=106, healthyCount=7 (via GET /registry/stats with auth)",
+      "activity_api_local_vessel": "vessel_id=activity-api-local, endpoint=http://127.0.0.1:8080, shapes=53 (verified via GET /vessels/activity-api-local)",
+      "registry_shapes_sample": "activityExecutionTrace, activityTemplate, activityMetrics, executionTraceWithSignatures, impulseRelevance, compositionSuccess, activityTemplate_update, activityTemplate_deprecate, activityFeedback_write (confirmed in GET /registry/shapes returning 106 total)"
+    },
+    "commit_that_fixed": "6ef640c3",
+    "discrepancy_note": "Commit message says 107 shapes; registry/stats returns 106 at 09:58:50Z. Difference of 1 — likely one shape TTL-expired or registration order. Not material.",
+    "resolution_confirmed": true
+  },
+
+  "discovery_registry_state": {
+    "vessel_count": 7,
+    "shape_count": 106,
+    "healthy_count": 7,
+    "vessels_identified": [
+      "activity-api-local (53 shapes, endpoint=http://127.0.0.1:8080)",
+      "development-vessel-local (seen in /health)",
+      "discovery-vessel (self, 4 shapes: vesselCapability/vesselEndpoint/vesselHealth/vesselRegistry)",
+      "goal-host-vessel",
+      "llm-resolver-vessel",
+      "local-tools-vessel",
+      "identity-vessel (inferred from health check)"
+    ],
+    "note": "Prior (pre-fix): 5 vessels / 54 shapes. F-025 fix added activity-api-local with 53 shapes, raising total from 54→106."
+  },
+
+  "s4a_gate_audit": {
+    "spec_requirement": "S.4a: At least one coverageReport impulse has coverage_progress=true from natural substrate activity",
+    "coverage_tick_executions": {
+      "count_in_500_trace_window": 1,
+      "execution": {
+        "executed_at": "2026-05-25T09:40:19.421Z",
+        "success": true,
+        "duration_ms": 44122,
+        "task_count": 0,
+        "impulse_count": 0,
+        "output_impulses_stored": false
+      },
+      "total_in_metrics": 4,
+      "discrepancy_explanation": "metrics.total_executions=4 reflects SurrealDB-persisted state including pre-container-restart runs. The current 500-trace window starts at 08:24:50Z, capturing only post-restart activity."
+    },
+    "coverage_progress_current_state": {
+      "invoked_at": "2026-05-25T09:58:40Z",
+      "coverage_progress": false,
+      "consecutive_progressing_cycles": 0,
+      "cells_over_time": [
+        {"window": "1h lookback", "timestamp": "2026-05-25T08:56:56Z", "reachable_learned": 9, "reachable_unlearned": 14, "unknown": 0},
+        {"window": "2h lookback", "timestamp": "2026-05-25T07:56:56Z", "reachable_learned": 9, "reachable_unlearned": 14, "unknown": 0},
+        {"window": "3h lookback", "timestamp": "2026-05-25T06:56:56Z", "reachable_learned": 9, "reachable_unlearned": 14, "unknown": 0},
+        {"window": "4h lookback", "timestamp": "2026-05-25T05:56:56Z", "reachable_learned": 9, "reachable_unlearned": 14, "unknown": 0}
+      ],
+      "interpretation": "RL=9 across all 4 windows — no new shapes learned. coverage_progress=false requires reachable_learned strictly increasing. Stagnant."
+    },
+    "s4a_status": "NOT MET",
+    "window_1_anchor": "2026-05-25T09:40:19Z (coverage-tick succeeded but produced coverage_progress=false)",
+    "root_cause": "Reachable_learned count is flat at 9 across all windows. The system executes activity templates but the coverage_tick resolver sees no new shape learning. F-068 (task_count=0) means output impulses are not stored in traces, so coverage_tick cannot observe shape output progression from recent executions — it falls back to template output_shapes, but those were already present in older windows too.",
+    "s4a_unblocked_claim": "The validator iter-27 claim 'S.4a measurement unblocked' is ACCURATE in the narrow sense that coverage-tick can now execute (it ran at 09:40). It is NOT accurate if interpreted as 'S.4a will be satisfied soon' — coverage_progress is false and will remain so until RL increases.",
+    "what_would_close_s4a": "New templates must be seeded or created (increasing reachable_learned above 9) across successive 1h windows."
+  },
+
+  "s4b_gate_audit": {
+    "spec_requirement": "S.4b: most recent substrateHealthReport has health_verdict.overall_passing=true",
+    "current_overall_passing": false,
+    "health_verdict_detail": {
+      "confidence_passing": false,
+      "stability_passing": false,
+      "optimality_passing": null,
+      "vessels_passing": false
+    },
+    "root_causes": {
+      "confidence_passing_false": "median_alpha_plus_beta=2, pairs_above_floor(10)=0. Thompson posteriors still near-prior for most templates. Only validator-dispatch (α=135) and create-shape-provider-goal (β=22) have meaningful posteriors.",
+      "stability_passing_false": "new_templates_added=28 in the 1h window (all templates appeared fresh after container restart ~09:03Z), mutation_rate_per_hour=28. The substrate-health-tick interprets mass template addition as instability.",
+      "vessels_passing_false": "boredom-vessel shows as inactive. This is a false negative — boredom-vessel is a one-shot systemd timer (Type=oneshot), appears inactive between 5-min fires. The health-tick design treats one-shot inactive state as unhealthy.",
+      "optimality_passing_null": "most_recent_harness_run_at=null — no harness run recorded"
+    },
+    "s4b_status": "NOT MET"
+  },
+
+  "f029_failure_mode_null": {
+    "finding": "F-029: failure_mode null on all failed traces",
+    "prior_status": "OPEN (investigation-014: 22 failures all null)",
+    "current_check": "5 failed traces in latest 50, all failure_mode=null",
+    "status": "OPEN — persistent",
+    "affected_templates": ["create-shape-provider-goal (all failures)"]
+  },
+
+  "f068_task_count_zero": {
+    "finding": "F-068: task_count=0 on all execution traces",
+    "prior_status": "new in investigation-014",
+    "current_check": "0 of 20 most-recent traces have task_count>0. Latest trace: coverage-tick (success=true, task_count=0, impulse_count=0)",
+    "status": "OPEN — confirmed persistent",
+    "severity": "HIGH — prevents S.4a from verifying coverage_progress=true via stored output impulses; prevents composition-chain propagation from observing task-level shapes",
+    "impact_on_s4a": "Coverage-tick at 09:40 succeeded but we cannot confirm its coverageReport body (output not stored). S.4a is unverifiable from stored traces."
+  },
+
+  "f036_shape_provider_goal": {
+    "finding": "F-036: create-shape-provider-goal 0% success",
+    "prior_status": "OPEN — 66 failures (investigation-014)",
+    "current_check": "56+4=60 failures in 500-trace window, 0 successes. New traces: create-shape-provider-goal (52 failures), activity:⟨create-shape-provider-goal⟩ (4 failures, 0 successes).",
+    "sample_failure": "execution_id=exec_8e29hm1z, duration_ms=10, task_count=0, impulse_count=0, status=failure",
+    "status": "OPEN — persistent. 10ms instant failure = execution dispatch failing before any task runs.",
+    "note": "Two different activity_id forms present: 'create-shape-provider-goal' (plain) and 'activity:⟨create-shape-provider-goal⟩' (SurrealDB-wrapped). May indicate id normalization issue."
+  },
+
+  "f069_thompson_undercounting": {
+    "finding": "F-069: Thompson α under-counted ~4x for high-volume templates",
+    "prior_status": "new in investigation-014 (ratio 0.22 for validator-dispatch)",
+    "current_check": {
+      "validator_dispatch": {"metrics_n": 490, "metrics_ok": 490, "alpha_actual": 135, "alpha_expected_naive": 491, "ratio": 0.275},
+      "slot_binding": {"metrics_n": 67, "metrics_ok": 67, "alpha_actual": 21, "alpha_expected_naive": 68, "ratio": 0.31},
+      "coverage_tick": {"metrics_n": 4, "metrics_ok": 2, "alpha_actual": 1, "alpha_expected_naive": 3, "ratio": 0.33}
+    },
+    "status": "OPEN — confirmed persistent. Direction correct (α increments on success), magnitude ~3-4x below naive expectation.",
+    "note": "The RETURN fix (5605057b) improved the path but didn't fully close the gap. This may be intentional partial-credit or a remaining write-path issue."
+  },
+
+  "f063_boredom_vessel_requires": {
+    "finding": "F-063: boredom-vessel.service has Requires=goal-host-vessel.service",
+    "prior_status": "OPEN",
+    "current_check": "boredom-vessel ran at 09:54:45Z and completed at 09:56:22Z (status=0). goal-host-vessel stable. No cascade observed.",
+    "status": "OPEN — fix not applied but not causing harm in current substrate run"
+  },
+
+  "f067_goal_host_timeout": {
+    "finding": "F-067: Goal-host 5min HTTP timeout on boredom goals",
+    "prior_status": "UNVERIFIABLE",
+    "current_check": "boredom-vessel tick at 09:54:45Z dispatched 'probe unlearned shapes', completed at 09:56:22Z (97 seconds). Under the 5-min limit.",
+    "status": "UNVERIFIABLE — not observed to timeout in current run"
+  },
+
+  "f025_verified_resolved": true,
+
+  "boredom_vessel_liveness": {
+    "status": "active (one-shot timer fires every 5min)",
+    "last_execution": "2026-05-25T09:54:45Z to 09:56:22Z (97s, status=0)",
+    "goal_dispatched": "probe unlearned shapes — find templates that have no execution traces and recommend the best one to run",
+    "execution_id": "exec_9737zblg",
+    "timer_trigger": "boredom-vessel.timer (TriggeredBy)"
+  },
+
+  "thompson_state_summary": {
+    "as_of": "2026-05-25T09:58Z",
+    "validator_dispatch": {"n": 490, "ok": 490, "alpha": 135, "beta": 1},
+    "slot_binding": {"n": 67, "ok": 67, "alpha": 21, "beta": 1},
+    "create_shape_provider_goal": {"n": 71, "ok": 0, "alpha": 1, "beta": 22},
+    "coverage_tick": {"n": 4, "ok": 2, "alpha": 1, "beta": 2},
+    "substrate_health_tick": {"n": 4, "ok": 2, "alpha": 2, "beta": 2},
+    "probe_reachable_unlearned": {"n": 3, "ok": 1, "alpha": 2, "beta": 2},
+    "escalate_unknown_shape": {"n": 2, "ok": 0, "alpha": 1, "beta": 2}
+  },
+
+  "cycle_9_check": {
+    "status": "NOT LANDED",
+    "latest_cycle_file": "cycle-8.json (2026-05-23T07:40:51Z)",
+    "cycle_8_summary": {
+      "cycle_number": 8,
+      "baseline_gap_count": 0,
+      "consecutive_zero_debt_cycles": 4,
+      "lift_candidate": "LIFT CANDIDATE: 4 consecutive cycles zero debt, gap=0, autonomous proposals present",
+      "proposals_authored": 9,
+      "proposals_registered": 0
+    },
+    "note": "No cycle-9.json found. The failure-mode autonomous loop cycle counter last updated 2026-05-23. No new cycle reports since investigation began."
+  },
+
+  "findings_tally": {
+    "open": 29,
+    "resolved": 42,
+    "partially_resolved": 1,
+    "regressed": 0,
+    "unverifiable": 1,
+    "total": 73,
+    "new_this_iteration": 0,
+    "resolved_this_iteration": 1,
+    "regressed_this_iteration": 0,
+    "newly_resolved": ["F-025 (activity-api discovery registration)"],
+    "key_open": [
+      "F-036: create-shape-provider-goal 0% success (60+ failures, 0 successes, 10ms instant fail)",
+      "F-029: failure_mode null on all failed traces (persistent)",
+      "F-068: task_count=0 on all traces (HIGH — blocks S.4a verifiability)",
+      "F-069: Thompson α undercounting ~3-4x (direction correct, magnitude degraded)",
+      "S.4a NOT MET: coverage_progress=false (RL=9 flat across all 4 windows)",
+      "S.4b NOT MET: overall_passing=false (confidence, stability, vessels all failing)"
+    ]
+  },
+
+  "s4a_detailed_assessment": {
+    "window_1_anchor_claimed_by_validator": "2026-05-25T09:40:19Z",
+    "window_1_produced_coverage_progress_true": false,
+    "reason": "coverage_tick at 09:40 succeeded (exit=0) but the resolver's output coverageReport body is NOT stored in the trace (task_count=0, impulse_count=0 — F-068). The CURRENT invocation of coverage_tick returns coverage_progress=false with RL=9 constant. We cannot confirm coverage_progress was true at 09:40 either, because the state was essentially identical (substrate had just restarted, same templates, same traces).",
+    "validator_claim_accuracy": "The claim 'S.4a measurement unblocked' is accurate: coverage-tick CAN execute and does reach the measurement code. The claim does NOT mean coverage_progress=true was observed.",
+    "s4a_gate_status": "OPEN — requires actual shape learning (RL must increase over successive windows)"
+  },
+
+  "open_questions": [
+    "Why does create-shape-provider-goal fail instantly (10ms) with task_count=0? Is the IAS executor failing to start task execution for this template?",
+    "F-068: what change caused task_count to stop being written? Was it present in pre-restart traces?",
+    "coverage_tick RL=9 — which 9 shapes are 'learned'? Are any topology templates' output shapes (coverageReport, substrateHealthReport) counted?",
+    "substrate-health-tick vessels_passing=false due to boredom-vessel inactive. Should health-tick treat one-shot inactive as passing?",
+    "Why do coverage-tick template-level fields show total_executions=0 while metrics shows n=4? The split between tpl-level and metrics-level counters is confusing."
+  ],
+
+  "next_wake_recommendation": {
+    "delay_seconds": 3600,
+    "reason": "S.4a is NOT met (coverage_progress=false). The blocker is learning stagnation (RL=9 flat). No new DEV commits landed since investigation-014. Watching for: (1) new templates seeded by boredom cycle causing RL to increase, (2) coverage_progress to flip true, (3) any DEV operator action on F-068 or F-036. A 1h window is appropriate — coverage_progress requires 1h windows to accumulate anyway.",
+    "wake_signal": "coverage_progress=true from a fresh coverage_tick invocation, OR new DEV commits addressing F-068/F-036"
+  }
+}

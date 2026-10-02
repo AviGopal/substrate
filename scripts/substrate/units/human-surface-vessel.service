@@ -1,0 +1,35 @@
+[Unit]
+Description=human-surface-vessel
+After=discovery-vessel.service identity-vessel.service
+Wants=discovery-vessel.service identity-vessel.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8310
+# HOST is 0.0.0.0 because this vessel exists to be reached by a human from OUTSIDE
+# the container. A 127.0.0.1 bind does not accept the DNAT'd traffic that a
+# `docker run -p 18310:8310` publish delivers from the container's bridge IP: the
+# host mapping still exists, docker-proxy still completes the handshake, then the
+# inward connect fails and the caller sees "connection reset by peer" while
+# /health answers 200 in-container. This file is the BAKED unit; the 0.0.0.0 in
+# vessels.manifest.json governs only the vessel-ctl-rendered one, so the two must
+# be changed together or the stale side silently wins. VESSEL_ENDPOINT below stays
+# 127.0.0.1 on purpose — it is the self-address used for discovery registration,
+# independent of the bind.
+# Exposure is decided by the port mapping alone: a mapping with no address publishes
+# the surface on every host interface, and a 127.0.0.1: prefix on the mapping keeps
+# it on the local host. The surface proxies goals with this fleet's key and checks
+# no inbound credential, so publish it no wider than the people who may use that key.
+Environment=HOST=0.0.0.0
+Environment=VESSEL_ID=human-surface-vessel
+Environment=VESSEL_ENDPOINT=http://127.0.0.1:8310
+WorkingDirectory=/vessels/human-surface-vessel
+ExecStart=/root/.bun/bin/bun /vessels/human-surface-vessel/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

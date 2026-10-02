@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-a80b3450-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-a80b3450] investigate and decompose gap autonomous-goals-lose-their-gap-identity-before-ground",
+  "description": "[narrowed from route-edit-a80b3450] investigate and decompose gap autonomous-goals-lose-their-gap-identity-before-grounding: THE 15% REACH RATE RUN DOWN. Edit repos/goal-host-vessel/src/index.ts.",
+  "goal_text": "[narrowed from route-edit-a80b3450] investigate and decompose gap autonomous-goals-lose-their-gap-identity-before-grounding: THE 15% REACH RATE RUN DOWN. Edit repos/goal-host-vessel/src/index.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-a80b3450-narrowed",
+  "source_gap_source": "substrate_detected"
+}

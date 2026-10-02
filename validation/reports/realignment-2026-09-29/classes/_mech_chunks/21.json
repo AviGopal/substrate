@@ -1,0 +1,550 @@
+{
+ "area": "concept-db",
+ "items": [
+  {
+   "name": "volume-only fossil scripts (11)",
+   "location": "/workspace/active-scripts/{autonomy-metrics-view,autonomy-trend,backfill-composition-edges,composition-edge-backfill,criterion-coverage,docs-align-scan,docs-align-status,learning-to-learn-demo,meta-closure-view,prime-concept-db,recompute-poisoned-posteriors}.ts",
+   "purpose": "Old one-shots and views",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Absent from the super-repo, no caller, dated 08-02/08-05",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "docs-as-concepts ingestion",
+   "location": "3ecc34b6, 0e9e8d06",
+   "purpose": "docs as consultable concepts",
+   "status": "unknown",
+   "general": true,
+   "evidence": "org reconcile was manual",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "doc_expectation / architecture_doc ingestion",
+   "location": "concept rows",
+   "purpose": "Docs as expectations for the docs-align loop",
+   "status": "duplicate",
+   "duplicates_of": "architecture_doc vs doc_expectation (96 sections twice)",
+   "evidence": "25% stale",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "07-03 concept-db distillation of operator memory",
+   "location": "concept-db",
+   "purpose": "move 374 findings into the concept graph",
+   "status": "dormant",
+   "general": false,
+   "evidence": "only a handful of matching concepts; no reader",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "compose_lessons (concept-db)",
+   "location": "concept-db",
+   "purpose": "Teach drafter at prompt-build",
+   "status": "broken",
+   "general": true,
+   "evidence": "08-05/08-08 recall severed 100% on spoke; concept-db masked",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "concept-db upkeep Thompson",
+   "location": "concept-db",
+   "purpose": "learn upkeep activity selection",
+   "status": "broken",
+   "general": false,
+   "evidence": "in-memory, totalTrials 0 under 132-313 restarts/day",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "compose_lesson corpus + COMPOSE_LESSON_GUIDANCE",
+   "location": "concept-db (Authorization: ApiKey scope); feature-compose.ts:2897",
+   "purpose": "Drafter read-at-use-time teaching channel",
+   "status": "live-used",
+   "general": true,
+   "evidence": "11 classes since 07-04; read channel reopened (adfe470). Class text is canned (08-26).",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "concept-db search telemetry",
+   "location": "concept-db (cb400d6)",
+   "purpose": "Make search starvation observable",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "Did not flag the 24-day lexical outage",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "compose_lesson concept channel",
+   "location": "concept-db -> feature-compose prompt",
+   "purpose": "Read-at-use-time drafter lessons",
+   "status": "live-used",
+   "general": true,
+   "evidence": "20 lessons, text from hardcoded COMPOSE_LESSON_GUIDANCE. The operator seeded a lesson from a hypothesis later refuted (fc-scope frequency)",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "concept-db shape-dispatch agreement check",
+   "location": "concept-db 995fee1/568b668",
+   "purpose": "Enforce advertised=dispatchable",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Coexists with duplicated public+private entries in config.ts",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "compose_lesson concepts",
+   "location": "concept-db concept (57)",
+   "purpose": "Drafter-facing class lessons recalled at prompt-build",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Loaded up to 85 times; times_succeeded 0 on all; duplicated",
+   "duplicates_of": "anchor_not_found \u00d75, syntax_break \u00d73, typecheck_dangling \u00d73, hollow_write \u00d72",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "concept_usage grading",
+   "location": "concept-db concept_usage",
+   "purpose": "Grade concept usefulness",
+   "status": "live-used",
+   "general": true,
+   "evidence": "3726 rows, 96% neutral",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "concept_edge contradicts/resolves_to",
+   "location": "concept-db schemas.ts:55",
+   "purpose": "Supersession/contradiction edges",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Zero consumers (07-10)",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "architectural_pattern_principle concepts",
+   "location": "concept-db source_type; validation/scripts/seed-architectural-principles.ts",
+   "purpose": "architecture as queryable data driving detectors",
+   "status": "live-used",
+   "general": true,
+   "evidence": "8 principles minted 06-03, consumed by horizon detectors",
+   "source": "openspec-3",
+   "mentions": 1,
+   "sources": [
+    "openspec-3"
+   ]
+  },
+  {
+   "name": "source\u2192shape map",
+   "location": "concept-db sources/unified.ts:14 and concept.ts:30",
+   "purpose": "Infer shape",
+   "status": "duplicate",
+   "general": false,
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "concept-db lexical ladder + two-stage FTS + dense leg",
+   "location": "concept-db src/resolvers/concept.ts searchConcepts",
+   "purpose": "Concept recall for drafter/lessons",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Broken 09-02..09-26 unnoticed; fixed 278edae",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "concept-db two-stage FTS ladder",
+   "location": "concept-db src/resolvers/concept.ts:405-500",
+   "purpose": "Lexical recall for identifiers",
+   "status": "broken",
+   "general": true,
+   "evidence": "0 lexical matches since 09-02; placeholder fixed; stage-2 re-match unchanged",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "concept-db upkeep optimizer + prune",
+   "location": "concept-db src/upkeep/activities.ts",
+   "purpose": "Optimize and prune concept store",
+   "status": "dormant",
+   "general": true,
+   "evidence": "totalTrials 0 (reset by 132 restarts/day); prune predicate times_loaded=0 unreachable, targets 0.8% of store",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "concept-db in-vessel upkeep scheduler",
+   "location": "concept-db src/upkeep/{activities,scheduler,thompson}.ts",
+   "purpose": "split/prune/decay concepts",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "concept-db-upkeep-loop proposed 8 activities",
+   "evidence": "runs on the resolver side, not as traced activities (law 2)",
+   "source": "openspec-3",
+   "mentions": 1,
+   "sources": [
+    "openspec-3"
+   ]
+  },
+  {
+   "name": "concept-db upkeep Thompson",
+   "location": "concept-db upkeep/",
+   "purpose": "Maintenance arm selection",
+   "status": "broken",
+   "general": false,
+   "evidence": "Module-level \u03b1/\u03b2 resets on deploy",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "compose_lesson teaching channel",
+   "location": "concept-db via DISCOVERY_ENDPOINT; composeLessonsBlock",
+   "purpose": "Read-at-use-time lessons for the drafter.",
+   "status": "live-used",
+   "general": true,
+   "evidence": "878 concept-db hits 08-12; unreachable on spoke 08-03; write-blocked 07-30",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "concept-db apply-schema (unledgered)",
+   "location": "concept-db/scripts/apply-schema.ts via ExecStartPre",
+   "purpose": "Apply sql/core on every boot",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Re-runs UPDATEs and conflicting 007 DEFINEs every start",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "concept-db write shapes (7)",
+   "location": "concept-db/src/config.ts, routes/impulses.ts",
+   "purpose": "Concept/edge/usage writes as impulses",
+   "status": "live-used",
+   "general": true,
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "createConcept content dedup",
+   "location": "concept-db/src/resolvers/concept.ts createConcept",
+   "purpose": "Avoid duplicate concepts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Unindexed content equality over 88k rows; org-scoped",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "conceptCreditDecontaminate_write",
+   "location": "concept-db/src/resolvers/decontaminate.ts",
+   "purpose": "Recompute inflated concept counters",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Depends on concept_usage, which retention now limits to the hot window",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "conceptUpkeepAuditLog write-audit",
+   "location": "concept-db/src/routes/impulses.ts:58-90",
+   "purpose": "Audit every concept write",
+   "status": "live-unused",
+   "evidence": "24,183 impulse rows; no reader found",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "DenseLegStats search telemetry",
+   "location": "concept-db/src/services/search-telemetry.ts",
+   "purpose": "Distinguish budget miss from true empty",
+   "status": "live-used",
+   "general": true,
+   "evidence": "/health search block",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "concept upkeep scheduler (resolve-island, prune-irrelevant-neighbors)",
+   "location": "concept-db/src/upkeep/activities.ts",
+   "purpose": "Maintain the concept graph",
+   "status": "dormant",
+   "general": true,
+   "evidence": "/health upkeep enabled:false; 95 edges ever traversed",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "compose_lesson ledger to concept-db",
+   "location": "dev-vessel feature-compose.ts e6de357/2ab1c4b",
+   "purpose": "class-grain drafter lessons with semantic recall",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "45-52 rows written; reader not verified",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "compose_lesson to drafter",
+   "location": "feature-compose appendComposeLesson / concept-db",
+   "purpose": "teach drafter from failures",
+   "status": "live-used",
+   "general": true,
+   "evidence": "regressions never become lessons; failure credit posts to 404",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  },
+  {
+   "name": "compose_lesson teaching channel",
+   "location": "feature-compose composeLessonsBlock to decomposePrompt; concept-db",
+   "purpose": "Deliver failure lessons to the drafter at prompt-build",
+   "status": "live-used",
+   "general": true,
+   "evidence": "45 concepts read per compose, 0 of them from reverts; lexical recall broken since fd645bd",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "compose_lesson / consultPrinciples",
+   "location": "feature-compose.ts:1300; concept-db",
+   "purpose": "Read-at-use-time teaching",
+   "status": "broken",
+   "general": true,
+   "evidence": "CONCEPT_DB_ENDPOINT unset \u2192 '' (08-04)",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "concept-db compose_lesson teaching channel",
+   "location": "feature-compose.ts:1507/1554",
+   "purpose": "Class-grain lessons delivered to the drafter",
+   "status": "broken",
+   "general": true,
+   "evidence": "Searches took 10-25s against an 8s budget and concept-db restarted 132x/day (08-29)",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "Compose lesson channel",
+   "location": "feature-compose.ts:1700 compose-lessons.jsonl + concept-db, recalled :1766",
+   "purpose": "Class-grain failure lessons read at prompt-build",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-06 pass rate 0%\u219276%; concept recall 459 ok vs 1212 failed, falls back to the last 60 jsonl lines",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "resolver_schema contract negotiation",
+   "location": "goal-host asks; concept-db resolver-schema.ts; dev-vessel 348053d",
+   "purpose": "Owning vessel publishes payload contract for write shapes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-03 only concept-db (unreachable); 08-05 dev-vessel added",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "concept-db prompt-build recall",
+   "location": "goal-host index.ts:10136-10231; concept-db concept.ts:449-531",
+   "purpose": "Law-8 information delivery",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Not read by author_composed_capability or universalToolFallback",
+   "source": "reports-5",
+   "mentions": 1,
+   "sources": [
+    "reports-5"
+   ]
+  },
+  {
+   "name": "concept_edge graph",
+   "location": "learning_loop.concept_edge",
+   "purpose": "Related-concept neighbourhood",
+   "status": "fossil",
+   "general": true,
+   "evidence": "53% dangling; 2 edges created in September",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "shape-dispatch-check",
+   "location": "packages/shape-dispatch-check/check.ts; concept-db/scripts/check-shape-dispatch.ts",
+   "purpose": "Advertise-vs-dispatch invariant checker",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Exists; concept-db wired; fleet lint wiring not verified",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "concept-db upkeep scheduler",
+   "location": "repos/concept-db upkeep",
+   "purpose": "Autonomous concept-graph maintenance via Thompson",
+   "status": "dormant",
+   "general": false,
+   "evidence": "3 trials total. /health and /upkeep/status disagree on whether it is enabled.",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "apply-schema.ts",
+   "location": "repos/concept-db/scripts/apply-schema.ts",
+   "purpose": "apply concept-db schema",
+   "status": "broken",
+   "general": false,
+   "evidence": "splits on ';', swallows errors, prints success; fn::island_concepts absent",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "concept-db apply-schema",
+   "location": "repos/concept-db/scripts/apply-schema.ts",
+   "purpose": "Build concept schema",
+   "status": "broken",
+   "general": true,
+   "evidence": "Splits on ';', swallows errors, prints success; fn::island_concepts absent",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "concept-db hybrid search (FTS ladder + dense HNSW + RRF)",
+   "location": "repos/concept-db/src/resolvers/concept.ts:400-830",
+   "purpose": "Recall of lessons, principles and memory at use time",
+   "status": "live-used",
+   "general": true,
+   "evidence": "25,636 searches since 09-28; dense fallback 94% empty; HNSW positive control OK",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  }
+ ]
+}

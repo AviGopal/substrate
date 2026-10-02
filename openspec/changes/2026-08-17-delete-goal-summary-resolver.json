@@ -1,0 +1,9 @@
+{
+  "title": "Delete goal-summary.ts resolver file",
+  "description": "Deletes the goal-summary.ts resolver file as it's no longer needed.",
+  "change": {
+    "file_path": "repos/development-vessel/src/resolvers/goal-summary.ts",
+    "old_string": "*",
+    "new_string": ""
+  }
+}

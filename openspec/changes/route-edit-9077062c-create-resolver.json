@@ -1,0 +1,27 @@
+
+{
+  "change_id": "route-edit-9077062c-create-resolver",
+  "summary": "Create httpResponse resolver",
+  "description": "This change creates the http-response.ts resolver to produce the httpResponse shape.",
+  "target_file": "repos/development-vessel/src/resolvers/http-response.ts",
+  "patches": [
+    {
+      "type": "create_file",
+      "content": "import { HttpResponsePointer, ResolverResult, HttpResponse } from '../config';
+
+export async function resolveHttpResponse(pointer: HttpResponsePointer): Promise<ResolverResult> {
+  if (pointer.type !== 'httpResponse') {
+    return { shape: 'error', body: 'Invalid pointer type' };
+  }
+
+  try {
+    const response = await fetch(pointer.url);
+    const body = await response.text();
+    return { shape: 'httpResponse', body: { status: response.status, body: body } };
+  } catch (error: any) {
+    return { shape: 'error', body: `Failed to fetch URL: ${error.message}` };
+  }
+}"
+    }
+  ]
+}

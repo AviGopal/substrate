@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-29f8f226-narrowed-anchor_not_found-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from recommit-route-edit-29f8f226-narrowed-anchor_not_found] compose for gap route-edit-29f8f226-narrowed repe",
+  "description": "[narrowed from recommit-route-edit-29f8f226-narrowed-anchor_not_found] compose for gap route-edit-29f8f226-narrowed repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mt73k7l0-tn13zk/development-ves",
+  "goal_text": "[narrowed from recommit-route-edit-29f8f226-narrowed-anchor_not_found] compose for gap route-edit-29f8f226-narrowed repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mt73k7l0-tn13zk/development-ves",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-29f8f226-narrowed-anchor_not_found-narrowed",
+  "source_gap_source": "substrate_detected"
+}

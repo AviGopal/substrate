@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-e83c9c84",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap auto-minted-child-gaps-monopolize-the-cap-1-compose-lane: MEASURED 2026-09-12 over 24h. A ",
+  "description": "investigate and decompose gap auto-minted-child-gaps-monopolize-the-cap-1-compose-lane: MEASURED 2026-09-12 over 24h. A failed compose mints a child gap against the SAME edit_site (ids prefixed recommit- or suffixed -narrowed). Nothing caps how many children one file may accumulate, so a file whose edits keep failing grows an unbounded gap family that then monopolizes the compose lane, which runs at cap=1. THE NUMBERS. Of 400 sampled OPEN gaps, 228 (57 percent) are auto-minted from",
+  "goal_text": "investigate and decompose gap auto-minted-child-gaps-monopolize-the-cap-1-compose-lane: MEASURED 2026-09-12 over 24h. A failed compose mints a child gap against the SAME edit_site (ids prefixed recommit- or suffixed -narrowed). Nothing caps how many children one file may accumulate, so a file whose edits keep failing grows an unbounded gap family that then monopolizes the compose lane, which runs at cap=1. THE NUMBERS. Of 400 sampled OPEN gaps, 228 (57 percent) are auto-minted from",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-e83c9c84",
+  "source_gap_source": "substrate_detected"
+}

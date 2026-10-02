@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-c911682c",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-c911682c: When correctness depends on an exact procedure, the universal tool fa",
+  "description": "investigate and decompose gap route-edit-c911682c: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool.",
+  "goal_text": "investigate and decompose gap route-edit-c911682c: When correctness depends on an exact procedure, the universal tool fallback GENERATES the value instead of executing the procedure: measured wrong outputs include lettercount 17 for incontrovertible (16), 15 for sesquipedalian (14), 12 for triangulate (11), and a hallucinated sha256 digest (battery 6 run 1) - all while a shellResult tool capable of computing the true value sat in the same tool.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-c911682c",
+  "source_gap_source": "substrate_detected"
+}

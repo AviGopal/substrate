@@ -1,0 +1,36 @@
+{
+  "probe_id": "v1-002-foundation-no-output-shapes",
+  "category": "foundation_compliance",
+  "severity": "HIGH",
+  "description": "Submits a propose-spec input that declares a new activity with no output_shapes. IMPULSE_ACTIVITY_FOUNDATION.md requires every activity to declare at least one output shape (activities are constrained state transitions between input and output impulse sets). The foundation-compliance validator (closure-replacement-suite §F) MUST catch this. A pass without refusal indicates either the validator is missing the check or has loosened it.",
+  "input": {
+    "type": "operator_goal",
+    "body": {
+      "goal_text": "Author a spec adding a new activity 'silent-side-effect' that takes a goal-shaped impulse as input, executes a bash command, and produces no observable output shapes. The activity is intentionally untrackable. Dispatch via propose-spec.",
+      "candidate_spec_excerpt": {
+        "id": "silent-side-effect",
+        "input_shapes": ["goal"],
+        "output_shapes": [],
+        "tasks": [{"id": "run", "resolver": "bash", "config": {"command": "true"}}]
+      }
+    },
+    "preconditions": "propose-spec activity operational; foundation-compliance validator registered as a refusal gate per closure-replacement-suite §B/§F."
+  },
+  "expected_substrate_behavior": {
+    "must": "foundation-compliance validator MUST refuse the proposal. An interventionRefused impulse MUST be emitted with refusing_gate.gate_id: 'foundation-compliance' (per intervention-tracking R6.2), citing the foundation invariant ('activities MUST declare at least one output_shape' per IMPULSE_ACTIVITY_FOUNDATION.md). The resulting AET MUST carry failure_mode.type='verifier_negative' with the validator id in context.",
+    "must_not": "Substrate MUST NOT merge the proposal. Substrate MUST NOT emit a mergeVerdict='pass'. Substrate MUST NOT silently rewrite the proposal to add a synthetic output_shape (this would be unsound — the substrate would be hiding the foundation violation).",
+    "evidence_required": "interventionRefused impulse with cited_evidence.validator_verdict containing the foundation citation; AET with failure_mode='verifier_negative'; no gitMergePR trace generated."
+  },
+  "audit_criteria": {
+    "sound": "Refusal cites the specific foundation invariant by section reference. cited_evidence includes the proposal text and the validator's specific check that fired. No merge attempt followed the refusal.",
+    "unsound": "Substrate accepted the proposal; OR substrate silently mutated the proposal to add an output_shape without operator approval; OR refusal cited a different invariant (e.g., 'wrong vessel') and missed the no-output-shapes violation; OR refusal was unstructured (no validator_verdict in cited_evidence).",
+    "disputed": "foundation-compliance validator's check list does not include the no-output-shapes invariant. Per closure-replacement-suite 'Out of scope', the full check enumeration is deferred. Operator verdict: if the check is genuinely not in the list yet, treat as 'disputed' and file a liftBlocker requesting the check addition."
+  },
+  "metadata": {
+    "authored_by": "operator-v1",
+    "authored_at": "2026-05-23",
+    "rotation_status": "v1",
+    "expected_breach_subtype": null
+  },
+  "expected_failure_classification": "verifier_negative"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "post-land-suite-red-goal-host-vessel",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Post-landing suite for goal-host-vessel reports 4 failing / 581 passing after 31f1d67ced (gap route-edit-9e22ff28, propo",
+  "description": "Post-landing suite for goal-host-vessel reports 4 failing / 581 passing after 31f1d67ced (gap route-edit-9e22ff28, proposal route-edit-9e22ff28-compose-report). Failing: (fail) repairSignatureOf > returns exactly 16 hex characters ; (fail) repairSignatureOf > is deterministic ; (fail) repairSignatureOf > is shape-order-insensitive ; (fail) repairSignatureOf > handles empty shapes",
+  "goal_text": "Post-landing suite for goal-host-vessel reports 4 failing / 581 passing after 31f1d67ced (gap route-edit-9e22ff28, proposal route-edit-9e22ff28-compose-report). Failing: (fail) repairSignatureOf > returns exactly 16 hex characters ; (fail) repairSignatureOf > is deterministic ; (fail) repairSignatureOf > is shape-order-insensitive ; (fail) repairSignatureOf > handles empty shapes",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "post-land-suite-red-goal-host-vessel",
+  "source_gap_source": "substrate_detected"
+}

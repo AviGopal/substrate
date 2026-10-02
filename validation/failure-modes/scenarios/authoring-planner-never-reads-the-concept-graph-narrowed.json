@@ -1,0 +1,19 @@
+{
+  "id": "authoring-planner-never-reads-the-concept-graph-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from authoring-planner-never-reads-the-concept-graph] author_composed_capability plans chains without consulti",
+  "description": "[narrowed from authoring-planner-never-reads-the-concept-graph] author_composed_capability plans chains without consulting concept-db, so the substrate's own knowledge store is not a reader for its authoring lane. Edit repos/development-vessel/src/resolvers/author-composed-capability.ts.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds a comment that explicitly states the concept_graph_consulted is false, meaning it still *does not* consult the concept-db, which is the core of the gap.\n- semantic_reject: The patch adds a new entry to CURATED_RESOLVER_HINTS but does not modify author_composed_capability to actually consult the concept-db as required by the gap\n- typecheck_dangling_reference: src/resolvers/author-composed-capability.ts(159,5): error TS2739: Type 'Set<string>' is missing the following properties from type '{ shapes: Set<string>; concepts: { shape: string; relations: string[\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from authoring-planner-never-reads-the-concept-graph] author_composed_capability plans chains without consulting concept-db, so the substrate's own knowledge store is not a reader for its authoring lane. Edit repos/development-vessel/src/resolvers/author-composed-capability.ts.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds a comment that explicitly states the concept_graph_consulted is false, meaning it still *does not* consult the concept-db, which is the core of the gap.\n- semantic_reject: The patch adds a new entry to CURATED_RESOLVER_HINTS but does not modify author_composed_capability to actually consult the concept-db as required by the gap\n- typecheck_dangling_reference: src/resolvers/author-composed-capability.ts(159,5): error TS2739: Type 'Set<string>' is missing the following properties from type '{ shapes: Set<string>; concepts: { shape: string; relations: string[\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "authoring-planner-never-reads-the-concept-graph-narrowed",
+  "source_gap_source": "substrate_detected"
+}

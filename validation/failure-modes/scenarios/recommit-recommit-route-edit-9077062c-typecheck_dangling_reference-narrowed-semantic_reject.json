@@ -1,0 +1,19 @@
+{
+  "id": "recommit-recommit-route-edit-9077062c-typecheck_dangling_reference-narrowed-semantic_reject",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap recommit-route-edit-9077062c-typecheck_dangling_reference-narrowed repeated already-recorded failure cla",
+  "description": "compose for gap recommit-route-edit-9077062c-typecheck_dangling_reference-narrowed repeated already-recorded failure class semantic_reject: adversarial refuters agreed 2/2 (conf 1.00, 1.00): The patch introduces a new check for `pointer.url` being undefined or not a string (lines 55-66). H",
+  "goal_text": "compose for gap recommit-route-edit-9077062c-typecheck_dangling_reference-narrowed repeated already-recorded failure class semantic_reject: adversarial refuters agreed 2/2 (conf 1.00, 1.00): The patch introduces a new check for `pointer.url` being undefined or not a string (lines 55-66). H",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-recommit-route-edit-9077062c-typecheck_dangling_reference-narrowed-semantic_reject",
+  "source_gap_source": "substrate_detected"
+}

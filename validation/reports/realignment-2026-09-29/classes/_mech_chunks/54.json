@@ -1,0 +1,18 @@
+{
+ "area": "syzygy",
+ "items": [
+  {
+   "name": "interactor-log jsonl writer",
+   "location": "syzygy-local-surface /workspace/git/super-repo/interactor-log/interactorObservation_write.jsonl",
+   "purpose": "Record UI exposure observations",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "4 rows, written locally only, with no hub reader.",
+   "source": "syzygy",
+   "mentions": 1,
+   "sources": [
+    "syzygy"
+   ]
+  }
+ ]
+}

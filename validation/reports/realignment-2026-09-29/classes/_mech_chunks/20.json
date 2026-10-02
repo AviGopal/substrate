@@ -1,0 +1,609 @@
+{
+ "area": "validation",
+ "items": [
+  {
+   "name": "run-weekly-harness.sh + weekly workflow (reuse/compare/stratified/goal-generator/forge)",
+   "location": ".github/workflows/weekly-recommendation-validation.yml, validation/scripts",
+   "purpose": "Weekly recommendation quality gate",
+   "status": "broken",
+   "general": false,
+   "evidence": "20/20 runs failed on a missing secret, 05-18 to 09-28",
+   "source": "validation-other-3",
+   "mentions": 1,
+   "sources": [
+    "validation-other-3"
+   ]
+  },
+  {
+   "name": "correctness validation / ratchet / trace-enforce-validate / library learning",
+   "location": "Feb-Mar commits (c0304aac, 078ba667, 8b2a87e6, f169e127)",
+   "purpose": "early self-improvement loops",
+   "status": "fossil",
+   "general": false,
+   "evidence": "no references after March",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "Acceptance harness (master25/26, run-task.sh, grader, RUN*.md reports)",
+   "location": "operator side + validation/reports/causal-attempt-ledger",
+   "purpose": "Grade the ledger over R, restore, C and U fixtures",
+   "status": "live-used",
+   "general": false,
+   "evidence": "23 reports, 5 of them byte duplicates (prev/unsuffixed)",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "scenario store on disk (validation/failure-modes/scenarios, vessel-scenarios)",
+   "location": "super-repo tree, git-tracked, 3 copies",
+   "purpose": "Drafter input queue",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "It duplicates the gap store (2232/2275 are bridge mirrors). Runtime state sits in git, against CLAUDE.md placement.",
+   "source": "validation-other-3",
+   "mentions": 1,
+   "sources": [
+    "validation-other-3"
+   ]
+  },
+  {
+   "name": "census / validation activity families",
+   "location": "templates capability-census-tick, validation-dispatch-tick, validation-grade-tick",
+   "purpose": "Self-census and 4-tier validation",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Never fired unassisted (07-20).",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "substrate-narrator.ts + validation/gaps",
+   "location": "validation/",
+   "purpose": "Operator narration gap accumulation",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "gaps/gaps.json gap store",
+   "evidence": "Last record 2026-05-24",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "adversarial probe corpus v1 + adversarial-probe-tick",
+   "location": "validation/adversarial-probes/v1",
+   "purpose": "S1->S2 gate / push-away",
+   "status": "dormant",
+   "evidence": "no consumer code in repos/*/src; 0 traces July window",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "failure-mode scenario corpus",
+   "location": "validation/failure-modes (3,342 files)",
+   "purpose": "Generated scenarios",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Added wholesale by autonomous commits 3142f140/4e4170a8/13c5d466/796fac89",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "surface-state-probe",
+   "location": "validation/human-participation/surface-state-probe.ts",
+   "purpose": "Photograph and verify the human surface against sources",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "Run ad hoc twice, not scheduled; needs a host browser",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "Investigation F-ID ledger with carried-forward status",
+   "location": "validation/investigations/README.md + *.json",
+   "purpose": "Track findings across iterations by first_seen_in so a recurrence is visible",
+   "status": "fossil",
+   "general": true,
+   "evidence": "Loop stopped 2026-05-30; no reader; 4 streams collide in numbering",
+   "source": "validation-other-2",
+   "mentions": 1,
+   "sources": [
+    "validation-other-2"
+   ]
+  },
+  {
+   "name": "Lifecycle audit harness + install run-case.sh + substrate-status verdict",
+   "location": "validation/reports/container-lifecycle-audit-*; install-demo-2026-09-23; image substrate-status",
+   "purpose": "Deployment acceptance across topologies",
+   "status": "live-used",
+   "general": true,
+   "evidence": "26/26 (09-22); 9/9 usable (09-23); CI Docker+Podman served",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "pre-registration probe protocol",
+   "location": "validation/reports/jev-one-goal-probe",
+   "purpose": "Frozen falsifiable predictions per dispatch",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Seven attempts with single-variable changes; honest separate unaided and informed verdicts",
+   "source": "reports-5",
+   "mentions": 1,
+   "sources": [
+    "reports-5"
+   ]
+  },
+  {
+   "name": "lifecycle acceptance harness",
+   "location": "validation/reports/lifecycle-audit-fixes-2026-09-22/, container-lifecycle-audit-rerun-2026-09-22/",
+   "purpose": "26-check container lifecycle",
+   "status": "unknown",
+   "general": false,
+   "evidence": "operator harness 26/26 (19b3e668); not an activity",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "technical-investigation probes",
+   "location": "validation/reports/substrate-technical-investigation/{extraction-gate-probe.ts, completion/mechanism-probe.ts, completion/live-readonly.ts}",
+   "purpose": "One-off audit probes of the extraction gate, sampler and replay",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Nothing invokes them, so under the script-retention law they are candidates for retirement or conversion into activities",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "operate.py probe / probe.ts P2P verification",
+   "location": "validation/reports/syzygy-local-bringup-2026-09-22/",
+   "purpose": "Bounded read probes of hub capabilities over P2P",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Manual only. No activity or timer invokes it, and the 9-29 outage was not detected.",
+   "source": "syzygy",
+   "mentions": 1,
+   "sources": [
+    "syzygy"
+   ]
+  },
+  {
+   "name": "explicit ENABLED_VESSELS inventory + compose idempotence proof",
+   "location": "validation/reports/syzygy-local-bringup-2026-09-22/inventory-compose.yaml, inventory-idempotence.json",
+   "purpose": "Run any vessel subset from one image, reproducibly",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Proven on 9-22 and used by the 9-23 install demo. No dependency-completeness check: the inventory advertises goal-host without an LLM.",
+   "source": "syzygy",
+   "mentions": 1,
+   "sources": [
+    "syzygy"
+   ]
+  },
+  {
+   "name": "surface-host.conf HOST override drop-in",
+   "location": "validation/reports/syzygy-local-bringup-2026-09-22/surface-host.conf",
+   "purpose": "Make the baked loopback-bound surface reachable from the host",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Bind-mounted read-only into both containers. It is a fixture workaround for an image default.",
+   "source": "syzygy",
+   "mentions": 1,
+   "sources": [
+    "syzygy"
+   ]
+  },
+  {
+   "name": "External-oracle harness family (validatability, falsification, goal-expectation, reach-generalization, complexity-ladder, stage-harness, self-dev-reliability)",
+   "location": "validation/scripts",
+   "purpose": "Grade reached/landings against independent ground truth; measure the gaming gap, confabulation and inert commits",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Runs by the operator only, 07-27 to 08-26. Results in validation/results (stage-harness 29/7/0). Nothing schedules them, and ports are hardcoded.",
+   "source": "validation-other-3",
+   "mentions": 1,
+   "sources": [
+    "validation-other-3"
+   ]
+  },
+  {
+   "name": "Lift-validation harness",
+   "location": "validation/scripts",
+   "purpose": "Validate architecture",
+   "status": "broken",
+   "general": true,
+   "evidence": "7 of 663 scenarios scoreable (1%) 08-29",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "argument-chain-check.test.ts",
+   "location": "validation/scripts",
+   "purpose": "Trace-sink argument chain check",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Named as a zero-call-site instrument in memory-budget-check.service (08-17); still unplaced",
+   "source": "validation-other-3",
+   "mentions": 1,
+   "sources": [
+    "validation-other-3"
+   ]
+  },
+  {
+   "name": "complexity-ladder / conditioned-differentiation / probe-chain-stages harnesses",
+   "location": "validation/scripts",
+   "purpose": "reach differentiation with must-fail controls",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "no invoker",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "failure-mode-harness / stratified-harness / test-forge-goal-completion",
+   "location": "validation/scripts",
+   "purpose": "scenario/coverage/forge harness",
+   "status": "dormant",
+   "evidence": "docs + run-weekly-harness.sh only; weekly cron not established",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "failure-mode-harness.ts + progression-driver.ts",
+   "location": "validation/scripts",
+   "purpose": "6-scenario lift harness and cycle KPI",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Last real run on 2026-07-05 showed gap=6; its LIFT claim was invalid",
+   "source": "validation-other-3",
+   "mentions": 1,
+   "sources": [
+    "validation-other-3"
+   ]
+  },
+  {
+   "name": "goal-expectation-harness.ts / self-dev-reliability.mjs",
+   "location": "validation/scripts",
+   "purpose": "operator-side confabulation and reliability measurement",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "advisor 08-26: external gate is the anti-pattern; no activity invokes it",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "phase-era one-off tests (test-18-*, test-22-*, test-4-6-*, verify-*, probe-*, seed-*, cite-check, closure-audit, narrator)",
+   "location": "validation/scripts",
+   "purpose": "May-June phase validation",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Last commits 05-05 to 06-24, no invokers, canary endpoints",
+   "source": "validation-other-3",
+   "mentions": 1,
+   "sources": [
+    "validation-other-3"
+   ]
+  },
+  {
+   "name": "stratified-harness / goal-generator",
+   "location": "validation/scripts",
+   "purpose": "arbitrary-goal universality measurement",
+   "status": "dormant",
+   "evidence": "20/20 weekly CI failures",
+   "source": "openspec-10",
+   "mentions": 1,
+   "sources": [
+    "openspec-10"
+   ]
+  },
+  {
+   "name": "substrate-cycle-resync.mjs",
+   "location": "validation/scripts",
+   "purpose": "restart/resync test",
+   "status": "live-unused",
+   "evidence": "one code comment in federation-probe-tick.ts:901",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "validation harness family",
+   "location": "validation/scripts (*-harness.py/.ts, stage-harness, failure-mode-harness)",
+   "purpose": "External-oracle measurement of reach, reuse, ablation",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Each touched 1-4 times, none after 08-28; 220 compiled artifacts committed by 4e4170a8",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "compiled .js/.d.ts/.map artifacts",
+   "location": "validation/scripts (220 files)",
+   "purpose": "none (tsc emit)",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Committed by Substrate Autonomous in 4e4170a8 (09-07)",
+   "source": "validation-other-3",
+   "mentions": 1,
+   "sources": [
+    "validation-other-3"
+   ]
+  },
+  {
+   "name": "compiled .js/.d.ts/.map siblings",
+   "location": "validation/scripts, substrate-authored/proposed",
+   "purpose": "build output",
+   "status": "duplicate",
+   "evidence": "committed beside each .ts",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "failure-mode-harness.ts / stratified-harness.ts",
+   "location": "validation/scripts/",
+   "purpose": "Failure classification and Thompson/MRR validation",
+   "status": "unknown",
+   "general": false,
+   "evidence": "Referenced by development-vessel seeds harness-check-scenario, docs-align-scan, substrate-health-tick; execution not verified",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "validation harnesses (falsification, validatability, eval-ablation, reuse, posterior-consistency)",
+   "location": "validation/scripts/",
+   "purpose": "Falsifiability instruments.",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Operator-run; no validating activity recorded (script-retention risk)",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "cite-check.ts",
+   "location": "validation/scripts/cite-check.ts",
+   "purpose": "Verify path:line cites before an audit publishes",
+   "status": "fossil",
+   "general": true,
+   "evidence": "No invoker outside investigation prose (grep of repos/scripts/validation/.claude)",
+   "source": "validation-other-2",
+   "mentions": 1,
+   "sources": [
+    "validation-other-2"
+   ]
+  },
+  {
+   "name": "closure-audit",
+   "location": "validation/scripts/closure-audit.ts",
+   "purpose": "Simulate removal of 7 external crutches",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Last output 09-09, HTTP 0 negatives, no unit",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "closure-audit.ts",
+   "location": "validation/scripts/closure-audit.ts",
+   "purpose": "Closure lift gate",
+   "status": "dormant",
+   "general": false,
+   "evidence": "No invoker",
+   "source": "docs-3",
+   "mentions": 2,
+   "sources": [
+    "docs-3",
+    "validation-other-2"
+   ]
+  },
+  {
+   "name": "closure-audit / lift-status / closure-status",
+   "location": "validation/scripts/closure-audit.ts, validation/state/*.json",
+   "purpose": "lift gate evidence",
+   "status": "fossil",
+   "general": false,
+   "evidence": "lift 05-26 operator-judgment; closure last run 09-07 all_closed=false",
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "Conditioned differentiation key",
+   "location": "validation/scripts/conditioned-differentiation-harness.py",
+   "purpose": "Identity separating work by data store",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Offline-only validation 08-12; not wired into the walk",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "Evaluation harnesses",
+   "location": "validation/scripts/eval-ablation-harness.py, complexity-ladder-harness.ts",
+   "purpose": "Cold-floor and complexity measurement",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-26 drove floor fixes; 08-12 exposed the write-graded collapse",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "Failure-mode harness + progression-driver",
+   "location": "validation/scripts/failure-mode-harness.ts, progression-driver.ts",
+   "purpose": "count gaps and manual_intervention_debt",
+   "status": "unknown",
+   "general": false,
+   "evidence": "CLAUDE.md names it validation tool; its debt metric was gameable",
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "reuse-harness hit@k benchmark",
+   "location": "validation/scripts/reuse-harness.ts",
+   "purpose": "reuse metric",
+   "status": "fossil",
+   "evidence": "stale expected ids; 0/0/0 since 07-05; duplicate byte-identical 07-05 file",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "stage-harness",
+   "location": "validation/scripts/stage-harness.ts",
+   "purpose": "8-stage edit-chain fixtures incl. known_open",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "no invoker; 29 pass/7 known_open 08-11",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "stage-harness --predict",
+   "location": "validation/scripts/stage-harness.ts",
+   "purpose": "per-layer dispatch prediction without mutation",
+   "status": "unknown",
+   "general": true,
+   "evidence": "operator tool 08-11",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "lift-status.json / COORDINATION.md / gaps INDEX narration",
+   "location": "validation/state, validation/gaps",
+   "purpose": "May-June ledgers",
+   "status": "fossil",
+   "evidence": "as_of 05-26 / 06-02; INDEX last 05-24",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "lift-status.json / agent-coordination.json",
+   "location": "validation/state/",
+   "purpose": "Self-reported lift phase and dev focus",
+   "status": "fossil",
+   "general": false,
+   "evidence": "S2 as_of 2026-05-26 authored by devbob; F-033/F-122/F-125 found coordination stale or false",
+   "source": "validation-other-2",
+   "mentions": 1,
+   "sources": [
+    "validation-other-2"
+   ]
+  },
+  {
+   "name": "closure-status audit",
+   "location": "validation/state/closure-status.json",
+   "purpose": "CLAUDE.md closure properties",
+   "status": "broken",
+   "evidence": "09-07 run: dev-vessel unreachable, HTTP 0 -> 5 'not closed'",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "vessel_heartbeat_starvation_scan (substrate-authored)",
+   "location": "validation/substrate-authored/proposed",
+   "purpose": "detector",
+   "status": "fossil",
+   "evidence": "0 hits in repos/*/src; compiled siblings added by residue commit 4e4170a8",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "Ledger graded-run harness + CHECKINS operator log",
+   "location": "~/.cache/causal-attempt-ledger-harness/master21-28.sh; validation/.../CHECKINS.md; surface-state-probe.ts",
+   "purpose": "Operator coordination and measurement",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Operator-only coordination substituting for unbuilt system window lease (#59)",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  }
+ ]
+}

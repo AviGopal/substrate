@@ -1,0 +1,19 @@
+{
+  "id": "goal_host_failing_direction-test_suite",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "goal_host_failing_direction",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "goal-host fails on direction [test_suite]: modal template satisfier:test_suite succeeds only 0% over 10 runs — the goal ",
+  "description": "goal-host fails on direction [test_suite]: modal template satisfier:test_suite succeeds only 0% over 10 runs — the goal vessel has no effective path for this direction.",
+  "goal_text": "goal-host fails on direction [test_suite]: modal template satisfier:test_suite succeeds only 0% over 10 runs — the goal vessel has no effective path for this direction.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "goal_host_failing_direction-test_suite",
+  "source_gap_source": "substrate_detected"
+}

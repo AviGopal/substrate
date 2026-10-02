@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-48e839f4-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-48e839f4] investigate and decompose gap route-edit-135df0f0: Wire the first half of drafting-m",
+  "description": "[narrowed from route-edit-48e839f4] investigate and decompose gap route-edit-135df0f0: Wire the first half of drafting-model grading. This change spans TWO files; apply BOTH edits.\n\nFILE 1 — repos/llm-resolver-vessel/src/index.ts. Replace this line, which occurs exactly once:\n  [\"llmQuotaState\", llmQuotaStateHandler as never],\n\nwith:\n  [\"llmArmOutcome_write\", (async (ctx: { body: unknown }) => {\n    const b = ctx.body as { model?: string; reached?: boolean; task_type?: string };\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/index.ts(345,3): error TS1472: 'catch' or 'finally' expected.\n- verify_failed: src/index.ts(345,3): error TS1472: 'catch' or 'finally' expected.\n- verify_failed: src/index.ts(345,3): error TS1472: 'catch' or 'finally' expected.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-48e839f4] investigate and decompose gap route-edit-135df0f0: Wire the first half of drafting-model grading. This change spans TWO files; apply BOTH edits.\n\nFILE 1 — repos/llm-resolver-vessel/src/index.ts. Replace this line, which occurs exactly once:\n  [\"llmQuotaState\", llmQuotaStateHandler as never],\n\nwith:\n  [\"llmArmOutcome_write\", (async (ctx: { body: unknown }) => {\n    const b = ctx.body as { model?: string; reached?: boolean; task_type?: string };\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/index.ts(345,3): error TS1472: 'catch' or 'finally' expected.\n- verify_failed: src/index.ts(345,3): error TS1472: 'catch' or 'finally' expected.\n- verify_failed: src/index.ts(345,3): error TS1472: 'catch' or 'finally' expected.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-48e839f4-narrowed",
+  "source_gap_source": "substrate_detected"
+}

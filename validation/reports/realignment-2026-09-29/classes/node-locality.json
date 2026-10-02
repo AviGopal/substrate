@@ -1,0 +1,621 @@
+{
+ "attempts": [
+  {
+   "key": "node-locality",
+   "title": "pull-sync enables disabled timers",
+   "where": "7f97df70",
+   "tried": "Enable converged timers that is-enabled reports as 'disabled'",
+   "outcome": "partial",
+   "date": "2026-09-09",
+   "evidence": "On 09-26 12:56Z it enabled DB watchdogs on DB-less node 2, which failed 'Unable to connect'. Now compose-drift, joint-liveness, learning-loop-selftest and validator-liveness are masked-failed on node 2",
+   "source": "git-deployment"
+  },
+  {
+   "key": "node-locality",
+   "title": "F-V58 embedding ONNX path",
+   "where": "9871ff90, 025b0a26",
+   "date": "2026-05-18, 2026-05-24",
+   "tried": "fixed on canary, then the same fix again for the substrate (EMBEDDING_MODEL_DIR in gen-env)",
+   "outcome": "partial",
+   "evidence": "the fix did not travel between deployments",
+   "source": "git-super-1"
+  },
+  {
+   "key": "node-locality",
+   "title": "node-local stores fork on node 2",
+   "where": "a50d1196, 5d0788b via d628779f, 947c8729, 0862c4b6, 9ee996b8, e31e28dd, 31f15baf",
+   "tried": "Move calibration to the gap-store holder; a store-forwarding node stops measuring class2 locally",
+   "outcome": "partial",
+   "date": "2026-09-26..2026-09-28",
+   "evidence": "Node-2 local calibration sealed its pool; 2->59 after the move. Lifecycle tick ran 22 times on node-2 fixtures and 0 times on the real store",
+   "source": "git-super-2"
+  },
+  {
+   "key": "node-locality",
+   "title": "Operator rhythm rebaseline",
+   "where": "pool timeShapedRhythm (operator-rebaseline-2026-09-27)",
+   "date": "2026-09-27",
+   "tried": "Rebaselined \u03b1/\u03b2 from 7-day ledger evidence",
+   "outcome": "partial",
+   "evidence": "Applied on node 1 only. Node 2 gap-closing is still \u03b1755.5/\u03b22 against node 1's 67/23. The restore source rebaseline-snapshot-20260926T092807Z.json is no longer found.",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "node-locality",
+   "title": "Stores eventually consistent across identity group",
+   "where": "gap activity-api-stores-not-eventually-consistent-same-identity-group-2026-07-14",
+   "tried": "Diagnose divergence; anti-entropy later reported live (trace-replication-tick.ts)",
+   "outcome": "unknown",
+   "date": "2026-07-19",
+   "evidence": "Hub 29,593 vs local 11,403 (07-14); 07-19 report claims peer-pull live. Unverified in shard.",
+   "source": "memory-2"
+  },
+  {
+   "key": "node-locality",
+   "title": "Sidecar owner-merge + dispatchId pinning",
+   "where": "obsidian federation-sidecar.ts f5255ad",
+   "tried": "Merge per-goal-host in-memory activeDispatches across owners; pin per-dispatch polls",
+   "outcome": "worked",
+   "date": "2026-07-29",
+   "evidence": "closure demo 07-30 d6374230; composer's correct draft was rolled back by callgraph-blind semantic gate, so operator bypass",
+   "source": "memory-7"
+  },
+  {
+   "key": "node-locality",
+   "title": "Host-local bodyHonestyPolicy",
+   "where": "WORKSPACE_ROOT/policies",
+   "tried": "Hand-seeded on the spoke",
+   "outcome": "failed",
+   "date": "2026-08-10",
+   "evidence": "Resolves on the spoke, 404 on the hub",
+   "source": "memory-8"
+  },
+  {
+   "key": "node-locality",
+   "title": "Deploy local-tools on the hub for shellResult",
+   "where": "hub placement",
+   "tried": "co-locate location-stateful resolver with feature_compose",
+   "outcome": "unknown",
+   "date": "2026-07-05",
+   "evidence": "finding_2026_07_05_hub_spoke_shellresult_break; data-locality ruling",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "node-locality",
+   "title": "Hand-mask DB watchdogs on node 2",
+   "where": "compose2-live /etc/systemd/system/{compose-drift,joint-liveness,validator-liveness,learning-loop-selftest}.{service,timer} -> /dev/null",
+   "tried": "After 6-hourly/30-min 'Unable to connect' failures (SURREALDB_URL 127.0.0.1:8000, surrealdb masked) and a missing script, the four detectors were masked by hand on 09-28 05:56",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "Units still listed failed. The symlinks are in the container layer and die on recreate. The pull-sync unit auto-enable that armed them on 09-26 12:56Z ('ENABLED validator-liveness.timer \u2014 it was converged but disabled') is profile-blind and still live.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "node-locality",
+   "title": "Cross-node spend envelope reader",
+   "where": "repos/development-vessel/src/resolvers/gap-to-feature.ts:4084",
+   "tried": "Sum spendEnvelope across every poolImpulse producer discovery lists, so a record written on either node binds both (replacing the 09-27 hand-mirroring into node 2's pool)",
+   "outcome": "worked",
+   "date": "2026-09-27",
+   "evidence": "Node 2 logs 'spend envelope exhausted: spent 2.x USD of 2 USD/h over 2 spend source(s)' 73x/24h, so both nodes are read. The records themselves were not diffed.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "node-locality",
+   "title": "Single-container substrate",
+   "where": "openspec/changes/2026-05-23-single-container-substrate",
+   "tried": "Collapse fleet into one container trust boundary",
+   "outcome": "worked",
+   "date": "2026-05-23",
+   "evidence": "substrate-live runs; tasks.md stale (19/36, lists minibob unit)",
+   "source": "openspec-1"
+  },
+  {
+   "key": "node-locality",
+   "title": "Cross-node spend relay llmSpendSummaryNode (4.0a)",
+   "where": "dev-vessel e6f07a0,55c0649,c3c4041",
+   "tried": "each node's dev-vessel relays its own llm-resolver summary under a distinct shape; the envelope reader sums across discovery producers",
+   "outcome": "worked",
+   "date": "2026-09-27",
+   "evidence": "spent 0.14183 vs hand sum 0.14182 across 2 sources; 4.0 (per-node resolver identity, P220) stays open because it needs a container recreate",
+   "source": "openspec-10"
+  },
+  {
+   "key": "node-locality",
+   "title": "Restore local-tools on hub (spoke self-edit toolbelt)",
+   "where": "2026-07-05-distributed-spoke-development",
+   "tried": "Restart loaded-but-disabled local-tools unit via systemd_restart resolver",
+   "outcome": "worked",
+   "date": "2026-07-05",
+   "evidence": "shellResult resolves; edit-intent passes endpoint discovery",
+   "source": "openspec-4"
+  },
+  {
+   "key": "node-locality",
+   "title": "Toolbelt co-location detector",
+   "where": "advertised_shape_coverage_scan feature_compose_locations_missing_local_toolbelt; cited commit 5381b04",
+   "tried": "Flag feature_compose locations lacking local location-stateful shapes",
+   "outcome": "partial",
+   "date": "2026-07-05",
+   "evidence": "v1 false-positives (same vesselId != same location); gap write never wired; 5381b04 missing from clone",
+   "source": "openspec-4"
+  },
+  {
+   "key": "node-locality",
+   "title": "Decentralized compose ownership (node 2 owns dev-vessel/activity-api/goal-host)",
+   "where": "gap-to-feature ownedVessels, composeOwnership, goal-host routing, composer-interruption-sweep",
+   "date": "2026-09-26",
+   "tried": "~25 landed tasks incl. 1.1c 988377f, 4.6 8645ead, 4.7 fbb2fab/1669ac8, 5.1a 1e18e09",
+   "outcome": "worked",
+   "evidence": "live composeOwnership: node1 16 repos, node2 3; composerInterruptionReport 24h node1: 21 restarts, 0 lossy, 0 foreign_cutovers; 4.4 falsifier passed 09-27 21:41-22:21Z",
+   "source": "openspec-7"
+  },
+  {
+   "key": "node-locality",
+   "title": "Repoint cockpit from dead hub syzygy to local",
+   "where": ".metabob/config.json",
+   "date": "2026-08-22",
+   "tried": "Cockpit endpoint syzygy.host:18080 had no goal_execution plane",
+   "outcome": "partial",
+   "evidence": "Fresh process resolves goal_execution; running MCP held stale launch config; minting resumed 08-23 with operator traffic",
+   "source": "reports-1"
+  },
+  {
+   "key": "node-locality",
+   "title": "Self-observation units moved to infra role",
+   "where": "6d9e611d inventory roles",
+   "date": "2026-08-16",
+   "tried": "Move 8 self-observation families from autonomy to infra",
+   "outcome": "worked",
+   "evidence": "42 autonomy-role units had run nowhere after federation; streams resumed; baseline reach_cum 0.1216, reach_6h 0.0235",
+   "source": "reports-3"
+  },
+  {
+   "key": "node-locality",
+   "title": "Launch-contract anchor split-brain HUB_DISCOVERY_URL vs DISCOVERY_ENDPOINT; operator key harvested into fleets",
+   "where": "gen-env.sh:423-428; Makefile ANTHROPIC_API_KEY ?= jq $(HOME)/.metabob",
+   "tried": "Proof only: canary key plus matched-pair arms",
+   "outcome": "unknown",
+   "date": "2026-09-15",
+   "evidence": "Arm 2 built standalone with loopback and no warning. The canary sk-ant-CANARY was persisted into /etc/substrate/env.",
+   "source": "reports-5"
+  },
+  {
+   "key": "node-locality",
+   "title": "Calibration at the gap-store holder; abstain class2 off the holder",
+   "where": "development-vessel 76bf256, 094c230, 5d0788b",
+   "tried": "Hold one calibration table; the forwarding node does not measure class2.",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "Node 2 pool 2 to 59 (negative control held); wrong-node closes had credited self_knowledge 9/1 to 20/7.",
+   "source": "reports-6"
+  },
+  {
+   "key": "node-locality",
+   "title": "Node-2 detectors masked after failing",
+   "where": "compose2-live compose-drift/joint-liveness/validator-liveness/learning-loop-selftest",
+   "date": "2026-09-28",
+   "tried": "Units ran on the spoke. They failed ('Unable to connect': no local SurrealDB, and 'Module not found learning-loop-selftest-tick.ts') and were then masked",
+   "outcome": "failed",
+   "evidence": "The units are masked and failed. The signal was thrown away instead of placing the detectors correctly. The script is still missing from node 2's clone",
+   "source": "timers-readers"
+  },
+  {
+   "key": "node-locality",
+   "title": "Wiring green-vs-miswired fixes G1-G5",
+   "where": "relevance-sink-vessel d42910bc; bootstrap a919a62a/a07ea8b7/6067c25b",
+   "tried": "Health round-trips store; readiness/doctor/HEALTHCHECK discriminate miswired",
+   "outcome": "worked",
+   "date": "2026-09-16",
+   "evidence": "pre-registered matrix: miswired now 503/NOT ready/unhealthy",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "node-locality",
+   "title": "Fix B: class2 checks abstain on non-holding node",
+   "where": "dev-vessel sweep 5d0788b",
+   "date": "2026-09-28T23:58Z",
+   "tried": "node 2 abstains, node 1 measures",
+   "outcome": "worked",
+   "evidence": "relevance-sink gap reopened 23 times, 6 false lands; same -narrowed false close 09-23 with different cause",
+   "source": "transcripts-4"
+  }
+ ],
+ "problems": [
+  {
+   "key": "node-locality",
+   "symptom": "Node 2 loses every concept write: 300 usage-record + 26 lesson-mirror failures per 6h",
+   "root_cause": "Reads route via discovery; writes use CONCEPT_DB_ENDPOINT default 127.0.0.1:8260, and node 2 runs no concept-db",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-29",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Node 1 ('hub') runs PROFILE_EFFECTIVE=standalone with FED_SUBSTRATE_ID=local-dev-spoke; node 2 compute spoke-66684ac4; 20,766/21,044 executions/day tagged local-dev-spoke",
+   "root_cause": "deployment identity/profile diverged from README hub/spoke model",
+   "last_seen": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Node 1 and node 2 share state only through 9 pinned host.containers.internal HTTP env URLs; rhythm pause/posteriors are node-local, so node 2 drained a paused goal",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "root_cause": "Federation carries no replicated state and the HTTP pinning bypasses discovery",
+   "source": "federation-relay"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Node 2's super-repo clone is damaged (inventory truncated, script deleted) while pull-sync reports clean; DB watchdogs were enabled on a DB-less node; two inventories disagree",
+   "root_cause": "Per-node clones and state are mutated by unidentified writers; pull-sync ignores uncommitted work; unit enablement is not profile-aware; apply-inventory and self-fact-reconcile read different inventory files",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "source": "git-deployment"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Landing probe blind to composes on the other node; double landing",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-27",
+   "recurrences": 1,
+   "root_cause": "The compose report is written on the owning node's filesystem.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Checked: node 2 clone HEADs equal the hub for all four repos (negative result); only d1ebb66 spoke-only URL failure relates",
+   "first_seen": "2026-09-17",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "git-mid"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "a fix made on one deployment (canary) absent on another (substrate); viewers in the wrong namespace report false STALE",
+   "first_seen": "2026-05-18",
+   "last_seen": "2026-06-22",
+   "recurrences": 4,
+   "root_cause": "config and paths per deployment not carried by the image/env contract",
+   "source": "git-super-1"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Node-local calibration/gaps/rhythm/spend files fork after the second node; lifecycle ran on fixtures; operator cap sized on the wrong host",
+   "root_cause": "'Stores' implemented as per-node files; measurement taken where the operator is, not where the code runs",
+   "first_seen": "2026-08-17",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "source": "git-super-2"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Hub stamps its own executions origin_substrate_id='local-dev-spoke'; only 28 rows from node 2 in 5 days; node 2 learning-loop-selftest, validator-liveness, joint-liveness and compose-drift units failed",
+   "root_cause": "Identity and provenance mislabeled; per-node checks presume a local trace store the spoke profile does not run",
+   "source": "live-activities"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "node 2 gap store stale at 70 rows; closes measured on wrong node; node-local pauses and posteriors",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-27",
+   "recurrences": 7,
+   "root_cause": "writes forward to hub but reads do not; per-node records read as global",
+   "source": "live-gaps"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Memory, rhythm posteriors, jointBindings, llm-model-policy (rev 25 vs 9) and policy files all differ between node 1 and node 2. Operator containment and rebaselines reach node 1 only.",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 5,
+   "root_cause": "Every node keeps its own super-repo runtime dirs (pool, memory, policies, state). No shape carries the learning state to the hub.",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "node 2 registers 8 vessels / 325 shapes; 83 hub-only shapes; stray k8s-DNS registrant activity-api-activity-api on node 2",
+   "root_cause": "stray registrant source unknown",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Hub and node stores diverge; dead keys, masks and arms differ per node; push capability misjudged per node",
+   "root_cause": "No anti-entropy sync; runtime stopgaps applied per node",
+   "first_seen": "2026-07-14",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "source": "memory-1"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Investigations searched hub journal for local commits; starters read local registry (16 shapes) not hub (187); Docker VM vs host CPU boundary; dead /workspace/gaps/gaps.json decoy",
+   "root_cause": "Per-node state and paths not named in measurements",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-13",
+   "recurrences": 5,
+   "source": "memory-10"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Memory and gap stores are per-substrate silos; spoke masks vessels without redirecting consumers; duplicate boredom on hub; stores diverge",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-08-03",
+   "recurrences": 5,
+   "root_cause": "Role masks change placement but consumers stay pinned to loopback",
+   "source": "memory-2"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Measurements and tools run on the wrong node (spoke-masked activity-api, tools executing on hub, intervention_evaluate mute)",
+   "first_seen": "2026-08-04",
+   "last_seen": "2026-08-12",
+   "recurrences": 3,
+   "root_cause": "Role-masked units plus loopback defaults",
+   "source": "memory-4"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Federated nodes silently lack capabilities: 42 autonomy units masked, concept-db port unpublished, hub dev-vessel with separate gap/memory state, spoke registry drained.",
+   "root_cause": "Role groups and per-node deploy drift. Placement is not verified by a cross-node reach detector.",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-02",
+   "recurrences": 6,
+   "source": "memory-5"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Measurement on wrong node/instance (spoke vs hub, local vs cockpit)",
+   "root_cause": "per-node registries and split trace store; discovery resolves to different instance",
+   "first_seen": "2026-08-01",
+   "last_seen": "2026-08-11",
+   "recurrences": 6,
+   "source": "memory-6"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "The spoke depends on the hub for discovery and the trace store. Per-goal-host in-memory state is routed to the wrong owner. Labels are written to one node and read from another",
+   "root_cause": "PRODUCER_DISCOVERY_ENDPOINT and ACTIVITY_API_ENDPOINT are pinned to the hub. Hub-loopback addresses are advertised. Transport mirrors local-to-hub only. Masked units on the spoke",
+   "first_seen": "2026-07-15",
+   "last_seen": "2026-08-17",
+   "recurrences": 7,
+   "source": "memory-7"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Behaviour differs between hub and spoke: host-local policy, traces only on the hub, dead self-development plane on the hub, unpublished ports, loopback advertisements.",
+   "root_cause": "State is kept in host files or volumes and discovery advertises loopback addresses. Verification is done on one node.",
+   "first_seen": "2026-08-05",
+   "last_seen": "2026-08-23",
+   "recurrences": 7,
+   "source": "memory-8"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Work and measurement are on different nodes; hub lacks location-stateful producers",
+   "first_seen": "2026-07-05",
+   "last_seen": "2026-08-10",
+   "recurrences": 4,
+   "root_cause": "loop runs on the spoke (9199 of ~9200/day) while the hub is inspected; loopback registrations",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Hub-only detectors (joint-liveness, validator-liveness, compose-drift, learning-loop-selftest) scheduled on the DB-less compute node and failing every run",
+   "root_cause": "pull-sync unit convergence auto-enables timers without consulting profile/data locality; masks applied by hand in the container layer",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 20,
+   "source": "node2-runtime"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Learned state forks per node: gap-class-posteriors, close-oracle-calibration (landed_commit false_closes 2149 vs 31), expectation-calibration, goal-host failure memory (1772 vs 277), reached-commands (10624 vs 451), memory notes (59 vs 3)",
+   "root_cause": "Stores are local JSON files at process.env[X] ?? '/workspace/...' constants rather than shaped impulses served where the data lives",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "A pause on node 1 was absent on node 2 (117 unsupervised composes); spend read from one node; node-2 category calibration sealed 126/128 gaps; gap-class-posteriors.json node-local; breaker counts in-process",
+   "root_cause": "state held in per-node files and processes rather than one discovery-routed authoritative shape",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "source": "openspec-10"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Event drain and template fetch silently dead when hub unreachable; toolbelt detector false-positive",
+   "root_cause": "Spoke paths bound to hub WS/PRODUCER_DISCOVERY_ENDPOINT; no location identity in loopback registrations",
+   "first_seen": "2026-07-05",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "source": "openspec-4"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Attempt ledger, selection state and operator pauses are per node; containment reopens if the holder drops from discovery",
+   "root_cause": "only the gap store (forwarding) and pool records (discovery) are shared",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "openspec-7"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Cockpit and spoke point at a hub lacking self-development plane; traces land on hub where effects cannot be verified; autonomy role masked on hub+spoke",
+   "root_cause": "Role inventory and client config assume standalone; roles.full only includes autonomy",
+   "first_seen": "2026-08-01",
+   "last_seen": "2026-09-24",
+   "recurrences": 5,
+   "source": "reports-1"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "self-recovery restarts saturated vessels and kills in-flight composes. pull-sync takes owed restarts on content that already matches. Breadcrumbs misattribute restarts.",
+   "root_cause": "The liveness probe cannot tell saturation from death, db_pressure_backoff reads 0, restarters read no window shape, and breadcrumbs are not PID-bound.",
+   "first_seen": "2026-09-25 (RUN10-VOID-0715)",
+   "last_seen": "2026-09-29 (open gap activity-api-recommend-queries-block-the-event-loop... x2)",
+   "recurrences": 3,
+   "source": "reports-2"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Spoke reads masked/local stores and reports zeros or false gaps; detectors blind; retirement and reach baseline computed on partial data",
+   "root_cause": "Trace store/activity-api masked on spoke; detectors run where data isn't; spool backlog; autonomy role in no hub/spoke group",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-16",
+   "recurrences": 6,
+   "source": "reports-3"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Audits run on a spoke with activity-api masked; the spectral gate is dead on the spoke; concept-db crashlooped on the spoke; split-brain anchor",
+   "root_cause": "Role/profile masking combined with per-node measurement; ambiguous join anchors",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-15",
+   "recurrences": 4,
+   "source": "reports-5"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Pause, rhythm, calibration, scope, envelope and class2 measurement differ per node; node 2 ran unsupervised, sealed its pool, closed gaps node 1 reopens, and scanned a fixture store.",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 7,
+   "root_cause": "State and measurement written as node-local files and records after the split; single-node assumptions (e.g. class2 resolves on localhost since 07-07) were never revisited.",
+   "source": "reports-6"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Node 2 runs DB watchdogs with no DB; its pull-sync build fails (no node_modules); n2 lessons stay local; spend summed by hand; submodules not initialised (0-byte grounding)",
+   "root_cause": "Profile or role does not follow data locality; node-local state is not federated",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "source": "reports-7"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "The inventory surface shows a green but empty activeDispatches board, served by its own idle local goal-host, which hides the hub outage.",
+   "first_seen": "2026-09-29",
+   "last_seen": "2026-09-29",
+   "root_cause": "discovery /resolve fans out to peers only when no local producer exists (repos/discovery-vessel/src/index.ts ~L222).",
+   "source": "syzygy"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Node 2 runs 4 timers. 5 detectors are masked+failed. There is no self-recovery timer and no metrics dir. The gap store is an independent stale copy (70 rows, modified 09-26) that the node-2 gap-compose watchdog drains",
+   "root_cause": "Detectors open SurrealDB and read metric files directly instead of resolving by shape. The gap store and metrics are per-node JSON files",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "source": "timers-readers"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Miswired vessel reports healthy/ready everywhere while every write fails",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-16",
+   "recurrences": 2,
+   "root_cause": "Unconditional /health; readiness checks liveness not wiring",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Pause, calibration, memory, verification and budget per node after the split",
+   "first_seen": "2026-09-26T15:14Z",
+   "last_seen": "2026-09-29T03:25Z",
+   "recurrences": 6,
+   "root_cause": "Single-node assumptions survived the 09-26 ownership split; forwarder applied pass by pass",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "diagnoses aimed at wrong store/tree (local vs hub trace store; super-repo vs vessels clone 34 vs 47); node-1 trace table frozen at 07-14",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "three trees and two stores; readers point at hub via METABOB_ENDPOINT",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "The node2 scenario store is frozen at 09-26 (2275) and its /workspace copy is empty. The node1 copies hold 3364 and 4573 files.",
+   "root_cause": "A file-based per-node store is used as a drafter queue instead of a shaped impulse",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "source": "validation-other-3"
+  }
+ ],
+ "claims": [
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-27 22:11",
+   "claim": "hub watchdogs healthy; node 2 is profile mismatch + cpg build failure; selftest missing because clone behind at ce1e4c5d",
+   "where": "debc3da3; MECHANISM-AUDIT-2026-09-28.md line 30",
+   "later": "The cpg fix is confirmed (08:11). The profile mismatch was only hand-masked 09-28 05:56 and the enabler is still live. The selftest file is still deleted at HEAD 9c967329, so the 'clone behind' diagnosis was wrong.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-27 08:56",
+   "claim": "node 2 reopened after mirroring autonomy-scope and spend-envelope into its own pool",
+   "where": "CHECKINS / 5ac90e4a",
+   "later": "Superseded by a general cross-node envelope reader (gap-to-feature.ts:4084) that sums every discovered pool producer.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-27",
+   "claim": "4.4 change-level falsifier PASSED (node-2 landing did not interrupt node 1)",
+   "where": "decentralized-compose-ownership/tasks.md",
+   "later": "holds: 24h node1 report shows 21 restarts, 0 lossy, 0 foreign cutovers",
+   "source": "openspec-7"
+  },
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-16",
+   "claim": "'restore spectral-gap from its truncation; make staleness as loud as absence' (7013d1cf)",
+   "where": "scripts/substrate/spectral-gap.ts, compose-teacher.ts",
+   "later": "live_genuine is 0 nodes and 0 edges on 09-29. Node 2 has no metrics file, and the dev-vessel resolvers that read it use a hardcoded node-1 path",
+   "source": "timers-readers"
+  },
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-28",
+   "claim": "Node-2 detectors disposed by masking",
+   "where": "compose2-live units",
+   "later": "The masked units still show as failed. The service-failure-* gaps (09-26) are open with no edit_site. learning-loop-selftest-tick.ts is still missing from node 2's clone",
+   "source": "timers-readers"
+  },
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-16T01:39",
+   "claim": "Wiring goal met \u2014 miswired fleets now red, all pre-registered cells satisfied",
+   "where": "28f8c594",
+   "later": "09-16 06:07 relevance-sink dead from mangled second application of the same landed fix; in-tree vessel unrepairable",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-26T08:06Z",
+   "claim": "The storm is resolved (recursion guard 7f0425d, seed paused)",
+   "where": "ac8b0aad 2026-09-26T08:06Z",
+   "later": "Guard hand-landed (feature_compose needs LLM even for exact edits); paused seed kept running on node 2 because pause/posteriors node-local",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "node-locality",
+   "claimed_at": "2026-09-28T23:58Z",
+   "claim": "Fix B 5d0788b confirmed both sides, false-close loop closed",
+   "where": "ac8b0aad 2026-09-28T23:58Z",
+   "later": "Same false close happened 09-23 with different cause; a57dc30 fix never reached old rows (gap store carries forward keys)",
+   "source": "transcripts-4"
+  }
+ ]
+}

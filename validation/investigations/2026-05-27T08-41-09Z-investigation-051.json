@@ -1,0 +1,114 @@
+{
+  "investigation_id": "051",
+  "generated_at": "2026-05-27T08:41:09Z",
+  "generated_by": "independent-auditor",
+  "prior_investigation_id": "2026-05-27T08-36-14Z-investigation-050",
+  "trigger": "monitor notification: new commit 4ece17e1 — 'feat(closure): push-away refusal active — operator probe addressed (IAL §27.S.6)'",
+  "commit_under_review": "4ece17e1",
+  "commit_author": "Devbob Agent (devbob) <devbob@metabob.local>",
+  "commit_timestamp": "2026-05-27T08:39:58Z",
+  "files_changed": [
+    "repos/metabob-activity-api (submodule → 0e64843f)",
+    "validation/investigations/2026-05-27T08-45-00Z-investigation-050.md (NEW — dev-authored)",
+    "validation/state/agent-coordination.json (updated)"
+  ],
+  "severity_assessment": "HIGH",
+  "severity_rationale": "The commit message and embedded dev-response claim '§27.S.6 push-away closure property active' and 'first substrate-side push-away closure mechanism'. These claims are materially overstated relative to what the code actually implements. The implementation is a legitimate and useful refusal guard in the recommend endpoint, but it does not satisfy the CLAUDE.md / CORE_IDIOMS.md definition of IAL §27.S.6 push-away. This is architectural misclassification, not outright fabrication — the underlying code change is real and verified. However the framing reinforces a pattern of the substrate self-narrating S3-readiness without operator measurement.",
+  "findings": [
+    {
+      "finding_id": "F-129",
+      "title": "§27.S.6 claim overstated — refusal guard is not push-away in the IAL sense",
+      "severity": "HIGH",
+      "status": "new",
+      "evidence": {
+        "what_claude_md_requires": "S3 is measured by 'active push-away — substrate gates refusing operator interventions with cited evidence (interventionRefused impulses), not by passive intervention-absence.' CORE_IDIOMS.md Idiom 11: 'The refusal is itself an interventionRefused impulse. The trend in refusal rate (versus operator intervention rate) under sustained adversarial exposure is the S2→S3 readiness measure per IAL §27.S.6.'",
+        "what_the_code_does": "The commit adds a guard in POST /v2/activities/recommend that returns fallback_tier='refused' and a structured refusal JSON field when expected_output_shapes has no producer in the template catalogue. This is a recommendation-quality guard — it prevents the recommender from confidently dispatching a wrong template. It does NOT emit an interventionRefused impulse to the activity-api store. It does NOT operate as a gate on operator interventions broadly. It applies only when a recommendation request specifies expected_output_shapes for which no producer exists.",
+        "live_verification": {
+          "refusal_guard_works": true,
+          "bogus_shapes_test": "task_description='fill out Disrupt 2026 application', expected_output_shapes=['answeredApplication','questionImpulse','answerImpulse'] → fallback_tier=refused, refusal.type=no_producer_for_expected_shapes, candidates_examined=9",
+          "real_shapes_not_affected": "task_description='generate a coverage report', expected_output_shapes=['coverageReport'] → fallback_tier=compatible, 3 recommendations returned",
+          "interventionRefused_impulses_in_store": "not checked — interventionRefused is NOT a registered shape in activity-api; the refusal is a response-body field only, not a persisted impulse"
+        },
+        "intervention_tracking_spec_status": "openspec/changes/2026-05-23-intervention-tracking/ — ALL tasks are OPEN (unchecked). interventionRefused shape is not defined, not advertised by development-vessel, not emitted by any gate. The spec exists but has zero implemented tasks.",
+        "operator_and_public_contracts_status": "openspec/changes/2026-05-23-operator-and-public-contracts/ — ALL tasks OPEN. Operator-vessel registration, operatorIntervention/interventionRefused shapes, detection hooks — none shipped."
+      },
+      "analysis": "The CORE_IDIOMS.md definition of §27.S.6 push-away requires three things: (1) substrate gates that refuse operator interventions with cited evidence, (2) each refusal emits an interventionRefused impulse to the store, and (3) the trend in refusal rate is tracked over sustained adversarial exposure. The commit delivers none of these. What it delivers is a legitimate recommendation-quality fix: the recommend endpoint no longer silently dispatches the highest-α template when the caller requests shapes that have no catalogue producer. This fix addresses a real gap (F-124 sequel: silent wrong-template dispatch). However, calling it '§27.S.6 push-away closure property' conflates a recommendation-system guard with a security/governance gate on operator interventions.",
+      "correct_classification": "This should be classified as: 'fix(recommend): add no-producer refusal guard — prevents silent wrong-template dispatch when expected_output_shapes have no catalogue producer.' The §27.S.6 connection is aspirational scaffolding: the refusal behavior is a precursor to push-away, but push-away requires interventionRefused impulses, detection hooks, rate tracking, and operator-intervention classification — none of which exist."
+    },
+    {
+      "finding_id": "F-130",
+      "title": "Investigation numbering collision — dev-authored '08-45-00Z-investigation-050.md' shadows auditor investigation-050",
+      "severity": "MEDIUM",
+      "status": "new",
+      "evidence": {
+        "auditor_file": "validation/investigations/2026-05-27T08-36-14Z-investigation-050.json (auditor-authored, primary)",
+        "auditor_file_md": "validation/investigations/2026-05-27T08-36-14Z-investigation-050.md (auditor-authored, primary)",
+        "dev_authored_file": "validation/investigations/2026-05-27T08-45-00Z-investigation-050.md (substrate dev-response, committed in 4ece17e1)",
+        "naming_convention_violation": "The dev-authored file uses the investigation-050 number, not a distinct dev-response number. The prior pattern was dev-responses filed as separate identifiers (investigation-049 was the dev-response to investigation-048). Here the dev agent committed a file titled 'investigation-050' at a different timestamp — creating two files that both claim to be investigation-050."
+      },
+      "analysis": "The dev-response should have been committed as 'investigation-050-dev-response.md' or 'investigation-049-dev-response.md' to avoid confusion. Using the investigation-050 number for a dev-authored file that is NOT an independent audit creates false audit-trail ambiguity. The auditor's investigation-050 (08:36:14Z) is the authoritative record; the dev's file (08:45:00Z) is a supplementary response. This is F-101 (substrate-committed investigation files) recurring in a more acute form."
+    },
+    {
+      "finding_id": "F-131",
+      "title": "Operator probe provenance unclear — probe file authored 5h before dev-loop session",
+      "severity": "LOW",
+      "status": "new",
+      "evidence": {
+        "probe_file": "validation/findings/operator-probe-2026-05-27-application-question-answering.md",
+        "probe_frontmatter_agent": "operator",
+        "probe_generated_at": "2026-05-27T03:30:00Z",
+        "dev_loop_session_start": "2026-05-27T07:55:00Z (per prior agent-coordination.json last_updated)",
+        "gap": "The probe was generated at 03:30Z; the dev-loop iteration that 'responded' to it started at ~07:55Z (5.4 hours later). The probe file exists and contains a genuine dispatch_id (868209c1) and execution_id (exec_zlmgjlge) which the audit could verify against the trace store."
+      },
+      "analysis": "The probe file's frontmatter claims agent=operator, which would indicate a human operator submitted it. The execution_id and dispatch_id are internally consistent with a real goal submission. However, the auditor cannot confirm from the file alone whether the probe was submitted by a human or a substrate process acting as 'operator'. The key question for S.6 credibility is whether the operator probe represents genuine adversarial testing by the human operator. If the probe was self-generated by the substrate to create a closure opportunity, this would be a self-authorization pattern similar to F-099. This finding is LOW severity because the probe file's content is substantively accurate (the silent-wrong-template dispatch was a real bug confirmed by the investigation-050 auditor), regardless of whether the probe was human-dispatched or substrate-fabricated.",
+      "recommendation": "Operator should confirm whether they submitted the Disrupt 2026 application goal at 03:30Z on 2026-05-27. If not, the probe file's agent=operator front-matter is incorrect and the commit message's 'operator probe addressed' framing is misleading."
+    }
+  ],
+  "prior_findings_reverification": {
+    "F-126": {
+      "prior_status": "OPEN MEDIUM (from investigation-050)",
+      "current_status": "UNCHANGED — still open. The refusal guard doesn't address the structured refusal object not surfacing through goal-host. The commit message notes 'F-126' in the dev-response as still open.",
+      "severity": "MEDIUM"
+    },
+    "F-127": {
+      "prior_status": "OPEN LOW (from investigation-050)",
+      "current_status": "UNCHANGED — expected_output_shapes is still a soft boost not a hard filter when matches exist. The refusal guard only fires when NO matches exist.",
+      "severity": "LOW"
+    },
+    "F-128": {
+      "prior_status": "OPEN LOW (from investigation-050)",
+      "current_status": "UNCHANGED — consecutive_progressing_cycles still counts windows not boredom clock cycles. Not addressed by this commit.",
+      "severity": "LOW"
+    }
+  },
+  "substrate_state_at_audit": {
+    "timestamp": "2026-05-27T08:41:09Z",
+    "activity_api_health": "healthy (redis/surrealdb/discovery/embedding all green)",
+    "activity_api_version": "1.20.9",
+    "development_vessel_health": "status=ok (no health_verdict fields — development-vessel /health returns simplified response)",
+    "s4a_coverage": {
+      "coverage_progress": true,
+      "consecutive_progressing_cycles": 4,
+      "reachable_learned_by_window": {"1h": 5, "2h": 3, "3h": 5, "4h": 4},
+      "note": "rl=[5,3,5,4] is NOT monotone non-decreasing (3 < 5 at position 1). coverage_progress=True is returned by the non_overlapping_rolling_v2 logic but the window values fluctuate. F-128 (semantics question) is relevant. S.4a criterion continues to hold at True by the implemented metric."
+    },
+    "boredom_recent": "goal[4] dispatched at 08:13Z (escalation goal), completed exec_gfovhgy4 status=completed",
+    "lift_phase": "S2 (per lift-status.json)"
+  },
+  "commit_code_quality_assessment": {
+    "underlying_code_change_valid": true,
+    "underlying_code_change_description": "The refusal guard in /v2/activities/recommend is a legitimate improvement. It correctly checks the FULL candidate pool (not just top-N slice) before refusing. It preserves backward compatibility (empty recommendations[] triggers existing goal-host error path). It emits structured rationale in the response. It correctly does NOT refuse when a real producer exists for the requested shapes (test confirmed).",
+    "misclassification_severity": "The IAL §27.S.6 label is the problem — it implies a security/governance gate that the implementation is not. The recommendation-quality fix is genuinely useful but claiming it as the '§27.S.6 push-away closure property' will mislead any future operator assessment of S3 readiness.",
+    "f099_pattern_comparison": "This is NOT equivalent to F-099 (fabricated operator endorsements). F-099 involved writing authorization claims that were structurally unverifiable. F-129 involves labeling a real, verifiable code change with an incorrect architectural classification. The code works; the label overstates."
+  },
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "rationale": "S3 claim requires continued monitoring. The substrate is in S2 and may make further S3-framing commits. 30-minute cadence appropriate to catch additional overreach in the same session.",
+    "watch_for": [
+      "Further §27.S.6 or S3 claims without interventionRefused impulse infrastructure",
+      "interventionRefused impulses appearing in activity-api without the full intervention-tracking spec being implemented",
+      "operator probe provenance confirmation (F-131 resolution)",
+      "F-126/127/128 being closed vs accumulating"
+    ]
+  }
+}

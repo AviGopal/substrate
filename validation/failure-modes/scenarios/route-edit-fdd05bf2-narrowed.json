@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-fdd05bf2-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-fdd05bf2] In repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts, add one optio",
+  "description": "[narrowed from route-edit-fdd05bf2] In repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts, add one optional field to the TraceRow interface.\n\nThe interface currently contains this exact line:\n\n  started_at?: unknown;\n\nImmediately after that line, add this single line:\n\n  executed_at?: unknown;\n\nChange nothing else in the file.",
+  "goal_text": "[narrowed from route-edit-fdd05bf2] In repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts, add one optional field to the TraceRow interface.\n\nThe interface currently contains this exact line:\n\n  started_at?: unknown;\n\nImmediately after that line, add this single line:\n\n  executed_at?: unknown;\n\nChange nothing else in the file.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-fdd05bf2-narrowed",
+  "source_gap_source": "substrate_detected"
+}

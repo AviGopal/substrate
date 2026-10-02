@@ -1,0 +1,201 @@
+{"proposal":{"scenario_id":"fp-15-missing-producer-stale-registration","authored_by":"make_activity_autonomous","registration_status":"draft","created_at":"1970-01-01T00:00:00.000Z"},"template":"```json
+{
+  "id": "gap-closing:fp-15-missing-producer-stale-registration",
+  "name": "Vessel Health Corroboration and Discovery Liveness Gate",
+  "description": "Closes gap in detection of stale registrations with broken producers. Audits vessel_registry against impulse_resolution_metrics over 24h rolling window, identifies shapes with ≥80% resolution failure rate from advertised vessel, and proposes discovery-side liveness gate activity. Tags output for Thompson sampling and gates future discovery results by recent resolution success.",
+  "inputShapes": [
+    "vesselRegistry",
+    "vesselHealth",
+    "activityExecutionTrace"
+  ],
+  "outputShapes": [
+    "vesselHealthCorroboration",
+    "discoveryFreshnessAudit",
+    "registrationLivenessReport"
+  ],
+  "tags": [
+    "discovery.liveness.corroboration",
+    "gap-closing",
+    "fp-15"
+  ],
+  "tasks": [
+    {
+      "id": "t1-fetch-codebase-discovery",
+      "name": "Fetch discovery-vessel registry implementation",
+      "resolver": "fs_read",
+      "params": {
+        "path": "repos/discovery-vessel/src/registry.ts"
+      },
+      "description": "Read current TTL, heartbeat, and findByShape logic to understand registration freshness checks.",
+      "produces": ["registrySource"]
+    },
+    {
+      "id": "t2-fetch-codebase-metrics",
+      "name": "Fetch impulse resolution metrics schema",
+      "resolver": "fs_read",
+      "params": {
+        "path": "repos/metabob-activity-api/sql/008-impulse-resolution-metrics.surql"
+      },
+      "description": "Read schema for per-resolution metrics to understand available fields for failure-rate aggregation.",
+      "produces": ["metricsSchema"]
+    },
+    {
+      "id": "t3-fetch-codebase-resolver",
+      "name": "Fetch resolveVesselHealth implementation",
+      "resolver": "fs_read",
+      "params": {
+        "path": "repos/discovery-vessel/src/resolvers.ts"
+      },
+      "description": "Read current active-probe logic and checkEndpoint guard to understand health-check behavior.",
+      "produces": ["resolverSource"]
+    },
+    {
+      "id": "t4-fetch-codebase-circuit-breaker",
+      "name": "Fetch MiniBob circuit breaker implementation",
+      "resolver": "fs_read",
+      "params": {
+        "path": "repos/minibob/src/vessel-direct-resolver.ts"
+      },
+      "description": "Read circuit breaker state machine and local-only storage to identify persistence gap.",
+      "produces": ["circuitBreakerSource"]
+    },
+    {
+      "id": "t5-analyze-gap-artifact",
+      "name": "Analyze gap and synthesize corroboration logic",
+      "resolver": "llm_completion_dispatch",
+      "params": {
+        "prompt": "Given the following code artifacts and failure-mode scenario, synthesize a vessel-health-corroboration activity that: (1) queries impulse_resolution_metrics for vessels with ≥80% failure rate in last 24h, (2) cross-references against vessel_registry for fresh (non-expired) registrations, (3) identifies false-positive unproducible-shape flags, (4) proposes a discovery-side liveness gate that filters findByShape results by recent resolution success, (5) outputs vesselHealthCorroboration shape with per-vessel per-shape failure rates and liveness recommendations. Include specific SQL query structure, activity pseudo-code, and integration points.",
+        "context_artifacts": [
+          "registrySource",
+          "metricsSchema",
+          "resolverSource",
+          "circuitBreakerSource"
+        ],
+        "model": "claude-opus",
+        "temperature": 0.3
+      },
+      "description": "Use LLM to synthesize corroboration logic from codebase analysis.",
+      "produces": ["corroborationLogic", "discoveryGateProposal"]
+    },
+    {
+      "id": "t6-draft-corroboration-activity",
+      "name": "Draft vessel health corroboration activity template",
+      "resolver": "activity_create_variant",
+      "params": {
+        "base_activity_id": null,
+        "name": "Vessel Health Corroboration",
+        "description": "Queries impulse_resolution_metrics and vessel_registry to identify stale registrations with broken producers. Computes per-vessel per-shape failure rates over 24h rolling window. Outputs vesselHealthCorroboration shape with liveness recommendations and discovery gate criteria.",
+        "input_shapes": [
+          "vesselRegistry",
+          "impulseResolutionMetrics"
+        ],
+        "output_shapes": [
+          "vesselHealthCorroboration"
+        ],
+        "tags": [
+          "discovery.liveness.corroboration",
+          "gap-closing",
+          "fp-15"
+        ],
+        "logic_spec": "corroborationLogic"
+      },
+      "description": "Create activity variant template for corroboration.",
+      "produces": ["corroborationActivityTemplate"]
+    },
+    {
+      "id": "t7-draft-discovery-gate-activity",
+      "name": "Draft discovery liveness gate activity template",
+      "resolver": "activity_create_variant",
+      "params": {
+        "base_activity_id": null,
+        "name": "Discovery Liveness Gate",
+        "description": "Gates discovery-vessel findByShape results by recent resolution success. Filters out vessels with ≥80% failure rate in last 24h for requested shape. Prevents false-positive unproducible-shape flags and synthetic producer duplication.",
+        "input_shapes": [
+          "vesselRegistry",
+          "vesselHealthCorroboration"
+        ],
+        "output_shapes": [
+          "discoveryFreshnessAudit"
+        ],
+        "tags": [
+          "discovery.liveness.gate",
+          "gap-closing",
+          "fp-15"
+        ],
+        "logic_spec": "discoveryGateProposal"
+      },
+      "description": "Create activity variant template for discovery gate.",
+      "produces": ["discoveryGateActivityTemplate"]
+    },
+    {
+      "id": "t8-draft-liveness-report-activity",
+      "name": "Draft registration liveness report activity template",
+      "resolver": "activity_create_variant",
+      "params": {
+        "base_activity_id": null,
+        "name": "Registration Liveness Report",
+        "description": "Generates registrationLivenessReport shape: per-vessel audit of registration freshness vs. resolution success, false-positive flags, and recommendations for circuit-breaker state persistence and discovery-gate integration.",
+        "input_shapes": [
+          "vesselRegistry",
+          "vesselHealthCorroboration",
+          "activityExecutionTrace"
+        ],
+        "output_shapes": [
+          "registrationLivenessReport"
+        ],
+        "tags": [
+          "discovery.liveness.audit",
+          "gap-closing",
+          "fp-15"
+        ],
+        "logic_spec": "corroborationLogic"
+      },
+      "description": "Create activity variant template for liveness report.",
+      "produces": ["livenessReportActivityTemplate"]
+    },
+    {
+      "id": "t9-emit-gap-closing-trace",
+      "name": "Emit gap-closing trace with all templates and recommendations",
+      "resolver": "fs_write",
+      "params": {
+        "path": "gap-closing-trace-fp-15.json",
+        "content": {
+          "gap_id": "fp-15-missing-producer-stale-registration",
+          "closure_class": "new",
+          "timestamp": "2026-05-22T00:00:00Z",
+          "activity_templates": [
+            "corroborationActivityTemplate",
+            "discoveryGateActivityTemplate",
+            "livenessReportActivityTemplate"
+          ],
+          "expected_output_shapes": [
+            "vesselHealthCorroboration",
+            "discoveryFreshnessAudit",
+            "registrationLivenessReport"
+          ],
+          "thompson_alpha_minimum": 5,
+          "self_heal_window_seconds": 43200,
+          "regression_check": true,
+          "regression_query": "After corroboration activity ships, the same synthetic broken vessel should be filtered from discovery recommendations for shape 'syntheticShapeFp15' within 1 hour.",
+          "code_integration_points": [
+            "repos/discovery-vessel/src/registry.ts:198-219 (findByShape gate)",
+            "repos/discovery-vessel/src/resolvers.ts:100-146 (resolveVesselHealth enhancement)",
+            "repos/metabob-activity-api/sql/008-impulse-resolution-metrics.surql (aggregate query)",
+            "repos/minibob/src/vessel-direct-resolver.ts:62-132 (circuit breaker persistence)"
+          ],
+          "analysis_artifacts": [
+            "registrySource",
+            "metricsSchema",
+            "resolverSource",
+            "circuitBreakerSource",
+            "corroborationLogic",
+            "discoveryGateProposal"
+          ]
+        }
+      },
+      "description": "Write gap-closing trace with all activity templates and integration recommendations.",
+      "produces": ["gapClosingTrace"]
+    }
+  ]
+}
+```"}

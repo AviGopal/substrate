@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-394625f8",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts, insert one block into the traceTimestamp function",
+  "description": "In repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts, insert one block into the traceTimestamp function.\n\nThe file contains this exact block:\n\n  if (typeof t.started_at === \"string\") {\n    const v = Date.parse(t.started_at);\n    if (!Number.isNaN(v)) return v;\n  }\n\nImmediately after it, insert exactly:\n\n  const ex = (t as { executed_at?: unknown }).executed_at;\n  if (typeof ex === \"string\") {\n    const w = Date.parse(ex);\n    if (!Number.isNaN(w)) return w;\n  }\n\nInsert only. Do not modify any other line, interface, or function.\n\nFacts, each stated positively:\n1. Every trace row passed to traceTimestamp carries executed_at as an ISO date string, for example \"2026-09-04T10:53:30.299061668Z\".\n2. The guard `typeof ex === \"string\"` is the populated-check; Date.parse runs only when that guard is true.\n3. traceTimestamp's return value is read at line 240 of this file and assigned into bucket.newest, which sets recency and therefore combined_score.\n4. This block is reached whenever the earlier guards fall through, which is the normal case.",
+  "goal_text": "In repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts, insert one block into the traceTimestamp function.\n\nThe file contains this exact block:\n\n  if (typeof t.started_at === \"string\") {\n    const v = Date.parse(t.started_at);\n    if (!Number.isNaN(v)) return v;\n  }\n\nImmediately after it, insert exactly:\n\n  const ex = (t as { executed_at?: unknown }).executed_at;\n  if (typeof ex === \"string\") {\n    const w = Date.parse(ex);\n    if (!Number.isNaN(w)) return w;\n  }\n\nInsert only. Do not modify any other line, interface, or function.\n\nFacts, each stated positively:\n1. Every trace row passed to traceTimestamp carries executed_at as an ISO date string, for example \"2026-09-04T10:53:30.299061668Z\".\n2. The guard `typeof ex === \"string\"` is the populated-check; Date.parse runs only when that guard is true.\n3. traceTimestamp's return value is read at line 240 of this file and assigned into bucket.newest, which sets recency and therefore combined_score.\n4. This block is reached whenever the earlier guards fall through, which is the normal case.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-394625f8",
+  "source_gap_source": "substrate_detected"
+}

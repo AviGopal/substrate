@@ -1,0 +1,19 @@
+{
+  "id": "test-file-edits-never-reach-mitosis-staging-so-the-cutover-commits-nothing-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed] ⚠ REFUTED 2026-08-29T09:16Z — THE CENTRAL CLAIM OF THIS GAP IS FALSE. Edit repos/development-vessel/src/resol",
+  "description": "[narrowed] ⚠ REFUTED 2026-08-29T09:16Z — THE CENTRAL CLAIM OF THIS GAP IS FALSE. Edit repos/development-vessel/src/resolvers/feature-compose.ts.",
+  "goal_text": "[narrowed] ⚠ REFUTED 2026-08-29T09:16Z — THE CENTRAL CLAIM OF THIS GAP IS FALSE. Edit repos/development-vessel/src/resolvers/feature-compose.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "test-file-edits-never-reach-mitosis-staging-so-the-cutover-commits-nothing-narrowed",
+  "source_gap_source": "substrate_detected"
+}

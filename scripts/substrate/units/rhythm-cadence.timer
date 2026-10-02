@@ -1,0 +1,17 @@
+[Unit]
+Description=Rhythm cadence timer
+
+[Timer]
+# 15 minutes is a stated choice, not a derived one. The conductor is cheap (one resolve,
+# rate-limited internally by max_enqueue), and due-ness moves on the scale at which
+# staleness and load change, so a quarter-hour is frequent enough to catch a due window
+# and infrequent enough not to churn the queue. Compare validator-liveness at 6h, which
+# asks a much slower question.
+OnActiveSec=5min
+OnUnitActiveSec=15min
+Persistent=true
+AccuracySec=30s
+Unit=rhythm-cadence.service
+
+[Install]
+WantedBy=timers.target

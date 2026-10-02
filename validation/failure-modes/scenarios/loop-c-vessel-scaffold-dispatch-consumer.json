@@ -1,0 +1,64 @@
+{
+  "id": "loop-c-vessel-scaffold-dispatch-consumer",
+  "mode_class": "architectural_pattern",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "information_state": "known_unknown",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "operator_seed": true,
+  "title": "Loop-C truncation — vessel-authoring scenario queue has no deterministic consumer",
+  "description": "gap-to-scenario-bridge already classifies missing_capability gaps (SUBSTRATE_AS_MDP §8.6 horizon tier-check) and writes them to validation/failure-modes/vessel-scenarios/<id>.json, tagged routing_class:'vessel_authoring' with target_template_id=development-vessel:scaffold-and-publish-vessel and the demanded capability_shape / demanding_template_count / sample_template_ids carried through. But NOTHING deterministically consumes that queue: the only consumer is an LLM-reuse boredom goal that Thompson can misroute to a high-α template. So the bridge makes the routing DECISION and discards it at the dispatch boundary — capability horizons that the recombination drafter structurally cannot close (§8.5: 'no vessel advertises shape X' needs a NEW resolver, not a recombination of existing ones) accumulate in the queue and never become vessels. This is the last wired-but-truncated loop in the four-loop self-stability set; closing it lets capability development grow the ACTION SPACE (ΔS, ΔA, ΔR per §8.1 monotone capacity), not just recombine existing resolvers.",
+  "trigger": {
+    "preconditions": [
+      "vessel-demand-tick (or capability-gap-audit-tick) has emitted a missing_capability substrateGap",
+      "gap-to-scenario-bridge has drained it into validation/failure-modes/vessel-scenarios/",
+      "no activity template lists that directory, picks an entry, and dispatches scaffold-and-publish-vessel"
+    ],
+    "synthetic_setup": {
+      "files": [
+        {
+          "path": "/workspace/validation/failure-modes/vessel-scenarios/vessel-demand-priceQuoteResult.json",
+          "content_hint": "A representative vessel_authoring scenario: { id, routing_class:'vessel_authoring', target_template_id:'development-vessel:scaffold-and-publish-vessel', capability_shape:'priceQuoteResult', demanding_template_count:4, sample_template_ids:[...], source_gap_id:'vessel-demand-...' }. The authored consumer must read THIS shape."
+        }
+      ]
+    }
+  },
+  "goal_text": "Author a single seed activity template — name it vessel-scaffold-trigger-tick — that is the Loop-C dual of drafter-trigger-tick (src/seed/drafter-trigger-tick.ts). It must: (1) fs_list /workspace/validation/failure-modes/vessel-scenarios with glob *.json and shuffle:true; (2) json_path_extract entries.0.name; (3) fs_read the chosen scenario file; (4) run ONE constrained llm_completion_dispatch task that reads the scenario's capability_shape + demanding_template_count and emits STRICT JSON {vessel_name (npm-valid lowercase, ends -vessel), port (string 8300-8399), advertised_shapes_literal (string holding a TS array literal), description, commit_message, pr_title, pr_body (MUST contain a 'Substrate-Authored-By:' trailer line)}; (5) json_path_extract each field; (6) http_fetch POST http://127.0.0.1:8210/run-goal with targetTemplateId=development-vessel:scaffold-and-publish-vessel and variables assembled from the extracted fields plus cwd-derived dirPath/unitFilePath (cwd=/workspace, owner=metabob, repo=metabob-devbob, base_branch=dev, target_branch=substrate-authored/<vessel_name>-scaffold). Add zero new resolvers — all five (fs_list, json_path_extract, fs_read, llm_completion_dispatch, http_fetch) already exist; this is compose-only. Tag it boredom_target_template + lift.autonomous.loop + vessel.addition so it enters boredom rotation. The output shape is vesselScaffoldDispatchResult. The safety argument: scaffold-and-publish-vessel terminates in a PR against dev, not a live deploy, so imperfect derived values are caught at PR review (evaluate-pr-via-internal-idioms).",
+  "expected_input_shapes": [
+    "directoryListing",
+    "json_extracted_value",
+    "fileContent",
+    "vesselScaffoldDesign"
+  ],
+  "expected_output_shapes": [
+    "vesselScaffoldDispatchResult"
+  ],
+  "detection": {
+    "signal": "validation/failure-modes/vessel-scenarios/ contains >= 1 *.json entry whose routing_class is 'vessel_authoring', AND no registered activity template has both an fs_list task pointed at that directory and an http_fetch task whose body targets development-vessel:scaffold-and-publish-vessel. The queue grows monotonically with zero scaffold dispatches sourced from it.",
+    "witness_required": "trace_only",
+    "query_template": "Compare count(vessel-scenarios/*.json) against count(execution traces where target_template_id='development-vessel:scaffold-and-publish-vessel' AND source='vessel-scaffold-trigger-tick'); a growing former with zero latter is the truncation."
+  },
+  "expected_emergence": {
+    "class": "new",
+    "activity_signature": {
+      "input_shapes_intersect": ["directoryListing", "fileContent"],
+      "output_shapes_must_include": ["vesselScaffoldDispatchResult"],
+      "tags_pattern": "lift.autonomous.loop.*|vessel.addition.*"
+    }
+  },
+  "self_heal_window_seconds": 86400,
+  "cited_principle": "SUBSTRATE_AS_MDP §8.5 (capability horizons need new resolvers, not recombination) + §8.6 (horizon tier-check routes to scaffold, not draft); the authored template is the deterministic DISPATCH half of the routing DECISION the bridge already makes.",
+  "cited_artifacts": [
+    "repos/development-vessel/src/seed/drafter-trigger-tick.ts",
+    "repos/development-vessel/src/seed/scaffold-and-publish-vessel.ts",
+    "repos/development-vessel/src/resolvers/gap-to-scenario-bridge.ts",
+    "repos/development-vessel/src/seed/enact-orthogonal-decisions.ts"
+  ],
+  "metadata": {
+    "priority": "high",
+    "cost_asymmetry": "symmetric",
+    "depends_on_scenarios": [],
+    "note": "Recombination scenario (routes to draft-gap-closing-activity), NOT a vessel-authoring scenario — it authors an ACTIVITY that recombines existing resolvers. The reference implementation it should converge toward is repos/development-vessel/src/seed/vessel-scaffold-trigger-tick.ts (drafted alongside this scenario as the operator's ground-truth target)."
+  }
+}

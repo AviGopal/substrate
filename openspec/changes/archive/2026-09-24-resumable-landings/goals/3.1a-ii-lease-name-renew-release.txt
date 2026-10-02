@@ -1,0 +1,30 @@
+In repos/development-vessel/src/resolvers/maintenance-lease.ts, make renew and release honour the lease `name` (openspec 2026-09-24-resumable-landings task 3.1a-ii). acquire and read are already name-aware (namedLeasePath(name), readLease(name?), writeLease(lease, name?)); deleteLease, renew and release still use only the unnamed maintenance.json, so a cutover holding name "cutover" cannot renew or release its own lease. Use exactly these five old->new edits (each old text occurs once in the file) and nothing else.
+EDIT 1 — old:
+async function deleteLease(): Promise<void> {
+  try {
+    await unlink(leasePath());
+new:
+async function deleteLease(name?: string): Promise<void> {
+  try {
+    await unlink(namedLeasePath(name));
+EDIT 2 — old:
+    const existing = await readLease();
+    if (!existing || existing.token !== token) {
+new:
+    const existing = await readLease(pointer.name);
+    if (!existing || existing.token !== token) {
+EDIT 3 — old:
+    await writeLease({ ...existing, expires_at });
+new:
+    await writeLease({ ...existing, expires_at }, pointer.name);
+EDIT 4 — old:
+    const existing = await readLease();
+    if (!existing) {
+new:
+    const existing = await readLease(pointer.name);
+    if (!existing) {
+EDIT 5 — old:
+    await deleteLease();
+new:
+    await deleteLease(pointer.name);
+Falsifier: acquire {holder:"a", name:"cutover"}; renew with its token and name "cutover" -> renewed:true and maintenance-cutover.json's expires_at moves; release with its token and name "cutover" -> released:true, maintenance-cutover.json is gone and maintenance.json is untouched. Unnamed renew/release behave exactly as before.

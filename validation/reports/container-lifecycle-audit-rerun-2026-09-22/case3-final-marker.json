@@ -1,0 +1,13 @@
+{
+  "at": "2026-09-22T10:49:24.912713+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-new-network-existing-org",
+    "cat",
+    "/workspace/audit-marker"
+  ],
+  "rc": 0,
+  "stdout": "case3-marker",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

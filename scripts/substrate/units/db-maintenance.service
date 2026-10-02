@@ -1,0 +1,7 @@
+[Unit]
+Description=DB maintenance — row-count/index/integrity remediation against a LIVE SurrealDB (does not detect or recover a wedged/unresponsive DB process)
+[Service]
+Type=oneshot
+Environment=DB_MAINTENANCE=1
+EnvironmentFile=-/etc/substrate/env
+ExecStart=/root/.bun/bin/bun /workspace/active-scripts/db-maintenance-tick.ts

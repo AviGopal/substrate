@@ -1,0 +1,15 @@
+{
+  "schema_version": "0.1",
+  "metadata": {
+    "title": "Add ResolverResult interface to types.ts",
+    "description": "Adds the ResolverResult interface to types.ts for use across resolvers.",
+    "tags": ["feature", "types", "resolver"]
+  },
+  "changes": [
+    {
+      "type": "file_create",
+      "filePath": "repos/development-vessel/src/resolvers/types.ts",
+      "content": "export interface ResolverResult<T = unknown> {\n  success: boolean;\n  shape: string;\n  body: T;\n  details?: Record<string, unknown>;\n}\n\nexport interface Impulse {\n  id: string;\n  type: string;\n  pointer: Record<string, unknown>;\n  content: string;\n  loaded: boolean;\n  budget: number;\n  priority: 'low' | 'medium' | 'high';\n  metadata: Record<string, unknown>;\n  createdAt: number;\n}"
+    }
+  ]
+}

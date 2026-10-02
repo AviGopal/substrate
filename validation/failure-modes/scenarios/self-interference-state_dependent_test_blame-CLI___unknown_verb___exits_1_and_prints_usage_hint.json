@@ -1,0 +1,19 @@
+{
+  "id": "self-interference-state_dependent_test_blame-CLI___unknown_verb___exits_1_and_prints_usage_hint",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "state_dependent_test_blame for CLI — unknown verb > exits 1 and prints usage hint: this test was blamed as draft-introdu",
+  "description": "state_dependent_test_blame for CLI — unknown verb > exits 1 and prints usage hint: this test was blamed as draft-introduced across 55 DIFFERENT gaps, so no draft caused it: it depends on mutable live state and fails deterministically on the confirmation re-run, which the gate reads as proof. Exclude it from the newTest blame set rather than rejecting the drafts.",
+  "goal_text": "state_dependent_test_blame for CLI — unknown verb > exits 1 and prints usage hint: this test was blamed as draft-introduced across 55 DIFFERENT gaps, so no draft caused it: it depends on mutable live state and fails deterministically on the confirmation re-run, which the gate reads as proof. Exclude it from the newTest blame set rather than rejecting the drafts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "self-interference-state_dependent_test_blame-CLI — unknown verb > exits 1 and prints usage hint",
+  "source_gap_source": "substrate_detected"
+}

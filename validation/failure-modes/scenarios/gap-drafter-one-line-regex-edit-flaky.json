@@ -1,0 +1,19 @@
+{
+  "id": "gap-drafter-one-line-regex-edit-flaky",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "other",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "THE DRAFTER FAILS A ONE-LINE REGEX EDIT THREE DIFFERENT WAYS.",
+  "description": "THE DRAFTER FAILS A ONE-LINE REGEX EDIT THREE DIFFERENT WAYS.",
+  "goal_text": "THE DRAFTER FAILS A ONE-LINE REGEX EDIT THREE DIFFERENT WAYS.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-drafter-one-line-regex-edit-flaky",
+  "source_gap_source": "operator_narration"
+}

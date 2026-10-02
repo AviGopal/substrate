@@ -1,0 +1,16 @@
+[Unit]
+Description=Runtime-drift watchdog timer
+
+[Timer]
+# Deliberately more frequent than the other liveness ticks: the window that matters is
+# between an un-reverted edit and the next unit restart, and a restart can be triggered by
+# any cutover at any time. A 10-minute sweep keeps that window small; the check is a byte
+# comparison over source trees and costs nothing when nothing has drifted.
+OnActiveSec=4min
+OnUnitActiveSec=10min
+Persistent=true
+AccuracySec=30s
+Unit=runtime-drift.service
+
+[Install]
+WantedBy=timers.target

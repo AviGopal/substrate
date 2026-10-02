@@ -1,0 +1,19 @@
+{
+  "id": "gap-env-gated-dense-backfill-enabled-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed] env-gated capability: DENSE_BACKFILL_ENABLED is read by concept-db, activity-api, unset in the running enviro",
+  "description": "[narrowed] env-gated capability: DENSE_BACKFILL_ENABLED is read by concept-db, activity-api, unset in the running environment, and its unset branch disables a capability or silently falls back (2 site(s), e.g. Edit repos/concept-db/src/index.ts.",
+  "goal_text": "[narrowed] env-gated capability: DENSE_BACKFILL_ENABLED is read by concept-db, activity-api, unset in the running environment, and its unset branch disables a capability or silently falls back (2 site(s), e.g. Edit repos/concept-db/src/index.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-env-gated-dense-backfill-enabled-narrowed",
+  "source_gap_source": "substrate_detected"
+}

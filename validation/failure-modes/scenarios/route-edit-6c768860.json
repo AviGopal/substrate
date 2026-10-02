@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-6c768860",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-b95c7110: MEASURED 2026-09-12. When fs_edit fails with old_string not found, lo",
+  "description": "investigate and decompose gap route-edit-b95c7110: MEASURED 2026-09-12. When fs_edit fails with old_string not found, local-tools-vessel/src/index.ts:333 returns a message that ALREADY CONTAINS THE ANSWER: 'The closest real text is lines X-Y of N, VERBATIM:' followed by the actual verbatim lines. feature-compose.ts then DISCARDS that message. Its blind-edit repair path instead runs a fresh cat, dumps the ENTIRE file into an LLM prompt built as",
+  "goal_text": "investigate and decompose gap route-edit-b95c7110: MEASURED 2026-09-12. When fs_edit fails with old_string not found, local-tools-vessel/src/index.ts:333 returns a message that ALREADY CONTAINS THE ANSWER: 'The closest real text is lines X-Y of N, VERBATIM:' followed by the actual verbatim lines. feature-compose.ts then DISCARDS that message. Its blind-edit repair path instead runs a fresh cat, dumps the ENTIRE file into an LLM prompt built as",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-6c768860",
+  "source_gap_source": "substrate_detected"
+}

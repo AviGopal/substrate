@@ -1,0 +1,68 @@
+# Project secret-scanning rules, layered over the gitleaks defaults.
+#
+# The pre-commit hook's remediation text points here for extending the rule set.
+# The file did not exist, which mattered: the credential shapes this substrate
+# actually mints are project-specific and match none of the generic rules, so the
+# default set is silent on exactly the secrets most likely to be committed here.
+# Both rules below are regression rules — each matches a credential that reached
+# the tree and had to be rotated.
+
+title = "substrate"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "substrate-api-key"
+description = "Substrate API key (mb_ prefix) — minted by identity-vessel, accepted as `Authorization: ApiKey`"
+regex = '''\bmb[-_][A-Za-z0-9_-]{32,}'''
+tags = ["key", "substrate"]
+
+[[rules]]
+id = "substrate-session-token"
+description = "Session/bootstrap token — base64 of sessions:<uuid>:<org>:<user>"
+# Matches the decoded form directly, and the base64 form by its fixed prefix:
+# `sessions:` base64-encodes to `c2Vzc2lvbnM6`.
+regex = '''(?:\bsessions:[0-9a-fA-F-]{36}:|c2Vzc2lvbnM6)'''
+tags = ["token", "substrate"]
+
+[[rules]]
+id = "anthropic-key"
+description = "Anthropic API key"
+regex = '''\bsk-ant-[A-Za-z0-9_-]{20,}'''
+tags = ["key", "anthropic"]
+
+[allowlist]
+description = "Paths that legitimately carry credential-shaped example values"
+# Test allowlist regexes against the whole matched LINE, not just the captured
+# secret — the audit-evidence entries below discriminate on the field NAME
+# (<X>_sha256, key_id), which the secret capture alone does not contain.
+regexTarget = "line"
+paths = [
+  # Example env templates ship placeholder values by design.
+  '''\.env\..*\.example$''',
+  # This rule file necessarily contains the patterns it matches.
+  '''scripts/git-hooks/\.gitleaks\.toml$''',
+]
+regexes = [
+  # The key-harvest proof (validation/reports/launch-contract-gaps-proof) plants
+  # a deliberately fake canary credential and prints it verbatim — that verbatim
+  # print IS the evidence. Never a real key; the literal CANARY marker is required.
+  '''sk-ant-CANARY-[A-Za-z0-9-]+''',
+  # Demo/placeholder Anthropic keys used by throwaway proof containers.
+  '''sk-ant-(?:demo|dummy)-[A-Za-z0-9-]+''',
+  # Audit-evidence non-secrets that trip the generic-api-key rule:
+  # (a) fingerprint files store SHA-256 HASHES of env secrets under
+  #     <NAME>_sha256 keys — the hash is the evidence (equality across
+  #     recreate), the preimage never appears;
+  # (b) identity payloads carry key_id, a public identifier of the form
+  #     key_<16 chars>, while the key VALUE itself is scrubbed to [redacted]
+  #     by the harness before anything is written.
+  '''[A-Z][A-Z_]*_sha256["']?\s*[:=]\s*["']?[0-9a-f]{64}''',
+  '''key_id["']?\s*[:=]\s*["']?key_[A-Za-z0-9]{8,24}["']?''',
+  # Realignment/synthesis records key every row by a problem-class slug in a JSON
+  # "key" field. regexTarget is "line", so an allowlist regex suppresses EVERY finding
+  # on a matching line: this one is anchored to a line holding ONLY that field, so a
+  # minified line carrying a real token is still flagged (qa review 2026-09-29).
+  '''^\s*"key":\s*"[a-z][a-z0-9]*(?:-[a-z0-9]+)+",?\s*$''',
+]

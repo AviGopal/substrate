@@ -1,0 +1,8 @@
+i	operand	reached	stored_ok	alpha	beta	sig_present
+0	harbor-exp0	true	YES			
+1	lantern-exp1	null	NO			
+2	meadow-exp2	true	YES			
+3	orchid-exp3	true	YES			
+4	pillar-exp4	true	YES			
+5	quartz-exp5	false	NO			
+6	russet-exp6	null	NO			

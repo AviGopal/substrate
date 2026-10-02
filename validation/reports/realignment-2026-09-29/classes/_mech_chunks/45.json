@@ -1,0 +1,44 @@
+{
+ "area": "react-renderer",
+ "items": [
+  {
+   "name": "Hono route table (shadowed routes)",
+   "location": "activity-api execution-traces.ts; react-renderer index.ts",
+   "purpose": "Selection observability endpoints and write shapes.",
+   "status": "broken",
+   "general": false,
+   "evidence": "10 shadowed routes (08-11)",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "react-renderer, workbench vessels",
+   "location": "repos/ (not in inventory/manifest)",
+   "purpose": "UI stacks",
+   "status": "fossil",
+   "general": false,
+   "evidence": "never ran (08-07)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "react-renderer, workbench",
+   "location": "repos/react-renderer, repos/workbench (gitignored)",
+   "purpose": "never-run UI stacks",
+   "status": "fossil",
+   "general": false,
+   "evidence": "not in inventory, manifest or units; still on disk",
+   "source": "openspec-9",
+   "mentions": 1,
+   "sources": [
+    "openspec-9"
+   ]
+  }
+ ]
+}

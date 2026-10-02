@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-04a17268-narrowed-compose_execution_failure",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-04a17268] The gap store experienced a significant data loss, reducing from 4,113 rows to 44 du",
+  "description": "[narrowed from route-edit-04a17268] The gap store experienced a significant data loss, reducing from 4,113 rows to 44 due to loadGaps() returning an empty array on any read or parse failure, resulting in a destructive read-modify-write cycle.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds a condition to prevent writing redundant gaps, but the gap describes a data loss issue due to `loadGaps` returning an empty array on failure, leading to destructive writes, which this p\n- typecheck_dangling_reference: src/resolvers/substrate-gap.ts(529,31): error TS2554: Expected 0 arguments, but got 1.\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-04a17268-narrowed repeated already-recorded failure class compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mtzdc2r6-su33ke/development-ves. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "[narrowed from route-edit-04a17268] The gap store experienced a significant data loss, reducing from 4,113 rows to 44 due to loadGaps() returning an empty array on any read or parse failure, resulting in a destructive read-modify-write cycle.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds a condition to prevent writing redundant gaps, but the gap describes a data loss issue due to `loadGaps` returning an empty array on failure, leading to destructive writes, which this p\n- typecheck_dangling_reference: src/resolvers/substrate-gap.ts(529,31): error TS2554: Expected 0 arguments, but got 1.\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-04a17268-narrowed repeated already-recorded failure class compose_execution_failure: {\"error\":\"old_string and new_string are identical — this op is a no-op, not an edit\",\"path\":\"/workspace/git/compose/fc-mtzdc2r6-su33ke/development-ves. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-04a17268-narrowed-compose_execution_failure",
+  "source_gap_source": "substrate_detected"
+}

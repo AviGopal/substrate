@@ -1,0 +1,13 @@
+In repos/development-vessel/src/cli.ts, sanitise seed tags before the version-bumped upsert posts them (openspec 2026-09-24-resumable-landings task 3.3b-fix). Measured 20:36:20Z: restarting development-vessel-seed found development-vessel:trace-store-reconcile at seed_version 2 > 0 and POSTed it, and activity-api refused HTTP 400 "Tags must be lowercase alphanumeric with dots" because the seed carries the tag "db.maintenance.trace-store". The old activity_create_variant path always rewrote hyphens to dots (activity-create-variant.ts: tag.toLowerCase().replace(/-/g, ".").replace(/[^a-z0-9.]/g, "")); the direct upsert skipped it. Checked offline: the sanitised body passes activity-api's CreateTemplateRequestSchema and keeps metadata.seed_version. Exactly one edit (the old line occurs once), nothing else:
+EDIT 1 — old:
+      const body = { ...(t as Record<string, unknown>), proposed: false, org_id: "organizations:substrate" };
+new:
+      // Same tag sanitising activity_create_variant applies before it posts: activity-api's
+      // TagSchema is /^[a-z][a-z0-9]*(\.[a-z][a-z0-9]*)*$/, and seeds carry hyphenated tags
+      // (e.g. "db.maintenance.trace-store") that the variant path always rewrote.
+      const rawTags = (t as { tags?: unknown }).tags;
+      const tags = Array.isArray(rawTags)
+        ? rawTags.map((tag) => (typeof tag === "string" ? tag.toLowerCase().replace(/-/g, ".").replace(/[^a-z0-9.]/g, "") : tag))
+        : rawTags;
+      const body = { ...(t as Record<string, unknown>), tags, proposed: false, org_id: "organizations:substrate" };
+Falsifier: restarting development-vessel-seed logs "[seed] upserted development-vessel:trace-store-reconcile: seed_version 0 -> 2", and GET /v2/activities/templates/development-vessel:trace-store-reconcile then shows metadata.seed_version 2, tasks acquire_lease > extract_lease_token > reconcile > release_lease > verify, lease name trace_store, and reconcile timeoutMs 900000.

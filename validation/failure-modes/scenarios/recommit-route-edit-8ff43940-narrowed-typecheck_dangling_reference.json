@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-8ff43940-narrowed-typecheck_dangling_reference",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap route-edit-8ff43940-narrowed repeated already-recorded failure class typecheck_dangling_reference: src/r",
+  "description": "compose for gap route-edit-8ff43940-narrowed repeated already-recorded failure class typecheck_dangling_reference: src/resolvers/gap-to-feature.ts(1784,9): error TS2367: This comparison appears to be unintentional because the types '\"pending\" | \"present\" | null' an",
+  "goal_text": "compose for gap route-edit-8ff43940-narrowed repeated already-recorded failure class typecheck_dangling_reference: src/resolvers/gap-to-feature.ts(1784,9): error TS2367: This comparison appears to be unintentional because the types '\"pending\" | \"present\" | null' an",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-8ff43940-narrowed-typecheck_dangling_reference",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,735 @@
+# Seam closure — what was closed, what was reversed, what remains
+
+Companion to `SELECTION_SEAM_ROOT_CAUSE_2026-08-22.md` and
+`LEARNING_DB_ARCHITECTURE_AUDIT_2026-08-22.md`. This is the action record: what
+changed, what it measured before and after, and where a fix was withdrawn.
+
+Every claim here is a measurement against the live local `substrate-live`
+container. Where a change is committed but not yet deployed, it says so.
+
+---
+
+## 1. The autonomy blocker — CLOSED, verified in production
+
+**The defect.** `fs_edit`/`fs_write` called `resolve(path)`, which resolves a
+*relative* path against `process.cwd()`. No fs resolver runs with cwd equal to
+`WORKSPACE_ROOT` — development-vessel runs at `/vessels/development-vessel` while
+the root is `/workspace/git/super-repo`. Every relative path therefore resolved
+somewhere the caller never named and was rejected.
+
+**Why it mattered.** `repos/<vessel>/src/…` is the exact form CLAUDE.md tells
+callers to use and the form `feature_compose` emits. Observed live as `fs_edit:
+HTTP 500 path outside workspace root: repos/identity-vessel/src/index.ts` against
+a file that exists, across four distinct vessel-source paths in six hours.
+
+**Scope of the claim, corrected.** An earlier draft said this made the autonomy
+criterion "structurally unreachable". **It did not**, and the measurement says so:
+`git log --author='Substrate Autonomous'` shows **10 substrate-authored commits in
+the preceding 7 days** (08-15, 08-18 ×6, 08-20, 08-22). Autonomy was never at
+zero. What was blocked is the `fs_edit` route specifically — the walk's
+edit-intent path through goal-host. The commits that were landing came via
+`apply_proposal_as_patch + vessel_mitosis_cutover`, a different resolver that
+never touched this guard. The 09:18 substrate-authored commit observed during this
+session is consistent with the pre-existing rate and is **not** evidence that this
+fix enabled it.
+
+**The fix** (`development-vessel@89a7bf3`). Resolve a relative path against each
+candidate root, and *return* the resolved absolute path so callers stop operating
+on the raw string. The second half is load-bearing: `Bun.file(pointer.path)` would
+have read from cwd even once the guard passed, trading a 500 for a silent
+wrong-file read. `fs-write`'s allowlist check had the same defect independently.
+
+**Verified after deploy:**
+
+| probe | before | after |
+|---|---|---|
+| `repos/activity-api/src/routes/activities.ts` | `path outside workspace root` | `oldString not found` ✅ |
+| `../../../etc/passwd` | rejected | **still rejected** ✅ |
+| `/etc/passwd` | rejected | **still rejected** ✅ |
+| `/workspace/git/super-repo-evil/x.ts` | rejected | **still rejected** ✅ |
+
+The error moved from a guard rejection to a content error — the file resolved and
+was read at the correct absolute location, no write occurred, and the sandbox was
+not widened.
+
+**Verified by conviction, not by green tests.** Reinjecting the original
+`resolve(path)` fails 6 of the 15 new tests — exactly the relative-path cases.
+Two baseline suite runs scored 81 and 94 failures against this change's 82 and 88,
+so the suite is flaky in that band and the change sits below the worst baseline.
+
+---
+
+## 2. The posterior lookup — the real root cause, one line
+
+**Every Thompson selection this substrate has made was drawn from `Beta(1,1)` plus
+heuristic boosts.** Not because the credit path is broken — it works and holds
+credit-weighted posteriors up to α=493.83/β=897.23 — but because the selector
+could not read one.
+
+`getCanonicalPosteriors` reads the correct table and binds the wrong value: it
+**strips** the `organizations:` prefix while the rows carry it.
+
+```
+org_id in variant_performance_metrics:
+  organizations:substrate  3275     public            17
+  organizations:metabob      76     metabob_internal   1
+                                    unknown            1
+
+WHERE account_id IS NONE AND org_id = 'substrate'                →      0
+WHERE account_id IS NONE AND org_id = 'organizations:substrate'  →  3,275
+```
+
+It returned an empty map on every call, and its own doc comment states the
+consequence: *"an empty map means every caller falls back to the uninformative
+prior."* That is exactly the measured draw — α=4.0/β=1.0 for an arm whose stored
+posterior is α=23.76/β=10.86 — and why **β was pinned at 1.0 everywhere**: no
+failure evidence could reach the draw.
+
+**Why it inverted.** The strip was a back-compat shim with a TODO: *"after
+migrating existing data to record format, use orgId directly."* The migration
+happened. The shim outlived the incompatibility and now matched the **19-row
+minority** while orphaning the **3,351-row majority**.
+
+**The fix** (`activity-api@baca870`) matches *both* forms rather than swapping one
+for the other — dropping the bare form would orphan the rows the shim was written
+for. Both call sites. **1,624 arms carrying moved posteriors become visible to
+selection.** Zero test regressions (96 unique failing names before and after).
+
+**Deployment status, stated exactly.** The fix is live (`activity-api` converged
+to `3fb33b6` at 09:32:44, verified in the pull-sync log). What is verified is the
+*query*: run directly against the live database, the widened clause returns 3,275
+rows where the narrow one returns 0, and 1,624 of the newly-matchable rows carry
+`thompson_alpha > 1`. What is **not yet verified is the end-to-end draw** — the
+sampler writes `thompson_selection_log` only when `/recommend` is called, and the
+newest entry is 09:30:14, before the deploy. Selections arrive in bursts on goal
+traffic, and none has landed since. Until one does, the last β=1.0 draw on record
+predates the fix and must not be read as evidence either way.
+
+The test went through two rewrites, both forced by measurement rather than taste.
+It first drove `getActivityScores` through a `mock.module` of `../db/surreal`;
+that passed in isolation *both locally and inside the container* and failed only
+in a full-suite run, because `mock.module` is global and order-dependent — once an
+earlier file imports the real module, the cached binding wins. pull-sync refused
+to converge on it twice, blocking the fix the test existed to protect. It now
+asserts on source, deterministic under any ordering and the pattern this repo
+already uses (`execution-traces.sql-targets.test.ts`).
+
+**The autonomous half-revert.** Substrate-authored commit `3e58e73` consolidated
+this function, kept the widened clause at the first site, and narrowed the second
+back to a single form — **while leaving `params.org_id_prefix` bound there**. An
+unused parameter, which no placeholder/binding check catches, because the mismatch
+runs the harmless direction: I had verified placeholders ⊆ bindings and it passed.
+The check that was needed is whether every intended widening survived. The test now
+anchors on `$org_id_prefix` — unique to these two sites — and asserts the **count
+is 2**, proven by conviction on each site independently.
+
+---
+
+## 3. The `success` predicate — two fixes, one reversal, one escalation
+
+This one went wrong twice before it went right, and both reversals are recorded
+because the pattern matters more than the outcome.
+
+**Round 1 — assumed corruption (196/197).** `activity_id='X' AND success=true`
+returned **0 in 2ms** while the same rows returned **5,619 in 750ms** by scan.
+Diagnosed as index corruption; both composites rebuilt with `CONCURRENTLY`.
+
+**Round 1 refuted (198).** After the rebuild applied, freshly-built indexes still
+returned 0. *You cannot rebuild your way out of a fault the rebuild reproduces.*
+Removed them, exactly as 196 had pre-committed: **a missing index degrades to a
+correct scan, a corrupt one silently lies.**
+
+**Round 2 — the removal exposed something worse (199).** With only the
+single-field `idx_execution_success` left to serve the boolean, the planner uses
+it and **discards the conjoined filter**:
+
+| query | result |
+|---|---|
+| global `success = true` | 8,167 |
+| `ribosome-extract` total rows | **123** |
+| `ribosome-extract AND success = true` | **8,167** ← the global count |
+| `ribosome-extract AND success` | 122 ✅ |
+| `validator-dispatch` total rows | 5,547 |
+| `validator-dispatch AND success = true` | **8,442** ← exceeds its own total |
+
+A filtered count larger than the unfiltered count for the same activity is proof
+on its own.
+
+**This was more dangerous than the defect it replaced.** Before, ~49 call sites
+got `0` — wrong but inert, since a sweep that selects nothing deletes nothing. A
+global row set is wrong *and plausible*, and `trace-retention.ts` filters strata
+with exactly this predicate. A per-stratum delete driven by a global selection
+deletes across every stratum.
+
+**It was not firing, by luck rather than design** — the journal at 09:13:40 shows
+`over global ceiling — skipping stratum auto-discovery this cycle so the indexed
+valve is reached (total 150086, ceiling 150000)`. Above the ceiling the sweep
+takes the global time-ordered valve. Below it, stratum deletes engage on a
+predicate that cannot tell which stratum it is in. Migration 199 removes the last
+boolean index before that happens, and carries the rule: **no index over
+`success` is to be reinstated** — every configuration tried has been fast and
+wrong, in two different directions.
+
+---
+
+## 4. A stale test that blocked the pipeline
+
+`execution-traces.sql-targets` pinned `CREATE activity_composition_graph SET`
+after the writer was deliberately changed to a keyed `UPSERT`. The table it
+guards never changed, so it failed on the *verb* while its actual invariant held —
+and `substrate-pull-sync` refused to converge activity-api on that single
+failure, blocking every migration behind it. Now pins the real form and
+additionally asserts the upsert stays *keyed*, so a regression to a bare table
+write that reintroduces duplicate edges still fails. Verified by conviction:
+redirecting the writer fails it, restoring passes 3/3, `execution-traces.ts` left
+byte-identical.
+
+---
+
+## 5. What the autonomy path did, once it worked
+
+Two dispatches of the same fix, differing only in the quality of the information
+given:
+
+| dispatch | information supplied | result |
+|---|---|---|
+| first | approximate line numbers, prose description | drafter **confabulated** an anchor occurring **0 times** |
+| second | verbatim anchors proven unique in the file | **exactly the right plan** — both real sites, widened `$org_id_prefix` clauses drafted correctly |
+
+That is law 8 in a controlled comparison: the first failure was information
+starvation, not model weakness. The fix for a wrong output was not a bigger
+prompt — it was making the load-bearing fact available at the moment of use.
+
+The second dispatch was then blocked by a gate worth keeping:
+
+> `TARGET HAS NO TEST FILE: repos/activity-api/src/db/paradigm.ts — every gate
+> below this point READS the diff; only a test RUNS it. A FAVORABLE verdict here
+> means the change was reviewed, never executed.`
+
+That gate is correct. The test file now exists, so it is satisfied for future
+changes to that file.
+
+---
+
+## 6. Diagnosed, not yet fixed
+
+**The selection→outcome join** is built at five of seven stages and unattached at
+both producing ends. Selection writes `correlation_id`; `execution` declares the
+column; `paradigm.ts:374` projects it; `execution-traces.ts:1126` fetches *by* it;
+`v_selection_outcomes` consumes it. But `StoreExecutionTraceRequestSchema` has no
+`correlation_id` and no `.passthrough()`, so Zod strips it at ingest, and the
+field occurs **zero times** in goal-host-vessel's and ias-executor-ts's entire
+source. Zero of 8,650 non-auth executions carry it. Fixing either side alone
+changes nothing — that mutual invisibility is why a nearly-complete join has
+produced nothing. Three coordinated changes across three repos.
+
+**The conditional tiers** miss through joint sparsity rather than impossibility:
+2 of 15 live selection signatures do exist in the credit store, with rows well
+past the observation floor. Tier 2's cluster rows are fresh and weighty
+(n up to 195) but live selection signatures carry **no cluster assignment**, and
+57% of assignments are `contaminated`. Tier 3 — now fixed — is the fallback meant
+to absorb exactly this.
+
+**`v_activity_score` really is missing** and cannot self-restore (defined with
+`IF NOT EXISTS` in a schema file that `init_migrations` records as applied, so
+`init-database.ts` skips it forever — the class migration 174 fixed for seven
+other views). Its only consumer is `GET /v2/activities/corpus-summary`, which
+reports zeros for the whole corpus. Real, separate, **not** on the selection path.
+
+---
+
+## Method notes
+
+**Four phantom-column reads, all caught by reading one full row first.** `reached`
+on `goal_execution_paths`; `template_id` and `created_at` on
+`thompson_selection_log`; `signature_hash` on `signature_cluster_assignment`. Each
+returned a clean, confident, meaningless answer — SurrealDB returns `NULL` for an
+absent column, so a typo and a genuine absence are indistinguishable. One nearly
+shipped as a headline claiming selection had stopped a month ago.
+
+**A grep hit is not a call path.** The audit's published tier-3 mechanism —
+"selection reads a view that does not exist" — was wrong. `FROM v_activity_score`
+exists, but in a reporting endpoint. I traced a grep hit to a conclusion without
+confirming what actually populated `scoresMap`. Every *measured* fact survived;
+only the mechanism connecting them was invented, and it was invented in the one
+place left unprobed.
+
+**Both index reversals came from the instrument, not from insight.** 196 said in
+advance what to do if the rebuild failed, and it failed, and that instruction was
+followed. A fix that specifies its own falsification is worth more than a fix that
+is merely correct.
+
+
+---
+
+## Re-evaluation — measured after deploy
+
+### The `success` predicate: CLOSED and verified
+
+Migration 199's own four-query check, run after it applied:
+
+| | total | `AND success=true` | `AND success` |
+|---|---|---|---|
+| `ribosome-extract` | 123 | **122** | **122** ✅ |
+| `validator-dispatch` | 3,102 | **3,102** | **3,102** ✅ |
+
+All forms agree and every filtered count is bounded by its total — the first time
+that has been true on this table.
+
+### The retention sweep started working, and the ring is draining
+
+The predicate the per-stratum sweep filters on was returning zero rows, so it
+deleted nothing. With it fixed:
+
+| measure | before | after |
+|---|---|---|
+| `execution` rows | 150,002 (at cap) | **69,564** |
+| `auth_resolve_v1` rows | 142,951 | **65,958** |
+
+Roughly **80,000 rows drained**. Auth share is still ~95%, so the storm's
+composition is unchanged — what changed is that the valve now moves.
+
+*Side observation, not chased:* `trace_store_counters.row_count` reads 146,845
+against an actual 69,564. The counter lags the table by a wide margin and is its
+own defect.
+
+### The posterior fix: verified at the query, NOT at the draw
+
+Stated exactly, because the distinction is the whole point of this report.
+
+**Verified.** The fix is live (`3fb33b6`, converged 09:32:44 — and migration 199
+appearing in `init_migrations` independently proves activity-api restarted on that
+content, since migrations apply at `ExecStartPre`). That converge also passed the
+test gate, which confirms the source-based test survives the container's
+full-suite run — the thing two earlier versions failed. Against the live database
+the widened clause returns **3,275** rows where the narrow one returns **0**, and
+**1,624** of the newly-matchable rows carry `thompson_alpha > 1`. Both entry
+points are covered: `getCanonicalPosteriors` is called from the shape-conditioned
+path (`paradigm.ts:652`) as well as `:2190`, so the fix is not confined to one
+branch.
+
+**Not verified: any behavioural change at the draw.** The first post-deploy burst
+(09:37:37, 3 selections) logged β=1.0 on all three. That is *inconclusive rather
+than negative*: all three arms have `variant_performance_metrics` rows at
+α=1.0/β=1.0 with `total_executions` 0–1 — genuinely untried, for which β=1.0 is
+the **correct** draw. A conclusive test needs a burst containing an arm that has a
+moved posterior.
+
+**And a correction that cuts against the fix's headline.** Comparing
+`Activity scores fetched` counts either side of the deploy:
+
+```
+before 09:32   count:0 path:legacy ×10    count:36 path:new ×3    count:60 path:new ×2
+after  09:33   count:0 path:legacy ×8     count:36 path:new ×3    count:9  path:new ×1
+```
+
+The **`new` (paradigm) path was already returning 36–60 rows before the fix**.
+Only the `legacy` path returned 0, and it still does. So the claim "every Thompson
+selection was drawn from the uniform prior" is **not supported by this
+instrument** — some path was already fetching scores. The query-level defect is
+real and measured (0 vs 3,275 on the exact clause `getCanonicalPosteriors` emits),
+but its share of live draws is undetermined, and the α=4.0/β=1.0 observations that
+motivated the whole investigation are not yet explained end to end.
+
+That is the honest state: a real defect, really fixed, whose behavioural
+consequence remains unproven. It is recorded as open rather than closed.
+
+
+---
+
+# Round 2 — the decay, and why the open question closed differently than expected
+
+## The α=4.0/β=1.0 draw is explained. It was never a read failure.
+
+The previous round left one thing explicitly open: draws logged α=4.0/β=1.0 while the
+score fetch was demonstrably returning 36–60 rows. Both facts were true. The missing
+piece is **selection-time posterior decay**, applied *after* the fetch and *before* the
+draw:
+
+```
+alpha_decayed = 1 + (alpha - 1) * 0.5^(age_days / halfLife)      halfLife = 3
+```
+
+Reproduced exactly against the sampler's own log:
+
+| arm | stored | stale | decays to | + boost 3.0 | logged |
+|---|---|---|---|---|---|
+| `detect-vessel-code-drift` | 23.76 / 10.86 | 33.9d | 1.009 / 1.004 | **4.009 / 1.004** | 4.0 / 1.0 |
+| `operator-mcp-isomorphism-probe` | 21.62 / 18.22 | 25.8d | 1.054 / 1.045 | **4.054 / 1.045** | 4.0 / 1.0 |
+
+**β pinned at exactly 1.0 on every observation was the tell.** The posterior was fetched
+correctly, then decayed to the uniform prior before it could be sampled.
+
+## The cost, corpus-wide
+
+Over the 1,821 arms carrying real evidence (α+β > 4), at the in-force 3-day half-life:
+
+| staleness | arms | evidence retained |
+|---|---|---|
+| <1d | 81 | ~100% |
+| 3–7d | 3 | 20% → 0.4% |
+| 14–30d | 409 | 3.9% → 0.098% |
+| **>30d** | **1,328** | **<0.098%** |
+
+**95.4% retain under 5%. The median arm retains 0.0002%.**
+
+This is the mechanism behind "learning does not compound," stated precisely: the credit
+path accumulates evidence correctly, and the selector forgets it faster than arms
+re-execute. The corpus is bimodal — a small hot set runs constantly and never decays, a
+large cold set runs on a cycle of weeks and is erased between draws.
+
+**Origin:** the constant is documented as matching "the llm-resolver-vessel decayedCounts
+fix this mirrors." LLM resolver arms fire many times an hour; 3 days barely touches them.
+Activity templates fire on a cycle of weeks. **A constant calibrated for one population
+was applied to a population with a completely different cadence.**
+
+## Why the obvious fix is wrong — and how I found that out
+
+I raised the default to 30 days. `substrate-pull-sync` **refused to converge** and named
+the reason: `test/posterior-decay.test.ts` already pins that a posterior poisoned by a
+transient outage — α=1, β=81, i.e. 80 failures the arm did not earn — must heal to
+re-selectable within 30 days.
+
+That requirement is real, predates me, and raising the half-life silently overrides it.
+The gate was right; moving without reading it was my error, and it is the second time this
+session that a guard caught something my own checks missed.
+
+**One constant is doing two incompatible jobs:**
+
+- **R1** wants *fast* forgetting, so unearned blame heals.
+- **R2** wants *slow* forgetting, so earned credit compounds.
+
+A symmetric exponential toward (1,1) treats an earned 23.76/10.86 and an outage-poisoned
+1/81 identically, so satisfying either breaks the other. This is now proved rather than
+asserted: swept across 15 half-lives from 0.5 to 1,000 days, **the set satisfying both is
+empty**, with a monotonicity check (the requirements move in opposite directions) and a
+positive control (each is individually satisfiable, so the empty intersection is a real
+conflict rather than an impossible pair of asks).
+
+**Rejected on evidence, recorded so it is not re-derived:** decaying β faster than α. The
+asymmetry is tempting — blame is contaminated by outages, credit is earned — but it
+systematically inflates every arm's mean, and *"no failure evidence reaches the draw"* is
+the precise defect this whole investigation started from. It would deepen the failure it
+appears to fix.
+
+**Left at 3, deliberately.** The resolution is a design decision, and most likely belongs
+upstream: blame recorded during an infrastructure outage is not the arm's fault, and decay
+is a workaround for attributing it in the first place. Fixing attribution removes the need
+for aggressive forgetting, which dissolves the conflict instead of trading sides.
+
+The test file is a characterization: change the half-life and it fails, sending the next
+reader to the conflict rather than letting the change land silently.
+
+## Corrections to the previous round, from reading the code rather than inferring
+
+**The `correlation_id` seam is smaller than I published.** I wrote that the ingest schema
+strips the field and that the fix is "three coordinated changes." Both wrong:
+
+- The trace-store route reads `body.*` **directly** and deliberately does *not* apply
+  `StoreExecutionTraceRequestSchema` — there is a comment saying so, because enforcing it
+  would 400 the flat posters that currently work. So the schema strips nothing here.
+- The route **already passes the field through**:
+  `...(body.correlation_id ? { correlation_id: body.correlation_id } : {})`, commented
+  "Selection-to-execution correlation (from /recommend endpoint)".
+- `/recommend` **already returns** `rec.correlation_id` per recommendation.
+
+So six of seven stages are built and the storage side is complete. The single remaining
+gap: **goal-host never reads `correlation_id` off the recommendation** (zero occurrences
+in its source), so nothing downstream can send it. One producer chain, not three
+coordinated schema changes.
+
+
+---
+
+# Round 2 re-evaluation — measured after deploy
+
+Converged at `82255e6`, gate passing, all seven vessels `active` / `NRestarts=0`.
+
+## The retention repair worked, and it was precise
+
+The `success` predicate fix let the per-stratum sweep see its own work for the first
+time. The result is not a blunt drain — it targeted the noise and left the signal:
+
+| measure | before | after | |
+|---|---|---|---|
+| `execution` rows | 150,002 (at cap) | **5,669** | ring no longer saturated |
+| `auth_resolve_v1` | 142,951 (95.3%) | **2,202** (38.8%) | 140,749 removed |
+| non-auth traces | ~3,606 | **3,467** | **essentially untouched** |
+| distinct real activities | — | **233** | corpus intact |
+| reach verdicts | — | 136 true / 2,439 false | intact |
+
+**140,749 auth rows removed while 96% of real traces survived.** That is the sweep
+working as designed for the first time in its life.
+
+Predicate agreement confirmed on the drained corpus: `validator-dispatch AND success=true`
+= `AND success` = **911**. Equal, and bounded by the arm's own total.
+
+## Reach, recomputed on a clean corpus
+
+The drain removed the auth noise that made every prior reach figure unreliable, so this is
+the first measurement taken against a corpus that is mostly real work. It **reproduces the
+earlier figures almost exactly**, which is the useful result — the numbers were right, the
+denominator was just contaminated:
+
+| denominator | reach | earlier measurement |
+|---|---|---|
+| excluding `auth_resolve_v1` | **36.5%** (136 / 373) | 37.0% |
+| goal-shaped executions | **42.5%** (121 / 285) | 42.4% |
+
+Against a stated expectation of ~90%.
+
+**New defect surfaced by the clean corpus:** all 2,202 surviving `auth_resolve_v1` rows
+carry a `reached` verdict. An authentication check has no goal to reach, so grading it is
+meaningless — and it is exactly why the unfiltered reach rate read as 0.08%. Any reach
+metric computed without excluding auth is measuring the auth sampler.
+
+## Status of every seam
+
+| seam | state |
+|---|---|
+| fs guard rejecting all relative paths | **CLOSED**, verified live with three traversal controls |
+| `success` composite indexes serving zero | **CLOSED** after two documented reversals |
+| retention sweep deleting nothing | **CLOSED** — 140,749 rows drained, real traces preserved |
+| `org_id` posterior binding | **CLOSED** at the query (0 → 3,275 rows); draw effect still unproven |
+| α=4.0/β=1.0 draws (was OPEN) | **EXPLAINED** — selection-time decay, reproduced exactly |
+| decay half-life | **PROVEN UNFIXABLE BY TUNING** — left at 3, resolution is a design decision |
+| `correlation_id` / gradable decisions | **SPECIFIED, NOT DONE** — see below |
+| 69% missing reach tags | open |
+| conditional-tier sparsity | open |
+| `v_activity_score` absent | open, affects `corpus-summary` only |
+
+## The correlation seam, now fully specified
+
+Six of seven stages are built. Corrections to the previous round, from reading the code:
+the ingest route does **not** apply the schema (deliberately — enforcing it would 400 the
+flat posters), it **already** passes `correlation_id` through, and `/recommend`
+**already** returns it per recommendation.
+
+And the consumer is emptier than reported: `v_selection_outcomes` holds 226 rows and
+**not one carries any outcome field**. Every column is selection-side
+(`alpha_at_selection`, `selection_probability`, `expected_success_rate`). It is named for
+a join that was never built.
+
+The single gap: `recommendExcluding` (goal-host `index.ts:5630`) returns
+`Promise<string | null>` — the template id alone — discarding `correlation_id` from the
+recommendation it just read. Three call sites (`:12237`, `:12240`, `:12363`) feed that id
+into dispatch. Closing it means returning the pair and threading it to the trace payload
+`ias-executor-ts/src/adapters/activity-api-trace-sink.ts` posts.
+
+**Not attempted here, deliberately.** It is a refactor of the walk's hot path across two
+repos, and this session has twice been caught by moving fast on this codebase — once by a
+guard I had not read, once by an autonomous commit silently half-reverting a fix. The work
+is small and now fully specified; it deserves a fresh pass, not a tired one.
+
+
+---
+
+# Round 3 — the four remaining seams
+
+Prompted by a stop-gate correctly refusing round 2: three seams were listed open and one
+specified-but-deferred. All four are now resolved, though two resolved by being
+**re-measured out of existence** rather than repaired — which is the more useful outcome.
+
+## 1. `v_activity_score` missing — CLOSED
+
+`GET /v2/activities/corpus-summary` selected `FROM v_activity_score`, a view absent from
+the database. SurrealDB reports a missing table as an empty one, so the endpoint returned
+a healthy 200 with **every count at 0** and `avg_belief` at its 0.5 default.
+
+Fixed by pointing it at the surviving producer rather than resurrecting the view:
+
+| | before | after |
+|---|---|---|
+| total_activities | 0 | **3,275** |
+| total_executions | 0 | **1,560,649** |
+| total_successes | 0 | **637,961** |
+| avg_belief | 0.5 (default) | **0.435** |
+
+**Not restored deliberately.** It was a live aggregate `FROM execution` — the hot trace
+table — and migration 165 removed its sibling `v_activity_score_enhanced` for exactly that
+reason. Re-creating it would reintroduce write amplification on the busiest table in the
+system to serve one reporting endpoint. Its own header declared it a replacement for
+`variant_performance_metrics`, which is the table that actually won. Law 3: reuse the
+existing producer.
+
+*Self-inflicted trap worth recording:* the first version of the test matched
+`FROM v_activity_score` in the fix's **own explanatory comment** and reported the defect as
+live. The test now strips comment lines. Same "a comment describing a defect was written by
+whoever fixed it" class this codebase has hit before — caught by the test failing on
+correct code.
+
+## 2. "69% missing reach tags" — WITHDRAWN, it was measured over the wrong population
+
+The published claim was that 69% of executions never receive a reach tag, starving the
+ribosome's honesty gate. Re-measured against the population that *should* carry a verdict:
+
+| population | graded | ungraded | |
+|---|---|---|---|
+| **goal-shaped executions** | **285** | 76 | **79% graded** |
+| goal-host walks (incl. intermediate steps) | 373 | 1,700 | 18% |
+| everything else | 0 | 1,395 | 0% — correct, not goals |
+
+The 76 ungraded goal executions are all `auto-bridge-*` — **intermediate walk steps**.
+Reach is a property of a goal, not of each step, so they are correctly ungraded. The
+ribosome consumes `execution_completed` for *every* execution — non-goals and intermediate
+steps included — so the "69%" was measured over the firehose, not over the gradable set.
+
+**The reach gate is not the extraction bottleneck.** That remains downstream: 90 of 102
+`ribosome-extract` runs return `status: success` with `reached: false`.
+
+## 3. `correlation_id` — CLOSED in code, end-to-end observation pending
+
+Both ends of the join were already built; nothing carried the value between them because
+`recommendExcluding` returned the template id alone and discarded the rest of the
+recommendation. Measured before: `correlation_id` on **0 of 8,650** non-auth executions,
+and `v_selection_outcomes` holding 226 rows of which **not one carries an outcome field**.
+
+The id now rides the prefixed-tag provenance channel the walk already uses
+(`dispatcher_used:`, `state_signature:`, `edit_intent:`), so no schema change was needed.
+
+**Attribution correctness is the load-bearing property, not presence.** The id is captured
+*inside* the selection branch — after the exclusion and shape filters, in the block that
+returns the chosen id — so it belongs to the recommendation actually picked, and it is
+re-stamped per retry attempt. Reporting the first recommendation's id while executing a
+different arm would attribute an outcome to a decision never taken: worse than no link.
+Conviction covers both failure modes (dropping the tag fails 1 test, dropping the
+attribution fails 2).
+
+**Not yet observed live.** Deployed at `547383a`; since then exactly one execution has
+occurred and it took the **satisfier** path, which bypasses `recommendExcluding` entirely
+and therefore legitimately carries no correlation id. Verification needs a
+Thompson-selected execution. Recorded as pending rather than claimed.
+
+*Scope note surfaced by that probe:* satisfier picks never pass through recommend, so they
+will never carry a correlation id by construction. Any measure of "decisions graded as
+decisions" must exclude them or count them separately.
+
+## 4. Conditional-tier sparsity — CHARACTERIZED as structural, not a wiring defect
+
+Tier 2 (cluster) exists to absorb tier 1b's signature sparsity. It cannot, and the reason
+is structural rather than a broken join.
+
+The dependency chain is: **credit writes `context_thompson_scores` → the backfill writes
+`signature_embedding` → `signature-cluster-tick` clusters those embeddings → tier 2 can
+serve.** Every link is keyed on signatures the credit path already saw.
+
+Verified directly on three live selection signatures: the only one with an embedding
+(`0bcbfdf2c58a0ca2`) is exactly one of the two that already exist in the credit store. The
+other two have neither embedding nor cluster assignment.
+
+**So the fallback is only available where the primary already works.** A selection-time
+signature that has never been credited is not merely unclustered — it was never a candidate
+for clustering. Compounding it, 403 of 706 assignments (57%) are `contaminated: true`,
+which disables the tier by design.
+
+Closing this is a **design change, not a repair**: it needs an embedding computed for an
+unseen signature and a nearest-cluster lookup at selection time. `signature_embedding`
+exists and clustering is already embedding-based, so the machinery is present — but there
+is no `nearestCluster`/`assignCluster` entry point anywhere in the source, and adding
+embedding computation to the recommend hot path is a latency decision, not a wiring fix.
+Left for a deliberate design pass with the mechanism precisely located.
+
+
+---
+
+# Round 4 — blame attribution fixed, then the decay lengthened
+
+Directed: *"fix blame attribution during outages, then lengthen the decay."* Done in that
+order, because the second is only safe because of the first.
+
+## The blame defect was worse than "outages are mis-attributed"
+
+Tracing it produced a sharper finding: **98% of this system's failures carried no
+diagnostic information at all**, so blame could not be attributed even in principle.
+
+```
+execution_error   1,761      <- 98% of all recorded failures
+cascading            36
+verifier_negative      4
+```
+
+`execution_error` was absent from `computeDeltas`' switch, so it fell to `default:` and
+took a **full β=1 penalty** while warning *"unknown failure_mode.type"*. The overwhelming
+majority of all blame in this system was assigned by a branch that did not know what it
+was looking at.
+
+And the payload was empty — `{type: 'execution_error'}` with nothing else. Tracing why:
+
+| stage | state |
+|---|---|
+| engine emits `{type, reason}` (`engine.ts:1407`) | ✅ reason present |
+| trace sink forwards it | ❌ **collapsed to a bare type** |
+| activity-api route validates it | — no zod applied; reads `body.failure_mode?.type` |
+| DB column | `FLEXIBLE TYPE option<object>`, no ASSERT |
+
+The sink's own comment justified the strip on two grounds, **both false when measured**:
+`FailureModeSchema` is declared and applied on *no* ingest route, and the claim that
+"rich error info travels in the per-task error field instead" does not hold — sampling a
+failed execution's persisted tasks shows no error/reason/message key at all.
+
+So the reason was destroyed at the wire boundary to satisfy a contract nothing enforces,
+and nowhere recovered it. That is the *"explicit projection is a silent dropper"* class,
+and it is why an outage and a genuinely broken arm recorded identical failures.
+
+## The fix
+
+**Sink** (`ias-executor@acfd5c0`): `execution_error` forwarded intact. The guard is kept —
+an unrecognised type still flattens, but now to a bounded one-line description rather than
+nothing.
+
+**Attribution** (`activity-api@2ededef`): `computeDeltas` abstains (`β += 0`, the shape
+`cascading` already uses for a victim) when the reason matches a transport/availability
+signature. Deliberately **narrow** — anything unrecognised keeps the strict penalty, and
+an `execution_error` with *no* reason also keeps it, because historical rows have none and
+abstaining blind would forgive every unlabelled failure in the store.
+
+*Its own negative control caught the first version over-matching:* a bare `/\b50[234]\b/`
+matched `"returned 5031 rows, expected 502"` — an arm-fault message that would then have
+escaped blame. Status codes now require explicit `HTTP`/`status` context. **A false
+abstention costs one blame signal; a false blame condemns a working arm.**
+
+## Then the decay, which this made safe
+
+Raised **3 → 30 days**. Previously impossible: one constant served two incompatible jobs,
+and a sweep over 15 half-lives proved the set satisfying both is empty. Fixing attribution
+**dissolves** the conflict rather than trading sides — outage poison is no longer
+manufactured, so decay no longer has to erase real evidence to remove it.
+
+The sweep test is **kept, not deleted**. It is what proves the conflict could never have
+been tuned away; if anyone later proposes serving R1 with the half-life again, it still
+says no.
+
+**Residual, measured and stated rather than rounded:** 32 of 509 arms with real β already
+carry the historic poison signature. A β=81 row now crosses back to re-selectable at
+roughly **240 days** rather than 30 — at 180 days it is still suppressed at mean 0.308. My
+first draft said "two quarters" and the test caught that as wrong. The two worst are
+`auth_resolve_v1` (β=399,770 — the credential storm, environmental by definition and not a
+selectable activity) and a hook subscriber already excluded from the conditional
+posterior, so the slow fade lands where it costs least.
+
+## Deployment — verified, with one honest gap
+
+Converged 16:51. The `ias-executor` change is a **shared package**, so pull-sync rebuilt
+`dist` for six consumers and restarted them. Verified in the artifact consumers actually
+load:
+
+```
+/vessels/ias-executor-ts/dist/adapters/activity-api-trace-sink.js
+  execution_error occurrences: 7
+  describeUnknownFailure:      2
+  built: 2026-08-22 16:51:11
+```
+
+with `goal-host-vessel` (16:51:28), `development-vessel` (16:51:20) and `ribosome-vessel`
+(16:51:52) all restarted onto it.
+
+**Not yet observed end to end:** zero `execution_error` rows have been recorded since the
+deploy, so no natural failure has exercised the path. The mechanism is unit-proven (11
+tests, conviction-checked in both directions) and the deployed artifact is confirmed, but
+the first reason-carrying failure row is still pending. Recorded as pending rather than
+claimed — the same standard applied to the `org_id` and `correlation_id` fixes.
+
+**What to watch:** `SELECT count() FROM execution WHERE failure_mode.type='execution_error'
+AND failure_mode.reason IS NOT NONE` should become non-zero on the next failure. If it
+stays at zero while failures accumulate, the sink is not the only producer and the
+remaining one needs finding.

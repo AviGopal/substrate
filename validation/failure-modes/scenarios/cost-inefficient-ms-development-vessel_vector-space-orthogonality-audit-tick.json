@@ -1,0 +1,19 @@
+{
+  "id": "cost-inefficient-ms-development-vessel_vector-space-orthogonality-audit-tick",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "cost_constraint",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Template 'development-vessel:vector-space-orthogonality-audit-tick' is cost-inefficient on ms: expected=58530 (≥ 2× pool",
+  "description": "Template 'development-vessel:vector-space-orthogonality-audit-tick' is cost-inefficient on ms: expected=58530 (≥ 2× pool median 2424) at mean=0.50, value_per_sec=0.009. Useful work but far more expensive than peers — a candidate for a cheaper variant (§8.4 tier-refinement or narrower scope).",
+  "goal_text": "Template 'development-vessel:vector-space-orthogonality-audit-tick' is cost-inefficient on ms: expected=58530 (≥ 2× pool median 2424) at mean=0.50, value_per_sec=0.009. Useful work but far more expensive than peers — a candidate for a cheaper variant (§8.4 tier-refinement or narrower scope).\n\nRemediation hint: Profile the template's slowest/most-expensive task; collapse an llm/pattern-tier step to deterministic where possible (§8.4), or draft a scoped variant. Re-measure.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "cost-inefficient-ms-development-vessel_vector-space-orthogonality-audit-tick",
+  "source_gap_source": "substrate_detected"
+}

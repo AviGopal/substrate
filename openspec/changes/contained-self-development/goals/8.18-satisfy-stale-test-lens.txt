@@ -1,0 +1,14 @@
+In repos/development-vessel/src/resolvers/feature-compose.ts, add a SATISFY-STALE-TEST lens to the refuters and to the drafter's closure criterion, because both autonomous failing-test landings on 09-28 changed working production code only to satisfy a stale test (a resolve timeout lowered 30000 to 10000 beneath the comment explaining why 30 s is required; a guard that turned off discovery-first resolution in production), and both passed the gates and were closed as verified. Apply exactly these 2 edits; each old text occurs exactly once:
+EDIT 1
+old:
+(A real case: a gap 'no live authoring tree for obsidian-vessel' was "fixed" by mkdir -p /vessels/<vessel>/src inside an unrelated resolver.)
+new:
+(A real case: a gap 'no live authoring tree for obsidian-vessel' was "fixed" by mkdir -p /vessels/<vessel>/src inside an unrelated resolver.)
+- SATISFY-STALE-TEST: changing working production code only so a failing test passes, when the test is the stale side: the change contradicts a comment or stated rationale beside the edited line, or disables or short-circuits a documented production path (a discovery fallback, a retry, a timeout budget) that the test does not exercise. (Real cases: a resolve timeout lowered from 30000 to 10000 beneath a comment explaining why 30 s is required; an environment guard added that turned off discovery-first resolution in production.) When the test is stale, the fix is the test.
+EDIT 2
+old:
+- FABRICATE-TO-SATISFY is rejected: creating the checked thing itself (an empty directory, placeholder file or stub record at the path a check looks for) so the check passes while the divergence's real source is untouched. Reconcile the SOURCE the gap names, not the check's observation of it.
+new:
+- FABRICATE-TO-SATISFY is rejected: creating the checked thing itself (an empty directory, placeholder file or stub record at the path a check looks for) so the check passes while the divergence's real source is untouched. Reconcile the SOURCE the gap names, not the check's observation of it.
+- SATISFY-STALE-TEST is rejected: a failing test is not automatically right. If the code at your edit documents WHY it behaves as it does (a comment giving a reason, a budget, a fallback) and the test asserts otherwise, the test is stale: fix the TEST, not the code. Never disable or short-circuit a production path (a discovery fallback, a retry, a timeout budget) to make a test pass.
+Done when: all 2 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

@@ -1,0 +1,6 @@
+06:19:58 case=peered-standalone prefix=29 image=ghcr.io/avigopal/substrate:421653ab75abfa91e9bc4ff863e91bb386e54f64
+06:20:01 up; waiting for usable
+06:21:28 verdict rc=0 after 90s: {"live":"pass","seeded":"pass","served":"pass","usable":"pass","connected":"unknown"}
+06:21:29 data-local dispatch=54102d59-e1cf-4333-a21c-33ab9a989d61
+06:21:59 data-local status=completed reached=true answer_mentions_53=true
+06:22:32 done rc=0

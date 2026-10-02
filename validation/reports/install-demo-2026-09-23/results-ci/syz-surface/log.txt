@@ -1,0 +1,5 @@
+05:55:43 case=syz-surface prefix=23 image=ghcr.io/avigopal/substrate:421653ab75abfa91e9bc4ff863e91bb386e54f64
+05:55:45 up; waiting for usable
+06:16:20 verdict rc=3 after 1236s: {"live":"pass","seeded":"unknown","served":"unknown","usable":"unknown","connected":"unknown"}
+06:16:20 data-local: no goal-host on this node (profile routes goals to its anchor)
+06:16:57 done rc=3

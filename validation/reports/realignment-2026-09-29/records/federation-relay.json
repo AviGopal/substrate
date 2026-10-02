@@ -1,0 +1,384 @@
+{
+ "source": "federation-relay",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/federation-relay.md",
+ "coverage": "Covered live: all 4 local containers (unit states, transport /health, 7 days of transport journals, discovery /bootstrap, /metrics, /registry/shapes, env keys classified without printing values) plus the remote syzygy-hub droplet 104.236.0.175 (bootstrap, metrics, /vessels lookups, TCP reachability). Also read the node-2 pool (18 federationVerificationReport sweeps and the latest verdicts), the node-1 gap store (112 federation-related gaps), all 5 federation openspec changes (task counts and proposals), git history of scripts/substrate/federation-relay (about 45 commits) and repos/libp2p-federation-transport (11), the network-demo report, and the provenance of .relay-pub-key.protobuf (it is actually a private key; peer id derived; the operator transcript that created it was found). Not covered: per-row contents of the node-1/node-2 vesselRegistry (the in-container-key read was refused by the permission classifier, so unauthenticated surfaces were used instead); success/failure of individual syzygy p2p forwards (the logs carry no status); the obsidian-vessel federation-sidecar runtime; the caller that polls federation-transport-vessel@local-dev-spoke on node 1 (not identified).",
+ "attempts": [
+  {
+   "key": "federation-p2p",
+   "title": "vessel-federation + substrate-fleet-federation specs",
+   "where": "openspec/changes/2026-05-23-vessel-federation, 2026-05-31-substrate-fleet-federation",
+   "tried": "Full federation design (43 + 53 tasks)",
+   "outcome": "superseded",
+   "date": "2026-05-23",
+   "evidence": "0/96 tasks checked; replaced by the libp2p-federation-transport primitive on 06-30"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "libp2p Circuit Relay v2 primitive + ingress sidecar",
+   "where": "repos/libp2p-federation-transport 2bb1189, baa360c",
+   "tried": "One libp2p node per substrate, relay circuit, e2e through a live hub relay",
+   "outcome": "partial",
+   "date": "2026-06-30",
+   "evidence": "Live on the syzygy island (thousands of forwards 09-22..25); never adopted by node 1/node 2"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Relay findability replication",
+   "where": "openspec/changes/2026-07-19-relay-findability-replication/proposal.md",
+   "tried": "Registration replication, loud reservation, honest /bootstrap, hub peer wiring; direct==punchthrough decision",
+   "outcome": "partial",
+   "date": "2026-07-19",
+   "evidence": "Only loud reservation landed; replication and honest bootstrap are still absent on 09-29 (72 days)"
+  },
+  {
+   "key": "env-gating",
+   "title": "Host-independent federation join",
+   "where": "openspec/changes/2026-09-12-host-independent-federation-join; commits 87e30952 etc.",
+   "tried": "Ungate relay-less transport, anchor precedence, remove frozen droplet IP, request-derived bootstrap, symmetric dialability, replication",
+   "outcome": "partial",
+   "date": "2026-09-12",
+   "evidence": "Ungate and precedence landed; bootstrap refused 3x on compose grounding window 0 bytes; replication never done; the relay-less transport on node 2 has no dialable address (I5/I9 undecidable)"
+  },
+  {
+   "key": "false-verification",
+   "title": "Independent federation oracle federation-probe-tick",
+   "where": "scripts/substrate/federation-relay/federation-probe-tick.ts (~40 DevBob commits 09-11..09-15)",
+   "tried": "Ephemeral nonce-identity peer, negative controls NC1-8, fed:<class> auto gaps, close-by-measurement",
+   "outcome": "partial",
+   "date": "2026-09-11",
+   "evidence": "Runs on node 2 only; 18 sweeps 09-26..09-29 stuck at coverage 0.647, blocking no_relay_anchor; witness scope same-netns; most passes are local-registry verdicts"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Network demo hub+spoke zero-config",
+   "where": "validation/reports/network-demo/REPORT.md, VALIDATION-POST-FIX.md, aba286bd",
+   "tried": "Hub (ENABLED_ROLES=hub) + spoke join by 2 env vars; add/remove vessel propagation; hub resolves spoke memoryNote over libp2p",
+   "outcome": "dormant",
+   "date": "2026-09-16",
+   "evidence": "Proven in throwaway val-hub/val-spoke containers, which were torn down; the production pair created 09-23/09-26 never joined an overlay"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Off-host relay reachability via published port",
+   "where": "validation/failure-modes/scenarios/fed-relay_unreachable_off_host.json; ad-hoc container substrate-relay-pub",
+   "tried": "Relay with -p 30333 announcing LAN IP 10.0.0.104",
+   "outcome": "partial",
+   "date": "2026-09-16",
+   "evidence": "LAN reachability proven; public-IP part open; left the private key .relay-pub-key.protobuf untracked in the tree"
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Hub self-anchor / named profiles / in-container relay",
+   "where": "scripts/substrate/entrypoint.sh; d8fed96f, aba286bd",
+   "tried": "PROFILE=hub or ENABLED_ROLES=hub auto-enables relay + transport; RELAY_ANNOUNCE_PORT",
+   "outcome": "dormant",
+   "date": "2026-09-23",
+   "evidence": "node 1 PROFILE_EFFECTIVE=standalone, node 2 compute: no relay anywhere in the production pair; node 2 publishes 30333->26333 with no relay unit"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Autonomous commit of compiled build output",
+   "where": "repos/libp2p-federation-transport 542e712; super-repo 4e4170a8, 796fac89",
+   "tried": "vessel-code-commit-and-push / drift commits",
+   "outcome": "failed",
+   "date": "2026-09-19",
+   "evidence": "Committed .js/.d.ts/.map beside .ts; units execute the .ts, so the committed output is dead residue"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Honest /bootstrap via feature_compose",
+   "where": "repos/discovery-vessel/src/index.ts",
+   "tried": "3 dispatches, 2 formulations",
+   "outcome": "failed",
+   "date": "2026-09-13",
+   "evidence": "Refused: grounding window (0 BYTES) contains none of the target files; filed fed:compose-grounding-window-empty-for-discovery-index"
+  }
+ ],
+ "problems": [
+  {
+   "key": "federation-p2p",
+   "symptom": "The production nodes are not on any p2p overlay: node 1 has no transport/relay (unit disabled, relay not installed), and node 2's transport is direct-only with 0 connections, no multiaddr, and the hub mirror skipped",
+   "first_seen": "2026-07-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 6,
+   "root_cause": "Federation is enabled only by env presence at boot (HUB_DISCOVERY_URL/PEER_MULTIADDR/PROFILE=hub); the production launch sets none of these, and no instrument measures federation between the production nodes"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Node 1 and node 2 share state only through 9 pinned host.containers.internal HTTP env URLs; rhythm pause/posteriors are node-local, so node 2 drained a paused goal",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "root_cause": "Federation carries no replicated state and the HTTP pinning bypasses discovery"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "/bootstrap returns identity_endpoint 127.0.0.1 (node 1) or host.containers.internal (node 2), empty discovery_endpoint, empty relays",
+   "first_seen": "2026-07-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Anchors come from PUBLIC_IP/*_PUBLIC_URL env; request-derived fix never landed (compose grounding refusal)"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Federation oracle reports coverage 0.647 and closes fed:* gaps on a vantage with no foreign peers; I5/I9 undecidable when the transport has no dialable address; I1 foreign_vantage passes with witness_scope NOT off-host",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "root_cause": "The oracle runs in-container on one node and treats absence of peers as undecidable instead of failing"
+  },
+  {
+   "key": "false-verification",
+   "symptom": "fed:no_relay_anchor evidence text says the transport refuses to start without an anchor, although that gate was removed 09-12",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "recurrences": 18,
+   "root_cause": "Frozen evidence template in the oracle, not a measured cause"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "17 capability gaps for invented shape names (federation_state_summary, federation_overlay_state, ...) while federation_verification_report exists; batch-closed 09-28, recurred within 23h",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 17,
+   "root_cause": "Target inference mints a new shape name per phrasing; no alias to the served shape"
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "A reboot/recreate silently de-federates: node 1 was local-dev-spoke on the droplet hub (257 mirrored registrations) and is now non-federated with every unit healthy",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "root_cause": "gen-env/launch does not round-trip federation values (gap-mu82wqoh, open)"
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "Same-host syzygy containers talk only through a DigitalOcean relay; holePunchSuccess 0 everywhere; direct==punchthrough (operator decision 07-19) not realized",
+   "first_seen": "2026-07-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "root_cause": "No direct dialable addresses announced/usable; DCUtR never succeeds"
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "Registration replication absent: findability is a hub star; spoke->hub fan-out returns found:false for hub loopback rows",
+   "first_seen": "2026-07-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Never implemented (07-19 item 1, 09-12 step 5)"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Untracked, un-gitignored Ed25519 PRIVATE key scripts/substrate/federation-relay/.relay-pub-key.protobuf (peer 12D3KooWLvbz...) from an ad-hoc 09-16 relay experiment; relay default key path writes into the source tree",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "root_cause": "RELAY_KEY_FILE defaults to ./relay-key.protobuf in the CWD, which is the source tree; the experiment mounted the tree"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "20 tracked compiled .js/.d.ts/.map in the relay dir, build output in the transport repo, 3 caller-less scripts, a third libp2p implementation in the obsidian sidecar, 16+ ephemeral spoke-<hex> ids in hub metrics",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Autonomous drift commits include build output; demo/compose runs mint new substrate ids"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "The human surfaces live on the syzygy island; node 1 obsidian-intake SKIPPED 681x/24h (no obsidian:note advertised); the surface shows a federated peer's findings as its own after a local restart",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "root_cause": "Two disconnected federation islands; federation fallback lacks provenance of rows"
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "syzygy transports: register -> 401 x86 (surface) and x48 (inventory), hub-register 401, getaddrinfo ETIMEOUT syzygy.host",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-28",
+   "recurrences": 134,
+   "root_cause": "unknown: credential mismatch against discovery/identity (not investigated)"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "The public droplet serves unauthenticated /vessels/:id and /metrics exposing fleet topology; the libp2p ingress confused deputy is still open",
+   "first_seen": "2026-09-12",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "root_cause": "No authorization on discovery reads or ingress"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "libp2p-federation-transport primitive",
+   "location": "repos/libp2p-federation-transport/src/index.ts",
+   "purpose": "createVesselLibp2p/resolveViaLibp2p/serveResolve over Circuit Relay v2",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Imported by transport, probe and obsidian sidecar; syzygy forwards live"
+  },
+  {
+   "name": "federation-transport-server",
+   "location": "scripts/substrate/federation-relay/federation-transport-server.ts",
+   "purpose": "One libp2p identity per substrate; per-vessel hub mirror rows; ingress proxy by _fedTargetVessel; egress",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Active on syzygy-local-* with reservations; on node 2 active but undialable; absent on node 1"
+  },
+  {
+   "name": "circuit relay",
+   "location": "scripts/substrate/federation-relay/relay.ts",
+   "purpose": "Reachability anchor",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Only on the remote droplet 104.236.0.175:30333; not installed on node 1/2"
+  },
+  {
+   "name": "federation-probe-tick oracle",
+   "location": "scripts/substrate/federation-relay/federation-probe-tick.ts via federation_verification_report shape + rhythm-federation-verification",
+   "purpose": "Independent ephemeral-peer verification, fed:<class> gaps",
+   "status": "live-used",
+   "general": true,
+   "evidence": "18 sweeps on node 2 09-26..09-29, all identical; vantage-limited"
+  },
+  {
+   "name": "discovery peer fan-out",
+   "location": "repos/discovery-vessel/src/index.ts forwardToPeers/forwardResolveToPeers",
+   "purpose": "Query-time pull from PEER_DISCOVERY_ENDPOINTS",
+   "status": "unknown",
+   "general": true,
+   "evidence": "0 peer log lines in 24h on node 1/2; open gap: per-peer outcomes discarded"
+  },
+  {
+   "name": "registration replication",
+   "location": "(not built)",
+   "purpose": "Dial-in => findable by all",
+   "status": "dormant",
+   "general": true,
+   "evidence": "grep finds no replicate/forward-on-register; specified 07-19 and 09-12"
+  },
+  {
+   "name": "hub self-anchor auto-enable",
+   "location": "scripts/substrate/entrypoint.sh (hub profile relay+transport)",
+   "purpose": "PROFILE=hub brings up relay+transport",
+   "status": "dormant",
+   "general": false,
+   "evidence": "No production node runs PROFILE=hub"
+  },
+  {
+   "name": "obsidian federation sidecar",
+   "location": "repos/obsidian-vessel/sidecar/federation-sidecar.ts",
+   "purpose": "Obsidian vault libp2p ingress/owner-merge",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "federation-transport-server ingress",
+   "evidence": "711 lines, last change 07-30; no obsidian:note advertised anywhere"
+  },
+  {
+   "name": "fed-federated-resolve / fed-resolve-client / obsidian-passthrough",
+   "location": "scripts/substrate/federation-relay/",
+   "purpose": "Ad-hoc resolve clients / passthrough",
+   "status": "fossil",
+   "general": false,
+   "evidence": "No callers outside their own .d.ts"
+  },
+  {
+   "name": "compiled .js/.d.ts/.map build output",
+   "location": "scripts/substrate/federation-relay/*.js etc; repos/libp2p-federation-transport 542e712",
+   "purpose": "none (units run .ts)",
+   "status": "fossil",
+   "general": false,
+   "evidence": "ExecStart runs the .ts; .js stale vs .ts"
+  },
+  {
+   "name": "HTTP env pinning node2->node1",
+   "location": "compose2-live /etc/substrate/env (9 keys -> host.containers.internal:18xxx)",
+   "purpose": "De facto cross-node resolution",
+   "status": "live-used",
+   "general": false,
+   "evidence": "All node2->node1 traffic; violates laws 1 and 11"
+  },
+  {
+   "name": "loud reservation / de-advertise on SIGTERM",
+   "location": "federation-transport-server.ts",
+   "purpose": "Observable reservation loss, withdraw mirror rows",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Logs 'reservation lost \u2026 reacquired', 'SIGTERM: withdrawing 4 mirrored row(s)'"
+  }
+ ],
+ "principles": [
+  "Measure federation between the production nodes, from a foreign vantage; an in-container oracle whose peers are absent must fail, not report undecidable",
+  "A lab demo in throwaway containers is not deployment: check the production topology (node 1 standalone, node 2 compute) before claiming a capability",
+  "Federation must not be enabled by boot-time env presence; the profile that makes a node a hub must be the thing that brings up relay+transport, and it must survive recreate",
+  "HTTP host pinning (host.containers.internal) masquerades as federation; count what actually crosses over the overlay",
+  "Evidence text in auto-filed gaps must be measured per sweep, never a frozen template that outlives the fix",
+  "Alias invented shape names to the served shape instead of closing capability gaps one name at a time",
+  "Keys and build output never belong in the source tree; default key paths must point to the volume"
+ ],
+ "claims": [
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-09-16",
+   "claim": "Network demo: zero-config hub+spoke, add/remove propagates network-wide, hub resolves spoke memoryNote over libp2p with ZERO interventions",
+   "where": "validation/reports/network-demo/REPORT.md, VALIDATION-POST-FIX.md",
+   "later": "Only in torn-down val-hub/val-spoke containers; the production node1/node2 pair has no overlay on 09-29"
+  },
+  {
+   "key": "env-gating",
+   "claimed_at": "2026-09-12",
+   "claim": "A relay-less transport is a healthy transport (ungate landed)",
+   "where": "87e30952; 09-12 proposal Outcome",
+   "later": "Node 2 transport is active but announces no dialable address (I5/I9 'no valid addresses'); healthy only per systemctl"
+  },
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-07-19",
+   "claim": "Direct connection equivalent to punchthrough (operator-ratified)",
+   "where": "07-19 proposal",
+   "later": "holePunchSuccess 0 on all transports; same-host syzygy containers relay via a cloud droplet"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-19",
+   "claim": "fed:punchthrough_unavailable CLOSED BY MEASUREMENT",
+   "where": "gap store",
+   "later": "No hole punch has succeeded on any live transport; measured on a vantage with no foreign peers"
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-26",
+   "claim": "fed:registry_lost_local_rows closed (I12 pass own_rows 11 foreign_rows 1)",
+   "where": "gap store",
+   "later": "Accurate but vacuous for federation; still passing with foreign_rows 1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-09-28",
+   "claim": "16 gap-federation-* capability gaps closed",
+   "where": "gap store 01:26-01:29",
+   "later": "gap-detailed-federation-state created 09-29 00:38: same class recurred within 23h"
+  },
+  {
+   "key": "endpoint-routing",
+   "claimed_at": "2026-07-19",
+   "claim": "Honest /bootstrap specified (then again 09-12)",
+   "where": "07-19 item 3; 09-12 step 2",
+   "later": "Still loopback/host-dependent on 09-29 on node 1 and node 2; fed:join_door_host_dependent open for 18 sweeps"
+  },
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-09-15",
+   "claim": "A hub self-anchors: role=hub brings up its own relay and transport",
+   "where": "aba286bd, d8fed96f",
+   "later": "No production node runs the hub profile; node 1 has no relay/transport"
+  },
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-09-12",
+   "claim": "Discovery reachable over the overlay; multiaddr-only join works",
+   "where": "a0afaa98, f483cdf1; 09-12 Outcome",
+   "later": "No production node uses PEER_MULTIADDR; never exercised outside lab"
+  }
+ ]
+}

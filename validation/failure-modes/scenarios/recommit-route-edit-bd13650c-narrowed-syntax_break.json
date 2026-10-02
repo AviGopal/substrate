@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-bd13650c-narrowed-syntax_break",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap route-edit-bd13650c-narrowed repeated already-recorded failure class syntax_break: src/engine.ts(184,9):",
+  "description": "compose for gap route-edit-bd13650c-narrowed repeated already-recorded failure class syntax_break: src/engine.ts(184,9): error TS1135: Argument expression expected. | src/engine.ts(311,9): error TS1128: Declaration or statement expected. | src/engin",
+  "goal_text": "compose for gap route-edit-bd13650c-narrowed repeated already-recorded failure class syntax_break: src/engine.ts(184,9): error TS1135: Argument expression expected. | src/engine.ts(311,9): error TS1128: Declaration or statement expected. | src/engin",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-bd13650c-narrowed-syntax_break",
+  "source_gap_source": "substrate_detected"
+}

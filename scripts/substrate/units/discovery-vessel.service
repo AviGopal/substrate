@@ -1,0 +1,18 @@
+[Unit]
+Description=discovery-vessel
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8100
+Environment=HOST=127.0.0.1
+WorkingDirectory=/vessels/discovery-vessel
+ExecStart=/root/.bun/bin/bun /vessels/discovery-vessel/index.ts
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

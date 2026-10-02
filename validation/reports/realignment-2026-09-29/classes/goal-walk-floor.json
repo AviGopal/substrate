@@ -1,0 +1,1284 @@
+{
+ "attempts": [
+  {
+   "key": "goal-walk-floor",
+   "title": "ReAct floor universalToolFallback/runGroundedToolLoop",
+   "where": "goal-host-vessel/src/index.ts",
+   "tried": "Bounded grounded tool loop (4 iter x 8 calls) so no goal is structurally unreachable",
+   "outcome": "partial",
+   "evidence": "7d goal_execution_paths: universal_tool_fallback 9274 executions, success_count 187 (2.0%) / successful_executions 455 (4.9%) - far from ~90% contract (mixed population)",
+   "date": "2026-09-21..28",
+   "source": "docs-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Selector honest refusal (no_producer_for_expected_shapes)",
+   "where": "repos/activity-api/src/routes/activities.ts ~7720-7760; table refusal_events",
+   "tried": "Refuse rather than fall back to the highest-\u03b1 template when no template emits the expected output shapes; suggest create-shape-provider-goal",
+   "outcome": "partial",
+   "date": "2026-08-28..2026-09-29",
+   "evidence": "9129 refusals, 112 in the last 24 h and 996 in 7 days. The candidate pool is template output_shapes only, with no discovery or resolver consult. So shapes that vessels serve (goal_execution, activityExecutionTrace, light_dispatch_execution) are refused daily, and nothing consumes the suggestion.",
+   "source": "docs-2"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Bulk close missing_capability backlog as single-goal demand",
+   "where": "live store classification_metadata.resolution",
+   "date": "2026-09-28",
+   "tried": "Operator audit closed 734 missing_capability gaps (697 shapes, 0 demanded by 2+ goals)",
+   "outcome": "partial",
+   "evidence": "The backlog was cleared by hand. The filer that mints them was not changed. The same pattern appeared on 06-14 and 09-05 (82% expire, 4% ever composed).",
+   "source": "gap-history"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "ReAct floor revived and repaired repeatedly",
+   "where": "43247db, 559a55d, ecd0c5a, c43f59d, 8ee6c66, c033664, 825f773",
+   "date": "2026-07-23..08-17",
+   "tried": "Grounded tool loop. Removed the LLM_VESSEL_ENDPOINT gate that had silently disabled it.",
+   "outcome": "worked",
+   "evidence": "Live now (universalToolFallback/floor ~2.8k journal lines in 7 days).",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Target inference inverted guard and dropped composition halves",
+   "where": "1f24ad1, 39b86a2, 6e049cc, 546a855, dd5ed4a, 6d60248, 3b9197d, 4678802, faa0afc, 0c41918, cc8c3cd, a410572, e9ee9b4",
+   "date": "2026-08-04..09-25",
+   "tried": "Many routing rules in goal-target-inference and the named-shape bind.",
+   "outcome": "partial",
+   "evidence": "24 autonomous commits to goal-target-inference.ts. 1f24ad1: an inverted guard had made inference a no-op.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Single-goal prompt patching (Io distance)",
+   "where": "f73faaa..3496df5 (~30 commits)",
+   "date": "2026-08-15",
+   "tried": "Corrector and prompt patches for one live-data goal.",
+   "outcome": "partial",
+   "evidence": "2c26fcb: 'stating it in the prompt does not hold'.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Walk reads outputs from a just-cleared store",
+   "where": "ias-executor-ts 8676beb",
+   "tried": "Stop evictExecutionScope clearing before goal-host reads outputs back",
+   "outcome": "worked",
+   "date": "2026-08-21",
+   "evidence": "Stubs had been pooled as data and graded by the reach judge",
+   "source": "git-mid"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "ReAct parity benchmark vs Claude Code",
+   "where": "84200483, 9022dd67",
+   "date": "2026-05-02..03",
+   "tried": "minibob head-to-head, from 0/8 to '9/10 at \u22641.5x LLM calls'",
+   "outcome": "dormant",
+   "evidence": "measured LLM-call parity, not outcome parity; minibob was removed 05-24, so the floor measurement was lost",
+   "source": "git-super-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Reach-gate revisions",
+   "where": "371cba48, 6188faa6, ebb6c46b, d3f56573",
+   "date": "2026-06-24..29",
+   "tried": "reach-gate, reach-verdict-on-trace, substantive-satisfaction, satisfier persistence",
+   "outcome": "unknown",
+   "evidence": "reach semantics revised 3 times in 5 days",
+   "source": "git-super-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "ReAct floor / target inference",
+   "where": "f70595f2, d60fcc81, 391e0da8, beb19924, 9c967329",
+   "tried": "Credentials repair, depth-cap raise, then 09-28 probes",
+   "outcome": "partial",
+   "date": "2026-08-16..2026-09-28",
+   "evidence": "09-28: the floor was broken, read-only questions were routed as code edits, and memory/recall had no target shape",
+   "source": "git-super-2"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Walk tier ladder",
+   "where": "goal_execution_paths.walk_tier",
+   "tried": "learned_pathway > satisfier > universal_tool_fallback > fresh_derivation",
+   "outcome": "partial",
+   "evidence": "lifetime success: learned_pathway 30.8%, satisfier 15.4%, universal fallback 8.5%, fresh_derivation 3.0%, feature_compose 0/60",
+   "source": "live-activities"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Capability-gap generator files confabulated shape names; bulk-closed by hand",
+   "where": "750 rows kind:capability_gap; closed_by operator:claude-avi",
+   "tried": "693 closed as walk_artifact on 09-28 ~01h",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "generator untouched; 17 new ones, latest 09-29T03:53Z; every missing_shape is unique (meaningful_content, learning-loop-results...)",
+   "source": "live-gaps"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "pull_cutover escalation seam",
+   "where": "boredom goal-generation.ts; pull_cutover resolver edb4ba3",
+   "tried": "Self-escalate a baseline-broken gap to pull_cutover",
+   "outcome": "partial",
+   "date": "2026-07-21",
+   "evidence": "Fired live 12:26:03; reach gate caught a hollow satisfier; signal spurious (fixed 1fa1e9f); output-shape mismatch pullCutoverReport",
+   "source": "memory-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Compose BUSY falls through to a walk that cannot edit",
+   "where": "goal-host EARLY EDIT-INTENT",
+   "tried": "(defect) filed compose-busy-falls-through-to-a-walk-that-cannot-edit",
+   "outcome": "unknown",
+   "date": "2026-08-23",
+   "evidence": "fs_edit / fileEditResult / code_modification_proposal unproducible; transient capacity graded as a capability failure",
+   "source": "memory-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Substrate cannot compose fixes outside repos/<vessel>/src",
+   "where": "goal-host edit-intent + gap lane no_groundable_target",
+   "tried": "(defect) filed the-substrate-cannot-compose-a-fix-outside-repos-vessel-src",
+   "outcome": "unknown",
+   "date": "2026-09-15",
+   "evidence": ".gitignore fix picked 0 times in 3h; operator landed it",
+   "source": "memory-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Thrown dispatch status + drain freshness",
+   "where": "goal-host b3ad44a, df4b700, 6f735c1",
+   "date": "2026-08-05",
+   "tried": "Set status on throw; fresh-only in-flight count; reconciler feeds corpus",
+   "outcome": "worked",
+   "evidence": "in_flight 15->0 sustained over 36-min rhythm; landed by direct edit (bootstrap deadlock)",
+   "source": "memory-10"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Walk wall-clock LLM call cuts",
+   "where": "goal-host 8a5e15e, 71e0161, 1797a72, 1be9f4f",
+   "date": "2026-07-24",
+   "tried": "Remove redundant LLM round trips; interpreter facts in executorGuidance",
+   "outcome": "worked",
+   "evidence": "145s -> 35s; digit-sum/factorial reach",
+   "source": "memory-10"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "NORMATIVE_INTENT in isPathlessCodeChangeGoal",
+   "where": "goal-host goal-file-resolution.ts",
+   "date": "2026-08-10",
+   "tried": "Admit 'should refuse/prefer' as change intent",
+   "outcome": "partial",
+   "evidence": "Gate admits; extractSearchTerms cannot localize one file; inference unchanged",
+   "source": "memory-10"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Deterministic compositional routes",
+   "where": "goal-host 06b66d8, e874a19",
+   "date": "2026-07-30",
+   "tried": "Hand-built parse/build/verify triads for rank-aggregate, two-source-compare, gap-ratio",
+   "outcome": "worked",
+   "evidence": "emitted==truth by construction; per-class specific, not general",
+   "source": "memory-10"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Restore ReAct floor admission",
+   "where": "goal-host f4f983a (substrate-authored)",
+   "tried": "(groundedOk>0 || finalText) gate",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "5/5 reached, 3 via universal-tool-fallback; 9/10 in operator batches",
+   "source": "memory-2"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Producer-locality tiebreak",
+   "where": "goal-host 36d663e satisfier-pick.ts",
+   "tried": "score = priority*2 + local",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "5 consecutive first-try landings, up from ~1 in 3",
+   "source": "memory-2"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Walk sees vessel-resolver producers",
+   "where": "goal-host 5301ae4; ias-executor engine.ts VesselResolver (07-16)",
+   "tried": "Inject vessel-resolve satisfiers at no-pick; discovery-routed resolvers at dispatch",
+   "outcome": "partial",
+   "date": "2026-07-14",
+   "evidence": "First learned composition minted; foreign write resolver still auto-bridged (07-15), residual at 07-31",
+   "source": "memory-2"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "ReAct floor: routing rule + grounded tool loop + command evidence",
+   "where": "goal-host 43247db, f44b27b, 6cba611, da08516",
+   "tried": "Routed shellResult as the universal executor, added a groundedOk-gated ReAct loop, surfaced the executed command to the judge, and routed the a.5 investigation through runGroundedToolLoop.",
+   "outcome": "partial",
+   "date": "2026-07-23",
+   "evidence": "Floor went from 0/3 to 2/3 grounded and fabrication closed. The ReAct loop itself had 0 live firings (dormant). Grounding in a tool is not grounding in truth.",
+   "source": "memory-3"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Pathless goal captured by early edit-intent onto confabulated file",
+   "where": "goal-host index.ts early edit-intent; dispatch d12205d6",
+   "tried": "Filed a class2 gap; fix = require the path be named in the goal.",
+   "outcome": "unknown",
+   "date": "2026-09-19",
+   "evidence": "template-audit.ts was attacked with fs_edit at 0.98 confidence. PROVEN-BAD arms stay selected with beta withheld.",
+   "source": "memory-3"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Symptom-only goals 'cannot reach authoring' note",
+   "where": "goal-host index.ts regex claim; goal-file-resolution.ts",
+   "tried": "Concluded the gate was a regex.",
+   "outcome": "superseded",
+   "date": "2026-08-11",
+   "evidence": "Retracted. goal-file-resolution.ts (927 lines) exists; the real defects were a vocabulary hole (799ccb3) and vessel scoping.",
+   "source": "memory-3"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Cold floor self-correction (degenerate result re-synthesis)",
+   "where": "goal-host c7870bd, 6157be4",
+   "tried": "Re-synthesize the command on empty, error or zero results",
+   "outcome": "worked",
+   "date": "2026-07-26",
+   "evidence": "Cold floor went 2/4\u21924/4 twice on the held-out compute suite (narrow suite; later audits found 51% zero-cycle floors)",
+   "source": "memory-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Gap-investigation grounding + citation oracle (fix #7) and shapes=[] (fix #8)",
+   "where": "goal-host 9cc89fd, 6d96a81",
+   "tried": "Seed and cite 'investigate and decompose gap' goals; fall back on empty completion_shapes",
+   "outcome": "partial",
+   "date": "2026-08-28",
+   "evidence": "The oracle path fires on autonomous traffic, but a coincidental fixture citation passes and some goals still reach hollow through the LLM judge",
+   "source": "memory-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Compositional oracle guard",
+   "where": "goal-host c467e5f",
+   "tried": "isCompositionalGoal bails the greedy single-op parsers",
+   "outcome": "worked",
+   "date": "2026-07-30",
+   "evidence": "Operator-built parsers had \u03b1-credited wrong answers (8708 vs 7767); two-op reach is honestly 1/8",
+   "source": "memory-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Creation routing + create-apply + grounding exemption",
+   "where": "goal-host 13f7440 (substrate); dev 632955a, 578b831, 3c6a4b3",
+   "tried": "Route creation verbs to compose; allow absent-target writes; exempt net-new files from grounding",
+   "outcome": "worked",
+   "date": "2026-08-25",
+   "evidence": "Clean-state creation landed as 4839607 and 3/4 reliability runs landed. The first 'proof' 3afb1812 was retry-after-debris.",
+   "source": "memory-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Prose route temporal deixis",
+   "where": "goal-host 0223842; 5be029a http_response \u2192 web_resource",
+   "tried": "Route 'right now' measurements to fetch; replace the fake http capability",
+   "outcome": "worked",
+   "date": "2026-08-16",
+   "evidence": "Earth\u2013Io 6.2757 AU matched ground truth; the fake capability had caused 3 re-mints and 12 orphan files",
+   "source": "memory-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Fix A: compute-chain augmentation, deferral and direct-bind",
+   "where": "goal-host e118234",
+   "tried": "Inject shellResult between source and write, and defer executors until their operands exist.",
+   "outcome": "partial",
+   "date": "2026-07-25",
+   "evidence": "The walk composed [http_fetch, shellResult, fileWriteResult], but the last-mile command produced 18 instead of 14. The probe correctly flipped it hollow.",
+   "source": "memory-5"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Per-dispatch ablation/learning_mode control plus eval harness",
+   "where": "goal-host 0fe201f; validation/scripts/eval-ablation-harness.py 75ea589c",
+   "tried": "Add forceFloor/observe arms to expose cache-masked floor reach.",
+   "outcome": "worked",
+   "date": "2026-07-26",
+   "evidence": "WARM reached 4/4 and FLOOR 2/4, so the floor is about 50% cache-dependent. The harness is operator-run and there is no evidence of standing use.",
+   "source": "memory-5"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Everyday floor via deterministic templating (by-construction oracles)",
+   "where": "goal-host 78faa7b, 2161ada, 9d6a63d, 351ca70, ce83b4b",
+   "tried": "Aggregate route and grounding, then a deterministic command template sharing its parse with the oracle.",
+   "outcome": "partial",
+   "date": "2026-07-30",
+   "evidence": "The 14-goal battery went 7 -> 14/14, but only for hand-templated families. The 09-19 generality round reached R 3/7. Coaxed route and grounding alone (f5baa42, 4e86f46) had left reach at 0/4.",
+   "source": "memory-5"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "hollow_walklog_capped veto narrowed",
+   "where": "goal-host 2cb9b26",
+   "tried": "Veto only when gapsFiled>0 and producedShapes<=2.",
+   "outcome": "worked",
+   "date": "2026-08-03",
+   "source": "memory-5"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Floor 5xx treated as observation",
+   "where": "goal-host 825f773",
+   "tried": "Split the !r.ok break: 5xx continues, 4xx breaks.",
+   "outcome": "worked",
+   "date": "2026-08-17",
+   "evidence": "15 aborts in 3h had been graded as failures.",
+   "source": "memory-5"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Bind args from pool before synthesis",
+   "where": "goal-host 13b3262, c07cffc",
+   "date": "2026-09-03",
+   "tried": "bind declared-required fields from pool; recover field names from refusal",
+   "outcome": "partial",
+   "evidence": "v1 inert (0 bindings); v2 fires, 0/2 binds legitimately",
+   "source": "memory-6"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Investigation floor with citation oracle",
+   "where": "goal-host 752014d, 0af9639, 71d434f, a334032, 5e4d045",
+   "date": "2026-08-27",
+   "tried": "route code-investigation to seeded floor + deterministic citation check",
+   "outcome": "worked",
+   "evidence": "ab7074b1 reached; reuse lost to raw-count ranking (gap pathway-reuse-ranks-by-raw-success-count-starves-verified-floor)",
+   "source": "memory-6"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Restate pathless code-change goals at the door",
+   "where": "goal-host goal-intent.ts / handleRunGoal (08-09)",
+   "date": "2026-08-09",
+   "tried": "resolve one target file before edit-intent test",
+   "outcome": "worked",
+   "evidence": "5 probes; rg missing in container made first evidence fabricated",
+   "source": "memory-6"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Interrogative guard on early edit-intent",
+   "where": "goal-host 92d4b428",
+   "date": "2026-07-30",
+   "tried": "questions naming files no longer route to feature_compose",
+   "outcome": "worked",
+   "evidence": "q_pct now computes; question had authored spurious code into live source",
+   "source": "memory-6"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Nine-layer pathless-goal pipeline fixes",
+   "where": "goal-host (17 commits) 2026-08-11",
+   "tried": "NORMATIVE_INTENT, kebab locator, wantsCallSitesOf, fc-symbols, typeNamesIn",
+   "outcome": "partial",
+   "date": "2026-08-11",
+   "evidence": "5 of 17 fixes inert on arrival; layer 9 anchor uniqueness unfixed; drafter compliance failures",
+   "source": "memory-7"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Panel stops pinning whole vault catalog as expected_output_shapes",
+   "where": "obsidian 44c6563",
+   "tried": "Leave expected_output_shapes unset so inference runs",
+   "outcome": "worked",
+   "date": "2026-07-25",
+   "evidence": "verified live 07-24/25: inferred obsidian:list_notes @0.98",
+   "source": "memory-7"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Prose route for raw llm_completion + payload top-level prompt",
+   "where": "goal-host 7721fe8, cd1127d, 5153704",
+   "tried": "Fire prose route on either advertised shape; thread prompt top-level; add summar to EXPLANATORY_RE",
+   "outcome": "worked",
+   "date": "2026-07-28",
+   "evidence": "'Paris.' reached via hub; detector-set divergence gap filed",
+   "source": "memory-7"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Federated envelope unwrap in llm-completion-dispatch",
+   "where": "dev-vessel da08516",
+   "tried": "Parse string | array | {value}",
+   "outcome": "partial",
+   "date": "2026-07-23",
+   "evidence": "floor fires; class fix (normalize at egress) filed not done; 07-27 double-wrapped envelope 500s recurred",
+   "source": "memory-7"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "satisfierTried one-shot blacklist bounded retry + noise composite rejection",
+   "where": "goal-host a1e9c12",
+   "tried": "GENERIC_NOISE_SHAPES; one retry on transient",
+   "outcome": "partial",
+   "date": "2026-07-27",
+   "evidence": "3/3 reached but answer confabulated (GraphQL resolver); grounding Fix C not landed",
+   "source": "memory-7"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Bare write-shape resolution: flat pointer lift",
+   "where": "dev-vessel f57fd03",
+   "tried": "Lift flat {summary} into gap envelope for substrateGap_write",
+   "outcome": "partial",
+   "date": "2026-08-03",
+   "evidence": "bespoke tolerance; 447/990 0-step deaths; durable resolver_schema in dev-vessel landed 348053d 08-05",
+   "source": "memory-7"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Symptom-to-file resolution",
+   "where": "c1985ec, 69be9f0, 3f4421d, write-narrowing",
+   "tried": "Symbol search, identifier proposals, vocabulary hint",
+   "outcome": "partial",
+   "date": "2026-08-10",
+   "evidence": "Right file 3 of 6 times",
+   "source": "memory-8"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Satisfier pseudo-id pinned; inference prompt biased to analysis",
+   "where": "dd12c17, 5b3ae9d",
+   "tried": "Decline to pin satisfier ids; add an edit-shape rule to the inference prompt",
+   "outcome": "worked",
+   "date": "2026-08-10",
+   "evidence": "Inference confidence went from 0 to 0.95 on edit shapes",
+   "source": "memory-8"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "File-location starvation",
+   "where": "44375c6, 5a890c3, 55f0ee1",
+   "tried": "Fixed path roots and told the prompt where source lives",
+   "outcome": "worked",
+   "date": "2026-08-09",
+   "evidence": "The first reach afterwards was ungradable (no produced shapes)",
+   "source": "memory-8"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Behaviour-described goals reach edit path",
+   "where": "goal-file-resolution.ts 50d2e69, fea9eab",
+   "date": "2026-08-09",
+   "tried": "vocabulary widening + adjacent content-word pair search",
+   "outcome": "partial",
+   "evidence": "restated via 'walk falls'; but the localizer prefers rare prose n-grams; seed literals attract; harmful b222d75 landing on 08-11",
+   "source": "memory-9"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Fleet per-vessel credentials re-issued",
+   "where": "identity; 939bb55, 978fc40, b032dc9",
+   "date": "2026-09-10",
+   "tried": "issue keys, verify vs discovery, wire API_KEY",
+   "outcome": "worked",
+   "evidence": "0-step terminations 100% -> 0; reach 10-18% had been VOID",
+   "source": "memory-9"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Lever 4 goal to target-shape inference",
+   "where": "goal-host",
+   "tried": "natural-language goals route to producers",
+   "outcome": "partial",
+   "date": "2026-06-25",
+   "evidence": "07-02 plain dev goals misrouted; 09-29 'memory' maps to no shape",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "gap-compose watchdog restarts gap_to_feature on stall",
+   "where": "scripts/substrate/gap-compose-tick.ts; gap-compose.timer on both nodes",
+   "tried": "Fire a gap_to_feature impulse when open intents have stalled",
+   "outcome": "failed",
+   "evidence": "The only action ever logged is watchdog_restart: 1417 on node 1 since 09-25 and 36 on node 2, all ok:true http:200. stalled_min keeps climbing (node 1 210->230). The stall is admission starvation, which a restart cannot fix.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Dispatch termination: git probe, landed latch, Bun fetch timeout",
+   "where": "goal-host f3ffd7d,f9001e9,1942eaf",
+   "tried": "probe origin/dev for the route-edit id on timeout; latch the landed verdict; timeout:false (Bun's ~300s idle timeout had been overriding the 900s AbortSignal)",
+   "outcome": "worked",
+   "date": "2026-09-27 02:05-02:12",
+   "evidence": "root cause of the silent revert 98bc2b5, the double apply 194df79, the duplicate probe 7eae3a0 and the false failed verdict ec38999d",
+   "source": "openspec-10"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Four-horizon architecture-aware detectors (goals 17-20)",
+   "where": "development-vessel resolvers vessel-responsibility-audit, vessel-architecture-pattern-scan, activity-lifecycle-audit, resolver-distribution-audit; boredom :635-638",
+   "tried": "Principle concepts become check predicates, and detectors emit substrateGaps for architectural anti-patterns",
+   "outcome": "partial",
+   "date": "2026-06-03",
+   "evidence": "Stage 3.1: 2 of 4 emit gaps; still wired in boredom; the responsibility audit reads 0 principles over HTTP",
+   "source": "openspec-3"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Goal->target-shape inference seeds the walk",
+   "where": "2026-06-25-goal-target-shape-inference; goal-host f85a6d5 src/goal-target-inference.ts",
+   "tried": "LLM infers 1-3 producible target shapes up front, cached by goal_hash, fails open to opportunistic mode",
+   "outcome": "partial",
+   "date": "2026-06-30..07-01",
+   "evidence": "goal_hash 270b97f0 inferred [code_quality,problem_detection,sourceCodeAnalysis]; B5 seeding>=0.8 never measured; 07-13 6c699b51 'no producer' for substrateGap_write; super-repo 9c967329 (09-29) 'no shape for memory/recall'",
+   "source": "openspec-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Shape-action-evidence closure proof umbrella",
+   "where": "2026-07-01-shape-action-evidence-closure-proof",
+   "tried": "7 falsifiable claims doc, harness baseline, E1 gate, B via substrate, flag-OFF D1/E2, G human interaction closure, F measurement",
+   "outcome": "partial",
+   "date": "2026-07-01..02",
+   "evidence": "A,C1,E1,B1-4,E2,D1.1-2,G1.1 done; baseline 13 goals 0 passable (c60927aa); F1-F5 (re-run, evidence table, archive) never done; lift gate 0/24",
+   "source": "openspec-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Option A retry-once on null fresh derivation",
+   "where": "goal-host index.ts",
+   "date": "2026-08-27",
+   "tried": "retry once on fresh derivation that produced no measurement",
+   "outcome": "worked",
+   "evidence": "26f4ecb landed durable, in live goal-host HEAD bc99f91; DONATED truth=1 observed 08-27",
+   "source": "openspec-7"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Layer-2 pointer resolution via reachContentDigests",
+   "where": "goal-host poolDigest",
+   "date": "2026-08-27",
+   "tried": "resolve stub executionId via reachContentDigests; dispatched first (UNFAVORABLE), then supervised",
+   "outcome": "reverted",
+   "evidence": "live test: reachContentDigests.size=0, still abstained; reverted to 26f4ecb",
+   "source": "openspec-7"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Layer-2 stdout render in poolDigest",
+   "where": "goal-host index.ts ~10845",
+   "date": "2026-08-27",
+   "tried": "render executable-result stdout instead of JSON (160-char guard dropped the line)",
+   "outcome": "dormant",
+   "evidence": "f91f8f2 live; verified attempt-1 reach 08-27; but 72h goal-host journal: 0 DONATED, 0 recipe answers, 0 independent-recompute-agrees, 3 'walk emitted no measurable value'",
+   "source": "openspec-7"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Surface box: deterministic 8-rule surfaceIntent parser, fall through to run-goal on 422",
+   "where": "repos/human-surface-vessel/src/surface-intent.ts, ui/src/api/client.ts",
+   "tried": "floor-first parser; refusal dispatches a walk",
+   "outcome": "partial",
+   "date": "2026-08-07",
+   "evidence": "filmed revisions 0->3; but surfaceIntent is resolver-only, no activity row (law 2), still true 09-28",
+   "source": "openspec-9"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Io live-measurement goal: 45 failed attempts fixed by four independent fixes",
+   "where": "0223842 LIVE_MEASUREMENT_RE, 2dcfc12 recall retry, a68e1ac JPL allowlist, 5be029a http_response delegate",
+   "date": "2026-08-16",
+   "tried": "Prose-answer route misclassified; http_response hardcoded httpbin; relay recall timeouts",
+   "outcome": "worked",
+   "evidence": "Io reached exact to 15 digits 6.26946016292196; Europa exact; Ganymede then false reach via web_search 0.993 AU",
+   "source": "reports-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Raise target-inference depth cap",
+   "where": "goal-target-inference.ts 78dbcd6 (substrate), 230e711, 5e02d505, 705f1eac; walk-budget.json max_iters 8",
+   "date": "2026-08-17",
+   "tried": ".slice(0,3) param, caller pass, alternatives clause, primary prompt clause, budget",
+   "outcome": "partial",
+   "evidence": "Only 705f1eac moved 3->5 shapes; mean inferred 2.5, max 4; fact delivery reliable at 2 facts (5/5), not 3 (1/4)",
+   "source": "reports-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Refuse retryably when compose BUSY instead of falling through to a walk that cannot edit",
+   "where": "goal-host 2cc8af7 (operator direct edit under override)",
+   "date": "2026-08-22",
+   "tried": "Walk minted phantom capability gaps for fs_edit/fileEditResult/code_modification_proposal",
+   "outcome": "unknown",
+   "evidence": "Verified to typecheck/lint; mirrored live via pull-sync",
+   "source": "reports-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Pool-walk c.slice TypeError hardening",
+   "where": "goal-host 875e137 (operator)",
+   "date": "2026-09-22",
+   "tried": "JSON.stringify(undefined) at 7 digest builders; 91 walk aborts",
+   "outcome": "worked",
+   "evidence": "0 pool-walk error on new instance; source of undefined impulse still open",
+   "source": "reports-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Execution-id threading, fixed hop by hop (#32 -> #41 -> #43 -> #60 -> #61)",
+   "where": "goal-host rawResolve/ufExecuteTool/6b4da46/2f6436f/1b98343; llm-resolver 324f7f1; development-vessel llm-completion-dispatch.ts, d72654f, d4456d9, 829f613; ed81a69 (bash host)",
+   "tried": "Seven or more separate per-hop stamps of execution_id, each announced as the fix: rawResolve, enterWith, the floor dispatchTool, llm-completion-dispatch, author-producer, composed-capability, the discovery proxy.",
+   "outcome": "worked",
+   "date": "2026-09-24..26",
+   "evidence": "#61 was closed 09-26 with a falsifier: 0 id-less [type,command] requests between 08:55 and 09:55Z. Before that, each graded run exposed a new dropping hop: 11 of 19 U commits were null in RUN10-FAIL-1600, and 1 of 21 in RUN12-FAIL-2238. This is the clearest same-issue-new-hat chain in the shard. There is no single context carrier.",
+   "source": "reports-2"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Floor prompt states network reachable",
+   "where": "goal-host floor prompt (one line)",
+   "date": "2026-08-15",
+   "tried": "Tell model outbound access exists and external facts must be retrieved",
+   "outcome": "worked",
+   "evidence": "Floor moved from 'I cannot browse eBay' or fabricated price to attempted retrieval with honest failure",
+   "source": "reports-3"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Evidence-supply fixes for Io chain",
+   "where": "50448be, 32b5c04, cb03dfc, 21314ec, 1fee66f goal-host",
+   "date": "2026-08-16",
+   "tried": "Log command, re-fetch eaten body, log request URL, data-centred window, HOLLOW-CONTENT log",
+   "outcome": "worked",
+   "evidence": "Each worked on first contact. HOLLOW-CONTENT revealed a correct 6.27607851 AU that had been hidden for ~39 dispatches",
+   "source": "reports-3"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Human goals battery defects 1 and 2",
+   "where": "goal-host 17f2e41 (answerBody on reached, not isQuestionGoal); c303d7e (pinnableHead declines universal-tool-fallback)",
+   "tried": "Dispatched as goals with verbatim old/new anchors",
+   "outcome": "worked",
+   "date": "2026-08-18",
+   "evidence": "answerBody 0 -> 915 chars on 'I have got two ripe avocados' goal; same family runs 13 walk attempts instead of dying at 0 steps. Verbatim anchors 4/4 vs ~1/3 described edits.",
+   "source": "reports-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Floor inherits refuted target seeds (defect 4) blocked by vacuous-edit gate (defect 5)",
+   "where": "goal-host index.ts:11507; vacuous-edit.ts:439",
+   "tried": "Pass [] seeds when walk.reached===false; line-scoped codeOnly stripping",
+   "outcome": "unknown",
+   "date": "2026-08-18",
+   "evidence": "Vacuous gate's apostrophe stripping deleted 73.4% of index.ts (1,048,462->279,328 chars), refused a used binding `uf`. Dispatched; landing not recorded in shard. Vacuous gate false-refused again 09-24 via stale super-repo copy (different hat).",
+   "source": "reports-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Expectation demo sha256 in 2 minutes",
+   "where": "dispatch 0254e51b",
+   "tried": "Pre-registered D1-D3",
+   "outcome": "partial",
+   "date": "2026-09-19",
+   "evidence": "Artifact byte-correct +74s; verdict +154s (oracle abstained -> LLM judge); cockpit blind. Corrected from success to PARTIAL: operator was the verifier.",
+   "source": "reports-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Generality round 1 (7 goals, 6 domains)",
+   "where": "generality-round1-2026-09-19/PREREG.md; d70acd27",
+   "tried": "One dispatch each, frozen methods; then derive-from-source seeding",
+   "outcome": "partial",
+   "date": "2026-09-19",
+   "evidence": "R 3/7, V 7/7; G4 fixed at artifact level after d70acd27 (21 byte-correct) but LLM judge false-rejected; code-edit and net-new refused at grounding; ReAct baseline arm never run -> parity UNTESTED. Cross-goal rebind contamination (body=etartsbus).",
+   "source": "reports-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Natural-language capability goals captured onto victim files by early edit-intent",
+   "where": "goal-host createIntent regex index.ts:12464; early edit-intent detector",
+   "tried": "Rephrasing; direct resolve bypass; a report-shaped goal (PROVIDER attempt 2)",
+   "outcome": "failed",
+   "date": "2026-09-18",
+   "evidence": "Dispatches 5af332e4 (apply-migration-066.sh), aa1ef6e5 (goal-host index.ts), d12205d6 (template-audit.ts, fs_edit at 0.98). The dispatch record's goal text was overwritten.",
+   "source": "reports-5"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Hop-4 content threading (retainOutputs)",
+   "where": "ias-executor 8676beb",
+   "tried": "Stop evictExecutionScope from clearing the store before the walk reads its outputs back.",
+   "outcome": "worked",
+   "date": "2026-08-21",
+   "evidence": "9 real read-backs and 0 stubs (was 29/8); 15 pre-existing test failures were this defect.",
+   "source": "reports-6"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Deterministic env-gate route in goal-target inference",
+   "where": "goal-host 2183da8",
+   "tried": "deterministicEnvGateRoute so self-check goals infer env_gate_scan",
+   "outcome": "worked",
+   "date": "2026-08-13",
+   "evidence": "Dispatch 83925ddd reached with a 5349-char envGateReport (was inferred_target_shapes:[])",
+   "source": "reports-7"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "The 402-credit-exhaustion hypothesis for empty target inference was tested by an instrument and retracted",
+   "where": "goal-host 978fc40 diagnostic",
+   "tried": "Log on the transport-failure branch of target inference",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "The diagnostic never fired, which refuted the hypothesis. The actual cause was an empty knownShapes list after a discovery 401 (section R).",
+   "source": "reports-8"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Live eight-goal pilot through the cockpit",
+   "where": "substrate-live-integration REPORT 2026-09-10",
+   "tried": "Arithmetic, sorting, aggregation, dependency order, specific file, missing file, post-failure and repeat goals",
+   "outcome": "partial",
+   "date": "2026-09-10",
+   "evidence": "4/8 reached and correct; 1/8 met the exact output contract. A correct answer (20413) was judged wrong; permitted absence was rejected. 3 gaps were filed with falsifier:none.",
+   "source": "reports-8"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Investigation grep eaten by node_modules / truncated before named file",
+   "where": "ff560216 2026-08-30T23:35 goal-host 095d568",
+   "tried": "named file first with -H, exclude node_modules",
+   "outcome": "worked",
+   "date": "2026-08-30",
+   "evidence": "named-file lines 0->7; gap closed on its predicate ABSENT",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Creation goals false-reach and cannot create",
+   "where": "44a75483 2026-08-25T08:11 goal-host 221f919, 60b7c0f, 13f7440; dev-vessel 632955a, 578b831",
+   "tried": "exclude creation from countable path; route to compose; coerce edit-on-absent to create; exempt net-new from blind-plan refusal",
+   "outcome": "partial",
+   "date": "2026-08-25",
+   "evidence": "'proven end-to-end' retracted 06:40 (retry-after-debris); later fixed from clean; content quality stub/wrong import",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Investigation floor stack",
+   "where": "44a75483 2026-08-27T22:00 goal-host 752014d, 2757d15, 0af9639, 71d434f, 5e4d045, 9cc89fd",
+   "tried": "deterministic code-search routing, grep synthesis, satisfier suppression, citation oracle",
+   "outcome": "worked",
+   "date": "2026-08-27",
+   "evidence": "ab7074b1 reached via deterministic:code-investigation-cited; coincidental-citation weakness filed",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "verifyDeterministicCompute discarded its own recomputed truth",
+   "where": "goal-host",
+   "tried": "Repair through substrate; qualification probe cadence",
+   "outcome": "worked",
+   "date": "2026-09-11",
+   "evidence": "N=2 autonomous cycles, 653x379=247487 green",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Self-heal observation: 4h window",
+   "where": "80ab9659 @ 2026-09-16T22:21 to 09-17T01:39",
+   "tried": "operator pre-registered that the self-filed root-cause gaps would not be attempted, then observed without dispatching",
+   "outcome": "failed",
+   "evidence": "both target gaps got 0 attempts; open gaps 2,479->2,498; the drain exposes only the top 15 and these gaps had 0 citations or unlocks",
+   "date": "2026-09-16",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Plain-language need for lifecycle-scan forwarding",
+   "where": "gap-lifecycle-scan.ts",
+   "date": "2026-09-29T02:23Z",
+   "tried": "need without paths/shapes",
+   "outcome": "failed",
+   "evidence": "System found right file and reused GAP_STORE_ENDPOINT; verification rejected on unrelated federated-error-cascade test",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Capability rounds 1-4 (answer-checked)",
+   "where": "validation/findings/capability-validation.md, blocker-clearance-and-round2.md, round3, round4",
+   "tried": "33 novel goals serial with independent ground truth",
+   "outcome": "partial",
+   "date": "2026-08-10",
+   "evidence": "7/7, 7/8, 6/8, 4/8; non-filesystem 4/8 all via universal_tool_fallback; 3 wallpaper",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Complexity ladder with must-fail controls",
+   "where": "validation/results/2026-08-12-complexity-ladder.json",
+   "tried": "3 controls + 4 rungs",
+   "outcome": "partial",
+   "date": "2026-08-12",
+   "evidence": "controls failed correctly; all rungs reached with producerSteps 0 via satisfier; rungs_with_producer_steps 0",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Push-away refusal when no producer exists",
+   "where": "4ece17e1 (IAL 27.S.6)",
+   "tried": "Refuse, instead of falling back to the highest-alpha template, when no producer of the goal's output shapes exists (Disrupt application probe)",
+   "outcome": "partial",
+   "date": "2026-05-27",
+   "evidence": "F-129: overstated, not push-away; inv-062: interventionRefused had 0 hits on 05-29 (12 hits today); 4-of-4 misroute experiments on 05-28 after the fix",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Semantic mismatch detector / goal_semantics / resolver_registry_query / origin_layer designs",
+   "where": "stream-B inv-042,043,048,059,060,075,078,079",
+   "tried": "Design-only proposals (15-168 LOC each) for post-execution mismatch detection and registry validation",
+   "outcome": "dormant",
+   "date": "2026-05-28",
+   "evidence": "0 source hits today for goal_semantics, resolver_registry_query, origin_layer, LiveExecutionFrame, keywordMappingProposal",
+   "source": "validation-other-2"
+  }
+ ],
+ "problems": [
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Reach by tier 7d (success_count/execution_count): learned_pathway 51%, satisfier 1.7%, fresh_derivation 0.8%, universal_tool_fallback 2.0%, feature_compose 0/54 vs ~90% contract",
+   "root_cause": "not determined in this shard; population mixes autonomous/tick goals",
+   "last_seen": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Selector refuses 112/day for expected shapes (goal_execution, activityExecutionTrace, light_dispatch_execution) that vessels serve; suggestion create-shape-provider-goal never consumed",
+   "root_cause": "The refusal candidate pool is template output_shapes only (activities.ts ~7759), never discovery resolvers: template and resolver producer knowledge are two unjoined stores",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-29",
+   "recurrences": 9129,
+   "source": "docs-2"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "17 capability gaps for invented shape names (federation_state_summary, federation_overlay_state, ...) while federation_verification_report exists; batch-closed 09-28, recurred within 23h",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 17,
+   "root_cause": "Target inference mints a new shape name per phrasing; no alias to the served shape",
+   "source": "federation-relay"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "named goals do not run the named template (improvise fallthrough); ReAct parity measured once on the removed minibob",
+   "first_seen": "2026-03-20",
+   "last_seen": "2026-06-29",
+   "recurrences": 5,
+   "root_cause": "target inference without dense search (embedding disabled); reach semantics repeatedly redefined",
+   "source": "git-super-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Walk dies at target inference; read-only questions routed as edits; no shape for memory",
+   "root_cause": "Empty vocabulary from 401; intent classification biased to edit",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "source": "git-super-2"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "fresh_derivation 3% and universal_tool_fallback 8.5% success vs a ~90% reach contract; edit goals fail as satisfier:goal-host-walk-failed (441/0 in 5d) on compose lane BUSY",
+   "root_cause": "The floor tiers rarely succeed; the edit lane is capacity-bound",
+   "source": "live-activities"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "target inference misreads goals; ReAct floor shapes unreachable from cold (llmcompletion, shell, websearch)",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 60,
+   "root_cause": "target inference rewrites paths or invents shapes; producers' required inputs unproducible",
+   "source": "live-gaps"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "A capability-level need ('the system cannot remember') found no target shape and ended hollow",
+   "first_seen": "2026-09-29",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "root_cause": "Target inference cannot map capability words to the memoryNote shape that the same node serves",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "universal-tool-fallback (ReAct floor) 17% success; feature_compose 20%; git_branch_create 0/2393; git_push 6/65",
+   "root_cause": "unknown for most (no reason recorded); partly draining refusals (852), invalid URLs, workspace-root refusals",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Walks cannot edit, write, or deploy; they end in a hollow satisfier or 'no producer'",
+   "root_cause": "Tool-less LLM paths; unproducible edit shapes; pull_cutover output-shape mismatch; edit intent requires repos/<vessel>/src",
+   "first_seen": "2026-07-10",
+   "last_seen": "2026-09-15",
+   "recurrences": 5,
+   "source": "memory-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Non-specific goals answered by shell satisfier ('46') graded reached; phrasing routes to producerless shapes; thrown dispatches immortal; resolve-URL overshoot kills ReAct floor; universal-tool-fallback invisible in walk timeline",
+   "root_cause": "Target inference single-shape collapse; floor not guaranteed when a shape has no producer; dispatch-surface verdict differs from trace verdict",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-22",
+   "recurrences": 6,
+   "source": "memory-10"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Empty or keyword-latched target inference, walk blind to resolver producers, payload args not synthesized, cannot create from intent",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-07-31",
+   "recurrences": 8,
+   "root_cause": "Target inference is a single LLM classifier; producers are discovered only as templates; no payload constructor",
+   "source": "memory-2"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Derivation-over-source goals hollow-green on raw input shapes. Multi-source cardinality is lost. Internal vocabulary mis-infers target shapes. Shell CWD and env facts are missing. Honest goal reach is 5% (edit goals 2.4%).",
+   "first_seen": "2026-07-23",
+   "last_seen": "2026-09-19",
+   "recurrences": 8,
+   "root_cause": "Target inference picks tool or input shapes, and prompts lack environment facts. The grounded fallback only fires after reached===false.",
+   "source": "memory-3"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "ReAct floor doesn't loop, never traces, runs tools on the hub, excludes edit goals; target inference collapses to shellResult",
+   "first_seen": "2026-08-04",
+   "last_seen": "2026-08-07",
+   "recurrences": 3,
+   "root_cause": "Unlogged break on timeout, non-2xx fatal, `return uf` before recordGoalPath, loopback tool endpoint, name-only selection",
+   "source": "memory-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Read/compute/maintenance goals naming a repos file misrouted to EARLY EDIT-INTENT compose",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-08-24",
+   "recurrences": 4,
+   "root_cause": "Edit-intent keyed on a named repos path, not an edit verb",
+   "source": "memory-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Target inference drops or confabulates shapes, explicit phrasing gives empty targets, the floor is cache-dependent, compositional goals have 0 producer steps.",
+   "root_cause": "The walk matches whole output-shape identity, there is no transform family, and inference is an LLM classifier.",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-19",
+   "recurrences": 7,
+   "source": "memory-5"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Target inference collides goal words with shape names; derived values LLM-interpolated; 'no producer' errors lie",
+   "root_cause": "LLM on critical path; narrow deterministic compute; satisfier empty => error string",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-08-06",
+   "recurrences": 5,
+   "source": "memory-6"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Arbitrary goals die at step 0 or reach wrongly. Only the ReAct floor answers non-filesystem work. Walk reach measured 7.1%/24h on 09-02",
+   "root_cause": "Envelope parse gaps, env gates, a blacklist after one transient failure, write shapes resolved with no payload, target inference [] for report/convert goals, and file-writing goals that never terminalize",
+   "first_seen": "2026-07-23",
+   "last_seen": "2026-09-02",
+   "recurrences": 10,
+   "source": "memory-7"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Symptom goals don't reach the right file, inference biased to reads, compound goals flattened, write shapes unreachable through the walk.",
+   "root_cause": "Vocabulary gap between symptoms and identifiers, the example in the inference prompt, and target arity not preserved.",
+   "first_seen": "2026-07-19",
+   "last_seen": "2026-08-10",
+   "recurrences": 7,
+   "source": "memory-8"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Non-specific goals never reach the edit path, or misroute to comments/seed string literals; deterministic floor covers 2%",
+   "first_seen": "2026-08-05",
+   "last_seen": "2026-08-12",
+   "recurrences": 5,
+   "root_cause": "Regex admission vocabulary; the localizer ranks rarity over code-likeness; the ReAct floor is an LLM call; target inference degrades to [] when starved or 401",
+   "source": "memory-9"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Goal described as a capability finds no target shape and runs leftovers",
+   "first_seen": "2026-06-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 8,
+   "root_cause": "target inference text-driven; shape vocabulary facts not available at inference time",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Fix deployed but executed path never exercises it (GOAL_RUNTIME vs SearchFirst); zero shape-provider escalations; improvise fallthrough",
+   "first_seen": "2026-05-09",
+   "last_seen": "2026-05-25",
+   "recurrences": 2,
+   "root_cause": "branch exists but is not reachable from the real dispatch path",
+   "source": "openspec-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "NL goals route to irrelevant high-Thompson templates or terminate 'no producer'",
+   "root_cause": "No target shape (fixed by inference) then vocabulary gaps and walk blind to vessel-resolver producers",
+   "first_seen": "2026-06-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "source": "openspec-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Reach 10% per attempt vs 90% claim; edit-intent 0/41; goals die before execution (prose-route classifier, target caps, derivation ordering); 3-fact goals unreliable",
+   "root_cause": "Classification and target inference close the goal before the walk; under-decomposition; read-shape resolution seam",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-22",
+   "recurrences": 8,
+   "source": "reports-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Commits and shell calls made on behalf of a dispatch carry execution_id=null. They are untraced, and the mint deferral cannot match them.",
+   "root_cause": "Every resolver hop that rebuilds a pointer from an allow-list drops context fields. The id was stamped per hop instead of carried as shared context.",
+   "first_seen": "2026-09-24 (#32)",
+   "last_seen": "2026-09-26 (#61 closed)",
+   "recurrences": 7,
+   "source": "reports-2"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Arbitrary goals misrouted (eBay -> env_gate_scan/fileEditResult), busy compose reported as capability gap, retry cannot widen, reach_6h 2.35% vs ~90% expected",
+   "root_cause": "Domain-locked vocabulary, recall dark, fall-through to walk on BUSY, unsatisfiable retry target, floor prompt missing environment facts",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-16",
+   "recurrences": 5,
+   "source": "reports-3"
+  },
+  {
+   "key": "goal-vocabulary-regex",
+   "symptom": "Natural-language goals gated by lexical regexes/bigrams: isQuestionGoal leading word, edit-intent verb whitelist (5/7 phrasings rejected), createIntent adjacency, localiser unique-bigram, oracle title capture, escalation kind allowlist",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-09-20",
+   "recurrences": 6,
+   "root_cause": "Admission/routing decisions implemented as string predicates over prose instead of typed decisions with a floor; each instance patched locally, class never retired (jev typed decision measured 8/8 vs regex 6/8 but wiring uncommitted).",
+   "source": "reports-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Target inference picks shellResult over an advertised resolver shape",
+   "first_seen": "2026-08-21",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "root_cause": "Inference favours generic shell producer; open as goal-target-inference-picks-shellresult-over-the-advertised-vesselhealth-shape (different shape, same class).",
+   "source": "reports-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Pathless natural-language goals are captured onto victim files by regex edit-intent, and the dispatch record gets rewritten",
+   "root_cause": "A lexical createIntent/early edit-intent regex; target inference returns empty or fs_edit; head-of-line producer scan at missingNow[0]",
+   "first_seen": "2026-09-15",
+   "last_seen": "2026-09-18",
+   "recurrences": 4,
+   "source": "reports-5"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Reach far below 90%: 7.1% (09-02), 7.9% (edit 2.1%, 09-10), 12.8% non-trivial (09-11 quiet), 6.5% (09-12, 1 distinct goal in 4h). Execution-level 48% is 92% self-scanning timers. An available shell capability (137*149) was unreachable through a goal.",
+   "root_cause": "Reach roughly equals the edit landing rate (96.2% of not_achieved are edit-intent-no-landed-edit). Target inference was empty when the vocabulary fetch failed. The ReAct floor works when routed (09-02 Iceland dispatch).",
+   "first_seen": "2026-09-02",
+   "last_seen": "2026-09-12",
+   "recurrences": 5,
+   "source": "reports-8"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "The ReAct floor is dark on spokes; every lifecycle arrangement returns reached:false with a null reason",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-22",
+   "recurrences": 2,
+   "root_cause": "llm_completion_dispatch registered through a channel the federation mirror never reads; later the resolve-URL joiner (MEMORY.md 09-22)",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "hollow recovery suppresses only producer; non-filesystem goals only answer via universal fallback",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-08-12",
+   "recurrences": 3,
+   "root_cause": "suppressSatisfierShapes empties producer set; smarter planes convert answerable goals to false success",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Arbitrary goals (web research, file write, Fibonacci, OWASP audit, Disrupt application) misrouted to substrate-internal templates and graded success",
+   "first_seen": "2026-05-27 dev-response inv-050",
+   "last_seen": "2026-05-28 inv-056 (11 experiments)",
+   "recurrences": 11,
+   "root_cause": "Static regex classifier plus highest-alpha fallback; no operator-class templates; no post-execution mismatch detector",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "LLM path silently non-functional substrate-wide (tokens_in=0 on all 53 sub-traces)",
+   "first_seen": "2026-05-28 F-148",
+   "last_seen": "2026-05-28 inv-067 (engine gap still open)",
+   "recurrences": 1,
+   "root_cause": "Shape name mismatch, model prefix, and wrong shape in the dev-vessel resolver; engine llm-prompt never reached llm.generate()",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "94% of concept-db searches are dense_true_empty (24,207 of 25,651)",
+   "root_cause": "not established; the concept graph lacks recall for walk and prompt queries",
+   "first_seen": "unknown",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "claims": [
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-09-28",
+   "claim": "16 gap-federation-* capability gaps closed",
+   "where": "gap store 01:26-01:29",
+   "later": "gap-detailed-federation-state created 09-29 00:38: same class recurred within 23h",
+   "source": "federation-relay"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-06-25",
+   "claim": "Lever 4 goal-shape inference: natural-language goals REACH end-to-end",
+   "where": "finding_2026_06_25_lever4_goal_shape_inference_keystone_reached",
+   "later": "07-02 plain dev goals misroute to maintenance ticks; 09-29 'memory' maps to no shape",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-09-28 16:00",
+   "claim": "node 2 gap-compose restored",
+   "where": "3b0ca6d9",
+   "later": "gap-compose on node 2 logs only watchdog_restart (36), never a compose action.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-08-27",
+   "claim": "Both layers of the verifier-recipe grounding chain now closed (26f4ecb, f91f8f2)",
+   "where": "2026-08-27-live-recipe-rescues-failed-partner/proposal.md",
+   "later": "code still live, but 0 recipe donations or answers in 72h to 09-29: dormant",
+   "source": "openspec-7"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-08-07",
+   "claim": "the loop closes through the box (typed instruction reshapes or dispatches)",
+   "where": "VALIDATION-2 s8",
+   "later": "not re-measured in this pass; surfaceIntent is still not an activity",
+   "source": "openspec-9"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-08-25T03:55",
+   "claim": "Creation capability resolved and proven end-to-end (3afb1812)",
+   "where": "44a75483",
+   "later": "06:40 retracted: broken from clean state, reached via retry-after-debris",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-08-29T01:10",
+   "claim": "Reach rate ~1%",
+   "where": "ff560216",
+   "later": "01:40 retracted: 1624/1922 were auth telemetry; true 17.3%",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-09-11",
+   "claim": "Ladder reached 7/7",
+   "where": "35537c7e @ 2026-09-11T23:59 summary",
+   "later": "Same day: learning loop still open, reach 8.6%/24h, exemplar consumer never designed; the ladder measured self-health, not reach",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-09-12",
+   "claim": "Five repairs landed and pushed, all substrate-authored; reach 22.6%",
+   "where": "35537c7e @ 2026-09-12T10:20 summary",
+   "later": "09-13: all reach baselines were operator-contaminated; autonomous 0.9-2.6%, operator 80%",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-09-16",
+   "claim": "76 substrate resolvers, ~91% wired: ReAct floor met",
+   "where": "35537c7e @ 2026-09-16T20:52 summary",
+   "later": "09-18: floor dark on spokes (gap-mu6ejfac); MEMORY.md 09-22: the URL joiner kills the floor",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-09-25T11:02Z",
+   "claim": "Reach best bucket of the day, 51% cleaned-up, improvement in outcomes",
+   "where": "ac8b0aad 2026-09-25T11:02Z",
+   "later": "8c31cdb broke routing 12:09-12:36; traffic-mix explanation retracted; reach definitions changed repeatedly, not comparable",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-09-29T02:30Z",
+   "claim": "Supply reaches autonomy end to end for the first time today; bottleneck moved to drafts not landing",
+   "where": "ac8b0aad 2026-09-29T02:30Z",
+   "later": "02:43 retracted: decomposed steps landed verified 09-27 (ec962628-step-1); drafter bottleneck is 08-13 finding verbatim",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-08-10",
+   "claim": "structural floor gap for pure-reasoning goals",
+   "where": "validation/findings/capability-validation.md \u00a71.4",
+   "later": "retracted in the same doc (starvation); serial run gave 5050 on trial 1",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "goal-walk-floor",
+   "claimed_at": "2026-05-27",
+   "claim": "Push-away refusal active (IAL 27.S.6)",
+   "where": "commit 4ece17e1",
+   "later": "F-129 overstated; interventionRefused had 0 hits 05-29; 11-experiment misroute confirmation 05-28",
+   "source": "validation-other-2"
+  }
+ ]
+}

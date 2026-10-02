@@ -1,0 +1,933 @@
+#!/usr/bin/env bun
+"use strict";
+/**
+ * stratified-harness.ts — Phase 25.2 coverage matrix driver.
+ *
+ * Consumes a generated goals file (from goal-generator.ts), runs recommendations
+ * and queries matching traces from activity-api, then emits a 24-cell coverage
+ * matrix report.
+ *
+ * Usage:
+ *   bun run validation/scripts/stratified-harness.ts \
+ *     --goals validation/generated/<seed>-<date>.json \
+ *     [--baseline validation/results/<prior>-stratified-report.json] \
+ *     [--label "run label"] \
+ *     [--detailed]
+ *
+ * Config: reads METABOB_ENDPOINT / METABOB_API_KEY or ~/.metabob/config.json.
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const promises_1 = require("node:fs/promises");
+const node_fs_1 = require("node:fs");
+const node_os_1 = require("node:os");
+const node_path_1 = require("node:path");
+const node_util_1 = require("node:util");
+const node_url_1 = require("node:url");
+const decision_record_completeness_ts_1 = require("./lib/decision-record-completeness.ts");
+const output_normalizers_ts_1 = require("./lib/output-normalizers.ts");
+const contamination_delta_ts_1 = require("./lib/contamination-delta.ts");
+const refinement_detectors_ts_1 = require("./lib/refinement-detectors.ts");
+const rolling_pool_ts_1 = require("./lib/rolling-pool.ts");
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
+async function loadConfig() {
+    const envEndpoint = process.env.METABOB_ENDPOINT;
+    const envKey = process.env.METABOB_API_KEY;
+    const configPath = (0, node_path_1.join)((0, node_os_1.homedir)(), ".metabob", "config.json");
+    if ((0, node_fs_1.existsSync)(configPath)) {
+        const raw = JSON.parse(await (0, promises_1.readFile)(configPath, "utf8"));
+        const endpoint = envEndpoint ?? raw.metabob?.endpoint;
+        const apiKey = envKey ?? raw.metabob?.apiKey ?? "";
+        if (!endpoint)
+            throw new Error("endpoint not set. Set METABOB_ENDPOINT env or metabob.endpoint in ~/.metabob/config.json");
+        if (apiKey)
+            return { endpoint, apiKey };
+    }
+    if (envEndpoint && envKey)
+        return { endpoint: envEndpoint, apiKey: envKey };
+    if (envEndpoint && !envKey)
+        throw new Error("METABOB_API_KEY not set. Set via env var or ~/.metabob/config.json");
+    throw new Error("endpoint not set. Set METABOB_ENDPOINT env or metabob.endpoint in ~/.metabob/config.json");
+}
+async function loadShortestPathCache(statePath) {
+    if (!(0, node_fs_1.existsSync)(statePath))
+        return {};
+    try {
+        return JSON.parse(await (0, promises_1.readFile)(statePath, "utf8"));
+    }
+    catch {
+        return {};
+    }
+}
+async function saveShortestPathCache(statePath, cache) {
+    await (0, promises_1.mkdir)((0, node_path_1.dirname)(statePath), { recursive: true });
+    await (0, promises_1.writeFile)(statePath, JSON.stringify(cache, null, 2), "utf8");
+}
+function updateShortestPathCache(cache, cellId, costUsd, chain) {
+    const now = new Date().toISOString();
+    if (!(cellId in cache)) {
+        cache[cellId] = {
+            shortest_cost_usd: costUsd,
+            shortest_chain: chain,
+            shortest_observed_at: now,
+            observation_count: 1,
+        };
+    }
+    else if (costUsd < cache[cellId].shortest_cost_usd) {
+        cache[cellId].shortest_cost_usd = costUsd;
+        cache[cellId].shortest_chain = chain;
+        cache[cellId].shortest_observed_at = now;
+        cache[cellId].observation_count += 1;
+    }
+    else {
+        cache[cellId].observation_count += 1;
+    }
+}
+function evictStaleEntries(cache) {
+    const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    for (const key of Object.keys(cache)) {
+        const entry = cache[key];
+        const age = new Date(entry.shortest_observed_at).getTime();
+        if (age < cutoff && entry.observation_count < 3) {
+            delete cache[key];
+        }
+    }
+}
+// ---------------------------------------------------------------------------
+// Recommendation runner
+// ---------------------------------------------------------------------------
+async function runRecommendation(goal, endpoint, authHeaders, excludeVariant) {
+    try {
+        const resp = await fetch(`${endpoint}/v2/activities/recommend`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...authHeaders },
+            body: JSON.stringify({
+                goal_description: goal.goal_text,
+                expected_output_shapes: goal.expected_output_shapes,
+                impulse_pool: goal.seed_impulse_pool.map((s) => ({ type: s })),
+                limit: 5,
+                ...(excludeVariant ? { exclude_variant: excludeVariant } : {}),
+            }),
+            signal: AbortSignal.timeout(20_000),
+        });
+        if (!resp.ok)
+            return [];
+        const body = (await resp.json());
+        return body.recommendations ?? body.activities ?? body.templates ?? [];
+    }
+    catch {
+        return [];
+    }
+}
+function recommendationCoversOutputShapes(rec, expectedOutputShapes) {
+    if (!rec.output_shapes?.length)
+        return false;
+    return expectedOutputShapes.every((s) => rec.output_shapes.includes(s));
+}
+async function fetchOracleLabel(labelId, endpoint, authHeaders) {
+    try {
+        const resp = await fetch(`${endpoint}/v2/impulses/resolve`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...authHeaders },
+            body: JSON.stringify({
+                pointer: { type: "preValidationResult", id: labelId },
+            }),
+            signal: AbortSignal.timeout(10_000),
+        });
+        if (!resp.ok)
+            return null;
+        const body = await resp.json();
+        return body.data ?? body.result ?? null;
+    }
+    catch {
+        return null;
+    }
+}
+// ---------------------------------------------------------------------------
+// Trace query: find recent traces matching output shapes
+// ---------------------------------------------------------------------------
+async function queryMatchingTraces(outputShapes, endpoint, authHeaders, limit = 10) {
+    if (!outputShapes.length)
+        return [];
+    try {
+        // Query traces by output shape (using executionTraceList with shape filter)
+        const resp = await fetch(`${endpoint}/v2/activities/execution-traces?` +
+            new URLSearchParams({
+                output_shapes: outputShapes.join(","),
+                limit: String(limit),
+                order: "desc",
+            }), {
+            headers: authHeaders,
+            signal: AbortSignal.timeout(20_000),
+        });
+        if (!resp.ok) {
+            // Fallback: try POST body form
+            const resp2 = await fetch(`${endpoint}/v2/activities/execution-traces`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", ...authHeaders },
+                body: JSON.stringify({ output_shapes: outputShapes, limit }),
+                signal: AbortSignal.timeout(20_000),
+            });
+            if (!resp2.ok)
+                return [];
+            const body2 = (await resp2.json());
+            return body2.traces ?? body2.data ?? body2.executions ?? [];
+        }
+        const body = (await resp.json());
+        return body.traces ?? body.data ?? body.executions ?? [];
+    }
+    catch {
+        return [];
+    }
+}
+// ---------------------------------------------------------------------------
+// G4.1.2: per-trace task hydration.
+//
+// The trace LIST endpoint returns slim rows (no tasks[]); per-task structure
+// (resolver_id / resolver_tier / cost) lives in the split
+// `execution_trace_content` table, which only the per-trace GET
+// (`GET /v2/activities/execution-traces/:executionId`) hydrates
+// (content_source: "split"). Fetch it on demand so tier classification and
+// task-based scoring (reuse_efficiency, DRC) see real tasks.
+// ---------------------------------------------------------------------------
+async function hydrateTraceTasks(trace, endpoint, authHeaders) {
+    const execId = trace.execution_id ?? trace.id;
+    if (!execId)
+        return null;
+    try {
+        const resp = await fetch(`${endpoint}/v2/activities/execution-traces/${encodeURIComponent(execId)}`, { headers: authHeaders, signal: AbortSignal.timeout(15_000) });
+        if (!resp.ok)
+            return null;
+        const body = (await resp.json());
+        return Array.isArray(body.tasks) && body.tasks.length > 0 ? body.tasks : null;
+    }
+    catch {
+        return null;
+    }
+}
+/** Max per-trace GET hydrations per goal (bounds API cost within BUDGET_CAP). */
+const TASK_HYDRATION_PER_GOAL = 3;
+// ---------------------------------------------------------------------------
+// Per-trace scoring
+// ---------------------------------------------------------------------------
+function p50(arr) {
+    if (!arr.length)
+        return null;
+    const sorted = [...arr].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+}
+function mean(arr) {
+    if (!arr.length)
+        return null;
+    return arr.reduce((s, v) => s + v, 0) / arr.length;
+}
+// POSTERIOR_KEYS and BINDING_KEYS imported from lib/decision-record-completeness.ts
+function scoreTasks(tasks, thompsonPoolIds, trace) {
+    if (!tasks.length)
+        return { reuse_efficiency: null, improvise_share: null, decision_record_completeness: null };
+    const taskCosts = tasks.map((t) => t.cost_usd ?? 0);
+    const totalCost = taskCosts.reduce((s, v) => s + v, 0);
+    // Reuse efficiency: cost of tasks using known-warm templates / total
+    let reusedCost = 0;
+    for (const t of tasks) {
+        const actId = t.activity_id ?? "";
+        const isReused = thompsonPoolIds.has(actId) &&
+            !actId.includes("improvise") &&
+            (t.cost_usd ?? 0) > 0;
+        if (isReused)
+            reusedCost += t.cost_usd ?? 0;
+    }
+    const reuse_efficiency = totalCost > 0 ? reusedCost / totalCost : 0;
+    // Improvise share: fraction of tasks with improvise in activity_id
+    const impCount = tasks.filter((t) => (t.activity_id ?? "").includes("improvise")).length;
+    const improvise_share = impCount / tasks.length;
+    // Decision record completeness delegated to lib/decision-record-completeness.ts
+    const drcScores = (0, decision_record_completeness_ts_1.scoreDecisionRecordCompleteness)(tasks, trace);
+    const decision_record_completeness = drcScores?.completeness ?? null;
+    return { reuse_efficiency, improvise_share, decision_record_completeness };
+}
+// G6.5.1: detect validator_false_negative — trace succeeded but validator task
+// recorded a failure_mode (meaning validator-dispatch found issues post-hoc).
+function detectValidatorFalseNegative(trace) {
+    const success = trace.status === "success" || trace.status === "completed";
+    if (!success)
+        return false;
+    const tasks = trace.tasks ?? [];
+    return tasks.some((t) => (t.resolver_id?.includes("validator") || t.activity_id?.includes("validator")) &&
+        t.failure_mode != null);
+}
+function scoreTrace(trace, thompsonPoolIds) {
+    const success = trace.status === "success" || trace.status === "completed";
+    const cost_usd = typeof trace.cost_usd === "number" ? trace.cost_usd : null;
+    const taskScores = scoreTasks(trace.tasks ?? [], thompsonPoolIds, trace);
+    const validator_false_negative = detectValidatorFalseNegative(trace);
+    return { success, cost_usd, ...taskScores, validator_false_negative };
+}
+// ---------------------------------------------------------------------------
+// Thompson pool snapshot (mirrors reuse-harness.ts approach)
+// Uses /v2/activities/recommend with broad queries so alpha comes from the
+// actual posterior in variant_performance_metrics, not the raw template row.
+// The templates endpoint returns thompson_alpha=1 (prior) for all templates;
+// only the recommend response carries the real posterior via selection_metadata.
+// ---------------------------------------------------------------------------
+async function captureThompsonSnapshot(endpoint, authHeaders) {
+    const ids = new Set();
+    const broadQueries = ["fix bug", "add feature", "audit activity", "verify health", "create template"];
+    for (const q of broadQueries) {
+        try {
+            const resp = await fetch(`${endpoint}/v2/activities/recommend`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", ...authHeaders },
+                body: JSON.stringify({ task_description: q, limit: 20 }),
+                signal: AbortSignal.timeout(15_000),
+            });
+            if (!resp.ok)
+                continue;
+            const body = await resp.json();
+            for (const r of body.recommendations ?? []) {
+                const id = r.id ?? r.template_id ?? r.activity_id;
+                const alpha = r.selection_metadata?.alpha ?? 1;
+                if (id && alpha > 1)
+                    ids.add(id);
+            }
+        }
+        catch {
+            // Non-fatal
+        }
+    }
+    return ids;
+}
+// ---------------------------------------------------------------------------
+// Cell metrics initialization
+// ---------------------------------------------------------------------------
+function emptyCell() {
+    return {
+        sample_count: 0,
+        success_count: 0,
+        success_rate: null,
+        cost_usd_samples: [],
+        cost_p50_usd: null,
+        reuse_efficiency_samples: [],
+        reuse_efficiency: null,
+        improvise_share_samples: [],
+        improvise_share: null,
+        decision_record_completeness_samples: [],
+        decision_record_completeness: null,
+        witness_disagreement: null,
+        validator_false_negative_rate: null,
+        oracle_disagreement_rate: null,
+        multi_witness_disagreement_rate: null,
+        tier_distribution: null,
+        thompson_ci: null,
+        floor_pass: false,
+        recommend_coverage: null,
+        recommend_shape_match: null,
+    };
+}
+// Per-cell floor thresholds (from design §B)
+const FLOORS = {
+    success_rate: 0.30,
+    reuse_efficiency: 0.40, // only when sample_count ≥ 3 and depth ≥ 1
+    decision_record_completeness: 0.90,
+    witness_disagreement_max: 0.15,
+    multi_witness_disagreement_max: 0.10, // 25.6.x: A/B scenarios only
+};
+function computeFloorPass(cell, cellId) {
+    if (cell.sample_count < 3)
+        return false;
+    if (cell.floor_status === "gated_on_phase_22")
+        return false;
+    if (cell.success_rate !== null && cell.success_rate < FLOORS.success_rate)
+        return false;
+    if (cell.decision_record_completeness !== null &&
+        cell.decision_record_completeness < FLOORS.decision_record_completeness)
+        return false;
+    // reuse_efficiency floor only for depth ≥ 1 cells
+    const hasDepth = cellId.includes("depth1") || cellId.includes("depth2+");
+    if (hasDepth && cell.reuse_efficiency !== null &&
+        cell.reuse_efficiency < FLOORS.reuse_efficiency)
+        return false;
+    // 25.6.x: multi-witness disagreement floor for A/B scenarios only (not C/D gap cells)
+    const isScenarioAB = !cellId.includes("C∪D") && !cellId.includes("gapD");
+    if (isScenarioAB && cell.multi_witness_disagreement_rate !== null &&
+        cell.multi_witness_disagreement_rate > FLOORS.multi_witness_disagreement_max)
+        return false;
+    return true;
+}
+function finalizeCell(cell, cellId) {
+    const n = cell.sample_count;
+    if (n === 0)
+        return;
+    cell.success_rate = n > 0 ? cell.success_count / n : null;
+    cell.cost_p50_usd = p50(cell.cost_usd_samples.filter((v) => v !== null));
+    cell.reuse_efficiency = mean(cell.reuse_efficiency_samples);
+    cell.improvise_share = mean(cell.improvise_share_samples);
+    cell.decision_record_completeness = mean(cell.decision_record_completeness_samples);
+    cell.floor_pass = computeFloorPass(cell, cellId);
+}
+function detectRefinementEvents(currentMatrix, priorReport) {
+    if (!priorReport?.coverage_matrix)
+        return [];
+    const events = [];
+    for (const [cellId, current] of Object.entries(currentMatrix)) {
+        const prior = priorReport.coverage_matrix[cellId];
+        if (!prior)
+            continue;
+        // E.1 compression: success_rate improved by ≥ 0.10 and sample_count grew
+        if (current.success_rate && prior.success_rate) {
+            const successDelta = current.success_rate - (prior.success_rate ?? 0);
+            if (successDelta >= 0.10 && current.sample_count > (prior.sample_count ?? 0)) {
+                events.push({
+                    type: "compression",
+                    cell_id: cellId,
+                    description: `success_rate improved from ${prior.success_rate?.toFixed(3)} to ${current.success_rate.toFixed(3)}`,
+                    prior_value: prior.success_rate ?? null,
+                    current_value: current.success_rate,
+                });
+            }
+        }
+        // G4.1.2 / E.2 tier-descent (always low_confidence — see gating note)
+        const tierEvent = (0, refinement_detectors_ts_1.detectTierDescent)(cellId, prior.tier_distribution, current.tier_distribution);
+        if (tierEvent)
+            events.push(tierEvent);
+        // G4.1.3 / E.3 CI-narrowing for the cell's dominant activity
+        const ciEvent = (0, refinement_detectors_ts_1.detectCiNarrowing)(cellId, prior.thompson_ci, current.thompson_ci);
+        if (ciEvent)
+            events.push(ciEvent);
+    }
+    return events;
+}
+// ---------------------------------------------------------------------------
+// Optimality ratio per cell (G3.3.1: + closing/stable/regressing trend flags
+// when a prior report is supplied via --baseline; schema matches
+// compare-reports.ts `optimality_ratios` expectations)
+// ---------------------------------------------------------------------------
+function computeOptimalityRatios(rawCellCosts, cache, priorReport) {
+    const ratios = {};
+    for (const [cellId, costs] of Object.entries(rawCellCosts)) {
+        const entry = cache[cellId];
+        let ratio = null;
+        if (entry && costs.length && entry.shortest_cost_usd > 0) {
+            const meanCost = costs.reduce((s, v) => s + v, 0) / costs.length;
+            ratio = meanCost / entry.shortest_cost_usd;
+        }
+        const priorRatio = (0, refinement_detectors_ts_1.extractPriorOptimalityRatio)(priorReport?.optimality_ratios?.[cellId]);
+        ratios[cellId] = {
+            optimality_ratio: ratio,
+            trend: (0, refinement_detectors_ts_1.computeOptimalityTrend)(ratio, priorRatio),
+        };
+    }
+    return ratios;
+}
+function stripSampleArrays(matrix) {
+    const out = {};
+    for (const [cellId, cell] of Object.entries(matrix)) {
+        const { cost_usd_samples, reuse_efficiency_samples, improvise_share_samples, decision_record_completeness_samples, ...rest } = cell;
+        out[cellId] = rest;
+    }
+    return out;
+}
+async function runGoalLoop(goals, opts) {
+    const { endpoint, authHeaders, priorReport, thompsonPoolIds, shortestPaths } = opts;
+    const BUDGET_CAP = opts.budgetCap ?? 200;
+    const matrix = {};
+    const rawCellCosts = {};
+    const perGoalResults = [];
+    // G4.1.2: per-cell tier classifications accumulated across hydrated tasks
+    const cellTierSamples = {};
+    // G4.1.3: per-cell top-recommendation posteriors (id + α/β from selection_metadata)
+    const cellTopRecs = {};
+    let apiCallCount = 0;
+    console.log(`\n  Processing ${goals.length} goals...\n`);
+    for (let i = 0; i < goals.length; i++) {
+        const goal = goals[i];
+        const cellId = goal.cell_id;
+        if (!matrix[cellId]) {
+            matrix[cellId] = emptyCell();
+            rawCellCosts[cellId] = [];
+            cellTierSamples[cellId] = [];
+            cellTopRecs[cellId] = [];
+        }
+        const cell = matrix[cellId];
+        if (apiCallCount >= BUDGET_CAP) {
+            console.log(`  Budget cap (${BUDGET_CAP} API calls) reached — stopping early`);
+            break;
+        }
+        process.stdout.write(`  [${i + 1}/${goals.length}] cell=${cellId} `);
+        // 1. Run recommendation
+        const recs = await runRecommendation(goal, endpoint, authHeaders);
+        apiCallCount++;
+        const hasAnyRec = recs.length > 0;
+        const hasShapeMatch = recs.some((r) => recommendationCoversOutputShapes(r, goal.expected_output_shapes));
+        // G4.1.3: capture the top recommendation's live Thompson posterior
+        if (recs.length > 0) {
+            const top = recs[0];
+            const topId = top.id ?? top.template_id ?? top.activity_id;
+            const alpha = top.selection_metadata?.alpha;
+            const beta = top.selection_metadata?.beta;
+            if (topId && typeof alpha === "number" && typeof beta === "number") {
+                cellTopRecs[cellId].push({ id: topId, alpha, beta });
+            }
+        }
+        // 2. Query matching traces
+        const traces = await queryMatchingTraces(goal.expected_output_shapes, endpoint, authHeaders, 5);
+        apiCallCount++;
+        // G4.1.2: hydrate per-task structure (resolver_id / resolver_tier) from
+        // the per-trace GET for traces the list endpoint returned slim.
+        let hydrations = 0;
+        for (const trace of traces) {
+            if (trace.tasks?.length)
+                continue;
+            if (hydrations >= TASK_HYDRATION_PER_GOAL || apiCallCount >= BUDGET_CAP)
+                break;
+            const tasks = await hydrateTraceTasks(trace, endpoint, authHeaders);
+            apiCallCount++;
+            hydrations++;
+            if (tasks)
+                trace.tasks = tasks;
+        }
+        // G4.1.2: accumulate tier classifications for this cell
+        for (const trace of traces) {
+            for (const t of trace.tasks ?? []) {
+                cellTierSamples[cellId].push((0, refinement_detectors_ts_1.classifyResolverTier)(t.resolver_tier, t.resolver_id));
+            }
+        }
+        // 3. Score traces
+        const traceScores = [];
+        for (const trace of traces) {
+            const score = scoreTrace(trace, thompsonPoolIds);
+            traceScores.push(score);
+            cell.sample_count++;
+            if (score.success) {
+                cell.success_count++;
+                if (score.cost_usd !== null) {
+                    cell.cost_usd_samples.push(score.cost_usd);
+                    rawCellCosts[cellId].push(score.cost_usd);
+                    const chain = trace.composition_chain ?? (trace.activity_id ? [trace.activity_id] : []);
+                    updateShortestPathCache(shortestPaths, cellId, score.cost_usd, chain);
+                }
+            }
+            if (score.reuse_efficiency !== null)
+                cell.reuse_efficiency_samples.push(score.reuse_efficiency);
+            if (score.improvise_share !== null)
+                cell.improvise_share_samples.push(score.improvise_share);
+            if (score.decision_record_completeness !== null)
+                cell.decision_record_completeness_samples.push(score.decision_record_completeness);
+        }
+        // Scenario D gating
+        if (cellId.includes("C∪D") || goal.scenario === "C∪D" || goal.topology_gap_band === "D") {
+            cell.floor_status = "gated_on_phase_22";
+        }
+        // G6.3.2: witness comparison
+        const witnesses = [];
+        if (traces.length >= 2) {
+            const ta = traces[0];
+            const tb = traces[1];
+            const shapesA = [...(ta.output_shapes ?? [])].sort();
+            const shapesB = [...(tb.output_shapes ?? [])].sort();
+            const agreed = (0, output_normalizers_ts_1.outputsAgree)("output_shapes", shapesA, shapesB);
+            witnesses.push({
+                trace_a_id: ta.id ?? "unknown",
+                trace_b_id: tb.id ?? "unknown",
+                shape: "output_shapes",
+                agreed,
+                diff: agreed ? null : ((0, output_normalizers_ts_1.diffOutputs)("output_shapes", shapesA, shapesB) ?? null),
+            });
+        }
+        // G6.2.1 / 25.6.1: differential-solve — run for ALL goals with ≥1 recommendation.
+        // Re-runs recommend with the primary top choice excluded to surface next-best divergence.
+        let differential;
+        if (recs.length > 0) {
+            const primaryTopId = recs[0].id ?? recs[0].template_id ?? recs[0].activity_id ?? "";
+            if (primaryTopId) {
+                const altRecs = await runRecommendation(goal, endpoint, authHeaders, primaryTopId);
+                apiCallCount++;
+                const altTopId = altRecs[0]?.id ?? altRecs[0]?.template_id ?? altRecs[0]?.activity_id ?? null;
+                differential = {
+                    primary_top_id: primaryTopId,
+                    alt_top_id: altTopId,
+                    diverged: altTopId !== null && altTopId !== primaryTopId,
+                };
+            }
+        }
+        // G6.4.1: oracle arm — compare harness success assessment vs oracle verdict
+        let oracleFields = {};
+        const oracleLabelId = goal.oracle_label_id;
+        const embeddedVerdict = goal.oracle_verdict;
+        if (oracleLabelId) {
+            let verdict = embeddedVerdict ?? null;
+            if (!verdict) {
+                // Attempt API fetch when no embedded verdict
+                const oracleLabel = await fetchOracleLabel(oracleLabelId, endpoint, authHeaders);
+                apiCallCount++;
+                verdict = oracleLabel?.verdict ?? null;
+            }
+            if (verdict) {
+                const harnessPass = traceScores.some((s) => s.success);
+                const oraclePass = verdict === "pass";
+                oracleFields = {
+                    oracle_label_id: oracleLabelId,
+                    oracle_verdict: verdict,
+                    oracle_disagree: harnessPass !== oraclePass,
+                };
+            }
+        }
+        // 25.6.1: compute per-goal multi-witness pair totals
+        let witnessPairCount = 0;
+        let witnessDisagreeCount = 0;
+        if (differential) {
+            witnessPairCount++;
+            if (differential.diverged)
+                witnessDisagreeCount++;
+        }
+        if (witnesses.length > 0) {
+            witnessPairCount += witnesses.length;
+            witnessDisagreeCount += witnesses.filter((w) => !w.agreed).length;
+        }
+        if (oracleFields.oracle_disagree !== undefined) {
+            witnessPairCount++;
+            if (oracleFields.oracle_disagree)
+                witnessDisagreeCount++;
+        }
+        // validator FN counts as a disagreement pair if any successful trace had validator flag it
+        const validatorFalseNeg = traceScores.some((s) => s.validator_false_negative);
+        if (traceScores.some((s) => s.success)) {
+            witnessPairCount++;
+            if (validatorFalseNeg)
+                witnessDisagreeCount++;
+        }
+        const goalHarnessSuccess = traceScores.some((s) => s.success);
+        const lowConfidenceSuccess = goalHarnessSuccess && witnessDisagreeCount > 0;
+        perGoalResults.push({
+            goal_id: goal.id,
+            cell_id: cellId,
+            recommend_count: recs.length,
+            recommend_shape_match: hasShapeMatch,
+            trace_count: traces.length,
+            scores: traceScores,
+            witnesses,
+            ...(differential ? { differential } : {}),
+            ...oracleFields,
+            witness_pair_count: witnessPairCount,
+            witness_disagree_count: witnessDisagreeCount,
+            low_confidence_success: lowConfidenceSuccess,
+        });
+        process.stdout.write(`recs=${recs.length} shape_match=${hasShapeMatch ? "✓" : "✗"} traces=${traces.length}\n`);
+    }
+    // Finalize cells
+    for (const [cellId, cell] of Object.entries(matrix)) {
+        const goalResults = perGoalResults.filter((r) => r.cell_id === cellId);
+        cell.recommend_coverage =
+            goalResults.length > 0
+                ? goalResults.filter((r) => r.recommend_count > 0).length / goalResults.length
+                : null;
+        cell.recommend_shape_match =
+            goalResults.length > 0
+                ? goalResults.filter((r) => r.recommend_shape_match).length / goalResults.length
+                : null;
+        const goalsWithWitnesses = goalResults.filter((r) => r.witnesses.length > 0);
+        cell.witness_disagreement =
+            goalsWithWitnesses.length > 0
+                ? goalsWithWitnesses.filter((r) => r.witnesses.some((w) => !w.agreed)).length /
+                    goalsWithWitnesses.length
+                : null;
+        // G6.5.1: validator false-negative rate — successful traces with validator passed=false
+        const successScores = goalResults.flatMap((r) => r.scores.filter((s) => s.success));
+        cell.validator_false_negative_rate =
+            successScores.length > 0
+                ? successScores.filter((s) => s.validator_false_negative).length / successScores.length
+                : null;
+        // G6.4.1: oracle disagreement rate
+        const oracleGoals = goalResults.filter((r) => r.oracle_disagree !== undefined);
+        cell.oracle_disagreement_rate =
+            oracleGoals.length > 0
+                ? oracleGoals.filter((r) => r.oracle_disagree).length / oracleGoals.length
+                : null;
+        // 25.6.1: multi-witness disagreement rate — aggregate across all arms
+        const totalPairs = goalResults.reduce((s, r) => s + r.witness_pair_count, 0);
+        const totalDisagree = goalResults.reduce((s, r) => s + r.witness_disagree_count, 0);
+        cell.multi_witness_disagreement_rate = totalPairs > 0 ? totalDisagree / totalPairs : null;
+        // G4.1.2: per-cell tier distribution (recorded even without a baseline so
+        // the next run can pair against it)
+        cell.tier_distribution = (0, refinement_detectors_ts_1.computeTierDistribution)(cellTierSamples[cellId] ?? []);
+        // G4.1.3: dominant recommended activity's posterior snapshot
+        const topRecs = cellTopRecs[cellId] ?? [];
+        if (topRecs.length > 0) {
+            const freq = new Map();
+            for (const r of topRecs)
+                freq.set(r.id, (freq.get(r.id) ?? 0) + 1);
+            const dominantId = [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
+            // Latest observation of the dominant id carries the freshest α/β
+            const dominant = [...topRecs].reverse().find((r) => r.id === dominantId);
+            cell.thompson_ci = (0, refinement_detectors_ts_1.makeThompsonCiSnapshot)(dominant.id, dominant.alpha, dominant.beta);
+        }
+        finalizeCell(cell, cellId);
+    }
+    const refinementEvents = detectRefinementEvents(matrix, priorReport);
+    const optimalityRatios = computeOptimalityRatios(rawCellCosts, shortestPaths, priorReport);
+    const passableCells = Object.entries(matrix).filter(([, c]) => c.sample_count >= 3 && c.floor_status !== "gated_on_phase_22");
+    const universality_pass = passableCells.length === 0
+        ? null
+        : passableCells.every(([, c]) => c.floor_pass);
+    return { matrix, rawCellCosts, perGoalResults, refinementEvents, optimalityRatios, apiCallCount, universality_pass };
+}
+// ---------------------------------------------------------------------------
+async function main() {
+    const { values } = (0, node_util_1.parseArgs)({
+        options: {
+            goals: { type: "string" },
+            "held-out": { type: "boolean", default: false },
+            baseline: { type: "string", default: "" },
+            label: { type: "string", default: "" },
+            detailed: { type: "boolean", default: false },
+            // G6.4.1: path to oracle seeds JSON file (array of GeneratedGoal with oracle_label_id + oracle_verdict)
+            "oracle-seeds": { type: "string", default: "" },
+        },
+        allowPositionals: false,
+    });
+    if (!values["goals"]) {
+        console.error("Usage: stratified-harness.ts --goals <path-to-goals.json> [--baseline <prior-report>]");
+        process.exit(1);
+    }
+    const { endpoint, apiKey } = await loadConfig();
+    const authHeaders = { Authorization: `ApiKey ${apiKey}` };
+    const scriptDir = (0, node_path_1.dirname)((0, node_url_1.fileURLToPath)(import.meta.url));
+    const repoRoot = (0, node_path_1.join)(scriptDir, "..", "..");
+    // Load generated goals
+    const goalsPath = (0, node_path_1.resolve)(values["goals"]);
+    if (!(0, node_fs_1.existsSync)(goalsPath)) {
+        console.error(`Goals file not found: ${goalsPath}`);
+        process.exit(1);
+    }
+    const goalsFile = JSON.parse(await (0, promises_1.readFile)(goalsPath, "utf8"));
+    let goals = goalsFile.goals;
+    // G6.4.1: append oracle seeds if provided
+    if (values["oracle-seeds"]) {
+        const seedsPath = (0, node_path_1.resolve)(values["oracle-seeds"]);
+        if ((0, node_fs_1.existsSync)(seedsPath)) {
+            const oracleSeeds = JSON.parse(await (0, promises_1.readFile)(seedsPath, "utf8"));
+            goals = [...goals, ...oracleSeeds];
+            console.log(`  oracle seeds: ${oracleSeeds.length} goals appended from ${seedsPath}`);
+        }
+        else {
+            console.warn(`  oracle seeds file not found: ${seedsPath} (skipping)`);
+        }
+    }
+    console.log(`\nStratified Harness — Phase 25.6`);
+    console.log(`  goals file  : ${goalsPath}`);
+    console.log(`  goal count  : ${goals.length}`);
+    console.log(`  endpoint    : ${endpoint}`);
+    console.log(`  label       : ${values["label"] || "(none)"}`);
+    // Load prior report for refinement detection
+    let priorReport = null;
+    if (values["baseline"]) {
+        const baselinePath = (0, node_path_1.resolve)(values["baseline"]);
+        if ((0, node_fs_1.existsSync)(baselinePath)) {
+            priorReport = JSON.parse(await (0, promises_1.readFile)(baselinePath, "utf8"));
+            console.log(`  baseline    : ${baselinePath}`);
+        }
+    }
+    // Load state
+    const statePath = (0, node_path_1.join)(repoRoot, "validation", "state", "shortest-paths.json");
+    const shortestPaths = await loadShortestPathCache(statePath);
+    evictStaleEntries(shortestPaths);
+    // Capture Thompson pool snapshot
+    console.log("\n  Capturing Thompson snapshot...");
+    const thompsonPoolIds = await captureThompsonSnapshot(endpoint, authHeaders);
+    console.log(`  Thompson pool: ${thompsonPoolIds.size} templates`);
+    const loopOpts = { endpoint, authHeaders, priorReport, thompsonPoolIds, shortestPaths };
+    // G7.1.1: If --held-out, run held-out suite first and emit held-out report.
+    const isHeldOut = values["held-out"] === true;
+    let heldOutLoopResult = null;
+    if (isHeldOut) {
+        // Auto-detect held-out goals file: most recent *-held-out-goals.json in generated/
+        const generatedDir = (0, node_path_1.join)(repoRoot, "validation", "generated");
+        const { readdir } = await import("node:fs/promises");
+        const allFiles = (await readdir(generatedDir).catch(() => []));
+        const heldOutFiles = allFiles
+            .filter((f) => f.endsWith("-held-out-goals.json"))
+            .sort()
+            .reverse();
+        if (heldOutFiles.length === 0) {
+            console.warn("  --held-out: no held-out goals file found in validation/generated/. Run goal-generator --held-out first.");
+        }
+        else {
+            const heldOutPath = (0, node_path_1.join)(generatedDir, heldOutFiles[0]);
+            console.log(`\n  Held-out suite: ${heldOutPath}`);
+            const heldOutFile = JSON.parse(await (0, promises_1.readFile)(heldOutPath, "utf8"));
+            const heldOutGoals = heldOutFile.goals;
+            heldOutLoopResult = await runGoalLoop(heldOutGoals, loopOpts);
+            // Build held-out report (G7.1.2)
+            const heldOutMatrixOutput = stripSampleArrays(heldOutLoopResult.matrix);
+            const heldOutReport = {
+                harness_version: "25.6",
+                suite: "held_out",
+                run_at: new Date().toISOString(),
+                label: values["label"] || undefined,
+                goals_file: heldOutPath,
+                generator_seed: heldOutFile.generator_seed,
+                shape_registry_snapshot_hash: heldOutFile.shape_registry_snapshot_hash,
+                endpoint,
+                thompson_pool_size: thompsonPoolIds.size,
+                goals_processed: heldOutLoopResult.perGoalResults.length,
+                api_call_count: heldOutLoopResult.apiCallCount,
+                universality_pass: heldOutLoopResult.universality_pass,
+                cell_count: Object.keys(heldOutLoopResult.matrix).length,
+                coverage_matrix: heldOutMatrixOutput,
+                optimality_ratios: heldOutLoopResult.optimalityRatios,
+                refinement_event_count: heldOutLoopResult.refinementEvents.length,
+                // Gating note (tasks.md): low_confidence events (tier-descent until
+                // Phase 21 signatures) do NOT count toward the density criterion.
+                refinement_event_density: heldOutLoopResult.perGoalResults.length > 0
+                    ? heldOutLoopResult.refinementEvents.filter((e) => !e.low_confidence).length /
+                        heldOutLoopResult.perGoalResults.length
+                    : 0,
+                // G6.2.1 / 25.6.1: differential-solve + multi-witness summary for held-out suite
+                differential_witness_count: heldOutLoopResult.perGoalResults.filter((r) => r.differential).length,
+                multi_witness_total_pairs: heldOutLoopResult.perGoalResults.reduce((s, r) => s + r.witness_pair_count, 0),
+                multi_witness_disagree_count: heldOutLoopResult.perGoalResults.reduce((s, r) => s + r.witness_disagree_count, 0),
+                multi_witness_disagreement_rate: (() => {
+                    const pairs = heldOutLoopResult.perGoalResults.reduce((s, r) => s + r.witness_pair_count, 0);
+                    const dis = heldOutLoopResult.perGoalResults.reduce((s, r) => s + r.witness_disagree_count, 0);
+                    return pairs > 0 ? dis / pairs : null;
+                })(),
+                low_confidence_success_count: heldOutLoopResult.perGoalResults.filter((r) => r.low_confidence_success).length,
+                ...(values["detailed"] ? { per_goal_results: heldOutLoopResult.perGoalResults } : {}),
+            };
+            const resultsDir = (0, node_path_1.join)(repoRoot, "validation", "results");
+            await (0, promises_1.mkdir)(resultsDir, { recursive: true });
+            const dateStr = new Date().toISOString().slice(0, 10);
+            const heldOutReportPath = (0, node_path_1.join)(resultsDir, `${dateStr}-held-out-report.json`);
+            await (0, promises_1.writeFile)(heldOutReportPath, JSON.stringify(heldOutReport, null, 2), "utf8");
+            console.log(`  Held-out report written to: ${heldOutReportPath}`);
+            // G7.3.1: promote this week's held-out prompts into the rolling pool
+            // (keyed by ISO week; idempotent — re-running the same week is a no-op).
+            const rollingPoolPath = (0, node_path_1.join)(generatedDir, "rolling-pool.json");
+            let existingPool = null;
+            if ((0, node_fs_1.existsSync)(rollingPoolPath)) {
+                try {
+                    existingPool = JSON.parse(await (0, promises_1.readFile)(rollingPoolPath, "utf8"));
+                }
+                catch {
+                    console.warn(`  rolling-pool.json unreadable; starting a fresh pool`);
+                }
+            }
+            const generatedAt = heldOutFile.generated_at ? new Date(heldOutFile.generated_at) : new Date();
+            const weekKey = (0, rolling_pool_ts_1.isoWeekKey)(Number.isNaN(generatedAt.getTime()) ? new Date() : generatedAt);
+            const promotion = (0, rolling_pool_ts_1.promoteHeldOutToRollingPool)(existingPool, weekKey, heldOutGoals, heldOutFiles[0]);
+            if (promotion.added > 0) {
+                await (0, promises_1.writeFile)(rollingPoolPath, JSON.stringify(promotion.pool, null, 2), "utf8");
+                console.log(`  Rolling pool: +${promotion.added} held-out goals promoted under ${weekKey} ` +
+                    `(total ${(0, rolling_pool_ts_1.rollingPoolSize)(promotion.pool)}) → ${rollingPoolPath}`);
+            }
+            else {
+                console.log(`  Rolling pool: week ${weekKey} already promoted (no-op)`);
+            }
+        }
+    }
+    // Main (rolling-pool) suite
+    const loopResult = await runGoalLoop(goals, loopOpts);
+    const { matrix, rawCellCosts, perGoalResults, refinementEvents, optimalityRatios, apiCallCount, universality_pass } = loopResult;
+    // Save shortest-path cache
+    await saveShortestPathCache(statePath, shortestPaths);
+    // Build report
+    const matrixOutput = stripSampleArrays(matrix);
+    const passableCells = Object.entries(matrix).filter(([, c]) => c.sample_count >= 3 && c.floor_status !== "gated_on_phase_22");
+    const report = {
+        harness_version: "25.6",
+        suite: "rolling_pool",
+        run_at: new Date().toISOString(),
+        label: values["label"] || undefined,
+        goals_file: goalsPath,
+        generator_seed: goalsFile.generator_seed,
+        shape_registry_snapshot_hash: goalsFile.shape_registry_snapshot_hash,
+        endpoint,
+        thompson_pool_size: thompsonPoolIds.size,
+        goals_processed: perGoalResults.length,
+        api_call_count: apiCallCount,
+        universality_pass,
+        cell_count: Object.keys(matrix).length,
+        passable_cell_count: passableCells.length,
+        coverage_matrix: matrixOutput,
+        optimality_ratios: optimalityRatios,
+        refinement_event_count: refinementEvents.length,
+        // Gating note (tasks.md): low_confidence events (tier-descent until
+        // Phase 21 signatures) do NOT count toward the density criterion.
+        refinement_event_density: perGoalResults.length > 0
+            ? refinementEvents.filter((e) => !e.low_confidence).length / perGoalResults.length
+            : 0,
+        refinement_events: refinementEvents,
+        // G6.2.1: differential-solve summary
+        differential_witness_count: perGoalResults.filter((r) => r.differential).length,
+        differential_diverge_rate: (() => {
+            const withDiff = perGoalResults.filter((r) => r.differential);
+            return withDiff.length > 0
+                ? withDiff.filter((r) => r.differential.diverged).length / withDiff.length
+                : null;
+        })(),
+        // G6.4.1: oracle arm summary
+        oracle_goal_count: perGoalResults.filter((r) => r.oracle_disagree !== undefined).length,
+        oracle_disagreement_rate: (() => {
+            const withOracle = perGoalResults.filter((r) => r.oracle_disagree !== undefined);
+            return withOracle.length > 0
+                ? withOracle.filter((r) => r.oracle_disagree).length / withOracle.length
+                : null;
+        })(),
+        // 25.6.1: multi-witness disagreement — aggregated across all arms
+        multi_witness_total_pairs: perGoalResults.reduce((s, r) => s + r.witness_pair_count, 0),
+        multi_witness_disagree_count: perGoalResults.reduce((s, r) => s + r.witness_disagree_count, 0),
+        multi_witness_disagreement_rate: (() => {
+            const pairs = perGoalResults.reduce((s, r) => s + r.witness_pair_count, 0);
+            const dis = perGoalResults.reduce((s, r) => s + r.witness_disagree_count, 0);
+            return pairs > 0 ? dis / pairs : null;
+        })(),
+        low_confidence_success_count: perGoalResults.filter((r) => r.low_confidence_success).length,
+        // G7.2.1/G7.2.2: contamination check (only when held-out suite was run)
+        ...(heldOutLoopResult
+            ? (0, contamination_delta_ts_1.computeContaminationDelta)(matrix, heldOutLoopResult.matrix)
+            : {}),
+        ...(values["detailed"] ? { per_goal_results: perGoalResults } : {}),
+    };
+    // Write report
+    const resultsDir = (0, node_path_1.join)(repoRoot, "validation", "results");
+    await (0, promises_1.mkdir)(resultsDir, { recursive: true });
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const reportPath = (0, node_path_1.join)(resultsDir, `${dateStr}-stratified-report.json`);
+    await (0, promises_1.writeFile)(reportPath, JSON.stringify(report, null, 2), "utf8");
+    // Summary output
+    console.log(`\n${"═".repeat(60)}`);
+    console.log(`Stratified Coverage Matrix`);
+    console.log(`${"─".repeat(60)}`);
+    const diffCount = perGoalResults.filter((r) => r.differential).length;
+    const diffDiverged = perGoalResults.filter((r) => r.differential?.diverged).length;
+    const totalPairsAll = perGoalResults.reduce((s, r) => s + r.witness_pair_count, 0);
+    const totalDisagreeAll = perGoalResults.reduce((s, r) => s + r.witness_disagree_count, 0);
+    const mwdr = totalPairsAll > 0 ? (totalDisagreeAll / totalPairsAll).toFixed(3) : "n/a";
+    const lcCount = perGoalResults.filter((r) => r.low_confidence_success).length;
+    console.log(`  Cells populated   : ${Object.keys(matrix).length}`);
+    console.log(`  Passable cells    : ${passableCells.length}`);
+    console.log(`  Universality pass : ${universality_pass === null ? "N/A (no cells w/ n≥3)" : universality_pass ? "✅ PASS" : "❌ FAIL"}`);
+    console.log(`  Refinement events : ${refinementEvents.length}`);
+    console.log(`  Diff-solve pairs  : ${diffCount} (${diffDiverged} diverged)`);
+    console.log(`  Multi-witness     : ${totalPairsAll} pairs, ${totalDisagreeAll} disagree, rate=${mwdr} (goal: <0.10)`);
+    console.log(`  Low-conf success  : ${lcCount} goals`);
+    console.log(`  API calls         : ${apiCallCount}`);
+    console.log(`\nPer-cell summary:`);
+    for (const [cellId, cell] of Object.entries(matrixOutput)) {
+        const sr = cell.success_rate !== null ? `sr=${cell.success_rate.toFixed(2)}` : "sr=?";
+        const re = cell.reuse_efficiency !== null ? ` re=${cell.reuse_efficiency.toFixed(2)}` : "";
+        const is_ = cell.improvise_share !== null ? ` imp=${cell.improvise_share.toFixed(2)}` : "";
+        const drc = cell.decision_record_completeness !== null ? ` drc=${cell.decision_record_completeness.toFixed(2)}` : "";
+        const rc = cell.recommend_coverage !== null ? ` rcov=${cell.recommend_coverage.toFixed(2)}` : "";
+        const mw = cell.multi_witness_disagreement_rate !== null ? ` mw=${cell.multi_witness_disagreement_rate.toFixed(2)}` : "";
+        const fp = cell.floor_status === "gated_on_phase_22" ? " [gated]" : (cell.floor_pass ? " ✅" : cell.sample_count >= 3 ? " ❌" : " (n<3)");
+        console.log(`  ${cellId.padEnd(22)} n=${cell.sample_count} ${sr}${re}${is_}${drc}${rc}${mw}${fp}`);
+    }
+    console.log(`\nReport written to: ${reportPath}`);
+}
+main().catch((e) => {
+    console.error("ERROR:", e instanceof Error ? e.message : String(e));
+    process.exit(1);
+});
+//# sourceMappingURL=stratified-harness.js.map

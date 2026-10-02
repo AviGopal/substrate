@@ -1,0 +1,19 @@
+{
+  "id": "template-input-lint-development-vessel_scaffold-new-vessel",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "activity_lifecycle",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Seed template development-vessel:scaffold-new-vessel declares input(s)/variable(s) no task consumes [shapes: cwd; vars: ",
+  "description": "Seed template development-vessel:scaffold-new-vessel declares input(s)/variable(s) no task consumes [shapes: cwd; vars: none] — a silent mis-wire (the class that left draft-activity-from-pattern dead).",
+  "goal_text": "Seed template development-vessel:scaffold-new-vessel declares input(s)/variable(s) no task consumes [shapes: cwd; vars: none] — a silent mis-wire (the class that left draft-activity-from-pattern dead).\n\nRemediation hint: Add a task that consumes the declared input (e.g. an fs_read/http_fetch that loads it), OR drop the unused declaration. Mirrors the draft-activity-from-pattern load_cluster fix.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "template-input-lint-development-vessel_scaffold-new-vessel",
+  "source_gap_source": "substrate_detected"
+}

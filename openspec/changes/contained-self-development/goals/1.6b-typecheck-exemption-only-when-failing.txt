@@ -1,0 +1,12 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, exempt a typecheck-class gap from the autonomyScope falsifier requirement only while its vessel fails typecheck now (vesselTypecheckClean(vessel) === false), not merely because a TS code appears in its summary. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+      if (requiredClasses && requiredClasses.length > 0 && !typecheckClassOf(g)) {
+new:
+      // A typecheck-class gap keeps its own machine check only while its vessel FAILS typecheck now:
+      // a TS code carried into a summary by a failed attempt's lesson otherwise admitted the
+      // fs-edit gap (local-tools typechecks clean) and redrafted it four times.
+      const typecheckClass = typecheckClassOf(g);
+      const typecheckFailingNow = typecheckClass ? vesselTypecheckClean(typecheckClass.vessel) === false : false;
+      if (requiredClasses && requiredClasses.length > 0 && !typecheckFailingNow) {
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

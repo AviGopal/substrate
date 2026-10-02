@@ -1,0 +1,19 @@
+{
+  "id": "operator-escalation-backlog",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The substrate is asking for operator decisions and not getting them: 139 of 143 solicitations are unanswered. A sealed g",
+  "description": "The substrate is asking for operator decisions and not getting them: 139 of 143 solicitations are unanswered. A sealed gap category's only designed escape is a human verb, so each unanswered escalation is a gap family that can never be reattempted. To answer one: write uiFeedback_write with panel_id set to the solicitation id and the verb in pointer.value, then resolve escalation_disposition_apply. Waiting longest: needs-human-reach-gap-error-log, needs-human-reach-gap-test-report, needs-human-reach-gap-executiontracelist, needs-human-reach-gap-shape-gap-resolution, needs-human-reach-gap-activityexecutiontrace, needs-human-reach-gap-apply-proposal-as-patch",
+  "goal_text": "The substrate is asking for operator decisions and not getting them: 139 of 143 solicitations are unanswered. A sealed gap category's only designed escape is a human verb, so each unanswered escalation is a gap family that can never be reattempted. To answer one: write uiFeedback_write with panel_id set to the solicitation id and the verb in pointer.value, then resolve escalation_disposition_apply. Waiting longest: needs-human-reach-gap-error-log, needs-human-reach-gap-test-report, needs-human-reach-gap-executiontracelist, needs-human-reach-gap-shape-gap-resolution, needs-human-reach-gap-activityexecutiontrace, needs-human-reach-gap-apply-proposal-as-patch",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "operator-escalation-backlog",
+  "source_gap_source": "substrate_detected"
+}

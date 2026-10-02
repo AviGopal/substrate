@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-216d4e90",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose goal: Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts to refuse a cutove",
+  "description": "investigate and decompose goal: Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts to refuse a cutover whose diff deletes a load-bearing evidence comment while making no behavioural change in the same hunk. Measured case: substrate-authored commit 3e58e73 removed a 20-line comment from getCanonicalPosteriors in activity-api that recorded measured row counts and an explicit do-not-simplify-this-back warning, while preserving behaviour exactly; typecheck, shape-dispatch, the semantic gate and the post-land suite all passed it, because no gate reads what a diff REMOVES. Add a check over the staged diff that flags removed comment lines carrying measurements, row counts, or explicit warnings when the same hunk has no non-comment change, and refuse the cutover with that reason unless the proposal justifies the deletion.",
+  "goal_text": "investigate and decompose goal: Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts to refuse a cutover whose diff deletes a load-bearing evidence comment while making no behavioural change in the same hunk. Measured case: substrate-authored commit 3e58e73 removed a 20-line comment from getCanonicalPosteriors in activity-api that recorded measured row counts and an explicit do-not-simplify-this-back warning, while preserving behaviour exactly; typecheck, shape-dispatch, the semantic gate and the post-land suite all passed it, because no gate reads what a diff REMOVES. Add a check over the staged diff that flags removed comment lines carrying measurements, row counts, or explicit warnings when the same hunk has no non-comment change, and refuse the cutover with that reason unless the proposal justifies the deletion.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-216d4e90",
+  "source_gap_source": "substrate_detected"
+}

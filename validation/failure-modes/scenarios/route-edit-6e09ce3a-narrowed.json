@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-6e09ce3a-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-6e09ce3a] investigate and decompose gap authoring-planner-never-reads-the-concept-graph: autho",
+  "description": "[narrowed from route-edit-6e09ce3a] investigate and decompose gap authoring-planner-never-reads-the-concept-graph: author_composed_capability plans chains without consulting concept-db, so the substrate's own knowledge store is not a reader for its authoring lane. Edit repos/development-vessel/src/resolvers/author-composed-capability.ts.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/resolvers/author-composed-capability.ts(602,95): error TS2353: Object literal may only specify known properties, and 'source' does not exist in type 'ConceptSearchBySourcePointer'.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-6e09ce3a] investigate and decompose gap authoring-planner-never-reads-the-concept-graph: author_composed_capability plans chains without consulting concept-db, so the substrate's own knowledge store is not a reader for its authoring lane. Edit repos/development-vessel/src/resolvers/author-composed-capability.ts.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/resolvers/author-composed-capability.ts(602,95): error TS2353: Object literal may only specify known properties, and 'source' does not exist in type 'ConceptSearchBySourcePointer'.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-6e09ce3a-narrowed",
+  "source_gap_source": "substrate_detected"
+}

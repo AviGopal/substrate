@@ -1,0 +1,19 @@
+{
+  "id": "selfdev-compose-cannot-author-small-file-edit-intent-routes-to-patch-with-tools",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "An edit goal naming repos/identity-vessel/src/resolvers/issue-key.ts (220 lines) with verbatim single-occurrence anchors",
+  "description": "An edit goal naming repos/identity-vessel/src/resolvers/issue-key.ts (220 lines) with verbatim single-occurrence anchors failed to land any edit across three dispatches.",
+  "goal_text": "An edit goal naming repos/identity-vessel/src/resolvers/issue-key.ts (220 lines) with verbatim single-occurrence anchors failed to land any edit across three dispatches.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "selfdev-compose-cannot-author-small-file-edit-intent-routes-to-patch-with-tools",
+  "source_gap_source": "substrate_detected"
+}

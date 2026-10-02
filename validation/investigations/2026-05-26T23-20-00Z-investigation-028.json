@@ -1,0 +1,115 @@
+{
+  "investigation_id": "2026-05-26T23-20-00Z-investigation-028",
+  "generated_at": "2026-05-26T23:20:00Z",
+  "investigator_session_id": "claude-opus-4-7-audit-iter-013",
+  "prior_investigation_id": "2026-05-26T18-45-00Z-investigation-027",
+  "loop_iteration": 13,
+  "framing": "per-resolver behavioral audit + audit-resolver-divergence activity design",
+  "substrate_target": "http://localhost:18080",
+  "subagent_inputs": [{"task_id": "a1a02b8897d3e45a9", "name": "Resolver-POV audit + self-replicating activity"}],
+  "trace_window": {"size": 200, "sampled_at": "2026-05-26T23:11Z", "histogram": {"validator-dispatch": 145, "slot-binding": 21, "create-shape-provider-goal": 21, "harness-run-matrix": 2, "escalate-unknown-shape": 1}},
+  "per_resolver_findings": [
+    {
+      "id": "A1",
+      "resolver": "activity_recommendation",
+      "specimen": "exec_sihkveb4 / forward_chain_producers",
+      "observed_dur_ms": 1,
+      "expected_dur_ms_range": "tens of ms minimum (HTTP round-trip + embedding-index + cosine)",
+      "divergence": "1ms impossible for real activity-api call on localhost; response degraded/cached/empty but trace records success regardless",
+      "expectation_gap": "downstream compose_goal expects ranked candidates with Thompson posteriors; gets nothing but LLM emits goal-shape anyway",
+      "pattern": "same confabulation pattern as iter-024 on different resolver"
+    },
+    {
+      "id": "A2",
+      "resolver": "impulse_cooccurrence",
+      "specimen": "exec_sihkveb4 / cooccurrence_signal",
+      "observed_dur_ms": 0,
+      "observed_out_content": "{pairs:[], trace_count:0}",
+      "source_vs_template_divergence": "resolver does exactly what source says (stub); template declares signal-4 as meaningful input",
+      "new_gap_taxonomy_type": {"id": 8, "name": "missing-impulse-content-masked-by-present-impulse-shape", "signal": "shape in pool, impulse emitted, content structurally absent (stub or degraded)"},
+      "f036_implication": "F-036 was 'closed' by registering this resolver; signal 4 still effectively absent; templates downstream calibrate Thompson posteriors against a constant"
+    },
+    {
+      "id": "A3",
+      "severity": "HIGH",
+      "resolver": "impulse-resolve",
+      "specimen": "exec_nc0xtji1 / discover_validators",
+      "observed_in_count": 91,
+      "observed_consumed_count": 0,
+      "contract": "reads only task.config.pointer",
+      "divergence": "binding layer's fill-every-slot semantics pour all 91 available impulses into inputImpulses; resolver ignores them; trace records input_impulse_ids as if all 91 were consumed",
+      "downstream_contamination": "impulse-relevance writes record spurious co-resolution with shapes that had no causal role — corrupts entire impulse-relevance learning loop",
+      "independent_from": "iter-024 LLM confabulation; this is binding-layer contract violation contaminating every config-pointer resolver"
+    },
+    {
+      "id": "A4",
+      "severity": "CORRECTION_TO_ITER026",
+      "resolver": "llm-prompt",
+      "specimens": ["exec_nc0xtji1/select_validator_per_shape", "exec_nc0xtji1/propagate_failure_mode", "exec_sihkveb4/compose_goal"],
+      "observed_input_impulse_ids": [],
+      "iter026_claim": "context.inputImpulses fix sufficient to make synthesis grounded",
+      "trace_reality": "input_impulse_ids empty on every llm-prompt task in window",
+      "root_cause": "upstream templates don't declare inputShapes for llm-prompt tasks; resolver has nothing to consume",
+      "post_iter026_behavior_unchanged": true,
+      "required_additional_fixes": [
+        "amend each llm-prompt-using template inputShapes declaration",
+        "wire lifecycle:llm:dispatched destination (audit.md Finding 3)",
+        "re-run iter-024 confabulation experiment"
+      ]
+    },
+    {
+      "id": "A5",
+      "resolver": "validator-dispatch (lifecycle template)",
+      "trace_frequency": "145/200 (73%)",
+      "per_invocation_duration_ms": 45598,
+      "per_invocation_llm_seconds": 8,
+      "task_breakdown": [
+        {"task": "discover_validators", "dur_ms": 5, "resolver": "impulse-resolve"},
+        {"task": "select_validator_per_shape", "dur_ms": 5194, "resolver": "llm-prompt"},
+        {"task": "dispatch_validators", "dur_ms": 0, "in": 0, "out": 1, "actually_dispatches": false},
+        {"task": "propagate_failure_mode", "dur_ms": 2668, "resolver": "llm-prompt"},
+        {"task": "learning_signal_write", "dur_ms": 0, "in": 0, "out": 0}
+      ],
+      "divergence": "dominant cost center; produces nothing observable; parent failure_mode stays null",
+      "expectation_gap": "substrate's largest LLM budget spent on lifecycle template that selects validators that never dispatch and writes learning signals that never write"
+    }
+  ],
+  "audit_resolver_divergence_activity": {
+    "location": "development-vessel",
+    "input_shapes": ["resolverRegistry", "traceWindow (executionTraceWithSignatures)", "expectationSet (description_of + playbook concepts from concept-db)"],
+    "output_shapes": ["resolverDivergenceReport", "expectationGap (consumable by draft-gap-closing-activity)", "memoryNote(type=finding, scope=resolver-audit)"],
+    "task_graph_deterministic_majority": true,
+    "llm_reserved_for": "ambiguous-band severity grading only",
+    "triggers": ["lifecycle:substrate:idle cadence (boredom rotation slot)", "lifecycle:gap:detected reactive (escalate-unknown-shape, coverage-tick)"],
+    "expectation_provenance": {
+      "cold_start": "operator-authored description_of concepts for 5 built-in resolvers",
+      "mature": "ribosome promotion — after ≥10 fires with stable signature (same in/out histograms, duration within 1.5× MAD), ribosome emits description_of(resolver_id) automatically"
+    },
+    "self_audit_guard": "emittingTemplateId exclusion (existing pattern in lifecycle-subscriptions.ts); exclude traces whose composition_chain contains audit-resolver-divergence",
+    "operational_implication": "operator role narrows from doing audit to ratifying/refusing substrate's proposed gap-closing fixes; S2→S3 push-away signal realized as interventionRefused citing resolverDivergenceReport"
+  },
+  "meta_audit_experiment": {
+    "name": "24h idle-cadence run",
+    "method": "sample 10 expectationGap impulses at random; manually classify (a) true-divergence, (b) false-positive, (c) noise",
+    "promote_threshold": "≥6/10 in (a) → promote to permanent boredom rotation; gate future resolver registrations on description_of concept",
+    "tighten_threshold": "≥5/10 in (b)+(c) → pause activity, fix cold-start envelopes",
+    "meta_audit_accrual": "classification becomes goal_verification_label (migration-101 oracle corpus)"
+  },
+  "updates_to_prior_investigations": [
+    {
+      "investigation": "iter-023 gap taxonomy",
+      "update": "add Type 8: missing-impulse-content-masked-by-present-impulse-shape"
+    },
+    {
+      "investigation": "iter-026 inputImpulses fix",
+      "update": "fix is inert in production; templates don't declare inputShapes for llm-prompt tasks",
+      "correction_added_to_iter026_md": true
+    }
+  ],
+  "highest_leverage_immediate_dev_actions_ordered": [
+    "wire lifecycle:llm:dispatched destination (audit.md Finding 3)",
+    "audit + fix llm-prompt template inputShapes declarations",
+    "propose audit-resolver-divergence activity or empower substrate to propose via propose-spec"
+  ],
+  "next_wake_recommendation": "cron 23:47Z; watch for dev actions on audit.md Finding 3 + llm-prompt template inputShapes amendments"
+}

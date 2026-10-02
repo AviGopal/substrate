@@ -1,0 +1,469 @@
+#!/usr/bin/env bun
+"use strict";
+/**
+ * closure-audit.ts — IAL §27.3.j.7 closure-audit script.
+ *
+ * Tests each substrate closure property by probing the live substrate,
+ * optionally simulating the absence of a specific external tool.
+ *
+ * Usage:
+ *   bun run validation/scripts/closure-audit.ts
+ *   bun run validation/scripts/closure-audit.ts --without=operator-memory
+ *   bun run validation/scripts/closure-audit.ts --without=operator-memory --without=slash-skills
+ *
+ * --without options:
+ *   operator-memory       test if substrate memory works without ~/.claude/.../memory/ files
+ *   slash-skills          test if skill-equivalent ops work via substrate resolvers alone
+ *   subagents             test if complex tasks can execute without Claude Code subagents
+ *   github-actions        test if CI/merge gating works via substrate alone
+ *   operator-shell        test if substrate can self-heal without operator shell access
+ *   operator-spec-authoring  test if substrate can author specs without operator
+ *   push-away             test if substrate refuses incompetent interventions with cited evidence (IAL §27.S.6)
+ *
+ * Writes: validation/state/closure-status.json
+ * Exit codes: 0 = all tested properties closed, 1 = one or more gaps remain
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+const fs_1 = require("fs");
+const path_1 = require("path");
+const url_1 = require("url");
+const __dirname = (0, path_1.dirname)((0, url_1.fileURLToPath)(import.meta.url));
+const REPO_ROOT = (0, path_1.join)(__dirname, "..", "..");
+const STATE_DIR = (0, path_1.join)(REPO_ROOT, "validation", "state");
+const OUTPUT_PATH = (0, path_1.join)(STATE_DIR, "closure-status.json");
+// ── config ────────────────────────────────────────────────────────────────────
+const DEV_VESSEL_URL = process.env["DEV_VESSEL_ENDPOINT"] ?? "http://localhost:18090";
+const DISCOVERY_URL = process.env["DISCOVERY_ENDPOINT"] ?? "http://localhost:18100";
+const ACTIVITY_API_URL = process.env["METABOB_ENDPOINT"] ?? "http://localhost:18080";
+// goal-host-vessel: internal port 8210. In local substrate, expose via -p 18210:8210.
+// Override with GOAL_HOST_ENDPOINT env var if using a different mapping.
+const GOAL_HOST_URL = process.env["GOAL_HOST_ENDPOINT"] ?? "http://localhost:18210";
+// API key for discovery queries.
+// Priority: SUBSTRATE_API_KEY (substrate-internal key) > METABOB_API_KEY env >
+// /workspace/.substrate-secrets (local Docker substrate) > ~/.metabob/config.json
+const METABOB_API_KEY = process.env["SUBSTRATE_API_KEY"] ?? process.env["METABOB_API_KEY"] ?? (() => {
+    try {
+        const secrets = require("fs").readFileSync("/workspace/.substrate-secrets", "utf8");
+        const match = secrets.match(/^METABOB_API_KEY=(.+)$/m);
+        if (match)
+            return match[1].trim();
+    }
+    catch { /* not in local substrate */ }
+    try {
+        const cfg = JSON.parse(require("fs").readFileSync(require("os").homedir() + "/.metabob/config.json", "utf8"));
+        return cfg?.metabob?.apiKey ?? "";
+    }
+    catch {
+        return "";
+    }
+})();
+const TIMEOUT_MS = 8_000;
+// ── CLI args ──────────────────────────────────────────────────────────────────
+const WITHOUT_ARGS = process.argv
+    .filter((a) => a.startsWith("--without="))
+    .map((a) => a.replace("--without=", ""));
+const ALL_PROPERTIES = [
+    "operator-memory",
+    "slash-skills",
+    "subagents",
+    "github-actions",
+    "operator-shell",
+    "operator-spec-authoring",
+    "push-away",
+];
+const PROPERTIES_TO_TEST = WITHOUT_ARGS.length > 0
+    ? WITHOUT_ARGS.filter((a) => ALL_PROPERTIES.includes(a))
+    : [...ALL_PROPERTIES];
+if (WITHOUT_ARGS.some((a) => !ALL_PROPERTIES.includes(a))) {
+    const unknown = WITHOUT_ARGS.filter((a) => !ALL_PROPERTIES.includes(a));
+    console.error(`[closure-audit] Unknown --without values: ${unknown.join(", ")}`);
+    console.error(`[closure-audit] Valid values: ${ALL_PROPERTIES.join(", ")}`);
+    process.exit(2);
+}
+// ── HTTP helpers ──────────────────────────────────────────────────────────────
+async function get(url) {
+    try {
+        const r = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+        let body;
+        try {
+            body = await r.json();
+        }
+        catch {
+            body = await r.text();
+        }
+        return { ok: r.ok, status: r.status, body };
+    }
+    catch (e) {
+        return { ok: false, status: 0, body: String(e.message) };
+    }
+}
+async function post(url, data, extraHeaders) {
+    try {
+        const r = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...extraHeaders },
+            body: JSON.stringify(data),
+            signal: AbortSignal.timeout(TIMEOUT_MS),
+        });
+        let body;
+        try {
+            body = await r.json();
+        }
+        catch {
+            body = await r.text();
+        }
+        return { ok: r.ok, status: r.status, body };
+    }
+    catch (e) {
+        return { ok: false, status: 0, body: String(e.message) };
+    }
+}
+function discoveryAuthHeaders() {
+    return METABOB_API_KEY ? { "Authorization": `ApiKey ${METABOB_API_KEY}` } : {};
+}
+async function resolveShape(pointer) {
+    // development-vessel expects { impulse: { pointer: { type, ... } } }
+    const r = await post(`${DEV_VESSEL_URL}/v2/impulses/resolve`, { impulse: { pointer } });
+    if (!r.ok)
+        return { ok: false, body: r.body, error: `HTTP ${r.status}` };
+    const body = r.body;
+    if (body?.success === false)
+        return { ok: false, body, error: String(body.error) };
+    return { ok: true, body };
+}
+async function getDiscoveryShapes(vesselId) {
+    const r = await post(`${DISCOVERY_URL}/resolve`, { shape: "*", filter: { vessel_id: vesselId } });
+    if (!r.ok)
+        return [];
+    const vessels = r.body?.vessels ?? [];
+    const vessel = vessels.find((v) => v?.id === vesselId);
+    return vessel?.shapes ?? [];
+}
+// ── probe functions ───────────────────────────────────────────────────────────
+async function probeMemoryClosure() {
+    const r = await resolveShape({ type: "memoryNote", limit: 1 });
+    if (!r.ok) {
+        return { closed: false, missing_deps: ["memoryNote resolver in development-vessel"], evidence: String(r.error) };
+    }
+    const body = r.body;
+    const inner = (body?.body ?? body);
+    if (!Array.isArray(inner?.notes)) {
+        return { closed: false, missing_deps: ["memoryNote resolver returns notes array"], evidence: JSON.stringify(inner).slice(0, 200) };
+    }
+    return { closed: true, missing_deps: [], evidence: `memoryNote resolver live, ${inner.notes.length} notes returned` };
+}
+async function probeSkillClosure() {
+    const REQUIRED_SHAPES = [
+        "fs_read", "fs_write", "fs_edit", "fs_list",
+        "git_status", "git_add", "git_commit", "git_diff", "git_log",
+        "llm_completion_dispatch", "http_fetch",
+        "activity_fetch", "activity_create_variant", "activity_recommend",
+    ];
+    // Check dev-vessel health first
+    const health = await get(`${DEV_VESSEL_URL}/health`);
+    if (!health.ok) {
+        return { closed: false, missing_deps: ["development-vessel reachable"], evidence: `health check failed: ${health.status}` };
+    }
+    // Check shapes endpoint
+    const shapesR = await get(`${DEV_VESSEL_URL}/shapes`);
+    const advertised = [];
+    if (shapesR.ok) {
+        const body = shapesR.body;
+        const shapes = (body?.shapes ?? body);
+        if (Array.isArray(shapes))
+            advertised.push(...shapes);
+    }
+    const missing = REQUIRED_SHAPES.filter((s) => !advertised.includes(s));
+    if (missing.length > 0) {
+        return { closed: false, missing_deps: missing.map((s) => `resolver: ${s}`), evidence: `advertised: [${advertised.join(", ")}]` };
+    }
+    return { closed: true, missing_deps: [], evidence: `all ${REQUIRED_SHAPES.length} required resolver shapes present` };
+}
+async function probeSubagentClosure() {
+    // Try direct health endpoint first (requires host port mapping -p 18210:8210)
+    const health = await get(`${GOAL_HOST_URL}/health`);
+    if (health.ok) {
+        const body = health.body;
+        const status = body?.status ?? body?.health;
+        return {
+            closed: status === "healthy" || status === "ok",
+            missing_deps: (status === "healthy" || status === "ok") ? [] : ["goal-host-vessel healthy"],
+            evidence: `goal-host-vessel responded: ${JSON.stringify(body).slice(0, 150)}`,
+        };
+    }
+    // Fallback: docker exec for local substrate (when port 18210 isn't mapped)
+    try {
+        const proc = Bun.spawnSync(["docker", "exec", "substrate-live", "curl", "-s", "http://localhost:8210/health"], {
+            timeout: 5_000,
+        });
+        if (proc.exitCode === 0) {
+            const text = proc.stdout.toString();
+            const body = JSON.parse(text);
+            const status = body?.status ?? body?.health;
+            if (status === "healthy" || status === "ok") {
+                return { closed: true, missing_deps: [], evidence: `goal-host-vessel healthy via docker exec: ${text.slice(0, 120)}` };
+            }
+        }
+    }
+    catch { /* docker not available or container not running */ }
+    // Fallback: probe via discovery-vessel vesselCapability query (correct v0.4.0 format)
+    const discoveryR = await post(`${DISCOVERY_URL}/resolve`, { pointer: { type: "vesselCapability", shape: "goal_execution" } }, discoveryAuthHeaders());
+    if (discoveryR.ok) {
+        const content = discoveryR.body?.content;
+        const found = content?.found;
+        const vessels = content?.vessels ?? [];
+        if (found && vessels.length > 0) {
+            return {
+                closed: true,
+                missing_deps: [],
+                evidence: `goal-host-vessel registered in discovery with goal_execution shape (direct port not mapped; use -p 18210:8210 to expose)`,
+            };
+        }
+    }
+    return {
+        closed: false,
+        missing_deps: ["goal-host-vessel reachable (restart container with -p 18210:8210 to expose direct port)"],
+        evidence: `health: ${health.status}, discovery: ${String(JSON.stringify(discoveryR.body?.content ?? discoveryR.body)).slice(0, 80)}`,
+    };
+}
+async function probeCIClosure() {
+    const r = await resolveShape({ type: "failure_mode_matrix_score", dry_run: true });
+    if (!r.ok) {
+        // Try /shapes endpoint as fallback
+        const shapesR = await get(`${DEV_VESSEL_URL}/shapes`);
+        const body = shapesR.body;
+        const shapes = (body?.shapes ?? body);
+        if (Array.isArray(shapes) && shapes.includes("failure_mode_matrix_score")) {
+            return { closed: true, missing_deps: [], evidence: "failure_mode_matrix_score shape advertised by development-vessel" };
+        }
+        return { closed: false, missing_deps: ["failure_mode_matrix_score resolver"], evidence: String(r.error) };
+    }
+    return { closed: true, missing_deps: [], evidence: "failure_mode_matrix_score resolver responded" };
+}
+async function probeSelfHealClosure() {
+    const missing = [];
+    // systemd_restart shape
+    const r = await resolveShape({ type: "systemd_restart", unit: "noop-test.service", dry_run: true });
+    if (r.ok) {
+        // shape is live
+    }
+    else {
+        const shapesR = await get(`${DEV_VESSEL_URL}/shapes`);
+        const body = shapesR.body;
+        const shapes = (body?.shapes ?? body);
+        if (!Array.isArray(shapes) || !shapes.includes("systemd_restart")) {
+            missing.push("systemd_restart resolver");
+        }
+    }
+    // substrate_health_tick
+    const tickR = await resolveShape({ type: "substrate_health_tick" });
+    if (!tickR.ok) {
+        // Check shape presence instead
+        const shapesR = await get(`${DEV_VESSEL_URL}/shapes`);
+        const body = shapesR.body;
+        const shapes = (body?.shapes ?? body);
+        if (!Array.isArray(shapes) || !shapes.includes("substrate_health_tick")) {
+            missing.push("substrate_health_tick resolver");
+        }
+    }
+    return {
+        closed: missing.length === 0,
+        missing_deps: missing,
+        evidence: missing.length === 0
+            ? "systemd_restart + substrate_health_tick resolvers present"
+            : `missing: ${missing.join(", ")}`,
+    };
+}
+async function probeSpecAuthoringClosure() {
+    const REQUIRED = ["memoryNote_write", "activity_create_variant", "fs_write", "git_commit", "llm_completion_dispatch"];
+    const shapesR = await get(`${DEV_VESSEL_URL}/shapes`);
+    const body = shapesR.body;
+    const shapes = (body?.shapes ?? body);
+    if (!Array.isArray(shapes)) {
+        return { closed: false, missing_deps: REQUIRED, evidence: "could not reach development-vessel /shapes" };
+    }
+    const missing = REQUIRED.filter((s) => !shapes.includes(s));
+    return {
+        closed: missing.length === 0,
+        missing_deps: missing.map((s) => `resolver: ${s}`),
+        evidence: missing.length === 0
+            ? `all ${REQUIRED.length} spec-authoring resolver shapes present`
+            : `missing: ${missing.join(", ")}`,
+    };
+}
+/**
+ * Push-away closure (IAL §27.S.6): substrate refuses incompetent operator
+ * interventions with cited evidence. Tests three properties:
+ *
+ *   1. Refusal pathway works — POSTing an unsatisfiable recommend request
+ *      returns refusal=no_producer_for_expected_shapes
+ *   2. Refusal events persist durably — /v2/activities/refusals/stats
+ *      returns a queryable count over a sustained window
+ *   3. Refusal carries cited evidence — refusal_type, candidates_examined,
+ *      and reason are all present in the response
+ *
+ * §27.S.6 push-away is the S2→S3 progress signal. This probe verifies the
+ * surface exists; the sustained-window measure (refusal count > 0 over
+ * adversarial exposure) is operator-evaluated, not a binary closure check.
+ */
+async function probePushAwayClosure() {
+    const missing = [];
+    // 1. Issue a refusal-eligible recommend (shape that no template produces)
+    const refuseProbeShape = `__closure_audit_nonexistent_shape_${Date.now()}__`;
+    const recommendR = await post(`${ACTIVITY_API_URL}/v2/activities/recommend`, {
+        task_description: "closure-audit push-away probe",
+        expected_output_shapes: [refuseProbeShape],
+    }, discoveryAuthHeaders());
+    let refusalWorks = false;
+    if (recommendR.ok) {
+        const body = recommendR.body;
+        const refusal = body?.refusal;
+        if (refusal && refusal.type === "no_producer_for_expected_shapes") {
+            refusalWorks = true;
+        }
+    }
+    if (!refusalWorks)
+        missing.push("refusal pathway in POST /v2/activities/recommend");
+    // 2. Stats endpoint exists and is queryable (activity-api requires API key)
+    const statsR = await (async () => {
+        try {
+            const r = await fetch(`${ACTIVITY_API_URL}/v2/activities/refusals/stats?window_seconds=300`, { headers: discoveryAuthHeaders(), signal: AbortSignal.timeout(TIMEOUT_MS) });
+            let body;
+            try {
+                body = await r.json();
+            }
+            catch {
+                body = await r.text();
+            }
+            return { ok: r.ok, status: r.status, body };
+        }
+        catch (e) {
+            return { ok: false, status: 0, body: String(e.message) };
+        }
+    })();
+    let statsWorks = false;
+    let statsCount = 0;
+    if (statsR.ok) {
+        const body = statsR.body;
+        if (typeof body?.total === "number" && body.by_type !== undefined) {
+            statsWorks = true;
+            statsCount = body.total;
+        }
+    }
+    if (!statsWorks)
+        missing.push("GET /v2/activities/refusals/stats endpoint");
+    // 3. After our probe, stats should reflect at least one refusal in the window
+    let durableEvidence = false;
+    if (statsWorks && refusalWorks) {
+        // Re-fetch stats after the probe; allow a few hundred ms for the
+        // fire-and-forget DB write to land.
+        await new Promise((r) => setTimeout(r, 800));
+        const statsR2 = await (async () => {
+            try {
+                const r = await fetch(`${ACTIVITY_API_URL}/v2/activities/refusals/stats?window_seconds=60`, { headers: discoveryAuthHeaders(), signal: AbortSignal.timeout(TIMEOUT_MS) });
+                let body;
+                try {
+                    body = await r.json();
+                }
+                catch {
+                    body = await r.text();
+                }
+                return { ok: r.ok, status: r.status, body };
+            }
+            catch (e) {
+                return { ok: false, status: 0, body: String(e.message) };
+            }
+        })();
+        if (statsR2.ok) {
+            const body = statsR2.body;
+            const recent = body?.top_recent;
+            if (recent && recent.some(r => Array.isArray(r.expected_output_shapes) && r.expected_output_shapes.includes(refuseProbeShape))) {
+                durableEvidence = true;
+            }
+            else if ((body?.total ?? 0) > statsCount) {
+                // count incremented even if we didn't find our exact row in top_recent
+                durableEvidence = true;
+            }
+        }
+    }
+    if (refusalWorks && statsWorks && !durableEvidence) {
+        missing.push("durable refusal recording (probe refusal didn't show up in stats)");
+    }
+    return {
+        closed: missing.length === 0,
+        missing_deps: missing,
+        evidence: missing.length === 0
+            ? `refusal pathway + stats endpoint + durable recording all working (probe shape ${refuseProbeShape.slice(-30)} recorded)`
+            : `gaps: ${missing.join("; ")}`,
+    };
+}
+// ── main ──────────────────────────────────────────────────────────────────────
+const PROBE_FN = {
+    "operator-memory": probeMemoryClosure,
+    "slash-skills": probeSkillClosure,
+    "subagents": probeSubagentClosure,
+    "github-actions": probeCIClosure,
+    "operator-shell": probeSelfHealClosure,
+    "operator-spec-authoring": probeSpecAuthoringClosure,
+    "push-away": probePushAwayClosure,
+};
+const DESCRIPTIONS = {
+    "operator-memory": "Substrate memory (memoryNote) works without operator ~/.claude/memory files",
+    "slash-skills": "Skill-equivalent operations available via development-vessel resolvers alone",
+    "subagents": "Complex multi-step goals executable via goal-host-vessel without Claude Code subagents",
+    "github-actions": "Merge/CI gating available via failure_mode_matrix_score without GitHub Actions",
+    "operator-shell": "Substrate self-heals via systemd_restart + substrate_health_tick without operator shell",
+    "operator-spec-authoring": "Spec authoring resolvers present; substrate can author specs without operator",
+    "push-away": "Substrate refuses incompetent interventions with cited evidence + durable record (IAL §27.S.6)",
+};
+async function getVersionInfo() {
+    const versions = {};
+    const dvHealth = await get(`${DEV_VESSEL_URL}/health`);
+    if (dvHealth.ok) {
+        const body = dvHealth.body;
+        versions["development-vessel"] = String(body?.version ?? "unknown");
+    }
+    else {
+        versions["development-vessel"] = "unreachable";
+    }
+    const apiHealth = await get(`${ACTIVITY_API_URL}/health`);
+    if (apiHealth.ok) {
+        const body = apiHealth.body;
+        versions["activity-api"] = String(body?.version ?? "unknown");
+    }
+    else {
+        versions["activity-api"] = "unreachable";
+    }
+    return versions;
+}
+console.log(`[closure-audit] Testing ${PROPERTIES_TO_TEST.length} closure properties: ${PROPERTIES_TO_TEST.join(", ")}`);
+console.log(`[closure-audit] Substrate: ${DEV_VESSEL_URL} | Discovery: ${DISCOVERY_URL}\n`);
+const properties = {};
+for (const prop of PROPERTIES_TO_TEST) {
+    process.stdout.write(`  ${prop.padEnd(28)} ... `);
+    const result = await PROBE_FN[prop]();
+    properties[prop] = { ...result, description: DESCRIPTIONS[prop] };
+    const tag = result.closed ? "✓ CLOSED" : "✗ OPEN";
+    console.log(`${tag}  ${result.evidence.slice(0, 80)}`);
+    if (!result.closed && result.missing_deps.length > 0) {
+        for (const dep of result.missing_deps) {
+            console.log(`    missing: ${dep}`);
+        }
+    }
+}
+console.log();
+const versions = await getVersionInfo();
+const allClosed = PROPERTIES_TO_TEST.every((p) => properties[p]?.closed);
+const output = {
+    properties,
+    audit_run_at: new Date().toISOString(),
+    audit_tool_versions: versions,
+    all_closed: allClosed,
+    tested: PROPERTIES_TO_TEST,
+};
+(0, fs_1.mkdirSync)(STATE_DIR, { recursive: true });
+(0, fs_1.writeFileSync)(OUTPUT_PATH, JSON.stringify(output, null, 2));
+console.log(`[closure-audit] Results written to ${OUTPUT_PATH}`);
+console.log(`[closure-audit] Summary: ${PROPERTIES_TO_TEST.filter((p) => properties[p]?.closed).length}/${PROPERTIES_TO_TEST.length} closed`);
+process.exit(allClosed ? 0 : 1);
+//# sourceMappingURL=closure-audit.js.map

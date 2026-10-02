@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-263858f0-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-263858f0] Edit repos/development-vessel/src/resolvers/gap-to-feature.ts with a REPLACE operati",
+  "description": "[narrowed from route-edit-263858f0] Edit repos/development-vessel/src/resolvers/gap-to-feature.ts with a REPLACE operation on the existing file. Do not use create_file — the file exists at roughly 181000 bytes and create_file will be refused.\n\nMake exactly one replacement.\n\nold_string (three lines, occurs exactly once; six spaces before continue, four before the closing brace, four before actionableGaps):\n      continue;\n    }\n    actionableGaps.push(g);\n\nnew_string (the same two remaining lines, byte-identical, continue line removed):\n    }\n    actionableGaps.push(g);\n\nNothing else changes. Do not comment the line out — a prior attempt did and the semantic gate correctly hard-failed it as \"zero behaviour delta\". Do not anchor on a bare `continue;`, which occurs twice in this file. Do not rely on line numbers; this file shifts as other changes land.\n\nWhy: that `continue` sits in the `if (hopeless(g))` branch of pickMostLandable and drops every gap in a hopeless category before scoring runs. 23 documentation_drift gaps already compute to landability 1.00, joint top of the pool, and are never selected because of it. Removing it lets them reach actionableGaps and be scored — the \"re-test path (penalty, not hard exclusion)\" the comment above hopeless() already promises. Keep the uiQuestion_write escalation exactly as it is. Do not alter hopeless(), landabilityScore, or any threshold, and introduce no new symbol.",
+  "goal_text": "[narrowed from route-edit-263858f0] Edit repos/development-vessel/src/resolvers/gap-to-feature.ts with a REPLACE operation on the existing file. Do not use create_file — the file exists at roughly 181000 bytes and create_file will be refused.\n\nMake exactly one replacement.\n\nold_string (three lines, occurs exactly once; six spaces before continue, four before the closing brace, four before actionableGaps):\n      continue;\n    }\n    actionableGaps.push(g);\n\nnew_string (the same two remaining lines, byte-identical, continue line removed):\n    }\n    actionableGaps.push(g);\n\nNothing else changes. Do not comment the line out — a prior attempt did and the semantic gate correctly hard-failed it as \"zero behaviour delta\". Do not anchor on a bare `continue;`, which occurs twice in this file. Do not rely on line numbers; this file shifts as other changes land.\n\nWhy: that `continue` sits in the `if (hopeless(g))` branch of pickMostLandable and drops every gap in a hopeless category before scoring runs. 23 documentation_drift gaps already compute to landability 1.00, joint top of the pool, and are never selected because of it. Removing it lets them reach actionableGaps and be scored — the \"re-test path (penalty, not hard exclusion)\" the comment above hopeless() already promises. Keep the uiQuestion_write escalation exactly as it is. Do not alter hopeless(), landabilityScore, or any threshold, and introduce no new symbol.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-263858f0-narrowed",
+  "source_gap_source": "substrate_detected"
+}

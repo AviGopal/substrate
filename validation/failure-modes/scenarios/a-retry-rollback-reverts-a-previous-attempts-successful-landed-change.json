@@ -1,0 +1,19 @@
+{
+  "id": "a-retry-rollback-reverts-a-previous-attempts-successful-landed-change",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "meta",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "When two composes touch the same file, a failing attempt's rollback can revert a DIFFERENT attempt's already-successful ",
+  "description": "When two composes touch the same file, a failing attempt's rollback can revert a DIFFERENT attempt's already-successful change. The rollback restores preEditContent, a snapshot each compose takes on first touch of a file. If compose B starts before compose A's write lands, B's snapshot predates A's change, so B's rollback writes the pre-A content back and silently destroys A's landed work. MAX_CONCURRENT_COMPOSES is 4 and the composeInFlight guard only serialises UNISOLATED vessels, so two composes on the same file can overlap. OBSERVED TWICE on 2026-09-09. Case 1: at 01:24:17 a compose on gap route-edit-cd20dbbc succeeded outright - verify_ok=[true], rolled_back=false, and the semantic gate approved it in as many words - and at 01:26:37 a second attempt on the SAME gap failed verify, rolled back, and the operator-verified change was gone from the deployed tree with no commit. Case 2: earlier the same day a patch_with_tools edit applied and reported verified-green terminal, and a concurrent feature_compose on the same file rolled back and reverted it. PROPOSED CHANGE: make the rollback conditional rather than blind. Before writing preEditContent back, read the file's current bytes; restore only if they still match what THIS compose left there, and when they do not, skip the restore and log the skip with the path, because a mismatch means another writer has touched the file and this compose no longer owns it. Alternatively serialise composes per FILE rather than per vessel, extending the existing composeInFlight guard from vessel keys to absolute paths.",
+  "goal_text": "When two composes touch the same file, a failing attempt's rollback can revert a DIFFERENT attempt's already-successful change. The rollback restores preEditContent, a snapshot each compose takes on first touch of a file. If compose B starts before compose A's write lands, B's snapshot predates A's change, so B's rollback writes the pre-A content back and silently destroys A's landed work. MAX_CONCURRENT_COMPOSES is 4 and the composeInFlight guard only serialises UNISOLATED vessels, so two composes on the same file can overlap. OBSERVED TWICE on 2026-09-09. Case 1: at 01:24:17 a compose on gap route-edit-cd20dbbc succeeded outright - verify_ok=[true], rolled_back=false, and the semantic gate approved it in as many words - and at 01:26:37 a second attempt on the SAME gap failed verify, rolled back, and the operator-verified change was gone from the deployed tree with no commit. Case 2: earlier the same day a patch_with_tools edit applied and reported verified-green terminal, and a concurrent feature_compose on the same file rolled back and reverted it. PROPOSED CHANGE: make the rollback conditional rather than blind. Before writing preEditContent back, read the file's current bytes; restore only if they still match what THIS compose left there, and when they do not, skip the restore and log the skip with the path, because a mismatch means another writer has touched the file and this compose no longer owns it. Alternatively serialise composes per FILE rather than per vessel, extending the existing composeInFlight guard from vessel keys to absolute paths.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "a-retry-rollback-reverts-a-previous-attempts-successful-landed-change",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-bcdda034",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-bae12a58: Thread the captured compose execution id into the compose report, in ",
+  "description": "investigate and decompose gap route-edit-bae12a58: Thread the captured compose execution id into the compose report, in repos/development-vessel/src/resolvers/feature-compose.ts. Two insertions, both purely additive, no existing line deleted or changed. All anchors below were verified verbatim-unique against the current file.\n\nFirst insertion. The line\n\n  try {\n\nthat immediately precedes the verbatim-unique line\n\n    const traceEndpoint =",
+  "goal_text": "investigate and decompose gap route-edit-bae12a58: Thread the captured compose execution id into the compose report, in repos/development-vessel/src/resolvers/feature-compose.ts. Two insertions, both purely additive, no existing line deleted or changed. All anchors below were verified verbatim-unique against the current file.\n\nFirst insertion. The line\n\n  try {\n\nthat immediately precedes the verbatim-unique line\n\n    const traceEndpoint =",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-bcdda034",
+  "source_gap_source": "substrate_detected"
+}

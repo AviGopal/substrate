@@ -1,0 +1,7 @@
+run	dispatch	V20s	verdict_s	reached	reason	body_match
+1	ee61cb90-dad9-4d75-88ae-eaca331aa5e1	PASS(exec=none,walkLog=2)	50	true/completed	deterministic:transform-verified — sha256(trendfive-demo-2026-09-19) = ddd1847c4c9b8143183acde50322f6a99e3710d3faf581d	MATCH
+2	a7f868d7-ed74-41ad-880c-82a69b0127b9	PASS(exec=none,walkLog=4)	50	true/completed	deterministic:verified-compute-artifact — recomputed the arithmetic in-process (null) and resolved the named note "": 	MATCH
+3	0a2f8ed1-c745-472b-97e7-c1920dbd4ee5	PASS(exec=none,walkLog=6)	60	true/completed	deterministic:transform-verified — product(359*941) = 337819 found in produced content	MATCH
+4	7549416e-5c4c-4911-8c4d-c17cbc16105f	PASS(exec=none,walkLog=6)	66	true/completed	deterministic:transform-verified — base64(battery-five) = YmF0dGVyeS1maXZl found in produced content	MATCH
+5	3c689484-76fa-4b62-b9b6-9cc8842e6a13	PASS(exec=none,walkLog=5)	90	false/failed	deterministic:transform-mismatch — goal determines 16 for lettercount(incontrovertible) but produced content does not 	MISMATCH(17 )
+6	725ddafe-9fdc-49d4-a2ff-b6ea718183bc	PASS(exec=universal-tool-fallback-816b0d40-1789811992419,walkLog=9)	20	true/completed	deterministic:transform-verified — uppercase(murmur) = MURMUR found in produced content	MATCH

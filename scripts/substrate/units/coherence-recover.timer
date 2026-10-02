@@ -1,0 +1,12 @@
+[Unit]
+Description=Coherence recovery timer
+
+[Timer]
+OnActiveSec=12min
+OnUnitActiveSec=60min
+Persistent=true
+AccuracySec=1min
+Unit=coherence-recover.service
+
+[Install]
+WantedBy=timers.target

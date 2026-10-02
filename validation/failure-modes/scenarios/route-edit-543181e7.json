@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-543181e7",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/goal-host-vessel/src/index.ts, fix the reach-gate's poolDigest so it grades a produced shape's real content ins",
+  "description": "In repos/goal-host-vessel/src/index.ts, fix the reach-gate's poolDigest so it grades a produced shape's real content instead of a provenance pointer. In the poolDigest construction — the `poolImpulses.filter(...).map(...)` block that renders each impulse as `- ${shape}: ${content}` (near the comment \"Pool content goes first so substantive earlier outputs survive the length cap\") — before rendering, detect when an impulse's content is an object carrying an `executionId` (a `{producedBy, executionId}` provenance stub) and, when present, substitute the resolved content from `reachContentDigests.get(executionId)` (which is already stored in `- shape: content` form); otherwise fall back to rendering the stub exactly as today. This must fail open: if there is no executionId or no entry in reachContentDigests, behavior is unchanged. The goal is that a shellResult produced by a vessel-resolve satisfier contributes its actual stdout (e.g. a count) to the graded digest, not the pointer, so extractEmittedNumbers can read it. Do not change reconcileDerivations or its call site.",
+  "goal_text": "In repos/goal-host-vessel/src/index.ts, fix the reach-gate's poolDigest so it grades a produced shape's real content instead of a provenance pointer. In the poolDigest construction — the `poolImpulses.filter(...).map(...)` block that renders each impulse as `- ${shape}: ${content}` (near the comment \"Pool content goes first so substantive earlier outputs survive the length cap\") — before rendering, detect when an impulse's content is an object carrying an `executionId` (a `{producedBy, executionId}` provenance stub) and, when present, substitute the resolved content from `reachContentDigests.get(executionId)` (which is already stored in `- shape: content` form); otherwise fall back to rendering the stub exactly as today. This must fail open: if there is no executionId or no entry in reachContentDigests, behavior is unchanged. The goal is that a shellResult produced by a vessel-resolve satisfier contributes its actual stdout (e.g. a count) to the graded digest, not the pointer, so extractEmittedNumbers can read it. Do not change reconcileDerivations or its call site.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-543181e7",
+  "source_gap_source": "substrate_detected"
+}

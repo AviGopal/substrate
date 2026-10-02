@@ -1,0 +1,73 @@
+{
+  "status": 200,
+  "data": {
+    "resolved": true,
+    "success": true,
+    "shape": "uiQuestion",
+    "body": {
+      "questions": [
+        {
+          "id": "audit-required-question",
+          "title": "Audit: choose a deployment scope",
+          "body": {
+            "text": "Synthetic test. No real deployment will be authorized."
+          },
+          "kind": "question",
+          "importance": "medium",
+          "asks": [
+            {
+              "id": "scope",
+              "prompt": "Choose a scope",
+              "type": "text"
+            }
+          ],
+          "visibility": "public",
+          "revision": 1,
+          "createdAt": 1790074035316,
+          "updatedAt": 1790074035316,
+          "responses": [],
+          "answers": [],
+          "answered": false,
+          "declined": false,
+          "rank": 1,
+          "because": [
+            "the system is asking you a direct question",
+            "the substrate declared importance \"medium\"",
+            "raised today",
+            "no answer recorded yet"
+          ]
+        }
+      ],
+      "total": 1,
+      "unanswered": 1,
+      "ranking": {
+        "solicitations_total": 1,
+        "shown_count": 1,
+        "not_shown_count": 0,
+        "slice_size": 50,
+        "slice_source": "policy",
+        "policy_revision": 0,
+        "weights": {
+          "byKind": {
+            "gap_needs_human": 10,
+            "gap_reland_needs_human": 10,
+            "question": 8,
+            "code_change": 7,
+            "gap_needs_localization": 6,
+            "gap_pending_verification": 4,
+            "info": 1,
+            "pulse": 0.5
+          },
+          "agePerDay": 0.4,
+          "declaredImportance": {
+            "high": 3,
+            "medium": 1,
+            "low": 0
+          },
+          "unansweredBoost": 24
+        },
+        "explanation": "Showing 1 of 1 by importance; top: \"Audit: choose a deployment scope\" \u2014 the system is asking you a direct question; nothing further is hidden."
+      }
+    }
+  }
+}

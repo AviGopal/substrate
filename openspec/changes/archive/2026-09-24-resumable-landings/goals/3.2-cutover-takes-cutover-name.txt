@@ -1,0 +1,17 @@
+In repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts, take the change_window maintenance lease under the name "cutover" at every acquire AND release (openspec 2026-09-24-resumable-landings task 3.2). maintenance-lease.ts now stores a named hold in its own file and a hold with a different name does not exclude it, so a trace_store reconcile hold will no longer refuse or defer verified cutovers ("DEFERRED: change_window lease held", env_change_window_held). Releases MUST pass the same name, or the named lease file would leak to its 10-minute TTL. Use exactly these eight edits (each old text occurs once in the file) and nothing else:
+EDIT 1 — old: `const acquireResult = await resolveMaintenanceLeaseWrite({`  new: `const acquireResult = await resolveMaintenanceLeaseWrite({ name: "cutover",`
+EDIT 2 — old: `const retryAcquire = await resolveMaintenanceLeaseWrite({`  new: `const retryAcquire = await resolveMaintenanceLeaseWrite({ name: "cutover",`
+EDIT 3 — old (the only multi-line release in the file):
+        type: "maintenanceLease_write",
+        op: "release",
+new:
+        type: "maintenanceLease_write",
+        name: "cutover",
+        op: "release",
+EDIT 4 — old: `op: "acquire", holder: leaseHolder, ttl_ms: 600_000 });`  new: `op: "acquire", name: "cutover", holder: leaseHolder, ttl_ms: 600_000 });`
+EDIT 5 — old: `op: "acquire", holder: pLeaseHolder, ttl_ms: 600_000 });`  new: `op: "acquire", name: "cutover", holder: pLeaseHolder, ttl_ms: 600_000 });`
+EDIT 6 — old: `op: "release", token: leaseToken }); } catch {}`  new: `op: "release", name: "cutover", token: leaseToken }); } catch {}`
+EDIT 7 — old: `op: "release", token: proposalLeaseToken }); } catch { }`  new: `op: "release", name: "cutover", token: proposalLeaseToken }); } catch { }`
+EDIT 8 — old: `op: "release", token: leaseToken }); } catch { }`  new: `op: "release", name: "cutover", token: leaseToken }); } catch { }`
+Reviewer facts: two cutovers for different vessels still exclude each other (same name, different holders); the self-deadlock guard still works (same holder re-acquires its own name); an unnamed global hold still refuses the cutover.
+Falsifier: with change_window held under name "trace_store" by another holder, a FAVORABLE cutover acquires "cutover", pushes, logs no env_change_window_held, and leaves no maintenance-cutover.json behind afterwards.

@@ -1,0 +1,19 @@
+{
+  "id": "posterior-drift-1784927206707",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "posterior_consistency_drift",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "1 activity_metrics cells have Thompson posterior means drifting from empirical trace counts > threshold. Stale posterior",
+  "description": "1 activity_metrics cells have Thompson posterior means drifting from empirical trace counts > threshold. Stale posteriors cause Thompson Sampling + momentum to allocate traffic based on outdated belief.",
+  "goal_text": "1 activity_metrics cells have Thompson posterior means drifting from empirical trace counts > threshold. Stale posteriors cause Thompson Sampling + momentum to allocate traffic based on outdated belief.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": "outcomes_must_reflect_substantive_work",
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "posterior-drift-1784927206707",
+  "source_gap_source": "substrate_detected"
+}

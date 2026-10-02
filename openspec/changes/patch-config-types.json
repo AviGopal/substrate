@@ -1,0 +1,20 @@
+{
+  "summary": "Update config/types.ts for httpResponse resolver",
+  "description": "This patch updates HttpResponsePointer and HttpResponse types, and adds ResolverOutcome and ResolverResult types for the httpResponse resolver.",
+  "path": "repos/development-vessel/src/config/types.ts",
+  "old_string": "export type HttpResponsePointer = {\n  type: \"httpResponse\";\n  url: string;\n};\n\nexport type HttpResponse = {\n  status: number;\n  body: string;\n};\n",
+  "new_string": "export type HttpResponsePointer = {\n  type: \"httpResponse\";\n  url: string;\n  max_bytes?: number;\n  allow_domains?: string[];\n};\n\nexport type HttpResponse = {\n  status: number;\n  statusText: string;\n  headers: { [key: string]: string };
+  body: string;
+};
+
+export type ResolverOutcome = \"success\" | \"error\";
+
+export interface ResolverResult {
+  _outcome: ResolverOutcome;
+  shape?: string;
+  error?: string;
+  httpResponse?: HttpResponse;
+  body?: { [key: string]: unknown };
+}
+"
+}

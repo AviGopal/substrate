@@ -1,0 +1,19 @@
+{
+  "id": "no-llm-provider-available-and-an-empty-key-is-reported-as-quota-exhaustion-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from no-llm-provider-available-and-an-empty-key-is-reported-as-quota-exhaustion] Every distinct provider failu",
+  "description": "[narrowed from no-llm-provider-available-and-an-empty-key-is-reported-as-quota-exhaustion] Every distinct provider failure is collapsed into 'marked exhausted' and sent into a 600 second cooldown retry loop, so three conditions requiring three different operator actions are reported as one condition and none is escalated. Edit repos/llm-resolver-vessel/src/index.ts.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds handling for empty API keys but does not address the specific issue of distinct provider failures being collapsed into 'marked exhausted'\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from no-llm-provider-available-and-an-empty-key-is-reported-as-quota-exhaustion] Every distinct provider failure is collapsed into 'marked exhausted' and sent into a 600 second cooldown retry loop, so three conditions requiring three different operator actions are reported as one condition and none is escalated. Edit repos/llm-resolver-vessel/src/index.ts.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch adds handling for empty API keys but does not address the specific issue of distinct provider failures being collapsed into 'marked exhausted'\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "no-llm-provider-available-and-an-empty-key-is-reported-as-quota-exhaustion-narrowed",
+  "source_gap_source": "substrate_detected"
+}

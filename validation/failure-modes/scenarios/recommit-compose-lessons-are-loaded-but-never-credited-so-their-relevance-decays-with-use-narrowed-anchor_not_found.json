@@ -1,0 +1,19 @@
+{
+  "id": "recommit-compose-lessons-are-loaded-but-never-credited-so-their-relevance-decays-with-use-narrowed-anchor_not_found",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed] feature-compose.ts loads compose_lesson concepts into the drafter prompt and never records whether they helpe",
+  "description": "[narrowed] feature-compose.ts loads compose_lesson concepts into the drafter prompt and never records whether they helped, so the corpus cannot be graded: 17 compose_lesson concepts are loaded, 0 have ever been credited. Edit repos/development-vessel/src/resolvers/feature-compose.ts.",
+  "goal_text": "[narrowed] feature-compose.ts loads compose_lesson concepts into the drafter prompt and never records whether they helped, so the corpus cannot be graded: 17 compose_lesson concepts are loaded, 0 have ever been credited. Edit repos/development-vessel/src/resolvers/feature-compose.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-compose-lessons-are-loaded-but-never-credited-so-their-relevance-decays-with-use-narrowed-anchor_not_found",
+  "source_gap_source": "substrate_detected"
+}

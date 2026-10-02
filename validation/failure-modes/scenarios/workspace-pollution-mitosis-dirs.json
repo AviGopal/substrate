@@ -1,0 +1,19 @@
+{
+  "id": "workspace-pollution-mitosis-dirs",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "workspace_pollution",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "389 abandoned mitosis staging dirs in /vessels (oldest 22d) — swamps the responsibility-audit scan cap and blinds the se",
+  "description": "389 abandoned mitosis staging dirs in /vessels (oldest 22d) — swamps the responsibility-audit scan cap and blinds the self-audit",
+  "goal_text": "389 abandoned mitosis staging dirs in /vessels (oldest 22d) — swamps the responsibility-audit scan cap and blinds the self-audit",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "workspace-pollution-mitosis-dirs",
+  "source_gap_source": "substrate_detected"
+}

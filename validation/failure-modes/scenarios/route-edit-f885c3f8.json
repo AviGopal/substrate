@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-f885c3f8",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-b0de8b0a: ten-of-eleven-rhythm-families-have-no-staleness-driver",
+  "description": "investigate and decompose gap route-edit-b0de8b0a: ten-of-eleven-rhythm-families-have-no-staleness-driver",
+  "goal_text": "investigate and decompose gap route-edit-b0de8b0a: ten-of-eleven-rhythm-families-have-no-staleness-driver",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-f885c3f8",
+  "source_gap_source": "substrate_detected"
+}

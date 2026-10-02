@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-254dded0-narrowed-semantic_reject",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-254dded0] investigate and decompose gap route-edit-dac2f850: Edit repos/discovery-vessel/src/i",
+  "description": "[narrowed from route-edit-254dded0] investigate and decompose gap route-edit-dac2f850: Edit repos/discovery-vessel/src/index.ts so the GET /bootstrap handler stops returning a loopback identity_endpoint.\n\nThe relevant code is the const identity_endpoint assignment inside the app.get(\"/bootstrap\", ...) handler. Today its final fallback is process.env.IDENTITY_VESSEL_URL, which on this deployment is http://127.0.0.1:8101 — so a remote client that fetches /bootstrap is handed an\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch updates the identity_endpoint to no longer fallback to loopback identity_endpoint, addressing the gap.\n- semantic_reject: The patch removes the fallback to process.env.IDENTITY_VESSEL_URL which was causing the loopback identity_endpoint, thus changing the behavior as required by the gap.\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-254dded0-narrowed repeated already-recorded failure class semantic_reject: The patch removes `process.env.IDENTITY_VESSEL_URL` from the fallback chain for `identity_endpoint`, directly addressing the gap's requirement to stop. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "[narrowed from route-edit-254dded0] investigate and decompose gap route-edit-dac2f850: Edit repos/discovery-vessel/src/index.ts so the GET /bootstrap handler stops returning a loopback identity_endpoint.\n\nThe relevant code is the const identity_endpoint assignment inside the app.get(\"/bootstrap\", ...) handler. Today its final fallback is process.env.IDENTITY_VESSEL_URL, which on this deployment is http://127.0.0.1:8101 — so a remote client that fetches /bootstrap is handed an\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: The patch updates the identity_endpoint to no longer fallback to loopback identity_endpoint, addressing the gap.\n- semantic_reject: The patch removes the fallback to process.env.IDENTITY_VESSEL_URL which was causing the loopback identity_endpoint, thus changing the behavior as required by the gap.\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-254dded0-narrowed repeated already-recorded failure class semantic_reject: The patch removes `process.env.IDENTITY_VESSEL_URL` from the fallback chain for `identity_endpoint`, directly addressing the gap's requirement to stop. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-254dded0-narrowed-semantic_reject",
+  "source_gap_source": "substrate_detected"
+}

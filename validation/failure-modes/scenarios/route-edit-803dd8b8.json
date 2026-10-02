@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-803dd8b8",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/goal-host-vessel/src/goal-target-inference.ts, add a deterministic code-search route following the existing det",
+  "description": "In repos/goal-host-vessel/src/goal-target-inference.ts, add a deterministic code-search route following the existing deterministicEnvGateRoute and deterministicCompositionAsk pattern in that file. When a goal asks to search the codebase, find what creates/defines a symbol, find where something is configured, or root-cause a named symbol or error string — and the goal contains no persist-write clause (_COMPOSITION_WRITE_CLAUSE) — return a GoalTargetDecision targeting code-search shapes (codeSearchResult, or code_find_function / source_code when advertised in knownShapes) at moderate confidence. Guard it so it only fires when those shapes are advertised in knownShapes and it must NOT preempt the registry-count-to-shellResult route or the composition-write route. This fixes the observed misrouting where a goal saying 'search the codebase for what creates exec_test_1' was inferred as execution_trace/trace_search (a trace-store query) instead of a code search.",
+  "goal_text": "In repos/goal-host-vessel/src/goal-target-inference.ts, add a deterministic code-search route following the existing deterministicEnvGateRoute and deterministicCompositionAsk pattern in that file. When a goal asks to search the codebase, find what creates/defines a symbol, find where something is configured, or root-cause a named symbol or error string — and the goal contains no persist-write clause (_COMPOSITION_WRITE_CLAUSE) — return a GoalTargetDecision targeting code-search shapes (codeSearchResult, or code_find_function / source_code when advertised in knownShapes) at moderate confidence. Guard it so it only fires when those shapes are advertised in knownShapes and it must NOT preempt the registry-count-to-shellResult route or the composition-write route. This fixes the observed misrouting where a goal saying 'search the codebase for what creates exec_test_1' was inferred as execution_trace/trace_search (a trace-store query) instead of a code search.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-803dd8b8",
+  "source_gap_source": "substrate_detected"
+}

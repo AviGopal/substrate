@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-5d1e43aa",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/activity-api/src/routes/execution-traces.ts, export the insertTraceDigest helper so a sibling route can reuse i",
+  "description": "In repos/activity-api/src/routes/execution-traces.ts, export the insertTraceDigest helper so a sibling route can reuse it instead of duplicating the digest write.\n\nReplace this line, which occurs exactly once in the file:\nasync function insertTraceDigest(trace: any, body: any, jwtToken?: string): Promise<void> {\n\nwith exactly this line:\nexport async function insertTraceDigest(trace: any, body: any, jwtToken?: string): Promise<void> {\n\nWHY: trace_digest is written by exactly one call site, the POST / handler of this router, mounted at /v2/activities/execution-traces. The sibling route POST /executions in repos/activity-api/src/routes/activities.ts, mounted at /v2/activities, records executions WITHOUT a digest. Measured 2026-09-12: activity feature_compose has 2491 rows in execution and ZERO rows in trace_digest, and fleet-wide only 1311 of 10717 executions in 24 hours are digested. Because execution_exemplar is extracted solely from trace_digest, the highest-traffic authoring activity is invisible to the extraction stage. Exporting this function is the first of two steps; the second adds the call in activities.ts. Adding the export keyword alone changes no behaviour and removes no caller: the existing call site at the POST / handler is unaffected.\n\nDo not change the function body. Do not change any other line in the file.\n\nPOST-CONDITION: after this change the file contains the exact string \"export async function insertTraceDigest\", the existing internal call site still compiles, and the file typechecks clean.",
+  "goal_text": "In repos/activity-api/src/routes/execution-traces.ts, export the insertTraceDigest helper so a sibling route can reuse it instead of duplicating the digest write.\n\nReplace this line, which occurs exactly once in the file:\nasync function insertTraceDigest(trace: any, body: any, jwtToken?: string): Promise<void> {\n\nwith exactly this line:\nexport async function insertTraceDigest(trace: any, body: any, jwtToken?: string): Promise<void> {\n\nWHY: trace_digest is written by exactly one call site, the POST / handler of this router, mounted at /v2/activities/execution-traces. The sibling route POST /executions in repos/activity-api/src/routes/activities.ts, mounted at /v2/activities, records executions WITHOUT a digest. Measured 2026-09-12: activity feature_compose has 2491 rows in execution and ZERO rows in trace_digest, and fleet-wide only 1311 of 10717 executions in 24 hours are digested. Because execution_exemplar is extracted solely from trace_digest, the highest-traffic authoring activity is invisible to the extraction stage. Exporting this function is the first of two steps; the second adds the call in activities.ts. Adding the export keyword alone changes no behaviour and removes no caller: the existing call site at the POST / handler is unaffected.\n\nDo not change the function body. Do not change any other line in the file.\n\nPOST-CONDITION: after this change the file contains the exact string \"export async function insertTraceDigest\", the existing internal call site still compiles, and the file typechecks clean.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-5d1e43aa",
+  "source_gap_source": "substrate_detected"
+}

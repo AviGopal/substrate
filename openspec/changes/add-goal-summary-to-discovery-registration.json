@@ -1,0 +1,17 @@
+{
+  "title": "Register goal_summary in discovery-registration.ts",
+  "description": "Registers the 'goal_summary' shape in discovery-registration.ts to close the orphaned-capability-goal_summary gap.",
+  "changes": [
+    {
+      "type": "edit_file",
+      "path": "/workspace/git/super-repo/repos/development-vessel/src/discovery-registration.ts",
+      "changes": [
+        {
+          "type": "insert_after",
+          "anchor": "    shapes: 'conceptDbReachable' in config && config.conceptDbReachable === false\n      ? config.discovery.shapes.filter((s: string) => !['concept_usage_record', 'concept_search_by_source', 'concept_select_for_prompt'].includes(s))\n      : config.discovery.shapes,",
+          "content": "    \"goal_summary\",\n"
+        }
+      ]
+    }
+  ]
+}

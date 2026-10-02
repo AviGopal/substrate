@@ -1,0 +1,2 @@
+Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.
+[status] waiting for usable: live=unknown seeded=unknown served=unknown usable=unknown connected=unknown 

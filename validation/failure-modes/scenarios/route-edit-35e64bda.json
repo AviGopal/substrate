@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-35e64bda",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/discovery-vessel/src/index.ts to make peer fan-out log a non-ok peer response instead of swallowing it. In th",
+  "description": "Edit repos/discovery-vessel/src/index.ts to make peer fan-out log a non-ok peer response instead of swallowing it. In the forwardToPeers function, the current line `      if (!res.ok) return` silently discards a non-ok response, so a peer 401/403 (usually a missing or wrong HUB_API_KEY, which is set by no deploy path) is byte-identical to \"this peer has no producer\". Replace that single line so that before returning it logs the peer and res.status via console.warn, appending the hint \" — auth rejected; check HUB_API_KEY / peer key issuer\" when res.status is 401 or 403. Do not change the merge/dedup behavior that follows a successful response.",
+  "goal_text": "Edit repos/discovery-vessel/src/index.ts to make peer fan-out log a non-ok peer response instead of swallowing it. In the forwardToPeers function, the current line `      if (!res.ok) return` silently discards a non-ok response, so a peer 401/403 (usually a missing or wrong HUB_API_KEY, which is set by no deploy path) is byte-identical to \"this peer has no producer\". Replace that single line so that before returning it logs the peer and res.status via console.warn, appending the hint \" — auth rejected; check HUB_API_KEY / peer key issuer\" when res.status is 401 or 403. Do not change the merge/dedup behavior that follows a successful response.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-35e64bda",
+  "source_gap_source": "substrate_detected"
+}

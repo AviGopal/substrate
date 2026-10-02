@@ -1,0 +1,6 @@
+{
+  "summary": "Delete old http-response.ts",
+  "description": "Delete the old http-response.ts resolver file.",
+  "path": "repos/development-vessel/src/resolvers/http-response.ts",
+  "action": "delete"
+}

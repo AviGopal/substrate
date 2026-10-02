@@ -1,0 +1,590 @@
+{
+ "source": "reports-2",
+ "coverage": "NOTE: the raw notes file was NOT written. The harness refused the Write (\"Subagents should return findings as text, not write report files\"), and I did not work around that through Bash, so everything is in this record instead. Shard = find validation/reports -name '*.md' | sort | sed -n '24,46p', which is 23 files, all in validation/reports/causal-attempt-ledger/. Read in full: GAPS_OBSERVED.md (61 numbered findings; #44 is used twice), RUN0_DRYRUN, RUN10-FAIL-1600, RUN10-FAIL-1838, RUN10-VOID-0715, RUN10-VOID-2002, RUN11-FAIL-0203, RUN11-FAIL-1352, RUN11-VOID-1220, RUN12-FAIL-2238, RUN10.md, RUN10-PASS-0050, RUN10-PASS-0955, RUN10-PASS-1239, RUN11-PASS-2153, RUN11-prev-0305 (a 158-byte stub). Headers and failed items only: RUN10-PASS-2105, RUN10-PASS-0306, RUN10-prev-0047, RUN10-prev-0305, RUN11.md, RUN11-PASS-0346, RUN11-prev-0047. All seven are 10/10, and 5 are byte duplicates of other run files (RUN10.md=RUN10-PASS-0306, RUN10-prev-0305=RUN10-PASS-0050, RUN10-prev-0047=RUN10-PASS-2105, RUN11.md=RUN11-PASS-0346, RUN11-prev-0047=RUN11-PASS-2153). Outside the shard and not read: FINISH_LINE.md, RUN1-9, RUN12.md/-PASS-0433/-prev-0047, backup-trace-store-reconcile/. Read-only live cross-check on substrate-live, 09-29 ~03:40Z: gaps.json holds 6,276 gaps (10.5 MB) and 480 -narrowed ids. unaccounted-landing* gaps: 114 superseded, 14 open aggregates, 9 rejected, 1 closed. The ephemeral-endpoint hijack gap is open x2. trace-store-reconcile lease gaps, lease-rollback gaps and live-sync residue gaps are still open. /workspace/parked-landings holds 47 files. Run tally for the shard: 7 distinct 10/10 passes, 5 FAIL records, 3 VOID or stopped runs. Each non-pass was caused by a different real substrate defect; none was a ledger bug.",
+ "attempts": [
+  {
+   "key": "write-read-mismatch",
+   "title": "Register attempt before preLiveSync (RUN0 false-negative held)",
+   "where": "development-vessel feature-compose staging + cutover registerAttempt; RUN0_DRYRUN.md",
+   "tried": "feature_compose copied staged drafts into /vessels before the cutover took its pre-snapshot, so pre and post both showed the change. The fix registers the attempt and pre-snapshot first, passes attempt_id, and makes the cutover's registerAttempt idempotent.",
+   "outcome": "partial",
+   "date": "2026-09-23",
+   "evidence": "Later graded runs pass 1a. The same class returned on the parked-resume path (#48, RUN10-VOID-2002): resumeParkedLanding passes no attempt_id, so a new attempt is minted after the live sync."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Check ids fixed so snapshots compare units and gates, not just the canary (#31)",
+   "where": "development-vessel attempt-register.ts, 2cdc90f (invariantSelect)",
+   "tried": "Pass real check ids instead of result ids, which evaluateChecks answered not_applicable.",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "Fixed at 2 registration sites; a third site (the parked resume) registers checks:null (#48). Making unit checks real then surfaced #36 (blame for restart flips) and #40 (transient mitosis units)."
+  },
+  {
+   "key": "hollow-landing",
+   "title": "dispatchContext readers landed without their enterWith writer (5c1c7d2)",
+   "where": "goal-host runGoalWithRecovery; GAPS_OBSERVED #41",
+   "tried": "Declare dispatchContext and its readers. The enterWith writer was dropped from the landing, and the operator recorded it as landed without checking.",
+   "outcome": "failed",
+   "date": "2026-09-24",
+   "evidence": "Every reader read undefined until a one-line enterWith fix was queued. Run 4 item U failed on it."
+  },
+  {
+   "key": "hollow-landing",
+   "title": "attempt_register landed with two dead string keys (c89861b)",
+   "where": "development-vessel attempt_register; #22",
+   "tried": "A new resolver landed through tsc, the semantic judge and the refuters.",
+   "outcome": "failed",
+   "date": "2026-09-24",
+   "evidence": "It read kind attemptSnapshot while stateSnapshot is written, and expected shape unaccountedLandings while the scan returns unaccountedLandingReport, so the sweep was dead code. Compose logged 'TARGET HAS NO TEST FILE'."
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Execution-id threading, fixed hop by hop (#32 -> #41 -> #43 -> #60 -> #61)",
+   "where": "goal-host rawResolve/ufExecuteTool/6b4da46/2f6436f/1b98343; llm-resolver 324f7f1; development-vessel llm-completion-dispatch.ts, d72654f, d4456d9, 829f613; ed81a69 (bash host)",
+   "tried": "Seven or more separate per-hop stamps of execution_id, each announced as the fix: rawResolve, enterWith, the floor dispatchTool, llm-completion-dispatch, author-producer, composed-capability, the discovery proxy.",
+   "outcome": "worked",
+   "date": "2026-09-24..26",
+   "evidence": "#61 was closed 09-26 with a falsifier: 0 id-less [type,command] requests between 08:55 and 09:55Z. Before that, each graded run exposed a new dropping hop: 11 of 19 U commits were null in RUN10-FAIL-1600, and 1 of 21 in RUN12-FAIL-2238. This is the clearest same-issue-new-hat chain in the shard. There is no single context carrier."
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Quadratic unaccounted_landing_scan made linear (429c8bd)",
+   "where": "development-vessel, 2026-09-25 15:06",
+   "tried": "Build the landingEvent and attemptIntent key sets once per scan, instead of re-parsing the 2.3 MB landingEvent.jsonl for each of 5,471 spool files (about 30M JSON.parse calls).",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "Scan time went from 13-14 s to 0.028-0.033 s. Output matches the ledger: ingested 5482, commits_seen 336, unaccounted 147."
+  },
+  {
+   "key": "false-verification",
+   "title": "DEFER line named only the oldest unaccounted sha (7c70178)",
+   "where": "goal-host",
+   "tried": "List every unaccounted sha of the dispatch instead of the first match from .find.",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "RUN11-FAIL-1352 addendum; later runs pass item 3'."
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Fold per-commit unaccounted-landing gaps into one aggregate per repo (#52)",
+   "where": "gap store, sweepAttempts",
+   "tried": "One aggregate gap per repo; the legacy per-commit gaps become superseded with duplicate_of; the close predicate is 'the repo's next landing carries an attempt'.",
+   "outcome": "partial",
+   "date": "2026-09-25",
+   "evidence": "Live 09-29: 114 superseded and 14 aggregates open (13 repos plus unknown). The close predicate has closed none of them. Before the fold: 469 opened and 36 closed in 24 h."
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Operator repair of crystallized trace-store-reconcile variants (#14)",
+   "where": "activityTemplate_update on 4 variants; backups in causal-attempt-ledger/backup-trace-store-reconcile/",
+   "tried": "Restore ttl_ms 300000 and the {{extract_lease_token_text}} placeholder, which extraction had redacted to the literal '[redacted]'.",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "#19: reconcile still fails every run with 'lease_token is required' and leaks the global change_window lease for 5 min per run. Live 09-29 open gaps: a-failing-trace-store-reconcile-re-takes-the-single-global-change-window..., the-trace-store-reconcile-remedy-pins-the-base-template-id..., template-input-lint-development-vessel_trace-store-reconcile."
+  },
+  {
+   "key": "env-gating",
+   "title": "CUTOVER_LEASE_WAIT_MS=330000 stopgap",
+   "where": "development-vessel unit file",
+   "tried": "Raise the cutover lease wait above reconcile's TTL so verified drafts are not discarded.",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "The live drop-in was pending approval. Env-gated behaviour violates law 1. The root cause (#19) is open."
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Park verified drafts instead of discarding them on lease contention (resumable-landings)",
+   "where": "development-vessel /workspace/parked-landings, resumeParkedLanding",
+   "tried": "Defer without rollback, then resume on redispatch.",
+   "outcome": "partial",
+   "date": "2026-09-25",
+   "evidence": "The resume path breaks attempt attribution (#48, RUN10-VOID-2002). goal-host reports a parked patch as UNFAVORABLE with no detail (#49). The staged draft is left in the non-isolated super-repo worktree (#45) and gets swept into another gap's commit (#44). 47 parked files sit live on 09-29, and nothing auto-resumes them."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Revert goal-host 8c31cdb globalThis.fetch monkey-patch (6ce1446)",
+   "where": "goal-host src/index.ts; RUN11-VOID-1220",
+   "tried": "A traced feature_compose called directly on development-vessel, restoring 60833b4:src/index.ts, because goal-host routing was broken.",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "The run was voided. The landing gate had passed a process-global side effect; nothing checks for that class."
+  },
+  {
+   "key": "directed-overshoot",
+   "title": "Drift gate 0a0d59f, then base-sha fix 082f6ee, which broke freshness (#47, #51)",
+   "where": "development-vessel vessel-mitosis-cutover.ts / feature-compose staged_base_sha",
+   "tried": "0a0d59f refused on HEAD content sha != staged_base_sha. 082f6ee changed staged_base_sha to the pre-edit hash.",
+   "outcome": "reverted",
+   "date": "2026-09-25",
+   "evidence": "0a0d59f caused 14 COMMITTED DRIFT refusals and 1 landing in 3 h; the operator reverted it with 97f7cdf at 20:05:24, and the ledger had settled it 'held'. 082f6ee then failed 4 of 7 freshness checks because one field carried two meanings. It resurfaced as the lane deadlock in the memory index."
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Probe restore path fix: strip repos/ in extractProbeFilePaths",
+   "where": "development-vessel author-producer.ts; RUN10-FAIL-1838",
+   "tried": "Map repos/<v>/... to /vessels/<v>/..., where local-tools actually writes, instead of /vessels/repos/<v>, which never exists.",
+   "outcome": "unknown",
+   "date": "2026-09-25",
+   "evidence": "Dispatched. The live canary had been overwritten by a validation probe. The probe's side effects (git commits) are still unsandboxed (#60)."
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Container git hooks stopped recording /tmp checkouts (#16)",
+   "where": "container hooks _record.sh",
+   "tried": "Fix at the source.",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "About 900 events per hour from reland-verdict fixtures before the fix."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Restore sed-bloated worktree files; stop the retry harness (#35)",
+   "where": "/workspace/git/super-repo/repos/*: goal-host index.ts (170 MB, 658,893 lines appended), feature-compose.ts (95 MB), gap-to-feature.ts (94 dup imports), patch-with-tools.ts; backups in /workspace/backups/sed-bloat-2026-09-24/",
+   "tried": "The operator restored the files from HEAD and stopped the retry harness. The root cause was that dispatch.sh sent the operator only as a tag, not as the body field.",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "The instances were cleaned. The walk shell route and the satisfier refusal still do not cover shell executors (#4, #33)."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Harness pre-run check reads push clone HEAD, not the live file (#38)",
+   "where": "operator harness",
+   "tried": "Stop grepping the live canary.",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "Run 0 and run 4 were both trapped by the staged live file."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "make run-live volume inspect-before-create for podman (#29)",
+   "where": "scripts/substrate/Makefile (3 sites)",
+   "tried": "Inspect the volume first and create it only when absent.",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "Recreate exited 125 on podman, which explains why the 02:10 recreate after the docker rm -f never came back."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "development-vessel-seed ordered after identity-seeder (#10)",
+   "where": "scripts/substrate/units/development-vessel-seed.service",
+   "tried": "Unit ordering.",
+   "outcome": "unknown",
+   "date": "2026-09-24",
+   "evidence": "Takes effect on the next image build; the file shows as modified in git status."
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Hold 4 window-blind dispatchers during graded runs (#59 addendum)",
+   "where": "gap-compose.service, boredom in-process selector, funnel-drain.timer, substrate-gap.ts in-process nudge",
+   "tried": "The operator paused (1)-(3). (4) has no shaped control. autonomous_pick lease.",
+   "outcome": "partial",
+   "date": "2026-09-25",
+   "evidence": "Needed for the passing streak. RUN10-VOID-2002 shows a compose picked before the lease was taken still landed. There is no single shared window shape for landing, restart and sync."
+  },
+  {
+   "key": "false-verification",
+   "title": "Harness: open a run only when goal-host/dev-vessel in_flight == 0; retry semantic-gate UNFAVORABLE",
+   "where": "operator harness (run-task.sh, master25/26)",
+   "tried": "Avoid earlier fixture dispatches walking into the next run (#54 recurrence).",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "The later streak passed: RUN10/11 at 03:06 and 03:46 on 09-26. The substrate-side post-walk double-route check was not confirmed."
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Host watchdog restarts local-tools when its discovery row is hijacked (#25)",
+   "where": "operator host script",
+   "tried": "Mitigate the ephemeral-endpoint hijack during the acceptance window.",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "Symptom mitigation only. The gap a-transient-verify-instance-registers-an-ephemeral-endpoint... is still open x2 live on 09-29."
+  }
+ ],
+ "problems": [
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Commits and shell calls made on behalf of a dispatch carry execution_id=null. They are untraced, and the mint deferral cannot match them.",
+   "root_cause": "Every resolver hop that rebuilds a pointer from an allow-list drops context fields. The id was stamped per hop instead of carried as shared context.",
+   "first_seen": "2026-09-24 (#32)",
+   "last_seen": "2026-09-26 (#61 closed)",
+   "recurrences": 7
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The live runtime tree holds uncommitted or rolled-back drafts. Pre-snapshots see the change, created files are orphaned, a vessel restarts onto a duplicate insert, and the harness is fooled.",
+   "root_cause": "feature_compose preLiveSync stages drafts into /vessels before the cutover. Rollback covers isolated vessels only and does not remove created files.",
+   "first_seen": "2026-09-23 (RUN0, #26)",
+   "last_seen": "2026-09-25 (#50); live open gap a-refused-surql-cutover-left-its-live-sync-in-the-live-tree",
+   "recurrences": 6
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Verified FAVORABLE drafts are discarded or parked because the global change_window lease is held.",
+   "root_cause": "trace-store-reconcile crystallized with a redacted token and a stale TTL. It fails every run before releasing the single global lease.",
+   "first_seen": "2026-09-24 (#14)",
+   "last_seen": "2026-09-29 (open gaps; 47 parked landings)",
+   "recurrences": 4
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "local-tools' discovery row points at an ephemeral port, and compose grounding windows are 0 bytes.",
+   "root_cause": "Transient verify instances register under the live vessel id. The real vessel registers only at boot, so the row never heals.",
+   "first_seen": "2026-09-24 (#3)",
+   "last_seen": "2026-09-29 (gap open x2)",
+   "recurrences": 2
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Verification and validation code writes to live stores: a phantom gap in live gaps.json, the live canary overwritten, real git commits from probes, placeholder-filled gaps.",
+   "root_cause": "Verify instances, author_producer validateProducesShape and draft execution run against live stores and the real producers without a sandbox. The probe restore path mapped the wrong root.",
+   "first_seen": "2026-09-24 (#20)",
+   "last_seen": "2026-09-25 (RUN10-FAIL-1838)",
+   "recurrences": 5
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Landings pass every gate but do nothing: a reader with no writer, dead string keys, a copied node_modules consumer.",
+   "root_cause": "The gates read a diff and never execute the main path. There is no per-resolver test requirement.",
+   "first_seen": "2026-09-24 (#22, #41, #6)",
+   "last_seen": "2026-09-24",
+   "recurrences": 3
+  },
+  {
+   "key": "false-verification",
+   "symptom": "The ledger settles 'held' on the commit that stopped every landing (0a0d59f), blames unrelated landings for restart flips, and readiness passes a dead container.",
+   "root_cause": "The check set observes liveness and gate refusals, not a positive 'known-good landing still lands' case. There is no restart discriminator, and silent skips count as passes.",
+   "first_seen": "2026-09-24 (#30, #36)",
+   "last_seen": "2026-09-25 (#47)",
+   "recurrences": 3
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Reach is graded wrong: a landed edit is graded reached:false (#12), an old commit of the same goal text gives false credit (#37), and one goal produces many commits (#46).",
+   "root_cause": "The edit-intent route falls through to the walk and grades the walk. The gap id is a hash of the goal text. Retries are not idempotent over side effects.",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-25 (RUN12 21 commits)",
+   "recurrences": 3
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "One edit dispatch is routed to feature_compose twice. A second compose lands inside the next run's window.",
+   "root_cause": "The post-walk EDIT-INTENT route does not check whether this dispatch's edit already landed or is in flight. The 4dec1bc guard covers only escalation.",
+   "first_seen": "2026-09-25 (#54)",
+   "last_seen": "2026-09-26 (RUN11-FAIL-0203, d3cd630)",
+   "recurrences": 2
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Autonomous landings inside graded windows break routing or landing (8c31cdb fetch patch; 0a0d59f drift deadlock; 91c042b changed U's path).",
+   "root_cause": "Window-blind dispatchers: landing, restart and sync paths read no shared window/lease shape. Gates do not check for process-global side effects.",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-25",
+   "recurrences": 4
+  },
+  {
+   "key": "node-locality",
+   "symptom": "self-recovery restarts saturated vessels and kills in-flight composes. pull-sync takes owed restarts on content that already matches. Breadcrumbs misattribute restarts.",
+   "root_cause": "The liveness probe cannot tell saturation from death, db_pressure_backoff reads 0, restarters read no window shape, and breadcrumbs are not PID-bound.",
+   "first_seen": "2026-09-25 (RUN10-VOID-0715)",
+   "last_seen": "2026-09-29 (open gap activity-api-recommend-queries-block-the-event-loop... x2)",
+   "recurrences": 3
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Trace-ingest storm: 1064 POSTs and 1194 duplicate-id errors per 5 min, 233 POSTs of 60 s or more, host load around 30. A quadratic ledger scan blocks the event loop.",
+   "root_cause": "Clients re-send slow trace POSTs while the first insert is still in flight. The FTS REBUILD averages 833 s. The onset trigger was never identified.",
+   "first_seen": "2026-09-25 06:55",
+   "last_seen": "2026-09-25 08:26",
+   "recurrences": 1
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "sed -i fall-through appended one line 658,893 times (170 MB goal-host index.ts) plus 3 other files, with no commit, invisible to hooks and the ledger.",
+   "root_cause": "The walk tool fallback on edit goals is ungated, and the satisfier's fs-write refusal does not cover shell. Operator dispatches without the operator body field competed as autonomous, were refused BUSY, and were retried.",
+   "first_seen": "2026-09-23 14:20",
+   "last_seen": "2026-09-24 09:00",
+   "recurrences": 4
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Seed and learned templates drift from source (TTL, redacted placeholders). bootstrap-seeder refuses 19 templates.",
+   "root_cause": "The seeder skips a populated catalogue. Extraction redacts placeholders. The learning_track field is required but unset.",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29 (open)",
+   "recurrences": 3
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "The drafter needs an operator-added region hint. Drafts come from weak models, and anchors come from a stale window.",
+   "root_cause": "Hardcoded OpenRouter model list and claude-slug routing. The window is built from the stale super-repo copy. Constraints such as 'python/node absent' are not read at use time.",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-25",
+   "recurrences": 4
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "The drafter-facing consequence lesson is dropped. A parked verdict is reported as UNFAVORABLE. Intent touched_files misses swept-in files.",
+   "root_cause": "writeLesson guards on a gap that was never persisted; goal-host drops the parked flag; the intent is registered from the plan, not the diff.",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-25",
+   "recurrences": 3
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "The LLM plane ran dry (402 from OpenRouter and Chutes), llm_completion was de-advertised, and no gap was filed.",
+   "root_cause": "There is no detector for provider credit exhaustion.",
+   "first_seen": "2026-09-24 (#8)",
+   "last_seen": "2026-09-24",
+   "recurrences": 1
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "substrate-live was removed by a concurrent session (docker rm -f) and was down about 2 h. Nothing observed its absence.",
+   "root_cause": "Shared live container with no lease; observers run inside the thing that disappeared.",
+   "first_seen": "2026-09-24 02:10",
+   "last_seen": "2026-09-24",
+   "recurrences": 1
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "CLAUDE.md's one-file-per-goal guidance contradicts the semantic judge, which requires a new resolver's registration in the same compose.",
+   "root_cause": "The doc rule predates the semantic judge's 'no callers' rejection.",
+   "first_seen": "2026-09-24 (#13)",
+   "last_seen": "2026-09-24",
+   "recurrences": 1
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "Causal attempt ledger (attemptIntent, pre/outcome/settle snapshots, five-valued verdicts, consequence lessons)",
+   "location": "development-vessel attempt-register.ts, attempt-checks, spool landingEvent.jsonl / attemptIntent.jsonl",
+   "purpose": "Attribute every landing to an attempt and execution, detect flips, and settle held, regressed or unresolved",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Graded streak of 10/10 runs 09-25/26; RUN*.md files"
+  },
+  {
+   "name": "unaccounted_landing_scan + sweepAttempts",
+   "location": "development-vessel",
+   "purpose": "Find commits without a registered attempt",
+   "status": "live-used",
+   "general": true,
+   "evidence": "429c8bd took it from 13 s to 0.03 s; 14 aggregate gaps live"
+  },
+  {
+   "name": "Aggregate unaccounted-landings-<repo> gaps",
+   "location": "gap store",
+   "purpose": "Replace per-commit gap flooding",
+   "status": "live-used",
+   "general": true,
+   "evidence": "114 superseded, 14 open; the close predicate has closed none"
+  },
+  {
+   "name": "Extraction deferral guard (reach->mint DEFER / WITHHELD)",
+   "location": "goal-host recordGoalPath / mint path",
+   "purpose": "Withhold ribosome extraction while a dispatch has unaccounted landings",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Item 3' in runs; 7c70178"
+  },
+  {
+   "name": "dispatchContext AsyncLocalStorage + enterWith",
+   "location": "goal-host runGoalWithRecovery",
+   "purpose": "Carry the dispatch id to every hop",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Hollow in 5c1c7d2 (#41) until the writer was added; the floor continuation can run with an empty store (RUN12)"
+  },
+  {
+   "name": "Per-hop execution_id stamps",
+   "location": "goal-host rawResolve/ufExecuteTool/discovery proxy 1b98343; llm-resolver dispatchTool 324f7f1; dev-vessel llm-completion-dispatch, author-producer d72654f, composed-capability d4456d9/829f613; bash host ed81a69",
+   "purpose": "Attribute shell side effects to their dispatch",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "dispatchContext (one concern patched at 7+ sites)",
+   "evidence": "#32-#61"
+  },
+  {
+   "name": "local-tools id-less shell request instrumentation",
+   "location": "local-tools-vessel",
+   "purpose": "Log pointer keys and caller when execution_id is missing",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Named the [type,command] sender, which led to 1b98343"
+  },
+  {
+   "name": "Commit-hook committer attribution (committer_unit, committer_cmd)",
+   "location": "container git hooks _record.sh",
+   "purpose": "Identify which unit made each commit",
+   "status": "live-used",
+   "general": true,
+   "evidence": "RUN10-FAIL-1600 diagnosis"
+  },
+  {
+   "name": "preLiveSync staging of drafts into the live tree",
+   "location": "development-vessel feature-compose staging loop",
+   "purpose": "Stage verified drafts before the cutover",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Root of #23, #26, #27, #45, #50 and of false pre-snapshots; harmful"
+  },
+  {
+   "name": "Parked landings + resumeParkedLanding",
+   "location": "development-vessel /workspace/parked-landings",
+   "purpose": "Keep verified drafts when the cutover is deferred",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "47 parked files on 09-29; resumes only on redispatch of the same goal; the resume drops attempt_id (#48)"
+  },
+  {
+   "name": "change_window maintenance lease",
+   "location": "development-vessel maintenance-lease.ts, cutover",
+   "purpose": "Serialize cutovers and maintenance",
+   "status": "broken",
+   "general": true,
+   "evidence": "A single global lease, leaked by trace-store-reconcile (#14, #19); open gaps on 09-29"
+  },
+  {
+   "name": "autonomous_pick lease",
+   "location": "development-vessel",
+   "purpose": "Keep in-process autonomous picks out of graded windows",
+   "status": "live-used",
+   "general": true,
+   "evidence": "RUN10-FAIL-1838 in-window landings were only fixtures; RUN10-VOID-2002 shows a pick taken before the lease still landed"
+  },
+  {
+   "name": "BRIDGE-AUTHOR / author_producer validateProducesShape",
+   "location": "goal-host index.ts ~10302 -> dev-vessel author-producer.ts ~678",
+   "purpose": "Author a missing producer mid-walk and validate it",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Validation runs the real producer: untraced git commits (#60) and an overwritten live canary (RUN10-FAIL-1838)"
+  },
+  {
+   "name": "Probe file snapshot/restore (extractProbeFilePaths)",
+   "location": "author-producer.ts",
+   "purpose": "Undo validation probe file writes",
+   "status": "broken",
+   "general": false,
+   "evidence": "Mapped /vessels/repos/<v>, which never exists; fix dispatched 09-25"
+  },
+  {
+   "name": "EARLY EDIT-INTENT and post-walk EDIT-INTENT routes",
+   "location": "goal-host index.ts",
+   "purpose": "Route edit goals to feature_compose",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "Double routing: #54 and RUN11-FAIL-0203 (d3cd630)"
+  },
+  {
+   "name": "LATE-LANDING detection by route-edit gap id",
+   "location": "goal-host",
+   "purpose": "Credit a late compose landing to its dispatch",
+   "status": "broken",
+   "general": false,
+   "evidence": "#37: credits old commits of the same goal text"
+  },
+  {
+   "name": "Satisfier filesystem-write refusal",
+   "location": "goal-host",
+   "purpose": "Block walks from writing vessel source",
+   "status": "broken",
+   "general": false,
+   "evidence": "#33 refused then claimed success; #35: the shell route is uncovered"
+  },
+  {
+   "name": "self-recovery liveness restarts",
+   "location": "container self-recovery",
+   "purpose": "Restart unhealthy vessels",
+   "status": "live-used",
+   "general": true,
+   "evidence": "#55 kills saturated vessels mid-work; db_pressure_backoff reads 0"
+  },
+  {
+   "name": "pull-sync owed restart",
+   "location": "container pull-sync",
+   "purpose": "Apply mirrored content to the runtime",
+   "status": "live-used",
+   "general": true,
+   "evidence": "#56 window-blind; false-stale mtime at 06:54:53"
+  },
+  {
+   "name": "Restart-attribution breadcrumb",
+   "location": "vessels startup",
+   "purpose": "Attribute restarts to their requester",
+   "status": "broken",
+   "general": false,
+   "evidence": "#57 reuses a stale breadcrumb"
+  },
+  {
+   "name": "trace-store-reconcile learned variants",
+   "location": "activity templates (4 variants)",
+   "purpose": "Periodic trace-store reconcile under the lease",
+   "status": "broken",
+   "general": false,
+   "evidence": "#19 fails every run and leaks the lease; open gaps 09-29"
+  },
+  {
+   "name": "bootstrap-seeder",
+   "location": "scripts (bootstrap tier)",
+   "purpose": "Seed the first activity templates",
+   "status": "broken",
+   "general": true,
+   "evidence": "#9: 19 templates refused because learning_track is missing"
+  },
+  {
+   "name": "substrate-ready.sh",
+   "location": "scripts/substrate",
+   "purpose": "Fleet readiness verdict",
+   "status": "broken",
+   "general": true,
+   "evidence": "#30 reports ready for a Created (not running) container"
+  },
+  {
+   "name": "llm-resolver pickProvider / isModelWilling hardcoded model list",
+   "location": "llm-resolver-vessel",
+   "purpose": "Route LLM calls to a provider",
+   "status": "live-used",
+   "general": true,
+   "evidence": "#17: strong OpenRouter models unreachable; claude slugs sent to a keyless lane"
+  },
+  {
+   "name": "Host watchdog for the local-tools discovery row",
+   "location": "operator host",
+   "purpose": "Heal the ephemeral endpoint hijack",
+   "status": "unknown",
+   "general": false,
+   "evidence": "#25 operator stopgap"
+  },
+  {
+   "name": "Acceptance harness (master25/26, run-task.sh, grader, RUN*.md reports)",
+   "location": "operator side + validation/reports/causal-attempt-ledger",
+   "purpose": "Grade the ledger over R, restore, C and U fixtures",
+   "status": "live-used",
+   "general": false,
+   "evidence": "23 reports, 5 of them byte duplicates (prev/unsuffixed)"
+  }
+ ],
+ "principles": [
+  "A new resolver must not land without a per-resolver test that executes its main path; gates that read a diff cannot see dead string keys (GAPS_OBSERVED #22)",
+  "A file present in /vessels is not landing evidence; read the push clone's HEAD (#23, #38)",
+  "A context field threaded through a resolver chain is lost at every hop that rebuilds its pointer from an allow-list, so trace the full chain through discovery before dispatching per-hop fixes (#43 addendum)",
+  "Instrument rather than infer: after reasoning refuted candidate hops, logging at the receiver named the caller (RUN10-FAIL-1600)",
+  "The baseline check set must include a positive 'known-good landing still lands' (landing_liveness) case, or the worst regression, of the landing path itself, is invisible (#47)",
+  "A flip coinciding with an unreachable dependency or a recorded restart settles unresolved, not regressed: surprise, not blame (#36, design D7)",
+  "Register attempt intent from the commit diff, not the compose plan, and flag surplus files (#44)",
+  "Validation probes must run in a sandbox or be refused for side-effecting commands (#60)",
+  "A retry must be idempotent over its side effects (#46)",
+  "One shared window/lease shape should be read by the landing, restart and sync paths; windows announced to sessions have no reader in the substrate (#56, #59)",
+  "Tell saturation from death before restarting, and back off under DB pressure (#55)",
+  "One field, one meaning: two checks reading staged_base_sha with two meanings deadlocked or broke landings (#51)",
+  "Record refuted hypotheses so they are not re-tried, and mark relayed claims as not measured (RUN0, #47, #54 corrections)",
+  "Do not change a grader after the fact; a void run counts as no pass (RUN12, RUN10-VOID-0715, RUN11-VOID-1220)",
+  "Operator identity must travel in the dispatch body, not only as a tag; otherwise operator work competes as autonomous work and cascades into retries (#35)",
+  "A silent skip reads as a pass (#30)",
+  "The routable model set should come from the provider's live list, not a literal (#17)",
+  "A crystallized template can freeze a defect (redacted placeholder, stale TTL); seed and learned templates need drift detection against source (#14, #18)"
+ ],
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/reports-2.md (NOT WRITTEN: the harness refused the Write for subagents; the full content is in this structured record)"
+}

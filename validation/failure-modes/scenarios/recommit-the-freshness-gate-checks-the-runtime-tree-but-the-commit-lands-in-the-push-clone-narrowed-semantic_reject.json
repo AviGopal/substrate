@@ -1,0 +1,19 @@
+{
+  "id": "recommit-the-freshness-gate-checks-the-runtime-tree-but-the-commit-lands-in-the-push-clone-narrowed-semantic_reject",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed] BATCH SIGNATURE — THE COLLISION IS STRUCTURAL, NOT INCIDENTAL. Edit repos/development-vessel/src/resolvers/ve",
+  "description": "[narrowed] BATCH SIGNATURE — THE COLLISION IS STRUCTURAL, NOT INCIDENTAL. Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts.",
+  "goal_text": "[narrowed] BATCH SIGNATURE — THE COLLISION IS STRUCTURAL, NOT INCIDENTAL. Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-the-freshness-gate-checks-the-runtime-tree-but-the-commit-lands-in-the-push-clone-narrowed-semantic_reject",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,210 @@
+{
+  "investigation_id": "054",
+  "generated_at": "2026-05-27T11:18:17Z",
+  "prior_investigation_id": "2026-05-27T10-35-05Z-investigation-053",
+  "auditor": "claude-sonnet-4-6 (independent substrate auditor)",
+  "scope": "Commits since investigation-053 (2026-05-27T10:35:05Z): 34c55690, d42c4fd1, 29cd8f55, d83baee9, 86186cb4, 789bf275",
+  "commits_audited": [
+    {
+      "sha": "34c55690",
+      "title": "feat(closure): inv-028 C addressed + F-133 fix — engine resolveInputs poll-and-wait",
+      "files_changed": ["openspec/changes/2026-05-27-neutral-emitter-lifecycle-bus/tasks.md", "validation/dev-responses/2026-05-27T10-50-00Z-dev-response-004.md"],
+      "note": "Super-repo commit. Submodule ias-executor-ts NOT advanced (pointer stays at 49bfb43). The ias-executor-ts change 37a9ddb was committed locally and deployed to container via docker cp; super-repo does not reference it."
+    },
+    {
+      "sha": "d42c4fd1",
+      "title": "feat(closure): F-111 closed — substrate dist drift detector",
+      "files_changed": ["validation/dev-responses/2026-05-27T11-00-00Z-dev-response-005.md"],
+      "note": "Super-repo commit. Submodule ias-executor-ts NOT advanced. The ias-executor-ts change b6b58a2 (verify-dist-fresh.ts) committed locally; super-repo still points to 49bfb43."
+    },
+    {
+      "sha": "29cd8f55",
+      "title": "feat(closure): F-129 FULL + F-135 self-resolved (audit inv-053 response)",
+      "files_changed": ["repos/metabob-activity-api (migration 140, refusal_events table, GET /v2/activities/refusals/stats)"]
+    },
+    {
+      "sha": "d83baee9",
+      "title": "feat(closure): F-134 addressed — promote refuses hallucinated-resolver templates",
+      "files_changed": ["repos/metabob-activity-api/src/routes/activities.ts (POST /templates/:id/promote guard)"]
+    },
+    {
+      "sha": "86186cb4",
+      "title": "feat(closure-audit): add push-away closure property (IAL §27.S.6)",
+      "files_changed": ["validation/scripts/closure-audit.ts", "validation/state/closure-status.json"]
+    },
+    {
+      "sha": "789bf275",
+      "title": "docs(closure-audit): dev-response-008 + agent-coord update — push-away self-verifying",
+      "files_changed": ["validation/dev-responses/2026-05-27T11-15-00Z-dev-response-008.md", "validation/state/agent-coordination.json"]
+    }
+  ],
+  "prior_findings": [
+    {
+      "id": "F-128",
+      "severity": "LOW",
+      "title": "consecutive_progressing_cycles semantics — S.4a criterion ambiguous",
+      "status_in_053": "open",
+      "status_now": "open",
+      "evidence": "No commits address this. Coverage tick at 11:38Z shows coverage_progress=true, consecutive_progressing_cycles=4, windows=[7,9,7,5] (non-monotone). The counter counts non-overlapping hourly cells with any learned activity, not strict monotone progress. S.4a tasks.md criterion still unresolved on whether the checkbox can be marked complete. This finding remains advisory — S.4a is passing by the literal criterion text."
+    },
+    {
+      "id": "F-129",
+      "severity": "HIGH",
+      "title": "§27.S.6 push-away measurement surface",
+      "status_in_053": "partially_resolved",
+      "status_now": "resolved_with_caveat",
+      "evidence": "Commit 29cd8f55 adds migration 140 (refusal_events SCHEMAFULL table) + durable write path + GET /v2/activities/refusals/stats. Live verified: auditor probe issued (task_description='inv054 probe test', expected_output_shapes=['auditor_probe_shape_xyz_inv054_nonexistent']), refusal_type=no_producer_for_expected_shapes returned with cited evidence (candidates_examined=8, reason citing §27.S.6). Stats total incremented from 6→7 (confirmed durable write). Commit d83baee9 adds promote guard refusing templates with hallucinated resolvers (hallucinated_resolvers_in_template type). Stats at report time: total=8, by_type={no_producer_for_expected_shapes:7, hallucinated_resolvers_in_template:1}. CAVEAT: The measurement surface is complete and functional. §27.S.6 S2→S3 transition requires sustained measurement over adversarial exposure (not a single probe). Sustained window is 0 days old. The substrate can now record refusals durably; whether the pattern constitutes S2→S3 evidence is an operator judgment, not a binary gate. Closure-audit.ts now reports 7/7 properties closed including push-away.",
+      "caveat": "Measurement surface complete; S2→S3 signal from sustained adversarial exposure not yet demonstrated by temporal window."
+    },
+    {
+      "id": "F-130",
+      "severity": "HIGH",
+      "title": "Investigation numbering collisions",
+      "status_in_053": "resolved",
+      "status_now": "resolved",
+      "evidence": "validation/dev-responses/ namespace confirmed present. Note: parallel .md-only investigation files with overlapping numbers (e.g., 2026-05-27T09-40-00Z-investigation-054.md) still exist — these are a different series not in the canonical JSON chain. The JSON-anchored chain is unambiguous."
+    },
+    {
+      "id": "F-131",
+      "severity": "LOW",
+      "title": "Operator probe file provenance",
+      "status_in_053": "open",
+      "status_now": "open",
+      "evidence": "No commits address probe file attribution. Finding remains open."
+    },
+    {
+      "id": "F-132",
+      "severity": "LOW",
+      "title": "CLAUDE.md stale reference",
+      "status_in_053": "resolved",
+      "status_now": "resolved",
+      "evidence": "No regression observed."
+    },
+    {
+      "id": "F-133",
+      "severity": "LOW",
+      "title": "tasks.md regex mismatch",
+      "status_in_053": "resolved",
+      "status_now": "resolved",
+      "evidence": "Commit 34c55690 updated openspec/changes/2026-05-27-neutral-emitter-lifecycle-bus/tasks.md §1.1 regex from strict-3-segments to 2-to-4 segment pattern. Verified in diff."
+    },
+    {
+      "id": "F-134",
+      "severity": "MEDIUM",
+      "title": "Proposal non-executability — hallucinated resolver names",
+      "status_in_053": "open",
+      "status_now": "addressed",
+      "evidence": "Commit d83baee9 adds POST /templates/:id/promote guard. Implementation verified in repos/metabob-activity-api/src/routes/activities.ts lines 3155-3283. Built-in resolver set of 21 names (compose, activity, iteration, llm-prompt, impulse-resolve, validation, helmfile_sync, impulse_pool_selection, producer_selection, impulse_preparation, wire_discovery_registration, wire_auth_blueprint, scaffold_vessel_skeleton, docker_build_push, learning_signal_writer, verify_three_invariants, file_read, bash, llm, activity_recommendation, impulse_cooccurrence). Discovery-vessel /registry/shapes also queried (107 shapes). Templates with unregistered resolvers get 422 with intervention.refused bus event + refusal_events durable write. NOTE: The built-in allowlist includes helmfile_sync, scaffold_vessel_skeleton, docker_build_push — deployment/CI resolvers not available in the single-container substrate. These are permissive false-negatives in the guard: templates using these resolvers would pass promotion but fail at execution. This is a secondary finding (see F-139).",
+      "secondary_concern": "Hardcoded allowlist includes CI/deployment resolvers (helmfile_sync, scaffold_vessel_skeleton, docker_build_push) not present in single-container substrate — creates false-negative window in promote guard."
+    },
+    {
+      "id": "F-135",
+      "severity": "LOW",
+      "title": "concept-db restart unconfirmed",
+      "status_in_053": "open",
+      "status_now": "resolved",
+      "evidence": "journalctl confirms concept-db.service was Started multiple times on 2026-05-27: 10:15:46, 10:49:55, 10:51:43, 10:52:46, 11:13:20. Service is actively running and restarting. F-135 self-resolved as claimed."
+    },
+    {
+      "id": "F-136",
+      "severity": "LOW",
+      "title": "snake_case naming dispute — resolver_pattern_report",
+      "status_in_053": "open",
+      "status_now": "resolved_declined",
+      "evidence": "Substrate declined with rationale (as claimed in prior investigation). Shape inventory confirmed: development-vessel advertises 31 shapes. 29 use snake_case (git_status, fs_read, etc.). 2 use camelCase: memoryNote and memoryNote_write. These are cross-system protocol shapes (external to dev-vessel, matching activity-api convention). All dev-vessel-native shapes are uniformly snake_case. The naming dispute is resolved: existing convention is snake_case for dev-vessel shapes, camelCase for imported external protocol shapes."
+    },
+    {
+      "id": "F-137",
+      "severity": "LOW",
+      "title": "S.4a coverage temporal spread",
+      "status_in_053": "conditionally_passing",
+      "status_now": "conditionally_passing",
+      "evidence": "Coverage tick at 11:38Z: coverage_progress=true, coverage_fraction=0.633 (19/30 total_advertised), consecutive_progressing_cycles=4. Windows=[7,9,7,5] (reachable_learned per hour). Boredom activity observed: goal[2] probe-reachable-unlearned completed at 10:44Z, goal[3] harness-check-scenario submitted at 11:13Z. S.4a criterion (natural substrate activity → coverage_progress=true) is met. F-128 ambiguity persists but doesn't block the literal criterion."
+    }
+  ],
+  "new_findings": [
+    {
+      "id": "F-138",
+      "severity": "MEDIUM",
+      "title": "ias-executor-ts submodule pointer not advanced — 3 commits untracked by super-repo",
+      "description": "Super-repo commits 34c55690 and d42c4fd1 describe changes to ias-executor-ts (commits 37a9ddb and b6b58a2) but do NOT advance the super-repo submodule pointer. The pointer remains at 49bfb432a8684ae25e0bbb7eb0c48773846bc3dd (2026-05-26T19:45Z) while the submodule HEAD is at b6b58a2074d9b6b66468c4d293d846a7f8ce66c8 (3 commits ahead: 161eede, 37a9ddb, b6b58a2).",
+      "sub_findings": [
+        "verify-dist-fresh.ts (b6b58a2) exists locally in repos/ias-executor-ts/scripts/ but NOT in the container (/vessels/ias-executor-ts has only dist/, src/, node_modules/ — no scripts/ dir). The script is a developer tool meant to run from the operator's workspace, not from inside the container. This is expected design, but means F-111 closure is a workspace-tool only — the tool prevents future drift if used; it does not detect or prevent past drift autonomously.",
+        "The async resolveInputs with poll-and-wait (37a9ddb) IS deployed in the container dist (verified: /vessels/ias-executor-ts/dist/engine.js contains EXECUTOR_INPUT_RESOLUTION_TIMEOUT_MS logic). The functional change is live even though the pointer is stale.",
+        "ias-executor-ts remote origin (git@github.com:AviGopal/ias-executor-ts.git) returns 'Repository not found'. The 3 new commits have no remote backup. A container rebuild or git submodule update would lose these commits from the workspace (the deployed dist in the container would survive, but the source history would be orphaned)."
+      ],
+      "risk": "No remote backup for 3 functional commits. Container rebuild does not restore source; dist rebuild from stale pointer (49bfb43) would revert async resolveInputs behavior to pre-37a9ddb state.",
+      "recommendation": "Push ias-executor-ts to a recoverable remote (or mirror). Advance super-repo submodule pointer to b6b58a2. Until then, avoid git submodule update on repos/ias-executor-ts.",
+      "status": "open"
+    },
+    {
+      "id": "F-139",
+      "severity": "LOW",
+      "title": "Promote guard allowlist includes CI/deployment resolvers absent from single-container substrate",
+      "description": "The hardcoded builtInResolvers set in activities.ts promote endpoint includes helmfile_sync, scaffold_vessel_skeleton, docker_build_push. These are CI/deployment-context resolvers not registered in the single-container substrate's discovery registry. Templates using these resolvers will pass the promote guard but fail at execution time. This is a false-negative window in the guard — permissive by design for multi-substrate compatibility, but the substrate cannot execute such templates if promoted.",
+      "risk": "LOW — templates using these resolvers are unlikely to be authored by the substrate's own proposal system (which should only reference registered resolvers). The promote guard still catches hallucinated arbitrary names. The primary risk is that a substrate-authored proposal using helmfile_sync would pass promotion silently.",
+      "recommendation": "Consider warning (not refusing) when built-in resolver is not in discovery registry — provides observability without breaking multi-substrate compat.",
+      "status": "open"
+    }
+  ],
+  "verification_results": {
+    "F-129_durable_write": {
+      "method": "live probe",
+      "result": "CONFIRMED",
+      "detail": "Stats before probe=6, after probe+2s sleep=7 (delta=+1). Refusal type no_producer_for_expected_shapes with cited evidence (candidates_examined=8, IAL §27.S.6 cited in reason text). Fire-and-forget DB write confirmed durable."
+    },
+    "F-134_promote_guard": {
+      "method": "source inspection",
+      "result": "CONFIRMED — implementation present",
+      "detail": "activities.ts lines 3155-3283 implement the guard with discovery-vessel /registry/shapes fetch + 21-name built-in set + unregistered resolver detection → 422 + bus emit + refusal_events write. Refusal stats show hallucinated_resolvers_in_template=1 (test from earlier invocation in dev-response)."
+    },
+    "F-135_concept_db_restart": {
+      "method": "journalctl",
+      "result": "CONFIRMED — service active",
+      "detail": "5 Start events logged 10:15–11:13Z. Service is healthy and restarting normally."
+    },
+    "F-136_naming_convention": {
+      "method": "source inspection",
+      "result": "CONFIRMED — snake_case for native shapes",
+      "detail": "29 snake_case shapes, 2 camelCase (memoryNote, memoryNote_write — external protocol shapes). Convention is internally consistent."
+    },
+    "F-138_submodule_drift": {
+      "method": "git submodule status + container inspection",
+      "result": "CONFIRMED — 3 commits untracked",
+      "detail": "super-repo pointer=49bfb43, submodule HEAD=b6b58a2. verify-dist-fresh.ts NOT in container. Async resolveInputs IS in container dist (deployed). Remote origin returns 404."
+    },
+    "closure_audit_7_of_7": {
+      "method": "commit inspection + source review",
+      "result": "CONFIRMED — push-away property added",
+      "detail": "closure-audit.ts now probes push-away (3 sub-properties: refusal fires, stats endpoint live, count increments). closure-status.json push-away.closed=true. Auditor independently verified all 3 sub-properties live."
+    }
+  },
+  "substrate_state": {
+    "health": "healthy",
+    "activity_api_version": "1.20.9",
+    "redis": "healthy",
+    "surrealdb": "healthy",
+    "discovery": "healthy (registered)",
+    "embedding": "healthy (all-MiniLM-L6-v2, dim=384)",
+    "refusal_events_total": 8,
+    "coverage_progress": true,
+    "coverage_fraction": 0.633,
+    "consecutive_progressing_cycles": 4,
+    "boredom_recent": "goal[2] probe-reachable-unlearned completed 10:44Z; goal[3] harness-check-scenario submitted 11:13Z",
+    "root_file_count": 14
+  },
+  "agent_coordination": {
+    "dev_last_primary_audit_acknowledged": "2026-05-27T10-35-05Z-investigation-053",
+    "dev_last_updated": "2026-05-27T11:15:00Z",
+    "auditor_last_updated": "2026-05-27T11:18:17Z"
+  },
+  "lift_status_assessment": {
+    "S1_to_S2_gate": "The §27.S.4 terminal condition requires: autonomous capability cycle (inv-028 A ✓), pattern aggregation (inv-028 B ✓), slot-binding determinism (inv-028 C ✓), coverage convergence (S.4a ✓ by literal criterion). All gates appear structurally closed. F-128 ambiguity does not block the literal reading.",
+    "S2_to_S3_signal": "Push-away measurement surface is now complete (F-129 resolved). 8 refusal events recorded (7 no_producer, 1 hallucinated_resolver). Sustained adversarial exposure window is <1 day. S2→S3 is operator-evaluated, not gate-based. The infrastructure to measure it now exists.",
+    "primary_risk": "F-138 — ias-executor-ts submodule drift with no remote backup. 3 functional commits (including async resolveInputs) are not durably recoverable if workspace is reset. Medium risk to substrate continuity."
+  },
+  "next_wake_recommendation": {
+    "delay_seconds": 7200,
+    "rationale": "Commit velocity has slowed markedly — 6 commits in the audit window but the last two (86186cb4, 789bf275) are closure-audit self-documentation rather than functional changes. The primary open items (F-128, F-131, F-138, F-139) are structural/hygiene with no time pressure. S.4a coverage is accumulating naturally. 7200s (2 hours) is appropriate to allow natural boredom activity to produce meaningful coverage tick changes."
+  }
+}

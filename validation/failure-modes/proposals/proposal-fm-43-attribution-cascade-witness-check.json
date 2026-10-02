@@ -1,0 +1,190 @@
+{
+  "proposal": {
+    "proposal_id": "proposal-fm-43-attribution-cascade-witness-check",
+    "scenario_id": "fm-43-cascade-attribution-error",
+    "closes_gap": true,
+    "template_name": "attribution-cascade-witness-check",
+    "authored_by": "subagent",
+    "authored_at": "2026-05-22T00:00:00Z",
+    "registration_status": "blocked_operator",
+    "notes": "Registration blocked: requires new POST /v2/activities/execution-traces/correct endpoint on activity-api (or equivalent thompson_posterior_correction consumer) to actually revise stored failure_mode and revert spurious α/β deltas — traces are append-only today and no posterior-revision write path exists. Alternatively requires an admin-scope key to write activityTemplate_update for global registration. Cannot self-register from current canary keys (read,write only — admin scope unreachable via API-key path per identity-vessel validateKeyFormat). Template emits thompson_posterior_correction impulses as the contract; activity-api must grow a consumer that applies αΔ/βΔ deltas to variant_performance_metrics and patches activity_execution_traces.failure_mode.type from 'cascading' to 'independent_failure' when an audit verdict reaches the configured confidence threshold."
+  },
+  "template": {
+    "id": "attribution-cascade-witness-check",
+    "name": "Attribution Cascade Witness Check",
+    "description": "Audit recent traces marked failure_mode.type='cascading' and reclassify them to 'independent_failure' when the upstream task's output impulses were successfully consumed by ≥1 other trace within the witness window. Emits thompson_posterior_correction impulses to revert spurious β penalties applied to the upstream variant by propagateCreditAlongChain, and an attributionAuditReport summarizing the audit pass. Pure deterministic SurrealQL workflow — no LLM, no improvisation.",
+    "tags": [
+      "learning",
+      "learning.attribution",
+      "learning.attribution.cascade_witness",
+      "audit",
+      "posterior-correction",
+      "deterministic"
+    ],
+    "input_shapes": [
+      "activityExecutionTrace",
+      "executionTraceWithSignatures",
+      "compositionSuccess",
+      "impulseRelevance"
+    ],
+    "output_shapes": [
+      "attributionAuditReport",
+      "thompson_posterior_correction",
+      "cascadeReclassification"
+    ],
+    "tasks": [
+      {
+        "id": "query_cascading_candidates",
+        "description": "Query all execution traces in the last N days marked failure_mode.type='cascading' along with their upstream_task_id and per-task output_impulse_ids.",
+        "resolver": "surrealql",
+        "resolver_tier": "deterministic",
+        "config": {
+          "query": "SELECT id, parent_execution_id, composition_chain, failure_mode, tasks, created_at FROM activity_execution_traces WHERE failure_mode.type = 'cascading' AND created_at > time::now() - {{lookback_days}}d LIMIT {{max_candidates}}",
+          "variables": {
+            "lookback_days": 7,
+            "max_candidates": 500
+          },
+          "output_shape": "cascadingCandidateSet",
+          "output_impulse_id": "{{lifecycle.taskId}}.cascading_candidates"
+        }
+      },
+      {
+        "id": "extract_upstream_outputs",
+        "description": "For each candidate, locate the named upstream_task_id inside tasks[] and extract its output_impulse_ids (the impulses whose validity will be witness-tested).",
+        "resolver": "deterministic-projection",
+        "resolver_tier": "deterministic",
+        "config": {
+          "input_impulse_id": "{{tasks.query_cascading_candidates.output_impulse_id}}",
+          "projection": "for each trace t in input.results: let u = t.failure_mode.context.upstream_task_id; let upstream_task = t.tasks.find(x => x.id == u); emit { victim_trace_id: t.id, upstream_task_id: u, upstream_output_impulse_ids: upstream_task.output_impulse_ids, upstream_variant_id: upstream_task.activity_variant_id, created_at: t.created_at }",
+          "output_shape": "upstreamOutputManifest",
+          "output_impulse_id": "{{lifecycle.taskId}}.upstream_outputs"
+        }
+      },
+      {
+        "id": "witness_query_downstream_consumers",
+        "description": "For each upstream output_impulse_id set, search for OTHER traces (success=true) within the witness window whose any task.input_impulse_ids overlap — these are downstream witnesses proving the upstream output was valid.",
+        "resolver": "surrealql",
+        "resolver_tier": "deterministic",
+        "config": {
+          "input_impulse_id": "{{tasks.extract_upstream_outputs.output_impulse_id}}",
+          "query": "SELECT id, success, tasks.input_impulse_ids AS consumed_impulse_ids, created_at FROM activity_execution_traces WHERE success = true AND created_at > $candidate_created_at AND created_at < $candidate_created_at + {{witness_window_hours}}h AND tasks.input_impulse_ids ANYINSIDE $upstream_output_impulse_ids AND id != $victim_trace_id",
+          "variables": {
+            "witness_window_hours": 24
+          },
+          "iterate_over": "upstream_outputs",
+          "output_shape": "witnessConsumerSet",
+          "output_impulse_id": "{{lifecycle.taskId}}.witness_consumers"
+        }
+      },
+      {
+        "id": "compute_attribution_verdict",
+        "description": "Classify each candidate: 'independent_failure' if ≥ min_witnesses successful downstream traces consumed the upstream outputs (cascade was misattributed); 'cascading_confirmed' if no witnesses found AND upstream output signatures differ from baseline; 'inconclusive' otherwise. Emits per-candidate verdict with confidence score.",
+        "resolver": "deterministic-classifier",
+        "resolver_tier": "deterministic",
+        "config": {
+          "input_impulse_ids": [
+            "{{tasks.extract_upstream_outputs.output_impulse_id}}",
+            "{{tasks.witness_query_downstream_consumers.output_impulse_id}}"
+          ],
+          "rules": {
+            "independent_failure": "witnesses.length >= min_witnesses",
+            "cascading_confirmed": "witnesses.length == 0 AND signature_match == false",
+            "inconclusive": "default"
+          },
+          "min_witnesses": 1,
+          "confidence_high_threshold": 0.85,
+          "confidence_formula": "min(1.0, witnesses.length / 3.0)",
+          "output_shape": "cascadeReclassification",
+          "output_impulse_id": "{{lifecycle.taskId}}.attribution_verdicts"
+        }
+      },
+      {
+        "id": "emit_posterior_corrections",
+        "description": "For each verdict with class='independent_failure' AND confidence >= confidence_high_threshold, emit one thompson_posterior_correction impulse instructing activity-api to revert the spurious β penalty (β -= γ^1 with the same propagation γ used at penalty time) on the upstream variant and to patch the victim trace's failure_mode.type from 'cascading' to 'independent_failure'.",
+        "resolver": "impulse-emitter",
+        "resolver_tier": "deterministic",
+        "config": {
+          "input_impulse_id": "{{tasks.compute_attribution_verdict.output_impulse_id}}",
+          "filter": "verdict == 'independent_failure' AND confidence >= 0.85",
+          "emit_per_match": {
+            "shape": "thompson_posterior_correction",
+            "body": {
+              "correction_type": "cascade_misattribution_revert",
+              "target_variant_id": "{{match.upstream_variant_id}}",
+              "target_trace_id": "{{match.victim_trace_id}}",
+              "target_upstream_task_id": "{{match.upstream_task_id}}",
+              "alpha_delta": 0.0,
+              "beta_delta": "-{{propagation_gamma}}",
+              "propagation_gamma": 0.5,
+              "reclassify_failure_mode": {
+                "from": "cascading",
+                "to": "independent_failure"
+              },
+              "evidence": {
+                "witness_trace_ids": "{{match.witnesses[].id}}",
+                "witness_count": "{{match.witnesses.length}}",
+                "confidence": "{{match.confidence}}",
+                "audited_by": "attribution-cascade-witness-check",
+                "audited_at": "{{lifecycle.now}}"
+              }
+            }
+          },
+          "output_shape": "thompson_posterior_correction",
+          "output_impulse_id": "{{lifecycle.taskId}}.corrections"
+        },
+        "validation": {
+          "requiredPatterns": [
+            "\"shape\"\\s*:\\s*\"thompson_posterior_correction\"",
+            "\"correction_type\"\\s*:\\s*\"cascade_misattribution_revert\"",
+            "\"target_variant_id\"",
+            "\"beta_delta\"",
+            "\"reclassify_failure_mode\"",
+            "\"evidence\""
+          ]
+        }
+      },
+      {
+        "id": "emit_audit_report",
+        "description": "Aggregate verdicts into a single attributionAuditReport summarizing total candidates scanned, counts by verdict class, corrections emitted, and lookback window for operator review.",
+        "resolver": "impulse-emitter",
+        "resolver_tier": "deterministic",
+        "config": {
+          "input_impulse_ids": [
+            "{{tasks.compute_attribution_verdict.output_impulse_id}}",
+            "{{tasks.emit_posterior_corrections.output_impulse_id}}"
+          ],
+          "emit_one": {
+            "shape": "attributionAuditReport",
+            "body": {
+              "report_type": "cascade_witness_audit",
+              "lookback_days": 7,
+              "witness_window_hours": 24,
+              "candidates_scanned": "{{verdicts.length}}",
+              "verdict_counts": {
+                "independent_failure": "{{count(verdicts, v => v.verdict == 'independent_failure')}}",
+                "cascading_confirmed": "{{count(verdicts, v => v.verdict == 'cascading_confirmed')}}",
+                "inconclusive": "{{count(verdicts, v => v.verdict == 'inconclusive')}}"
+              },
+              "corrections_emitted": "{{corrections.length}}",
+              "audited_at": "{{lifecycle.now}}"
+            }
+          },
+          "output_shape": "attributionAuditReport",
+          "output_impulse_id": "{{lifecycle.taskId}}.audit_report"
+        },
+        "validation": {
+          "requiredPatterns": [
+            "\"shape\"\\s*:\\s*\"attributionAuditReport\"",
+            "\"report_type\"\\s*:\\s*\"cascade_witness_audit\"",
+            "\"verdict_counts\"",
+            "\"corrections_emitted\""
+          ]
+        }
+      }
+    ],
+    "retry": {
+      "max_attempts": 1,
+      "strategy": "none"
+    }
+  }
+}

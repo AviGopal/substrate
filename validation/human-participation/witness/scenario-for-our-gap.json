@@ -1,0 +1,19 @@
+{
+  "id": "substrate-pull-sync-has-failed-every-tick-since-the-container-clone-left-dev",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "substrate-pull-sync has failed on every ~10 minute tick, and the cause is the substrate's own git state rather than the ",
+  "description": "substrate-pull-sync has failed on every ~10 minute tick, and the cause is the substrate's own git state rather than the sync script.",
+  "goal_text": "substrate-pull-sync has failed on every ~10 minute tick, and the cause is the substrate's own git state rather than the sync script.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "substrate-pull-sync-has-failed-every-tick-since-the-container-clone-left-dev",
+  "source_gap_source": "operator_narration"
+}

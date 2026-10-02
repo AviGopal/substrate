@@ -1,0 +1,15 @@
+{
+  "schema_version": "0.1",
+  "metadata": {
+    "title": "Register goal_summary in discovery-registration.ts",
+    "description": "Registers the 'goal_summary' shape in config.ts to make it discoverable.",
+    "tags": ["feature", "goal_summary", "discovery"]
+  },
+  "changes": [
+    {
+      "type": "file_create",
+      "filePath": "repos/development-vessel/src/config.ts",
+      "content": "export const VESSEL_ID = process.env[\"VESSEL_ID\"] ?? `development-vessel-${process.env[\"HOSTNAME\"] ?? \"local\"}`;\nexport const PORT = parseInt(process.env[\"PORT\"] ?? \"8090\", 10);\nexport const HOST = process.env[\"HOST\"] ?? \"0.0.0.0\";\n\nexport const METABOB_ENDPOINT = process.env[\"METABOB_ENDPOINT\"] ?? \"http://127.0.0.1:8080\";\nexport const METABOB_API_KEY = process.env[\"METABOB_API_KEY\"] ?? \"\";\nexport const DISCOVERY_ENDPOINT = process.env[\"DISCOVERY_ENDPOINT\"] ?? \"http://127.0.0.1:8100\";\nexport const GOAL_HOST_VESSEL_ENDPOINT = process.env[\"GOAL_HOST_VESSEL_ENDPOINT\"] ?? \"http://127.0.0.1:8210\";\nexport const CONCEPT_DB_ENDPOINT = process.env[\"CONCEPT_DB_ENDPOINT\"] ?? \"http://127.0.0.1:8260\";\n\nexport const WORKSPACE_ROOT = process.env[\"WORKSPACE_ROOT\"] ?? process.cwd();\n\nexport const config = {\n  vesselId: VESSEL_ID,\n  port: PORT,\n  host: HOST,\n  metabobEndpoint: METABOB_ENDPOINT,\n  metabobApiKey: METABOB_API_KEY,\n  discoveryEndpoint: DISCOVERY_ENDPOINT,\n  workspaceRoot: WORKSPACE_ROOT,\n  discovery: {\n    shapes: [\n      \"goal_summary\"\n    ] as const,\n    resolveEndpoint: \"/v2/impulses/resolve\",\n    resolveRequestFormat: \"pointer\" as const,\n    authScheme: \"ApiKey\" as const,\n    resolveTimeoutMs: 10_000,\n    shapeDescriptions: {} as Record<string, string>,\n  },\n} as const;\n\nexport const DISCOVERY_SHAPES: readonly string[] = config.discovery.shapes;\n"
+    }
+  ]
+}

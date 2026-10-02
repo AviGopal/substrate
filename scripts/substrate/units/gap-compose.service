@@ -1,0 +1,13 @@
+[Unit]
+Description=Gap-compose — route an open substrateGap through the feature composer (detect->author->verify->stage)
+After=activity-api.service development-vessel.service llm-resolver-vessel.service
+# AUTONOMOUS author+verify+stage by default (no human switch). GAP_COMPOSE_TRIAGE=1 opts out.
+# Smoke: docker exec substrate-live systemctl start gap-compose.service
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/gap-compose-tick.ts
+StandardOutput=journal
+StandardError=journal
+[Install]
+WantedBy=multi-user.target

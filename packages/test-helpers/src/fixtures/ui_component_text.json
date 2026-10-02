@@ -1,0 +1,8 @@
+{
+  "type": "uiComponent",
+  "primitive": {
+    "type": "text",
+    "variant": "body",
+    "content": "Hello world"
+  }
+}

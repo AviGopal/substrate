@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-7fb27996",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose goal: Edit repos/development-vessel/src/resolvers/gap-to-feature.ts: in the landabilityScore f",
+  "description": "investigate and decompose goal: Edit repos/development-vessel/src/resolvers/gap-to-feature.ts: in the landabilityScore function, give documentation_drift gaps a fair competing score so they are not structurally outranked by surgical source gaps. Currently zero documentation_drift gaps appear across 429 picker decisions over 24 hours: a documentation_drift gap typically lacks an edit_site (so misses the +0.3 concrete-change-site boost) and is not in SURGICAL_CATEGORIES (so misses the +0.15 boost), leaving it near the 0.5 base while surgical source gaps reach ~0.9 and always win the ranking. Add a modest landability boost for gaps whose category is \"documentation_drift\" (for example s += 0.2) so the documentation backlog can be worked. Keep the final score clamped to [0,1].",
+  "goal_text": "investigate and decompose goal: Edit repos/development-vessel/src/resolvers/gap-to-feature.ts: in the landabilityScore function, give documentation_drift gaps a fair competing score so they are not structurally outranked by surgical source gaps. Currently zero documentation_drift gaps appear across 429 picker decisions over 24 hours: a documentation_drift gap typically lacks an edit_site (so misses the +0.3 concrete-change-site boost) and is not in SURGICAL_CATEGORIES (so misses the +0.15 boost), leaving it near the 0.5 base while surgical source gaps reach ~0.9 and always win the ranking. Add a modest landability boost for gaps whose category is \"documentation_drift\" (for example s += 0.2) so the documentation backlog can be worked. Keep the final score clamped to [0,1].",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-7fb27996",
+  "source_gap_source": "substrate_detected"
+}

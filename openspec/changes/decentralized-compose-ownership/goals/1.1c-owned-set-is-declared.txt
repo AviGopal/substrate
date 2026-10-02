@@ -1,0 +1,11 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, make ownership the DECLARED push set rather than mere clone presence. Measured: the push clones under vesselsCloneRoot() are also the source substrate-pull-sync converges each live vessel from, so a node cannot stop owning a repo by removing its clone without also losing the ability to pull that repo's updates. In ownedVessels(), replace exactly this line (it occurs once):
+
+    return new Set(readdirSync(vesselsCloneRoot()).filter((d) => existsSync(join(vesselsCloneRoot(), d, ".git"))));
+
+with:
+
+    const present = readdirSync(vesselsCloneRoot()).filter((d) => existsSync(join(vesselsCloneRoot(), d, ".git")));
+    const declared = (process.env["SUBSTRATE_PUSH_VESSELS"] ?? "").split(/[\s,]+/).filter(Boolean);
+    return new Set(declared.length > 0 ? present.filter((d) => declared.includes(d)) : present);
+
+When SUBSTRATE_PUSH_VESSELS is unset the result is unchanged (every present clone). When it is set, a node owns only the declared repos it also has a clone for, and keeps its other clones for pulling. Change nothing else.

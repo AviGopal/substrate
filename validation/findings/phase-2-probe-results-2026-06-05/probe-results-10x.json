@@ -1,0 +1,17 @@
+{
+  "ts": "2026-06-05T23:45:00Z",
+  "harness": "validation/scripts/probe-chain-stages.ts (bun, 229 LOC)",
+  "runs_per_stage": 10,
+  "endpoint_used": "http://localhost:18210 (goal-host) + http://localhost:18090 (dev-vessel) + workspace inspection",
+  "summary": {
+    "S1_detection_orthogonality": {"pass": 5, "total": 10, "invariants": [{"name": "gap_count variation ≤20%", "pass": true, "detail": "min=2 max=2 (every PASS run)"}]},
+    "S2_bridge_gap_to_scenario": {"pass": 9, "total": 10, "invariants": [{"name": "idempotent: no duplicates", "pass": true, "detail": "scenarios=6 every run (state-dependent — see V8 in observation.md)"}]},
+    "S3_draft_scenario_to_proposal": {"pass": 0, "total": 10, "invariants": [{"name": "no proposal overwritten", "pass": true, "detail": "proposals=190 unchanged"}, {"name": "distinct scenarios exercised", "pass": true, "detail": "6 distinct scenarios cycled"}]},
+    "S4_apply_proposal_to_mitosis": {"pass": 0, "total": 10, "invariants": [{"name": "≥3 distinct mitosis dirs created", "pass": false, "detail": "created=0"}]},
+    "S5_evaluate_mitosis_to_verdict": {"pass": 10, "total": 10, "invariants": [{"name": "deterministic per mitosis dir", "pass": true, "detail": "all INSUFFICIENT_DATA across all 10 distinct dirs"}]},
+    "S6_cutover_verdict_to_intent": {"pass_wire": 10, "pass_operational": 0, "total": 10, "invariants": [{"name": "intent emitted with unique id", "pass": false, "detail": "0/10 intents emitted; success=true returned alongside shape=structuredError — see V1"}]},
+    "S7_host_sync_intent_to_commit": {"pass": 10, "total": 10, "invariants": [{"name": "result lines written on processed intents", "pass": true, "detail": "no pending intents; correct noop"}]}
+  },
+  "aggregate": {"wire": "44/70", "operational": "14/70 (S6 silent-success drops operational by 10)"},
+  "log_path": "/tmp/probe-run.log"
+}

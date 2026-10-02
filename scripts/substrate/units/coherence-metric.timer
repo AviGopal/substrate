@@ -1,0 +1,12 @@
+[Unit]
+Description=Coherence metric timer
+
+[Timer]
+OnActiveSec=4min
+OnUnitActiveSec=20min
+Persistent=true
+AccuracySec=30s
+Unit=coherence-metric.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,9 @@
+{
+  "title": "Delete summarize-goals activity file",
+  "description": "Deletes the summarize-goals activity file as it's no longer needed.",
+  "change": {
+    "file_path": "repos/development-vessel/src/activities/summarize-goals.ts",
+    "old_string": "*",
+    "new_string": ""
+  }
+}

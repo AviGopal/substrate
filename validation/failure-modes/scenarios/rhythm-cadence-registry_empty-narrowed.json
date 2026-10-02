@@ -1,0 +1,19 @@
+{
+  "id": "rhythm-cadence-registry_empty-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "other",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from rhythm-cadence-registry_empty] Rhythm registry is EMPTY: rhythm_conductor_tick read zero timeShapedRhythm",
+  "description": "[narrowed from rhythm-cadence-registry_empty] Rhythm registry is EMPTY: rhythm_conductor_tick read zero timeShapedRhythm impulses, so nothing periodic in this substrate has a cadence. Re-seed the registry (pool impulses of shape timeShapedRhythm carrying axis/family/budget/alpha/beta/staleness).",
+  "goal_text": "[narrowed from rhythm-cadence-registry_empty] Rhythm registry is EMPTY: rhythm_conductor_tick read zero timeShapedRhythm impulses, so nothing periodic in this substrate has a cadence. Re-seed the registry (pool impulses of shape timeShapedRhythm carrying axis/family/budget/alpha/beta/staleness).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "rhythm-cadence-registry_empty-narrowed",
+  "source_gap_source": "substrate_detected"
+}

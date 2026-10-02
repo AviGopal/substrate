@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-2906960a",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-af7a2178: In repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts, f",
+  "description": "investigate and decompose gap route-edit-af7a2178: In repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts, find the single line that reads exactly: if (structuralBreak && pointer.dry_run !== true) { and change its condition to also require that regResp is not null, so that a failed or timed-out registry read does not emit a structural-break gap. Keep the existing structuralBreak constant and its type exactly as they are — do not alter",
+  "goal_text": "investigate and decompose gap route-edit-af7a2178: In repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts, find the single line that reads exactly: if (structuralBreak && pointer.dry_run !== true) { and change its condition to also require that regResp is not null, so that a failed or timed-out registry read does not emit a structural-break gap. Keep the existing structuralBreak constant and its type exactly as they are — do not alter",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-2906960a",
+  "source_gap_source": "substrate_detected"
+}

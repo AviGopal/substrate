@@ -1,0 +1,19 @@
+{
+  "id": "an-autonomous-repair-lands-without-closing-the-gap-it-repaired",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The autonomous repair loop lands a fix and leaves its originating gap OPEN. Edit repos/development-vessel/src/resolvers/",
+  "description": "The autonomous repair loop lands a fix and leaves its originating gap OPEN. Edit repos/development-vessel/src/resolvers/feature-compose.ts.",
+  "goal_text": "The autonomous repair loop lands a fix and leaves its originating gap OPEN. Edit repos/development-vessel/src/resolvers/feature-compose.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "an-autonomous-repair-lands-without-closing-the-gap-it-repaired",
+  "source_gap_source": "substrate_detected"
+}

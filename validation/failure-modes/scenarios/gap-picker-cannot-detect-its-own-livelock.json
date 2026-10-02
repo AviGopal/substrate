@@ -1,0 +1,19 @@
+{
+  "id": "gap-picker-cannot-detect-its-own-livelock",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "gap-to-feature logs PENDING verification at pick time — skipping re-compose every time it selects a gap it cannot act on",
+  "description": "gap-to-feature logs PENDING verification at pick time — skipping re-compose every time it selects a gap it cannot act on, but never counts it. Measured: 432 picks of route-edit-56849210 in 48h and 200 picks of recommit-route-edit-9077062c-typecheck_dangling_reference-narrowed in 24h, none ever composed. A gap picked N times and never composed is a livelock, and the picker is the only component positioned to notice. It should count consecutive no-op picks per gap, emit that count, and file a livelock gap past a threshold instead of re-skipping silently forever.",
+  "goal_text": "gap-to-feature logs PENDING verification at pick time — skipping re-compose every time it selects a gap it cannot act on, but never counts it. Measured: 432 picks of route-edit-56849210 in 48h and 200 picks of recommit-route-edit-9077062c-typecheck_dangling_reference-narrowed in 24h, none ever composed. A gap picked N times and never composed is a livelock, and the picker is the only component positioned to notice. It should count consecutive no-op picks per gap, emit that count, and file a livelock gap past a threshold instead of re-skipping silently forever.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-picker-cannot-detect-its-own-livelock",
+  "source_gap_source": "substrate_detected"
+}

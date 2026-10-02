@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-891f6810",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/development-vessel/src/resolvers/env-gate-scan.ts, the constant named GUARD_RE matches only boolean capability ",
+  "description": "In repos/development-vessel/src/resolvers/env-gate-scan.ts, the constant named GUARD_RE matches only boolean capability guard forms, so an environment variable read that supplies a numeric default is never flagged as an env gate. Add one more alternative to that single regular expression so it also matches a nullish-coalescing operator, written as two consecutive question marks. Do not add any import. Do not modify any other line or any other function. The change must typecheck.",
+  "goal_text": "In repos/development-vessel/src/resolvers/env-gate-scan.ts, the constant named GUARD_RE matches only boolean capability guard forms, so an environment variable read that supplies a numeric default is never flagged as an env gate. Add one more alternative to that single regular expression so it also matches a nullish-coalescing operator, written as two consecutive question marks. Do not add any import. Do not modify any other line or any other function. The change must typecheck.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-891f6810",
+  "source_gap_source": "substrate_detected"
+}

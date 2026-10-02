@@ -1,0 +1,793 @@
+{
+ "source": "git-goalhost",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/git-goalhost.md",
+ "coverage": "The whole goal-host-vessel live clone history in substrate-live (/workspace/git/vessels/goal-host-vessel, HEAD bc99f91 2026-09-28, 1,090 commits from 06-15 on). I read every non-autonomous commit subject (546). For all 544 autonomous commits I pulled the Gap trailer and shortstat, measured code-vs-comment churn, and read diffs for the oscillation clusters and the named gaps. I read the bodies of every revert and of key operator commits. I ran git log -G for 15 recurring identifiers. Structural map: a top-level anchor scan of src/index.ts at HEAD (17,910 lines), env-read inventory, dead/disabled markers, a callers check, and index.ts size over 8 dates. Runtime-use evidence comes from 7 days of goal-host journal (312k lines) plus the sizes of the reached-command cache and the verifier-recipes store. Skipped: line-by-line reading of the 382 route-edit diffs (only sampled); the other src/*.ts module histories (counted, not read); node 2 (compose2-live) clone.",
+ "attempts": [
+  {
+   "key": "endpoint-routing",
+   "title": "asResolvePath made absolute, then call sites patched one per gap",
+   "where": "9531c5f, 6c98916, 5ca51be; src/index.ts:448",
+   "date": "2026-09-20..09-28",
+   "tried": "9531c5f made asResolvePath return an absolute URL. 6c98916 patched 1 concatenating site and 5ca51be patched 2 more with inline startsWith('http') ternaries.",
+   "outcome": "partial",
+   "evidence": "At HEAD, 7 sites still do `${endpoint}${asResolvePath(...)}` (9460, 12746, 12776, 13507, 13519, 13994, 14347). Latent until the target row is absolute."
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Normalize absolute resolve_endpoint at all resolve sites (first time)",
+   "where": "b135638; 02291af, e3a4ce2, a08207c; ddf7a1d, c51d3f8, 298eea5, d2a8d88",
+   "date": "2026-06-29..07-16",
+   "tried": "Normalized absolute resolve_endpoint at 'all remaining' sites, plus 3 surgical-hardcoded-endpoint landings and 4 rewrites of asResolvePath.",
+   "outcome": "superseded",
+   "evidence": "The same class reopened on 09-20, 09-22 and 09-28."
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Loopback vs peer endpoint preference oscillation",
+   "where": "route-edit-eaa86280:3 (344f970..9c90131); endpointForShape",
+   "date": "2026-08-10",
+   "tried": "14 autonomous commits in 5.5 hours toggling between skipping loopback, preferring non-loopback, and returning the peer immediately.",
+   "outcome": "failed",
+   "evidence": "Pure oscillation. isIPLoopback|127.0.0.1 appears in 47 commits (30 autonomous) from 06-15 to 08-29."
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Global fetch monkey-patch as a discovery-first routing shim",
+   "where": "8c31cdb -> 6ce1446",
+   "date": "2026-09-25",
+   "tried": "An autonomous 52-line globalThis.fetch override.",
+   "outcome": "reverted",
+   "evidence": "Autonomously reverted the same day by gap revert-8c31cdb-global-fetch-shim."
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Concept recall read a masked or pinned port",
+   "where": "53d9080, 5ab2a21, 1adbad4",
+   "date": "2026-08-07",
+   "tried": "Route recall through discovery and delete the pinned port.",
+   "outcome": "partial",
+   "evidence": ":8260|:18260 is still touched 8 times, through 08-29."
+  },
+  {
+   "key": "false-verification",
+   "title": "Edit-intent reached only on a pushed landed sha",
+   "where": "d679cfb, bfc6af1, 238a4a3, 0687ac2, 5b415ae, 8fd1c23",
+   "date": "2026-07-21..07-22",
+   "tried": "Treat staged as not landed, require a landed sha plus diff substance.",
+   "outcome": "reverted",
+   "evidence": "Undone in effect by stale duplicate escalation blocks that returned reached:true on mitosisStaged (removed in e830210 on 08-02)."
+  },
+  {
+   "key": "false-verification",
+   "title": "Triplicated pwt escalation block graded staging as reach",
+   "where": "e830210",
+   "date": "2026-08-02",
+   "tried": "Deleted 2 stale copies of 3 that short-circuited the correct block.",
+   "outcome": "worked",
+   "evidence": "The predicate matched 100% of pwt returns. An operator edit goal returned reached:yes with nothing on origin/dev."
+  },
+  {
+   "key": "false-verification",
+   "title": "Creation or fs-effect goals require landing evidence (repeated)",
+   "where": "e62a5d9, 221f919, 60b7c0f, 05e0c87, 50f7560, 1b823cb, 94f4649",
+   "date": "2026-08-09..09-02",
+   "tried": "Added landing-evidence requirements per goal kind: fs-effect, creation, gap-close, late landing.",
+   "outcome": "partial",
+   "evidence": "Recurred again on 09-19 (4 landings for gap-reach-gate-accepts-artifact-existence-without-content-check) and 09-27."
+  },
+  {
+   "key": "false-verification",
+   "title": "Landing probe blind to ownership-routed composes on the other node",
+   "where": "f3ffd7d landedCommitForGoal",
+   "date": "2026-09-27",
+   "tried": "Credit on git evidence (Gap trailer) because the compose report lives on the owning node.",
+   "outcome": "unknown",
+   "evidence": "The same change landed twice (c23b601, 194df79) before this. It duplicates landedShaForGoalHash."
+  },
+  {
+   "key": "false-verification",
+   "title": "Registry oracle vessel-anywhere/totalVessels test, 7 recurrences",
+   "where": "0789584 reverting autonomous 31f1d67",
+   "date": "2026-07-27..08-17",
+   "tried": "Six symptom guards, then the substrate re-added the symptom to close a gap.",
+   "outcome": "worked",
+   "evidence": "HEAD no longer has the /\\bvessel\\b/?totalVessels line. The tests pinned the rule, not the call site."
+  },
+  {
+   "key": "false-verification",
+   "title": "Hand-written count/aggregate oracles graded wrong questions",
+   "where": "dbdaa09, 6527e03, a9742a9, d833cdc, bcfc4ed, 2504fb0, 054b2d0, 6e6aa7c, d7fee60, 6a1ce94, 9e0492c, ba5f733",
+   "date": "2026-08-04..08-08",
+   "tried": "Patched each oracle's parse and scope.",
+   "outcome": "superseded",
+   "evidence": "'six copies of one parse'. Replaced by independent recompute and then recipes."
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Comment-only autonomous landings",
+   "where": "e3e1849 57b84f5 38a834a 2f519ee ec6f9d3 11144ea 020e0ac c388d5a c88bf0a 5cf8301 03bc5b8 f1d79c3 d1d302e",
+   "date": "2026-07-04..08-09",
+   "tried": "Autonomous compose landings.",
+   "outcome": "failed",
+   "evidence": "13 of 544 autonomous commits change only comments. 238 of 544 change 2 or fewer code lines."
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Add/remove oscillation on one comment block",
+   "where": "route-edit-6c0aad12 (24e967b, e3e1849/c93c251, 57b84f5/e9edf8b, 38a834a/c4b1505)",
+   "date": "2026-07-04",
+   "tried": "7 landings for one gap.",
+   "outcome": "failed",
+   "evidence": "Alternating +3/-3 lines, net zero."
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Duplicate block inserted 10 times by repeated route-edit composes",
+   "where": "route-edit-26279b2b (e9fa970 + 10x20-line); 2d962de; 9a93e21",
+   "date": "2026-07-09",
+   "tried": "The gap-drain re-composed the same edit, and the operator deduped it.",
+   "outcome": "reverted",
+   "evidence": "The dedupe was itself re-inserted by a stale runtime cutover and re-deduped in 9a93e21."
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "-narrowed child reverses its parent the same day",
+   "where": "39bef90 -> bc99f91",
+   "date": "2026-09-28",
+   "tried": "The parent landed a hardcoded scripts/substrate/->/substrate/ path rewrite in the goal hash. The narrowed child deleted it.",
+   "outcome": "failed",
+   "evidence": "Two 'landings', net zero, 30 minutes apart."
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Substrate commented out the isEditIntentGoal path operand",
+   "where": "fce961b, f1d79c3 reverted by eac995e",
+   "date": "2026-08-09",
+   "tried": "An autonomous 'fix' that widened edit-intent detection.",
+   "outcome": "reverted",
+   "evidence": "'Add a note about my weekend' became an edit goal. Typecheck passed, and a semantic widening passes every gate."
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Wrong-repo, wrong-change landing in the core walk",
+   "where": "b222d75 reverted by c158bd0",
+   "date": "2026-08-11",
+   "tried": "The goal asked to change an activity-api dedup gate. What landed was a direct=null refusal in goal-host's walk.",
+   "outcome": "reverted",
+   "evidence": "Blast radius was every walk that resolves a body with a template_id."
+  },
+  {
+   "key": "drafter-quality",
+   "title": "One-line endedAt edit deleted 35-line recipe-seed block",
+   "where": "e1e84cc; a8e38dc, 280dada, 496aebf",
+   "date": "2026-08-07",
+   "tried": "Autonomous patch, then revert, reapply, and revert.",
+   "outcome": "reverted",
+   "evidence": "Filed as no-scope-check-on-patch-deletions."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Duplicate walkTerminationReason crash-looped goal-host",
+   "where": "2fe3750 fixed by 4658fe5; 7b3168e + 4fa92b3 fixed by f3953c0",
+   "date": "2026-07-29..07-30",
+   "tried": "An autonomous dedupe edit injected a redeclaration. An async change left the call site un-awaited.",
+   "outcome": "reverted",
+   "evidence": "TS2451. Goal dispatch DOWN. The staticEvaluate signature-subset gate is not a full tsc."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Stale-base full-file cutover clobbered the honest-reach guard",
+   "where": "1be9f4f, re-landed by ca52631",
+   "date": "2026-07-24",
+   "tried": "Re-land the guard on the current HEAD.",
+   "outcome": "partial",
+   "evidence": "The cutover-clobber class: 18 guard lines deleted while making a 3-line edit."
+  },
+  {
+   "key": "env-gating",
+   "title": "Env-gated auto-draft 'fixed' by defaulting the env gate OFF",
+   "where": "429c7e5; src/index.ts:16175",
+   "date": "2026-08-18",
+   "tried": "Gap gap-env-gated-substrate-auto-draft-enabled (law 1).",
+   "outcome": "failed",
+   "evidence": "The landing added `|| === undefined`, deepening the env gate. Still in HEAD."
+  },
+  {
+   "key": "env-gating",
+   "title": "Operator law-1 conversions of constants to shapes",
+   "where": "b79c2ba, 4f7a817, 02f168c, ca286e0",
+   "date": "2026-08-16..08-17",
+   "tried": "Walk budgets, lesson execution and EDGE_BLEND_K read as shapes at use time.",
+   "outcome": "worked",
+   "evidence": "34 process.env reads remain in index.ts, including ROUTE_EDIT_INTENT_TO_COMPOSE, PREFER_LIBP2P_ROUTE, ROUTE_ACTIVITY_REPAIR and SUBSTRATE_REUSE_LLM_ENABLED."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Policy shapes with a reader but no producer",
+   "where": "f87f52f, a848aee, 7dead06, f34547e",
+   "date": "2026-08-09..08-28",
+   "tried": "Produce walkBudget, lessonExecutionPolicy, bodyHonestyPolicy, extractionPolicy and pathwayReusePolicy.",
+   "outcome": "worked",
+   "evidence": "'I shipped both readers, neither producer'. bodyHonestyPolicy had no file from 08-02."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Verdicts and oracle labels computed but not delivered",
+   "where": "1cd87a0, 115cc67, fc297b4, d9dc600, 3cd7019, 41b9080, ea78fd7, d60abfc",
+   "date": "2026-07-20..09-19",
+   "tried": "Deliver the reach verdict and human labels to the learner, and spool lost verdicts.",
+   "outcome": "partial",
+   "evidence": "The lost-verdict emitter was 'inert TWICE' (d60abfc). The oracle-label consumer gap was re-filed on 09-19."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Traces carry no reach tag or input impulses, so no consumption edges",
+   "where": "3244164, c6f5b14, 91d1b63, b36f0ef, 69fe835",
+   "date": "2026-08-09..09-23",
+   "tried": "Tag satisfier and composite traces, and declare consumed inputs.",
+   "outcome": "partial",
+   "evidence": "45 executions arrived ungraded. The 09-23 gap satisfier-traces-record-no-input-impulses was still open."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Asymmetric credit: beta without a possible alpha",
+   "where": "62a00f5 (reverted 0ffb69a), cabf140, 3691ee7, b5e4b56, 020042d, d69a4ad, c256109",
+   "date": "2026-07-22..09-22",
+   "tried": "Withhold beta where alpha is impossible, grade at all 8 sites, draw a real Beta.",
+   "outcome": "partial",
+   "evidence": "Recurred 5 times. 020042d: 'a withheld beta is actually withheld'."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Satisfier self-certification and misclassification as learned_pathway",
+   "where": "6c020d9, 921d70e, d3a3815",
+   "date": "2026-08-05",
+   "tried": "Stop the satisfier grading itself and fix the classification.",
+   "outcome": "worked",
+   "evidence": "52% of paths had self-certified."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Pinned dispatcher keeps pinning a template with a decisively negative posterior",
+   "where": "runtime journal (ias-executor-ts goal-host.js:692)",
+   "date": "2026-09-21..09-28",
+   "tried": "The posterior refusal (pinnedTargetPosteriorVerdict) fires.",
+   "outcome": "partial",
+   "evidence": "966 refusals in 7 days for scaffold-and-publish-vessel (alpha 6.05, beta 8610.66). The caller never learns."
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome reach->mint does not actually mint (4 recurrences)",
+   "where": "15620e7, 337d223, f88ba8f, 8d960a8, d48a963, ef48012, 4a4af5e",
+   "date": "2026-06-22..08-17",
+   "tried": "Make the mint run, stamp lifecycle.status, fix the mint tag, arm the recursion gate.",
+   "outcome": "partial",
+   "evidence": "Each fix said the previous path never minted."
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Learned pathway with a satisfier head is dropped",
+   "where": "3d2e52a, 579f365, c37df24, 49b884e, 91c042b",
+   "date": "2026-09-23..09-25",
+   "tried": "5 autonomous landings on one gap family.",
+   "outcome": "partial",
+   "evidence": "49b884e: acceptance is intermittent, and 1/3 of transform walks still write before computing."
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Lexical rebind (middle-tier first/last-mile reuse)",
+   "where": "d38eaa9, 831dafb, ~12 rebind fixes on 08-08 (d9a2597, eefa75e, 9a68d17, 1df0e02, 6b0701a/91df0e7, 65b7c81/88480c0, 8aa17cc/c477e07)",
+   "date": "2026-07-24..08-12",
+   "tried": "Reuse learned commands across goals that differ in content.",
+   "outcome": "dormant",
+   "evidence": "0 selected of 3,456 in 7 days, all shape-mismatch. The cache holds 10,624 lines and is still written."
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Reuse ceiling and middle barriers",
+   "where": "6082c2e, 7cd8952, 7d6ea64, 0a532d2, 2d980fe, 35fb2f6, 785293c, d45aa3d",
+   "date": "2026-07-31..08-28",
+   "tried": "Close reuse-hop barriers, lineage, Wilson ranking. Satisfier-plane reuse ordering was disabled on evidence.",
+   "outcome": "partial",
+   "evidence": "'DISABLED ON EVIDENCE' at 9870 (0/4 vs 3/4)."
+  },
+  {
+   "key": "false-verification",
+   "title": "Independent recompute (two agreeing derivations) as a general oracle",
+   "where": "aed9961, 2337624, 62dbbb0, b068747, 089aead/b41851c, 1ec89d1/b012857, 95a9626, 779be83, 26f4ecb",
+   "date": "2026-08-07..08-27",
+   "tried": "Grade novel classes by recompute and donate verified commands.",
+   "outcome": "partial",
+   "evidence": "7 days: 1 DONATED. Most runs abstain, return unusable stdout, or fail the authoring call."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Verifier recipes as graded data",
+   "where": "48f67f9, 3d8d9bc, 72539a0, 30cbd14, 669db4d; /workspace/state/verifier-recipes.jsonl",
+   "date": "2026-08-07..08-08",
+   "tried": "Learn verifiers as recipes.",
+   "outcome": "dormant",
+   "evidence": "39 recipes, last written Aug 27. Loaded 44 times in 7 days with no grading evidence."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Floor recipe seeding",
+   "where": "1021176, d73da0b, c671407, e1e84cc, 496aebf; src/index.ts:5127",
+   "date": "2026-08-07",
+   "tried": "Seed the ReAct floor with the family's verified command.",
+   "outcome": "dormant",
+   "evidence": "Present in HEAD, 0 journal hits in 7 days."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Ephemeris (JPL Horizons) oracle",
+   "where": "b18c191, bb21ddf, 15bc5fd",
+   "date": "2026-08-16..08-17",
+   "tried": "Grade live astronomical distances.",
+   "outcome": "dormant",
+   "evidence": "6,479 ABSTAINED and 0 graded in 7 days. It runs on every goal."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "ClassRow route-as-data oracle harness",
+   "where": "e8caa37, ef5c645, 6bc12d5, 8478bc6, 5fa3fc8, 6ba5c6c, b307589",
+   "date": "2026-07-30",
+   "tried": "Make a new compositional reach class one data row, guarded by an executable drift gate.",
+   "outcome": "partial",
+   "evidence": "Only avg-threshold and below-mean migrated. 20 legacy verify*Reach functions remain beside it."
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "ReAct floor revived and repaired repeatedly",
+   "where": "43247db, 559a55d, ecd0c5a, c43f59d, 8ee6c66, c033664, 825f773",
+   "date": "2026-07-23..08-17",
+   "tried": "Grounded tool loop. Removed the LLM_VESSEL_ENDPOINT gate that had silently disabled it.",
+   "outcome": "worked",
+   "evidence": "Live now (universalToolFallback/floor ~2.8k journal lines in 7 days)."
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Target inference inverted guard and dropped composition halves",
+   "where": "1f24ad1, 39b86a2, 6e049cc, 546a855, dd5ed4a, 6d60248, 3b9197d, 4678802, faa0afc, 0c41918, cc8c3cd, a410572, e9ee9b4",
+   "date": "2026-08-04..09-25",
+   "tried": "Many routing rules in goal-target-inference and the named-shape bind.",
+   "outcome": "partial",
+   "evidence": "24 autonomous commits to goal-target-inference.ts. 1f24ad1: an inverted guard had made inference a no-op."
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Single-goal prompt patching (Io distance)",
+   "where": "f73faaa..3496df5 (~30 commits)",
+   "date": "2026-08-15",
+   "tried": "Corrector and prompt patches for one live-data goal.",
+   "outcome": "partial",
+   "evidence": "2c26fcb: 'stating it in the prompt does not hold'."
+  },
+  {
+   "key": "memory-recall",
+   "title": "Concept recall ladder over an unreliable relay",
+   "where": "53d9080, 5ab2a21, 1adbad4, 637c1f4, 373761a, 4afc7ac, 3faae36, 674a400, 09892ed, 668e16a, 2dcfc12, 060d2d0, c72ee75",
+   "date": "2026-08-07..08-17",
+   "tried": "Parallel, then serial, caching, retries, union of queries.",
+   "outcome": "partial",
+   "evidence": "The relay fails about 40% of the time. The success rate was unmeasurable until 060d2d0."
+  },
+  {
+   "key": "memory-recall",
+   "title": "Failure memory keyed by goal_hash",
+   "where": "9e23455, cf8fd87, 4710f6c",
+   "date": "2026-09-22",
+   "tried": "Persist hollow verdicts and feed them into attempt 1.",
+   "outcome": "worked",
+   "evidence": "1,460 FAILURE-RECALL lines in 7 days."
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Compose BUSY/503 falls through to a walk (5 fixes)",
+   "where": "01ef41e, 4ba7bbd, eed0ccf, ee4622a, 2cc8af7, 60833b4",
+   "date": "2026-07-05..09-25",
+   "tried": "Refuse retryably on BUSY or draining.",
+   "outcome": "partial",
+   "evidence": "The edit-intent decision is duplicated at EARLY (12683) and late (13304/13365) routes. It reappeared on 09-25."
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Duplicate in-flight goal dispatches",
+   "where": "055406c, 7e121c4, 7f0425d",
+   "date": "2026-07-21, 09-26",
+   "tried": "Coalesce in /run-goal, then refuse /resolve for a goal already being walked.",
+   "outcome": "partial",
+   "evidence": "Two guards at two entry points for one class."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Stale runtime cutover re-inserts removed code",
+   "where": "9a93e21, ca52631",
+   "date": "2026-07-09, 07-24",
+   "tried": "Re-dedupe and re-land.",
+   "outcome": "partial",
+   "evidence": "The base SHA at staging was stale."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Cutover restart leaks and drain races",
+   "where": "015d1ae, 53cce0b, b3ad44a, df4b700, 28b6fa9",
+   "date": "2026-07-26..08-08",
+   "tried": "Graceful drain before discovery stop, and clear leaked running records.",
+   "outcome": "worked"
+  },
+  {
+   "key": "gap-content",
+   "title": "Symptom-to-file routing at the door",
+   "where": "59166c8, e6a26eb, 4c1d800, fea9eab, 3f4421d, 2147c8a, a817403, 47a4549, 37912c8; reverts 88b212a, d2b3858",
+   "date": "2026-08-09..08-11",
+   "tried": "About 25 commits teaching goal-file-resolution to locate an edit site.",
+   "outcome": "partial",
+   "evidence": "9178b9a: 'uniqueness is no longer evidence of location at this corpus size'."
+  },
+  {
+   "key": "gap-content",
+   "title": "Phantom capability gaps for executor or walk-artifact shapes",
+   "where": "404cd67, 80f7249, d575161, 8a6442c, 2d7fd0b, 3d4aa60",
+   "date": "2026-07-30..09-22",
+   "tried": "Suppress bogus gap filing and file nothing on lookup failure.",
+   "outcome": "partial",
+   "evidence": "About 5,000 [reach-gap] ABSTAIN lines in 7 days because producer discovery times out."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "index.ts never decomposed",
+   "where": "src/index.ts; 6a6eaa4",
+   "date": "2026-06-20..09-28",
+   "tried": "Extraction into 84 sibling modules. Removed 2 callerless functions.",
+   "outcome": "failed",
+   "evidence": "2,113 -> 17,910 lines. 3 functions hold about 7,950 lines. Autonomous churn +6,051/-1,380."
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Bare satisfier wrote to live vessel source",
+   "where": "bee05ca",
+   "date": "2026-08-06",
+   "tried": "Stop satisfier writes to live source.",
+   "outcome": "worked"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Failed walks wrote no trace",
+   "where": "07a6c7c, 1c615b0",
+   "date": "2026-09-22",
+   "tried": "persistFailedWalkTrace, plus threading token usage.",
+   "outcome": "worked",
+   "evidence": "Before this, a failed walk left goal-seek:no-trace."
+  },
+  {
+   "key": "federation-p2p",
+   "title": "libp2p/peer routing via federation egress",
+   "where": "a1ffaa5, 752f46d, 1ecf873, 27d02a2",
+   "date": "2026-06-30..07-31",
+   "tried": "Route peer-advertised shapes through egress.",
+   "outcome": "partial",
+   "evidence": "Gated by the PREFER_LIBP2P_ROUTE env var (3 sites)."
+  }
+ ],
+ "problems": [
+  {
+   "key": "endpoint-routing",
+   "symptom": "Shape resolves fail with an invalid URL or 'no producer' because callers join endpoint + absolute resolve URL, or pick a loopback address",
+   "first_seen": "2026-06-15",
+   "last_seen": "2026-09-28",
+   "recurrences": 9,
+   "root_cause": "No single URL-joining seam. asResolvePath's contract changed (09-20) without updating its 10 call sites, which are patched one gap at a time. Endpoint preference is a hand-coded heuristic that the drafter oscillates on."
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Edit or creation goals graded reached with nothing landed; oracles confirm wrong answers",
+   "first_seen": "2026-07-21",
+   "last_seen": "2026-09-27",
+   "recurrences": 10,
+   "root_cause": "Landing evidence is checked per goal kind at many sites. Duplicate stale blocks short-circuit the correct one. The landing ledger is node-local. Oracles are hand-written per family and each re-derives parsing."
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Autonomous landings that are comment-only, net zero, or oscillating (13 comment-only; clusters of 7, 7, 11 and 14 commits on one gap)",
+   "first_seen": "2026-07-04",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "root_cause": "The gap is re-composed repeatedly with no idempotence or no-op check. -narrowed children can undo parents. Landings count as success without a behavioral delta."
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafts widen predicates, land in the wrong repo, delete out-of-scope code, or hardcode path hacks",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "root_cause": "Gates check typecheck, region and semantic judgement, not deletion scope or predicate widening. The drafter edits line windows of 4,500-line functions."
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Autonomous landing breaks tsc or crash-loops goal-host (duplicate let, un-awaited async)",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-22",
+   "recurrences": 3,
+   "root_cause": "Signature-subset staticEvaluate is not a full cross-file tsc. Full-file cutover from a stale base."
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Compose BUSY/503 falls through to a shell walk that cannot edit",
+   "first_seen": "2026-07-05",
+   "last_seen": "2026-09-25",
+   "recurrences": 5,
+   "root_cause": "The edit-intent routing decision is duplicated (EARLY route and late route) with separate status handling."
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Reached executions don't mint; learned pathways dropped; middle-tier rebind never selects",
+   "first_seen": "2026-06-30",
+   "last_seen": "2026-09-25",
+   "recurrences": 6,
+   "root_cause": "The mint path was gated on fields no producer set. The rebind cache is keyed to shapes the walk no longer targets (shape-mismatch)."
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Arms only lose (beta without possible alpha), grades recorded at 2 of 8 sites, dispatcher pins a template at beta 8610",
+   "first_seen": "2026-07-22",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "root_cause": "Credit assignment is spread across many sites in the walk. Pinned dispatchers bypass selection learning."
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Policy readers with no producer; verdicts and labels computed but not consumed; traces missing tags and consumed inputs",
+   "first_seen": "2026-07-20",
+   "last_seen": "2026-09-23",
+   "recurrences": 7,
+   "root_cause": "Readers shipped without producers, emitters inert, and no check that a written field has a reader."
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour behind env vars; a law-1 gap 'fixed' by defaulting the env gate OFF",
+   "first_seen": "2026-06-15",
+   "last_seen": "2026-08-18",
+   "recurrences": 3,
+   "root_cause": "34 process.env reads in index.ts. The drafter satisfies the gap text literally."
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Concept recall slow, failing (relay ~40%) or hitting the wrong vessel or port",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-08-17",
+   "recurrences": 12,
+   "root_cause": "Recall crosses nodes through the relay; locality not handled."
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Landing probe blind to composes on the other node; double landing",
+   "first_seen": "2026-09-27",
+   "last_seen": "2026-09-27",
+   "recurrences": 1,
+   "root_cause": "The compose report is written on the owning node's filesystem."
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "Same block inserted 10 times; the same change landed twice; duplicate in-flight dispatches",
+   "first_seen": "2026-07-09",
+   "last_seen": "2026-09-27",
+   "recurrences": 4,
+   "root_cause": "Gap drain re-composes without checking for an existing landing, and dedup guards exist per entry point."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "index.ts 17,910 lines; 3 functions about 7,950; dead gates and diagnostic sinks left in; 4 generations of reach grading coexist",
+   "first_seen": "2026-06-20",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "Every fix is additive. Mechanisms are superseded but not retired."
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Ephemeris oracle 0/6,479, rebind 0/3,456, recipes and recipe seeding unused",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "Mechanisms were built for one goal family, validated once, and never retired."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Stale-base cutover clobbers or re-inserts code; restarts leak in-flight dispatches",
+   "first_seen": "2026-07-09",
+   "last_seen": "2026-08-05",
+   "recurrences": 4,
+   "root_cause": "Full-file cutover staged against an old base SHA."
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "verifyGoalReached + deterministic verdict chain",
+   "location": "src/index.ts:3489-3937",
+   "purpose": "Reach judge (LLM plus deterministic oracles)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "7 days: edit-intent-no-landed-edit 1,111, code-investigation 927, transform ~521"
+  },
+  {
+   "name": "Hand-written verify*Reach oracles (22)",
+   "location": "src/index.ts:1519-3489",
+   "purpose": "Per-family reach oracles",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Most families have little or no verdict traffic in 7 days",
+   "duplicates_of": "ClassRow harness, independent recompute, verifier recipes"
+  },
+  {
+   "name": "ClassRow route-as-data harness",
+   "location": "src/index.ts:2553-2860",
+   "purpose": "Make a reach class a data row",
+   "status": "duplicate",
+   "general": true,
+   "evidence": "Only 2 families migrated; 20 legacy remain",
+   "duplicates_of": "verify*Reach"
+  },
+  {
+   "name": "recomputeIndependently",
+   "location": "src/index.ts:4649",
+   "purpose": "Two-derivation ground truth and command donation",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1 DONATED in 7 days; mostly abstains or fails authoring"
+  },
+  {
+   "name": "Verifier recipes",
+   "location": "src/verifier-recipe.ts; /workspace/state/verifier-recipes.jsonl",
+   "purpose": "Verifiers as graded data",
+   "status": "dormant",
+   "general": true,
+   "evidence": "39 recipes, last written Aug 27; loads only"
+  },
+  {
+   "name": "recipeSeed in universalToolFallback",
+   "location": "src/index.ts:5127",
+   "purpose": "Seed the floor with a verified command",
+   "status": "dormant",
+   "general": false,
+   "evidence": "0 journal hits in 7 days"
+  },
+  {
+   "name": "tryLexicalRebind + reached-command cache",
+   "location": "src/index.ts:4119; /workspace/.goal-host-reached-commands.jsonl",
+   "purpose": "Middle-tier first/last-mile reuse",
+   "status": "broken",
+   "general": true,
+   "evidence": "0/3,456 selected, all shape-mismatch; cache 10,624 lines still written"
+  },
+  {
+   "name": "verifyEphemerisDistanceReach",
+   "location": "src/index.ts (ephemeris)",
+   "purpose": "JPL Horizons distance oracle",
+   "status": "fossil",
+   "general": false,
+   "evidence": "6,479 ABSTAINED, 0 graded in 7 days, run on every goal"
+  },
+  {
+   "name": "universalToolFallback / runGroundedToolLoop (ReAct floor)",
+   "location": "src/index.ts:4934-5436",
+   "purpose": "Parity floor",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "Failure memory",
+   "location": "src/index.ts ~12073",
+   "purpose": "Feed prior hollow verdicts into attempt 1",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1,460 hits in 7 days"
+  },
+  {
+   "name": "Edit-intent routing to feature_compose (EARLY + late)",
+   "location": "src/index.ts:12683, 13304/13365",
+   "purpose": "Route code-change goals to compose",
+   "status": "duplicate",
+   "general": true,
+   "evidence": "BUSY/503 fall-through fixed 5 times; env-gated by ROUTE_EDIT_INTENT_TO_COMPOSE"
+  },
+  {
+   "name": "goal-file-resolution / searchWorkspaceForTerm",
+   "location": "src/goal-file-resolution.ts; src/index.ts:15643",
+   "purpose": "Resolve the edit site from goal text",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "buildProxyResolver vs buildDiscoveryProxyResolver",
+   "location": "src/index.ts:14886, 15064",
+   "purpose": "Proxy shapes to dev-vessel (specific) or via discovery (general)",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "Both registered (15317, 15366)"
+  },
+  {
+   "name": "asResolvePath + endpointForShape",
+   "location": "src/index.ts:448, 487",
+   "purpose": "Resolve URL construction and endpoint choice",
+   "status": "broken",
+   "general": true,
+   "evidence": "7 call sites still concatenate endpoint + absolute URL"
+  },
+  {
+   "name": "landedShaForGoalHash vs landedCommitForGoal",
+   "location": "src/index.ts:6192; f3ffd7d",
+   "purpose": "Confirm an edit landed",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "The new probe exists because the old one reads a node-local compose report"
+  },
+  {
+   "name": "mintReachedTrace (reach->ribosome mint)",
+   "location": "src/index.ts:6889",
+   "purpose": "Crystallize reached executions",
+   "status": "live-used",
+   "general": true,
+   "evidence": "The 'doesn't mint' class recurred 4 times"
+  },
+  {
+   "name": "Auto-draft in handleRunGoal",
+   "location": "src/index.ts:16169-16242",
+   "purpose": "Draft new activity when no catalogue fit",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Env-gated default OFF since 429c7e5"
+  },
+  {
+   "name": "Coalesce in-flight + /resolve already-walking refusal",
+   "location": "055406c/7e121c4; 7f0425d",
+   "purpose": "Dedup concurrent identical goals",
+   "status": "duplicate",
+   "general": false
+  },
+  {
+   "name": "Diagnostic sinks and ablations (NoOp sink, disable-subscribers, fetch probe)",
+   "location": "src/index.ts:14425-14463",
+   "purpose": "Iteration diagnostics",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Env-gated, left in from ITER-4/iter-10"
+  },
+  {
+   "name": "Satisfier-plane reuse ordering",
+   "location": "src/index.ts:9870",
+   "purpose": "Posterior reuse ordering",
+   "status": "dormant",
+   "general": true,
+   "evidence": "'DISABLED ON EVIDENCE' (35fb2f6)"
+  },
+  {
+   "name": "Global fetch discovery shim",
+   "location": "8c31cdb (reverted 6ce1446)",
+   "purpose": "Discovery-first routing via fetch override",
+   "status": "fossil",
+   "general": false
+  },
+  {
+   "name": "Pinned-target posterior refusal",
+   "location": "ias-executor-ts goal-host.js:692",
+   "purpose": "Refuse a pinned template with a negative posterior",
+   "status": "live-used",
+   "general": true,
+   "evidence": "966 refusals in 7 days; the caller never adapts"
+  }
+ ],
+ "principles": [
+  "A staged clone is not a reach (e830210)",
+  "Resolve the missing path, don't delete the requirement for one (eac995e)",
+  "Guarding the observed symptom lets the class recur; pin the call site, not only the rule (0789584, 7th recurrence)",
+  "Nothing checks that deletions are in scope; a self-contained deletion passes typecheck, region and semantic gates (496aebf)",
+  "A semantic widening of a predicate passes every gate; nothing fails closed (eac995e)",
+  "Enforce in code; stating it in the prompt does not hold (2c26fcb)",
+  "A failed producer lookup is not proof that no producer exists (f5c4052, d575161, 744ecd8)",
+  "Grade novel goal classes by independent recompute, and one model-authored command is not ground truth (aed9961, 2337624)",
+  "A reader without a producer is inert ('I shipped both readers, neither producer', f87f52f)",
+  "Law 1 applies to the operator's own constants too (4f7a817, 02f168c, ca286e0)",
+  "A signature-subset staticEvaluate is not a full tsc (f3953c0)",
+  "Pinning a target bypasses selection, not the evidence (runtime refusal text)"
+ ]
+}

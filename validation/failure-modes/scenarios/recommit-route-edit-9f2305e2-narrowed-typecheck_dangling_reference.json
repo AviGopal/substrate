@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-9f2305e2-narrowed-typecheck_dangling_reference",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-9f2305e2] investigate and decompose gap route-edit-b234ff12: The gap store's row count dropped",
+  "description": "[narrowed from route-edit-9f2305e2] investigate and decompose gap route-edit-b234ff12: The gap store's row count dropped from 4,113 to 44 in a single day due to loadGaps() returning an empty array on any read or parse failure, resulting in a corrupt gaps.json file and leading to data loss.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- syntax_break: src/resolvers/substrate-gap.ts(775,7): error TS1109: Expression expected.\n- typecheck_dangling_reference: src/resolvers/substrate-gap.ts(250,10): error TS2552: Cannot find name 'loadGapsSafe'. Did you mean 'loadGaps'? | src/resolvers/substrate-gap.ts(258,45): error TS18046: 'error' is of type 'unknown'. |\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-9f2305e2-narrowed repeated already-recorded failure class typecheck_dangling_reference: src/resolvers/substrate-gap.ts(800,5): error TS2322: Type 'number | boolean' is not assignable to type 'number'.. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "[narrowed from route-edit-9f2305e2] investigate and decompose gap route-edit-b234ff12: The gap store's row count dropped from 4,113 to 44 in a single day due to loadGaps() returning an empty array on any read or parse failure, resulting in a corrupt gaps.json file and leading to data loss.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n- syntax_break: src/resolvers/substrate-gap.ts(775,7): error TS1109: Expression expected.\n- typecheck_dangling_reference: src/resolvers/substrate-gap.ts(250,10): error TS2552: Cannot find name 'loadGapsSafe'. Did you mean 'loadGaps'? | src/resolvers/substrate-gap.ts(258,45): error TS18046: 'error' is of type 'unknown'. |\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-9f2305e2-narrowed repeated already-recorded failure class typecheck_dangling_reference: src/resolvers/substrate-gap.ts(800,5): error TS2322: Type 'number | boolean' is not assignable to type 'number'.. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-9f2305e2-narrowed-typecheck_dangling_reference",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,11 @@
+== BEFORE install — spoke local registry, humanSurface shapes:
+(none = not present)
+
+== vessel-ctl install human-surface-vessel (runtime add on spoke):
+{"ok":true,"action":"installed","vessel":"human-surface-vessel","container":"647f1eec796c","active":"active","self_recovery":true,"deps":"dependencies installed"}
+
+== vessel-ctl uninstall human-surface-vessel (runtime remove on spoke):
+[discovery-deregister] removed human-surface-vessel@spoke-52da0d98
+{"ok":true,"action":"uninstalled","vessel":"human-surface-vessel","container":"647f1eec796c"}
+== spoke local registry after uninstall:
+1

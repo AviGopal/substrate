@@ -1,0 +1,174 @@
+{
+ "area": "human-surface-vessel",
+ "items": [
+  {
+   "name": "human-surface on syzygy-local-surface",
+   "location": "127.0.0.1:38310",
+   "purpose": "Browser human surface for Syzygy",
+   "status": "broken",
+   "general": false,
+   "evidence": "Board read returns resolved:false with NO_RESERVATION. It advertises uiQuestion to the hub with 0 panels.",
+   "source": "syzygy",
+   "mentions": 1,
+   "sources": [
+    "syzygy"
+   ]
+  },
+  {
+   "name": "human-surface-vessel",
+   "location": ":8310",
+   "purpose": "Live human resolver surface",
+   "status": "live-used",
+   "general": true,
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "Human-surface verification bypass",
+   "location": "gap-to-feature.ts 6c33870/47171d1",
+   "purpose": "Workaround for missing remote",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Removed 766f68d; returned 'absent'",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "form-learn.ts + learnedFormByShape",
+   "location": "human-surface 8a83c8c..1dcfd4b",
+   "purpose": "Learn presentation form from complaints",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Landed, not deployed; demote-only",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "planContent open-vocab/closed-form renderer + renderPolicy.formByShape",
+   "location": "human-surface ui ContentRender.tsx, ledger.ts",
+   "purpose": "Render any shape by content form; policy read at use time",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Census misroutes 35->0; 5 call sites",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "human participation journals",
+   "location": "human-surface-vessel (runs from /vessels image layer)",
+   "purpose": "Question/response exchange",
+   "status": "live-used",
+   "general": false,
+   "evidence": "split across two dirs; stale copy ends with probe residue",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "reachableFrom loopback rewrite",
+   "location": "human-surface-vessel/src/routes/proxy.ts:133",
+   "purpose": "make discovery rows dialable",
+   "status": "live-used",
+   "general": false,
+   "evidence": "exists in one consumer only; should be shared",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "human-surface-vessel",
+   "location": "repos/human-surface-vessel (plain files) + github.com/AviGopal/human-surface-vessel clone at /workspace/git/vessels",
+   "purpose": "single human UI surface: runs board, uiPanel/uiQuestion, surfaceIntent, renderPolicy",
+   "status": "live-used",
+   "general": true,
+   "evidence": "active on substrate-live and compose2-live; the super-repo copy is stale relative to the clone",
+   "source": "openspec-9",
+   "mentions": 1,
+   "sources": [
+    "openspec-9"
+   ]
+  },
+  {
+   "name": "human-surface-vessel authoring root",
+   "location": "repos/human-surface-vessel (plain files), /workspace/git/human-surface-release",
+   "purpose": "Live human surface",
+   "status": "unknown",
+   "general": false,
+   "evidence": "09-22: no submodule, so the substrate can't author it; bootstrapped in-container; deploy open",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "importance-learn",
+   "location": "repos/human-surface-vessel/src/importance-learn.ts",
+   "purpose": "learn render importance weights from exposure telemetry and write renderPolicy",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "added 09-20; reads interactorObservation_write; usage in traces not verified",
+   "source": "openspec-9",
+   "mentions": 1,
+   "sources": [
+    "openspec-9"
+   ]
+  },
+  {
+   "name": "loopback->discovery-host endpoint remap",
+   "location": "repos/human-surface-vessel/src/routes/proxy.ts",
+   "purpose": "make registry loopback addresses reachable from outside the container",
+   "status": "live-used",
+   "general": false,
+   "duplicates_of": "obsidian-vessel federation sidecar remap",
+   "evidence": "fixed the 502 on 08-07; a per-vessel copy, not a shared seam",
+   "source": "openspec-9",
+   "mentions": 1,
+   "sources": [
+    "openspec-9"
+   ]
+  },
+  {
+   "name": "surfaceIntent parser",
+   "location": "repos/human-surface-vessel/src/surface-intent.ts",
+   "purpose": "deterministic 8-rule surface-instruction parser",
+   "status": "live-used",
+   "general": false,
+   "evidence": "sole discovery producer of surfaceIntent; no activity row (law-2 gap)",
+   "source": "openspec-9",
+   "mentions": 1,
+   "sources": [
+    "openspec-9"
+   ]
+  },
+  {
+   "name": "human-surface-vessel do-anything box",
+   "location": "repos/human-surface-vessel/ui/src/{Surface,components/AskRegion,StarterChips,RunRow,GradeGesture}.tsx, src/routes/proxy.ts:654",
+   "purpose": "Browser goal dispatch with a reached-first run view and grading",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Service active, :8310 healthy, dispatch tag surface:do-anything",
+   "source": "openspec-8",
+   "mentions": 1,
+   "sources": [
+    "openspec-8"
+   ]
+  }
+ ]
+}

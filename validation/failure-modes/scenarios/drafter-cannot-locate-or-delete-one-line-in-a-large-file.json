@@ -1,0 +1,19 @@
+{
+  "id": "drafter-cannot-locate-or-delete-one-line-in-a-large-file",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The drafter failed SIX distinct ways trying to make one single-line change, while succeeding at three additions to the S",
+  "description": "The drafter failed SIX distinct ways trying to make one single-line change, while succeeding at three additions to the SAME FILE on the same day.",
+  "goal_text": "The drafter failed SIX distinct ways trying to make one single-line change, while succeeding at three additions to the SAME FILE on the same day.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "drafter-cannot-locate-or-delete-one-line-in-a-large-file",
+  "source_gap_source": "substrate_detected"
+}

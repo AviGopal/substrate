@@ -1,0 +1,23 @@
+{
+  "session_id": "c2Vzc2lvbnMuNGQ1NzdmYTctMDk3Mi00MTJiLThmNTYtMWZlZDViMjg0ZDJm",
+  "session_token": "c2Vzc2lv...",
+  "state_file": ".metabob/state",
+  "created_at": "2026-03-18T06:56:06.541534",
+  "last_updated": "2026-03-21T05:23:06.106249",
+  "format_version": "4.0",
+  "interrupted": false,
+  "clean_shutdown": true,
+  "created_new": false,
+  "resumed": false,
+  "api_key_provided": true,
+  "keepalive_interval": 300,
+  "resumption": {
+    "can_resume": true,
+    "state_file_exists": true,
+    "session_file_exists": true,
+    "was_interrupted": false,
+    "state_file_age": 0.0013189315795898438
+  },
+  "timestamp": 1774095786.109315,
+  "timestamp_iso": "2026-03-21 05:23:06"
+}

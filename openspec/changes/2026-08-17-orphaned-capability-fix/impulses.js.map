@@ -1,0 +1,1 @@
+{"version":3,"file":"impulses.js","sourceRoot":"","sources":["impulses.ts"],"names":[],"mappings":";;;AAAA,gFAAmF;AACnF,uGAA0G;AAEnG,KAAK,mBAAmB,OAA8C;IAC1E,QAAQ,OAAO,CAAC,KAAK,EAAE,CAAC;QACpB,KAAK,cAAc;YACf,OAAO,mBAAmB,CAAC,OAA8B,CAAC,CAAC;QAChE,KAAK,qBAAqB;YACtB,OAAO,IAAA,+CAAyB,EAAC,OAAoC,CAAC,CACpE,CAAC,iBAAiB;IACzB,CAAC;AACN,CAAC"}

@@ -1,0 +1,649 @@
+{
+  "investigation_id": "2026-05-25T09-10-48-investigation-011",
+  "generated_at": "2026-05-25T09:10:48Z",
+  "investigator_session_id": "claude-sonnet-4-6-iter-027",
+  "prior_investigation_id": "2026-05-25T08-58-34-investigation-010",
+  "loop_iteration": 27,
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container",
+    "substrate_reachable": true,
+    "substrate_version": "1.20.9",
+    "auth_verified": true,
+    "container_name": "substrate-live",
+    "container_image": "metabob/substrate:dev",
+    "container_status": "Up (restarted at ~09:03:36Z)",
+    "health_check": {
+      "redis": "healthy",
+      "surrealdb": "healthy",
+      "discovery": "unhealthy (Was there a typo in the url or port?)",
+      "embedding": "healthy (all-MiniLM-L6-v2, dim=384)",
+      "pool_size": 0
+    }
+  },
+  "commits_since_prior": [
+    {
+      "sha": "1702cad7",
+      "message": "validation iter-21: execution loop live; Thompson converging; F-051/037/043/052/054 resolved",
+      "files_changed": ["validation/findings/iter-21-narration.md"],
+      "impact": "Validator narration claiming F-037/F-043 resolved. Adds 148-line narration with Thompson metrics: validator-dispatch α=2 β=1 execs=228, slot-binding α=2 β=1 execs=32, harness-run-matrix α=2 β=3 execs=7. Also claims F-052 (composition chains) and F-054 (trace visibility) resolved."
+    },
+    {
+      "sha": "156f1c30",
+      "message": "feat(goal-host): register activity_recommendation built-in resolver",
+      "files_changed": ["repos/goal-host-vessel/src/index.ts"],
+      "impact": "Registers activity_recommendation as a pattern-tier resolver in GoalHost at startup. Forwards to activity-api /v2/activities/recommend with goal/targetShape from execution variables and limit/minSuccessRate from task config. Called alongside registerDevVesselProxies(). Confirmed live in substrate: goal-host-vessel logs 'registered built-in resolver: activity_recommendation' at startup."
+    }
+  ],
+  "f037_f043_audit": {
+    "verdict": "CONFIRMED RESOLVED — WITH CAVEATS",
+    "evidence": {
+      "validator_dispatch": {
+        "alpha": 2, "beta": 1, "execs": 285, "success_rate": 1.0,
+        "avg_duration_ms": 11540,
+        "observation": "285 executions, all successful, α well above β. Thompson is clearly not flat."
+      },
+      "slot_binding": {
+        "alpha": 2, "beta": 1, "execs": 39, "success_rate": 1.0,
+        "observation": "39 executions, all successful."
+      },
+      "create_shape_provider_goal": {
+        "alpha": 1, "beta": 2, "execs": 35, "success_rate": 0,
+        "avg_duration_ms": 3,
+        "observation": "35 executions, all failures, avg 3ms. This means 35 INSTANT failures (0ms class). β=2 correctly reflects failures but α=1 means no successes. Discrepancy with validator iter-21 claim of 24% success (33 execs)."
+      },
+      "coverage_tick": {
+        "alpha": 1, "beta": 2, "execs": 3, "success_rate": 0,
+        "observation": "Only 3 execs, all failures. β=2. No new execs since prior investigation — topology goals were failing. Changed post-container-restart."
+      }
+    },
+    "normalizeActivityId_fix": {
+      "in_running_container": true,
+      "evidence": "docker exec substrate-live grep -n normalizeActivityId /workspace/repos/metabob-activity-api/src/lib/posterior-update.ts → line 437: const activityId = normalizeActivityId(rawActivityId). Bun runs TypeScript directly from source (not compiled binary). Fix IS in running image.",
+      "confirmation": "activity-api version 1.20.9 running in container. Template endpoint returns α=2 for validator-dispatch (not stuck at 1). Posteriors ARE moving."
+    },
+    "f037_status": "RESOLVED — posteriors confirmed moving beyond initial values. normalizeActivityId fix is live in running container (Bun interpreted from /workspace source).",
+    "f043_status": "RESOLVED — same fix. Thompson updates are correctly attributing outcomes.",
+    "caveat": "create-shape-provider-goal shows 0% success with 35 execs and 3ms avg duration, suggesting persistent instant-failure issue (F-051 class?) for this specific template. The validator's iter-21 claimed 24% success which does not match live substrate state."
+  },
+  "activity_recommendation_resolver": {
+    "status": "LIVE AND CONFIRMED",
+    "evidence": "goal-host-vessel startup log: 'registered built-in resolver: activity_recommendation'. Confirmed on BOTH restarts (09:02:56 and 09:03:36).",
+    "shapes_endpoint": "goal-host-vessel /health returns shapes=['goal_execution','activity_execution'] — activity_recommendation is a registered RESOLVER not an advertised shape.",
+    "effect_observed": "Boredom goal[0] 'measure the substrate topology' at 09:05:37Z → COMPLETED at 09:09:24Z (3m47s). Selected template: replace-activity (α=2, β=1, execs=1). The goal completed but chose replace-activity NOT coverage-tick. Thompson selected the template with higher prior (replace-activity α=2) over coverage-tick (α=1, β=2).",
+    "unblocked": "F-061 topology goals now completing. The 5-minute timeout seen in iter-010 is resolved — goal[0] completed in 227 seconds.",
+    "new_concern": "Template selection for 'measure topology' chose replace-activity, not coverage-tick. This may mean coverage-tick is being deprioritized due to its failed posterior (β=2), while replace-activity had just one successful execution. The semantic match is poor — replace-activity is for replacing templates, not measuring topology."
+  },
+  "boredom_execution_trace_path": {
+    "observation": "Boredom goal[0] (exec_eoil758o, replace-activity, success) IS visible in execution-traces API as 'activity:⟨replace-activity⟩'. Prior boredom goals used activity_id='validator-dispatch' and 'slot-binding' (bare form). This confirms boredom traces ARE writing to the API but appear under their chosen template's activity_id.",
+    "validator_discrepancy": "Validator iter-21 said 'boredom goals not in queryable set' — this was incorrect or conditions have changed. The exec_eoil758o trace is visible."
+  },
+  "coverage_tick_successes": {
+    "count": 0,
+    "template_metrics": {"alpha": 1, "beta": 2, "execs": 3, "success_rate": 0},
+    "s4a_status": "STILL BLOCKED — coverage-tick has 0 successful executions. Thompson deprioritizes it (β=2). Boredom topology goals now completing but selecting different templates (replace-activity) based on Thompson priors. Coverage-tick needs to succeed to reset its posterior.",
+    "root_cause_hypothesis": "coverage-tick template (dev-vessel:coverage-tick) requires specific resolvers or data that are failing. With β=2 posterior, Thompson will rarely select it. A 'forced' execution would be needed to break the cycle."
+  },
+  "template_count_discrepancy": {
+    "total_in_index": 28,
+    "returned_by_no_q_query": 2,
+    "explanation": "GET /v2/activities/templates with no ?q= returns only 2 of 28 templates. Appears to be a pagination/cache artifact — bootstrap-seeder seeded 13/13 successfully, 28 exist in DB. Direct ID lookup works (coverage-tick, validator-dispatch all queryable). FTS/Redis cache issue or paradigm filter returning only non-dev-vessel templates by default.",
+    "impact": "Medium — direct ID lookups work; FTS-based discovery may route incorrectly."
+  },
+  "validator_claims_audit": {
+    "F051_instant_failures_resolved": {
+      "claim": "Execution durations increased from 0-2ms to 5-42s",
+      "verified": "PARTIAL — validator-dispatch traces avg 11.8s, slot-binding avg 39s. BUT create-shape-provider-goal still has 35 execs with avg 3ms (instant failures). The proxy resolver fix helped some templates but not create-shape-provider-goal.",
+      "status": "PARTIAL"
+    },
+    "F052_composition_chains": {
+      "claim": "94/200 traces carry composition chains",
+      "verified": "CANNOT CONFIRM — trace API fields checked. Traces have activity_id, variant_id but composition_chain field not returned in list endpoint. Not audited this iteration."
+    },
+    "F054_trace_visibility": {
+      "claim": "Fixed from .data to .executions field",
+      "verified": "CONFIRMED — /v2/activities/execution-traces returns 200 traces under .executions key."
+    },
+    "validator_success_rate_discrepancy": {
+      "claim": "177/200 (88.5%) success rate",
+      "auditor_observation": "validator-dispatch=149 ok, slot-binding=21 ok, replace-activity=2 ok, evolve=1 ok = 173 ok across 200 traces. Discrepancy of 4 successes. Minor — may be timing difference."
+    },
+    "create_shape_provider_goal_discrepancy": {
+      "claim": "24% success rate (33 execs, α~2)",
+      "auditor_observation": "Live substrate shows 35 execs, 100% failure, α=1, β=2, avg_duration=3ms. SIGNIFICANT DISCREPANCY. The validator may have queried at a different time, or the iter-21 metrics were from a different substrate state.",
+      "severity": "medium"
+    }
+  },
+  "f061_status": {
+    "prior": "OPEN — topology goals timing out at 300s or being killed by systemd",
+    "current": "PARTIALLY RESOLVED — goal[0] 'measure topology' completed successfully at 09:09:24Z (3m47s). However it selected replace-activity, not coverage-tick. Goals [2] and [3] still being killed (SIGTERM, not timeout). The instant-failure path for goal[1] 'probe unlearned shapes' still returns failed in 1s.",
+    "status": "PARTIALLY_RESOLVED"
+  },
+  "f062_status": {
+    "prior": "OPEN — Thompson normalizeActivityId fix uncertain in running image",
+    "current": "RESOLVED — docker exec confirms normalizeActivityId at line 437 of posterior-update.ts in container /workspace. Bun runs TS directly from source. Posteriors moving (validator-dispatch α=2, slot-binding α=2). Fix is active.",
+    "status": "RESOLVED"
+  },
+  "s4a_window_status": {
+    "s1": "passed",
+    "s2": "passed",
+    "s3": "passed",
+    "s4a": "BLOCKED — requires coverage-tick to execute with coverage_progress=true. Zero successful coverage-tick executions. Boredom loop now completing topology goals (F-061 partially resolved) but selecting replace-activity not coverage-tick due to Thompson priors.",
+    "s4b": "BLOCKED — substrate-health-tick α=1, β=2, execs=3, success_rate=0. Same issue.",
+    "window_markers": "No new cycle files since cycle-8 (2026-05-23). lift-status.json still at phase=S1, last updated 2026-05-24."
+  },
+  "findings": [
+    {
+      "id": "F-001",
+      "claim": "Gameable lift; cycle-8 unchanged.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "ls /home/avi/documents/work/exp-repo/metabob-devbob/validation/failure-modes/cycles/*.json",
+          "excerpt": "8 cycle files (cycle-0 through cycle-8). No cycle-9. Unchanged from iter-010.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-002",
+      "claim": "6 malformed proposals (epoch-zero timestamps).",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-003",
+      "claim": "Traces lack signature; task_count=0 on all traces via API.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-004",
+      "claim": "Only 8 failure-mode scenarios on disk (spec implies 63).",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-005",
+      "claim": "No cycle-9 generated. Lift cycle count stalled at 8.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-006",
+      "claim": "Hardcoded identity.metabob.com and svc.cluster.local defaults.",
+      "category": "deployment",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-007",
+      "claim": "Trailblazing unimplemented.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-008",
+      "claim": "Mythic language in substrate self-description.",
+      "category": "idiom",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "unverifiable"
+    },
+    {
+      "id": "F-009",
+      "claim": "substrate-explicit-vessels tasks still open (1b.6, 2.4, 2.5, 6.3).",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-23T23-12-41-investigation-001",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-011",
+      "claim": "Lift-criterion-hardening zero DEV iterations.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-012",
+      "claim": "Cycle reports substrate-anonymous.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-013",
+      "claim": "6 invalid + 3 subagent proposals remain.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-015",
+      "claim": "Progression-driver paused, S.2 not auto-advancing.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-23T23-15-01-investigation-002",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-019",
+      "claim": "Development-vessel template seeder failing all 15 seeds at startup.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T00-39-23-investigation-004",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-020",
+      "claim": "Coverage-tick: 0 successes across all iterations.",
+      "category": "execution",
+      "severity": "critical",
+      "first_seen_in": "2026-05-24T00-39-23-investigation-004",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl /v2/activities/templates/activity:⟨development-vessel:coverage-tick⟩",
+          "excerpt": "alpha=1, beta=2, execs=3, success_rate=0. No new executions since iter-010.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-021",
+      "claim": "Boredom topology goals selecting wrong templates (Thompson deprioritizes coverage-tick due to β=2).",
+      "category": "execution",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T01-17-44-investigation-005",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "journalctl -u boredom-vessel + execution-traces API",
+          "excerpt": "goal[0] 'measure topology' completed but selected replace-activity (α=2 β=1) not coverage-tick (α=1 β=2). exec_eoil758o=replace-activity success=True dur=226245ms.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-023",
+      "claim": "Template FTS index incomplete: GET /v2/activities/templates returns 2 of 28.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T02-01-18-investigation-006",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl /v2/activities/templates?limit=200 | .total=28 but .templates=[2 items]",
+          "excerpt": "28 total in index but only forge-vessel-for-shape and evolve-activity-self-contained returned. Direct ID lookups work. Bootstrap-seeder seeded 13/13.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-025",
+      "claim": "Discovery-vessel unhealthy in activity-api /health.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T02-01-18-investigation-006",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-026",
+      "claim": "Trace total returns -1 from API.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-24T02-01-18-investigation-006",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl /v2/activities/execution-traces?limit=1 | .total",
+          "excerpt": "-1 returned for total count.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-029",
+      "claim": "harness-check-scenario: 0% success across 5 executions.",
+      "category": "execution",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T03-31-03-investigation-007",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-031",
+      "claim": "Boredom goals 1-4 killed by SIGTERM within 18-24 seconds.",
+      "category": "execution",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T03-31-03-investigation-007",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "journalctl -u boredom-vessel",
+          "excerpt": "goal[2] 'run full topology chain' → SIGTERM at 18s (09:02:32Z). goal[3] → SIGTERM at 24s. Only goal[0] and goal[1] survive long enough to complete.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-036",
+      "claim": "Create-shape-provider-goal: 35 instant failures (3ms avg), 0 successes.",
+      "category": "execution",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T05-24-58-investigation-008",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "execution-traces breakdown by activity_id",
+          "excerpt": "create-shape-provider-goal: ok=0, fail=21, avg_dur=3ms. activity:⟨create-shape-provider-goal⟩: ok=0, fail=3, avg_dur=89299ms. Template shows execs=35, success_rate=0, alpha=1, beta=2.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-037",
+      "claim": "Thompson posteriors flat — normalizeActivityId fix not applied to running image.",
+      "category": "execution",
+      "severity": "critical",
+      "first_seen_in": "2026-05-24T05-24-58-investigation-008",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n normalizeActivityId /workspace/repos/metabob-activity-api/src/lib/posterior-update.ts",
+          "excerpt": "line 437: const activityId = normalizeActivityId(rawActivityId); CONFIRMED IN RUNNING IMAGE.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        },
+        {
+          "kind": "api",
+          "command": "GET /v2/activities/templates/activity:⟨validator-dispatch⟩",
+          "excerpt": "alpha=2, beta=1, execs=285, success_rate=1. Posteriors clearly moving.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "resolved",
+      "resolved_at": "2026-05-25T09:10:48Z",
+      "resolution": "normalizeActivityId fix confirmed in running container (Bun runs TS from /workspace source directly). Posteriors confirmed moving: validator-dispatch α=2 (not stuck at 1)."
+    },
+    {
+      "id": "F-039",
+      "claim": "Failure_mode null on all failure traces.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T05-24-58-investigation-008",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-041",
+      "claim": "Boredom goal[1] 'probe unlearned shapes' fails in 1s.",
+      "category": "execution",
+      "severity": "medium",
+      "first_seen_in": "2026-05-24T06-24-12-investigation-009",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "journalctl -u boredom-vessel",
+          "excerpt": "goal[1] at 08:56:37Z → dispatched status=failed in 1s (exec_mvvea66f). Same 1s failure pattern.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-042",
+      "claim": "Boredom goal[0] topology goal was hanging for 300s (HTTP timeout on goal-host).",
+      "category": "execution",
+      "severity": "high",
+      "first_seen_in": "2026-05-24T06-24-12-investigation-009",
+      "evidence": [],
+      "status": "open",
+      "update": "F-061 (child finding) partially resolved — goal[0] now completing in ~3m47s. This parent finding tracking the 5min timeout behavior may also be resolved. See F-061 update."
+    },
+    {
+      "id": "F-043",
+      "claim": "Thompson alpha/beta not updating correctly.",
+      "category": "execution",
+      "severity": "critical",
+      "first_seen_in": "2026-05-24T05-24-58-investigation-008",
+      "evidence": [
+        {
+          "kind": "api",
+          "command": "GET /v2/activities/templates/activity:⟨slot-binding⟩",
+          "excerpt": "alpha=2, beta=1, execs=39, success_rate=1. Posteriors moving correctly.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "resolved",
+      "resolved_at": "2026-05-25T09:10:48Z",
+      "resolution": "Same fix as F-037. Posteriors confirmed moving for slot-binding (α=2), validator-dispatch (α=2)."
+    },
+    {
+      "id": "F-045",
+      "claim": "Goal-host-vessel /shapes not returning activity_recommendation shape.",
+      "category": "operational",
+      "severity": "low",
+      "first_seen_in": "2026-05-25T08-58-34-investigation-010",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live curl http://localhost:8210/health",
+          "excerpt": "shapes=['goal_execution','activity_execution'] — activity_recommendation is a resolver, not an advertised shape. Health endpoint lists only output shapes.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "resolved",
+      "resolved_at": "2026-05-25T09:10:48Z",
+      "resolution": "activity_recommendation is registered as a resolver (not shape). goal-host startup log confirms 'registered built-in resolver: activity_recommendation'. This was a category error in the original finding — resolvers and shapes are different."
+    },
+    {
+      "id": "F-046",
+      "claim": "Template list returns 2/28 templates via default GET.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T08-58-34-investigation-010",
+      "evidence": [
+        {
+          "kind": "api",
+          "command": "GET /v2/activities/templates?limit=200",
+          "excerpt": "total=28, templates=[2]. Confirmed this iteration. Direct ID lookups work.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-047",
+      "claim": "Boredom trace not visible in execution-traces API (validator's iter-21 claim).",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "validation/findings/iter-21-narration.md",
+      "evidence": [
+        {
+          "kind": "api",
+          "command": "GET /v2/activities/execution-traces | most recent trace",
+          "excerpt": "exec_eoil758o = activity:⟨replace-activity⟩ success=True dur=226245ms — this IS the boredom goal[0] trace, visible in API.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "resolved",
+      "resolved_at": "2026-05-25T09:10:48Z",
+      "resolution": "Boredom traces ARE visible in execution-traces API. The boredom goal[0] trace (exec_eoil758o, replace-activity) appears as the most recent trace. Validator's iter-21 claim was incorrect or conditions have changed."
+    },
+    {
+      "id": "F-050",
+      "claim": "Validator iter-21 create-shape-provider-goal success rate discrepancy (24% claimed vs 0% live).",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T09-10-48-investigation-011",
+      "evidence": [
+        {
+          "kind": "api",
+          "command": "GET /v2/activities/templates/activity:⟨create-shape-provider-goal⟩",
+          "excerpt": "execs=35, success_rate=0, alpha=1, beta=2, avg_duration=0.19ms. Validator claimed 33 execs with 24% success (α~2).",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-053",
+      "claim": "Failure_mode null on all failure traces.",
+      "category": "provenance",
+      "severity": "medium",
+      "first_seen_in": "validation/findings/iter-21-narration.md",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-055",
+      "claim": "Subagents gate closed via docker exec fallback, not host-mapped port.",
+      "category": "methodology",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T08-58-34-investigation-010",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-056",
+      "claim": "Replace-activity selected for topology measurement goal (semantic mismatch).",
+      "category": "execution",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T09-10-48-investigation-011",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "boredom goal[0] 'measure topology' → exec_eoil758o = replace-activity",
+          "excerpt": "Thompson selected replace-activity (α=2,β=1,execs=1) over coverage-tick (α=1,β=2,execs=3) for topology measurement. Semantic mismatch: replace-activity is for replacing templates.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-057",
+      "claim": "Boredom goals [2],[3] still being SIGTERMed within 18-24 seconds.",
+      "category": "execution",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T08-58-34-investigation-010",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "journalctl -u boredom-vessel",
+          "excerpt": "goal[2] at 09:02:14 → SIGTERM at 09:02:32 (18s). goal[3] at 09:02:32 → SIGTERM at 09:02:56 (24s). systemd limit?",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "open"
+    },
+    {
+      "id": "F-059",
+      "claim": "Development-vessel seeder still failing all seeds on startup.",
+      "category": "operational",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T08-58-34-investigation-010",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-060",
+      "claim": "goal-host-vessel /shapes unreachable from outside container.",
+      "category": "operational",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T08-58-34-investigation-010",
+      "evidence": [],
+      "status": "open"
+    },
+    {
+      "id": "F-061",
+      "claim": "Boredom goal[0] topology goal hanging for 300s — goal-host HTTP timeout.",
+      "category": "execution",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T08-58-34-investigation-010",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "journalctl -u boredom-vessel --since 09:05:00",
+          "excerpt": "goal[0] at 09:05:37Z → dispatched status=completed at 09:09:24Z (3m47s). FIRST SUCCESSFUL topology goal completion observed.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "partially_resolved",
+      "resolution": "Goal[0] now completing in 3m47s (not timing out). However goal[1] still failing in 1s, goals[2],[3] still SIGTERMed. Partial improvement.",
+      "new_concern": "Goal[0] selected replace-activity (not coverage-tick) — template selection semantically incorrect for topology measurement."
+    },
+    {
+      "id": "F-062",
+      "claim": "Thompson normalizeActivityId fix uncertain in running container image.",
+      "category": "execution",
+      "severity": "critical",
+      "first_seen_in": "2026-05-25T08-58-34-investigation-010",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n normalizeActivityId /workspace/repos/metabob-activity-api/src/lib/posterior-update.ts",
+          "excerpt": "line 437: const activityId = normalizeActivityId(rawActivityId); CONFIRMED IN RUNNING IMAGE. Bun runs TypeScript directly from source.",
+          "verified_at": "2026-05-25T09:10:48Z"
+        }
+      ],
+      "status": "resolved",
+      "resolved_at": "2026-05-25T09:10:48Z",
+      "resolution": "Fix confirmed in running image. Bun interprets TS from /workspace source — no separate compilation step needed. Posteriors moving confirms fix is active."
+    }
+  ],
+  "findings_tally": {
+    "open": 26,
+    "resolved": 38,
+    "partially_resolved": 1,
+    "regressed": 0,
+    "unverifiable": 1,
+    "total": 66,
+    "new_this_iteration": 3,
+    "resolved_this_iteration": 5,
+    "key_resolutions": ["F-037 (Thompson flat)", "F-043 (Thompson wrong)", "F-062 (fix in image)", "F-047 (boredom traces invisible)", "F-045 (activity_recommendation shape)"],
+    "key_new_findings": ["F-056 (semantic mismatch: replace-activity selected for topology)", "F-050 (create-shape-provider-goal discrepancy)", "partially F-061 (topology goal now completing)"]
+  },
+  "next_wake_recommendation": {
+    "delay_seconds": 1800,
+    "rationale": "Thompson posteriors moving (F-037/F-043 resolved). First topology goal success observed (F-061 partially resolved). BUT coverage-tick still 0 successes and S.4a blocked. Boredom loops running every 5 min — 30min wake lets several more cycles accumulate. Watch for: (1) coverage-tick execution success, (2) create-shape-provider-goal discrepancy investigation, (3) goals [2],[3] SIGTERM root cause (systemd unit time limit?)."
+  }
+}

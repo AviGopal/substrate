@@ -1,0 +1,849 @@
+{
+ "area": "other",
+ "items": [
+  {
+   "name": "false-premise admission exclusion",
+   "location": "gap-to-feature.ts admitActionableGaps (09-11)",
+   "purpose": "Exclude gaps whose quoted anchor no longer exists",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Excludes but does not close; families respawn.",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "human-priority weight",
+   "location": "gap-to-feature.ts ranking",
+   "purpose": "prefer human gaps",
+   "status": "live-used",
+   "general": true,
+   "evidence": "matches only human_reported and excludes operator:* sources (09-18)",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "Revert detector",
+   "location": "gap-to-feature.ts revert recognition",
+   "purpose": "Link reverts to landings",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "Needs 'reverts <sha>'; operator reverts lacked it",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "hopeless()/predictLand/expectation-calibration.json",
+   "location": "gap-to-feature.ts ~993/~2427",
+   "purpose": "category landability self-model",
+   "status": "broken",
+   "general": true,
+   "evidence": "trained on the landed_commit class (0/1030)",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "Narrowing/recommit/step minter",
+   "location": "gap-to-feature.ts, feature-compose.ts appendComposeLesson",
+   "purpose": "retry failed gaps with lessons",
+   "status": "live-used",
+   "general": true,
+   "evidence": "480 narrowed, 430 recommit (415 open); main row multiplier",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  },
+  {
+   "name": "markPendingVerification / landedCommitVerdict",
+   "location": "gap-to-feature.ts:1149",
+   "purpose": "Hold unmeasured landings; re-land = present",
+   "status": "live-used",
+   "general": true,
+   "evidence": "livelock 432 picks 08-22; re-land closes as verified",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "compose-horizon cooldown map",
+   "location": "gap-to-feature.ts:1552 (bc6daac)",
+   "purpose": "Per-gap compose cooldown",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Env-tunable GAP_COMPOSE_COOLDOWN_MS; global trigger flap left open",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "Narrowing / recommit child gaps",
+   "location": "gap-to-feature.ts:1988; feature-compose.ts:2340",
+   "purpose": "Decompose stuck gaps / retry failed composes",
+   "status": "duplicate",
+   "general": true,
+   "evidence": "Verbatim copies with the penalty reset; 57% of open gaps auto-minted (09-12)",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "per-node calibration stores",
+   "location": "gap-to-feature.ts:2745/2775/2845 (/workspace/expectation-calibration.json, gap-class-posteriors.json, close-oracle-calibration.json)",
+   "purpose": "Class posteriors and close-oracle calibration that gate admission and closes",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Values diverge between the nodes (e.g. landed_commit false_closes 2149 vs 31). The paths are env-default constants.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "hopeless() category seal",
+   "location": "gap-to-feature.ts:778 + /workspace/expectation-calibration.json",
+   "purpose": "Exclude unlandable categories",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Harmful: 11+ categories sealed at 8/0; 59/237 excluded live (09-05)",
+   "source": "memory-4",
+   "mentions": 2,
+   "sources": [
+    "memory-4",
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "premise check PREMISE UNVERIFIED",
+   "location": "gap-to-feature.ts:799 (9f222fb)",
+   "purpose": "refuse gaps whose quoted token is absent",
+   "status": "unknown",
+   "general": true,
+   "evidence": "0 production firings at last check 09-13",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "premise check PREMISE WARNING",
+   "location": "gap-to-feature.ts:799 (9f222fb)",
+   "purpose": "Warn drafter of false gap premises",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "0 fires on autonomous composes",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "hopeless() calibration seal",
+   "location": "gap-to-feature.ts:987 + /workspace/expectation-calibration.json",
+   "purpose": "Stop spending on categories with attempts>=8 and lands=0.",
+   "status": "live-used",
+   "general": true,
+   "evidence": "13 sealed 09-02; laundered by echo children",
+   "source": "memory-5",
+   "mentions": 2,
+   "sources": [
+    "memory-5",
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "land->close sweep (closeLandedGap)",
+   "location": "gap-to-feature.ts; 10e10e9; 6583dd4",
+   "purpose": "Close gaps on verified landings",
+   "status": "live-used",
+   "general": true,
+   "evidence": "First self-measured close landed_verified on 09-28",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "hopeless() category seal + bounded human exemption",
+   "location": "gap-to-feature; /workspace/expectation-calibration.json",
+   "purpose": "Stop floods from never-landing categories",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Harmful: seals whole categories (3 categories 0/12-0/15) regardless of gap quality",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "Category seal hopeless() + escalation escape valve",
+   "location": "gap-to-feature; be891f3",
+   "purpose": "Stop hopeless categories; human exemption",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Links 1-3 closed; link 4 open; documentation_drift sealed by noise attempts",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "stale_open gap hygiene threshold",
+   "location": "gap_lifecycle_scan staleHours 48",
+   "purpose": "Detect idle gaps",
+   "status": "broken",
+   "general": false,
+   "evidence": "Structurally 0 (fleet touch cadence 36-48h)",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "autonomous_pick maintenanceLease",
+   "location": "gap_to_feature 128f51f",
+   "purpose": "Hold autonomous picks during measurement windows",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Ledger runs 10/10 (09-26)",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "substrate-config / env.provenance",
+   "location": "gen-env.sh plus image script",
+   "purpose": "Show which config tier won",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Verified 08-20 after two own defects",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "Gap investigation/repair grounding + citation oracle",
+   "location": "goal-target-inference.ts, goal-intent.ts (9cc89fd, 05e0c87)",
+   "purpose": "Ground and grade autonomous gap goals",
+   "status": "live-used",
+   "general": false,
+   "evidence": "08-28: accepts coincidental citations; phrasing-specific",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "host autonomous-regression detector",
+   "location": "host script (676cb859/cffc9489), .pullsync-testbaseline",
+   "purpose": "Detect test regressions after pulls",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Host-side, ungraded; 132 failed runs",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "autonomy-metrics collector / autonomy-status / criterion-coverage views",
+   "location": "host scripts (06-17..06-19)",
+   "purpose": "operator autonomy measurement",
+   "status": "fossil",
+   "general": false,
+   "evidence": "host-side, operator-read only; stale-cache incidents 06-19",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "Surgical gap scan",
+   "location": "hourly scan (06-29) surgical-hardcoded-endpoint",
+   "purpose": "Deterministic pattern gaps with file:line + literal check",
+   "status": "dormant",
+   "general": true,
+   "evidence": "16/16 landed autonomously, no reverts; pattern exhausted; extension da76f061 reverted as duplicate",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "gen-env merge-then-write + apply-inventory ENABLED_EXTRA_VESSELS",
+   "location": "image bootstrap tier 9f8f945e, d9f93442",
+   "purpose": "restartable boot from config+volumes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "restart rehearsal passed",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "joint-liveness detector",
+   "location": "joint-liveness.service, jointBinding registry",
+   "purpose": "flag severed write-read joints",
+   "status": "broken",
+   "general": true,
+   "evidence": "unit failed; checked 1 of 1; cannot read registry",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  },
+  {
+   "name": "semantic gate (addresses:true)",
+   "location": "landing lane",
+   "purpose": "Judge whether a patch addresses the gap",
+   "status": "broken",
+   "general": true,
+   "evidence": "Approved wrong-region/wrong-semantics obsidian edits 08-07 and inert 314f228",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "tool-usage / tool-argument pattern learning",
+   "location": "learning-signal-writer.ts:154; activities.ts:10019",
+   "purpose": "Learn tool argument patterns",
+   "status": "broken",
+   "general": false,
+   "evidence": "3 tables 0 rows",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "counterIntegrity",
+   "location": "learning-transfer-report.ts (40395ba)",
+   "purpose": "Assert total_executions vs selection counts",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Reports slot-binding 48,613x live",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "38 empty tables incl. composition_chain, vessel*, tool_usage*, execution_traces, goal_execution_path",
+   "location": "learning_loop",
+   "purpose": "Various legacy schemas",
+   "status": "fossil",
+   "evidence": "0 rows each",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "goal_verification_labels oracle corpus",
+   "location": "learning_loop.goal_verification_labels",
+   "purpose": "Reach verdicts from human/automated/deterministic labelers",
+   "status": "live-used",
+   "general": true,
+   "evidence": "14,100 rows; grounded never true",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "light-dispatch reachVerdict",
+   "location": "light-dispatch (59732fd)",
+   "purpose": "grade autonomous executions",
+   "status": "live-used",
+   "general": true,
+   "evidence": "95.5% true: vacuous for deterministic ticks",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "classifyPlane LLM-plane health",
+   "location": "llm completion health observer",
+   "purpose": "Declare the completion plane dark or usable",
+   "status": "broken",
+   "general": false,
+   "evidence": "Closed llm-completion-plane-dark while discovery had no llm_completion producer (09-11)",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "hub-egress LLM fallback",
+   "location": "llm-completion-dispatch.ts ec8ef67; feature-compose L1722",
+   "purpose": "reach hub arms",
+   "status": "duplicate",
+   "general": true,
+   "evidence": "4 inline callers bypass shared dispatcher",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "named maintenance leases",
+   "location": "maintenance-lease.ts",
+   "purpose": "Coordinate cutover, trace_store, change_window and autonomous_pick windows",
+   "status": "live-used",
+   "general": true,
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "change_window lease",
+   "location": "maintenanceLease shape; trace-store-reconcile, cutover, pull-sync",
+   "purpose": "Serialize mutating maintenance",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Harmful: monopolized 08-09 and 09-23/24 (45 deferrals/90 min)",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "oracle label consumer",
+   "location": "maybeConsumeOracleLabel fc297b4/d9dc600",
+   "purpose": "Operator feedback into credit",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Keyed on dispatch records (~3 h), so picker composes are unlabelable; no labels since 09-26",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "test-delta landing gate",
+   "location": "mitosis static eval (c0b665e, 41bde26, 25cd735)",
+   "purpose": "Refuse landings that introduce test failures",
+   "status": "broken",
+   "general": true,
+   "evidence": "Fixed 08-09. Dead again 08-31..09-28 per memory (shell 30s kill).",
+   "source": "git-devvessel-1",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-1"
+   ]
+  },
+  {
+   "name": "post_land_suite",
+   "location": "mitosis-applied.jsonl / test_suite",
+   "purpose": "Run vessel tests after landing",
+   "status": "live-used",
+   "general": true,
+   "evidence": "dormant 08-31->09-28 (ran=false ~600); fixed 5e9a0b2",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "Self-replacement pipeline (audit-vessel-purity, shadow-validate, promote, archive)",
+   "location": "none",
+   "purpose": "Replace impure vessels via shadow validation",
+   "status": "fossil",
+   "general": true,
+   "evidence": "Never built; mitosis cutover is the partial analogue",
+   "source": "openspec-2",
+   "mentions": 1,
+   "sources": [
+    "openspec-2"
+   ]
+  },
+  {
+   "name": "declined outcome / refusal-precision / conduct ledger",
+   "location": "none",
+   "purpose": "SOVEREIGN \u00a71-7 earned authority",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Absent: trace status \u2208 {success, failure}",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "foundation-compliance validator + propose-spec/verify-merge-candidate/restart-vessel",
+   "location": "none (FOUNDATION_COMPLIANCE_CHECKS.md spec only)",
+   "purpose": "Gate substrate-authored specs; closure CC checks",
+   "status": "fossil",
+   "general": true,
+   "evidence": "0 hits in live code",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "producerExistsForShape (proposed)",
+   "location": "not built",
+   "purpose": "cross-family dedup before mint",
+   "status": "unknown",
+   "general": true,
+   "evidence": "absent from all clones",
+   "source": "openspec-7",
+   "mentions": 1,
+   "sources": [
+    "openspec-7"
+   ]
+  },
+  {
+   "name": "exact-edit pre-validated goal recipe",
+   "location": "operator method into feature_compose (EDIT n old:/new:)",
+   "purpose": "First-try directed landings",
+   "status": "live-used",
+   "general": true,
+   "evidence": "4/4 first-try 09-25; directed landing 58%. The system does not author these itself (PROGRAM item 13).",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "design-tokens",
+   "location": "packages/design-tokens",
+   "purpose": "single source for color, type and state palette",
+   "status": "unknown",
+   "general": true,
+   "evidence": "typechecks 08-07; consumption not verified this pass",
+   "source": "openspec-9",
+   "mentions": 1,
+   "sources": [
+    "openspec-9"
+   ]
+  },
+  {
+   "name": "interaction-conformance checker",
+   "location": "packages/interaction-conformance",
+   "purpose": "static P1-P13 interaction-contract gate plus --emit-concepts lessons",
+   "status": "dormant",
+   "general": true,
+   "evidence": "proven to refuse 08-07; no lint consumer; P5/P6/P10 false positives unfixed",
+   "source": "openspec-9",
+   "mentions": 1,
+   "sources": [
+    "openspec-9"
+   ]
+  },
+  {
+   "name": "packages/shape-dispatch-check",
+   "location": "packages/shape-dispatch-check + scripts/check-shape-dispatch-all.sh",
+   "purpose": "Class detector for shape dispatch contract",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Zero callers (08-21); activity-api CLAUDE.md claims bun run lint runs it, but no lint script exists",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "shape-dispatch-check",
+   "location": "packages/shape-dispatch-check/",
+   "purpose": "Assert advertised shapes equal dispatch cases.",
+   "status": "unknown",
+   "general": true,
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "shape-dispatch-check lint",
+   "location": "packages/shape-dispatch-check/check.ts via repos/*/scripts/check-shape-dispatch.ts",
+   "purpose": "Enforce agreement between config shapes and dispatch cases",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Invoked by dev-vessel patch-with-tools.ts and vessel-mitosis-evaluate.ts",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "shape-dispatch-check",
+   "location": "packages/shape-dispatch-check; scripts/check-shape-dispatch-all.sh",
+   "purpose": "Advertised shapes == dispatch cases",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Sweep covers 2/19 vessels; no activity validates it",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "Endpoint-constant injection",
+   "location": "patch-with-tools.ts (7d9e39c)",
+   "purpose": "Supply in-file endpoint constants as facts to the ReAct editor",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-29 prevents URL confabulation across 3 escalation paths",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "patch_with_tools path containment",
+   "location": "patch-with-tools.ts (d4ae359/a2fc845/0e1de31)",
+   "purpose": "Refuse edit paths outside the target vessel",
+   "status": "live-used",
+   "general": true,
+   "evidence": "19/425 refused, 0 FP",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "L11 fabricated-host hard gate",
+   "location": "patch-with-tools.ts before mitosis staging (1a507d1), reusing detectArchitectureViolation Check C",
+   "purpose": "Block new external host literals absent from pre-image",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Corpus 2/200 flagged, 0 FP; advisory-only on feature-compose path",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "zero_behaviour_delta gate",
+   "location": "patch-with-tools.ts:1309 (+ede0030 exemption); feature-compose detectZeroBehaviorDelta",
+   "purpose": "Refuse comment/whitespace-only landings",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Blocks a336a75 class; accepts no-op reorders (3a97d2f)",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "synthetic FAVORABLE evaluation evidence",
+   "location": "patch-with-tools.ts:239",
+   "purpose": "Feed cutover after static evaluation",
+   "status": "broken",
+   "general": true,
+   "evidence": "Hardcoded rates of 1 and no traces",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "Poisoned-baseline guard",
+   "location": "patch-with-tools.ts:576-580",
+   "purpose": "Refuse edits when live \u2260 clone",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-09: refuses correctly, but its repairer mirror-to-live is never invoked, creating a deadlock",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "Shaped policies (walkBudget, lessonExecutionPolicy, settlementPolicy)",
+   "location": "policies/*.json under WORKSPACE_ROOT",
+   "purpose": "Law-1 shaped bounds",
+   "status": "broken",
+   "general": true,
+   "evidence": "erased from git worktree 08-16; dead copy at /workspace/policies",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "action_no_effect",
+   "location": "prompt sentence only",
+   "purpose": "penalize no-effect actions",
+   "status": "dormant",
+   "general": true,
+   "evidence": "consumer wired; zero rows vs 108,563 executions",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "regionContainmentVerdict",
+   "location": "pwt / feature-compose",
+   "purpose": "region containment on escalated patches",
+   "status": "dormant",
+   "general": true,
+   "evidence": "input region present on 2.6% of gaps",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "verifyPatchAddressesGap on patch_with_tools",
+   "location": "pwt 21da981",
+   "purpose": "semantic judge on the escalation lane",
+   "status": "live-used",
+   "general": true,
+   "evidence": "2 real refusals in the first 3 firings; fails open",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "remedy_effectiveness_observer / llm_api_health_observer / human_input",
+   "location": "registered resolvers",
+   "purpose": "detect remedies that don't move metrics / provider health / ask a human",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "no rhythm or activity invokes them (08-09, 08-12)",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "LLM arm renderer",
+   "location": "render-llm-arms.sh, apply-llm-arms.sh, llm-arms.json",
+   "purpose": "Render per-provider arm units",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Replaced static llm-resolver-{opus,haiku,google} units, which were duplicates on the same ports",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "metabob opencode/rpc-api/cli/dashboard",
+   "location": "repos/* (dropped f71ebe72)",
+   "purpose": "Feb-Mar platform",
+   "status": "fossil",
+   "general": true,
+   "evidence": "dropped as dead 04-30",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "metabob-mcp cockpit",
+   "location": "repos/metabob-mcp",
+   "purpose": "agent dispatch surface",
+   "status": "unknown",
+   "general": true,
+   "evidence": "dropped 04-30 as dead, re-added 05-12 d016bd1b",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "minibob",
+   "location": "repos/minibob",
+   "purpose": "goal processor, boredom, ReAct parity host",
+   "status": "fossil",
+   "general": true,
+   "evidence": "removed from container 57d74520; submodule dropped b49942df",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "Drift-commit self-maintenance family",
+   "location": "rhythm self-maintenance goal",
+   "purpose": "Commit detected vessel code drift",
+   "status": "live-used",
+   "general": false,
+   "evidence": "9d839e0 422 cache binaries; 4e4170a8 09-07; held on user decision",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  }
+ ]
+}

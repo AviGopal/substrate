@@ -1,0 +1,12 @@
+
+{
+  "change": {
+    "description": "Implement basic goal_summary resolver to close orphaned capability gap.",
+    "files": [
+      {
+        "path": "src/resolvers/goal-summary-resolver.ts",
+        "content": "import { ActivityContext, Resolver } from \"@avigopal/ias-executor-ts\";\n\ninterface GoalSummaryOutput {\n  summary: string;\n  details?: Record<string, any>;\n}\n\nconst goalSummaryResolver: Resolver<any, GoalSummaryOutput> = {\n  name: \"goal_summary\",\n  async resolve(context: ActivityContext, config: any): Promise<GoalSummaryOutput> {\n    // In a real scenario, this would gather actual metrics and summarize them.\n    // For now, we return a placeholder summary.\n    return {\n      summary: \"This is a summary of the substrate's goals and activities. (Placeholder)\",\n      details: {\n        timestamp: new Date().toISOString(),\n        // Add more relevant details here in a full implementation\n      },\n    };\n  },\n};\n\nexport default goalSummaryResolver;\n"
+      }
+    ]
+  }
+}

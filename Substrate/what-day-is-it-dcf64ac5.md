@@ -1,0 +1,3 @@
+# What is obsidian-vessel? Make a note explaining how it works
+
+Obsidian-Vessel is an Obsidian plugin that transforms your Obsidian vault into a "vessel" by exposing vault content (notes, search, canvas, backlinks, frontmatter, daily notes, graph queries) as impulse resolvers on a local HTTP server. Each instance of obsidian-vessel has a unique vessel ID and provides human interaction capabilities.

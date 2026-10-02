@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-1b60e744-narrowed-typecheck_dangling_reference",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-1b60e744] investigate and decompose gap route-edit-42be9978: In repos/goal-host-vessel/src/ind",
+  "description": "[narrowed from route-edit-1b60e744] investigate and decompose gap route-edit-42be9978: In repos/goal-host-vessel/src/index.ts, add one small self-contained helper function at the TOP LEVEL of the module, immediately before the line that reads `async function recordGoalPath(` — do not insert anything inside an existing function, and do not modify any existing code in this change. The helper is exactly this shape and must be balanced on its own: an async function named `landedShaForGo\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: compose adds top-level function landedShaForGoalPath with zero readers, not exported and not wired — a write-only hollow addition; wire it, export it for a real consumer, or drop it\n- semantic_reject: compose adds top-level function landedShaForGoalPath with zero readers, not exported and not wired — a write-only hollow addition; wire it, export it for a real consumer, or drop it\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-1b60e744-narrowed repeated already-recorded failure class typecheck_dangling_reference: src/index.ts(5939,24): error TS2554: Expected 2 arguments, but got 1.. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "[narrowed from route-edit-1b60e744] investigate and decompose gap route-edit-42be9978: In repos/goal-host-vessel/src/index.ts, add one small self-contained helper function at the TOP LEVEL of the module, immediately before the line that reads `async function recordGoalPath(` — do not insert anything inside an existing function, and do not modify any existing code in this change. The helper is exactly this shape and must be balanced on its own: an async function named `landedShaForGo\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- semantic_reject: compose adds top-level function landedShaForGoalPath with zero readers, not exported and not wired — a write-only hollow addition; wire it, export it for a real consumer, or drop it\n- semantic_reject: compose adds top-level function landedShaForGoalPath with zero readers, not exported and not wired — a write-only hollow addition; wire it, export it for a real consumer, or drop it\n\nDo not repeat these failures. Address the specific cause named above. [RETRY CONTEXT — compose for gap route-edit-1b60e744-narrowed repeated already-recorded failure class typecheck_dangling_reference: src/index.ts(5939,24): error TS2554: Expected 2 arguments, but got 1.. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-1b60e744-narrowed-typecheck_dangling_reference",
+  "source_gap_source": "substrate_detected"
+}

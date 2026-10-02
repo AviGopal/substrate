@@ -1,0 +1,80 @@
+[submodule "repos/concept-db"]
+	path = repos/concept-db
+	url = ../concept-db.git
+	branch = dev
+
+[submodule "repos/discovery-vessel"]
+	path = repos/discovery-vessel
+	url = ../discovery-vessel.git
+	branch = dev
+
+[submodule "repos/identity-vessel"]
+	path = repos/identity-vessel
+	url = ../identity-vessel.git
+	branch = dev
+
+[submodule "repos/activity-api"]
+	path = repos/activity-api
+	url = ../activity-api.git
+	branch = dev
+
+[submodule "repos/cpg-inference-ts"]
+	path = repos/cpg-inference-ts
+	url = ../cpg-inference-ts.git
+	branch = dev
+[submodule "repos/development-vessel"]
+	path = repos/development-vessel
+	url = ../development-vessel.git
+	branch = dev
+[submodule "repos/analysis-vessel"]
+	path = repos/analysis-vessel
+	url = ../analysis-vessel.git
+	branch = dev
+[submodule "repos/ias-executor-ts"]
+	path = repos/ias-executor-ts
+	url = ../ias-executor-ts.git
+	branch = dev
+[submodule "repos/boredom-vessel"]
+	path = repos/boredom-vessel
+	url = ../boredom-vessel.git
+	branch = dev
+[submodule "repos/goal-host-vessel"]
+	path = repos/goal-host-vessel
+	url = ../goal-host-vessel.git
+	branch = dev
+[submodule "repos/llm-resolver-vessel"]
+	path = repos/llm-resolver-vessel
+	url = ../llm-resolver-vessel.git
+	branch = dev
+[submodule "repos/local-tools-vessel"]
+	path = repos/local-tools-vessel
+	url = ../local-tools-vessel.git
+	branch = dev
+[submodule "repos/ribosome-vessel"]
+	path = repos/ribosome-vessel
+	url = ../ribosome-vessel.git
+	branch = dev
+[submodule "repos/stateful-ui-vessel"]
+	path = repos/stateful-ui-vessel
+	url = ../stateful-ui-vessel.git
+	branch = dev
+[submodule "repos/light-dispatch-vessel"]
+	path = repos/light-dispatch-vessel
+	url = ../light-dispatch-vessel.git
+	branch = dev
+[submodule "repos/metric-collector-vessel"]
+	path = repos/metric-collector-vessel
+	url = ../metric-collector-vessel.git
+	branch = dev
+[submodule "repos/obsidian-vessel"]
+	path = repos/obsidian-vessel
+	url = ../obsidian-vessel.git
+	branch = dev
+[submodule "repos/libp2p-federation-transport"]
+	path = repos/libp2p-federation-transport
+	url = ../libp2p-federation-transport.git
+	branch = dev
+[submodule "repos/human-surface-vessel"]
+	path = repos/human-surface-vessel
+	url = ../human-surface-vessel.git
+	branch = dev

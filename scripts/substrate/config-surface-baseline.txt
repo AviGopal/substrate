@@ -1,0 +1,6 @@
+lane=compose offered=72 emitted=92
+lane=compose dropped=
+lane=compose hardcoded=
+lane=compose unoffered=
+lane=compose mangled=
+phantom=0

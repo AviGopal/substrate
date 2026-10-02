@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-1e3e1f90",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/goal-host-vessel/src/goal-target-inference.ts, add a module-level constant near the top of the file: const MAX_",
+  "description": "In repos/goal-host-vessel/src/goal-target-inference.ts, add a module-level constant near the top of the file: const MAX_TARGET_SHAPES = 3; Then change the single line that reads exactly '  ).slice(0, 3) as string[];' to read '  ).slice(0, MAX_TARGET_SHAPES) as string[];'. That line occurs exactly once in the file. Behaviour is unchanged because the constant equals 3; this only names the bound. Nonce fix-cap-c4a2-r1.",
+  "goal_text": "In repos/goal-host-vessel/src/goal-target-inference.ts, add a module-level constant near the top of the file: const MAX_TARGET_SHAPES = 3; Then change the single line that reads exactly '  ).slice(0, 3) as string[];' to read '  ).slice(0, MAX_TARGET_SHAPES) as string[];'. That line occurs exactly once in the file. Behaviour is unchanged because the constant equals 3; this only names the bound. Nonce fix-cap-c4a2-r1.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-1e3e1f90",
+  "source_gap_source": "substrate_detected"
+}

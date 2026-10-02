@@ -1,0 +1,19 @@
+{
+  "id": "pull-sync-testgate-skipped-ias-executor-ts",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Repair needed: pull-sync converged ias-executor-ts to bf5c691a4a with NO test gate — the per-tick budget (420s) was exha",
+  "description": "Repair needed: pull-sync converged ias-executor-ts to bf5c691a4a with NO test gate — the per-tick budget (420s) was exhausted after 782s, so the suite never ran. This is not a passing gate, it is an absent one, and it is absent precisely when a tick is slow, which is when convergence is riskiest. Repair the capability by raising the budget, sharding the gate across ticks, or running the suite before the tick's other work.",
+  "goal_text": "Repair needed: pull-sync converged ias-executor-ts to bf5c691a4a with NO test gate — the per-tick budget (420s) was exhausted after 782s, so the suite never ran. This is not a passing gate, it is an absent one, and it is absent precisely when a tick is slow, which is when convergence is riskiest. Repair the capability by raising the budget, sharding the gate across ticks, or running the suite before the tick's other work.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "pull-sync-testgate-skipped-ias-executor-ts",
+  "source_gap_source": "substrate_detected"
+}

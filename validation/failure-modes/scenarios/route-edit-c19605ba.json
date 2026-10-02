@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-c19605ba",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/activity-api/src/lib/posterior-update.ts, make three coordinated edits so that an execution whose trace metadat",
+  "description": "In repos/activity-api/src/lib/posterior-update.ts, make three coordinated edits so that an execution whose trace metadata reports information_yield \"idle\" does not receive positive alpha credit. Edit 1: the interface TraceForPosterior beginning at line 48 has no metadata field at all, which is why this change cannot be made without it — add an optional property metadata?: { information_yield?: string } to that interface. Edit 2: line 241 currently reads exactly:   skipped_reason?: 'all_deterministic' | 'ungraded_reach';   — add a third arm so it reads 'all_deterministic' | 'ungraded_reach' | 'idle_yield'. Edit 3: line 1069 inside applyOutcomeToPosteriors currently reads exactly:   const skipVariantUpdate = tierClass === 'all_deterministic';   — the parameter named trace is in scope there; extend this so the variant_performance_metrics UPDATE is also skipped when trace.metadata?.information_yield === 'idle', and set skipped_reason to 'idle_yield' for that case in the UpdateSummary object literal at lines 1298-1310 which currently uses a nested ternary over ungraded and skipVariantUpdate. An interface-only or comment-only change is explicitly NOT sufficient — a previous attempt was rejected by the semantic gate for adding the union arm without the logic. The metadata field is optional, so when a caller does not supply it the value is undefined and behaviour is unchanged; that is intended for this change.",
+  "goal_text": "In repos/activity-api/src/lib/posterior-update.ts, make three coordinated edits so that an execution whose trace metadata reports information_yield \"idle\" does not receive positive alpha credit. Edit 1: the interface TraceForPosterior beginning at line 48 has no metadata field at all, which is why this change cannot be made without it — add an optional property metadata?: { information_yield?: string } to that interface. Edit 2: line 241 currently reads exactly:   skipped_reason?: 'all_deterministic' | 'ungraded_reach';   — add a third arm so it reads 'all_deterministic' | 'ungraded_reach' | 'idle_yield'. Edit 3: line 1069 inside applyOutcomeToPosteriors currently reads exactly:   const skipVariantUpdate = tierClass === 'all_deterministic';   — the parameter named trace is in scope there; extend this so the variant_performance_metrics UPDATE is also skipped when trace.metadata?.information_yield === 'idle', and set skipped_reason to 'idle_yield' for that case in the UpdateSummary object literal at lines 1298-1310 which currently uses a nested ternary over ungraded and skipVariantUpdate. An interface-only or comment-only change is explicitly NOT sufficient — a previous attempt was rejected by the semantic gate for adding the union arm without the logic. The metadata field is optional, so when a caller does not supply it the value is undefined and behaviour is unchanged; that is intended for this change.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-c19605ba",
+  "source_gap_source": "substrate_detected"
+}

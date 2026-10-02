@@ -1,0 +1,9 @@
+{
+  "status": 409,
+  "data": {
+    "resolved": false,
+    "success": false,
+    "shape": "uiQuestion_write",
+    "error": "contentless write refused: panel 'audit-required-question' already exists and this uiQuestion_write carried no content-bearing field (title, body, kind, importance, asks, visibility). Nothing was changed. Supply the field(s) you intend to write, or read the panel instead of rewriting it."
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-24db916a",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-a45b4506: The executor interpolates placeholders in LLM prompt templates but no",
+  "description": "investigate and decompose gap route-edit-a45b4506: The executor interpolates placeholders in LLM prompt templates but not in non-LLM task configs, resulting in unprocessed placeholders in activity templates that require caller-supplied values.",
+  "goal_text": "investigate and decompose gap route-edit-a45b4506: The executor interpolates placeholders in LLM prompt templates but not in non-LLM task configs, resulting in unprocessed placeholders in activity templates that require caller-supplied values.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-24db916a",
+  "source_gap_source": "substrate_detected"
+}

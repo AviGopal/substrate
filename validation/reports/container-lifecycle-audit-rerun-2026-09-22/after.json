@@ -1,0 +1,300 @@
+{
+  "containers": [
+    {
+      "id": "7397faf95327b65131491da4fb02878b044a4f1308aba307f2cf64000ace9d24",
+      "name": "substrate-live",
+      "image": "46d6397c5daa0252928eff734f766ca6220905ab5ae52d820d5de1afd276693c",
+      "started": "2026-09-19T00:34:43.934702241-07:00",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "substrate-surreal",
+          "Source": "/home/avi/.local/share/containers/storage/volumes/substrate-surreal/_data",
+          "Destination": "/var/lib/surrealdb",
+          "Driver": "local",
+          "Mode": "",
+          "Options": [
+            "nosuid",
+            "nodev",
+            "rbind"
+          ],
+          "RW": true,
+          "Propagation": "rprivate"
+        },
+        {
+          "Type": "volume",
+          "Name": "substrate-workspace",
+          "Source": "/home/avi/.local/share/containers/storage/volumes/substrate-workspace/_data",
+          "Destination": "/workspace",
+          "Driver": "local",
+          "Mode": "",
+          "Options": [
+            "nosuid",
+            "nodev",
+            "rbind"
+          ],
+          "RW": true,
+          "Propagation": "rprivate"
+        }
+      ],
+      "networks": {}
+    },
+    {
+      "id": "196d7cb238134b539228c932938b9dd0a81521aedc0d3dcc6f16a38c4668d34a",
+      "name": "mini-node",
+      "image": "46d6397c5daa0252928eff734f766ca6220905ab5ae52d820d5de1afd276693c",
+      "started": "2026-09-19T00:34:49.598579429-07:00",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "mini-workspace",
+          "Source": "/home/avi/.local/share/containers/storage/volumes/mini-workspace/_data",
+          "Destination": "/workspace",
+          "Driver": "local",
+          "Mode": "",
+          "Options": [
+            "nosuid",
+            "nodev",
+            "rbind"
+          ],
+          "RW": true,
+          "Propagation": "rprivate"
+        },
+        {
+          "Type": "volume",
+          "Name": "mini-surreal",
+          "Source": "/home/avi/.local/share/containers/storage/volumes/mini-surreal/_data",
+          "Destination": "/var/lib/surrealdb",
+          "Driver": "local",
+          "Mode": "",
+          "Options": [
+            "nosuid",
+            "nodev",
+            "rbind"
+          ],
+          "RW": true,
+          "Propagation": "rprivate"
+        }
+      ],
+      "networks": {}
+    },
+    {
+      "id": "c2fecdd62e028590651413c37b6d3760e690c43f1e4bb68688c5fc1c66e0bb85",
+      "name": "verify-node",
+      "image": "f70de0656d69dabcb7c57ed2919d7e580e378e1020db17b2d8173f5b675c6c12",
+      "started": "2026-09-17T22:52:11.629192642-07:00",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "verify-surreal",
+          "Source": "/home/avi/.local/share/containers/storage/volumes/verify-surreal/_data",
+          "Destination": "/var/lib/surrealdb",
+          "Driver": "local",
+          "Mode": "",
+          "Options": [
+            "nosuid",
+            "nodev",
+            "rbind"
+          ],
+          "RW": true,
+          "Propagation": "rprivate"
+        },
+        {
+          "Type": "volume",
+          "Name": "verify-workspace",
+          "Source": "/home/avi/.local/share/containers/storage/volumes/verify-workspace/_data",
+          "Destination": "/workspace",
+          "Driver": "local",
+          "Mode": "",
+          "Options": [
+            "nosuid",
+            "nodev",
+            "rbind"
+          ],
+          "RW": true,
+          "Propagation": "rprivate"
+        }
+      ],
+      "networks": {
+        "pasta": {
+          "EndpointID": "",
+          "Gateway": "",
+          "IPAddress": "",
+          "IPPrefixLen": 0,
+          "IPv6Gateway": "",
+          "GlobalIPv6Address": "",
+          "GlobalIPv6PrefixLen": 0,
+          "MacAddress": "",
+          "NetworkID": "pasta",
+          "DriverOpts": null,
+          "IPAMConfig": null,
+          "Links": null
+        }
+      }
+    },
+    {
+      "id": "c661f17926022fb67c84f6f73369bf5d9247dd42b8ac793dbadad612e591e23e",
+      "name": "spoke-syz",
+      "image": "f70de0656d69dabcb7c57ed2919d7e580e378e1020db17b2d8173f5b675c6c12",
+      "started": "2026-09-17T23:02:35.587573909-07:00",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "spoke-syz-workspace",
+          "Source": "/home/avi/.local/share/containers/storage/volumes/spoke-syz-workspace/_data",
+          "Destination": "/workspace",
+          "Driver": "local",
+          "Mode": "",
+          "Options": [
+            "nosuid",
+            "nodev",
+            "rbind"
+          ],
+          "RW": true,
+          "Propagation": "rprivate"
+        },
+        {
+          "Type": "volume",
+          "Name": "spoke-syz-surreal",
+          "Source": "/home/avi/.local/share/containers/storage/volumes/spoke-syz-surreal/_data",
+          "Destination": "/var/lib/surrealdb",
+          "Driver": "local",
+          "Mode": "",
+          "Options": [
+            "nosuid",
+            "nodev",
+            "rbind"
+          ],
+          "RW": true,
+          "Propagation": "rprivate"
+        }
+      ],
+      "networks": {
+        "pasta": {
+          "EndpointID": "",
+          "Gateway": "",
+          "IPAddress": "",
+          "IPPrefixLen": 0,
+          "IPv6Gateway": "",
+          "GlobalIPv6Address": "",
+          "GlobalIPv6PrefixLen": 0,
+          "MacAddress": "",
+          "NetworkID": "pasta",
+          "DriverOpts": null,
+          "IPAMConfig": null,
+          "Links": null
+        }
+      }
+    },
+    {
+      "id": "6208a798ded549d44bc78aa805856ad1115d8c6e983f8285c9a754b87906004d",
+      "name": "coldboot-node",
+      "image": "f70de0656d69dabcb7c57ed2919d7e580e378e1020db17b2d8173f5b675c6c12",
+      "started": "2026-09-19T15:34:14.282274835-07:00",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "coldboot-surreal",
+          "Source": "/home/avi/.local/share/containers/storage/volumes/coldboot-surreal/_data",
+          "Destination": "/var/lib/surrealdb",
+          "Driver": "local",
+          "Mode": "",
+          "Options": [
+            "nosuid",
+            "nodev",
+            "rbind"
+          ],
+          "RW": true,
+          "Propagation": "rprivate"
+        },
+        {
+          "Type": "volume",
+          "Name": "coldboot-workspace",
+          "Source": "/home/avi/.local/share/containers/storage/volumes/coldboot-workspace/_data",
+          "Destination": "/workspace",
+          "Driver": "local",
+          "Mode": "",
+          "Options": [
+            "nosuid",
+            "nodev",
+            "rbind"
+          ],
+          "RW": true,
+          "Propagation": "rprivate"
+        }
+      ],
+      "networks": {
+        "pasta": {
+          "EndpointID": "",
+          "Gateway": "",
+          "IPAddress": "",
+          "IPPrefixLen": 0,
+          "IPv6Gateway": "",
+          "GlobalIPv6Address": "",
+          "GlobalIPv6PrefixLen": 0,
+          "MacAddress": "",
+          "NetworkID": "pasta",
+          "DriverOpts": null,
+          "IPAMConfig": null,
+          "Links": null
+        }
+      }
+    },
+    {
+      "id": "7c4bc3536ca89644ad5a971ea24e952e49162e29599a94e131cbf13928b289fb",
+      "name": "coldboot2-node",
+      "image": "2edb33af6b5a402fd385a3b2e889e021f2be428d4586974f07526dd79c7f67e1",
+      "started": "2026-09-19T15:57:49.896943959-07:00",
+      "mounts": [
+        {
+          "Type": "volume",
+          "Name": "coldboot2-surreal",
+          "Source": "/home/avi/.local/share/containers/storage/volumes/coldboot2-surreal/_data",
+          "Destination": "/var/lib/surrealdb",
+          "Driver": "local",
+          "Mode": "",
+          "Options": [
+            "nosuid",
+            "nodev",
+            "rbind"
+          ],
+          "RW": true,
+          "Propagation": "rprivate"
+        },
+        {
+          "Type": "volume",
+          "Name": "coldboot2-workspace",
+          "Source": "/home/avi/.local/share/containers/storage/volumes/coldboot2-workspace/_data",
+          "Destination": "/workspace",
+          "Driver": "local",
+          "Mode": "",
+          "Options": [
+            "nosuid",
+            "nodev",
+            "rbind"
+          ],
+          "RW": true,
+          "Propagation": "rprivate"
+        }
+      ],
+      "networks": {
+        "pasta": {
+          "EndpointID": "",
+          "Gateway": "",
+          "IPAddress": "",
+          "IPPrefixLen": 0,
+          "IPv6Gateway": "",
+          "GlobalIPv6Address": "",
+          "GlobalIPv6PrefixLen": 0,
+          "MacAddress": "",
+          "NetworkID": "pasta",
+          "DriverOpts": null,
+          "IPAMConfig": null,
+          "Links": null
+        }
+      }
+    }
+  ],
+  "networks": "[\n  {\n    \"name\": \"podman\",\n    \"id\": \"2f259bab93aaaaa2542ba43ef33eb990d0999ee1b9924b557b7be53c0b7a1bb9\",\n    \"driver\": \"bridge\",\n    \"network_interface\": \"podman0\",\n    \"created\": \"2026-09-22T03:51:32.337491155-07:00\",\n    \"subnets\": [\n      {\n        \"subnet\": \"10.88.0.0/16\",\n        \"gateway\": \"10.88.0.1\"\n      }\n    ],\n    \"ipv6_enabled\": false,\n    \"internal\": false,\n    \"dns_enabled\": false,\n    \"ipam_options\": {\n      \"driver\": \"host-local\"\n    }\n  }\n]\n",
+  "volumes": "[\n  {\n    \"Name\": \"substrate-surreal\",\n    \"Driver\": \"local\",\n    \"Mountpoint\": \"/home/avi/.local/share/containers/storage/volumes/substrate-surreal/_data\",\n    \"CreatedAt\": \"2026-09-17T17:53:31.66708016-07:00\",\n    \"Labels\": {\n      \n    },\n    \"Scope\": \"local\",\n    \"Options\": {\n      \n    },\n    \"MountCount\": 0,\n    \"NeedsCopyUp\": true,\n    \"LockNumber\": 0\n  },\n  {\n    \"Name\": \"substrate-workspace\",\n    \"Driver\": \"local\",\n    \"Mountpoint\": \"/home/avi/.local/share/containers/storage/volumes/substrate-workspace/_data\",\n    \"CreatedAt\": \"2026-09-17T17:53:45.665610439-07:00\",\n    \"Labels\": {\n      \n    },\n    \"Scope\": \"local\",\n    \"Options\": {\n      \n    },\n    \"MountCount\": 0,\n    \"NeedsCopyUp\": true,\n    \"LockNumber\": 1\n  },\n  {\n    \"Name\": \"mini-workspace\",\n    \"Driver\": \"local\",\n    \"Mountpoint\": \"/home/avi/.local/share/containers/storage/volumes/mini-workspace/_data\",\n    \"CreatedAt\": \"2026-09-17T19:45:00.311195729-07:00\",\n    \"Labels\": {\n      \n    },\n    \"Scope\": \"local\",\n    \"Options\": {\n      \n    },\n    \"MountCount\": 0,\n    \"NeedsCopyUp\": true,\n    \"LockNumber\": 4\n  },\n  {\n    \"Name\": \"mini-surreal\",\n    \"Driver\": \"local\",\n    \"Mountpoint\": \"/home/avi/.local/share/containers/storage/volumes/mini-surreal/_data\",\n    \"CreatedAt\": \"2026-09-17T19:45:00.329065202-07:00\",\n    \"Labels\": {\n      \n    },\n    \"Scope\": \"local\",\n    \"Options\": {\n      \n    },\n    \"MountCount\": 0,\n    \"NeedsCopyUp\": true,\n    \"LockNumber\": 5\n  },\n  {\n    \"Name\": \"verify-surreal\",\n    \"Driver\": \"local\",\n    \"Mountpoint\": \"/home/avi/.local/share/containers/storage/volumes/verify-surreal/_data\",\n    \"CreatedAt\": \"2026-09-17T22:52:11.150167366-07:00\",\n    \"Labels\": {\n      \n    },\n    \"Scope\": \"local\",\n    \"Options\": {\n      \n    },\n    \"MountCount\": 0,\n    \"NeedsCopyUp\": true,\n    \"LockNumber\": 7\n  },\n  {\n    \"Name\": \"verify-workspace\",\n    \"Driver\": \"local\",\n    \"Mountpoint\": \"/home/avi/.local/share/containers/storage/volumes/verify-workspace/_data\",\n    \"CreatedAt\": \"2026-09-17T22:52:11.160537418-07:00\",\n    \"Labels\": {\n      \n    },\n    \"Scope\": \"local\",\n    \"Options\": {\n      \n    },\n    \"MountCount\": 0,\n    \"NeedsCopyUp\": true,\n    \"LockNumber\": 8\n  },\n  {\n    \"Name\": \"spoke-syz-workspace\",\n    \"Driver\": \"local\",\n    \"Mountpoint\": \"/home/avi/.local/share/containers/storage/volumes/spoke-syz-workspace/_data\",\n    \"CreatedAt\": \"2026-09-17T23:02:35.149811139-07:00\",\n    \"Labels\": {\n      \n    },\n    \"Scope\": \"local\",\n    \"Options\": {\n      \n    },\n    \"MountCount\": 0,\n    \"NeedsCopyUp\": true,\n    \"LockNumber\": 10\n  },\n  {\n    \"Name\": \"spoke-syz-surreal\",\n    \"Driver\": \"local\",\n    \"Mountpoint\": \"/home/avi/.local/share/containers/storage/volumes/spoke-syz-surreal/_data\",\n    \"CreatedAt\": \"2026-09-17T23:02:35.16017912-07:00\",\n    \"Labels\": {\n      \n    },\n    \"Scope\": \"local\",\n    \"Options\": {\n      \n    },\n    \"MountCount\": 0,\n    \"NeedsCopyUp\": true,\n    \"LockNumber\": 11\n  },\n  {\n    \"Name\": \"coldboot-surreal\",\n    \"Driver\": \"local\",\n    \"Mountpoint\": \"/home/avi/.local/share/containers/storage/volumes/coldboot-surreal/_data\",\n    \"CreatedAt\": \"2026-09-19T15:34:13.164470551-07:00\",\n    \"Labels\": {\n      \n    },\n    \"Scope\": \"local\",\n    \"Options\": {\n      \n    },\n    \"MountCount\": 0,\n    \"NeedsCopyUp\": true,\n    \"LockNumber\": 12\n  },\n  {\n    \"Name\": \"coldboot-workspace\",\n    \"Driver\": \"local\",\n    \"Mountpoint\": \"/home/avi/.local/share/containers/storage/volumes/coldboot-workspace/_data\",\n    \"CreatedAt\": \"2026-09-19T15:34:13.267178736-07:00\",\n    \"Labels\": {\n      \n    },\n    \"Scope\": \"local\",\n    \"Options\": {\n      \n    },\n    \"MountCount\": 0,\n    \"NeedsCopyUp\": true,\n    \"LockNumber\": 13\n  },\n  {\n    \"Name\": \"coldboot2-surreal\",\n    \"Driver\": \"local\",\n    \"Mountpoint\": \"/home/avi/.local/share/containers/storage/volumes/coldboot2-surreal/_data\",\n    \"CreatedAt\": \"2026-09-19T15:57:49.014215468-07:00\",\n    \"Labels\": {\n      \n    },\n    \"Scope\": \"local\",\n    \"Options\": {\n      \n    },\n    \"MountCount\": 0,\n    \"NeedsCopyUp\": true,\n    \"LockNumber\": 15\n  },\n  {\n    \"Name\": \"coldboot2-workspace\",\n    \"Driver\": \"local\",\n    \"Mountpoint\": \"/home/avi/.local/share/containers/storage/volumes/coldboot2-workspace/_data\",\n    \"CreatedAt\": \"2026-09-19T15:57:49.106506604-07:00\",\n    \"Labels\": {\n      \n    },\n    \"Scope\": \"local\",\n    \"Options\": {\n      \n    },\n    \"MountCount\": 0,\n    \"NeedsCopyUp\": true,\n    \"LockNumber\": 16\n  }\n]\n"
+}

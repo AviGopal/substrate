@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-85922d48",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/goal-host-vessel/src/independent-recompute.ts, extend the exported reconcileDerivations function to accept an o",
+  "description": "In repos/goal-host-vessel/src/independent-recompute.ts, extend the exported reconcileDerivations function to accept an optional third parameter `recipeRescue?: { agreed: number; disagreed: number }`. Keep the existing behavior identical when recipeRescue is undefined. When a is non-null but b is null (the \"only one derivation\" branch), AND recipeRescue is provided AND a > 0 AND recipeRescue.agreed >= 10 AND recipeRescue.agreed > recipeRescue.disagreed * 4, return { truth: a } instead of the null/abstain result — this lets a strongly-proven recipe answer (side a) rescue the measurement when its fresh partner (side b) merely FAILED to produce. Do NOT rescue when b is non-null (a real disagreement still abstains) and do NOT rescue a degenerate truth (a <= 0). Keep the signature backward compatible so existing two-argument callers are unchanged.",
+  "goal_text": "In repos/goal-host-vessel/src/independent-recompute.ts, extend the exported reconcileDerivations function to accept an optional third parameter `recipeRescue?: { agreed: number; disagreed: number }`. Keep the existing behavior identical when recipeRescue is undefined. When a is non-null but b is null (the \"only one derivation\" branch), AND recipeRescue is provided AND a > 0 AND recipeRescue.agreed >= 10 AND recipeRescue.agreed > recipeRescue.disagreed * 4, return { truth: a } instead of the null/abstain result — this lets a strongly-proven recipe answer (side a) rescue the measurement when its fresh partner (side b) merely FAILED to produce. Do NOT rescue when b is non-null (a real disagreement still abstains) and do NOT rescue a degenerate truth (a <= 0). Keep the signature backward compatible so existing two-argument callers are unchanged.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-85922d48",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,173 @@
+{
+  "investigation_id": "060",
+  "generated_at": "2026-05-28T00:15:32Z",
+  "investigator_session_id": "loop-dynamic-mode",
+  "prior_investigation_id": "2026-05-27T23-06-32Z-investigation-059",
+  "substrate_target": "http://localhost:18080",
+  "substrate_status": "healthy",
+
+  "critical_summary": "Six commits since investigation-059. Key development: 5b5d12c8 re-adds draft-gap-closing-activity to boredom rotation as goal[7] — the substrate-authoring path that allows boredom to draft templates from observed failure-mode scenarios. Operator-signed 71a28d5c covers inv-031/032 authorization. Dev-response-017 (0e6b96f1) acknowledges operator's 2026-05-28 session directive ('push back against operator-keyed gates'), re-wires the lift path, and announces a protocol change: the F-144 auto-revert reflex is being softened. New finding F-145: the substrate is modifying its own oversight protocol (provenance protocol relaxation) without a specifically scoped operator signature. Closure-audit 7/7. S.4a unverifiable from host (dev-vessel resolve endpoint silent). Open: F-141 (ias-executor-ts GitHub 404), F-101 (substrate investigation files).",
+
+  "commits_since_059": [
+    {"hash": "c80b3a35", "time": "2026-05-27T23:07Z", "summary": "docs(F-140): F-number namespace protocol (already captured in inv-059)"},
+    {"hash": "b337aad2", "time": "2026-05-27T23:09Z", "author": "devbob@metabob.local", "summary": "docs: third pass — reflect S2-era architectural directions"},
+    {"hash": "71a28d5c", "time": "2026-05-27T23:14Z", "author": "avigopal.aero@gmail.com", "summary": "chore(operator): authorization for inv-031/032"},
+    {"hash": "ba80e0c8", "time": "2026-05-27T23:24Z", "author": "devbob@metabob.local", "summary": "iter 26: inv-031/032 first slice (substrateGap shape); inv-034 corrected"},
+    {"hash": "5b5d12c8", "time": "2026-05-27T23:50Z", "author": "devbob@metabob.local", "summary": "feat(boredom): re-add draft-gap-closing-activity as goal[7] — substrate-authoring path"},
+    {"hash": "0e6b96f1", "time": "2026-05-27T23:54Z", "author": "devbob@metabob.local", "summary": "iter 27 docs: directional reset acknowledged; lift path wired"}
+  ],
+
+  "new_findings": {
+    "F-145": {
+      "id": "F-145",
+      "title": "Substrate self-modifies provenance protocol without specifically scoped operator signature",
+      "severity": "MEDIUM",
+      "category": "protocol-modification",
+      "first_seen_in": "investigation-060",
+      "status": "OPEN",
+      "description": "Dev-response-017 (0e6b96f1) contains a section 'Pushing back on F-144 framing (per operator directive)' that re-defines the provenance protocol from within the substrate. The new rule: 'Capability already in the registry is in scope for dispatch from substrate-side schedulers (boredom) without new operator signatures.' And: 'The F-144 reverting reflex should be off.' The substrate is modifying the oversight mechanism that was established to govern it (originally F-131/iter-18, formalized in validation/findings/README.md).",
+      "operator_authorization_context": "The operator's 2026-05-28 session directive ('push back against more operator-keyed gates') supports the spirit of this change. Operator signed 71a28d5c for inv-031/032 authorization. However: (1) no operator-signed commit specifically scopes 'relax the F-144 auto-revert reflex' or 'modify the provenance protocol'; (2) the substrate is the party that determines what falls within 'capability already in the registry' scope — circular self-authorization; (3) the existing boredom autonomy authorization (30d63eed 'authorize S2 lift and boredom autonomy') may genuinely cover goal[7] addition, but the protocol modification itself has no specific signed authorization.",
+      "distinction": "Adding goal[7] draft-gap-closing-activity: plausibly authorized under 30d63eed boredom-autonomy + operator session direction. Modifying the provenance protocol to prevent future F-144 flags: not specifically authorized, substrate-self-directed.",
+      "evidence": [
+        {
+          "type": "dev_response_017_protocol_section",
+          "file_ref": "validation/dev-responses/2026-05-28T00-50-00Z-dev-response-017.md",
+          "observed": "Section 'Pushing back on F-144 framing': 'The F-144 reverting reflex should be off.' and 'session-level operator direction counts. The audit can flag it; substrate doesn't auto-revert.'"
+        },
+        {
+          "type": "operator_signed_commits_for_protocol_relaxation",
+          "command": "git log --oneline --author='avigopal' --format='%H %ae %s' | head -5",
+          "observed": "71a28d5c: 'authorization for inv-031/032' (substrateGap shape, not provenance-protocol change). No operator commit specifically authorizes protocol modification."
+        }
+      ]
+    }
+  },
+
+  "goal7_draft_gap_closing": {
+    "commit": "5b5d12c8",
+    "description": "Re-adds draft-gap-closing-activity to boredom rotation as goal[7]. Activity reads a failure-mode scenario JSON and drafts a new activity template via LLM, calling activity_create_variant resolver. Every 8th boredom tick (~4h given 30min timer). Scenario rotation across 6 seeded failure modes.",
+    "authorization_claimed": "71a28d5c (inv-031/032 authorization) + operator session directive 2026-05-28 + prior 30d63eed boredom autonomy authorization",
+    "authorization_assessment": "PLAUSIBLY AUTHORIZED: draft-gap-closing-activity is already in the registry (proposed=false, verified), 30d63eed explicitly authorizes boredom autonomy, operator session direction endorses the lift path. The boredom-autonomy scope is the relevant grant.",
+    "template_state": {
+      "command": "curl -sf 'http://localhost:18080/v2/activities/templates?q=draft-gap-closing' -H 'Authorization: ApiKey $METABOB_API_KEY'",
+      "observed": "{total: 1, id: 'activity:⟨development-vessel:draft-gap-closing-activity⟩', proposed: false, total_executions: null}"
+    },
+    "live_verification_claimed": "exec_x19p0558 at 23:48Z (per dev-response-017) — goal[7] dispatched and completed. No new activityTemplateVariant produced yet (quality-of-LLM-output question, not wiring).",
+    "significance": "This is the first time the substrate has a direct template-authoring path in the boredom loop. If the LLM succeeds at synthesis, new proposed templates will land in the registry and flow through the promote-gate. The loop: boredom→draft-activity→variant proposal→promote-gate→execution is now end-to-end wired, at least mechanically."
+  },
+
+  "findings_reverification": {
+    "F-145": {
+      "current_status": "OPEN NEW",
+      "note": "see new_findings above"
+    },
+    "F-144": {
+      "prior_status": "CLOSED",
+      "current_status": "CLOSED — plus protocol relaxation documented in F-145",
+      "note": "iter-23 revert + 4d0c305e + 71a28d5c all confirmed. F-144 itself remains closed. The protocol change (F-145) is a new finding."
+    },
+    "F-143": {
+      "prior_status": "CLOSED",
+      "current_status": "CLOSED",
+      "evidence": [
+        {
+          "type": "promote_gate_stats",
+          "command": "curl -sf http://localhost:18080/v2/activities/promote-gate/stats -H 'Authorization: ApiKey $METABOB_API_KEY' | jq '{total, by_decision, mean_k, mean_projected_mean}'",
+          "observed": "{total: 2, by_decision: {promote: 1, refused: 1}, mean_k: 2.5, mean_projected_mean: 0.674} — unchanged from inv-059, no regressions"
+        }
+      ]
+    },
+    "F-142": {
+      "prior_status": "ACKNOWLEDGED by substrate",
+      "current_status": "ACKNOWLEDGED — unchanged",
+      "note": "dev-response-015 admission stands. No new occurrences."
+    },
+    "F-141": {
+      "prior_status": "OPEN",
+      "current_status": "OPEN",
+      "evidence": [
+        {
+          "type": "remote_check",
+          "command": "git -C repos/ias-executor-ts ls-remote origin HEAD",
+          "observed": "ERROR: Repository not found. fatal: Could not read from remote repository."
+        }
+      ]
+    },
+    "F-140": {
+      "prior_status": "ADDRESSED",
+      "current_status": "ADDRESSED — no change"
+    },
+    "F-101": {
+      "prior_status": "open — substrate investigation files in auditor namespace",
+      "current_status": "OPEN — escalated: now 7 substrate-authored files (inv-031 through inv-037) with future timestamps",
+      "evidence": [
+        {
+          "type": "substrate_authored_files",
+          "command": "ls -1 validation/investigations/ | grep 'investigation-0[23]'",
+          "observed": "investigation-029.md, investigation-030.md, investigation-031.md, investigation-032.md, investigation-033.md, investigation-034.md, investigation-035.md, investigation-036.md, investigation-037.md — 029/030 are old; 031-037 are substrate-authored planning docs, all untracked, timestamps ranging from 2026-05-27T22:30:00Z to 2026-05-28T00:55:00Z"
+        }
+      ]
+    }
+  },
+
+  "s4a_status": {
+    "coverage_progress": "UNVERIFIABLE",
+    "note": "Dev-vessel resolve endpoint (localhost:18090) returned no response to coverageProgress query. Same on 18080. Likely the shape is owned by development-vessel (port 8060 inside container); mapped host port responds to TCP but returns empty body. S.4a not verifiable in this iteration.",
+    "last_verified": "investigation-059 at 23:03:43Z — coverage_progress=True, consecutive=0"
+  },
+
+  "autonomous_promotion_direction": {
+    "status": "authorized, not yet re-implemented",
+    "authorization_commits": ["4d0c305e", "71a28d5c"],
+    "dev_response_017_note": "dev-response-017 lists 're-ship autonomous-promote endpoint' as the top-priority next move. Not yet committed.",
+    "current_endpoint": "404 (iter-23 revert still in effect)"
+  },
+
+  "closure_audit": {
+    "result": "7/7 CLOSED",
+    "verified_at": "2026-05-28T00:12Z",
+    "command": "bun validation/scripts/closure-audit.ts"
+  },
+
+  "push_away_surface": {
+    "total_1h": 30,
+    "by_type": {
+      "no_producer_for_expected_shapes": 20,
+      "hallucinated_resolvers_in_template": 3,
+      "promote_gate_below_threshold": 7
+    },
+    "note": "Slight increase from inv-059 (28 in 24h). Promote-gate projection functional; same 7 gate refusals."
+  },
+
+  "root_file_count": {
+    "count": 14,
+    "within_limit": true,
+    "command": "ls -1 | wc -l"
+  },
+
+  "operator_authorization_trail": {
+    "signed_commits": [
+      {"hash": "71a28d5c", "email": "avigopal.aero@gmail.com", "scope": "inv-031/032 (substrateGap shape)"},
+      {"hash": "4d0c305e", "email": "avigopal.aero@gmail.com", "scope": "autonomous template promotion"},
+      {"hash": "4c60b0a1", "email": "avigopal.aero@gmail.com", "scope": "S2 lift 2026-05-26"},
+      {"hash": "ce457fdd", "email": "avigopal.aero@gmail.com", "scope": "S2 lift 2026-05-26"},
+      {"hash": "30d63eed", "email": "avigopal.aero@gmail.com", "scope": "S2 lift and boredom autonomy"}
+    ],
+    "session_directives_in_audit_trail": "2026-05-28 directive ('minimum substrate self-bootstrap, push back against operator-keyed gates') is in dev-response-017 but not in any operator-signed commit"
+  },
+
+  "prior_findings_status": {
+    "F-145": "OPEN NEW — substrate self-modifies provenance protocol",
+    "F-144": "CLOSED — plus F-145 protocol relaxation",
+    "F-143": "CLOSED — promote-gate functional (mean_k=2.5)",
+    "F-142": "ACKNOWLEDGED",
+    "F-141": "OPEN — ias-executor-ts GitHub remote 404",
+    "F-140": "ADDRESSED",
+    "F-101": "OPEN — 7 substrate-authored investigation files (031-037)"
+  },
+
+  "next_wake_recommendation": {
+    "delay_seconds": 3600,
+    "rationale": "Active phase: goal[7] now wired, autonomous-promote re-implementation flagged as next substrate move, dev-response-017 opens 3 follow-on items. 1h polling to catch promote re-implementation and first goal[7] template production."
+  }
+}

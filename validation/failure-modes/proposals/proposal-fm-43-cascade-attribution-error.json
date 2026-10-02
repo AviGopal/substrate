@@ -1,0 +1,242 @@
+{"proposal":{"scenario_id":"fm-43-cascade-attribution-error","authored_by":"make_activity_autonomous","registration_status":"draft","created_at":"1970-01-01T00:00:00.000Z"},"template":"```json
+{
+  "id": "gap-closing:fm-43-cascade-attribution-error",
+  "name": "Cascade Attribution Disambiguation & Thompson Correction",
+  "description": "Audits execution traces marked with failure_mode='cascading' to identify false positive cascade attributions. Validates upstream task outputs via replay and cross-trace witness queries. Downgrades spurious cascading failures to independent_failure and produces Thompson posterior correction records to restore penalized upstream task variants.",
+  "inputShapes": [
+    "activityExecutionTrace",
+    "executionTraceWithSignatures",
+    "impulseRelevance"
+  ],
+  "outputShapes": [
+    "attributionAuditReport",
+    "thompson_posterior_correction",
+    "cascadeReclassification",
+    "gapClosingTrace"
+  ],
+  "tags": [
+    "learning.attribution.cascade-validation",
+    "learning.attribution.disambiguation",
+    "self-healing.false-positive-correction"
+  ],
+  "timeout_seconds": 3600,
+  "retries": 2,
+  "tasks": [
+    {
+      "id": "t1-fetch-cascading-traces",
+      "name": "Fetch recent cascading failure traces",
+      "resolver": "activity_fetch",
+      "params": {
+        "query_template": "SELECT id, tasks, failure_mode, created_at FROM activity_execution_traces WHERE failure_mode.type = 'cascading' AND created_at > time::now() - 7d ORDER BY created_at DESC",
+        "limit": 100,
+        "include_task_impulse_ids": true
+      },
+      "input_shapes": [],
+      "output_shapes": [
+        "activityExecutionTrace"
+      ],
+      "depends_on": []
+    },
+    {
+      "id": "t2-extract-upstream-outputs",
+      "name": "Extract upstream task outputs and impulse IDs",
+      "resolver": "llm_completion_dispatch",
+      "params": {
+        "model": "claude-opus",
+        "prompt_template": "Given a cascading failure trace, extract: (1) upstream_task_id from failure_mode.context, (2) upstream task's output_impulse_ids, (3) upstream task's output shape/signature. Return structured JSON with fields: upstream_task_id, output_impulse_ids, output_signature_hash, task_index.",
+        "input_binding": "cascading_trace",
+        "output_format": "json"
+      },
+      "input_shapes": [
+        "activityExecutionTrace"
+      ],
+      "output_shapes": [
+        "impulseRelevance"
+      ],
+      "depends_on": [
+        "t1-fetch-cascading-traces"
+      ]
+    },
+    {
+      "id": "t3-query-witness-traces",
+      "name": "Cross-reference upstream impulse IDs in other successful traces",
+      "resolver": "activity_fetch",
+      "params": {
+        "query_template": "SELECT id, tasks, success FROM activity_execution_traces WHERE tasks[*].input_impulse_ids OVERLAP ? AND success = true AND created_at > time::now() - 24h",
+        "bind_param": "output_impulse_ids_from_upstream",
+        "limit": 50
+      },
+      "input_shapes": [
+        "impulseRelevance"
+      ],
+      "output_shapes": [
+        "executionTraceWithSignatures"
+      ],
+      "depends_on": [
+        "t2-extract-upstream-outputs"
+      ]
+    },
+    {
+      "id": "t4-validate-upstream-output",
+      "name": "Validate upstream task output via replay and witness correlation",
+      "resolver": "llm_completion_dispatch",
+      "params": {
+        "model": "claude-opus",
+        "prompt_template": "For each cascading failure trace: (1) Check if upstream task's output_impulse_ids appear in ≥1 witness trace input_impulse_ids with success=true. (2) Determine if upstream output is valid (correct shape, non-null, matches baseline signature). (3) Classify as 'valid_upstream' or 'invalid_upstream'. Return JSON with: cascading_trace_id, upstream_task_id, has_witness, witness_count, output_validity, confidence_score, reclassification_recommendation.",
+        "input_binding": [
+          "cascading_trace_with_upstream_info",
+          "witness_traces"
+        ],
+        "output_format": "json"
+      },
+      "input_shapes": [
+        "activityExecutionTrace",
+        "executionTraceWithSignatures"
+      ],
+      "output_shapes": [
+        "attributionAuditReport"
+      ],
+      "depends_on": [
+        "t2-extract-upstream-outputs",
+        "t3-query-witness-traces"
+      ]
+    },
+    {
+      "id": "t5-identify-false-cascade",
+      "name": "Identify false cascade attributions and independent failures",
+      "resolver": "llm_completion_dispatch",
+      "params": {
+        "model": "claude-opus",
+        "prompt_template": "Filter audit report: identify traces where output_validity='valid_upstream' AND has_witness=true. These are false cascade attributions (upstream succeeded, downstream failed independently). For each: extract cascading_trace_id, upstream_task_id, downstream_task_id, failure_reason_independent. Return JSON array with fields: cascading_trace_id, upstream_task_id, downstream_task_id, reclassification_from, reclassification_to, confidence, reason.",
+        "input_binding": "attribution_audit_report",
+        "output_format": "json"
+      },
+      "input_shapes": [
+        "attributionAuditReport"
+      ],
+      "output_shapes": [
+        "cascadeReclassification"
+      ],
+      "depends_on": [
+        "t4-validate-upstream-output"
+      ]
+    },
+    {
+      "id": "t6-compute-thompson-correction",
+      "name": "Compute Thompson posterior corrections for penalized upstream tasks",
+      "resolver": "llm_completion_dispatch",
+      "params": {
+        "model": "claude-opus",
+        "prompt_template": "For each false cascade identified: (1) Retrieve upstream task's current Thompson posterior (α, β). (2) Reverse the spurious penalty: cascading victim received αΔ=0, βΔ=0 but parent received β+=γ^1 penalty. (3) Compute correction: subtract the propagated penalty from upstream task's β. (4) Compute corrected posterior and confidence interval. Return JSON with: upstream_task_id, upstream_variant_id, current_alpha, current_beta, penalty_reversal_delta_beta, corrected_alpha, corrected_beta, confidence_interval_lower, confidence_interval_upper, correction_rationale.",
+        "input_binding": "cascade_reclassification",
+        "output_format": "json"
+      },
+      "input_shapes": [
+        "cascadeReclassification"
+      ],
+      "output_shapes": [
+        "thompson_posterior_correction"
+      ],
+      "depends_on": [
+        "t5-identify-false-cascade"
+      ]
+    },
+    {
+      "id": "t7-generate-audit-report",
+      "name": "Generate comprehensive attribution audit report",
+      "resolver": "fs_write",
+      "params": {
+        "file_path": "/tmp/cascade-attribution-audit-{timestamp}.json",
+        "content_binding": {
+          "report_type": "cascade_attribution_audit",
+          "timestamp": "{now}",
+          "summary": {
+            "total_cascading_traces_analyzed": "count(t1.output)",
+            "false_cascade_count": "count(t5.output)",
+            "true_cascade_count": "total_cascading_traces_analyzed - false_cascade_count",
+            "upstream_tasks_penalized": "count(distinct t6.upstream_task_id)",
+            "corrections_issued": "count(t6.output)"
+          },
+          "false_cascades": "t5.output",
+          "thompson_corrections": "t6.output",
+          "audit_confidence": "aggregate(t4.confidence_score)"
+        }
+      },
+      "input_shapes": [
+        "attributionAuditReport",
+        "cascadeReclassification",
+        "thompson_posterior_correction"
+      ],
+      "output_shapes": [
+        "gapClosingTrace"
+      ],
+      "depends_on": [
+        "t4-validate-upstream-output",
+        "t5-identify-false-cascade",
+        "t6-compute-thompson-correction"
+      ]
+    },
+    {
+      "id": "t8-persist-corrections",
+      "name": "Persist Thompson corrections and reclassification metadata",
+      "resolver": "activity_create_variant",
+      "params": {
+        "variant_type": "thompson_posterior_correction_batch",
+        "metadata": {
+          "source_activity_id": "gap-closing:fm-43-cascade-attribution-error",
+          "correction_timestamp": "{now}",
+          "audit_report_path": "t7.file_path"
+        },
+        "corrections_binding": "t6.output",
+        "reclassifications_binding": "t5.output"
+      },
+      "input_shapes": [
+        "thompson_posterior_correction",
+        "cascadeReclassification"
+      ],
+      "output_shapes": [
+        "gapClosingTrace"
+      ],
+      "depends_on": [
+        "t6-compute-thompson-correction",
+        "t5-identify-false-cascade",
+        "t7-generate-audit-report"
+      ]
+    }
+  ],
+  "success_criteria": [
+    {
+      "name": "Identified false cascades",
+      "condition": "count(cascadeReclassification output where reclassification_to='independent_failure') > 0",
+      "severity": "medium"
+    },
+    {
+      "name": "Thompson corrections computed",
+      "condition": "count(thompson_posterior_correction output) >= count(cascadeReclassification output)",
+      "severity": "high"
+    },
+    {
+      "name": "Audit report generated",
+      "condition": "gapClosingTrace output exists with report_type='cascade_attribution_audit'",
+      "severity": "high"
+    },
+    {
+      "name": "Corrections persisted",
+      "condition": "activity_create_variant succeeds with variant_type='thompson_posterior_correction_batch'",
+      "severity": "critical"
+    }
+  ],
+  "recovery_test": {
+    "enabled": true,
+    "regression_check": true,
+    "test_query": "After corrections persist: verify upstream task variant's Thompson posterior (α, β) matches corrected values within tolerance (±0.01). Planted cascade-attribution scenario should show upstream task's success rate restored on next harness run."
+  },
+  "self_healing_metadata": {
+    "emergence_class": "gap",
+    "failure_mode_id": "fm-43-cascade-attribution-error",
+    "gap_class": "new",
+    "self_heal_window_seconds": 86400,
+    "tags_pattern": "learning.attribution.*"
+  }
+}
+```"}

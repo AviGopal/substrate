@@ -1,0 +1,22 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, make verifyGapConditionAsync read a Class-2 `nonzero_field` as a finite number only (>0 absent, 0 present) and anything else (null, missing, non-numeric) as unknown, because since the falsified-landing record a 'present' read also marks a landing FALSIFIED, so a discovery outage or an under-volume null would condemn a landing that nothing measured; unknown keeps the gap open without judging it. Apply exactly these 1 edits; each old text occurs exactly once:
+EDIT 1
+old:
+    // Defect heuristic 2: explicit nonzero_field should be >0 but is 0 / null / undefined
+    if (nonzeroField !== null) {
+      const val = inner[nonzeroField];
+      if (val === 0 || val === null || val === undefined || val === '') {
+        return 'present';
+      }
+      return 'absent';
+    }
+new:
+    // Defect heuristic 2: explicit nonzero_field is a HEALTH count — a finite number >0 is absent, 0 is present.
+    // null / missing / non-numeric is UNMEASURED and reads unknown. It used to read 'present', which held a gap
+    // open (right for closing) but, since the falsified-landing record, also marks a landing FALSIFIED on an
+    // outage or an under-volume null (wrong). Unknown does neither: the sweep abstains and the gap stays open.
+    if (nonzeroField !== null) {
+      const val = inner[nonzeroField];
+      if (typeof val === 'number' && Number.isFinite(val)) return val > 0 ? 'absent' : 'present';
+      return 'unknown';
+    }
+Done when: all 1 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

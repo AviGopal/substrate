@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-f2378a68",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/development-vessel/src/resolvers/docs-align-tick.ts, turn on the accuracy invariant, which currently never exec",
+  "description": "In repos/development-vessel/src/resolvers/docs-align-tick.ts, turn on the accuracy invariant, which currently never executes. Two changes inside the resolveDocsAlignTick function. First, before the call to resolveDocsAlignScan, fetch the live shape vocabulary from the discovery registry and hold it in a local const named advertised_shapes typed as string[]: GET the URL formed from process.env.DISCOVERY_ENDPOINT with a fallback default of \"http://127.0.0.1:8100\" followed by the path /registry/shapes, parse the JSON response into an array of shape name strings, and wrap the whole fetch in try/catch so that any failure yields an empty array and the tick keeps working exactly as it does today. The file already uses global fetch at line 85 for a METABOB_ENDPOINT call, so follow that same style. Second, the object literal passed to resolveDocsAlignScan currently contains these two properties verbatim:   live_truth: { existing_paths, unit_names },   and   invariants: [\"timelessness\", \"naming_alignment\", \"setup_enablement\"],   — change the first to   live_truth: { existing_paths, unit_names, advertised_shapes },   and the second to   invariants: [\"timelessness\", \"naming_alignment\", \"setup_enablement\", \"accuracy\"],   . Both changes are required together: the accuracy branch in docs-align-scan.ts line 236 is gated on pointer.live_truth.advertised_shapes being present, so adding the invariant name without supplying advertised_shapes leaves the branch dead exactly as it is now. Do not add the shape_existence invariant and do not modify docs-align-scan.ts.",
+  "goal_text": "In repos/development-vessel/src/resolvers/docs-align-tick.ts, turn on the accuracy invariant, which currently never executes. Two changes inside the resolveDocsAlignTick function. First, before the call to resolveDocsAlignScan, fetch the live shape vocabulary from the discovery registry and hold it in a local const named advertised_shapes typed as string[]: GET the URL formed from process.env.DISCOVERY_ENDPOINT with a fallback default of \"http://127.0.0.1:8100\" followed by the path /registry/shapes, parse the JSON response into an array of shape name strings, and wrap the whole fetch in try/catch so that any failure yields an empty array and the tick keeps working exactly as it does today. The file already uses global fetch at line 85 for a METABOB_ENDPOINT call, so follow that same style. Second, the object literal passed to resolveDocsAlignScan currently contains these two properties verbatim:   live_truth: { existing_paths, unit_names },   and   invariants: [\"timelessness\", \"naming_alignment\", \"setup_enablement\"],   — change the first to   live_truth: { existing_paths, unit_names, advertised_shapes },   and the second to   invariants: [\"timelessness\", \"naming_alignment\", \"setup_enablement\", \"accuracy\"],   . Both changes are required together: the accuracy branch in docs-align-scan.ts line 236 is gated on pointer.live_truth.advertised_shapes being present, so adding the invariant name without supplying advertised_shapes leaves the branch dead exactly as it is now. Do not add the shape_existence invariant and do not modify docs-align-scan.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-f2378a68",
+  "source_gap_source": "substrate_detected"
+}

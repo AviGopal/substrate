@@ -1,0 +1,611 @@
+{
+ "source": "openspec-4",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/openspec-4.md",
+ "coverage": "openspec/changes entries 55-72 (18 active dated dirs, no stray files): 2026-06-16 namespace-and-compose-migration, 06-16 self-persistence-and-direct-push, 06-23 demand-driven-orphan-capability-detection, 06-24 author-producer-validate-mint-parity, 06-25 cross-signature-reputation-penalty, 06-25 goal-target-shape-inference, 06-25 semantic-cutover-verification-gate, 06-25 substrate-root-rename-and-repo-hygiene, 07-01 shape-action-evidence-closure-proof, 07-04 single-transport-story, 07-05 code-locality-resolver, 07-05 distributed-spoke-development, 07-08 substrate-self-managed-db-reconciliation, 07-09 restore-contiguous-shape-flow, 07-15 vessel-maintenance-parity-gate, 07-18 s2-stability-ladder, 07-19 llm-arms-data-driven, 07-19 obsidian-pebkac-config. Read fully all proposal/tasks/design/VERIFY/findings, except partial reads of orphan-resolvers-evidence.txt (1.5KB), spoke design.md (80 lines), parity design.md (60 lines), code-locality agent-prompt.md (40 lines); contiguous-flow design.md and specs/ spec.md not read. Live checks: greps over host repos/ and container dev-vessel clone (HEAD f451e42), gap-store id lookups in all container gaps.json copies (live store earliest 2026-09-18), trace_store_counters query, /workspace/pool and /workspace/locality log tails, dev-vessel journal (2h). Host repos lag container clones; container evidence preferred.",
+ "attempts": [
+  {
+   "key": "hollow-landing",
+   "title": "Semantic cutover verification gate",
+   "where": "openspec/changes/2026-06-25-semantic-cutover-verification-gate; dev-vessel feature-compose.ts:417,5800",
+   "tried": "After tsc+shape-dispatch, grep-reachability hard-fail + haiku judge verifyPatchAddressesGap, suspected_real_location writeback, SEMANTIC_CUTOVER_GATE default ON; later computeDataFlowFacts (2aca7ab,bd94937,0174b56, super-repo 543e74e)",
+   "outcome": "partial",
+   "date": "2026-06-25..07-01",
+   "evidence": "Live default ON; but hollow class recurred 3x on 07-01 (64fd66d consumed-never-populated, 82099b4a imported-never-called, 2aca7ab detector wiring dropped) and again in memory 09-15 hollow_write, 09-19 unparseable commit"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "author_producer validate-mint parity via goal_file_extract 2-task bridge",
+   "where": "2026-06-24-author-producer-validate-mint-parity; dev-vessel src/resolvers/goal-file-extract.ts",
+   "tried": "Deterministic goal_file_extract, 2-task minted bridge binding {{impulse:filePaths}}, repos/->/vessels/ path normalization",
+   "outcome": "partial",
+   "date": "2026-06-24..25",
+   "evidence": "exec_rbv3iaxt real line-cited finding; demo goal still HOLLOW (reach-gate calibration, analysis-vessel capability ceiling); validation tolerated read_error as substance"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Goal->target-shape inference seeds the walk",
+   "where": "2026-06-25-goal-target-shape-inference; goal-host f85a6d5 src/goal-target-inference.ts",
+   "tried": "LLM infers 1-3 producible target shapes up front, cached by goal_hash, fails open to opportunistic mode",
+   "outcome": "partial",
+   "date": "2026-06-30..07-01",
+   "evidence": "goal_hash 270b97f0 inferred [code_quality,problem_detection,sourceCodeAnalysis]; B5 seeding>=0.8 never measured; 07-13 6c699b51 'no producer' for substrateGap_write; super-repo 9c967329 (09-29) 'no shape for memory/recall'"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Cross-signature reputation penalty",
+   "where": "2026-06-25-cross-signature-reputation-penalty; activity-api activities.ts:6388, jobs/accelerator-flag-tick.ts",
+   "tried": "reputationFactor = 1 - blendWeight*(1-mu_g) with novelty/min-obs exemptions, flag OFF",
+   "outcome": "dormant",
+   "date": "2026-06-25..07-01",
+   "evidence": "applyReputationFactor landed with 8 tests flag OFF; now getTuningParam-gated by accelerator-flag-tick; F3 staggered measured flips never recorded"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Orphaned-capability detector (find-half)",
+   "where": "2026-06-23-demand-driven-orphan-capability-detection; dev-vessel orphaned-capability-scan.ts",
+   "tried": "live_resolver_shapes - invoked_resolvers, filtered, emit stable-id orphaned_capability gaps on boredom tick",
+   "outcome": "partial",
+   "date": "2026-06-23..24",
+   "evidence": "Detector live; fix-half proven missing 06-24; author_producer route added 07-01 (gap-to-feature.ts:1060-1069); 38 open/3 closed orphaned_capability gaps created 09-23..09-28 after store reset"
+  },
+  {
+   "key": "false-verification",
+   "title": "Orphan count from unpaginated read",
+   "where": "2026-06-23 findings/verify-2026-06-24.md",
+   "tried": "Hand analysis of templates endpoint claimed 28 invoked/250 orphaned",
+   "outcome": "failed",
+   "date": "2026-06-23",
+   "evidence": "Endpoint paginates at 100; real 216 invoked / 35 orphans"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Container-side direct push cutover (MITOSIS_DIRECT_PUSH)",
+   "where": "2026-06-16-substrate-self-persistence-and-direct-push; dev-vessel 2cad89c vessel-mitosis-cutover.ts",
+   "tried": "git identity + PAT helper + writable clones, host_repo_root=push clone, retire host-sync-poller",
+   "outcome": "worked",
+   "date": "2026-06-16",
+   "evidence": "push_status pushed; Substrate-Authored commit on AviGopal/development-vessel dev; still live"
+  },
+  {
+   "key": "memory-recall",
+   "title": "Self-persistence snapshot/restore (Phase 0)",
+   "where": "2026-06-16-substrate-self-persistence-and-direct-push tasks 0.1-0.6",
+   "tried": "Planned snapshot-state/restore-state resolvers + off-host bundle to AviGopal/substrate-state",
+   "outcome": "dormant",
+   "date": "2026-06-16",
+   "evidence": "0 hits for snapshot_state/snapshotState in dev-vessel; state repo created empty; gap store history pre-09-18 lost"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Namespace migration + compose surface",
+   "where": "2026-06-16-substrate-namespace-and-compose-migration",
+   "tried": "Create AviGopal remotes, split 9 vessels, transfer 5, rename metabob-activity-api, docker-compose.yml",
+   "outcome": "superseded",
+   "date": "2026-06-16",
+   "evidence": "M0-M2.6, M3.1-3.2 done (94b38dd56); M1.2/M3.3/M3.4/R.1/X.* open; superseded by root rename and unified-install-interface"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Root rename + repo hygiene",
+   "where": "2026-06-25-substrate-root-rename-and-repo-hygiene",
+   "tried": "Cruft removal, convert 8 embedded repos to submodules, drop obsidian/dashboard, de-hardcode paths, grep pre-commit gate, mv root",
+   "outcome": "partial",
+   "date": "2026-06-25",
+   "evidence": "Root did move to /home/avi/documents/work/substrate; tasks.md 0 checked; .gitmodules still carries obsidian-vessel"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Shape-action-evidence closure proof umbrella",
+   "where": "2026-07-01-shape-action-evidence-closure-proof",
+   "tried": "7 falsifiable claims doc, harness baseline, E1 gate, B via substrate, flag-OFF D1/E2, G human interaction closure, F measurement",
+   "outcome": "partial",
+   "date": "2026-07-01..02",
+   "evidence": "A,C1,E1,B1-4,E2,D1.1-2,G1.1 done; baseline 13 goals 0 passable (c60927aa); F1-F5 (re-run, evidence table, archive) never done; lift gate 0/24"
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Implicit human-interaction closure (G workstream)",
+   "where": "2026-07-01 umbrella G1-G4; obsidian 82099b4a, febe74e",
+   "tried": "solicitation_id stamping, expectation verify detector, operator-presence guard, interaction_surface_gap self-modification",
+   "outcome": "dormant",
+   "date": "2026-07-01",
+   "evidence": "G1.1 landed; G1.2, G2.2-G4.3 open; capability-gap-interaction-expectation-verify compose UNFAVORABLE and gap now absent; surface later replaced"
+  },
+  {
+   "key": "env-gating",
+   "title": "Single transport story (libp2p overlay as the transport)",
+   "where": "2026-07-04-single-transport-story; goal-host index.ts:422,4242,7478, llm-router.ts:69",
+   "tried": "Registration carries protocol/libp2p fields; route by registration not PREFER_LIBP2P_ROUTE",
+   "outcome": "partial",
+   "date": "2026-07-04",
+   "evidence": "vessel-discovery-client has libp2p_multiaddr; PREFER_LIBP2P_ROUTE still read in 3 places; baked 127.0.0.1 URLs in seed templates never fixed"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Trace attribution repair (materialsConsulted)",
+   "where": "2026-07-05-code-locality-resolver slice 1; ias ad132ac,811e02a,134ddf0; activity-api 99fccf6",
+   "tried": "Engine derives filesModified/materialsConsulted; sink forwards instead of hardcoded []",
+   "outcome": "worked",
+   "date": "2026-07-05",
+   "evidence": "ias activity-api-trace-sink.ts:194 forwards materialsConsulted; 1.4 live verify unchecked"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Code-locality cued recall (shadow mode)",
+   "where": "dev-vessel src/resolvers/code-locality.ts, code-locality-mining-tick.ts (37d4c13, 3c5b4f1); /workspace/locality",
+   "tried": "Mine traces into family->locator index, shadow-predict alongside compose, promote on posterior",
+   "outcome": "dormant",
+   "date": "2026-07-05..09-29",
+   "evidence": "Built in dev-vessel not activity-api (locality_associations absent); shadow-log 8060 entries, 28 ever found:true, 0/1000 recent; index stale since Sep 18; tasks 2-7 unchecked"
+  },
+  {
+   "key": "node-locality",
+   "title": "Restore local-tools on hub (spoke self-edit toolbelt)",
+   "where": "2026-07-05-distributed-spoke-development",
+   "tried": "Restart loaded-but-disabled local-tools unit via systemd_restart resolver",
+   "outcome": "worked",
+   "date": "2026-07-05",
+   "evidence": "shellResult resolves; edit-intent passes endpoint discovery"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull_cutover convergence resolver",
+   "where": "dev-vessel pull-cutover.ts (d245022, 0ed07cd); boredom de87042/6561c67, goal-generation.ts:156",
+   "tried": "Substrate-authored resolver: pull origin/dev into clone, cp -aT to /vessels, restart; scheduled goal",
+   "outcome": "worked",
+   "date": "2026-07-05",
+   "evidence": "Live; boredom uses it as doom-signal repair goal; extend-to-all-vessels open"
+  },
+  {
+   "key": "node-locality",
+   "title": "Toolbelt co-location detector",
+   "where": "advertised_shape_coverage_scan feature_compose_locations_missing_local_toolbelt; cited commit 5381b04",
+   "tried": "Flag feature_compose locations lacking local location-stateful shapes",
+   "outcome": "partial",
+   "date": "2026-07-05",
+   "evidence": "v1 false-positives (same vesselId != same location); gap write never wired; 5381b04 missing from clone"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Self-managed trace-store reconciliation",
+   "where": "2026-07-08-substrate-self-managed-db-reconciliation; activity-api 3f378ae, dev-vessel 9674cb8, super-repo fec3a157",
+   "tried": "Quiesced copy-forward swap, counters migration 156, lease, pausable-citizen guard, health observer, lease-gated db_admin reconcile, gap route",
+   "outcome": "worked",
+   "date": "2026-07-09",
+   "evidence": "AET 218953->40851 rows, cold query 86s->4.4ms; cadence exec_2ulr7ddi; live trace_store_counters:execution reconciled 2026-09-29T03:14Z; cap drifted to 150000 (row 150193); counter drift 21% (07-12); tasks.md never ticked"
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Contiguous shape flow: event drain replaces timers",
+   "where": "2026-07-09-restore-contiguous-shape-flow; dev-vessel GapDrainObserver, poolImpulse, watchdog-tick.ts",
+   "tried": "Standing pool, gap route/remedy, devvessel.gap.written WS event drain, timers demoted to watchdogs",
+   "outcome": "failed",
+   "date": "2026-07-09..07-23",
+   "evidence": "34ms gap->dispatch on 07-09; drain-log last 2000: 1931 ok:false http 400 (llmModelPolicy_write/llmQuotaState), silent since 2026-07-23; watchdog-log silent since 07-20 with 1523 open intents; standing.json frozen Sep 7; substrate-gap.ts:1215 notes WS path depends on hub and watchdog marker never stale"
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Standing-intent fold into state signature",
+   "where": "07-09 task A5; cited commit b72cd62f",
+   "tried": "Fold top-8 open standing_intent_shapes into compute_state_signature hash",
+   "outcome": "reverted",
+   "date": "2026-07-09",
+   "evidence": "b72cd62f not a valid object in dev-vessel clone; standing_intent_shapes absent (git log --all -S empty); only a poolImpulse rhythm-axis fetch remains"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "title": "Gap lifecycle age-boundary re-verify + burial guard",
+   "where": "07-09 D1/D2; dev-vessel db90246a, cfd3dd89",
+   "tried": "Re-verify at 48h/7d/14d; escalate after 3 fix-failures; forbid landability auto-close on verified gaps",
+   "outcome": "unknown",
+   "date": "2026-07-09",
+   "evidence": "Commits resolve; later memory (09-15) shows autoCloseStaleGaps on idle still closes gaps"
+  },
+  {
+   "key": "calibration-seal",
+   "title": "Env-vs-fix failure attribution",
+   "where": "07-09 C1; gap env-vs-fix-failure-attribution-2026-07-09",
+   "tried": "env failure classes skip bumpFailedAttempts/lessons/calibration",
+   "outcome": "partial",
+   "date": "2026-07-09",
+   "evidence": "env_change_window_held present in 2 dev-vessel files; tracking gap absent from store; tasks.md C1 unchecked"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Vessel-maintenance parity gate for fossil decomposition",
+   "where": "2026-07-15-vessel-maintenance-parity-gate; dev-vessel src/maintenance/parity-gate.ts, seam-extraction.ts, spliceability.ts",
+   "tried": "Deterministic surface/type/test/AST parity gate so weak models can split fossils; loose-bag extractor; dry run on activities.ts",
+   "outcome": "dormant",
+   "date": "2026-07-15",
+   "evidence": "Phase 0-2 done, imported by vessel-mitosis-cutover.ts and change-series-tick.ts; Phase 3 first landing unchecked; goal-host index.ts grew from 6912 to >=7486 lines"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "S2 stability ladder rung 1 compose-drops-secondary-hunks",
+   "where": "2026-07-18-s2-stability-ladder",
+   "tried": "Spec only: fix multi-hunk drop, verifier supremacy, walk repair, human surface, unassisted reach gauge",
+   "outcome": "unknown",
+   "date": "2026-07-18",
+   "evidence": "Memory 09-27: prose -> planner dropped 2/3 edits, still reached (same class)"
+  },
+  {
+   "key": "env-gating",
+   "title": "Data-driven LLM arms",
+   "where": "2026-07-19-llm-arms-data-driven; scripts/substrate render-llm-arms.sh, apply-llm-arms.sh, entrypoint.sh:198-221; llm-resolver index.ts:69,1098",
+   "tried": "Declarative llm-arms.json rendered to single-provider units; LLM_PINNED_PROVIDER quota gating",
+   "outcome": "worked",
+   "date": "2026-07-19",
+   "evidence": "entrypoint + Dockerfile wire apply-llm-arms; static opus/haiku/google units gone; proposal still says cutover remaining (docs-drift); arm-inventory-as-shape gap open"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Obsidian point-and-go config + honest Test Connection",
+   "where": "2026-07-19-obsidian-pebkac-config; obsidian settings-tab.ts:232",
+   "tried": "Spec: validate discovery/apiKey, probe via getActiveSidecarPort, auto-pick ports",
+   "outcome": "dormant",
+   "date": "2026-07-19",
+   "evidence": "T1-T6 unchecked; settings-tab.ts:232 still fetches 127.0.0.1:${federationHealthPort}/health"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Reconcile template envelope fix",
+   "where": "07-09 VERIFY; exec_z20x6yrz; dev-vessel 8b3d8eef",
+   "tried": "Seed used {impulse:...}; activity-api needs {pointer,budget}; fixed seed + stored template via activityTemplate_update",
+   "outcome": "worked",
+   "date": "2026-07-09",
+   "evidence": "Every reconcile had 400-ZodErrored; same 400-envelope class reappears in drain-log to 07-23"
+  },
+  {
+   "key": "false-verification",
+   "title": "Store-pressure sensing and hollow reach",
+   "where": "07-08 VERIFY 2026-07-12 section; goals 9d4d00f4, 6c699b51",
+   "tried": "Dispatch diagnose + standing store-pressure sensing goals",
+   "outcome": "failed",
+   "date": "2026-07-12..13",
+   "evidence": "9d4d00f4 reached:yes with nothing produced (label nkktd0xv0w7xa1fbjo8u not_reached); 6c699b51 no producer; filed gaps now absent"
+  },
+  {
+   "key": "docs-drift",
+   "title": "Expectations doc watched by docs-align-scan",
+   "where": "07-01 A2; docs/architecture/SHAPE_ACTION_EVIDENCE_EXPECTATIONS.md",
+   "tried": "7 falsifiable claims + fold-in to MDP/DEC docs",
+   "outcome": "partial",
+   "date": "2026-07-01..02",
+   "evidence": "Status lines drifted within a day (Claim 1); F4 zero-drift never certified; IAL tasks vs SUBSTRATE.md contradictory"
+  }
+ ],
+ "problems": [
+  {
+   "key": "memory-recall",
+   "symptom": "Every gap id cited in June/July openspec VERIFY/design docs (13 checked) is absent from every gaps.json in the container; live store begins 2026-09-18",
+   "root_cause": "Gap store reset/replaced without migrating history; no snapshot/restore (06-16 Phase 0 never built)",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Type-clean dead or unwired code lands and closes gaps",
+   "root_cause": "Verify gates read the diff (typecheck, grep) not the consuming path",
+   "first_seen": "2026-06-25",
+   "last_seen": "2026-09-19",
+   "recurrences": 5
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Remedy/template calls 400 on envelope mismatch ({impulse} vs {pointer,budget}); drain retries 1931x",
+   "root_cause": "Producer and consumer envelopes diverge with no contract check at write time",
+   "first_seen": "2026-07-09",
+   "last_seen": "2026-07-23",
+   "recurrences": 2
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Event drain and template fetch silently dead when hub unreachable; toolbelt detector false-positive",
+   "root_cause": "Spoke paths bound to hub WS/PRODUCER_DISCOVERY_ENDPOINT; no location identity in loopback registrations",
+   "first_seen": "2026-07-05",
+   "last_seen": "2026-09-29",
+   "recurrences": 3
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Watchdog/pickup logs report healthy while unable to act (masked unit start exit discarded; stall marker never stale)",
+   "root_cause": "Liveness marker is a file every compose appends to; exit status ignored",
+   "first_seen": "2026-07-09",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Orphaned-capability gaps regenerated (38 open) but rarely drained",
+   "root_cause": "Find-half built first; fix-half (bridge author needing resolver contract) absent then only partially added via author_producer",
+   "first_seen": "2026-06-23",
+   "last_seen": "2026-09-28",
+   "recurrences": 2
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafter cannot splice files past ~1-2k lines; drops secondary hunks; stale-base collateral deletions typecheck",
+   "root_cause": "God files (activities.ts 12k, goal-host index.ts 7.5k+) and one-shot multi-site edits",
+   "first_seen": "2026-07-01",
+   "last_seen": "2026-09-27",
+   "recurrences": 4
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "NL goals route to irrelevant high-Thompson templates or terminate 'no producer'",
+   "root_cause": "No target shape (fixed by inference) then vocabulary gaps and walk blind to vessel-resolver producers",
+   "first_seen": "2026-06-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 3
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Trace store bloat wedges loop (219k rows, 13GB, 86s count); counters overcount 21%; cap drifted to 150000",
+   "root_cause": "Timer tick exhaust idle traces; fire-and-forget counters miss delete paths",
+   "first_seen": "2026-07-08",
+   "last_seen": "2026-09-29",
+   "recurrences": 2
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "Timers colonize selection; gap->remedy latency 30-60 min; timers begat timers",
+   "root_cause": "Four cut seams: per-execution pool teardown, walk ends flow on reach, polling instead of WS, selection blind to standing intents",
+   "first_seen": "2026-07-09",
+   "last_seen": "2026-09-29",
+   "recurrences": 2
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Transport choice and many gates are env knobs (PREFER_LIBP2P_ROUTE, SEMANTIC_CUTOVER_GATE, GAP_DRAIN_OBSERVER, TRACE_STORE_CAP)",
+   "root_cause": "Flags introduced as env for safety and never migrated to shapes (partial: accelerator-flag-tick tuning params)",
+   "first_seen": "2026-06-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 4
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Hardcoded 127.0.0.1 URLs baked into seed template JSON and drafting prompt; obsidian Test Connection probes wrong port",
+   "root_cause": "Loopback treated as transport model; follow-up slices never written",
+   "first_seen": "2026-07-04",
+   "last_seen": "2026-09-29",
+   "recurrences": 2
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Specs not updated after landing or drift; 175 active vs 4 archived changes; tasks all unchecked despite VERIFY done",
+   "root_cause": "No archive/closure step owned by anything; expectations doc status lines drift",
+   "first_seen": "2026-07-01",
+   "last_seen": "2026-09-29",
+   "recurrences": 4
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "624MB /workspace/tmp clones each with own gaps.json; compiled watchdog-tick .js/.d.ts residue; root hygiene tasks never done",
+   "root_cause": "Experiments and composes leave artifacts in live volume and scripts dir",
+   "first_seen": "2026-06-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 2
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "Code-locality recall never finds a family (0/1000 recent)",
+   "root_cause": "Index keyed by family that predictions never match; index not refreshed since Sep 18; never promoted from shadow",
+   "first_seen": "2026-07-05",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Gamed local signature escapes bad global reputation; lift gate 0/24 with lambda1=0 two-component topology",
+   "root_cause": "Linear blend downweights global at nContext>=5; composition graph fractured",
+   "first_seen": "2026-06-25",
+   "last_seen": "2026-07-02",
+   "recurrences": 1
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "Hub commits on stale base; runtime drifts from origin/dev; self-recovery reverts mid-window",
+   "root_cause": "In-container plain git fetch lacks credential helper; cutover only converges local runtime",
+   "first_seen": "2026-06-16",
+   "last_seen": "2026-07-09",
+   "recurrences": 3
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "Semantic cutover gate (verifyPatchAddressesGap + computeDataFlowFacts)",
+   "location": "development-vessel src/resolvers/feature-compose.ts:417,5800",
+   "purpose": "Reject landings that do not reachably address the gap",
+   "status": "live-used",
+   "general": true,
+   "evidence": "SEMANTIC_CUTOVER_GATE default on; 28 gate tests"
+  },
+  {
+   "name": "Parity gate / seam extraction / spliceability",
+   "location": "development-vessel src/maintenance/parity-gate.ts, seam-extraction.ts, spliceability.ts",
+   "purpose": "Deterministic behavior-neutral verification for weak-model fossil decomposition",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Imported by vessel-mitosis-cutover.ts and change-series-tick.ts; no recorded parity-gated fossil split"
+  },
+  {
+   "name": "inferGoalTargetShapes",
+   "location": "goal-host-vessel src/goal-target-inference.ts",
+   "purpose": "Seed walk targets for NL goals",
+   "status": "live-used",
+   "general": true,
+   "evidence": "f85a6d5; 09-29 commit shows gaps for memory/recall"
+  },
+  {
+   "name": "applyReputationFactor + accelerator-flag-tick",
+   "location": "activity-api src/routes/activities.ts:6388, src/jobs/accelerator-flag-tick.ts",
+   "purpose": "Damp gamed-signature selection; flag policy via tuning params",
+   "status": "unknown",
+   "general": true,
+   "evidence": "getTuningParam default 0"
+  },
+  {
+   "name": "orphaned_capability_scan",
+   "location": "development-vessel src/resolvers/orphaned-capability-scan.ts",
+   "purpose": "Emit gaps for live resolvers no activity invokes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "38 open gaps created 09-23..09-28"
+  },
+  {
+   "name": "author_producer + goal_file_extract bridge",
+   "location": "development-vessel src/resolvers/goal-file-extract.ts, author-producer.ts; gap-to-feature.ts:1060",
+   "purpose": "Mint runnable producer bridges with goal-derived file inputs",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "MITOSIS_DIRECT_PUSH cutover",
+   "location": "development-vessel src/resolvers/vessel-mitosis-cutover.ts",
+   "purpose": "In-container authenticated push + mirror + restart",
+   "status": "live-used",
+   "general": true,
+   "evidence": "2cad89c"
+  },
+  {
+   "name": "pull_cutover",
+   "location": "development-vessel src/resolvers/pull-cutover.ts; boredom-vessel src/goal-generation.ts:156",
+   "purpose": "Converge runtime to origin/dev by pull",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "feature_compose toolbelt coverage check",
+   "location": "development-vessel advertised_shape_coverage_scan",
+   "purpose": "Detect dev locations missing location-stateful producers",
+   "status": "broken",
+   "general": false,
+   "evidence": "False-positives same-vessel vs same-location; gap write not wired"
+  },
+  {
+   "name": "Trace-store reconcile cadence (counters, lease, observer, db_admin reconcile, pausable guard)",
+   "location": "activity-api 3f378ae migration 156, db-admin.ts; development-vessel 9674cb8 maintenanceLease, trace_store_health_observer, http-retry.ts",
+   "purpose": "Autonomous trace-store bloat control",
+   "status": "live-used",
+   "general": true,
+   "evidence": "trace_store_counters:execution reconciled 2026-09-29T03:14Z; cap 150000"
+  },
+  {
+   "name": "GapDrainObserver WS event drain",
+   "location": "development-vessel src/services/gap-drain-observer.ts; src/index.ts:395",
+   "purpose": "Event-triggered gap remedy dispatch",
+   "status": "broken",
+   "general": true,
+   "evidence": "drain-log silent since 2026-07-23 after 1931/2000 400s; depends on hub WS"
+  },
+  {
+   "name": "Standing pool poolImpulse / standing.json",
+   "location": "development-vessel poolImpulse resolvers; /workspace/pool/standing.json",
+   "purpose": "Standing intents persist across walks and condition selection",
+   "status": "dormant",
+   "general": true,
+   "evidence": "standing.json frozen Sep 7; standing_intent_shapes fold absent"
+  },
+  {
+   "name": "watchdog-tick + watchdog.conf drop-ins",
+   "location": "scripts/substrate/watchdog-tick.ts",
+   "purpose": "Demoted timers restart flow only when stalled",
+   "status": "broken",
+   "general": true,
+   "evidence": "Stall marker compose-lessons.jsonl never stale; log silent since 07-20; superseded by in-process compose call (substrate-gap.ts:1218)"
+  },
+  {
+   "name": "Gap route/remedy fields",
+   "location": "development-vessel SubstrateGap (a551ca8b, de9f77f7)",
+   "purpose": "Detectors declare how a gap drains",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "Gap lifecycle age re-verify + burial guard",
+   "location": "development-vessel gap-lifecycle-scan (db90246a, cfd3dd89)",
+   "purpose": "Decisions not decay for aging gaps",
+   "status": "unknown",
+   "general": true
+  },
+  {
+   "name": "change_window lease + env failure classes",
+   "location": "development-vessel (env_change_window_held in 2 files, change_window in 4)",
+   "purpose": "Coordinate cutovers; do not blame env failures on drafts",
+   "status": "unknown",
+   "general": true
+  },
+  {
+   "name": "code_locality shadow resolver + mining tick",
+   "location": "development-vessel src/resolvers/code-locality.ts, code-locality-mining-tick.ts; /workspace/locality",
+   "purpose": "Cue-triggered recall of relevant files per goal family",
+   "status": "dormant",
+   "general": false,
+   "evidence": "0/1000 recent predictions found; index stale Sep 18; activity-api locality_associations never built"
+  },
+  {
+   "name": "materialsConsulted trace attribution",
+   "location": "ias-executor-ts src/adapters/activity-api-trace-sink.ts:194",
+   "purpose": "Record read/changed material per task",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "LLM arm renderer (llm-arms.json, render/apply-llm-arms.sh) + LLM_PINNED_PROVIDER",
+   "location": "scripts/substrate/*, entrypoint.sh:198-221; llm-resolver-vessel src/index.ts:69,1098",
+   "purpose": "One pinned provider arm per config line",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "libp2p registration fields / PREFER_LIBP2P_ROUTE routing",
+   "location": "packages/vessel-discovery-client; goal-host index.ts:422,4242,7478, llm-router.ts:69",
+   "purpose": "Route by registration transport",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Env knob still consulted; partial"
+  },
+  {
+   "name": "snapshot-state / restore-state",
+   "location": "planned development-vessel (never built)",
+   "purpose": "Off-host continuity of learned state",
+   "status": "fossil",
+   "general": true,
+   "evidence": "0 hits"
+  },
+  {
+   "name": "Obsidian solicitation_id stamping",
+   "location": "obsidian-vessel src (5 files)",
+   "purpose": "Attribute human interactions to soliciting outputs",
+   "status": "dormant",
+   "general": false
+  }
+ ],
+ "principles": [
+  "All correctness lives in a deterministic gate so the generator can be arbitrarily weak; parity gate is the degenerate strongest point of the semantic gate (2026-07-15-vessel-maintenance-parity-gate/proposal.md)",
+  "A maintenance commit that edits behavior voids parity and must be split (07-15)",
+  "Decomposition rate must outpace accretion: lambda1 >= rho_grow (07-15)",
+  "typecheck=clean != gap fixed, mirroring status=completed != goal reached (06-25 semantic gate)",
+  "Avoidance symmetric with reward across selection, execution, authoring (06-25 goal-target-inference / semantic gate)",
+  "Verifier supremacy: checks must be much more reliable than doing; checks are graded activities and a check that never fires decays (07-18 s2 ladder rung 2)",
+  "S2 stable when self-report vs independent audit margin is small and shrinking, not when a rate crosses a line once (07-18)",
+  "Tripwires: second gate-gaming incident, hollow closes in headline rate, prediction error drifting toward flattery (07-18)",
+  "Placement follows data locality not everything-everywhere: location-stateful vs location-independent vs shared singleton (07-05 distributed-spoke proposal)",
+  "A cutover is done only when scored, never when the unit merely restarts (07-05)",
+  "A vessel's reachability is entirely its discovery registration; loopback is the degenerate case (07-04 single-transport)",
+  "Expectations live in docs/ watched by docs-align-scan; fold-in not supersession banners (07-01 design decisions 1-2)",
+  "Do not let the system under test author its own ruler mid-experiment (07-01 design decision 4)",
+  "Falsifiable status lines get falsified (07-01 design)",
+  "Timers begat timers; the gap write itself is the trigger; a quiet watchdog writes no trace (07-09 contiguous-shape-flow)",
+  "Gap lifecycle is decisions not decay; silent score-burial of a critical gap is a defect (07-09)",
+  "Environment failures must not burn gap/approach credit (07-09)",
+  "Damp demonstrated bad reputation, not novelty (06-25 reputation penalty)",
+  "Law-1 boundary: provider pin is identity; the arm list is behavior and should be a shape (07-19 llm-arms)",
+  "Every instance fix owes a class detector: dead-arm-still-advertised, enable-list omission, build/run tag drift (07-19 llm-arms)",
+  "Expertise formation: attributed log, consolidation, cued recall, metacognitive gate, shadow apprenticeship, precise blame (07-05 code-locality agent-prompt.md)",
+  "The carrier of learning must survive a move from host A to host B (06-16 self-persistence)",
+  "No hardcoded refs not relative to {substrate-root} (06-25 root rename)",
+  "Never bulk-delete row-by-row in SurrealDB; copy-forward swap; bounded reads only (07-08 design)"
+ ]
+}

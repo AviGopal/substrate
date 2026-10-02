@@ -1,0 +1,161 @@
+{"proposal":{"scenario_id":"fm-44-silent-trace-loss","authored_by":"make_activity_autonomous","registration_status":"draft","created_at":"1970-01-01T00:00:00.000Z"},"template":"```json
+{
+  "id": "gap-closing:fm-44-silent-trace-loss",
+  "name": "Detect and Report Silent Trace Loss via Vessel Execution Count Divergence",
+  "description": "Detects silent trace loss by comparing vessel-reported execution counts against activity-api stored traces. Identifies vessels with >5% sustained loss over 3+ consecutive 24h windows. Generates trace loss report and proposes redelivery strategy.",
+  "tags": [
+    "reliability.trace_durability.detection",
+    "reliability.trace_durability.diagnosis",
+    "gap-closing"
+  ],
+  "inputShapes": [
+    "activityExecutionTrace",
+    "vesselPerformanceMetrics",
+    "vesselHealth"
+  ],
+  "outputShapes": [
+    "traceLossReport",
+    "traceRedeliveryProposal",
+    "vesselOutboxStatus",
+    "gapClosingTrace"
+  ],
+  "tasks": [
+    {
+      "id": "task-1-fetch-codebase-state",
+      "name": "Fetch codebase state for trace sink implementations",
+      "description": "Read current implementations of TranslatingTraceSink, MiniBob trace-cache, and AgentRuntime to understand fire-and-forget behavior.",
+      "resolver": "fs_read",
+      "params": {
+        "paths": [
+          "repos/ias-executor-ts/src/adapters/activity-api-trace-sink.ts",
+          "repos/minibob/src/mcp.ts",
+          "repos/minibob/src/trace-cache.ts",
+          "repos/minibob/src/agent-runtime.ts",
+          "repos/discovery-vessel/src/registry.ts"
+        ]
+      },
+      "expectedOutputShape": "codebaseSnapshot"
+    },
+    {
+      "id": "task-2-generate-detection-query",
+      "name": "Generate SQL detection query for trace count divergence",
+      "description": "Compose parameterized query to fetch per-vessel trace counts from activity-api over 24h rolling windows and compare against vessel heartbeat execution counters.",
+      "resolver": "llm_completion_dispatch",
+      "params": {
+        "prompt": "Generate a SQL query that: (1) Counts execution traces per vessel_id over rolling 24h windows from activity_execution_traces table; (2) Includes a template to compare against vessel-reported executionsCompleted from heartbeat metadata; (3) Identifies vessels where (local_count - remote_trace_count) / local_count > 0.05 sustained over 3+ consecutive windows. Return query and comparison logic as JSON.",
+        "context": {
+          "schema_hints": [
+            "activity_execution_traces(id, vessel_id, created_at, ...)",
+            "vessel_heartbeat_metadata(vessel_id, executionsCompleted, timestamp, ...)"
+          ],
+          "scenario_id": "fm-44-silent-trace-loss"
+        }
+      },
+      "expectedOutputShape": "detectionQueryTemplate"
+    },
+    {
+      "id": "task-3-analyze-outbox-gap",
+      "name": "Analyze durable outbox gap in current implementations",
+      "description": "Review TranslatingTraceSink and MiniBob trace-cache to document lack of retry/outbox mechanism. Identify where fire-and-forget occurs and what state would be lost.",
+      "resolver": "git_diff",
+      "params": {
+        "repo": "ias-executor-ts",
+        "paths": [
+          "src/adapters/activity-api-trace-sink.ts"
+        ],
+        "since": "HEAD~100",
+        "until": "HEAD",
+        "filter": "trace|outbox|retry|POST"
+      },
+      "expectedOutputShape": "outboxGapAnalysis"
+    },
+    {
+      "id": "task-4-propose-outbox-pattern",
+      "name": "Propose durable outbox and redelivery pattern",
+      "description": "Design a vessel-local outbox mechanism that persists failed traces and re-submits them. Include idempotency key strategy to prevent double-writes.",
+      "resolver": "llm_completion_dispatch",
+      "params": {
+        "prompt": "Design a durable outbox pattern for vessel-side trace submission that: (1) Persists traces to local disk before attempting POST; (2) Implements exponential backoff retry on 5xx/timeout; (3) Includes idempotency key (trace_id + vessel_id + timestamp hash) to prevent double-writes on redelivery; (4) Exposes a background sync thread that runs every 5min. Return as JSON schema with field definitions and pseudocode for sync loop.",
+        "context": {
+          "existing_cache_location": "~/.metabob/.cache/traces/",
+          "target_endpoint": "POST /v2/activities/execution-traces",
+          "scenario_id": "fm-44-silent-trace-loss"
+        }
+      },
+      "expectedOutputShape": "traceRedeliveryProposal"
+    },
+    {
+      "id": "task-5-design-api-endpoint",
+      "name": "Design activity-api endpoint for per-vessel trace count",
+      "description": "Propose GET /v2/vessels/{vesselId}/execution-count endpoint to expose recorded trace count for divergence detection.",
+      "resolver": "llm_completion_dispatch",
+      "params": {
+        "prompt": "Design a REST API endpoint GET /v2/vessels/{vesselId}/execution-count that returns: (1) vessel_id, (2) recorded_trace_count (total traces stored for this vessel), (3) window_start and window_end (24h rolling window), (4) last_trace_timestamp. Include query parameters for time range filtering. Return as OpenAPI 3.0 spec fragment with example response.",
+        "context": {
+          "scenario_id": "fm-44-silent-trace-loss",
+          "purpose": "Enable cross-vessel witness for divergence detection"
+        }
+      },
+      "expectedOutputShape": "apiEndpointProposal"
+    },
+    {
+      "id": "task-6-generate-detection-activity",
+      "name": "Generate the trace loss detection activity variant",
+      "description": "Create an activity template that runs the divergence detection query, identifies affected vessels, and generates the traceLossReport.",
+      "resolver": "activity_create_variant",
+      "params": {
+        "baseActivityId": "sys.reliability.trace_durability.monitor",
+        "variantName": "trace-loss-divergence-detector",
+        "inputShapes": [
+          "activityExecutionTrace",
+          "vesselPerformanceMetrics"
+        ],
+        "outputShapes": [
+          "traceLossReport",
+          "vesselOutboxStatus"
+        ],
+        "tags": [
+          "reliability.trace_durability.detection",
+          "gap-closing"
+        ],
+        "description": "Detects silent trace loss by comparing vessel-reported execution counts (from heartbeat) against activity-api stored trace counts over 24h rolling windows. Surfaces vessels with >5% sustained loss over 3+ consecutive windows."
+      },
+      "expectedOutputShape": "activityVariant"
+    },
+    {
+      "id": "task-7-compile-gap-closing-trace",
+      "name": "Compile gap-closing execution trace",
+      "description": "Synthesize findings from all tasks into a structured gapClosingTrace that documents the detection mechanism, proposed fixes, and evidence of the gap closure.",
+      "resolver": "llm_completion_dispatch",
+      "params": {
+        "prompt": "Compile a gapClosingTrace JSON object that documents: (1) gap_id: 'fm-44-silent-trace-loss'; (2) detection_mechanism: summary of divergence detection query; (3) root_causes: list of code locations where fire-and-forget occurs (from task-3); (4) proposed_fixes: list of outbox pattern, API endpoint, and activity variant (from tasks 4-6); (5) evidence: expected output shapes and tags; (6) closure_criteria: vessels with trace loss gap <1% sustained over 3+ windows. Return as JSON.",
+        "context": {
+          "scenario_id": "fm-44-silent-trace-loss",
+          "tasks_completed": [
+            "task-1-fetch-codebase-state",
+            "task-2-generate-detection-query",
+            "task-3-analyze-outbox-gap",
+            "task-4-propose-outbox-pattern",
+            "task-5-design-api-endpoint",
+            "task-6-generate-detection-activity"
+          ]
+        }
+      },
+      "expectedOutputShape": "gapClosingTrace"
+    }
+  ],
+  "executionStrategy": "sequential",
+  "timeoutSeconds": 3600,
+  "retryPolicy": {
+    "maxAttempts": 2,
+    "backoffSeconds": 60
+  },
+  "metadata": {
+    "scenario_id": "fm-44-silent-trace-loss",
+    "emergence_class": "gap_accepted",
+    "priority": "high",
+    "self_heal_window_seconds": 172800,
+    "created_at": "2026-05-22T00:00:00Z"
+  }
+}
+```"}

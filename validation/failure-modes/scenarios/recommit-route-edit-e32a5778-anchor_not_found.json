@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-e32a5778-anchor_not_found",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap route-edit-e32a5778 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not f",
+  "description": "compose for gap route-edit-e32a5778 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 908-913 of 3823, VERBATIM:\\n908:   const meta = (gap.classification_metadata ??",
+  "goal_text": "compose for gap route-edit-e32a5778 repeated already-recorded failure class anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 908-913 of 3823, VERBATIM:\\n908:   const meta = (gap.classification_metadata ??",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-e32a5778-anchor_not_found",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-b2925de2",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-29f8f226: Edit repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts.",
+  "description": "investigate and decompose gap route-edit-29f8f226: Edit repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts. OPERATOR VERDICT 2026-08-23: the single landing dbb2917 is INERT and must not close this gap. Its entire diff is two comment lines restating the gap text pasted into an unrelated substrateGap_write literal, plus a whitespace-only reindent of category: other that breaks the surrounding indentation. It does not address the drafter",
+  "goal_text": "investigate and decompose gap route-edit-29f8f226: Edit repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts. OPERATOR VERDICT 2026-08-23: the single landing dbb2917 is INERT and must not close this gap. Its entire diff is two comment lines restating the gap text pasted into an unrelated substrateGap_write literal, plus a whitespace-only reindent of category: other that breaks the surrounding indentation. It does not address the drafter",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-b2925de2",
+  "source_gap_source": "substrate_detected"
+}

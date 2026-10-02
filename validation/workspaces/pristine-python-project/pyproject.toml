@@ -1,0 +1,5 @@
+[project]
+name = "pristine-python-project"
+version = "0.0.0"
+description = "Benchmark seed workspace"
+requires-python = ">=3.10"

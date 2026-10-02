@@ -1,0 +1,82 @@
+{
+  "investigation_id": "035",
+  "generated_at": "2026-05-26T16:00:05Z",
+  "investigator_session_id": "loop-iteration-048",
+  "prior_investigation_id": "2026-05-26T13-58-11Z-investigation-034",
+  "loop_iteration": 48,
+  "substrate_target": "http://localhost:18080",
+  "substrate_status": "healthy — no new commits for 6h37m",
+  "trigger": "manual /loop invocation (2h02m after investigation-034 by container clock)",
+
+  "clock_note": "Container date -u was 15:02:05Z at start of data collection and 16:00:05Z at end — ~58 container-minutes elapsed during probing. S.4a probed at ~15:02Z. Boredom log captures events through 15:44Z. Generated_at uses the final confirmed container time (16:00:05Z).",
+
+  "summary": "S.4a improving: rl=[5,7,8,8] at probe time (15:02Z), consecutive=2, still False (3h==4h==8). Boredom: 3 completions since investigation-034, then goal[5] failed at 15:39Z — F-088 recurrence, 2nd post-fix failure of goal[5] type. AbortSignal fix (106b1f0b) insufficient: goal-host-vessel takes >5min for health+liveness goal on some runs. No new substrate commits (6h37m quiet). Health True. F-099/F-100/F-101 open.",
+
+  "s4a_status": {
+    "coverage_progress": false,
+    "consecutive_progressing_cycles": 2,
+    "rl": [5, 7, 8, 8],
+    "probed_at": "2026-05-26T15:02:05Z",
+    "analysis": "Near-miss: 5<7<8=8. The 3h and 4h windows both contain 8 distinct template types. The 4h window (since ~11:02Z) and 3h window (since ~12:02Z) cover overlapping recent boredom history and happen to have the same template diversity. For coverage_progress=True we need 3h<4h — either a new template type must enter the 4h window but not the 3h, or the 3h must drop as activities roll out. consecutive=2 means 2 of 3 adjacent pairs are strictly increasing (1h<2h and 2h<3h). Progress since investigation-033's consecutive=1.",
+    "change_from_034": "investigation-034: rl=[5,6,6,8] consecutive=1. Now: rl=[5,7,8,8] consecutive=2. 2h and 3h windows both improved. Getting closer to True.",
+    "next_opportunity": "Next coverage-tick (goal[0]) expected at ~16:09Z. As boredom cycles continue and the window edges shift, 4h > 3h may restore."
+  },
+
+  "health_status": {
+    "overall_passing": true,
+    "confidence_passing": true,
+    "stability_passing": true,
+    "vessels_passing": true,
+    "verified_at": "2026-05-26T15:02:05Z"
+  },
+
+  "f088_recurrence": {
+    "id": "F-088",
+    "status": "ACTIVE — AbortSignal fix insufficient for goal[5] type",
+    "new_failure": {
+      "time": "2026-05-26T15:39Z",
+      "goal_index": 5,
+      "goal": "check substrate health including vessel liveness — report which vessels are active or down and restart any that are inactive",
+      "duration_min": 5,
+      "failure": "exit-code failure (timeout — no dispatched line before failure)",
+      "note": "Second post-fix failure of goal[5]. First post-fix success was at 12:09Z (1.3 min). Same goal, different outcome."
+    },
+    "boredom_fires_since_034": [
+      { "time": "2026-05-26T14:09Z", "goal_index": 2, "execution_id": "exec_a4wg16fw", "status": "completed", "duration_min": 4.3 },
+      { "time": "2026-05-26T14:39Z", "goal_index": 3, "execution_id": "exec_biii4tto", "status": "completed", "duration_min": 1.5 },
+      { "time": "2026-05-26T15:09Z", "goal_index": 4, "execution_id": "exec_zrp8stfq", "status": "completed", "duration_min": 1.1 },
+      { "time": "2026-05-26T15:39Z", "goal_index": 5, "execution_id": null, "status": "FAILED", "duration_min": 5 }
+    ],
+    "pattern": "Goal[5] succeeds when goal-host-vessel processes the health+liveness check quickly (<2 min). Fails when goal-host-vessel takes >5 min (possibly restarting a vessel or running a slow health probe). The AbortSignal.timeout removal (106b1f0b) removed the EXPLICIT timeout but Bun 1.3.14 or the OS TCP stack still imposes a ~300s fetch timeout via a different mechanism. OR: goal-host-vessel itself crashes/hangs on some health-check runs, causing boredom's POST to never receive a response.",
+    "revised_assessment": "F-088 NOT substantially resolved. Investigation-034 was premature — goal[5] had one success at 12:09Z (the first fire after the fix) but subsequently failed again at 15:39Z. The fix addresses some cases but the root cause (goal-host-vessel timeout for long-running health goals) persists.",
+    "evidence_command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager --since '2026-05-26 15:30:00' | grep -E 'goal\\[|dispatched|Failed'"
+  },
+
+  "new_commits_since_032": [],
+  "substrate_quiet_since": "2026-05-26T09:22:34Z",
+  "substrate_quiet_duration_min": 397,
+
+  "new_findings_check": {
+    "failure_mode_cycles": "Last cycle is cycle-8.json (pre-existing). No new cycles.",
+    "proposals": "No new proposals beyond pre-existing set (proposal-fp-12, fp-15, fm-44, etc.).",
+    "root_artifacts": "Not checked this iteration — substrate quiet, low priority.",
+    "hardcoded_endpoints": "Not rechecked this iteration — no new commits to grep."
+  },
+
+  "prior_findings_status": {
+    "F-101": { "status": "open", "change": "no new commits, no operator response (6h37m)" },
+    "F-099": { "status": "open", "change": "no operator response to direct question (now 6h34m)" },
+    "F-100": { "status": "open", "change": "concept-db.service ExecStartPre still running; no operator response" },
+    "F-095": { "status": "open", "change": "unchanged" },
+    "F-096": { "status": "partially explained", "change": "unchanged" },
+    "F-097": { "status": "confirmed", "change": "unchanged" },
+    "F-088": { "status": "ACTIVE — revised from 'substantially resolved'; goal[5] still intermittently failing" },
+    "F-092": { "status": "resolved (S.4a fluctuating naturally, consecutive=2 improving)" },
+    "F-094": { "status": "open — add-resolver-to-vessel still running as part of boredom but no evidence of registering new resolvers" }
+  },
+
+  "next_wake_recommendation": {
+    "delay_seconds": 3600,
+    "rationale": "S.4a at consecutive=2, nearing True — monitor next 2 boredom cycles. F-088 active again. 1h wakeup."
+  }
+}

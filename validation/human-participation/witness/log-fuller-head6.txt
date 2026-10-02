@@ -1,0 +1,67 @@
+commit 191afb0012e04bb99aab34cabc422a014f92f619
+Author:     Substrate Autonomous <substrate-autonomous@substrate.local>
+AuthorDate: Sun Sep 20 02:36:13 2026 +0000
+Commit:     Substrate Autonomous <substrate-autonomous@substrate.local>
+CommitDate: Sun Sep 20 02:36:13 2026 +0000
+
+    Automated commit of vessel code changes
+
+commit f17a81a0e06ae4a34b42aac0dfb99f3be728ac62
+Merge: a6fbf4f4 93c70c5e
+Author:     Substrate Autonomous <substrate-autonomous@substrate.local>
+AuthorDate: Sun Sep 20 02:23:39 2026 +0000
+Commit:     Substrate Autonomous <substrate-autonomous@substrate.local>
+CommitDate: Sun Sep 20 02:23:39 2026 +0000
+
+    Merge origin/dev into development-vessel and resolve conflicts
+
+commit 93c70c5e2b9218fcafb4691c398318f36b7f12a7
+Author:     substrate-bot <substrate-bot@users.noreply.github.com>
+AuthorDate: Sun Sep 20 00:47:06 2026 +0000
+Commit:     substrate-bot <substrate-bot@users.noreply.github.com>
+CommitDate: Sun Sep 20 00:47:06 2026 +0000
+
+    chore(submodules): bump 12 pointer(s) to latest dev
+    
+    - repos/concept-db: a4e353d -> 9e2c8a8
+    - repos/discovery-vessel: 3f0edc9 -> 0b7db2d
+    - repos/identity-vessel: 4b335ea -> bcbcc18
+    - repos/activity-api: 7ffc375 -> 0f923a1
+    - repos/development-vessel: 206f055 -> 7aa8a69
+    - repos/ias-executor-ts: 3e884a1 -> 25150c9
+    - repos/goal-host-vessel: a6bb9ec -> 7f20608
+    - repos/llm-resolver-vessel: 8c518dd -> 789853a
+    - repos/local-tools-vessel: 5053494 -> 4d0c600
+    - repos/light-dispatch-vessel: 2e7d141 -> 59732fd
+    - repos/obsidian-vessel: 3252ef2 -> 3364d47
+    - repos/libp2p-federation-transport: d459bba -> 542e712
+
+commit 095bd69269a09389f7fbff3a31e51cfee01b0fa7
+Author:     Avi Gopal <avi@metabob.com>
+AuthorDate: Sat Sep 19 16:42:38 2026 -0700
+Commit:     Avi Gopal <avi@metabob.com>
+CommitDate: Sat Sep 19 16:42:38 2026 -0700
+
+    docs(validation): queue items 3-4 closed with falsifiers
+    
+    Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+
+commit 72a5909af080d79a4325618550583d1433660b9f
+Author:     Avi Gopal <avi@metabob.com>
+AuthorDate: Sat Sep 19 16:37:45 2026 -0700
+Commit:     Avi Gopal <avi@metabob.com>
+CommitDate: Sat Sep 19 16:37:45 2026 -0700
+
+    docs(validation): standing trend expectation landed and first autonomous check recorded
+    
+    Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+
+commit 290a5c78655ee02c18e73b54a47fcff53a2ec865
+Author:     Avi Gopal <avi@metabob.com>
+AuthorDate: Sat Sep 19 16:27:13 2026 -0700
+Commit:     Avi Gopal <avi@metabob.com>
+CommitDate: Sat Sep 19 16:27:13 2026 -0700
+
+    docs(validation): generality round 1 + falsifier re-run evidence
+    
+    Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

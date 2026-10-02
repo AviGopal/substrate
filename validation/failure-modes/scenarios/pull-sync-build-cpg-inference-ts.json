@@ -1,0 +1,19 @@
+{
+  "id": "pull-sync-build-cpg-inference-ts",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "service_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "cpg-inference-ts build failed at 19f24a5ae3; live dist kept, no consumer touched",
+  "description": "cpg-inference-ts build failed at 19f24a5ae3; live dist kept, no consumer touched",
+  "goal_text": "cpg-inference-ts build failed at 19f24a5ae3; live dist kept, no consumer touched",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "pull-sync-build-cpg-inference-ts",
+  "source_gap_source": "substrate_detected"
+}

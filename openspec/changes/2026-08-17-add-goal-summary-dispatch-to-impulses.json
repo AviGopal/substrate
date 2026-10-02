@@ -1,0 +1,15 @@
+{
+  "schema_version": "0.1",
+  "metadata": {
+    "title": "Add goal_summary dispatch to impulses.ts",
+    "description": "Adds a dispatch case for the goal_summary resolver in src/routes/impulses.ts to enable its invocation.",
+    "tags": ["feature", "goal_summary", "dispatch"]
+  },
+  "changes": [
+    {
+      "type": "file_create",
+      "filePath": "repos/development-vessel/src/routes/impulses.ts",
+      "content": "import { Hono } from \"hono\";\nimport { ResolverResult } from \"../resolvers/types.js\";\nimport { resolveGoalSummary } from \"../resolvers/goal-summary.js\";\n\ninterface AnyPointer {\n  type: string;\n  [key: string]: unknown;\n}\n\nasync function dispatchInner(pointer: AnyPointer): Promise<ResolverResult> {\n  switch (pointer.type) {\n    case \"goal_summary\":\n      return resolveGoalSummary();\n    default:\n      throw new Error(`Unknown pointer type: ${pointer.type}`);\n  }\n}\n\nexport async function resolveDispatch(pointer: AnyPointer): Promise<ResolverResult> {\n  return dispatchInner(pointer);\n}\n\nexport const impulsesRouter = new Hono();\n\nimpulsesRouter.post(\"/v2/impulses/resolve\", async (c) => {\n  let body: { impulse?: { type?: string; pointer?: { type?: string } } };\n  try {\n    body = await c.req.json();\n  } catch {\n    return c.json({ success: false, error: \"invalid JSON body\" }, 400);\n  }\n\n  const pointer = body?.impulse?.pointer ?? body?.impulse;\n  const pointerType = pointer?.type ?? body?.impulse?.type;\n\n  if (!pointerType) {\n    return c.json({ success: false, error: \"pointer.type is required\" }, 400);\n  }\n\n  try {\n    const result = await resolveDispatch({ ...(pointer as Record<string, unknown>), type: pointerType });\n    if (result.shape === \"structuredError\") {\n      const detail =\n        (result.body as Record<string, unknown> | undefined)?.[\"detail\"];\n      return c.json({\n        success: false,\n        shape: result.shape,\n        body: result.body,\n        error: typeof detail === \"string\" ? detail : \"structuredError\",\n      });\n    }\n    return c.json({ success: true, shape: result.shape, body: result.body });\n  } catch (err) {\n    const message = err instanceof Error ? err.message : String(err);\n    if (message.startsWith(\"unknown shape:\")) {\n      return c.json({ success: false, error: message }, 400);\n    }\n    return c.json({ success: false, error: message }, 500);\n  }\n});\n"
+    }
+  ]
+}

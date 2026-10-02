@@ -1,0 +1,815 @@
+{
+ "area": "activity-api",
+ "items": [
+  {
+   "name": "successor features + SF blend",
+   "location": "activity-api src/lib/successor-features.ts; activities.scoring.ts:125; jobs/accelerator-flag-tick.ts",
+   "purpose": "shape-occupancy \u03c8 blended into recommend",
+   "status": "live-used",
+   "general": true,
+   "evidence": "2681 rows; blend on via tuning row; acceptance never run; variance_estimate unwritten",
+   "source": "openspec-3",
+   "mentions": 1,
+   "sources": [
+    "openspec-3"
+   ]
+  },
+  {
+   "name": "substrate_tuning_param + getTuningParam",
+   "location": "activity-api src/lib/tuning-params.ts; migration 152",
+   "purpose": "table-backed runtime parameters (law-1 seam) with env fallback",
+   "status": "live-used",
+   "general": true,
+   "evidence": "rows TD_LAMBDA 0.6, SF_BLEND 1.0, YIELD_FLOOR 0.1, PROBE_NULLNONE_FIXED 3.0",
+   "source": "openspec-3",
+   "mentions": 1,
+   "sources": [
+    "openspec-3"
+   ]
+  },
+  {
+   "name": "auto-promote vpm_key underscore normalization",
+   "location": "activity-api src/routes/activities.ts:3733",
+   "purpose": "join vpm rows to template ids",
+   "status": "broken",
+   "general": false,
+   "evidence": "replace(/_/g,':') still present; breaks underscore ids",
+   "source": "openspec-3",
+   "mentions": 1,
+   "sources": [
+    "openspec-3"
+   ]
+  },
+  {
+   "name": "auto-promote trace-store evidence fallback",
+   "location": "activity-api src/routes/activities.ts:3751",
+   "purpose": "graduate proposed activities lacking vpm samples",
+   "status": "live-used",
+   "general": true,
+   "evidence": "62 graduated on 06-14",
+   "source": "openspec-3",
+   "mentions": 1,
+   "sources": [
+    "openspec-3"
+   ]
+  },
+  {
+   "name": "applyReputationFactor + accelerator-flag-tick",
+   "location": "activity-api src/routes/activities.ts:6388, src/jobs/accelerator-flag-tick.ts",
+   "purpose": "Damp gamed-signature selection; flag policy via tuning params",
+   "status": "unknown",
+   "general": true,
+   "evidence": "getTuningParam default 0",
+   "source": "openspec-4",
+   "mentions": 1,
+   "sources": [
+    "openspec-4"
+   ]
+  },
+  {
+   "name": "Substrate event bus /v2/events/publish + WS broadcaster",
+   "location": "activity-api src/routes/events.ts, websocket/",
+   "purpose": "Neutral broadcast of lifecycle, vessel and task events to any subscriber",
+   "status": "live-used",
+   "general": true,
+   "evidence": "grep hits; the concept-bridge receives vessel_daemon_resolve events live",
+   "source": "openspec-2",
+   "mentions": 1,
+   "sources": [
+    "openspec-2"
+   ]
+  },
+  {
+   "name": "metadata.task_count denormalization",
+   "location": "activity-api src/routes/execution-traces.ts:1032-1056,2903",
+   "purpose": "Accurate task_count on the LIST endpoint after the content split",
+   "status": "live-used",
+   "general": true,
+   "source": "openspec-2",
+   "mentions": 1,
+   "sources": [
+    "openspec-2"
+   ]
+  },
+  {
+   "name": "execution replication pull",
+   "location": "activity-api src/routes/replication-pull.ts, src/jobs/trace-replication-tick.ts",
+   "purpose": "Cross-node trace anti-entropy over libp2p egress",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Proven 07-14. Uses setInterval + env (law-1/5 gap). The transport relay was broken 08-10 and 09-11.",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "embedding-conditioned prior (ridge \u03b8)",
+   "location": "activity-api src/services/embedding-prior.ts, embedding-prior-trainer.ts, src/lib/prior-seed.ts",
+   "purpose": "cold-cell prior from MiniLM embeddings",
+   "status": "unknown",
+   "general": true,
+   "evidence": "5128 append-only rows, org_id 'default' vs reader org filter; env-gated",
+   "source": "openspec-3",
+   "mentions": 1,
+   "sources": [
+    "openspec-3"
+   ]
+  },
+  {
+   "name": "tier-classifier",
+   "location": "activity-api src/services/tier-classifier.ts",
+   "purpose": "skip Thompson maintenance on deterministic cells",
+   "status": "live-used",
+   "general": true,
+   "evidence": "imported by posterior-update.ts:27 and activities.scoring/composition/templates-db; caused vpm starvation for deterministic activities",
+   "source": "openspec-3",
+   "mentions": 1,
+   "sources": [
+    "openspec-3"
+   ]
+  },
+  {
+   "name": "successor features SF_BLEND",
+   "location": "activity-api successor-features.ts, activities.scoring.ts:125",
+   "purpose": "Predictive value in selection",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Trains by default, blend off self-arms at 200 cells; residual evaporates",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "validator-dispatch / slot-binding traces",
+   "location": "activity-api system templates",
+   "purpose": "Per-fire validation",
+   "status": "live-used",
+   "general": false,
+   "evidence": "47,732 + 9,772 rows in 5 days",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "templateAuditReport",
+   "location": "activity-api template-audit.ts; dev-vessel template-promote/mitosis ticks",
+   "purpose": "Template deficiency report",
+   "status": "live-used",
+   "general": true,
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "Retention valve with quarantine",
+   "location": "activity-api trace-retention.ts",
+   "purpose": "Keep trace store under cap",
+   "status": "live-used",
+   "general": false,
+   "evidence": "25 rows/6 min vs 310k surplus",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "trace retention + trace_store_health_observer -> reconcile_trace_store",
+   "location": "activity-api trace-retention.ts",
+   "purpose": "Keep the trace store bounded",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Caps are env (gen-env.sh); .timer cadence",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "trace retention valve",
+   "location": "activity-api trace-retention.ts",
+   "purpose": "Keep execution under 150k cap",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Runs but cannot keep up (3.5-17 s/row deletes); blob GC disabled 40.8GB (09-25)",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "trace-retention + global ceiling valve",
+   "location": "activity-api trace-retention.ts b048ece",
+   "purpose": "Bound the trace store",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Cap 150k via live env only",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "validator-dispatch",
+   "location": "activity-api validator",
+   "purpose": "Dispatch validators on lifecycle:task:completed",
+   "status": "live-used",
+   "general": true,
+   "evidence": "47,732 runs/5d (32% of store), 99.6% ok",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "Legacy checkAndRetireTemplate",
+   "location": "activity-api variant-creator.ts",
+   "purpose": "Retire poor templates",
+   "status": "fossil",
+   "general": false,
+   "evidence": "never completed its body; superseded by checkAndRetireByPosterior",
+   "duplicates_of": "checkAndRetireByPosterior",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "Poor-performance retirement (checkAndRetireTemplate / variant-creator)",
+   "location": "activity-api variant-creator.ts, activities.ts:2477",
+   "purpose": "Remove decisively failing arms (law 3 other half)",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Binding fixed f2857fc 08-16, gate starved. 09-29: poor_performance retirements = 0; failed_out path retired 10",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "canonical belief stores",
+   "location": "activity-api variant_performance_metrics, context_thompson_scores, goal_execution_paths",
+   "purpose": "Thompson posteriors and learned pathways",
+   "status": "live-used",
+   "general": true,
+   "evidence": "4571 arms and 7879 context rows (09-08). Belief is split across six families; never merge them.",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "VPM metrics.thompson_alpha/beta",
+   "location": "activity-api variant_performance_metrics; boredom picker",
+   "purpose": "learned posterior per variant",
+   "status": "unknown",
+   "general": true,
+   "evidence": "read-site fixed 05-30 ebfb1075; poisoned 06-17 460cc35a",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "v_shape_conditioned_score",
+   "location": "activity-api view",
+   "purpose": "shape-conditioned selection",
+   "status": "dormant",
+   "general": true,
+   "evidence": "no rows (09-16)",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "v_shape_conditioned_score",
+   "location": "activity-api, goal-host",
+   "purpose": "State-conditioned posterior read",
+   "status": "live-used",
+   "general": true,
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "validator-dispatch / slot-binding chain",
+   "location": "activity-api/ias-executor",
+   "purpose": "lifecycle chain",
+   "status": "live-used",
+   "evidence": "4,280/1,503 traces July window; ~85% of June traffic self-loop",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "activity-api init-database ledger",
+   "location": "activity-api/scripts/init-database.ts, init_migrations",
+   "purpose": "Apply migrations once",
+   "status": "live-used",
+   "general": true,
+   "evidence": "UNIQUE not enforced for 158; ghost names",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "Auth session pool",
+   "location": "activity-api/src/db/auth-session-pool.ts",
+   "purpose": "avoid connect/auth per query",
+   "status": "live-used",
+   "general": true,
+   "evidence": "env DB_POOL_ENABLED",
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "TaskGenerator debug/optimize tasks",
+   "location": "activity-api/src/index.ts:916",
+   "purpose": "generate debug tasks for low-success templates",
+   "status": "unknown",
+   "general": false,
+   "evidence": "flooded queue May; env-gated",
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "Posterior time decay via substrate_tuning_param",
+   "location": "activity-api/src/lib/posterior-update.ts",
+   "purpose": "Use-time steerable half-life (default 3d), applied on write and selection read",
+   "status": "live-used",
+   "general": true,
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "Posterior time-decay with shaped half-life",
+   "location": "activity-api/src/lib/posterior-update.ts:895-972,1238",
+   "purpose": "Let posteriors poisoned in outages heal; half-life from substrate_tuning_param THOMPSON_DECAY_HALFLIFE_DAYS",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1b0c693, 99ae266, 2ededef; logic in both TS and SurrealQL",
+   "source": "openspec-5",
+   "mentions": 1,
+   "sources": [
+    "openspec-5"
+   ]
+  },
+  {
+   "name": "propagateCreditAlongChain + TD_LAMBDA",
+   "location": "activity-api/src/lib/posterior-update.ts; tuning-params",
+   "purpose": "TD(\u03bb) chain credit, \u03bb read at use time",
+   "status": "live-used",
+   "general": true,
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "classifyReach",
+   "location": "activity-api/src/lib/reach-classify.ts",
+   "purpose": "Reach verdict overrides exit status for credit",
+   "status": "live-used",
+   "general": true,
+   "evidence": "6 call sites across activity-api, goal-host, ribosome-vessel",
+   "source": "docs-3",
+   "mentions": 2,
+   "sources": [
+    "docs-3",
+    "memory-2"
+   ]
+  },
+  {
+   "name": "runtime-tracing middleware",
+   "location": "activity-api/src/middleware/runtime-tracing.ts",
+   "purpose": "Per-request traces",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 call sites by decision",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "FailureModeSchema + computeDeltas",
+   "location": "activity-api/src/models/schemas.ts, lib/posterior-update.ts",
+   "purpose": "Outcome-conditional posterior step sizes",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "24h: 11,129 null, 9,790 out-of-union execution_error, 138 cascading w/o upstream, 3 verifier_negative",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "execution_error failure type",
+   "location": "activity-api/src/models/schemas.ts:1141",
+   "purpose": "keep engine failure attribution",
+   "status": "live-used",
+   "general": true,
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "Proposed-first template discipline",
+   "location": "activity-api/src/models/schemas.ts:253",
+   "purpose": "new templates not selectable until promoted",
+   "status": "broken",
+   "general": true,
+   "evidence": "proposed default(false) still",
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "relevance-feedback endpoint",
+   "location": "activity-api/src/routes/activities.ts:11477",
+   "purpose": "Relevance grading from feedback",
+   "status": "live-unused",
+   "evidence": "0 rows, test-only callers",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "cluster_shadow_decision emitter (D5.3)",
+   "location": "activity-api/src/routes/activities.ts:7387-7440",
+   "purpose": "Shadow partial-pooling decisions",
+   "status": "live-unused",
+   "evidence": "73,941 rows, test-only reader",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "refusal_events selector refusal",
+   "location": "activity-api/src/routes/activities.ts:7759",
+   "purpose": "Honest refusal instead of confidently-wrong fallback",
+   "status": "live-used",
+   "general": true,
+   "evidence": "9160 rows; template-only candidate pool",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "*_write learning-loop write resolvers (20 shapes)",
+   "location": "activity-api/src/routes/impulses.ts",
+   "purpose": "Learning-loop writes through POST /v2/impulses/resolve delegating to REST handlers",
+   "status": "live-used",
+   "general": true,
+   "duplicates_of": "REST endpoints /v2/activities/* (delegated)",
+   "evidence": "Advertised; compositionEdge_write listed in docs but absent",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "thompson_posterior shape",
+   "location": "activity-api/src/routes/impulses.ts",
+   "purpose": "Posterior readable as impulse",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "advertised; readers not counted",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "executeAsAuth root fallback",
+   "location": "activity-api/src/routes/impulses.ts:142",
+   "purpose": "Run API-key-authenticated queries as root with manual org_id predicates",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Code confirmed; violates PERMISSIONS law stated in CLAUDE.md, docs/README.md \u00a76, SCHEMA_OWNERSHIP.md, RBAC_GUIDE.md",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "embedding_prior_weights ridge retrain",
+   "location": "activity-api/src/services/embedding-prior.ts",
+   "purpose": "Embedding-conditioned priors",
+   "status": "live-used",
+   "evidence": "5,130 versions kept, latest only read",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "trace-retention aux reap",
+   "location": "activity-api/src/services/trace-retention.ts:660-700",
+   "purpose": "Bound trace_digest/concept_usage",
+   "status": "live-used",
+   "general": true,
+   "evidence": "concept_usage only covers today",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "State-space signature v1 conditional keying",
+   "location": "activity-api/src/utils/session-context.ts, lib/posterior-aggregator.ts, lib/cluster-posterior.ts",
+   "purpose": "context-conditional posteriors",
+   "status": "live-used",
+   "general": true,
+   "evidence": "9,809 v1 rows of 29,178; acceptance never measured",
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "named maintenance leases",
+   "location": "dev-vessel maintenance-lease.ts; activity-api db-admin-reconcile.ts",
+   "purpose": "cutover vs trace_store windows",
+   "status": "live-used",
+   "general": true,
+   "source": "openspec-10",
+   "mentions": 1,
+   "sources": [
+    "openspec-10"
+   ]
+  },
+  {
+   "name": "vessel.registered reactive proxy registration",
+   "location": "discovery \u2192 activity-api bus \u2192 goal-host; dev-vessel vessel-register-passthrough.ts",
+   "purpose": "Remove the startup race for proxy resolvers (F-129)",
+   "status": "live-used",
+   "general": true,
+   "source": "openspec-2",
+   "mentions": 1,
+   "sources": [
+    "openspec-2"
+   ]
+  },
+  {
+   "name": "recordGoalPath / goal_execution_paths pathway reuse via shape_signature",
+   "location": "goal-host + activity-api",
+   "purpose": "Ceiling: reuse learned pathways",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-13 'accepted 2-step pathway \u2026 10/10 reached'. The posterior tracks verdicts correctly but learns satisfier:shellResult",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "selection posterior tiers",
+   "location": "goal-host + activity-api",
+   "purpose": "Thompson selection over learned posteriors",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Read path fixed 72aad357 (09-25) after 4 audits; eb2b8fcf still names alpha=1",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "recommendReachingPath",
+   "location": "goal-host :12825; activity-api /v2/goal-paths/recommend",
+   "purpose": "learned-pathway reuse",
+   "status": "live-used",
+   "general": true,
+   "evidence": "deterministic top-1 by raw count starves verified floor (08-27)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "recommendReachingPath + shape-signature arm",
+   "location": "goal-host index.ts:8091; activity-api /v2/goal-paths/recommend 48bc174",
+   "purpose": "Pathway reuse across goals",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-06 one call site (recovery loop, ~34% traffic); 109/120 borrows one donor",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "recommendReachingPath/recordGoalPath learned pathway",
+   "location": "goal-host pathway-head.ts, pathway-rank.ts; activity-api goal_execution_paths",
+   "purpose": "Replay prior reaching path by goal_hash (ceiling)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "901 learned_pathway executions/7d, 51% success_count",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "pathway reuse (recommendReachingPath + pathwayReusePolicy)",
+   "location": "goal-host/activity-api",
+   "purpose": "Ceiling reuse",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Had no producer on 08-08. Accepted at 3/5 on 09-11.",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "retirement sweep / retired flag",
+   "location": "light-dispatch 66b95e1; activity-api 8b76d56, 7947f79",
+   "purpose": "Retire dead arms reversibly",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-05; old ghost sweep hit non-existent route (fossil)",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "evidence-aliasing-check",
+   "location": "packages/evidence-aliasing-check + activity-api lint",
+   "purpose": "flag writers resetting updated_at without decay",
+   "status": "live-used",
+   "general": true,
+   "evidence": "wired into lint; 8 findings",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "activity-api/concept-db GitHub CI",
+   "location": "repos/*/.github/workflows/ci-webhook.yml, sync-to-deployment.yml",
+   "purpose": "K8s-era canary pipeline",
+   "status": "fossil",
+   "general": false,
+   "evidence": "200/200 and 50/50 failures",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "isReachInapplicable telemetry abstention",
+   "location": "repos/activity-api/src/lib/reach-classify.ts",
+   "purpose": "telemetry probes don't pump beta",
+   "status": "live-used",
+   "general": true,
+   "evidence": "auth capture stopped 10:43 08-24",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "conservation-audit endpoint + liveness invariant",
+   "location": "repos/activity-api/src/routes/activities.ts",
+   "purpose": "junction invariants as a detector seam",
+   "status": "live-used",
+   "general": true,
+   "evidence": "found dark lanes; duplicate route registrations",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "db_admin repair pattern catalogue",
+   "location": "repos/activity-api/src/routes/db-admin-repair.ts",
+   "purpose": "Vetted, dry-run, snapshot and audit data repairs",
+   "status": "live-used",
+   "general": true,
+   "evidence": "recover_endpoint_output_shapes: 1,644 rows, snapshot revert key; reuse instead of a mint",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "db-admin-repair backup rail",
+   "location": "repos/activity-api/src/routes/db-admin-repair.ts:408",
+   "purpose": "Snapshot rows before a repair mutation",
+   "status": "live-used",
+   "general": true,
+   "evidence": "The code works, but its test writes fixture backups into live /workspace/db-backups (391 on node 2, 1766 on node 1).",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "activity-api /v2/vessels/* endpoints",
+   "location": "repos/activity-api/src/routes/vessels.ts",
+   "purpose": "Legacy vessel registry proxy",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Promised 410 by 07-01; still 401-routed",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "trace-retention sweep + global-ceiling valve",
+   "location": "repos/activity-api/src/services/trace-retention.ts",
+   "purpose": "bound the execution trace table",
+   "status": "live-used",
+   "general": true,
+   "evidence": "09-29 execution=150,267, but batches fail and quarantine; upkeep_stats 0 rows",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "Parked landings + resume, named leases",
+   "location": "vessel-mitosis-cutover.ts; activity-api db_admin; openspec/specs/{change-window-names,parked-landing,restart-budgets}",
+   "purpose": "Keep verified patches across lease/restart refusals",
+   "status": "live-used",
+   "general": true,
+   "evidence": "14 parked/7 resumed 09-24 night; c1dd4c2",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  }
+ ]
+}

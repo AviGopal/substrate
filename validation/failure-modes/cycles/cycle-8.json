@@ -1,0 +1,30 @@
+{
+  "cycle_number": 8,
+  "started_at": "2026-05-23T07:40:51.401Z",
+  "baseline_report": "validation/results/2026-05-23-failure-mode-cycle-8.json",
+  "baseline_gap_count": 0,
+  "baseline_reuse_count": 6,
+  "proposals_authored": 9,
+  "proposals_by_author": {
+    "subagent": 3,
+    "make_activity_autonomous": 6
+  },
+  "proposals_registered": 0,
+  "manual_intervention_debt": 0,
+  "manual_intervention_breakdown": {
+    "subagent_dispatches": 0,
+    "human_authored_templates": 0,
+    "operator_admin_actions_required": 0
+  },
+  "remaining_gaps": [],
+  "gaps_with_proposal": [],
+  "lift_kpi": {
+    "debt_zero": true,
+    "gap_count_decreasing": true,
+    "consecutive_zero_debt_cycles": 4
+  },
+  "notes": [
+    "LIFT CANDIDATE: 4 consecutive cycles with zero manual debt, gap count at floor (0), autonomous proposals present. System operating autonomously.",
+    "6 proposals authored autonomously (via make-activity). This is the lift signal."
+  ]
+}

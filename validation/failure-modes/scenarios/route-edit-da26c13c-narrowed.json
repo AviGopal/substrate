@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-da26c13c-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-da26c13c] Edit repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts to satisfy the ",
+  "description": "[narrowed from route-edit-da26c13c] Edit repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts to satisfy the following request. The relevant code is in the region \"substrate gap\". If that file is the wrong target, say so rather than editing it.\n\nClose substrate gap planner-invents-an-unrequested-op-against-an-explicit-negative-instruction-and-one-bad-op-rolls-back-a-correct-one: MEASURED 2026-09-04, dispatch 0e3f1a5a, report route-edit-39ce0192.",
+  "goal_text": "[narrowed from route-edit-da26c13c] Edit repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts to satisfy the following request. The relevant code is in the region \"substrate gap\". If that file is the wrong target, say so rather than editing it.\n\nClose substrate gap planner-invents-an-unrequested-op-against-an-explicit-negative-instruction-and-one-bad-op-rolls-back-a-correct-one: MEASURED 2026-09-04, dispatch 0e3f1a5a, report route-edit-39ce0192.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-da26c13c-narrowed",
+  "source_gap_source": "substrate_detected"
+}

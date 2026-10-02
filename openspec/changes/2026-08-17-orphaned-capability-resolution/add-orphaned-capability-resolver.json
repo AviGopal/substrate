@@ -1,0 +1,5 @@
+
+{
+  "path": "repos/development-vessel/src/resolvers/orphaned-capability-resolution.ts",
+  "patch": "--- a/repos/development-vessel/src/resolvers/orphaned-capability-resolution.ts\n+++ b/repos/development-vessel/src/resolvers/orphaned-capability-resolution.ts\n@@ -0,0 +1,10 @@\n+import { ResolverResult } from \"../../../repos/development-vessel/src/types\";\n+\n+export async function resolveOrphanedCapabilityResolution(): Promise<ResolverResult> {\n+  return {\n+    success: true,\n+    shape: \"orphaned-capability-resolution\",\n+    body: {\n+      message: \"Orphaned capability resolution placeholder.\",\n+      resolved: true,\n+      timestamp: new Date().toISOString(),\n+    },\n+  };\n+}\n"
+}

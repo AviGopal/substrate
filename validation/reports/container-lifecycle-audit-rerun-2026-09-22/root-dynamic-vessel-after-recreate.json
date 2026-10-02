@@ -1,0 +1,27 @@
+{
+  "status": {
+    "at": "2026-09-22T10:50:50.128401+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-root-a",
+      "vessel-ctl",
+      "status",
+      "audit-fixture-vessel"
+    ],
+    "rc": 0,
+    "stdout": "audit-fixture-vessel.service           active       enabled    restarts=0\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  "resolve": {
+    "status": 200,
+    "data": {
+      "resolved": true,
+      "shape": "audit_fixture",
+      "body": {
+        "value": "isolated-manifest-v1",
+        "vessel": "audit-fixture-vessel"
+      }
+    }
+  }
+}

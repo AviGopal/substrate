@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-fc81cade",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Update repos/goal-host-vessel/src/registry-field.ts to treat the wording \"count of\" as a counting trigger, joining the e",
+  "description": "Update repos/goal-host-vessel/src/registry-field.ts to treat the wording \"count of\" as a counting trigger, joining the existing alternation of \"how many\", \"number of\" and \"total\", so that a question such as \"the count of vessels\" is no longer rejected as naming an entity the registry does not track.",
+  "goal_text": "Update repos/goal-host-vessel/src/registry-field.ts to treat the wording \"count of\" as a counting trigger, joining the existing alternation of \"how many\", \"number of\" and \"total\", so that a question such as \"the count of vessels\" is no longer rejected as naming an entity the registry does not track.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-fc81cade",
+  "source_gap_source": "substrate_detected"
+}

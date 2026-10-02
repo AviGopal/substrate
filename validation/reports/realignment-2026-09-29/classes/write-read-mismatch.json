@@ -1,0 +1,1858 @@
+{
+ "attempts": [
+  {
+   "key": "write-read-mismatch",
+   "title": "Compose-lesson failure write-back",
+   "where": "feature-compose.ts:3151-3170 (substrate-authored 6f69142, 2026-09-09)",
+   "tried": "On compose failure, search lessons by class and POST /usage/<id>/fail to grade them",
+   "outcome": "failed",
+   "date": "2026-09-09",
+   "evidence": "Route /usage/:id/fail does not exist (mounts /concepts,/mcp,/upkeep,/v2/impulses); flat body vs pointer; parses array vs {content}; errors swallowed; compose_lesson sum times_failed=1, times_succeeded=0, times_loaded=7,310",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Execution-level resolver tracking (migration 067)",
+   "where": "activity-api/src/routes/execution-traces.ts; sql/migrations/067-add-resolver-tracking.surql; RESOLVER_TRACKING.md",
+   "tried": "Store resolver_tier, resolved_by_vessel_id, impulse_resolutions[] on execution for resolver selection learning",
+   "outcome": "failed",
+   "evidence": "85,720 executions in 3d: resolver_tier null on all, 0 with impulse_resolutions, 0 with resolved_by_vessel_id; tier only inside trace.tasks[]; impulse_resolution_metrics, llm_resolution_log, routing_trace tables 0 rows",
+   "date": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Tool-usage / tool-argument pattern learning",
+   "where": "ias-executor-ts/src/resolvers/learning-signal-writer.ts:154 -> activity-api activities.ts:10019",
+   "tried": "POST /v2/activities/tool-usage per tool_argument_pattern to learn argument patterns",
+   "outcome": "failed",
+   "evidence": "tool_usage, tool_usage_patterns, tool_argument_pattern all 0 rows despite a live writer: silent learning-signal path",
+   "date": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Move auto_draft decision telemetry out of the gap store",
+   "where": "goal-host-vessel 3d4aa60",
+   "date": "2026-09-22",
+   "tried": "Append auto_draft decisions to auto-draft-decisions.jsonl instead of the substrateGap store",
+   "outcome": "worked",
+   "evidence": "No auto_draft rows created after 09-22 (before that: 635-1337 per day). But the JSONL has no reader anywhere.",
+   "source": "gap-history"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Merge-not-replace for substrateGap_write",
+   "where": "gap substrategap-write-replaces-instead-of-merging-destroying-omitted-fields",
+   "date": "2026-09-05",
+   "tried": "Closed; the writer now merges omitted keys",
+   "outcome": "partial",
+   "evidence": "The fix overshot: omitted keys carry forward, so a cleared pending_outcome_verification does not stick (memory notes 09-23 and 09-26).",
+   "source": "gap-history"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "query() never checks statement status",
+   "where": "676c3f3 (08-21) src/db/surreal.ts",
+   "tried": "Add queryRaw() and use it at the composition upsert",
+   "outcome": "partial",
+   "date": "2026-08-21",
+   "evidence": "Nine rewrites of one UPSERT had reported success while writing nothing. query() still swallows status everywhere else.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "NULL is not NONE, fixed per call site 11 times",
+   "where": "ce491e1,17884e7,0bdaa5a,606ecc2,6be44e5,9f420c5,de2c9f8,46b95c0,2a31d5a,86a776d,1f0d70f",
+   "tried": "Coerce null to NONE at individual writes",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "Recurred from 03-24 to 09-28; no boundary helper exists.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Missing view read as an empty table, so the pool got no posteriors",
+   "where": "3322f92, 91af5a3 (08-22)",
+   "tried": "Read variant_performance_metrics directly instead of a nonexistent v_activity_score behind a catch",
+   "outcome": "worked",
+   "date": "2026-08-22",
+   "evidence": "The fallback log string appeared 0 times in the journal; boredom had been scoring the whole pool metric-less.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Zod/SCHEMAFULL silently strip fields",
+   "where": "e40bc57,874104b,8351780,48bc174,ffcac44,62acd51",
+   "tried": "Add fields to schemas and DEFINE FIELDs one at a time",
+   "outcome": "partial",
+   "date": "2026-08-13",
+   "evidence": "48bc174: 15 paths recommended, 0 accepted in 48h because successful_executions was stripped. Recurred at least 6 times.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Composition edge write: about 20 cause-claiming commits in one day",
+   "where": "18c1490..3fdb2b2, 676c3f3, 7a0da2e (08-21/22)",
+   "tried": "Id forms, IF syntax, PERMISSIONS/JWT, readback-asserts-mutation, deterministic UPSERT",
+   "outcome": "worked",
+   "date": "2026-08-22",
+   "evidence": "'THE CAUSE' was that the write ran under a JWT the table permission rejects (caa6b85), plus query() hiding the rejection.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Honest reach verdict persisted but never credited",
+   "where": "2b4e18b (08-05), 64b3997 (08-06), f93150e/40af267 (09-02)",
+   "tried": "Have POST /reach call classifyReach and applyOutcomeToPosteriors; make it the single vpm writer",
+   "outcome": "partial",
+   "date": "2026-09-02",
+   "evidence": "Zero posterior movement across 2392 templates while about 400 traces landed; on 09-02 the verdict had to be put back on the read path.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Gap store readers pinned to a frozen literal path",
+   "where": "b1c3e68, 267900a (08-09)",
+   "tried": "Read via workspaceRoot(), then grep the literal prefix to find other pinned readers.",
+   "outcome": "worked",
+   "date": "2026-08-09",
+   "evidence": "Frozen copy: 2666 total/462 open. Live store: 200/154. A hand-filed gap sat 13h. The same class recurs for memory stores in memory 09-22.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Quiesce marker written where nobody reads",
+   "where": "a0e6692, 8a92d57, 31f957a (08-11)",
+   "tried": "Align the timer's quiesce dir with /workspace/quiesce.",
+   "outcome": "worked",
+   "date": "2026-08-11",
+   "evidence": "The timer wrote /workspace/git/super-repo/quiesce while the vessel and pull-sync read /workspace/quiesce.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "pwt escalation read gap.file_path that no gap carries",
+   "where": "2a8ebf5 (08-10)",
+   "tried": "Read classification_metadata.edit_site.",
+   "outcome": "worked",
+   "date": "2026-08-10",
+   "evidence": "0/360 gaps had file_path and 104 had edit_site. The escalation crashed on entry every time and the error was swallowed into a warn.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Selector reads trace shapes; template declared a different shape",
+   "where": "41fd8f7 V24e (06-08)",
+   "tried": "Declare the trace-recorded shape.",
+   "outcome": "worked",
+   "date": "2026-06-08",
+   "evidence": "Chain templates got a starvation floor of 0.3 instead of a pull boost of 2.0.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Flat-pointer gap write drops classification_metadata",
+   "where": "b907922, f2aea65, ec3f93a",
+   "tried": "Same passthrough landed 3 times",
+   "outcome": "partial",
+   "date": "2026-09-09..09-13",
+   "evidence": "Two duplicate spreads remain at substrate-gap.ts:728/:732",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Trace readers read the wrong table",
+   "where": "6b580d5, 24105a2, 9a33df2",
+   "tried": "Repoint to executions",
+   "outcome": "worked",
+   "date": "2026-08-29",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Landing trace emission placed wrongly 3 times",
+   "where": "4afd4c1, e8e3fec, ee74683, 7bbda5d, 8af0f94, 3ea9136, c5f3f09",
+   "tried": "Funnel through one helper, awaited and bounded",
+   "outcome": "worked",
+   "date": "2026-08-29",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Causal impulse writes silently inert",
+   "where": "83d5c60, 0e9e3d6",
+   "tried": "Add the missing required field; read the stored fields",
+   "outcome": "dormant",
+   "date": "2026-09-05..09-16",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Policy shapes with a reader but no producer",
+   "where": "f87f52f, a848aee, 7dead06, f34547e",
+   "date": "2026-08-09..08-28",
+   "tried": "Produce walkBudget, lessonExecutionPolicy, bodyHonestyPolicy, extractionPolicy and pathwayReusePolicy.",
+   "outcome": "worked",
+   "evidence": "'I shipped both readers, neither producer'. bodyHonestyPolicy had no file from 08-02.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Verdicts and oracle labels computed but not delivered",
+   "where": "1cd87a0, 115cc67, fc297b4, d9dc600, 3cd7019, 41b9080, ea78fd7, d60abfc",
+   "date": "2026-07-20..09-19",
+   "tried": "Deliver the reach verdict and human labels to the learner, and spool lost verdicts.",
+   "outcome": "partial",
+   "evidence": "The lost-verdict emitter was 'inert TWICE' (d60abfc). The oracle-label consumer gap was re-filed on 09-19.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Traces carry no reach tag or input impulses, so no consumption edges",
+   "where": "3244164, c6f5b14, 91d1b63, b36f0ef, 69fe835",
+   "date": "2026-08-09..09-23",
+   "tried": "Tag satisfier and composite traces, and declare consumed inputs.",
+   "outcome": "partial",
+   "evidence": "45 executions arrived ungraded. The 09-23 gap satisfier-traces-record-no-input-impulses was still open.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "boredom C9 gap-store read: wrong path",
+   "where": "boredom-vessel 0b76b4f(06-24) -> cfe1cd3(07-21)",
+   "tried": "Fixed the read path /workspace/gaps.json -> /workspace/gaps/gaps.json; gap-driven selection had been silently dead",
+   "outcome": "partial",
+   "date": "2026-07-21",
+   "evidence": "f12e865 the same day: 'path fix alone read nothing' (flat array vs parsed.gaps)",
+   "source": "git-mid"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "boredom gap-store parse: flat array vs envelope",
+   "where": "boredom-vessel f12e865, 312146d, bd8aab3",
+   "tried": "Tolerate array and {gaps:[]}; parse resolve envelope body.gaps",
+   "outcome": "partial",
+   "date": "2026-07-17..21",
+   "evidence": "02b0d24 (08-09): the store read was a copy frozen 08-08; follow WORKSPACE_ROOT",
+   "source": "git-mid"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "boredom ranks live work by a frozen gap-store copy",
+   "where": "boredom-vessel 02b0d24",
+   "tried": "Follow WORKSPACE_ROOT where substrate-gap.ts writes",
+   "outcome": "partial",
+   "date": "2026-08-09",
+   "evidence": "4th fix of the same reader; memory 09-22 found a WORKSPACE_ROOT unit-vs-env-file conflict again",
+   "source": "git-mid"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Trace sink strips the failure reason at the wire boundary",
+   "where": "ias-executor-ts dc4c4e5(05-21) -> acfd5c0(08-22) -> 700ceff(09-28)",
+   "tried": "dc4c4e5 stripped non-canonical failure_mode (diff verified); acfd5c0 restored the reason; 700ceff adds reach_reason as the reason",
+   "outcome": "partial",
+   "date": "2026-05-21..09-28",
+   "evidence": "acfd5c0: 98% of failures became an information-free label; the premise (closed FailureModeSchema) was applied on no route",
+   "source": "git-mid"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Dead LLM unwrap: shape llm_completion_result vs llmTextCompletion",
+   "where": "goal-host b164b73; ias-executor-ts 2a12397",
+   "tried": "Fixed the same literal in two executors separately",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "evidence": "The envelope JSON had been written into ribosome-vessel/src/index.ts and 7 proposal files",
+   "source": "git-mid"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "revoked key listed as active: 4 fixes",
+   "where": "user-vessel 4f71df7, dashboard e092dd4+654aef1 (05-28), identity c8bf5d9 (08-22)",
+   "tried": "three reader-side filters, then the write/read store split",
+   "outcome": "worked",
+   "date": "2026-08-22",
+   "evidence": "revoke wrote redis; the listing read surreal is_active",
+   "source": "git-small"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "auth traces dropped or ungraded: 3 fixes",
+   "where": "identity 13a4d79 (04-20), ff3194d (07-31), 01af799 (08-09)",
+   "tried": "status values; X-Internal-Api-Key header; reached:false tags",
+   "outcome": "worked",
+   "evidence": "every auth trace dropped by 401 every ~2 min; then 'third construction site with the same defect'",
+   "source": "git-small"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "impulse/pointer envelope unwrapping per resolver",
+   "where": "local-tools a559094 (06-19), 1b88738 (07-04 SA), 8bf69ea+befef71 (07-14), 3ae3fe8/9eb4808 (09-24/25); llm-resolver db8af1d (09-23)",
+   "tried": "per-handler str(body,'impulse','pointer',\u2026) fallbacks; pointer-body.ts",
+   "outcome": "partial",
+   "evidence": "a spoke could never complete through a peer's arm until 09-23; discovery has advertised resolve_request_format since 07-07, unused",
+   "source": "git-small"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "ribosome reach gate re-fixed 6x",
+   "where": "ribosome 7118506, 2279760 (07-13); 572cd6c, 7a688be (08-02); a54691d (08-05); 7f142af (09-02)",
+   "tried": "status, then success field, then task census, then terminal tasks, then honest verdict, then reach column",
+   "outcome": "partial",
+   "evidence": "94% false reach (a54691d); 0 extractions in 12h (572cd6c); now 17,188 ALLOWED / 505 dispatched in 7 days",
+   "source": "git-small"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "ENOENT returned as success-shaped analysis content",
+   "where": "analysis-vessel f6af48e (08-02)",
+   "tried": "refuse instead of returning ENOENT as problems[]",
+   "outcome": "worked",
+   "evidence": "LLM-narrated root-cause notes about a nonexistent file persisted to the memory store",
+   "source": "git-small"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "light-dispatch writes its own reach verdict",
+   "where": "light-dispatch 59732fd (09-08 SA)",
+   "tried": "POST execution-traces/reach from light dispatch",
+   "outcome": "unknown",
+   "evidence": "route exists (200 vs 404 control); a third writer of reached with its own rule",
+   "source": "git-small"
+  },
+  {
+   "key": "path-root-ambiguity",
+   "title": "path root mapping fixed 6x in 2 vessels",
+   "where": "analysis aba168a (07-09 SA), 5a890c3 (08-09); local-tools 8bf69ea (07-14), 2aaa834 (07-21), 44375c6 (08-09), 11636e6 (09-25 SA)",
+   "tried": "repos/\u2192/vessels, bare\u2192workspace, cwd from envelope, bounded-shell tmp cwd",
+   "outcome": "partial",
+   "evidence": "shadow garbage tree at /vessels/local-tools-vessel/repos; confabulated filenames; aba168a shipped a dead candidate",
+   "source": "git-small"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Picker reads the top-level prior instead of metrics.thompson_alpha",
+   "where": "ebfb1075",
+   "date": "2026-05-30",
+   "tried": "prefer t.metrics.thompson_alpha; the top-level field was always 1",
+   "outcome": "worked",
+   "evidence": "picker had been choosing an alpha=1/beta=9 template over an alpha=3/beta=1 one",
+   "source": "git-super-1"
+  },
+  {
+   "key": "failure-reason-dropped",
+   "title": "Persist trace failure_mode",
+   "where": "ab511b4e",
+   "date": "2026-06-01",
+   "tried": "activity-api bump for failure_mode persistence",
+   "outcome": "failed",
+   "evidence": "06-17 460cc35a: 37,810 failed traces with has_mode=false and has_err=false; gap-003 recurred x12 in May",
+   "source": "git-super-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Concept relevancy never increments",
+   "where": "73387704, 66d79807",
+   "date": "2026-06-04",
+   "tried": "observer fixes (2bed214)",
+   "outcome": "failed",
+   "evidence": "still stalled after the fix (observer creates new concepts instead of updating)",
+   "source": "git-super-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Execution-recording chain (Feb-Mar)",
+   "where": "f46f2105, 5e53feea, 9cbddfc9, aa2ef54b, 3ab363a4",
+   "date": "2026-02-20..03-07",
+   "tried": "dual-write, metrics flow, execution recording, 'learning loop fully operational'",
+   "outcome": "failed",
+   "evidence": "03-07 'critical execution recording failure after enforcement'",
+   "source": "git-super-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Boredom gap-demand read wrong path",
+   "where": "boredom-vessel index.ts:2325, 0bd60ab + 474dcf5",
+   "tried": "Path fix + generator handles baseline gaps",
+   "outcome": "worked",
+   "date": "2026-07-21",
+   "evidence": "/workspace/gaps.json did not exist; every gap weight was 1.0, so gap-driven selection was dead",
+   "source": "memory-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Borrowed-pathway lineage in parent_goal_hash",
+   "where": "POST /v2/goal-paths",
+   "tried": "Reuse an existing field",
+   "outcome": "failed",
+   "date": "2026-08-08",
+   "evidence": "CC1 400: reused walks recorded nothing. Needs reuse-lineage-has-no-field-of-its-own",
+   "source": "memory-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "db-maintenance integrity repair field rename",
+   "where": "activity-api db-admin.ts:206 vs scripts/substrate/db-maintenance-tick.ts:83",
+   "tried": "(defect)",
+   "outcome": "failed",
+   "date": "2026-08-31",
+   "evidence": "59/59 runs actions:[]; never ran",
+   "source": "memory-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Post verdict after in-process resolveFeatureCompose",
+   "where": "gap-to-feature.ts sites 2970/3672/3705",
+   "date": "2026-09-07",
+   "tried": "Deliver reach verdict directly from in-process compose calls",
+   "outcome": "partial",
+   "evidence": "Patched 1 of 3 sites; coverage 29% then 15%; sibling-call-site miss (2nd time in session)",
+   "source": "memory-10"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Credit plumbing: 6 credit paths from one reached execution, 4 broken",
+   "where": "activity-api d9e48cf, 1787879, c9dd7b6; goal-host fc297b4 (Edit A)",
+   "tried": "Fixed NULL-confidence goal_execution_paths CREATE, bare-id normalization, ?? precedence + RBAC root write (c9dd7b6 was the first zero-hands compose landing). Edit A added poll-time label consumption.",
+   "outcome": "partial",
+   "date": "2026-07-20",
+   "evidence": "Credit flowed on 3 of 6 paths. Pathway CONSULTATION stayed dead (0 recommendReachingPath). The labels->posterior fold fired but its delta was empty (the flag is set too early).",
+   "source": "memory-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Reach write-back 0ad5dfc (reach tag on execution mirror)",
+   "where": "activity-api 0ad5dfc / goal-host index.ts:9635",
+   "tried": "Landed by the substrate on its 4th dispatch to make the reach verdict persist as a tag",
+   "outcome": "partial",
+   "date": "2026-08-06",
+   "evidence": "Reach became observable (reach-patch ok 0\u21922), but the AET UPDATE matched 0 rows (AET is decommissioned) and /reach never calls applyOutcomeToPosteriors, so credit stayed at zero. Delivery was a void fetch that lost ~13% until spool ea78fd7 (08-26).",
+   "source": "memory-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Wire /reach caller to write the reached COLUMN",
+   "where": "goal-host \u2192 activity-api POST /execution-traces/reach",
+   "tried": "Operator dispatched a fix to call the zero-caller /reach route",
+   "outcome": "failed",
+   "date": "2026-08-04",
+   "evidence": "classifyReach reads tags, not the column. The view doesn't project `reached`. It returned 200 {updated:0} on no match, so the green could not fail.",
+   "source": "memory-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Envelope divergence fix (resolver_schema body vs content)",
+   "where": "goal-host 4e5d37f",
+   "tried": "First no-hands detect\u2192land cycle: sj?.content ?? sj?.body",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "evidence": "Probing resolver_schema confirmed body; the substrate's own verification grep was absence-satisfied",
+   "source": "memory-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "analysis-vessel error-as-content leak",
+   "where": "analysis-vessel f6af48e",
+   "tried": "Return a bare {error} on the error path.",
+   "outcome": "worked",
+   "date": "2026-08-03",
+   "evidence": "Correct but cold: read_error fired 0 times in 24h.",
+   "source": "memory-5"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Compose executions ungraded (exec_ vs feature_compose:<sha>)",
+   "where": "feature-compose.ts:6185; activity-api activities.ts:1947",
+   "tried": "Diagnosed; proposed capturing the returned execution_id at link 4.",
+   "outcome": "unknown",
+   "date": "2026-09-05",
+   "evidence": "868/873 are ungraded, and the gap-store self-repair banked 0 oracle labels.",
+   "source": "memory-5"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "goalExecutionPath org scoping + endpoint shapes + sentinel",
+   "where": "activity-api f2b642c + follow-ups (impulses.ts)",
+   "date": "2026-08-10",
+   "tried": "(org_id=$org OR NONE), satisfier shapes, 'public' sentinel",
+   "outcome": "worked",
+   "evidence": "first populated row end-to-end; wrong fixture hid defect 2",
+   "source": "memory-6"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "light-dispatch flat tasks envelope",
+   "where": "activity-api 4c1b588 (execution-traces.ts:1840)",
+   "date": "2026-08-06",
+   "tried": "accept flat tasks",
+   "outcome": "worked",
+   "evidence": "10,166 roots had been stored null",
+   "source": "memory-6"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "memoryNote_write tolerant intake",
+   "where": "development-vessel 9790c2f memory-note.ts",
+   "date": "2026-07-26",
+   "tried": "accept flat or nested pointer",
+   "outcome": "worked",
+   "evidence": "500 gone; composed content still garbage (gap-compute-emit-composed-write-content-binding-garbage)",
+   "source": "memory-6"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "why-now trigger across three serializers",
+   "where": "goal-host 901bdb8, 6d64e62, 218f08c, 987cb7b",
+   "tried": "Add trigger to DispatchRecord, activeDispatches, /executions; panel read fleetActivityFeed",
+   "outcome": "worked",
+   "date": "2026-07-24",
+   "evidence": "only the third serializer fix (987cb7b) made it render",
+   "source": "memory-7"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Oracle-label consumer on both read paths + latch fix",
+   "where": "goal-host d9dc600, 3cd7019; activity-api e6f85d0; obsidian b717c4b",
+   "tried": "Consume human label each terminal poll; shared maybeConsumeOracleLabel",
+   "outcome": "worked",
+   "date": "2026-07-28",
+   "evidence": "human override flipped reached True->False verified; 07-31 watch: limit:1 latch lets deterministic pre-empt human",
+   "source": "memory-7"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "successful_executions Zod strip + nearby-match reuse arm",
+   "where": "activity-api 48bc174",
+   "tried": "Declare field in schema; shape-signature cover>=0.5 arm",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "evidence": "0/5 accepted -> first cross-goal reuse 08-06T20:45Z; later 109/120 borrows one donor",
+   "source": "memory-7"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "resolver_schema published by development-vessel",
+   "where": "dev-vessel 348053d",
+   "tried": "One resolver parameterized by threaded shape publishing payload contracts",
+   "outcome": "worked",
+   "date": "2026-08-05",
+   "evidence": "rung 9 (file a gap) reached; contract-conformance test",
+   "source": "memory-7"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "walk_tier stripped by response schema; timestamps {}",
+   "where": "activity-api 8351780, de6b409; e6bf483 mig 181",
+   "tried": "Declare fields on response schema; TimestampSchema",
+   "outcome": "worked",
+   "date": "2026-08-04",
+   "evidence": "reuse reversed from 'cold' to 55% learned_pathway; later 08-08 93% of learned_pathway was substring bug, genuine 1.8%",
+   "source": "memory-7"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "psi/successor_value wired at six call sites",
+   "where": "goal-host shared helper 2026-08-17",
+   "tried": "Send signature/completion_shapes",
+   "outcome": "partial",
+   "date": "2026-08-17",
+   "evidence": "computable only; blend gated default-inert; dispatch path unavailable (masked activity-api/surrealdb, hub partially down)",
+   "source": "memory-7"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Composition-edge reconciler reads frozen activity_execution_traces",
+   "where": "composition-edge-reconcile.ts:210; 3c1bf965; activity-api b8671c9",
+   "tried": "07-31: live executions go to `execution`. 08-25: repointed 27 sites in 7 scripts to v_paradigm_execution_traces. 09-28: that view had been absent since ~09-22, so the reader was switched to `execution`",
+   "outcome": "reverted",
+   "date": "2026-07-31..2026-09-28",
+   "evidence": "The same reader-on-a-dead-table defect showed up three times. The 08-25 fix pointed at a view that later disappeared.",
+   "source": "memory-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "WORKSPACE_ROOT path split: /workspace vs /workspace/git/super-repo",
+   "where": "gap-lifecycle-scan.ts:235; apply-proposal-as-patch.ts; predicateLiteralNotUnique",
+   "tried": "08-09: gap scan read a frozen gaps.json. 08-11: the applier read a proposals dir nobody writes to (2,257 proposals stranded; fixed by dispatch). 09-22: the class-1 guard strips repos/ and gets ENOENT",
+   "outcome": "partial",
+   "date": "2026-08-09..2026-09-22",
+   "evidence": "6+ instances. The fossil /workspace/gaps/gaps.json was still being written on 08-30. The two memory stores were split the same way on 09-22.",
+   "source": "memory-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Deterministic labeler rejected by the whitelist",
+   "where": "goal-host index.ts:2280; activity-api impulses.ts:2811",
+   "tried": "goal-host sends labeler:'deterministic' but the whitelist only allows human/automated, so every write gets HTTP 400 and fetch swallows it. Revived in 23e707f + migration 183",
+   "outcome": "worked",
+   "date": "2026-07-31",
+   "evidence": "41 verdicts were lost. `[oracle-label] consumed` appeared after the fix.",
+   "source": "memory-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Wrong literal 'llm_completion_result' at 3 sites",
+   "where": "author-producer.ts:815 e61621db; goal-host proxy b164b73; ias-executor 2a12397",
+   "tried": "The producer returns llmTextCompletion. Two sites were fixed 07-31 and another two on 08-07",
+   "outcome": "worked",
+   "date": "2026-07-31/2026-08-07",
+   "evidence": "The dead unwrap branch let LLM envelopes flow into source files and 7 proposal artifacts.",
+   "source": "memory-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "expected_output_shapes round-trip hunt",
+   "where": "goal-host recordGoalPath; activity-api goal-paths.ts; init-database",
+   "tried": "Checks on synthetic probes passed, but the real writer never sent the field. The hunt then went through migrations, the response zod schema and OVERWRITE parsing. The actual root was an unbound CREATE param, fixed in 4d0f627",
+   "outcome": "worked",
+   "date": "2026-08-04",
+   "evidence": "The operator's first 'VERIFIED LIVE' claim was hollow. The hunt passed through 4 wrong layers.",
+   "source": "memory-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Resolver args dropped across five layers",
+   "where": "activity-api-trace-sink, normalizePersistedTask, extractTasks, ribosome prompt; 9518d4e, f71bb56",
+   "tried": "Threaded resolvedConfig through all five layers. The same mismatch came back inside the fix itself",
+   "outcome": "partial",
+   "date": "2026-08-17",
+   "evidence": "Only 6 of 61 learned compositions completed. Committed, but the live effect needs the hub and was never exercised.",
+   "source": "memory-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Compose exec id: synthesised sha id vs minted exec_ id",
+   "where": "feature-compose.ts:6185; goal-host 7 synth sites; be8ff83, ed86ab4, f611478, 0c36ead",
+   "tried": "Read the id from the correct response branch and thread it through. f611478 patched the wrong site of seven and was inert",
+   "outcome": "partial",
+   "date": "2026-09-06",
+   "evidence": "First graded exec_ row. UNFAVORABLE composes still orphan their rows, so the beta signal is lost.",
+   "source": "memory-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "goalSignature stamp reads top-level column",
+   "where": "activity-api a8005bad",
+   "tried": "A substrate-authored stamp that SELECTs goalSignature at the top level, while the producer writes it under trace.metadata",
+   "outcome": "failed",
+   "date": "2026-07-25",
+   "evidence": "No-op landing. The false premise came from the operator's goal text.",
+   "source": "memory-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Dispatcher discarded federated compose verdict",
+   "where": "goal-host edit-intent reader; 90a2533",
+   "date": "2026-08-10",
+   "tried": "read content.body.verdict",
+   "outcome": "partial",
+   "evidence": "verdict=(none) resolved; root (local capability advertised only as libp2p row) left open",
+   "source": "memory-9"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Failure memory keyed by goal_hash",
+   "where": "goal-host 64ce0ac, 9e23455, cf8fd87",
+   "date": "2026-09-22",
+   "tried": "persist failure reason and recall into priorVerdictFeedback on attempt 1",
+   "outcome": "partial",
+   "evidence": "A/B: recall worked, defect not repeated, count trap still not reached",
+   "source": "memory-9"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Falsifier predicate overwritten by class label",
+   "where": "substrate-gap.ts ~1006; d312f43",
+   "date": "2026-09-12",
+   "tried": "copy >24-char predicate to falsifier_predicate before label overwrite",
+   "outcome": "partial",
+   "evidence": "sentinel survives; past predicates permanently lost; derivation yield 0.9% unchanged",
+   "source": "memory-9"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Flat gap-write path dropped classification_metadata",
+   "where": "coerceFlatGapPointer; b907922 (autonomous, 27 min)",
+   "date": "2026-09-10",
+   "tried": "spread classification_metadata",
+   "outcome": "worked",
+   "evidence": "read-back shows class1 + fields intact; f2aea65 re-applied the identical fix 13 min after close (a closed gap did not stop the in-flight compose)",
+   "source": "memory-9"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Thompson normalize activity_id",
+   "where": "activity-api b972fd2 posterior-update.ts",
+   "tried": "normalizeActivityId before WHERE on variant_performance_metrics",
+   "outcome": "worked",
+   "date": "2026-05-25",
+   "evidence": "alpha 1->2, beta 2->3 verified after fix",
+   "source": "openspec-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "TraceSink strips execution_error failure type",
+   "where": "ias-executor-ts activity-api-trace-sink.ts:138-148; audit F19",
+   "tried": "Add execution_error to FailureModeSchema",
+   "outcome": "partial",
+   "date": "2026-05-29",
+   "evidence": "schemas.ts:1141-1153 has execution_error now; but only 1219/4764 failure traces since 09-27 carry non-null failure_mode",
+   "source": "openspec-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "substrateGap -> drafter drain (drain-pending-substrate-gaps)",
+   "where": "dev-vessel seed + boredom goal[10]",
+   "tried": "a pull drainer from the gap store into draft-gap-closing-activity",
+   "outcome": "dormant",
+   "date": "2026-05-30",
+   "evidence": "1 execution retained; it probes /workspace/gaps/gaps.json, but the live store is /workspace/git/super-repo/gaps/gaps.json",
+   "source": "openspec-10"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "LIST execution-traces task_count after migration 118",
+   "where": "openspec/changes/2026-05-31-list-endpoint-task-count-from-content; activity-api execution-traces.ts:1032-1056",
+   "date": "2026-05-31",
+   "tried": "Option B: denormalize metadata.task_count at write time and project it in the list query.",
+   "outcome": "worked",
+   "evidence": "Live code projects (metadata.task_count ?? 0). Before the fix, 491/500 rows showed task_count=0 and 50 false-positive phantom gaps were filed.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Neutral-emitter lifecycle bus",
+   "where": "openspec/changes/2026-05-27-neutral-emitter-lifecycle-bus; activity-api routes/events.ts",
+   "date": "2026-05-27",
+   "tried": "Added /v2/events/publish, a BusForwardingEventSink, discovery vessel.* events, and reactive goal-host proxy registration (F-129).",
+   "outcome": "worked",
+   "evidence": "Live in activity-api, goal-host and dev-vessel. tasks.md is still 0/32 ticked, although commit 4167ba2a says tasks 1 and 4 are live.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "concept-bridge-observer Part A",
+   "where": "development-vessel src/observers/concept-bridge-observer.ts",
+   "date": "2026-05-28",
+   "tried": "Operator-authored WS subscriber that mints signature concepts and usage from vessel_daemon_resolve events.",
+   "outcome": "worked",
+   "evidence": "592 concept-bridge journal lines in 6h; 'minted/usage recorded shape=source_code'. When it was accepted, concept-db writes were still failing.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Vessel /resolve dual-form contract conformance probe",
+   "where": "openspec/changes/2026-05-30-vessel-resolve-contract-conformance",
+   "date": "2026-05-30",
+   "tried": "Proposed a verify-resolver-contract-conformance probe that emits substrateGap for each drifting vessel.",
+   "outcome": "superseded",
+   "evidence": "The probe was never built. The instances were hand-patched instead (concept-db routes/impulses.ts:411 now reads body?.impulse?.pointer ?? body?.pointer; ias-executor ResolverServer accepts both forms), which the proposal itself warned against.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "concept-usage-backfill chain (goal[16])",
+   "where": "development-vessel 7ceee82; super-repo 9fcb0919; boredom-vessel src/index.ts:631",
+   "tried": "Deterministic chain concept_select_for_prompt -> json_path_extract -> concept_usage_record so that concept relevance accrues outcomes",
+   "outcome": "partial",
+   "date": "2026-06-03",
+   "evidence": "The finding said it 'should work' by analogy. Pre-lift Stage 3.3 then found selected:[] and a POST to /concepts//usage returning 404, and the outcome is always hard-coded 'success'. 3.4 later passed via light-dispatch (exec_39a7c719-b5b)",
+   "source": "openspec-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "vessel_responsibility_audit reads 0 principles over HTTP, 8 when invoked directly",
+   "where": "openspec/changes/2026-06-03-pre-lift-bootstrap-and-architecture-aware-loop/findings/stage-0-and-1-empirical-verdicts.md",
+   "tried": "Architecture-aware detector that queries architectural_pattern_principle concepts; the discrepancy was filed as a 'Bun runtime edge case'",
+   "outcome": "failed",
+   "date": "2026-06-03",
+   "evidence": "Stage 3.2 still reads '[ ] GAP principles_fetched_total: 0'; never attributed with a positive control through the same address",
+   "source": "openspec-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Trace attribution repair (materialsConsulted)",
+   "where": "2026-07-05-code-locality-resolver slice 1; ias ad132ac,811e02a,134ddf0; activity-api 99fccf6",
+   "tried": "Engine derives filesModified/materialsConsulted; sink forwards instead of hardcoded []",
+   "outcome": "worked",
+   "date": "2026-07-05",
+   "evidence": "ias activity-api-trace-sink.ts:194 forwards materialsConsulted; 1.4 live verify unchecked",
+   "source": "openspec-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Reconcile template envelope fix",
+   "where": "07-09 VERIFY; exec_z20x6yrz; dev-vessel 8b3d8eef",
+   "tried": "Seed used {impulse:...}; activity-api needs {pointer,budget}; fixed seed + stored template via activityTemplate_update",
+   "outcome": "worked",
+   "date": "2026-07-09",
+   "evidence": "Every reconcile had 400-ZodErrored; same 400-envelope class reappears in drain-log to 07-23",
+   "source": "openspec-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Cross-vessel wiring repair composition",
+   "where": "openspec/changes/2026-08-29-cross-vessel-wiring-repair",
+   "date": "2026-08-29",
+   "tried": "proposal only; one operator hand run (activity-api 4e0d27a receiver -> goal-host d45aa3d sender)",
+   "outcome": "dormant",
+   "evidence": "no cross_vessel_repair symbol anywhere; 38 orphaned-capability gaps open; the first system-landed orphaned_capability was never recorded",
+   "source": "openspec-7"
+  },
+  {
+   "key": "write-read-mismatch",
+   "date": "2026-08-16",
+   "title": "Operator fix: http_response ignored its URL (hardcoded httpbin 404)",
+   "where": "repos/development-vessel/src/resolvers/http-response.ts (5be029a)",
+   "tried": "Delegate to resolveWebResource, keep the shape name",
+   "outcome": "worked",
+   "evidence": "Live resolver delegates. Followed by 4 narrowed/recommit substrate cutovers 08-17/18 (48db304, 9419b26, 5bed003, f0f340c)",
+   "source": "openspec-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "date": "2026-08-07",
+   "title": "Scaffold registration payload defect identified (not filed or fixed)",
+   "where": "repos/development-vessel/src/seed/complete-vessel-scaffold.ts:213",
+   "tried": "Documented in do-anything design.md section 5 as 'worth filing separately'",
+   "outcome": "dormant",
+   "evidence": "Still nests resolverContract; grep systemVessel = 0; last commit bbf0e09 2026-07-12",
+   "source": "openspec-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Operator fix: httpResponse delegates to trust-gated web_resource",
+   "where": "repos/development-vessel/src/resolvers/http-response.ts (5be029a)",
+   "tried": "removed default URL, delegate to web_resource allowlist fetcher, keep shape vocabulary",
+   "outcome": "worked",
+   "date": "2026-08-16",
+   "evidence": "still dispatched at src/routes/impulses.ts:68,406",
+   "source": "openspec-9"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Retirement on posterior evidence from the real ingest route",
+   "where": "activity-api e2d7077+1d83bf5 checkAndRetireByPosterior",
+   "date": "2026-08-16",
+   "tried": "Old checkAndRetireTemplate never fired (route nobody posts, wrong table, <20 guard, .filter throw); new retire from ingest",
+   "outcome": "dormant",
+   "evidence": "Acceptance test inconclusive (synthetic trace wrong org, ungraded); 09-23 ungraded exception-failures never move posterior (47 SKIPPED reach_ungraded)",
+   "source": "reports-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Split ingest write: counters move, alpha/beta do not",
+   "where": "activity-api learning update; BLOCKER_CLEARANCE \u00a712/\u00a716 row 8; MEMORY-SPLIT 12:15-13:05Z 09-23",
+   "date": "2026-08-16..2026-09-23",
+   "tried": "Filed 08-16 as split write; re-diagnosed 09-23 as applyOutcomeToPosteriors zeroing deltas for ungraded; one-op design filed (executor-failed ungraded => beta+1)",
+   "outcome": "failed",
+   "evidence": "Same WARN 'Thompson Sampling score update returned no results in either table' 08-16 and 09-23; reconcile template 304 exec, 184 failed, alpha 119.7 beta 9.0",
+   "source": "reports-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Argument amputation across 5 layers in series",
+   "where": "ias-executor ExecutionTaskRecord, normalizePersistedTask, extractTasks, ribosome prompt, activity-api-trace-sink f71bb56 9518d4e",
+   "date": "2026-08-17",
+   "tried": "Fix each layer; first 'closed' claim inert (5th layer projection dropped resolvedConfig)",
+   "outcome": "partial",
+   "evidence": "Deployed to all 6 consumers; no live trace ever read carrying resolved_config (hub-gated)",
+   "source": "reports-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "B1 correlation_id join and B3 durable validator",
+   "where": "ias-executor activity-api-adapter.ts, goal-host.ts; templates/index.ts SHARED_TEMPLATES",
+   "date": "2026-08-24",
+   "tried": "Patches specified; not landed (MCP unavailable, direct edit blocked)",
+   "outcome": "unknown",
+   "evidence": "0 organic executions with correlation_id; 26,529 selections unjoinable",
+   "source": "reports-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Consumption edges on satisfier traces",
+   "where": "goal-host 69fe835 (design v4)",
+   "date": "2026-09-23",
+   "tried": "Record input/output impulse ids on satisfier trace",
+   "outcome": "worked",
+   "evidence": "553c89ab trace input_impulse_ids [walk-substrateGap-3]; closed by falsifier",
+   "source": "reports-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Variant family visible to sampler",
+   "where": "activity-api 6a1b570 (substrate unprompted), 97ff41d; sampler 2fd1dca; a5b4772 (lane) second source",
+   "date": "2026-09-23",
+   "tried": "Page listing, route API-key auth, queryRaw, loop source",
+   "outcome": "partial",
+   "evidence": "family sampled 4 members 12:13Z; base still drawn because learner posterior not updated on ungraded failures",
+   "source": "reports-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Register attempt before preLiveSync (RUN0 false-negative held)",
+   "where": "development-vessel feature-compose staging + cutover registerAttempt; RUN0_DRYRUN.md",
+   "tried": "feature_compose copied staged drafts into /vessels before the cutover took its pre-snapshot, so pre and post both showed the change. The fix registers the attempt and pre-snapshot first, passes attempt_id, and makes the cutover's registerAttempt idempotent.",
+   "outcome": "partial",
+   "date": "2026-09-23",
+   "evidence": "Later graded runs pass 1a. The same class returned on the parked-resume path (#48, RUN10-VOID-2002): resumeParkedLanding passes no attempt_id, so a new attempt is minted after the live sync.",
+   "source": "reports-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Check ids fixed so snapshots compare units and gates, not just the canary (#31)",
+   "where": "development-vessel attempt-register.ts, 2cdc90f (invariantSelect)",
+   "tried": "Pass real check ids instead of result ids, which evaluateChecks answered not_applicable.",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "Fixed at 2 registration sites; a third site (the parked resume) registers checks:null (#48). Making unit checks real then surfaced #36 (blame for restart flips) and #40 (transient mitosis units).",
+   "source": "reports-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Composition edge minting at ingest (deriveCompositionEdgeFromParent)",
+   "where": "activity-api 516fc73 (execution-traces.ts:1690)",
+   "date": "2026-08-11",
+   "tried": "Derive producer->consumer edge at trace ingest from parent_execution_id",
+   "outcome": "failed",
+   "evidence": "Live for 3+ days with 0 edges. The lookup type::thing('execution',$pid) hit 0/200 (the ids live in activity_execution_traces.execution_id), and the miss path is a silent return. Edges newest 2026-07-14 through 08-16",
+   "source": "reports-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Edge parent lookup fixed autonomously",
+   "where": "fef173c (Substrate Autonomous 2026-08-15 02:54)",
+   "date": "2026-08-15",
+   "tried": "SELECT activity_id FROM activity_execution_traces WHERE execution_id=$pid",
+   "outcome": "partial",
+   "evidence": "200/200 hits on live walk-* ids, yet still no edges: the CREATE was missing 3 ASSERT!=NONE fields (execution_id, org_id, success), found by probing the live DB",
+   "source": "reports-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Composition edges minted from executions (eventual state)",
+   "where": "hub activity_composition_graph (spot-check 2026-09-29)",
+   "date": "2026-09-29",
+   "tried": "Multiple later fixes (outside shard)",
+   "outcome": "worked",
+   "evidence": "6,955 rows with real execution ids, newest 2026-09-29T03:40Z",
+   "source": "reports-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Lesson handoff to arg synthesis keyed by goal hash",
+   "where": "c72ee75 goal-host",
+   "date": "2026-08-16",
+   "tried": "Deliver recalled lessons to arg synthesiser",
+   "outcome": "failed",
+   "evidence": "Store and lookup hashes were disjoint over 20 min; chars=0 for 6 attempts misread as 'drafter ignored lesson'. Fixed later by threading via opts",
+   "source": "reports-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Service-error routing",
+   "where": "ad61ae6 -> 39325b3 goal-host",
+   "date": "2026-08-16",
+   "tried": "Route HTTP-200 body errors back to correction",
+   "outcome": "reverted",
+   "evidence": "Read the envelope's top-level error while the error was in body.bodyJson.error, so the fix was inert on arrival. Re-fixed",
+   "source": "reports-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "08-20 composition learning prescriptions",
+   "where": "COMPOSITION_LEARNING_STATE_2026-08-20.md",
+   "date": "2026-08-20",
+   "tried": "Populate ancestor_signatures, pass walkEvidence at floor, flip SF_BLEND",
+   "outcome": "superseded",
+   "evidence": "All three overturned on 08-21: e19997f already fixed credit; the floor has no opts; the graph is read but the picker does not order by blend. The report had read a fix's comment as evidence of the defect",
+   "source": "reports-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "08-21 composition architecture plan A1-A4/B1-B13",
+   "where": "COMPOSITION_LEARNING_ARCHITECTURE_2026-08-21.md",
+   "date": "2026-08-21",
+   "tried": "Schema-parity checker, walkEv at :9471, tuning readback, edge fields, predecessor threading, blend sort, psi",
+   "outcome": "unknown",
+   "evidence": "Plan only; the law audit found violations of laws 1/2/3/6/11/12. SF_BLEND row later =1 (09-25) and edges later minted (09-29); other items not traced in this shard",
+   "source": "reports-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Form-learning loop (decision->outcome join->learner->policy)",
+   "where": "human-surface 8a83c8c, cab60aa, a1532dc, 1dcfd4b",
+   "tried": "Substrate chain apply->tick->evaluate->cutover after provenance fixes 8bc66ba, 573461a",
+   "outcome": "dormant",
+   "date": "2026-09-23",
+   "evidence": "Falsifier tests 7/7; suite 135/3 unchanged; NOT live (surface serves detached release checkout e1c06f60 11 behind); demote-only, no variance source. Gap the-substrates-own-deploy-step-cannot-deploy-the-live-human-surface OPEN 09-29.",
+   "source": "reports-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Templates endpoint read nonexistent v_activity_score; fallback never ran",
+   "where": "activity-api GET /v2/activities/templates (NEEDLE_MOVERS_2026-08-22)",
+   "tried": "Switch the read to variant_performance_metrics with a counted template_metrics_fetched log",
+   "outcome": "partial",
+   "date": "2026-08-22",
+   "evidence": "Log shows matched:50 where it was 0 before. [LIVE 09-28] paradigm.ts:606/2205 still read v_activity_score, and activities.ts:4978 has a comment 'THIS READ ANSWERED ZEROS FOR THE WHOLE CORPUS'. The class recurs site by site.",
+   "source": "reports-5"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Selection\u2192outcome join (law 12) severed at 4 joints",
+   "where": "execution-traces.ts (755dca9 ingest), 471febb/7413367 reader, lib/decision-credit.ts + migration 201",
+   "tried": "Ingest lifts the correlation tag; JOIN-free reader; additive decision_outcome consumer",
+   "outcome": "partial",
+   "date": "2026-08-24",
+   "evidence": "Claimed 'resolved', retracted to 1 of 3 joints, then 1 of 4. Finally joined on real data, but the producer fires only on the rare recommend-draw path: 0/9614 rows tagged. No credit path consumes it.",
+   "source": "reports-5"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Law-1 remediation shipped readers for walkBudget/lessonExecutionPolicy with no producer",
+   "where": "goal-host index.ts:1092-1125",
+   "tried": "Shaped-impulse read channel",
+   "outcome": "dormant",
+   "date": "2026-08-16",
+   "evidence": "Verbatim lesson execution fails closed and is off in every deployment. The author admits 'the reader shipped; the producer did not'.",
+   "source": "reports-5"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "org_id prefix strip on the posterior read",
+   "where": "activity-api paradigm.ts:547,:710 baca870 (converged 3fb33b6)",
+   "tried": "Match both the bare and the organizations: forms.",
+   "outcome": "partial",
+   "date": "2026-08-22",
+   "evidence": "The query went 0 to 3,275 rows; the effect on the draw was never shown; autonomous 3e58e73 half-reverted the second site. The alpha=4/beta=1 draws were later explained by decay, not by this.",
+   "source": "reports-6"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "correlation_id selection-to-outcome join",
+   "where": "goal-host 547383a",
+   "tried": "Thread the recommendation's correlation_id as a prefixed tag.",
+   "outcome": "unknown",
+   "date": "2026-08-22",
+   "evidence": "Never observed live (satisfier picks bypass recommend); v_selection_outcomes carries no outcome field.",
+   "source": "reports-6"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Score-read id normalization (fix #7)",
+   "where": "activity-api 53d8e77",
+   "tried": "Match the bare ids the rows store (callers bound activity:<id>).",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "Legacy read went 0 to 406 rows; shape-conditioned reads now use posteriors. The source notes the context path had already been fixed for the same defect.",
+   "source": "reports-6"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Populate ancestor_signatures for chain credit",
+   "where": "activity-api e19997f",
+   "tried": "Fall back to the ancestor's own v1 signature from its trace row so signature-keyed chain credit writes",
+   "outcome": "unknown",
+   "date": "2026-08-13",
+   "evidence": "Verified by typecheck and reasoning only; the activity-api test harness hangs in the spoke. Inert while the floor emits compositionChain:[].",
+   "source": "reports-7"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "rhythm-reality-sync re-reads row before write",
+   "where": "development-vessel 66f62d5",
+   "tried": "freshRhythmBody re-read before each staleness write",
+   "outcome": "partial",
+   "date": "2026-09-26",
+   "evidence": "A race probe at 1.0 s offset lost the marker. The window narrowed from about 15 s to ms but is not closed; the CAS 4cd270d landed later.",
+   "source": "reports-7"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Flat-pointer gap write dropped classification_metadata; fixed autonomously, then duplicate re-applied",
+   "where": "b907922 (09-10 01:29) and duplicate f2aea65 (01:45)",
+   "tried": "Spread supplied predicate fields in gapFromFlatPointer",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "Store read-back gives falsifier:class1 with 4 fields intact. A closed gap did not stop the in-flight compose, so the identical fix landed twice.",
+   "source": "reports-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "WORKSPACE_ROOT made durable = super-repo clone",
+   "where": "scripts/substrate/gen-env.sh (09d9baa6)",
+   "date": "2026-07-25",
+   "tried": "Set WORKSPACE_ROOT from SUBSTRATE_ROOT so every unit gets the same root (law 11)",
+   "outcome": "partial",
+   "evidence": "Split reads the same day: the watchdog log at /workspace/pool froze 07-20 while the live one is under /workspace/git/super-repo/pool; the pool standing.json froze 09-07; typecheck-scenario-gen writes to the frozen /workspace/gaps/gaps.json; self-operational-health falsely flags missing subdirs",
+   "source": "timers-readers"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Per-site workaround in boredom-vessel for the frozen gaps.json",
+   "where": "repos/boredom-vessel/src/index.ts:2393",
+   "tried": "Read around the literal /workspace/gaps/gaps.json ('a copy frozen 2026-08-08')",
+   "outcome": "partial",
+   "evidence": "Fixed one reader. typecheck-scenario-gen and meta-closure-view still use the frozen path",
+   "source": "timers-readers"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Repoint 8 KPI/self-dev scripts off the frozen trace table",
+   "where": "3c1bf965",
+   "date": "2026-08-25",
+   "tried": "Changed the table name the scripts read",
+   "outcome": "partial",
+   "evidence": "joint-liveness still files frozen-table-class gaps: severed-joint-* x5 open 09-27..09-28",
+   "source": "timers-readers"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "typecheck-scenario-gen as concrete fuel for the funnel",
+   "where": "scripts/substrate/typecheck-scenario-gen.ts (331abda3)",
+   "date": "2026-06-17",
+   "tried": "Turn tsc errors into scenario files and gap rows",
+   "outcome": "failed",
+   "evidence": "20 typecheck-* gaps from 09-11 to 09-26, including TS1005/TS1128 syntax errors in vessel-mitosis-cutover, exist only in the frozen /workspace/gaps/gaps.json. The live store has 0",
+   "source": "timers-readers"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Compose lesson mirror chain",
+   "where": "ff560216 2026-08-31T01:56 dev-vessel f580efd, cc5bc8b; concept-db 945a667",
+   "tried": "fix host, check HTTP status, retry SurrealDB conflicts",
+   "outcome": "partial",
+   "date": "2026-08-31",
+   "evidence": "945a667 real (200/400 alternating -> 6/6); 'severed 2 months' premise false (tenant-scoped query saw default org 3 rows vs 21)",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Capture real exec_* id in feature-compose trace emission",
+   "where": "development-vessel feature-compose.ts (void fetch -> awaited)",
+   "tried": "Stop the fire-and-forget POST that minted its own id; carry the real execution id into the compose report",
+   "outcome": "worked",
+   "date": "2026-09-06",
+   "evidence": "09:15:37 execution_id=exec_1788686137787_aypktaaorip matched a real row; 40 firings verified",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Dispatch/execution-id propagation chain, fixed one hop at a time",
+   "where": "goal-host index.ts, llm-resolver, dev-vessel llm-completion-dispatch.ts/author-producer.ts/author-composed-capability.ts, local-tools gitCommit/bounded_shell",
+   "date": "2026-09-24..2026-09-26",
+   "tried": "13+ per-call-site fixes: enterWith #41, 6b4da46, 324f7f1, 3fe63f3, 3ae3fe8, 61f2552, ed81a69, 9eb4808, ca4f8a5, d72654f/2f6436f, d4456d9/829f613, 959519e, 1b98343 (#61)",
+   "outcome": "partial",
+   "evidence": "Each fix exposed the next ('seventh place today where the id got lost'); graded runs pass 09-26, but 09-27 15:36 bun test shells still carry no execution id",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Posterior score reads used activity:<id> vs stored bare id",
+   "where": "activity-api data layer",
+   "date": "2026-09-25T09:22Z",
+   "tried": "53d8e77 normalizes id in all three reads (prior fix covered context-bucket only)",
+   "outcome": "worked",
+   "evidence": "59/59 reads empty before; 406 rows after; 104/115 shape-conditioned reads use posteriors",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Seeded gap/scenario to test self-repair",
+   "where": "validation/findings/substrate-seed-gap-response-2026-06-04, substrate-scenario-seed-response-2026-06-04",
+   "tried": "operator seed via substrateGap_write and a scenario file",
+   "outcome": "failed",
+   "date": "2026-06-04",
+   "evidence": "drafter reads scenario files, not the gap store; kick-started draft produced analysis JSON only, no source patch",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Applier proposals dir fix",
+   "where": "validation/findings/round7-blocker-sweep.md \u00a71",
+   "tried": "dispatched one-line fix to read /workspace/proposals",
+   "outcome": "worked",
+   "date": "2026-08-11",
+   "evidence": "n=1 dry-run returns mitosisStaged; 2,257 pending proposals",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "gap_to_scenario_bridge: mirror gaps into scenario files for the drafter",
+   "where": "repos/development-vessel/src/resolvers/gap-to-scenario-bridge.ts",
+   "date": "2026-06-04 (492dd88), vessel routing 06-13 (b51ed1d)",
+   "tried": "Write scenarios/<gap>.json under WORKSPACE_ROOT for the drafter, with class-level dedup",
+   "outcome": "partial",
+   "evidence": "The bridge writes to the super-repo copy (env file WORKSPACE_ROOT wins), but the drafter, pick-priority-scenario and vessel-arrival-scan read /workspace/... Three diverging copies: 3364, 4573 and 2275 files.",
+   "source": "validation-other-3"
+  }
+ ],
+ "problems": [
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Compose lessons never graded (times_succeeded=0, times_failed=1 over 7,310 loads)",
+   "root_cause": "Write-back POSTs to the nonexistent /usage/<id>/fail with the wrong body/response shape; errors swallowed (6f69142)",
+   "first_seen": "2026-09-09",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "concept-db-db"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Execution-level resolver_tier/impulse_resolutions/resolved_by_vessel_id empty on all 85,720 recent executions",
+   "root_cause": "writers put tier in trace.tasks[]; documented rollup fields never populated",
+   "last_seen": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Tool-usage pattern tables empty though learning-signal-writer posts /tool-usage",
+   "root_cause": "silent best-effort learning-signal path (foundation F-39 residue class)",
+   "last_seen": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Human-surface journals split across /workspace/interactor-log (stale 09-22) and /workspace/git/super-repo/interactor-log (09-27)",
+   "root_cause": "EnvironmentFile WORKSPACE_ROOT=/workspace/git/super-repo overrides doc's /workspace default (same class as 09-22 two-memory-stores)",
+   "last_seen": "2026-09-27",
+   "source": "docs-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Writers and readers of gaps/state use different WORKSPACE_ROOT/GAPS_PATH; typecheck-scenario-gen still writes typecheck_error gaps to the fossil /workspace/gaps/gaps.json (20 rows 09-11..09-26)",
+   "first_seen": "2026-08-08",
+   "last_seen": "2026-09-26",
+   "recurrences": 7,
+   "root_cause": "State addressed by env-var path with a hard-coded /workspace fallback instead of by shape",
+   "source": "gap-history"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Writes report success while persisting nothing, or consumers read a key or table that isn't there (NULL vs NONE, SCHEMAFULL/Zod strips, missing view reads empty, bare vs prefixed ids, org_id forms)",
+   "root_cause": "No shared write-verification seam: surrealDB.query() ignores statement status, there is no NONE-coercion boundary, and there is no writer-to-reader key test; each instance was fixed at one call site",
+   "first_seen": "2026-03-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 30,
+   "source": "git-activityapi"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Producer writes a path/field the consumer never reads (gap store, quiesce marker, verification_outcome, file_path, declared shape)",
+   "first_seen": "2026-05-30",
+   "last_seen": "2026-08-11",
+   "recurrences": 9,
+   "root_cause": "State location resolved independently per call site (WORKSPACE_ROOT vs literals). No shared accessor and no reader-exists check.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Producers write fields or tables consumers do not read (classification_metadata, executions table, causal fields, landing traces)",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-16",
+   "recurrences": 6,
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Policy readers with no producer; verdicts and labels computed but not consumed; traces missing tags and consumed inputs",
+   "first_seen": "2026-07-20",
+   "last_seen": "2026-09-23",
+   "recurrences": 7,
+   "root_cause": "Readers shipped without producers, emitters inert, and no check that a written field has a reader.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Producer writes where the consumer does not read: gap-store path/format/frozen-copy (boredom), resolvedConfig dropped at the sink, prompt names a nonexistent field, llm shape name mismatch, walk reads a cleared store",
+   "first_seen": "2026-05-21",
+   "last_seen": "2026-09-28",
+   "recurrences": 10,
+   "root_cause": "Explicit projections and hardcoded paths/keys with no end-to-end positive control; each layer is fixed alone",
+   "source": "git-mid"
+  },
+  {
+   "key": "path-root-ambiguity",
+   "symptom": "ENOENT on valid paths, shadow garbage trees, confabulated filenames, sed editing the wrong checkout",
+   "first_seen": "2026-07-09",
+   "last_seen": "2026-09-25",
+   "recurrences": 6,
+   "root_cause": "four path roots (/vessels, clones, super-repo repos, vessel cwd) with per-vessel duplicate resolvers instead of one primitive",
+   "source": "git-small"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "revoked keys listed active; auth traces dropped or ungraded; envelope args unread; reach read from the wrong field; ENOENT consumed as content",
+   "first_seen": "2026-04-20",
+   "last_seen": "2026-09-23",
+   "recurrences": 17,
+   "root_cause": "producer and consumer contracts not shared (redis vs surreal, tags vs column, flat vs pointer); fixes applied reader-side per call site",
+   "source": "git-small"
+  },
+  {
+   "key": "failure-reason-dropped",
+   "symptom": "failed traces carry no failure_mode and no error (37,810 of them by 06-17); silent success inflates alpha",
+   "first_seen": "2026-05-23",
+   "last_seen": "2026-06-17",
+   "recurrences": 5,
+   "root_cause": "the executor never records distinguishable outcomes; computeDeltas defaults null to beta=1",
+   "source": "git-super-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "recording/metrics claimed complete then found not flowing (Feb-Mar); concept relevancy never increments; ribosome mints lack output_shapes",
+   "first_seen": "2026-02-20",
+   "last_seen": "2026-06-30",
+   "recurrences": 8,
+   "root_cause": "producers write fields or paths that the consumer never reads; verification is done at the producer",
+   "source": "git-super-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "activity-table learning fields are constant defaults on all 4,010 rows; vpm alpha/beta disagree with vpm counters (codereadresult\u2192concept-write alpha 9,193 vs 0 successes; validator-dispatch vpm 40% ok vs 99.6% in execution)",
+   "root_cause": "Multiple writers with different update rules; the activity-row columns have no writer",
+   "source": "live-activities"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "severed joints (decision_outcome, ribosome extraction 6.8d), fields with zero writers, placeholder rows",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-28",
+   "recurrences": 20,
+   "root_cause": "writers and readers evolve independently; no liveness check that works (joint-liveness itself broken)",
+   "source": "live-gaps"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "All 1805 boredomSelectionSnapshots record open_gap_count 0 and rhythms_consulted [].",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "root_cause": "The snapshot writer reads top-level total/items, but the data is under body.gaps/body.impulses (confirmed by replay). The scorer reads correctly: two readers of one seam with divergent envelopes.",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "26,970 of 46,591 failures in 5 days carry no reason in any field (auth_resolve_v1 20,636; universal-tool-fallback 1,532; feature_compose 474)",
+   "root_cause": "identity sets error_message only in the catch path; other writers omit failure_mode.reason; trace content drops task error text",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "dev-vessel routes gap_to_feature, doc_drift_fix, db_contention_observer but never registers them; registers 6 shapes with no route case",
+   "root_cause": "route switch and config.discovery.shapes are maintained separately",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "A mechanism silently does nothing: the consumer reads a key/path/envelope the producer does not write",
+   "root_cause": "Paths outside shaped dispatch have no contract at the boundary; undefined coerces to 0 or empty",
+   "first_seen": "2026-07-21",
+   "last_seen": "2026-09-15",
+   "recurrences": 12,
+   "source": "memory-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Producer writes a field/shape/answer that no consumer reads, or consumer reads a different field/table/path (walk_tier stripped, stop_reason unread, fs_edit hint discarded, gradeArmByExecution never called, operator_verdict archive, impulse_shape_activity_score write-only, solicitation_ids vs panel_id, resolve_endpoint ignored, devDraining unread, flat pointer drops classification_metadata, compose lessons never credited, ev reads unwritten fields)",
+   "root_cause": "Mechanisms built and validated in isolation without enumerating callers/consumers; fixes patched one call site of several; no general write-without-reader detector",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-22",
+   "recurrences": 16,
+   "source": "memory-10"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Writer and reader disagree: architecturePrinciple vs architectural_pattern_principle, sampledScore read but never emitted, double-unwrap endpoint_output_shapes 0/400, goal identity defined twice",
+   "first_seen": "2026-07-19",
+   "last_seen": "2026-08-04",
+   "recurrences": 5,
+   "root_cause": "Severed credit-graph edges (emitted\u2227\u00acread, read\u2227\u00acemitted, defined-twice) with no detector",
+   "source": "memory-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "A producer writes to a field, store, id form, auth scope or peer that the consumer never reads, and status stays green: three disagreeing alphas, vestigial activity posteriors, the phantom activity_metrics table, fields with zero readers, escalations to an unread vessel, the gap store rewriting ids, a lesson JSONL writer storing the install preamble.",
+   "first_seen": "2026-07-14",
+   "last_seen": "2026-09-22",
+   "recurrences": 15,
+   "root_cause": "No contract that every write has a named reader. Writes are verified with the writer's own id, credential or store, never at the consumer.",
+   "source": "memory-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "The reach verdict never becomes posterior credit: it is computed but not posted, posted to a column nobody reads, written to the decommissioned AET, and lost by a void fetch",
+   "first_seen": "2026-07-27",
+   "last_seen": "2026-08-26",
+   "recurrences": 5,
+   "root_cause": "There is no runtime-checked producer\u2194consumer contract. Each link (delivery, tag vs column, table, INSERT-time-only consumers, transport) was fixed separately.",
+   "source": "memory-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Rhythm cadence dead: the conductor reads an empty pool file, enqueues to a write-only queue, the gap-closing rhythm is pinned at due 0, and rhythms are lost when the pool resets",
+   "first_seen": "2026-08-04",
+   "last_seen": "2026-08-24",
+   "recurrences": 3,
+   "root_cause": "WORKSPACE_ROOT-split pool files, a write-only boredom-queue.json, and rhythms living only in the pool volume with no code seeder",
+   "source": "memory-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Stores accumulate while the read side is dead: verifier recipes (_useRecipe), decision_outcome, goal_verification_labels, per_gap_failure_lessons, the TARGET HAS NO TEST FILE warning",
+   "first_seen": "2026-08-24",
+   "last_seen": "2026-09-24",
+   "recurrences": 6,
+   "root_cause": "Mechanisms are built write-first and validated once; nothing asserts a consumer reads the current output",
+   "source": "memory-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Shaped policies (law 1) are decorative: readers with no producers, producers with erased storage, reads routed to a 404",
+   "first_seen": "2026-08-06",
+   "last_seen": "2026-08-28",
+   "recurrences": 4,
+   "root_cause": "Policy files sat in a gitignored dir inside a cleaned git work tree, reads went through activity-api instead of discovery, and producers were missing",
+   "source": "memory-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "A producer writes a field, id, shape name or envelope that its consumer does not read, so the join silently returns empty.",
+   "root_cause": "There is no contract seam between writers and readers, and no detector for the class. Each instance was patched locally.",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-20",
+   "recurrences": 16,
+   "source": "memory-5"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "The self-development lane's executions are never graded (868/873), and a successful self-repair banked 0 labels.",
+   "root_cause": "activity-api mints exec_ ids, and the void fetch discards the id while the reach verdict is keyed feature_compose:<sha>.",
+   "first_seen": "2026-09-05",
+   "last_seen": "2026-09-05",
+   "recurrences": 1,
+   "source": "memory-5"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Producer writes a field/envelope the consumer never reads (org_id, tasks, executed_at, pointer.note, journal format, servesIntent)",
+   "root_cause": "no contract/ownership check across vessel boundaries; renamed field returns null instead of erroring",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-09-20",
+   "recurrences": 12,
+   "source": "memory-6"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "EnvironmentFile silently overrides unit Environment= (peer discovery, gap store, memory store)",
+   "root_cause": "systemd EnvironmentFile precedence + gen-env allow-list; drop-ins don't reach process",
+   "first_seen": "2026-07-19",
+   "last_seen": "2026-09-22",
+   "recurrences": 4,
+   "source": "memory-6"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Producer writes a field, key, status word or endpoint that the consumer never reads, so the behavior silently does nothing",
+   "root_cause": "No contract-conformance test between writer and reader. Serializers strip undeclared keys (Zod, SCHEMAFULL). Near-miss keys land on real sibling fields. Consumers are wired on one endpoint only. Each instance is fixed alone",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-08-25",
+   "recurrences": 15,
+   "source": "memory-7"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "A producer writes a path, key, table, id or literal that the consumer never reads. The failure is silent (400 swallowed, SCHEMAFULL drop, optional chaining, catch returning empty).",
+   "root_cause": "No write/read agreement check at the seams. The joint-liveness detector was filed 3+ times and never built; only declarationDrift exists, for the schema slice.",
+   "first_seen": "2026-07-22",
+   "last_seen": "2026-09-28",
+   "recurrences": 14,
+   "source": "memory-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Verdicts and learning signal computed and then lost (reach-patch MATCHED NO ROW, non-fatal label writes, joinDecisionOutcome drops, in-process compose bypasses verdict delivery)",
+   "first_seen": "2026-08-08",
+   "last_seen": "2026-09-24",
+   "recurrences": 9,
+   "root_cause": "Several producer paths do not route through the single verdict deliverer; learning writes fail open; the reason is stripped on the failure side",
+   "source": "memory-9"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Node 2 lessons and concept usage never reach concept-db: 115 'compose-lessons concept-db mirror failed' and ~1300 'concept-bridge usage record failed' per 24h, while lesson READS succeed",
+   "root_cause": "CONCEPT_DB_ENDPOINT unset on node 2 so it defaults to 127.0.0.1:8260 (config.ts:41); writers pin a local port while readers route elsewhere",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Posterior WHERE never matched un-normalized ids; trace sink filtered failure types; chain credit used leaf bucket; validator failure_mode impulse had no write endpoint",
+   "first_seen": "2026-05-09",
+   "last_seen": "2026-05-30",
+   "recurrences": 4,
+   "root_cause": "format/contract mismatch at producer-consumer seams",
+   "source": "openspec-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "A second gap store /workspace/gaps/gaps.json (830 rows) was still written on 09-26; the live store is /workspace/git/super-repo/gaps/gaps.json (6,278)",
+   "root_cause": "HYPOTHESIS: a writer resolving WORKSPACE_ROOT=/workspace, or a test run with the live env (writer not identified)",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-26",
+   "source": "openspec-10"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "After migration 118 the LIST reader returned task_count=0 for 491/500 rows. The phantom detector filed 50 false gaps, and a '9367 phantoms' claim propagated into specs and concepts.",
+   "root_cause": "The storage split updated one reader (single GET) and not its sibling (LIST).",
+   "first_seen": "2026-05-31",
+   "last_seen": "2026-05-31",
+   "recurrences": 1,
+   "source": "openspec-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Events and resolutions were emitted where no consumer read them: engine lifecycle on an in-process sink, discovery registration emitting nothing (F-129: zero proxies), analysis resolutions not matching concept-db filters (145 events, 0 usage), /resolve dual-form parse drift across 3 vessels.",
+   "root_cause": "Producer/consumer contracts are re-derived per vessel, and no conformance detector exists for the class.",
+   "first_seen": "2026-05-27",
+   "last_seen": "2026-05-30",
+   "recurrences": 4,
+   "source": "openspec-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "vessel_responsibility_audit reads 0 principles via the HTTP route but 8 via direct import",
+   "first_seen": "2026-06-03",
+   "last_seen": "2026-06-03",
+   "recurrences": 1,
+   "root_cause": "unattributed; filed as a Bun runtime edge case without a positive control through the same address",
+   "source": "openspec-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "embedding_prior_weights written with org_id 'default' while the reader filters by the trace org; the \u03b8-prior may never serve",
+   "first_seen": "2026-06-28",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "writer and reader disagree on the org key (plausible, not confirmed)",
+   "source": "openspec-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "auto-promote vpm_key normalization replace(/_/g,':') breaks the join for underscore-heavy authored ids",
+   "first_seen": "2026-06-14",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "asymmetric id normalization between writer and joiner",
+   "source": "openspec-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Remedy/template calls 400 on envelope mismatch ({impulse} vs {pointer,budget}); drain retries 1931x",
+   "root_cause": "Producer and consumer envelopes diverge with no contract check at write time",
+   "first_seen": "2026-07-09",
+   "last_seen": "2026-07-23",
+   "recurrences": 2,
+   "source": "openspec-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "A shape answers well-formed but ignores its input (http_response fetched hardcoded httpbin), so reuse-before-mint returns garbage and the drafter re-mints",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-08-16",
+   "recurrences": 3,
+   "root_cause": "Scaffold resolver advertised and dispatched with no content check; lint only enforces advertised==dispatched",
+   "source": "openspec-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Vessels generated from the substrate's own scaffold register nested resolverContract with no systemVessel, so they are partially invisible to org-scoped discovery",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "Scaffold writes nested fields; the registry reads them flat; no check resolves scaffold output against the registry",
+   "source": "openspec-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "A producer advertised a shape (httpResponse) but ignored its input, so the walk kept re-minting a replacement (12 orphan drafts)",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-08-16",
+   "recurrences": 1,
+   "root_cause": "Scaffold resolver left advertised. Law 3 composition with a lying producer returns garbage, and nothing detects that a shape's content is wrong while its status is fine.",
+   "source": "openspec-9"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Producer writes a key/route/table/shape the consumer does not read (or reads a different one); every stage verifies what it sees and not that the next stage received it",
+   "root_cause": "No general producer/consumer agreement detector; explicit projections and whitelists drop fields silently; duplicated stores/copies (memory, gaps, policies) under different WORKSPACE_ROOTs",
+   "first_seen": "2026-08-13 (audit cited)",
+   "last_seen": "2026-09-23",
+   "recurrences": 20,
+   "source": "reports-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "The drafter-facing consequence lesson is dropped. A parked verdict is reported as UNFAVORABLE. Intent touched_files misses swept-in files.",
+   "root_cause": "writeLesson guards on a gap that was never persisted; goal-host drops the parked flag; the intent is registered from the plan, not the diff.",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-25",
+   "recurrences": 3,
+   "source": "reports-2"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Composition edge graph frozen at 2026-07-14 while a live consumer (discover-by-shapes composition_score) scored selection against it",
+   "root_cause": "Batch reconcile masked. The ingest deriver looked up the wrong table/key with a silent return on miss and omitted 3 required fields; SCHEMAFULL CREATE on a root connection fails silently",
+   "first_seen": "2026-07-14",
+   "last_seen": "2026-08-16 (resolved by 2026-09-29 spot-check)",
+   "recurrences": 4,
+   "source": "reports-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Flags/credit/lessons report written but consumer reads nothing (SF_BLEND null, lesson chars=0, cache replays overridden reach, body.bodyJson.error unread)",
+   "root_cause": "Producer and consumer disagree on key, table, envelope or store, and no layer counts what it consumed. NULL vs NONE in option<string>",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-08-21",
+   "recurrences": 7,
+   "source": "reports-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Produced records nothing reads: form_decision, doc_expectation concepts, uiFeedback JSONL, interactor-log, per_gap_failure_lessons, falsifier_exercise, mitosis-pending gap_id",
+   "first_seen": "2026-09-06",
+   "last_seen": "2026-09-24",
+   "recurrences": 7,
+   "root_cause": "Writers added without cited readers; readers keyed on different field names/formats/endpoints than writers.",
+   "source": "reports-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Fields are written with no reader, or read with no writer. Missing views and tables read as empty with status OK, so fallbacks never fire and learning signals vanish silently.",
+   "root_cause": "No producer/consumer parity check exists. SurrealDB returns empty/OK for a missing table and NULL for a phantom column. Every audit proposed a written-with-no-reader detector and none was built.",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 25,
+   "source": "reports-5"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Producer and consumer disagree on key, type or value form; reads return 0 silently (cts bare vs prefixed, org_id strip, 8 vs 16 hex signature, applied===true never set, effectiveTags pushed after handoff, snake vs camel learning_mode, flat vs nested gap write, status success+failure_mode).",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-28",
+   "recurrences": 14,
+   "root_cause": "Each side is written independently with no shared contract or consumer-side counter; fixes repair one site and nothing re-checks the seam class.",
+   "source": "reports-6"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Products written where their consumer does not read: ancestor_signatures; score reads with prefixed ids plus an absent view (Beta(1,1) for every arm); content_embedding OMITted; oracle labels keyed on dispatch records; regressed_by has no reader; rhythm alpha credited on fire",
+   "root_cause": "No contract or registry between writer and reader keys; 50 category-B cases with a 1-11 d detection median",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "source": "reports-7"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "The gap write boundary destroys or replaces classification_metadata: replace-wholesale resets failed_attempts to 0 (08-29); the flat pointer drops the predicate (09-09); success:false on a landed write plus replace semantics means a stale retry reverts it (09-10); memory 09-23 'carries forward omitted keys'.",
+   "root_cause": "substrateGap_write replaces instead of merging, and the write/read contracts are unstated",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-23",
+   "recurrences": 4,
+   "source": "reports-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Interactor exposure observations are written to the spoke's local interactor-log jsonl (4 rows, 9-22 to 9-25), and nothing on the hub reads them.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-25",
+   "source": "syzygy"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Producers and consumers use different roots. Frozen copies of pool/standing.json, watchdog-log, drain-log and gaps.json under /workspace still receive writes or are read as if live, while live state is under /workspace/git/super-repo",
+   "root_cause": "09d9baa6 redefined WORKSPACE_ROOT from the volume root to the super-repo clone. Scripts that hardcode /workspace/... and scripts that join WORKSPACE_ROOT+relative now disagree. It was patched per site and never at the seam",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 7,
+   "source": "timers-readers"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "compose-teacher (last run 09-23) and operator-goal-generator (last run 09-09) never fire",
+   "root_cause": "watchdog-tick's default WATCHDOG_ACTIVITY_PATHS is another flow's drain log. Their 'is my flow alive' test reads a file that every drain appends to",
+   "first_seen": "2026-07-08",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "source": "timers-readers"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Producers write channels with no consumer: uiQuestion, decision_outcome, /decision-calibration, verify_by, idle-yield metadata, solicitationOutcomeReport",
+   "first_seen": "2026-08-23",
+   "last_seen": "2026-09-03",
+   "recurrences": 7,
+   "root_cause": "minting a writer is not gated on a named reader; ingest projection drops fields",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Live state read from /workspace decoys (gaps.json fossil, policies rev 10, compose-slots, memory notes) while the live copy is under /workspace/git/super-repo",
+   "first_seen": "2026-09-05",
+   "last_seen": "2026-09-22",
+   "recurrences": 7,
+   "root_cause": "WORKSPACE_ROOT differs between unit, env-file and code default (MEMORY.md 09-22: EnvironmentFile wins, 680 notes unread)",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "A stage writes (ids, scores, polarity, node-local state, fingerprints) where the next stage does not read",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 12,
+   "root_cause": "08-13 audit 'producer/consumer key mismatch (write != read)'; fixed per call site, reopened at node level after 09-26 split",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "drafted repairs accumulate unapplied (4,138 proposals, 2,257 pending)",
+   "first_seen": "2026-06-04",
+   "last_seen": "2026-08-11",
+   "recurrences": 4,
+   "root_cause": "drafter reads scenario files not gap store; applier dir != writer dir; proposal schema mismatch",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "The scenario store has three diverging copies. The bridge writes to the super-repo copy while the drafter and pickers read /workspace. The drafter drafts repairs for its own fs_read misses.",
+   "root_cause": "Unit WORKSPACE_ROOT=/workspace is overridden by the env file's super-repo value, and the readers hardcode /workspace. It is the same class as the 09-22 two-memory-stores finding, but that fix did not grep the scenario call sites.",
+   "first_seen": "2026-05-22 (proposal-fp-11)",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "source": "validation-other-3"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Seed prompts tell drafted activities to POST substrateGap_write to 127.0.0.1:8270 (stateful-ui)",
+   "root_cause": "The endpoint is pinned in seed text. Only development-vessel serves substrateGap_write.",
+   "first_seen": "unknown",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "claims": [
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-09-09",
+   "claim": "Record failure for the lessons that led to this class (substrate-authored mitosis)",
+   "where": "development-vessel 6f69142, feature-compose.ts:3151",
+   "later": "Route /usage/:id/fail does not exist; compose_lesson times_failed total 1, times_succeeded 0 as of 09-29",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-09-05",
+   "claim": "substrategap-write replaces instead of merging: closed",
+   "where": "gap substrategap-write-replaces-instead-of-merging-destroying-omitted-fields",
+   "later": "Overshoot: omitted keys carried forward, so cleared flags do not stick (09-23, 09-26)",
+   "source": "gap-history"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-09-22",
+   "claim": "auto_draft decisions go to JSONL, not the gap store",
+   "where": "goal-host-vessel 3d4aa60",
+   "later": "Held (no auto_draft rows after 09-22), but the JSONL is write-only with no reader",
+   "source": "gap-history"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-05-30",
+   "claim": "substrateGap -> drafter loop closed",
+   "where": "archive/2026-05-30-substrate-gap-drafter-wiring",
+   "later": "1 retained execution; it reads the /workspace/gaps store, not the live super-repo store",
+   "source": "openspec-10"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-08-16",
+   "claim": "http_response fixed to fetch the requested URL via the trust-gated fetcher",
+   "where": "repos/development-vessel 5be029a",
+   "later": "Live and still wired. 4 more substrate narrowed/recommit cutovers followed on 08-17/18; the drafts it provoked remain as fossils",
+   "source": "openspec-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-08-07",
+   "claim": "Scaffold registration defect identified, 'worth filing separately'",
+   "where": "do-anything-surface/design.md section 5",
+   "later": "Unfixed on 2026-09-28 (complete-vessel-scaffold.ts:213)",
+   "source": "openspec-8"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-07-25",
+   "claim": "'set WORKSPACE_ROOT durably from SUBSTRATE_ROOT (law 11)' (09d9baa6)",
+   "where": "scripts/substrate/gen-env.sh",
+   "later": "At least 7 split-read instances remain live on 09-29 (watchdog log, pool, drain-log marker, gaps.json, subdir check, memory store, metrics path guessing)",
+   "source": "timers-readers"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-08-25",
+   "claim": "'repoint 8 KPI/self-dev scripts off the frozen trace table' (3c1bf965)",
+   "where": "scripts/substrate/*",
+   "later": "joint-liveness keeps filing frozen-table-class severed-joint-* gaps as of 09-28/29",
+   "source": "timers-readers"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-06-17",
+   "claim": "typecheck-scenario-gen gives 'sustained concrete fuel for the autonomous funnel' (331abda3)",
+   "where": "scripts/substrate/typecheck-scenario-gen.ts",
+   "later": "From 09-11 to 09-26 it delivered 20 gaps to the frozen /workspace/gaps/gaps.json. 0 reached the live store",
+   "source": "timers-readers"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-08-31T01:51",
+   "claim": "Lesson loop severed for two months; 5,797 failures produced 1 lesson; three fixes",
+   "where": "ff560216",
+   "later": "04:34 central claim wrong: the unauthenticated query read the default tenant; 21 lessons exist since 07-04",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-09-25T01:06Z",
+   "claim": "All seven fixes that carry the dispatch id are committed and running",
+   "where": "3f991252 2026-09-25T01:06Z",
+   "later": "8th path found run 9 (ca4f8a5); another in run 12 (author-composed-capability); gap #61; id-less bun test shells 09-27",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-08-11",
+   "claim": "applier proposals path fixed and verified",
+   "where": "validation/findings/round7-blocker-sweep.md \u00a71",
+   "later": "proven only at n=1 dry-run",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "write-read-mismatch",
+   "claimed_at": "2026-06-04 (492dd88)",
+   "claim": "gap_to_scenario_bridge closes 'Break 1': gaps reach the drafter as scenario files",
+   "where": "repos/development-vessel/src/resolvers/gap-to-scenario-bridge.ts header",
+   "later": "The writer and readers use different roots, the 08-05 autonomous edit writes null files, and the 09-29 wasted-cycle gap reports 100% zero-work",
+   "source": "validation-other-3"
+  }
+ ]
+}

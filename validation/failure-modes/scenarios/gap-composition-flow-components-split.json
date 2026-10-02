@@ -1,0 +1,19 @@
+{
+  "id": "gap-composition-flow-components-split",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "learning_loop",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Composition-graph flow is SPLIT: the genuine composition graph has 11 connected components (384 nodes, 902 genuine edges",
+  "description": "Composition-graph flow is SPLIT: the genuine composition graph has 11 connected components (384 nodes, 902 genuine edges). Credit cannot mix across components, so learning stays local to each island. Author or reuse a producer-consumer composition that joins the components (compose-teacher class), then re-run composition_flow_health_scan to confirm the join.",
+  "goal_text": "Composition-graph flow is SPLIT: the genuine composition graph has 11 connected components (384 nodes, 902 genuine edges). Credit cannot mix across components, so learning stays local to each island. Author or reuse a producer-consumer composition that joins the components (compose-teacher class), then re-run composition_flow_health_scan to confirm the join.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-composition-flow-components-split",
+  "source_gap_source": "substrate_detected"
+}

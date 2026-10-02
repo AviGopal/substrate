@@ -1,0 +1,19 @@
+{
+  "id": "concept-db-resolve-island-unbounded-correlated-subquery",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "performance_regression",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "concept-db's resolve-island upkeep activity runs: SELECT * FROM concept WHERE relevance > 0.3 AND (SELECT count() FROM c",
+  "description": "concept-db's resolve-island upkeep activity runs: SELECT * FROM concept WHERE relevance > 0.3 AND (SELECT count() FROM concept_edge WHERE from_concept = concept.id OR to_concept = concept.id GROUP ALL)[0].count == 0 ORDER BY created_at DESC LIMIT 10. The relevance filter matches 60,800 of 63,611 concept rows (nearly the whole table), and SurrealDB evaluates the correlated concept_edge subquery for every matching row BEFORE the ORDER BY/LIMIT 10 is applied -- tens of thousands of subquery evaluations per cycle against a 22,312-row concept_edge table. This times out ('The operation timed out') and re-fires every UPKEEP_INTERVAL_MS (default 300000ms/5min) via the upkeep scheduler, contributing sustained SurrealDB CPU/IO load. Observed as part of a 2026-08-29 thermal emergency (Tctl 100C). Emergency mitigation: stopped concept-db's upkeep scheduler live via POST /upkeep/scheduler/stop (confirmed running:false) -- this is NOT a code fix and the scheduler is currently OFF, meaning split-long-concept, adjust-priority-relevance, prune-irrelevant-neighbors, decay-stale-relevance, and prune-per-execution-concepts are also not running. Needs: rewrite resolve-island's query to bound the candidate set (e.g. pre-filter to a small recent/unchecked window, or track a checked-at watermark) before the correlated subquery, then re-enable the scheduler.",
+  "goal_text": "concept-db's resolve-island upkeep activity runs: SELECT * FROM concept WHERE relevance > 0.3 AND (SELECT count() FROM concept_edge WHERE from_concept = concept.id OR to_concept = concept.id GROUP ALL)[0].count == 0 ORDER BY created_at DESC LIMIT 10. The relevance filter matches 60,800 of 63,611 concept rows (nearly the whole table), and SurrealDB evaluates the correlated concept_edge subquery for every matching row BEFORE the ORDER BY/LIMIT 10 is applied -- tens of thousands of subquery evaluations per cycle against a 22,312-row concept_edge table. This times out ('The operation timed out') and re-fires every UPKEEP_INTERVAL_MS (default 300000ms/5min) via the upkeep scheduler, contributing sustained SurrealDB CPU/IO load. Observed as part of a 2026-08-29 thermal emergency (Tctl 100C). Emergency mitigation: stopped concept-db's upkeep scheduler live via POST /upkeep/scheduler/stop (confirmed running:false) -- this is NOT a code fix and the scheduler is currently OFF, meaning split-long-concept, adjust-priority-relevance, prune-irrelevant-neighbors, decay-stale-relevance, and prune-per-execution-concepts are also not running. Needs: rewrite resolve-island's query to bound the candidate set (e.g. pre-filter to a small recent/unchecked window, or track a checked-at watermark) before the correlated subquery, then re-enable the scheduler.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "concept-db-resolve-island-unbounded-correlated-subquery",
+  "source_gap_source": "substrate_detected"
+}

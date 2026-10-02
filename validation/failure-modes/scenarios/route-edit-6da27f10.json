@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-6da27f10",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/development-vessel/src/resolvers/feature-compose.ts, surface the reason a drafting-grade report fails instead o",
+  "description": "In repos/development-vessel/src/resolvers/feature-compose.ts, surface the reason a drafting-grade report fails instead of discarding it.\n\nReplace this line, which occurs exactly once:\n      }).catch(() => {});\n\nwith exactly:\n      }).catch((e) => { console.warn(\"[fc-draft-model] grade POST FAILED: \" + String((e as { message?: unknown })?.message ?? e)); });\n\nWhy: this catch currently swallows the error with an empty body, and the success line is logged immediately after the request is INITIATED rather than after it is accepted. So a failed grade write leaves no trace at all and the log overstates what was recorded. Measured after a clean posterior reset: FIVE 'graded' lines were emitted - gemini at 17:13:16 and 17:17:12, deepseek at 17:13:18 and 17:18:38, gpt-4o-mini at 17:16:06 - while the policy recorded only THREE observations. Concurrency, cache staleness and decay were each ruled out: the repeat grades are minutes apart, the policy cache lives ten seconds, and a second penalty four minutes later would have moved beta from 2 to about 2.999 rather than leaving it unchanged. So roughly two of five writes failed and there is currently no record of why.\n\nThis is a learning-path write. Its failures must be visible, because an invisible failure makes the mechanism look more productive than it is - any count of observations per hour taken from the journal is currently too high.\n\nThis adds a warning inside an existing catch. It declares no module state, alters no control flow, sends nothing new, and cannot change any verdict. The replacement does not contain the anchor, so applying it twice is a no-op.",
+  "goal_text": "In repos/development-vessel/src/resolvers/feature-compose.ts, surface the reason a drafting-grade report fails instead of discarding it.\n\nReplace this line, which occurs exactly once:\n      }).catch(() => {});\n\nwith exactly:\n      }).catch((e) => { console.warn(\"[fc-draft-model] grade POST FAILED: \" + String((e as { message?: unknown })?.message ?? e)); });\n\nWhy: this catch currently swallows the error with an empty body, and the success line is logged immediately after the request is INITIATED rather than after it is accepted. So a failed grade write leaves no trace at all and the log overstates what was recorded. Measured after a clean posterior reset: FIVE 'graded' lines were emitted - gemini at 17:13:16 and 17:17:12, deepseek at 17:13:18 and 17:18:38, gpt-4o-mini at 17:16:06 - while the policy recorded only THREE observations. Concurrency, cache staleness and decay were each ruled out: the repeat grades are minutes apart, the policy cache lives ten seconds, and a second penalty four minutes later would have moved beta from 2 to about 2.999 rather than leaving it unchanged. So roughly two of five writes failed and there is currently no record of why.\n\nThis is a learning-path write. Its failures must be visible, because an invisible failure makes the mechanism look more productive than it is - any count of observations per hour taken from the journal is currently too high.\n\nThis adds a warning inside an existing catch. It declares no module state, alters no control flow, sends nothing new, and cannot change any verdict. The replacement does not contain the anchor, so applying it twice is a no-op.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-6da27f10",
+  "source_gap_source": "substrate_detected"
+}

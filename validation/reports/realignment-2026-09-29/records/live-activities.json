@@ -1,0 +1,429 @@
+{
+ "source": "live-activities",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/live-activities.md",
+ "coverage": "Hub substrate-live SurrealDB activity-system/learning_loop, read-only, 2026-09-28 ~21:00 local. Tables read in full or aggregated: activity (all 4,010 rows, no embeddings); execution (all 150,258 rows grouped by activity_id, day and failure reason; the table covers only 09-24..09-29 because of a 150k row cap); variant_performance_metrics (6,744, the lifetime counters); context_thompson_scores (2,693 template groups); thompson_selection_log (7-day aggregate plus per-day counts); goal_execution_paths (tier aggregate, 7-day paths); activity_composition_graph (edge kinds); row counts of ~24 related tables; trace_store_counters. Also git log of the goal-host, activity-api and development-vessel live clones since 09-20, grepping for URL fixes. For node 2 (compose2-live) I checked only its unit list; it has no DB. Skipped: per-context-bucket posterior analysis, execution trace bodies beyond samples, and the concept/impulse tables.",
+ "attempts": [
+  {
+   "key": "endpoint-routing",
+   "title": "Fix rawresolve absolute-URL concatenation (first attempt)",
+   "where": "goal-host-vessel 6c98916 (2026-09-22T07:12, substrate-authored)",
+   "tried": "Stop prepending the row endpoint to an absolute resolvePath in rawResolve",
+   "outcome": "partial",
+   "date": "2026-09-22",
+   "evidence": "'fetch() URL is invalid' failures continued: 09-24 1751, 09-25 1562, 09-26 3422, 09-27 2196, 09-28 897 (~9.8k across 111 activity ids)"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Fix remaining walk-path resolve-URL sites (second attempt)",
+   "where": "goal-host-vessel 5ca51be (2026-09-28T13:00, substrate-authored)",
+   "tried": "Applied the URL fix to the other walk-path call sites (resolve-url-walk-path-sites-7457-15128)",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "After 13:05, 13,717 executions include 2 invalid-URL failures; auto-bridge-problem_detection went from 63/2348 to 63/68 ok"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Activity-table posterior columns",
+   "where": "activity table thompson_alpha/beta, ev, *_executions, learning_track",
+   "tried": "Store per-activity posterior and counters on the activity row",
+   "outcome": "dormant",
+   "evidence": "All 4,010 rows are constant alpha=1, beta=1, ev=0.5, counters 0, learning_track=unclassified; the real posteriors are in variant_performance_metrics and context_thompson_scores"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Activity classifier pass",
+   "where": "activity.last_classified_at / learning_track",
+   "tried": "Periodically classify activities into learning tracks",
+   "outcome": "failed",
+   "date": "2026-09-26",
+   "evidence": "Every row has last_classified_at 09-26, yet all 4,010 are 'unclassified'; 3,993 rows had updated_at rewritten 09-28T08 with no semantic change"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Variant generation storm (-<ts13>, -improved-, -hardened-, _variant_)",
+   "where": "development-vessel variant generator, June-July 2026",
+   "tried": "Mint variants of weak activities for Thompson to choose between",
+   "outcome": "failed",
+   "date": "2026-06/07",
+   "evidence": "586 rows, 570 proposed, 545 never executed, 0 executed in last 5d; e.g. LADDERWALK step 18 x185 (1 ever ran), release-change x177 (0 ran)"
+  },
+  {
+   "key": "gap-content",
+   "title": "Gap-closing template factory",
+   "where": "gap-closing:* activities (1,925 rows, 1,841 minted June)",
+   "tried": "Mint one closer activity per gap from a fixed read_scenario\u2192fetch_traces\u2192analyze\u2192write_report skeleton producing patch_proposal",
+   "outcome": "failed",
+   "date": "2026-06",
+   "evidence": "1,742 identical skeletons; 1,106 retired; 257 live never ran and 240 are stale; ~500 live rows output patch_proposal (a report, not a fix)"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Retire primitive applied to gap-closers",
+   "where": "activity.retired (retire primitive 19ae84e per memory)",
+   "tried": "Retire superseded activities",
+   "outcome": "partial",
+   "evidence": "Retired rows are respected (only 3 runs from 2 retired rows in 5d), but 1,340 live never-run rows remain"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Organic composition minting (compose-*, compose-auto-bridge-*)",
+   "where": "development-vessel, June 2026",
+   "tried": "Mint compositions of producer\u2192consumer edges, including compositions of compositions",
+   "outcome": "failed",
+   "date": "2026-06",
+   "evidence": "compose-* 220 rows, 98 never ran, 36 runs 0 ok in 5d; compose-auto-bridge-* 2,815 runs 33 ok"
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "Ribosome extraction of learned-composition chains",
+   "where": "ribosome-extract; learned-composition-* (148 rows)",
+   "tried": "Extract reached executions into reusable chain templates",
+   "outcome": "partial",
+   "evidence": "ribosome-extract 1,459/1,456 ok in 5d; the minted chains average 23% ok; 65 live arms have \u226520 runs and 0 successes (codereadresult\u2192concept-write 5,464/0; git-status\u2192git-diff\u2192concept-write 4,365/0)"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Execution row cap 150k",
+   "where": "trace_store_counters:execution cap=150000",
+   "tried": "Bound trace store growth with a row cap",
+   "outcome": "partial",
+   "evidence": "Growth is bounded, but the retained window is ~5 days (09-24..09-29) and ~70% of rows are housekeeping or telemetry (validator-dispatch 32%, auth_resolve_v1 14%)"
+  },
+  {
+   "key": "selection-learning",
+   "title": "Recommend-time Thompson selection",
+   "where": "thompson_selection_log (recommend-* ids, ~640 candidates)",
+   "tried": "Thompson-sample candidates at recommend time",
+   "outcome": "partial",
+   "evidence": "7d: 61,906 selections, 60% to arms with alpha+beta\u22644, 25% to arms with 0 executions in 5d, 24% to proposed rows; conservation-* family ~30k selections with few executions"
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Walk tier ladder",
+   "where": "goal_execution_paths.walk_tier",
+   "tried": "learned_pathway > satisfier > universal_tool_fallback > fresh_derivation",
+   "outcome": "partial",
+   "evidence": "lifetime success: learned_pathway 30.8%, satisfier 15.4%, universal fallback 8.5%, fresh_derivation 3.0%, feature_compose 0/60"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "pull-sync-unhealthy activity-api gap closer",
+   "where": "gap-closing:pull-sync-unhealthy-activity-api-1784251158497",
+   "tried": "Close the pull-sync-unhealthy gap via a gap-closer activity",
+   "outcome": "failed",
+   "evidence": "1,490 runs in 5 days (~300/day, 95% ok): the gap keeps reappearing or the closer is run as a tick; not durable"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Mitosis cutover of vessels",
+   "where": "vessel_mitosis_cutover, development-vessel:mitosis-tick",
+   "tried": "Cut over vessel versions in place",
+   "outcome": "partial",
+   "evidence": "cutover 589 runs, 391 ok; 60 failures are 'refusing cutover on protected vessel: discovery-vessel'; 790+62 in-flight failures from HTTP 503 draining"
+  },
+  {
+   "key": "test-residue-live-state",
+   "title": "Operator experiment variants of trace-store-reconcile",
+   "where": "development-vessel:trace-store-reconcile-lease-ttl-120s / -release-before-verify / -swap-timeout-15min (created 09-24)",
+   "tried": "Hand-made variants to test reconcile fixes",
+   "outcome": "failed",
+   "date": "2026-09-24",
+   "evidence": "171/23 and 166/19 ok; the base reconcile is 470/110; the variants are left live as residue"
+  }
+ ],
+ "problems": [
+  {
+   "key": "endpoint-routing",
+   "symptom": "'fetch() URL is invalid' killed auto-bridge, compose-auto-bridge, learned-auto-bridge and several learned-composition arms",
+   "root_cause": "Resolve-URL joiner produced absolute URLs while call sites still prepended the endpoint; the 09-22 fix covered one site",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-28T13",
+   "recurrences": 2
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Posteriors of the auto-bridge family carry large betas from an infrastructure bug (auto-bridge-problem_detection alpha 6.9 / beta 36.2) even though the arm is 93% ok after the fix",
+   "root_cause": "Failures are charged to the arm with no failure-reason attribution; addressing errors are not separated from capability failures"
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "activity-table learning fields are constant defaults on all 4,010 rows; vpm alpha/beta disagree with vpm counters (codereadresult\u2192concept-write alpha 9,193 vs 0 successes; validator-dispatch vpm 40% ok vs 99.6% in execution)",
+   "root_cause": "Multiple writers with different update rules; the activity-row columns have no writer"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Learning substrate (execution) holds only ~5 days",
+   "root_cause": "150k row cap with ~70% of rows from housekeeping and telemetry (validator-dispatch 47.7k, auth_resolve_v1 21.4k, gap-to-scenario tick 18k)"
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "Auth checks recorded as execution and decision_outcome rows (auth_resolve_v1: 561,660 lifetime, 5,462 ok, org unknown); probe ids in the store (falsifier-probe, nonexistent-*, __conformance_probe_nonexistent__, ias-executor-ts-canary-test)",
+   "root_cause": "Telemetry and probes share the learning trace table"
+  },
+  {
+   "key": "node-locality",
+   "symptom": "Hub stamps its own executions origin_substrate_id='local-dev-spoke'; only 28 rows from node 2 in 5 days; node 2 learning-loop-selftest, validator-liveness, joint-liveness and compose-drift units failed",
+   "root_cause": "Identity and provenance mislabeled; per-node checks presume a local trace store the spoke profile does not run"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "48% of live activities (1,340) never ran; 94% of the pool predates August; 165 duplicate signatures hold 2,052 live rows",
+   "root_cause": "June/July mint storms (variants, gap-closers, organic compositions) with no automatic retirement of never-run or zero-success arms"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "~500 live gap-closing and repaired rows output patch_proposal from a report skeleton; 65 live arms with \u226520 runs and 0 successes are still selectable",
+   "root_cause": "Minted closers produce reports, not fixes; no grade-to-retire loop"
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "60% of Thompson selections go to arms with \u22642 observations; conservation-* twins win ~30k/62k selections but rarely execute",
+   "root_cause": "Recommend-time selection is decoupled from execution and grading, so optimism on cold arms is never paid down; learned-* twins duplicate seeded arms"
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "learned-conservation-* duplicates conservation-*; learned-auto-bridge-* duplicates auto-bridge-*; 171 names with multiple live rows (1,501 rows)",
+   "root_cause": "The ribosome and learners mint copies of existing producers instead of sharpening the existing posterior (law 3 violation)"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "fresh_derivation 3% and universal_tool_fallback 8.5% success vs a ~90% reach contract; edit goals fail as satisfier:goal-host-walk-failed (441/0 in 5d) on compose lane BUSY",
+   "root_cause": "The floor tiers rarely succeed; the edit lane is capacity-bound"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "852 failures from 'development-vessel is draining' 503s; repeated cutover attempts on protected discovery-vessel; pull-sync-unhealthy closer re-run ~300/day",
+   "root_cause": "Restarts abort in-flight work; the gap is not durable"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Templates reference non-registered resolvers ('learned-auto-bridge-problem-detection-1r2k9x' 305, 'condition' 88, federation_* ~150); unrendered placeholders in ids ({{extract_drafter_scenario_json_value_json}} x6); fs path-root mismatch /vessels vs /workspace (313)",
+   "root_cause": "Minted templates are not validated against the live resolver registry or workspace root"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "11 empty schema tables beside live twins (composition_chain, composition_node, activity_template, execution_traces, goal_execution_path, pattern, execution_pattern, composite_sequence_patterns, execution_sequences, activity_metrics, routing_trace)",
+   "root_cause": "Schema fossils left from earlier designs"
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "federation_verification_report / federation_probe resolvers unreachable or not registered (~380 failures in 5d); learned-satisfier-federation-verification-report 176/0",
+   "root_cause": "The federation resolver is not served where the walk routes it"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "variant_performance_metrics posterior store",
+   "location": "activity-api DB table variant_performance_metrics",
+   "purpose": "Lifetime per-activity Thompson posterior and counters",
+   "status": "live-used",
+   "general": true,
+   "evidence": "6,744 rows, updated 09-29; alpha/beta diverge from counters"
+  },
+  {
+   "name": "context_thompson_scores",
+   "location": "activity-api DB",
+   "purpose": "Context- and cluster-conditioned posteriors",
+   "status": "live-used",
+   "general": true,
+   "evidence": "29,192 rows; cluster buckets written 09-28"
+  },
+  {
+   "name": "activity-row learning columns",
+   "location": "activity.thompson_*/ev/*_executions/learning_track",
+   "purpose": "Per-activity posterior on the row",
+   "status": "fossil",
+   "general": true,
+   "evidence": "Constant defaults on all 4,010 rows",
+   "duplicates_of": "variant_performance_metrics"
+  },
+  {
+   "name": "activity classifier",
+   "location": "activity.last_classified_at",
+   "purpose": "Assign learning tracks",
+   "status": "broken",
+   "general": true,
+   "evidence": "All rows classified 09-26 and all still 'unclassified'"
+  },
+  {
+   "name": "recommend-time Thompson selection",
+   "location": "thompson_selection_log",
+   "purpose": "Select an activity among ~640 candidates",
+   "status": "live-used",
+   "general": true,
+   "evidence": "61,906 selections/7d; 60% to n\u22642 arms; decoupled from execution"
+  },
+  {
+   "name": "walk tier ladder",
+   "location": "goal-host; goal_execution_paths.walk_tier",
+   "purpose": "learned_pathway > satisfier > universal fallback > fresh derivation",
+   "status": "live-used",
+   "general": true,
+   "evidence": "4,999 paths in 7d; learned_pathway 30.8% vs fresh 3.0%"
+  },
+  {
+   "name": "satisfier path",
+   "location": "goal-host satisfier:* (no activity row)",
+   "purpose": "Serve a target shape directly from a registered resolver",
+   "status": "live-used",
+   "general": true,
+   "evidence": "179 ids, 9,016 runs/5d, 52% ok; not in the activity pool (law 2 gap)"
+  },
+  {
+   "name": "universal-tool-fallback",
+   "location": "goal-host",
+   "purpose": "ReAct floor",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1,918 runs/5d, 318 ok"
+  },
+  {
+   "name": "feature_compose edit lane",
+   "location": "development-vessel",
+   "purpose": "Draft, verify and land code edits",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1,949 runs/5d, 382 ok; 441 walk-failed on BUSY"
+  },
+  {
+   "name": "auto-bridge deterministic shape bridges",
+   "location": "auto-bridge-* activities (81)",
+   "purpose": "Bridge one shape to its producer resolver",
+   "status": "live-used",
+   "general": true,
+   "evidence": "After 5ca51be, 63/68 ok for problem_detection; new bridges still minted in September"
+  },
+  {
+   "name": "learned-auto-bridge-*",
+   "location": "pool (28)",
+   "purpose": "Learned copies of bridges",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "947 runs, 4 ok",
+   "duplicates_of": "auto-bridge-*"
+  },
+  {
+   "name": "ribosome-extract",
+   "location": "development-vessel",
+   "purpose": "Extract reached executions into templates",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1,459/1,456 in 5d; minted chains 23% ok, ungraded"
+  },
+  {
+   "name": "organic composition minting",
+   "location": "compose-*, compose-auto-bridge-*",
+   "purpose": "Mint producer\u2192consumer compositions",
+   "status": "fossil",
+   "general": true,
+   "evidence": "220 June rows; 2,815 runs, 33 ok"
+  },
+  {
+   "name": "gap-closing template factory",
+   "location": "gap-closing:* (1,742 identical skeletons)",
+   "purpose": "Per-gap closer activity",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Outputs report-style patch_proposal; 1,106 retired, 497 live never or stale"
+  },
+  {
+   "name": "variant generator",
+   "location": "-<ts13>/_variant_/-improved-/-hardened- rows",
+   "purpose": "Variant-first repair",
+   "status": "fossil",
+   "general": true,
+   "evidence": "586 rows, 545 never ran; nothing new since July"
+  },
+  {
+   "name": "retire primitive",
+   "location": "activity.retired",
+   "purpose": "Remove arms from selection",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Retired rows not executed; under-applied"
+  },
+  {
+   "name": "execution row cap",
+   "location": "trace_store_counters:execution cap=150000",
+   "purpose": "Bound trace growth",
+   "status": "live-used",
+   "general": true,
+   "evidence": "~5-day window"
+  },
+  {
+   "name": "auth telemetry into execution",
+   "location": "auth_resolve_v1 rows",
+   "purpose": "Record identity checks",
+   "status": "live-used",
+   "general": false,
+   "evidence": "21,427 rows in 5d (14%); pollutes the learning store"
+  },
+  {
+   "name": "validator-dispatch",
+   "location": "activity-api validator",
+   "purpose": "Dispatch validators on lifecycle:task:completed",
+   "status": "live-used",
+   "general": true,
+   "evidence": "47,732 runs/5d (32% of store), 99.6% ok"
+  },
+  {
+   "name": "slot-binding",
+   "location": "goal-host",
+   "purpose": "Bind data flow shape to shape",
+   "status": "live-used",
+   "general": true,
+   "evidence": "9,772 runs/5d"
+  },
+  {
+   "name": "gap-to-scenario-bridge-tick",
+   "location": "development-vessel",
+   "purpose": "Bridge gaps into scenarios",
+   "status": "live-used",
+   "general": true,
+   "evidence": "17,974 runs/5d"
+  },
+  {
+   "name": "composition:shellresult-to-memorynote-write",
+   "location": "composition:* (code path, no row)",
+   "purpose": "Crystallized chain",
+   "status": "live-used",
+   "general": false,
+   "evidence": "308/308 in 5d"
+  },
+  {
+   "name": "conservation-* observers and learned-conservation-* twins",
+   "location": "seeded plus learned rows",
+   "purpose": "Conservation audits and junction observers",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "~30k selections/7d, few executions",
+   "duplicates_of": "conservation-* seeded"
+  },
+  {
+   "name": "empty schema tables",
+   "location": "composition_chain, composition_node, activity_template, execution_traces, goal_execution_path, pattern, execution_pattern, composite_sequence_patterns, execution_sequences, activity_metrics, routing_trace",
+   "purpose": "Earlier designs",
+   "status": "fossil",
+   "general": false,
+   "evidence": "0 rows each"
+  },
+  {
+   "name": "create-shape-provider-goal",
+   "location": "pool",
+   "purpose": "Mint shape provider goals",
+   "status": "broken",
+   "general": false,
+   "evidence": "101,633 runs, 0 ok, last run 07-13, row still live"
+  }
+ ],
+ "principles": [
+  "A fix at one call site is not a fix to the class: 6c98916 (09-22) left ~9.8k invalid-URL failures until 5ca51be (09-28) (live-activities.md \u00a71 endpoint-routing)",
+  "Infrastructure failures graded as capability failures poison posteriors; attribute failure reasons before updating beta (\u00a71 endpoint-routing)",
+  "A capped trace store dominated by telemetry is a learning substrate only ~5 days deep (\u00a71 trace-store-db)",
+  "Minting without automatic retirement accumulates 48% never-run arms; minting is cheap only if retirement is automatic (\u00a71 bloat)",
+  "A selection that is not executed and graded never pays down optimism: 60% of picks went to n\u22642 arms (\u00a71 selection-learning)",
+  "Posterior fields must have one writer and one reader; the activity-row columns are write-dead and vpm has divergent writers (\u00a71 write-read-mismatch)",
+  "The learned pathway outperforms fresh derivation 10x (30.8% vs 3.0%); the floor tiers are where the reach contract fails (\u00a71 goal-walk-floor)",
+  "Satisfiers and code paths that do real work (24% of executions) sit outside the activity pool, so they are invisible to selection and retirement (law 2) (\u00a72)"
+ ]
+}

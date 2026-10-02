@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-c10fb730",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-4282e8e8: In repos/development-vessel/src/resolvers/feature-compose.ts, stop a ",
+  "description": "investigate and decompose gap route-edit-4282e8e8: In repos/development-vessel/src/resolvers/feature-compose.ts, stop a failed compose attempt from erasing the durable evidence of an earlier successful one.\n\nAround line 5979-5988 there is a block that begins with this exact comment:\n\n  // Persist the compose report as a durable artifact (mirrors gap-to-feature's PROPOSALS_DIR reports). Never fails the compose.\n\nInside it, the report is written wit",
+  "goal_text": "investigate and decompose gap route-edit-4282e8e8: In repos/development-vessel/src/resolvers/feature-compose.ts, stop a failed compose attempt from erasing the durable evidence of an earlier successful one.\n\nAround line 5979-5988 there is a block that begins with this exact comment:\n\n  // Persist the compose report as a durable artifact (mirrors gap-to-feature's PROPOSALS_DIR reports). Never fails the compose.\n\nInside it, the report is written wit",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-c10fb730",
+  "source_gap_source": "substrate_detected"
+}

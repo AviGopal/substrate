@@ -1,0 +1,1 @@
+Add a `divide(a, b)` function to the math module that returns `a / b`. It must throw (or raise) a descriptive error when `b` is zero. Add tests that cover: normal division, integer truncation behaviour (if applicable to the language), and the zero-divisor error case. All existing tests must still pass.

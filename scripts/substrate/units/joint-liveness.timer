@@ -1,0 +1,12 @@
+[Unit]
+Description=Joint-liveness detector timer
+
+[Timer]
+OnActiveSec=8min
+OnUnitActiveSec=30min
+Persistent=true
+AccuracySec=30s
+Unit=joint-liveness.service
+
+[Install]
+WantedBy=timers.target

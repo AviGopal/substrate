@@ -1,0 +1,26 @@
+{
+  "id": "vessel-demand-traceAggregateReport-2026-09-03",
+  "routing_class": "vessel_authoring",
+  "target_template_id": "development-vessel:scaffold-and-publish-vessel",
+  "mode_class": "missing_capability",
+  "stage": "vessel_authoring",
+  "outcome_class": "gap",
+  "title": "Shape 'traceAggregateReport' required by 5 templates but no vessel advertises it. Candidate for substrate-authored vesse",
+  "description": "Shape 'traceAggregateReport' required by 5 templates but no vessel advertises it. Candidate for substrate-authored vessel.",
+  "goal_text": "Shape 'traceAggregateReport' required by 5 templates but no vessel advertises it. Candidate for substrate-authored vessel.",
+  "capability_shape": "traceAggregateReport",
+  "demanding_template_count": 5,
+  "sample_template_ids": [
+    "composed-cap-substrate-runner-roster-aggregator-autho",
+    "composed-cap-produce-shape-obsidian-fleet-health-pane",
+    "composed-cap-produce-shape-model-count-report-capabil",
+    "composed-cap-produce-shape-report-model-count-capabil",
+    "composed-cap-produce-shape-obsidian-metrics-panel-con"
+  ],
+  "gap_subtype": "vessel_demand",
+  "cite_principle": null,
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "vessel-demand-traceAggregateReport-2026-09-03",
+  "source_gap_source": "substrate_detected"
+}

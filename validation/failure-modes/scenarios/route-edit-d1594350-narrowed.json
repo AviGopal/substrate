@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-d1594350-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-d1594350] investigate and decompose gap route-edit-59b07044: Stop the gap store from silently ",
+  "description": "[narrowed from route-edit-d1594350] investigate and decompose gap route-edit-59b07044: Stop the gap store from silently destroying itself in repos/development-vessel/src/resolvers/substrate-gap.ts.\n\nMeasured incident, 2026-09-09: the gap store went from 4,113 rows to 44 in a single day. Cause: loadGaps() returns an EMPTY array on ANY read or parse failure, and the store is a read-modify-write - load, mutate, save. So one corrupt or transiently unreadable gaps.json yields [], and\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- typecheck_dangling_reference: (fail) resolveGapToFeature cooldown logic > a non-attempt compose result should clear the cooldown for immediate re-eligibility [0.14ms] | (fail) resolveGapToFeature cooldown logic > a genuine non-lan\n- semantic_reject: The patch edits the wrong function and does not modify loadGaps() which is the source of the empty array on read failures\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 245-250 of 1160, VERBATIM:\\n245: }\\n246: \\n247: async function loadGaps(): Promise<SubstrateGap[]> {\\n248:   try {\\n249:     cons\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-d1594350] investigate and decompose gap route-edit-59b07044: Stop the gap store from silently destroying itself in repos/development-vessel/src/resolvers/substrate-gap.ts.\n\nMeasured incident, 2026-09-09: the gap store went from 4,113 rows to 44 in a single day. Cause: loadGaps() returns an EMPTY array on ANY read or parse failure, and the store is a read-modify-write - load, mutate, save. So one corrupt or transiently unreadable gaps.json yields [], and\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- typecheck_dangling_reference: (fail) resolveGapToFeature cooldown logic > a non-attempt compose result should clear the cooldown for immediate re-eligibility [0.14ms] | (fail) resolveGapToFeature cooldown logic > a genuine non-lan\n- semantic_reject: The patch edits the wrong function and does not modify loadGaps() which is the source of the empty array on read failures\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 245-250 of 1160, VERBATIM:\\n245: }\\n246: \\n247: async function loadGaps(): Promise<SubstrateGap[]> {\\n248:   try {\\n249:     cons\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-d1594350-narrowed",
+  "source_gap_source": "substrate_detected"
+}

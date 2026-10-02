@@ -1,0 +1,21 @@
+{
+  "id": "self-alteration-stale-proposal-backlog",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architectural_pattern",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Proposal backlog is 2364 with 14% stale (322 freshness/precondition/analytic reports). FIFO apply churns these dead prop",
+  "description": "Proposal backlog is 2364 with 14% stale (322 freshness/precondition/analytic reports). FIFO apply churns these dead proposals before reaching fresh actionable ones, wasting its rare selection slots.",
+  "goal_text": "Proposal backlog is 2364 with 14% stale (322 freshness/precondition/analytic reports). FIFO apply churns these dead proposals before reaching fresh actionable ones, wasting its rare selection slots.\n\nRemediation hint: Sweep stale proposals (freshness_violation / precondition-rejection / arch-pattern-bloat older than N days) into .applied or .rejected, and/or have apply skip them, so the actionable backlog is small.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [
+    "repos/development-vessel/src/resolvers/apply-proposal-as-patch.ts"
+  ],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "self-alteration-stale-proposal-backlog",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-05-23T06:16:53.326Z",
+  "label": "cycle-5",
+  "endpoint": "https://activity.metabob.com",
+  "scenarios_run": 1,
+  "scenarios": [
+    {
+      "scenario_id": "fp-11-silent-semantic-failure",
+      "dispatched_at": "2026-05-23T06:16:51.205Z",
+      "recommendations_returned": 2,
+      "matched_existing_activity_id": "activity:⟨gap-closing:fp-11-silent-semantic-failure-1779506719973⟩",
+      "emergence_class": "reuse",
+      "emergent_trace_id": null,
+      "self_heal_seconds": null,
+      "detection_signal_present": false,
+      "notes": [
+        "matched via discover-by-shapes (not yet ranked in /recommend)"
+      ]
+    }
+  ],
+  "summary": {
+    "reuse": 1,
+    "new": 0,
+    "gap": 0,
+    "avg_self_heal_seconds": null
+  }
+}

@@ -1,0 +1,6 @@
+In repos/development-vessel/src/routes/impulses.ts, serve a `composeOwnership` shape so a caller can ask a composer which repos it can land. Measured: goal-host needs each feature_compose producer's owned repos to route an edit goal to the owner, and the discovery vessel (the only place that could echo it on the capability row) is protected: vessel_mitosis_cutover refuses every cutover on it. Add, immediately before the existing line `    case "attempt_snapshot":`, this case:
+
+    case "composeOwnership":
+      return { shape: "composeOwnership", body: { node: process.env["SUBSTRATE_NAME"] ?? "substrate", owned_repos: [...ownedVessels()].sort() } };
+
+and add `import { ownedVessels } from "../resolvers/gap-to-feature.js";` next to the existing `import { resolveAttemptRegister } from "../resolvers/attempt-register.js";`. Change nothing else.

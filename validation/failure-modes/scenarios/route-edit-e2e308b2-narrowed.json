@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-e2e308b2-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-e2e308b2] In repos/discovery-vessel/src/index.ts, replace the line ZZZ_THIS_ANCHOR_DOES_NOT_EX",
+  "description": "[narrowed from route-edit-e2e308b2] In repos/discovery-vessel/src/index.ts, replace the line ZZZ_THIS_ANCHOR_DOES_NOT_EXIST_CLOSURE_PROBE_20260912 = 1; with ZZZ_THIS_ANCHOR_DOES_NOT_EXIST_CLOSURE_PROBE_20260912 = 2; . This is a deliberate closure probe: the anchor does not exist, so the edit must fail to apply and be rolled back.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- typecheck_dangling_reference: src/index.ts(27,1): error TS2304: Cannot find name 'ZZZ_THIS_ANCHOR_DOES_NOT_EXIST_CLOSURE_PROBE_20260912'. | src/index.ts(145,16): error TS2304: Cannot find name 'VERSION'. | src/index.ts(455,16): er\n- anchor_not_found: {\"error\":\"old_string not found in file. NOTHING resembling your anchor occurs in this 532-line file — you are editing from memory, not from the file. Call fs_read on /workspace/git/compose/fc-mty9qcxa\n- semantic_reject: dead-code-only patch: every changed symbol (ZZZ_THIS_ANCHOR_DOES_NOT_EXIST_CLOSURE_PROBE_20260912) has zero callers and is not an entrypoint — the change cannot execute\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-e2e308b2] In repos/discovery-vessel/src/index.ts, replace the line ZZZ_THIS_ANCHOR_DOES_NOT_EXIST_CLOSURE_PROBE_20260912 = 1; with ZZZ_THIS_ANCHOR_DOES_NOT_EXIST_CLOSURE_PROBE_20260912 = 2; . This is a deliberate closure probe: the anchor does not exist, so the edit must fail to apply and be rolled back.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- typecheck_dangling_reference: src/index.ts(27,1): error TS2304: Cannot find name 'ZZZ_THIS_ANCHOR_DOES_NOT_EXIST_CLOSURE_PROBE_20260912'. | src/index.ts(145,16): error TS2304: Cannot find name 'VERSION'. | src/index.ts(455,16): er\n- anchor_not_found: {\"error\":\"old_string not found in file. NOTHING resembling your anchor occurs in this 532-line file — you are editing from memory, not from the file. Call fs_read on /workspace/git/compose/fc-mty9qcxa\n- semantic_reject: dead-code-only patch: every changed symbol (ZZZ_THIS_ANCHOR_DOES_NOT_EXIST_CLOSURE_PROBE_20260912) has zero callers and is not an entrypoint — the change cannot execute\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-e2e308b2-narrowed",
+  "source_gap_source": "substrate_detected"
+}

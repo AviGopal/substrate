@@ -1,0 +1,23 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, remove the human-surface bypass in verifyGapConditionAsync's class-3 landed-commit block. Measured: that block returns 'absent' for any gap whose edit_site contains /human-surface-vessel/ or whose metadata surface is human-surface-vessel, without consulting any landed commit. So the close sweep can report a human-surface gap as fixed when nothing landed. The bypass was added because human-surface had no push-able clone. It now has a GitHub remote (AviGopal/human-surface-vessel) and a push clone, so landedCommitVerdict can judge it like every other repo. One edit in this one file. Replace exactly these lines (they occur once):
+
+    const metadata = (gap.classification_metadata as Record<string, unknown> | undefined) ?? {};
+    const editSite = typeof metadata['edit_site'] === 'string' ? String(metadata['edit_site']) : '';
+    const surface = typeof metadata['surface'] === 'string' ? String(metadata['surface']) : '';
+
+    // For human-surface-vessel, the git-based verification path is broken due to both
+    // source grounding issues (for patch generation) and lack of a push-able clone.
+    // Bypassing landedCommitVerdict avoids errors from an unreachable/un-analyzable repo.
+    // We treat a land signal as sufficient to close the gap, returning 'absent' to prevent
+    // the system from attempting to re-compose a fix for a vessel it cannot edit.
+    if (editSite.includes('/human-surface-vessel/') || surface === 'human-surface-vessel') {
+      return 'absent';
+    }
+    const verdict = landedCommitVerdict(gapId, editSite);
+
+with:
+
+    const metadata = (gap.classification_metadata as Record<string, unknown> | undefined) ?? {};
+    const editSite = typeof metadata['edit_site'] === 'string' ? String(metadata['edit_site']) : '';
+    const verdict = landedCommitVerdict(gapId, editSite);
+
+Nothing else in the file changes.

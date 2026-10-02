@@ -1,0 +1,19 @@
+{
+  "id": "recommit-conservation-audit-route-registered-twice-blocks-all-further-edits-narrowed-compose_execution_failure",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap conservation-audit-route-registered-twice-blocks-all-further-edits-narrowed repeated already-recorded fa",
+  "description": "compose for gap conservation-audit-route-registered-twice-blocks-all-further-edits-narrowed repeated already-recorded failure class compose_execution_failure: replace_lines DRIFT-REFUSED for repos/activity-api/src/routes/activities.ts 5827-5954: expected first/last [\"app.get('/conservation-audit', async (c) ",
+  "goal_text": "compose for gap conservation-audit-route-registered-twice-blocks-all-further-edits-narrowed repeated already-recorded failure class compose_execution_failure: replace_lines DRIFT-REFUSED for repos/activity-api/src/routes/activities.ts 5827-5954: expected first/last [\"app.get('/conservation-audit', async (c) ",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-conservation-audit-route-registered-twice-blocks-all-further-edits-narrowed-compose_execution_failure",
+  "source_gap_source": "substrate_detected"
+}

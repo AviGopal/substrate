@@ -1,0 +1,19 @@
+{
+  "id": "gap-daemon-timers-can-never-rearm",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "service_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "boredom-vessel.timer and m1-trainer.timer are active+enabled on production with NextElapseUSecMonotonic=infinity — they ",
+  "description": "boredom-vessel.timer and m1-trainer.timer are active+enabled on production with NextElapseUSecMonotonic=infinity — they have fired once and will never fire again. Cause: the triggered .service is Type=simple Restart=always (permanently active) while the .timer uses OnUnitActiveSec, which measures from activation; a unit that never goes inactive never re-arms. The pairing is self-contradictory: either the vessel is a daemon and needs no timer, or it is timer-driven and must not be Restart=always. Detector: vessel-ctl status now prints next=NEVER for this state (it previously listed no timer units at all).",
+  "goal_text": "boredom-vessel.timer and m1-trainer.timer are active+enabled on production with NextElapseUSecMonotonic=infinity — they have fired once and will never fire again. Cause: the triggered .service is Type=simple Restart=always (permanently active) while the .timer uses OnUnitActiveSec, which measures from activation; a unit that never goes inactive never re-arms. The pairing is self-contradictory: either the vessel is a daemon and needs no timer, or it is timer-driven and must not be Restart=always. Detector: vessel-ctl status now prints next=NEVER for this state (it previously listed no timer units at all).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-daemon-timers-can-never-rearm",
+  "source_gap_source": "substrate_detected"
+}

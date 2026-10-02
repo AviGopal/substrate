@@ -1,0 +1,16 @@
+{
+  "templateId": "invoke-goal-summary-activity",
+  "name": "Invoke Goal Summary",
+  "description": "Invokes the goal_summary resolver to generate a summary report of goal-related metrics.",
+  "inputShapes": [],
+  "parameters": {},
+  "tasks": [
+    {
+      "id": "generate-goal-summary",
+      "type": "run_resolver",
+      "resolverName": "goal_summary",
+      "config": {}
+    }
+  ],
+  "outputShape": "goalSummaryReport"
+}

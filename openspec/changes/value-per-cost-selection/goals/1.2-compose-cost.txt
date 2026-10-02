@@ -1,0 +1,59 @@
+In repos/development-vessel/src/resolvers/feature-compose.ts, keep the usage the llm resolver returns on every llmCall response and accumulate it per compose run (input_tokens, output_tokens, calls, cost_usd, scoped to one compose via AsyncLocalStorage so concurrent composes never share a total) and write those totals into the compose execution report instead of the hard-coded zero cost and tokens, so compose spend becomes measurable. Apply exactly these 4 edits; each old text occurs exactly once:
+
+EDIT 1
+old:
+import { createHash as parkHash } from "node:crypto";
+new:
+import { createHash as parkHash } from "node:crypto";
+import { AsyncLocalStorage } from "node:async_hooks";
+
+// COMPOSE SPEND (openspec value-per-cost-selection, spend-accounting). The llm resolver
+// returns `usage` on every completion and llmCall used to drop it, so every compose report
+// said cost 0 / tokens 0 and nothing could weigh a compose's value against its price. Each
+// compose run gets its own accumulator through AsyncLocalStorage (entered once per composeId
+// around resolveFeatureComposeInner), so concurrent composes never share a total and the
+// string return contract of llmCall / llmCallWithFailover is unchanged for every caller.
+type ComposeUsage = { input_tokens: number; output_tokens: number; calls: number; cost_usd: number };
+const composeUsageStore = new AsyncLocalStorage<ComposeUsage>();
+function recordComposeUsage(usage: unknown): void {
+  const acc = composeUsageStore.getStore();
+  if (!acc) return;
+  const u = (usage && typeof usage === "object" ? usage : {}) as Record<string, unknown>;
+  const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  acc.calls += 1;
+  acc.input_tokens += num(u["input_tokens"]);
+  acc.output_tokens += num(u["output_tokens"]);
+  acc.cost_usd += num(u["cost_usd"]);
+}
+
+EDIT 2
+old:
+  if (content === '' && resolved === false) {
+new:
+  // Charge this response to the enclosing compose run BEFORE the throws below: an empty or
+  // truncated completion was still billed. Federated envelopes carry usage beside the content.
+  recordComposeUsage((j.content && typeof j.content === 'object' ? (j.content.body ?? j.content).usage : undefined) ?? j.usage);
+
+  if (content === '' && resolved === false) {
+
+EDIT 3
+old:
+  try { return await resolveFeatureComposeInner(pointer, pointer.gap?.id, ws); }
+new:
+  try { return await composeUsageStore.run({ input_tokens: 0, output_tokens: 0, calls: 0, cost_usd: 0 }, () => resolveFeatureComposeInner(pointer, pointer.gap?.id, ws)); }
+
+EDIT 4
+old:
+        cost: 0,
+        tokens: { input: 0, output: 0, cache: 0 },
+        error_message: verdict === "FAVORABLE" ? undefined : String(semantic_gate?.reason ?? "").slice(0, 400),
+        metadata: {
+new:
+        cost: composeUsageStore.getStore()?.cost_usd ?? 0,
+        tokens: { input: composeUsageStore.getStore()?.input_tokens ?? 0, output: composeUsageStore.getStore()?.output_tokens ?? 0, cache: 0 },
+        error_message: verdict === "FAVORABLE" ? undefined : String(semantic_gate?.reason ?? "").slice(0, 400),
+        metadata: {
+          // This run's accumulated LLM spend ({input_tokens, output_tokens, calls, cost_usd}).
+          llm_usage: composeUsageStore.getStore() ?? null,
+
+Done when: all 4 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

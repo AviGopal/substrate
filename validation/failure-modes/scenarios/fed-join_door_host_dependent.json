@@ -1,0 +1,19 @@
+{
+  "id": "fed-join_door_host_dependent",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architecture",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "FALSIFIER (closure predicate — carried here because substrateGap_write discards a free-text falsifier): GET /bootstrap r",
+  "description": "FALSIFIER (closure predicate — carried here because substrateGap_write discards a free-text falsifier): GET /bootstrap returns a non-empty discovery_endpoint and a non-loopback identity_endpoint when queried under a foreign Host header. || DETECTED BY: federation-probe-tick, an independent ephemeral-peer oracle; witnessed by static , never by the transport's own health report. || CONFIRMED OVER 76 consecutive QUIESCENT sweeps (no unit changed MainPID or NRestarts during them), so this is not a cutover artefact. || EVIDENCE (sweep-2026-09-18T05:47:34.642Z): I3_join_door_honest: {\"identity_endpoint\":\"http://127.0.0.1:8101\",\"discovery_endpoint\":\"\",\"identity_endpoint_under_foreign_host\":\"http://127.0.0.1:8101\",\"note\":\"anchors are host-dependent or empty, and unchanged under a foreign Host header — a joiner cannot tell a configured hub from an unconfigured one\"} || CONTEXT: part of the federation overlay break tracked as host-independent-federation-join-broken and specified in openspec/changes/2026-09-12-host-independent-federation-join/proposal.md. This row is the re-measured, self-detected form — it closes when the probe says so, not when someone says it landed.",
+  "goal_text": "FALSIFIER (closure predicate — carried here because substrateGap_write discards a free-text falsifier): GET /bootstrap returns a non-empty discovery_endpoint and a non-loopback identity_endpoint when queried under a foreign Host header. || DETECTED BY: federation-probe-tick, an independent ephemeral-peer oracle; witnessed by static , never by the transport's own health report. || CONFIRMED OVER 76 consecutive QUIESCENT sweeps (no unit changed MainPID or NRestarts during them), so this is not a cutover artefact. || EVIDENCE (sweep-2026-09-18T05:47:34.642Z): I3_join_door_honest: {\"identity_endpoint\":\"http://127.0.0.1:8101\",\"discovery_endpoint\":\"\",\"identity_endpoint_under_foreign_host\":\"http://127.0.0.1:8101\",\"note\":\"anchors are host-dependent or empty, and unchanged under a foreign Host header — a joiner cannot tell a configured hub from an unconfigured one\"} || CONTEXT: part of the federation overlay break tracked as host-independent-federation-join-broken and specified in openspec/changes/2026-09-12-host-independent-federation-join/proposal.md. This row is the re-measured, self-detected form — it closes when the probe says so, not when someone says it landed.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "fed:join_door_host_dependent",
+  "source_gap_source": "substrate_detected"
+}

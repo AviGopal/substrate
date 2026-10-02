@@ -1,0 +1,19 @@
+{
+  "id": "conservation-liveness-junction-violated",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Conservation invariant 'liveness' is violated by 9 arm(s). Worst offenders: development-vessel:applied-proposal-sentinel",
+  "description": "Conservation invariant 'liveness' is violated by 9 arm(s). Worst offenders: development-vessel:applied-proposal-sentinel-observer-tick, development-vessel:mitosis-pending-observer-tick, development-vessel:dead-end-decision-scan-tick, development-vessel:generative-frontier-gap-tick, development-vessel:mitosis-intent-queue-observer-tick. lane emission share collapsed while the fleet kept executing - the lane is silently broken, not merely idle This gap is filed automatically by the conservation-audit-emit bridge and refreshed on each run; it aggregates all 9 violations of this invariant into one demand rather than one gap per arm.",
+  "goal_text": "Conservation invariant 'liveness' is violated by 9 arm(s). Worst offenders: development-vessel:applied-proposal-sentinel-observer-tick, development-vessel:mitosis-pending-observer-tick, development-vessel:dead-end-decision-scan-tick, development-vessel:generative-frontier-gap-tick, development-vessel:mitosis-intent-queue-observer-tick. lane emission share collapsed while the fleet kept executing - the lane is silently broken, not merely idle This gap is filed automatically by the conservation-audit-emit bridge and refreshed on each run; it aggregates all 9 violations of this invariant into one demand rather than one gap per arm.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "conservation-liveness-junction-violated",
+  "source_gap_source": "substrate_detected"
+}

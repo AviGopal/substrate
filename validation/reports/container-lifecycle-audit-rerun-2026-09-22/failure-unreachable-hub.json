@@ -1,0 +1,41 @@
+{
+  "state": {
+    "at": "2026-09-22T10:50:15.481337+00:00",
+    "argv": [
+      "docker",
+      "inspect",
+      "--format",
+      "{{json .State}}",
+      "sla-0922r-80a33e-unreachable-hub"
+    ],
+    "rc": 0,
+    "stdout": "{\"OciVersion\":\"1.3.0\",\"Status\":\"exited\",\"Running\":false,\"Paused\":false,\"Restarting\":false,\"OOMKilled\":false,\"Dead\":false,\"Pid\":0,\"ExitCode\":1,\"Error\":\"\",\"StartedAt\":\"2026-09-22T03:50:12.46122349-07:00\",\"FinishedAt\":\"2026-09-22T03:50:12.530076436-07:00\",\"CheckpointedAt\":\"0001-01-01T00:00:00Z\",\"RestoredAt\":\"0001-01-01T00:00:00Z\"}\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+  },
+  "logs": {
+    "at": "2026-09-22T10:50:15.541011+00:00",
+    "argv": [
+      "docker",
+      "logs",
+      "--tail",
+      "30",
+      "sla-0922r-80a33e-unreachable-hub"
+    ],
+    "rc": 0,
+    "stdout": "[substrate] generating /etc/substrate/env\n",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n[gen-env] WARN: hub discovery at 192.0.2.1:8100 did not answer; assuming port-relative offset -10000.\n[gen-env] WARN: if this spoke 401s on registration, the hub was not merely slow to start \u2014 re-check the endpoint.\n[gen-env] ERROR: derived IDENTITY_VESSEL_URL (http://192.0.2.1:8101) is unreachable (no /health response).\n[gen-env]   This configuration silently emits an unreachable IDENTITY_VESSEL_URL, which is not a reachable state.\n[gen-env]   Verify your DISCOVERY_ENDPOINT, or override IDENTITY_VESSEL_URL explicitly.\n"
+  },
+  "identity": {
+    "at": "2026-09-22T10:50:15.649113+00:00",
+    "argv": [
+      "docker",
+      "exec",
+      "sla-0922r-80a33e-unreachable-hub",
+      "substrate-key",
+      "whoami"
+    ],
+    "rc": 255,
+    "stdout": "",
+    "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\nError: can only create exec sessions on running containers: container state improper\n"
+  }
+}

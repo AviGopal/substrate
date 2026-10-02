@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-f856a29e",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/activity-api/src/routes/activities.ts so the Thompson global posterior tier stops reading a database view tha",
+  "description": "Edit repos/activity-api/src/routes/activities.ts so the Thompson global posterior tier stops reading a database view that does not exist. Around line 6016 the recommend path builds scoresMap by querying v_activity_score. That view is absent from the database: SELECT * FROM v_activity_score returns status OK with zero rows, because SurrealDB treats a missing table as an empty one, so the query never errors and scoresMap is permanently empty. As a result line 6492 falls through to alpha 1.0 and beta 1.0 and every Thompson draw uses the uniform prior plus heuristic boosts. Measured live: the sampler drew alpha 4.0 beta 1.0 for an arm whose stored posterior is alpha 23.76 beta 10.86. Change that query to read from variant_performance_metrics instead, which holds 3349 rows of which 1638 carry moved posteriors, selecting activity_id, variant_id, thompson_alpha, thompson_beta, total_executions and successful_executions, and mapping thompson_alpha onto the alpha field and thompson_beta onto the beta field so the downstream blend arithmetic is untouched. Key the resulting map under both the bare id and the prefixed activity form the way the contextScoresMap loop near line 6119 already does, because variant_performance_metrics stores bare ids while the recommend path holds prefixed ones. Add a single counted log line reporting requested and matched counts in the same style as the cts_lookup log near line 6146, so the repair is observable at the consuming layer instead of assumed. Do not alter the three tier precedence logic, the boost application near line 6602, or the blend arithmetic near line 6610.",
+  "goal_text": "Edit repos/activity-api/src/routes/activities.ts so the Thompson global posterior tier stops reading a database view that does not exist. Around line 6016 the recommend path builds scoresMap by querying v_activity_score. That view is absent from the database: SELECT * FROM v_activity_score returns status OK with zero rows, because SurrealDB treats a missing table as an empty one, so the query never errors and scoresMap is permanently empty. As a result line 6492 falls through to alpha 1.0 and beta 1.0 and every Thompson draw uses the uniform prior plus heuristic boosts. Measured live: the sampler drew alpha 4.0 beta 1.0 for an arm whose stored posterior is alpha 23.76 beta 10.86. Change that query to read from variant_performance_metrics instead, which holds 3349 rows of which 1638 carry moved posteriors, selecting activity_id, variant_id, thompson_alpha, thompson_beta, total_executions and successful_executions, and mapping thompson_alpha onto the alpha field and thompson_beta onto the beta field so the downstream blend arithmetic is untouched. Key the resulting map under both the bare id and the prefixed activity form the way the contextScoresMap loop near line 6119 already does, because variant_performance_metrics stores bare ids while the recommend path holds prefixed ones. Add a single counted log line reporting requested and matched counts in the same style as the cts_lookup log near line 6146, so the repair is observable at the consuming layer instead of assumed. Do not alter the three tier precedence logic, the boost application near line 6602, or the blend arithmetic near line 6610.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-f856a29e",
+  "source_gap_source": "substrate_detected"
+}

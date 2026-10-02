@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-6a82e162-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-6a82e162] In repos/llm-resolver-vessel/src/index.ts, make a provider authentication failure ma",
+  "description": "[narrowed from route-edit-6a82e162] In repos/llm-resolver-vessel/src/index.ts, make a provider authentication failure mark the arm unwilling instead of leaving it permanently selectable. Today an anthropic 401 makes the completion fail over per call but records no cooldown, so claude-sonnet-5 and claude-haiku-4-5 keep winning Thompson selection and every draft they win is served by the failover walk instead of the selected model. In the completion error path, when a provider returns an authentication error (HTTP 401 or an authentication_error code), record a cooldown for that provider using the same cooldown state that inCooldown and inModelCooldown already read, so isModelWilling returns false for its arms and selectArm stops offering them. Change only that error path. Do not change selection scoring, priors, or any posterior.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 1241-1246 of 1513, VERBATIM:\\n1241:     // `body.model ?? DEFAULT_MODEL` and dial the default BLINDLY — which is\\n1242:     // ex\n- semantic_reject: zero behaviour delta — added lines are comment/whitespace-only — zero behaviour delta\n- verify_failed: src/index.ts(347,1): error TS1184: Modifiers cannot appear here.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-6a82e162] In repos/llm-resolver-vessel/src/index.ts, make a provider authentication failure mark the arm unwilling instead of leaving it permanently selectable. Today an anthropic 401 makes the completion fail over per call but records no cooldown, so claude-sonnet-5 and claude-haiku-4-5 keep winning Thompson selection and every draft they win is served by the failover walk instead of the selected model. In the completion error path, when a provider returns an authentication error (HTTP 401 or an authentication_error code), record a cooldown for that provider using the same cooldown state that inCooldown and inModelCooldown already read, so isModelWilling returns false for its arms and selectArm stops offering them. Change only that error path. Do not change selection scoring, priors, or any posterior.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 1241-1246 of 1513, VERBATIM:\\n1241:     // `body.model ?? DEFAULT_MODEL` and dial the default BLINDLY — which is\\n1242:     // ex\n- semantic_reject: zero behaviour delta — added lines are comment/whitespace-only — zero behaviour delta\n- verify_failed: src/index.ts(347,1): error TS1184: Modifiers cannot appear here.\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-6a82e162-narrowed",
+  "source_gap_source": "substrate_detected"
+}

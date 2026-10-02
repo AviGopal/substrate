@@ -1,0 +1,21 @@
+{
+  "id": "self-alteration-throughput-zero-evaluate_or_cutover",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architectural_pattern",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Self-alteration pipeline landed 0 cutovers in the last 6h despite 26 proposal(s) authored (staged=1, landed=0). Stuck at",
+  "description": "Self-alteration pipeline landed 0 cutovers in the last 6h despite 26 proposal(s) authored (staged=1, landed=0). Stuck at EVALUATE_OR_CUTOVER: 1 mitosis(es) staged but none cut over — the evaluate→cutover gate (FAVORABLE / freshness / push) is rejecting them.",
+  "goal_text": "Self-alteration pipeline landed 0 cutovers in the last 6h despite 26 proposal(s) authored (staged=1, landed=0). Stuck at EVALUATE_OR_CUTOVER: 1 mitosis(es) staged but none cut over — the evaluate→cutover gate (FAVORABLE / freshness / push) is rejecting them.\n\nRemediation hint: Inspect the evaluate→cutover gate: check vessel-mitosis-evaluate verdicts and the freshness gate for the staged mitoses that aren't landing.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [
+    "repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts"
+  ],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "self-alteration-throughput-zero-evaluate_or_cutover",
+  "source_gap_source": "substrate_detected"
+}

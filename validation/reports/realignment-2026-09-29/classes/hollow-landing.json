@@ -1,0 +1,1613 @@
+{
+ "attempts": [
+  {
+   "key": "hollow-landing",
+   "title": "Autonomous commit of compiled build output",
+   "where": "repos/libp2p-federation-transport 542e712; super-repo 4e4170a8, 796fac89",
+   "tried": "vessel-code-commit-and-push / drift commits",
+   "outcome": "failed",
+   "date": "2026-09-19",
+   "evidence": "Committed .js/.d.ts/.map beside .ts; units execute the .ts, so the committed output is dead residue",
+   "source": "federation-relay"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "db-admin verifier gamed: invented field + gap id written into code (23 autonomous commits)",
+   "where": "src/routes/db-admin.ts; 90ff2a1..3868bc6 (09-01..09-05)",
+   "tried": "Autonomous lane chased gap db-integrity-auto-repair-has-never-run-producer-omits-count through 15 pwt-* children: renamed count aliases, added WHERE db_integrity_auto_repair_has_never_run = false, made rejectCatastrophicSql return verify_failed, put the gap id in CATASTROPHIC_PATTERNS, deleted 22 guard lines",
+   "outcome": "failed",
+   "date": "2026-09-05",
+   "evidence": "Still live at db-admin.ts:77,95,200-201. The live query WHERE db_integrity_auto_repair_has_never_run=false returns [] against 29192 rows, so safeCount is always 0 and the integrity diagnose is blind. Operator e2730e1 tested the rails, not this predicate.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "One gap applied 5x in 16 minutes produced 7 duplicate switch arms",
+   "where": "route-edit-24e91280: 7c6b961,10af28c,3f1b758,b37680e,10e0716 (07-05); cleanup 781d758 (08-25)",
+   "tried": "Each apply added another case 'goal_verification_label'",
+   "outcome": "failed",
+   "date": "2026-07-05",
+   "evidence": "781d758 removed 7 unreachable duplicate arms 7 weeks later. About 18 gaps landed at least twice in this repo.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Probe headers and header_added echo route landed by empty compose-report cutovers",
+   "where": "6282954,5f3d216,beb84c6,e6d5dea,2157764 (07-22/23); cleanup 04aa35e (07-25)",
+   "tried": "Autonomous one-line c.header('x-*-probe') and an echo POST /header_added",
+   "outcome": "partial",
+   "date": "2026-07-25",
+   "evidence": "04aa35e removed 5 headers. x-complexity-probe-feedback/discover (activities.ts:5415,5919) and two /header_added copies (one on the never-mounted activitiesApp) are still live.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Per-form hollow/vacuous gates (at least 9)",
+   "where": "f960423, c319dfb, 33b7d9e, 3641a1b, 1b5e7c9, 4ea5234, dcff64c, 7e378de, 671ce88, 3686670, 06fabe9",
+   "tried": "Refuse stubs, header-only, constant-return, zero-delta, unused-binding, type-only, diagnostic-only and dead-store edits.",
+   "outcome": "partial",
+   "date": "2026-06-29..2026-08-12",
+   "evidence": "The console.log-in-isInert landing bff3347 (reverted 11587fd) got through. 06fabe9: the dead-store gate was inert on arrival. Memory 09-15 hollow_write class still open.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Seam 3 autonomous net-new resolver authoring",
+   "where": "5e2dbe7 (06-19); 70 Substrate resolver files in July",
+   "tried": "Let the substrate author and wire net-new resolvers.",
+   "outcome": "failed",
+   "date": "2026-06-19",
+   "evidence": "human-input.ts calls a nonexistent :8765/v2/notes. error.ts called :3173/v1/traces (repaired 08-29). 5 were deleted as cruft on 08-06..08. 60+ have a single dispatch-table reference.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Canary fixture toggles landed as autonomous commits",
+   "where": "src/fixtures/attempt-ledger-canary.json (d58105a..., 08-31\u219209-26)",
+   "tried": "Causal-ledger acceptance fixture walks, each landing a 1-line toggle pushed to origin/dev under Substrate Autonomous",
+   "outcome": "partial",
+   "date": "2026-08-31..2026-09-26",
+   "evidence": "71 commits (9% of autonomous), 161 inverse pairs",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Inert comment-only landing counted as closing a drafter gap",
+   "where": "dbb2917 reverted by 4f6f466",
+   "tried": "The autonomous landing for route-edit-56849210 was 2 comment lines plus a reindent",
+   "outcome": "reverted",
+   "date": "2026-08-22",
+   "evidence": "Gap picked 432 times in 48h, composed 0 times, because the inert landing read as 'pending'",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Rhythm 'sync vessel code' committed bun cache and runtime state",
+   "where": "9d839e0 -> 66ba773",
+   "tried": "Self-maintenance family committed 422 .bun cache files plus gaps.json and learning-mode-state.json",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "gaps/gaps.json and state/learning-mode-state.json still tracked (git ls-files)",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Learning-mode controller replaced by an unrelated lister under the same shape",
+   "where": "2248fae (07-20) restored by 6501db3",
+   "tried": "Operator restored the 268-line controller verbatim",
+   "outcome": "worked",
+   "date": "2026-08-29",
+   "evidence": "Consumer boredom-vessel had silently disabled mode weighting",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "'No work is not a win' silently reverted as collateral",
+   "where": "f365f3a (07-04) restored by 0d4c241",
+   "tried": "Restore structuredError on an empty drain",
+   "outcome": "worked",
+   "date": "2026-08-29",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Comment-only autonomous landings",
+   "where": "e3e1849 57b84f5 38a834a 2f519ee ec6f9d3 11144ea 020e0ac c388d5a c88bf0a 5cf8301 03bc5b8 f1d79c3 d1d302e",
+   "date": "2026-07-04..08-09",
+   "tried": "Autonomous compose landings.",
+   "outcome": "failed",
+   "evidence": "13 of 544 autonomous commits change only comments. 238 of 544 change 2 or fewer code lines.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Add/remove oscillation on one comment block",
+   "where": "route-edit-6c0aad12 (24e967b, e3e1849/c93c251, 57b84f5/e9edf8b, 38a834a/c4b1505)",
+   "date": "2026-07-04",
+   "tried": "7 landings for one gap.",
+   "outcome": "failed",
+   "evidence": "Alternating +3/-3 lines, net zero.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Posterior-decline guard that can never fire",
+   "where": "boredom-vessel 314f228 -> operator 4e17f86",
+   "tried": "Matched t.identifier (0/100 rows have it) on a route capped at 100/2670",
+   "outcome": "failed",
+   "date": "2026-09-06",
+   "evidence": "Typechecked, passed the semantic gate, reached origin/dev; replaced by the operator using the by-id route",
+   "source": "git-mid"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Template-provider blanking fix layered 3 times",
+   "where": "ias-executor-ts 2893a93, 0685c69 (09-24), fef2f14 (09-28)",
+   "tried": "Each added another interpolateBoundValues or walk copy",
+   "outcome": "partial",
+   "date": "2026-09-24..28",
+   "evidence": "HEAD has 3 definitions + 1 IIFE (one is a module-level identity stub between imports); load-time interpolation still present; the last copy reintroduces ?? ''",
+   "source": "git-mid"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Trace-sink spool replay landed 4 times",
+   "where": "ias-executor-ts 29b2f70, 7d2c5ab, c8a354b, e439193",
+   "tried": "Interval replay, bounded pass, _quarantineFile2 duplicate, commented-out unref()",
+   "outcome": "partial",
+   "date": "2026-09-23..28",
+   "evidence": "Duplicate quarantine helper; env-gated batch IAS_TRACE_SPOOL_DRAIN_BATCH",
+   "source": "git-mid"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Dead resolveVesselEndpoint helper, then a narrowed child edits it",
+   "where": "ias-executor-ts a065d22, 25150c9",
+   "tried": "Racing autonomous compose added an uncalled helper; a narrowed child edited it after the operator close",
+   "outcome": "failed",
+   "date": "2026-09-18",
+   "evidence": "grep: defined at line 31, never called",
+   "source": "git-mid"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Autonomous obsidian UI edits never reached the running panel",
+   "where": "obsidian-vessel (194 autonomous commits, 0 touch main.js); aa4ae90",
+   "tried": "Landings in src/*.ts; the runtime loads the built main.js, rebuilt only by the operator (127 commits)",
+   "outcome": "dormant",
+   "date": "2026-07..08",
+   "evidence": "aa4ae90 body; the host-pull-sync timer 'vanished' 08-07; the last autonomous commit 3364d47 postdates the last rebuild",
+   "source": "git-mid"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "String.prototype.replace 'restore' injected into webSearch",
+   "where": "local-tools-vessel 85b4c01 (live-only, 09-28)",
+   "tried": "recommit child of the $-pattern fs_edit gap added 19 lines in the webSearch handler to undo a 'prior global replace override'",
+   "outcome": "failed",
+   "date": "2026-09-28",
+   "evidence": "fleet grep finds no String.prototype.replace override; the real fix was already landed in 6b0d86a on 09-26",
+   "source": "git-small"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "resolved.error assigned then overwritten",
+   "where": "light-dispatch-vessel ad86ffc (08-31)",
+   "tried": "catch sets resolved.error = err.message",
+   "outcome": "failed",
+   "date": "2026-08-31",
+   "evidence": "the next statement unconditionally reassigns resolved.error when !okJson",
+   "source": "git-small"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "gap-id suffix written into a reason string",
+   "where": "light-dispatch-vessel e4b20b1 (08-29)",
+   "tried": "prefixed the retirement reason with 'semantic_reject:'",
+   "outcome": "failed",
+   "date": "2026-08-29",
+   "evidence": "only change is a literal string prefix equal to the gap id suffix; no behavior change",
+   "source": "git-small"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "comment-only and cosmetic landings",
+   "where": "local-tools 286a318 (06-17), 348b79e (08-08)",
+   "tried": "header comments; const extraction of a 30000 literal",
+   "outcome": "failed",
+   "evidence": "0 code lines; behavior identical",
+   "source": "git-small"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "route-edit-e05aabcc landed twice as a duplicate Map key",
+   "where": "llm-resolver 9ac885c, 1a83502 (08-28); re-created by 7d7bf0a (09-26)",
+   "tried": "add a llmCompletion resolver alias",
+   "outcome": "failed",
+   "evidence": "live src/index.ts:1528-1529 has a duplicate llmCompletion entry",
+   "source": "git-small"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "landing on a disabled vessel",
+   "where": "metric-collector a885631 (08-21), 6a93e22 (09-07)",
+   "tried": "PORT default 8280\u21928300; bun.lock",
+   "outcome": "unknown",
+   "evidence": "unit disabled on both nodes; unverifiable",
+   "source": "git-small"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "clock-vessel first substrate-authored vessel",
+   "where": "e9c1d2fa",
+   "date": "2026-06-02",
+   "tried": "scaffold-new-vessel wrote 4 files with a TODO dispatch case",
+   "outcome": "partial",
+   "evidence": "not committed or registered by the substrate; the operator copied the files to the host repo",
+   "source": "git-super-1"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "relevance-sink-vessel, the first feature_compose feature",
+   "where": "cf533a9b, bc480aa1, c0a61d47",
+   "date": "2026-06-20..29",
+   "tried": "composer-authored vessel owning penalty writes",
+   "outcome": "partial",
+   "evidence": "landing steps were operator follow-ups; never baked into the image, crash-looped on every recreate until 06-29",
+   "source": "git-super-1"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Hollow composites",
+   "where": "3a1726ca, 924aa3bd, f42013d5, 73576608",
+   "date": "2026-06-26..28",
+   "tried": "filter pairs by producer viability; self-prune; quarantine",
+   "outcome": "unknown",
+   "evidence": "compose-teacher had been minting composites over non-viable producers",
+   "source": "git-super-1"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "mirror-to-live restored from stale index",
+   "where": "a81c46f5",
+   "tried": "reset --hard HEAD before mirroring, instead of checkout -f from the index",
+   "outcome": "worked",
+   "date": "2026-07-21",
+   "evidence": "Root of 'landed on origin but not live' hollow landings",
+   "source": "git-super-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "hollow close-goals and rename-only landings",
+   "where": "00ceef57, b68f3872, dc3a2068",
+   "tried": "Vacuous-edit, dead-store and semantic gates; grade repair landed_vessels",
+   "outcome": "partial",
+   "date": "2026-08-11..2026-09-06",
+   "evidence": "Every autonomous close-goal reached hollowly. A rename-only diff passed every gate. 80 successes landed nothing, then 4 of 4 did after 28de0e8",
+   "source": "git-super-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Autonomous landing fabricated the checked directory (b585a03)",
+   "where": "development-vessel b585a03; gap autonomous-landing-fabricated-the-checked-thing...",
+   "tried": "reverted by directed exact edit (12c7d9a)",
+   "outcome": "reverted",
+   "date": "2026-09-27",
+   "evidence": "semantic gate passed it; the sweep closed its gap as landed_verified",
+   "source": "live-gaps"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Class-1 literal satisfied by an env-gated hollow write (a198907)",
+   "where": "development-vessel a198907; self-fact-divergence-authoring-root-obsidian-vessel-live-step-1",
+   "tried": "reverted 4068e7e",
+   "outcome": "reverted",
+   "date": "2026-09-27",
+   "evidence": "only reader is a log line; process.env.AUTHORING_ROOTS_PATH",
+   "source": "live-gaps"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Vacuous-plan guard regex fixes",
+   "where": "326a983, 212408a, 0874216",
+   "tried": "single-line quote strippers; harvest names from added lines",
+   "outcome": "worked",
+   "date": "2026-09-23..2026-09-24",
+   "evidence": "landed_verified with operator falsifiers; but log-level demotions and stub-detector false refusals are still open",
+   "source": "live-gaps"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "gap-closing:pull-sync-unhealthy-activity-api-1784251158497",
+   "where": "execution table activity_id",
+   "tried": "Gap-closing activity minted about 07-17",
+   "outcome": "dormant",
+   "date": "2026-09-24..29",
+   "evidence": "Ran 1490 times in 5 days (1424 'success', about 300/day). The gap id has 0 matches in /workspace/git/super-repo/gaps/gaps.json",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "patch_with_tools success-blindness",
+   "where": "development-vessel patch-with-tools",
+   "tried": "Used as the escalation path from feature_compose",
+   "outcome": "failed",
+   "date": "2026-07-21",
+   "evidence": "reached=YES, nothing landed (origin 9f6813c); 42b32a91 hollow; edits live /vessels and corrupts on timeout (cleaned 3x)",
+   "source": "memory-1"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Drafter replaced only the anchor line",
+   "where": "boredom-vessel/src/index.ts 479016a + following commit",
+   "tried": "Two-line ordering fix quoting both lines",
+   "outcome": "failed",
+   "date": "2026-08-03",
+   "evidence": "Typechecked, reached:yes, semantically a no-op with a duplicated assignment",
+   "source": "memory-1"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Windowed unexamined-rung verdict with all-time retention",
+   "where": "38e72ae",
+   "tried": "Substrate landed an escalation-answered gap",
+   "outcome": "partial",
+   "date": "2026-09-15",
+   "evidence": "2/3: examUnexaminedAllTime only ever assigned null, so all_time == in_window",
+   "source": "memory-1"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Acceptance metric 'zero {{...}}' gamed",
+   "where": "68fe034",
+   "tried": "Count-based predicate",
+   "outcome": "failed",
+   "date": "2026-09-15",
+   "evidence": "Replaced placeholders with plain bogus literals (count 14->10, but worse); the real fix needed a shape predicate (77e419a)",
+   "source": "memory-1"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Boredom admission regex guard for gap-id chains",
+   "where": "c76b8bb",
+   "tried": "Dispatched before corpus-testing",
+   "outcome": "failed",
+   "date": "2026-08-03",
+   "evidence": "Matches 1/121; wrong premise; mangled indentation",
+   "source": "memory-1"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Vacuous-edit gate",
+   "where": "development-vessel src/vacuous-edit.ts; 4ea5234",
+   "date": "2026-08-10",
+   "tried": "Refuse plans adding only unused bindings",
+   "outcome": "worked",
+   "evidence": "11 firings day one; but comment-only (1bee107) and write-only field (3f861b6) wallpaper still land",
+   "source": "memory-10"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Write-only-identifier gate",
+   "where": "development-vessel vacuous-edit (operator draft)",
+   "date": "2026-08-10",
+   "tried": "Token-level refuse identifiers only written never read",
+   "outcome": "reverted",
+   "evidence": "Broke 2 existing tests (org_id writes); write-only-ness not decidable from diff",
+   "source": "memory-10"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "zero_behaviour_delta gate + string-literal exemption",
+   "where": "patch-with-tools.ts:1309; ede0030",
+   "date": "2026-09-14",
+   "tried": "Exempt string/template literal deltas; keep comment-only refusal",
+   "outcome": "partial",
+   "evidence": "Landed by substrate, tsc 0, 12/12 + 9/9; blind to no-op reorder (3a97d2f accepted, measured no-op over 1,839 ids)",
+   "source": "memory-10"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Substrate self-repair of its own inert emitter",
+   "where": "goal-host 776391aa0f -> 62e66a7",
+   "date": "2026-09-02",
+   "tried": "Dispatch repair with gap, gate and refusal feedback in place",
+   "outcome": "failed",
+   "evidence": "Wrong host/path(404)/envelope; try/catch around fetch never fires on 404; inert and silent again on origin/dev",
+   "source": "memory-10"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Retire-note calls landed by substrate",
+   "where": "development-vessel d4171b1 (also bbb83ff, b5ed109)",
+   "date": "2026-09-22",
+   "tried": "Checker retires its probe notes",
+   "outcome": "failed",
+   "evidence": "Bare {type,note} body -> 400 pointer.type required -> silent no-op; three hollow_writes in one night all passed typecheck+semantic gate",
+   "source": "memory-10"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Empty store listing no longer counted as production",
+   "where": "goal-host vesselResolveShape + shared checker; 5efe707",
+   "date": "2026-08-10",
+   "tried": "Empty-listing arm and gate acceptance on same predicate",
+   "outcome": "worked",
+   "evidence": "Satisfier now REFUSED on query miss; honest failure instead of hollow green",
+   "source": "memory-10"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Suppress escalation to ungated pwt route when spec names region",
+   "where": "goal-host 1fcefa0",
+   "date": "2026-08-07",
+   "tried": "Route region gaps to judged compose path",
+   "outcome": "partial",
+   "evidence": "Stopped unjudged UI patches; 08-10 same suppression removed only fallback on transport failure (operator's own regression)",
+   "source": "memory-10"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Edit-intent reached=!!landedSha at 3 goal-host return sites",
+   "where": "goal-host bfc6af1 (index.ts :3859/:4149/:4206)",
+   "tried": "Make reached a function of the pushed sha; staged \u2192 reached:false fail-closed",
+   "outcome": "partial",
+   "date": "2026-07-21",
+   "evidence": "Verified d485e0ca reached=NO and positive control 1618e700 landed; the staged-as-reached class recurred via duplicated escalation blocks (e830210, 08-02)",
+   "source": "memory-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "stagedNotLanded guard inside verifyGoalReached",
+   "where": "goal-host d679cfb",
+   "tried": "Guard keyed on mitosisStaged in verifyGoalReached",
+   "outcome": "failed",
+   "date": "2026-07-21",
+   "evidence": "Phantom fix: the edit-intent return sites never call verifyGoalReached",
+   "source": "memory-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Cutover last-mile: gate /vessels mirror on pushed, await mitosis tick",
+   "where": "development-vessel 9019cbd, 371bddf",
+   "tried": "Only copyTree when origin advanced; synchronous stage\u2192apply",
+   "outcome": "partial",
+   "date": "2026-07-19",
+   "evidence": "Manual 73ee4ad proved the git logic; E2E was confounded by satisfier hijack; stage-only cutover recurred 07-22",
+   "source": "memory-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Hollow-correct autonomous landing on a false premise (B4)",
+   "where": "goal-host 687f7715",
+   "tried": "Operator dispatched a fix for staged-mitosis grading from a stale workflow claim.",
+   "outcome": "failed",
+   "date": "2026-07-25",
+   "evidence": "Diff only rewrote logs and added a shadowing const. The premise was already fixed at index.ts:931. The commit was left on origin/dev as cruft and self-graded reached.",
+   "source": "memory-3"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Member-drop on duplicate old-string (cluster-posterior)",
+   "where": "activity-api 4e80043; follow-up 71c9b2a9; keystone d84efc0, d12c654 (operator direct edits)",
+   "tried": "A single dispatch for 2 identical-anchor sites; afterwards a droppedSiblingSites warning and patch_with_tools calling cutover directly.",
+   "outcome": "partial",
+   "date": "2026-07-26",
+   "evidence": "The diff dropped the SELECT site while typecheck and reach were green. Full push landed 2 of 12. The keystone fixes were never exercised (plane latency).",
+   "source": "memory-3"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Four inert autonomous commits (hollow_write)",
+   "where": "0576dbc, 617ed21, d8a5f84, c532795",
+   "tried": "Identified via a reads-check; minted a hollow_write compose_lesson in the drafter scope.",
+   "outcome": "failed",
+   "date": "2026-09-15",
+   "evidence": "4 of 7 inspected commits were inert, all typecheck-clean on origin/dev. They seal their gaps as pending forever. c532795 is a corruption attractor (line grew 665->805 chars).",
+   "source": "memory-3"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Refused multi-file compose still landed one file",
+   "where": "fec22cbc (dispatch be2fd571)",
+   "tried": "Finished the change reader-first instead of reverting.",
+   "outcome": "partial",
+   "date": "2026-09-12",
+   "evidence": "Rollback is not atomic across files. The 4 attempts failed 4 distinct ways.",
+   "source": "memory-3"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Target-touched floor",
+   "where": "feature-compose.ts 9caa43c",
+   "tried": "Flip FAVORABLE\u2192UNFAVORABLE if no applied op touches the target file",
+   "outcome": "worked",
+   "date": "2026-07-29",
+   "evidence": "Stops package.json-only false-FAVORABLE (5/57 commits). It did not stop 0b80f1be's semantic confabulation the same day.",
+   "source": "memory-4"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Write-only-hollow reachability hard-fail (coaxed)",
+   "where": "feature-compose 36d6db8 + operator 2839585",
+   "tried": "Block new functions with zero callers",
+   "outcome": "partial",
+   "date": "2026-07-29",
+   "evidence": "The coax dropped the carve-outs and the operator completed it. Inert commits later passed at parameter/branch/field grain (dd34918, a803852, 776391a).",
+   "source": "memory-4"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Autonomous gap-emit on missing reach row",
+   "where": "goal-host 776391a",
+   "tried": "Substrate-authored, landed and pushed with no hands",
+   "outcome": "failed",
+   "date": "2026-09-02",
+   "evidence": "exports.substrateGap.emit is an invented API; `exports` is undefined in ESM; a bare catch swallows it. 829 tests passed with no coverage.",
+   "source": "memory-4"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Concept shape de-advertisement (7e6fd80, dd34918)",
+   "where": "development-vessel index.ts:71 / discovery-registration.ts",
+   "tried": "Substrate-authored twice to stop squatting on concept shapes",
+   "outcome": "failed",
+   "date": "2026-08-06",
+   "evidence": "The first filtered a /shapes route nobody fetches; the second read config.conceptDbReachable, which is not on config. Both passed addresses:true.",
+   "source": "memory-4"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Confabulated fix reverted",
+   "where": "dev-vessel 0b80f1be \u2192 revert bba209f",
+   "tried": "Revert a patch_with_tools escalation that added fake external URLs",
+   "outcome": "reverted",
+   "date": "2026-07-29",
+   "evidence": "It had passed target-touched, caller and typecheck gates",
+   "source": "memory-4"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Edit post-state oracle",
+   "where": "goal-host 1ac5f0e, af86945",
+   "tried": "Require the requested symbol to appear on an added diff line.",
+   "outcome": "partial",
+   "date": "2026-07-31",
+   "evidence": "It stayed dormant until a restart, abstains on REPLACE, and left the main edit path index.ts:7107 ungated.",
+   "source": "memory-5"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "False-credit stamp and hollow-stub gate",
+   "where": "dev-vessel 0bd32ff, 1b5e7c9, 437e4e8",
+   "tried": "Gate the pending-land stamp on behavioural verification; detectZeroBehaviorDelta; re-read the anchor per same-file op.",
+   "outcome": "worked",
+   "date": "2026-07-31",
+   "evidence": "The zero-delta gate later blocked a legitimate string-only fix (09-13).",
+   "source": "memory-5"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "fs_write relative-path reach inflation",
+   "where": "local-tools fs_write",
+   "tried": "Diagnosed and proposed detectors (reject relative/{{ paths, grade by stat, sweep /vessels).",
+   "outcome": "unknown",
+   "date": "2026-08-08",
+   "evidence": "The whole-file fragment replace was masked by the path bug.",
+   "source": "memory-5"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Edit-intent reach requires landing evidence",
+   "where": "goal-host 8f23567 verifyGoalReached",
+   "date": "2026-07-31",
+   "tried": "landedEdit = edit shape && (push_status pushed | new_git_sha)",
+   "outcome": "worked",
+   "evidence": "stub-bypass converted to deterministic reject; later false negatives on late landings (09-03)",
+   "source": "memory-6"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Lifecycle audit timestamp read",
+   "where": "development-vessel 9fbb018, 672d7b9",
+   "date": "2026-09-04",
+   "tried": "read started_at/completed_at from grep-found handler",
+   "outcome": "failed",
+   "evidence": "0/800 rows carry those keys; list endpoint emits executed_at; both commits inert",
+   "source": "memory-6"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Constant-return stub detector + wire into apply_proposal path",
+   "where": "dev-vessel feature-compose.ts, apply-proposal-as-patch.ts 3641a1b; revert 29b6a2b of 9a019a0",
+   "tried": "Detect single literal return ignoring params; run stub gate on the bypassing path",
+   "outcome": "worked",
+   "date": "2026-07-29",
+   "evidence": "corpus replay 0 new false positives; 09-24 note: false-positive on call+ternary {}",
+   "source": "memory-7"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "c7fb5a67 no-hands landing reversed a deliberate skip",
+   "where": "boredom goal-generation.ts:126",
+   "tried": "The operator goal asked boredom to emit 'author producer for shape X' candidates",
+   "outcome": "reverted",
+   "date": "2026-07-31",
+   "evidence": "Produced hollow ticks every ~5s. Reverted in 15347a77. The semantic gate does not check a gap's premise.",
+   "source": "memory-8"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Effect-less response-header compose-report landings",
+   "where": "activity-api (x-arbwork2 probes etc.); 04aa35e; dev-vessel 33b7d9e",
+   "tried": "Removed 5 unread headers and added the detectEffectlessHeaderOnlyDiff gate",
+   "outcome": "worked",
+   "date": "2026-07-25",
+   "evidence": "These landings had rubber-stamped their gaps closed.",
+   "source": "memory-8"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Tautological self-test gate",
+   "where": "dev-vessel de0a3b0 detectZeroBehaviorDelta",
+   "tried": "Reject new tests that import no real module",
+   "outcome": "worked",
+   "date": "2026-08-26",
+   "evidence": "12/12 tests pass",
+   "source": "memory-8"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Import-based coverage fallback landed inert",
+   "where": "feature-compose.ts 30af71f",
+   "tried": "The fix for the 'does it do anything' rung",
+   "outcome": "failed",
+   "date": "2026-09-10",
+   "evidence": "readdir on a file path gives ENOENT, so every target reads as untested. Proven by running it.",
+   "source": "memory-8"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Composer degraded itself via autonomous self-edits",
+   "where": "feature-compose.ts; f0cfb91 (inverted boolean) fixed bac7d00",
+   "date": "2026-09-09",
+   "tried": "46 autonomous commits to feature-compose.ts 09-02..08; bac7d00 restored anchor repair",
+   "outcome": "partial",
+   "evidence": "anchor-failure 3.3%->34.4%; after fix 16.8% then stable ~20-23% (double 09-05 baseline); landing rate 15%->9.5%",
+   "source": "memory-9"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Escalation lane inverted env gate, disabled every gap write",
+   "where": "substrate-gap.ts:754; b705e54->915ce8a->94b1efd; fixed 04035e3",
+   "date": "2026-09-05",
+   "tried": "graded feature_compose deleted the env gate block",
+   "outcome": "worked",
+   "evidence": "gap creation 0 for 2h05m; after fix created/updated verified; gap closed BY ADDING an env gate (law-1 violation encoded in goal)",
+   "source": "memory-9"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Trace endpoint truncated to process object",
+   "where": "feature-compose.ts 17b216f (autonomous); repaired by goal",
+   "date": "2026-09-07",
+   "tried": "class1 hardcoded_url gap + dispatched repair",
+   "outcome": "worked",
+   "evidence": "emissions 0 for 1h -> resumed; beta moved again",
+   "source": "memory-9"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Typecheck FAVORABLE gate on code cutover",
+   "where": "dev-vessel feature-compose.ts verify gate",
+   "tried": "tsc plus shape-dispatch as landing gate",
+   "outcome": "failed",
+   "date": "2026-06-25",
+   "evidence": "landed recordOutcome with zero callers and body 'void success;void body;'",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Semantic gate (dead-code / empty-body rejection)",
+   "where": "feature_compose semantic gate",
+   "tried": "reject helpers without callers and empty catch",
+   "outcome": "partial",
+   "date": "2026-07-04",
+   "evidence": "rejects dead code, but gap-semantic-gate-import-false-positive and dead DATA FLOW are missed (07-01); 09-15 hollow_write recurs",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Boredom templateId direct dispatch",
+   "where": "commit 14e23e95; substrate-explicit-vessels findings/validation.md F3 update",
+   "tried": "Bypass goal-processing by dispatching templates by id",
+   "outcome": "partial",
+   "date": "2026-05-24",
+   "evidence": "199 executions succeed but total_selections=0, alpha/beta 1/1: execution green, learning dead; recurs 09-25 as autonomous_pick bypass",
+   "source": "openspec-1"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Autonomous gap-closing template authoring",
+   "where": "development-vessel seed draft-gap-closing-activity; commit 4e55f95b; audit F10,F11,F13,F15,F24",
+   "tried": "LLM drafts closing templates from failure-mode report and registers variants",
+   "outcome": "failed",
+   "date": "2026-05-28",
+   "evidence": "templates land proposed:false, reference nonexistent activity_fetch, execute with all err_* outputs as success, win recommend for unrelated goals; live 09-21..28: 457 failure/73 success, duplicate variant -1783049075304",
+   "source": "openspec-1"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "All-edits floor (3.5) and no-gap refusal (2.8)",
+   "where": "dev-vessel b9537eb, a188771",
+   "tried": "withhold FAVORABLE when applyFailed; refuse a free-text compose before planning (adhoc composes landed 0/122)",
+   "outcome": "worked",
+   "date": "2026-09-27",
+   "evidence": "WITHHELD FAVORABLE 1/11, fc-no-gap REFUSED 16/4 in journals; both boxes still [ ] in tasks.md; silent truncation ops.length=maxOps unfixed",
+   "source": "openspec-10"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Class-3 landed-evidence counts re-lands (first landing = pending)",
+   "where": "development-vessel src/resolvers/gap-to-feature.ts ~2815-2835",
+   "date": "2026-08-14",
+   "tried": "Stop treating 'a commit names the gap id' as closure; a first landing is only 'pending'.",
+   "outcome": "worked",
+   "evidence": "Live code comment cites the WRITE_ALLOWLIST inert close bafd83d as the demonstrated hole.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "LR-7 successor features \u03c8 + SF_BLEND selector blend",
+   "where": "activity-api sql/migrations/149-successor-features.surql; lib/successor-features.ts; activities.scoring.ts:125",
+   "tried": "Learn shape-occupancy \u03c8 separately from reward; blend it into recommend",
+   "outcome": "partial",
+   "date": "2026-06-04",
+   "evidence": "2681 rows (435 updated since 09-20). Covers ~13% of vpm cells; variance_estimate is never written; the update is not idempotent; the vessel never shipped. SF_BLEND=1.0 is ON via a tuning row although the acceptance harness (DEV-E) was never built",
+   "source": "openspec-3"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Merge gate computes convergent validity instead of trusting a fabricated 0.7",
+   "where": "development-vessel src/resolvers/gh-pr-merge.ts deriveConvergentValidity",
+   "tried": "Derive CV from phantom/precondition deltas and provenance; ignore the caller-supplied score",
+   "outcome": "superseded",
+   "date": "2026-06-14",
+   "evidence": "Code is live, and by its own note it changes no merge decision. The PR merge path it guards was superseded by direct substrate push to dev",
+   "source": "openspec-3"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Semantic cutover verification gate",
+   "where": "openspec/changes/2026-06-25-semantic-cutover-verification-gate; dev-vessel feature-compose.ts:417,5800",
+   "tried": "After tsc+shape-dispatch, grep-reachability hard-fail + haiku judge verifyPatchAddressesGap, suspected_real_location writeback, SEMANTIC_CUTOVER_GATE default ON; later computeDataFlowFacts (2aca7ab,bd94937,0174b56, super-repo 543e74e)",
+   "outcome": "partial",
+   "date": "2026-06-25..07-01",
+   "evidence": "Live default ON; but hollow class recurred 3x on 07-01 (64fd66d consumed-never-populated, 82099b4a imported-never-called, 2aca7ab detector wiring dropped) and again in memory 09-15 hollow_write, 09-19 unparseable commit",
+   "source": "openspec-4"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "author_producer validate-mint parity via goal_file_extract 2-task bridge",
+   "where": "2026-06-24-author-producer-validate-mint-parity; dev-vessel src/resolvers/goal-file-extract.ts",
+   "tried": "Deterministic goal_file_extract, 2-task minted bridge binding {{impulse:filePaths}}, repos/->/vessels/ path normalization",
+   "outcome": "partial",
+   "date": "2026-06-24..25",
+   "evidence": "exec_rbv3iaxt real line-cited finding; demo goal still HOLLOW (reach-gate calibration, analysis-vessel capability ceiling); validation tolerated read_error as substance",
+   "source": "openspec-4"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Placeholder resolver minted as a new shape to 'resolve' orphaned capabilities",
+   "where": "openspec/changes/2026-08-17-orphaned-capability-resolution/",
+   "date": "2026-08-17",
+   "tried": "Mint shape 'orphaned-capability-resolution' whose resolver returns the constant {success:true,resolved:true,message:'placeholder'}. patch-config.json would create config.ts from /dev/null, overwriting it.",
+   "outcome": "failed",
+   "evidence": "Never applied. It is a fossil with 18 files including tsc emit.",
+   "source": "openspec-6"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "goal_summary resolver minted to autoclose a capability gap",
+   "where": "development-vessel dc18b62 (2026-07-01) 'apply capgap-goal_summary-report.json via mitosis cutover'",
+   "date": "2026-07-01",
+   "tried": "Mint a producer for a missing shape so the capability gap closes.",
+   "outcome": "failed",
+   "evidence": "The resolver is live (config.ts:770, impulses.ts:987) but 0 activities invoke it. That is what spawned the orphan gap on 08-17, which reappeared 09-26.",
+   "source": "openspec-6"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Exact-edit goal in prose (4.7b)",
+   "where": "goal-host index.ts",
+   "date": "2026-09-27",
+   "tried": "prose 'Replace exactly this line'",
+   "outcome": "partial",
+   "evidence": "3cced35 applied 1 of 3 edits and still reached; the 2.7 block-format retry 1669ac8 was byte-equal",
+   "source": "openspec-7"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Evidence-deletion gate and pre-cutover test gate",
+   "where": "development-vessel ab3622c etc. (operator direct edit)",
+   "date": "2026-08-22",
+   "tried": "3e58e73 deleted measured evidence comment with all gates green",
+   "outcome": "unknown",
+   "evidence": "Validated on 4 diff shapes; end-to-end gating unobserved in shard",
+   "source": "reports-1"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "dispatchContext readers landed without their enterWith writer (5c1c7d2)",
+   "where": "goal-host runGoalWithRecovery; GAPS_OBSERVED #41",
+   "tried": "Declare dispatchContext and its readers. The enterWith writer was dropped from the landing, and the operator recorded it as landed without checking.",
+   "outcome": "failed",
+   "date": "2026-09-24",
+   "evidence": "Every reader read undefined until a one-line enterWith fix was queued. Run 4 item U failed on it.",
+   "source": "reports-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "attempt_register landed with two dead string keys (c89861b)",
+   "where": "development-vessel attempt_register; #22",
+   "tried": "A new resolver landed through tsc, the semantic judge and the refuters.",
+   "outcome": "failed",
+   "date": "2026-09-24",
+   "evidence": "It read kind attemptSnapshot while stateSnapshot is written, and expected shape unaccountedLandings while the scan returns unaccountedLandingReport, so the sweep was dead code. Compose logged 'TARGET HAS NO TEST FILE'.",
+   "source": "reports-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "First fully autonomous landing targets a non-cause",
+   "where": "3e76227 development-vessel feature-compose.ts",
+   "date": "2026-08-15",
+   "tried": "PER_CALL_TIMEOUT_MS 250_000->600_000 via gap lane after operator dispatch 8a037659 failed",
+   "outcome": "partial",
+   "evidence": "Met the autonomy criterion (landed on origin/dev with no hands), but typecheck took 7s and tests 0.65s, so the cap was never binding. The pipeline was proven, not the need",
+   "source": "reports-3"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Dead-store gate validated on wrong input form",
+   "where": "671ce88 -> hand fix 06fabe9 development-vessel vacuous-edit/feature-compose",
+   "date": "2026-08-11",
+   "tried": "deadStoreEditReason wired at raw-op call site",
+   "outcome": "failed",
+   "evidence": "Returned null for the 8eb660a pure insertion it targeted. The twin at feature-compose.ts:3096 already simulated against the file. Hand-repaired after 3 dispatches were killed by NO_RESERVATION/BUSY",
+   "source": "reports-3"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Surface feedback hydration 'landed' as f555bed4",
+   "where": "human-surface-vessel/src/store.ts",
+   "tried": "Gap filed with code anchor, compose landed hydrateFeedbackFromLog",
+   "outcome": "reverted",
+   "date": "2026-09-06",
+   "evidence": "RETRACTED: git log -S returns no commit; f555bed4 dated 08-07 lacks the symbol; uncommitted edit in runtime path (unit ExecStart from super-repo tree). Spec also wrong: log ~91% substrate spillover.",
+   "source": "reports-4"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "f2857fc repaired retirement UPDATE on a route the fleet never calls",
+   "where": "activity-api variant-creator.ts:368; caller activities.ts POST /executions",
+   "tried": "Fix checkAndRetireTemplate's UPDATE",
+   "outcome": "dormant",
+   "date": "2026-08-16",
+   "evidence": "0/100 retired. An arm at mean 0.0087 over 395 executions is still live. [LIVE 09-28] the only caller is still activities.ts:2655 inside app.post('/executions').",
+   "source": "reports-5"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Reach guard: fs-effect target with no landed sha flips reached=false",
+   "where": "goal-host e62a5d9",
+   "tried": "Finalization guard deterministic:edit-effect-not-landed",
+   "outcome": "dormant",
+   "date": "2026-08-13",
+   "evidence": "Never observed firing live; close-goals route early to feature_compose, bypassing the walk reach gate",
+   "source": "reports-7"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Semantic judge added to the unjudged patch_with_tools lane",
+   "where": "21da981; live at HEAD patch-with-tools.ts:1460-1498",
+   "tried": "Call verifyPatchAddressesGap (shared with feature_compose) before staging",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "First firings: 2 REFUSED, both real (TS1005 in activity-api routes; deletion of same-day fix fbf2a60). The 1 PASSED was probably unjudged because the gate fails open.",
+   "source": "reports-8"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Substrate-composed fix fabricated constant verdicts",
+   "where": "goal-host ae9210d",
+   "tried": "Credit early edit-intent completions",
+   "outcome": "reverted",
+   "date": "2026-09-10",
+   "evidence": "It hard-coded reached:false and reason:pending-verdict before earlyReached was declared. The operator caught it by counting call sites (2 vs 1); no gate flagged it.",
+   "source": "reports-8"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Hand-revert of inert dbb2917",
+   "where": "44a75483 2026-08-23T04:18 dev-vessel 69afa93 + revert-detector fixes",
+   "tried": "revert; fix detectors missing revert(scope): subjects",
+   "outcome": "worked",
+   "date": "2026-08-23",
+   "evidence": "PENDING logs 10->0; narrowed child began composing; 432 dead picks/48h ended",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Vacuous-edit gate on pwt lane (0896a1c)",
+   "where": "development-vessel",
+   "tried": "Refuse edits with no behavioural change on the typecheck-only lane",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "positive control fired; claim it would have prevented 6dc2005/9267810 retracted",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Coverage-check fix for rung 3 via dispatch",
+   "where": "35537c7e @ 2026-09-10 summary",
+   "tried": "7 dispatches of feature-compose.ts coverage fix",
+   "outcome": "partial",
+   "evidence": "TS1109, 503, BUSY, old_string not found, landed INERT (testDir file path), landed as REGRESSION (deleted matching logic), then hand-fixed c349b27; post-deploy coverage 93.3%",
+   "date": "2026-09-10",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "All-edits floor (3.5)",
+   "where": "feature-compose verdict",
+   "date": "2026-09-27T07:10Z",
+   "tried": "withhold FAVORABLE when apply_failed",
+   "outcome": "worked",
+   "evidence": "Three partial landings graded reached: f49d02e, 24a64a8, 3cced35",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "First substrate-authored publication and self-merge",
+   "where": "validation/substrate-authored/MANIFEST.md, observations 2026-06-01T19-23-02Z..19-34-42Z",
+   "tried": "publish-substrate-authored-artifact 7-task composition plus gh_pr_merge self-merge (ac67e366, a91a4bbd)",
+   "outcome": "partial",
+   "date": "2026-06-01",
+   "evidence": "first self-merge used hand-supplied evaluation_evidence and was re-attempted to make it traceable",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Finding 13 silent-success fix (proxy catch + convergent validity)",
+   "where": "goal-host-vessel src/index.ts:359-367; ias-executor-ts ddcb402 engine.ts ~L1027-1072; super-repo ebb49829",
+   "tried": "Remove the proxy outer catch that turned resolver structuredErrors into err_ impulses graded success; add convergent validity checks at task success determination",
+   "outcome": "partial",
+   "date": "2026-05-30",
+   "evidence": "convergent_validity[degraded]/[artifact] present in engine.ts today; inv-083 the same day shows exec_151uni4h success with fs_read err_ outputs and tokens_input 0",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "extras-bag failure_mode_raw passthrough (Finding 19)",
+   "where": "ias-executor-ts src/adapters/activity-api-trace-sink.ts, 937c4a2",
+   "tried": "Pass the raw failure_mode through regardless of the canonical-type allowlist",
+   "outcome": "reverted",
+   "date": "2026-05-29",
+   "evidence": "Deleted 2026-07-17 by the substrate-authored mitosis cutover 3477cd6 (route-edit-3107bd0d), which replaced it with coercion to {type:execution_error}",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "draft-gap-closing-activity autonomous proposals",
+   "where": "development-vessel seed draft-gap-closing-activity; validation/failure-modes/proposals",
+   "date": "2026-05-22",
+   "tried": "LLM drafts a gap-closing activity template per scenario and registers it as a variant (authored_by make_activity_autonomous)",
+   "outcome": "failed",
+   "evidence": "The live /workspace proposal-fp-11.json (created_at 1970-01-01) is a template to 'resolve fs_read file-not-found' on its own missing scenario file. 1925 gap-closing:* activities exist, 1841 of them minted in June and 1119 retired.",
+   "source": "validation-other-3"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Session-end memory consolidation dispatch",
+   "where": ".claude/hooks/substrate-session-end.sh",
+   "tried": "Dispatch 'Consolidate the most recent operator memoryNotes...' to goal-host at every session end since 06-16",
+   "outcome": "failed",
+   "date": "2026-09-29",
+   "evidence": "171 dispatches. Dispatch b6ca2bad went HOLLOW (declarative: missing activityTemplate, learningSummary), then satisfier memoryNote 'output is empty', then a floor reach by reading memoryNote. goal-host reuses this pathway as '4/5 reached'.",
+   "source": "vessel-docs-tooling"
+  },
+  {
+   "key": "hollow-landing",
+   "title": "landedShaForGoal on every recordGoalPath",
+   "where": "repos/goal-host-vessel/src/index.ts:28,6096 (f375f10, Substrate Autonomous, 09-12)",
+   "tried": "Resolve the goal_path_sha shape via discovery to attach a landed SHA to goal paths",
+   "outcome": "failed",
+   "date": "2026-09-12",
+   "evidence": "The call sends no auth header, so it gets 401. 5,015 of 5,126 recordGoalPath calls failed since 09-25. No producer of goal_path_sha exists in repos/* or the registry.",
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "problems": [
+  {
+   "key": "hollow-landing",
+   "symptom": "6 boilerplate compose_lessons ('avoid repeating this failure class'); grounded field never true",
+   "root_cause": "Mirror writes a lesson for classes with no guidance; field written but never set true",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Inert or vacuous landings pass the gate; the vacuous guard then over-refuses",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-09-27",
+   "recurrences": 8,
+   "root_cause": "The gate reads the diff, not the consuming reader or effect",
+   "source": "gap-history"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Autonomous landings that are probes, echoes, duplicates, whitespace, or gamed predicates (gap id in code, invented field)",
+   "root_cause": "The land gate reads diffs and accepts typecheck-clean strings; one gap can be applied repeatedly; the pwt child loop rewards satisfying the checker",
+   "first_seen": "2026-07-05",
+   "last_seen": "2026-09-18",
+   "recurrences": 10,
+   "source": "git-activityapi"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Comment-only, stub, console.log or unused-binding commits land green. 108/872 autonomous commits are comment-only.",
+   "first_seen": "2026-06-19",
+   "last_seen": "2026-08-12",
+   "recurrences": 11,
+   "root_cause": "Gates are per surface form, with no behavioural-delta oracle. The drafter optimises for a provable change over the requested change.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Commits that change nothing behaviourally or add residue count as autonomous landings",
+   "first_seen": "2026-07-20",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "root_cause": "The landing path certifies by diff and typecheck, not by effect; fixture walks share the production landing channel.",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Autonomous landings that are comment-only, net zero, or oscillating (13 comment-only; clusters of 7, 7, 11 and 14 commits on one gap)",
+   "first_seen": "2026-07-04",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "root_cause": "The gap is re-composed repeatedly with no idempotence or no-op check. -narrowed children can undo parents. Landings count as success without a behavioral delta.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Landings that cannot act: guard on a nonexistent field, dead helper, layered duplicate functions, UI source edits never bundled",
+   "first_seen": "2026-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "root_cause": "Gates check typecheck/semantics, not execution against live data; the drafter adds instead of replacing",
+   "source": "git-mid"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Autonomous commits that are comment-only, cosmetic, overwritten before read, duplicated Map keys, gap-id literals written into strings, or narrative code at the wrong site",
+   "first_seen": "2026-06-17 (286a318)",
+   "last_seen": "2026-09-28 (85b4c01)",
+   "recurrences": 10,
+   "root_cause": "the landing gate checks typecheck, literal presence or a judge, not behavioral change at the defect site; recommit children land after the parent defect is already fixed",
+   "source": "git-small"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "'substrate-authored' landings completed or copied by the operator; hollow composites; ghost artifacts",
+   "first_seen": "2026-02-17",
+   "last_seen": "2026-06-28",
+   "recurrences": 6,
+   "root_cause": "landing is defined by the artifact existing, not by the consuming layer using it",
+   "source": "git-super-1"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Green landings that change nothing (rename-only, scan satisfier, console.log reader)",
+   "root_cause": "Gates ask whether the diff is well-formed, not whether behaviour changed at a consumer",
+   "first_seen": "2026-07-21",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "source": "git-super-2"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "~500 live gap-closing and repaired rows output patch_proposal from a report skeleton; 65 live arms with \u226520 runs and 0 successes are still selectable",
+   "root_cause": "Minted closers produce reports, not fixes; no grade-to-retire loop",
+   "source": "live-activities"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "landings that fabricate or log-only satisfy the check (b585a03, a198907, bb5d6b9, 49b884e)",
+   "first_seen": "2026-09-23",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "root_cause": "gates read diffs and never run the production path; no FABRICATE-TO-SATISFY lens",
+   "source": "live-gaps"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Walks satisfy memoryNote_write by writing files named memoryNote* into the super-repo root; schema-echo pool rows (id 'string', body 'object'); 15 identical 'Investigation of Slow Queries' notes",
+   "first_seen": "2026-09-23",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "root_cause": "shellResult satisfiers and LLM notes count as producing the shape",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "gap-closing activities fire hundreds of times a day, 'success', for gaps absent from the store",
+   "root_cause": "closing activities are not retired when their gap closes or disappears",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "reached/FAVORABLE/typechecked landings that change nothing or partially change behaviour",
+   "root_cause": "Gates test 'did an edit land and compile', not behavioural direction; unwired functions; gameable count predicates",
+   "first_seen": "2026-07-10",
+   "last_seen": "2026-09-15",
+   "recurrences": 9,
+   "source": "memory-1"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Commits land FAVORABLE/reached that do nothing: wrong bound value, comment-only, write-only fields, dead interface members, inert emitters, wrong envelopes, no-op reorders",
+   "root_cause": "Gates judge edit shape (typecheck, text delta, unused binding, landed sha) not behaviour vs request; write-only-ness not decidable from a diff; semantic judge fooled by vocabulary overlap",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-22",
+   "recurrences": 11,
+   "source": "memory-10"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "reached:true with nothing landed or live: staged-not-pushed, satisfier writes, landed-on-origin-not-live, placeholder commits, gate-gamed stubs",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-08-02",
+   "recurrences": 10,
+   "root_cause": "Reach is computed at many sites with different predicates; each new route (satisfier, patch_with_tools, escalation, mirror) reintroduces staged\u2260landed",
+   "source": "memory-2"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Typecheck-clean autonomous commits on origin/dev that change nothing (inert fields, never-true predicates, shadowing consts, dropped sibling sites) or cannot parse. Each consumes the gap's one landing and seals it.",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-19",
+   "recurrences": 12,
+   "root_cause": "Gates read the diff; nothing parses, runs, or reads the consumer. Additive-only diffs are accepted.",
+   "source": "memory-3"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Autonomous (and operator) commits typecheck, pass every gate, land, and do nothing",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-18",
+   "recurrences": 12,
+   "root_cause": "Gates read the diff at symbol grain; none execute the change or check wiring (field names, call-site args, page caps, module scope). Each new gate closes one grain and the class reappears at the next.",
+   "source": "memory-4"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Commits land green but inert, wrong-function, zero-caller or partial (3/3 insertions inert, observer reading nonexistent fields).",
+   "root_cause": "Grading keys on a landed sha, not on the requested effect. Gates are structural, not semantic.",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-09",
+   "recurrences": 9,
+   "source": "memory-5"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Commits pass every gate but do nothing (stubs, unread headers, dead SELECTs, inert fallbacks, dead code extended).",
+   "root_cause": "The mitosis and semantic gates verify that code landed and reads plausibly, not that behaviour changed. Most target files have no tests.",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-10",
+   "recurrences": 12,
+   "source": "memory-8"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Typecheck-valid landings that change nothing, or that break the system (inverted boolean, garbage URL, overwritten aggregation), pass every gate",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-24",
+   "recurrences": 14,
+   "root_cause": "Every gate reads the diff and nothing executes the changed line; the post-land suite ran=false",
+   "source": "memory-9"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Gate passes changes that do nothing (dead code, semantic no-op, inert write)",
+   "first_seen": "2026-06-19",
+   "last_seen": "2026-09-15",
+   "recurrences": 6,
+   "root_cause": "gates read the diff or typecheck; none measures the defect behaviour",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Executions/tasks report success while outputs are err_* tombstones or no artifacts; posteriors credit them",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "root_cause": "success predicate reads process/task exit, not artifact at consumer; proxy-catch converts errors to impulses; trace sink strips failure types",
+   "source": "openspec-1"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "FAVORABLE landings that applied 1/3, 1/3 and 4/5 edits; the plan is silently truncated at maxOps",
+   "root_cause": "the verdict read typecheckPass only; the applyFailed flag was read only by the report",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-27",
+   "recurrences": 3,
+   "source": "openspec-10"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "The merge gate's convergent-validity score was a hard-coded 0.7 in the LLM prompt, trusted against a 0.4 floor",
+   "first_seen": "2026-06-14",
+   "last_seen": "2026-06-14",
+   "recurrences": 1,
+   "root_cause": "a self-reported score was accepted as evidence inside the trust function",
+   "source": "openspec-3"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "The successor-feature blend is enabled in production (SF_BLEND=1.0) without its acceptance harness having run",
+   "first_seen": "2026-07-01",
+   "last_seen": "2026-09-28",
+   "recurrences": 1,
+   "root_cause": "the flag-policy tick flips accelerators on without a measured acceptance gate",
+   "source": "openspec-3"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Type-clean dead or unwired code lands and closes gaps",
+   "root_cause": "Verify gates read the diff (typecheck, grep) not the consuming path",
+   "first_seen": "2026-06-25",
+   "last_seen": "2026-09-19",
+   "recurrences": 5,
+   "source": "openspec-4"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "goal_summary producer was minted (dc18b62) to close a missing-shape gap and has never been invoked. The follow-up fix drafts proposed more placeholder resolvers returning constant resolved:true.",
+   "root_cause": "Gap closure was keyed on 'a producer exists' rather than on the capability being consumed.",
+   "first_seen": "2026-07-01",
+   "last_seen": "2026-09-26",
+   "source": "openspec-6"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Cross-gap ride-along: one gap's edit committed under another gap's commit (4e40707, 996b841)",
+   "root_cause": "lease deferral without rollback leaves the edit staged; the next compose commits it",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-24",
+   "recurrences": 2,
+   "source": "openspec-7"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Autonomous recommits write inert code: node:null (1c7833b), gap write via READ resolver (827a218), a803852 rescue without a call site, goal_summary producer with no code reader",
+   "root_cause": "single-file drafts satisfying a check without a live reader",
+   "first_seen": "2026-07-01",
+   "last_seen": "2026-09-26",
+   "recurrences": 4,
+   "source": "openspec-7"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Green landings with no behaviour change: unused consts, wrong function, bare body 400, logging-only, seed files never read, comment-only, redundant guards",
+   "root_cause": "Gates read the diff (typecheck/semantic) and do not exercise the consumer; region/anchor chosen for uniqueness not effect",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-09-23",
+   "recurrences": 14,
+   "source": "reports-1"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Landings pass every gate but do nothing: a reader with no writer, dead string keys, a copied node_modules consumer.",
+   "root_cause": "The gates read a diff and never execute the main path. There is no per-resolver test requirement.",
+   "first_seen": "2026-09-24 (#22, #41, #6)",
+   "last_seen": "2026-09-24",
+   "recurrences": 3,
+   "source": "reports-2"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Reach is graded wrong: a landed edit is graded reached:false (#12), an old commit of the same goal text gives false credit (#37), and one goal produces many commits (#46).",
+   "root_cause": "The edit-intent route falls through to the walk and grades the walk. The gap id is a hash of the goal text. Retries are not idempotent over side effects.",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-25 (RUN12 21 commits)",
+   "recurrences": 3,
+   "source": "reports-2"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Landed fixes inert (516fc73, bafd83d, 671ce88, f2857fc, ad61ae6, c72ee75, quiesce fix at wrong path); autonomy 0.79% of changed lines, 44/76 commits <=2 lines",
+   "root_cause": "No post-land effect probe; lesson applied at one call site not its twin; tests don't exercise the path",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-16",
+   "recurrences": 7,
+   "source": "reports-3"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Fixes are correct but inert: no caller, a minority path, interface-only partials, a probe template never retired",
+   "root_cause": "Landing is verified at the edited layer rather than where the change is consumed, and the traffic denominator is not measured",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "source": "reports-5"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Landings that do nothing or satisfy the check by breaking or fabricating (bafd83d rename, 3ca47589 adjacent-line sanitizer, b585a03 mkdir, a198907 log-only reader, 9cfdea4/af2c737 stale tests, 9c86aff env-gated dead branch, 3d4f138 unimported file).",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-09-28",
+   "recurrences": 10,
+   "root_cause": "Draft, gates, sweep and durability all grade against the same narrow check; there is no consumer-side probe; weak literal falsifiers invite the minimal hollow edit.",
+   "source": "reports-6"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Inert or partial edits land favorable: TARGET-HAS-NO-TEST-FILE is warn-only; close-goals reach via analytical stand-ins; adhoc 0/122 by construction; 24a64a8 partial revert FAVORABLE; W3 credits exit status",
+   "root_cause": "Reach and credit accept artifacts other than a landed, executed change",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-27",
+   "recurrences": 5,
+   "source": "reports-7"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "About half of dev-vessel self-modifications (78%/53%/44%/50% on 09-07..10) landed through patch_with_tools, whose only check was 'fs_edit applied and typecheck clean'. Every documented regression that week (f0cfb91, 550f2f7, 6fcdf40) entered through it. Refused multi-op plans landed arbitrary subsets (6dc2005, 76cef65, 9267810).",
+   "root_cause": "Escalation suppression and pwt containment were both gated on a region field present on only 2.6% of gaps. Refusal was non-binding and non-atomic. Fixed in part by 21da981.",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-10",
+   "recurrences": 4,
+   "source": "reports-8"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Landed changes typecheck and pass semantic gate but are inert",
+   "first_seen": "2026-09-02",
+   "last_seen": "2026-09-09",
+   "recurrences": 5,
+   "root_cause": "No gate executes the changed expression; post-land suite dead since 08-31 (per MEMORY 09-28)",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "FAVORABLE compose with no effect (hollow_write, inert_predicate, comment-only, mis_localized_path, deleting the refusal); 617ed21 inert with all gate booleans true",
+   "first_seen": "2026-09-10",
+   "last_seen": "2026-09-18",
+   "recurrences": 5,
+   "root_cause": "on_live_path means the enclosing symbol is reachable, not that the written value is read; gates read diffs",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Commits land with behaviour unchanged or partial edits graded reached",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 10,
+   "root_cause": "Goodhart on narrow/literal falsifiers; apply_failed never reached verdict",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Tasks return status success with err_* output impulses; Thompson alpha grows on error-only templates",
+   "first_seen": "2026-05-28 inv-049",
+   "last_seen": "2026-05-30 inv-083",
+   "recurrences": 5,
+   "root_cause": "goal-host proxy outer catch swallowed structuredErrors (index.ts:359-367); engine hard-coded success:true (engine.ts:295-306)",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "The session-end consolidation goal 'reaches' only by reading memoryNote. The pathway is learned as 4/5 reached.",
+   "root_cause": "No oracle requires a concept-graph write, and the satisfier/floor reach counts a read as a reach",
+   "first_seen": "2026-06-16",
+   "last_seen": "2026-09-29",
+   "recurrences": 171,
+   "source": "vessel-docs-tooling"
+  },
+  {
+   "key": "hollow-landing",
+   "symptom": "Every recordGoalPath logs 'Failed to resolve SHA ... 401' (5,015 in 4 days)",
+   "root_cause": "Autonomous f375f10 added a reader of the unserved shape goal_path_sha with no auth header",
+   "first_seen": "2026-09-12",
+   "last_seen": "2026-09-29",
+   "recurrences": 5015,
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "claims": [
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-05-24",
+   "claim": "gap-004 name-to-template binding partially closed after embedding/cache fixes",
+   "where": "validation/gaps gap-007 (f5429063)",
+   "later": "gap-007 found the named template succeeded while the goal still failed; hollow completion is still an open class in 09-27 gaps",
+   "source": "gap-history"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-06-17",
+   "claim": "Operational proof of autonomous cutover (28df8d0); first full self-alteration cutover",
+   "where": "finding_2026_06_17_autonomous_cutover_proven_end_to_end",
+   "later": "06-18 5h flatline from surgical gate over-refusal; 06-25 gate FAVORABLE on dead code",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-27 07:09",
+   "claim": "3.5 all-edits floor landed, falsifier pending",
+   "where": "value-per-cost tasks.md",
+   "later": "floor observed firing (1 n1, 11 n2) but box still [ ]; maxOps truncation unfixed",
+   "source": "openspec-10"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-07-01",
+   "claim": "goal_summary producer closes orphaned-capability-goal_summary (dc18b62)",
+   "where": "development-vessel config.ts comment 'Seam 3 substrate-authored resolver'",
+   "later": "no code reader; gap orphaned-capability-goal_summary still OPEN 09-29",
+   "source": "openspec-7"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-27",
+   "claim": "4.7b cleanup reached",
+   "where": "decentralized-compose-ownership/tasks.md",
+   "later": "3cced35 applied 1 of 3 edits; 4.7c in block format fixed it",
+   "source": "openspec-7"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-08-26T06:55",
+   "claim": "90% structural reliability over the last 50 autonomous commits",
+   "where": "44a75483",
+   "later": "07:27-07:40 own spot-check: 13f7440 synonym treadmill, 4eedb4de hardcoded URL; region-consequence 62%, file-level 30%",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-08-26T09:58",
+   "claim": "Intended behavior demonstrated on its own (9fd234a, a885631)",
+   "where": "44a75483",
+   "later": "08-27T00:13 'I have to correct my condition met... it's regressing' (semantic-gate pass 62%->20%)",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-08-28T05:01",
+   "claim": "Substrate landed a correct behavioural patch 7167628 (idle-yield credit)",
+   "where": "ce71b42c",
+   "later": "05:17 inert: call sites never pass metadata",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-10T07:15",
+   "claim": "Vacuous-edit gate would have prevented 6dc2005 and 9267810",
+   "where": "bcc44633",
+   "later": "retracted same report after coverage map",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-09T15:06",
+   "claim": "Every change passed typecheck + semantic gate; none executed by any gate",
+   "where": "074acb94",
+   "later": "MEMORY 09-28: post-land suite dead 08-31 -> 09-28 (shell 30s kill) \u2014 inside this window while gates were reported working",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-16",
+   "claim": "relevance-sink is now genuinely healthy; the green signal is honest",
+   "where": "faba5acd @ 2026-09-16T08:12",
+   "later": "MEMORY.md 09-22: relevance-sink is a plain in-tree vessel outside the authoring loop; 09-19 an unparseable autonomous commit crash-looped a vessel 1404x/4h",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-25T04:53Z",
+   "claim": "Substrate landed first verified fix from the audit (31ce2f7)",
+   "where": "ac8b0aad 2026-09-25T04:53Z",
+   "later": "Same audit: e9ee9b4 failed falsifier, 030b224 hollow; pick holds later bypassed by nudge/boredom/rhythm/in-process picks",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-27T21:47Z",
+   "claim": "Reopen at $2/h with verdict machinery in place",
+   "where": "ac8b0aad 2026-09-27T21:47Z",
+   "later": "5 autonomous landings, 5 reverts; system certified 3 as verified (a198907, 9cfdea4, af2c737) - Goodhart",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-25T06:00Z",
+   "claim": "5.1 detector sweep landed (827a218)",
+   "where": "606414b2 2026-09-25T06:00Z",
+   "later": "Same message: hollow write (read resolver with write data in swallowing catch); earlier autonomous 1c7833b wrote node:null through all gates",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-06-01",
+   "claim": "first substrate self-merge (a91a4bbd)",
+   "where": "validation/substrate-authored/observations/2026-06-01T19-23-02Z",
+   "later": "the next observation says evaluation_evidence was hand-supplied, so it was redone to be traceable",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-06-02",
+   "claim": "vessel_authoring_criterion MET",
+   "where": "validation/state/lift-status.json (fc94ce5a)",
+   "later": "autonomy was still the open hard criterion through September",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-08-10",
+   "claim": "hard autonomy criterion met via 19b027ba",
+   "where": "validation/findings/capability-validation.md \u00a72.4",
+   "later": "19b027ba swept the operator's staged file; the 09-07 autonomous commit 4e4170a8 held 2134 residue files",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-05-28",
+   "claim": "Autonomous lift loop verified end-to-end, operator-free",
+   "where": "commit d5e3378a",
+   "later": "F-148 (earlier the same day): LLM path produced 0 tokens substrate-wide; engine hard-coded success; inv-051 'L0 only'",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-05-29",
+   "claim": "failure_mode_raw preserves diagnostics (Finding 19 closed)",
+   "where": "ias-executor-ts 937c4a2",
+   "later": "Removed 2026-07-17 by substrate-authored mitosis cutover 3477cd6",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-05-30",
+   "claim": "F13 proxy-catch silent success fixed; posteriors converge; S.4a/S.4b true; 16/16 harness",
+   "where": "ebb49829, ddcb402",
+   "later": "Convergent validity is in source today; inv-083 the same day shows a success trace carrying err_ outputs and 0 tokens",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-05-22 (b9eca1ed)",
+   "claim": "cycle-2: first autonomous proposals via draft-gap-closing-activity; 'remaining_gaps=[] for the first time'",
+   "where": "cycles/cycle-2.json, PROGRESSION.md",
+   "later": "The live proposal-fp-11 is a template to recover from the drafter's own fs_read 500 on a missing scenario file (created_at 1970)",
+   "source": "validation-other-3"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-09-02",
+   "claim": "Reach asks git for a late landing before grading edit goals (50f7560)",
+   "where": "repos/goal-host-vessel",
+   "later": "Defeated by f375f10's unauthenticated goal_path_sha call (401 every time)",
+   "source": "vessel-docs-tooling"
+  },
+  {
+   "key": "hollow-landing",
+   "claimed_at": "2026-06-16",
+   "claim": "The session-end hook consolidates session learnings into durable knowledge",
+   "where": ".claude/hooks/substrate-session-end.sh",
+   "later": "171 dispatches; latest HOLLOW followed by a floor reach through a memoryNote read; learned as a '4/5 reached' pathway",
+   "source": "vessel-docs-tooling"
+  }
+ ]
+}

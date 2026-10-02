@@ -1,0 +1,19 @@
+{
+  "id": "mitosis_freshness_violation-development-vessel-mitosis-2026-08-29T09-58-56-471Z",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "other",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Mitosis mitosis-2026-08-29T09-58-56-471Z for development-vessel refused cutover: base_sha_mismatch. staged_base_sha=25ba",
+  "description": "Mitosis mitosis-2026-08-29T09-58-56-471Z for development-vessel refused cutover: base_sha_mismatch. staged_base_sha=25baf34b067b, current_live_sha=1f5e69119719. Live source has changed since this mitosis was drafted (or was never recorded); re-derive against current. Cites principle: resilient_against_unintended_changes.",
+  "goal_text": "Mitosis mitosis-2026-08-29T09-58-56-471Z for development-vessel refused cutover: base_sha_mismatch. staged_base_sha=25baf34b067b, current_live_sha=1f5e69119719. Live source has changed since this mitosis was drafted (or was never recorded); re-derive against current. Cites principle: resilient_against_unintended_changes.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": "resilient_against_unintended_changes",
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "mitosis_freshness_violation:development-vessel:mitosis-2026-08-29T09-58-56-471Z",
+  "source_gap_source": "substrate_detected"
+}

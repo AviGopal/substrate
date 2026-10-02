@@ -1,0 +1,358 @@
+{
+ "area": "development-vessel",
+ "items": [
+  {
+   "name": "cross-node spendEnvelope reader",
+   "location": "repos/development-vessel/src/resolvers/gap-to-feature.ts:4084",
+   "purpose": "One envelope binds all nodes by summing over every discovered pool producer",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Log line 'over 2 spend source(s)'.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "gap_to_scenario_bridge",
+   "location": "repos/development-vessel/src/resolvers/gap-to-scenario-bridge.ts + seed gap-to-scenario-bridge-tick",
+   "purpose": "Mirror gaps into drafter scenario JSON files; route capability gaps to vessel-scenarios",
+   "status": "broken",
+   "general": false,
+   "evidence": "Writes to the super-repo while readers use /workspace; 1428/1509 null vessel-scenarios; self-filed wasted-cycle gap (36x zero-work)",
+   "source": "validation-other-3",
+   "mentions": 1,
+   "sources": [
+    "validation-other-3"
+   ]
+  },
+  {
+   "name": "goal-host-behavior-scan",
+   "location": "repos/development-vessel/src/resolvers/goal-host-behavior-scan.ts",
+   "purpose": "Model goal directions",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "No static reader of goalHostBehaviorModel",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "httpResponse resolver (delegates to web_resource)",
+   "location": "repos/development-vessel/src/resolvers/http-response.ts",
+   "purpose": "trust-gated external fetch under the httpResponse shape",
+   "status": "live-used",
+   "general": true,
+   "evidence": "dispatched in src/routes/impulses.ts:406",
+   "source": "openspec-9",
+   "mentions": 1,
+   "sources": [
+    "openspec-9"
+   ]
+  },
+  {
+   "name": "http_response resolver (delegating)",
+   "location": "repos/development-vessel/src/resolvers/http-response.ts",
+   "purpose": "http_response shape delegating to the trust-gated web_resource fetcher",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Wired in routes/impulses.ts:68",
+   "source": "openspec-8",
+   "mentions": 1,
+   "sources": [
+    "openspec-8"
+   ]
+  },
+  {
+   "name": "operational_state recovery ladder",
+   "location": "repos/development-vessel/src/resolvers/operational-state.ts",
+   "purpose": "7-rung self-health verdict",
+   "status": "unknown",
+   "general": true,
+   "evidence": "used 09-10/11 (7/7 on 09-11); rung 2 was a latch, windowed in 48656e6; not seen after 09-11 in window",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "drainBoredomQueue / FAMILY_RESOLVERS",
+   "location": "repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts",
+   "purpose": "autonomous maintenance cadence",
+   "status": "live-used",
+   "general": false,
+   "evidence": "present; funnel_history grew 08-24",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "rhythm self-maintenance drift-commit",
+   "location": "repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts:126",
+   "purpose": "Detect vessel code drift and commit+push",
+   "status": "broken",
+   "general": false,
+   "evidence": "Produced 4e4170a8, e72a7fc8, 13c5d466, 796fac89, edc68d49 and 9d839e0 residue commits; held 09-28 via the rhythm budget",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "self-maintenance rhythm goal (detect-vessel-code-drift then vessel-code-commit-and-push)",
+   "location": "repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts:126",
+   "purpose": "Commit and push vessel clone drift",
+   "status": "broken",
+   "general": false,
+   "evidence": "Produced the 4e4170a8 (2134 files), 13c5d466 (1909) and 796fac89 (412) super-repo sweeps and a source truncation; still in source",
+   "source": "openspec-8",
+   "mentions": 1,
+   "sources": [
+    "openspec-8"
+   ]
+  },
+  {
+   "name": "autonomous drift-commit (self-maintenance rhythm goal)",
+   "location": "repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts:126 (walked goal: detect-vessel-code-drift then vessel-code-commit-and-push)",
+   "purpose": "Commit live-vs-clone drift",
+   "status": "broken",
+   "general": true,
+   "evidence": "~4,400 residue files at HEAD; truncation in git (7013d1cf); blocked node-1 ff (50830bec)",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "rhythm vessel-sync-and-health",
+   "location": "repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts:127",
+   "purpose": "LLM-walked goal: ff clones, mirror to /vessels, restart, check health",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "substrate-pull-sync",
+   "source": "git-deployment",
+   "mentions": 1,
+   "sources": [
+    "git-deployment"
+   ]
+  },
+  {
+   "name": "self-fact-reconcile fleet_inventory_copy",
+   "location": "repos/development-vessel/src/resolvers/self-fact-reconcile.ts:146",
+   "purpose": "Detect divergence between source and deploy inventory copies",
+   "status": "broken",
+   "general": false,
+   "evidence": "Both node-2 copies were truncated to one identical obsidian entry, so the check sees them agree.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "classifyFalsifier + falsifier_predicate",
+   "location": "repos/development-vessel/src/resolvers/substrate-gap.ts ~409-470, ~1006",
+   "purpose": "census of which gaps are machine-closable",
+   "status": "live-used",
+   "general": true,
+   "evidence": "f36c851 class1b; d312f43 preserve predicate; it is a census, not a producer",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "substrate-gap.ts systemctl kick of gap-compose.service",
+   "location": "repos/development-vessel/src/resolvers/substrate-gap.ts:1262,1329",
+   "purpose": "Start a compose on every gap write",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "GapDrainObserver (services/gap-drain-observer.ts) and the watchdog",
+   "evidence": "The service starts every 1-7 min. The timer's own LastTrigger is 09-28 11:45",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "needs-human escalation passthrough",
+   "location": "repos/development-vessel/src/resolvers/ui-write-passthrough.ts; gap-to-feature.ts:1238,2913",
+   "purpose": "Ask a human resolver when a gap fails repeatedly",
+   "status": "broken",
+   "general": true,
+   "evidence": "2873 THREW on node 2 because the local stateful-ui is masked.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "BASELINE_MAX_AGE_MS stale-baseline fail-open",
+   "location": "repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts",
+   "purpose": "don't compare against stale post-land baseline",
+   "status": "live-used",
+   "general": false,
+   "evidence": "cf28f52; landings resumed",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  },
+  {
+   "name": "dev-vessel bootstrap templates (ship-change etc.)",
+   "location": "repos/development-vessel/src/seed",
+   "purpose": "Commit routing, scaffolding, lift measurement",
+   "status": "dormant",
+   "general": false,
+   "evidence": "total_executions=0; no matching traces; re-seeded 09-28",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "complete-vessel-scaffold",
+   "location": "repos/development-vessel/src/seed/complete-vessel-scaffold.ts",
+   "purpose": "Substrate's canonical scaffold for new vessels",
+   "status": "broken",
+   "general": true,
+   "evidence": "Line 213 nests resolverContract; no systemVessel",
+   "source": "openspec-8",
+   "mentions": 2,
+   "sources": [
+    "openspec-8",
+    "openspec-9"
+   ]
+  },
+  {
+   "name": "draft-gap-closing-activity",
+   "location": "repos/development-vessel/src/seed/draft-gap-closing-activity.ts",
+   "purpose": "LLM-draft a gap-closing activity template per scenario",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Reads a hardcoded /workspace path. 338 July traces, 73 success. 1925 gap-closing:* outputs, 1119 retired. 7 rows have task path scenarios/.json.",
+   "source": "validation-other-3",
+   "mentions": 1,
+   "sources": [
+    "validation-other-3"
+   ]
+  },
+  {
+   "name": "GapDrainObserver",
+   "location": "repos/development-vessel/src/services/gap-drain-observer.ts",
+   "purpose": "Event-driven compose drain (the primary path)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Its websocket goes to the hub's activity-api, so it is unreachable from a spoke when the hub is down (per the substrate-gap.ts comment)",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "vacuousEditReason / inertRegexEditRefusal",
+   "location": "repos/development-vessel/src/vacuous-edit.ts; feature-compose 9c4e242; pwt 0896a1c",
+   "purpose": "refuse behaviour-free edits",
+   "status": "live-used",
+   "general": true,
+   "evidence": "real catches; coverage holes; ?-count carve-out",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "Shape-dispatch agreement lint",
+   "location": "scripts/check-shape-dispatch.ts in activity-api, concept-db, development-vessel",
+   "purpose": "advertised shapes match dispatch cases",
+   "status": "live-used",
+   "general": true,
+   "evidence": "wired into lint; runtime self-trace never built",
+   "source": "openspec-1",
+   "mentions": 1,
+   "sources": [
+    "openspec-1"
+   ]
+  },
+  {
+   "name": "Doc ingestion to concept-db + consultPrinciples top-4",
+   "location": "scripts/substrate/ingest-docs-as-concepts.ts; development-vessel feature-compose.ts",
+   "purpose": "Docs as runtime input to the drafter",
+   "status": "broken",
+   "general": true,
+   "evidence": "Reap refused 75/75 runs; 606 stale concepts; updated:10 every run; driven by systemd timer",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "obsidian-* resolvers in development-vessel",
+   "location": "src/resolvers/obsidian-*.ts (11), ui-*",
+   "purpose": "Human surface helpers",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Low execs; misplaced by locality",
+   "source": "git-devvessel-2",
+   "mentions": 1,
+   "sources": [
+    "git-devvessel-2"
+   ]
+  },
+  {
+   "name": "drift-commit writer (vessel-code-commit-and-push / 'vessel code drift detected and committed')",
+   "location": "substrate autonomous commit activity; evidence super-repo 4e4170a8, 796fac89; dev-vessel 9d839e0",
+   "purpose": "commit drifted vessel code",
+   "status": "live-used",
+   "general": true,
+   "evidence": "3 residue sweeps in 21 days; it is the source of the openspec strays and the 823 emit files",
+   "source": "openspec-9",
+   "mentions": 1,
+   "sources": [
+    "openspec-9"
+   ]
+  },
+  {
+   "name": "causal-adjudication.ts",
+   "location": "validation/scripts or development-vessel",
+   "purpose": "Predicate present at baseline / before-after adjudication",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Zero callers (CHECKINS 09-29 00:00)",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "migrate-memory-to-substrate.ts / memory-sync-tick / memory-pending-flush",
+   "location": "validation/scripts; dev-vessel ticks",
+   "purpose": "bridge operator files to substrate memory",
+   "status": "fossil",
+   "general": false,
+   "evidence": "05-23 design; no evidence of runs after July",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  }
+ ]
+}

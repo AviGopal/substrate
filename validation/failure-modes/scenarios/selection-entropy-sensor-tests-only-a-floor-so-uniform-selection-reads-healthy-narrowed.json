@@ -1,0 +1,19 @@
+{
+  "id": "selection-entropy-sensor-tests-only-a-floor-so-uniform-selection-reads-healthy-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from selection-entropy-sensor-tests-only-a-floor-so-uniform-selection-reads-healthy] repos/development-vessel/",
+  "description": "[narrowed from selection-entropy-sensor-tests-only-a-floor-so-uniform-selection-reads-healthy] repos/development-vessel/src/resolvers/selection-entropy.ts declares `const floor` twice — once at function scope and again inside the try block, where the inner one shadows the outer. The outer declaration is now dead: nothing between it and the try block reads `floor`. Remove the dead outer declaration.\n\nDelete this exact line, which is the one at function scope immediately following the `limit` declaration:\n  const floor = Number(p.entropy_floor ?? 0.5) || 0.5;\n\nKeep the other, indented copy inside the try block exactly as it is:\n    const floor = Number(p.entropy_floor ?? 0.5) || 0.5;\n    const ceiling = Number(p.entropy_ceiling ?? 0.95) || 0.95;\n\nChange nothing else. The file must still typecheck and the resolver must keep emitting overall_entropy, collapsed, never_converging, undifferentiated, entropy_floor and entropy_ceiling exactly as it does now.",
+  "goal_text": "[narrowed from selection-entropy-sensor-tests-only-a-floor-so-uniform-selection-reads-healthy] repos/development-vessel/src/resolvers/selection-entropy.ts declares `const floor` twice — once at function scope and again inside the try block, where the inner one shadows the outer. The outer declaration is now dead: nothing between it and the try block reads `floor`. Remove the dead outer declaration.\n\nDelete this exact line, which is the one at function scope immediately following the `limit` declaration:\n  const floor = Number(p.entropy_floor ?? 0.5) || 0.5;\n\nKeep the other, indented copy inside the try block exactly as it is:\n    const floor = Number(p.entropy_floor ?? 0.5) || 0.5;\n    const ceiling = Number(p.entropy_ceiling ?? 0.95) || 0.95;\n\nChange nothing else. The file must still typecheck and the resolver must keep emitting overall_entropy, collapsed, never_converging, undifferentiated, entropy_floor and entropy_ceiling exactly as it does now.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "selection-entropy-sensor-tests-only-a-floor-so-uniform-selection-reads-healthy-narrowed",
+  "source_gap_source": "substrate_detected"
+}

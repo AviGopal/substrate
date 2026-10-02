@@ -1,0 +1,54 @@
+[Unit]
+StartLimitIntervalSec=600
+StartLimitBurst=10
+Description=bootstrap-seeder (seed shared activity templates)
+# Run after activity-api is up so POST /v2/activities/templates is available
+After=identity-seeder.service activity-api.service
+# identity-seeder first: seeding with the pre-mint bootstrap key writes org-less
+# rows that fail schema validation (observed 2026-07-02 first-boot test).
+Wants=activity-api.service
+
+# Smoke test (task 3.3):
+#   docker exec substrate-live systemctl start bootstrap-seeder.service
+#   docker exec substrate-live systemctl status bootstrap-seeder.service
+#   docker exec substrate-live journalctl -u bootstrap-seeder.service --no-pager
+#   # Confirm catalogue restored: curl -s http://localhost:8080/v2/activities/templates | jq '.total'
+#   # For full wipe test: docker exec substrate-live rm -rf /var/lib/surrealdb/data
+#   # then restart substrate; templates should reappear within 30s of activity-api readiness.
+
+[Service]
+# Type=simple, NOT oneshot, and the distinction is the whole point.
+#
+# systemd does not consider a `oneshot` started until it EXITS, and
+# multi-user.target waits for every unit that wants it. Combined with
+# Restart=on-failure + RestartSec=20 + StartLimitBurst=10 below, a seeder that
+# keeps failing held the boot for up to ten minutes — and on a federated spoke
+# it fails readily, because it seeds 18 templates over the network to the HUB's
+# activity-api and those calls time out. Measured 2026-08-08 on a spoke restart:
+# `systemctl list-jobs` showed multi-user.target, stateful-ui-vessel,
+# boredom-vessel.timer, substrate-pull-sync.timer, self-recovery.timer and
+# substrate-ready all in `start waiting` behind this one unit, with
+# is-system-running still reporting `starting` fifteen minutes in.
+#
+# NOTHING orders after this unit — no After=, Requires= or Wants= anywhere in
+# units/ names it — so the target was waiting for it and getting no ordering
+# guarantee in return. Type=simple marks it started as soon as it forks; the
+# seeding still runs, still retries on failure, and no longer decides how long
+# the substrate takes to finish booting.
+#
+# The retry policy below is deliberately kept: it is what makes the seeder
+# converge without an operator when it races a cold DB.
+Type=simple
+EnvironmentFile=/etc/substrate/env
+WorkingDirectory=/vessels/ias-executor-ts
+ExecStart=/root/.bun/bin/bun /scripts/bootstrap-seeder.ts
+# Self-heal the boot race: the target vessel answers /health before its DB
+# connection is warm, so a too-early seed run fails. on-failure + generous
+# burst lets the oneshot converge without operator help (2026-07-02).
+Restart=on-failure
+RestartSec=20
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

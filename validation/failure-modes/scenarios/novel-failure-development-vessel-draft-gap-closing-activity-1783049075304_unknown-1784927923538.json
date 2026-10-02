@@ -1,0 +1,19 @@
+{
+  "id": "novel-failure-development-vessel-draft-gap-closing-activity-1783049075304_unknown-1784927923538",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "novel_failure_mode_detected",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "5 failure traces (development-vessel:draft-gap-closing-activity-1783049075304|unknown) orthogonal to all architectural p",
+  "description": "5 failure traces (development-vessel:draft-gap-closing-activity-1783049075304|unknown) orthogonal to all architectural principles (max sim=0.000 vs '<none>'). Centroid: development-vessel:draft-gap-closing-activity-1783049075304 unknown_failure no_task",
+  "goal_text": "5 failure traces (development-vessel:draft-gap-closing-activity-1783049075304|unknown) orthogonal to all architectural principles (max sim=0.000 vs '<none>'). Centroid: development-vessel:draft-gap-closing-activity-1783049075304 unknown_failure no_task",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "novel-failure-development-vessel:draft-gap-closing-activity-1783049075304|unknown-1784927923538",
+  "source_gap_source": "substrate_detected"
+}

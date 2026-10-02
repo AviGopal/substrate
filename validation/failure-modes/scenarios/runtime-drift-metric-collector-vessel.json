@@ -1,0 +1,19 @@
+{
+  "id": "runtime-drift-metric-collector-vessel",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The live runtime tree of metric-collector-vessel diverges from its committed source. 1 file(s) differ: index.ts. They pa",
+  "description": "The live runtime tree of metric-collector-vessel diverges from its committed source. 1 file(s) differ: index.ts. They parse, so this is an un-reverted edit rather than imminent breakage. NOT repaired (a compose holds a slot — in-place edits are expected right now). /vessels is a mirror of committed source; divergence with no compose holding a slot means an edit was applied and never rolled back.",
+  "goal_text": "The live runtime tree of metric-collector-vessel diverges from its committed source. 1 file(s) differ: index.ts. They parse, so this is an un-reverted edit rather than imminent breakage. NOT repaired (a compose holds a slot — in-place edits are expected right now). /vessels is a mirror of committed source; divergence with no compose holding a slot means an edit was applied and never rolled back.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "runtime-drift-metric-collector-vessel",
+  "source_gap_source": "substrate_detected"
+}

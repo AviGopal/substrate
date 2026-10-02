@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-9579f94e-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-9579f94e] investigate and decompose gap route-edit-04a17268: The gap store experienced a signi",
+  "description": "[narrowed from route-edit-9579f94e] investigate and decompose gap route-edit-04a17268: The gap store experienced a significant data loss, reducing from 4,113 rows to 44 due to loadGaps() returning an empty array on any read or parse failure, resulting in a destructive read-modify-write cycle.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/resolvers/substrate-gap.ts(607,11): error TS1005: ':' expected. | src/resolvers/substrate-gap.ts(607,36): error TS1005: ',' expected.\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 527-532 of 1248, VERBATIM:\\n527:   pointer: SubstrateGapReadPointer,\\n528: ): Promise<ResolverResult> {\\n529:   const gaps = awai\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-9579f94e] investigate and decompose gap route-edit-04a17268: The gap store experienced a significant data loss, reducing from 4,113 rows to 44 due to loadGaps() returning an empty array on any read or parse failure, resulting in a destructive read-modify-write cycle.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- syntax_break: src/resolvers/substrate-gap.ts(607,11): error TS1005: ':' expected. | src/resolvers/substrate-gap.ts(607,36): error TS1005: ',' expected.\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 527-532 of 1248, VERBATIM:\\n527:   pointer: SubstrateGapReadPointer,\\n528: ): Promise<ResolverResult> {\\n529:   const gaps = awai\n- compose_execution_failure: {\"error\":\"no_unique_anchor: refused fs_edit — planned anchor is non-unique and re-derivation found no unique substring (would mislocalize to first occurrence)\"}\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-9579f94e-narrowed",
+  "source_gap_source": "substrate_detected"
+}

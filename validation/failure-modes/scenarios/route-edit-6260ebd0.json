@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-6260ebd0",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts, insert one block.\n\nThe file contains this exact b",
+  "description": "In repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts, insert one block.\n\nThe file contains this exact block:\n\n  if (typeof t.started_at === \"string\") {\n    const v = Date.parse(t.started_at);\n    if (!Number.isNaN(v)) return v;\n  }\n\nImmediately after it, insert exactly:\n\n  const ex = (t as { executed_at?: unknown }).executed_at;\n  if (typeof ex === \"string\") {\n    const w = Date.parse(ex);\n    if (!Number.isNaN(w)) return w;\n  }\n\nInsert only. Do not modify any other line, interface, or function.",
+  "goal_text": "In repos/development-vessel/src/resolvers/activity-lifecycle-audit.ts, insert one block.\n\nThe file contains this exact block:\n\n  if (typeof t.started_at === \"string\") {\n    const v = Date.parse(t.started_at);\n    if (!Number.isNaN(v)) return v;\n  }\n\nImmediately after it, insert exactly:\n\n  const ex = (t as { executed_at?: unknown }).executed_at;\n  if (typeof ex === \"string\") {\n    const w = Date.parse(ex);\n    if (!Number.isNaN(w)) return w;\n  }\n\nInsert only. Do not modify any other line, interface, or function.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-6260ebd0",
+  "source_gap_source": "substrate_detected"
+}

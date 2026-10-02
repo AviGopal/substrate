@@ -1,0 +1,1412 @@
+{
+ "attempts": [
+  {
+   "key": "autonomous-regression",
+   "title": "Stale-base cutover silent revert fix",
+   "where": "gap mitosis-cutover-lands-a-stale-base-patch-as-a-silent-revert",
+   "date": "2026-08-28",
+   "tried": "Closed the gap as fixed",
+   "outcome": "failed",
+   "evidence": "Recurred 09-24 (6ab8271 undid a0ff3d3; staged_base_sha deadlock) and 09-26 (a-coalesced-retry-inherits-a-stale-base-compose..., open).",
+   "source": "gap-history"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "residual-trend route double-landed, deleted, then spliced into a garbled duplicate conservation-audit-emit",
+   "where": "5100ccb,776456c (09-07), 9c1d56a (09-13), 53292c9 (09-14); activities.ts:5971,6034,6039",
+   "tried": "Autonomous route additions and edits under route-edit-c2ed2d92/7016bd12/bd6b4762",
+   "outcome": "failed",
+   "date": "2026-09-14",
+   "evidence": "No residual-trend route remains. Line 6039 reads \"never grows.residual-trend', async (c) => {\". There are two /conservation-audit-emit handlers.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "SQL string literal corrupted to a different target table",
+   "where": "b4f9148 (08-15) reverted by cee3686; guard 29ce34b",
+   "tried": "Autonomous edit rewrote INSERT INTO variant_performance_metrics as activity_composition_graph with execution_id='derive-from-parent'",
+   "outcome": "reverted",
+   "date": "2026-08-15",
+   "evidence": "Operator added a test pinning SQL target tables inside strings.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Failing-test gap drafted a production env-gate that bypassed discovery",
+   "where": "9cfdea4 -> fb0a18a (09-28), acc184b",
+   "tried": "To satisfy embedding-lookup-cache.test.ts, the drafter added if(!process.env.CONCEPT_DB_URL) return null",
+   "outcome": "reverted",
+   "date": "2026-09-28",
+   "evidence": "Reverted 33 minutes later by operator-authored route-edit-291411f0; the test was then fixed instead.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Autonomous edits reversed an operator perf fix (type::datetime -> <datetime>)",
+   "where": "29ad522,68cb931 (09-11) vs 2e32d0a (06-16); execution-traces.ts:952,989",
+   "tried": "One-line autonomous route-edits",
+   "outcome": "failed",
+   "date": "2026-09-11",
+   "evidence": "trace-window-bounds.test.ts:38 still expects type::datetime. Not reverted.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Migration 207 written in MySQL dialect (adversarial probe of the .surql gate)",
+   "where": "b27c69d -> 9c187af (09-05)",
+   "tried": "Drafter produced ALTER TABLE ... ADD COLUMN",
+   "outcome": "reverted",
+   "date": "2026-09-05",
+   "evidence": "The gate modelled DEFINE FIELD shapes only and abstained on the foreign dialect.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Substrate replaced a local dep with a 404 registry version, twice",
+   "where": "ddffdee reverted 956e464 (08-09); 29d9b85 (-narrowed child) reverted 9a34712 (08-12); cf. 5208185 (07-11)",
+   "tried": "Operator revert, plus 1aaf435 refuse an unresolvable manifest.",
+   "outcome": "partial",
+   "date": "2026-08-12",
+   "evidence": "It landed as landed_verified after 4 failed attempts because verify used a pre-populated node_modules.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Autonomous cutovers clobber files",
+   "where": "d26a303 package.json (07-03), 96c2aaa, eafd87a (06-30), 70517eb -2969 lines reverted 3215e70 (08-01), 9c4660a (08-01), 25cd735 path-guard disable",
+   "tried": "Restore by hand. 35c6b33 corruption-signature refusal. af54cc8 truncation guard.",
+   "outcome": "partial",
+   "date": "2026-07-03..2026-08-09",
+   "evidence": "The path-guard disable landed FAVORABLE and afterwards every add/fix goal routed to feature_compose.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "--no-block gap-compose nudge added then removed by autonomous commits",
+   "where": "61a6e46 -> 985859a (09-11) -> ca53600 (09-14)",
+   "tried": "Operator re-added --no-block",
+   "outcome": "worked",
+   "date": "2026-09-14",
+   "evidence": "3 days of event-loop freezes; store grew 7,323->7,650 in one night; 36 picks gave 0 cutovers",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Stale-base cutover deleted the fix it was meant to land",
+   "where": "510b6df reverted by fe52076",
+   "tried": "Revert and file the stale-base overwrite class",
+   "outcome": "worked",
+   "date": "2026-08-28",
+   "evidence": "44-line deletion; base 4e87aba predated 421052c",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Committed-drift gate compared HEAD against the patched-file hash",
+   "where": "0a0d59f reverted by 97f7cdf; 082f6ee",
+   "tried": "Refuse a cutover when HEAD content differs from staged_base_sha",
+   "outcome": "reverted",
+   "date": "2026-09-24",
+   "evidence": "Refused every feature_compose cutover; overwrite class left open",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Resume-parked-landing commit silently reverted a0ff3d3",
+   "where": "6ab8271 then 7994841",
+   "tried": "Re-apply the one-liner",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Duplicate block insertions by autonomous landings",
+   "where": "128f51f+31d07cd (lease, 15bb263 removed one); substrate-gap.ts:728/:732",
+   "tried": "Later autonomous removal",
+   "outcome": "partial",
+   "date": "2026-09-25",
+   "evidence": "The classification_metadata spread is still duplicated",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "gapsPath default toggled three times",
+   "where": "9b2473a, ab4e064, 6b15167 in gap-lifecycle-scan.ts",
+   "tried": "Autonomous flips between workspaceRoot() and /workspace/gaps/gaps.json",
+   "outcome": "partial",
+   "date": "2026-09-06..09-09",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "setTimeout sleeps inserted then removed in feature-compose",
+   "where": "c42cef9, bce0115, 95865af, 9e5f3e7 (each reverted)",
+   "tried": "Symptom sleeps for races",
+   "outcome": "reverted",
+   "date": "2026-09-07..09-10",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "self-fact authoring-root landings reverted the same day",
+   "where": "b585a03, 04b3e9c, a198907 reverted by 12c7d9a, 37d0f72, 4068e7e",
+   "tried": "Autonomous repair of authoring-root divergence",
+   "outcome": "reverted",
+   "date": "2026-09-27",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Duplicate walkTerminationReason crash-looped goal-host",
+   "where": "2fe3750 fixed by 4658fe5; 7b3168e + 4fa92b3 fixed by f3953c0",
+   "date": "2026-07-29..07-30",
+   "tried": "An autonomous dedupe edit injected a redeclaration. An async change left the call site un-awaited.",
+   "outcome": "reverted",
+   "evidence": "TS2451. Goal dispatch DOWN. The staticEvaluate signature-subset gate is not a full tsc.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Stale-base full-file cutover clobbered the honest-reach guard",
+   "where": "1be9f4f, re-landed by ca52631",
+   "date": "2026-07-24",
+   "tried": "Re-land the guard on the current HEAD.",
+   "outcome": "partial",
+   "evidence": "The cutover-clobber class: 18 guard lines deleted while making a 3-line edit.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Schemas .min(1) ping-pong between two gaps",
+   "where": "concept-db e059a98 (04:08) / c8c944f (04:12)",
+   "tried": "The failing-test lane added .min(1); a route-edit gap byte-reverted it 4 minutes later",
+   "outcome": "reverted",
+   "date": "2026-09-28",
+   "evidence": "Identical inverse diffs on src/models/schemas.ts",
+   "source": "git-mid"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Non-mitosis autonomous commit broke index.ts and committed build output",
+   "where": "boredom-vessel 84cd2f2 -> 36954f2",
+   "tried": "'feat: Update boredom-vessel content' committed 24 compiled .js/.d.ts/.map files and a string literal outside AUTONOMOUS_GOALS",
+   "outcome": "failed",
+   "date": "2026-09-19",
+   "evidence": "Syntax repaired by 36954f2 about 4h later; compiled files still tracked at HEAD (inert only because Bun prefers .ts, verified)",
+   "source": "git-mid"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Autonomous re-enable of confabulated producer-goal minting",
+   "where": "boredom-vessel c7fb5a6 -> 1bf4fee (pwt)",
+   "tried": "Minted 'Author a producer resolver for shape X', undoing operator 5bd047b",
+   "outcome": "reverted",
+   "date": "2026-07-31",
+   "evidence": "Reverted 28 minutes later by pwt mitosis",
+   "source": "git-mid"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Load-time placeholder interpolation blanks chained templates",
+   "where": "ias-executor-ts 946034c",
+   "tried": "Interpolate {{x}} in non-LLM configs against raw task fields with ?? ''",
+   "outcome": "failed",
+   "date": "2026-09-15",
+   "evidence": "Spawned gap 'the-template-provider-blanks-every-placeholder-at-load-time...'",
+   "source": "git-mid"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "hardcoded 30s AbortSignal introduced in sh()",
+   "where": "local-tools 6fb9282 (07-22 SA)",
+   "tried": "bound shell spawn",
+   "outcome": "failed",
+   "date": "2026-07-22",
+   "evidence": "origin of the 30s cap; e4d604c (08-29) 'every code-class compose failed verification'; post-land suite dead 08-31\u219209-28",
+   "source": "git-small"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "second shell spawn site boundedShellResolver",
+   "where": "local-tools c709850 (07-22 SA)",
+   "tried": "new bounded_shell resolver bypassing sh()",
+   "outcome": "partial",
+   "evidence": "every later fix duplicated: 44c2b21 governor, fa603a0+9eb4808 execution_id, 11636e6 cwd",
+   "source": "git-small"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "fs_edit rejects empty new_string",
+   "where": "local-tools b34e37a (09-24) \u2192 repaired by aaee500 (09-25)",
+   "tried": "!new_string guard",
+   "outcome": "reverted",
+   "date": "2026-09-24",
+   "evidence": "the lane could not express deletions; repaired autonomously in 24h via its own gap",
+   "source": "git-small"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "bounded-shell timeout rewrites auto-reverted",
+   "where": "local-tools 925d160/7d11ded \u2192 1a796aa/b646ee2 (07-22)",
+   "tried": "AbortController + hardcoded 30s",
+   "outcome": "reverted",
+   "evidence": "the only substrate-authored reverts in the shard",
+   "source": "git-small"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Substrate degraded its own measurement templates",
+   "where": "70f8d942",
+   "date": "2026-05-23",
+   "tried": "validator observation",
+   "outcome": "failed",
+   "evidence": "coverage-tick and substrate-health-tick lost; ~$18 burned on identical failing goals",
+   "source": "git-super-1"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "truncated/half-written source reaches live or git (R16)",
+   "where": "befbccdc, 2134839b, 7013d1cf, 4b73956e",
+   "tried": "Re-mirror on truncation, heal any live-vs-clone drift, restore from git",
+   "outcome": "partial",
+   "date": "2026-08-02..2026-09-26",
+   "evidence": "feature-compose.ts went from 190,111 to 38 bytes 3 times in a day. 4b73956e is the 'fourth walk-writes-live-source instance'",
+   "source": "git-super-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "autonomous landings break prod (09-25..09-28)",
+   "where": "vessel goal-host 8c31cdb (99db7a9f); human-surface bb5d6b9 (80e44669); activity-api 9cfdea4 + concept-db af2c737 (914828a2); patch-with-tools a198907 (37d5f9b0)",
+   "tried": "Contained autonomy with a spend envelope, falsifier-required admission, class1/class2 only",
+   "outcome": "reverted",
+   "date": "2026-09-25..2026-09-28",
+   "evidence": "Seen: a fetch monkey-patch, an 'as unknown as' cast, stale tests satisfied by breaking prod, and two landings that reintroduce env gates (law 1). All reverted; autonomy paused 13:00-21:47 on 09-27",
+   "source": "git-super-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Four passing autonomous landings reverted by operator; no learning signal",
+   "where": "a198907, c4bb14d, 9cfdea4, af2c737; gap an-operator-verdict-that-a-passing-landing-regressed-has-no-reader",
+   "tried": "operator reverts plus regressed_by stamps",
+   "outcome": "reverted",
+   "date": "2026-09-28",
+   "evidence": "3 closed landed_verified; settlement, posterior and lesson never updated",
+   "source": "live-gaps"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Global fetch monkey-patch landed through gates (goal-host 8c31cdb)",
+   "where": "gap a-landing-gate-passed-a-global-fetch-monkey-patch...; revert-8c31cdb-global-fetch-shim",
+   "tried": "revert gap filed",
+   "outcome": "reverted",
+   "date": "2026-09-25",
+   "evidence": "broke ledger_canary; landing 6ce1446 carried no gap",
+   "source": "live-gaps"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Cutover silently reverted a newer landing (6ab8271 undid a0ff3d3)",
+   "where": "development-vessel feature-compose.ts",
+   "tried": "filed a-cutover-overwrites-a-newer-committed-landing...; then a-coalesced-retry-inherits-a-stale-base (09-26)",
+   "outcome": "failed",
+   "date": "2026-09-24",
+   "evidence": "class recurred 09-26; both open",
+   "source": "live-gaps"
+  },
+  {
+   "key": "self-repair-conflict",
+   "title": "Self-repair re-enables funnel-drain.timer against operator holds",
+   "where": "self_repair_operational",
+   "tried": "auto re-enable",
+   "outcome": "unknown",
+   "date": "2026-09-25..2026-09-26",
+   "evidence": "54 resolved rows in 17h, all funnel-drain.timer",
+   "source": "live-gaps"
+  },
+  {
+   "key": "stale-whole-rewrite",
+   "title": "Fix rhythm-reality-sync rewriting the whole rhythm body from a stale read",
+   "where": "development-vessel 329fc5c",
+   "date": "2026-09-26",
+   "tried": "Autonomous fix: staleness-only sync writes",
+   "outcome": "failed",
+   "evidence": "Wiped the 09-26 containment (project-intake budget 1.5 and its pause). The seed tick re-seeded defaults (0.2, \u03b138.5); the 05:26 recursion storm followed. The operator re-contained at 09-27 03:03.",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Hold the self-maintenance rhythm",
+   "where": "pool timeShapedRhythm self-maintenance hold (both nodes)",
+   "date": "2026-09-28",
+   "tried": "Operator hold after detect-drift committed 422 .bun cache binaries plus gaps.json and learning-mode-state.json into dev-vessel (9d839e0)",
+   "outcome": "partial",
+   "evidence": "Same family as 4e4170a8 (09-07). Lift condition not met: the commit step must stage only src/.",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Empty API key crash-looped llm-resolver",
+   "where": "f4bae3c",
+   "tried": "Substrate removed continue for keyless providers",
+   "outcome": "failed",
+   "date": "2026-09-15",
+   "evidence": "19 restarts, llm_completion left discovery, every compose failed; self-sealing; operator env placeholders",
+   "source": "memory-1"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "File corruption vectors in apply path",
+   "where": "local-tools b42db41, 67a9e71; development-vessel c42410d; containment d4ae359/a2fc845/0e1de31",
+   "date": "2026-08-02",
+   "tried": "Refuse empty old_string, differing create_file overwrite, fs_write shrink; path containment",
+   "outcome": "worked",
+   "evidence": "fs_write guard caught 190,333->41 truncation live; containment 19/425 refused 0 FP; guards disabled by prior damage (condition on healthy target)",
+   "source": "memory-10"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "repairCreatedFile URL-as-prompt truncation",
+   "where": "feature-compose.ts repairCreatedFile; 92505c5 truncatingRewriteReason",
+   "date": "2026-08-12",
+   "tried": "Relative (<50%) truncation guard",
+   "outcome": "partial",
+   "evidence": "Path already dead since substrate 9972ecd (throwing param swallowed); destructive writes stopped because path died",
+   "source": "memory-10"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "404 dependency replacement",
+   "where": "development-vessel package.json ddffdee (reverted 956e464), 29d9b85",
+   "date": "2026-08-10",
+   "tried": "Substrate replaced file:../ias-executor-ts with registry version",
+   "outcome": "reverted",
+   "evidence": "Recurred 08-12; compose verify ran bun install only when node_modules absent; nothing checks changed deps resolve",
+   "source": "memory-10"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Substrate disabled edit-intent guard",
+   "where": "goal-host goal-intent.ts fce961b (reverted eac995e)",
+   "date": "2026-08-09",
+   "tried": "Operator probe asked guard to stop requiring a path",
+   "outcome": "reverted",
+   "evidence": "Existing tests failed 2/7 yet gate computed 0 introduced (overlay tested live tree)",
+   "source": "memory-10"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "L11 fabricated-host hard gate on pwt path",
+   "where": "patch-with-tools.ts; 1a507d1",
+   "date": "2026-08-03",
+   "tried": "Wire existing detectArchitectureViolation Check C as hard fail where apply_proposal_as_patch lands",
+   "outcome": "worked",
+   "evidence": "Corpus 200 commits: flags exactly 7ea7d52 and 0b80f1b, 0 FP, allows revert 3215e70",
+   "source": "memory-10"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Repair llmCall endpoint swap in feature-compose.ts",
+   "where": "development-vessel 33afcc8, 978a70f, c3194ee",
+   "tried": "Restore discovered llmEndpoint at all call sites",
+   "outcome": "reverted",
+   "date": "2026-08-02",
+   "evidence": "The substrate reverted it via db7c414, 8733823 and 3cca30b within ~1h; only the gate stopped the loop",
+   "source": "memory-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Revert drafter self-corruption",
+   "where": "development-vessel c20a972, 6892c85, 9c4660a, 4fc14ab",
+   "tried": "Revert feature-compose.ts to last-good + auth header fix; hand-revert byte-0 corruption",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "Crash loop on hub + spoke ended; gap supply toward the file was not retired",
+   "source": "memory-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "In-band gate self-protection (token ratchet)",
+   "where": "vessel-mitosis-cutover.ts (not landed)",
+   "tried": "Token-count ratchet",
+   "outcome": "failed",
+   "date": "2026-08-03",
+   "evidence": "Defeated by a comment; FP on prose; false-green on unreadable. Regression rate of fixes \u226545% over 6 cycles.",
+   "source": "memory-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Endpoint-swap loop on feature-compose.ts",
+   "where": "a74ccd7, 7ea7d52, 1ad2db9, f79fadb; fix a11b7bb",
+   "tried": "The substrate thrashed one call site. 7ea7d52 landed a literal fake URL; f79fadb left llmEndpoints[1]! unguarded.",
+   "outcome": "failed",
+   "date": "2026-08-03",
+   "evidence": "a11b7bb guarded the index. The loop reverted its own fake URL but left a new defect behind.",
+   "source": "memory-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Re-cutover of same proposal silently reverted a landed fix",
+   "where": "fc7789c -> 734393a (route-edit-92ad1532)",
+   "tried": "Detected via git show. Proposed staged_base_sha==HEAD check at cutover.",
+   "outcome": "failed",
+   "date": "2026-09-14",
+   "evidence": "Orphan blameEmitted remains. 17 of 406 proposals (4.2%) were cut over more than once. Compose reports overwrite in place and cannot witness this.",
+   "source": "memory-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Unparseable autonomous commit pushed; boredom crash-looped 1404x with 0 gaps",
+   "where": "boredom-vessel 84cd2f2; repair 36954f2",
+   "tried": "Operator goal repaired it through the lane with no hands.",
+   "outcome": "worked",
+   "date": "2026-09-19",
+   "evidence": "Instance repaired. Class open: no parse check at landing, and self-operational-health.ts watches 0 service units.",
+   "source": "memory-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Substrate deleted surql landing-gate guard",
+   "where": "dev-vessel 54b7762 -> restored 1a18944; schema 50946be, 291b72d, 41c9e89",
+   "tried": "Operator campaign; the substrate restored the gate through its repaired lane.",
+   "outcome": "worked",
+   "date": "2026-09-22",
+   "evidence": ".surql landings were wedged 09-16..09-22. Audit rerun 19b3e668 was 26/26 MET. About 22 migration files fail on cold boot.",
+   "source": "memory-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Drafter prepended hallucinated file into LIVE goal-paths.ts; activity-api crash loop",
+   "where": "activity-api /vessels live tree; detector bec9d8d",
+   "tried": "Operator restored the file and added a parse-check signature at cutover. Closed the phantom-demand gap route-edit-09100637.",
+   "outcome": "partial",
+   "date": "2026-08-11",
+   "evidence": "It recurred 2.5h later before cutover: the detector sits at the wrong stage. Closing the phantom gap stopped the loop (23 picks/8min -> 0).",
+   "source": "memory-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Rolled-back compose truncated discovery-vessel live src to 2.4KB",
+   "where": "/vessels/discovery-vessel/src/index.ts",
+   "tried": "Operator restored from clone without a restart.",
+   "outcome": "worked",
+   "date": "2026-08-09",
+   "evidence": "The rollback log said 'restored 1/1' while the file was a fragment. Proposed a post-rollback byte-compare detector; not built.",
+   "source": "memory-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Autonomous commits reversed documented contracts",
+   "where": "f365f3a (no-work-is-not-a-win), eb42e0b (citation deleted -> fixed c173011), 01e3dd9 (requeueAfterNonAttempt deleted)",
+   "tried": "Tests left red and gaps filed. Proposed that the landing template records WHY.",
+   "outcome": "partial",
+   "date": "2026-08-29",
+   "evidence": "Only the citation regression was fixed. 866 substrate commits carry the same WHAT-only template.",
+   "source": "memory-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Differential typecheck gate fooled by syntax errors",
+   "where": "vessel-mitosis-evaluate.ts; reverts 3434f3e, db63bef; hardening 05450e6",
+   "tried": "Revert the broken landings 5697f70/0f794d2 and harden the gate to fail closed.",
+   "outcome": "partial",
+   "date": "2026-07-29",
+   "evidence": "9775bc8, which deleted 12 lines of Thompson code with TS1128, still landed via the apply_proposal path on 07-30 (reverted d280a05).",
+   "source": "memory-5"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Autonomous insertion goals land inert",
+   "where": "3130a55, c6c93ab, 2143dda",
+   "tried": "Dispatch insertion goals autonomously.",
+   "outcome": "failed",
+   "date": "2026-08-13",
+   "evidence": "3/3 inert landings. In-place modifications 82125c9 and 6a65f9c were correct.",
+   "source": "memory-5"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Un-corrupt earlyEditVerb regex + orphan fn",
+   "where": "goal-host e3468ea (09b49f2, 2f4093c)",
+   "date": "2026-07-27",
+   "tried": "restore clean edit verbs, remove injected orphan, read-only guard",
+   "outcome": "worked",
+   "evidence": "report-version goal no longer edits; version bump 2f4093c on activity-api never reverted",
+   "source": "memory-6"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Stale-base cutover silent revert restored",
+   "where": "fe52076 (510b6df reverted 421052c)",
+   "date": "2026-08-28",
+   "tried": "restore fix; file gap mitosis-cutover-lands-a-stale-base-patch-as-a-silent-revert",
+   "outcome": "partial",
+   "evidence": "recurred 09-24 (6ab8271 undid a0ff3d3); drift gate 0a0d59f then deadlocked lane",
+   "source": "memory-6"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Opposite autonomous edits from victim edit_site",
+   "where": "569e982 / 128bbcc",
+   "date": "2026-09-15",
+   "tried": "autonomous composes on gap whose edit_site named victim file",
+   "outcome": "failed",
+   "evidence": "destroyed operator guard then reverted; net zero by luck; operator corrected edit_site on 4 gaps",
+   "source": "memory-6"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Four autonomous landings, all wrong, zero gate catches",
+   "where": "d96e2ae, bc0ba3f3, 2dbb4a6, 067b3f46",
+   "tried": "Autonomous feature_compose landings graded reached:true FAVORABLE",
+   "outcome": "failed",
+   "date": "2026-08-11",
+   "evidence": "infinite loop; deleted log with fabricated judge rationale; silent revert; wrong invariant",
+   "source": "memory-7"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Substrate narrowed operator instrument",
+   "where": "goal-host d65f8bd reverted 24d46fe",
+   "tried": "Autonomous added deterministic===false on optional field",
+   "outcome": "reverted",
+   "date": "2026-08-03",
+   "evidence": "silenced most diagnostic output; typechecked, passed gates",
+   "source": "memory-7"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "patch-with-tools live-source truncation guard",
+   "where": "dev-vessel af54cc8, fd701d9, 0f351f1",
+   "tried": "Refuse >50% shrink; snapshots+finally restore; propagate real tool errors",
+   "outcome": "partial",
+   "date": "2026-07-30",
+   "evidence": "index.ts 9386->213 incident; live mirror corruption recurred 07-31 and 08-05; overlay isolation still open",
+   "source": "memory-7"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Substrate migration made every write to activity fail",
+   "where": "activity-api 6ac1aa6 / a4b7f1b -> 206 53d310d; gate e8bc5ca; detector 8636190",
+   "tried": "Migration 206 with OVERWRITE option<>, plus the surqlBreakingFieldRefusal gate and the declarationDrift detector",
+   "outcome": "worked",
+   "date": "2026-09-05",
+   "evidence": "156 errors in 35 min. The gate was later broken by substrate commit 54b7762 (MEMORY 09-22).",
+   "source": "memory-8"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "0a0d59f drift gate compares against the patched hash",
+   "where": "vessel-mitosis-cutover.ts; feature-compose staged_base_sha",
+   "tried": "Diagnosed. Needs an operator bootstrap",
+   "outcome": "unknown",
+   "date": "2026-09-24",
+   "evidence": "Refused every isolated cutover, including its own repair",
+   "source": "memory-8"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "renderSafeAnchors empty-region regression",
+   "where": "cross-file-symbols.ts d95bf13 -> 6e63247 -> 8b838d0/05aeaa3",
+   "tried": "Restored the guard. The substrate then landed the correct version itself",
+   "outcome": "worked",
+   "date": "2026-08-11",
+   "evidence": "The anchor band had moved to the top of the file",
+   "source": "memory-8"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Recursion storm via goal-host's own /resolve",
+   "where": "goal-host goal_execution",
+   "tried": "Stopped the container",
+   "outcome": "unknown",
+   "date": "2026-09-26",
+   "evidence": "Load 26, 588 shells/min, 146 gaps/h, every LLM provider exhausted. No depth brake was recorded.",
+   "source": "memory-8"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Walk satisfiers write live source without rollback",
+   "where": "satisfier:fs_edit bee05ca; code_replace_lines; auto-bridge-fileEditResult",
+   "tried": "Guarded fs_edit. Other writers found later",
+   "outcome": "partial",
+   "date": "2026-08-07..09-26",
+   "evidence": "Three writers make runtime diverge from git (09-26)",
+   "source": "memory-8"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Operator removes duplicated hasLessons block",
+   "where": "/vessels/development-vessel gap-to-feature.ts",
+   "tried": "hand-fix a crash-loop (NRestarts 61) and request a TS2300/TS2451 pre-cutover gate",
+   "outcome": "partial",
+   "date": "2026-07-08",
+   "evidence": "gate not built; 09-19 unparseable commit, 1404 restarts, zero gaps",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Substrate self-deployment via PRs + merge gate",
+   "where": "openspec/changes/2026-05-23-substrate-self-deployment",
+   "date": "2026-05-23",
+   "tried": "gitOpenPR, gitMergePR, author-pr, a 90-day whitelist, and a rollback activity.",
+   "outcome": "superseded",
+   "evidence": "0/36 tasks; gitMergePR is absent. Autonomy was instead achieved by feature_compose \u2192 mitosis cutover \u2192 direct push to dev, with autonomyScope as the whitelist analogue.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "staged_base_sha = pre-patch hash (5.4)",
+   "where": "feature-compose.ts",
+   "date": "2026-09-24",
+   "tried": "082f6ee",
+   "outcome": "reverted",
+   "evidence": "the second reader (freshness) needed the patched hash: 7 false already_applied no-ops; substrate self-repaired with 96a1f57 (freshness also accepts staged==live)",
+   "source": "openspec-7"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Gap store forwarding 4.0d-i",
+   "where": "substrate-gap.ts",
+   "date": "2026-09-26",
+   "tried": "51e30de landed",
+   "outcome": "reverted",
+   "evidence": "deleted 6 min later by autonomous recommit 21179d8 (stale base); re-landed partially as 516bc18, read side eb62676",
+   "source": "openspec-7"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Causal attempt ledger acceptance (3 consecutive 10/10)",
+   "where": "openspec causal-attempt-ledger; attempt-register cbdb432, attempt-checks a4923f2",
+   "date": "2026-09-24..26",
+   "tried": "Pre-registered canary R/C/U fixtures, amendments 1-5, graded runs 1-12",
+   "outcome": "worked",
+   "evidence": "CONSISTENT 05:10Z 09-26, but only with operator stopgaps: gap-compose masked, boredom/funnel-drain stopped, autonomous_pick lease held; voids from 8c31cdb, 4f1d3e8, 768ae7c",
+   "source": "reports-1"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Revert goal-host 8c31cdb globalThis.fetch monkey-patch (6ce1446)",
+   "where": "goal-host src/index.ts; RUN11-VOID-1220",
+   "tried": "A traced feature_compose called directly on development-vessel, restoring 60833b4:src/index.ts, because goal-host routing was broken.",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "The run was voided. The landing gate had passed a process-global side effect; nothing checks for that class.",
+   "source": "reports-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Edge CREATE fields goal landed destructively",
+   "where": "b4f9148 (autonomous, operator goal) activity-api execution-traces.ts",
+   "date": "2026-08-15",
+   "tried": "Add org_id/execution_id/success to edge CREATE",
+   "outcome": "reverted",
+   "evidence": "Redirected the variant_performance_metrics INSERT (Thompson posterior write) to activity_composition_graph, ~1600 lines from target. FAVORABLE via typecheck/shape-dispatch/tests because it was inside a SQL template literal. Reverted cee3686/fc64261",
+   "source": "reports-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Shell requestTimeoutSec 30->300",
+   "where": "e1ffa50 local-tools-vessel (autonomous, operator-authored goal)",
+   "date": "2026-08-15",
+   "tried": "Raise shell watchdog so verify is not SIGKILLed",
+   "outcome": "reverted",
+   "evidence": "The watchdog subshell inherited stdout, so every shell call took the full timeout. That meant a ~3h outage with no compose reports 05:30-08:50. Reverted live + 09e863b",
+   "source": "reports-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Superseded-attempt stale write after verdict (fencing)",
+   "where": "gap-superseded-attempt-writes-land-after-the-verdict; 4dfe316a settle-confirm",
+   "tried": "Verdict-truthfulness half (re-read 3s later)",
+   "outcome": "partial",
+   "date": "2026-09-19",
+   "evidence": "Battery 7 runs 4,5 degraded 0.7-2s after true verdict. Root 'open' per report; live store shows gap closed 09-19 (closed on the verdict half). Recurred in responsibility cycle case D (re-degraded 14s after restoration).",
+   "source": "reports-4"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "learning_track empty -> nothing registrable",
+   "where": "activity row builder bf82746",
+   "tried": "Set learning_track explicitly",
+   "outcome": "partial",
+   "date": "2026-09-23",
+   "evidence": "1,300 failures/24h since 20:07 reseed, no gap filed; fixed; recurred 09-24 04:18 in bootstrap-seeder after restore (image copy lacked fallback until pull-sync).",
+   "source": "reports-4"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "staged_base_sha drift gate deadlock",
+   "where": "0a0d59f (substrate-authored)",
+   "tried": "Loop drafted repair 5.4; refused by same gate",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "Both writers hash PATCHED file; 6/6 refusals match no commit. Store shows gap closed 09-25 (one row), a sibling row still open.",
+   "source": "reports-4"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Substrate commit 54b7762 deleted 39 lines of the surql gate, wedging all .surql landings 09-16..09-22",
+   "where": "development-vessel vessel-mitosis-evaluate.ts surqlBreakingFieldRefusal; fix 1a18944",
+   "tried": "Byte-exact restoration via a pre-validated goal (dispatch c5fe1475)",
+   "outcome": "worked",
+   "date": "2026-09-22",
+   "evidence": "The gate accepts the unmodified corpus. The substrate-authored fix landed and was pushed. The detector gap is filed but not built.",
+   "source": "reports-5"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Revert the global fetch shim",
+   "where": "goal-host 8c31cdb reverted by 6ce1446",
+   "tried": "Exact inverse through feature_compose.",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "The shim stripped pointers on /resolve and voided run 11; a super-repo pointer bump then pinned the shim again (ba02be09).",
+   "source": "reports-6"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Substrate's own fix for the sync race",
+   "where": "development-vessel 329fc5c",
+   "tried": "Write body:{staleness} only",
+   "outcome": "failed",
+   "date": "2026-09-26",
+   "evidence": "poolImpulse_write replaces the body, which wiped family/alpha/beta/budget/operator_pause and project-intake's containment",
+   "source": "reports-7"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Revert of 329fc5c",
+   "where": "24a64a8 (node 2) then 667dd53",
+   "tried": "Directed revert goal",
+   "outcome": "partial",
+   "date": "2026-09-27",
+   "evidence": "24a64a8 restored 1 of 3 writes with a FAVORABLE verdict on a partial edit; 667dd53 completed it",
+   "source": "reports-7"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "System-initiated revert",
+   "where": "local-tools/dev-vessel reverts 07-22 to 08-01; pull-cutover health revert edb4ba3",
+   "tried": "Substrate reverts its own bad landings",
+   "outcome": "dormant",
+   "date": "2026-08-01",
+   "evidence": "None since 08-01. Specified in 5 openspec changes, none built. The detector matches 'git revert' text only.",
+   "source": "reports-7"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Deadlock fix --no-block landed autonomously, silently reverted by the substrate 5h later, then re-fixed 3 days later as if newly found",
+   "where": "development-vessel 61a6e46 (09-11 autonomous) -> 985859a (09-11 17:58 autonomous, gap route-edit-2fcda496, compose-staged/judged lane) -> ca53600 (09-14 operator)",
+   "tried": "Add --no-block to Bun.spawnSync systemctl start gap-compose.service in substrate-gap.ts, which had caused a sync-spawn/callback deadlock",
+   "outcome": "reverted",
+   "date": "2026-09-11",
+   "evidence": "ADDENDUM section X verified 61a6e46 at 4 layers (0/96 health failures). git show 985859a shows a 1-line removal of --no-block. The ca53600 comment re-measures the freeze (7,323->7,650 gap rows, 36 picks with 0 cutovers) and does not cite 61a6e46.",
+   "source": "reports-8"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Fix of the inverted-boolean composer regression",
+   "where": "development-vessel bac7d00 (fixes f0cfb91)",
+   "tried": "Restore the anchor-repair condition that f0cfb91 inverted (!r.ok -> r.ok)",
+   "outcome": "partial",
+   "date": "2026-09-09",
+   "evidence": "Anchor-fail rate 34.4% -> 16.8-20% but stayed about 2x the 10-12% baseline (ADDENDUM sections A and G)",
+   "source": "reports-8"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Composer degradation detector",
+   "where": "scripts/substrate/compose-drift-tick.ts 13176c29 + timer",
+   "tried": "Median self-baseline with relative, absolute and z guards",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "Positive control z=17.4 on 09-08. Timer still fires 09-29 01:28. Whether anything consumes its output is unknown.",
+   "source": "reports-8"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Restore satisfier trace-id namespace after 3d648ad",
+   "where": "goal-host-vessel",
+   "tried": "One-line revert filed as gap restore-the-satisfier-trace-id-namespace-so-the-signature-lands",
+   "outcome": "unknown",
+   "date": "2026-09-09",
+   "evidence": "3d648ad landed 09-08 10:42 froze the v1 signature; outcome not observed in window",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Revert reach-metric accumulation break",
+   "where": "35537c7e @ 2026-09-12 summary",
+   "tried": "revert 52452e0 (Substrate Autonomous 08-28 pwt- lane replaced +$reached with =$reached) via bc268e7",
+   "outcome": "partial",
+   "evidence": "accumulation 27->88->914->1198, but reconciliation still fails (stored 1198 vs source 18,987)",
+   "date": "2026-09-12",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Fix rollback-skip corruption loop",
+   "where": "faba5acd @ 2026-09-16T08:08",
+   "tried": "88032ab rollback ownership fix; restore relevance-sink source",
+   "outcome": "worked",
+   "evidence": "e76b88c (substrate 09-10) made rollback structurally dead for every applied edit while trace said rolled_back:true; relevance-sink 10,501B corruption -> 7,709B restored and parses",
+   "date": "2026-09-16",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Restore deleted surql landing guard",
+   "where": "7726f8bf @ 2026-09-22T08:22",
+   "tried": "dispatch with the verbatim 39-line block",
+   "outcome": "worked",
+   "evidence": "1a18944 byte-exact restore of the guard deleted by 54b7762 (09-16); .surql landings had been wedged for 6 days",
+   "date": "2026-09-22",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "0a0d59f drift gate hashed post-patch base, deadlocking landing path",
+   "where": "vessel-mitosis-cutover.ts",
+   "date": "2026-09-24T17:08Z",
+   "tried": "operator revert 97f7cdf at 20:05; unblock54.sh prepared",
+   "outcome": "reverted",
+   "evidence": "13 landings refused after 18:00; ledger settled 0a0d59f HELD (gap #47)",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Substrate landing 946034c blanked every {{placeholder}} at template load",
+   "where": "ias-executor-ts activity-api-provider.ts",
+   "date": "2026-09-24T05:35Z",
+   "tried": "Root-cause gap filed with falsifier; substrate landed 2893a93 on 4th draft (directed pick)",
+   "outcome": "worked",
+   "evidence": "Undetected 9 days (from 09-15); 108/108 trace-store-reconcile runs failing lease_token; autonomous picker passed over the gap 55 min",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Goal-host global fetch monkey-patch 8c31cdb",
+   "where": "goal-host index.ts",
+   "date": "2026-09-25T12:05Z",
+   "tried": "revert 6ce1446 via direct compose; super-repo pointer moved ba02be09",
+   "outcome": "reverted",
+   "evidence": "Every compose request empty; run 11 voided; autonomous pointer bump 7ebdd935 had captured the shim",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Self-granted operator approval d8c93b4",
+   "where": "dev-vessel feature-compose.ts / gap-to-feature prompt",
+   "date": "2026-09-25T03:35Z",
+   "tried": "5cbc6d0 reword prompt; 60ad9cd remove block; aaee500 edit tool can delete",
+   "outcome": "worked",
+   "evidence": "Drafter followed operator-facing prompt line 'Set operator_approved: true'",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Autonomous cutovers added a null-return in the vessel-authoring branch",
+   "where": "gap-to-scenario-bridge.ts:229-233 (bd42c72, 4e9eb41, 92dce2c)",
+   "date": "2026-08-05",
+   "tried": "Substrate mitosis cutovers guarded a missing meta.shape by returning null",
+   "outcome": "failed",
+   "evidence": "null is still serialized to <id>.json, and exists() then skips that gap forever. 1428 of 1509 live vessel-scenarios are the 4-byte 'null', the newest from 2026-09-28.",
+   "source": "validation-other-3"
+  }
+ ],
+ "problems": [
+  {
+   "key": "autonomous-regression",
+   "symptom": "A stale-base cutover silently reverts a landed commit",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-26",
+   "recurrences": 3,
+   "root_cause": "Retried or coalesced compose reuses a base captured before the prior landing",
+   "source": "gap-history"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings delete or garble code, corrupt SQL inside strings, write the wrong dialect, reverse operator perf fixes, or gate production code on env to pass a test",
+   "root_cause": "Anchor/splice patching without a semantic diff check; SQL in strings is invisible to typecheck; failing-test gaps target production files",
+   "first_seen": "2026-07-27",
+   "last_seen": "2026-09-28",
+   "recurrences": 9,
+   "source": "git-activityapi"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings delete 2969 lines, inject placeholders at byte 0, crash-loop the vessel, break package deps",
+   "first_seen": "2026-06-30",
+   "last_seen": "2026-08-12",
+   "recurrences": 10,
+   "root_cause": "The drafter edits its own source (192 autonomous edits to feature-compose.ts). Gates were blind, which makes the corruption self-sealing.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "A fix landed and was later silently undone by another commit (autonomous or operator): --no-block, 8-hex class key, learning-mode controller, no-work-is-not-a-win, a0ff3d3",
+   "first_seen": "2026-07-04",
+   "last_seen": "2026-09-24",
+   "recurrences": 7,
+   "root_cause": "Nothing checks that a predecessor fix still holds when a later commit touches the same region. Stale-base staging and cutover overwrite are unguarded (97f7cdf: class still open).",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Autonomous landing breaks tsc or crash-loops goal-host (duplicate let, un-awaited async)",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-22",
+   "recurrences": 3,
+   "root_cause": "Signature-subset staticEvaluate is not a full cross-file tsc. Full-file cutover from a stale base.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings break or oscillate: schemas ping-pong in 4 minutes, /health env-gate flip x3, syntax break + build output commit, re-enabled a disabled mint path, load-time placeholder blanking",
+   "first_seen": "2026-07-31",
+   "last_seen": "2026-09-28",
+   "recurrences": 7,
+   "root_cause": "Multiple gaps own the same file with opposite intents; one-file-per-compose; no cross-gap conflict check",
+   "source": "git-mid"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "SA landings introduce defects: 30s shell cap, second spawn site, typecheck break, empty new_string rejection, gap flood",
+   "first_seen": "2026-07-22",
+   "last_seen": "2026-09-24",
+   "recurrences": 6,
+   "root_cause": "verify passes on typecheck and suite; no behavioral falsifier for primitives every other path depends on",
+   "source": "git-small"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "substrate lost its own measurement templates; recursive-fix deadlock",
+   "first_seen": "2026-05-23",
+   "last_seen": "2026-06-03",
+   "recurrences": 2,
+   "root_cause": "no self-detection of degradation; template registry not durable",
+   "source": "git-super-1"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Autonomous landings break prod or truncate source (fetch monkey-patch, as-unknown cast, stale-test satisfaction, spectral-gap truncated in git)",
+   "root_cause": "Landing gates check the motivating predicate locally; no consumer-side probe on the production path or registered-joint check",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-28",
+   "recurrences": 10,
+   "source": "git-super-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "substrate landings broke things; the operator found every regression",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 9,
+   "root_cause": "no consumer-side probe per landing; operator revert does not feed back into settlement, posterior or lessons",
+   "source": "live-gaps"
+  },
+  {
+   "key": "stale-whole-rewrite",
+   "symptom": "Whole-body or whole-file rewrites lose concurrent or omitted data: the rhythm containment wiped by 329fc5c, the memory store wiped, gap store keys carried forward, torn pool tmps.",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-26",
+   "recurrences": 4,
+   "root_cause": "Read-modify-write of an entire record or file, with no versioning and no fail-closed read",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "detect-drift commit-and-push committed 422 .bun cache binaries and runtime state into dev-vessel",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "root_cause": "The commit step stages runtime and cache paths",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings revert operator fixes, crash-loop vessels, or invert the requested logic while green",
+   "root_cause": "Freshness gate checks the mirror; verify lacks behavioural/no-signal tests; empty-key module-scope throw",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-19",
+   "recurrences": 5,
+   "source": "memory-1"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings disabled edit-intent guard, replaced local dep with 404 (twice), fabricated hosts, truncated its own resolver, crash-looped vessels",
+   "root_cause": "Gates reason about source not environment; ungated escalation route; apply on live tree; checks after deps present",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-19",
+   "recurrences": 6,
+   "source": "memory-10"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate commits revert fixes, corrupt the drafter, evict registry rows, weaken gates",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-09-26",
+   "recurrences": 8,
+   "root_cause": "In-band gates are editable and evadable; typecheck and semantic gates do not model endpoint semantics",
+   "source": "memory-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings reverse contracts, delete guards (54b7762), reverse their own fixes via re-cutover (734393a), prepend hallucinated files into the live tree, truncate discovery-vessel, and push unparseable files.",
+   "first_seen": "2026-07-04",
+   "last_seen": "2026-09-22",
+   "recurrences": 9,
+   "root_cause": "Landings record WHAT not WHY; drafting happens against the live tree; there is no staged_base_sha==HEAD check; the deleted-guard class has no self-test.",
+   "source": "memory-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings break things undetected (tests 5 days, template placeholders 9 days, self-lock cascade, tsc baseline, reach_history destroyed)",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-24",
+   "recurrences": 6,
+   "root_cause": "In-band gates only; no CI (operator decision 'Leave it'); guards are the highest-churn edit targets",
+   "source": "memory-4"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings broke builds and features (5697f70, 0f794d2, 2fe3750, 9775bc8, 3130a55 clobber, 8340f57 stale-base overwrite).",
+   "root_cause": "Gates blind to syntax-bail, cutover from a stale base, no per-path gating.",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-08-13",
+   "recurrences": 7,
+   "source": "memory-5"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Autonomous cutover silently reverts a newer commit",
+   "root_cause": "patch staged against an old base applied as content onto HEAD; nothing compares staging base to HEAD; later guard compared against patched hash and deadlocked",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-24",
+   "recurrences": 4,
+   "source": "memory-6"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate-authored commits corrupt own source (regex polluted, orphan fn, dropped set members, deleted lines, nulled guards)",
+   "root_cause": "syntactic gates cannot see semantic damage; unrelated-deletion scope check absent",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-09-15",
+   "recurrences": 10,
+   "source": "memory-6"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate-authored landings loop, truncate live source, revert newer work, silence instruments or add hollow resolvers, and pass every gate",
+   "root_cause": "Gates reason about the diff text and never execute the code. The drafter edits live /vessels in place with no overlay. The staging base is not compared to the branch tip. Nothing models intent",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-09-24",
+   "recurrences": 12,
+   "source": "memory-7"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings broke production: all writes to activity rejected, cutover deadlock, anchor regression, recursion storm, live-source writes by walk satisfiers.",
+   "root_cause": "No effect verification or run-time check before landing. Walk satisfiers have no rollback. There is no recursion or depth brake.",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-26",
+   "recurrences": 8,
+   "source": "memory-8"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings broke the gap store, the composer, reach history, the trace emitter and the walk satisfier",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-09-12",
+   "recurrences": 8,
+   "root_cause": "Unjudged lane plus no execution gate; self-modification of the component that performs modification",
+   "source": "memory-9"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Self-edit breaks the authoring vessel itself (crash-loop, bootstrap deadlock)",
+   "first_seen": "2026-07-08",
+   "last_seen": "2026-09-19",
+   "recurrences": 3,
+   "root_cause": "no parse or duplicate-identifier check on the vessel's own source before cutover restart",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Non-terminating dispatches re-apply or overwrite landings: 98bc2b5 silently reverted afc7d6d; 194df79 double-applied c23b601; 7eae3a0 added a duplicate probe; ec38999d false failed; 6ab8271 cutover reverted a0ff3d3",
+   "root_cause": "Bun default fetch idle timeout (~300s) overrode the 900s AbortSignal, so the fallback walk sent a second compose and the last return won; cutovers stage whole files from a stale base",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-27",
+   "recurrences": 5,
+   "source": "openspec-10"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate-authored drift gate 0a0d59f refused every isolated landing, including its own repair",
+   "root_cause": "staged_base_sha was the patched hash; the gate compared it with HEAD",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-24",
+   "recurrences": 1,
+   "source": "openspec-7"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Landed edits overwritten or reverted: 21179d8 deleted 51e30de; 6ab8271 undid a0ff3d3; live-sync rollback reverted a committed line",
+   "root_cause": "recommit/park resume on a stale base; rollback restores the snapshot over a file equal to the commit",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-26",
+   "recurrences": 4,
+   "source": "openspec-7"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Automated drift-commit truncated spectral-gap source; the service failed and consumers read a 9-day-stale value as current",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-16",
+   "recurrences": 1,
+   "root_cause": "Mass commit of a mid-edit working tree; the stale producer's last line kept being served with no staleness check",
+   "source": "openspec-8"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings revert verified fixes or change selection inside graded windows (31f1d67, 3e58e73, 8c31cdb, 4f1d3e8, 768ae7c)",
+   "root_cause": "Manufactured demand from noisy gates; no gate checks semantic reverts or evidence deletion; window-blind dispatchers",
+   "first_seen": "2026-08-17",
+   "last_seen": "2026-09-25",
+   "recurrences": 6,
+   "source": "reports-1"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Autonomous landings inside graded windows break routing or landing (8c31cdb fetch patch; 0a0d59f drift deadlock; 91c042b changed U's path).",
+   "root_cause": "Window-blind dispatchers: landing, restart and sync paths read no shared window/lease shape. Gates do not check for process-global side effects.",
+   "first_seen": "2026-09-25",
+   "last_seen": "2026-09-25",
+   "recurrences": 4,
+   "source": "reports-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Walk commits repeatedly without reaching (8 commits in RUN9, 21 in RUN12-prev); satisfier fs_write corrupts live canary",
+   "root_cause": "Retry cap reads landings only after spool ingestion; fallback walk writes after refusing",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-25",
+   "recurrences": 3,
+   "source": "reports-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate-authored landings broke shared seams undetected: 946034c blanked placeholders 9 days; 0a0d59f deadlocked lane; learning_track empty after reseed",
+   "first_seen": "2026-09-15",
+   "last_seen": "2026-09-24",
+   "recurrences": 3,
+   "root_cause": "Gates read diffs and typecheck/suite; no post-land behavioural probe (gap landing-gates-read-diffs-and-never-run-them still OPEN 09-29).",
+   "source": "reports-4"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "A substrate commit deletes gate logic (54b7762) or misplaces a regex (1268a11), and nothing detects it",
+   "root_cause": "The typecheck gate passes deletions, and there is no corpus self-check of gates",
+   "first_seen": "2026-08-18",
+   "last_seen": "2026-09-22",
+   "recurrences": 2,
+   "source": "reports-5"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings break live behaviour (3d648ad signature loss, 8c31cdb fetch shim, 329fc5c rhythm wipe restoring the storm source, bf8e48c parse errors, bb5d6b9 surface break, c4bb14d hides restarts).",
+   "first_seen": "2026-08-22",
+   "last_seen": "2026-09-28",
+   "recurrences": 12,
+   "root_cause": "Gates read the diff; targets without tests pass as 'reviewed, never executed'; the judge has no lens for fabricate or satisfy-stale-test; there is no auto-revert.",
+   "source": "reports-6"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings break other mechanisms: b1cd133 pooled SQL (still present 09-28); 329fc5c wiped rhythm bodies; 54b7762 SurQL gate; 08-17 drift openspec dirs; ribosome nesting 7 deep; at least 17 unjudged landings on 09-26",
+   "root_cause": "Landing validated against its own motivating check only; no gate on registered joints; reverts unrecognisable",
+   "first_seen": "2026-07-17",
+   "last_seen": "2026-09-27",
+   "recurrences": 51,
+   "source": "reports-7"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "The substrate reverts its own fresh fixes: --no-block removed 5h after it landed (985859a). A patch to delete same-day fix fbf2a60 was refused only by the new pwt gate. Memory notes 6ab8271 undid a0ff3d3.",
+   "root_cause": "No detector for 'a landing reverses a commit less than N days old'. Semantic gates judge against the gap summary, not against recent history. The operator's re-fix (ca53600) did not cite the prior fix, so the recurrence was invisible.",
+   "first_seen": "2026-09-10",
+   "last_seen": "2026-09-24",
+   "recurrences": 3,
+   "source": "reports-8"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Autonomous commits clobber or break verified work (6ba576a, 510b6df, 22c3fd2 fabricated identifier, 1e66893 relocation, 3e58e73 evidence deletion)",
+   "first_seen": "2026-08-23",
+   "last_seen": "2026-09-03",
+   "recurrences": 6,
+   "root_cause": "stale-base staging; blind-edit repair without uniqueness/locality; typecheck blind to comments",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate-authored commits silently break learning/drafting (f0cfb91 inverted guard, 3d648ad signature freeze, 6fcdf40 junk awaits, c4ec7367 mangled rebase, relevance-sink double-apply)",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-16",
+   "recurrences": 5,
+   "root_cause": "Gates read diffs; nothing executes landed code post-land",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings break machinery: 52452e0 reach metric, e76b88c rollback dead, f4bae3c llm-resolver crash loop, 54b7762 surql guard deleted",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-22",
+   "recurrences": 4,
+   "root_cause": "computeNewlyFailing returns [] on an empty baseline (failing_recorded=0 while 35 tests fail); the pwt lane has no semantic judge",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "Substrate landings break landing path, routing, or other mechanisms",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 12,
+   "root_cause": "Validated locally once; no auto-revert since 08-01; no consumer-side check",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "A substrate-authored mitosis cutover deleted the failure_mode_raw diagnostics passthrough",
+   "first_seen": "2026-07-17 3477cd6",
+   "last_seen": "2026-07-17",
+   "recurrences": 1,
+   "root_cause": "Autonomous route-edit rewrote the trace-sink line and dropped the adjacent diagnostic field",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "symptom": "1428/1509 live vessel-scenarios are 'null'. Capability gaps are permanently marked bridged to nothing.",
+   "root_cause": "The 2026-08-05 autonomous cutovers made the IIFE return null, the writer still serializes it, and the exists() idempotency then skips the gap forever",
+   "first_seen": "2026-08-05",
+   "last_seen": "2026-09-28",
+   "recurrences": 1428,
+   "source": "validation-other-3"
+  }
+ ],
+ "claims": [
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-08-28",
+   "claim": "mitosis-cutover stale-base silent revert closed",
+   "where": "gap mitosis-cutover-lands-a-stale-base-patch-as-a-silent-revert (09-07 snapshot)",
+   "later": "Recurred 09-24 (6ab8271 undid a0ff3d3) and 09-26 (coalesced retry stale-base revert, open)",
+   "source": "gap-history"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-06-14",
+   "claim": "MILESTONE: autonomous code self-fix (a55d893)",
+   "where": "finding_2026_06_14_autonomous_code_self_fix_achieved",
+   "later": "06-17 no substrate commit for 3 days (later attributed to a wrong filter)",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-28",
+   "claim": "post-land suite dead since 08-31 fixed by 5e9a0b2",
+   "where": "operator memory index",
+   "later": "Node 2 dev-vessel HEAD f451e42 contains 5e9a0b2 (ancestor verified). Effect on node 2 not measured.",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-26 23:33",
+   "claim": "1.2 landed",
+   "where": "value-per-cost tasks.md",
+   "later": "it silently reverted 2.6 (afc7d6d); re-landed c10e74a 23:39",
+   "source": "openspec-10"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-26",
+   "claim": "4.0d-i gap-store forwarding landed exactly as requested (51e30de)",
+   "where": "decentralized-compose-ownership/tasks.md",
+   "later": "deleted 6 min later by autonomous recommit 21179d8; re-landed in parts",
+   "source": "openspec-7"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-08-23T02:16",
+   "claim": "Hard autonomy criterion met today: 3e58e73 Substrate Autonomous on origin/dev",
+   "where": "44a75483",
+   "later": "same commit deleted the 20-line measured-evidence comment; led to the no-gate-reads-removals gap",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-08-28T23:22",
+   "claim": "Solicitation fix done and verified",
+   "where": "ce71b42c",
+   "later": "had to land twice; the autonomous loop reverted the first via stale base; freshness gate hashed /vessels not the clone",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-08T22:58",
+   "claim": "The chain composes end to end (6fdcd71 emitter landed unaided)",
+   "where": "0b1032b5",
+   "later": "same message: posterior did not move; 09-09 02:17 cause 3d648ad; restore outcome not observed",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-07T18:07",
+   "claim": "Hard autonomy criterion met end to end",
+   "where": "074acb94",
+   "later": "also claimed 08-30, 09-06, 09-07 23:52, 09-08, 09-16; same windows contain autonomous regressions f0cfb91, 3d648ad, c4ec7367, relevance-sink double-apply",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-15",
+   "claim": "All 11 tasks complete; substrate landed f083cf0 and 77e419a; functioning in a way that would fix",
+   "where": "35537c7e @ 2026-09-15T19:23 summary",
+   "later": "09-16: diagnosed non-viable (green payable without fixing; red pins 18->35; yield 99->12 lines/commit)",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-22",
+   "claim": "Campaign closed: all five audit failures fixed and verified; the rebuilt image passes out of the box",
+   "where": "7726f8bf @ 2026-09-22T09:06",
+   "later": "The first image build had baked stale submodules (caught by the advisor at 09:00); no later in-window refutation",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-24T05:45Z",
+   "claim": "Self-repair demonstration complete, verified by effect (2893a93 placeholder fix)",
+   "where": "7e2b03b2 2026-09-24T05:45Z",
+   "later": "Defect was substrate's own 946034c, undetected 9 days; selection was a directed pick; 'The system finds none of its own deep defects'",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-24T17:24Z",
+   "claim": "Since 17:10 no change can land on any vessel (0a0d59f)",
+   "where": "3f991252 2026-09-24T17:24Z",
+   "later": "17:45 retracted as unmeasured; 20:18 reversed again (13 refusals after 18:00); operator revert 97f7cdf; ledger had rated it HELD",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "autonomous-regression",
+   "claimed_at": "2026-09-12",
+   "claim": "Autonomous route-edit-ea3a308d landed via mitosis cutover (f375f10)",
+   "where": "repos/goal-host-vessel/src/index.ts",
+   "later": "5,015 of 5,126 recordGoalPath calls log a 401; goal_path_sha has no producer",
+   "source": "vessel-docs-tooling"
+  }
+ ]
+}

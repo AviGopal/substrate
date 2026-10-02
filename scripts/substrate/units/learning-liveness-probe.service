@@ -1,0 +1,32 @@
+[Unit]
+Description=Learning-liveness probe — proves credit still flows, by intervening rather than by reading a field
+# Learning had been demonstrated by hand many times and never once WITHOUT an
+# operator. That gap is why "the credit channel is one-directional" was published
+# twice from this fleet: the only continuously-available signals were the ones that
+# lie. This unit is the bracketed intervention, standing — snapshot a posterior,
+# dispatch ONE nonce'd deterministically-graded goal, snapshot again, and assert
+# only what decay and graded yield leave assertable (success_count and the posterior
+# MEAN, never a raw delta or a magnitude).
+#
+# Exit 0 = alive, 2 = inconclusive (no execution landed on the arm — NOT a failure),
+# 3 = failed, and a gap is filed naming which condition broke.
+#
+# Needs goal-host to dispatch into. Deliberately does NOT require activity-api
+# locally: on a spoke that unit is masked and the real store is the hub, which the
+# probe resolves from the running goal-host process rather than from the env file.
+After=goal-host-vessel.service
+Wants=goal-host-vessel.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/substrate/env
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/learning-liveness-probe.ts
+# 2 is "inconclusive", which is a normal outcome on a busy substrate whose walk
+# picked a different arm. Only 3 (credit demonstrably did not follow an execution)
+# should read as a unit failure.
+SuccessExitStatus=0 2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

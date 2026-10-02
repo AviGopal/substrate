@@ -1,0 +1,21 @@
+{
+  "id": "model-opportunity-gap_landability",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "architectural_pattern",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Backward-model opportunity: 'gap_landability' is acted on / observed but NOT predicted. Proposed model: Explain landed-v",
+  "description": "Backward-model opportunity: 'gap_landability' is acted on / observed but NOT predicted. Proposed model: Explain landed-vs-not for closed/churned gaps from features (remediation already present?, single-file?, category) → a landability score per OPEN gap. Backward model over the gap→cutover outcome history. Payoff: predict gap landability → skip/auto-close gaps whose fix is un-landable (directly prevents the stale-open/churn class gap_lifecycle_scan currently cleans up reactively). Adding it follows the predict→validate→residual template (like the live cost model) — every prediction becomes a free residual-detector, widening detectability.",
+  "goal_text": "Backward-model opportunity: 'gap_landability' is acted on / observed but NOT predicted. Proposed model: Explain landed-vs-not for closed/churned gaps from features (remediation already present?, single-file?, category) → a landability score per OPEN gap. Backward model over the gap→cutover outcome history. Payoff: predict gap landability → skip/auto-close gaps whose fix is un-landable (directly prevents the stale-open/churn class gap_lifecycle_scan currently cleans up reactively). Adding it follows the predict→validate→residual template (like the live cost model) — every prediction becomes a free residual-detector, widening detectability.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [
+    "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts"
+  ],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "model-opportunity-gap_landability",
+  "source_gap_source": "substrate_detected"
+}

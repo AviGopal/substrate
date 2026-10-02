@@ -1,0 +1,12 @@
+[
+  {
+    "part": "workspace",
+    "bytes": 67584,
+    "sha256": "5982afb3ba7b81931b046fac6dde9f8a41d707b12f0aec8b2c336d53514d2ac8"
+  },
+  {
+    "part": "surreal",
+    "bytes": 22343680,
+    "sha256": "5c230b3aab07bff243f38df9dcf3a3916ecef864c00b3c132769b3e22eec811f"
+  }
+]

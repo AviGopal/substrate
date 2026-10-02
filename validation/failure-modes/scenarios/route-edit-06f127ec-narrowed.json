@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-06f127ec-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-06f127ec] Edit repos/goal-host-vessel/src/index.ts so the walk supplies the successor-feature ",
+  "description": "[narrowed from route-edit-06f127ec] Edit repos/goal-host-vessel/src/index.ts so the walk supplies the successor-feature readout inputs that activity-api's discover-by-shapes service requires. At every fetch to /v2/activities/discover-by-shapes that already sends include_scores: true, also send `signature` (set to the same cached state signature hash currently sent as state_signature) and `completion_shapes` (set to the walk's goal target shape array). The service destructures `signature` and `completion_shapes`; sending only `state_signature` and `expected_output_shapes` leaves both guard conditions false, so the psi transfer value is never computed. Also add completion_shapes alongside the existing expected_output_shapes on the /v2/activities/recommend request bodies.",
+  "goal_text": "[narrowed from route-edit-06f127ec] Edit repos/goal-host-vessel/src/index.ts so the walk supplies the successor-feature readout inputs that activity-api's discover-by-shapes service requires. At every fetch to /v2/activities/discover-by-shapes that already sends include_scores: true, also send `signature` (set to the same cached state signature hash currently sent as state_signature) and `completion_shapes` (set to the walk's goal target shape array). The service destructures `signature` and `completion_shapes`; sending only `state_signature` and `expected_output_shapes` leaves both guard conditions false, so the psi transfer value is never computed. Also add completion_shapes alongside the existing expected_output_shapes on the /v2/activities/recommend request bodies.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-06f127ec-narrowed",
+  "source_gap_source": "substrate_detected"
+}

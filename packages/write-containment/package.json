@@ -1,0 +1,6 @@
+{
+  "name": "@avigopal/write-containment",
+  "version": "0.1.0",
+  "description": "The one write-containment rule every in-process file writer applies (vendored byte-identical into local-tools-vessel and development-vessel)",
+  "type": "module"
+}

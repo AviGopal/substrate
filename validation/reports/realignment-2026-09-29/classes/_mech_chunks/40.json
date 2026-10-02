@@ -1,0 +1,96 @@
+{
+ "area": "libp2p-federation-transport",
+ "items": [
+  {
+   "name": "libp2p compiled .js/.d.ts in repo",
+   "location": "libp2p-federation-transport (542e712)",
+   "purpose": "none (sweep artefact)",
+   "status": "fossil",
+   "general": false,
+   "evidence": "stale vs .ts",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "federation verification oracle/sweep",
+   "location": "libp2p-federation-transport probe + federation_verification_report shape",
+   "purpose": "Independent overlay health with gap close",
+   "status": "live-used",
+   "general": false,
+   "evidence": "~25 fix commits 09-11..09-15 for self-defects",
+   "source": "git-super-2",
+   "mentions": 1,
+   "sources": [
+    "git-super-2"
+   ]
+  },
+  {
+   "name": "libp2p sendAll chunking + forced re-reservation",
+   "location": "libp2p-federation-transport src/index.ts",
+   "purpose": "reliable federation transport",
+   "status": "unknown",
+   "general": true,
+   "evidence": "federation-transport inactive on hub, active on node 2",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "Relay phantom-reservation redial",
+   "location": "libp2p-federation-transport/src/sidecar.ts:148-160",
+   "purpose": "Redial relay when circuit empty or no circuit peers for 2 ticks",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Logs only; no gap signal",
+   "source": "openspec-5",
+   "mentions": 1,
+   "sources": [
+    "openspec-5"
+   ]
+  },
+  {
+   "name": "libp2p-federation-transport primitive",
+   "location": "repos/libp2p-federation-transport/src/index.ts",
+   "purpose": "createVesselLibp2p/resolveViaLibp2p/serveResolve over Circuit Relay v2",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Imported by transport, probe and obsidian sidecar; syzygy forwards live",
+   "source": "federation-relay",
+   "mentions": 1,
+   "sources": [
+    "federation-relay"
+   ]
+  },
+  {
+   "name": "federation-transport-vessel relay reservation + ingress\u2192libp2p forward",
+   "location": "repos/libp2p-federation-transport; /vessels/federation-transport-vessel in both spokes",
+   "purpose": "Reach hub producers over the circuit relay",
+   "status": "broken",
+   "general": true,
+   "evidence": "On 9-29 every hub-only read fails with NO_RESERVATION, while /health shows reservationsHeld:1 and phantomSuspected:false.",
+   "source": "syzygy",
+   "mentions": 1,
+   "sources": [
+    "syzygy"
+   ]
+  },
+  {
+   "name": "compiled .js/.d.ts/.map build output",
+   "location": "scripts/substrate/federation-relay/*.js etc; repos/libp2p-federation-transport 542e712",
+   "purpose": "none (units run .ts)",
+   "status": "fossil",
+   "general": false,
+   "evidence": "ExecStart runs the .ts; .js stale vs .ts",
+   "source": "federation-relay",
+   "mentions": 1,
+   "sources": [
+    "federation-relay"
+   ]
+  }
+ ]
+}

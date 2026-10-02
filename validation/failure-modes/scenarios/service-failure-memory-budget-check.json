@@ -1,0 +1,19 @@
+{
+  "id": "service-failure-memory-budget-check",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "service_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "systemd unit memory-budget-check.service failed (Result=success, exit=1). Last log: 2 FAIL(s) — the fleet's memory budge",
+  "description": "systemd unit memory-budget-check.service failed (Result=success, exit=1). Last log: 2 FAIL(s) — the fleet's memory budget or its recovery path does not hold.. Possible causes: configuration issue, missing dependencies, or a bug in the script or application.",
+  "goal_text": "systemd unit memory-budget-check.service failed (Result=success, exit=1). Last log: 2 FAIL(s) — the fleet's memory budget or its recovery path does not hold.. Possible causes: configuration issue, missing dependencies, or a bug in the script or application.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": "a_maintenance_unit_that_fails_every_run_is_a_silent_learning_loss",
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "service-failure-memory-budget-check",
+  "source_gap_source": "substrate_detected"
+}

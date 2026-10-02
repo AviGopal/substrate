@@ -1,0 +1,851 @@
+{
+ "area": "goal-host-vessel",
+ "items": [
+  {
+   "name": "Inline absolute-URL ternaries",
+   "location": "goal-host index.ts:7457, 8004, 15128",
+   "purpose": "Per-site fix for absolute resolve_endpoint",
+   "status": "live-used",
+   "general": false,
+   "duplicates_of": "asResolvePath",
+   "evidence": "5ca51be stopped 'URL is invalid'",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "SATISFIER_FORBIDDEN_FS_WRITE",
+   "location": "goal-host index.ts:9042",
+   "purpose": "Bar bare satisfiers from writing vessel source",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Does not cover store writes, so failed walks keep their gap-store writes (09-05).",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "Other URL joiners",
+   "location": "goal-host llm-router.ts:100; human-surface routes/proxy.ts:246; dev feature-compose.ts:538",
+   "purpose": "Build resolve URLs",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "asResolvePath",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "Operator-label reader",
+   "location": "goal-host maybeConsumeOracleLabel",
+   "purpose": "Feed provide_feedback verdicts to credit",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Keyed on dispatch ids autonomous picks lack",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "Ribosome extraction + grounded mint gate",
+   "location": "goal-host mintReachedTrace :1742; 411417b",
+   "purpose": "earn learned templates",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-04 1115 replays/0 writes; floor paths unrecorded until 09-10",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "missing-verifier-gap filer",
+   "location": "goal-host missing-verifier-gap.ts",
+   "purpose": "author oracles for new goal classes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "6 verifier gaps; in-process dedup defect",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "Wilson pathway ranking",
+   "location": "goal-host pathway-rank.ts (785293c)",
+   "purpose": "Rank reusable pathways by confidence-bounded rate",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-29 cross-goal reuse 24/24",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "reach_gate_lesson mirror",
+   "location": "goal-host penaliseHollowTemplate 1ee2224",
+   "purpose": "record hollow classes",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "270 rows written; reader not verified",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "Per-hop execution_id stamps",
+   "location": "goal-host rawResolve/ufExecuteTool/discovery proxy 1b98343; llm-resolver dispatchTool 324f7f1; dev-vessel llm-completion-dispatch, author-producer d72654f, composed-capability d4456d9/829f613; bash host ed81a69",
+   "purpose": "Attribute shell side effects to their dispatch",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "dispatchContext (one concern patched at 7+ sites)",
+   "evidence": "#32-#61",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "Deterministic verified-registry-count oracle",
+   "location": "goal-host reach verifier",
+   "purpose": "Oracle against primary source",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Rung 1: queried /registry/stats totalShapes=324 and matched",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "Reached-command cache (crystallization replay)",
+   "location": "goal-host reached-command cache, store-backed",
+   "purpose": "Replay verified commands for identical or class-normalized goals",
+   "status": "live-used",
+   "general": true,
+   "evidence": "09-18: consult 20\u21924, survives restart, evicts on graded failure",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "lexical rebind (Tier-2 first-mile adaptation)",
+   "location": "goal-host rebind",
+   "purpose": "Adapt a donor command to a new slot",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 organic selected=true in 462+ calls; fires only in the operator-forced case; scaffold threshold 0.15 vs natural rephrase 0.13",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "Extraction deferral guard (reach->mint DEFER / WITHHELD)",
+   "location": "goal-host recordGoalPath / mint path",
+   "purpose": "Withhold ribosome extraction while a dispatch has unaccounted landings",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Item 3' in runs; 7c70178",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "registryFieldFor shared parse",
+   "location": "goal-host registry-field.ts",
+   "purpose": "Single rule for producer, binding, verifier",
+   "status": "live-used",
+   "general": true,
+   "evidence": "5/5 correct with required-producer rule 08-17; reverted once by 31f1d67",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "dispatchContext AsyncLocalStorage + enterWith",
+   "location": "goal-host runGoalWithRecovery",
+   "purpose": "Carry the dispatch id to every hop",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Hollow in 5c1c7d2 (#41) until the writer was added; the floor continuation can run with an empty store (RUN12)",
+   "source": "reports-2",
+   "mentions": 1,
+   "sources": [
+    "reports-2"
+   ]
+  },
+  {
+   "name": "unified execution path",
+   "location": "goal-host runTemplate (index.ts, ias-executor hosts/goal-host.ts)",
+   "purpose": "Top-level execution via impulse->resolver dispatch",
+   "status": "dormant",
+   "general": true,
+   "evidence": "foundation Known Gaps 'Open'",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "satisfier:* and universal-tool-fallback tiers",
+   "location": "goal-host satisfier-pick.ts",
+   "purpose": "Floor producers",
+   "status": "live-used",
+   "general": true,
+   "evidence": "No activity row, so structurally ungradable (law 2)",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "satisfier path",
+   "location": "goal-host satisfier:* (no activity row)",
+   "purpose": "Serve a target shape directly from a registered resolver",
+   "status": "live-used",
+   "general": true,
+   "evidence": "179 ids, 9,016 runs/5d, 52% ok; not in the activity pool (law 2 gap)",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "beta-sample (replaced the counterfeit draw)",
+   "location": "goal-host src/beta-sample.ts",
+   "purpose": "Real Beta sample for readCandidateShapes",
+   "status": "live-used",
+   "general": false,
+   "source": "reports-5",
+   "mentions": 1,
+   "sources": [
+    "reports-5"
+   ]
+  },
+  {
+   "name": "Real Beta sampler",
+   "location": "goal-host src/beta-sample.ts (d69a4ad)",
+   "purpose": "Thompson draw that respects beta",
+   "status": "live-used",
+   "general": true,
+   "evidence": "verified live 08-16",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "goal-file-resolution",
+   "location": "goal-host src/goal-file-resolution.ts (called index.ts:12099)",
+   "purpose": "Symptom -> file localization, fail-closed",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Vocabulary fix 799ccb3. Comments are a phantom-match minefield (08-11).",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "llm-router.ts willing x able cascade",
+   "location": "goal-host src/llm-router.ts",
+   "purpose": "Discover LLM producers, Thompson per task-type, cascade",
+   "status": "live-used",
+   "general": true,
+   "evidence": "07-31 correct reference; cascade capped at 2",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "reached-command tombstone store",
+   "location": "goal-host src/reached-command-store.ts",
+   "purpose": "Durable eviction of false reaches",
+   "status": "live-used",
+   "general": false,
+   "evidence": "The pattern for 'stop selecting this'. The goal_execution_paths equivalent is unverified.",
+   "source": "reports-5",
+   "mentions": 1,
+   "sources": [
+    "reports-5"
+   ]
+  },
+  {
+   "name": "golden drift gate + ClassRow primitives",
+   "location": "goal-host test/reach-routes-golden.test.ts; 5fa3fc8, b307589",
+   "purpose": "reach classes as data, drift-checked",
+   "status": "live-used",
+   "general": true,
+   "evidence": "926b42b no-hands landing (07-31)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "lexical rebind reachedCommandCache",
+   "location": "goal-host tryLexicalRebind; /workspace/.goal-host-reached-commands.jsonl",
+   "purpose": "First-mile adaptation by command replay",
+   "status": "live-used",
+   "general": false,
+   "evidence": "First selected=true 09-06. The misleading 'outcome selected=no' log line is still live. Command-shaped results only.",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "Floor zero-tool fabrication gate, walk planned-retrieval guard, widening retry",
+   "location": "goal-host universalToolFallback + walk",
+   "purpose": "Refuse unretrieved answers",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Closed fabrication on observed Io paths (08-16). Class survived elsewhere (bitcoin, ISS)",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "Deterministic oracles + recipes + citation oracle",
+   "location": "goal-host verifyDeterministicCompute, 5e4d045, reconcileDerivations",
+   "purpose": "independent ground truth",
+   "status": "live-used",
+   "general": true,
+   "evidence": "49 oracle events/24h; recipe minting 0/24h (08-26)",
+   "source": "memory-6",
+   "mentions": 1,
+   "sources": [
+    "memory-6"
+   ]
+  },
+  {
+   "name": "edit post-state oracle",
+   "location": "goal-host verifyEditPostState/symbolInAddedLines 1ac5f0e, af86945",
+   "purpose": "Downgrade landed edits missing the requested symbol.",
+   "status": "unknown",
+   "general": false,
+   "evidence": "Dormant until restart 07-31; add-symbol only",
+   "source": "memory-5",
+   "mentions": 1,
+   "sources": [
+    "memory-5"
+   ]
+  },
+  {
+   "name": "Reach judge with command provenance (recordExecutorCommand)",
+   "location": "goal-host verifyGoalReached",
+   "purpose": "Command-to-intent alignment in reach grading",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Blind for shell/bash until 08-16; fixed by recording at every content path",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "Deterministic oracles family",
+   "location": "goal-host verifyGoalReached (registry-count, compute-answer, compute-artifact, two/multi-source, transform, ephemeris)",
+   "purpose": "Independent recomputation of answers",
+   "status": "live-used",
+   "general": false,
+   "evidence": "multiple wrong-field regressions; three private sanitisers",
+   "duplicates_of": "each oracle carries its own partial numeric sanitiser",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "Deterministic transform oracle (named-note byte-compare + settle-retry + settle-confirm)",
+   "location": "goal-host verifyGoalReached; c9f1f86, 694fa777, e8e1af35, 78ff348c, 4dfe316a",
+   "purpose": "Grade transform goals by recomputation, not LLM judge",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Batteries 5,6,8 met bar; only deterministic transform families",
+   "source": "reports-4",
+   "mentions": 1,
+   "sources": [
+    "reports-4"
+   ]
+  },
+  {
+   "name": "Scaffold dispatch resolvers",
+   "location": "goal-host vessel-scaffold-dispatch-resolver, loopC-vessel-designer-resolver; boredom vesselAdditionScaffoldDispatch; ribosome vessel-scaffold-dispatch-result",
+   "purpose": "Vessel addition",
+   "status": "dormant",
+   "general": false,
+   "evidence": "0 traces",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "Capability-gap generator",
+   "location": "goal-host walk / detector",
+   "purpose": "file missing-producer gaps",
+   "status": "live-used",
+   "general": true,
+   "evidence": "750 confabulated shapes; 693 hand-closed; still filing 09-29",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  },
+  {
+   "name": "decideContinuation (walk-continuation.ts)",
+   "location": "goal-host walk-continuation.ts",
+   "purpose": "Resume a broken walk",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Imported index.ts:181, 0 call sites",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "walk write satisfiers (fs_edit, code_replace_lines, auto-bridge-fileEditResult)",
+   "location": "goal-host walk/local-tools",
+   "purpose": "Direct edits from the walk",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Hazardous: write live source with no rollback (09-26)",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "reached-command cache + REBIND",
+   "location": "goal-host walk; 77d318b",
+   "purpose": "first/last-mile reuse of verified commands",
+   "status": "live-used",
+   "general": true,
+   "evidence": "14-145 rebinds/24h; retention was ~5% before the retain guard",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "In-flight recovery loop (recommendExcluding, repairSignatureOf, exhaustion)",
+   "location": "goal-host walk; docs/architecture/sequences/04-improvisation-failure-modes.md:75",
+   "purpose": "retry with a genuinely different approach on miss",
+   "status": "dormant",
+   "general": true,
+   "evidence": "193/193 graded attempts 'attempt 1/1' over 8 days (09-16 07:33)",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "goal_verification_label consumption",
+   "location": "goal-host ~15113",
+   "purpose": "oracle corpus reach override",
+   "status": "live-used",
+   "general": true,
+   "evidence": "15 consumptions/6h (08-28); frozen 21h then restored 09-10",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "recordDeterministicLabel det gate / maybeConsumeOracleLabel",
+   "location": "goal-host ~3769 / ~15670",
+   "purpose": "verdict-of-record corpus + human override",
+   "status": "live-used",
+   "general": true,
+   "evidence": "LLM verdicts never labelled; human override works",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "hollow_walklog_capped precedence",
+   "location": "goal-host-vessel",
+   "purpose": "LLM judge cannot override a walk log with 0 new shapes",
+   "status": "live-used",
+   "general": true,
+   "evidence": "capability-validation \u00a71.4",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "tryLexicalRebind",
+   "location": "goal-host-vessel",
+   "purpose": "Adapt a donor verified command to a new goal",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Donor chosen by goal-token overlap with no data-store gate: it chose an unrelated fs_write for eBay and a file-count command for Io",
+   "source": "reports-3",
+   "mentions": 1,
+   "sources": [
+    "reports-3"
+   ]
+  },
+  {
+   "name": "universal tool fallback (ReAct floor)",
+   "location": "goal-host-vessel",
+   "purpose": "parity floor for any goal",
+   "status": "broken",
+   "general": true,
+   "evidence": "dark on spokes 09-18 (gap-mu6ejfac)",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "universal_tool_fallback (ReAct floor)",
+   "location": "goal-host-vessel",
+   "purpose": "floor parity",
+   "status": "live-used",
+   "general": true,
+   "evidence": "carried 4/4 non-filesystem successes in round4",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "walk-concepts recall",
+   "location": "goal-host-vessel",
+   "purpose": "Recall concepts for a walk from concept-db",
+   "status": "broken",
+   "general": true,
+   "evidence": "Skipped 2686x on node 2 since boot because no concept-db row is reachable.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "grounded flag -> fallback (56a0683)",
+   "location": "goal-host-vessel GoalSeekResult",
+   "purpose": "ungrounded reach not reported as reached",
+   "status": "unknown",
+   "general": true,
+   "evidence": "0 fires at time of round5",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "malformed-goal interpolation guard + coalescing key",
+   "location": "goal-host-vessel index.ts:12217",
+   "purpose": "refuse unrendered goals; dedupe running",
+   "status": "live-used",
+   "general": true,
+   "evidence": "round4",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "auto-draft-decisions.jsonl",
+   "location": "goal-host-vessel index.ts:16822,16877 (3d4aa60)",
+   "purpose": "Auto-draft decision telemetry",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "Append-only, no reader; shows a 518x repeat of the trace-store reconcile remedy",
+   "source": "gap-history",
+   "mentions": 1,
+   "sources": [
+    "gap-history"
+   ]
+  },
+  {
+   "name": "recordGoalPath / recommendReachingPath",
+   "location": "goal-host-vessel pathway-head/rank, shaped-policy-store; activity-api",
+   "purpose": "Per-goal path record and reuse",
+   "status": "live-used",
+   "general": true,
+   "evidence": "goal_execution_paths 22,234 rows",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "inferGoalTargetShapes",
+   "location": "goal-host-vessel src/goal-target-inference.ts",
+   "purpose": "Seed walk targets for NL goals",
+   "status": "live-used",
+   "general": true,
+   "evidence": "f85a6d5; 09-29 commit shows gaps for memory/recall",
+   "source": "openspec-4",
+   "mentions": 1,
+   "sources": [
+    "openspec-4"
+   ]
+  },
+  {
+   "name": "reachedCommandCache (crystallization)",
+   "location": "goal-host-vessel src/index.ts, /workspace/.goal-host-reached-commands.jsonl",
+   "purpose": "replay verified commands and skip synthesis",
+   "status": "live-used",
+   "general": false,
+   "evidence": "replay proven 09-18; 6eed100/4c5534d/2e8b4cc/0d86170; goal-host only",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "goal-host failure memory / reached-command cache",
+   "location": "goal-host-vessel src/index.ts:3827,3904",
+   "purpose": "Remember failure reasons and reached commands across dispatches",
+   "status": "live-used",
+   "general": false,
+   "evidence": "1772/10624 lines on node 1 vs 277/451 on node 2; nothing shared between them.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "asResolvePath",
+   "location": "goal-host-vessel src/index.ts:448",
+   "purpose": "Normalize resolve_endpoint to a path",
+   "status": "broken",
+   "general": true,
+   "evidence": "Returns absolute URLs; concatenated after endpoint at 9+ sites",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "pinned-target posterior refusal",
+   "location": "goal-host-vessel src/index.ts:692",
+   "purpose": "Refuse pinned targets whose learned posterior is decisively negative",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1036 refusals/24h of scaffold-and-publish-vessel. It works, but the caller is unattributed and never stops.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "goal-file-resolution (symptom->file localizer)",
+   "location": "goal-host-vessel/src/goal-file-resolution.ts",
+   "purpose": "restate pathless goals onto files",
+   "status": "live-used",
+   "general": true,
+   "evidence": "misroutes onto prose/seed literals; phrase pairs fea9eab",
+   "source": "memory-9",
+   "mentions": 1,
+   "sources": [
+    "memory-9"
+   ]
+  },
+  {
+   "name": "goal-target-inference",
+   "location": "goal-host-vessel/src/goal-target-inference.ts",
+   "purpose": "Infer target shapes from NL goal",
+   "status": "live-used",
+   "general": true,
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "Qualification deterministic oracles verified-compute-answer / verified-gap-total",
+   "location": "goal-host-vessel/src/index.ts",
+   "purpose": "Deterministic verdict sources for probe families",
+   "status": "unknown",
+   "general": false,
+   "evidence": "Present in code; firing cadence not verified",
+   "source": "docs-3",
+   "mentions": 1,
+   "sources": [
+    "docs-3"
+   ]
+  },
+  {
+   "name": "recommendExcluding in-flight recovery",
+   "location": "goal-host-vessel/src/index.ts",
+   "purpose": "Retry with a different producer on reached:false",
+   "status": "live-used",
+   "general": true,
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "universalToolFallback/runGroundedToolLoop",
+   "location": "goal-host-vessel/src/index.ts",
+   "purpose": "ReAct floor",
+   "status": "live-used",
+   "general": true,
+   "evidence": "9274 executions/7d, ~2-5% success",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "verifyGoalReached reach gate + hollow beta-penalty",
+   "location": "goal-host-vessel/src/index.ts",
+   "purpose": "Grade reach, not exit status",
+   "status": "live-used",
+   "general": true,
+   "evidence": "runs on every walk; reached field populated on 37k of 85k recent executions",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "walk tier ladder",
+   "location": "goal-host; goal_execution_paths.walk_tier",
+   "purpose": "learned_pathway > satisfier > universal fallback > fresh derivation",
+   "status": "live-used",
+   "general": true,
+   "evidence": "4,999 paths in 7d; learned_pathway 30.8% vs fresh 3.0%",
+   "source": "live-activities",
+   "mentions": 1,
+   "sources": [
+    "live-activities"
+   ]
+  },
+  {
+   "name": "Spend envelope, breaker, admission gates",
+   "location": "llm-resolver, gap-to-feature.ts, goal-host, boredom, rhythm conductor (value-per-cost-selection)",
+   "purpose": "Price and cap spend; refuse structurally unlandable work",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Pause verified all three dispatchers; breaker 429; $2/h binding every hour 09-28",
+   "source": "transcripts-4",
+   "mentions": 1,
+   "sources": [
+    "transcripts-4"
+   ]
+  },
+  {
+   "name": "gradeArmByExecution",
+   "location": "llm-resolver/goal-host",
+   "purpose": "Reach-grade LLM arms",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Exported, never called",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "_fedTargetVessel literal pin",
+   "location": "obsidian-vessel/src/concept-db-client.ts:484; goal-host-vessel/src/index.ts:160",
+   "purpose": "Force concept shape to concept-db-local",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Band-aid slated for retirement by duplicate-genres T14; still present",
+   "duplicates_of": "distribution_policy stateful_data_owner_pin",
+   "source": "openspec-5",
+   "mentions": 1,
+   "sources": [
+    "openspec-5"
+   ]
+  },
+  {
+   "name": "libp2p registration fields / PREFER_LIBP2P_ROUTE routing",
+   "location": "packages/vessel-discovery-client; goal-host index.ts:422,4242,7478, llm-router.ts:69",
+   "purpose": "Route by registration transport",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Env knob still consulted; partial",
+   "source": "openspec-4",
+   "mentions": 1,
+   "sources": [
+    "openspec-4"
+   ]
+  },
+  {
+   "name": "landedShaForGoalHash LATE-LANDING",
+   "location": "repos/goal-host-vessel/src/index.ts",
+   "purpose": "credit edit-intent landings whose caller failed",
+   "status": "live-used",
+   "general": false,
+   "evidence": "true positive 09-04 09:04; misses pwt path and goal-seek :15202",
+   "source": "transcripts-1",
+   "mentions": 1,
+   "sources": [
+    "transcripts-1"
+   ]
+  }
+ ]
+}

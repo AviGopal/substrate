@@ -1,0 +1,19 @@
+{
+  "id": "db-contention-2026-08-21T12",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "db_contention",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "SurrealDB write/read contention: p95_latency_ms=2020.8>2000 (p50=15.5ms, slow_queries=50, qps=5.04). Likely a write-stor",
+  "description": "SurrealDB write/read contention: p95_latency_ms=2020.8>2000 (p50=15.5ms, slow_queries=50, qps=5.04). Likely a write-storm or hot-row UPDATE pattern saturating the single-writer engine. Inspect by_op in /metrics/db; mitigations: batch hot-table writes, detach posterior/penalty writes from request hot paths, reduce failure-trace volume.",
+  "goal_text": "SurrealDB write/read contention: p95_latency_ms=2020.8>2000 (p50=15.5ms, slow_queries=50, qps=5.04). Likely a write-storm or hot-row UPDATE pattern saturating the single-writer engine. Inspect by_op in /metrics/db; mitigations: batch hot-table writes, detach posterior/penalty writes from request hot paths, reduce failure-trace volume.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "db-contention-2026-08-21T12",
+  "source_gap_source": "substrate_detected"
+}

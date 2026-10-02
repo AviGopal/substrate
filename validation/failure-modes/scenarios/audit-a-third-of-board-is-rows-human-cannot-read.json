@@ -1,0 +1,19 @@
+{
+  "id": "audit-a-third-of-board-is-rows-human-cannot-read",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "conversation_only",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Close substrate gap a-third-of-the-board-is-rows-a-human-cannot-read: Audit of what the human surface displays, 2026-09-",
+  "description": "Close substrate gap a-third-of-the-board-is-rows-a-human-cannot-read: Audit of what the human surface displays, 2026-09-06, against the activeDispatches feed it renders (50 rows, matching the stated 'board carries at most 50 runs').",
+  "goal_text": "Close substrate gap a-third-of-the-board-is-rows-a-human-cannot-read: Audit of what the human surface displays, 2026-09-06, against the activeDispatches feed it renders (50 rows, matching the stated 'board carries at most 50 runs').",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "audit-a-third-of-board-is-rows-human-cannot-read",
+  "source_gap_source": "operator_narration"
+}

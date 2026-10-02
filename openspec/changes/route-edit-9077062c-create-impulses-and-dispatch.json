@@ -1,0 +1,23 @@
+
+{
+  "change_id": "route-edit-9077062c-create-impulses-and-dispatch",
+  "summary": "Create impulses.ts and add dispatch for httpResponse",
+  "description": "This change creates the impulses.ts file and adds a dispatch case for the httpResponse shape.",
+  "target_file": "repos/development-vessel/src/routes/impulses.ts",
+  "patches": [
+    {
+      "type": "create_file",
+      "content": "import { AnyPointer, ResolverResult } from '../config';
+import { resolveHttpResponse } from '../resolvers/http-response';
+
+export async function routeImpulse(pointer: AnyPointer): Promise<ResolverResult> {
+  switch (pointer.type) {
+    case 'httpResponse':
+      return resolveHttpResponse(pointer as any);
+    default:
+      return { shape: 'error', body: `Unknown pointer type: ${pointer.type}` };
+  }
+}"
+    }
+  ]
+}

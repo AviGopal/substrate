@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-98e77b8a",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap a-poisoned-compose-lesson-can-never-be-removed-from-the-drafter-corpus: The concept-db adv",
+  "description": "investigate and decompose gap a-poisoned-compose-lesson-can-never-be-removed-from-the-drafter-corpus: The concept-db advertises no delete, retire, or supersede shape, indicating a gap in catalog management that may lead to unnecessary resource consumption.",
+  "goal_text": "investigate and decompose gap a-poisoned-compose-lesson-can-never-be-removed-from-the-drafter-corpus: The concept-db advertises no delete, retire, or supersede shape, indicating a gap in catalog management that may lead to unnecessary resource consumption.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-98e77b8a",
+  "source_gap_source": "substrate_detected"
+}

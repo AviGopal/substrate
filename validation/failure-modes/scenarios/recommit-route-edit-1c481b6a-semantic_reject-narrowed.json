@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-1c481b6a-semantic_reject-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from recommit-route-edit-1c481b6a-semantic_reject] compose for gap route-edit-1c481b6a repeated already-record",
+  "description": "[narrowed from recommit-route-edit-1c481b6a-semantic_reject] compose for gap route-edit-1c481b6a repeated already-recorded failure class semantic_reject: dead-code-only patch: every changed symbol (insertSystemTrace) has zero callers and is not an entrypoint — the change cannot execute",
+  "goal_text": "[narrowed from recommit-route-edit-1c481b6a-semantic_reject] compose for gap route-edit-1c481b6a repeated already-recorded failure class semantic_reject: dead-code-only patch: every changed symbol (insertSystemTrace) has zero callers and is not an entrypoint — the change cannot execute",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-1c481b6a-semantic_reject-narrowed",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-b95c7110-verify_failed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap the-blind-edit-repair-discards-the-verbatim-anchor-the-file-tool-already-returned: MEASURE",
+  "description": "investigate and decompose gap the-blind-edit-repair-discards-the-verbatim-anchor-the-file-tool-already-returned: MEASURED 2026-09-12. When fs_edit fails with old_string not found, local-tools-vessel/src/index.ts:333 returns a message that ALREADY CONTAINS THE ANSWER: 'The closest real text is lines X-Y of N, VERBATIM:' followed by the actual verbatim lines. feature-compose.ts then DISCARDS that message. Its blind-edit repair path instead runs a fresh cat, dumps the ENTIRE file into an LLM prompt built as [RETRY CONTEXT — compose for gap route-edit-b95c7110 repeated already-recorded failure class verify_failed: src/resolvers/feature-compose.ts(34,126): error TS2305: Module '\"../cross-file-symbols.js\"' has no exported member 'verbatimAnchorFromFsEditError'.. The specification is above; this failure text is context only and is not the specification.]",
+  "goal_text": "investigate and decompose gap the-blind-edit-repair-discards-the-verbatim-anchor-the-file-tool-already-returned: MEASURED 2026-09-12. When fs_edit fails with old_string not found, local-tools-vessel/src/index.ts:333 returns a message that ALREADY CONTAINS THE ANSWER: 'The closest real text is lines X-Y of N, VERBATIM:' followed by the actual verbatim lines. feature-compose.ts then DISCARDS that message. Its blind-edit repair path instead runs a fresh cat, dumps the ENTIRE file into an LLM prompt built as [RETRY CONTEXT — compose for gap route-edit-b95c7110 repeated already-recorded failure class verify_failed: src/resolvers/feature-compose.ts(34,126): error TS2305: Module '\"../cross-file-symbols.js\"' has no exported member 'verbatimAnchorFromFsEditError'.. The specification is above; this failure text is context only and is not the specification.]",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-b95c7110-verify_failed",
+  "source_gap_source": "substrate_detected"
+}

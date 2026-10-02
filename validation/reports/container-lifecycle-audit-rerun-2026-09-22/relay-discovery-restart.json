@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-22T10:44:22.726126+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "vessel-ctl",
+    "restart",
+    "discovery-vessel"
+  ],
+  "rc": 0,
+  "stdout": "{\"ok\":true,\"action\":\"restart\",\"vessel\":\"discovery-vessel\",\"unit\":\"discovery-vessel.service\",\"container\":\"sla-0922r-80a33e-root-a\",\"active\":\"active\",\"mainpid\":\"3751\",\"nrestarts\":\"0\"}\n",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-4fca2558-semantic_reject",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "compose for gap route-edit-4fca2558 repeated already-recorded failure class semantic_reject: The patch introduces a `isL",
+  "description": "compose for gap route-edit-4fca2558 repeated already-recorded failure class semantic_reject: The patch introduces a `isLoopback` function and uses it to derive endpoints from the request host, but it still falls back to environment variables l",
+  "goal_text": "compose for gap route-edit-4fca2558 repeated already-recorded failure class semantic_reject: The patch introduces a `isLoopback` function and uses it to derive endpoints from the request host, but it still falls back to environment variables l",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-4fca2558-semantic_reject",
+  "source_gap_source": "substrate_detected"
+}

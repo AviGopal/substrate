@@ -1,0 +1,1 @@
+{"version":3,"file":"http-response-types.d.ts","sourceRoot":"","sources":["http-response-types.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,cAAc;IAC7B,KAAK,EAAE,MAAM,CAAC;IACd,IAAI,EAAE,OAAO,CAAC;CACf;AAED,MAAM,WAAW,mBAAmB;IAClC,IAAI,EAAE,cAAc,CAAC;IACrB,GAAG,EAAE,MAAM,CAAC;IACZ,SAAS,CAAC,EAAE,MAAM,CAAC;IACnB,aAAa,CAAC,EAAE,MAAM,EAAE,CAAC;CAC1B"}

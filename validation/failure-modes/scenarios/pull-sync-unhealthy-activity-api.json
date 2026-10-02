@@ -1,0 +1,19 @@
+{
+  "id": "pull-sync-unhealthy-activity-api",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "service_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "activity-api unhealthy after pull-sync to 16edacd237; reverted to 5c57ff9811 and halted the sync run",
+  "description": "activity-api unhealthy after pull-sync to 16edacd237; reverted to 5c57ff9811 and halted the sync run",
+  "goal_text": "activity-api unhealthy after pull-sync to 16edacd237; reverted to 5c57ff9811 and halted the sync run",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "pull-sync-unhealthy-activity-api",
+  "source_gap_source": "substrate_detected"
+}

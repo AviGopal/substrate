@@ -1,0 +1,9 @@
+{
+  "title": "Remove goal_summary from config.ts shapes array",
+  "description": "Removes the 'goal_summary' entry from the discovery.shapes array in config.ts as it is an orphaned capability.",
+  "change": {
+    "file_path": "repos/development-vessel/src/config.ts",
+    "old_string": "      \"goal_summary\",\n",
+    "new_string": ""
+  }
+}

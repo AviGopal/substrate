@@ -1,0 +1,19 @@
+{
+  "id": "baseline-typecheck-broken-repos-discovery-vessel",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "feature_compose found the UNTOUCHED baseline of repos/discovery-vessel failing typecheck BEFORE drafting (2 pre-existing",
+  "description": "feature_compose found the UNTOUCHED baseline of repos/discovery-vessel failing typecheck BEFORE drafting (2 pre-existing tsc errors, e.g. src/index.ts: error TS2304: Cannot find name 'ZZZ_THIS_ANCHOR_DOES_NOT_EXIST_CLOSURE_PROBE_20260912'. | src/index.ts: error TS2304: Cannot find name 'MAX_PEER_DEPTH'.). Environment fault (stale runtime copy or missing module), not a drafter fault: re-sync this vessel source from its repo baseline. Draft verdicts on this vessel use baseline-delta blame until the baseline is clean.",
+  "goal_text": "feature_compose found the UNTOUCHED baseline of repos/discovery-vessel failing typecheck BEFORE drafting (2 pre-existing tsc errors, e.g. src/index.ts: error TS2304: Cannot find name 'ZZZ_THIS_ANCHOR_DOES_NOT_EXIST_CLOSURE_PROBE_20260912'. | src/index.ts: error TS2304: Cannot find name 'MAX_PEER_DEPTH'.). Environment fault (stale runtime copy or missing module), not a drafter fault: re-sync this vessel source from its repo baseline. Draft verdicts on this vessel use baseline-delta blame until the baseline is clean.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "baseline-typecheck-broken-repos-discovery-vessel",
+  "source_gap_source": "substrate_detected"
+}

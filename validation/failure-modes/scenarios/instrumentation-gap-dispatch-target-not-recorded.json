@@ -1,0 +1,19 @@
+{
+  "id": "instrumentation-gap-dispatch-target-not-recorded",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "missing_concept",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "activity-api execution traces do not record the dispatch's originally-requested target_template_id. Detector probed targ",
+  "description": "activity-api execution traces do not record the dispatch's originally-requested target_template_id. Detector probed target_template_id, dispatch_target_template_id, requested_template_id across 100 recent rows and found none. Without this field, dispatch-target-drift (caller says X, Thompson/recommend selects Y) is structurally invisible to the substrate. Fix path: extend AET schema + trace-write path in repos/activity-api so goal-host can persist the requested target alongside the selected variant_id.",
+  "goal_text": "activity-api execution traces do not record the dispatch's originally-requested target_template_id. Detector probed target_template_id, dispatch_target_template_id, requested_template_id across 100 recent rows and found none. Without this field, dispatch-target-drift (caller says X, Thompson/recommend selects Y) is structurally invisible to the substrate. Fix path: extend AET schema + trace-write path in repos/activity-api so goal-host can persist the requested target alongside the selected variant_id.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "instrumentation-gap-dispatch-target-not-recorded",
+  "source_gap_source": "substrate_detected"
+}

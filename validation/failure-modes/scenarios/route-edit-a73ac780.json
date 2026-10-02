@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-a73ac780",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/development-vessel/src/resolvers/selector-saturation-audit.ts. The current line reads exactly: `const degener",
+  "description": "Edit repos/development-vessel/src/resolvers/selector-saturation-audit.ts. The current line reads exactly: `const degenerate = saturatedFraction >= satThreshold && variance <= varThreshold;` — this AND-condition only flags degeneracy when the selector is BOTH saturated AND low-variance, so it misses the case this audit exists to catch: undifferentiated arm posteriors (variance_of_means at or below varThreshold with distinct_means <= 1) that are NOT saturated, which make Thompson selection effectively uniform-random yet report 'healthy'. Change that single line to also treat undifferentiated means as degenerate, e.g.: `const degenerate = (saturatedFraction >= satThreshold && variance <= varThreshold) || (variance <= varThreshold && (snap.distinct_means ?? 2) <= 1);`. Preserve the cold-start guard above it unchanged. Change only this line.",
+  "goal_text": "Edit repos/development-vessel/src/resolvers/selector-saturation-audit.ts. The current line reads exactly: `const degenerate = saturatedFraction >= satThreshold && variance <= varThreshold;` — this AND-condition only flags degeneracy when the selector is BOTH saturated AND low-variance, so it misses the case this audit exists to catch: undifferentiated arm posteriors (variance_of_means at or below varThreshold with distinct_means <= 1) that are NOT saturated, which make Thompson selection effectively uniform-random yet report 'healthy'. Change that single line to also treat undifferentiated means as degenerate, e.g.: `const degenerate = (saturatedFraction >= satThreshold && variance <= varThreshold) || (variance <= varThreshold && (snap.distinct_means ?? 2) <= 1);`. Preserve the cold-start guard above it unchanged. Change only this line.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-a73ac780",
+  "source_gap_source": "substrate_detected"
+}

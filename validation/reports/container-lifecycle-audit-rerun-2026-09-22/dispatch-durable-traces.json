@@ -1,0 +1,85 @@
+{
+  "status": 200,
+  "data": {
+    "executions": [
+      {
+        "activity_id": "validator-dispatch",
+        "cost_usd": 0,
+        "duration_ms": 97,
+        "executed_at": "2026-09-22T10:44:25.000733834Z",
+        "execution_id": "execution:exec_si7rmxv0",
+        "id": "v_paradigm_execution_traces:exec_si7rmxv0",
+        "org_id": "organizations:substrate",
+        "parent_execution_id": "exec_dbta9gqb",
+        "status": "success",
+        "success": true,
+        "task_count": 0,
+        "variant_id": "validator-dispatch",
+        "reached": null
+      },
+      {
+        "activity_id": "validator-dispatch",
+        "cost_usd": 0,
+        "duration_ms": 2,
+        "executed_at": "2026-09-22T10:44:24.90454137Z",
+        "execution_id": "execution:exec_gcash7qj",
+        "id": "v_paradigm_execution_traces:exec_gcash7qj",
+        "org_id": "organizations:substrate",
+        "parent_execution_id": "exec_0aeyvmoi",
+        "status": "success",
+        "success": true,
+        "task_count": 0,
+        "variant_id": "validator-dispatch",
+        "reached": null
+      },
+      {
+        "activity_id": "validator-dispatch",
+        "cost_usd": 0,
+        "duration_ms": 75,
+        "executed_at": "2026-09-22T10:44:24.896316419Z",
+        "execution_id": "execution:exec_6auy87m2",
+        "id": "v_paradigm_execution_traces:exec_6auy87m2",
+        "org_id": "organizations:substrate",
+        "parent_execution_id": "exec_0aeyvmoi",
+        "status": "success",
+        "success": true,
+        "task_count": 0,
+        "variant_id": "validator-dispatch",
+        "reached": null
+      },
+      {
+        "activity_id": "validator-dispatch",
+        "cost_usd": 0,
+        "duration_ms": 90,
+        "executed_at": "2026-09-22T10:44:24.815731576Z",
+        "execution_id": "execution:exec_z37fygzi",
+        "id": "v_paradigm_execution_traces:exec_z37fygzi",
+        "org_id": "organizations:substrate",
+        "parent_execution_id": "exec_p2plyye8",
+        "status": "success",
+        "success": true,
+        "task_count": 0,
+        "variant_id": "validator-dispatch",
+        "reached": null
+      },
+      {
+        "activity_id": "validator-dispatch",
+        "cost_usd": 0,
+        "duration_ms": 89,
+        "executed_at": "2026-09-22T10:44:24.812468003Z",
+        "execution_id": "execution:exec_sqhqj3x4",
+        "id": "v_paradigm_execution_traces:exec_sqhqj3x4",
+        "org_id": "organizations:substrate",
+        "parent_execution_id": "exec_p2plyye8",
+        "status": "success",
+        "success": true,
+        "task_count": 0,
+        "variant_id": "validator-dispatch",
+        "reached": null
+      }
+    ],
+    "total": -1,
+    "limit": 5,
+    "offset": 0
+  }
+}

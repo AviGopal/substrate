@@ -1,0 +1,19 @@
+{
+  "id": "the-repair-drafter-ignores-the-safe-output-format-half-the-time",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "MEASURED 2026-09-12 across roughly 36 typecheck-repair responses, using telemetry landed today. Edit repos/development-v",
+  "description": "MEASURED 2026-09-12 across roughly 36 typecheck-repair responses, using telemetry landed today. Edit repos/development-vessel/src/resolvers/feature-compose.ts.",
+  "goal_text": "MEASURED 2026-09-12 across roughly 36 typecheck-repair responses, using telemetry landed today. Edit repos/development-vessel/src/resolvers/feature-compose.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "the-repair-drafter-ignores-the-safe-output-format-half-the-time",
+  "source_gap_source": "substrate_detected"
+}

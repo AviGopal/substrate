@@ -1,0 +1,26 @@
+{
+  "id": "vessel-demand-discoverByShapesQuery-2026-09-03",
+  "routing_class": "vessel_authoring",
+  "target_template_id": "development-vessel:scaffold-and-publish-vessel",
+  "mode_class": "missing_capability",
+  "stage": "vessel_authoring",
+  "outcome_class": "gap",
+  "title": "Shape 'discoverByShapesQuery' required by 56 templates but no vessel advertises it. Candidate for substrate-authored ves",
+  "description": "Shape 'discoverByShapesQuery' required by 56 templates but no vessel advertises it. Candidate for substrate-authored vessel.",
+  "goal_text": "Shape 'discoverByShapesQuery' required by 56 templates but no vessel advertises it. Candidate for substrate-authored vessel.",
+  "capability_shape": "discoverByShapesQuery",
+  "demanding_template_count": 56,
+  "sample_template_ids": [
+    "composed-cap-pulsevitals2-composed-aggregator-improved--new-1785085209437",
+    "composed-cap-pulsevitals2-composed-aggregator-author-1643723400-1785453629293",
+    "composed-cap-pulsevitals2-composed-aggregator-improved--〉-1785066037418",
+    "composed-capability:pulsevitals2-composed-aggregator-author-20240727T135742Z-1785062261513",
+    "composed-cap-pulsevitals2-composed-aggregator-improved---1785077504943"
+  ],
+  "gap_subtype": "vessel_demand",
+  "cite_principle": null,
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "vessel-demand-discoverByShapesQuery-2026-09-03",
+  "source_gap_source": "substrate_detected"
+}

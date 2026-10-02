@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-fd914210",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/llm-resolver-vessel/src/index.ts, in the OPENAI_WIRE_PROVIDERS startup loop, the keyless-provider branch (the o",
+  "description": "In repos/llm-resolver-vessel/src/index.ts, in the OPENAI_WIRE_PROVIDERS startup loop, the keyless-provider branch (the one that logs \"SKIPPED at startup\" and calls reportMissingKey when the provider api key env is empty and no defaultKey exists) must `continue` to the next provider instead of falling through to `new OpenAI({apiKey: key, ...})`. The current comment says \"DO NOT continue; instead, initialize client with dummy key so it appears in quota state\" but the code passes the EMPTY string, and the OpenAI SDK constructor throws \"Missing credentials\" on an empty apiKey — so one keyless provider kills the entire vessel at boot in a systemd restart loop (measured 2026-09-16 06:06-06:07 on the live substrate after removing a placeholder GOOGLE_API_KEY; the vessel crash-looped until the branch was hot-patched to continue). Replace the comment and the fall-through with a `continue;` so a keyless provider forfeits its models cleanly, exactly as the branch's own warning text already claims (\"forfeiting N model(s)\").",
+  "goal_text": "In repos/llm-resolver-vessel/src/index.ts, in the OPENAI_WIRE_PROVIDERS startup loop, the keyless-provider branch (the one that logs \"SKIPPED at startup\" and calls reportMissingKey when the provider api key env is empty and no defaultKey exists) must `continue` to the next provider instead of falling through to `new OpenAI({apiKey: key, ...})`. The current comment says \"DO NOT continue; instead, initialize client with dummy key so it appears in quota state\" but the code passes the EMPTY string, and the OpenAI SDK constructor throws \"Missing credentials\" on an empty apiKey — so one keyless provider kills the entire vessel at boot in a systemd restart loop (measured 2026-09-16 06:06-06:07 on the live substrate after removing a placeholder GOOGLE_API_KEY; the vessel crash-looped until the branch was hot-patched to continue). Replace the comment and the fall-through with a `continue;` so a keyless provider forfeits its models cleanly, exactly as the branch's own warning text already claims (\"forfeiting N model(s)\").",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-fd914210",
+  "source_gap_source": "substrate_detected"
+}

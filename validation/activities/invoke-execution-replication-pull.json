@@ -1,0 +1,24 @@
+{
+  "id": "invoke-execution-replication-pull",
+  "name": "Invoke Execution Replication Pull",
+  "description": "An activity to invoke the executionReplicationPull resolver for replication purposes.",
+  "execution_type": "template",
+  "tasks": [
+    {
+      "id": "call-replication-pull",
+      "description": "Call the executionReplicationPull resolver.",
+      "tool_code": "executionReplicationPull",
+      "arguments": {
+        "since": "2023-01-01T00:00:00Z",
+        "limit": 10
+      },
+      "outputShapes": ["executionReplicationPullResult"]
+    }
+  ],
+  "input_shapes": [],
+  "output_shapes": ["executionReplicationPullResult"],
+  "category": "replication",
+  "scope": "global",
+  "public": true,
+  "proposed": false
+}

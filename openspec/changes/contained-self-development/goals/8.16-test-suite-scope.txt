@@ -1,0 +1,35 @@
+In repos/development-vessel/src/resolvers/test-suite.ts, let the suite runner run a single test file, report how many requested test names did not pass, and run tests with discovery pointed at a dead address, because a failing test is the best measured, code-fixable gap, but the whole development-vessel suite exceeds the time budget, and a plain failure count reads a deleted or renamed test as fixed; and a local-tools test run in the live container registered a phantom endpoint (127.0.0.1:20236) in live discovery, breaking every compose on the node for ~20 minutes. Apply exactly these 4 edits; each old text occurs exactly once:
+EDIT 1
+old:
+  const testFilter = onlyTests.length > 0
+new:
+  // One test file (relative to the vessel root) instead of the whole suite: a failing-test gap is judged in
+  // seconds rather than a suite that exceeds the budget. Path characters only; anything else is ignored.
+  const testFile = typeof pointer.test_file === "string" && /^[A-Za-z0-9_./-]+$/.test(pointer.test_file.trim()) && !pointer.test_file.includes("..")
+    ? pointer.test_file.trim()
+    : "";
+  const testFilter = onlyTests.length > 0
+EDIT 2
+old:
+timeout ${budgetSec} bun test --timeout ${perTestTimeoutMs}${testFilter} 2>&1 || true)`;
+new:
+DISCOVERY_ENDPOINT=http://127.0.0.1:9 DISCOVERY_VESSEL_ENDPOINT=http://127.0.0.1:9 timeout ${budgetSec} bun test${testFile ? " " + JSON.stringify(testFile) : ""} --timeout ${perTestTimeoutMs}${testFilter} 2>&1 || true)`;
+EDIT 3
+old:
+  const parsed = parseBunSummary(raw);
+new:
+  const parsed = parseBunSummary(raw);
+  // Requested tests that did not pass: failing, missing, renamed or deleted all count. A failing-test gap
+  // measured by `fail` alone reads a deleted test as fixed; this count stays >0 until the test itself passes.
+  const passLines = raw.split("\n").filter((l) => /^\s*\(pass\)/.test(l));
+  const requestedNotPassing = onlyTests.length > 0
+    ? onlyTests.filter((t) => !passLines.some((l) => l.includes(t))).length
+    : null;
+EDIT 4
+old:
+      fail: parsed.fail,
+new:
+      fail: parsed.fail,
+      test_file: testFile || null,
+      requested_not_passing: ran || onlyTests.length === 0 ? requestedNotPassing : null,
+Done when: all 4 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

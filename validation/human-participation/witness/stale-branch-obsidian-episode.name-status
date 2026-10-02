@@ -1,0 +1,13 @@
+M	compose-slots/slot-0.slot
+M	interactor-log/uiFeedback_write.jsonl
+D	leases/maintenance.json
+A	mitosis-applied-host-sync.jsonl
+M	repos/activity-api
+M	repos/concept-db
+M	repos/development-vessel
+M	repos/goal-host-vessel
+M	repos/ias-executor-ts
+M	repos/identity-vessel
+M	repos/llm-resolver-vessel
+M	repos/metric-collector-vessel
+M	state/learning-mode-state.json

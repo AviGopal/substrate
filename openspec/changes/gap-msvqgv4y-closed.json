@@ -1,0 +1,7 @@
+{
+  "change_id": "gap-msvqgv4y-closed",
+  "summary": "Close gap-msvqgv4y: uiPanel_write is now invoked",
+  "description": "The resolver 'uiPanel_write' is now invoked by 'draft-detector-activity', as verified by inspecting 'repos/development-vessel/src/seed/draft-detector-activity.ts'. This closes gap-msvqgv4y.",
+  "gap_id": "gap-msvqgv4y",
+  "status": "closed"
+}

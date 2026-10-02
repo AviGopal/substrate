@@ -1,0 +1,9 @@
+In repos/development-vessel/src/resolvers/attempt-checks.ts, in takeSnapshot, replace exactly the line
+
+  const results = await evaluateChecks(opts.checks);
+
+with
+
+  const results = await evaluateChecks(opts.checks, undefined, opts.repos?.length === 1 ? opts.repos[0] : undefined);
+
+Measured: evaluateChecks takes an optional targetVessel and records systemd_units as unknown when that vessel is not resident on this node, but its only caller never passes it, so the branch can never run (a hollow parameter). Every takeSnapshot caller in attempt-register.ts passes `repos: [<the landed repo>]`. Passing undefined as the second argument keeps the default per-check timeout. Change nothing else.

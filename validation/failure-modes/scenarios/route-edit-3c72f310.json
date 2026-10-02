@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-3c72f310",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/development-vessel/src/resolvers/feature-compose.ts, fix creation-goal apply: when a compose op targets a sourc",
+  "description": "In repos/development-vessel/src/resolvers/feature-compose.ts, fix creation-goal apply: when a compose op targets a source file that does not yet exist, it must CREATE the file rather than fail. Root cause (measured, dispatch 8d98f763 / route-edit-15b1240a): for a goal to create a new file, the drafter emitted an op with kind:\"edit\" pointing at a not-yet-existing path; per the drafter prompt an edit to a path not already present fails at apply with \"ENOENT: no such file or directory, open <path>\", so op_count=1 apply_failed, rolled_back, verdict UNFAVORABLE — no file created. feature_compose already supports a create_file op; the defect is that a new-file intent lands as kind:\"edit\" and ENOENTs by design. Fix it deterministically at the point where the file tree is known: when an op's target path is absent in the compose worktree, promote it to a create_file (mkdir -p the parent, write the intended new content) instead of opening a nonexistent file — guard so it only fires when the path is genuinely absent, leaving normal edits to existing files unchanged. Preserve the existing ENOENT/parent-dir handling.",
+  "goal_text": "In repos/development-vessel/src/resolvers/feature-compose.ts, fix creation-goal apply: when a compose op targets a source file that does not yet exist, it must CREATE the file rather than fail. Root cause (measured, dispatch 8d98f763 / route-edit-15b1240a): for a goal to create a new file, the drafter emitted an op with kind:\"edit\" pointing at a not-yet-existing path; per the drafter prompt an edit to a path not already present fails at apply with \"ENOENT: no such file or directory, open <path>\", so op_count=1 apply_failed, rolled_back, verdict UNFAVORABLE — no file created. feature_compose already supports a create_file op; the defect is that a new-file intent lands as kind:\"edit\" and ENOENTs by design. Fix it deterministically at the point where the file tree is known: when an op's target path is absent in the compose worktree, promote it to a create_file (mkdir -p the parent, write the intended new content) instead of opening a nonexistent file — guard so it only fires when the path is genuinely absent, leaving normal edits to existing files unchanged. Preserve the existing ENOENT/parent-dir handling.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-3c72f310",
+  "source_gap_source": "substrate_detected"
+}

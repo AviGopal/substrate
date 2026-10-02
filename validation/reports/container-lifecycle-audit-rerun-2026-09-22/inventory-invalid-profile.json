@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-22T10:47:03.129074+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "sh",
+    "-c",
+    "PROFILE=audit_no_such_profile /usr/local/bin/apply-inventory"
+  ],
+  "rc": 1,
+  "stdout": "",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n[apply-inventory] FATAL: PROFILE='audit_no_such_profile' names no entry in .profiles \u2014 known: audit_mutable, compute_node, surface_node\n"
+}

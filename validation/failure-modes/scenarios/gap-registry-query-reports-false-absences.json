@@ -1,0 +1,19 @@
+{
+  "id": "gap-registry-query-reports-false-absences",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "observability",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The metabob cockpit tool registry_query answers \"No vessels advertise shape X\" for shapes that discovery does serve. Mea",
+  "description": "The metabob cockpit tool registry_query answers \"No vessels advertise shape X\" for shapes that discovery does serve. Measured twice: memoryNote (discovery /registry/shapes lists it; vesselCapability resolve returns development-vessel-local) and source_code/problem_detection/code_quality (all resolve to analysis-vessel-local, 6 shapes, registered among 14 vessels, health 200). It advertises ~90 shapes against discovery /registry/stats totalShapes=383, so it appears to read a partial or stale index. IMPACT: this is the read path for law 3 (find an existing producer before minting) — a false negative is exactly what causes a duplicate mint, which the laws call negative value. It has already produced a wrong finding in a documentation audit, where an agent concluded a running, registered vessel advertised nothing. Consumers must cross-check against discovery /resolve before concluding absence.",
+  "goal_text": "The metabob cockpit tool registry_query answers \"No vessels advertise shape X\" for shapes that discovery does serve. Measured twice: memoryNote (discovery /registry/shapes lists it; vesselCapability resolve returns development-vessel-local) and source_code/problem_detection/code_quality (all resolve to analysis-vessel-local, 6 shapes, registered among 14 vessels, health 200). It advertises ~90 shapes against discovery /registry/stats totalShapes=383, so it appears to read a partial or stale index. IMPACT: this is the read path for law 3 (find an existing producer before minting) — a false negative is exactly what causes a duplicate mint, which the laws call negative value. It has already produced a wrong finding in a documentation audit, where an agent concluded a running, registered vessel advertised nothing. Consumers must cross-check against discovery /resolve before concluding absence.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-registry-query-reports-false-absences",
+  "source_gap_source": "substrate_detected"
+}

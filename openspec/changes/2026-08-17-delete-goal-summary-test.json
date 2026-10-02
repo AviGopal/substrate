@@ -1,0 +1,9 @@
+{
+  "title": "Delete goal-summary.test.js file",
+  "description": "Deletes the goal-summary.test.js test file as it's no longer needed.",
+  "change": {
+    "file_path": "repos/development-vessel/test/resolvers/goal-summary.test.js",
+    "old_string": "*",
+    "new_string": ""
+  }
+}

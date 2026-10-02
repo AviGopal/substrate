@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-60005a84",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap route-edit-35e64bda: Edit repos/discovery-vessel/src/index.ts to make peer fan-out log a n",
+  "description": "investigate and decompose gap route-edit-35e64bda: Edit repos/discovery-vessel/src/index.ts to make peer fan-out log a non-ok peer response instead of swallowing it. In the forwardToPeers function, the current line `      if (!res.ok) return` silently discards a non-ok response, so a peer 401/403 (usually a missing or wrong HUB_API_KEY, which is set by no deploy path) is byte-identical to \"this peer has no producer\". Replace that single line so th",
+  "goal_text": "investigate and decompose gap route-edit-35e64bda: Edit repos/discovery-vessel/src/index.ts to make peer fan-out log a non-ok peer response instead of swallowing it. In the forwardToPeers function, the current line `      if (!res.ok) return` silently discards a non-ok response, so a peer 401/403 (usually a missing or wrong HUB_API_KEY, which is set by no deploy path) is byte-identical to \"this peer has no producer\". Replace that single line so th",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-60005a84",
+  "source_gap_source": "substrate_detected"
+}

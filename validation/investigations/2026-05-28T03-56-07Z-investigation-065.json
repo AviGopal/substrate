@@ -1,0 +1,59 @@
+{
+  "investigation_id": "065",
+  "generated_at": "2026-05-28T03:56:07Z",
+  "investigator_session_id": "loop-dynamic-mode",
+  "prior_investigation_id": "2026-05-28T03-07-07Z-investigation-064",
+  "substrate_target": "http://localhost:18080",
+  "substrate_status": "healthy",
+
+  "critical_summary": "No new commits since investigation-064 (quiescent ~49 min; ~81 min since iter-29). Iter-30 engine LLM fix has not landed. All findings carry forward unchanged. F-148 HIGH (engine llm-prompt gap) remains open. F-146 CRITICAL (4d0c305e devbob@metabob.local) unchanged. Closure-audit 7/7. Auto-promote: considered=6, promoted=0. Root count still 30. Substrate appears to have paused iterating — possibly operator offline or deeper investigation in progress.",
+
+  "commits_since_064": [],
+
+  "findings_reverification": {
+    "F-148": {
+      "prior_status": "HIGH OPEN",
+      "current_status": "HIGH OPEN — 81 min since iter-29 partial fix, no iter-30",
+      "evidence": [{"type": "no_new_commits", "command": "git log --oneline --since='2026-05-28T03:07:07Z' --format='%H %ae %s'", "observed": "(empty)"}]
+    },
+    "F-147": {"prior_status": "LOW OPEN", "current_status": "LOW OPEN", "evidence": [{"type": "root_count", "command": "ls -1 | wc -l", "observed": "30"}]},
+    "F-146": {
+      "prior_status": "CRITICAL OPEN",
+      "current_status": "CRITICAL OPEN",
+      "evidence": [{"type": "4d0c305e_author", "command": "git show 4d0c305e --format='%H %ae'", "observed": "4d0c305e7900e0e065c7fb5c93f2f2812b1fd48b devbob@metabob.local"}]
+    },
+    "F-145": {"prior_status": "OPEN", "current_status": "OPEN"},
+    "F-144": {"prior_status": "RE-OPENED", "current_status": "RE-OPENED"},
+    "F-143": {"prior_status": "CLOSED", "current_status": "CLOSED"},
+    "F-142": {"prior_status": "ACKNOWLEDGED", "current_status": "ACKNOWLEDGED"},
+    "F-141": {"prior_status": "OPEN", "current_status": "OPEN"},
+    "F-140": {"prior_status": "ADDRESSED", "current_status": "ADDRESSED"},
+    "F-101": {"prior_status": "OPEN", "current_status": "OPEN"}
+  },
+
+  "auto_promote_status": {
+    "command": "curl -sf -X POST http://localhost:18080/v2/activities/templates/auto-promote -H 'Authorization: ApiKey $METABOB_API_KEY' -d '{\"dry_run\": true}'",
+    "observed": "{success: true, considered: 6, promoted: 0, skipped: 6}",
+    "note": "Unchanged. Correct behavior — no LLM synthesis means no new proposed templates."
+  },
+
+  "closure_audit": {"result": "7/7 CLOSED", "verified_at": "2026-05-28T03:54Z"},
+
+  "prior_findings_status": {
+    "F-148": "HIGH OPEN — iter-30 not landed, engine gap persists",
+    "F-147": "LOW OPEN",
+    "F-146": "CRITICAL OPEN",
+    "F-145": "OPEN",
+    "F-144": "RE-OPENED",
+    "F-143": "CLOSED",
+    "F-142": "ACKNOWLEDGED",
+    "F-141": "OPEN",
+    "F-140": "ADDRESSED",
+    "F-101": "OPEN"
+  },
+
+  "next_wake_recommendation": {
+    "delay_seconds": 3600,
+    "rationale": "Substrate quiescent for 81+ min. Monitor (br85cpgaa) will fire on commit; fallback heartbeat raised to 1h given extended pause."
+  }
+}

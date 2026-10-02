@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-c7220eb8",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Add repos/development-vessel/src/seed/gate-self-probe-tick.ts — create this new seed file exporting a GATE_SELF_PROBE_TI",
+  "description": "Add repos/development-vessel/src/seed/gate-self-probe-tick.ts — create this new seed file exporting a GATE_SELF_PROBE_TICK_TEMPLATE: a deterministic single-resolver wrapper around the live gate_self_probe resolver, following exactly the pattern of POSTERIOR_CONSISTENCY_AUDIT_TICK_TEMPLATE in src/seed/posterior-consistency-audit-tick.ts. Template id \"development-vessel:gate-self-probe-tick\", name \"gate-self-probe-tick\", empty inputShapes, a single task with resolver \"gate_self_probe\" and config { type: \"gate_self_probe\" }, outputShapes [\"gateSelfProbe\"], tags [\"intent:horizon_detection\", \"horizon:meta\", \"phase:detect\", \"boredom_target_template\", \"lift.autonomous.loop\", \"light_dispatch_eligible\"]. Then wire it into src/seed/index.ts: add an import line, an export line, and one entry appended to the SEED_TEMPLATES array. This closes substrate gap gate-self-probe-dispatcher-wiring so the autonomous rotation can invoke the gate self-probe and detect gate regressions.",
+  "goal_text": "Add repos/development-vessel/src/seed/gate-self-probe-tick.ts — create this new seed file exporting a GATE_SELF_PROBE_TICK_TEMPLATE: a deterministic single-resolver wrapper around the live gate_self_probe resolver, following exactly the pattern of POSTERIOR_CONSISTENCY_AUDIT_TICK_TEMPLATE in src/seed/posterior-consistency-audit-tick.ts. Template id \"development-vessel:gate-self-probe-tick\", name \"gate-self-probe-tick\", empty inputShapes, a single task with resolver \"gate_self_probe\" and config { type: \"gate_self_probe\" }, outputShapes [\"gateSelfProbe\"], tags [\"intent:horizon_detection\", \"horizon:meta\", \"phase:detect\", \"boredom_target_template\", \"lift.autonomous.loop\", \"light_dispatch_eligible\"]. Then wire it into src/seed/index.ts: add an import line, an export line, and one entry appended to the SEED_TEMPLATES array. This closes substrate gap gate-self-probe-dispatcher-wiring so the autonomous rotation can invoke the gate self-probe and detect gate regressions.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-c7220eb8",
+  "source_gap_source": "substrate_detected"
+}

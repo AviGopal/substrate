@@ -1,0 +1,263 @@
+{
+ "area": "database",
+ "items": [
+  {
+   "name": "account_id dual-scope",
+   "location": "04-28 phases A-G; migrations 095-099",
+   "purpose": "Account-scoped tenancy",
+   "status": "fossil",
+   "general": true,
+   "evidence": "Withdrawn 07-22 (166/170/174)",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "AET->execution dual-write / replication",
+   "location": "07-13/14 commits, migration 159",
+   "purpose": "Trace table migration + intra-group replication",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Dual-write decommissioned ec43116; replication use not verified",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "activity_execution_traces",
+   "location": "SurrealDB",
+   "purpose": "Old trace table",
+   "status": "fossil",
+   "general": true,
+   "evidence": "18,135 rows, all July 2026",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "execution_trace_content",
+   "location": "SurrealDB",
+   "purpose": "Task-level trace content",
+   "status": "live-used",
+   "general": true,
+   "evidence": "513k rows over 30+ days, no error text, not reclaimed",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "activityExecutionSummary clone family",
+   "location": "SurrealDB activity table",
+   "purpose": "duplicate producers",
+   "status": "duplicate",
+   "general": false,
+   "evidence": "70 rows, 68 not deprecated, minted 05-30..07-01",
+   "source": "openspec-7",
+   "mentions": 1,
+   "sources": [
+    "openspec-7"
+   ]
+  },
+  {
+   "name": "activity_template / activity_metrics / activity_templates tables",
+   "location": "SurrealDB learning_loop",
+   "purpose": "Documented template and metrics storage",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "activity table (4,010 rows)",
+   "evidence": "0 / 0 / 2 rows",
+   "source": "vessel-docs-tooling",
+   "mentions": 1,
+   "sources": [
+    "vessel-docs-tooling"
+   ]
+  },
+  {
+   "name": "legacy trace tables activity_execution_traces / activity_execution_trace",
+   "location": "SurrealDB learning_loop",
+   "purpose": "old trace store",
+   "status": "fossil",
+   "general": false,
+   "evidence": "07-26: execution is canonical, legacy aliases being archived",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "scratch namespaces",
+   "location": "SurrealDB root: scratch_test, 'scratch_test', audit-scratch (22 dbs)",
+   "purpose": "Migration bisect/test",
+   "status": "fossil",
+   "evidence": "INFO FOR NS",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "approach_feedback_scores",
+   "location": "designed (migration 180 free)",
+   "purpose": "Grade approach orthogonal to reach",
+   "status": "dormant",
+   "general": true,
+   "evidence": "07-27/28 designed not built",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "migrations table (second ledger)",
+   "location": "learning_loop.migrations",
+   "purpose": "Legacy ledger",
+   "status": "fossil",
+   "evidence": "2 rows 07-17, no filename",
+   "source": "concept-db-db",
+   "mentions": 1,
+   "sources": [
+    "concept-db-db"
+   ]
+  },
+  {
+   "name": "shape_gap_resolution slot-binding cache",
+   "location": "migration 105; /shape-gap-resolution routes",
+   "purpose": "Slot-binding cache",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "0 callers",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "trace_store_counters + lease-gated reconcile",
+   "location": "migration 156, src/routes/db-admin-reconcile.ts",
+   "purpose": "Trace-store size accounting",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Lease validation re-edited 67411fb, 1055cba, bd018b2",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "composition_edge table + fn::update_composition_edge",
+   "location": "migrations 046/063, retired by 169",
+   "purpose": "Phase-3 shape-based edge learner",
+   "status": "fossil",
+   "general": false,
+   "evidence": "fcf9499: 0 rows, fn never applied; scripts/reconcile-composition-edges.ts remains",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "external-validation resolver + grounding pipeline",
+   "location": "none (tables dropped in migrations 164/176)",
+   "purpose": "Validate against real systems; vesselize endpoints",
+   "status": "fossil",
+   "general": true,
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "Empty SurrealDB tables",
+   "location": "routing_trace, tool_usage, impulse_resolution_metrics, llm_resolution_log, impulse_usage_history, execution_system_traces, vessel, vessel_capabilities, shape_definition",
+   "purpose": "Various metrics",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 rows",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "Migration runner init-database.ts",
+   "location": "scripts/init-database.ts",
+   "purpose": "Apply schema on unit start",
+   "status": "live-used",
+   "general": true,
+   "evidence": "b4d7b0e, ef83e6a, 129fa76, fdb2fa6; ledger-vs-state gap (1f0d70f)",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "self-recovery-surreal-wedge-restart",
+   "location": "self-recovery timer",
+   "purpose": "restart a wedged SurrealDB",
+   "status": "live-used",
+   "general": false,
+   "evidence": "acted autonomously 09-16 20:03, RSS 22.5->4GB",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "queryRaw status-checked query",
+   "location": "src/db/surreal.ts (676c3f3)",
+   "purpose": "Surface statements SurrealDB rejects",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Used at the composition upsert only; query() still swallows status",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "Hierarchical signature clustering / cluster posterior",
+   "location": "src/lib/cluster-posterior.ts, migrations 132-135",
+   "purpose": "Pooling sparse signatures",
+   "status": "unknown",
+   "general": false,
+   "evidence": "Shadow logic deleted by 9775bc8, reverted d280a05",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "SurrealDB + valkey in spoke containers",
+   "location": "syzygy-local-* /var/lib/surrealdb",
+   "purpose": "Local support stores",
+   "status": "dormant",
+   "general": false,
+   "evidence": "INFO FOR ROOT shows zero namespaces after 6.4 days.",
+   "source": "syzygy",
+   "mentions": 1,
+   "sources": [
+    "syzygy"
+   ]
+  }
+ ]
+}

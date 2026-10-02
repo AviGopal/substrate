@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-9e67317b",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "falsifier",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The route-edit 9e67317b has been flagged as broken due to the closure predicate indicating that the federation-transport",
+  "description": "The route-edit 9e67317b has been flagged as broken due to the closure predicate indicating that the federation-transport-vessel is active for more than 10 minutes without a valid relay, a non-empty discovery endpoint under a foreign Host header, and an unreachable HUB_DISCOVERY_URL does not continue the transport process.",
+  "goal_text": "The route-edit 9e67317b has been flagged as broken due to the closure predicate indicating that the federation-transport-vessel is active for more than 10 minutes without a valid relay, a non-empty discovery endpoint under a foreign Host header, and an unreachable HUB_DISCOVERY_URL does not continue the transport process.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-9e67317b",
+  "source_gap_source": "substrate_detected"
+}

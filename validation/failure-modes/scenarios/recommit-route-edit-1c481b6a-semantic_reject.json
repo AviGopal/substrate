@@ -1,0 +1,19 @@
+{
+  "id": "recommit-route-edit-1c481b6a-semantic_reject",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "semantic_reject",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Dead‑code‑only patch: the changed symbol insertSystemTrace has zero callers and is not an entrypoint, so the change cann",
+  "description": "Dead‑code‑only patch: the changed symbol insertSystemTrace has zero callers and is not an entrypoint, so the change cannot execute. This repeated failure class (semantic_reject) for route‑edit‑1c481b6a demonstrates a dead‑code‑only modification that cannot affect runtime behavior.",
+  "goal_text": "Dead‑code‑only patch: the changed symbol insertSystemTrace has zero callers and is not an entrypoint, so the change cannot execute. This repeated failure class (semantic_reject) for route‑edit‑1c481b6a demonstrates a dead‑code‑only modification that cannot affect runtime behavior.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "recommit-route-edit-1c481b6a-semantic_reject",
+  "source_gap_source": "substrate_detected"
+}

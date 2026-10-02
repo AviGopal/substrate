@@ -1,0 +1,71 @@
+{
+  "investigation_id": "2026-05-26T17-30-00Z-investigation-024",
+  "generated_at": "2026-05-26T17:30:00Z",
+  "investigator_session_id": "claude-opus-4-7-audit-iter-009",
+  "prior_investigation_id": "2026-05-26T17-12-00Z-investigation-023",
+  "loop_iteration": 9,
+  "framing": "LLM resolver's in-time POV — what it sees, what it cannot",
+  "substrate_target": "http://localhost:18080",
+  "subagent_inputs": [
+    {"task_id": "a6517ddc487788caf", "name": "LLM resolver's in-activity POV"}
+  ],
+  "what_llm_sees": {
+    "fields_read_from_ResolverContext": ["task.prompt.template", "context.variables"],
+    "read_at": "repos/ias-executor-ts/src/resolvers/llm-prompt.ts:78-89",
+    "wire_payload_to_llm_resolver_vessel": "{type:'llm_completion', prompt, model, max_tokens, system?}",
+    "wire_handler": "repos/llm-resolver-vessel/src/index.ts:94-99",
+    "system_prompt_default": "none (no canonical template sets task.prompt.systemPrompt)",
+    "tools": "none",
+    "message_history": "none",
+    "metadata_field_status": "exists on LLMPort.generate (ports.ts:71) but UNUSED by every caller"
+  },
+  "absences": [
+    {"field": "originating_goal_text", "comment": "exists in options.goalContext.goal (engine.ts:107,326), emitted on lifecycle:task:preBinding, never threaded into variables for llm-prompt"},
+    {"field": "compositionChain", "comment": "on ResolverContext, used by engine for cycle guards, not passed to LLM"},
+    {"field": "thompson_posteriors", "comment": "not surfaced"},
+    {"field": "gap_type_classification", "comment": "executor-side knowledge per iter-023; invisible to LLM"},
+    {"field": "sibling_task_outputs_not_declared", "comment": "engine intentionally narrows pool at resolveInputs engine.ts:119"},
+    {"field": "prior_turn_output", "comment": "single-shot completion, no conversation context"},
+    {"field": "failure_history", "comment": "per-task retry state opaque to model"}
+  ],
+  "five_goal_classes": [
+    {"name": "top_level_user_goal", "wire_path": "/run-goal {goal,variables}", "llm_visible_discriminator": "only if template pipes {{goal}}"},
+    {"name": "boredom_fired_meta_goal", "wire_path": "same /run-goal", "llm_visible_discriminator": "none beyond canned goal text"},
+    {"name": "composed_subgoal_cascade", "wire_path": "downstream dispatch", "llm_visible_discriminator": "only inferable from prompt framing"},
+    {"name": "lifecycle_routed_prompt", "wire_path": "same llm-prompt resolver", "llm_visible_discriminator": "none — structured output demanded, no signal of binding/validation context"},
+    {"name": "self_reflective_prompt", "wire_path": "same", "llm_visible_discriminator": "same"}
+  ],
+  "synthesis_failure_today": {
+    "insufficient_input_recognition": "none — prompt instructs 'handle defensively'; LLM has no unable_to_synthesize output discriminant; WILL confabulate",
+    "prompt_routing_mistake_detection": "impossible — LLM emits demanded shape regardless",
+    "self_aware_refusal_capacity": "zero — no failure channel; parse-failure routes to verifier_negative (validator's α/β, not synthesis's)",
+    "corruption_pattern": "binding-layer Thompson posteriors corrupted at rate of LLM confabulation over empty signal sets; same pattern H1 (two-sided-trace) flagged cross-vessel, here intra-vessel"
+  },
+  "cheapest_measurement_experiment": {
+    "name": "24h confabulation-rate log-tap",
+    "site": "llm-resolver-vessel /resolve handler",
+    "scoring_axes": [
+      "prompt contained meaningful signal-1/2/3/4 content vs all empty/error placeholders",
+      "LLM emitted confident goal-shape output anyway",
+      "downstream dispatch succeeded or failed"
+    ],
+    "key_ratio": "(signal-empty AND confident-output AND downstream-fail) / (signal-empty AND any-output)",
+    "decision_threshold_above_15pct": "LLM cannot participate in gap detection without structural prompt-envelope changes",
+    "decision_threshold_below_5pct": "existing prompt-only conditioning sufficient — higher-leverage work is executor-side classifier (iter-023)",
+    "hot_path_changes": "zero",
+    "wait_time": "24h"
+  },
+  "operational_implications_priority_ordered": [
+    "metadata channel on LLMPort.generate is the load-bearing unused field",
+    "LLM has no failure channel — synthesis-failure becomes parse error or confabulated success",
+    "Concept-db injection (Cα, iter-022) lands at llm-prompt.ts:85 interpolation site",
+    "All five goal-classes flow through identical wire format with no discriminator"
+  ],
+  "correction": {
+    "by_investigation": "2026-05-26T18-15-00Z-investigation-026",
+    "summary": "diagnosis 'LLM has no envelope channel' is causally one layer off — actual bug: llm-prompt.ts ignores context.inputImpulses (already resolved by executor). Fix is resolver patch, not wire envelope.",
+    "observational_findings_remain_valid": true,
+    "causal_attribution_off_by_one_layer": true
+  },
+  "next_wake_recommendation": "run the 24h confabulation-rate log-tap; gates iter-025/026 deploy direction"
+}

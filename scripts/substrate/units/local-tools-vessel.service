@@ -1,0 +1,46 @@
+[Unit]
+Description=local-tools-vessel
+After=activity-api.service discovery-vessel.service identity-vessel.service
+Wants=activity-api.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/substrate/env
+Environment=PORT=8230
+Environment=HOST=127.0.0.1
+# Use the vessel-specific key for trace attribution (D4); falls back to shared key if unset
+EnvironmentFile=-/etc/substrate/local-tools-vessel.env
+WorkingDirectory=/vessels/local-tools-vessel
+# The super-repo's submodule checkouts are pull-sync's mirrors, not a work
+# tree: a shell walk that edits them freezes pull-sync ("left at old pointers")
+# and every reader of that copy sees stale code. local-tools runs arbitrary
+# shell for walks, so it gets them read-only; pull-sync is a separate unit.
+# The leading '-' makes this conditional: where no super-repo clone exists (a node whose
+# vessel set creates none), the unit still starts. Which vessels share a container must not
+# decide whether this one runs; without it, a missing path failed every start at NAMESPACE.
+ReadOnlyPaths=-/workspace/git/super-repo/repos
+# SECRETS LIVE WITH THE RESOLVER THAT USES THEM. local-tools runs the agent's
+# shell, so the secret files must not exist in its mount namespace: otherwise a
+# root shell can read them, and the credential helper in /etc/gitconfig sources
+# /etc/substrate/env, so `git credential fill` would hand out the push token.
+# The EnvironmentFile= lines above still work: systemd reads them in the manager
+# before it forks and builds this namespace. Nothing in local-tools reads these
+# paths at runtime. Credentialed git (fetch/push of a private remote) belongs to
+# development-vessel's own process, not to this shell.
+# The leading '-' keeps the unit starting on a node where a path does not exist.
+InaccessiblePaths=-/etc/substrate
+InaccessiblePaths=-/workspace/.substrate-secrets
+# The timer run-dir is code that runs as root with the fleet EnvironmentFile on
+# the next firing. The agent's shell writing a file there is the same as reading
+# every secret, so it is read-only here. Its writers are the boot seed unit,
+# pull-sync, and development-vessel's activate_substrate_script (committed blobs
+# only) — none of them this shell.
+ReadOnlyPaths=-/workspace/active-scripts
+ExecStart=/root/.bun/bin/bun /vessels/local-tools-vessel/src/index.ts
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

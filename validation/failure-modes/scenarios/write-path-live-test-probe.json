@@ -1,0 +1,19 @@
+{
+  "id": "write-path-live-test-probe",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "diagnostic probe write to determine whether gaps.json is actually being persisted",
+  "description": "diagnostic probe write to determine whether gaps.json is actually being persisted",
+  "goal_text": "diagnostic probe write to determine whether gaps.json is actually being persisted",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "write-path-live-test-probe",
+  "source_gap_source": "substrate_detected"
+}

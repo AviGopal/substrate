@@ -1,0 +1,19 @@
+{
+  "id": "compose-slots-module-level-env-capture",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "env_capture",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In development-vessel/src/compose-slots.ts, SLOT_DIR is captured as a module-level const using process.env['COMPOSE_SLOT",
+  "description": "In development-vessel/src/compose-slots.ts, SLOT_DIR is captured as a module-level const using process.env['COMPOSE_SLOT_DIR'] ?? default at import time, causing it to be fixed for the runtime and not reflect later changes to the environment variable. This same defect class was identified and fixed today in substrate-gap.ts (workspaceRoot) and in local-tools-vessel's test-exec-slots.ts (first draft). No live incident for compose-slots.ts has been observed yet, but its own test suite may need verification.",
+  "goal_text": "In development-vessel/src/compose-slots.ts, SLOT_DIR is captured as a module-level const using process.env['COMPOSE_SLOT_DIR'] ?? default at import time, causing it to be fixed for the runtime and not reflect later changes to the environment variable. This same defect class was identified and fixed today in substrate-gap.ts (workspaceRoot) and in local-tools-vessel's test-exec-slots.ts (first draft). No live incident for compose-slots.ts has been observed yet, but its own test suite may need verification.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "compose-slots-module-level-env-capture",
+  "source_gap_source": "substrate_detected"
+}

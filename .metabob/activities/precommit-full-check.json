@@ -1,0 +1,64 @@
+{
+  "variant_id": "precommit:full-check",
+  "activity_id": "precommit:full-check",
+  "variant_name": "Full Pre-Commit Check",
+  "description": "Run all pre-commit checks: lint, cruft detection, and validation",
+  "category": "tool",
+  "tags": ["precommit.full", "code.quality", "development.workflow"],
+  "tag_prefixes": ["precommit", "precommit.full", "code", "code.quality"],
+  "scope": "org",
+  "org_id": "metabob_internal",
+  "task_steps": [
+    {
+      "id": "identify-changed-repos",
+      "description": "Identify which repos have staged changes",
+      "prompt": {
+        "template": "Run `git diff --cached --name-only` in {{workspace_path}} to get all staged files.\n\nGroup files by their parent repo (repos/*).\n\nReturn a list of repos that have changes.",
+        "variables": [
+          { "name": "workspace_path", "type": "string", "required": true, "default": "." }
+        ]
+      },
+      "subagent": "Bash"
+    },
+    {
+      "id": "run-lint-per-repo",
+      "description": "Run lint for each changed repository",
+      "dependencies": ["identify-changed-repos"],
+      "prompt": {
+        "template": "For each repository with staged changes:\n\n1. Check if it has a lint script in package.json\n2. If yes, run `bun run lint` in that repo\n3. Capture errors and warnings\n\nReport results for each repo.",
+        "variables": []
+      },
+      "subagent": "Bash"
+    },
+    {
+      "id": "detect-cruft",
+      "description": "Scan for LLM cruft patterns",
+      "dependencies": ["identify-changed-repos"],
+      "prompt": {
+        "template": "Search staged TypeScript/JavaScript files for cruft patterns:\n\n```bash\ngit diff --cached --name-only | grep -E '\\.(ts|tsx|js|jsx)$' | while read file; do\n  grep -nE 'TODO.*LLM|FIXME.*generated|_unused[A-Z]|// removed|// DEPRECATED' \"$file\" 2>/dev/null\ndone\n```\n\nReport any findings with file:line:pattern format.",
+        "variables": []
+      },
+      "subagent": "Bash"
+    },
+    {
+      "id": "check-secrets",
+      "description": "Scan for accidental secrets",
+      "dependencies": ["identify-changed-repos"],
+      "prompt": {
+        "template": "Check staged files for potential secrets:\n\n1. API keys (sk-ant, sk-, AKIA, ghp_, glpat-)\n2. Passwords in code (password=, secret=, token=)\n3. .env files being committed\n\nUse grep patterns similar to the MiniBob pre-commit hook.",
+        "variables": []
+      },
+      "subagent": "Bash"
+    },
+    {
+      "id": "generate-report",
+      "description": "Generate final pre-commit report",
+      "dependencies": ["run-lint-per-repo", "detect-cruft", "check-secrets"],
+      "prompt": {
+        "template": "Generate a pre-commit validation report:\n\n## Pre-Commit Check Results\n\n### Lint Results\n[Summary per repo]\n\n### LLM Cruft Detection\n[Findings or PASS]\n\n### Secret Scanning\n[Findings or PASS]\n\n### Overall Status\n- PASS: All checks passed\n- WARN: Non-blocking issues found\n- FAIL: Blocking issues found\n\nProvide specific recommendations for any WARN or FAIL items.",
+        "variables": []
+      },
+      "subagent": "general-purpose"
+    }
+  ]
+}

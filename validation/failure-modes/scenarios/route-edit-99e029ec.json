@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-99e029ec",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/goal-host-vessel/src/verifier-recipe.ts, add a single explanatory comment line directly above the first export ",
+  "description": "In repos/goal-host-vessel/src/verifier-recipe.ts, add a single explanatory comment line directly above the first export in the file, reading exactly:\n// Reach-credit note: verdict reasons must carry the deterministic: prefix or recordDeterministicLabel drops the label.\n\nMake exactly one edit. Change no code. This records, at the site future readers will look, the invariant that cost the oracle corpus its record of successful edits.",
+  "goal_text": "In repos/goal-host-vessel/src/verifier-recipe.ts, add a single explanatory comment line directly above the first export in the file, reading exactly:\n// Reach-credit note: verdict reasons must carry the deterministic: prefix or recordDeterministicLabel drops the label.\n\nMake exactly one edit. Change no code. This records, at the site future readers will look, the invariant that cost the oracle corpus its record of successful edits.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-99e029ec",
+  "source_gap_source": "substrate_detected"
+}

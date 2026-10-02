@@ -1,0 +1,1 @@
+Implement the list-ops module so all tests pass. The module must provide `append`, `concat`, `filter`, `length`, `map`, `foldl`, `foldr`, and `reverse` without using the corresponding Python built-ins — implement each operation using only basic iteration or recursion. All 24 tests must pass.

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-170801a8",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts to satisfy the following request. The relevant code",
+  "description": "Edit repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts to satisfy the following request. The relevant code is in the region \"substrate gap\". If that file is the wrong target, say so rather than editing it.\n\nClose substrate gap cutover-gate-baseline-records-tests-as-passing-that-fail-at-every-recent-commit: The mitosis cutover pre-cutover gate has refused 8 of 8 promotions in 3 hours (0 applied) by attributing PRE-EXISTING test failures to each staged change, blocking every substrate-authored landing.",
+  "goal_text": "Edit repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts to satisfy the following request. The relevant code is in the region \"substrate gap\". If that file is the wrong target, say so rather than editing it.\n\nClose substrate gap cutover-gate-baseline-records-tests-as-passing-that-fail-at-every-recent-commit: The mitosis cutover pre-cutover gate has refused 8 of 8 promotions in 3 hours (0 applied) by attributing PRE-EXISTING test failures to each staged change, blocking every substrate-authored landing.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-170801a8",
+  "source_gap_source": "substrate_detected"
+}

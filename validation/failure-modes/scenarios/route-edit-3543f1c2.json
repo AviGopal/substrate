@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-3543f1c2",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap surgical-hardcoded-endpoint-activity-api-cacd24c372: Inline hardcoded endpoint literal \"ht",
+  "description": "investigate and decompose gap surgical-hardcoded-endpoint-activity-api-cacd24c372: Inline hardcoded endpoint literal \"http://127.0.0.1:8080/v2/activities/conservation-audit?invariant=all\" in repos/activity-api/src/routes/activities.ts:5998 (the activity-api port :8080). A hardcoded host:port in a fetch() call silently breaks if the endpoint moves and violates the route-via-env/discovery principle. Fix: replace the literal with the env-defaulted endpoint constant.",
+  "goal_text": "investigate and decompose gap surgical-hardcoded-endpoint-activity-api-cacd24c372: Inline hardcoded endpoint literal \"http://127.0.0.1:8080/v2/activities/conservation-audit?invariant=all\" in repos/activity-api/src/routes/activities.ts:5998 (the activity-api port :8080). A hardcoded host:port in a fetch() call silently breaks if the endpoint moves and violates the route-via-env/discovery principle. Fix: replace the literal with the env-defaulted endpoint constant.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-3543f1c2",
+  "source_gap_source": "substrate_detected"
+}

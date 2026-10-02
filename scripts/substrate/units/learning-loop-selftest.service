@@ -1,0 +1,30 @@
+[Unit]
+Description=Learning-loop selftest — does the execution→learning chain actually conduct?
+# Dispatches gate_self_probe, whose outcome is known BY CONSTRUCTION (hostile/benign
+# fixtures run through the real gate functions), then asserts each link of the chain
+# at the store that CONSUMES it: an execution row carrying the probe tag, a grading
+# marker on that row, movement in the probe's own posterior arm, a goal-path row, and
+# zero movement on sampled non-probe arms. No LLM is in the assertion path.
+#
+# Every one of those links was observed broken in the week before this unit was
+# written — a verdict tag written before the grade-check, grading called in-process
+# at sites never awaited, a belief junction that logged success while moving nothing.
+# Each was found by an operator following one execution by hand. This is that walk.
+#
+# WHY TIMER-TIER AND NOT THE ROTATION. The design document places probe templates on
+# the autonomous rotation; the 2026-09-09 census found 90 of 102 selection-scheduled
+# validators dormant, every survivor timer-driven. A selftest scheduled by the
+# learning loop it validates is the circularity CLAUDE.md names when it exempts the
+# liveness watchdogs. The RUNNER is bootstrap tier; the PROBES it dispatches still
+# travel the real lanes, which is the point.
+#
+# It asserts and does not repair: red links are filed as gaps carrying class-2
+# behavioural predicates. Read-only except gap emission and its own probe dispatch.
+After=activity-api.service surrealdb.service development-vessel.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/learning-loop-selftest-tick.ts
+StandardOutput=journal
+StandardError=journal

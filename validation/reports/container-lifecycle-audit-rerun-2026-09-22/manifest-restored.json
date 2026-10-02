@@ -1,0 +1,11 @@
+{
+  "status": 200,
+  "data": {
+    "resolved": true,
+    "shape": "audit_fixture",
+    "body": {
+      "value": "isolated-manifest-v1",
+      "vessel": "audit-fixture-vessel"
+    }
+  }
+}

@@ -1,0 +1,1 @@
+Add a `multiply(a, b)` function to `src/math.ts` that returns `a * b`. Add a corresponding test in `src/math.test.ts` covering at least two cases (positive numbers, and a case involving zero). Make sure all tests pass.

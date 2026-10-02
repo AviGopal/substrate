@@ -1,0 +1,19 @@
+{
+  "id": "no-detector-for-ppid1-orphans-per-cgroup",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "missing_concept",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "The substrate has no activity or check that counts ppid=1 orphaned processes grouped by cgroup/systemd unit. This class ",
+  "description": "The substrate has no activity or check that counts ppid=1 orphaned processes grouped by cgroup/systemd unit. This class of defect (a spawned child surviving its own tracked lifecycle, becoming an untracked orphan) caused a real thermal emergency 2026-08-30 -- 14 orphaned bun test processes were invisible to a concurrency governor that correctly tracked its own slot bookkeeping. A periodic check (count ppid=1 processes per unit's cgroup, alert or auto-reap above a threshold) would have caught this class without an operator manually walking /proc. This is a law-6 followon: 'what activity would detect this class without me.'",
+  "goal_text": "The substrate has no activity or check that counts ppid=1 orphaned processes grouped by cgroup/systemd unit. This class of defect (a spawned child surviving its own tracked lifecycle, becoming an untracked orphan) caused a real thermal emergency 2026-08-30 -- 14 orphaned bun test processes were invisible to a concurrency governor that correctly tracked its own slot bookkeeping. A periodic check (count ppid=1 processes per unit's cgroup, alert or auto-reap above a threshold) would have caught this class without an operator manually walking /proc. This is a law-6 followon: 'what activity would detect this class without me.'",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "no-detector-for-ppid1-orphans-per-cgroup",
+  "source_gap_source": "operator_narration"
+}

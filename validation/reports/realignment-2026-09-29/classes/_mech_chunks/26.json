@@ -1,0 +1,336 @@
+{
+ "area": "ribosome-vessel",
+ "items": [
+  {
+   "name": "ribosome-vessel",
+   "location": "3a3ef840",
+   "purpose": "WS-driven template extraction",
+   "status": "unknown",
+   "general": true,
+   "evidence": "202 async fix 09d69ade; output_shapes missing until d105e1ae",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "ribosome (microplastic)",
+   "location": "e5b04851",
+   "purpose": "template extraction",
+   "status": "fossil",
+   "general": true,
+   "evidence": "microplastic abandoned after March",
+   "duplicates_of": "ribosome-vessel",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "ribosome extraction via mintReachedTrace",
+   "location": "goal-host + ribosome-vessel",
+   "purpose": "Turn reached traces into templates",
+   "status": "live-used",
+   "general": true,
+   "evidence": "09-02: minted templates ran 460 times, seeded ones once. The write gate ignores proposal_validation.passed (probe). Synthesis is trace copying.",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "ribosome-vessel WS observer",
+   "location": "repos/ribosome-vessel",
+   "purpose": "mint from WS events",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "ribosome-extract lifecycle subscriber",
+   "evidence": "0 dispatches in 26h; ignores execution_completed",
+   "source": "memory-adjacent",
+   "mentions": 1,
+   "sources": [
+    "memory-adjacent"
+   ]
+  },
+  {
+   "name": "ribosome-vessel WS consumer",
+   "location": "repos/ribosome-vessel/src/index.ts",
+   "purpose": "Extraction on execution_completed",
+   "status": "live-used",
+   "general": true,
+   "evidence": "activity-api emits at execution-traces.ts:4062; stale comment at index.ts:42",
+   "source": "docs-2",
+   "mentions": 1,
+   "sources": [
+    "docs-2"
+   ]
+  },
+  {
+   "name": "ribosome mint/extract",
+   "location": "ribosome",
+   "purpose": "Crystallize reached executions into templates",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 templates/24h on 07-31. Args were amputated until 9518d4e (08-17).",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "Ribosome extraction",
+   "location": "ribosome-vessel",
+   "purpose": "Extract reached executions into templates",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-06: 20,653/20,653 events took trace.success branch; learned-learned stacking \u00d721; duplicate variants (07-31)",
+   "source": "memory-4",
+   "mentions": 2,
+   "sources": [
+    "memory-4",
+    "memory-5"
+   ]
+  },
+  {
+   "name": "Ribosome extraction and registration",
+   "location": "ribosome-vessel",
+   "purpose": "extract reached executions into pathways",
+   "status": "broken",
+   "general": true,
+   "evidence": "extraction lags 591,566s; registers shapes:[] which discovery rejects",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  },
+  {
+   "name": "ribosome extract",
+   "location": "ribosome-vessel",
+   "purpose": "Mint templates from reached traces",
+   "status": "broken",
+   "general": true,
+   "evidence": "08-22 applyExtraction false; 09-28 1,788/1,788 execution_error, 0 templates since 09-22, registration 400 every minute",
+   "source": "reports-6",
+   "mentions": 1,
+   "sources": [
+    "reports-6"
+   ]
+  },
+  {
+   "name": "ribosome-vessel extraction dispatch",
+   "location": "ribosome-vessel",
+   "purpose": "Extract templates",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "goal-host mintReachedTrace",
+   "evidence": "Pinned to retired ribosome-extract; 1,788 errors in 7 d; register 400 every minute",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "ribosome activityDispatch extraction path",
+   "location": "ribosome-vessel (43a6d0b)",
+   "purpose": "dispatch ribosome-extract",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "goal-host mintReachedTrace in-process extraction",
+   "evidence": "3,746/3,746 failed pre-07-30",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "extractionEligibilityPolicy / extractionPolicy shapes",
+   "location": "ribosome-vessel (c779cfd)",
+   "purpose": "law-1 shaped extraction config",
+   "status": "dormant",
+   "general": true,
+   "evidence": "1,199 + 959 'unresolved \u2014 falling back' WARNs in 7 days",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "Ribosome extraction with honest-reach gate",
+   "location": "ribosome-vessel + ias-executor ribosome-extract.json",
+   "purpose": "Mint activities from reached executions",
+   "status": "live-used",
+   "general": true,
+   "evidence": "starved: 942/1698 skipped 08-29; compose landings never reach mintReachedTrace",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "ribosome discovery registration",
+   "location": "ribosome-vessel :697 (shapes: [])",
+   "purpose": "register consumer vessel",
+   "status": "broken",
+   "general": false,
+   "evidence": "5,208 register failed: 400 in 7 days after discovery 7cc9da4",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "Ribosome extraction",
+   "location": "ribosome-vessel :8240 + ribosome-extract",
+   "purpose": "Extract templates from reached executions",
+   "status": "live-used",
+   "general": true,
+   "evidence": "1456/1459 ok in 5 days though undiscoverable",
+   "source": "live-resolvers",
+   "mentions": 1,
+   "sources": [
+    "live-resolvers"
+   ]
+  },
+  {
+   "name": "extractionPolicy impulse",
+   "location": "ribosome-vessel depth bound",
+   "purpose": "Shaped bound on learned- nesting",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "08-06 no producer; 1374 fallback warnings/6h, runs on literal",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "ribosome walk extraction",
+   "location": "ribosome-vessel index.ts (86aebdf read fix); ias-executor ribosome-extract.json",
+   "purpose": "Mint learned compositions from reached executions",
+   "status": "live-used",
+   "general": true,
+   "evidence": "learned-composition-* 538 executions (08-29); 0 extractions in 09-02 window; resolver-implemented work unextractable",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  },
+  {
+   "name": "ribosome replay-observer backfill",
+   "location": "ribosome-vessel replay-observer.ts:271",
+   "purpose": "Mint from historical traces",
+   "status": "broken",
+   "general": false,
+   "evidence": "08-03 98.6% fetch failures; timeout raised 60s; index owed",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "ribosome reach re-read + census + depth-bound gate",
+   "location": "ribosome-vessel src/index.ts",
+   "purpose": "extract templates only from honestly reached executions",
+   "status": "live-used",
+   "general": true,
+   "evidence": "17,188 ALLOWED, 505 dispatched in 7 days; 515 learned- rows",
+   "source": "git-small",
+   "mentions": 1,
+   "sources": [
+    "git-small"
+   ]
+  },
+  {
+   "name": "ribosome-vessel WS extraction path",
+   "location": "ribosome-vessel src/index.ts",
+   "purpose": "Event-driven extraction dispatch",
+   "status": "fossil",
+   "general": false,
+   "duplicates_of": "mintReachedTrace",
+   "evidence": "07-24: 0 exec, live path is mintReachedTrace",
+   "source": "memory-7",
+   "mentions": 1,
+   "sources": [
+    "memory-7"
+   ]
+  },
+  {
+   "name": "ribosome extraction",
+   "location": "ribosome-vessel src/index.ts (5f96ba4)",
+   "purpose": "Mint learned templates from reached executions",
+   "status": "live-used",
+   "general": true,
+   "evidence": "learned-* minted from 08-03. extracted_from is empty on all rows (07-25).",
+   "source": "memory-3",
+   "mentions": 1,
+   "sources": [
+    "memory-3"
+   ]
+  },
+  {
+   "name": "ribosome extract / learned-composition templates",
+   "location": "ribosome-vessel, activity-api",
+   "purpose": "Crystallize reached executions",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Intermittent; skipped-task census blocked mints (08-02)",
+   "source": "memory-2",
+   "mentions": 1,
+   "sources": [
+    "memory-2"
+   ]
+  },
+  {
+   "name": "ribosome-extract",
+   "location": "ribosome-vessel; activity-api /v2/ribosome",
+   "purpose": "Extract reached traces into templates",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "~100 runs/day with applyExtraction=false, nothing registered",
+   "source": "docs-1",
+   "mentions": 1,
+   "sources": [
+    "docs-1"
+   ]
+  },
+  {
+   "name": "ribosome extraction",
+   "location": "ribosome-vessel; ribosome-extract.json; impulses.ts:2630",
+   "purpose": "Mint templates from reached executions (law 4)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Yield ~0.1% on 08-22, resumed 08-23; eligibility is a literal list and extractionPolicy is unresolved",
+   "source": "reports-5",
+   "mentions": 1,
+   "sources": [
+    "reports-5"
+   ]
+  },
+  {
+   "name": "mintReachedTrace (reach->ribosome mint)",
+   "location": "src/index.ts:6889",
+   "purpose": "Crystallize reached executions",
+   "status": "live-used",
+   "general": true,
+   "evidence": "The 'doesn't mint' class recurred 4 times",
+   "source": "git-goalhost",
+   "mentions": 1,
+   "sources": [
+    "git-goalhost"
+   ]
+  }
+ ]
+}

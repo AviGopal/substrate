@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-4ad6a328",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts to add a PRE-cutover test gate, reusing the post-l",
+  "description": "Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts to add a PRE-cutover test gate, reusing the post-land machinery that already exists.\n\nINSERT the new gate immediately AFTER this line, which occurs exactly once in the file (verbatim):\n  if (evaluation_evidence.verdict !== \"FAVORABLE\") {\n\nThe block to reuse is further down and begins with this line, which also occurs exactly once (verbatim):\n    const suite = await resolveTestSuite({\n\nThat existing block runs resolveTestSuite AFTER the commit lands, reads sb.failingTests, diffs those test NAMES against the per-vessel baseline file under /workspace/post-land-baseline/, and files a substrateGap for tests that are NEWLY failing. Do not duplicate that logic — factor the suite-run-plus-baseline-diff into one helper and call it from both places.\n\nRequired behaviour of the new pre-cutover call: run the suite against the mitosis tree before the track is promoted; compute the same newly-failing set difference against the vessel baseline; if that set is non-empty, re-run once to confirm and refuse the cutover only if the same test names fail again; log the requested and confirmed counts so a refusal is legible. Do NOT gate on a raw pass/fail count — the suite sits in an 81 to 94 failure band and only the set difference is meaningful. Leave the existing post-land block in place unchanged as the fallback for when the pre-cutover run cannot execute.\n\nCloses substrate gap cutover-suite-observes-but-does-not-gate.",
+  "goal_text": "Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts to add a PRE-cutover test gate, reusing the post-land machinery that already exists.\n\nINSERT the new gate immediately AFTER this line, which occurs exactly once in the file (verbatim):\n  if (evaluation_evidence.verdict !== \"FAVORABLE\") {\n\nThe block to reuse is further down and begins with this line, which also occurs exactly once (verbatim):\n    const suite = await resolveTestSuite({\n\nThat existing block runs resolveTestSuite AFTER the commit lands, reads sb.failingTests, diffs those test NAMES against the per-vessel baseline file under /workspace/post-land-baseline/, and files a substrateGap for tests that are NEWLY failing. Do not duplicate that logic — factor the suite-run-plus-baseline-diff into one helper and call it from both places.\n\nRequired behaviour of the new pre-cutover call: run the suite against the mitosis tree before the track is promoted; compute the same newly-failing set difference against the vessel baseline; if that set is non-empty, re-run once to confirm and refuse the cutover only if the same test names fail again; log the requested and confirmed counts so a refusal is legible. Do NOT gate on a raw pass/fail count — the suite sits in an 81 to 94 failure band and only the set difference is meaningful. Leave the existing post-land block in place unchanged as the fallback for when the pre-cutover run cannot execute.\n\nCloses substrate gap cutover-suite-observes-but-does-not-gate.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-4ad6a328",
+  "source_gap_source": "substrate_detected"
+}

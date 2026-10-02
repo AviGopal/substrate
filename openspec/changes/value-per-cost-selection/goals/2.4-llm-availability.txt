@@ -1,0 +1,62 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, add an LLM-availability probe to the pre-selection capacity block of resolveGapToFeature: when discovery answers that no llm_completion producer is advertised, auto-picks return the same BUSY capacity-stage non-attempt the full-lane peek returns, with reason llm_unavailable, and the probe result is cached for 60 seconds. Apply exactly these 2 edits; each old text occurs exactly once:
+EDIT 1
+old:
+let attemptSweepInFlight = false;
+new:
+let attemptSweepInFlight = false;
+
+// LLM-AVAILABILITY PROBE (value-per-cost-selection 2.4). With no llm_completion producer
+// advertised every compose fails after taking a slot. Absent only when discovery answers OK
+// with an empty producer list; an unreachable or malformed answer is unknown (null) and
+// fails open like the capacity peek. Cached for LLM_PROBE_TTL_MS either way.
+const LLM_PROBE_TTL_MS = 60_000;
+let llmProbeCache: { at: number; available: boolean | null } | null = null;
+async function llmProducerAdvertised(): Promise<boolean | null> {
+  if (llmProbeCache && Date.now() - llmProbeCache.at < LLM_PROBE_TTL_MS) return llmProbeCache.available;
+  let available: boolean | null = null;
+  try {
+    const dr = await fetch(`${DISCOVERY_ENDPOINT}/resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `ApiKey ${METABOB_API_KEY}` },
+      body: JSON.stringify({ pointer: { type: "vesselCapability", shape: "llm_completion" } }),
+      signal: AbortSignal.timeout(3000),
+    });
+    if (dr.ok) {
+      const dd = (await dr.json()) as { content?: { vessels?: unknown } };
+      const vessels = dd.content?.vessels;
+      if (Array.isArray(vessels)) available = vessels.length > 0;
+    }
+  } catch { available = null; }
+  llmProbeCache = { at: Date.now(), available };
+  return available;
+}
+EDIT 2
+old:
+          skipped_selection: true,
+        },
+      };
+    }
+  }
+  // 1. Select a gap
+new:
+          skipped_selection: true,
+        },
+      };
+    }
+    if ((await llmProducerAdvertised()) === false) {
+      console.log(`[gap-to-feature] selection skipped: llm_unavailable (no llm_completion producer advertised)`);
+      return {
+        shape: "gapToFeatureReport",
+        body: {
+          ok: false,
+          stage: "capacity",
+          verdict: "BUSY",
+          error: "llm_unavailable: no llm_completion producer advertised — selection skipped",
+          reason: "llm_unavailable",
+          skipped_selection: true,
+        },
+      };
+    }
+  }
+  // 1. Select a gap
+Done when: all 2 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

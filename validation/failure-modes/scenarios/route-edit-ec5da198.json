@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-ec5da198",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/development-vessel/src/resolvers/gap-to-feature.ts using a REPLACE operation on an existing file. Do not use ",
+  "description": "Edit repos/development-vessel/src/resolvers/gap-to-feature.ts using a REPLACE operation on an existing file. Do not use create_file: that file already exists and is about 181000 bytes, and a create_file op will be refused.\n\nPerform exactly one replacement. The old_string is these three lines, which occur exactly once in the file (six spaces before continue, four before the closing brace, four before actionableGaps):\n\n      continue;\n    }\n    actionableGaps.push(g);\n\nThe new_string is these two lines, identical except that the `continue;` line is gone:\n\n    }\n    actionableGaps.push(g);\n\nThat is the entire change. Do not comment the line out — an earlier attempt added a comment beside it and was correctly rejected by the semantic gate as \"zero behaviour delta\". Do not anchor on a bare `continue;`, which occurs twice in this file. Do not trust any line number; this file shifts as other changes land.\n\nPurpose: this `continue` sits inside the `if (hopeless(g))` branch of pickMostLandable and drops every gap in a hopeless category before scoring runs, so 23 documentation_drift gaps that already compute to the joint top landability of 1.00 are never selected. Removing it lets them fall through to actionableGaps and be scored, which is the \"re-test path (penalty, not hard exclusion)\" the comment above hopeless() already promises. Keep the uiQuestion_write escalation exactly as it is. Do not alter hopeless(), landabilityScore, or any threshold, and introduce no new symbol.",
+  "goal_text": "Edit repos/development-vessel/src/resolvers/gap-to-feature.ts using a REPLACE operation on an existing file. Do not use create_file: that file already exists and is about 181000 bytes, and a create_file op will be refused.\n\nPerform exactly one replacement. The old_string is these three lines, which occur exactly once in the file (six spaces before continue, four before the closing brace, four before actionableGaps):\n\n      continue;\n    }\n    actionableGaps.push(g);\n\nThe new_string is these two lines, identical except that the `continue;` line is gone:\n\n    }\n    actionableGaps.push(g);\n\nThat is the entire change. Do not comment the line out — an earlier attempt added a comment beside it and was correctly rejected by the semantic gate as \"zero behaviour delta\". Do not anchor on a bare `continue;`, which occurs twice in this file. Do not trust any line number; this file shifts as other changes land.\n\nPurpose: this `continue` sits inside the `if (hopeless(g))` branch of pickMostLandable and drops every gap in a hopeless category before scoring runs, so 23 documentation_drift gaps that already compute to the joint top landability of 1.00 are never selected. Removing it lets them fall through to actionableGaps and be scored, which is the \"re-test path (penalty, not hard exclusion)\" the comment above hopeless() already promises. Keep the uiQuestion_write escalation exactly as it is. Do not alter hopeless(), landabilityScore, or any threshold, and introduce no new symbol.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-ec5da198",
+  "source_gap_source": "substrate_detected"
+}

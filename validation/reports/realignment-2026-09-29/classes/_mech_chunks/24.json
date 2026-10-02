@@ -1,0 +1,372 @@
+{
+ "area": "boredom-vessel",
+ "items": [
+  {
+   "name": "boredom-vessel.timer",
+   "location": "/lib/systemd/system/boredom-vessel.timer",
+   "purpose": "Periodic boredom trigger",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Boredom runs as a daemon. The timer has no NEXT; its last trigger was 09-28 15:51.",
+   "source": "node2-runtime",
+   "mentions": 1,
+   "sources": [
+    "node2-runtime"
+   ]
+  },
+  {
+   "name": "change-series orchestrator",
+   "location": "11ebf40/157e662 (boredom host, poolImpulse)",
+   "purpose": "Multi-file series, one step per tick",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Demonstrated 225ab19. Plans are seeded; nothing authors them.",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "31 of 134 route handlers with 0 callers",
+   "location": "activities.ts (/scores, /similar-state, /validate-composition, /create-goal-seeking, /tags/suggest ...), ci.ts, connections.ts, boredom.ts, execution-traces.ts /deliberation",
+   "purpose": "Various Phase-era endpoints",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "Last-segment grep across all vessel clones and super-repo scripts/validation/packages; shape-dispatch callers not excluded",
+   "source": "git-activityapi",
+   "mentions": 1,
+   "sources": [
+    "git-activityapi"
+   ]
+  },
+  {
+   "name": "boredom goal-generation candidates",
+   "location": "boredom goal-generation.ts",
+   "purpose": "System-minted goals",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Re-sourced d34d295 after its net-negative period",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "auto-promote",
+   "location": "boredom tick",
+   "purpose": "Graduate proposals into activities",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Inverted threshold fixed; promoted 3 (08-09)",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "boredom AUTONOMOUS_GOALS array",
+   "location": "boredom-vessel",
+   "purpose": "goal rotation",
+   "status": "fossil",
+   "general": false,
+   "evidence": "replaced by the pool daemon; goal[49] fired 0 times (06c48140 body)",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "selectGoalForLoadConditioned state signature",
+   "location": "boredom-vessel",
+   "purpose": "load-conditioned selection",
+   "status": "dormant",
+   "evidence": "decorative: signature too fine (06-04)",
+   "source": "validation-other-1",
+   "mentions": 1,
+   "sources": [
+    "validation-other-1"
+   ]
+  },
+  {
+   "name": "selector-state snapshot roster",
+   "location": "boredom-vessel (00c1965, c6d3109)",
+   "purpose": "Feed dormancy detectors",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Tautology fixed 08-28",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "boredom pool daemon (UCB1)",
+   "location": "boredom-vessel 30938781, 2517d309",
+   "purpose": "idle-work selection",
+   "status": "unknown",
+   "general": true,
+   "evidence": "second selector alongside Thompson",
+   "duplicates_of": "Thompson selection",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "boredom gap-admission MIRROR",
+   "location": "boredom-vessel goal-generation (0ccfadf)",
+   "purpose": "Apply dev-vessel admitActionableGaps predicate",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "development-vessel admitActionableGaps",
+   "evidence": "Declared mirror with a delete-when-shape-exists TODO",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "boredom priorityWeightByShape condition fold",
+   "location": "boredom-vessel refreshSubstrateState",
+   "purpose": "Fold gap demand/rhythm due-state into idle selection",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Read the wrong gaps path (dead) until 0bd60ab; rhythm fold 406d311",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "boredom posterior-decline guard",
+   "location": "boredom-vessel resolvers/vesselAdditionScaffoldDispatch (4e17f86)",
+   "purpose": "Skip a hardcoded dispatch when the posterior is decisively negative",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Control matrix; the 314f228 version is a fossil",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "boredom compiled artifacts in src",
+   "location": "boredom-vessel src/*.js,*.d.ts,*.map (84cd2f2)",
+   "purpose": "none (residue)",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Tracked at HEAD; Bun prefers .ts so they are inert",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "boredom gap-goal supply (generateGapGoalCandidates)",
+   "location": "boredom-vessel src/goal-generation.ts",
+   "purpose": "Mint goals from open gaps",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Store reader fixed 4 times; 12bb26a investigate/decompose on 09-28",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "AUTONOMOUS_GOALS static rotation",
+   "location": "boredom-vessel src/index.ts",
+   "purpose": "Hardcoded goal list (goal[46..49])",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Law-5 static list; still edited 09-19/20",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "EXECUTABLE_RESOLVERS seed + discovery union",
+   "location": "boredom-vessel src/index.ts (92f3336)",
+   "purpose": "Decide which proposals are executable",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Autonomous law-1 repair; had blocked 214 proposals",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "boredom resolve-URL joiner",
+   "location": "boredom-vessel src/index.ts boredomDiscoverResolveUrls (f28bc06)",
+   "purpose": "Discover producers for the envelope read",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "goal-host routeFor / ias discovery-adapter",
+   "evidence": "Same absolute-vs-path logic reimplemented",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "boredom spend envelope",
+   "location": "boredom-vessel src/index.ts readBoredomEnvelope (f28bc06)",
+   "purpose": "Stop dispatch when LLM spend is exhausted",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "development-vessel gap-to-feature.ts spendEnvelopeAllows",
+   "evidence": "The comment states it mirrors dev-vessel",
+   "source": "git-mid",
+   "mentions": 1,
+   "sources": [
+    "git-mid"
+   ]
+  },
+  {
+   "name": "information-yield UCB reward",
+   "location": "boredom-vessel src/index.ts:2843-2923",
+   "purpose": "reward goals on productive findings, not completion",
+   "status": "live-used",
+   "general": true,
+   "evidence": "IDLE_REWARD=0.2; information_yield reused by gap auto-close",
+   "source": "openspec-3",
+   "mentions": 1,
+   "sources": [
+    "openspec-3"
+   ]
+  },
+  {
+   "name": "boredom-vessel src/index.js",
+   "location": "boredom-vessel/src/index.js (tracked, 228KB)",
+   "purpose": "stale compiled twin of index.ts",
+   "status": "fossil",
+   "general": false,
+   "evidence": "committed by 84cd2f2 on 2026-09-19; the unit runs index.ts",
+   "source": "openspec-3",
+   "mentions": 1,
+   "sources": [
+    "openspec-3"
+   ]
+  },
+  {
+   "name": "boredom ucbScoreImpl",
+   "location": "boredom-vessel/src/index.ts:3413",
+   "purpose": "select next template by information yield",
+   "status": "live-used",
+   "general": true,
+   "evidence": "~98% observation, ~2% repair (09-16)",
+   "source": "transcripts-2",
+   "mentions": 1,
+   "sources": [
+    "transcripts-2"
+   ]
+  },
+  {
+   "name": "boredomSelectionSnapshot",
+   "location": "boredom-vessel/src/index.ts:57-115",
+   "purpose": "Law-5 observability record",
+   "status": "broken",
+   "general": false,
+   "evidence": "1805 snapshots all open_gap_count 0 and rhythms []; envelope mismatch confirmed by replay",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "templateId boredom tasks bypassing the selector",
+   "location": "minibob boredom.ts (05-24), now boredom-vessel",
+   "purpose": "Force topology templates to run",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Workaround that routes around Thompson (findings D-002)",
+   "source": "openspec-2",
+   "mentions": 1,
+   "sources": [
+    "openspec-2"
+   ]
+  },
+  {
+   "name": "timeShapedRhythm + boredom due-score scorer",
+   "location": "pool; boredom-vessel/src/index.ts:2549-2616",
+   "purpose": "Condition-driven cadence (law 5)",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Reads body.impulses correctly; posteriors diverge per node",
+   "source": "live-pool-memory",
+   "mentions": 1,
+   "sources": [
+    "live-pool-memory"
+   ]
+  },
+  {
+   "name": "boredom UCB selector",
+   "location": "repos/boredom-vessel/src/index.ts:3413",
+   "purpose": "condition-driven idle selection",
+   "status": "live-used",
+   "general": true,
+   "evidence": "~85% of picks go to 5 detector templates; repair ~2%",
+   "source": "transcripts-3",
+   "mentions": 1,
+   "sources": [
+    "transcripts-3"
+   ]
+  },
+  {
+   "name": "rhythm conductor boredom_enqueue file",
+   "location": "rhythm-conductor",
+   "purpose": "Ferry due work to boredom",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Nothing reads it; superseded by the fold",
+   "source": "memory-1",
+   "mentions": 1,
+   "sources": [
+    "memory-1"
+   ]
+  },
+  {
+   "name": "boredom-vessel.timer",
+   "location": "units/boredom-vessel.timer",
+   "purpose": "Periodic boredom pass",
+   "status": "fossil",
+   "general": false,
+   "evidence": "The service runs as a daemon, so OnUnitActive never elapses",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "boredom-queue.json",
+   "location": "~/.minibob/boredom-queue.json",
+   "purpose": "Queue of rhythm-enqueued tasks",
+   "status": "fossil",
+   "general": false,
+   "evidence": "08-08: 446 pending, 0 readers; boredom reads due-state directly",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  }
+ ]
+}

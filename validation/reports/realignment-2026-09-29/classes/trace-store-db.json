@@ -1,0 +1,1329 @@
+{
+ "attempts": [
+  {
+   "key": "trace-store-db",
+   "title": "activity-api migration ledger (init_migrations)",
+   "where": "repos/activity-api/scripts/init-database.ts",
+   "tried": "Filename ledger with UNIQUE index, bootstrap pre-population, F-35 migrations/ subdir inclusion",
+   "outcome": "partial",
+   "evidence": "158 has 2 rows under UNIQUE; ledger names 143-prediction-disagreement and 159-backfill have no file anywhere; 13 duplicate prefixes; 203 applied 09-24 after 204-212",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Read execution directly after v_paradigm_execution_traces view froze",
+   "where": "activity-api/src/routes/execution-traces.ts (~line 1058 comment)",
+   "tried": "Replace frozen view with direct FROM execution",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "Code comment: view froze or vanished 09-22..09-28, detectors saw no new traces for ~6 days first",
+   "source": "docs-3"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "O(1) trace counters + maintenanceLease + copy-forward reconcile",
+   "where": "activity-api trace-store-counters.ts, db-admin-reconcile.ts; development-vessel maintenance-lease.ts, trace-store-health-observer",
+   "tried": "Autonomous bounded trace store",
+   "outcome": "worked",
+   "evidence": "trace_store_counters:execution row_count 149,651 / cap 150,000, last_reconciled_at 2026-09-29T03:44Z",
+   "source": "docs-3"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Log landability predictions for later validation",
+   "where": "development-vessel 418d80d (substrate-authored) gap-lifecycle-scan.ts:404-414",
+   "date": "2026-09-26",
+   "tried": "Write per-gap landability predictions to landability_predictions.log for later validation",
+   "outcome": "dormant",
+   "evidence": "No reader. 10.5MB and 66,866 lines in 3 days. About 12 discrete score values, so not per-gap discriminative.",
+   "source": "gap-history"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Migrations 205/206/210 restore lost fields",
+   "where": "6ac1aa6,a4b7f1b,41266ae,53d310d,1aacce3 (09-05)",
+   "tried": "Restore fields lost to unapplied migrations",
+   "outcome": "partial",
+   "date": "2026-09-05",
+   "evidence": "205 was landed unparseable; 206 was needed because 205 made 6 fields non-optional and broke every write; 210 was 'not SurrealDB' and rewritten.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Migration runner marked pending migrations applied without running them",
+   "where": "b4d7b0e (08-04)",
+   "tried": "Return null on a failed ledger read instead of an empty Set, so bootstrap no longer marks all applied",
+   "outcome": "worked",
+   "date": "2026-08-04",
+   "evidence": "Migration 188 had been lost this way.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Two migrations failed on every boot for 8 months",
+   "where": "ef83e6a (08-17)",
+   "tried": "DEFINE the ci_status field that 005-ci-integration indexed",
+   "outcome": "worked",
+   "date": "2026-08-17",
+   "evidence": "The unit restarted about 7x/hour; POST /ci had been inert since it landed.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Migration timeout raised to 300s caused a hub restart loop",
+   "where": "c0246f7 -> 8fbc032 (08-02)",
+   "tried": "Let DEFINE TABLE AS backfills finish inside ExecStartPre",
+   "outcome": "reverted",
+   "date": "2026-08-02",
+   "evidence": "10 pids, activity-api never active, spoke /health 000, ribosome WebSocket closed 108x/24h.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "v_paradigm_execution_traces absent while the ledger said 167 applied",
+   "where": "1f0d70f, d98309e (09-28), migration 212",
+   "tried": "Restore the view with a NONE-safe tokens_total and IF NOT EXISTS",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "Every trace-listing detector saw traces_examined 0 from about 09-22 07:01 to 09-28.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Drop idx_execution_id for retention speed",
+   "where": "be4d99a (193) -> 0da9c16 (194), 12735fa",
+   "tried": "Remove the UNIQUE index on the record id",
+   "outcome": "reverted",
+   "date": "2026-08-09",
+   "evidence": "3.52 s/row before vs 17.2 and 11.4 s/row after.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Retention batch=1 deletes",
+   "where": "dd32641 -> f4d62bf (08-09)",
+   "tried": "Delete one row per statement",
+   "outcome": "reverted",
+   "date": "2026-08-09",
+   "evidence": "9.19 s/row (contaminated sample); the statement-width hypothesis was not supported.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace retention valve (rows then bytes)",
+   "where": "6abbd2a (06-16) .. c0b9624/3cafd9c (09-16); about 31 commits",
+   "tried": "Stratified sweep, global-ceiling valve, quarantine of poison batches, byte ceiling",
+   "outcome": "partial",
+   "date": "2026-09-16",
+   "evidence": "3cafd9c: the bytes are not in the rows the valve counts; the store-wedge root is still open.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Success composite indexes rebuilt, then removed",
+   "where": "cd4d646 (196/197), db667c1, ffd75d0 (198/199) 08-22",
+   "tried": "Rebuild corrupt indexes, then remove them",
+   "outcome": "superseded",
+   "date": "2026-08-22",
+   "evidence": "With the index, 'X AND success = true discards X'.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "trace retention delete batch=1",
+   "where": "a78fcfd7 \u2192 07e32d38 (gen-env.sh)",
+   "tried": "TRACE_RETENTION_DELETE_BATCH=1",
+   "outcome": "reverted",
+   "date": "2026-08-16",
+   "evidence": "320 queries in flight, p50 33.7s, load 13.4, row count did not fall",
+   "source": "git-deployment"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Failed walks wrote no trace",
+   "where": "07a6c7c, 1c615b0",
+   "date": "2026-09-22",
+   "tried": "persistFailedWalkTrace, plus threading token usage.",
+   "outcome": "worked",
+   "evidence": "Before this, a failed walk left goal-seek:no-trace.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace-sink retries writes the server already committed",
+   "where": "ias-executor-ts 09c32a0(06-17) -> 3cf29a3(09-26)",
+   "tried": "Timeout 15s -> 120s, Idempotency-Key, jittered backoff",
+   "outcome": "unknown",
+   "date": "2026-09-26",
+   "evidence": "The retry mechanism added 06-17 created duplicates",
+   "source": "git-mid"
+  },
+  {
+   "key": "schema-ownership",
+   "title": "concept-db clobbered activity-api's impulse table",
+   "where": "concept-db 9b5c087",
+   "tried": "IF NOT EXISTS, non-owning",
+   "outcome": "worked",
+   "date": "2026-07-23",
+   "evidence": "Stripped tenant PERMISSIONS on each crash loop",
+   "source": "git-mid"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "dashboard 5s poll on an O(table) sort",
+   "where": "metabob-cloud-dashboard 3f5e35e (08-17)",
+   "tried": "disable the poll for that query only",
+   "outcome": "partial",
+   "evidence": "473,176-row view; 8 workers at 96%; 30s fleet latency; reach/credit writes lost; narrow projection never done",
+   "source": "git-small"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "key_session unbounded growth",
+   "where": "identity bfad5ca (07-29)",
+   "tried": "amortized reaper",
+   "outcome": "worked",
+   "evidence": "1.34M rows thrashed the host; 99.4% expired",
+   "source": "git-small"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "SurrealDB typing/coercion fixes",
+   "where": "555b1b9a, 5cd1da38, 839e1e46, 72c041b3, afe2de86, e5cf2897, 4052bdd9",
+   "date": "2026-03-12..05-27",
+   "tried": "datetime, org_id and record-id fixes, one at a time",
+   "outcome": "partial",
+   "evidence": "at least 12 separate fixes of the same typing class",
+   "source": "git-super-1"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "self-recovery restarts the DB-pressure victim (R4)",
+   "where": "9520a372, fc143654, 44250006, 0b3f70b2, 337c3b81, ad9da780",
+   "tried": "3-strike probe, a RETURN 1 pressure probe, a start-phase guard, a timed probe, then a bounded ladder",
+   "outcome": "partial",
+   "date": "2026-07-10..2026-09-16",
+   "evidence": "0b3f70b2: 16 restarts/6h, and the probe could only detect a dead DB. 337c3b81: 'the same loop, again'. ad9da780: 36 byte-identical escalations",
+   "source": "git-super-2"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "SurrealDB memory/trace growth, six hats (R5)",
+   "where": "2687fbe7, ee9c1dc2, 6eda182a, 60b2328e, 5a2074f7, 9e8b931f, 8c862ef8, 9fdb0b27, 1178cc1a",
+   "tried": "Block cache cap, retention rhythm, 150k cap, restart on wedge, valve poison-row quarantine, then removal of the FTS rebuild",
+   "outcome": "partial",
+   "date": "2026-07-16..2026-09-25",
+   "evidence": "1178cc1a: 41GB on disk, 89% of it unreclaimed blob garbage from a 30-min FTS REBUILD. The rebuild was removed by substrate-authored activity-api 9387ca7 (worked); total growth is still open",
+   "source": "git-super-2"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "retention batch=1 experiment",
+   "where": "a78fcfd7 -> 07e32d38",
+   "tried": "Narrow the DELETE statement width to 1",
+   "outcome": "reverted",
+   "date": "2026-08-16",
+   "evidence": "320 queries in flight, p50 33.7s; the real cause was poison rows (9e8b931f)",
+   "source": "git-super-2"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Execution row cap 150k",
+   "where": "trace_store_counters:execution cap=150000",
+   "tried": "Bound trace store growth with a row cap",
+   "outcome": "partial",
+   "evidence": "Growth is bounded, but the retained window is ~5 days (09-24..09-29) and ~70% of rows are housekeeping or telemetry (validator-dispatch 32%, auth_resolve_v1 14%)",
+   "source": "live-activities"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace-store reconcile remedy loop",
+   "where": "trace-store-reconcile-*, 62e174a, 2fd1dca, 2bccc64",
+   "tried": "timeout raise, paged listing, route via gap_to_feature",
+   "outcome": "failed",
+   "date": "2026-09-23..2026-09-24",
+   "evidence": "62e174a and 2fd1dca FAILED behavioural verification; remedy dispatched 47x in 6h; trace-store-reconcile-2026-09-24T11 open at 150,062 rows, 27 attempts",
+   "source": "live-gaps"
+  },
+  {
+   "key": "gap-store-integrity",
+   "title": "Gap store collapse and lost concurrent writes",
+   "where": "/workspace/git/super-repo/gaps/gaps.json",
+   "tried": "recovery from tmp files (09-09 precedent); gaps filed",
+   "outcome": "failed",
+   "date": "2026-09-18..2026-09-27",
+   "evidence": "9275 to 4636; 9 of 22 writes lost while reporting updated; 14 tmp orphans; pre-09-18 history gone",
+   "source": "live-gaps"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace retention exemptions + 150k cap",
+   "where": "activity-api services/trace-retention.ts:158; trace_store_counters",
+   "tried": "Cap the execution table; exempt validator-dispatch and slot-binding through the TRACE_RETENTION_ACTIVITIES env var",
+   "outcome": "partial",
+   "evidence": "The cap holds at 149,783 rows. validator-dispatch 47,732 + auth_resolve_v1 21,427 = 46% of it, so the window is about 5 days. execution_trace_content (513k rows) is not reclaimed with its executions",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace self-development pipeline",
+   "where": "feature-compose 4afd4c1; cutover e8e3fec; reach chaining c5f7efb",
+   "date": "2026-08-29",
+   "tried": "Emit execution per compose and cutover refusal/landing",
+   "outcome": "partial",
+   "evidence": "Queryable route/gate verdicts; gap_to_feature, apply_proposal_as_patch, patch_with_tools still untraced; resolver summaries unextractable (completed=0)",
+   "source": "memory-10"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Valve drain batch + instrumentation",
+   "where": "trace-retention 0e1fdb6; index drop 0da9c16 reverted; batch=1 f4d62bf reverted",
+   "date": "2026-08-09",
+   "tried": "Smaller delete batch; drop index; single-row deletes",
+   "outcome": "partial",
+   "evidence": "Valve runs but 3.5-17 s/row; cannot keep up (surplus ~157k); design question",
+   "source": "memory-10"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Remove boolean success indexes",
+   "where": "migrations 198 db667c1, 199 ffd75d0",
+   "date": "2026-08-22",
+   "tried": "Drop indexes mis-serving retention probe",
+   "outcome": "worked",
+   "evidence": "Ring 150k -> 9,242; re-arms if a success index returns",
+   "source": "memory-10"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Bound compose storm (hub)",
+   "where": "hub droplet migration; generator masked",
+   "date": "2026-08-10",
+   "tried": "Masking uncapped compose generator (~30 concurrent typecheck+test)",
+   "outcome": "worked",
+   "evidence": "Load 45 -> 1.8; activity-api write timeouts stopped; disk-full was secondary",
+   "source": "memory-10"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "SurrealDB OOM containment + index",
+   "where": "cgroup MemoryHigh 22G/Max 26G; mig 162 idx_vpet_org_time (3112144)",
+   "tried": "Cap the cgroup; index ORDER BY executed_at on the view",
+   "outcome": "worked",
+   "date": "2026-07-22",
+   "evidence": "Kills went from 6-22/hr to ~0. The index was out-of-band until committed. A 30GB balloon recurred (ROUND 5), fixed by b02d789.",
+   "source": "memory-2"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "RocksDB block-cache cap + restart",
+   "where": "dbaf0cf3",
+   "tried": "Cap block cache, restart surreal",
+   "outcome": "failed",
+   "date": "2026-07-16",
+   "evidence": "OOM'd faster (warmup reload); net-negative",
+   "source": "memory-2"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Sort-spill via SURREAL_TEMPORARY_DIRECTORY",
+   "where": "live drop-in",
+   "tried": "Spill ORDER BY to disk",
+   "outcome": "failed",
+   "date": "2026-07-22",
+   "evidence": "+7GB RSS and temp dir stayed at 1MB; 2.3.3 does not spill",
+   "source": "memory-2"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Reconcile livelock + fabricated counter + reached unstored",
+   "where": "activity-api 2181e96, 07f2bbe, b02d789, mig 163/164",
+   "tried": "Skip swap when AET decommissioned; counter on execution; persist reached at write",
+   "outcome": "worked",
+   "date": "2026-07-22",
+   "evidence": "Audit row applied:true; counter 108,590 real; 7-day livelock broken",
+   "source": "memory-2"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Retention global ceiling valve",
+   "where": "activity-api b048ece",
+   "tried": "Global reservoir ceiling = TRACE_STORE_CAP",
+   "outcome": "partial",
+   "date": "2026-07-22",
+   "evidence": "Armed at 150k, but only via live env (not persisted to gen-env/units)",
+   "source": "memory-2"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Six schema files never applied",
+   "where": "activity-api a5aed3e, 99424ad, 7c3e46b, 6c2de10",
+   "tried": "Rewrite IF/ORDER/GROUP syntax for 2.3.3; move 045 fan-out to read time",
+   "outcome": "partial",
+   "date": "2026-08-03",
+   "evidence": "046/047 fixed and shape usage measurable; 045 (shape learning) and 040 still broken; format-learning absent",
+   "source": "memory-2"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Dead view/table retirement",
+   "where": "migs 165,167,171-179; 4ae36df",
+   "tried": "Drop dead views/tables; neutralize source DEFINEs",
+   "outcome": "partial",
+   "date": "2026-07-23",
+   "evidence": "Tables 102\u219294; the hidden view re-creator was never located; v_*_by_account kept (07-22) then REMOVE-sourced (07-23)",
+   "source": "memory-2"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "AET -> execution trace-store migration + silent-drop fix",
+   "where": "activity-api 848e7e1, 27dca9b, c475cc1, e4185ab, e8822c7, 9d46962; super-repo 11ec70dc",
+   "tried": "Made the execution table lossless. Fixed the JWT $token-vs-$auth PERMISSIONS silent drop by writing via root with verify-after-insert. Repointed 22 readers, flipped writes, decommissioned AET.",
+   "outcome": "worked",
+   "date": "2026-07-14",
+   "evidence": "48 AET = 48 execution rows, 0 drops. Caveats: DUAL_WRITE_ENABLED=false lives in /etc/substrate/env and resets on image rebuild; AET residue remains (counters, db-admin, E33).",
+   "source": "memory-3"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "FTS index cannot build in startup gate",
+   "where": "20d8d26 (syntax), e5a8fd5 (caller fall-through)",
+   "tried": "Syntax fix, then made callers not trust silent zero hits.",
+   "outcome": "partial",
+   "date": "2026-08-03",
+   "evidence": "Indexes still absent (94s build plus write conflict). e5a8fd5 ended the silent {total:0}.",
+   "source": "memory-3"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "GROUP ALL drops equality beside datetime range",
+   "where": "db-admin.ts safeCount; 82b030e alias fix",
+   "tried": "Filed surrealdb-group-all-drops-equality-conjunct-beside-datetime-range.",
+   "outcome": "partial",
+   "date": "2026-09-03",
+   "evidence": "The alias fix left the underlying planner defect. The integrity scan may report clean either way.",
+   "source": "memory-3"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Template-list cache thrash (CPU root)",
+   "where": "activity-api a4735e9 + migration 180",
+   "tried": "Remove redis.del(CACHE_LIST_KEY) on every score update; add created_at index",
+   "outcome": "worked",
+   "date": "2026-07-24",
+   "evidence": "CPU 1955%\u21921570% and memory 26\u219213GiB. The 09-24 inverse (id-set never invalidated, 6 days stale) was fixed in 1f58320/55cd36d.",
+   "source": "memory-4"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace retention batch-size prune experiment",
+   "where": "live hub gen-env TRACE_RETENTION_DELETE_BATCH=1; d253457; 07e32d38",
+   "tried": "Defer the DELETE during index rebuild; then batch=1",
+   "outcome": "failed",
+   "date": "2026-08-16",
+   "evidence": "The rebuild-collision theory was refuted. batch=1 caused a queue explosion (320 in flight, load 13.4) and was reverted. The store stayed at 446,705 vs cap 150,000 and needs a design change.",
+   "source": "memory-4"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Self-recovery DB probe made representative",
+   "where": "0b3f70b2; b8baf26",
+   "tried": "Real SELECT probe; treat a duplicate insert as success.",
+   "outcome": "partial",
+   "date": "2026-08-08",
+   "evidence": "Not verified under load. Retention DELETE still cannot prune past 16 indexes.",
+   "source": "memory-5"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Missing migration 023 applied, state_signature path recording",
+   "where": "migration 211; e1979f77, 092eac27, 6d998681",
+   "tried": "Apply 023 manually and record state_signature on paths.",
+   "outcome": "worked",
+   "date": "2026-09-20",
+   "evidence": "The view has 709+ rows and F-PRIOR alpha rose +1 per verified reach. 023 was never in the init_migrations ledger.",
+   "source": "memory-5"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "key_session leak reaper",
+   "where": "identity-vessel bfad5ca + migration 003",
+   "date": "2026-07-29",
+   "tried": "offline REMOVE TABLE + index; amortized reap-on-write",
+   "outcome": "worked",
+   "evidence": "load 20->5, count 31s->359us; bounded reaping verified",
+   "source": "memory-6"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Ribosome replay fetch timeout",
+   "where": "ribosome-vessel replay-observer.ts:271",
+   "tried": "15s -> 60s",
+   "outcome": "partial",
+   "date": "2026-08-03",
+   "evidence": "98.6% fetch failures; unindexed scan; index owed",
+   "source": "memory-7"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Composition-edge reconcile table swap",
+   "where": "activity-api (withheld)",
+   "tried": "Swap dead activity_execution_traces -> execution",
+   "outcome": "dormant",
+   "date": "2026-07-31",
+   "evidence": "withheld as unsound (SCHEMAFULL assert swallowed); edges frozen ~1998 rows since 07-28",
+   "source": "memory-7"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "SurrealDB thrash and retention",
+   "where": "trace-retention.ts; migration 182 f8ebf2c; 5dd2606; c3e16a8; 2c3f97a",
+   "tried": "Indexes, aux reap, query semaphore, success sampling",
+   "outcome": "partial",
+   "date": "2026-07-23..08-09",
+   "evidence": "Now degrades to latency instead of OOM. Retention covers only a subset of tables.",
+   "source": "memory-8"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Migration runner marks migrations applied without running them",
+   "where": "init-database.ts b4d7b0e, 3a08e00, fe0eaf9",
+   "tried": "Return null on a failed read, move the ensure first, check runSQL results",
+   "outcome": "partial",
+   "date": "2026-08-04",
+   "evidence": "Recurred 09-05: the fresh-DB bulk path marked 37 migrations applied in 1s",
+   "source": "memory-8"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Retention valve ORDER BY timeout",
+   "where": "trace-retention.ts:510",
+   "date": "2026-08-09",
+   "tried": "diagnosed (the same file records the refutation 60 lines below)",
+   "outcome": "unknown",
+   "evidence": "302k/150k rows, 0 deletions ever; 65% of inserts are bookkeeping",
+   "source": "memory-9"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Manual delete of 46,543 validator-dispatch failure rows",
+   "where": "node1 activity_execution_traces",
+   "tried": "deleted the all-failure lifecycle noise; 5.3s to 3.0s",
+   "outcome": "superseded",
+   "date": "2026-06-15",
+   "evidence": "finding_2026_06_15_trace_store_bloat_ratelimiter; re-bloated to 110K by 06-16",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Stratified trace-retention sweep enabled",
+   "where": "activity-api trace-retention.ts, gen-env TRACE_RETENTION_ENABLED, super-repo ae447b449",
+   "tried": "265,045 to 160,443 rows plus a 30-min recurring sweep",
+   "outcome": "failed",
+   "date": "2026-06-21",
+   "evidence": "07-08: 220K rows, deleted:0 per cycle, auto-discover GROUP BY times out (deadlock); 08-08: 267K against the 150k cap, upkeep_stats empty",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace-digest read-swap",
+   "where": "activity-api src/db/trace-digest.ts",
+   "tried": "new activity_execution_trace_digest table",
+   "outcome": "failed",
+   "date": "2026-07-08",
+   "evidence": "a trace_digest table already existed; the new table is redundant dead code",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Global-ceiling valve plus orphan content reap",
+   "where": "activity-api trace-retention",
+   "tried": "cap execution at 150k",
+   "outcome": "partial",
+   "date": "2026-09-29",
+   "evidence": "execution=150,267; journal shows 'batch FAILED \u2014 quarantining' (125 quarantined); upkeep_stats is 0 rows",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "SurrealDB RL layer (atomic, COMPUTED ev, beta_sample, RELATE, HNSW)",
+   "where": "openspec/changes/2026-04-29-surrealdb-rl-layer",
+   "tried": "Push RL primitives into SurrealDB",
+   "outcome": "partial",
+   "date": "2026-05-18",
+   "evidence": "fn::beta_sample live and used in routes/activities.ts; RELATE composes table never created; HNSW dropped by migration 110 (CPU storm)",
+   "source": "openspec-1"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Template listing DB load (4b)",
+   "where": "activity-api 626eb63, ba3408b, 79eaaef",
+   "tried": "honour FTS offset; in-process catalogue cache",
+   "outcome": "partial",
+   "date": "2026-09-27",
+   "evidence": "was 49 listings/min; post-restart falsifier not recorded; 4b.3 indexes open",
+   "source": "openspec-10"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Self-managed trace-store reconciliation",
+   "where": "2026-07-08-substrate-self-managed-db-reconciliation; activity-api 3f378ae, dev-vessel 9674cb8, super-repo fec3a157",
+   "tried": "Quiesced copy-forward swap, counters migration 156, lease, pausable-citizen guard, health observer, lease-gated db_admin reconcile, gap route",
+   "outcome": "worked",
+   "date": "2026-07-09",
+   "evidence": "AET 218953->40851 rows, cold query 86s->4.4ms; cadence exec_2ulr7ddi; live trace_store_counters:execution reconciled 2026-09-29T03:14Z; cap drifted to 150000 (row 150193); counter drift 21% (07-12); tasks.md never ticked",
+   "source": "openspec-4"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace retention prune: phase-lock deferral, batch=1, quarantine valve",
+   "where": "activity-api trace-retention.ts d253457, a78fcfd7, 07e32d38, quarantine valve",
+   "date": "2026-08-16",
+   "tried": "Defer during FTS rebuild (hypothesis refuted by own test); batch=1 via gen-env (degraded hub 320 in flight, 81% slow; reverted); found poison head row exec_4o2fxn66, quarantine-and-advance",
+   "outcome": "partial",
+   "evidence": "Valve removed 25 rows first time but 25 rows/6 min vs 310k surplus; store 460k vs 150k cap; 09-23 still at cap 154,082",
+   "source": "reports-1"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Quadratic unaccounted_landing_scan made linear (429c8bd)",
+   "where": "development-vessel, 2026-09-25 15:06",
+   "tried": "Build the landingEvent and attemptIntent key sets once per scan, instead of re-parsing the 2.3 MB landingEvent.jsonl for each of 5,471 spool files (about 30M JSON.parse calls).",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "Scan time went from 13-14 s to 0.028-0.033 s. Output matches the ledger: ingested 5482, commits_seen 336, unaccounted 147.",
+   "source": "reports-2"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "SurrealDB unmask/start after OOM mask",
+   "where": "substrate-live surrealdb.service",
+   "date": "2026-08-16",
+   "tried": "systemctl unmask && start",
+   "outcome": "worked",
+   "evidence": "Masked since 08-12 OOM while running unmanaged; it died at load 66. After restart concept-db was healthy and load 66->4.5. Left enabled=disabled",
+   "source": "reports-3"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace spool quarantine",
+   "where": "spoke trace spool",
+   "date": "2026-08-16",
+   "tried": "Quarantine the 16,723 undelivered traces retried every 60s",
+   "outcome": "worked",
+   "evidence": "Spool 16,771->3. Pruning ~27GB / 29,354 trace rows was left as an operator decision (db-maintenance is detect-only)",
+   "source": "reports-3"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Auth storm filled 150k execution ring; boolean composite indexes made retention delete nothing",
+   "where": "activity-api migrations 198 (db667c1), 199 (ffd75d0)",
+   "tried": "Substrate removed the boolean indexes",
+   "outcome": "worked",
+   "date": "2026-08-22",
+   "evidence": "The ring drained from 150k to 9,242 and the stratified sweep is live. Substrate self-fixed.",
+   "source": "reports-5"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Reader-less views poison every execution insert on cold boot",
+   "where": "activity-api sql 023 (v_shape_pattern_performance), 055 (50946be), 045 (41c9e89)",
+   "tried": "Retire the views via REMOVE TABLE IF EXISTS",
+   "outcome": "worked",
+   "date": "2026-09-22",
+   "evidence": "Fresh-volume acceptance passes: POST execution-traces 200 and listed. The rebuilt image 254bf8c9 passes with no overlays.",
+   "source": "reports-5"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "22 migration files fail to parse on cold boot and nothing records it",
+   "where": "activity-api scripts/init-database.ts applySQLFile",
+   "tried": "Filed gap cold-boot-silently-skips-twenty-two-unparseable-migration-files",
+   "outcome": "unknown",
+   "date": "2026-09-22",
+   "evidence": "Sweep sql-sweep-2026-09-22.txt. Both 021 variants fail, so v_activity_score exists nowhere.",
+   "source": "reports-5"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "NULL is not NONE in SurrealDB writes",
+   "where": "activity-api 2a31d5a",
+   "tried": "Omit absent keys; read the row back and throw on mismatch.",
+   "outcome": "worked",
+   "date": "2026-08-21",
+   "evidence": "SF_BLEND went null to 1 unassisted; psi blends 0 to 9; the 35 shape_definition failures in 48 h were the same class.",
+   "source": "reports-6"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "success index rebuild, then removal",
+   "where": "migrations 196/197/198/199",
+   "tried": "Rebuilt the composites; the rebuild reproduced the fault; removing them exposed a filtered count greater than the total; all indexes over success were removed.",
+   "outcome": "worked",
+   "date": "2026-08-22",
+   "evidence": "Retention drained 140,749 auth rows (150,002 to 5,669) while keeping real traces.",
+   "source": "reports-6"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace storm fixes",
+   "where": "activity-api b56623a, 9387ca7, bf3f0bf",
+   "tried": "Duplicate-first ingest; delete the scheduled FTS rebuild; dense cosine in-process.",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "Ingest went from 15-51 s to p50 2 ms; 0 duplicate-id errors; container stop needed first.",
+   "source": "reports-6"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Restore the trace listing for the failure detectors",
+   "where": "activity-api 1f0d70f, d98309e, b8671c9, 927bb26, 40a5c7f; development-vessel 6583dd4",
+   "tried": "Restore v_paradigm_execution_traces (the out-of-band build froze), then read execution directly; count status-success failures; sweep measurable-first.",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "traces_examined went 0 to 50; the view had been absent since ~09-22.",
+   "source": "reports-6"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Export/import rebuild of trace store",
+   "where": "08-12 rebuild.log (cited in TRACE-STORE-GROWTH \u00a75)",
+   "tried": "Full export/import to reclaim blob garbage",
+   "outcome": "failed",
+   "date": "2026-08-12",
+   "evidence": "rebuild.log ends DONE ok=3 fail=6: chunk split mid-string, view-row collision, init_migrations dup index; 425 July blob files still present",
+   "source": "reports-7"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Duplicate check first on trace ingest",
+   "where": "activity-api b56623a",
+   "tried": "Idempotent early return before side effects",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "A duplicate POST answers 200 in about 1 ms (was 15-22 s)",
+   "source": "reports-7"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Remove the 30-min scheduled FTS REBUILD INDEX",
+   "where": "activity-api 9387ca7",
+   "tried": "Unschedule a rebuild that compensated for a SurrealDB 3.0.0 bug on a 2.3.3 server",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "No rebuild since 09:15. It had written about 89% of 41 GB of blob garbage and occupied the DB at least 6.6 h/day.",
+   "source": "reports-7"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Dense retrieval in process",
+   "where": "activity-api bf3f0bf",
+   "tried": "Score Tier-1 rows in JS instead of a full-table cosine scan",
+   "outcome": "worked",
+   "date": "2026-09-25",
+   "evidence": "0 full-table dense scans; results match SurrealDB to full precision",
+   "source": "reports-7"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Move SQL logging to debug",
+   "where": "activity-api db/surreal.ts",
+   "tried": "Pre-validated exact edit",
+   "outcome": "failed",
+   "date": "2026-09-25",
+   "evidence": "Refused by the vacuous-edit guard (gap filed); logging was 52 MB per 10 min, 71% of it authenticated-query params",
+   "source": "reports-7"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace sink client timeout above server p99",
+   "where": "ias-executor-ts activity-api-trace-sink.ts",
+   "tried": "15 s abort plus 3 retries caused 63% duplicate deliveries",
+   "outcome": "partial",
+   "date": "2026-09-25",
+   "evidence": "Live code now uses AbortSignal.timeout(120000). No idempotency key or 202 queue; the 11,716-file spool was not addressed in the reports.",
+   "source": "reports-7"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "SurrealDB socket leak in createAuthenticatedClient",
+   "where": "b1353836 2026-08-29T10:14 activity-api 4e28073, concept-db c601cd6",
+   "tried": "try/catch + close() on auth failure",
+   "outcome": "worked",
+   "date": "2026-08-29",
+   "evidence": "connections plateau 28-69 -> ~20 stable",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "HNSW defeated by scalar filter",
+   "where": "0f5cd43b 2026-08-30T02:00 concept-db 62cbf1e",
+   "tried": "two-stage unfiltered KNN then filter in SQL",
+   "outcome": "worked",
+   "date": "2026-08-30",
+   "evidence": "47.9s -> ~840ms; RRF denseCount:3 first ever; consultPrinciples 74ms at load 7.9",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Migration 205",
+   "where": "activity-api sql/migrations",
+   "tried": "Hand-apply migration",
+   "outcome": "reverted",
+   "date": "2026-09-04",
+   "evidence": "live side refuted premise; parked; 206 corrects field types",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace retention byte ceiling",
+   "where": "80ab9659 @ 2026-09-16T21:38",
+   "tried": "c0b9624+3cafd9c byte-derived ceiling in trace-retention.ts",
+   "outcome": "partial",
+   "evidence": "deployed; its own instrument refuted the large-row premise; boundBy:'rows' in 9 unattended runs, so the byte bound never binds; deleting rows does not reclaim disk (gap-mu4m9fdb)",
+   "date": "2026-09-16",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Fix retention duty cycle starving dispatch (gap-mu4pb4p3)",
+   "where": "80ab9659 @ 2026-09-17T05:47",
+   "tried": "dispatched 5 attempts to change the batch",
+   "outcome": "reverted",
+   "evidence": "retracted: the duty cycle drained 0.66->0.07 on its own with no commit; 'Had the drafter succeeded, I would have manufactured causal evidence'",
+   "date": "2026-09-17",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Fresh-datastore trace persistence (023/045/055 migrations)",
+   "where": "7726f8bf @ 2026-09-22T08:48",
+   "tried": "scratch-namespace repro; substrate-landed 50946be, 291b72d, 41c9e89 through hand-staged evaluate/cutover",
+   "outcome": "worked",
+   "evidence": "cold-boot trace POST 200 stored:true and listed; rebuilt image 125775d7 passes",
+   "date": "2026-09-22",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Trace-write storm and DB redline fixes",
+   "where": "activity-api",
+   "date": "2026-09-25T08:21Z..09:53Z",
+   "tried": "container stop; spool set aside; b56623a dup-check first, 9387ca7 remove 30-min FTS rebuild, bf3f0bf in-app dense scoring",
+   "outcome": "partial",
+   "evidence": "Load 31->6; but store 42->45GB, retention deletes time out again 09-26/09-27, DB 12 cores 09-27 03:08",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "activity-api migration runner convergence",
+   "where": "activity-api scripts/init-database.ts",
+   "date": "2026-09-24T13:11Z",
+   "tried": "gaps filed per migration; substrate fdb2fa6",
+   "outcome": "partial",
+   "evidence": "Missed sql/schemas 040/045; escalation only logs; hub activity-api dark ~1-1.5h/day from 24 starts",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Durability primitives (surrealdb_export/import, backend-snapshot-to-git, gh_repo_create)",
+   "where": "validation/findings/2026-06-03-durability-and-new-repo-primitives.md",
+   "tried": "new resolvers plus boredom goal[14]",
+   "outcome": "dormant",
+   "date": "2026-06-03",
+   "evidence": "0 backend-snapshot-to-git traces in node-1 retained window (07-13..14); submodule cutover deferred",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "activity-api StartLimitIntervalSec=0 drop-in",
+   "where": "validation/findings/round5, round6",
+   "tried": "protect the only reachable trace store",
+   "outcome": "superseded",
+   "date": "2026-08-10",
+   "evidence": "round6: fleet reads/writes hub; local unit not load-bearing",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "Boredom to goal-host 300s timeout",
+   "where": "boredom-vessel AbortSignal 106b1f0b; TimeoutStartSec 985117ed; async dispatch",
+   "tried": "AbortSignal timeout, then a longer systemd timeout, then async dispatch",
+   "outcome": "worked",
+   "date": "2026-05-26",
+   "evidence": "F-088 marked insufficient 05-26 16:00; F-112 resolved by async dispatch 05-26 22:49",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "trace-store-db",
+   "title": "JWT_SECRET crash self-bootstrap",
+   "where": "b1d14073",
+   "tried": "Self-bootstrapping secrets on container restart",
+   "outcome": "partial",
+   "date": "2026-05-25",
+   "evidence": "Fixed the F-044 container death but introduced the F-049 seeder race (org_id NONE on all 13 template writes)",
+   "source": "validation-other-2"
+  }
+ ],
+ "problems": [
+  {
+   "key": "trace-store-db",
+   "symptom": "impulse table 107,865 rows (84k in September), 45-70s to count; 68% unread cluster_shadow_decision",
+   "root_cause": "Shadow emitter with no reader and no retention sweep",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "UNIQUE index on init_migrations.filename not enforced (158 twice); ghost ledger names 143/159",
+   "root_cause": "Index corruption class (cf. 196/197); migrations renumbered or deleted after apply",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "~28.5k execution rows/day dominated by ticks (gap-to-scenario-bridge-tick 3706/d, auth_resolve_v1 2568/d, mitosis-tick 1395/d) and ~100/day proposal-only ribosome runs",
+   "root_cause": "periodic ticks and auth checks traced as executions while runtime tracing is withheld 'to protect the store'",
+   "last_seen": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "17 of 100 DB tables have 0 rows; duplicate-name tables (activity/activity_template/activity_templates, execution/execution_traces/activity_execution_traces, goal_execution_path/paths, migrations/init_migrations)",
+   "root_cause": "schema fossils never dropped",
+   "last_seen": "2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Trace store at 149,651/150,000; docs name activity_execution_traces (last write 2026-07-14) as the store while the live store is execution; v_paradigm_execution_traces view froze 09-22..09-28 blinding detectors",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "source": "docs-3"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Migrations silently skipped, failing forever, unparseable, or ledger says applied while the object is absent; retention cannot bound the store; index experiments go the wrong way",
+   "root_cause": "The ledger records intent, not state, and there is no schema reconciler; startup-gated DDL; storage-engine delete cost",
+   "first_seen": "2026-04-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 15,
+   "source": "git-activityapi"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Retry re-sends committed traces; retryable conflicts dropped; full scans on 66K rows; shared-table schema clobber",
+   "first_seen": "2026-06-17",
+   "last_seen": "2026-09-26",
+   "recurrences": 4,
+   "source": "git-mid"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "O(table) queries saturate SurrealDB; unbounded telemetry tables",
+   "first_seen": "2026-07-29",
+   "last_seen": "2026-08-17",
+   "recurrences": 2,
+   "root_cause": "no TTL, no narrow projection; the view sorts the blob before LIMIT",
+   "source": "git-small"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "SurrealDB datetime/org_id/record-id coercion bugs; OOM; counts wrong on a 20-index table; full scans",
+   "first_seen": "2026-03-01",
+   "last_seen": "2026-06-28",
+   "recurrences": 14,
+   "root_cause": "schema typing drift across SurrealDB 3.x; unindexed scans",
+   "source": "git-super-1"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "SurrealDB OOM/wedge/latency and trace growth (15GB -> 27GB -> 41GB); restarts cascade",
+   "root_cause": "Unbounded writers (full-table FTS rebuild with blob GC off, unexpiring impulses, auth_resolve 95% of executions) plus retention unable to delete; the immune system restarts the victim",
+   "first_seen": "2026-07-16",
+   "last_seen": "2026-09-25",
+   "recurrences": 11,
+   "source": "git-super-2"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Learning substrate (execution) holds only ~5 days",
+   "root_cause": "150k row cap with ~70% of rows from housekeeping and telemetry (validator-dispatch 47.7k, auth_resolve_v1 21.4k, gap-to-scenario tick 18k)",
+   "source": "live-activities"
+  },
+  {
+   "key": "gap-store-integrity",
+   "symptom": "store collapsed 50%, lost writes reported as updated, 14 tmp orphans, templated rows",
+   "first_seen": "2026-09-09",
+   "last_seen": "2026-09-27",
+   "recurrences": 4,
+   "root_cause": "whole-file JSON rewrite with per-process lock; partial load then save; no compare-and-swap",
+   "source": "live-gaps"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "42GB unreclaimed blobs, duplicate ingest 63%, migrations fail every start, slow queries",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-28",
+   "recurrences": 25,
+   "root_cause": "synchronous ingest with retries past client timeout; blob GC off; migration runner in ExecStartPre",
+   "source": "live-gaps"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "execution table fills in about 5 days; 9 tables empty; activity_execution_traces frozen since July",
+   "root_cause": "per-fire telemetry (validator-dispatch, auth) recorded as executions; env-gated retention list",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "SurrealDB OOM, silent NULL-vs-NONE no-ops, destructive migrations, discarded migration exit status",
+   "root_cause": "option<T> rejects NULL silently on CREATE; ExecStartPre=-; oversized trace tables",
+   "first_seen": "2026-07",
+   "last_seen": "2026-09-04",
+   "recurrences": 4,
+   "source": "memory-1"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Write timeouts, delete cost seconds/row, 150k cap truncation, frozen AET shadow, 40.8GB unreclaimed blobs, trace-spool with no replayer, 30s query latency, datetime conjunct drops predicate",
+   "root_cause": "Storage-engine design (16 indexes, blob GC disabled in SurrealDB 2.3.3) plus uncapped producers; spooled writes never replayed",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-25",
+   "recurrences": 8,
+   "source": "memory-10"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "SurrealDB OOM or wedge, dead views, never-applied schemas, fabricated counters, livelocked reconcile",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-08-03",
+   "recurrences": 8,
+   "root_cause": "2.3.3 MemoryOrderedLimit + blob-heavy materialized views + read sites repointed off indexed tables; warn-and-continue schema apply",
+   "source": "memory-2"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "SurrealDB silently returns wrong answers: composite-index subsets return 0; equality is dropped beside datetime; GROUP ALL returns unfiltered counts; string/datetime compares mismatch; KNN plus filter scans (400x); poisoned views on empty tables; ~22 migrations fail cold boot.",
+   "first_seen": "2026-07-14",
+   "last_seen": "2026-09-22",
+   "recurrences": 9,
+   "root_cause": "Planner edge cases in 2.3.3 plus DEFINE IF NOT EXISTS divergence between warm and cold stores. There are no impossible-predicate controls in queries.",
+   "source": "memory-3"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Trace store 2-3x over cap, retention deletes ~0, DB saturation, 96% orphan content rows",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-24",
+   "recurrences": 4,
+   "root_cause": "Ticker-dominated ingest; the DELETE statement width vs queue trade-off; needs a design change (partitioning or not storing)",
+   "source": "memory-4"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "SurrealDB saturation (18GB execution table, 802K trace_digest rows), retention cannot delete, migrations never parsed or never in the ledger.",
+   "root_cause": "16 indexes on execution, no blob GC, a migration applier that is not the ledger.",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-20",
+   "recurrences": 5,
+   "source": "memory-5"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "SurrealDB thrash / ingest timeouts / trace store over cap freezing self-editing",
+   "root_cause": "unreaped tables (key_session), dual-write ingest route, no table-growth detector",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-08-09",
+   "recurrences": 4,
+   "source": "memory-6"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "SurrealQL traps (COALESCE, math::min, record-id params), SCHEMAFULL silent drops, unindexed scans over 15s, hub at 360% CPU, ranked windows and clamped limits",
+   "root_cause": "DB dialect is unverified before landing, and load correlates with lost writes",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-08-08",
+   "recurrences": 8,
+   "source": "memory-7"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "DB thrash and OOM, deletes that cannot drain, migrations marked applied without running, SCHEMAFULL silently dropping writes.",
+   "root_cause": "Unbounded tables and missing indexes, no admission control, a migration runner that bootstraps by marking everything applied, and ExecStartPre=- swallowing failures.",
+   "first_seen": "2026-07-23",
+   "last_seen": "2026-09-06",
+   "recurrences": 6,
+   "source": "memory-8"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Retention never deletes; unwindowed reads never return; SurrealDB silently drops conjuncts or returns zero on partial composite-index use",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-24",
+   "recurrences": 6,
+   "root_cause": "ORDER BY -> MemoryOrderedLimit; a predicate on an indexed field collapses the ordered walk; 65% bookkeeping inserts; root connection bypasses PERMISSIONS",
+   "source": "memory-9"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Trace table bloats, reads take seconds, the retention mechanism is 'enabled' but not enforcing or failing batches",
+   "first_seen": "2026-05-05",
+   "last_seen": "2026-09-29",
+   "recurrences": 7,
+   "root_cause": "unbounded high-frequency lifecycle writes; retention survey and deletes run on the overloaded table they must bound; no upkeep record read back",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "2545/2545 local-tools shell requests in 24h lack execution_id, including the mitosis staging copies into /vessels",
+   "root_cause": "Callers of the shellResult path do not propagate execution_id; the landing's file writes are untraced",
+   "first_seen": "2026-09-28",
+   "last_seen": "2026-09-29",
+   "recurrences": 2545,
+   "source": "node2-runtime"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "activity_execution_traces holds only July rows (18,135); recent traces are in trace_digest, execution_traces is empty, and trace_digest max(executed_at) aggregates return null.",
+   "root_cause": "Trace storage migrated or reclaimed; readers of AET may see a frozen world (not verified here).",
+   "first_seen": "2026-05-31",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "openspec-2"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Trace store bloat wedges loop (219k rows, 13GB, 86s count); counters overcount 21%; cap drifted to 150000",
+   "root_cause": "Timer tick exhaust idle traces; fire-and-forget counters miss delete paths",
+   "first_seen": "2026-07-08",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "source": "openspec-4"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Trace store 3x over cap; valve deletes nothing; event loop blocked; spooled traces never replayed; OOM; PERMISSIONS silently empty; unstable pagination",
+   "root_cause": "Storage-engine delete cost plus poison row; ingest volume exceeds any per-sweep budget; unordered LIMIT/START",
+   "first_seen": "2026-08-09",
+   "last_seen": "2026-09-23",
+   "recurrences": 6,
+   "source": "reports-1"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Trace-ingest storm: 1064 POSTs and 1194 duplicate-id errors per 5 min, 233 POSTs of 60 s or more, host load around 30. A quadratic ledger scan blocks the event loop.",
+   "root_cause": "Clients re-send slow trace POSTs while the first insert is still in flight. The FTS REBUILD averages 833 s. The onset trigger was never identified.",
+   "first_seen": "2026-09-25 06:55",
+   "last_seen": "2026-09-25 08:26",
+   "recurrences": 1,
+   "source": "reports-2"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Hub DB saturated: 27GB/19GB resident for ~64k rows, 607% CPU, 13s queries, 38,536 slow queries; fresh-install trace writes 500",
+   "root_cause": "Full payload per trace (~900KB/row), no pruning (db-maintenance detect-only), DB process in pathological state; array type errors on fresh schema (09-21)",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-22",
+   "recurrences": 2,
+   "source": "reports-3"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Execution table cannot drain: 25-row deletes time out (materialised view + 14 indexes), retention 6% of ingest, 74% ticker ingest; traces lack task stdout/impulse ids",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-24",
+   "recurrences": 2,
+   "root_cause": "Durable store receives ticker noise; view recomputed per write; retention knobs env vars (law 1).",
+   "source": "reports-4"
+  },
+  {
+   "key": "gap-store-integrity",
+   "symptom": "Unrendered template strings stored as gap status ({{goal.gap_status}} etc.) and uncontrolled status vocabulary (Open, resolved, reopened)",
+   "first_seen": "2026-09-20",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "root_cause": "substrateGap_write accepts arbitrary status strings; 2 rows 09-20 -> 10 rows 09-29.",
+   "source": "reports-4"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "The trace store is flushed by an auth storm, cold boot poisons inserts, 22 migrations are dead, full-view scans pin the DB",
+   "root_cause": "Retention indexes on boolean fields; reader-less computed views; applySQLFile skips failures silently; unbounded default window",
+   "first_seen": "2026-08-18",
+   "last_seen": "2026-09-22",
+   "recurrences": 4,
+   "source": "reports-5"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Detector or KPI reads a table or view that is absent or frozen and reports healthy zeros (v_activity_score, activity_execution_traces frozen since 07-14, v_shape_conditioned_score never applied, v_paradigm_execution_traces absent since ~09-22, /traces/query 404).",
+   "first_seen": "2026-08-22",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "root_cause": "In SurrealDB a missing table is indistinguishable from an empty one; IF NOT EXISTS migrations are skipped once ledgered; the migration budget kills expensive view builds.",
+   "source": "reports-6"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "42-46 GB store with 88.9% blob garbage; trace POST p50 51 s; 63% duplicate deliveries; FTS 99% timeout; dense scans 106 s; retention deletes time out; 20 GB RSS",
+   "root_cause": "Scheduled whole-table REBUILD (for a bug absent on 2.3.3) plus blob GC off; queueing on a 16-slot semaphore; non-idempotent retries; SELECT * on 20 KB rows; min/max views",
+   "first_seen": "2026-07-21",
+   "last_seen": "2026-09-26",
+   "recurrences": 3,
+   "source": "reports-7"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "19.2% of the retained execution rows are a revoked-key auth retry storm (auth_resolve_v1, about 1/s for 48h+). total_executions is inflated about 48x. reach_history has a row with no week and one with total=414,944.",
+   "root_cause": "Every rejected auth mints an execution row plus a posterior dual-write, and no consecutive-failure backoff exists",
+   "first_seen": "2026-09-08",
+   "last_seen": "2026-09-11",
+   "recurrences": 1,
+   "source": "reports-8"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "embedding_prior_weights has 5131 rows, gaining about 96 per day from m1-trainer, while the reader uses only the latest",
+   "root_cause": "Append-only CREATE on a 15-min timer with no retention",
+   "first_seen": "2026-08-22",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "timers-readers"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "SurrealDB pathologies: socket leak, HNSW scalar filter, unretried conflicts, inert view redefine, silent limit clamp",
+   "first_seen": "2026-08-29",
+   "last_seen": "2026-09-04",
+   "recurrences": 5,
+   "root_cause": "failures return plausible empties rather than errors",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "gap-store-integrity",
+   "symptom": "Gap store overwritten with 95 bytes by a credited orphan closer; NUL-filled 18MB (~251 gaps lost); polluted by the test suite; 100 mass-expired",
+   "first_seen": "2026-09-13",
+   "last_seen": "2026-09-18",
+   "recurrences": 4,
+   "root_cause": "Single JSON file rewritten in place; closers graded success:true; tests touch the live store",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "SurrealDB 37GB for 4.6GB logical; fresh-datastore trace writes return 500",
+   "first_seen": "2026-09-16",
+   "last_seen": "2026-09-22",
+   "recurrences": 2,
+   "root_cause": "Deletes do not reclaim blobs; migrations 023/045/055 poison inserts or never parse on an empty store",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "42-45GB store 89% garbage, write storms, migration timeouts, vanished trace view",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "root_cause": "30-min FTS rebuild, blob GC off, view recompute on delete, 15s resend, failed migrations skipped silently",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "unwindowed trace reads never return on hub; O(1) counter under-reports 44%; DELETE 45% of queries",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-08-11",
+   "recurrences": 3,
+   "root_cause": "30-day default window range-scan+sort; 37 callers omit since; retention valve pinned at 150k cap",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "Container death (JWT_SECRET), seeder race org_id NONE, Requires= SIGTERM cascade, Redis template-cache infinite TTL, registry count thrashing",
+   "first_seen": "2026-05-24 F-031",
+   "last_seen": "2026-05-25 F-065",
+   "recurrences": 7,
+   "root_cause": "Boot ordering and cache-invalidation defects",
+   "source": "validation-other-2"
+  }
+ ],
+ "claims": [
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-08-22",
+   "claim": "Rebuilt corrupt success indexes (196/197)",
+   "where": "activity-api migrations 196-199",
+   "later": "Ledger UNIQUE index still admits a duplicate 158 row",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-06-21",
+   "claim": "The flooders can no longer re-bloat the store",
+   "where": "finding_2026_06_21_trace_store_pruned_recurring_sweep_enabled",
+   "later": "07-08 220K rows, retention deleted 0 (deadlock); 08-08 267K vs 150k cap",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-07-26",
+   "claim": "Retention is ON and enforcing at cap 150k",
+   "where": "substrate-utils substrate-trace-store-live-topology.md",
+   "later": "08-08 'configured but NOT enforcing', 267,491 rows; 09-29 at cap but batches failing",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-08-29T10:14",
+   "claim": "SurrealDB socket leak fixed, fully back under control",
+   "where": "b1353836",
+   "later": "19:01 second driver: 29 concurrent bun test (the verify pipeline)",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-09-16",
+   "claim": "Retention sweep hung; nothing is burning",
+   "where": "80ab9659 @ 2026-09-16T22:57",
+   "later": "09-17 00:04 retracted: 19.7-min sweep completed; SurrealDB at 511% CPU",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-09-17",
+   "claim": "Retention duty cycle starves dispatch (gap-mu4pb4p3)",
+   "where": "80ab9659 @ 2026-09-17T00:30",
+   "later": "05:47 retracted: drain curve 0.66->0.07 with no change",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-09-16",
+   "claim": "Retention byte ceiling landed and working (c0b9624)",
+   "where": "80ab9659 @ 2026-09-17T09:18",
+   "later": "Deployed and running, but boundBy was rows in every run (the byte bound never binds), and disk reclamation is still absent",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-09-25T09:53Z",
+   "claim": "The machine is fixed; four activity-api fixes live",
+   "where": "ac8b0aad 2026-09-25T09:53Z",
+   "later": "Store grew ~1.5GB/h 09-26; retention deletes time out again; DB 12 cores load 18 on 09-27 03:08",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-08-10",
+   "claim": "local activity-api is the spoke's only reachable trace store",
+   "where": "validation/findings/round3, round5",
+   "later": "round6: the fleet reads/writes the hub; the local unit is frozen and unused",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "trace-store-db",
+   "claimed_at": "2026-08-09",
+   "claim": "trace store is down",
+   "where": "validation/findings/config-surface-audit.md \u00a77.10",
+   "later": "retracted: hung under contention, no restart",
+   "source": "validation-other-1"
+  }
+ ]
+}

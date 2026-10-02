@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-88645cd0",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts to satisfy the following request. The relevant code",
+  "description": "Edit repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts to satisfy the following request. The relevant code is in the region \"substrate gap\". If that file is the wrong target, say so rather than editing it.\n\nClose substrate gap smoke-test-fix9-verification: this is a deliberately unfixable synthetic gap with no real code defect behind it, dispatched only to verify that a repair attempt producing no landed edit correctly grades reached:false rather than being narrated as fixed.",
+  "goal_text": "Edit repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts to satisfy the following request. The relevant code is in the region \"substrate gap\". If that file is the wrong target, say so rather than editing it.\n\nClose substrate gap smoke-test-fix9-verification: this is a deliberately unfixable synthetic gap with no real code defect behind it, dispatched only to verify that a repair attempt producing no landed edit correctly grades reached:false rather than being narrated as fixed.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-88645cd0",
+  "source_gap_source": "substrate_detected"
+}

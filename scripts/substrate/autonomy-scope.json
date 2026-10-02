@@ -1,0 +1,54 @@
+{
+  "description": "The committed autonomy containment: the excluded paths and falsifier classes autonomous work is held to, and the spend envelope it runs under. Readers: scripts/bootstrap-seeder.ts --pool-policy writes these as the first autonomyScope and spendEnvelope pool records on a FRESH pool (development-vessel.service ExecStartPre); the planned push-time containment check reads the same file. The live records are trust-root pool records written with an operator (admin) key; changing containment means changing this file and the live records in the same operator act, and the self-facts rows autonomy_scope_pinned / spend_envelope_pinned pin the live copies per node. Bodies are the pool record bodies verbatim, minus the reason text.",
+  "autonomyScope": {
+    "excluded_paths": [
+      "repos/development-vessel/src/resolvers/feature-compose.ts",
+      "repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts",
+      "repos/development-vessel/src/resolvers/pull-cutover.ts",
+      "repos/development-vessel/src/resolvers/push-policy.ts",
+      "repos/development-vessel/src/resolvers/git-push.ts",
+      "repos/development-vessel/src/resolvers/gap-to-feature.ts",
+      "repos/development-vessel/src/resolvers/substrate-gap.ts",
+      "repos/development-vessel/src/resolvers/apply-proposal-as-patch.ts",
+      "repos/development-vessel/src/resolvers/pool-impulse.ts",
+      "repos/development-vessel/src/resolvers/maintenance-lease.ts",
+      "repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts",
+      "repos/development-vessel/src/routes/impulses.ts",
+      "repos/development-vessel/src/index.ts",
+      "repos/development-vessel/src/config.ts",
+      "repos/goal-host-vessel/src/index.ts",
+      "repos/activity-api/src/lib/posterior-update.ts",
+      "repos/llm-resolver-vessel/src/index.ts",
+      "repos/boredom-vessel/src/index.ts",
+      "repos/discovery-vessel/",
+      "repos/identity-vessel/",
+      "scripts/substrate/",
+      "repos/human-surface-vessel/",
+      "repos/cycle-demo-3/",
+      "repos/development-vessel/src/resolvers/attempt-register.ts",
+      "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts",
+      "repos/development-vessel/src/resolvers/self-fact-reconcile.ts",
+      "repos/development-vessel/src/resolvers/vessel-mitosis-evaluate.ts",
+      "scripts/bootstrap-seeder.ts"
+    ],
+    "require_falsifier_classes": [
+      "class2"
+    ]
+  },
+  "spendEnvelope": {
+    "usd_cap_per_hour": 2,
+    "paused": false
+  },
+  "source_record": {
+    "autonomyScope": {
+      "node": "c951b44f4a99",
+      "id": "autonomy-scope",
+      "updated_at": "2026-10-01T11:11:30.475Z"
+    },
+    "spendEnvelope": {
+      "node": "c951b44f4a99",
+      "id": "spend-envelope",
+      "updated_at": "2026-09-27T21:46:49.429Z"
+    }
+  }
+}

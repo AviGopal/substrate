@@ -1,0 +1,15 @@
+[Unit]
+Description=light-dispatch-vessel liveness probe timer (every 30s)
+
+[Timer]
+# First fire 30s after the timer activates, then every 30s. At ~30s detection
+# latency the boredom pool loses at most one or two dispatch attempts to a hung
+# vessel before it is bounced — well inside the loop's tolerance.
+OnActiveSec=30s
+OnUnitActiveSec=30s
+# Coalesce wakeups so the probe is cheap.
+AccuracySec=5s
+Unit=light-dispatch-healthcheck.service
+
+[Install]
+WantedBy=timers.target

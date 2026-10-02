@@ -1,0 +1,393 @@
+{
+ "source": "syzygy",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/syzygy.md",
+ "coverage": "What I covered: both syzygy containers, meaning their compose config, env var names, units, workspace and SurrealDB stores, journals (error-pattern counts and per-day series), transport /health, and live read-only function probes on 2026-09-29 at 04:22 UTC. I also read the remote hub's registry rows for the spokes, cross-checked the local substrate-live registry, compared image and source drift across all four containers, and went through the git history of the reservation/phantom/relay fix class, the related docs and the 9-23 install demo. Not covered: hub-side (syzygy.host) transport and relay state and journals, because that needs SSH, which was out of scope; the hub identity rate-limit config; and the contents of the exited spoke-syz volumes. Side effects: my probes sent read-only resolves through both spokes, and I created and then deleted /tmp/hubreg.json inside syzygy-local-inventory. The full notes are in the output file.",
+ "attempts": [
+  {
+   "key": "federation-p2p",
+   "title": "Syzygy local surface bring-up (spoke of remote hub)",
+   "where": "validation/reports/syzygy-local-bringup-2026-09-22/REPORT.md, compose.yaml; container syzygy-local-surface",
+   "tried": "Stood up a browser human surface on the laptop from pinned image 125775d7, with only discovery, transport, surface, surreal and valkey running locally. Execution, models and the activity store stay on syzygy.host, joined through the libp2p relay.",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "The first run got NO_RESERVATION. It was recovered by restarting the hub's federation-transport-vessel over SSH. On 2026-09-29 /api/resolve returns NO_RESERVATION for activeDispatches and llmQuotaState again."
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Explicit-inventory + idempotence proof instance",
+   "where": "validation/reports/syzygy-local-bringup-2026-09-22/inventory-compose.yaml, inventory-idempotence.json; container syzygy-local-inventory",
+   "tried": "Ran a nine-vessel allow-list (adding goal-host and local-tools). Checked repeat up, force-recreate, the persistent marker, presence in the hub registry, and bidirectional activeDispatches reads over libp2p.",
+   "outcome": "partial",
+   "date": "2026-09-22",
+   "evidence": "Idempotence was proven on 9-22. The fixture was never torn down. On 9-29 hub-only shapes fail with NO_RESERVATION, and the board read is answered by its own local goal-host with 0 dispatches."
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Manual hub transport restart as recovery",
+   "where": "REPORT.md 'Recovery was performed with' ssh ... systemctl restart federation-transport-vessel",
+   "tried": "Restarted only the hub's federation transport to reacquire the reservation.",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "It worked on 9-22, but the report itself said this was 'not proof that the underlying reservation liveness defect cannot recur'. The defect recurred by 9-29 with nothing detecting it."
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Forced relay re-reservation before ttl lapse",
+   "where": "repos/libp2p-federation-transport c68b54b; super 0fc8c4c2",
+   "tried": "Renewed the reservation before the unobservable 1-hour ttl lapses.",
+   "outcome": "superseded",
+   "date": "2026-07-11",
+   "evidence": "NO_RESERVATION recurred on 9-22 and again on 9-29."
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Derive circuit multiaddr live",
+   "where": "super 4aede401",
+   "tried": "Derived the circuit multiaddr live instead of capturing it once at startup.",
+   "outcome": "superseded",
+   "date": "2026-07-18",
+   "evidence": "The same class recurred afterwards."
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Log egress NO_RESERVATION increments",
+   "where": "super 5e48a4e8",
+   "tried": "Added the egressNoReservationCount counter and logging.",
+   "outcome": "partial",
+   "date": "2026-07-31",
+   "evidence": "On 9-29 the counter stayed at 0 after a NO_RESERVATION failure on the ingress\u2192libp2p forward path."
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Expose real reservation / fix phantom watchdog",
+   "where": "super 1afd003f, 3dbbbeff",
+   "tried": "Reported the reservation the relay client actually holds, and stopped the phantom watchdog from causing outages.",
+   "outcome": "partial",
+   "date": "2026-09-14",
+   "evidence": "The spokes report reservationsHeld:1 and phantomSuspected:false while the hub circuit is unreachable. The check only looks at their own reservation."
+  },
+  {
+   "key": "false-verification",
+   "title": "'Joined means a live reservation'",
+   "where": "super e1c06f60",
+   "tried": "Defined the join predicate as holding a live relay reservation.",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "On 9-29 both spokes pass the predicate (reservation held, hub-register 'all ok' at 04:22:09) while every hub-only function read fails."
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Overlay oracle / sweep",
+   "where": "super a0c702bb, 26a53fe0, 9834bd95, 5584bc3f, 251382f9",
+   "tried": "Built an independent overlay oracle calibrated against the failure, and made the sweep a resolvable shape.",
+   "outcome": "unknown",
+   "date": "2026-09-12",
+   "evidence": "No sign that it runs against the syzygy spokes. The outage on 9-29 went unfiled."
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Install demo peered with syzygy.host",
+   "where": "validation/reports/install-demo-2026-09-23/REPORT.md, 2f002a09",
+   "tried": "Launched nine fresh fleets against syzygy.host and substrate-live.",
+   "outcome": "worked",
+   "date": "2026-09-23",
+   "evidence": "All 9 reached 'usable' in 49\u2013113 s. The fleets were torn down, so this says nothing about how long a federation stays alive."
+  },
+  {
+   "key": "env-gating",
+   "title": "Bind override for human-surface host",
+   "where": "surface-host.conf drop-in",
+   "tried": "Mounted Environment=HOST=0.0.0.0 over the baked unit, which binds loopback.",
+   "outcome": "partial",
+   "date": "2026-09-22",
+   "evidence": "It works, but the fix lives in a fixture file, not in the image."
+  }
+ ],
+ "problems": [
+  {
+   "key": "federation-p2p",
+   "symptom": "Resolves from a spoke to the hub fail with 'ingress proxy failed: failed to connect via relay with status NO_RESERVATION', while the hub still answers over HTTP and the spoke's own reservation looks healthy.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "root_cause": "Unattributed. It is the target's (the hub transport's) reservation status at the relay. On 9-22 it was cleared by restarting the hub transport. The hub side was not inspected."
+  },
+  {
+   "key": "false-verification",
+   "symptom": "The metric the report said to monitor (egressNoReservationCount) stays at 0 when the ingress\u2192libp2p forward path fails.",
+   "first_seen": "2026-09-29",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "root_cause": "The counter is incremented only on the egress path. The forward path the surface uses is not counted."
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Join, readiness, health and hub-register all report green while no hub function is reachable.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "root_cause": "Every predicate measures local state or HTTP registration. None does a round-trip function read."
+  },
+  {
+   "key": "node-locality",
+   "symptom": "The inventory surface shows a green but empty activeDispatches board, served by its own idle local goal-host, which hides the hub outage.",
+   "first_seen": "2026-09-29",
+   "last_seen": "2026-09-29",
+   "root_cause": "discovery /resolve fans out to peers only when no local producer exists (repos/discovery-vessel/src/index.ts ~L222)."
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "The spoke's own relay reservation is lost and reacquired about every 1\u20132 days (9-23 23:20, 9-25 02:00, 9-26 21:20).",
+   "first_seen": "2026-09-23",
+   "last_seen": "2026-09-26",
+   "recurrences": 3
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "The inventory goal-host logs 'failed to register dev-vessel proxies: Unable to connect' 9,172 times and expectation-watchdog failures 917 times in 6.4 days.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "recurrences": 9172,
+   "root_cause": "Loopback endpoints are pinned for units masked in this inventory (development-vessel, llm-resolver at 127.0.0.1:8220)."
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "The hub registry advertises goal-host-vessel@syzygy-local-inventory as a producer of goal_execution and goalDispatchAsync, but it cannot execute because it has no LLM.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "root_cause": "The inventory has no dependency-completeness check before advertising. Registry rows are identity_status 'unverified' and count as healthy."
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "A laptop human-surface on a loopback-only port advertises uiQuestion and uiQuestion_write to the production hub, and nobody watches it (panels 0).",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "root_cause": "Registration does not tell apart a surface someone is watching from a fixture."
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "Spoke discovery register, heartbeat and resolve fail with 'identity returned 429', reported as 401 (about 290 on the surface and 176 on the inventory, every day).",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-28",
+   "recurrences": 466,
+   "root_cause": "Hub identity-vessel rate-limits spokes, and discovery reports the 429 as an auth failure."
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Interactor exposure observations are written to the spoke's local interactor-log jsonl (4 rows, 9-22 to 9-25), and nothing on the hub reads them.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-25"
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "SurrealDB (zero namespaces) and valkey run in both spokes with no data. The probe harness is manual only, with no scheduled reader.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "The spokes run a frozen 9-22 image with no pull-sync. Goal-host, discovery and local-tools source differ from the repo, and goal-host has 31 commits since 9-21. substrate-live's human-surface hash differs from the repo, compose2 and the spokes.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "SYZYGY_LOCAL_SURFACE.md says 'local setup succeeds \u2026 board now reads hub-owned dispatches', which is false on 9-29. The guides and the bring-up evidence directory are untracked, yet docs/README.md links them.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "Orphan exited containers with retained volumes (spoke-syz, mini-node, verify-node, coldboot-node, coldboot2-node). Proof fixtures left running for 6+ days. Diagnostic tick logs (mem-probe, gc-tick, BoundedBusSink at 18k lines each).",
+   "first_seen": "2026-09-17",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "GOAL_HOST_WS_SUBSCRIBER=off (iter-8 ablation), ROUTE_EDIT_INTENT_TO_COMPOSE=0 and MITOSIS_DIRECT_PUSH=0 steer runtime behavior.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "federation-transport-vessel relay reservation + ingress\u2192libp2p forward",
+   "location": "repos/libp2p-federation-transport; /vessels/federation-transport-vessel in both spokes",
+   "purpose": "Reach hub producers over the circuit relay",
+   "status": "broken",
+   "general": true,
+   "evidence": "On 9-29 every hub-only read fails with NO_RESERVATION, while /health shows reservationsHeld:1 and phantomSuspected:false."
+  },
+  {
+   "name": "egressNoReservationCount / phantomSuspected health fields",
+   "location": "transport /health :8401",
+   "purpose": "Detect reservation liveness failures",
+   "status": "broken",
+   "general": true,
+   "evidence": "The inventory counter stayed at 0 right after an ingress-forward NO_RESERVATION failure."
+  },
+  {
+   "name": "discovery local-first resolve with peer fan-out",
+   "location": "repos/discovery-vessel/src/index.ts /resolve ~L209-231",
+   "purpose": "Serve a shape locally, else forward to peer discovery",
+   "status": "live-used",
+   "general": true,
+   "evidence": "The inventory answers activeDispatches locally with an empty board, so the hub outage is shadowed."
+  },
+  {
+   "name": "explicit ENABLED_VESSELS inventory + compose idempotence proof",
+   "location": "validation/reports/syzygy-local-bringup-2026-09-22/inventory-compose.yaml, inventory-idempotence.json",
+   "purpose": "Run any vessel subset from one image, reproducibly",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Proven on 9-22 and used by the 9-23 install demo. No dependency-completeness check: the inventory advertises goal-host without an LLM."
+  },
+  {
+   "name": "operate.py probe / probe.ts P2P verification",
+   "location": "validation/reports/syzygy-local-bringup-2026-09-22/",
+   "purpose": "Bounded read probes of hub capabilities over P2P",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Manual only. No activity or timer invokes it, and the 9-29 outage was not detected."
+  },
+  {
+   "name": "surface-host.conf HOST override drop-in",
+   "location": "validation/reports/syzygy-local-bringup-2026-09-22/surface-host.conf",
+   "purpose": "Make the baked loopback-bound surface reachable from the host",
+   "status": "live-used",
+   "general": false,
+   "evidence": "Bind-mounted read-only into both containers. It is a fixture workaround for an image default."
+  },
+  {
+   "name": "SurrealDB + valkey in spoke containers",
+   "location": "syzygy-local-* /var/lib/surrealdb",
+   "purpose": "Local support stores",
+   "status": "dormant",
+   "general": false,
+   "evidence": "INFO FOR ROOT shows zero namespaces after 6.4 days."
+  },
+  {
+   "name": "interactor-log jsonl writer",
+   "location": "syzygy-local-surface /workspace/git/super-repo/interactor-log/interactorObservation_write.jsonl",
+   "purpose": "Record UI exposure observations",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "4 rows, written locally only, with no hub reader."
+  },
+  {
+   "name": "goal-host on inventory spoke",
+   "location": "syzygy-local-inventory goal-host-vessel",
+   "purpose": "Local dispatch",
+   "status": "fossil",
+   "general": false,
+   "evidence": "goal-host-dispatches.json is [] after 6.4 days. Its LLM is pinned to a masked 127.0.0.1:8220. It is still advertised to the hub.",
+   "duplicates_of": "goal-host-vessel@syzygy-hub"
+  },
+  {
+   "name": "local-tools on inventory spoke",
+   "location": "syzygy-local-inventory local-tools-vessel",
+   "purpose": "Shell/fs/git tools",
+   "status": "live-unused",
+   "general": false,
+   "evidence": "Advertises shell, fs_write and gitCommitResult to the production hub from the laptop.",
+   "duplicates_of": "local-tools-vessel@syzygy-hub"
+  },
+  {
+   "name": "human-surface on syzygy-local-surface",
+   "location": "127.0.0.1:38310",
+   "purpose": "Browser human surface for Syzygy",
+   "status": "broken",
+   "general": false,
+   "evidence": "Board read returns resolved:false with NO_RESERVATION. It advertises uiQuestion to the hub with 0 panels."
+  },
+  {
+   "name": "substrate-ready readiness",
+   "location": "substrate-ready --once --json",
+   "purpose": "Report fleet readiness",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Reports ready:true on both spokes while the hub function path is dead. Federation reachability is not part of the check."
+  }
+ ],
+ "principles": [
+  "The recurring federation failure is a missing function-path check, not a transport bug to patch once more. Eight or more 'fixed' commits changed reservation handling, yet no scheduled check does a round-trip read of a shape the node does not serve itself.",
+  "A green read through a node that also serves the shape locally proves nothing about the hub. Probes must target a shape with no local producer (for example llmQuotaState), or discovery's local-first rule shadows the outage.",
+  "When a report says 'monitor the counter', first confirm the counter increments on the failing path. egressNoReservationCount does not count the ingress-forward path.",
+  "'Joined', 'ready' and 'healthy' have each been defined as local state plus HTTP registration. A predicate that passes on a spoke that cannot reach its hub is a false verification.",
+  "Proof fixtures that keep running still advertise into production. The syzygy inventory's goal-host (no LLM), local-tools (shell, fs_write) and a surface nobody watches are live registry rows at the hub.",
+  "An inventory list is a composition request, not a dependency proof. Advertising a producer should require its dependencies (LLM, dev-vessel) to be reachable.",
+  "429s reported as 401s make rate limiting look like auth failure. Classify errors by their cause.",
+  "Dated verification docs with a present-tense verdict go stale silently. The 9-22 'setup succeeds' statement is false by 9-29, and the evidence directory was never committed."
+ ],
+ "claims": [
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-09-22",
+   "claim": "Current verdict: recovered after restarting only the Syzygy federation transport. The local surface reads the fleet board, and 10/11 P2P probes return 200.",
+   "where": "validation/reports/syzygy-local-bringup-2026-09-22/REPORT.md",
+   "later": "Broke again by 2026-09-29. Both spokes get NO_RESERVATION on activeDispatches and llmQuotaState, and nothing detected or filed it."
+  },
+  {
+   "key": "docs-drift",
+   "claimed_at": "2026-09-22",
+   "claim": "Observed result: local setup succeeds \u2026 The board now reads hub-owned dispatches.",
+   "where": "docs/guides/SYZYGY_LOCAL_SURFACE.md (untracked)",
+   "later": "False on 9-29. The file is untracked in git but linked from docs/README.md:150."
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-09-22",
+   "claim": "Joined means a live reservation.",
+   "where": "super e1c06f60",
+   "later": "On 9-29 the spokes hold a live reservation and hub-register 'all ok' while every hub function read fails."
+  },
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-09-22",
+   "claim": "After a bounded settle, both directions complete activeDispatches over libp2p; the spoke reached the hub with 50 dispatches.",
+   "where": "REPORT.md 'Explicit inventory and idempotence proof'",
+   "later": "Not reproducible through the inventory surface on 9-29. The read is served by its local goal-host (0 dispatches), and hub-only shapes fail with NO_RESERVATION."
+  },
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-07-11",
+   "claim": "Force relay re-reservation before the unobservable 1h ttl lapses.",
+   "where": "repos/libp2p-federation-transport c68b54b",
+   "later": "NO_RESERVATION recurred on 9-22 and 9-29."
+  },
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-07-18",
+   "claim": "Derive the circuit multiaddr live, never from a one-shot startup capture.",
+   "where": "super 4aede401",
+   "later": "The same class recurred."
+  },
+  {
+   "key": "false-verification",
+   "claimed_at": "2026-07-31",
+   "claim": "Log egress NO_RESERVATION increments.",
+   "where": "super 5e48a4e8",
+   "later": "The counter misses ingress-forward failures (inventory count 0 after a failure on 9-29)."
+  },
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-09-14",
+   "claim": "Expose the reservation the relay client actually holds. The phantom watchdog was manufacturing the outage.",
+   "where": "super 1afd003f, 3dbbbeff",
+   "later": "Only the spoke's own reservation is exposed. The hub circuit being dead is invisible (phantomSuspected:false)."
+  },
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-09-23",
+   "claim": "New launches reach goals with any inventory, peered with syzygy.host and substrate-live (9/9 usable).",
+   "where": "validation/reports/install-demo-2026-09-23/REPORT.md, 2f002a09",
+   "later": "True at launch time, but the fleets were torn down, so this is no evidence of a federation that stays alive. The long-lived syzygy spokes are unreachable on 9-29."
+  },
+  {
+   "key": "federation-p2p",
+   "claimed_at": "2026-09-22",
+   "claim": "All 388 hub shapes return at least one P2P circuit producer (capability coverage).",
+   "where": "REPORT.md Observations",
+   "later": "Registry coverage is not reachability. The rows stay 'healthy' (29/29) while their circuits reject."
+  }
+ ]
+}

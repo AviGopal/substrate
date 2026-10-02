@@ -1,0 +1,19 @@
+{
+  "id": "goal-reach-rejects-correct-content-and-permitted-absence",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In the Codex MCP pilot, arithmetic dispatch ff21afbf-fdbe-47bf-8765-7a604ec1bfd8 produced stdout 20413 yet was rejected ",
+  "description": "In the Codex MCP pilot, arithmetic dispatch ff21afbf-fdbe-47bf-8765-7a604ec1bfd8 produced stdout 20413 yet was rejected by a rationale calling 20413 incorrect relative to 20413. File-read dispatch 9a04c1fb-df1b-4fb4-844a-56d36dcf6e00 obtained goal-host-vessel but was rejected. Missing-file dispatch d931f699-cc8d-4abb-ad77-4dacd251ef2b rejected an explicitly allowed absence response. Independent arithmetic and live file oracles confirm these observations. Diagnose evaluator input/delivery and conditional-intent handling; do not assume model weakness or missing information. Closure requires held-out correct, incorrect, missing-file and inaccessible-file cases, with independent oracle agreement and no lowering of false-success protection.\n\nREPRODUCED 2026-09-11 by codex-operator, dispatch e5a1849a-5d10-4b27-8969-b990717324df: natural-language Compute 137 * 149, integer-only. shellResult stdout 20413, exit_code 0; reach judge calls value incorrect; final answerBody absent, reached:false, execution_path=fresh_derivation attempt_count=9. Completion health subsequently passed 1/1 local route (1542 ms). Thus current rejection is not explained by a completely dark completion plane. Later selected activity proposed_pattern_authored_http_llm_file_chain performed unrelated template/concept HTTP tasks; inspect actual effects before concluding it mutated state. Feedback label goal_verification_labels:7r8jsqjs6mnbnh4ai5jz was written and read back. Operator detected and formulated this reproduction; no code repair performed.",
+  "goal_text": "In the Codex MCP pilot, arithmetic dispatch ff21afbf-fdbe-47bf-8765-7a604ec1bfd8 produced stdout 20413 yet was rejected by a rationale calling 20413 incorrect relative to 20413. File-read dispatch 9a04c1fb-df1b-4fb4-844a-56d36dcf6e00 obtained goal-host-vessel but was rejected. Missing-file dispatch d931f699-cc8d-4abb-ad77-4dacd251ef2b rejected an explicitly allowed absence response. Independent arithmetic and live file oracles confirm these observations. Diagnose evaluator input/delivery and conditional-intent handling; do not assume model weakness or missing information. Closure requires held-out correct, incorrect, missing-file and inaccessible-file cases, with independent oracle agreement and no lowering of false-success protection.\n\nREPRODUCED 2026-09-11 by codex-operator, dispatch e5a1849a-5d10-4b27-8969-b990717324df: natural-language Compute 137 * 149, integer-only. shellResult stdout 20413, exit_code 0; reach judge calls value incorrect; final answerBody absent, reached:false, execution_path=fresh_derivation attempt_count=9. Completion health subsequently passed 1/1 local route (1542 ms). Thus current rejection is not explained by a completely dark completion plane. Later selected activity proposed_pattern_authored_http_llm_file_chain performed unrelated template/concept HTTP tasks; inspect actual effects before concluding it mutated state. Feedback label goal_verification_labels:7r8jsqjs6mnbnh4ai5jz was written and read back. Operator detected and formulated this reproduction; no code repair performed.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "goal-reach-rejects-correct-content-and-permitted-absence",
+  "source_gap_source": "operator_narration"
+}

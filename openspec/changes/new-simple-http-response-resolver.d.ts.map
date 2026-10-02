@@ -1,0 +1,1 @@
+{"version":3,"file":"new-simple-http-response-resolver.d.ts","sourceRoot":"","sources":["new-simple-http-response-resolver.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,uBAAuB,CAAC;AAG5D,wBAAsB,0BAA0B,CAC9C,OAAO,EAAE;IAAE,IAAI,EAAE,cAAc,CAAC;IAAC,GAAG,EAAE,MAAM,CAAA;CAAE,GAC7C,OAAO,CAAC,cAAc,CAAC,CA0GzB"}

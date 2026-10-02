@@ -1,0 +1,76 @@
+{
+  "properties": {
+    "operator-memory": {
+      "closed": false,
+      "missing_deps": [
+        "memoryNote resolver in development-vessel"
+      ],
+      "evidence": "HTTP 0",
+      "description": "Substrate memory (memoryNote) works without operator ~/.claude/memory files"
+    },
+    "slash-skills": {
+      "closed": false,
+      "missing_deps": [
+        "development-vessel reachable"
+      ],
+      "evidence": "health check failed: 0",
+      "description": "Skill-equivalent operations available via development-vessel resolvers alone"
+    },
+    "subagents": {
+      "closed": true,
+      "missing_deps": [],
+      "evidence": "goal-host-vessel registered in discovery with goal_execution shape (direct port not mapped; use -p 18210:8210 to expose)",
+      "description": "Complex multi-step goals executable via goal-host-vessel without Claude Code subagents"
+    },
+    "github-actions": {
+      "closed": false,
+      "missing_deps": [
+        "failure_mode_matrix_score resolver"
+      ],
+      "evidence": "HTTP 0",
+      "description": "Merge/CI gating available via failure_mode_matrix_score without GitHub Actions"
+    },
+    "operator-shell": {
+      "closed": false,
+      "missing_deps": [
+        "systemd_restart resolver",
+        "substrate_health_tick resolver"
+      ],
+      "evidence": "missing: systemd_restart resolver, substrate_health_tick resolver",
+      "description": "Substrate self-heals via systemd_restart + substrate_health_tick without operator shell"
+    },
+    "operator-spec-authoring": {
+      "closed": false,
+      "missing_deps": [
+        "memoryNote_write",
+        "activity_create_variant",
+        "fs_write",
+        "git_commit",
+        "llm_completion_dispatch"
+      ],
+      "evidence": "could not reach development-vessel /shapes",
+      "description": "Spec authoring resolvers present; substrate can author specs without operator"
+    },
+    "push-away": {
+      "closed": true,
+      "missing_deps": [],
+      "evidence": "refusal pathway + stats endpoint + durable recording all working (probe shape existent_shape_1788744330779__ recorded)",
+      "description": "Substrate refuses incompetent interventions with cited evidence + durable record (IAL §27.S.6)"
+    }
+  },
+  "audit_run_at": "2026-09-07T01:25:40.345Z",
+  "audit_tool_versions": {
+    "development-vessel": "unreachable",
+    "activity-api": "1.20.9"
+  },
+  "all_closed": false,
+  "tested": [
+    "operator-memory",
+    "slash-skills",
+    "subagents",
+    "github-actions",
+    "operator-shell",
+    "operator-spec-authoring",
+    "push-away"
+  ]
+}

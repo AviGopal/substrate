@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-f2d78ca8",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "investigate and decompose gap dead-environment-line-plus-stale-fallback-caused-fossil-path-misdiagnosis: development-ves",
+  "description": "investigate and decompose gap dead-environment-line-plus-stale-fallback-caused-fossil-path-misdiagnosis: development-vessel.service declares Environment=WORKSPACE_ROOT=/workspace, but /etc/substrate/env (loaded via EnvironmentFile=, which wins over a unit's own Environment= per systemd semantics) sets WORKSPACE_ROOT=/workspace/git/super-repo. The unit-level line can never take effect and is dead config. Separately, config.ts's WORKSPACE_ROOT fallback default is /workspace, matching the dead unit line",
+  "goal_text": "investigate and decompose gap dead-environment-line-plus-stale-fallback-caused-fossil-path-misdiagnosis: development-vessel.service declares Environment=WORKSPACE_ROOT=/workspace, but /etc/substrate/env (loaded via EnvironmentFile=, which wins over a unit's own Environment= per systemd semantics) sets WORKSPACE_ROOT=/workspace/git/super-repo. The unit-level line can never take effect and is dead config. Separately, config.ts's WORKSPACE_ROOT fallback default is /workspace, matching the dead unit line",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-f2d78ca8",
+  "source_gap_source": "substrate_detected"
+}

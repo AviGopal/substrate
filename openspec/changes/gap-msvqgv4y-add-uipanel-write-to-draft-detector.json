@@ -1,0 +1,13 @@
+{
+  "change_id": "gap-msvqgv4y-add-uipanel-write",
+  "summary": "Add uiPanel_write invocation to draft-detector-activity",
+  "description": "This change adds a task to the draft-detector-activity to invoke uiPanel_write, thereby closing gap-msvqgv4y.",
+  "target_file": "repos/development-vessel/src/seed/draft-detector-activity.ts",
+  "patches": [
+    {
+      "type": "insert_after_line",
+      "line_number": 29,
+      "content": "    {\n      \"id\": \"notify_ui_panel_write\",\n      \"description\": \"Notify UI that a detector activity has been drafted and registered.\",\n      \"resolver\": \"uiPanel_write\",\n      \"config\": {\n        \"type\": \"uiPanel_write\",\n        \"title\": \"Detector Activity Drafted\",\n        \"body\": \"A new detector activity has been drafted and registered to close gap-msvqgv4y.\",\n        \"kind\": \"info\",\n        \"importance\": \"low\"\n      },\n      \"outputShapes\": []\n    }"
+    }
+  ]
+}

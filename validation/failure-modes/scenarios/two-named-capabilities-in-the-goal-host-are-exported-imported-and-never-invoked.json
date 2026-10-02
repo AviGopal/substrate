@@ -1,0 +1,19 @@
+{
+  "id": "two-named-capabilities-in-the-goal-host-are-exported-imported-and-never-invoked",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Two fully implemented, exported capabilities in goal-host-vessel are imported by src/index.ts and invoked nowhere. Edit ",
+  "description": "Two fully implemented, exported capabilities in goal-host-vessel are imported by src/index.ts and invoked nowhere. Edit repos/goal-host-vessel/src/index.ts.",
+  "goal_text": "Two fully implemented, exported capabilities in goal-host-vessel are imported by src/index.ts and invoked nowhere. Edit repos/goal-host-vessel/src/index.ts.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "two-named-capabilities-in-the-goal-host-are-exported-imported-and-never-invoked",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,20 @@
+[Unit]
+Description=ingest-docs — build/refresh the doc-expectation surface in concept-db (docs as searchable concepts)
+After=concept-db.service
+# Ingests each watched-doc SECTION (docs/**, root CLAUDE.md, per-vessel CLAUDE.md/README)
+# into concept-db as an embedded concept (source_type=doc_expectation). Upsert-by-
+# section_key via a local manifest: CREATE new, PATCH changed, SKIP unchanged — safe on a
+# timer, never duplicates. Feeds feature-compose consultPrinciples (grounding) AND
+# docs-align-scan's dynamic doc<->change tie (the closure detector).
+# Smoke: docker exec substrate-live systemctl start ingest-docs.service
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+# Read the docs from the boot-fresh host bind (current committed doc text). The manifest
+# lives on the workspace volume so idempotency survives restarts.
+Environment=INGEST_MANIFEST=/workspace/.docs-ingest-manifest.json
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/ingest-docs-as-concepts.ts
+StandardOutput=journal
+StandardError=journal
+[Install]
+WantedBy=multi-user.target

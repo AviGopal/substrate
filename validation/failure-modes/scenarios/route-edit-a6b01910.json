@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-a6b01910",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/activity-api/src/lib/posterior-update.ts, stop awarding positive alpha credit to executions whose trace metadat",
+  "description": "In repos/activity-api/src/lib/posterior-update.ts, stop awarding positive alpha credit to executions whose trace metadata records information_yield \"idle\". The file already has an abstention mechanism: the UpdateSummary interface declares skipped_reason with the arms 'all_deterministic' and 'ungraded_reach'. Add a third arm 'idle_yield' to that union and skip the variant_performance_metrics posterior UPDATE when the execution trace metadata field information_yield equals \"idle\", exactly as the existing skip arms do. Do not change the behaviour for information_yield values \"productive\" or \"error\", and do not touch the beta path. Context: boredom-vessel/src/index.ts line 3728 already reads this same field and discounts it to IDLE_REWARD 0.2, but grep -rn information_yield repos/activity-api/src currently returns zero hits, so the trace store credits idle work at full alpha. Measured consequence: activity docs-mgmt:docs-decision-deliver has total_executions 1495, success_rate 0.987 and thompson_alpha 728.9 while every one of its traces carries impulses_created [] and metadata.information_yield \"idle\".",
+  "goal_text": "In repos/activity-api/src/lib/posterior-update.ts, stop awarding positive alpha credit to executions whose trace metadata records information_yield \"idle\". The file already has an abstention mechanism: the UpdateSummary interface declares skipped_reason with the arms 'all_deterministic' and 'ungraded_reach'. Add a third arm 'idle_yield' to that union and skip the variant_performance_metrics posterior UPDATE when the execution trace metadata field information_yield equals \"idle\", exactly as the existing skip arms do. Do not change the behaviour for information_yield values \"productive\" or \"error\", and do not touch the beta path. Context: boredom-vessel/src/index.ts line 3728 already reads this same field and discounts it to IDLE_REWARD 0.2, but grep -rn information_yield repos/activity-api/src currently returns zero hits, so the trace store credits idle work at full alpha. Measured consequence: activity docs-mgmt:docs-decision-deliver has total_executions 1495, success_rate 0.987 and thompson_alpha 728.9 while every one of its traces carries impulses_created [] and metadata.information_yield \"idle\".",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-a6b01910",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,22 @@
+In repos/development-vessel/src/resolvers/feature-compose.ts, run the deterministic verbatim-replacement synthesis only for directed composes (an autonomous compose's spec is the gap's prose, whose reproduction snippets were synthesized into TS1005 syntax breaks), and record the post-edit bytes after a replace_lines write so rollback recognises it. Apply exactly these 2 edits; each old text occurs exactly once:
+EDIT 1
+old:
+const verbatimOps = synthesizeVerbatimEditOps(verbatimSpecSource);
+new:
+// A verbatim old→new replacement is an INSTRUCTION form, so only a directed goal carries one. An
+// autonomous compose's spec is the gap's own prose, and a bug report that quotes a reproduction
+// ("find this exact anchor … replace it with …" around two fenced snippets) was synthesized into
+// an edit: 11 of 14 attempts on one gap this week, each a TS1005 syntax break
+// (contained-self-development, drafting reliability). Autonomous composes use the planner.
+const verbatimOps = (pointer as { directed?: boolean }).directed === true ? synthesizeVerbatimEditOps(verbatimSpecSource) : null;
+EDIT 2
+old:
+      const wr = await callTool(toolsEndpoint, "fs_write", { path: abs, content: next });
+      editedInPlan.add(abs);
+new:
+      const wr = await callTool(toolsEndpoint, "fs_write", { path: abs, content: next });
+      editedInPlan.add(abs);
+      // Record the post-edit bytes as the edit branch does, or rollback cannot recognise this
+      // compose's own write and reports a spurious ROLLBACK CONFLICT (rolled_back:false).
+      if (wr.ok) await recordPostEdit(abs);
+Done when: all 2 edits are present exactly once and the file typechecks. This is a source edit only; do not perform any other action.

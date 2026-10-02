@@ -1,0 +1,19 @@
+{
+  "id": "empty-api-key-crashes-llm-resolver-on-boot-and-darkens-the-whole-plane-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from empty-api-key-crashes-llm-resolver-on-boot-and-darkens-the-whole-plane] A substrate-authored commit made ",
+  "description": "[narrowed from empty-api-key-crashes-llm-resolver-on-boot-and-darkens-the-whole-plane] A substrate-authored commit made llm-resolver-vessel crash on boot whenever ANY wired provider has an empty API key, taking down the entire LLM plane and with it every compose in the fleet. Edit repos/llm-resolver-vessel/src/index.ts.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 147-152 of 1564, VERBATIM:\\n147: // construct an OpenAI client, which requires a non-empty apiKey string.\\n148: interface OpenAiW\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from empty-api-key-crashes-llm-resolver-on-boot-and-darkens-the-whole-plane] A substrate-authored commit made llm-resolver-vessel crash on boot whenever ANY wired provider has an empty API key, taking down the entire LLM plane and with it every compose in the fleet. Edit repos/llm-resolver-vessel/src/index.ts.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- anchor_not_found: {\"error\":\"old_string not found in file. The closest real text is lines 147-152 of 1564, VERBATIM:\\n147: // construct an OpenAI client, which requires a non-empty apiKey string.\\n148: interface OpenAiW\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "empty-api-key-crashes-llm-resolver-on-boot-and-darkens-the-whole-plane-narrowed",
+  "source_gap_source": "substrate_detected"
+}

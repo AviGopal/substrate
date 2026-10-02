@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-69ae66d8-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-69ae66d8] investigate and decompose gap route-edit-b2925de2: The landing commit dbb2917 is ine",
+  "description": "[narrowed from route-edit-69ae66d8] investigate and decompose gap route-edit-b2925de2: The landing commit dbb2917 is inert; its diff merely repeats the gap text as comment lines and whitespace‑only reindents the category: other, failing to address the drafter issue and leaving the gap unresolved.",
+  "goal_text": "[narrowed from route-edit-69ae66d8] investigate and decompose gap route-edit-b2925de2: The landing commit dbb2917 is inert; its diff merely repeats the gap text as comment lines and whitespace‑only reindents the category: other, failing to address the drafter issue and leaving the gap unresolved.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-69ae66d8-narrowed",
+  "source_gap_source": "substrate_detected"
+}

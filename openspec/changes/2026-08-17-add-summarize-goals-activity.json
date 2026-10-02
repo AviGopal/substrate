@@ -1,0 +1,10 @@
+
+{
+  "title": "Add summarize-goals activity to resolve orphaned-capability-goal_summary",
+  "description": "Adds the missing summarize-goals activity that invokes the goal_summary resolver, thereby resolving the orphaned-capability-goal_summary gap.",
+  "change": {
+    "file_path": "repos/development-vessel/src/activities/summarize-goals.ts",
+    "old_string": "",
+    "new_string": "import type { ActivityTemplate } from \"@avigopal/ias-executor-ts\";\n\nexport const SUMMARIZE_GOALS_TEMPLATE: ActivityTemplate = {\n  id: \"development-vessel:summarize-goals\",\n  name: \"summarize-goals\",\n  description:\n    \"Summarizes the overall health and activity of the substrate, including template metrics, composition graph details, and open gaps.\",\n  inputShapes: [],\n  outputShapes: [\"goal_summary\"],\n  tags: [\"monitoring\", \"health-check\", \"report\"],\n  variables: [],\n  tasks: [\n    {\n      id: \"get_goal_summary\",\n      description: \"Retrieve the goal summary report\",\n      resolver: \"goal_summary\",\n      config: {\n        type: \"goal_summary\",\n      },\n      outputShapes: [\"goal_summary\"],\n    },\n  ],\n};\n"
+  }
+}

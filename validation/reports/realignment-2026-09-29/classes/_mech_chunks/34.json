@@ -1,0 +1,174 @@
+{
+ "area": "systemd",
+ "items": [
+  {
+   "name": "self-recovery-tick",
+   "location": "/usr/local/bin/self-recovery-tick (self-recovery.timer, node 1 only)",
+   "purpose": "Restart unhealthy vessels",
+   "status": "live-used",
+   "general": true,
+   "evidence": "healthy 13, uninstalled_skipped 3. Present on node 2 but not scheduled there",
+   "source": "timers-readers",
+   "mentions": 1,
+   "sources": [
+    "timers-readers"
+   ]
+  },
+  {
+   "name": "substrate-pull-sync",
+   "location": "/usr/local/bin/substrate-pull-sync + timer",
+   "purpose": "Converge the super-repo into the container",
+   "status": "broken",
+   "general": true,
+   "evidence": "Reports synced=0 failed=0 while blocked by untracked files (twice on 09-10; 16h wedge on 09-22). Self-updates one tick behind itself. Timer fires 09-29.",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "compose-topology timer",
+   "location": "06c48140",
+   "purpose": "drive edge-former",
+   "status": "fossil",
+   "general": false,
+   "evidence": "reverted f1348751 the same day",
+   "source": "git-super-1",
+   "mentions": 1,
+   "sources": [
+    "git-super-1"
+   ]
+  },
+  {
+   "name": "rhythm-cadence timer",
+   "location": "22146522",
+   "purpose": "Drive rhythm cadence off a timer instead of Thompson selection",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Fired 09-29 03:33. It only reached the container after pull-sync was unblocked on 09-10.",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "validator-liveness watchdog",
+   "location": "bootstrap timer (8a3804ff)",
+   "purpose": "Flag validators that have stopped their own cadence",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Fired 09-29 01:25. It is structurally blind to demand-driven validators such as the reach oracle (section O).",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "host-pull-sync.timer",
+   "location": "host",
+   "purpose": "Host-side converge and restart",
+   "status": "fossil",
+   "general": false,
+   "evidence": "08-12 retired permanently",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "rhythm conductor + rhythm-cadence timer",
+   "location": "rhythm-conductor-tick.ts; 22146522",
+   "purpose": "Condition-driven cadence (law 5)",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Considered 11, enqueued 0. Only gap-closing has a staleness driver.",
+   "source": "memory-8",
+   "mentions": 1,
+   "sources": [
+    "memory-8"
+   ]
+  },
+  {
+   "name": "runtime-drift detector",
+   "location": "runtime-drift timer",
+   "purpose": "Detect clone/runtime divergence",
+   "status": "dormant",
+   "general": true,
+   "evidence": "repair gated by RUNTIME_DRIFT_REPAIR=1 not set",
+   "source": "reports-1",
+   "mentions": 1,
+   "sources": [
+    "reports-1"
+   ]
+  },
+  {
+   "name": "self-recovery-tick",
+   "location": "self-recovery.timer",
+   "purpose": "Restart unhealthy vessels and escalate after restart plus revert",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Masked the deadlock (a green recovered_by_restart every tick). Escalation ends in a log line (1071 repeats). No consecutive-outcome predicate.",
+   "source": "reports-8",
+   "mentions": 1,
+   "sources": [
+    "reports-8"
+   ]
+  },
+  {
+   "name": "self-recovery watchdog",
+   "location": "self-recovery.timer / tick",
+   "purpose": "Restart unhealthy vessels",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Dead 5 days until 08-13 (b2ff657b); under overload it restarts the victim (activity-api 09-25 07:51/07:57, 4 times on 09-26)",
+   "source": "reports-7",
+   "mentions": 1,
+   "sources": [
+    "reports-7"
+   ]
+  },
+  {
+   "name": "In-container substrate-pull-sync (quiesce, deferral, ratchet, convergence gate, fan-out hash)",
+   "location": "substrate-pull-sync.timer, c6d2212a",
+   "purpose": "Converge /vessels to origin/dev",
+   "status": "live-used",
+   "general": true,
+   "evidence": "08-12 quiesces; 08-16 refused a regression; content-hash blind to docker cp (08-28)",
+   "source": "memory-4",
+   "mentions": 1,
+   "sources": [
+    "memory-4"
+   ]
+  },
+  {
+   "name": "gap-compose.timer",
+   "location": "systemd unit",
+   "purpose": "periodic gap compose",
+   "status": "dormant",
+   "general": false,
+   "evidence": "self-op-health:repair_unit_dormant",
+   "source": "live-gaps",
+   "mentions": 1,
+   "sources": [
+    "live-gaps"
+   ]
+  },
+  {
+   "name": "self-recovery.timer / Restart=on-failure",
+   "location": "systemd units",
+   "purpose": "Recover dead vessels",
+   "status": "broken",
+   "general": true,
+   "evidence": "Clean stop exit 0 never recovered; timer next_elapse=0 (08-11); later restarts activity-api every 3 min on slow queries (09-22)",
+   "source": "memory-10",
+   "mentions": 1,
+   "sources": [
+    "memory-10"
+   ]
+  }
+ ]
+}

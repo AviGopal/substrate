@@ -1,0 +1,15 @@
+{
+  "at": "2026-09-22T10:46:13.633500+00:00",
+  "argv": [
+    "docker",
+    "exec",
+    "sla-0922r-80a33e-root-a",
+    "bun",
+    "-e",
+    "const p='/workspace/substrate/fleet/vessels.inventory.json';const d=await Bun.file(p).json();\nd.profiles.audit_mutable=JSON.parse(process.argv[1]);await Bun.write(p,JSON.stringify(d,null,2));\nlet e=await Bun.file('/etc/substrate/env').text();e=e.replace(/^PROFILE=.*\\n/gm,'');await Bun.write('/etc/substrate/env',e+'\\nPROFILE=audit_mutable\\n');",
+    "[\"surrealdb.service\", \"valkey.service\", \"discovery-vessel.service\", \"identity-vessel.service\", \"activity-api.service\", \"identity-seeder.service\", \"local-tools-vessel.service\", \"goal-host-vessel.service\", \"development-vessel.service\", \"concept-db.service\", \"journald-stdout-forwarder.service\", \"analysis-vessel.service\", \"bootstrap-seeder.service\", \"development-vessel-seed.service\"]"
+  ],
+  "rc": 0,
+  "stdout": "",
+  "stderr": "Emulate Docker CLI using podman. Create /etc/containers/nodocker to quiet msg.\n"
+}

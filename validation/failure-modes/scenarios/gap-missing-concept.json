@@ -1,0 +1,19 @@
+{
+  "id": "gap-missing-concept",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "missing_concept",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "novel shape with no resolver",
+  "description": "novel shape with no resolver",
+  "goal_text": "novel shape with no resolver",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-missing-concept",
+  "source_gap_source": "substrate_detected"
+}

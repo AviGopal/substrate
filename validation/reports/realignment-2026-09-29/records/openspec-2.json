@@ -1,0 +1,540 @@
+{
+ "source": "openspec-2",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/openspec-2.md",
+ "coverage": "Covered all 18 shard entries (openspec/changes listing lines 19-36, all top-level dated dirs 2026-05-23..2026-06-01; no stray .json/.ts files and no archive entries in this slice). For every entry I read proposal.md in full and read the headings and checkbox counts of tasks.md, plus topology-discovery-loop/findings/dev.md. I skipped design.md and the specs/*/spec.md deltas. Live checks were read-only on substrate-live: grepped /workspace/git/vessels/*/src for each change's identifiers; counted per-activity rows in trace_digest since 2026-09-14 (activity_execution_traces only holds 18,135 July rows); checked the development-vessel /proc environ for WRITE_ALLOWLIST (key presence only); read development-vessel git log/show for fs-write.ts; grepped the journal for concept-bridge. I did not verify the git dates of commits 69d680b and bafd83d; they are known only from a code comment.",
+ "attempts": [
+  {
+   "key": "sync-deploy-drift",
+   "title": "Vessel-binary redeploy on source drift",
+   "where": "openspec/changes/2026-05-30-vessel-binary-redeploy-on-source-drift",
+   "date": "2026-05-30",
+   "tried": "Specified a detect_binary_source_drift resolver, a redeploy-vessel-on-drift activity, vesselManifest authorship attribution, auto-substrate branches with a 24h admin hold, and a rollback-to-operator-ancestor path.",
+   "outcome": "failed",
+   "evidence": "0/16 tasks; none of the identifiers exist in the live code. Motivation: F26 concept-db a262475 was edited into /vessels but the binary stayed stale, and run_goal 'restart concept-db' picked gap-closing:test-valid-1780148026306 and completed in 1.2s without restarting anything. The class recurs later: post-land suite dead 08-31\u219209-28, the 'process started after newest commit' gate."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "Template-list Redis cache hid coverage-tick",
+   "where": "activity-api 93cd621; topology-discovery-loop/findings/dev.md D-001",
+   "date": "2026-05-24",
+   "tried": "Raised the cache fill threshold from 80% to 100% so the full DB fallback runs when any entry is missing.",
+   "outcome": "worked",
+   "evidence": "The finding notes the fix needed a container restart to take effect."
+  },
+  {
+   "key": "sync-deploy-drift",
+   "title": "EMBEDDING_MODEL_DIR missing from gen-env.sh",
+   "where": "topology findings D-004",
+   "date": "2026-05-24",
+   "tried": "Hand-appended the variable to /etc/substrate/env, with a proposed durable fix in gen-env.sh.",
+   "outcome": "unknown",
+   "evidence": "The Dockerfile ENV and the generated env file had diverged, which disabled dense search."
+  },
+  {
+   "key": "env-gating",
+   "title": "WRITE_ALLOWLIST env scoping for fs_write (draft-spec option B)",
+   "where": "development-vessel src/resolvers/fs-write.ts; commits 69d680b, bafd83d, 6586f17",
+   "date": "2026-05-30..2026-08-30",
+   "tried": "The spec chose an env var to scope substrate writes. A gap to remove the env gate then produced several autonomous landings: an inert rename (bafd83d), a flip of the unset branch from throw to return (6586f17), and the current throw inside a dead branch.",
+   "outcome": "failed",
+   "evidence": "The live dev-vessel process has no WRITE_ALLOWLIST. resolveFsWrite only calls assertInAllowlist when the env is defined, so the deny branch is unreachable and every workspace path stays writable. gap-to-feature.ts:2824 documents the bafd83d hollow close."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "LIST execution-traces task_count after migration 118",
+   "where": "openspec/changes/2026-05-31-list-endpoint-task-count-from-content; activity-api execution-traces.ts:1032-1056",
+   "date": "2026-05-31",
+   "tried": "Option B: denormalize metadata.task_count at write time and project it in the list query.",
+   "outcome": "worked",
+   "evidence": "Live code projects (metadata.task_count ?? 0). Before the fix, 491/500 rows showed task_count=0 and 50 false-positive phantom gaps were filed."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Neutral-emitter lifecycle bus",
+   "where": "openspec/changes/2026-05-27-neutral-emitter-lifecycle-bus; activity-api routes/events.ts",
+   "date": "2026-05-27",
+   "tried": "Added /v2/events/publish, a BusForwardingEventSink, discovery vessel.* events, and reactive goal-host proxy registration (F-129).",
+   "outcome": "worked",
+   "evidence": "Live in activity-api, goal-host and dev-vessel. tasks.md is still 0/32 ticked, although commit 4167ba2a says tasks 1 and 4 are live."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "concept-bridge-observer Part A",
+   "where": "development-vessel src/observers/concept-bridge-observer.ts",
+   "date": "2026-05-28",
+   "tried": "Operator-authored WS subscriber that mints signature concepts and usage from vessel_daemon_resolve events.",
+   "outcome": "worked",
+   "evidence": "592 concept-bridge journal lines in 6h; 'minted/usage recorded shape=source_code'. When it was accepted, concept-db writes were still failing."
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "concept-bridge Part B, the substrate-authored successor",
+   "where": "2026-05-28-concept-bridge-observer tasks 3.x",
+   "date": "2026-05-28",
+   "tried": "The lift test: the substrate should author the next adapter from substrateGap after palette expansion.",
+   "outcome": "dormant",
+   "evidence": "Tasks 3.1-3.5 unticked; the hand-authored observer is still the producer."
+  },
+  {
+   "key": "write-read-mismatch",
+   "title": "Vessel /resolve dual-form contract conformance probe",
+   "where": "openspec/changes/2026-05-30-vessel-resolve-contract-conformance",
+   "date": "2026-05-30",
+   "tried": "Proposed a verify-resolver-contract-conformance probe that emits substrateGap for each drifting vessel.",
+   "outcome": "superseded",
+   "evidence": "The probe was never built. The instances were hand-patched instead (concept-db routes/impulses.ts:411 now reads body?.impulse?.pointer ?? body?.pointer; ias-executor ResolverServer accepts both forms), which the proposal itself warned against."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Topology-discovery loop (measurement + probes + coverage-tick)",
+   "where": "openspec/changes/2026-05-23-topology-discovery-loop; dev-vessel seeds",
+   "date": "2026-05-23",
+   "tried": "Three measurement activities, three probe activities, coverage-tick and substrate-health-tick, and an observer fan-out.",
+   "outcome": "dormant",
+   "evidence": "29/33 tasks done, but S.4a coverage_progress never became true (RL flat at 2). Since 09-14: coverage-tick 0 traces, learned_topology_snapshot only 3 as a satisfier."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Boredom topology tasks switched from goal: to templateId:",
+   "where": "minibob src/boredom.ts (findings D-002)",
+   "date": "2026-05-24",
+   "tried": "Bypassed goal-processing, Thompson and the stagnation detector so coverage-tick would run.",
+   "outcome": "partial",
+   "evidence": "The chain ran, but only by routing around the selector; the underlying selection defect was never fixed."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Doc ingestion + concept management templates",
+   "where": "openspec/changes/2026-05-30-doc-ingestion-and-concept-management",
+   "date": "2026-05-30",
+   "tried": "Seeded ingest-doc-as-concepts and detect-stale-pointer, with inert listeners for correction and file-change events.",
+   "outcome": "failed",
+   "evidence": "All 5 dispatches aborted past the LLM step. Concept pointer coverage delta was 0% (272\u2192279, 0 with pointer.path). 0 traces since 09-14."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "draft-spec-from-gap (substrate-authored openspec)",
+   "where": "development-vessel src/seed/draft-spec-from-gap.ts",
+   "date": "2026-05-30",
+   "tried": "An LLM template that writes proposal.md and tasks.md from grouped substrateGaps.",
+   "outcome": "dormant",
+   "evidence": "One dispatch on 05-30; 0 traces since 09-14; operator review tasks unticked."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Info-gain bonus on successes",
+   "where": "openspec/changes/2026-05-30-info-gain-bonus-on-success",
+   "date": "2026-05-30",
+   "tried": "Scale signature-level \u03b1 by 1/(1+n) so redundant empty successes saturate.",
+   "outcome": "dormant",
+   "evidence": "infoGainFactor is absent from the code. Motivation: drain-pending-substrate-gaps got \u03b1 from 10ms empty successes, and 3 templates were drawn for the same goal."
+  },
+  {
+   "key": "selection-learning",
+   "title": "Failure-mode taxonomy extensions + root_cause_step",
+   "where": "openspec/changes/2026-05-31-display-failure-mode-extensions",
+   "date": "2026-05-31",
+   "tried": "Add consent_revoked and action_reversal_failed, confidence tiers, and root_cause_step for chain credit.",
+   "outcome": "dormant",
+   "evidence": "0/13 tasks; identifiers absent. Depth-1 cascading attribution is still open."
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "goal-host OOM: BoundedBusSink",
+   "where": "openspec/changes/2026-05-31-goal-host-oom-bounded-concurrency; goal-host/boredom/dev-vessel",
+   "date": "2026-05-31",
+   "tried": "L1 per-vessel bounded in-flight queue, L2 framework fix, L3 detect-service-oom-cascade detector.",
+   "outcome": "partial",
+   "evidence": "L1 is live in 3 vessels (duplicated) and tasks are unticked. The framework has IAS_SUBSCRIBER_MAX_INFLIGHT (env). The L3 detector has 0 traces. The OOM (about 10GB, killed every ~3 min, docker daemon wedged) was caused by the 05-27 bus forwarder."
+  },
+  {
+   "key": "false-verification",
+   "title": "Self-audit meta fan-out of detectors",
+   "where": "openspec/changes/2026-05-31-substrate-self-audit-meta",
+   "date": "2026-05-31",
+   "tried": "An event-driven meta-template to fan out the phantom, precondition, drift and OOM detectors.",
+   "outcome": "dormant",
+   "evidence": "self_audit_fan_out is absent. Its motivating '9367 phantoms' figure was the task_count=0 list artefact documented in a sibling proposal the same day."
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Vessel federation (pubkey ids, content-addressed templates, peer-aware /resolve)",
+   "where": "openspec/changes/2026-05-23-vessel-federation",
+   "date": "2026-05-23",
+   "tried": "H2 identity, template ids from sha256, and a peer list in discovery.",
+   "outcome": "superseded",
+   "evidence": "0/43 tasks. Only an advisory Ed25519 key exists (dev-vessel discovery-registration.ts). Replaced by 2026-07-19-relay-findability-replication, 2026-09-12-host-independent-federation-join and libp2p-federation-transport."
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Substrate fleet federation + observe-detect-resolve guardians",
+   "where": "openspec/changes/2026-05-31-substrate-fleet-federation",
+   "date": "2026-05-31",
+   "tried": "Five phases (image, H2, federated discovery and two-sided traces, quorum and self-install, auditor substrate) plus audit-vessel and network-guardian.",
+   "outcome": "partial",
+   "evidence": "0/53 ticked. The Phase 1 image is effectively live (substrate image, substrate-connect). Guardians were never built; the later relay and hub specs supersede this."
+  },
+  {
+   "key": "autonomous-regression",
+   "title": "Substrate self-deployment via PRs + merge gate",
+   "where": "openspec/changes/2026-05-23-substrate-self-deployment",
+   "date": "2026-05-23",
+   "tried": "gitOpenPR, gitMergePR, author-pr, a 90-day whitelist, and a rollback activity.",
+   "outcome": "superseded",
+   "evidence": "0/36 tasks; gitMergePR is absent. Autonomy was instead achieved by feature_compose \u2192 mitosis cutover \u2192 direct push to dev, with autonomyScope as the whitelist analogue."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Self-replacement pipeline (audit purity/shadow/promote/archive) + AviGopal rename",
+   "where": "openspec/changes/2026-05-23-substrate-self-replacement-pipeline",
+   "date": "2026-05-23",
+   "tried": "A five-activity pipeline and a C.1 minibob tool-vessel decomposition canary.",
+   "outcome": "superseded",
+   "evidence": "0/49 tasks; audit-vessel-purity absent; minibob gone. Vessel mitosis cutover is the later analogue."
+  },
+  {
+   "key": "human-surface-escalation",
+   "title": "Obsidian-vessel as bidirectional concept-db frontend",
+   "where": "openspec/changes/2026-05-30-obsidian-vessel-concept-db-frontend; obsidian-vessel src",
+   "date": "2026-05-30",
+   "tried": "Read mirror, canvas, writeback and bus listener, with a hardcoded default endpoint 127.0.0.1:18260.",
+   "outcome": "dormant",
+   "evidence": "18/21 code tasks done, but the acceptance probes for canvas, writeback and live push are unchecked. The live surface is human-surface-vessel plus obsidian-* timers."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Closed-loop learning (detect-recurring-pattern, predict-and-verify, refine-on-disagreement)",
+   "where": "openspec/changes/2026-06-01-closed-loop-learning-and-verification",
+   "date": "2026-06-01",
+   "tried": "Pattern clustering, verifier routing by output shape, and a refiner.",
+   "outcome": "dormant",
+   "evidence": "Seeds exist but tasks are 0/5 ticked. The transfer test never ran. boredom-vessel index.ts:547 holds the obsidian-coupled detector out of the core loop."
+  },
+  {
+   "key": "hollow-landing",
+   "title": "Class-3 landed-evidence counts re-lands (first landing = pending)",
+   "where": "development-vessel src/resolvers/gap-to-feature.ts ~2815-2835",
+   "date": "2026-08-14",
+   "tried": "Stop treating 'a commit names the gap id' as closure; a first landing is only 'pending'.",
+   "outcome": "worked",
+   "evidence": "Live code comment cites the WRITE_ALLOWLIST inert close bafd83d as the demonstrated hole."
+  }
+ ],
+ "problems": [
+  {
+   "key": "sync-deploy-drift",
+   "symptom": "A source fix is committed or edited into the clone, but the running process keeps the old binary. The fix is declared landed while its effective behavior is unchanged (F26 concept-db, cache fix 93cd621, EMBEDDING_MODEL_DIR).",
+   "root_cause": "No activity compares the running binary to the source and redeploys; the redeploy spec was never built; config paths (Dockerfile ENV vs gen-env) diverge.",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 4
+  },
+  {
+   "key": "env-gating",
+   "symptom": "fs_write scoping is behind the WRITE_ALLOWLIST env var. A gap to remove the gate was 'closed' by at least 3 landings (69d680b, bafd83d rename, 6586f17 branch flip), yet the gate is intact and the var is unset live, so there is no scoping at all.",
+   "root_cause": "The spec chose an env knob (law 1). Close predicates certified on commit provenance rather than the effective condition. The outer guard makes the inner deny unreachable.",
+   "first_seen": "2026-05-30",
+   "last_seen": "2026-09-29",
+   "recurrences": 3
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "After migration 118 the LIST reader returned task_count=0 for 491/500 rows. The phantom detector filed 50 false gaps, and a '9367 phantoms' claim propagated into specs and concepts.",
+   "root_cause": "The storage split updated one reader (single GET) and not its sibling (LIST).",
+   "first_seen": "2026-05-31",
+   "last_seen": "2026-05-31",
+   "recurrences": 1
+  },
+  {
+   "key": "write-read-mismatch",
+   "symptom": "Events and resolutions were emitted where no consumer read them: engine lifecycle on an in-process sink, discovery registration emitting nothing (F-129: zero proxies), analysis resolutions not matching concept-db filters (145 events, 0 usage), /resolve dual-form parse drift across 3 vessels.",
+   "root_cause": "Producer/consumer contracts are re-derived per vessel, and no conformance detector exists for the class.",
+   "first_seen": "2026-05-27",
+   "last_seen": "2026-05-30",
+   "recurrences": 4
+  },
+  {
+   "key": "dormant-mechanism",
+   "symptom": "Mechanisms were built and seeded but never reach or run: topology coverage-tick (S.4a never met, 0 traces since 09-14), ingest-doc (0% delta), draft-spec-from-gap, oom detector, obsidian writeback, closed-loop pattern detectors, and inert listeners with no emitter.",
+   "root_cause": "Acceptance was defined as code plus typecheck plus one dispatch, not as a sustained reached trace. Event-driven consumers shipped without producers.",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 7
+  },
+  {
+   "key": "false-verification",
+   "symptom": "Acceptance was declared on producer-side evidence: concept-bridge 'fires' while concept-db rejects every write; a restart goal 'completed' via an unrelated template; _goal_resolve failure_mode null \u00d712 explained away.",
+   "root_cause": "No positive control at the consuming layer, and status was read instead of reach.",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-05-31",
+   "recurrences": 3
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "tasks.md checkboxes are wrong in both directions: 4 live changes at 0% ticked, 3 mostly ticked but dormant. 8 of 18 changes are dead or superseded but not archived. Proposals reference removed paths (minibob, metabob-activity-api).",
+   "root_cause": "There is no archive/closure step tied to live verification, and openspec status is maintained by hand.",
+   "first_seen": "2026-05-23",
+   "last_seen": "2026-09-29",
+   "recurrences": 11
+  },
+  {
+   "key": "selection-learning",
+   "symptom": "Near-uniform draws among 3 templates for the same goal, and empty 10ms successes inflating \u03b1. The stagnation detector dropped the right template, and the fix bypassed the selector (templateId tasks). Cascading \u03b2 attributed to depth-1 only.",
+   "root_cause": "Sparse n\u22481 arms, success updates not discounted for information, credit attribution without a root_cause_step.",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-05-31",
+   "recurrences": 3
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "goal-host grew to about 10GB and was OOM-killed every ~3 min, and the docker daemon wedged.",
+   "root_cause": "The fire-and-forget bus forwarder (05-27) had unbounded in-flight promises, plus a WS listener leak.",
+   "first_seen": "2026-05-31",
+   "last_seen": "2026-05-31",
+   "recurrences": 1
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "The same two activities are minted as \u22656 distinct one-shot compositions (learned-topology-snapshot \u2194 substrate-health-tick), plus reverse-named duplicate chains (90/84 executions).",
+   "root_cause": "Auto-mint does not dedupe by shape signature or composition edge set (law 3).",
+   "first_seen": "2026-07",
+   "last_seen": "2026-09-29",
+   "recurrences": 2
+  },
+  {
+   "key": "narrowing-duplicates",
+   "symptom": "recommit-recommit-\u2026-narrowed gap ids three suffixes deep landed on fs-write.ts on 2026-08-30 (6586f17, 11ea1f6, 66bf1b8). Ribosome timestamp-variant ids caused template churn on 05-24.",
+   "root_cause": "Retries mint new gap and template identities instead of updating one.",
+   "first_seen": "2026-05-24",
+   "last_seen": "2026-08-30",
+   "recurrences": 2
+  },
+  {
+   "key": "trace-store-db",
+   "symptom": "activity_execution_traces holds only July rows (18,135); recent traces are in trace_digest, execution_traces is empty, and trace_digest max(executed_at) aggregates return null.",
+   "root_cause": "Trace storage migrated or reclaimed; readers of AET may see a frozen world (not verified here).",
+   "first_seen": "2026-05-31",
+   "last_seen": "2026-09-29",
+   "recurrences": 1
+  },
+  {
+   "key": "test-residue-live-state",
+   "symptom": "The test template gap-closing:test-valid-1780148026306 was selected for a real operator goal.",
+   "root_cause": "Test fixture templates were resident in the live selection pool.",
+   "first_seen": "2026-05-30",
+   "last_seen": "2026-05-30",
+   "recurrences": 1
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "Concept vocabulary was minted only by operator hand. Docs, commits and memory were never ingested, and pointer coverage stayed at 0%.",
+   "root_cause": "The ingestion templates never got past the LLM step, and there was no management layer.",
+   "first_seen": "2026-05-30",
+   "last_seen": "2026-05-30",
+   "recurrences": 1
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "Substrate event bus /v2/events/publish + WS broadcaster",
+   "location": "activity-api src/routes/events.ts, websocket/",
+   "purpose": "Neutral broadcast of lifecycle, vessel and task events to any subscriber",
+   "status": "live-used",
+   "general": true,
+   "evidence": "grep hits; the concept-bridge receives vessel_daemon_resolve events live"
+  },
+  {
+   "name": "BusForwardingEventSink",
+   "location": "ias-executor-ts adapters; goal-host/dev-vessel/activity-api index",
+   "purpose": "Forward engine lifecycle events onto the bus",
+   "status": "live-used",
+   "general": true,
+   "evidence": "grep in 3 vessels"
+  },
+  {
+   "name": "BoundedBusSink",
+   "location": "goal-host-vessel, boredom-vessel, development-vessel src",
+   "purpose": "Backpressure on in-flight bus forwards (OOM fix)",
+   "status": "duplicate",
+   "general": false,
+   "duplicates_of": "ias-executor-ts lifecycle-subscriber IAS_SUBSCRIBER_MAX_INFLIGHT cap",
+   "evidence": "Copied per vessel instead of being fixed in the framework; the cap is env-tuned"
+  },
+  {
+   "name": "vessel.registered reactive proxy registration",
+   "location": "discovery \u2192 activity-api bus \u2192 goal-host; dev-vessel vessel-register-passthrough.ts",
+   "purpose": "Remove the startup race for proxy resolvers (F-129)",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "concept-bridge-observer",
+   "location": "development-vessel src/observers/concept-bridge-observer.ts",
+   "purpose": "Mint concepts and usage from analysis-vessel resolutions",
+   "status": "live-used",
+   "general": false,
+   "evidence": "592 journal lines in 6h; hardcoded BRIDGEABLE_SHAPES; still operator-authored (Part B never happened)"
+  },
+  {
+   "name": "registry-change-observer lifecycle fan-out",
+   "location": "development-vessel src/observers/registry-change-observer.ts",
+   "purpose": "Fan out the topology measurement chain on lifecycle and registry events",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Wired, but coverage-tick has 0 traces since 09-14"
+  },
+  {
+   "name": "Topology measurement (learned-topology-snapshot, reachable-unlearned-report, unknown-shape-report, coverage-tick, substrate-health-tick)",
+   "location": "development-vessel seeds/resolvers; boredom goal[3]",
+   "purpose": "Locate the substrate in the reachability\u00d7learnedness table and measure coverage progress",
+   "status": "dormant",
+   "general": true,
+   "evidence": "satisfier:learned_topology_snapshot 3, coverage-tick 0 since 09-14; S.4a never met"
+  },
+  {
+   "name": "Probe layer (probe-reachable-unlearned, probe-untraversed-edge, escalate-unknown-shape)",
+   "location": "development-vessel seeds",
+   "purpose": "Proactive probing of unlearned and unknown shapes",
+   "status": "dormant",
+   "general": true,
+   "evidence": "0 traces since 09-14"
+  },
+  {
+   "name": "create-shape-provider-goal escalation",
+   "location": "goal/activity path",
+   "purpose": "Escalate an unbindable slot into a goal to produce the missing shape",
+   "status": "unknown",
+   "general": true,
+   "evidence": "751 traces in the July AET snapshot; not checked recently"
+  },
+  {
+   "name": "ingest-doc-as-concepts / detect-stale-pointer",
+   "location": "development-vessel seeds",
+   "purpose": "Ingest docs into concepts and detect stale concept pointers",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Never reached (LLM-step abort 05-30); 0 traces"
+  },
+  {
+   "name": "draft-spec-from-gap",
+   "location": "development-vessel src/seed/draft-spec-from-gap.ts",
+   "purpose": "Substrate-authored openspec proposals from gap clusters",
+   "status": "dormant",
+   "general": false,
+   "evidence": "0 traces since 09-14"
+  },
+  {
+   "name": "fs_write WRITE_ALLOWLIST scoping",
+   "location": "development-vessel src/resolvers/fs-write.ts:28-53",
+   "purpose": "Bound the substrate write scope",
+   "status": "broken",
+   "general": true,
+   "evidence": "Env unset live; the outer guard skips the check; the inner deny is unreachable dead code; \u22653 hollow landings"
+  },
+  {
+   "name": "Class-3 re-land-aware landed-evidence (first landing = pending)",
+   "location": "development-vessel src/resolvers/gap-to-feature.ts ~2815",
+   "purpose": "Stop closing a gap on commit provenance alone",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Code comment cites bafd83d"
+  },
+  {
+   "name": "metadata.task_count denormalization",
+   "location": "activity-api src/routes/execution-traces.ts:1032-1056,2903",
+   "purpose": "Accurate task_count on the LIST endpoint after the content split",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "detect-service-oom-cascade / service_oom_cascade_scan",
+   "location": "development-vessel seeds/resolvers",
+   "purpose": "Detect restart and memory cascades",
+   "status": "dormant",
+   "general": false,
+   "evidence": "0 traces since 09-14"
+  },
+  {
+   "name": "phantom_trace_scan / detect-phantom-success-trace",
+   "location": "development-vessel seeds",
+   "purpose": "Detect empty-success traces",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Its motivating 9367 figure was a list artefact; no recent traces seen"
+  },
+  {
+   "name": "detect-recurring-pattern / predict-and-verify / refine-on-disagreement",
+   "location": "development-vessel seeds",
+   "purpose": "Closed-loop pattern \u2192 activity \u2192 verify \u2192 refine",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Held out of the core loop (boredom index.ts:547); transfer test never run"
+  },
+  {
+   "name": "obsidian-vessel concept-db sync/writeback/canvas",
+   "location": "obsidian-vessel src/sync, canvas, concept-db-client.ts",
+   "purpose": "Human frontend for the concept graph",
+   "status": "dormant",
+   "general": false,
+   "evidence": "Acceptance probes unchecked; superseded by human-surface-vessel"
+  },
+  {
+   "name": "Advisory Ed25519 vessel identity (H2)",
+   "location": "development-vessel src/discovery-registration.ts:15-20",
+   "purpose": "Pubkey vessel identity for federation",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Advisory only; no enforcement"
+  },
+  {
+   "name": "systemd_restart resolver + restart-attribution",
+   "location": "development-vessel src/resolvers/systemd-restart.ts, src/restart-attribution.ts",
+   "purpose": "Restart units",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Exists, but is not composed into a drift \u2192 redeploy activity"
+  },
+  {
+   "name": "templateId boredom tasks bypassing the selector",
+   "location": "minibob boredom.ts (05-24), now boredom-vessel",
+   "purpose": "Force topology templates to run",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Workaround that routes around Thompson (findings D-002)"
+  },
+  {
+   "name": "PR-based self-deployment (gitOpenPR/gitMergePR/author-pr)",
+   "location": "none",
+   "purpose": "Substrate merges its own PRs",
+   "status": "fossil",
+   "general": true,
+   "evidence": "Never built; superseded by mitosis cutover direct landing"
+  },
+  {
+   "name": "Self-replacement pipeline (audit-vessel-purity, shadow-validate, promote, archive)",
+   "location": "none",
+   "purpose": "Replace impure vessels via shadow validation",
+   "status": "fossil",
+   "general": true,
+   "evidence": "Never built; mitosis cutover is the partial analogue"
+  }
+ ],
+ "principles": [
+  "Emitters broadcast neutrally; consumers register the hooks they need; no event is 'for' a consumer (2026-05-27-neutral-emitter-lifecycle-bus proposal \u00a7Why)",
+  "Substrate is deployment vocabulary: above discovery, callers see vessels, not topologies; no substrate_id (2026-05-23-vessel-federation \u00a7Explicit non-goals)",
+  "Ship the LOOP, not the LOG: detection and resolution are Thompson-graded activities gated by reversibility tiers, with push-away applied to the substrate's own resolutions (2026-05-31-substrate-fleet-federation \u00a7Observe, detect, resolve)",
+  "Hand-patching the instance short-circuits the signal; build the class detector and let the loop author fixes (2026-05-30-vessel-resolve-contract-conformance \u00a7Out of Scope)",
+  "Detector immunity pattern: inputShapes [], variables [], a single deterministic resolver; a meta must not become the next finding (2026-05-31-substrate-self-audit-meta \u00a71; goal-host-oom \u00a7Layer 3)",
+  "Event-driven detection over rotation-stochastic detection: detection must arrive before the posterior absorbs the damage (substrate-self-audit-meta \u00a7Why)",
+  "Activity-layer authoring self-rolls-back via Thompson \u03b2; code-layer authoring does not (a no-op resolver accrues \u03b1), so code needs gates and attribution (2026-05-30-vessel-binary-redeploy \u00a7review separation)",
+  "The rollback target is the latest operator-ratified ancestor in a hash-chained manifest (vessel-binary-redeploy \u00a7Rollback discriminator)",
+  "Coverage progress means the unlearned and unknown cells strictly shrink and the learned cell grows without external goals; renamed from 'convergence' because the name overclaimed (2026-05-23-topology-discovery-loop \u00a7Coverage-progress)",
+  "Redundant successes should saturate: count-based novelty \u03b1 += 1/(1+n), symmetric with failure stratification (2026-05-30-info-gain-bonus-on-success)",
+  "Failure credit belongs to the step that caused it (root_cause_step), not to depth-1 ancestors (2026-05-31-display-failure-mode-extensions \u00a74)",
+  "Deployment-mechanism changes stay operator-controlled (trust root); each verifier version is anchored to its predecessor (2026-05-23-substrate-self-deployment \u00a7Self-application)",
+  "Replace, don't edit in place: shadow-validate against live traffic, promote on evidence, archive (2026-05-23-substrate-self-replacement-pipeline \u00a7Why)",
+  "The S2 win is deriving the next adapter, not re-deriving the hand-authored one (2026-05-28-concept-bridge-observer \u00a7S1\u2192S2 evidence value)",
+  "Fix the canonical observability surface, not only the detector that tripped on it (2026-05-31-list-endpoint-task-count-from-content \u00a7Why fix in activity-api)",
+  "Anti-principle observed: shipping 'inert listeners so the contract is in place' produces consumers with no producer, which are dormant by construction (doc-ingestion Families 1/3; redeploy observer)"
+ ]
+}

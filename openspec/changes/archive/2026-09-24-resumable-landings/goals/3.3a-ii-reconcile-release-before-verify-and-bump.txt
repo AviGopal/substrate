@@ -1,0 +1,63 @@
+In repos/development-vessel/src/seed/trace-store-reconcile.ts, run release_lease before verify and version-bump the seed so it reaches the running catalogue (openspec 2026-09-24-resumable-landings task 3.3a-ii; a previous draft left the original verify task in place because its delete edit did not apply — EDIT 2 below replaces the verify block TOGETHER WITH the first two lines of release_lease, so its replacement is not empty). verify is trace_store_health_observer with dry_run:true — a read that needs no lease — and it fails most often (forbiddenPatterns over_cap), so with release after it every over-cap run held the lease to its TTL. The seeder re-uploads a seed whose metadata.seed_version exceeds the registered row's; without the bump this file's changes (named lease, 900 s timeout) stay inert. Exactly these four old->new edits (each old text occurs once), nothing else.
+EDIT 1 — old:
+  id: "development-vessel:trace-store-reconcile",
+new:
+  id: "development-vessel:trace-store-reconcile",
+  // Raise seed_version whenever this body changes: the seeder re-uploads a seed only when
+  // its seed_version exceeds the registered row's (see upsertVersionBumpedSeeds in cli.ts).
+  // 2 = lease named trace_store, release before verify, 900 s reconcile timeout.
+  metadata: { seed_version: 2 },
+EDIT 2 — old:
+    {
+      id: "verify",
+      description:
+        "Re-read the traceStore counters (dry_run so this check itself never " +
+        "re-emits a gap) and assert row_count <= cap post-swap.",
+      resolver: "trace_store_health_observer",
+      config: {
+        type: "trace_store_health_observer",
+        dry_run: true,
+      },
+      outputShapes: ["traceStoreHealthReport"],
+      validation: {
+        forbiddenPatterns: ['"over_cap":true'],
+      },
+    },
+    {
+      id: "release_lease",
+new:
+    {
+      id: "release_lease",
+EDIT 3 — old:
+      outputShapes: ["maintenanceLeaseWriteResult"],
+    },
+  ],
+};
+new:
+      outputShapes: ["maintenanceLeaseWriteResult"],
+    },
+    {
+      id: "verify",
+      description:
+        "Re-read the traceStore counters (dry_run so this check itself never " +
+        "re-emits a gap) and assert row_count <= cap post-swap.",
+      resolver: "trace_store_health_observer",
+      config: {
+        type: "trace_store_health_observer",
+        dry_run: true,
+      },
+      outputShapes: ["traceStoreHealthReport"],
+      validation: {
+        forbiddenPatterns: ['"over_cap":true'],
+      },
+    },
+  ],
+};
+EDIT 4 — old:
+ * if the reconcile or verify task fails mid-run, `release_lease` is simply
+ * never reached and the lease is NOT explicitly released here.
+new:
+ * if the reconcile task fails mid-run, `release_lease` is never reached and the
+ * lease is NOT explicitly released here. `release_lease` runs BEFORE `verify` (a dry-run
+ * read that needs no lease), so a verify failure no longer holds it.
+Falsifier: the task order becomes acquire_lease > extract_lease_token > reconcile > release_lease > verify with exactly ONE verify task, and the template carries metadata.seed_version 2.

@@ -1,0 +1,29 @@
+[Unit]
+StartLimitIntervalSec=600
+StartLimitBurst=10
+Description=concept-db concept seeder (Phase-22.S2 seed concepts)
+After=identity-seeder.service concept-db.service
+# identity-seeder first: seeding with the pre-mint bootstrap key writes org-less
+# rows that fail schema validation (observed 2026-07-02 first-boot test).
+Wants=concept-db.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/substrate/env
+Environment=CONCEPT_DB_URL=http://127.0.0.1:8260
+# concept-db is masked on any deployment that does not host it (every spoke).
+# Skip rather than wait: with Restart=on-failure a bounded abort would other-
+# wise retry 10× per 600s forever against a unit that will never start.
+ExecCondition=/bin/sh -c '[ "$(systemctl is-enabled concept-db.service 2>/dev/null)" != "masked" ]'
+ExecStartPre=/bin/sh -c 'i=0; until curl -sf http://127.0.0.1:8260/health > /dev/null; do i=$((i+1)); [ "$i" -ge 60 ] && { echo "concept-db not healthy after 120s — aborting seed"; exit 1; }; sleep 2; done'
+ExecStart=/root/.bun/bin/bun /vessels/seed-concepts.ts
+# Self-heal the boot race: the target vessel answers /health before its DB
+# connection is warm, so a too-early seed run fails. on-failure + generous
+# burst lets the oneshot converge without operator help (2026-07-02).
+Restart=on-failure
+RestartSec=20
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

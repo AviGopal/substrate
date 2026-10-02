@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-72e81f46-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-72e81f46] investigate and decompose gap route-edit-9848cc82: The GET /conservation-audit route",
+  "description": "[narrowed from route-edit-72e81f46] investigate and decompose gap route-edit-9848cc82: The GET /conservation-audit route is registered TWICE in repos/activity-api/src/routes/activities.ts with byte-identical handler bodies (verified by diffing the two blocks: the only difference was a trailing brace from the slice boundary). The framework serves the FIRST registration, so the second is unreachable dead code.\n\nTWO CONSEQUENCES.\n1. Dead code: roughly 80 lines that can never execute.\n2",
+  "goal_text": "[narrowed from route-edit-72e81f46] investigate and decompose gap route-edit-9848cc82: The GET /conservation-audit route is registered TWICE in repos/activity-api/src/routes/activities.ts with byte-identical handler bodies (verified by diffing the two blocks: the only difference was a trailing brace from the slice boundary). The framework serves the FIRST registration, so the second is unreachable dead code.\n\nTWO CONSEQUENCES.\n1. Dead code: roughly 80 lines that can never execute.\n2",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-72e81f46-narrowed",
+  "source_gap_source": "substrate_detected"
+}

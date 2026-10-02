@@ -1,0 +1,19 @@
+{
+  "id": "phantom-success-auth_1787512079778_ff0037l",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "trace_quality",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Phantom-success trace auth_1787512079778_ff0037l: status=success but task_count=0 (template=auth_resolve_v1, duration_ms",
+  "description": "Phantom-success trace auth_1787512079778_ff0037l: status=success but task_count=0 (template=auth_resolve_v1, duration_ms=34). Engine pre-flight rejection credits success without a real task body, polluting Thompson posteriors.",
+  "goal_text": "Phantom-success trace auth_1787512079778_ff0037l: status=success but task_count=0 (template=auth_resolve_v1, duration_ms=34). Engine pre-flight rejection credits success without a real task body, polluting Thompson posteriors.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "phantom-success-auth_1787512079778_ff0037l",
+  "source_gap_source": "substrate_detected"
+}

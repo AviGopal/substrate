@@ -1,0 +1,11 @@
+ Substrate/Projects/MyProject.md                 |   2 +-
+ Substrate/Projects/my_temp_project.md           |   2 +-
+ Substrate/Projects/projectThreadScanReport.json | 424 +-----------------------
+ Substrate/Projects/temp_test_open_todo.md       |   2 +-
+ repos/boredom-vessel                            |   0
+ repos/development-vessel                        |   0
+ repos/goal-host-vessel                          |   0
+ repos/stateful-ui-vessel                        |   0
+ state/learning-mode-state.json                  |   8 +-
+ test_file.txt                                   |   2 +-
+ 10 files changed, 10 insertions(+), 430 deletions(-)

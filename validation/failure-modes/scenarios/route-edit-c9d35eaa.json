@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-c9d35eaa",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts to refuse a cutover when the staged change only de",
+  "description": "Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts to refuse a cutover when the staged change only deletes explanatory comments.\n\nThe staged-file comparison already exists. It begins at this line, which occurs exactly once in the file (verbatim):\n  let hasRealDiff = false;\n\nand inside that loop it reads each staged file with this line, which also occurs exactly once (verbatim):\n      const mContent = await readFile(mPath);\n\nExtend that existing comparison. For each staged file, compare the base content against the mitosis content and detect the case where the only removed lines are comment lines AND the hunk contains no added or changed non-comment line. When a removed comment line carries a measured number, a row count, or an explicit warning such as \"do not\", treat it as load-bearing and refuse the cutover with a clear reason naming the file and the removed text. Leave every other outcome exactly as it is today, and do not refuse when the same hunk also changes real code.\n\nWhy this is needed, measured: substrate-authored commit 3e58e73 in repos/activity-api removed a twenty-line comment from getCanonicalPosteriors that recorded measured row counts and an explicit do-not-simplify-this-back warning, while preserving behaviour exactly. Typecheck passed, shape-dispatch passed, the semantic gate recorded addresses=true and on_live_path=true, and the post-land suite attributed only two unrelated failures. Every gate was correct on its own terms, because no gate reads what a change REMOVES. An operator had to notice and restore it.\n\nCloses substrate gap no-gate-reads-what-a-diff-removes.",
+  "goal_text": "Edit repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts to refuse a cutover when the staged change only deletes explanatory comments.\n\nThe staged-file comparison already exists. It begins at this line, which occurs exactly once in the file (verbatim):\n  let hasRealDiff = false;\n\nand inside that loop it reads each staged file with this line, which also occurs exactly once (verbatim):\n      const mContent = await readFile(mPath);\n\nExtend that existing comparison. For each staged file, compare the base content against the mitosis content and detect the case where the only removed lines are comment lines AND the hunk contains no added or changed non-comment line. When a removed comment line carries a measured number, a row count, or an explicit warning such as \"do not\", treat it as load-bearing and refuse the cutover with a clear reason naming the file and the removed text. Leave every other outcome exactly as it is today, and do not refuse when the same hunk also changes real code.\n\nWhy this is needed, measured: substrate-authored commit 3e58e73 in repos/activity-api removed a twenty-line comment from getCanonicalPosteriors that recorded measured row counts and an explicit do-not-simplify-this-back warning, while preserving behaviour exactly. Typecheck passed, shape-dispatch passed, the semantic gate recorded addresses=true and on_live_path=true, and the post-land suite attributed only two unrelated failures. Every gate was correct on its own terms, because no gate reads what a change REMOVES. An operator had to notice and restore it.\n\nCloses substrate gap no-gate-reads-what-a-diff-removes.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-c9d35eaa",
+  "source_gap_source": "substrate_detected"
+}

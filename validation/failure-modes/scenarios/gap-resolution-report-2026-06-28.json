@@ -1,0 +1,19 @@
+{
+  "id": "gap-resolution-report-2026-06-28",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "performance_inefficiency",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Produce a report ranking the substrate's most-resolved impulse shapes over the last 7 days by resolution volume and per-",
+  "description": "Produce a report ranking the substrate's most-resolved impulse shapes over the last 7 days by resolution volume and per-resolution cost (tokens and wallclock), split by resolver tier. Note: resolver_tier_cost_summary currently reports tier \"unknown\" and total_cost 0 for all rows in its 24h window — if cost attribution is missing at the source, identify where tier and cost stop being recorded and report that as the blocking gap instead of ranking on zeros.",
+  "goal_text": "Produce a report ranking the substrate's most-resolved impulse shapes over the last 7 days by resolution volume and per-resolution cost (tokens and wallclock), split by resolver tier. Note: resolver_tier_cost_summary currently reports tier \"unknown\" and total_cost 0 for all rows in its 24h window — if cost attribution is missing at the source, identify where tier and cost stop being recorded and report that as the blocking gap instead of ranking on zeros.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "gap-resolution-report-2026-06-28",
+  "source_gap_source": "operator_narration"
+}

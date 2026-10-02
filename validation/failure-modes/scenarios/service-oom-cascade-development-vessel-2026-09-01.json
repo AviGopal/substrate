@@ -1,0 +1,19 @@
+{
+  "id": "service-oom-cascade-development-vessel-2026-09-01",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "missing_concept",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Service development-vessel tripped OOM-cascade thresholds: memory_delta=586.5MB > 524MB. Likely root: bus-forward backpr",
+  "description": "Service development-vessel tripped OOM-cascade thresholds: memory_delta=586.5MB > 524MB. Likely root: bus-forward backpressure absence (concept_RYl73llSCGfc, concept_6RwK5H5F28hT, concept_T-CTTOEl97IM).",
+  "goal_text": "Service development-vessel tripped OOM-cascade thresholds: memory_delta=586.5MB > 524MB. Likely root: bus-forward backpressure absence (concept_RYl73llSCGfc, concept_6RwK5H5F28hT, concept_T-CTTOEl97IM).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "service-oom-cascade-development-vessel-2026-09-01",
+  "source_gap_source": "substrate_detected"
+}

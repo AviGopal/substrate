@@ -1,0 +1,9 @@
+In repos/development-vessel/src/resolvers/gap-to-feature.ts, immediately after the line (it occurs once in the file)
+
+  console.log(`[gap-to-feature] pick ${JSON.stringify({
+
+insert this one line:
+
+    owner: process.env["SUBSTRATE_NAME"] ?? "substrate",
+
+so it becomes the first property of the logged object. Measured: with two composer nodes the pick lines in the two journals are otherwise indistinguishable. Change nothing else.

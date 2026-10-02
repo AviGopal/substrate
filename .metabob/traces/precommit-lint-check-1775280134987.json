@@ -1,0 +1,51 @@
+{
+  "activityId": "precommit:lint-check",
+  "variantId": "precommit:lint-check-resolver",
+  "name": "Lint Check (Resolver-Based)",
+  "startedAt": 1775280134987,
+  "tasks": [
+    {
+      "taskId": "check-lint-script",
+      "description": "Check if lint script exists in package.json",
+      "resolver": "bash",
+      "command": "cat package.json 2>/dev/null | grep -q '\"lint\"' && echo 'HAS_LINT=true' || echo 'HAS_LINT=false'",
+      "startedAt": 1775280134987,
+      "stdout": "HAS_LINT=true\n",
+      "stderr": "",
+      "success": true,
+      "exitCode": 0,
+      "completedAt": 1775280134992,
+      "durationMs": 5
+    },
+    {
+      "taskId": "run-lint",
+      "description": "Run bun lint and capture results",
+      "resolver": "bash",
+      "command": "bun run lint 2>&1 || true",
+      "startedAt": 1775280134992,
+      "stdout": "$ eslint src/**/*.ts\n/usr/bin/bash: line 1: eslint: command not found\nerror: script \"lint\" exited with code 127\n",
+      "stderr": "",
+      "success": true,
+      "exitCode": 0,
+      "completedAt": 1775280134999,
+      "durationMs": 7
+    },
+    {
+      "taskId": "count-errors",
+      "description": "Count lint errors and warnings",
+      "resolver": "bash",
+      "command": "bun run lint 2>&1 | grep -cE '(error|Error)' || echo '0'",
+      "startedAt": 1775280134999,
+      "stdout": "1\n",
+      "stderr": "",
+      "success": true,
+      "exitCode": 0,
+      "completedAt": 1775280135005,
+      "durationMs": 6
+    }
+  ],
+  "success": true,
+  "completedAt": 1775280135005,
+  "durationMs": 18,
+  "summary": "3/3 tasks passed in 18ms"
+}

@@ -1,0 +1,73 @@
+{
+  "id": "fp-11-silent-semantic-failure",
+  "mode_class": "fp",
+  "stage": "validation",
+  "outcome_class": "FP",
+  "information_state": "known_unknown",
+  "title": "Silent semantic failure — exit_code=0 + rules pass, but output is logically wrong",
+  "description": "The most corrosive false positive. Trace records success because exit_code=0 and all validation rules pass, but the resolver misunderstood the goal and produced semantically wrong output (e.g., LLM resolver hallucinated a function name, file was written with placeholder text, refactor removed wrong call site). Thompson α increments incorrectly; future recommendations degrade silently. Detection requires downstream task contradiction or human verdict — the live trace alone cannot distinguish.",
+  "trigger": {
+    "preconditions": [
+      "task uses LLM-tier resolver or any resolver where output correctness is not strictly syntactic",
+      "task declares only syntactic validation rules (requiredFiles, forbiddenPatterns) without semantic check",
+      "downstream task consumes the output but does not immediately fail (consumes shape, not content semantics)"
+    ],
+    "synthetic_setup": {
+      "traces": [
+        {
+          "shape": "activityExecutionTrace",
+          "synthesize": "Pick the 10 most-recent successful LLM-resolver task executions; for each, replay the same input impulses and compare output. Diverging output indicates a candidate silent-semantic-failure trace."
+        }
+      ]
+    }
+  },
+  "goal_text": "Identify executions in the last 7 days where the recorded outcome was success but a re-execution against the same input impulses produces materially different output. Flag those as candidate silent-semantic-failures and propose a semantic-validation activity that gates future executions of the affected templates.",
+  "expected_input_shapes": [
+    "activityExecutionTrace",
+    "executionTraceWithSignatures"
+  ],
+  "expected_output_shapes": [
+    "silentFailureCandidate",
+    "semanticValidatorProposal",
+    "thompson_posterior_correction"
+  ],
+  "detection": {
+    "signal": "Two traces with same input_impulse_ids signature and same template_id, but materially different output_impulse content (Levenshtein distance > 0.4 on text, structural diff on JSON).",
+    "witness_required": "replay",
+    "query_template": "SELECT id, activity_id, input_impulses, output_impulses, success, created_at FROM execution WHERE created_at > time::now() - 7d AND success = true AND activity_id IN (SELECT activity_id FROM execution WHERE created_at > time::now() - 7d GROUP BY activity_id, input_impulses HAVING count() > 1) ORDER BY activity_id, input_impulses, created_at DESC"
+  },
+  "expected_emergence": {
+    "class": "gap_accepted",
+    "activity_signature": {
+      "input_shapes_intersect": ["activityExecutionTrace", "executionTraceWithSignatures"],
+      "output_shapes_must_include": ["semanticValidatorProposal"],
+      "tags_pattern": "validation.semantic.*"
+    }
+  },
+  "self_heal_window_seconds": 86400,
+  "recovery_test": {
+    "regression_check": true,
+    "regression_query": "After the semantic-validator activity is shipped, re-run the trigger and verify it now classifies the planted silent-failure as a failure_mode='verifier_negative' on subsequent executions of the affected template."
+  },
+  "subagent_investigation": {
+    "dispatched_at": "2026-05-22T00:00:00Z",
+    "findings_summary": "Trace storage splits across two tables: `execution` (input_impulses, output_impulses as ID arrays) and `impulse` (content, optional/often null). Output content is NOT materialized on the trace; must be fetched per-impulse and may be unavailable. executionTraceWithSignatures returns impulses_by_id with shape+summary but not raw content or input-signature hash. Migration 115 introduced `execution_trace_content` table with full output_impulses arrays. No replay-and-compare activity exists.",
+    "code_references": [
+      "repos/metabob-activity-api/sql/schemas/020-paradigm-core-tables.surql:240-325 (execution table fields)",
+      "repos/metabob-activity-api/src/routes/execution-trace-with-signatures.ts:85-105 (impulses_by_id shape)",
+      "repos/metabob-activity-api/sql/migrations/115-execution-trace-content-table.surql (output content materialization)",
+      "repos/metabob-activity-api/src/models/schemas.ts (FailureModeSchema with verifier_negative)"
+    ],
+    "current_gaps_in_codebase": [
+      "No input-signature fingerprint field on execution rows; cannot GROUP BY input signature deterministically",
+      "Output content is in impulse.content (often null); no guaranteed materialization on trace",
+      "No replay resolver that accepts (template_id, input_impulse_ids) and re-executes for divergence check",
+      "No `validation.semantic.*` tagged activity producing semanticValidatorProposal"
+    ]
+  },
+  "metadata": {
+    "priority": "critical",
+    "cost_asymmetry": "fp_corrosive",
+    "depends_on_scenarios": []
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-2f5a5678-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from route-edit-2f5a5678] investigate and decompose gap route-edit-2487f4d2: The gap store unexpectedly reduce",
+  "description": "[narrowed from route-edit-2f5a5678] investigate and decompose gap route-edit-2487f4d2: The gap store unexpectedly reduced from 4,113 rows to 44 due to loadGaps() returning an EMPTY array on read or parse failures, risking silent data loss.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/resolvers/substrate-gap.ts(558,18): error TS2339: Property 'shape' does not exist on type 'SubstrateGap[]'. | src/resolvers/substrate-gap.ts(558,47): error TS2739: Type 'SubstrateGap[]' is missing\n- syntax_break: src/resolvers/substrate-gap.ts(288,5): error TS1472: 'catch' or 'finally' expected. | src/resolvers/substrate-gap.ts(288,7): error TS1005: 'try' expected. | src/resolvers/substrate-gap.ts(294,1): erro\n\nDo not repeat these failures. Address the specific cause named above.",
+  "goal_text": "[narrowed from route-edit-2f5a5678] investigate and decompose gap route-edit-2487f4d2: The gap store unexpectedly reduced from 4,113 rows to 44 due to loadGaps() returning an EMPTY array on read or parse failures, risking silent data loss.\n\nWHY PREVIOUS ATTEMPTS ON THIS GAP FAILED (most recent last):\n- verify_failed: src/resolvers/substrate-gap.ts(558,18): error TS2339: Property 'shape' does not exist on type 'SubstrateGap[]'. | src/resolvers/substrate-gap.ts(558,47): error TS2739: Type 'SubstrateGap[]' is missing\n- syntax_break: src/resolvers/substrate-gap.ts(288,5): error TS1472: 'catch' or 'finally' expected. | src/resolvers/substrate-gap.ts(288,7): error TS1005: 'try' expected. | src/resolvers/substrate-gap.ts(294,1): erro\n\nDo not repeat these failures. Address the specific cause named above.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-2f5a5678-narrowed",
+  "source_gap_source": "substrate_detected"
+}

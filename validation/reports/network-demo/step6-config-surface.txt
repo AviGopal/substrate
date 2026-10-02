@@ -1,0 +1,10 @@
+== container env each container was LAUNCHED with (the whole config surface):
+--- demo-hub:
+ANTHROPIC_API_KEY=<set>
+ENABLED_ROLES=hub
+
+--- demo-spoke1:
+METABOB_API_KEY=<set>
+DISCOVERY_ENDPOINT=http://172.17.0.12:8100
+ANTHROPIC_API_KEY=
+

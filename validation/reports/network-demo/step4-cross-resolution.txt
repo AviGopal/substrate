@@ -1,0 +1,10 @@
+== LEG 1 hub->spoke: resolve memoryNote (producer: development-vessel, spoke only) from the HUB's discovery:
+{"error":"forward_failed","shape":"memoryNote","detail":"Unable to connect. Is the computer able to access the url?"}
+
+== LEG 2 spoke->hub: capability for activityExecutionTrace_write from the SPOKE's discovery (failed pre-relay):
+{"content":{"shape":"activityExecutionTrace_write","vessels":[],"found":false},"metadata":{"shape":"vesselCapability","resolvedAt":"2026-09-16T01:37:45.360Z","cacheStatus":"miss"}}
+
+== RETRY LEG 1 hub->spoke memoryNote:
+{"content":{"shape":"memoryNote","produced_by":"development-vessel-local@federation-transport-vessel@spoke-52da0d98","body":{"notes":[],"total":0},"note":"proxied to the owning vessel on the peer substrate over libp2p"},"metadata":{"shape":"memoryNote"}}
+== RETRY LEG 2 spoke->hub capability:
+{"content":{"shape":"activityExecutionTrace_write","vessels":[],"found":false},"metadata":{"shape":"vesselCapability","resolvedAt":"2026-09-16T01:38:37.397Z","cacheStatus":"miss"}}

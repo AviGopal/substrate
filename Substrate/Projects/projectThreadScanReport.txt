@@ -1,0 +1,16 @@
+Project Thread Scan Report
+==========================
+
+Scanned project files in: /workspace/git/super-repo/Substrate/Projects
+
+---
+File: /workspace/git/super-repo/Substrate/Projects/test_undispatched_todo.md
+  - Found and dispatched 'To do' items.
+  - Modified content:
+    - Original: '- [ ] This is an undispatched todo item'
+    - Dispatched: ' - [x] [DISPATCHED] This is an undispatched todo item'
+    - Original: '- [ ] Another undispatched todo'
+    - Dispatched: ' - [x] [DISPATCHED] Another undispatched todo'
+---
+
+Summary: 1 project file processed, 2 'To do' items dispatched.

@@ -1,0 +1,512 @@
+{
+ "source": "docs-2",
+ "raw_file": "/home/avi/documents/work/substrate/validation/reports/realignment-2026-09-29/raw/docs-2.md",
+ "coverage": "All 23 docs in shard slice 24-46 were read in full, except IDENTITY_VESSEL_CURL_EXAMPLES (first 80 lines plus headings) and CONCEPT_INTEGRATION_TEMPLATES (~230 lines). Git churn per doc was recorded. Three docs are untracked (CONTAINER_NETWORK_LIFECYCLE, HUMAN_PROJECT_LIFECYCLE, SYZYGY_LOCAL_SURFACE). Live checks on substrate-live: about 55 grep probes over /workspace/git/vessels/* and /workspace/git/super-repo/scripts; systemd unit files, drop-ins, timers and journals (gap-compose, compose-teacher, funnel-drain, composition-edge-reconcile, spectral-gap, coherence-*, m1-trainer, model-reality-audit, ingest-docs); read-only SurrealQL on goal_execution_paths, refusal_events, upkeep_audit_log and trace status vocabulary; the refusals.json stores; closure-status.json. The four follow-up greps were done: refusal pool source, watchdog cap, execution_completed emit, conditional gate. Skipped: compose2-live (node 2), concept-db architecturePrinciple row counts, and whether selection actually reads the conditional posteriors.",
+ "attempts": [
+  {
+   "key": "docs-drift",
+   "title": "Watchdog demotion of gap-compose/compose-teacher/funnel-drain never reflected in the canonical software chart",
+   "where": "commit 887577bd (2026-07-08); /usr/lib/systemd/system/{gap-compose,compose-teacher,funnel-drain,boredom-vessel,operator-goal-generator}.service.d/watchdog.conf; docs/architecture/SUBSTRATE_AS_SOFTWARE.md \u00a75",
+   "tried": "Made the event-driven GapDrainObserver primary and replaced the tick units' ExecStart with watchdog-tick.ts",
+   "outcome": "partial",
+   "date": "2026-07-08",
+   "evidence": "The drop-ins override run-dir.conf ExecStart. SOFTWARE \u00a75, which is ingested as architecturePrinciple into the drafter prompt, still says these units route and compose. compose-teacher has produced no output of its own in 2 days."
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "title": "Unbounded gap-compose watchdog reflex",
+   "where": "scripts/substrate/watchdog-tick.ts; gap-compose.service journal",
+   "tried": "On stall, the watchdog fires gap_to_feature once per tick",
+   "outcome": "failed",
+   "date": "2026-09-29",
+   "evidence": "263 watchdog_restart actions and 0 other actions in 24 h. Each returns ok:200, yet stalled_min climbs 191\u2192195 and open_intents 376\u2192382. There is no global attempt budget or repetition bound (only a per-fire attempts counter at line 148), which violates SOFTWARE \u00a75's own reflex-tier rule. Two possible causes are not told apart: an operator quiet-window mask, or restarts that never touch WATCHDOG_ACTIVITY_PATHS."
+  },
+  {
+   "key": "goal-walk-floor",
+   "title": "Selector honest refusal (no_producer_for_expected_shapes)",
+   "where": "repos/activity-api/src/routes/activities.ts ~7720-7760; table refusal_events",
+   "tried": "Refuse rather than fall back to the highest-\u03b1 template when no template emits the expected output shapes; suggest create-shape-provider-goal",
+   "outcome": "partial",
+   "date": "2026-08-28..2026-09-29",
+   "evidence": "9129 refusals, 112 in the last 24 h and 996 in 7 days. The candidate pool is template output_shapes only, with no discovery or resolver consult. So shapes that vessels serve (goal_execution, activityExecutionTrace, light_dispatch_execution) are refused daily, and nothing consumes the suggestion."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Closure-audit (idiom 7, CC-001..007)",
+   "where": "validation/scripts/closure-audit.ts; validation/state/closure-status.json",
+   "tried": "Operator-side script simulating the removal of 7 external crutches",
+   "outcome": "dormant",
+   "date": "2026-09-09",
+   "evidence": "Last written 09-09. No unit runs it, despite the doc's 'nightly'. Every open property's evidence is 'HTTP 0' or 'health check failed: 0', which are unattributed negatives from a probe that was never positively controlled."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Push-away interventionRefused corpus",
+   "where": "repos/development-vessel/src/resolvers/intervention-evaluate.ts; $WORKSPACE_ROOT/refusals/refusals.json",
+   "tried": "Refuse an operator intervention with cited priors and persist interventionRefused",
+   "outcome": "dormant",
+   "evidence": "6 records in total, split across /workspace/refusals (5, 09-07) and /workspace/git/super-repo/refusals (1, 09-25; untracked, not ignored). This is the same WORKSPACE_ROOT split as the memory two-stores finding. The S3 refusal-rate measure is inert."
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "composition-edge-reconcile deriving edges from traces",
+   "where": "scripts/substrate/composition-edge-reconcile.ts (timer)",
+   "tried": "Incremental reconcile of activity_composition_graph edges from traces",
+   "outcome": "partial",
+   "evidence": "In the 7-day journal, 204 of 205 runs have upserted:0 and 1 run upserted 161. The latest runs report batch_traces:0 even with recent_ids=287."
+  },
+  {
+   "key": "composition-crystallization",
+   "title": "ribosome-extract lifecycle template",
+   "where": "repos/ias-executor-ts/src/templates/lifecycle/ribosome-extract.json",
+   "tried": "Subscribe to lifecycle:activity:postExecution and emit extractedTemplate",
+   "outcome": "failed",
+   "evidence": "No emitter produces postExecution; the only hit is the template itself. The live path is the ribosome-vessel WS consumer. GLOSSARY describes the template path as live, contradicting CORE_IDIOMS."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Forge-vessel-for-shape",
+   "where": "repos/ias-executor-ts/src/templates/forge/forge-vessel-for-shape.json",
+   "tried": "Build a producer vessel for a shape with no producer",
+   "outcome": "dormant",
+   "evidence": "Registered but not dispatched. The no-producer path routes to create-shape-provider-goal, and the only runs are operator runs (validation test-22)."
+  },
+  {
+   "key": "dormant-mechanism",
+   "title": "Template upkeep write resolvers + audit log",
+   "where": "repos/activity-api (activityTemplate_update/_deprecate); docs/guides/TEMPLATE_UPKEEP.md; ACTIVITY_LIFECYCLE_DEPRECATION.md",
+   "tried": "Mutations via impulse resolvers with an upkeepAuditLog before/after diff",
+   "outcome": "dormant",
+   "evidence": "upkeep_audit_log has 0 rows (the table name is referenced in activity-api impulses.ts). The audit-and-backfill-templates middle activity is absent (0 hits)."
+  },
+  {
+   "key": "docs-drift",
+   "title": "Deprecated-predicate gap on the recommend path, documented and never filed",
+   "where": "activities.get-activities-with-tiered-fallback.ts; ACTIVITY_LIFECYCLE_DEPRECATION.md",
+   "tried": "Documented the asymmetry as 'advice to the selector'",
+   "outcome": "dormant",
+   "evidence": "The file has 0 occurrences of 'deprecated'. The doc was last touched 2026-08-02 and the gap is still open."
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Hardcoded svc.cluster.local defaults (TS template known gap)",
+   "where": "docs/architecture/TYPESCRIPT_VESSEL_TEMPLATE.md 'Known gap'",
+   "tried": "Listed 5 offending files; 'migrate at next significant revision'",
+   "outcome": "failed",
+   "evidence": "15 live src files now carry the defaults, including activity-api \u00d77 and concept-db \u00d73, the exemplars the doc tells drafters to copy."
+  },
+  {
+   "key": "drafter-quality",
+   "title": "feature-compose deterministic gates for invented emit APIs",
+   "where": "repos/development-vessel/src/resolvers/feature-compose.ts:1749-1836; TS_TEMPLATE 'Emitting an impulse'",
+   "tried": "Refuse exports.<x>.emit and literal /v2/impulses/<segment> after 2 landed-and-pushed dead emitters (776391aa0fc2)",
+   "outcome": "worked",
+   "evidence": "The gates exist, and the doc section was written so the fact arrives before drafting."
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "title": "Shape-dispatch sweep",
+   "where": "scripts/check-shape-dispatch-all.sh; packages/shape-dispatch-check",
+   "tried": "Mechanically verify that advertised shapes match dispatch cases",
+   "outcome": "partial",
+   "evidence": "VESSELS covers 2 of 19 clones (activity-api, concept-db). Its only callers are itself and 3 package.json lint scripts; no activity validates it."
+  },
+  {
+   "key": "docs-drift",
+   "title": "Foundation-compliance validator spec",
+   "where": "docs/FOUNDATION_COMPLIANCE_CHECKS.md",
+   "tried": "20 FC checks plus 7 CC checks gating substrate-authored spec proposals",
+   "outcome": "dormant",
+   "evidence": "0 hits for foundation-compliance, proposedSpec, closureStatusReport, operatorOverride, ciAgreementReport, verify-merge-candidate and restart-vessel. propose-spec appears only in dev-vessel CLAUDE.md and memory-note.ts."
+  },
+  {
+   "key": "federation-p2p",
+   "title": "Point-and-go /bootstrap join + direct-only fallback",
+   "where": "scripts/substrate/federation-relay/federation-transport-server.ts",
+   "tried": "Derive the relay from discovery /bootstrap and start direct-only when anchorless, instead of crash-looping",
+   "outcome": "partial",
+   "evidence": "Live in the scripts tier, not in repos/libp2p-federation-transport as the doc says, so the substrate cannot author it. The documented open limits: hub-owned shapes do not resolve from a spoke, direct-only is silent, and HTTP-over-libp2p fails above 1 B across a circuit."
+  },
+  {
+   "key": "docs-drift",
+   "title": "Retired-CLI guides kept as live docs",
+   "where": "docs/guides/{ACTIVITY_TASK_CONTEXT_PROPAGATION,INTERACTIVE_ACTIVITIES_AND_HUMAN_RESOLVER,CONCEPT_INTEGRATION_TEMPLATES,DASHBOARD_ANALYTICS,EXTERNAL_VALIDATION}.md; docs/IDENTITY_VESSEL_CURL_EXAMPLES.md",
+   "tried": "Kept retired-CLI and product-era guides with a 'historical' note",
+   "outcome": "failed",
+   "evidence": "0 hits for mergeEmbeddedTaskFields, materializeOutputImpulses, build-and-execute, human-guided-orchestrator, interactive-activity-selector and the three concept templates. templates/ does not exist. The curl guide uses the retired identity.metabob.com and the wrong port 8080."
+  },
+  {
+   "key": "docs-drift",
+   "title": "Conditional-task doc vs live gate",
+   "where": "docs/guides/CONDITIONAL_TASKS.md; ias-executor-ts/src/engine.interpolation.ts:143",
+   "tried": "Documented evaluateTaskCondition semantics (missing impulse \u2192 '', eval error \u2192 skip)",
+   "outcome": "superseded",
+   "evidence": "The live function is evaluateConditionalGate, and engine.ts:263 says an unresolved placeholder in a gate is fatal rather than defaulted."
+  },
+  {
+   "key": "docs-drift",
+   "title": "Untracked dated instance docs",
+   "where": "docs/guides/SYZYGY_LOCAL_SURFACE.md, CONTAINER_NETWORK_LIFECYCLE.md",
+   "tried": "Wrote the 09-22 Syzygy bring-up as a guide",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "Pins an image id, date, host and port (law 9 violation). Contains setup commands and make lifecycle targets outside README. Links to validation/reports/syzygy-local-bringup-2026-09-22/, which is untracked on the host and absent in the container."
+  }
+ ],
+ "problems": [
+  {
+   "key": "docs-drift",
+   "symptom": "Architecture docs ingested as architecturePrinciple into the drafter prompt carry stale unit semantics (SOFTWARE \u00a75 gap-compose/compose-teacher/funnel-drain), a non-existent shape (resolutionRefused) and an exemplar list containing the anti-pattern (svc.cluster.local in concept-db and activity-api)",
+   "root_cause": "Docs are updated by operators; no detector compares architecture claims with unit drop-ins or grep reality, and the docs-align loop's coverage of these files was not verified",
+   "first_seen": "2026-07-08",
+   "last_seen": "2026-09-29",
+   "recurrences": 3
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "Known defects recorded as prose in docs (tiered-fallback deprecated predicate, missing upkeep activity, postExecution never emitted, forge undispatched, federation one-directional, direct-only silent) persist for months",
+   "root_cause": "The doc acts as the gap store; the runtime reader is the operator only, so nothing files or detects them",
+   "first_seen": "2026-08-02",
+   "last_seen": "2026-09-29",
+   "recurrences": 6
+  },
+  {
+   "key": "docs-drift",
+   "symptom": "GLOSSARY says ribosome-extract subscribes to postExecution and emits extractedTemplate (reads as live), while CORE_IDIOMS says nothing emits postExecution; ribosome-vessel's comment says activity-api does not emit execution.completed while execution-traces.ts:4062 does",
+   "root_cause": "Parallel descriptions of one mechanism with no single owner or check",
+   "last_seen": "2026-09-29"
+  },
+  {
+   "key": "goal-walk-floor",
+   "symptom": "Selector refuses 112/day for expected shapes (goal_execution, activityExecutionTrace, light_dispatch_execution) that vessels serve; suggestion create-shape-provider-goal never consumed",
+   "root_cause": "The refusal candidate pool is template output_shapes only (activities.ts ~7759), never discovery resolvers: template and resolver producer knowledge are two unjoined stores",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-29",
+   "recurrences": 9129
+  },
+  {
+   "key": "spend-envelope-throughput",
+   "symptom": "The gap-compose watchdog fires gap_to_feature about every 90 s (263 in 24 h), each ok:200, while stalled_min keeps rising and open intents grow",
+   "root_cause": "The reflex has no global attempt budget or repetition bound; the restart either does not register as flow activity or runs against an operator mask (not told apart)",
+   "last_seen": "2026-09-29",
+   "recurrences": 263
+  },
+  {
+   "key": "false-verification",
+   "symptom": "closure-status.json marks properties open with evidence 'HTTP 0'; FOUNDATION_COMPLIANCE CC checks are called lift prerequisites but none is executable",
+   "root_cause": "Probe address never positively controlled; audit operator-side and unscheduled since 09-09",
+   "last_seen": "2026-09-09"
+  },
+  {
+   "key": "memory-recall",
+   "symptom": "interventionRefused corpus split across /workspace/refusals and /workspace/git/super-repo/refusals (5+1 records)",
+   "root_cause": "WORKSPACE_ROOT resolves differently per process, the same class as the two memory stores"
+  },
+  {
+   "key": "composition-crystallization",
+   "symptom": "composition-edge-reconcile upserts 0 edges in 204/205 runs; batch_traces:0 with recent_ids=287",
+   "root_cause": "Not discriminated (watermark or filter mismatch suspected)",
+   "last_seen": "2026-09-29",
+   "recurrences": 204
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Every self-* mechanism in SOFTWARE \u00a75 is a static systemd timer, and watchdog thresholds are unit Environment= lines",
+   "root_cause": "The doc codifies timer cadence, contradicting law 5 rhythm impulses"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "15 live src files keep .svc.cluster.local defaults (the doc's known-gap list names 5); boredom vessel-addition scaffold references deprecated /v2/vessels/register",
+   "root_cause": "The system is held closed by env-var discipline; there is no detector for the default"
+  },
+  {
+   "key": "codebase-bloat-fossils",
+   "symptom": "7 fossil guides for a retired CLI or out-of-fleet surfaces; hub files of 17,910 (goal-host index.ts), 11,766 (activities.ts) and 7,274 (feature-compose.ts) lines; untracked refusals/ residue in the substrate clone",
+   "root_cause": "No retirement path for docs; runtime state written inside the git tree"
+  },
+  {
+   "key": "human-surface-escalation",
+   "symptom": "Two contradictory human-answer semantics in docs: INTERACTIVE_ACTIVITIES falls back to default/options[0] when non-interactive, while HUMAN_PROJECT_LIFECYCLE says no timeout or preselected option is a human answer; uiquestion escalation channel write-only",
+   "root_cause": "Fossil doc not retired when the contract changed"
+  },
+  {
+   "key": "federation-p2p",
+   "symptom": "Hub-owned shapes return found:false from a spoke; direct-only transport federates nothing silently; HTTP-over-libp2p fails above 1 B across a circuit",
+   "root_cause": "The hub's own transport needs a live relay circuit before registerAtHub publishes; the transport code sits in the non-authorable scripts tier"
+  }
+ ],
+ "mechanisms": [
+  {
+   "name": "verifyGoalReached reach gate",
+   "location": "goal-host-vessel + development-vessel (9 files)",
+   "purpose": "Judge reached vs exited cleanly",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "recordGoalPath / recommendReachingPath",
+   "location": "goal-host-vessel pathway-head/rank, shaped-policy-store; activity-api",
+   "purpose": "Per-goal path record and reuse",
+   "status": "live-used",
+   "general": true,
+   "evidence": "goal_execution_paths 22,234 rows"
+  },
+  {
+   "name": "propagateCreditAlongChain + TD_LAMBDA",
+   "location": "activity-api/src/lib/posterior-update.ts; tuning-params",
+   "purpose": "TD(\u03bb) chain credit, \u03bb read at use time",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "computeDeltas / applyOutcomeToPosteriors + graded yield",
+   "location": "activity-api posterior-update.ts:282",
+   "purpose": "Outcome-conditional \u03b2 step and graded \u03b1",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "v_shape_conditioned_score",
+   "location": "activity-api, goal-host",
+   "purpose": "State-conditioned posterior read",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "BusForwardingEventSink / lifecycle hooks",
+   "location": "ias-executor-ts adapters/bus-forwarder.ts",
+   "purpose": "Neutral emitter bus",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "ribosome-extract lifecycle template",
+   "location": "ias-executor-ts/src/templates/lifecycle/ribosome-extract.json",
+   "purpose": "Trace\u2192template extraction via lifecycle hook",
+   "status": "broken",
+   "general": false,
+   "evidence": "Subscribes to postExecution, which nothing emits",
+   "duplicates_of": "ribosome-vessel WS consumer"
+  },
+  {
+   "name": "ribosome-vessel WS consumer",
+   "location": "repos/ribosome-vessel/src/index.ts",
+   "purpose": "Extraction on execution_completed",
+   "status": "live-used",
+   "general": true,
+   "evidence": "activity-api emits at execution-traces.ts:4062; stale comment at index.ts:42"
+  },
+  {
+   "name": "closure-audit",
+   "location": "validation/scripts/closure-audit.ts",
+   "purpose": "Simulate removal of 7 external crutches",
+   "status": "dormant",
+   "general": true,
+   "evidence": "Last output 09-09, HTTP 0 negatives, no unit"
+  },
+  {
+   "name": "forge-vessel-for-shape",
+   "location": "ias-executor-ts/src/templates/forge",
+   "purpose": "Build a producer for a missing shape",
+   "status": "dormant",
+   "general": false
+  },
+  {
+   "name": "create-shape-provider-goal escalation",
+   "location": "development-vessel seeds; ias-executor escalation template",
+   "purpose": "Escalate no-producer shapes",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Suggested in 9129 refusals, never consumed"
+  },
+  {
+   "name": "intervention_evaluate / interventionRefused",
+   "location": "development-vessel/src/resolvers/intervention-evaluate.ts",
+   "purpose": "Push-away with cited evidence",
+   "status": "dormant",
+   "general": true,
+   "evidence": "6 records in 2 split JSON stores"
+  },
+  {
+   "name": "refusal_events selector refusal",
+   "location": "activity-api/src/routes/activities.ts:7759",
+   "purpose": "Honest refusal instead of confidently-wrong fallback",
+   "status": "live-used",
+   "general": true,
+   "evidence": "9160 rows; template-only candidate pool"
+  },
+  {
+   "name": "declined outcome / refusal-precision / conduct ledger",
+   "location": "none",
+   "purpose": "SOVEREIGN \u00a71-7 earned authority",
+   "status": "unknown",
+   "general": true,
+   "evidence": "Absent: trace status \u2208 {success, failure}"
+  },
+  {
+   "name": "foundation-compliance validator + propose-spec/verify-merge-candidate/restart-vessel",
+   "location": "none (FOUNDATION_COMPLIANCE_CHECKS.md spec only)",
+   "purpose": "Gate substrate-authored specs; closure CC checks",
+   "status": "fossil",
+   "general": true,
+   "evidence": "0 hits in live code"
+  },
+  {
+   "name": "shape-dispatch-check",
+   "location": "packages/shape-dispatch-check; scripts/check-shape-dispatch-all.sh",
+   "purpose": "Advertised shapes == dispatch cases",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "Sweep covers 2/19 vessels; no activity validates it"
+  },
+  {
+   "name": "feature-compose emit-API gates",
+   "location": "development-vessel/src/resolvers/feature-compose.ts:1749-1836",
+   "purpose": "Refuse invented emit APIs and wrong resolve paths",
+   "status": "live-used",
+   "general": false
+  },
+  {
+   "name": "impulse-resolve + pointerFromImpulseSlots",
+   "location": "ias-executor-ts/src/resolvers/impulse-resolve.ts",
+   "purpose": "Generic shape call from task JSON",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "templateAuditReport",
+   "location": "activity-api template-audit.ts; dev-vessel template-promote/mitosis ticks",
+   "purpose": "Template deficiency report",
+   "status": "live-used",
+   "general": true
+  },
+  {
+   "name": "activityTemplate_update/_deprecate + upkeep_audit_log",
+   "location": "activity-api routes/impulses.ts",
+   "purpose": "Audited template mutation",
+   "status": "live-unused",
+   "general": true,
+   "evidence": "upkeep_audit_log = 0 rows"
+  },
+  {
+   "name": "validateEvidenceGate",
+   "location": "development-vessel variant-promote.ts, template-promote-tick.ts",
+   "purpose": "Posterior-evidence gate on deprecate/promote",
+   "status": "live-used",
+   "general": true,
+   "evidence": "The doc places it in activity-api impulses.ts (location drift)"
+  },
+  {
+   "name": "REUSE_BEFORE_MINT",
+   "location": "development-vessel/src/resolvers/activity-create-variant.ts",
+   "purpose": "Mint chokepoint reuse check",
+   "status": "live-used",
+   "general": false
+  },
+  {
+   "name": "watchdog-tick demotion",
+   "location": "scripts/substrate/watchdog-tick.ts + 5 unit watchdog.conf drop-ins",
+   "purpose": "Restart the flow when the event drain stalls",
+   "status": "live-used",
+   "general": true,
+   "evidence": "263 restarts/24 h, unbounded, stall never clears"
+  },
+  {
+   "name": "gap-compose-tick / compose-teacher / funnel-drain named scripts",
+   "location": "scripts/substrate (ExecStart overridden)",
+   "purpose": "Per SOFTWARE \u00a75: route gaps, bootstrap composites, fire funnel",
+   "status": "fossil",
+   "general": false,
+   "evidence": "Overridden by watchdog.conf; compose-teacher runs only as RESTART_EXEC"
+  },
+  {
+   "name": "composition-edge-reconcile",
+   "location": "scripts/substrate/composition-edge-reconcile.ts",
+   "purpose": "Derive composition edges from traces",
+   "status": "live-used",
+   "general": true,
+   "evidence": "204/205 runs upsert 0"
+  },
+  {
+   "name": "spectral-gap / coherence-metric / coherence-recover / m1-trainer / model-reality-audit",
+   "location": "scripts/substrate timers",
+   "purpose": "\u03bb\u2082/star-ratio, orthogonality, embedding prior, model-vs-reality audit",
+   "status": "live-used",
+   "general": true,
+   "evidence": "201 publishes, rows written, demotions"
+  },
+  {
+   "name": "ingest-docs \u2192 architecturePrinciple \u2192 feature-compose",
+   "location": "scripts/substrate/ingest-docs-as-concepts.ts; feature-compose.ts",
+   "purpose": "Docs as drafter-time expectations",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Timer ran 01:22, dryrun:false; this is why architecture-doc drift matters"
+  },
+  {
+   "name": "federation /bootstrap, direct-only, registerAtHub, substrateBootstrap",
+   "location": "scripts/substrate/federation-relay/federation-transport-server.ts",
+   "purpose": "Point-and-go join and overlay bootstrap",
+   "status": "live-used",
+   "general": true,
+   "evidence": "Scripts tier, not the repo named in FEDERATION.md"
+  },
+  {
+   "name": "evaluateConditionalGate",
+   "location": "ias-executor-ts/src/engine.interpolation.ts:143",
+   "purpose": "Task conditional gates",
+   "status": "live-used",
+   "general": true,
+   "evidence": "CONDITIONAL_TASKS names evaluateTaskCondition with different semantics"
+  },
+  {
+   "name": "mergeEmbeddedTaskFields / materializeOutputImpulses / SessionMemoryAgent / HumanResolver TTY",
+   "location": "retired CLI (docs only)",
+   "purpose": "Task context propagation, interactive templates",
+   "status": "fossil",
+   "general": false,
+   "evidence": "0 live hits"
+  },
+  {
+   "name": "external-validation resolver + grounding pipeline",
+   "location": "none (tables dropped in migrations 164/176)",
+   "purpose": "Validate against real systems; vesselize endpoints",
+   "status": "fossil",
+   "general": true
+  }
+ ],
+ "principles": [
+  "END GOAL: authority over its own behaviour earned, evidenced and revisable, never declared; the operator becomes structurally non-load-bearing, with interventions refused with cited evidence or absorbed without harm (SOVEREIGN intro and transfer boundary; SOFTWARE \u00a75 close)",
+  "The S1\u2192S2 lift is DEFINED as the substrate beginning to write authored-durable state; nothing in the normal loop writes it (SOFTWARE \u00a74, \u00a73.1)",
+  "Recall reads Informational, runs Transient, writes Recorded; Learning writes only the learned-durable half (SOFTWARE \u00a73.1)",
+  "Version and test the four primitives like code; snapshot and protect the learned-durable group like a database (SOFTWARE \u00a74.2)",
+  "Success = reached, not clean exit; recovery is part of reaching (SOFTWARE \u00a73.2)",
+  "resolver_tier is a coarse bin of a continuous learned directional certainty per (resolver, signature): keep the bins, read the scalar (SOFTWARE \u00a74.1)",
+  "The reflex tier is fixed and externally scheduled, but owes an attempt budget, a repetition bound and a route-exhaustion branch; identical failures should not be possible, recurrence is the defect (SOFTWARE \u00a75)",
+  "Reuse before mint: reuse raises \u03bb\u2081 and sharpens \u22c6, minting raises \u03c1_grow; stay \u03bb\u2081 \u2273 \u03c1_grow (SOFTWARE \u00a75)",
+  "Refusal is a first-class outcome (reached/failed/declined); a yes is evidence only when no was possible; with no honest exit, the no comes out as hollow completion (SOVEREIGN \u00a71)",
+  "Refusal precision is graded; gate revision is graded against the gate's stated purpose, since the cheapest edit to a blocking gate is its removal (SOVEREIGN \u00a72-3)",
+  "Loop-destroying changes bind tighter; decisions are staked with predictions recorded; the system reads its own conduct ledger (SOVEREIGN \u00a74-6)",
+  "Accountability lives at the ledger: what the record says happened is what happened; every hollow-completion class attacks this (SOVEREIGN \u00a77)",
+  "Env carries only bootstrap material (credential, port, identity, discovery endpoint); anything that steers behaviour is a shaped impulse read at use time (TS_TEMPLATE identity resolution)",
+  "One impulse endpoint, POST /v2/impulses/resolve with the {impulse:{pointer:{type}}} envelope, sent to the host serving the shape via discovery; branch on r.ok (TS_TEMPLATE emitting)",
+  "A gate refusing after the fact is a backstop; the fact must arrive before drafting (TS_TEMPLATE)",
+  "Registration non-blocking; every advertised shape has a dispatch case; the observer never throws (TS_TEMPLATE invariants)",
+  "Handlers accept every key alias, since a one-spelling reader silently starves goal families (TS_TEMPLATE)",
+  "Activities all the way down: no untraced side channel; edits to an earned template become variants with fresh priors; never present a prediction as a result; never require the human to speak internal language (WORKBENCH)",
+  "Explanations come from the recorded decision state, not reconstructed from the outcome; rank by reach, not frequency (WORKBENCH stories 4, UI learning)",
+  "Templates must have grounding traces; declared-but-never-walked templates are hollow (CORE_IDIOMS 6)",
+  "Before writing a subscriber, verify its event is emitted; an emitter that breaks when a subscriber is removed is not neutral (CORE_IDIOMS 4, 13)",
+  "Closure must stay green across runs and run from inside the substrate (CORE_IDIOMS 7)",
+  "Growth = the finite idiom set applied recursively over an unbounded shape space, not new mechanisms (CORE_IDIOMS \u00a73)",
+  "Templates do not belong in migrations (non-idempotent inserts mint duplicates); a lifecycle decision one-way only is not managed (TEMPLATE_UPKEEP)",
+  "Upkeep is single-candidate-per-invocation so each trace teaches the loop (TEMPLATE_UPKEEP \u00a74)",
+  "Never benchmark without vitals; probe on isolated instances, read on live; trust the running code, not the checkout; an always-succeeding arm is gaming its bandit (CONCEPT_DB_INVESTIGATION)",
+  "Process state is not readiness; an HTTP 200 or advertised route is not proof, a reached goal with a durable trace is (CONTAINER_NETWORK_LIFECYCLE, HUMAN_SURFACE)",
+  "A registry record is not proof of capability; call the shape (HUMAN_SURFACE)",
+  "No timeout or preselected option is a human answer; repeated manual intervention is a capability gap (HUMAN_PROJECT_LIFECYCLE)",
+  "Freezing a value that changes is the bug; a multiaddr names a peer identity, a URL names a host (FEDERATION)",
+  "Adapter-layer principle: missing functionality of a frozen dependency goes in an adapter, never a patch to the frozen thing (FOUNDATION_COMPLIANCE_CHECKS refs)",
+  "Where doc and code disagree, the code is what exists and the doc is what is owed (SOVEREIGN header)"
+ ]
+}

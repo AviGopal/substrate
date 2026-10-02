@@ -1,0 +1,25 @@
+In repos/goal-host-vessel/src/index.ts, undo three drafting defects that fbb2fab introduced into the post-walk EDIT-INTENT ownership routing, restoring the text that was specified. Measured: fbb2fab doubled a regex escape (`/\/+$/` became `/\/\/+$/`, which strips only two or more trailing slashes), kept the original `if (v?.endpoint)` block and added a mangled copy of it above, so the block runs twice and logs its line twice, and joined two statements onto one line. Three edits in this one file, nothing else changes.
+
+(1) Replace exactly this line (it occurs once):
+
+              const rows = (dj?.content?.vessels ?? []) as Array<import("./satisfier-pick.js").SatisfierProducer & { owned_repos?: string[]; vesselId?: string }>;              const targetVessel = /^repos\/([^/]+)\//.exec(editFile)?.[1] ?? "";
+
+with these two lines:
+
+              const rows = (dj?.content?.vessels ?? []) as Array<import("./satisfier-pick.js").SatisfierProducer & { owned_repos?: string[]; vesselId?: string }>;
+              const targetVessel = /^repos\/([^/]+)\//.exec(editFile)?.[1] ?? "";
+
+(2) Replace exactly this line (it occurs once):
+
+                    const u = `${String(r.endpoint ?? "").replace(/\/\/+$/, "")}${asResolvePath(r.resolve_endpoint)}`;
+
+with:
+
+                    const u = `${String(r.endpoint ?? "").replace(/\/+$/, "")}${asResolvePath(r.resolve_endpoint)}`;
+
+(3) Delete exactly these four lines (they occur once), leaving the identical block that follows them, whose regex is `/\/+$/`:
+
+              if (v?.endpoint) {
+                composeUrl = `${v.endpoint.replace(/\/\/+$/, "")}${asResolvePath(v.resolve_endpoint)}`;
+                tap(`[goal-host-vessel] ${opts.surface}: EDIT-INTENT feature_compose producer resolved via discovery → ${composeUrl}`);
+              }

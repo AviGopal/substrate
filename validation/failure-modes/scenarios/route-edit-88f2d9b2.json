@@ -1,0 +1,19 @@
+{
+  "id": "route-edit-88f2d9b2",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "edit_intent_route",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "In repos/goal-host-vessel/src/goal-intent.ts, extend isEditIntentGoal so that a goal naming a concrete source file under",
+  "description": "In repos/goal-host-vessel/src/goal-intent.ts, extend isEditIntentGoal so that a goal naming a concrete source file under repos/ that uses a creation verb also routes as edit-intent. Add the creation verbs create, creates, creating, author, authors, authoring, write, writes, writing, scaffold, scaffolds, scaffolding, generate, generates, generating to the existing verb alternation regex on the return statement. This mirrors the creation-verb additions already present in goalDemandsLandedEdit in the same file; without it, a goal like \"Create repos/foo/bar.ts ...\" fails the isEditIntentGoal routing gate and is diverted to the ReAct floor, which reads and reasons but never lands a commit, so the file is never created.",
+  "goal_text": "In repos/goal-host-vessel/src/goal-intent.ts, extend isEditIntentGoal so that a goal naming a concrete source file under repos/ that uses a creation verb also routes as edit-intent. Add the creation verbs create, creates, creating, author, authors, authoring, write, writes, writing, scaffold, scaffolds, scaffolding, generate, generates, generating to the existing verb alternation regex on the return statement. This mirrors the creation-verb additions already present in goalDemandsLandedEdit in the same file; without it, a goal like \"Create repos/foo/bar.ts ...\" fails the isEditIntentGoal routing gate and is diverted to the ReAct floor, which reads and reasons but never lands a commit, so the file is never created.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "route-edit-88f2d9b2",
+  "source_gap_source": "substrate_detected"
+}

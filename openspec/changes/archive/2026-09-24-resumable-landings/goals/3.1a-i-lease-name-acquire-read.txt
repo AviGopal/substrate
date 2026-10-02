@@ -1,0 +1,70 @@
+In repos/development-vessel/src/resolvers/maintenance-lease.ts, add an optional lease `name` for acquire and read (openspec 2026-09-24-resumable-landings task 3.1a-i). Previous drafts failed because they anchored on `const existing = await readLease();`, which occurs THREE times in this file (acquire, renew, release) — every anchor below is unique; use exactly these seven old->new edits and nothing else. renew and release are out of scope.
+EDIT 1 — old:
+  type: "maintenanceLease";
+}
+new:
+  type: "maintenanceLease";
+  name?: string;
+}
+EDIT 2 — old:
+  op: "acquire" | "renew" | "release";
+new:
+  op: "acquire" | "renew" | "release";
+  name?: string;
+EDIT 3 — old:
+async function readLease(): Promise<MaintenanceLease | null> {
+  try {
+    const raw = await readFile(leasePath(), "utf-8");
+new:
+export function namedLeasePath(name?: string): string {
+  return name ? join(dirname(leasePath()), `maintenance-${name.replace(/[^a-z0-9_-]/gi, "_")}.json`) : leasePath();
+}
+
+async function readLease(name?: string): Promise<MaintenanceLease | null> {
+  try {
+    const raw = await readFile(namedLeasePath(name), "utf-8");
+EDIT 4 — old:
+async function writeLease(lease: MaintenanceLease): Promise<void> {
+  const path = leasePath();
+new:
+async function writeLease(lease: MaintenanceLease, name?: string): Promise<void> {
+  const path = namedLeasePath(name);
+EDIT 5 — old:
+  const lease = await readLease();
+  if (!lease || isExpired(lease)) {
+new:
+  const own = await readLease(_pointer.name);
+  // An unnamed hold means everything: a named read also sees the global hold
+  // (services/gap-drain-observer.ts reads with names "trace_store" and "change_window").
+  const lease = own && !isExpired(own) ? own : _pointer.name ? await readLease() : own;
+  if (!lease || isExpired(lease)) {
+EDIT 6 — old:
+    const existing = await readLease();
+    if (existing && !isExpired(existing) && existing.holder !== holder) {
+      return {
+        shape: "maintenanceLeaseWriteResult",
+        body: { acquired: false, held_by: existing.holder, expires_at: existing.expires_at },
+      };
+    }
+new:
+    const existing = await readLease(pointer.name);
+    const globalHold = pointer.name ? await readLease() : null;
+    for (const h of [existing, globalHold]) {
+      if (h && !isExpired(h) && h.holder !== holder) {
+        return {
+          shape: "maintenanceLeaseWriteResult",
+          body: { acquired: false, held_by: h.holder, expires_at: h.expires_at, name: pointer.name ?? null },
+        };
+      }
+    }
+EDIT 7 — old:
+    await writeLease({ holder, token, acquired_at, expires_at });
+    return {
+      shape: "maintenanceLeaseWriteResult",
+      body: { acquired: true, token, holder, expires_at },
+new:
+    await writeLease({ holder, token, acquired_at, expires_at }, pointer.name);
+    return {
+      shape: "maintenanceLeaseWriteResult",
+      body: { acquired: true, token, holder, expires_at, name: pointer.name ?? null },
+Falsifier: acquire {holder:"a", name:"trace_store"} then {holder:"b", name:"cutover"} -> both acquired:true with files maintenance-trace_store.json and maintenance-cutover.json; with an unnamed hold by "c", acquire {holder:"b", name:"cutover"} -> acquired:false held_by "c"; read {name:"trace_store"} during the unnamed hold -> held:true. Unnamed callers behave exactly as before.

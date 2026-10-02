@@ -1,0 +1,7 @@
+[Unit]
+Description=Self-development trend recorder — empirical signal (ψ/edges/reach-rate) over time
+[Service]
+Type=oneshot
+Environment=SELF_DEV_TREND=1
+EnvironmentFile=-/etc/substrate/env
+ExecStart=/root/.bun/bin/bun /workspace/active-scripts/self-development-trend.ts

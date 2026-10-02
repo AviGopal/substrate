@@ -1,0 +1,19 @@
+{
+  "id": "systematic-failure-audit-test-report-zero",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Capability \"audit-test-report\" fails systematically at task \"(no tasks)\" (0/0 tasks ok, failure_mode: unknown) across 3 ",
+  "description": "Capability \"audit-test-report\" fails systematically at task \"(no tasks)\" (0/0 tasks ok, failure_mode: unknown) across 3 recent traces — author an improvement so it reaches.",
+  "goal_text": "Capability \"audit-test-report\" fails systematically at task \"(no tasks)\" (0/0 tasks ok, failure_mode: unknown) across 3 recent traces — author an improvement so it reaches.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "systematic-failure-audit-test-report-zero",
+  "source_gap_source": "substrate_detected"
+}

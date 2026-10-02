@@ -1,0 +1,1113 @@
+{
+ "attempts": [
+  {
+   "key": "drafter-quality",
+   "title": "Principle consult: shape filter dropped",
+   "where": "development-vessel/src/resolvers/feature-compose.ts:2546-2640",
+   "tried": "Removed shape=architecturePrinciple filter claiming no concept ever carried it; reduce spec to 3 longest words, narrowing retry",
+   "outcome": "partial",
+   "date": "2026-08-09",
+   "evidence": "719 architecturePrinciple rows exist (74 from June); concept.ts:329 does wire shape; consult now unfiltered over 88k rows, 87% signatures",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "feature-compose deterministic gates for invented emit APIs",
+   "where": "repos/development-vessel/src/resolvers/feature-compose.ts:1749-1836; TS_TEMPLATE 'Emitting an impulse'",
+   "tried": "Refuse exports.<x>.emit and literal /v2/impulses/<segment> after 2 landed-and-pushed dead emitters (776391aa0fc2)",
+   "outcome": "worked",
+   "evidence": "The gates exist, and the doc section was written so the fact arrives before drafting.",
+   "source": "docs-2"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Honest /bootstrap via feature_compose",
+   "where": "repos/discovery-vessel/src/index.ts",
+   "tried": "3 dispatches, 2 formulations",
+   "outcome": "failed",
+   "date": "2026-09-13",
+   "evidence": "Refused: grounding window (0 BYTES) contains none of the target files; filed fed:compose-grounding-window-empty-for-discovery-index",
+   "source": "federation-relay"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Grounding / anchor / region localization series",
+   "where": "24e4dc0, a5680c0, 1f9fa12 (07-22); 83bb498, 31fb735, 15c611e (07-31); 12 region commits (08-07); ~16 grounding/anchor commits (08-10..11)",
+   "tried": "Probe mining, verbatim probes, site-centred windows, uniqueness-checked anchors, indexed anchor pick.",
+   "outcome": "partial",
+   "date": "2026-07-22..2026-08-11",
+   "evidence": "78ba658: 'uniqueness, which measured backwards'. 6060ab7's mechanism was retracted in 6d3074d.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Drafter model pinning reintroduced at least 3 times",
+   "where": "568d483 (env), a6ee84b (DeepSeek), 5273bfa (sonnet-5), 47096a7, b0435f4, beec282, fd144a7",
+   "tried": "Restore shaped 'auto' model selection.",
+   "outcome": "partial",
+   "date": "2026-07-11..2026-07-31",
+   "evidence": "47096a7 'pass auto, not a hardcoded literal (law 1)'.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Anchor failures dominate the compose lane",
+   "where": "8efd578, cc2354d, 64968c1, 489503a, 2f2ba0f, 8d165a9, 03505e5",
+   "tried": "Anchor-selection fixes and the region hint",
+   "outcome": "partial",
+   "date": "2026-09-06..09-23",
+   "evidence": "Lane lands under 9%; two-thirds die at anchor or grounding",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Grounding bare catch gave a 100% refusal",
+   "where": "5598853",
+   "tried": "Log in the catch",
+   "outcome": "worked",
+   "date": "2026-09-15",
+   "evidence": "48 of 48 windows were 0 bytes",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Refuter quorum confabulation rolled back verified patches",
+   "where": "a105756, 7ab6155, 1746f5a",
+   "tried": "Quorum changes",
+   "outcome": "partial",
+   "date": "2026-08-18..09-24",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Substrate commented out the isEditIntentGoal path operand",
+   "where": "fce961b, f1d79c3 reverted by eac995e",
+   "date": "2026-08-09",
+   "tried": "An autonomous 'fix' that widened edit-intent detection.",
+   "outcome": "reverted",
+   "evidence": "'Add a note about my weekend' became an edit goal. Typecheck passed, and a semantic widening passes every gate.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Wrong-repo, wrong-change landing in the core walk",
+   "where": "b222d75 reverted by c158bd0",
+   "date": "2026-08-11",
+   "tried": "The goal asked to change an activity-api dedup gate. What landed was a direct=null refusal in goal-host's walk.",
+   "outcome": "reverted",
+   "evidence": "Blast radius was every walk that resolves a body with a template_id.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "One-line endedAt edit deleted 35-line recipe-seed block",
+   "where": "e1e84cc; a8e38dc, 280dada, 496aebf",
+   "date": "2026-08-07",
+   "tried": "Autonomous patch, then revert, reapply, and revert.",
+   "outcome": "reverted",
+   "evidence": "Filed as no-scope-check-on-patch-deletions.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "edit-primitive-safety",
+   "title": "fs_edit/fs_write guards",
+   "where": "local-tools b42db41, 67a9e71, dded800, 52928b8 (08-02); 6b0d86a (09-26 SA)",
+   "tried": "empty anchor, truncation, identity edit, re-grounding, function replacer",
+   "outcome": "worked",
+   "evidence": "feature-compose.ts truncated 190,111\u219238 bytes twice; 44 empty-anchor ops/24h; 120 confabulated anchors/24h",
+   "source": "git-small"
+  },
+  {
+   "key": "edit-primitive-safety",
+   "title": "code_search first-match blindness",
+   "where": "local-tools 71cfc74 (06-17)",
+   "tried": "force the g flag",
+   "outcome": "worked",
+   "evidence": "match_count 1\u219250; the patcher was blind",
+   "source": "git-small"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "deterministic exact-edit application (2.7)",
+   "where": "b1ab1f9b, 11a655c8 (vessel f70160f, 1669ac8)",
+   "tried": "Apply pre-validated EDIT blocks with no LLM plan",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "Byte-equal landings through the lane",
+   "source": "git-super-2"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "anchor/grounding defects",
+   "where": "ca1c48ad, 58ef8a13, 12bd74a3, bcb5c0dd, 0863e1f8, db6b984a, f8fe6dd1",
+   "tried": "Grounding-window, anchor-uniqueness and fs_edit literal-insert fixes",
+   "outcome": "partial",
+   "date": "2026-08-14..2026-09-28",
+   "evidence": "An edit applied 1602 lines from its target. The duplicated-line anchor class was found again 09-28",
+   "source": "git-super-2"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Compose lane anchor semicolon habit",
+   "where": "the-compose-lane-lands-under-nine-percent...",
+   "tried": "plan-time anchor check 8d165a9",
+   "outcome": "partial",
+   "date": "2026-09-22",
+   "evidence": "landed_verified, but the anchor-redraft stringified the prompt function; 85 anchor_not_found recommits remain",
+   "source": "live-gaps"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Operator exact-edit goals vs autonomous drafts",
+   "where": "the-system-does-not-author-exact-edit-goals...",
+   "tried": "measurement",
+   "outcome": "unknown",
+   "date": "2026-09-25",
+   "evidence": "operator 4/4 (b56623a, 9387ca7, bf3f0bf, 53d8e77) vs autonomous 88/211 (42%)",
+   "source": "live-gaps"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "One edit site per goal recipe",
+   "where": "154390b, 11ba16d, 2585053, 1d97038",
+   "tried": "Verbatim anchor, adjacent line, 'change nothing else', 'must typecheck', reason",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "4 autonomous landings on a 10,260-line file. Hand-decomposition is itself a law-13 gap",
+   "source": "memory-1"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Extract seam before behaviour change",
+   "where": "goal-host satisfier-pick.ts 83b254b",
+   "tried": "17-line extraction",
+   "outcome": "worked",
+   "date": "2026-07-13",
+   "evidence": "Landed first try where the 6,800-line index.ts had defeated 8+ rounds. The modularization loop gap was never closed; files grew to 10k+",
+   "source": "memory-1"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Reprobe gate landed by lesson-carried convergence",
+   "where": "development-vessel 5d17c501",
+   "tried": "Operator placed the one missing fact into the gap after each rejection",
+   "outcome": "worked",
+   "date": "2026-07-11",
+   "evidence": "4 attempts. Lesson-carrying was done by the operator, not the system",
+   "source": "memory-1"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Migration 205 REMOVE+DEFINE from a stale migration premise",
+   "where": "activity-api 9646cf8",
+   "tried": "Add signature to v_paradigm_execution_traces",
+   "outcome": "reverted",
+   "date": "2026-09-04",
+   "evidence": "Caught unpushed. Would have dropped 15 fields including the variant_id Thompson key",
+   "source": "memory-1"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Verbatim closest-text hint into blind-edit repair prompt",
+   "where": "development-vessel feature-compose.ts; 62da19fa (also substrate bbae436/a23e1b8/81c08ea)",
+   "date": "2026-09-12",
+   "tried": "Interpolate fs_edit 'closest real text VERBATIM' error into repair prompt instead of full-file dump",
+   "outcome": "partial",
+   "evidence": "Landed and live; operator replacement non-idempotent grew copies 1->4 across substrate cutovers; apply_failed 25%->15% but FAVORABLE 19%->17% (n=45): failures displaced downstream, not converted",
+   "source": "memory-10"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Repair-loop instrumentation probes",
+   "where": "feature-compose 170c3d69, 0672a4e2, 44caeaaa, 30237122",
+   "date": "2026-09-12",
+   "tried": "Light every repair-loop outcome",
+   "outcome": "worked",
+   "evidence": "Death modes = ANCHOR-MISS, unparseable JSON, neither key; each probe refuted its motivating hypothesis",
+   "source": "memory-10"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Patcher P0 UNPARSEABLE recovery",
+   "where": "development-vessel ef0c9c0 patch-with-tools.ts:467",
+   "tried": "Feed a format correction instead of a silent continue",
+   "outcome": "worked",
+   "date": "2026-07-19",
+   "evidence": "18-turn run with no live-file corruption; the landing was still blocked by contention on the single pending slot",
+   "source": "memory-2"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Drafter-corruption gate signatures in mitosis cutover",
+   "where": "development-vessel vessel-mitosis-cutover.ts; 93b18ba",
+   "tried": "Refuse byte-0 {{}} placeholder (line 1 only) and llmCall handed a bad endpoint constant",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "0 FP over 1,114 .ts files and 207 legit llmCall sites; 266 corrupt hits. Deleting all four gates trips no signature (08-03).",
+   "source": "memory-2"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Endpoint-constant injection into patch_with_tools",
+   "where": "dev-vessel 7d9e39c",
+   "tried": "Inject in-file *_ENDPOINT constants as facts (law 8)",
+   "outcome": "worked",
+   "date": "2026-07-29",
+   "evidence": "Prevents the https://concept-db.com confabulation class. The advisory-prompt version was refuted as a law-8 violation.",
+   "source": "memory-4"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "External-URL detector (coaxed da06433, then 33381f1)",
+   "where": "feature-compose.ts detectArchitectureViolation",
+   "tried": "Detect added literal external hosts",
+   "outcome": "partial",
+   "date": "2026-07-29",
+   "evidence": "The coaxed da06433 was inert and broke the tsc baseline. The operator's 33381f1 works but is advisory only. Its 08-03 whole-file pseudo-diff exempted hosts named in comments.",
+   "source": "memory-4"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Concept-db search latency (principle recall for drafter)",
+   "where": "concept-db 78311ad, c404069, fd645bd",
+   "tried": "LRU embed cache, then index-defeating scalar-conjunct fixes on hydrate and lexical legs",
+   "outcome": "worked",
+   "date": "2026-09-03",
+   "evidence": "The LRU cache was a wrong fix that reached origin. The sibling fixes took latency from 8-12s to 0.66-1.9s and budget misses from 4 to 0.",
+   "source": "memory-4"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Large-file edit keystone replace_lines",
+   "where": "dev-vessel c86451f",
+   "tried": "Add a drift-safe replace_lines op plus numbered grounding",
+   "outcome": "partial",
+   "date": "2026-08-26",
+   "evidence": "op_count went 0\u21921 but the draft broke typecheck and was rolled back; patch_with_tools lacks the op",
+   "source": "memory-4"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Localizer symbol-list fix",
+   "where": "dev-vessel 74f7c27; instrumentation 3151b73",
+   "tried": "Scope rg symbol grounding to the target file.",
+   "outcome": "failed",
+   "date": "2026-07-22",
+   "evidence": "INERT because rg is not installed in the container. The true root is anchoring on prominent early-file lines.",
+   "source": "memory-5"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "fs_edit anchor-miss returns real surrounding lines",
+   "where": "local-tools 52928b8",
+   "tried": "Re-ground the retry with real text on old_string miss.",
+   "outcome": "worked",
+   "date": "2026-08-02",
+   "evidence": "Error-message-only change. Anchors were invented, not stale.",
+   "source": "memory-5"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Region-scoped grounding activated",
+   "where": "dev-vessel 11f10af, 844f4e1, 78ba658",
+   "tried": "Mine identifier candidates from the request.",
+   "outcome": "partial",
+   "date": "2026-08-10",
+   "evidence": "Grounding went from 51k to 29.5k. The effect on anchor_not_found was unmeasured (n=16).",
+   "source": "memory-5"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "focusedSlice verbatim-fragment probes",
+   "where": "development-vessel 24e4dc0",
+   "date": "2026-07-22",
+   "tried": "center drafter window on quoted code / rare tokens",
+   "outcome": "worked",
+   "evidence": "unit-level: centers byte 184K not 0",
+   "source": "memory-6"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "siteCenteredWindow for re-derivation",
+   "where": "development-vessel 1f9fa12",
+   "date": "2026-07-22",
+   "tried": "center on unique verb+route",
+   "outcome": "partial",
+   "evidence": "landed 1fc512c/4bccc77; verb-less edits unchanged; demo residue left on origin/dev",
+   "source": "memory-6"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "LLM-free verbatim edit floor third-fence fix",
+   "where": "development-vessel 27b944a",
+   "date": "2026-08-05",
+   "tried": "cut spec at last VERBATIM EXCERPT marker",
+   "outcome": "partial",
+   "evidence": "floor fired first time ever; 09-16 edit-intent route again defeats it",
+   "source": "memory-6"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Lesson recall keyed by failure class",
+   "where": "concept-db 7df39d2; dev-vessel 6137257 (reverts 90c585f, 8236895)",
+   "date": "2026-08-10",
+   "tried": "fix @@ AND matching; query by most recent failure class",
+   "outcome": "worked",
+   "evidence": "targeted n=1 lessons; spec-text query reverted twice",
+   "source": "memory-6"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Pre-validated exact-edit block goals",
+   "where": "dev-vessel f70160f (2.7); landings 1669ac8, 7994841",
+   "tried": "EDIT n old:/new: unique anchors, tsc + stub detector + falsifier pre-dispatch; diff landed vs parent+edits",
+   "outcome": "worked",
+   "date": "2026-09-24",
+   "evidence": "prose form landed 3cced35 with 1/3 edits still reached; diff caught 6ab8271 silently reverting a0ff3d3",
+   "source": "memory-7"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Spec-builder grounded unique anchor + grounding hoist",
+   "where": "dev-vessel 31fb735, 83bb498, 15c611e, fd144a7",
+   "tried": "Real unique line as anchor; grounding unconditional; target-file scope gate; live fallback models",
+   "outcome": "partial",
+   "date": "2026-07-31",
+   "evidence": "08-05/08-11 drafter still confabulates anchors; anchor uniqueness failures persist",
+   "source": "memory-7"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Anchor supply pipeline",
+   "where": "dcb4198, dd7afb3, 2ff42fe, e637523, 5dfc141",
+   "tried": "Derive locators, pick the nearest anchor, give the anchor list to re-derivation, and have the model pick an index",
+   "outcome": "partial",
+   "date": "2026-08-11",
+   "evidence": "Supply is now correct but adherence is not (the drafter still fabricates router.get). The pick-an-index path fired on its first live run.",
+   "source": "memory-8"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Hard edit drafting 0/4",
+   "where": "discovery-vessel index.ts",
+   "tried": "Dispatched the same NL goal 4 times",
+   "outcome": "failed",
+   "date": "2026-08-09",
+   "evidence": "The grounding was larger than the file, so this was edit difficulty, not missing information. Every failure was caught by the gates.",
+   "source": "memory-8"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Drafter model hardcode",
+   "where": "feature-compose 5273bfa -> 47096a7",
+   "tried": "deepseek -> sonnet-5, then 'auto' (llm-resolver selectArm Thompson)",
+   "outcome": "worked",
+   "date": "2026-07-23/25",
+   "evidence": "Model choice is now learnable",
+   "source": "memory-8"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "patch_with_tools anti-loop guard",
+   "where": "patch-with-tools.ts:962",
+   "tried": "Diagnosed only",
+   "outcome": "unknown",
+   "date": "2026-08-10",
+   "evidence": "The guard can never fire. Tally: 2 done vs 19 failed.",
+   "source": "memory-8"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Grounding window centred on region (primary probe)",
+   "where": "feature-compose 46d4113 (690239b did nothing)",
+   "date": "2026-08-07",
+   "tried": "caller passes known locator as primary probe",
+   "outcome": "worked",
+   "evidence": "grounding_has_region:true; the drafter had been shown the first 3% of a 176KB file",
+   "source": "memory-9"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Anchor veto narrowed to explicit region",
+   "where": "feature-compose.ts:4789; 47f73b7",
+   "date": "2026-09-08",
+   "tried": "stop the prose-mined region from vetoing a unique anchor",
+   "outcome": "unknown",
+   "evidence": "vetoed anchor was correct (pwt landed 59732fd); fix landed duplicated; refutation condition pre-registered",
+   "source": "memory-9"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Byte-exact spec + pre-empted refuter + dry-run protocol",
+   "where": "326a983, 212408a, 0874216",
+   "date": "2026-09-24",
+   "tried": "put the executable counter-fact in the spec",
+   "outcome": "worked",
+   "evidence": "~20 min per gap; refuters had falsely rejected a correct regex 2/2",
+   "source": "memory-9"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Drafter schema pinning (V37) and target_file fix",
+   "where": "dev-vessel drafter",
+   "tried": "dynamic output-shape key; read target_file_paths[0]",
+   "outcome": "partial",
+   "date": "2026-06-19",
+   "evidence": "file_path_hallucination 17/17 to 0/8; bottleneck moved to anchors",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Leave unbound report_path to the loop (P3)",
+   "where": "gap-draft-gap-closing-unbound-report-path",
+   "tried": "file as gap, not hand-fix",
+   "outcome": "failed",
+   "date": "2026-07-04",
+   "evidence": "07-31: drafter 4,649/4,649 failing on literal {{report_path}} via light-dispatch empty input_impulses",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Compose lessons to concept-db",
+   "where": "dev-vessel e6de357, 2ab1c4b",
+   "tried": "class-grain lessons, semantic recall in composeLessonsBlock",
+   "outcome": "unknown",
+   "date": "2026-07-04",
+   "evidence": "45-52 compose_lesson rows live; reader not verified",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Deterministic verbatim EDIT-block path (fc-exact, 2.7) and goal-supplied anchors (2.6)",
+   "where": "dev-vessel f70160f, c10e74a",
+   "tried": "apply goal-supplied old/new blocks with no LLM plan; accept a unique goal anchor outside the grounding window",
+   "outcome": "worked",
+   "date": "2026-09-27",
+   "evidence": "fc-exact applying 7 (n1)/86 (n2); byte-equal landings; prose goals still go through the planner",
+   "source": "openspec-10"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Drop the hard-coded source_type whitelist in drafter concept priming",
+   "where": "openspec/changes/2026-06-04-drop-drafter-source-type-filter; development-vessel seed draft-activity-from-pattern.ts",
+   "tried": "Remove the 4-type whitelist so architectural_pattern_principle, extracted and human_input concepts reach the drafter",
+   "outcome": "worked",
+   "date": "2026-06-04",
+   "evidence": "the live seed no longer carries the whitelist (only source_type=resolver for vocabulary); tasks.md still shows 2/9",
+   "source": "openspec-3"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Permissive activity authoring: draft-activity-from-pattern + comprehensibility_check + registration invariants",
+   "where": "development-vessel seed draft-activity-from-pattern.ts, resolvers/comprehensibility-check.ts",
+   "tried": "A general LLM drafter from recurringPatternCluster with a second-provider comprehensibility gate",
+   "outcome": "partial",
+   "date": "2026-06-01",
+   "evidence": "Both exist live. One authored activity was proven on 06-14 (proposed_pattern_authored_prime_context, 4/4). The registration invariants were not verified; tasks 0/5",
+   "source": "openspec-3"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Vessel-maintenance parity gate for fossil decomposition",
+   "where": "2026-07-15-vessel-maintenance-parity-gate; dev-vessel src/maintenance/parity-gate.ts, seam-extraction.ts, spliceability.ts",
+   "tried": "Deterministic surface/type/test/AST parity gate so weak models can split fossils; loose-bag extractor; dry run on activities.ts",
+   "outcome": "dormant",
+   "date": "2026-07-15",
+   "evidence": "Phase 0-2 done, imported by vessel-mitosis-cutover.ts and change-series-tick.ts; Phase 3 first landing unchecked; goal-host index.ts grew from 6912 to >=7486 lines",
+   "source": "openspec-4"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "S2 stability ladder rung 1 compose-drops-secondary-hunks",
+   "where": "2026-07-18-s2-stability-ladder",
+   "tried": "Spec only: fix multi-hunk drop, verifier supremacy, walk repair, human surface, unassisted reach gauge",
+   "outcome": "unknown",
+   "date": "2026-07-18",
+   "evidence": "Memory 09-27: prose -> planner dropped 2/3 edits, still reached (same class)",
+   "source": "openspec-4"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Author simple httpResponse resolver (route-edit-9077062c)",
+   "where": "openspec/changes/2026-08-16-my-http-response-resolver.ts + route-edit-9077062c JSON",
+   "date": "2026-08-16",
+   "tried": "Substrate drafted replace_file of repos/development-vessel/src/resolvers/http-response.ts importing invented package @quilt/resolver",
+   "outcome": "failed",
+   "evidence": "Never landed in vessel; written as stray file into openspec/changes; committed by drift auto-commit 4e4170a8 (09-07), then tsc emitted .js/.d.ts committed by 796fac89 (09-19)",
+   "source": "openspec-5"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Confabulated APIs, doubled paths, and whole-file replacements in orphan fixes",
+   "where": "openspec/changes/2026-08-17-fix-goal-summary/, 2026-08-17-orphaned-capability-fix/, 2026-08-17-update-goal-summary-resolver.json",
+   "date": "2026-08-17",
+   "tried": "Imports of nonexistent packages (@dev-vessel/core 'set and get', @function-llama/substrate-client, @substrate/core); the doubled path ./repos/development-vessel/src/... imported from inside dev-vessel; literal '... // existing cases'; a 7-line replacement for an ~800-line config.ts; hardcoded fake metrics (avg_success_rate=0.37).",
+   "outcome": "failed",
+   "evidence": "The committed tsc emit contains 'const module_1 = require();'. Five different ad-hoc edit-spec schemas were used across the drafts.",
+   "source": "openspec-6"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Large-file edit capability for composer",
+   "where": "openspec/changes/2026-08-26-large-file-edit-capability",
+   "date": "2026-08-26",
+   "tried": "spec for verbatim-anchor grounding, line-range ops, AST ops; operator built replace_lines c86451f (08-25), line-addressed repair ee6312c/4841fb3 (08-30); later targetFileOnDisk anchors (09-24), [fc-exact] verbatim edits",
+   "outcome": "partial",
+   "evidence": "replace_lines present in feature-compose/patch-with-tools/local-tools; the spec's own verification (7-arm removal autonomously; learning-core gap self-closes) never recorded; class recurred as template-literal drafts, duplicate anchors, fs_edit empty new_string, $' expansion",
+   "source": "openspec-7"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Vacuous-guard regex, sibling stripper, Guard 2 harvest",
+   "where": "326a983, 212408a, 0874216",
+   "date": "2026-09-24",
+   "tried": "Newline-crossing string regex swallowed code; byte-exact spec",
+   "outcome": "worked",
+   "evidence": "0/5 -> 5/5 _rebind references; first attempt rolled back by two refuters asserting false regex fact",
+   "source": "reports-1"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "One-op one-anchor re-specification",
+   "where": "org_id edge fix goals 59be53ce vs autonomous landings",
+   "date": "2026-08-15",
+   "tried": "Restate multi-op fix as single op at unique anchor",
+   "outcome": "worked",
+   "evidence": "Every landing was single-op and every failure multi-op; a partially-correct multi-op plan rolled back its correct op",
+   "source": "reports-3"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "jev typed decision + generated disposition in escalation_disposition_apply",
+   "where": "development-vessel/src/resolvers/escalation-disposition-apply.ts (+220/-10)",
+   "tried": "Hand edit after 4 substrate attempts refused 'Grounding window (0 bytes)' on gap_compose path",
+   "outcome": "dormant",
+   "date": "2026-09-18",
+   "evidence": "Regex parsed 'Don't drop it' as drop; typed decision correct. Uncommitted, operator-authored; escalation_disposition_apply still 0 traces. Reverses 143212a (OFF by default, never drop, conf>=0.8).",
+   "source": "reports-4"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Anchor-provenance gate strips line-number prefix",
+   "where": "feature-compose assertAnchorInWindow 2f2ba0f",
+   "tried": "Strip ^\\d+\\t before includes",
+   "outcome": "worked",
+   "date": "2026-09-23",
+   "evidence": "Every multi-line verbatim op was re-drafted by construction; after fix 16-line anchor passed without re-draft.",
+   "source": "reports-4"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Authoring planner designed a secrets-exfiltration plan from a wrong LLM-generated shape description",
+   "where": "discovery POST /registry/shape-descriptions (bounded_shell); author-composed-capability",
+   "tried": "Correct one sentence of the bounded_shell description",
+   "outcome": "partial",
+   "date": "2026-09-18",
+   "evidence": "The planner chose bounded_shell in 5 consecutive runs. The description is volatile and in-memory. The durable fix, an advertised description in local-tools-vessel index.ts:705, never landed.",
+   "source": "reports-5"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Spec refiner overwrote verbatim specs",
+   "where": "development-vessel feature-compose.ts:3974, 64968c1",
+   "tried": "Change || to && so long specs that carry an anchor are not refined.",
+   "outcome": "worked",
+   "date": "2026-09-06",
+   "evidence": "Refines went from 15 to 0; the deterministic synthesizer still never fired (specFromGap injects its own fence).",
+   "source": "reports-6"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "fs_edit $-pattern expansion",
+   "where": "local-tools 6b0d86a",
+   "tried": "text.replace(old, () => new).",
+   "outcome": "worked",
+   "date": "2026-09-26",
+   "evidence": "One correct goal had 'failed' 3 times; the grader then false-negatived the fix.",
+   "source": "reports-6"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "2.7 verbatim EDIT blocks",
+   "where": "development-vessel f70160f",
+   "tried": "Apply goal-supplied edits with no LLM plan.",
+   "outcome": "worked",
+   "date": "2026-09-27",
+   "evidence": "Passed 3 times byte-equal; 1 call vs 2.3; 5k vs 27k tokens.",
+   "source": "reports-6"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Autonomous compose on env-gate and uniqueness gaps",
+   "where": "feature_compose fc-mssdffyf, dispatch a15a3ef3, routing 4ed5046",
+   "tried": "Route the close-goal via the cited file to feature_compose",
+   "outcome": "failed",
+   "date": "2026-08-13",
+   "evidence": "Routing worked. The semantic gate refused both drafts (addresses:false): the drafter edited /health instead of gating logic at concept-db index.ts:273. A walk concept_write stand-in still reported reached=true.",
+   "source": "reports-7"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Root-cause fix for the health observer's false 'healthy'",
+   "where": "fbf2a60 plus evidence follow-up cc3400e",
+   "tried": "Per-subgroup ratio from source_type-filtered search instead of a top-N-by-relevance sample",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "Observer flipped to one_sided:true with gap emitted, verified behaviourally after restart (section I)",
+   "source": "reports-8"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Spec text used as the compose-lesson recall query",
+   "where": "95d973e6 -> revert b865620b",
+   "tried": "Key no-class recall on spec prose",
+   "outcome": "reverted",
+   "date": "2026-09-11",
+   "evidence": "Lessons returned fell 8 -> 0-1. The operator had compared md5 hashes instead of counting results (section AH).",
+   "source": "reports-8"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Specific judge reasons injected into the drafter prompt; JSONL lesson reason distilled",
+   "where": "e1a43d83, cdb936e9, 107a75c7",
+   "tried": "One specific reason line per failure class; distil error lines at the call site so the persisted JSONL is informative",
+   "outcome": "worked",
+   "date": "2026-09-11",
+   "evidence": "Rendered block 41->8 lines. A natural syntax_break lesson 96s after deploy carried file:line TS1109 instead of install preamble (sections AK and AL).",
+   "source": "reports-8"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Enumerated anchor choice (anchor_index)",
+   "where": "feature-compose.ts:5096/5104",
+   "tried": "Built so the model picks from verified-unique anchors",
+   "outcome": "dormant",
+   "date": "2026-09-10",
+   "evidence": "It is used only in the re-derivation block; primary drafting still asks for verbatim anchors. HEAD 09-23 has 2 occurrences.",
+   "source": "reports-8"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Compose-lesson usage credit",
+   "where": "feature-compose.ts:3150-3175 (HEAD 09-23)",
+   "tried": "POST /usage/{id}/fail for lessons matching the failure class",
+   "outcome": "partial",
+   "date": "2026-09-23",
+   "evidence": "There is a fail branch but no success credit, and errors are swallowed. It parses a /v2/impulses/resolve response as a bare array, which is possibly an envelope, so the path may be hollow. The credit-primed-concepts.ts fix from 06-13 is wired to another drafter.",
+   "source": "reports-8"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Un-invert anchor-repair guard (bac7d00)",
+   "where": "feature-compose.ts ~4964",
+   "tried": "Fix autonomous f0cfb91 inverted `if (r.ok && ...)` guard",
+   "outcome": "worked",
+   "date": "2026-09-09",
+   "evidence": "anchor-failure 12%->19.0%->34.4% peak, back to 16.8% n=184 p<1e-6",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Spec refiner overwrote verbatim spec",
+   "where": "feature-compose.ts:3974",
+   "tried": "Stop refinement overwriting caller spec with REPLACE/ANCHOR tokens",
+   "outcome": "worked",
+   "date": "2026-09-06",
+   "evidence": "refinement 15->0; three consecutive byte-correct landings",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Exact-edit verbatim apply (2.7)",
+   "where": "feature-compose.ts",
+   "date": "2026-09-27T04:29Z",
+   "tried": "f70160f apply EDIT blocks with no LLM plan",
+   "outcome": "worked",
+   "evidence": "3 byte-equal passes; but only for operator-written edits; prose goals still mangled (3cced35 landed 1 of 3 graded reached)",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Retry targets gate's suspected_real_location; symbol->file 7.6",
+   "where": "dev-vessel localizeGap",
+   "date": "2026-09-25T15:21Z / 2026-09-27T12:32Z",
+   "tried": "d2555d8; 7.6",
+   "outcome": "partial",
+   "evidence": "35/123 failed drafts wrong-site; relevance-sink drafted 4x at wrong file",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Decomposer information starvation",
+   "where": "dev-vessel decomposeGap",
+   "date": "2026-09-28T10:26Z",
+   "tried": "quotedSiteExcerpt; 8bfc972 steps must be live alone; d6784f8; 91b0c9d twin anchors",
+   "outcome": "partial",
+   "evidence": "Decomposer saw first 7,000 chars of 17.9k-line file; 384 investigate runs closed 4 gaps",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "drafter-quality",
+   "title": "Phase-2 7-stage chain probe",
+   "where": "validation/findings/phase-2-probe-results-2026-06-05",
+   "tried": "probe-chain-stages.sh 5x per stage",
+   "outcome": "worked",
+   "date": "2026-06-05",
+   "evidence": "instrument worked: HTTP-green, semantically broken; 66 proposals unprocessable; bridge non-idempotent",
+   "source": "validation-other-1"
+  }
+ ],
+ "problems": [
+  {
+   "key": "drafter-quality",
+   "symptom": "Uninterpolated {{template}} placeholders stored as gap status/source (23 live); a TypeScript code block written as line 1 of the funnel-history data file",
+   "first_seen": "2026-06-14",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "root_cause": "The gap write path accepts LLM output without schema or placeholder validation. The 09-05 gap filing this was lost at the reset.",
+   "source": "gap-history"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Edits land in the wrong region, anchors mis-located, invented paths/URLs, model pinned",
+   "first_seen": "2026-05-28",
+   "last_seen": "2026-08-11",
+   "recurrences": 40,
+   "root_cause": "Information starvation at draft time (law 8). Localization rebuilt heuristically many times.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Compose lane lands under 9%; two-thirds die at anchor or grounding",
+   "first_seen": "2026-08-24",
+   "last_seen": "2026-09-23",
+   "recurrences": 8,
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafts widen predicates, land in the wrong repo, delete out-of-scope code, or hardcode path hacks",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "root_cause": "Gates check typecheck, region and semantic judgement, not deletion scope or predicate widening. The drafter edits line windows of 4,500-line functions.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "edit-primitive-safety",
+   "symptom": "fs_edit prepends on empty anchor; fs_write truncates running source; $ patterns corrupt; anchors confabulated",
+   "first_seen": "2026-06-17",
+   "last_seen": "2026-09-28",
+   "recurrences": 9,
+   "root_cause": "drafter edits apply directly to the running /vessels tree through permissive primitives",
+   "source": "git-small"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Templates reference non-registered resolvers ('learned-auto-bridge-problem-detection-1r2k9x' 305, 'condition' 88, federation_* ~150); unrendered placeholders in ids ({{extract_drafter_scenario_json_value_json}} x6); fs path-root mismatch /vessels vs /workspace (313)",
+   "root_cause": "Minted templates are not validated against the live resolver registry or workspace root",
+   "source": "live-activities"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafts edit only the anchor line, invent paths or fields, leave functions unwired, fail on large files",
+   "root_cause": "Information not at the point of use (3% of file visible, missing call site); splice envelope ~1-2k lines",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-09-15",
+   "recurrences": 7,
+   "source": "memory-1"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Anchor hallucination (largest refusal class), invented symbols, truncated/malformed TS (~50% typecheck fail), multi-op self-interference, one op applied rest dropped, wrong cross-boundary calls",
+   "root_cause": "Contested across notes: information availability (09-12 early), drafter capability/free-tier pool (09-12 late), spec content (09-13 final); info fixes displaced failures rather than converting",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-16",
+   "recurrences": 7,
+   "source": "memory-10"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drops secondary hunks, mis-anchors large files, garbles char-level edits, prepends at byte 0, swaps endpoint constants, games rejection text",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-08-03",
+   "recurrences": 10,
+   "root_cause": "Single-op drafter vs multi-site changes; no load-bearing contract at draft time; large fossil files",
+   "source": "memory-2"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafter invents APIs, URLs, line numbers and anchors; symptom edits; drops carve-outs",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-23",
+   "recurrences": 8,
+   "root_cause": "Information starvation (concept search timing out, wrong localized region, line-number plan format, numbered-window anchor matching) plus description instead of transcription",
+   "source": "memory-4"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Anchors are invented or mislocalized to early prominent lines, and the planner picks non-unique anchors.",
+   "root_cause": "Information starvation: god files of 10-16k lines, a rg-dependent symbol list with rg absent, region grounding dead, lessons unreachable on the spoke.",
+   "first_seen": "2026-07-22",
+   "last_seen": "2026-09-19",
+   "recurrences": 8,
+   "source": "memory-5"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafter edits wrong region / invents anchors / drops or relocates ops",
+   "root_cause": "goal text is paraphrased and re-derived between goal and apply; grounding windows mis-centered; blind-edit repair has no uniqueness/locality test; typecheck only locality gate",
+   "first_seen": "2026-07-20",
+   "last_seen": "2026-09-27",
+   "recurrences": 12,
+   "source": "memory-6"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "The drafter fabricates anchors and helpers, halves multi-op goals, writes envelopes into source, and hallucinates member access.",
+   "root_cause": "Information supply was fixed (anchor band, locators). What remains is adherence, which needs mechanical constraints (pick an index) and one op per goal.",
+   "first_seen": "2026-07-22",
+   "last_seen": "2026-09-24",
+   "recurrences": 9,
+   "source": "memory-8"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "About 52% of compose failures are edit mechanics (anchor_not_found, syntax, dangling ref); drafter paraphrases anchors, edits comments/strings, invents helpers",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-24",
+   "recurrences": 8,
+   "root_cause": "Information starvation (window mislocated, no cross-file symbols); free-text anchors instead of enumerated choice; backslashes do not survive the prose channel; multi-op plans shed edits",
+   "source": "memory-9"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafter emits wrong schema, hallucinated paths, bad anchors, duplicate declarations, or runs with unbound variables",
+   "first_seen": "2026-06-01",
+   "last_seen": "2026-09-27",
+   "recurrences": 10,
+   "root_cause": "LLM given prose specs and big files; dispatch paths drop variable-carrying impulses",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "LLM-authored templates reference nonexistent resolvers (activity_fetch 2/2), abstract config strings",
+   "first_seen": "2026-05-28",
+   "last_seen": "2026-09-28",
+   "recurrences": 2,
+   "root_cause": "no registry of valid resolvers available at draft time; no companion validator",
+   "source": "openspec-1"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafter cannot splice files past ~1-2k lines; drops secondary hunks; stale-base collateral deletions typecheck",
+   "root_cause": "God files (activities.ts 12k, goal-host index.ts 7.5k+) and one-shot multi-site edits",
+   "first_seen": "2026-07-01",
+   "last_seen": "2026-09-27",
+   "recurrences": 4,
+   "source": "openspec-4"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafts import invented packages (@quilt/resolver, @function-llama/substrate-client), use file_create to clobber whole existing files, use absolute /workspace paths, mix 5 incompatible change formats",
+   "root_cause": "No single change-artifact contract or schema available to the drafter at use time; no existence check on imports/targets before emitting",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-08-17",
+   "recurrences": 2,
+   "source": "openspec-5"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafts invent packages and APIs, doubled paths, and literal placeholder comments; they replace 800-line files with 7-line ones and hardcode fake metrics; five ad-hoc edit-spec schemas.",
+   "root_cause": "The drafter had no contract for its output format and no real file or API context at draft time (information starvation, law 8).",
+   "first_seen": "2026-08-17",
+   "last_seen": "2026-08-18",
+   "source": "openspec-6"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafter invents shape casing (httpResponse vs http_response), nonexistent import paths (../config/types from openspec) and delete targets for nonexistent files (http-response-new.ts)",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-08-17",
+   "recurrences": 5,
+   "root_cause": "No existence check on paths or shape names at draft time",
+   "source": "openspec-8"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "anchor_not_found, syntax_break, redeclare, wrong site, dropped ops; planner ignores supplied anchors",
+   "root_cause": "Multi-op designs and non-unique/ill-chosen anchors; model quality varies with router fallback",
+   "first_seen": "2026-08-22",
+   "last_seen": "2026-09-24",
+   "recurrences": 8,
+   "source": "reports-1"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "The drafter needs an operator-added region hint. Drafts come from weak models, and anchors come from a stale window.",
+   "root_cause": "Hardcoded OpenRouter model list and claude-slug routing. The window is built from the stale super-repo copy. Constraints such as 'python/node absent' are not read at use time.",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-25",
+   "recurrences": 4,
+   "source": "reports-2"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafter invents anchors and APIs and applies edits ~1600 lines from target; mutates verified recalled commands every attempt",
+   "root_cause": "Mis-localisation cause unidentified (the fc-scope frequency hypothesis was refuted); multi-op plans fragile; lessons re-synthesised through the LLM instead of executed verbatim",
+   "first_seen": "2026-08-15",
+   "last_seen": "2026-08-16",
+   "recurrences": 5,
+   "source": "reports-3"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafts break syntax on large files/template literals; confabulated anchors; described edits land ~1/3 vs verbatim 4/4",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-09-24",
+   "recurrences": 4,
+   "root_cause": "Anchor supply read stale copy; spec anchors non-unique; bounded loop cannot hold multi-site/new modules.",
+   "source": "reports-4"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "The planner makes a secrets-exfiltration plan, shell prefix-assignment bugs, and wrong request schemas",
+   "root_cause": "LLM-generated registry descriptions are semantically wrong and volatile; the planner reads only the goal text and those descriptions",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-18",
+   "recurrences": 1,
+   "source": "reports-5"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafter edits the symptom, relocates anchors, invents paths, and drops edits on long or verbose specs; the repair loop is dead; twin anchors are uneditable.",
+   "first_seen": "2026-08-14",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "root_cause": "Information starvation at draft time: region metadata dropped, grounding window misplaced, the spec refiner overwrites verbatim specs, and the decomposer sees only the first 7000 chars.",
+   "source": "reports-6"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "The drafter edits adjacent or cosmetic sites (addresses:false); wrong-site refusals 35 of 123 a day; autonomous drafted landing 0-23% versus 58% for operator exact-edits",
+   "root_cause": "Grounding centred off the defect; the system does not author exact-edit goals itself",
+   "first_seen": "2026-08-13",
+   "last_seen": "2026-09-27",
+   "recurrences": 3,
+   "source": "reports-7"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Anchor failures (28.2%), paraphrased anchors, planner ignores a supplied unique span, large replacements mangle braces. The composer file itself (6,451 lines) drifted past its drafter's anchor reliability (41 self-edits in 2 days).",
+   "root_cause": "Free-text anchors in the primary path (anchor_index dormant). Multi-op plans are non-atomic.",
+   "first_seen": "2026-09-06",
+   "last_seen": "2026-09-11",
+   "recurrences": 4,
+   "source": "reports-8"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Teaching channel: lessons loaded and never credited (0 of 21 over 3 months); 27 generic corpus rows vs 2,955 specific events; JSONL reason was the install preamble in 58% of rows; health detector went from cold start to a false 'healthy'.",
+   "root_cause": "appendComposeLesson writes class plus static guidance and drops the reason. Two writers, only one of which distils. The credit path was wired to a different drafter.",
+   "first_seen": "2026-06-13",
+   "last_seen": "2026-09-23",
+   "recurrences": 6,
+   "source": "reports-8"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "50% of composes fail at localization; paraphrased anchors, invented imports, edits relocated to wrong spans",
+   "first_seen": "2026-08-25",
+   "last_seen": "2026-09-04",
+   "recurrences": 10,
+   "root_cause": "model asked to transcribe bytes; re-derived anchors not checked for uniqueness or locality",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafter paraphrases located statement; anchors not found; mislocalised windows",
+   "first_seen": "2026-08-31",
+   "last_seen": "2026-09-11",
+   "recurrences": 6,
+   "root_cause": "Transcription failure, not truncation; partial/non-atomic application",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Drafts edit wrong site, mangle exact edits, game stale tests, silence detectors",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-29",
+   "recurrences": 10,
+   "root_cause": "Information starvation at draft time; same finding as 08-13 'bottleneck is now DRAFTER QUALITY'",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Proposals and substrate-authored templates reference hallucinated resolvers (activity_fetch)",
+   "first_seen": "2026-05-27 F-134",
+   "last_seen": "2026-05-28 inv-051",
+   "recurrences": 3,
+   "root_cause": "No registry validity check at author time; proposed defaulted to false",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "drafter-quality",
+   "symptom": "Across 661 recommit scenarios the recorded failure reasons are: semantic_reject 199, syntax_break 98, anchor_not_found 83, typecheck_dangling_reference 80, verify_failed 68, compose_execution_failure 50, wrong_location 13",
+   "root_cause": "Blind edits into giant files (goal-host index.ts is 16403 lines), TODO-stub drafts, and anchors lost",
+   "first_seen": "2026-06",
+   "last_seen": "2026-09-29",
+   "recurrences": 661,
+   "source": "validation-other-3"
+  }
+ ],
+ "claims": [
+  {
+   "key": "drafter-quality",
+   "claimed_at": "2026-06-12",
+   "claim": "V37 fixed the real drafter schema-drift root cause",
+   "where": "finding_2026_06_12_drafter_v37_and_inflight_state",
+   "later": "06-19 file_path_hallucination 18/24; 07-31 drafter failing 4,649/4,649",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "drafter-quality",
+   "claimed_at": "2026-07-04",
+   "claim": "P3: unbound report_path gap will be closed by the loop without operator code",
+   "where": "finding_2026_07_04_outcome_signal_economy_session",
+   "later": "07-31: still 100% failing (light-dispatch empty input_impulses)",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "drafter-quality",
+   "claimed_at": "2026-09-07T23:57",
+   "claim": "Instruction fidelity effectively done \u2014 three consecutive byte-correct landings",
+   "where": "0b1032b5",
+   "later": "09-09 08:07 autonomous f0cfb91 (09-07 10:42) had inverted the anchor-repair guard; failures peaked 34.4% 09-08; fixed bac7d00",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "drafter-quality",
+   "claimed_at": "2026-09-27T04:29Z",
+   "claim": "First time tonight the system's own composition path delivered the fix to itself (2.7 f70160f)",
+   "where": "ac8b0aad 2026-09-27T04:29Z",
+   "later": "Next prose goal landed 1 of 3 edits graded reached (3cced35); 07:58 'Every change that landed today came from me writing the exact edit'",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "drafter-quality",
+   "claimed_at": "2026-06-03",
+   "claim": "side-effect vessel improvement operational; lift is a stable mode",
+   "where": "validation/findings/side-effect-vessel-improvement-2026-06-03",
+   "later": "the dispatch OOM'd; 06-04: evaluate/integrate stalled, 0 live source changes",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "drafter-quality",
+   "claimed_at": "2026-08-12 (stage-harness.ts header)",
+   "claim": "Thirty end-to-end trials produced 32 fixes and no clean landing; nine fixes shipped inert (typechecked, passed own tests)",
+   "where": "validation/scripts/stage-harness.ts",
+   "later": "stage-harness-latest.json: 29 pass / 7 known_open / 0 regression. That is operator-run; nothing has rerun it since.",
+   "source": "validation-other-3"
+  }
+ ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "trace-store-reconcile-2026-08-21T10",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "trace_store_reconciliation",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Trace store row_count=150685 exceeds cap=150000 (last_reconciled_at=2026-08-21T10:45:17.899892087Z). Dispatch developmen",
+  "description": "Trace store row_count=150685 exceeds cap=150000 (last_reconciled_at=2026-08-21T10:45:17.899892087Z). Dispatch development-vessel:trace-store-reconcile to swap the hot table back under cap.",
+  "goal_text": "Trace store row_count=150685 exceeds cap=150000 (last_reconciled_at=2026-08-21T10:45:17.899892087Z). Dispatch development-vessel:trace-store-reconcile to swap the hot table back under cap.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "trace-store-reconcile-2026-08-21T10",
+  "source_gap_source": "substrate_detected"
+}

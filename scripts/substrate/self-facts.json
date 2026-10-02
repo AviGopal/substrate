@@ -1,0 +1,360 @@
+{
+  "description": "selfFactSpec rows (v1 as a committed data file) read at use time by development-vessel's self_fact_reconcile from the git object origin/dev:scripts/substrate/self-facts.json in each node's super-repo clone. A row registers one instrument (a fact function in self-fact-reconcile.ts): the node profiles whose node holds the copies it checks, the edit site its gaps point at, and its must-fail control. An instrument with no row does not run. REALIGNMENT 2026-09-29 §2.1 items 1, 3, 4, 5. Rows with instrument journal_pattern are recurring-defect detectors (unit, pattern, max, window_hours, must_fail_line, gate); the canary fires only if the pattern matches its own must_fail_line (REALIGNMENT 2026-09-29 section 7 step 2). Rows with instrument lookup_classification check that a failed discovery lookup is never read as no producer (a per-node journal count plus planted failed lookups); rows with instrument typed_seam_sites count discovery lookup sites outside the typed ias seam against a ratcheting ceiling (max), lowered by a data commit as sites migrate, and read unobserved when any clone ref is older than max_ref_age_hours.",
+  "rows": [
+    {
+      "id": "fleet_inventory_copy",
+      "instrument": "fleet_inventory_copy",
+      "profiles": [
+        "standalone",
+        "hub"
+      ],
+      "edit_site": "repos/development-vessel/src/resolvers/pull-cutover.ts",
+      "must_fail": "canary",
+      "window_hours": 1
+    },
+    {
+      "id": "authoring_root",
+      "instrument": "authoring_root",
+      "profiles": [
+        "standalone",
+        "hub"
+      ],
+      "edit_site": "repos/development-vessel/src/resolvers/patch-with-tools.ts",
+      "must_fail": "canary",
+      "window_hours": 1
+    },
+    {
+      "id": "manifest_checkout_lag",
+      "instrument": "manifest_checkout_lag",
+      "profiles": [
+        "standalone",
+        "hub"
+      ],
+      "edit_site": "repos/development-vessel/src/resolvers/pull-cutover.ts",
+      "must_fail": "canary",
+      "window_hours": 1
+    },
+    {
+      "id": "lane_coverage",
+      "instrument": "lane_coverage",
+      "profiles": [
+        "standalone",
+        "hub"
+      ],
+      "edit_site": "repos/development-vessel/src/resolvers/feature-compose.ts",
+      "must_fail": "canary",
+      "window_hours": 1
+    },
+    {
+      "id": "pull_sync_test_gate_blind",
+      "instrument": "journal_pattern",
+      "profiles": [
+        "standalone",
+        "hub"
+      ],
+      "edit_site": "scripts/substrate/substrate-pull-sync.sh",
+      "must_fail": "canary",
+      "window_hours": 24,
+      "unit": "substrate-pull-sync",
+      "gate": "timer",
+      "pattern": "TEST GATE BLIND",
+      "max": 0,
+      "must_fail_line": "[pull-sync 2026-09-29T12:08:37+00:00] development-vessel: !!! TEST GATE BLIND — suite produced no countable result (errored or absent); converging ungated"
+    },
+    {
+      "id": "fixture_template_in_live_store",
+      "instrument": "journal_pattern",
+      "profiles": [
+        "standalone",
+        "hub"
+      ],
+      "edit_site": "repos/activity-api/test/fts-tags.test.ts",
+      "must_fail": "canary",
+      "window_hours": 24,
+      "unit": "activity-api",
+      "gate": "active",
+      "pattern": "Template registered successfully.*fts_tags_test",
+      "max": 0,
+      "must_fail_line": "INFO Template registered successfully {\"id\":\"fts_tags_test_18_1_unrelated\"}"
+    },
+    {
+      "id": "gap_birth_verdicts",
+      "instrument": "gap_birth_verdicts",
+      "profiles": [
+        "standalone",
+        "hub"
+      ],
+      "edit_site": "repos/development-vessel/src/resolvers/substrate-gap.ts",
+      "must_fail": "canary",
+      "window_hours": 1,
+      "max": 95,
+      "must_fail_check": {
+        "evidence_resolve": {
+          "shape": "test_suite",
+          "input": {
+            "vessel": "repos/development-vessel",
+            "test_file": "test/resolvers/substrate-gap-falsifier.test.ts",
+            "only_tests": [
+              "no predicate at all is \"none\" — the 99% case, and not an error"
+            ],
+            "timeout_ms": 120000
+          },
+          "zero_field": "requested_not_passing"
+        }
+      }
+    },
+    {
+      "id": "retry_evidence",
+      "instrument": "retry_evidence",
+      "profiles": [
+        "standalone",
+        "hub"
+      ],
+      "edit_site": "repos/development-vessel/src/resolvers/feature-compose.ts",
+      "must_fail": "canary: a planted gap with an overlapping retry, a stage-contradicting class and an unescalated repeat refusal, plus a planted source with one unbranched checkOpNoEffect call, must all be measured; controls every run: noEffectOverlapRefusal must refuse a planted retry re-editing a no-effect span (else enforcement-not-refusing) and allow a disjoint one (else enforcement-over-refusing); fewer than min_sites branched checkOpNoEffect call sites at origin/dev is divergence gate-call-sites; retries past apply with no recorded spans make the row UNOBSERVED; a planted journaled refusal with no stored record must be measured (canary), and journaled refusals exceeding stored refusals for an unsaturated gap is divergence refusals-not-recorded",
+      "window_hours": 24,
+      "repo": "development-vessel",
+      "site_file": "src/resolvers/feature-compose.ts",
+      "min_sites": 4,
+      "journal_unit": "development-vessel",
+      "journal_grace_minutes": 30,
+      "notes": "FOLLOW-UP: once intervention 1 lands, fold this row's git-show call-site count into I1's countSites and gate it on refAgeHours (a stale origin/dev must read unobserved, never as a count). The journal cross-check reads only this node's development-vessel journal; node 2 (compute) composes are not cross-checked unless the row is also scoped to compute."
+    },
+    {
+      "id": "policy_reads_classify_failed_lookups",
+      "instrument": "lookup_classification",
+      "profiles": [
+        "standalone",
+        "hub",
+        "compute"
+      ],
+      "edit_site": "repos/development-vessel/src/config.ts",
+      "must_fail": "planted failed discovery lookups through the ias typed seam (timeout: a local discovery that accepts and never answers; network: a refused port), for each probe shape, must read 'lookup failed' and no policy-reader line built from them may match the pattern; a misread is a finding. The pattern must also match its own must_fail_line.",
+      "window_hours": 1,
+      "unit": "development-vessel",
+      "pattern": "(scope|envelope) unreadable.*no (poolImpulse|llmSpendSummaryNode) producer",
+      "max": 0,
+      "must_fail_line": "[gap-to-feature] selection skipped: spend envelope envelope unreadable: no poolImpulse producer discovered",
+      "probe_shapes": [
+        "poolImpulse",
+        "llmSpendSummaryNode"
+      ],
+      "probe_modes": [
+        "timeout",
+        "network"
+      ],
+      "linked_gap": "discovery-lookup-copies-must-migrate-onto-the-typed-ias-seam"
+    },
+    {
+      "id": "discovery_lookups_on_typed_seam",
+      "instrument": "typed_seam_sites",
+      "profiles": [
+        "standalone",
+        "hub"
+      ],
+      "edit_site": "repos/development-vessel/src/config.ts",
+      "must_fail": "a scratch repo holding one planted site, plus a .test.ts and a .js twin that must not count, must count exactly 1 with this row pattern and pathspecs; a clone whose origin/dev was last fetched or moved more than max_ref_age_hours ago (newest of FETCH_HEAD mtime and the ref reflog time) makes the row unobserved, never a lower count",
+      "site_pattern": "type:[[:space:]]*['\"]vesselCapability['\"]",
+      "pathspecs": [
+        ":(glob)src/**/*.ts",
+        ":(glob)src/**/*.tsx",
+        ":(glob)ui/src/**/*.ts",
+        ":(glob)ui/src/**/*.tsx",
+        ":(exclude,glob)**/*.test.ts",
+        ":(exclude,glob)**/*.test.tsx",
+        ":(exclude,glob)**/*.spec.ts",
+        ":(exclude,glob)**/test/**",
+        ":(exclude,glob)**/__tests__/**"
+      ],
+      "super_repo_pathspecs": [
+        ":(glob)packages/*/src/**/*.ts",
+        ":(glob)scripts/**/*.ts",
+        ":(exclude,glob)**/*.test.ts",
+        ":(exclude,glob)**/*.spec.ts",
+        ":(exclude,glob)**/test/**",
+        ":(exclude,glob)**/__tests__/**"
+      ],
+      "exclude_repos": [
+        "discovery-vessel"
+      ],
+      "seam_files": [
+        "ias-executor-ts:src/adapters/discovery-adapter.ts"
+      ],
+      "max": 65,
+      "max_ref_age_hours": 6,
+      "linked_gap": "discovery-lookup-copies-must-migrate-onto-the-typed-ias-seam"
+    },
+    {
+      "id": "argv_pass_flag_sites",
+      "instrument": "argv_shape_sites",
+      "profiles": [],
+      "edit_site": "scripts/substrate",
+      "reader": "scripts/substrate/substrate-doctor.sh check 2c, at use time from the working tree that holds the doctor (or /workspace/git/super-repo in-container). profiles is empty on purpose: self_fact_reconcile has no argv_shape_sites instrument and must not list these rows.",
+      "super_repo_pathspecs": [
+        ":(glob)scripts/substrate/**/*.sh",
+        ":(glob)scripts/substrate/units/**",
+        ":(glob)scripts/substrate/**/Makefile",
+        ":(glob)scripts/substrate/**/*.ts",
+        ":(exclude,glob)**/*.d.ts",
+        ":(exclude,glob)**/*.test.ts"
+      ],
+      "site_pattern": "(^|[^[:alnum:]_-])--pass(word)?([[:space:]]+|=)[\\\\\"']*\\$",
+      "max": 0,
+      "must_fail": "one added site in a scratch copy of the tree must make 2c FAIL above max; removing one site must report max-1 remaining; comment lines (#, //, *) never count; the doctor holds no copy of site_pattern, so it cannot count itself",
+      "why": "a --pass/--password flag whose value is a shell expansion: the value lands in world-readable /proc/<pid>/cmdline for the life of the process (surreal does not blank it)",
+      "notes": "RATCHET: max is the count at the commit that set it and only ever moves DOWN, by a data commit, as sites migrate to stdin/env (curl -K -, SURREAL_PASS). 2c notes when the count is below max so the ceiling gets lowered."
+    },
+    {
+      "id": "argv_user_colon_sites",
+      "instrument": "argv_shape_sites",
+      "profiles": [],
+      "edit_site": "scripts/substrate",
+      "reader": "scripts/substrate/substrate-doctor.sh check 2c, at use time from the working tree that holds the doctor (or /workspace/git/super-repo in-container). profiles is empty on purpose: self_fact_reconcile has no argv_shape_sites instrument and must not list these rows.",
+      "super_repo_pathspecs": [
+        ":(glob)scripts/substrate/**/*.sh",
+        ":(glob)scripts/substrate/units/**",
+        ":(glob)scripts/substrate/**/Makefile",
+        ":(glob)scripts/substrate/**/*.ts",
+        ":(exclude,glob)**/*.d.ts",
+        ":(exclude,glob)**/*.test.ts"
+      ],
+      "site_pattern": "(^|[^[:alnum:]_-])(-u|--user)([[:space:]]+|=)[\\\\\"']*[^[:space:]]*:[\\\\]?\\$",
+      "max": 0,
+      "must_fail": "one added site in a scratch copy of the tree must make 2c FAIL above max; removing one site must report max-1 remaining; comment lines (#, //, *) never count; the doctor holds no copy of site_pattern, so it cannot count itself",
+      "why": "-u/--user <x>:<expansion>: curl blanks the value after parsing, so it is exposed for a window at every exec",
+      "notes": "RATCHET: max is the count at the commit that set it and only ever moves DOWN, by a data commit, as sites migrate to stdin/env (curl -K -, SURREAL_PASS). 2c notes when the count is below max so the ceiling gets lowered."
+    },
+    {
+      "id": "argv_authz_header_sites",
+      "instrument": "argv_shape_sites",
+      "profiles": [],
+      "edit_site": "scripts/substrate",
+      "reader": "scripts/substrate/substrate-doctor.sh check 2c, at use time from the working tree that holds the doctor (or /workspace/git/super-repo in-container). profiles is empty on purpose: self_fact_reconcile has no argv_shape_sites instrument and must not list these rows.",
+      "super_repo_pathspecs": [
+        ":(glob)scripts/substrate/**/*.sh",
+        ":(glob)scripts/substrate/units/**",
+        ":(glob)scripts/substrate/**/Makefile",
+        ":(glob)scripts/substrate/**/*.ts",
+        ":(exclude,glob)**/*.d.ts",
+        ":(exclude,glob)**/*.test.ts"
+      ],
+      "site_pattern": "(^|[^[:alnum:]_-])(-H|--header)([[:space:]]+|=)[\\\\\"']*[Aa]uthorization:",
+      "max": 41,
+      "must_fail": "one added site in a scratch copy of the tree must make 2c FAIL above max; removing one site must report max-1 remaining; comment lines (#, //, *) never count; the doctor holds no copy of site_pattern, so it cannot count itself",
+      "why": "-H/--header 'Authorization: …': curl never blanks header values, so the credential is in argv for the life of the request",
+      "notes": "RATCHET: max is the count at the commit that set it and only ever moves DOWN, by a data commit, as sites migrate to stdin/env (curl -K -, SURREAL_PASS). 2c notes when the count is below max so the ceiling gets lowered."
+    },
+    {
+      "id": "autonomy_scope_pinned",
+      "instrument": "pool_record_pin",
+      "profiles": [
+        "*"
+      ],
+      "edit_site": "repos/development-vessel/src/resolvers/gap-to-feature.ts",
+      "must_fail": "each node's run plants a path into excluded_paths and a class into require_falsifier_classes of the copy it read; both must be reported as a mismatch",
+      "pool_shape": "autonomyScope",
+      "expected_by_node": {
+        "c951b44f4a99": {
+          "excluded_paths": [
+            "repos/development-vessel/src/resolvers/feature-compose.ts",
+            "repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts",
+            "repos/development-vessel/src/resolvers/pull-cutover.ts",
+            "repos/development-vessel/src/resolvers/push-policy.ts",
+            "repos/development-vessel/src/resolvers/git-push.ts",
+            "repos/development-vessel/src/resolvers/gap-to-feature.ts",
+            "repos/development-vessel/src/resolvers/substrate-gap.ts",
+            "repos/development-vessel/src/resolvers/apply-proposal-as-patch.ts",
+            "repos/development-vessel/src/resolvers/pool-impulse.ts",
+            "repos/development-vessel/src/resolvers/maintenance-lease.ts",
+            "repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts",
+            "repos/development-vessel/src/routes/impulses.ts",
+            "repos/development-vessel/src/index.ts",
+            "repos/development-vessel/src/config.ts",
+            "repos/goal-host-vessel/src/index.ts",
+            "repos/activity-api/src/lib/posterior-update.ts",
+            "repos/llm-resolver-vessel/src/index.ts",
+            "repos/boredom-vessel/src/index.ts",
+            "repos/discovery-vessel/",
+            "repos/identity-vessel/",
+            "scripts/substrate/",
+            "repos/human-surface-vessel/",
+            "repos/cycle-demo-3/",
+            "repos/development-vessel/src/resolvers/attempt-register.ts",
+            "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts",
+            "repos/development-vessel/src/resolvers/self-fact-reconcile.ts",
+            "repos/development-vessel/src/resolvers/vessel-mitosis-evaluate.ts",
+            "scripts/bootstrap-seeder.ts"
+          ],
+          "require_falsifier_classes": [
+            "class2"
+          ]
+        },
+        "compose2": {
+          "excluded_paths": [
+            "repos/development-vessel/src/resolvers/feature-compose.ts",
+            "repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts",
+            "repos/development-vessel/src/resolvers/pull-cutover.ts",
+            "repos/development-vessel/src/resolvers/push-policy.ts",
+            "repos/development-vessel/src/resolvers/git-push.ts",
+            "repos/development-vessel/src/resolvers/gap-to-feature.ts",
+            "repos/development-vessel/src/resolvers/substrate-gap.ts",
+            "repos/development-vessel/src/resolvers/apply-proposal-as-patch.ts",
+            "repos/development-vessel/src/resolvers/pool-impulse.ts",
+            "repos/development-vessel/src/resolvers/maintenance-lease.ts",
+            "repos/development-vessel/src/resolvers/rhythm-conductor-tick.ts",
+            "repos/development-vessel/src/routes/impulses.ts",
+            "repos/development-vessel/src/index.ts",
+            "repos/development-vessel/src/config.ts",
+            "repos/goal-host-vessel/src/index.ts",
+            "repos/activity-api/src/lib/posterior-update.ts",
+            "repos/llm-resolver-vessel/src/index.ts",
+            "repos/boredom-vessel/src/index.ts",
+            "repos/discovery-vessel/",
+            "repos/identity-vessel/",
+            "scripts/substrate/",
+            "repos/human-surface-vessel/",
+            "repos/cycle-demo-3/",
+            "repos/development-vessel/src/resolvers/attempt-register.ts",
+            "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts",
+            "repos/development-vessel/src/resolvers/self-fact-reconcile.ts",
+            "repos/development-vessel/src/resolvers/vessel-mitosis-evaluate.ts",
+            "scripts/bootstrap-seeder.ts"
+          ],
+          "require_falsifier_classes": [
+            "class2"
+          ]
+        }
+      },
+      "notes": "autonomyScope is a trust root and the containment the autonomous lane obeys; an absent record reads closed, so drift is the remaining failure: one node's copy gaining or losing an excluded path, or its falsifier classes changing, while the other keeps the old value. Compared: excluded_paths and require_falsifier_classes as exact-string sets (a directory entry 'x/' and a file entry 'x' differ); the reason text is not compared. Node keys are thisNode() (SUBSTRATE_NAME, else hostname), matching substrate_nodes_pinned: substrate-live sets no SUBSTRATE_NAME, so its key is the container hostname c951b44f4a99 and a recreated container SKIPS this row until SUBSTRATE_NAME is set and the key renamed; compose2-live sets SUBSTRATE_NAME=compose2. Rows naming nodes are skipped on every other node and substrate (nodes field). The pinned value is operator-authored here (a git object), never read from the pool it checks; changing the record means changing this row in the same operator act.",
+      "nodes": [
+        "c951b44f4a99",
+        "compose2"
+      ]
+    },
+    {
+      "id": "spend_envelope_pinned",
+      "instrument": "pool_record_pin",
+      "profiles": [
+        "*"
+      ],
+      "edit_site": "repos/development-vessel/src/resolvers/gap-to-feature.ts",
+      "must_fail": "each node's run perturbs usd_cap_per_hour and flips paused in the copy it read; both must be reported as a mismatch",
+      "pool_shape": "spendEnvelope",
+      "expected_by_node": {
+        "c951b44f4a99": {
+          "usd_cap_per_hour": 2,
+          "paused": false
+        },
+        "compose2": {
+          "usd_cap_per_hour": 2,
+          "paused": false
+        }
+      },
+      "notes": "spendEnvelope is a trust root and the budget the autonomous lane obeys; an absent record reads closed, so drift is the remaining failure: a cap raised, a pause lifted or set, or the cap replaced by uncapped:true on one node. Compared: usd_cap_per_hour and paused by equality; the reason text is not compared. Node keys are thisNode() (SUBSTRATE_NAME, else hostname), matching substrate_nodes_pinned: substrate-live sets no SUBSTRATE_NAME, so its key is the container hostname c951b44f4a99 and a recreated container SKIPS this row until SUBSTRATE_NAME is set and the key renamed; compose2-live sets SUBSTRATE_NAME=compose2. Rows naming nodes are skipped on every other node and substrate (nodes field). The pinned value is operator-authored here (a git object), never read from the pool it checks; changing the record means changing this row in the same operator act.",
+      "nodes": [
+        "c951b44f4a99",
+        "compose2"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "cost-model-miscalibrated",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "cost_constraint",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Cost model is miscalibrated on wall_ms(residual=1.123): prediction error >0.5. The substrate's predictions about its own",
+  "description": "Cost model is miscalibrated on wall_ms(residual=1.123): prediction error >0.5. The substrate's predictions about its own dispatch cost are systematically off — a detected constraint analogous to budget_exhausted at the model level. Likely a bimodal-cost template (fast hit / slow timeout, or a variable-length LLM draft) the expected-cost EWMA hasn't tracked.",
+  "goal_text": "Cost model is miscalibrated on wall_ms(residual=1.123): prediction error >0.5. The substrate's predictions about its own dispatch cost are systematically off — a detected constraint analogous to budget_exhausted at the model level. Likely a bimodal-cost template (fast hit / slow timeout, or a variable-length LLM draft) the expected-cost EWMA hasn't tracked.\n\nRemediation hint: In repos/boredom-vessel/src/index.ts, the per-template cost posterior (recordCostByTemplate / expectedCostMs) tracks only the mean, so a bimodal-cost template (fast hit vs slow timeout) mispredicts. Make the cost posterior variance-aware: track the spread (e.g. keep recent samples and use a robust/percentile estimate, or store mean+variance) so expectedCost reflects bimodality, and have combinedCostAdj use it. Keep the [0.5,2.0] clamp and cold-start ∞ behavior intact.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [
+    "repos/boredom-vessel/src/index.ts"
+  ],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "cost-model-miscalibrated",
+  "source_gap_source": "substrate_detected"
+}

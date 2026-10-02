@@ -1,0 +1,129 @@
+{
+  "investigation_id": "2026-05-26T18-45-00Z-investigation-027",
+  "generated_at": "2026-05-26T18:45:00Z",
+  "investigator_session_id": "claude-opus-4-7-audit-iter-012",
+  "prior_investigation_id": "2026-05-26T18-15-00Z-investigation-026",
+  "loop_iteration": 12,
+  "framing": "LLM resolver × lifecycle hooks × ISS interaction",
+  "substrate_target": "http://localhost:18080",
+  "subagent_inputs": [
+    {"task_id": "a2e1a030cd1c31514", "name": "LLM resolver × lifecycle hooks × ISS interaction"}
+  ],
+  "per_task_walkthrough_engine_ts_line_refs": {
+    "budget_check": "engine.ts:71-78",
+    "preBinding_emit": "engine.ts:80-110",
+    "preBinding_payload": ["taskId", "templateId", "executionId", "inputShapes", "currentImpulseShapes", "missingShapes", "variables", "parentDepth"],
+    "preBinding_subscriber": "slot-binding (nested execution)",
+    "task_started_emit": "engine.ts:112-116 (NOT lifecycle:* namespace, internal only)",
+    "resolveInputs": "engine.ts:119",
+    "resolver_invocation": "engine.ts:179",
+    "resolver_body": "llm-prompt.ts:69-114",
+    "inputImpulses_on_context": "engine.ts:154 (resolver ignores today)",
+    "outputs_stored": "engine.ts:201-206",
+    "task_completed_emit": "engine.ts:230-241 (internal)",
+    "lifecycle_task_completed_emit": "engine.ts:247-270",
+    "task_completed_subscribers": ["validator-dispatch", "concept-db ExecutionObserver"],
+    "execution_succeeded_emit": "engine.ts:311-328",
+    "execution_succeeded_subscribers": ["ribosome-extract", "audit-test-report"]
+  },
+  "iss_signature_NOT_in_engine": {
+    "computed_at": "activity-api edge",
+    "computation_sites": ["execution-traces.ts:2375-2398", "session-context.ts:141-164"],
+    "read_from": "body.metadata.state_space_signature OR re-derived from body.input_impulse_shapes + metadata.provenance + metadata.missing_shapes",
+    "consumed_by": "applyOutcomeToPosteriors → posterior-update.ts:476-533",
+    "writes_to": "context_thompson_scores keyed on (org_id, template_id, signature_version, context_bucket=signature)",
+    "engine_is_signature_blind": true,
+    "resolver_is_signature_blind": true,
+    "lifecycle_events_carry_signature": false
+  },
+  "iter026_implications_for_iss": {
+    "new_impulses_in_next_taskPrebinding": ["synthesisOutcome", "unmetRequirements"],
+    "automatic_signature_enrichment": "next outcome write derives enriched signature including new shapes (computeStateSpaceSignature already keys on input impulse shapes)",
+    "new_context_thompson_scores_rows": true,
+    "recommender_effect": "given incoming state with synthesisOutcome=insufficient_signal, draws from variant α/β under enriched signature NOT the confabulation-polluted prior",
+    "upstream_code_changes_required": "zero",
+    "multiplicative_power": "Phase 24 already exists to receive iter-026's correction"
+  },
+  "corruption_surface_analysis": {
+    "context_thompson_scores": {
+      "signature_keyed": true,
+      "bucketing_isolates_corruption": true,
+      "iter026_heals_corruption": false,
+      "iter026_stops_future_pollution": true,
+      "comment": "pre-iter-026 confabulation under S1 pollutes (T,1,S1) row only; future S1-incoming requests still see same biased α"
+    },
+    "variant_performance_metrics": {
+      "signature_keyed": false,
+      "unconditional": true,
+      "is_bleed_path": true,
+      "comment": "cold-start traces outnumber mature traces; unconditional row skews toward corrupted regime",
+      "fallback_consumers": ["recommender tiers with no matching conditional row", "templates below CARDINALITY_CAP=200"]
+    },
+    "chain_credit_cross_signature_leak": {
+      "site": "posterior-update.ts:236-302",
+      "mechanism": "propagates α/β to ancestors using each ancestor's own signature (ancestor_signatures map)",
+      "iter026_consequence": "if synthesisOutcome=insufficient_signal flips trace to verifier_negative, chain-credit walks ancestor signatures and writes negative deltas; ancestors whose signatures didn't include synthesisOutcome get retroactive β on historical buckets",
+      "correctness_in_intent": "yes — ancestor really did fail because of downstream gap",
+      "but_means": "Phase 24 cannot fully sandbox pre/post iter-026 evidence per signature"
+    }
+  },
+  "operator_action_post_iter026": "decay or reset variant_performance_metrics for templates with unmetRequirements-producing variants MORE aggressively than context_thompson_scores",
+  "validator_dispatch_with_new_shapes": {
+    "lifecycle_changes_required": "zero",
+    "new_validator_templates_required": 1,
+    "correct_route": "run validators against synthesisOutcome impulse itself — checks LLM self-report matches input-impulse evidence",
+    "catches": "inverse of iter-024 confabulation — LLM falsely declaring insufficient when inputs adequate",
+    "rejected_route": "skip validation — removes only check against gap-claim confabulation"
+  },
+  "lifecycle_channel_inventory": [
+    {"name": "lifecycle:task:preBinding", "exists": true, "subscribers": ["slot-binding"]},
+    {"name": "lifecycle:task:completed", "exists": true, "subscribers": ["validator-dispatch", "concept-db ExecutionObserver"]},
+    {"name": "lifecycle:execution:succeeded", "exists": true, "subscribers": ["ribosome-extract", "audit-test-report", "debug-failing-audit"]},
+    {"name": "lifecycle:activity:postExecution", "exists": true, "subscribers": ["ribosome-extract"]},
+    {"name": "lifecycle:task:started", "exists": "partial (engine emits unnamespaced task.started)", "priority": "low"},
+    {"name": "lifecycle:execution:tick", "exists": false, "priority": "low — declared no emitter"},
+    {"name": "lifecycle:gap:detected (iter-023)", "exists": false, "priority": "observability nice-to-have", "rationale": "filter idiom on outputShapes ∋ 'unmetRequirements' already covers routing"},
+    {"name": "lifecycle:substrate:idle (iter-025)", "exists": false, "priority": "nice-to-have deferred"},
+    {"name": "lifecycle:llm:dispatched", "exists": false, "priority": "CRITICAL-PATH for audit"},
+    {"name": "lifecycle:activity:failure", "exists": false, "priority": "nice-to-have"}
+  ],
+  "highest_leverage_event_to_add": {
+    "name": "lifecycle:llm:dispatched",
+    "emit_site": "llm-prompt.ts after interpolation before llm.generate",
+    "payload": ["executionId", "taskId", "templateId", "renderedPrompt", "inputImpulseIds", "inputShapes", "variables"],
+    "subscribers": ["confabulation audit harness", "eventually Cβ concept-extractor for prompt→outcome co-occurrence learning"],
+    "why_over_others": "iter-026 correctness CANNOT be verified without it; without it iter-024 confabulation audit and iter-026 attribution-fix verification reduce to log archaeology",
+    "with_it_enables": [
+      "validator-dispatch deterministic check 'rendered prompt contains input-impulse content'",
+      "Phase 24 signature-conditioned posteriors gain verifiable confabulation-rate metric per signature bucket",
+      "iter-024 ratio computable from event stream not log scraping"
+    ]
+  },
+  "llm_resolver_lifecycle_role": {
+    "as_subscriber": "NEVER — implies long-lived state breaking stateless-resolver invariant",
+    "as_producer": "YES — lifecycle:llm:dispatched / lifecycle:llm:returned for audit",
+    "rejected_subscription_cases": [
+      {"case": "long-running LLM observing sibling-task completion", "reason": "right place is meta-activity subscribed to lifecycle:task:completed"},
+      {"case": "LLM reacting to lifecycle:substrate:idle for pre-computation", "reason": "token costs uneconomic; boredom-vessel + meta-activity already covers"}
+    ]
+  },
+  "composition_with_design_arc": [
+    {"investigation": "iter-022", "status": "unchanged — Cα/Cβ remain valid concept-db impulses"},
+    {"investigation": "iter-023", "status": "unchanged — gap.classified is observability-only; impulse path covers data"},
+    {"investigation": "iter-024", "status": "diagnosis updated by iter-026; experiment still valid, now gated on lifecycle:llm:dispatched"},
+    {"investigation": "iter-025", "status": "corrected by iter-026"},
+    {"investigation": "iter-026", "status": "load-bearing fix"},
+    {"investigation": "iter-027 (this)", "status": "identifies lifecycle:llm:dispatched as missing audit primitive"}
+  ],
+  "critical_path_sequence": [
+    "patch llm-prompt.ts to honor inputImpulses + emit multi-impulse outputs",
+    "emit lifecycle:llm:dispatched from same site",
+    "run iter-024 confabulation experiment",
+    "decide envelope-framing additions on results"
+  ],
+  "loop_bookkeeping": {
+    "json_sidecars_backfilled_this_iteration": ["022", "023", "024", "025", "026"],
+    "format_matches_coordination_md_b108ac88": true
+  },
+  "next_wake_recommendation": "watch for llm-prompt.ts patch + lifecycle:llm:dispatched emit"
+}

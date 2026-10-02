@@ -1,0 +1,7 @@
+[Unit]
+Description=DB maintenance tick timer (every 30min)
+[Timer]
+OnBootSec=8min
+OnUnitActiveSec=30min
+[Install]
+WantedBy=timers.target

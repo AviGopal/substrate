@@ -1,0 +1,463 @@
+{
+  "investigation_id": "2026-05-25T22-06-00Z-investigation-026",
+  "generated_at": "2026-05-25T22:06:00Z",
+  "investigator_session_id": "claude-sonnet-4-6-audit-loop-41",
+  "prior_investigation_id": "2026-05-25T15-43-24Z-investigation-025",
+  "loop_iteration": 41,
+  "substrate_target": {
+    "endpoint": "http://localhost:18080",
+    "kind": "local-container"
+  },
+  "substrate_status": {
+    "container": "substrate-live",
+    "health": "healthy",
+    "running_version": "1.20.9",
+    "uptime_seconds": null,
+    "registry_vessels": 8,
+    "registry_shapes": 112,
+    "registry_healthy": 8,
+    "f069_fix_deployed": false,
+    "f069_fix_evidence": "docker exec substrate-live grep -n 'UPSERT activity' /vessels/activity-api/src/routes/activities.ts -> lines 1200 and 5268 still show UPSERT CONTENT pattern. UNCHANGED since investigation-020. Running image does not include c1364e4.",
+    "posterior_reset_triggered": false,
+    "posterior_accumulation_confirmed": true,
+    "container_uptime_estimate": "~11 hours (started ~10:58:59Z UTC)",
+    "boredom_status": "Active cycling. Since investigation-025 (15:43Z to 22:06Z — 383 min): 90 ticks started, 58 completed dispatches, 32 failures (timeout/unreachable). Completion rate ~64%. Active at observation time (submitting goal[1] probe-unlearned-shapes at 20:48Z, boredom in 'activating' state at 22:03Z).",
+    "new_commits_since_025": 4,
+    "new_commits_list": [
+      "13a61a61 chore(coordination): update dev state — 3 fixes this session, 28 templates in registry",
+      "d3914f0d fix(substrate): development-vessel waits for activity-api readiness before seeding templates (F-089 race fix)",
+      "5c761556 chore(submodule): bump ias-executor-ts to d98bec6 (forge fast-fail guard)",
+      "d49328e0 fix(F-036): create-shape-provider-goal succeeding after two-part fix + concept-db HOST=0.0.0.0"
+    ],
+    "hot_patches_applied": [
+      "concept-db.service HOST=0.0.0.0 — restarted ~16:03Z",
+      "forge-vessel-for-shape.json updated in container + upserted to activity-api registry (fast-fail guard at task 0)",
+      "development-vessel.service updated + restarted ~16:51Z → ExecStartPost now polls activity-api health up to 45s"
+    ]
+  },
+  "s4a_verdict": {
+    "window_status": "SECOND WINDOW — MONITORING. coverage-tick now present and executing (α=7 n=4). Not yet declared PASS.",
+    "verdict_final": false,
+    "coverage_tick_first_exec": "2026-05-25T20:38:27Z — first execution ~3h47min after seeding at 16:51Z",
+    "coverage_tick_exec_count": 4,
+    "coverage_tick_alpha": 7,
+    "substrate_health_tick_exec_count": 5,
+    "substrate_health_tick_alpha": 6,
+    "s4a_window_started_at": "2026-05-25T20:38:27Z (first coverage-tick execution)",
+    "s4a_window_elapsed_min": 87,
+    "s4a_gating_factors": [
+      "coverage-tick must emit coverageReport with coverage_progress=true — tasks=0 on all traces means we cannot confirm this is happening (F-068 task observability gap)",
+      "Thompson monoculture: validator-dispatch α=3423 vs coverage-tick α=7 (ratio ~490:1). Selection probability of coverage-tick is ~0.16% per tick. In 58 ticks: 0.09 expected — yet 4 executions observed. Indicates goal-path semantic selection (not pure Thompson) is driving coverage-tick firings.",
+      "S.4a requires 'natural substrate activity' — coverage-tick firing via boredom goal[4] 'check substrate health' appears to qualify as natural autonomous activity",
+      "Six unlearned shapes still outstanding: commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, vesselScaffolded"
+    ],
+    "monoculture_p_coverage_tick": "~0.16% per tick (α=7 out of total 4471 α) — yet 4 executions in ~87 min observed via semantic goal-path routing",
+    "structural_blocker": "F-068 task_count=0 prevents direct verification that coverageReport is being produced with coverage_progress=true. Without task-level impulse data, S.4a pass cannot be formally confirmed."
+  },
+  "substrate_self_development": {
+    "last_commit": "13a61a61",
+    "last_commit_time": "2026-05-25T17:20:00Z (approximate)",
+    "new_commits_since_025": 4,
+    "commits_in_window_hours": 1.6,
+    "development_cadence_note": "ACTIVE SELF-DEVELOPMENT RESUMED. 4 commits in ~1.6h between 15:43Z and 17:20Z. This is the highest commit cadence observed — previous plateau (3h34m gap at 025) ended with burst of substrate-authored fixes. F-090 closes: substrate self-development no longer plateaued.",
+    "development_vessel_status": "running",
+    "proposals_in_tree": [
+      "proposal-fp-12-partial-success-recorded-as-total.json",
+      "proposal-fp-15-missing-producer-stale-registration.json",
+      "proposal-fp-15-vessel-health-corroboration.json"
+    ],
+    "new_proposals_since_025": 0,
+    "total_templates_in_registry": 28,
+    "templates_delta_from_025": 15,
+    "notes": "Template registry grew from 13 (025) to 28 (026) — 15 new templates seeded by development-vessel. New templates include: coverage-tick, substrate-health-tick, draft-gap-closing-activity, harness-check-scenario, harness-run-matrix, escalate-unknown-shape, release-and-validate, release-change, branch-health, scaffold-new-vessel, add-resolver-to-vessel, propagate-judgment, ship-change. The F-089 race fix (d3914f0d) enabled development-vessel to successfully seed templates after activity-api is confirmed ready."
+  },
+  "thompson_state": {
+    "snapshot_time": "2026-05-25T22:06:00Z",
+    "total_templates": 28,
+    "templates_with_history": 18,
+    "total_alpha_all_templates": 4471,
+    "total_beta_all_templates": 120,
+    "total_executions_all_templates": 4477,
+    "delta_from_025": {
+      "elapsed_minutes": 383,
+      "alpha_delta": 2061,
+      "executions_delta": 2078,
+      "rate_per_minute": 5.42,
+      "rate_at_025_per_minute": 0.42,
+      "rate_change_note": "Execution rate jumped 12.9x from 0.42/min (025) to ~5.42/min (026). This is driven by 15 new templates seeded (development-vessel restart at 16:51Z) and boredom-vessel accelerating execution of new templates. Completion rate improved from 54% to 64% (58/90 dispatches)."
+    },
+    "validator_dispatch": {
+      "alpha": 3423,
+      "beta": 1,
+      "n": 3428,
+      "alpha_at_025": 1878,
+      "alpha_gained_since_025": 1545,
+      "rate_per_min_since_025": 4.03
+    },
+    "slot_binding": {
+      "alpha": 490,
+      "beta": 1,
+      "n": 476,
+      "alpha_at_025": 267
+    },
+    "create_shape_provider_goal": {
+      "alpha": 435,
+      "beta": 84,
+      "n": 466,
+      "alpha_at_025": 200,
+      "beta_at_025": 84,
+      "alpha_gained_since_025": 235,
+      "beta_gained_since_025": 0,
+      "notes": "F-036 fully holding. β stable at 84 (no new failures). α+235 confirms continuous successes since d49328e0 fix."
+    },
+    "coverage_tick": {
+      "alpha": 7,
+      "beta": 1,
+      "n": 4,
+      "alpha_at_025": "ABSENT",
+      "seeded_at": "2026-05-25T16:51Z",
+      "first_execution": "2026-05-25T20:38:27Z",
+      "executions_to_first_selection_ticks": "~46 boredom ticks (3h47min)",
+      "selection_mechanism": "semantic goal-path routing (not Thompson random sampling) — boredom goal[4] 'check substrate health' semantically matched coverage-tick"
+    },
+    "substrate_health_tick": {
+      "alpha": 6,
+      "beta": 1,
+      "n": 5,
+      "alpha_at_025": "ABSENT",
+      "notes": "Also seeded at ~16:51Z. 5 executions observed."
+    },
+    "forge_vessel_for_shape": {
+      "alpha": 1,
+      "beta": 10,
+      "n": 7,
+      "alpha_at_025": 1,
+      "beta_at_025": 7,
+      "beta_gained_since_025": 3,
+      "fast_fail_guard_deployed": true,
+      "fast_fail_notes": "Fast-fail guard at task 0 checks docker/helmfile availability in 3s. Prior behavior was 105s hang. β continues growing (docker not available in substrate) but at controllable rate. No forge executions appeared in last-200-traces query — forge not being dispatched by boredom in current window."
+    },
+    "other_templates": {
+      "draft_gap_closing_activity": {"alpha": 13, "beta": 1, "n": 11},
+      "harness_check_scenario": {"alpha": 10, "beta": 1, "n": 9},
+      "replace_activity": {"alpha": 10, "beta": 1, "n": 8},
+      "harness_run_matrix": {"alpha": 9, "beta": 1, "n": 8},
+      "prune_activity": {"alpha": 9, "beta": 1, "n": 8},
+      "repair_failed_activity": {"alpha": 9, "beta": 1, "n": 8},
+      "ribosome_extract": {"alpha": 8, "beta": 1, "n": 7},
+      "core_activity_audit": {"alpha": 6, "beta": 1, "n": 7},
+      "escalate_unknown_shape": {"alpha": 6, "beta": 1, "n": 6},
+      "release_and_validate": {"alpha": 6, "beta": 1, "n": 5},
+      "debug_failing_audit": {"alpha": 5, "beta": 1, "n": 4},
+      "probe_reachable_unlearned": {"alpha": 4, "beta": 1, "n": 5},
+      "evolve_activity_template": {"alpha": 4, "beta": 1, "n": 3},
+      "probe_untraversed_edge": {"alpha": 2, "beta": 1, "n": 2},
+      "release_change": {"alpha": 1, "beta": 1, "n": 0},
+      "add_resolver_to_vessel": {"alpha": 1, "beta": 1, "n": 0},
+      "run_sensitivity_probe": {"alpha": 1, "beta": 1, "n": 0},
+      "branch_health": {"alpha": 1, "beta": 1, "n": 0},
+      "scaffold_new_vessel": {"alpha": 1, "beta": 1, "n": 0},
+      "audit_test_report": {"alpha": 1, "beta": 1, "n": 0},
+      "propagate_judgment": {"alpha": 1, "beta": 1, "n": 0},
+      "ship_change": {"alpha": 1, "beta": 1, "n": 0}
+    },
+    "posterior_loss_quantification": {
+      "total_alpha_at_risk": 4471,
+      "total_executions_at_risk": 4477,
+      "fix_deployed": false,
+      "image_fix_commit": "c1364e4",
+      "risk_level": "CRITICAL — 4471 alpha units (85% concentrated in validator-dispatch at 3423) remain fully exposed on container restart. Up from 2410 at investigation-025. Container has been running 11+ hours without the UPSERT MERGE fix. Rate: +2061α in 383 min = 5.4α/min (12x higher than 025 rate).",
+      "rate_acceleration_note": "Rate jumped due to 15 new templates seeded and boredom executing more consistently. The risk has grown faster than expected."
+    },
+    "monoculture_severity": "EXTREME — validator-dispatch α=3423 out of total 4471 (76.6%). Selection probability for coverage-tick: ~0.16%. However, semantic goal routing is overriding pure Thompson, which explains 4 coverage-tick firings in 87 min despite statistical impossibility under Thompson alone."
+  },
+  "boredom_dispatch_summary_since_025": {
+    "period": "15:43Z to 22:06Z (~383 minutes)",
+    "ticks_started": 90,
+    "ticks_completed": 58,
+    "ticks_failed_timeout_or_unreachable": 32,
+    "completion_rate_pct": 64,
+    "goal_rotation_pattern": "goal[0]=measure topology, goal[1]=probe unlearned, goal[2]=topology chain, goal[3]=escalate shapes, goal[4]=health check",
+    "notable_timeouts": "goal[1] (probe unlearned shapes) timing out at 5-min mark repeatedly. goal[2] (topology chain) timing out occasionally. 'goal-host-vessel unreachable: The operation timed out' observed multiple times in log.",
+    "notable_successes": "goal[4] (check substrate health) at 20:37Z dispatched coverage-tick execution at 20:38:27Z — first coverage-tick firing. goal[2] and goal[3] completing reliably (~3-4 min each)."
+  },
+  "findings": [
+    {
+      "id": "F-089",
+      "claim": "coverage-tick SEEDED AND FIRING. F-089 SUBSTANTIALLY RESOLVED. development-vessel.service ExecStartPost fix (d3914f0d) polls activity-api health before seeding templates. Template registry grew from 13 to 28 templates after restart at 16:51Z. coverage-tick seeded at 16:51Z; first execution at 20:38:27Z (3h47min later). As of 22:06Z: coverage-tick α=7, β=1, n=4 (4 executions, all marked success=True). substrate-health-tick also seeded and executing (α=6, n=5). S.4a window is now open.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T12-01-47Z-investigation-023",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/templates?limit=200' | python3 (coverage filter)",
+          "excerpt": "coverage-tick: α=7 β=1 n=4. substrate-health-tick: α=6 β=1 n=5. Both present in 28-template registry.",
+          "verified_at": "2026-05-25T22:06:00Z"
+        },
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/execution-traces?limit=200' | python3 (coverage filter)",
+          "excerpt": "tid=activity:⟨development-vessel:coverage-tick⟩ at=2026-05-25T20:38:27.908Z success=True tasks=0. 1 coverage-tick trace in last 200 (more exist beyond window). 28-template registry confirmed.",
+          "verified_at": "2026-05-25T22:06:00Z"
+        }
+      ],
+      "status": "substantially-resolved — coverage-tick present and firing. S.4a monitoring phase open.",
+      "delta_from_025": "MAJOR CHANGE: coverage-tick went from ABSENT to α=7 n=4. The ExecStartPost health-poll fix (d3914f0d) solved the race condition. Template registry doubled from 13 to 28 templates.",
+      "open_questions": [
+        "Does coverage-tick emit coverageReport with coverage_progress=true? Cannot verify due to F-068 task_count=0.",
+        "Is the 4-execution sample sufficient for S.4a window pass? Minimum duration and execution count criteria unclear.",
+        "Will coverage-tick continue to be selected? Monoculture (α=3423 validator-dispatch vs α=7 coverage-tick) makes Thompson selection ~0.16%. Semantic routing appears to be the actual selection mechanism."
+      ]
+    },
+    {
+      "id": "F-083",
+      "claim": "Thompson posterior UPSERT CONTENT bug WORSENING. c1364e4 STILL not deployed. α=4471 across 28 templates fully at risk on restart (was 2410 at 025). Rate accelerated 12.9x (0.42/min → 5.42/min) due to 15 new templates seeded + boredom executing more consistently. In 383 min since 025: +2061α. validator-dispatch alone gained +1545α (now 3423). Container running 11+ hours without fix.",
+      "category": "regression",
+      "severity": "critical",
+      "first_seen_in": "2026-05-25T11-16-28Z-investigation-020",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live grep -n 'UPSERT activity.*CONTENT' /vessels/activity-api/src/routes/activities.ts | head -5",
+          "excerpt": "1200: UPSERT activity:`${activityId}` CONTENT {. 5268: UPSERT activity:`${generated.id}` CONTENT {. STILL old code. c1364e4 not deployed.",
+          "verified_at": "2026-05-25T22:06:00Z"
+        },
+        {
+          "kind": "observation",
+          "excerpt": "total_alpha=4471 (was 2410 at 025, was 2263 at 024). Rate: +2061α in 383 min = 5.4/min. At current rate, ~325 more alpha units accumulate per hour. A container restart would wipe all 4471 units and reset the S.4a window.",
+          "verified_at": "2026-05-25T22:06:00Z"
+        }
+      ],
+      "status": "open — worsening (faster accumulation rate)",
+      "delta_from_025": "Risk increased: +2061α (86% increase from 025). Rate jumped 12.9x. This is the highest-risk state observed across all investigations.",
+      "operator_remediation": "Rebuild Docker image from c1364e4 (activity-api UPSERT MERGE fix). CRITICAL TIMING NOTE: rebuilding now would also reset coverage-tick execution history (α=7, n=4), potentially resetting the S.4a window. Recommend: (a) confirm S.4a pass first if criteria are met, then rebuild, OR (b) accept posterior loss as acceptable tradeoff to break monoculture."
+    },
+    {
+      "id": "F-090",
+      "claim": "F-090 CLOSED: substrate self-development PLATEAU ENDED. 4 new commits in ~1.6h after 025's 3h34m plateau. Commits include: concept-db HOST fix, forge fast-fail guard (ias-executor-ts submodule bump), F-089 race fix (development-vessel ExecStartPost polling), and coordination state update. This is S1 substrate self-development at its highest observed cadence: 4 commits in 1.6h. The plateau was caused by operator quiescence; operator re-engagement triggered burst of fixes.",
+      "category": "positive",
+      "severity": "info",
+      "first_seen_in": "2026-05-25T12-29-57Z-investigation-024",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "git -C /home/avi/documents/work/exp-repo/metabob-devbob log --oneline -8",
+          "excerpt": "13a61a61, d3914f0d, 5c761556, d49328e0 — 4 commits between 025 and now",
+          "verified_at": "2026-05-25T22:06:00Z"
+        }
+      ],
+      "status": "closed — plateau ended. Monitoring for new plateau.",
+      "delta_from_025": "MAJOR CHANGE: 0 commits at 025 → 4 commits since 025. Template registry grew from 13 to 28 templates."
+    },
+    {
+      "id": "F-091",
+      "claim": "forge-vessel-for-shape FAST-FAIL GUARD DEPLOYED. Task 0 now checks docker+helmfile availability with 3s timeout (was 105s hang). Fast-fail guard exits with 'FORGE_ENV_NOT_SUPPORTED' if docker/helmfile not found. β grew from 7 (025) to 10 (026) — 3 additional failures post-guard deployment. However, each failure now takes <3s vs prior 105s. This is a substantial improvement: forge failures no longer block boredom-vessel for 2+ minutes per attempt.",
+      "category": "positive",
+      "severity": "medium",
+      "first_seen_in": "investigation-026",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/templates?limit=200' | python3 (forge filter)",
+          "excerpt": "Forge Vessel For Shape: α=1 β=10 n=7 (was β=7 at 025). β+3 since 025.",
+          "verified_at": "2026-05-25T22:06:00Z"
+        },
+        {
+          "kind": "observation",
+          "excerpt": "forge-vessel-for-shape.json task[0] now has: command=['bash','-c','if ! command -v docker...'], timeout=3000. Fast-fail exits immediately when docker not available in substrate container.",
+          "verified_at": "2026-05-25T22:06:00Z"
+        }
+      ],
+      "status": "resolved — fast-fail working. Forge will continue failing (docker not in substrate) but quickly.",
+      "delta_from_025": "NEW FINDING. Fast-fail guard deployed via hot-patch + ias-executor-ts submodule bump (5c761556/d98bec6)."
+    },
+    {
+      "id": "F-068",
+      "claim": "task_count=0 UNCHANGED. All sampled traces show tasks=[] task_count=0. This is now the binding constraint on S.4a verification: coverage-tick traces show success=True but we cannot confirm whether they are emitting coverageReport with coverage_progress=true. The finding affects all 28 templates. Urgency elevated from medium to high due to S.4a monitoring dependency.",
+      "category": "validation",
+      "severity": "high",
+      "first_seen_in": "prior investigations",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/execution-traces?limit=5' | python3",
+          "excerpt": "All 5 recent traces: tasks=0. validator-dispatch tasks=0 success=True (x2), probe-untraversed-edge tasks=0 success=True, validator-dispatch tasks=0 success=True, slot-binding tasks=0 success=True. All at 20:46-20:48Z.",
+          "verified_at": "2026-05-25T22:06:00Z"
+        }
+      ],
+      "status": "open — urgency ELEVATED (now blocks S.4a verification)",
+      "delta_from_025": "Severity upgraded from medium to high due to S.4a dependency."
+    },
+    {
+      "id": "F-088",
+      "claim": "boredom timeout pattern CONTINUES but completion rate IMPROVED. Since 025: 58 completed / 90 started = 64% (was 54% at 025). Multiple goal[1] (probe unlearned shapes) timeouts at 5-min mark observed. One explicit 'goal-host-vessel unreachable: The operation timed out' at 17:05-17:10Z and 17:20-17:25Z. The timeout pattern is persistent but less severe. Completion rate improvement from 54% to 64% is modest.",
+      "category": "regression",
+      "severity": "medium",
+      "first_seen_in": "2026-05-25T11-53-03Z-investigation-022",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live journalctl -u boredom-vessel.service --no-pager --since '15:43:00' | grep -E 'dispatched|unreachable' | wc -l",
+          "excerpt": "58 dispatched, 32 failures/timeouts. Completion rate 64%. Notable timeouts: 17:10Z, 17:25Z, 17:52Z, 17:57Z, 18:38Z.",
+          "verified_at": "2026-05-25T22:06:00Z"
+        }
+      ],
+      "status": "partial — improved from 54% to 64% completion rate",
+      "delta_from_025": "Modest improvement. 10 percentage point increase in completion rate."
+    },
+    {
+      "id": "F-036",
+      "claim": "create-shape-provider-goal STABLE POST-FIX. α=435 β=84 n=466. α+235 since 025, β+0. Success rate sustained. d49328e0 commit closed the two-part fix. β stable means no new failures — the fix is holding robustly across 466 executions.",
+      "category": "regression",
+      "severity": "low",
+      "first_seen_in": "prior investigations",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "curl -H 'Authorization: ApiKey ...' 'http://localhost:18080/v2/activities/templates?limit=200' | python3 (shape-provider filter)",
+          "excerpt": "Create Shape-Provider Goal: α=435 β=84 n=466. α+235 since 025 (200→435). β unchanged at 84.",
+          "verified_at": "2026-05-25T22:06:00Z"
+        }
+      ],
+      "status": "resolved — fix fully holding",
+      "delta_from_025": "+235α, +0β, +206n. Strong positive trajectory."
+    },
+    {
+      "id": "F-084",
+      "claim": "analysis-vessel and vessel registry STABLE. 8 vessels / 112 shapes / 8 healthy — unchanged since investigation-020. concept-db-seeder.service still in failed state (pre-existing, failed at 10:59:12Z — 0 of 24 concepts seeded due to API errors). Non-blocking for core system.",
+      "category": "regression",
+      "severity": "info",
+      "first_seen_in": "2026-05-25T11-16-28Z-investigation-020",
+      "evidence": [
+        {
+          "kind": "command",
+          "command": "docker exec substrate-live curl -s http://127.0.0.1:8100/registry/stats",
+          "excerpt": "{\"totalVessels\":8,\"totalShapes\":112,\"healthyCount\":8}",
+          "verified_at": "2026-05-25T22:06:00Z"
+        }
+      ],
+      "status": "resolved — stable 11+ hours"
+    },
+    {
+      "id": "F-075",
+      "claim": "reachable_learned still flat at observed count. Six unlearned shapes from prior observations (commandResult, fileEditResult, judgmentPropagated, sensitivity_evidence, test_audit_report, vesselScaffolded) still have no confirmed executions producing them. coverage-tick and substrate-health-tick are now executing but tasks=0 prevents verification of output shapes produced. S.4a window status depends on whether these ticks produce the required shapes.",
+      "category": "lift",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-29-42Z-investigation-018",
+      "status": "open — cannot verify improvement due to F-068 task_count=0",
+      "delta_from_025": "coverage-tick and substrate-health-tick now executing. Output shape production unverifiable."
+    },
+    {
+      "id": "F-079",
+      "claim": "F-069 posterior reset fix (c1364e4) NOT deployed in running image. UPSERT CONTENT lines 1200 and 5268 still present. Unchanged for 11+ hours.",
+      "category": "provenance",
+      "severity": "high",
+      "first_seen_in": "2026-05-25T10-38-48Z-investigation-019",
+      "status": "open — unchanged",
+      "delta_from_025": "No change."
+    }
+  ],
+  "substrate_explicit_vessels_progress": {
+    "tasks_complete": 48,
+    "tasks_open": 5,
+    "notes": "48/53 tasks complete. 5 remaining. Unchanged from investigation-025."
+  },
+  "topology_discovery_loop_progress": {
+    "tasks_complete": 29,
+    "tasks_open": 4,
+    "spec_path": "openspec/changes/2026-05-23-topology-discovery-loop/tasks.md"
+  },
+  "repo_artifacts": {
+    "root_file_count": 13,
+    "cycle_files": ["cycle-7.json", "cycle-8.json"],
+    "proposal_files": [
+      "proposal-fp-12-partial-success-recorded-as-total.json",
+      "proposal-fp-15-missing-producer-stale-registration.json",
+      "proposal-fp-15-vessel-health-corroboration.json"
+    ],
+    "new_since_025": "None — root count stable at 13"
+  },
+  "hardcoded_endpoint_scan": {
+    "unchanged_from_025": true,
+    "severity": "low — guarded by env var overrides"
+  },
+  "quiescence_analysis": {
+    "type": "substrate_active_post_operator_intervention",
+    "evidence": [
+      "4 commits in ~1.6h (15:43Z to 17:20Z) after 3h34m plateau",
+      "Template registry grew from 13 to 28 templates via development-vessel restart",
+      "coverage-tick and substrate-health-tick now firing autonomously via boredom",
+      "Boredom completion rate improved from 54% to 64%",
+      "3 hot-patches applied to container (concept-db HOST, forge fast-fail, dev-vessel ExecStartPost)"
+    ],
+    "substrate_interpretation": "The substrate is in active post-intervention execution mode. The operator provided 4 fixes that unblocked template seeding (F-089 race fix), reduced forge hang time (forge fast-fail), and fixed concept-db binding. The substrate executed these fixes and the boredom loop is now driving coverage-tick and substrate-health-tick executions. The S.4a window is now effectively open — the question is whether the tick output shapes satisfy the criterion.",
+    "s4a_status": {
+      "window_open": true,
+      "window_start": "2026-05-25T20:38:27Z",
+      "window_elapsed_min": 87,
+      "binding_constraint": "F-068 task_count=0 prevents verification of coverageReport emission",
+      "secondary_constraint": "monoculture (validator-dispatch α=3423) means coverage-tick won't be selected by pure Thompson — selection is happening via semantic goal-path routing",
+      "prognosis": "If coverage-tick is producing coverageReport with coverage_progress=true (unverifiable), S.4a may already be in progress or satisfied. The 4 executions with success=True are encouraging but unconfirmable without task-level data."
+    }
+  },
+  "prioritized_actions": [
+    {
+      "priority": 1,
+      "action": "Fix F-068 (task_count=0) — enable task-level trace recording in goal-host-vessel",
+      "rationale": "F-068 is now blocking S.4a verification. coverage-tick and substrate-health-tick are executing with success=True but tasks=0 prevents confirming output shapes produced. This is the highest-urgency gap given S.4a monitoring phase.",
+      "urgency": "critical"
+    },
+    {
+      "priority": 2,
+      "action": "Evaluate S.4a pass/fail criteria against current evidence",
+      "rationale": "coverage-tick α=7 n=4, substrate-health-tick α=6 n=5. If the S.4a criteria are satisfied by success=True alone (or can be verified via another mechanism), declare the window status before rebuilding Docker (which would reset these posteriors).",
+      "urgency": "high"
+    },
+    {
+      "priority": 3,
+      "action": "Rebuild Docker image with c1364e4 (UPSERT MERGE fix) after S.4a evaluation",
+      "rationale": "F-083 CRITICAL: α=4471 at risk on restart. Rate now 5.4/min. Rebuilding resets posteriors (including coverage-tick α=7) — must time with S.4a checkpoint to avoid losing evidence. After rebuild, coverage-tick and other templates would restart at α=1.",
+      "urgency": "high",
+      "note": "TIMING DEPENDENCY on priority 2. Rebuild before S.4a confirmation would reset the window. Rebuild after confirmation preserves the outcome."
+    },
+    {
+      "priority": 4,
+      "action": "Increase boredom-vessel HTTP client timeout to 8-10 minutes",
+      "rationale": "F-088: 36% timeout rate (32/90 ticks). goal[1] (probe unlearned shapes) and goal[2] (topology chain) are primary casualties at 5-min limit. Increasing to 8-10 min would improve completion rate toward 85%+.",
+      "urgency": "medium"
+    },
+    {
+      "priority": 5,
+      "action": "Seed concept-db concepts (fix concept-db-seeder.service)",
+      "rationale": "0 of 24 concepts seeded due to seeder failure. Not blocking core execution loop but concept-graph shapes are unlearned.",
+      "urgency": "low"
+    }
+  ],
+  "key_delta_from_025": {
+    "positive": [
+      "F-089 SUBSTANTIALLY RESOLVED: coverage-tick seeded and firing (α=7, n=4)",
+      "F-090 CLOSED: substrate self-development plateau ended — 4 commits in 1.6h",
+      "F-091 NEW/RESOLVED: forge fast-fail guard deployed — failures now <3s vs 105s",
+      "F-036 continuing to hold: +235α, +0β since 025",
+      "Template registry doubled: 13 → 28 templates (15 new templates from dev-vessel restart)",
+      "S.4a window now OPEN: coverage-tick + substrate-health-tick executing",
+      "Boredom completion rate improved: 54% → 64%",
+      "concept-db HOST=0.0.0.0 fix applied — concept-db now accessible"
+    ],
+    "negative": [
+      "F-083 worsening (accelerating): α=4471 at risk (was 2410 at 025). Rate 5.4/min (was 0.42/min at 025). 12.9x acceleration",
+      "F-068 urgency elevated: now blocks S.4a verification (was medium severity, now high)",
+      "S.4a not yet formally confirmable due to task_count=0 gap",
+      "concept-db-seeder.service still failed (0/24 concepts seeded)"
+    ],
+    "unchanged": [
+      "F-079 c1364e4 not deployed — UPSERT CONTENT still in running image",
+      "substrate-explicit-vessels 48/53 tasks",
+      "repo root: 13 artifacts",
+      "F-068 task_count=0 on all traces",
+      "registry: 8 vessels / 112 shapes / 8 healthy"
+    ]
+  },
+  "metrics": {}
+}

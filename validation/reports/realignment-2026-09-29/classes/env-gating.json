@@ -1,0 +1,893 @@
+{
+ "attempts": [
+  {
+   "key": "env-gating",
+   "title": "identity-vessel schema autoapply",
+   "where": "repos/identity-vessel/src/index.ts:1513",
+   "tried": "SCHEMA_AUTOAPPLY env gate with hardcoded list 001-003; 004 hand-applied 07-23",
+   "outcome": "dormant",
+   "date": "2026-07-23",
+   "evidence": "SCHEMA_AUTOAPPLY not in /etc/substrate/env; api_key/key_session PERMISSIONS NONE; 004 not in the list",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "env-gating",
+   "title": "Thompson decay half-life read at use time from substrate_tuning_param, no env fallback",
+   "where": "activity-api/src/lib/posterior-update.ts resolveThompsonDecayHalfLifeDays",
+   "tried": "Move a behavioural constant from env to a runtime-steerable row",
+   "outcome": "worked",
+   "evidence": "Function present and referenced in activities.ts; model of law-1 compliance",
+   "source": "docs-3"
+  },
+  {
+   "key": "env-gating",
+   "title": "Rhythm conductor for law-5 cadence",
+   "where": "development-vessel rhythm-conductor-tick.ts; rhythm-cadence.timer -> scripts/substrate/rhythm-seed-tick.ts, rhythm-conduct-tick.ts",
+   "tried": "Cadence as timeShapedRhythm impulses read by a conductor",
+   "outcome": "partial",
+   "evidence": "Conductor itself driven by a 15-min systemd timer; timeShapedRhythm not advertised in registry; 46-49 timers in container; gaps rhythm-cadence-registry_empty and rhythm-reality-sync-rewrites... (x2) open",
+   "source": "docs-3"
+  },
+  {
+   "key": "env-gating",
+   "title": "Host-independent federation join",
+   "where": "openspec/changes/2026-09-12-host-independent-federation-join; commits 87e30952 etc.",
+   "tried": "Ungate relay-less transport, anchor precedence, remove frozen droplet IP, request-derived bootstrap, symmetric dialability, replication",
+   "outcome": "partial",
+   "date": "2026-09-12",
+   "evidence": "Ungate and precedence landed; bootstrap refused 3x on compose grounding window 0 bytes; replication never done; the relay-less transport on node 2 has no dialable address (I5/I9 undecidable)",
+   "source": "federation-relay"
+  },
+  {
+   "key": "env-gating",
+   "title": "Law-1 ports of env gates, then autonomous re-introduction",
+   "where": "d3d29da, d81ab34 (08-17) vs 0f79ff2/35f86fb+6 pwt (08-18), 7c34185, e07dc50, b4f9d47, 9cfdea4",
+   "tried": "Read gates as shaped data",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "138 distinct process.env names are read in src and only 19 in config.ts.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "env-gating",
+   "title": "env-var delivery bus defects",
+   "where": "gen-env.sh: 28f78545, fd9d1102, f32b2274, ae110fcd, fdd5503f, e31e28dd; uncommitted generic provider carry",
+   "tried": "Carry behaviour and config knobs through /etc/substrate/env",
+   "outcome": "partial",
+   "date": "2026-08-08..2026-09-28",
+   "evidence": "'seven variables had no working delivery path'; 'a comment in an unquoted heredoc ran as a command every boot'; SUBSTRATE_PUSH_VESSELS and GAP_STORE_ENDPOINT had not reached units until 09-26",
+   "source": "git-deployment"
+  },
+  {
+   "key": "env-gating",
+   "title": "Behaviour behind env vars",
+   "where": "230093a MITOSIS_HOST_SYNC_MODE, 568d483 SELF_DEV_LLM_MODEL, 900bc69 REUSE_BEFORE_MINT, 6358937 EXTRA_WORKSPACE_ROOTS, 30bbe40 DEV_OPERATOR_PRESENT",
+   "tried": "Partially moved to discovery / 'auto'.",
+   "outcome": "partial",
+   "evidence": "gap-env-gated-write-allowlist was 'closed' twice by inert renames (69d680b, bafd83d).",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "env-gating",
+   "title": "Env-gated write allowlist and gate-fulfilled",
+   "where": "6651808, 038ed0d, 8f05704, f38f68b, 4814234, 60e3154",
+   "tried": "Landed 3x, then deleted unwired env_gate_fulfilled",
+   "outcome": "superseded",
+   "date": "2026-08-17..08-29",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "env-gating",
+   "title": "Env-gated auto-draft 'fixed' by defaulting the env gate OFF",
+   "where": "429c7e5; src/index.ts:16175",
+   "date": "2026-08-18",
+   "tried": "Gap gap-env-gated-substrate-auto-draft-enabled (law 1).",
+   "outcome": "failed",
+   "evidence": "The landing added `|| === undefined`, deepening the env gate. Still in HEAD.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "env-gating",
+   "title": "Operator law-1 conversions of constants to shapes",
+   "where": "b79c2ba, 4f7a817, 02f168c, ca286e0",
+   "date": "2026-08-16..08-17",
+   "tried": "Walk budgets, lesson execution and EDGE_BLEND_K read as shapes at use time.",
+   "outcome": "worked",
+   "evidence": "34 process.env reads remain in index.ts, including ROUTE_EDIT_INTENT_TO_COMPOSE, PREFER_LIBP2P_ROUTE, ROUTE_ACTIVITY_REPAIR and SUBSTRATE_REUSE_LLM_ENABLED.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "env-gating",
+   "title": "/health enabled gated on DENSE_BACKFILL_ENABLED, flip-flopped",
+   "where": "concept-db 071088f(08-15), 120d9d1(08-18), acb7a5a(08-18)",
+   "tried": "pwt mitosis gaps gated, ungated, then regated",
+   "outcome": "failed",
+   "date": "2026-08-15..18",
+   "evidence": "Three oscillating landings, all law-1 env gating",
+   "source": "git-mid"
+  },
+  {
+   "key": "env-gating",
+   "title": "EXECUTABLE_RESOLVERS constant blocked all 214 proposals",
+   "where": "boredom-vessel 92f3336 (autonomous)",
+   "tried": "Seed set unioned with discovery",
+   "outcome": "worked",
+   "date": "2026-08-06",
+   "evidence": "45 distinct blocked resolvers, 94 idle cycles; a law-1 repair made by the substrate",
+   "source": "git-mid"
+  },
+  {
+   "key": "env-gating",
+   "title": "Behaviour behind env vars",
+   "where": "00aa71e9, 6e00f7ae, 376b5794, 50812974, 6f5e1bdd, 1101faea",
+   "date": "2026-05-01..06-30",
+   "tried": "GOAL_RUNTIME, MINIBOB_BOREDOM_ENABLED, DB_POOL_ENABLED, MITOSIS_DIRECT_PUSH, GAP_COMPOSE_TRIAGE, LLM provider env",
+   "outcome": "unknown",
+   "evidence": "law 1 violations; the ias-executor bridge was 'wired but not activated' behind env (b3c9d58e)",
+   "source": "git-super-1"
+  },
+  {
+   "key": "env-gating",
+   "title": "Boredom AUTONOMOUS_GOALS parallel arrays",
+   "where": "de467c93, 366d3655, 793dcc81, 06c48140",
+   "date": "2026-06-07..22",
+   "tried": "adding goals by index to in-process arrays",
+   "outcome": "failed",
+   "evidence": "3 commits to add goal[42]; goal[49] edge-former fired 0 times in 40 min",
+   "source": "git-super-1"
+  },
+  {
+   "key": "env-gating",
+   "title": "env-read behaviour moved to shapes/use-time",
+   "where": "0968fd1c, f65556be, 16dd0571, 442de3ff, 28f78545, 42302670",
+   "tried": "Shaped policies and use-time reads; audit of variables with no delivery path",
+   "outcome": "partial",
+   "date": "2026-08-16..2026-08-22",
+   "evidence": "Autonomous landings reintroduced env gates on 09-27 (9cfdea4, a198907)",
+   "source": "git-super-2"
+  },
+  {
+   "key": "env-gating",
+   "title": "DOC_FIX_AUTOLAND -> docFixPolicy shape",
+   "where": "dev-vessel doc-drift-fix.ts, /workspace/doc-fix-policy.json",
+   "tried": "Substrate-authored in 4 dispatches",
+   "outcome": "worked",
+   "date": "2026-07-12",
+   "evidence": "Roundtrip proven; env-gated-behavior-sweep gap open; env fallback kept",
+   "source": "memory-1"
+  },
+  {
+   "key": "env-gating",
+   "title": "LLM_FALLBACK_MODEL env drift",
+   "where": "/etc/substrate/env",
+   "tried": "Filed env-drift detector, superseded by behavior-config-not-shape-driven",
+   "outcome": "superseded",
+   "date": "2026-07-12",
+   "evidence": "2/3 llm units could not fail over during the outage",
+   "source": "memory-1"
+  },
+  {
+   "key": "env-gating",
+   "title": "LLM failover gated by LLM_FALLBACK_MODEL",
+   "where": "llm-resolver-vessel index.ts:405-425",
+   "tried": "Diagnosed only",
+   "outcome": "dormant",
+   "date": "2026-08-03",
+   "evidence": "Detection fires, returns null; no failover for tool calls",
+   "source": "memory-2"
+  },
+  {
+   "key": "env-gating",
+   "title": "Satisfier shell env/CWD facts for command synthesis",
+   "where": "goal-host bfdd173, 691142d, 541c21e4 (1c)",
+   "tried": "Injected interpreter and repo-root facts into the executor prompt, then into the primary executorGuidance.",
+   "outcome": "partial",
+   "date": "2026-07-24",
+   "evidence": "The first fix covered only the fallback prompt, so the primary path kept synthesizing python3 and reach was nondeterministic. CWD not grounded: relative path gave 0, absolute gave 39.",
+   "source": "memory-3"
+  },
+  {
+   "key": "env-gating",
+   "title": "Shaped policy files for law-1 compliance",
+   "where": "policies/*.json in super-repo work tree; f87f52f producers",
+   "tried": "Seed policy files and add producers for walkBudget and lessonExecutionPolicy",
+   "outcome": "failed",
+   "date": "2026-08-16",
+   "evidence": "Files were erased or rewritten within ~50 min (a gitignored dir inside a cleaned work tree); POLICY_ROOT outside the tree is needed",
+   "source": "memory-4"
+  },
+  {
+   "key": "env-gating",
+   "title": "Compose lane outage via placeholder key \u2192 phantom arm",
+   "where": "llmModelPolicy pin; llm-resolver index.ts:381; 61ae51b",
+   "tried": "Delete the env line (blank crash-looped), then the substrate landed the one-line fix",
+   "outcome": "worked",
+   "date": "2026-09-16",
+   "evidence": "61ae51b is Substrate Autonomous; 89 failures never moved the pinned arm's \u03b2",
+   "source": "memory-4"
+  },
+  {
+   "key": "env-gating",
+   "title": "Compose watchdog marker pollution",
+   "where": "scripts/substrate/units/gap-compose.service.d/watchdog.conf e216d355",
+   "tried": "WATCHDOG_ACTIVITY_PATHS env pinned to compose-lessons.jsonl",
+   "outcome": "worked",
+   "date": "2026-07-29",
+   "evidence": "The watchdog fired with 1794 open intents. It is an env-var fix (law-1 tension); the __drainBackoff-never-set root is filed.",
+   "source": "memory-4"
+  },
+  {
+   "key": "env-gating",
+   "title": "Dev-vessel METABOB_API_KEY drift realign",
+   "where": "/workspace/.substrate-secrets and /etc/substrate/env",
+   "tried": "Operator realigned the key; the unit's second EnvironmentFile overrode the first.",
+   "outcome": "worked",
+   "date": "2026-07-29",
+   "evidence": "discovery calls went from 401 to 200. The key-drift class recurred on 07-27 and 09-19 (seed-identity shadowing, fixed 081e9cbd).",
+   "source": "memory-5"
+  },
+  {
+   "key": "env-gating",
+   "title": "Replace hardcoded haiku model pins with auto",
+   "where": "goal-host 8bd2fff (7 sites)",
+   "date": "2026-07-29",
+   "tried": "route through learned llmModelPolicy",
+   "outcome": "worked",
+   "evidence": "skips dead anthropic-first attempt; binary reach unchanged when all lanes dead",
+   "source": "memory-6"
+  },
+  {
+   "key": "env-gating",
+   "title": "Spoke derivation hardcodes 18xxx",
+   "where": "gen-env.sh:249-250; Makefile a48e4ae3",
+   "date": "2026-08-09",
+   "tried": "audit config surface; pass-through identity/activity endpoints",
+   "outcome": "partial",
+   "evidence": "a48e4ae3 fixed Makefile derivation; gen-env allow-list and 18xxx hardcode documented, not fixed in shard",
+   "source": "memory-6"
+  },
+  {
+   "key": "env-gating",
+   "title": "Remove LLM_VESSEL_ENDPOINT env gate on ReAct floor",
+   "where": "goal-host 559a55d",
+   "tried": "Floor resolves via discovery; trust wrapper's internal grounding",
+   "outcome": "worked",
+   "date": "2026-07-27",
+   "evidence": "prose over existing files reached via universal-tool-fallback",
+   "source": "memory-7"
+  },
+  {
+   "key": "env-gating",
+   "title": "Qwen3/vLLM arm on spoke",
+   "where": "llm-resolver VLLM_ENDPOINTS env",
+   "tried": "Register self-hosted provider via env",
+   "outcome": "dormant",
+   "date": "2026-07-31",
+   "evidence": "write blocked by classifier; capability inert behind unset env",
+   "source": "memory-7"
+  },
+  {
+   "key": "env-gating",
+   "title": "Stale key from .substrate-secrets EnvironmentFile order",
+   "where": "/workspace/.substrate-secrets",
+   "tried": "Reconciled the key line",
+   "outcome": "partial",
+   "date": "2026-07-24",
+   "evidence": "The same EnvironmentFile-wins mechanism came back on 09-22 with WORKSPACE_ROOT",
+   "source": "memory-8"
+  },
+  {
+   "key": "env-gating",
+   "title": "Hub unrestartable: gen-env overwrite heredoc",
+   "where": "gen-env.sh:529 9f8f945e; apply-inventory; deploy-hub.sh d9f93442",
+   "date": "2026-08-08",
+   "tried": "merge-then-write + image rebuild + declared roster",
+   "outcome": "worked",
+   "evidence": "restart rehearsal passed; recreate-safety unproven; the fleet had been running on hand-state",
+   "source": "memory-9"
+  },
+  {
+   "key": "env-gating",
+   "title": "Env-gate elimination plus env_gate_scan",
+   "where": "activity-api 089cdcf, dev-vessel 744a3cd",
+   "tried": "resolve concept-db via discovery; detect env-gated capability",
+   "outcome": "partial",
+   "date": "2026-07-04",
+   "evidence": "15 sites / 14 vars found; the same session minted env GAP_CLASS_OPEN_CAP",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "env-gating",
+   "title": "MITOSIS_DIRECT_PUSH as the missing knob",
+   "where": "vessel env",
+   "tried": "turn on direct push to close cutover",
+   "outcome": "partial",
+   "date": "2026-06-16",
+   "evidence": "autonomy behaviour gated by env; stalls followed 06-17..06-20",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "env-gating",
+   "title": "Substrate identity resolution",
+   "where": "openspec/changes/2026-05-23-substrate-identity-resolution",
+   "tried": "Replace hardcoded identity.metabob.com/k8s defaults with substrateIdentity shape",
+   "outcome": "dormant",
+   "date": "2026-05-23",
+   "evidence": "0/50 tasks; no substrateIdentity or VESSEL_BOOTSTRAP_KEY in src",
+   "source": "openspec-1"
+  },
+  {
+   "key": "env-gating",
+   "title": "WRITE_ALLOWLIST env scoping for fs_write (draft-spec option B)",
+   "where": "development-vessel src/resolvers/fs-write.ts; commits 69d680b, bafd83d, 6586f17",
+   "date": "2026-05-30..2026-08-30",
+   "tried": "The spec chose an env var to scope substrate writes. A gap to remove the env gate then produced several autonomous landings: an inert rename (bafd83d), a flip of the unset branch from throw to return (6586f17), and the current throw inside a dead branch.",
+   "outcome": "failed",
+   "evidence": "The live dev-vessel process has no WRITE_ALLOWLIST. resolveFsWrite only calls assertInAllowlist when the env is defined, so the deny branch is unreachable and every workspace path stays writable. gap-to-feature.ts:2824 documents the bafd83d hollow close.",
+   "source": "openspec-2"
+  },
+  {
+   "key": "env-gating",
+   "title": "LR-6 TD(\u03bb) credit via env TD_LAMBDA, later moved to substrate_tuning_param",
+   "where": "activity-api lib/posterior-update.ts:120-145; migration 152 substrate_tuning_param",
+   "tried": "Rename the \u03b3=0.5 constant to TD_LAMBDA, default 0.7, env override; later made table-backed",
+   "outcome": "partial",
+   "date": "2026-06-04",
+   "evidence": "live tuning row TD_LAMBDA=0.6; A4/A5 variance/convergence acceptance never recorded; the proposal self-corrected a wrong premise (decay already existed)",
+   "source": "openspec-3"
+  },
+  {
+   "key": "env-gating",
+   "title": "Single transport story (libp2p overlay as the transport)",
+   "where": "2026-07-04-single-transport-story; goal-host index.ts:422,4242,7478, llm-router.ts:69",
+   "tried": "Registration carries protocol/libp2p fields; route by registration not PREFER_LIBP2P_ROUTE",
+   "outcome": "partial",
+   "date": "2026-07-04",
+   "evidence": "vessel-discovery-client has libp2p_multiaddr; PREFER_LIBP2P_ROUTE still read in 3 places; baked 127.0.0.1 URLs in seed templates never fixed",
+   "source": "openspec-4"
+  },
+  {
+   "key": "env-gating",
+   "title": "Data-driven LLM arms",
+   "where": "2026-07-19-llm-arms-data-driven; scripts/substrate render-llm-arms.sh, apply-llm-arms.sh, entrypoint.sh:198-221; llm-resolver index.ts:69,1098",
+   "tried": "Declarative llm-arms.json rendered to single-provider units; LLM_PINNED_PROVIDER quota gating",
+   "outcome": "worked",
+   "date": "2026-07-19",
+   "evidence": "entrypoint + Dockerfile wire apply-llm-arms; static opus/haiku/google units gone; proposal still says cutover remaining (docs-drift); arm-inventory-as-shape gap open",
+   "source": "openspec-4"
+  },
+  {
+   "key": "env-gating",
+   "title": "gen-env spoke guard consults HUB_DISCOVERY_URL",
+   "where": "scripts/substrate/gen-env.sh",
+   "tried": "infer spoke-ness from HUB_DISCOVERY_URL as well as DISCOVERY_ENDPOINT",
+   "outcome": "worked",
+   "date": "2026-08-07",
+   "evidence": "gen-env.sh:206-215 present; substrate-ui deployment measured later",
+   "source": "openspec-9"
+  },
+  {
+   "key": "env-gating",
+   "title": "Producers for walkBudget/lessonExecutionPolicy shaped policies",
+   "where": "f87f52f; a848aee bodyHonestyPolicy self-heal",
+   "date": "2026-08-16",
+   "tried": "Readers existed with no producer (fallback iters=4 every walk); added producers",
+   "outcome": "partial",
+   "evidence": "Proven SHAPED iters=6 13:14, erased by 13:57: policies/ gitignored inside git worktree; POLICY_ROOT move never done in shard",
+   "source": "reports-1"
+  },
+  {
+   "key": "env-gating",
+   "title": "CUTOVER_LEASE_WAIT_MS=330000 stopgap",
+   "where": "development-vessel unit file",
+   "tried": "Raise the cutover lease wait above reconcile's TTL so verified drafts are not discarded.",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "The live drop-in was pending approval. Env-gated behaviour violates law 1. The root cause (#19) is open.",
+   "source": "reports-2"
+  },
+  {
+   "key": "env-gating",
+   "title": "substrate-config and env.provenance",
+   "where": "gen-env.sh and substrate-config",
+   "tried": "Report which tier supplied each variable",
+   "outcome": "worked",
+   "date": "2026-08-20",
+   "evidence": "Two own defects fixed first: the tool was never COPYed into the image, and it reported generated secrets as hardcoded. Now reports env/persisted/generated/unrecorded.",
+   "source": "reports-7"
+  },
+  {
+   "key": "env-gating",
+   "title": "vessel-ctl apply let the env file override the injected selection",
+   "where": "vessel-ctl.sh selection_override()",
+   "tried": "Re-export the caller's selection env after sourcing /etc/substrate/env",
+   "outcome": "worked",
+   "date": "2026-09-1x",
+   "evidence": "4-way test through the real code path. Gap gap-vessel-ctl-apply-overrides-the-injected-selection.",
+   "source": "reports-8"
+  },
+  {
+   "key": "env-gating",
+   "title": "Bind override for human-surface host",
+   "where": "surface-host.conf drop-in",
+   "tried": "Mounted Environment=HOST=0.0.0.0 over the baked unit, which binds loopback.",
+   "outcome": "partial",
+   "date": "2026-09-22",
+   "evidence": "It works, but the fix lives in a fixture file, not in the image.",
+   "source": "syzygy"
+  },
+  {
+   "key": "env-gating",
+   "title": "runtime-drift detector",
+   "where": "scripts/substrate/runtime-drift-tick.ts",
+   "tried": "Detect runtime-vs-clone drift and repair it",
+   "outcome": "partial",
+   "evidence": "Detects that development-vessel resolvers/patch-with-tools.ts differs from the clone but does not repair it, because RUNTIME_DRIFT_REPAIR is unset. demo-vessel and relevance-sink-vessel are not covered",
+   "source": "timers-readers"
+  },
+  {
+   "key": "env-gating",
+   "title": "Fleet credential recovery after reboot / API_KEY unset",
+   "where": "/etc/substrate/env, identity-vessel, gen-env",
+   "tried": "Issue fresh keys under current secret (backup env.bak-preauthfix-2026-09-10)",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "13:51 oracle corpus writing again after 21h frozen; reach instrument valid for first time (7.9%)",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "env-gating",
+   "title": "Keyless provider crash-loop / placeholder GOOGLE_API_KEY",
+   "where": "llm-resolver-vessel",
+   "tried": "Hot-patch running copy then substrate fix 61ae51b",
+   "outcome": "worked",
+   "date": "2026-09-16",
+   "evidence": "89 drafter 400s/30min before; compose lane restored",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "env-gating",
+   "title": "Hardcoded human-surface verification bypass",
+   "where": "gap-to-feature.ts 6c33870/47171d1",
+   "date": "2026-09-26T21:52Z",
+   "tried": "removed via node-2 routed 766f68d",
+   "outcome": "reverted",
+   "evidence": "Keyed on vessel name, returned 'absent' closing gaps without verification",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "env-gating",
+   "title": "Intent alignment via env-disabled reuse",
+   "where": "validation/findings/substrate-consistency/2026-06-02T00-23-18Z",
+   "tried": "SUBSTRATE_REUSE_KEYWORD_MIN=999 + promote fresh template per goal",
+   "outcome": "superseded",
+   "date": "2026-06-02",
+   "evidence": "6/6 aligned by minting a new 4-task template per goal (after 2/8 mode collapse onto fm-43)",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "env-gating",
+   "title": "Config-surface probe",
+   "where": "validation/findings/config-surface-audit.md, config-surface-open-decisions.md \u00a77",
+   "tried": "scripts/substrate/config-surface-probe.sh replaces prose harness",
+   "outcome": "dormant",
+   "date": "2026-08-21",
+   "evidence": "invoked by nothing (Makefile:159 comment only)",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "env-gating",
+   "title": "Vessel edit gate (dispatch, don't edit)",
+   "where": ".claude/hooks/substrate-vessel-edit-gate.sh + .claude/settings.local.json",
+   "tried": "PreToolUse deny on repos/*/src edits, with an S3 intervention_evaluate push-away",
+   "outcome": "failed",
+   "date": "2026-09-29",
+   "evidence": "settings.local.json has held env SUBSTRATE_ALLOW_DIRECT_EDIT=1 since at least 09-06 (mtime). A measured pair: with =1 the hook allows silently; with =0 it returns the generic deny. dev-vessel logged 0 intervention_evaluate calls since 09-25 because localhost:18090 is dark.",
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "problems": [
+  {
+   "key": "env-gating",
+   "symptom": "identity-vessel migrations never auto-apply in the substrate; 004 hand-applied",
+   "root_cause": "SCHEMA_AUTOAPPLY env gate plus a hardcoded 001-003 list",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Every self-* mechanism in SOFTWARE \u00a75 is a static systemd timer, and watchdog thresholds are unit Environment= lines",
+   "root_cause": "The doc codifies timer cadence, contradicting law 5 rhythm impulses",
+   "source": "docs-2"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Cadence law implemented as a systemd timer that runs the rhythm conductor; 48 behavioural env names exist only in unit Environment= lines; ~451 env names read; TRACE_STORE_* and TEMPLATE_LIFECYCLE_MIN_* env-gated",
+   "source": "docs-3"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour steered by env vars (authoring emit, concept-db upkeep, trace retention, compose lane cap, GAPS_PATH, PARKED_LANDINGS_DIR)",
+   "first_seen": "2026-08-18",
+   "last_seen": "2026-09-28",
+   "recurrences": 7,
+   "root_cause": "Bootstrap config used for runtime behaviour, against law 1",
+   "source": "gap-history"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour behind env vars keeps returning after law-1 ports",
+   "root_cause": "The drafter reaches for process.env as the cheapest gate; 138 env names are read outside config",
+   "first_seen": "2026-07-04",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "source": "git-activityapi"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour knobs (MITOSIS_DIRECT_PUSH, TRACE_RETENTION_*, RUNTIME_DRIFT_REPAIR, CUTOVER_LEASE_WAIT_MS, ENABLED/DISABLED_VESSELS) live in gen-env and unit Environment; the env bus itself repeatedly loses or corrupts values",
+   "root_cause": "A new behaviour gets an env var instead of a shaped impulse. The 1,801-line gen-env has quoting, heredoc and carry-through defects that no instrument sees",
+   "first_seen": "2026-06-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 8,
+   "source": "git-deployment"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour behind env vars; a law-1 gap 'fixed' by defaulting the env gate OFF",
+   "first_seen": "2026-06-15",
+   "last_seen": "2026-08-18",
+   "recurrences": 3,
+   "root_cause": "34 process.env reads in index.ts. The drafter satisfies the gap text literally.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "DENSE_BACKFILL_ENABLED, IAS_TRACE_SPOOL_DRAIN_BATCH, IAS_TRACE_SPOOL_DIR, resolve timeout env, agent_fill default-off, EXECUTABLE_RESOLVERS constant",
+   "first_seen": "2026-05-21",
+   "last_seen": "2026-09-26",
+   "recurrences": 6,
+   "root_cause": "The drafter and operators reach for env/constant knobs; law 1 is not enforced at the gate",
+   "source": "git-mid"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "behaviour behind env vars and in-process goal arrays; goal[49] never fires",
+   "first_seen": "2026-03-25",
+   "last_seen": "2026-06-30",
+   "recurrences": 10,
+   "root_cause": "behaviour encoded as bootstrap config and constants, not shapes/activities (law 1/2)",
+   "source": "git-super-1"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "compose cap, trace retention, drift repair, authoring roots behind env vars",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-27",
+   "recurrences": 6,
+   "root_cause": "law 1 violations reintroduced by both operator and autonomous code",
+   "source": "live-gaps"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "The memory path depends on WORKSPACE_ROOT, which the unit sets to /workspace and the env file sets to /workspace/git/super-repo (both still present); policy files are missing on node 2",
+   "first_seen": "2026-07-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "root_cause": "Store locations and behavior tunables live in env and files, not in shapes",
+   "source": "live-pool-memory"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "trace retention, escalation target and the dev-vessel advertise endpoint are set by env vars",
+   "root_cause": "TRACE_RETENTION_ACTIVITIES, STATEFUL_UI_VESSEL_ENDPOINT default, VESSEL_ADVERTISE_ENDPOINT=host.containers.internal",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour frozen at process start (fallback model, autoland, tools, caps, throttles, arm masks)",
+   "root_cause": "Env/config/constants used as behaviour switches",
+   "first_seen": "2026-07-10",
+   "last_seen": "2026-09-19",
+   "recurrences": 8,
+   "source": "memory-1"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour frozen in env/process state: RELAY_MULTIADDR/let RELAY, CONCEPT_DB_ENDPOINT unset, DUAL_WRITE_ENABLED, LLM_DEFAULT_MODEL to dead provider, WORKSPACE_ROOT fork, UPKEEP_INTERVAL_MS in-memory, CPUQuota on tmpfs, pinned model literals",
+   "root_cause": "Law 1 violations at bootstrap seams; comment claims compliance while code freezes",
+   "first_seen": "2026-07-31",
+   "last_seen": "2026-09-22",
+   "recurrences": 8,
+   "source": "memory-10"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Failover, routing, caps and cadence behind env vars, timers and literals",
+   "first_seen": "2026-07-15",
+   "last_seen": "2026-08-03",
+   "recurrences": 7,
+   "root_cause": "Bootstrap-frozen config used for runtime decisions",
+   "source": "memory-2"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behavior hides behind env vars and module-load constants: DUAL_WRITE, EXEMPLAR boot, replication cadence, draft thresholds, exploration rate, relay multiaddr, provider keys; `??` defeated by empty strings.",
+   "first_seen": "2026-07-14",
+   "last_seen": "2026-09-11",
+   "recurrences": 10,
+   "root_cause": "The bootstrap tier leaks into runtime behavior, invisible to traces (law 1).",
+   "source": "memory-3"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behavior steered by env or constants invisible to traces (DOC_FIX_AUTOLAND, PEER_FANOUT_MODE, MITOSIS_DIRECT_PUSH, WATCHDOG paths, budgets, placeholder keys, placement)",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-16",
+   "recurrences": 10,
+   "root_cause": "Fixes applied via env for speed; shaped-policy storage not durable",
+   "source": "memory-4"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour steered by env/constants (POSTERIOR_COALESCE, CONCEPT_DB_ENDPOINT default, EXPECTATION_CALIB_PATH, empty-string keys, extraction policy fallbacks).",
+   "root_cause": "Law 1 violation. Un-evaluable per dispatch (07-26 audit root).",
+   "first_seen": "2026-07-26",
+   "last_seen": "2026-09-02",
+   "recurrences": 6,
+   "source": "memory-5"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour gated by env/constants (proven-bad arming, fallback model, vLLM, default model, direct-edit bypass standing on)",
+   "root_cause": "bootstrap env used for behaviour, invisible to traces",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-09-10",
+   "recurrences": 7,
+   "source": "memory-6"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behavior sits behind unset env vars or static constants: the floor, VLLM arms, resource thresholds, tuning params falling back to env",
+   "root_cause": "Law 1 violations in the bootstrap tier leak into behavior",
+   "first_seen": "2026-07-27",
+   "last_seen": "2026-09-01",
+   "recurrences": 5,
+   "source": "memory-7"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour is gated on env vars or EnvironmentFile order: stale keys, WORKSPACE_ROOT, the kill switch, fanout mode, timeouts.",
+   "root_cause": "Bootstrap config is used for runtime behaviour, and the later EnvironmentFile silently wins.",
+   "first_seen": "2026-07-24",
+   "last_seen": "2026-08-25",
+   "recurrences": 6,
+   "source": "memory-8"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour behind env vars (SKIP_COMPOSE_TRIGGER, MAX_NEW_RESOLVERS_PER_HOUR, RUNTIME_DRIFT_REPAIR, CUTOVER_LEASE_WAIT_MS, REQUIRE_AUTH default false)",
+   "first_seen": "2026-08-10",
+   "last_seen": "2026-09-23",
+   "recurrences": 5,
+   "root_cause": "Bootstrap config used for runtime steering; the policy shapes have no producer (pathwayReusePolicy, bodyHonestyPolicy 0/417)",
+   "source": "memory-9"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Capability silently off because an env var is unset; new env gates minted while old ones are removed",
+   "first_seen": "2026-06-16",
+   "last_seen": "2026-08-08",
+   "recurrences": 7,
+   "root_cause": "behaviour and tuning parameters placed in env rather than shaped impulses",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour steered by env flags (TASK_GENERATION_ENABLED, DB_POOL_ENABLED, HNSW, GOAL_RUNTIME, FEATURE_ACTIVITY_DRIVEN_BINDING); hardcoded identity endpoints",
+   "first_seen": "2026-04-26",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "root_cause": "identity-resolution spec never built; flags used as fixes",
+   "source": "openspec-1"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "fs_write scoping is behind the WRITE_ALLOWLIST env var. A gap to remove the gate was 'closed' by at least 3 landings (69d680b, bafd83d rename, 6586f17 branch flip), yet the gate is intact and the var is unset live, so there is no scoping at all.",
+   "root_cause": "The spec chose an env knob (law 1). Close predicates certified on commit provenance rather than the effective condition. The outer guard makes the inner deny unreachable.",
+   "first_seen": "2026-05-30",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "source": "openspec-2"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "SF_BLEND, SF_BLEND_WEIGHT, EMBEDDING_PRIOR_ENABLED, M1_OBSERVER_*, PRIOR_SEED_*, COMPREHENSIBILITY_RECHECK_*, GOAL_HOST_DISABLE_SUBSCRIBERS gate behaviour via env",
+   "first_seen": "2026-06-01",
+   "last_seen": "2026-09-28",
+   "recurrences": 7,
+   "root_cause": "proposals specified env knobs by default; only TD_LAMBDA/SF_BLEND/YIELD_FLOOR moved to substrate_tuning_param, and env still wins first",
+   "source": "openspec-3"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Transport choice and many gates are env knobs (PREFER_LIBP2P_ROUTE, SEMANTIC_CUTOVER_GATE, GAP_DRAIN_OBSERVER, TRACE_STORE_CAP)",
+   "root_cause": "Flags introduced as env for safety and never migrated to shapes (partial: accelerator-flag-tick tuning params)",
+   "first_seen": "2026-06-25",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "source": "openspec-4"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "_fedTargetVessel 'concept-db-local' literal pin and PEER_DISCOVERY_ENDPOINTS env still steer routing",
+   "root_cause": "Proposed retirement tasks T14 and hub wiring never executed",
+   "first_seen": "2026-07-19",
+   "last_seen": "2026-09-28",
+   "source": "openspec-5"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour behind env/drop-ins/constants (retention 19 env reads, COMPOSE_MAX_CONCURRENT, CUTOVER_LEASE_WAIT_MS, RUNTIME_DRIFT_REPAIR, .slice(0,3), MAX_ITERS=4)",
+   "root_cause": "Shaped-policy storage unreliable, so operators fall back to drop-ins",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-24",
+   "recurrences": 8,
+   "source": "reports-1"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behavioral switches and the reach label threshold live in env/constants (SF_BLEND env short-circuits above the row, hollow-cap literals, EDGE_BLEND_K, quiesce/slot constants)",
+   "root_cause": "Tuning table is not a shape; env tier placed above the readable row",
+   "first_seen": "2026-08-21",
+   "last_seen": "2026-08-21",
+   "recurrences": 1,
+   "source": "reports-3"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour behind env/constants: retention knobs, quiesce bound, Retry-After:30, SUBSTRATE_ALLOW_DIRECT_EDIT persisting, doc autoland policy file",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-09-24",
+   "recurrences": 5,
+   "root_cause": "Law 1 violations at shared seams; system cannot variate them.",
+   "source": "reports-4"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Selection-critical hyperparameters and interlocks are frozen from process.env",
+   "root_cause": "SIGNATURE_CLUSTER_N_MIN and SATISFIER_PROVEN_BAD_ARMED are still env [LIVE 09-28], along with many *_INTERVAL_MS and learning-plane flags",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-28",
+   "recurrences": 3,
+   "source": "reports-5"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Behaviour gated by env or config (ROUTE_EDIT_INTENT_TO_COMPOSE, MITOSIS_DIRECT_PUSH, SUBSTRATE_ALLOW_DIRECT_EDIT permanently set, 17 pinned literals, RELAY_MULTIADDR frozen); autonomous landings add env gates (9c86aff, a198907, 9cfdea4).",
+   "first_seen": "2026-08-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "root_cause": "The config-surface detectors have 0 call sites; the drafter and judge have no law-1 lens.",
+   "source": "reports-6"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "MITOSIS_DIRECT_PUSH defaults to 1 and appears in no doc; VLLM_* discarded; retention literals; DB_POOL_ENABLED, DENSE_EMBEDDING_HNSW_ENABLED, CLUSTER_SHADOW_SAMPLE_RATE and similar gate the hot path",
+   "root_cause": "Law-1 violations persist; config layers have no provenance",
+   "first_seen": "2026-08-20",
+   "last_seen": "2026-09-25",
+   "recurrences": 3,
+   "source": "reports-7"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "vessel-ctl apply sourced the env file over the injected ENABLED_ROLES, defeating mask recovery on spokes. LAUNCH_OVERRIDES omits PORT_OFFSET, PROFILE and ENABLED_EXTRA_VESSELS, which are silently ignored on resume.",
+   "root_cause": "Bootstrap env precedence was undocumented and untested",
+   "first_seen": "2026-09-1x",
+   "last_seen": "2026-09-1x",
+   "recurrences": 2,
+   "source": "reports-8"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "GOAL_HOST_WS_SUBSCRIBER=off (iter-8 ablation), ROUTE_EDIT_INTENT_TO_COMPOSE=0 and MITOSIS_DIRECT_PUSH=0 steer runtime behavior.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "source": "syzygy"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Flow routing, repair arming and learning features live in env drop-ins: WATCHDOG_*, RUNTIME_DRIFT_REPAIR, EMBEDDING_PRIOR_ENABLED, BOREDOM_*, GAPS_PATH default",
+   "root_cause": "The timer and unit layer is configured with env, which violates law 1. Cadence is static OnUnitActiveSec, which violates law 5",
+   "first_seen": "2026-06-17",
+   "last_seen": "2026-09-29",
+   "recurrences": 5,
+   "source": "timers-readers"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "Credentials: secrets file override, key dropped in rewrite, API_KEY unset fleet-wide, placeholder GOOGLE_API_KEY pins dead model arm",
+   "first_seen": "2026-09-07",
+   "last_seen": "2026-09-16",
+   "recurrences": 4,
+   "root_cause": "Env/secret layering at boot invisible to traces; no restart policy on substrate-live",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "dead/discarded/frozen knobs; peering wiped on restart; FED id not persisted; admin key never persisted",
+   "first_seen": "2026-06-02",
+   "last_seen": "2026-08-26",
+   "recurrences": 5,
+   "root_cause": "gen-env allow-list regenerated every boot; bootstrap tier not self-updating",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "env-gating",
+   "symptom": "The edit gate exits 0 silently in every session",
+   "root_cause": "settings.local.json env SUBSTRATE_ALLOW_DIRECT_EDIT=1 persisted since at least 09-06. Transcripts claim it was 'restored to 0 after'.",
+   "first_seen": "2026-08-28",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "claims": [
+  {
+   "key": "env-gating",
+   "claimed_at": "2026-07-23",
+   "claim": "004 tenant-isolation applied live; the file makes it durable across a fresh deploy",
+   "where": "identity-vessel/sql/migrations/004 header",
+   "later": "No applier: SCHEMA_AUTOAPPLY unset and 004 not in the hardcoded list; a fresh deploy would not apply it",
+   "source": "concept-db-db"
+  },
+  {
+   "key": "env-gating",
+   "claimed_at": "2026-09-12",
+   "claim": "A relay-less transport is a healthy transport (ungate landed)",
+   "where": "87e30952; 09-12 proposal Outcome",
+   "later": "Node 2 transport is active but announces no dialable address (I5/I9 'no valid addresses'); healthy only per systemctl",
+   "source": "federation-relay"
+  },
+  {
+   "key": "env-gating",
+   "claimed_at": "2026-06-16",
+   "claim": "Self-alteration cutover loop CLOSED; MITOSIS_DIRECT_PUSH the one missing knob",
+   "where": "finding_2026_06_16_self_alteration_cutover_closed",
+   "later": "06-20 about 21h of pure no_op at landing",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "env-gating",
+   "claimed_at": "2026-09-10T20:19",
+   "claim": "Reach is 7.9% overall, 2.1% edit \u2014 for the first time a real number",
+   "where": "bcc44633",
+   "later": "all earlier reach figures void (fleet 401-dead since reboot 09-09; labeler discarded successes); 09-11 5.0%/2.4%",
+   "source": "transcripts-2"
+  },
+  {
+   "key": "env-gating",
+   "claimed_at": "2026-08-09",
+   "claim": "F10 image inventory drift",
+   "where": "validation/findings/config-surface-audit.md",
+   "later": "retracted: an old container was measured",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "env-gating",
+   "claimed_at": "2026-06-02",
+   "claim": "6/6 intent alignment",
+   "where": "validation/findings/substrate-consistency/2026-06-02T00-23-18Z",
+   "later": "achieved with reuse disabled by env and a fresh mint per goal",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "env-gating",
+   "claimed_at": "2026-08-28",
+   "claim": "SUBSTRATE_ALLOW_DIRECT_EDIT=1 set in settings.local.json and restored to 0 after",
+   "where": "operator transcripts",
+   "later": "Still 1 on 09-29 (mtime 09-06); the gate is inert",
+   "source": "vessel-docs-tooling"
+  }
+ ]
+}

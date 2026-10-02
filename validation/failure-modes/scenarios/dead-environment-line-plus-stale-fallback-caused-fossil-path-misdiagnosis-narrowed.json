@@ -1,0 +1,19 @@
+{
+  "id": "dead-environment-line-plus-stale-fallback-caused-fossil-path-misdiagnosis-narrowed",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "[narrowed from dead-environment-line-plus-stale-fallback-caused-fossil-path-misdiagnosis] development-vessel.service dec",
+  "description": "[narrowed from dead-environment-line-plus-stale-fallback-caused-fossil-path-misdiagnosis] development-vessel.service declares Environment=WORKSPACE_ROOT=/workspace, but /etc/substrate/env (loaded via EnvironmentFile=, which wins over a unit's own Environment= per systemd semantics) sets WORKSPACE_ROOT=/workspace/git/super-repo. The unit-level line can never take effect and is dead config. Separately, config.ts's WORKSPACE_ROOT fallback default is /workspace, matching the dead unit line and NOT the live value, and substrate-gap.ts's file-header comment describes storage generically as WORKSPACE_ROOT/gaps/gaps.json without noting the real resolved value or the pre-existing /workspace/gaps/gaps.json fossil (documented separately in boredom-vessel/src/index.ts as frozen 2026-08-08). An operator (or any future investigator) reading the unit file, config.ts, or the resolver comment in isolation will reasonably but wrongly conclude the store lives at /workspace, then spend real time diagnosing a phantom write-persistence bug against a dead fossil file while the live store persists correctly the whole time. This exact misdiagnosis happened 2026-08-30 (see rejected gap substrate-gap-write-reports-success-but-does-not-persist for the full trace).",
+  "goal_text": "[narrowed from dead-environment-line-plus-stale-fallback-caused-fossil-path-misdiagnosis] development-vessel.service declares Environment=WORKSPACE_ROOT=/workspace, but /etc/substrate/env (loaded via EnvironmentFile=, which wins over a unit's own Environment= per systemd semantics) sets WORKSPACE_ROOT=/workspace/git/super-repo. The unit-level line can never take effect and is dead config. Separately, config.ts's WORKSPACE_ROOT fallback default is /workspace, matching the dead unit line and NOT the live value, and substrate-gap.ts's file-header comment describes storage generically as WORKSPACE_ROOT/gaps/gaps.json without noting the real resolved value or the pre-existing /workspace/gaps/gaps.json fossil (documented separately in boredom-vessel/src/index.ts as frozen 2026-08-08). An operator (or any future investigator) reading the unit file, config.ts, or the resolver comment in isolation will reasonably but wrongly conclude the store lives at /workspace, then spend real time diagnosing a phantom write-persistence bug against a dead fossil file while the live store persists correctly the whole time. This exact misdiagnosis happened 2026-08-30 (see rejected gap substrate-gap-write-reports-success-but-does-not-persist for the full trace).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "dead-environment-line-plus-stale-fallback-caused-fossil-path-misdiagnosis-narrowed",
+  "source_gap_source": "operator_narration"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "posterior_consistency_audit",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "SubstrateGap: posterior inconsistency audit: the arm's stored belief (thompson_alpha / (thompson_alpha + thompson_beta))",
+  "description": "SubstrateGap: posterior inconsistency audit: the arm's stored belief (thompson_alpha / (thompson_alpha + thompson_beta)) disagrees with its own observed success rate (successful_executions / total_executions). Violation: total_executions > 50, observed_success_rate > 0.8, stored_belief < 0.5. Current violators: satisfier:webSearchResult (posterior 0.18 against 350 successes in 369 executions).",
+  "goal_text": "SubstrateGap: posterior inconsistency audit: the arm's stored belief (thompson_alpha / (thompson_alpha + thompson_beta)) disagrees with its own observed success rate (successful_executions / total_executions). Violation: total_executions > 50, observed_success_rate > 0.8, stored_belief < 0.5. Current violators: satisfier:webSearchResult (posterior 0.18 against 350 successes in 369 executions).",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "posterior_consistency_audit",
+  "source_gap_source": "substrate_detected"
+}

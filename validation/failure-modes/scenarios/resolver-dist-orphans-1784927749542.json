@@ -1,0 +1,19 @@
+{
+  "id": "resolver-dist-orphans-1784927749542",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "resolver_distribution",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "resolver_distribution shape_orphan: 4/4 advertised shapes never invoked in recent 0 traces. Catalogue carries setup cost",
+  "description": "resolver_distribution shape_orphan: 4/4 advertised shapes never invoked in recent 0 traces. Catalogue carries setup cost for unused shapes.",
+  "goal_text": "resolver_distribution shape_orphan: 4/4 advertised shapes never invoked in recent 0 traces. Catalogue carries setup cost for unused shapes.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "resolver-dist-orphans-1784927749542",
+  "source_gap_source": "substrate_detected"
+}

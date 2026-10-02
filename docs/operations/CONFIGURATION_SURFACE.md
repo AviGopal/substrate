@@ -1,0 +1,424 @@
+# Advanced configuration — tiers, channels, precedence, and what can be verified
+
+This is the advanced-configuration reference. A launch needs only the **install inputs**,
+listed with their defaults and the profiles that require them in
+[README § Installation](../../README.md#installation); that page is also the only place
+setup commands appear. Everything in this document is optional: set it in the same host
+`.env`, and the launch manifest forwards it to the image unchanged. The installer takes only
+the install inputs from your shell; an advanced variable set only in the shell is ignored
+with a notice, so set it in the fleet's `.env`.
+
+## The tiers
+
+| Tier | What | Where it lives | Read | Learnable? |
+|---|---|---|---|---|
+| **Install inputs** | `SUBSTRATE_NAME`, `SUBSTRATE_PORT_PREFIX`, `PROFILE`, `DISCOVERY_ENDPOINT` + `METABOB_API_KEY`, one provider key, `PUBLIC_IP`, `SUBSTRATE_GIT_PAT` + `SUBSTRATE_REPO_OWNER` | host `.env` | at boot, by gen-env | no (bootstrap, by design) |
+| **Advanced bootstrap** | the variables below | host `.env`, forwarded by the manifest | at boot | no |
+| **Generated secrets** | `JWT_SECRET`, `SURREAL_PASS`, API-key signing secret, the operator key | workspace `.substrate-secrets` | at boot | n/a (never hand-edited) |
+| **Runtime policy** | vessel additions (`vessel-ctl install`), `pushPolicy`, `llmModelPolicy`, rhythms | impulses in the substrate | at use time | **yes** |
+| **Client** | endpoint + key | `~/.metabob/config.json` (override: `METABOB_CONFIG_PATH`; a project-local `.metabob/config.json` shadows it) | by the cockpit | n/a |
+
+Anything the system should learn or change at runtime belongs in the runtime-policy tier
+as a shaped impulse (law 1), not here. The size of the advanced tier is a measure of
+unfinished shaping (see §3 below).
+
+## Advanced bootstrap variables
+
+| Group | Variables | Notes |
+|---|---|---|
+| Extra LLM providers | `OPENAI_API_KEY` (+ `OPENAI_BASE_URL`, `LLM_DEFAULT_MODEL` for an OpenAI-compatible local server), `GOOGLE_API_KEY`, `GROQ_API_KEY`, `MISTRAL_API_KEY`, `OPENROUTER_API_KEY`, `CHUTES_API_KEY` | one resolver arm per key present; an arm whose key is absent is skipped cleanly |
+| Self-hosted models | `VLLM_BASE_URL`, `VLLM_MODELS`, `VLLM_API_KEY`, `VLLM_ENDPOINTS`; `RUNPOD_ENDPOINT_ID`, `RUNPOD_API_KEY`, `RUNPOD_MODELS`, `RUNPOD_COST_PER_MTOK` | `VLLM_ENDPOINTS` takes a JSON array for several servers; a RunPod arm is offered only while a worker is warm |
+| LLM arms | `LLM_ARMS` | a JSON array of `{id, model, provider, port}` that replaces the whole arm list in `scripts/substrate/llm-arms.json` |
+| Vessel selection | `ENABLED_VESSELS`, `ENABLED_ROLES`, `ENABLED_EXTRA_VESSELS`, `DISABLED_VESSELS` | refine the unit set `PROFILE` selects; precedence and grammar in [`docs/SUBSTRATE.md`](../SUBSTRATE.md#topology-selection); preview with `apply-inventory` under `DRY_RUN=1` |
+| Federation overrides | `ACTIVITY_API_ENDPOINT`, `IDENTITY_VESSEL_URL`, `FED_SUBSTRATE_ID`, `RELAY_MULTIADDR`, `PEER_MULTIADDR`, `PEER_DISCOVERY_ENDPOINTS`, `FEDERATION_SIGNING_SECRET` | endpoints and the relay anchor are otherwise derived from `DISCOVERY_ENDPOINT` and `/bootstrap`; `PEER_MULTIADDR` is accepted only alongside `DISCOVERY_ENDPOINT` |
+| Federation, less common | `HUB_DISCOVERY_URL`, `METABOB_ENDPOINT`, `IDENTITY_ENDPOINT`, `FED_EXTRA_SHAPE`, `MAX_PEER_DEPTH`, `FEDERATION_PEER_AUTH_MODE` | endpoint aliases and peering knobs; `HUB_DISCOVERY_URL` without `DISCOVERY_ENDPOINT` fails the launch |
+| Advertised address | `FED_PUBLIC_IP`, `DISCOVERY_PUBLIC_URL`, `IDENTITY_PUBLIC_URL`, `DISCOVERY_PUBLIC_PORT`, `IDENTITY_PUBLIC_PORT`, `SUBSTRATE_BIND_HOST` | refine what `/bootstrap` advertises; the `*_PUBLIC_URL` and `*_PUBLIC_PORT` overrides are inert without `PUBLIC_IP` or its alias `FED_PUBLIC_IP` |
+| Landing scope | `SUBSTRATE_PUSH_VESSELS`, `GAP_STORE_ENDPOINT`, `GITHUB_TOKEN` | which repos this node lands; the resolve URL of the node holding the gap store (empty on the holder); `GITHUB_TOKEN` is carried beside `SUBSTRATE_GIT_PAT` and persisted like it |
+| Stores and roots | `SUBSTRATE_ROOT`, `SURREALDB_URL`, `REDIS_URL` | in-container locations; the defaults are correct for the image |
+| Relay ports | `RELAY_PORT`, `RELAY_ANNOUNCE_PORT` | `RELAY_PORT` is the host port the manifest publishes the in-container relay (container port `30333`) on instead of `<prefix>333`, e.g. to keep an existing hub on the host port its spokes already dial. `RELAY_ANNOUNCE_PORT` is the port the relay advertises; the manifest derives it from the published port, so set it only when peers dial a different port (the container port across a shared container network) |
+| Exposure | `SUBSTRATE_PUBLISH_IP`, `<VESSEL>_PUBLISH_IP` (`ACTIVITY_API`, `DEV_VESSEL`, `DISCOVERY`, `IDENTITY`, `GOAL_HOST`, `ANALYSIS`, `CONCEPT_DB`, `STATEFUL_UI`, `HUMAN_SURFACE`, `RELAY`) | the host address each port is published on; unset publishes on every interface, and a per-vessel value outranks `SUBSTRATE_PUBLISH_IP` for its port. Compose consumes these to build the port mappings; they never reach gen-env, so `substrate-config` does not report them. A compose override file cannot narrow a mapping (compose merges `ports` lists), so these are the supported way to keep a port on the local host |
+| Safety switches | `MITOSIS_DIRECT_PUSH`, `ROUTE_EDIT_INTENT_TO_COMPOSE` | `MITOSIS_DIRECT_PUSH` is the emergency kill switch for autonomous landing: `0` = no commit, no push, no host-sync intent (refusal kind `push_kill_switch`); unset or `1` = landings proceed, scoped by `SUBSTRATE_REPO_OWNER` and the `pushPolicy` impulse. It takes effect on recreate. A new install starts under an initial `pushPolicy` (no promotion) written on its first boot; an install that predates the policy keeps landing where its push clone points until a `pushPolicy` is recorded |
+| Image | `SUBSTRATE_IMAGE` | the tag the manifest runs; the published image is public |
+| Key signing | `API_KEY_SECRET`, `API_KEY_SECRET_PREVIOUS`, `ALLOW_INSECURE_API_KEY_SECRET` | generated and persisted on a fresh datastore; set explicitly only for a deliberate rotation or an existing deployment's migration |
+
+Trace-store retention (`TRACE_STORE_CAP` and the rest of the `TRACE_*` family) is not in
+this tier: the manifest does not forward those names, and gen-env writes them as fixed
+literals, warning on stderr when a supplied value is discarded. See
+[`docs/SUBSTRATE.md`](../SUBSTRATE.md#trace-store-retention-and-the-maintenance-lease).
+
+### What the image reports back
+
+gen-env writes these into `/etc/substrate/env` as a report of the outcome, for tools to
+read (`substrate-status`, `substrate-connect`, `substrate-config`); they are not inputs:
+
+| Name | Meaning |
+|---|---|
+| `PROFILE_EFFECTIVE` | the composition this container runs: `standalone`, `spoke`, `hub`, `hub-minimal`, `surface`, `compute`, or `custom` for an explicit `ENABLED_*` selection |
+| `SUBSTRATE_NAME` | the fleet name, present only when the launch supplied one |
+| `SUBSTRATE_CONTAINER_NAME` | the container's own name, present only when the launch supplied a name input |
+| `SUBSTRATE_PORT_PREFIX` | the port prefix, present only when the launch supplied one |
+| `RELAY_ANNOUNCE_PORT` | the port the relay advertises, when one was stated or derived |
+
+Verify that a value arrived at the process that consumes it, not at the file:
+`docker exec <c> substrate-config` reports provenance for what gen-env emitted, and §1
+below explains what it cannot see.
+
+## Migration: retired names
+
+Retired names and lanes fall into four groups: aliases still honoured, names already
+ignored, lanes removed, and wrappers deprecated but still working.
+
+**Aliases still honoured.** These take effect during migration. A name alias that
+conflicts with its replacement fails the launch before anything is written, and so does a
+partial set of the exact-name aliases on a new volume; on a volume an earlier boot already
+used, a partial set is warned about and boots as before.
+
+| Retired | Replacement | What happens when it is set |
+|---|---|---|
+| `SUBSTRATE_CONTAINER`, `WORKSPACE_VOLUME`, `SURREAL_VOLUME` | `SUBSTRATE_NAME` | honoured as exact names; gen-env warns on each |
+| `LIVE_NAME` | `SUBSTRATE_NAME` | honoured; `make up` and gen-env warn |
+| `PORT_OFFSET` | `SUBSTRATE_PORT_PREFIX` | translated to prefix `18 + n/1000` by `make up` (with a warning); `ui-only-up.sh` accepts the same value only as its `--port-offset` flag and ignores the variable |
+| `ACTIVITY_API_PORT`, `DEV_VESSEL_PORT`, `DISCOVERY_PORT`, `IDENTITY_PORT`, `GOAL_HOST_PORT`, `ANALYSIS_PORT`, `CONCEPT_DB_PORT`, `STATEFUL_UI_PORT`, `HUMAN_SURFACE_PORT` | `SUBSTRATE_PORT_PREFIX` | honoured by the manifest as a per-port override; gen-env warns on each, and refuses one that contradicts an explicit `SUBSTRATE_PORT_PREFIX` |
+| `ENABLED_ROLES=hub` + a hand-listed `ENABLED_EXTRA_VESSELS` | `PROFILE=hub` | honoured: both still refine the unit set |
+| `MITOSIS_DIRECT_PUSH` as the autonomy switch | push capability (`SUBSTRATE_GIT_PAT` + `SUBSTRATE_REPO_OWNER`) + `pushPolicy` | honoured only as the kill switch (`0` stops autonomous landing) |
+
+**Names already ignored.** Setting these changes nothing; the launcher that used to read
+them says so.
+
+| Retired | Replacement |
+|---|---|
+| `METABOB_CONFIG` | `METABOB_CONFIG_PATH` (`ui-only-up.sh` prints a note that the old name is ignored) |
+
+**Lanes removed.** These are commands and processes, not names; nothing warns about them.
+
+| Retired | Replacement |
+|---|---|
+| `make run-live`, `run`, `run-detach`, `run-live-obsidian`, raw `docker run` recipes, `configure-local.sh` | the install page's sequences |
+| a host relay process on its own port | the in-container relay on `P333` (`RELAY_PORT` keeps an existing hub's port) |
+
+**Wrappers deprecated but still working.** `scripts/substrate/deploy-hub.sh`,
+`deploy-hub-pull.sh` and `deploy-remote.sh` translate their old inputs into an `.env` and
+run `scripts/substrate/deploy.sh`, which runs the launch manifest on another host over
+ssh. The replacement for all of them is the install command run on the target host.
+
+---
+
+The rest of this document is the method: which channel delivers a value, what beats what,
+and which assertions can be re-measured rather than believed.
+
+## Why configuration needs a method
+
+Configuration is the one region of this system with **no learning loop**. Environment is
+frozen at process start, invisible to traces and to the walk, so no activity selects over it
+and no posterior grades it. Every other class of defect eventually surfaces as a
+`reached:false` and gets weighted down by the loop. A configuration defect waits for a human
+to look directly at it.
+
+That is the reason this document exists, and the reason its central claim is not a list of
+variables but a **method**: what channel delivers a value, what beats what, and which
+assertions can be re-measured rather than believed.
+
+Everything here is reproducible with `scripts/substrate/config-surface-probe.sh`. Where a
+number appears, the command that produced it appears beside it. Numbers drift; the prior
+hand-written audit's findings went stale in *both* directions within days — one defect fixed,
+one still live, nothing reporting either.
+
+---
+
+## 1. There is one funnel, and four channels through it
+
+Every vessel unit carries `EnvironmentFile=/etc/substrate/env`. **No unit carries
+`PassEnvironment`.** systemd is PID 1 and does not export its own environment to the units it
+spawns, so:
+
+> A variable `gen-env.sh` does not emit is invisible to every vessel, no matter how it was
+> passed.
+
+`gen-env.sh` is therefore an **allowlist**, and it is the layer at which "did my value
+arrive?" is a meaningful question. Comparing launch lanes at the `docker run` layer compares
+*intentions*; comparing at gen-env's output compares what a vessel can actually read.
+
+```bash
+# what a standalone boot emits
+docker run --rm -e ANTHROPIC_API_KEY=… --entrypoint bash <image> \
+  -c 'gen-env >/dev/null 2>&1; grep -cE "^[A-Z_]" /etc/substrate/env'
+```
+
+| # | Channel | Written by | Delivered by | Visible to `substrate-config`? |
+|---|---|---|---|---|
+| 1 | `/etc/substrate/env` | `gen-env.sh` (`cat >`, **truncating**) | `EnvironmentFile=` in every unit | yes, with provenance |
+| 2 | unit `Environment=` lines | baked into the image | the unit itself | **no** |
+| 3 | `.service.d/*.conf` drop-ins | baked into the image | applied after the main unit | **no** |
+| 4 | side files | `render-llm-arms.sh`, `gen-env.sh` | a second `EnvironmentFile=` | **no** |
+
+Channel 4 has two members with different lifetimes: `/etc/substrate/llm-<arm>.env` (per-arm
+model pin, regenerated every boot) and `/workspace/.substrate-secrets` (**the only durable
+container-side config** — `/etc/substrate` is not on a volume).
+
+### Channels 2 and 3 are a blind spot, not an override
+
+Both are invisible to the tooling built to answer "did my `-e` win?" — `substrate-config`
+reads channel 1 and its provenance sidecar, and cannot see the other three. Names appearing
+*only* in channel 2 have no operator delivery path and no provenance record at all.
+
+```bash
+# names set by unit files; how many appear in no other channel
+docker run --rm --entrypoint bash <image> -c \
+  'grep -h "^Environment=" /usr/lib/systemd/system/*.service | sed -E "s/^Environment=//; s/=.*//" | sort -u'
+```
+
+Measured: **52 names in channel 2, of which 48 appear nowhere else.** They are behavioural
+knobs frozen into the image — `SURGICAL_SCAN_CAP`, `TASK_GENERATION_ENABLED`,
+`OPERATOR_GOAL_GEN`, `EMIT_GAPS`, `RECOVER_CAP`, `OBSIDIAN_LEARN_MODE` — Tier-1 settings
+(§3) stuck in a tier that has no delivery path.
+
+**On collision, channel 1 wins.** systemd applies `Environment=` first and `EnvironmentFile=`
+afterwards, *regardless of line order in the unit*. This is easy to get backwards by reading
+the file top-to-bottom; verify it rather than reason about it:
+
+```bash
+# two marker units, opposite orders; both must report from_envfile
+printf 'X=from_envfile\n' > /tmp/t.env
+# unit A: EnvironmentFile= then Environment=X=from_inline
+# unit B: Environment=X=from_inline then EnvironmentFile=
+systemctl start ordA ordB && journalctl -u ordA -u ordB -o cat | grep RESULT
+```
+
+Four names collide (`WORKSPACE_ROOT`, `MITOSIS_DIRECT_PUSH`, `MITOSIS_RUNTIME_DIR`,
+`MITOSIS_PUSH_CLONE_DIR`) and resolve to the operator's value.
+
+Channel 3 is the exception that *does* override, because drop-ins are applied after the main
+unit. It is also the least visible, and it carries live behavioural decisions: peer endpoints,
+route preferences, and boredom pacing overrides of 240×–300× the in-code default.
+
+### Where a unit property lives
+
+One property, one file. Deciding which file:
+
+- **The unit file** (`scripts/substrate/units/<unit>`) carries every property the unit needs
+  to run correctly on any deployment: its sandbox (`ReadOnlyPaths=`, `ProtectSystem=`), working
+  directory, restart policy. Someone reading the unit file sees the whole contract, and a
+  sandbox that lives anywhere else is a sandbox nobody knows is there.
+- **A drop-in** (`scripts/substrate/units/<unit>.d/<name>.conf`) is an additive overlay that
+  can be removed independently: a run-dir repoint, a watchdog, a drain timeout, a
+  deployment-specific peer setting. Its header says what it changes and how to revert it
+  (delete the file, `daemon-reload`).
+- **Never both.** The same property in the unit file and in a drop-in is two sources of truth.
+  The drop-in is applied later, so it silently wins for single-valued properties and doubles
+  list-valued ones. Nothing reports the duplication.
+- **`/etc/systemd/system/**` is never a source of truth.** It outranks every vendor file and is
+  not in git. A live fix written there is a stopgap: land the tracked form in
+  `scripts/substrate/units/`, confirm it has converged, then delete the `/etc` copy.
+
+Both tracked forms reach a running container the same way. The image copies
+`scripts/substrate/units/` into `/usr/lib/systemd/system`, and pull-sync's unit convergence
+mirrors it on every tick. To check which files a unit is actually built from:
+
+```bash
+systemctl show <unit> -p FragmentPath -p DropInPaths
+```
+
+---
+
+## 2. Precedence, end to end
+
+```
+  docker run -e   >   shell env at compose time   >   .env beside the manifest   >   compose ":-" default
+      └── these four are indistinguishable to gen-env: they are just "the run environment"
+   >  /workspace/.substrate-secrets      (per-field grep — never sourced, so an operator
+   >  gen-env generated (openssl)         value cannot be clobbered by the persisted one)
+   >  gen-env hardcoded literal
+  ─────────── resolution ends; the value is written to /etc/substrate/env ───────────
+   >  unit Environment=
+   >  EnvironmentFile=-/workspace/.substrate-secrets (listed FIRST, so env outranks it)
+   >  EnvironmentFile=/etc/substrate/env          (beats Environment=, see §1)
+   >  EnvironmentFile=-/etc/substrate/llm-<id>.env (later file wins → per-arm pin)
+   >  .service.d/*.conf Environment=              (applied last, beats everything)
+   >  post-boot mutation (seed-identity.ts rewrites METABOB_API_KEY in both files)
+   >  in-code default
+```
+
+Three sub-chains deviate:
+
+- **Vessel selection**: `PROFILE` > `ENABLED_VESSELS` > `ENABLED_ROLES`, then
+  `+ ENABLED_EXTRA_VESSELS`, then `− DISABLED_VESSELS`. Emitted conditionally — an unset
+  selection stays absent, and `apply-inventory` reads absence as "keep everything".
+- **Endpoints** insert a derivation tier: explicit env > **spoke auto-derivation** from the
+  discovery host (scheme + port-block arithmetic on the discovery port) > alias chain > loopback literal.
+  **Routing anchors are never persisted.** `HUB_DISCOVERY_URL`, `DISCOVERY_ENDPOINT`,
+  `IDENTITY_VESSEL_URL`, `ACTIVITY_API_ENDPOINT` and their aliases describe where this
+  substrate is pointed *right now*; they are re-derived every boot and are excluded from
+  `.substrate-secrets` by both of its writers — gen-env's merge loop and `secrets.env.sh`'s
+  carry-through — so a value that once reached the file cannot outlive the hub it named.
+  This is not a precaution: one such anchor, carried forward by a merge loop designed to
+  preserve keys it did not recognise, pinned the fleet to a decommissioned host and held
+  the federation transport in a permanent crash loop.
+- **`.env` only reaches the container for names listed in compose's `environment:` block.**
+  An unlisted name in `.env` is a no-op regardless of the value.
+
+### Persistence is two halves
+
+A `persisted_secret` **read** without a matching **write** leaves the value in the file while
+the next boot resolves to empty anyway; a write without a read does the same in reverse. Both
+halves are required, and the probe checks for the mismatch:
+
+```
+   PHANTOM (gen-env reads it from .substrate-secrets; nothing writes it):
+```
+
+**Known limit, shared by all ~20 persisted names:** `${VAR:-…}` cannot distinguish *unset*
+from *explicitly emptied*, so `-e VAR=` does not clear a persisted value. Clearing one means
+editing `/workspace/.substrate-secrets`. Carrying a value by presence rather than by value
+would fix it; gen-env does not do that yet.
+
+---
+
+## 3. Two tiers — the distinction that decides what can become a shape
+
+**Tier 0 — bootstrap.** Irreducibly three things: *who am I* (credential), *where is the
+network* (one endpoint), *where does my data live* (volume, ports). Frozen by nature, must
+fail closed, cannot be graded.
+
+**Tier 1 — behavioural.** Everything else. Under law 1 these should be shaped impulses read
+at use time, observable in the trace of the execution that consumed them. Today they are env,
+which is why the surface is as large as it is: **the size of the config surface is a direct
+measure of unfinished derivation and unfinished shaping.**
+
+What determines whether a Tier-1 variable *can* move:
+
+| Read site | Consequence | Shape candidate? |
+|---|---|---|
+| Column-0 `const` (module load) | frozen for the process lifetime; needs a restart | not without refactoring |
+| Inside a function body | re-evaluated per call | **yes** |
+| `import.meta.env.VITE_*` | inlined at bundle time; needs a rebuild | no |
+
+Every `SURREALDB_*` read is module-load, so the database contract cannot change without
+restarting the fleet. The precedents to follow already exist in-tree: `trace-retention.ts`
+takes `env` as an injectable parameter, and `gap-lifecycle-scan.ts` reads at call time *and
+documents why*.
+
+---
+
+## 4. Scale, and what the measurement cannot see
+
+| Dimension | Count | How |
+|---|---|---|
+| Names emitted into `/etc/substrate/env` | **72–80 — conditional, not a constant** | `grep -cE '^[A-Z_]' /etc/substrate/env` after a boot. **Emission depends on what you supplied** (an absent provider key emits no arm), so this is a range and the command cannot reproduce a single number. A fixed count was carried here once and disagreed with `config-surface-baseline.txt` in the same repo. |
+| Names offered by each launch lane | per lane | `config-surface-probe.sh` (the cross-lane differential) |
+| Distinct names read across vessels and packages | ~451 | dot + bracket + helper forms, `sort -u` |
+| Names in unit `Environment=` lines | 52 (48 unique to that channel) | §1 |
+| `.service.d` drop-in files | 34 total, 10 carrying `Environment=` | `grep -l Environment= …/*.service.d/*.conf` |
+| Names documented in `scripts/substrate/.env.example` | 15 (none uncommented) | `grep -oE '^#? ?[A-Z_][A-Z0-9_]*=' … \| sort -u` |
+| `_ENV_SUPPLIED` provenance snapshot | 33 | `gen-env.sh` |
+
+**The scanner's own blind spots**, stated because a count presented without them invites
+false conclusions:
+
+- `process.env["FOO"]` bracket form is dominant in six vessels. **A dot-only grep misses
+  roughly 40% of the fleet.**
+- Helper forms — `parseEnvInt('NAME', …)`, `envOr("NAME", …)` — are invisible to both. The
+  `TRACE_*` family is read exclusively this way.
+- `concept-db` calls `parseEnvInt(key, …)` with a **caller-supplied** key. Those reads cannot
+  be statically enumerated by any scanner.
+- Shell consumers (`scripts/substrate/*.sh`, the tick scripts) are a separate population.
+  Several names that look unread by vessels are read by scripts.
+
+Consequence: the honest statement is "N names are read *by the forms this scan covers*". A
+name absent from a scan is not evidence of a name absent from the system — the same
+distinction as "a zero read through a filter measures the filter".
+
+---
+
+## 5. Default drift — the failure mode of a point-and-go join
+
+This is the most consequential category, because a default only applies when a variable is
+*unset*, which is exactly the state "point at a hub and go" depends on.
+
+| Variable | Distinct defaults | Worst pair |
+|---|---|---|
+| `SURREALDB_URL` | 5 | `localhost:8000` vs a Kubernetes service DNS name vs `ws://…` |
+| `SURREALDB_PASSWORD` | 4 | **`changeme` vs `root`** — two vessels reaching the same database with different default credentials. The originally-cited pair (activity-api vs relevance-sink) has since been repaired; `relevance-sink-vessel/src/index.ts` now defaults to `changeme`. The class is still live — e.g. `development-vessel/src/resolvers/orphaned-org-write-scan.ts` defaults to `root`. **Re-derive the instances before citing them; do not quote this row as current.** |
+| `DISCOVERY_ENDPOINT` | 4 | `discovery-vessel:8080` (wrong port for this fleet) and `localhost:8765` (a port used nowhere else) |
+| `ACTIVITY_API_ENDPOINT` | 4 | includes activity-api pointing at its **own** wrong port |
+| `GOAL_HOST_VESSEL_ENDPOINT` | 2 | `:8210` in 12 sites; `:8090` — the dev-vessel port — in one |
+| `FED_HEALTH_PORT` | 2 | `8401` in the in-container transport and its three consumers; `8402` in the **host-side Obsidian sidecar** (`libp2p-federation-transport/src/sidecar.ts`), a separate program reading the same name. One variable, two programs, two defaults — export it for one and the other silently moves. (Do not read this row as "the server disagrees with its consumers": the server agrees with them. Also distinct: `OBSIDIAN_PASSTHROUGH_HEALTH_PORT`, which also defaults to `8402` but is a different name.) |
+
+Adjacent hazards of the same kind:
+
+- **Alias sprawl** — 11 distinct names are used for the same API key across vessel source
+  (`grep -rhoE '(METABOB_API_KEY|API_KEY|…)' repos/*/src | sort -u`), plus multiple aliases
+  each for the activity, discovery, identity and dev-vessel endpoints. gen-env emits 5 of the
+  key aliases, so `?? process.env["API_KEY"]` and `?? DEV_VESSEL_API_KEY` fallbacks are
+  **dead in-container** — they can only fire outside systemd.
+- **Port collision** — `metric-collector-vessel` defaults `PORT` to `8280`, the same as
+  light-dispatch. Only a channel-2 `Environment=PORT=8300` keeps them apart; run either
+  outside systemd and they clash.
+- **Weak secret literals** — one `dev-secret-change-in-production` string serves both
+  `JWT_SECRET` and `API_KEY_SECRET` across five identity-vessel files, plus an `HMAC_SECRET`
+  equivalent. The insecure-value gate exists for `API_KEY_SECRET` **only**.
+
+Each row is a decision about which default is correct, not a mechanical edit.
+
+---
+
+## 6. Re-deriving this document
+
+```bash
+scripts/substrate/config-surface-probe.sh              # report; exit 1 on drift
+scripts/substrate/config-surface-probe.sh --baseline   # accept the current state
+PROBE_USE_IMAGE=1 scripts/substrate/config-surface-probe.sh   # measure the published image
+```
+
+By default the probe runs the **worktree's** `gen-env.sh` — a pre-commit check. It costs no
+LLM tokens and writes no traces, so unlike `substrate-doctor`'s arm check (which POSTs a real
+completion to every arm) and `--smoke` (which writes a real execution trace), it is safe to
+run in a loop.
+
+What it reports, and why each exists:
+
+| Section | Catches |
+|---|---|
+| `DROPPED` | a lane passes a name gen-env never emits — delivered to nothing |
+| `HARDCODED` | the name is emitted but your value was replaced by a literal |
+| cross-lane differential | two lanes that claim to launch the same thing and do not |
+| `UNOFFERED` | `scripts/substrate/.env.example` documents the name and this lane never passes it — the axis the other rows cannot reach, because every one of them starts from what a lane *already* passes. Both autonomy kill switches hid here |
+| `MANGLED` | the name is emitted and the value still carries the sentinel marker, but is not byte-identical to what was supplied — a value CORRUPTED in transit. Scoped to names documented as JSON, because gen-env legitimately *derives* many values and an unscoped byte-comparison reports nine false positives |
+| `PHANTOM` | a persisted read with no matching write |
+
+Sentinels for names documented as JSON are **JSON**, quotes included. They were all
+alphanumeric, which made the probe structurally unable to observe a quoting defect — and
+one was live: values were emitted with a raw `NAME="${VAR}"` wrap and no escaping, so a
+documented JSON value reached its consumer as invalid JSON and was swallowed by a warning.
+A probe that only supplies easy inputs measures how the system handles easy inputs.
+
+**A probe that cannot run must say so, never produce a number.** Three ways this one lied
+before it was trusted, each now guarded in the script:
+
+1. A swallowed daemon-side `mounts denied` reported every lane as emitting **zero** names — a
+   harness failure wearing the costume of the most alarming possible finding. stderr is now
+   kept and an empty emission set is a fatal error, because gen-env either fails closed
+   (writing nothing *and* exiting non-zero) or writes ~72 names. Zero with a clean exit is
+   impossible.
+2. The sentinel check counted the probe's own abstentions — the provider key and nine
+   endpoints it deliberately does not fake — as discarded values. Ten false positives, all
+   plausible. It now judges only names that actually carried a sentinel.
+3. It executed the image's baked `gen-env` while grepping the worktree's, comparing two
+   revisions and attributing the difference to the substrate.
+
+The third is the general form and the one worth carrying: **when a check reads one artifact
+and exercises another, its findings describe the gap between them, not the system.**
+
+---
+
+## 7. Why a script and not a pasted command
+
+A check nothing invokes cannot be trusted when it passes, because it is never observed
+failing. The hand-written audit this supersedes
+(`validation/findings/config-surface-audit.md`) was a `docker run` pasted into prose; its
+`VLLM_*` finding was fixed and its advertise-variable finding stayed live, and nothing
+reported either.
+
+The remaining step, unbuilt: this probe is a script, so it is still only as good as the habit
+of running it. Under law 2 the check belongs to an **activity** the loop can grade — at which
+point the configuration surface finally acquires the feedback the first paragraph says it
+lacks.

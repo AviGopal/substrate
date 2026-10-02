@@ -1,0 +1,298 @@
+# Environment files with secrets — never commit these
+.env
+.env.*
+!.env.*.example
+.metabob_api_key
+.metabob_session
+*.pem
+*.key
+secrets.yaml
+*.secrets.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Logs
+*.log
+logs/
+memory_monitor.log
+memory_monitor_output.log
+memory_profile_output.log
+memory_tracking.log
+opencode_memory_profile.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.coverage
+.pytest_cache/
+coverage/
+htmlcov/
+
+# Docker
+.docker/
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+test-local.txt
+tmp/
+**/tmp/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets and credentials
+*.pem
+*.key
+!*.pub
+test-workspace/dummy-project/
+test-workspace/refactor-test/
+
+# Metabob state files (stateful, should not be committed)
+.metabob/state
+.metabob/.metabob/cpg_cache.db
+.metabob/.metabob/cpg_cache.db-journal
+.metabob/.metabob/*.db
+.metabob/.metabob/*.db-journal
+
+# Temporary working files from other specifications
+CONFLICT_ANALYSIS_rpc-api-endpoint-database-integration.md
+FINAL_SUMMARY_dashboard-login-flow-e2e-validation.md
+RIPPLE_CHANGES_rpc-api-endpoint-database-integration.md
+VALIDATION_RESULTS_rpc-api-endpoint-database-integration.md
+conflict-detection-output.json
+create-conflict-analysis-impulse.ts
+create-ripple-impulse.ts
+create-validation-results-impulse.ts
+impulses/conflict-analysis-rpc-api-endpoint-database-integration.json
+impulses/ripple-rpc-api-endpoint-database-integration.json
+impulses/validation-results-rpc-api-endpoint-database-integration.json
+output/VALIDATION_RESULTS_dashboard-login-flow-e2e-validation.json
+output/VALIDATION_dashboard-login-flow-e2e-validation.json
+ripple-execution-output.json
+run-validation-tests.sh
+tests/validation-harnesses/README-rpc-api-endpoint-database-integration.md
+validation-harness-creation-summary.json
+validation-harness-rpc-api-endpoint-database-integration-summary.json
+.metabob/state.lock
+create-mcp-timeout-trace-impulse.ts
+
+# Session documentation (keep latest only)
+*AUTHENTICATION*.md
+*PLAYWRIGHT*.md
+*SESSION*.md
+*STATUS*.md
+PLATFORM_E2E*.md
+READY_TO_BUILD*.md
+
+# Build scripts (project-specific)
+build-and-deploy-*.sh
+build-deploy-test-*.sh
+
+# Test artifacts
+playwright-e2e-test.js
+test-python-project/
+screenshots/error-screenshot.png
+screenshots/final-test-*.png
+
+# Playwright MCP session output (screenshots + page yaml dumps)
+.playwright-mcp/
+# Loose screenshots / debug images at super-repo root
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.gif
+# One-shot debug text dumps at super-repo root
+/hello-*.txt
+/*.diff.txt
+
+# Temp files from activity session
+COMMIT_MESSAGE_*.txt
+
+# Substrate-narrator observation logs (operator-side tooling).
+# These can grow large and carry no commit-history value. To commit a
+# specific observation as evidence for a gap record, move it to
+# validation/gaps/evidence/ first. See validation/observations/README.md.
+/validation/observations/**
+!/validation/observations/README.md
+scripts/substrate/workspace/.substrate-secrets
+# Host-sync intent + results streams — runtime workspace state, written by
+# the substrate cutover resolver and the host-side poller respectively.
+scripts/substrate/workspace/mitosis-applied-host-sync.jsonl
+scripts/substrate/workspace/mitosis-applied-host-sync-results.jsonl
+# Writable vessel-repo clones for substrate-managed publication (see
+# `make -C scripts/substrate clone-vessel-repos`). Operator-local artifacts;
+# the super-repo records only the Makefile target, not the clones themselves.
+scripts/substrate/workspace/git/
+
+# Operator-side Obsidian vault for browsing concept-db (see vault/README.md).
+# Auto-mirrored concept notes and runtime workspace files do not belong in git.
+# Plugin install + settings ARE committed so the vault is reproducible.
+/vault/concept-db/**
+/vault/.obsidian/workspace*
+/vault/.obsidian/cache
+/vault/.obsidian/graph.json
+/vault/.obsidian/plugins/obsidian-vessel/data.json.local
+scripts/substrate/surreal-data/
+
+# Runtime /workspace volume (bind-mounted into substrate-live at /workspace).
+# Everything the substrate writes at runtime lands here — dispatch payloads,
+# enacted scenarios, proposals, snapshots, caches. NOT needed to build the
+# system; ignore wholesale. Already-tracked seed fixtures (e.g. the fm-51
+# scenario) stay tracked — .gitignore does not untrack them.
+scripts/substrate/workspace/
+
+# ── Untracked heavy nested-git checkouts (kept on disk, out of git) ──
+# Multi-GB sibling repos that live under repos/ but are not super-repo
+# submodules. Committing them as plain files would bloat history irreversibly.
+/repos/activity-dashboard/
+/repos/metabob-analysis-api/
+/repos/metabob-dashboard/
+/repos/metabob-opencode/
+/repos/k8s-activity-executor/
+/repos/vessels/
+/validation/polyglot-benchmark/
+/validation/repos/
+
+# ── Ephemeral substrate runtime + benchmark outputs ──
+/workspace/
+/validation/results/*.json
+/validation/activity-reuse-benchmark-*.json
+# stray root scratch file
+/disrupt-application.md
+/repos/metabob-internal-dashboard/
+
+# ── Dropped from the substrate submodule set ──
+# Product / UI / deploy repos not needed to build or run the substrate
+# container. Out of the super-repo; fresh clones do not include them.
+/repos/deployment/
+/repos/conversation-vessel/
+/repos/user-vessel/
+/repos/workbench/
+/repos/metabob-cloud-dashboard/
+/repos/terminal/
+/repos/react-renderer/
+
+# Mitosis staging clones — runtime scratch, never tracked
+/repos/*-mitosis-*/
+
+# machine-local MCP config (gitignored)
+.mcp.json
+**/.metabob/config.json
+**/.metabob/config.json.*
+**/*.hub-backup
+**/.bootstrap_token
+
+# stray runtime artifacts (regenerated by seed/deploy runs)
+/concept-ids.json
+/repos/relevance-sink-vessel/bun.lock
+# Lockfiles follow the existing per-vessel convention (see relevance-sink above):
+# regenerated by `bun install`, not carried in the tree.
+/packages/design-tokens/bun.lock
+/repos/human-surface-vessel/bun.lock
+/repos/human-surface-vessel/ui/bun.lock
+
+
+# ── Runtime state written under WORKSPACE_ROOT ──
+# The substrate writes its pool, gap store, memory, policies and heartbeat at
+# runtime. These were committed by an unscoped `git add -A` and then re-committed
+# on every change; the tracked copies had already diverged from the live files.
+# Learning state belongs in the container volume, not in the tree.
+/pool/
+/gaps/
+/memory/
+/memory_notes/
+# development-vessel's learning-mode resolver writes $WORKSPACE_ROOT/state/ at runtime; a tracked copy
+# blocks every super-repo fast-forward on a node where WORKSPACE_ROOT is this clone.
+/state/
+/policies/
+/data/
+/notes/
+/activities/
+/resolvers/
+/authoring-inflight/
+# The interactor log is the operator feedback channel: uiFeedback_write.jsonl and
+# its siblings are appended at runtime and read back by escalation_disposition_apply.
+# Tracked, they were restored to the committed blob by every `reset --hard`, which
+# destroyed 9 of 13 panels and 6 operator answers inside a single session on
+# 2026-09-15 and silently dropped escalation_disposition_apply from answered:7 to 3.
+/interactor-log/
+/load-attribution/
+/substrate-heartbeat.json
+/mitosis-applied.jsonl
+/metabob-mcp-doctor-*.json
+
+# Answer dumps from goal walks that side-effected the filesystem instead of
+# emitting a shaped impulse, plus a phantom vessel tree written to a path
+# missing its repos/ prefix.
+/gap-trace.json
+/gap-trace.txt
+/gap-activityvariant-write.json
+/gap-activityvariant-write.txt
+/goal-walk.json
+/memory_note.txt
+/parity_h1len.txt
+/shape_producer.txt
+/word_count_note
+/test-resolver.js
+/src/
+/development-vessel/
+
+# Recording artefacts — regenerable, never commit
+.video/
+
+# Extensionless copies make(1) creates from *.sh via its implicit rules when a
+# bad target name is passed. They are byte-identical duplicates that would enter
+# the Docker build context and shadow the real script.
+/scripts/substrate/mirror-to-live
+.config-probe.*
+validation/human-participation/witness-excluded/
+
+# Runtime files a fleet writes at the root of its own super-repo clone (WORKSPACE_ROOT
+# defaults there), which unscoped autonomous commits then swept in. Ignored so they
+# cannot be re-added; the copies already tracked are a separate cleanup decision.
+/leases/
+/Substrate/
+/history.txt
+/run_scan.js
+/mitosis-applied-host-sync*.jsonl
+# A relay's libp2p private key (relay.js writes it to its working directory; the
+# "pub" in the name is misleading). Never commit one.
+scripts/substrate/federation-relay/.relay-*key*.protobuf
+*.protobuf

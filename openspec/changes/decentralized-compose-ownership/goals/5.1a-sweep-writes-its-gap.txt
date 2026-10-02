@@ -1,0 +1,23 @@
+In repos/development-vessel/src/resolvers/composer-interruption-sweep.ts, make the sweep's gap write real and its owned-set failure honest. Measured: the landed sweep imports "./substrate-gap.js" and calls `resolveSubstrateGap`, which is the gap store's READ resolver, with a write-shaped object, inside a catch that swallows everything. So the detector can never file its gap and nothing says so. Also, when ownedVessels() fails, the owned set is empty and every cutover would count as foreign. Two edits in this one file:
+
+(1) Directly after the line (it occurs once)
+
+  const owned = await getOwnedVesselsSafe();
+
+insert:
+
+  if (owned.size === 0) {
+    return { shape: "composerInterruptionReport", body: { node, hours, lines_read, restarts: restartLines.length, lossy: null, foreign_cutovers: null, detail: "owned set unavailable", entries: [] as Entry[] } };
+  }
+
+(2) In the `if (foreignCount > 0) {` block, replace the whole `try { const mod = await import("./substrate-gap.js"); … } catch { … }` statement with:
+
+    try {
+      const { resolveSubstrateGapWrite } = await import("./substrate-gap.js");
+      const res = await resolveSubstrateGapWrite({ type: "substrateGap_write", gap: { id: gapId, category: "attempt_consequence", source: "substrate_detected", status: "open", detected_at: new Date().toISOString(), summary, classification_metadata: { edit_site: "repos/development-vessel/src/resolvers/gap-to-feature.ts", foreign_cutovers: foreignCount, vessels } } });
+      if ((res as { shape?: string }).shape === "structuredError") console.warn(`[composer-interruption-sweep] gap write refused for ${gapId}: ${JSON.stringify((res as { body?: unknown }).body).slice(0, 300)}`);
+    } catch (e) {
+      console.warn(`[composer-interruption-sweep] gap write failed for ${gapId}: ${(e as Error).message}`);
+    }
+
+and delete the now-unused `pointerLike` object declared just above it. Change nothing else.

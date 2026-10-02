@@ -1,0 +1,19 @@
+{
+  "id": "conservation-residual-trend",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "analysis_trend",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "Evaluating the conservation residual trend to determine if the residuals are converging, diverging, or flat. Any divergi",
+  "description": "Evaluating the conservation residual trend to determine if the residuals are converging, diverging, or flat. Any diverging residuals will be treated as horizons to cross instead of defects to patch.",
+  "goal_text": "Evaluating the conservation residual trend to determine if the residuals are converging, diverging, or flat. Any diverging residuals will be treated as horizons to cross instead of defects to patch.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "conservation-residual-trend",
+  "source_gap_source": "substrate_detected"
+}

@@ -1,0 +1,71 @@
+{
+  "id": "fm-44-silent-trace-loss",
+  "mode_class": "fm",
+  "stage": "learning",
+  "outcome_class": "FN",
+  "information_state": "known_unknown",
+  "title": "Silent trace loss — execution completed but trace POST failed and system proceeded anyway",
+  "description": "Vessel executes activity successfully, attempts POST /v2/activities/execution-traces, hits network blip / activity-api 5xx / auth refresh in-flight. Trace is lost. System proceeds as if learning loop captured it. Posterior never updates. Activity that should have α-incremented stays at prior. Repeats invisibly: high-volume tasks under-count successes; recommendation slowly drifts toward over-sampled (visible) variants.",
+  "trigger": {
+    "preconditions": [
+      "activity execution completes",
+      "trace POST returns non-2xx OR client times out before ACK",
+      "vessel has no retry/persist-and-retry policy for trace submission"
+    ],
+    "synthetic_setup": {
+      "registry_modifications": [
+        {
+          "action": "Inject a synthetic 'trace_loss_canary' impulse-write that vessels are expected to emit alongside execution traces. Trace successfully posted but canary missing → trace was likely lost in earlier instance."
+        }
+      ]
+    }
+  },
+  "goal_text": "Detect divergence between vessel-side execution counts and activity-api trace counts over rolling 24h windows. For each vessel, compute (observed local executions − stored remote traces) and surface vessels with >5% loss. Propose a trace-redelivery activity that maintains a local outbox per vessel and re-submits missing traces.",
+  "expected_input_shapes": [
+    "activityExecutionTrace",
+    "vesselPerformanceMetrics",
+    "vesselHealth"
+  ],
+  "expected_output_shapes": [
+    "traceLossReport",
+    "traceRedeliveryProposal",
+    "vesselOutboxStatus"
+  ],
+  "detection": {
+    "signal": "Vessel's self-reported execution count (from heartbeat metadata or local counters) > activity-api's stored trace count for that vessel_id over the same time window. The gap exceeds 5% and is sustained over ≥ 3 consecutive windows.",
+    "witness_required": "cross_vessel_witness",
+    "query_template": "SELECT vessel_id, COUNT(*) FROM activity_execution_traces WHERE created_at BETWEEN $start AND $end GROUP BY vessel_id; COMPARE against vessel-local counter snapshot from heartbeat payload."
+  },
+  "expected_emergence": {
+    "class": "gap_accepted",
+    "activity_signature": {
+      "input_shapes_intersect": ["activityExecutionTrace", "vesselPerformanceMetrics"],
+      "output_shapes_must_include": ["traceLossReport"],
+      "tags_pattern": "reliability.trace_durability.*"
+    }
+  },
+  "self_heal_window_seconds": 172800,
+  "subagent_investigation": {
+    "dispatched_at": "2026-05-22T00:00:00Z",
+    "findings_summary": "ias-executor-ts TranslatingTraceSink swallows non-2xx and transport errors with no retry — failed traces are DROPPED. MiniBob has a trace cache that persists to ~/.metabob/.cache/traces/ but no background sync thread; redelivery only fires when sync() is explicitly called. AgentRuntime tracks executionsCompleted locally and sends to /v2/vessels/heartbeat (not discovery-vessel). Activity-api has no endpoint to expose per-vessel recorded trace count, so the counter-divergence check the harness needs is not currently queryable.",
+    "code_references": [
+      "repos/ias-executor-ts/src/adapters/activity-api-trace-sink.ts:67-174 (TranslatingTraceSink.record — fire-and-forget, no outbox)",
+      "repos/minibob/src/mcp.ts:3108-3145 (storeExecutionTrace — caches on error, no abort)",
+      "repos/minibob/src/trace-cache.ts:84-102 (TraceCacheManager.add — disk persistence, no auto-sync)",
+      "repos/minibob/src/agent-runtime.ts:36,70,178-204,243 (executionsCompleted counter + heartbeat to activity-api)",
+      "repos/discovery-vessel/src/registry.ts:166-193 (heartbeat accepts metrics.executionsCompleted but minibob doesn't send it here)"
+    ],
+    "current_gaps_in_codebase": [
+      "ias-executor-ts has no durable outbox — traces silently dropped on POST failure",
+      "MiniBob trace-cache lacks background sync thread; entries sit until explicit sync()",
+      "No GET /v2/vessels/{vesselId}/execution-count endpoint on activity-api",
+      "No idempotency/dedup key on trace POST; redelivery could double-write",
+      "No `reliability.trace_durability.*` tagged activity"
+    ]
+  },
+  "metadata": {
+    "priority": "high",
+    "cost_asymmetry": "fn_corrosive",
+    "depends_on_scenarios": []
+  }
+}

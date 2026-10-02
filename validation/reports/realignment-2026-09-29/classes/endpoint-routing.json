@@ -1,0 +1,1099 @@
+{
+ "attempts": [
+  {
+   "key": "endpoint-routing",
+   "title": "Impulse conformance migrations (seams 1,2,5,6,7)",
+   "where": "docs/architecture/IMPULSE_CONFORMANCE_LEDGER.md",
+   "tried": "Migrate bespoke REST hops (/run-goal, recommend REST, goal-paths) to typed impulses after a dual-parse fix",
+   "outcome": "dormant",
+   "evidence": "seams 1-2 'scheduled' since <=2026-08-05; 34 boredom/dev-vessel files still call /run-goal; goal-host index.ts has 7 /v2/activities/recommend refs; no dual-parse identifier; seams 3-4 done",
+   "date": "2026-08-05..2026-09-28",
+   "source": "docs-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "thompson_posterior shape (class-(b) repair)",
+   "where": "activity-api/src/routes/impulses.ts",
+   "tried": "Give REST-only posterior data a shape resolvable via /v2/impulses/resolve reading the durable posterior",
+   "outcome": "worked",
+   "evidence": "shape advertised and code present in 8 files; foundation keeps it as worked repair pattern (use volume not measured)",
+   "source": "docs-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Hardcoded svc.cluster.local defaults (TS template known gap)",
+   "where": "docs/architecture/TYPESCRIPT_VESSEL_TEMPLATE.md 'Known gap'",
+   "tried": "Listed 5 offending files; 'migrate at next significant revision'",
+   "outcome": "failed",
+   "evidence": "15 live src files now carry the defaults, including activity-api \u00d77 and concept-db \u00d73, the exemplars the doc tells drafters to copy.",
+   "source": "docs-2"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Exclude routing anchors from .substrate-secrets",
+   "where": "scripts/substrate/gen-env.sh, secrets.env.sh; docs/operations/CONFIGURATION_SURFACE.md \u00a72",
+   "tried": "Stop persisting DISCOVERY_ENDPOINT etc. after an anchor pinned fleet to a decommissioned host (transport crash loop)",
+   "outcome": "worked",
+   "evidence": "Per doc; not re-verified live",
+   "source": "docs-3"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Hardcoded endpoints remain",
+   "where": "f027c1f (09-07); activities.ts :8080/:8090/:8100, posterior-update.ts :8255, signature-*.ts :8260",
+   "tried": "Surgical hardcoded-endpoint gap fixed one site",
+   "outcome": "partial",
+   "date": "2026-09-07",
+   "evidence": "8 literal host:port strings are still in src.",
+   "source": "git-activityapi"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "surgical-gap-scan endpoint+absolute-path detector",
+   "where": "da76f061 \u2192 807b92ef",
+   "tried": "Static host-timer scanner for resolve-URL joins",
+   "outcome": "reverted",
+   "date": "2026-09-28",
+   "evidence": "Duplicated open gaps and the trace-side oracle; 'belongs as a graded resolver like env_gate_scan, not a host timer script'",
+   "source": "git-deployment"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Drafter degenerate self-modification loop hardcodes the LLM endpoint",
+   "where": "50 substrate commits 08-01..02 on gap pwt-development-vessel-feature-compose.ts (bea427c, b467d4b, eab0e9c, 3f6e4f3, 5056240); fixes c20a972, 4fc14ab, 33afcc8+978a70f, c3194ee, 93b18ba, 35c6b33",
+   "tried": "Hand-revert the drafter and add gates that refuse non-LLM llmCall targets and corruption signatures.",
+   "outcome": "partial",
+   "date": "2026-08-02",
+   "evidence": "Pinned 127.0.0.1:8100 and CONCEPT_DB_ENDPOINT, destroyed failover, wrote a template placeholder at byte 0, crash-looped hub and spoke. The fix had to be landed twice (33afcc8/978a70f).",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Federated LLM failover reimplemented per file",
+   "where": "ddaf74e, dde7d33, e252256, b43062d, 534189a, da08516, d08774a, 626225e, ec8ef67 (07-19..29)",
+   "tried": "Discover-all arms, egress rewrite, envelope unwrap, by-name hub fallback \u2014 separately in feature-compose, patch-with-tools and llm-completion-dispatch.",
+   "outcome": "partial",
+   "date": "2026-07-19",
+   "evidence": "c3194ee (08-02) 'restore LLM egress at all four llmCall recovery sites'. Memory 09-22 resolve-URL joiner overshoot.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "trace-store-reconcile could never have run",
+   "where": "9674cb8 (07-08) -> 5dcfc60, af12cf3, 30aac7c, 4635174 (08-09)",
+   "tried": "Fix the route, the hardcoded 127.0.0.1:8080, the token placement and undeclared placeholders.",
+   "outcome": "partial",
+   "date": "2026-08-09",
+   "evidence": "af12cf3: 'my own fix was still broken'. It held the lease that gates every self-edit. The store sat at 2x cap.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Empty-env ?? endpoint defaults",
+   "where": "3409fac, fbb2441, f22d88e, 57b6cd6, d5a4aba reverted by f9f1ea2",
+   "tried": "env() helper at each site",
+   "outcome": "partial",
+   "date": "2026-08-21..09-09",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "development-vessel absent from discovery",
+   "where": "57c759a",
+   "tried": "Re-register on heartbeat failure",
+   "outcome": "worked",
+   "date": "2026-09-23",
+   "evidence": "Every activity it served was unroutable",
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "asResolvePath made absolute, then call sites patched one per gap",
+   "where": "9531c5f, 6c98916, 5ca51be; src/index.ts:448",
+   "date": "2026-09-20..09-28",
+   "tried": "9531c5f made asResolvePath return an absolute URL. 6c98916 patched 1 concatenating site and 5ca51be patched 2 more with inline startsWith('http') ternaries.",
+   "outcome": "partial",
+   "evidence": "At HEAD, 7 sites still do `${endpoint}${asResolvePath(...)}` (9460, 12746, 12776, 13507, 13519, 13994, 14347). Latent until the target row is absolute.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Normalize absolute resolve_endpoint at all resolve sites (first time)",
+   "where": "b135638; 02291af, e3a4ce2, a08207c; ddf7a1d, c51d3f8, 298eea5, d2a8d88",
+   "date": "2026-06-29..07-16",
+   "tried": "Normalized absolute resolve_endpoint at 'all remaining' sites, plus 3 surgical-hardcoded-endpoint landings and 4 rewrites of asResolvePath.",
+   "outcome": "superseded",
+   "evidence": "The same class reopened on 09-20, 09-22 and 09-28.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Loopback vs peer endpoint preference oscillation",
+   "where": "route-edit-eaa86280:3 (344f970..9c90131); endpointForShape",
+   "date": "2026-08-10",
+   "tried": "14 autonomous commits in 5.5 hours toggling between skipping loopback, preferring non-loopback, and returning the peer immediately.",
+   "outcome": "failed",
+   "evidence": "Pure oscillation. isIPLoopback|127.0.0.1 appears in 47 commits (30 autonomous) from 06-15 to 08-29.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Global fetch monkey-patch as a discovery-first routing shim",
+   "where": "8c31cdb -> 6ce1446",
+   "date": "2026-09-25",
+   "tried": "An autonomous 52-line globalThis.fetch override.",
+   "outcome": "reverted",
+   "evidence": "Autonomously reverted the same day by gap revert-8c31cdb-global-fetch-shim.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Concept recall read a masked or pinned port",
+   "where": "53d9080, 5ab2a21, 1adbad4",
+   "date": "2026-08-07",
+   "tried": "Route recall through discovery and delete the pinned port.",
+   "outcome": "partial",
+   "evidence": ":8260|:18260 is still touched 8 times, through 08-29.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Discovery adapter passes resolve_endpoint verbatim",
+   "where": "ias-executor-ts d1ebb66 (operator)",
+   "tried": "Construct URLs: libp2p via egress, absolute pass-through, path join, else ''",
+   "outcome": "worked",
+   "date": "2026-09-17",
+   "evidence": "Operator-authored after 5 failed substrate attempts on gap-mu6dazag",
+   "source": "git-mid"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Third copy of resolve-URL joiner in boredom",
+   "where": "boredom-vessel f28bc06",
+   "tried": "Inline boredomDiscoverResolveUrls with absolute/path join",
+   "outcome": "unknown",
+   "date": "2026-09-27",
+   "evidence": "Duplicates goal-host routeFor and ias discovery-adapter",
+   "source": "git-mid"
+  },
+  {
+   "key": "auth-credential-plumbing",
+   "title": "retire-sweep lists templates with the Bearer scheme",
+   "where": "light-dispatch src/index.ts:165 (retireNeverSucceededTemplates)",
+   "tried": "hourly paginated listing",
+   "outcome": "failed",
+   "evidence": "live probe Bearer\u2192401, ApiKey\u2192200; 'covered 0/0 templates \u2026 no never-succeeded arms' \u00d789 since \u226509-25; candidate cause identity 0a89ebc (08-25) PLAUSIBLE",
+   "source": "git-small"
+  },
+  {
+   "key": "auth-credential-plumbing",
+   "title": "discovery\u2194identity validation churn",
+   "where": "discovery fb57b02 (05-03), 5a0abb3 (05-05), db639cf (07-09), 7978682+3f0edc9 (08-19)",
+   "tried": "route change, timeout, cache+grace, reason-bearing 401s",
+   "outcome": "partial",
+   "evidence": "1,215 spurious 401s in 30 min (07-09); 169 in 37 min (08-19); still ~32 identity-rejected 401s per day",
+   "source": "git-small"
+  },
+  {
+   "key": "auth-credential-plumbing",
+   "title": "SurrealDB 3.x bind/function flip-flop",
+   "where": "identity ab82e23, 1fad1f3 (04-29); 8eae04e, c3aca84, 4047cc8 (05-21)",
+   "tried": "type::thing\u2192type::record\u2192direct bind\u2192<string> cast",
+   "outcome": "worked",
+   "evidence": "5 commits on one bind",
+   "source": "git-small"
+  },
+  {
+   "key": "auth-credential-plumbing",
+   "title": "unauthenticated JWT mint",
+   "where": "identity 352deab (08-04), a9db360/0a89ebc (08-25), bcbcc18 (08-26)",
+   "tried": "authenticate the mint, SEC-5 role gate, admin recovery path",
+   "outcome": "worked",
+   "evidence": "any caller could mint an admin JWT for any org; SEC-5 then locked the substrate out of its own admin key",
+   "source": "git-small"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "surgical hardcoded-endpoint fix only wrapped the literal",
+   "where": "ribosome e052535 (07-05 SA)",
+   "tried": "process.env.X ?? 'http://127.0.0.1:8210'",
+   "outcome": "partial",
+   "evidence": "ribosome still has 8 hardcoded loopback fallbacks and a raw :8210/run-goal URL",
+   "source": "git-small"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Discovery registration fixes",
+   "where": "45af2d39, ef26b461, 67bbcdb6, 6ef640c3",
+   "date": "2026-05-24..25",
+   "tried": "systemVessel:true (twice the same day), unique vesselId/endpoint, correct activity-api endpoint vars",
+   "outcome": "worked",
+   "evidence": "575dba23: template registry 2 to 28; mis-registration had hidden 26 templates",
+   "source": "git-super-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Hardcoded discovery endpoint to impulse protocol",
+   "where": "4bf5a11d, 5fe91335",
+   "date": "2026-04-25",
+   "tried": "default localhost:8080, then the impulse protocol for discovery",
+   "outcome": "superseded",
+   "evidence": "hardcoded ports recur later (41feb26b obsidian 27183 vs 27182)",
+   "source": "git-super-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "fleet keys wrong/unset: silent 401 empties the vocabulary (R7)",
+   "where": "3982521e, b2a0a878, cf882aed, 263ef893, 6d19c0a0, d60fcc81, 1322c71f, 2e18b398",
+   "tried": "Dual-secret bridge, a separate HUB_API_KEY, seeder validation by body, per-vessel key write",
+   "outcome": "partial",
+   "date": "2026-07-23..2026-09-22",
+   "evidence": "d60fcc81: API_KEY absent everywhere, discovery answered 401, the vocabulary came back empty and reach was gated at step 0 (the earlier section Q wrongly blamed LLM credit)",
+   "source": "git-super-2"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "human surface resolves by hardcoded address (R13)",
+   "where": "e53b54a4, 264829cc, d65a21e7, 4e50f1fa, 3b4f921a",
+   "tried": "Resolve on hub, then gap store by shape, then reverse hub preference, then per-row resolve path, then dispatch as shapes over p2p",
+   "outcome": "partial",
+   "date": "2026-08-07..2026-08-19",
+   "evidence": "d65a21e7 reversed e53b54a4. Autonomous bb5d6b9 (human-surface-vessel, via super-repo report 80e44669, 09-27) broke it again",
+   "source": "git-super-2"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "loopback/port derivation wrong for remote callers (R15)",
+   "where": "f85f0536, e975b0b2, 4fdf5b91, ada62cff, 6d19c0a0, 7736ac2f, 965901e1",
+   "tried": "Site-by-site repairs, then a shared discovery-client loopback repair",
+   "outcome": "partial",
+   "date": "2026-07-07..2026-09-14",
+   "evidence": "4fdf5b91: the repair existed in ONE consumer. The resolve-URL overshoot recurred 09-20..09-28 (goal-host 9531c5f/5ca51be via bd1fb6d9); 6+ join sites were still broken on 09-28",
+   "source": "git-super-2"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Fix rawresolve absolute-URL concatenation (first attempt)",
+   "where": "goal-host-vessel 6c98916 (2026-09-22T07:12, substrate-authored)",
+   "tried": "Stop prepending the row endpoint to an absolute resolvePath in rawResolve",
+   "outcome": "partial",
+   "date": "2026-09-22",
+   "evidence": "'fetch() URL is invalid' failures continued: 09-24 1751, 09-25 1562, 09-26 3422, 09-27 2196, 09-28 897 (~9.8k across 111 activity ids)",
+   "source": "live-activities"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Fix remaining walk-path resolve-URL sites (second attempt)",
+   "where": "goal-host-vessel 5ca51be (2026-09-28T13:00, substrate-authored)",
+   "tried": "Applied the URL fix to the other walk-path call sites (resolve-url-walk-path-sites-7457-15128)",
+   "outcome": "worked",
+   "date": "2026-09-28",
+   "evidence": "After 13:05, 13,717 executions include 2 invalid-URL failures; auto-bridge-problem_detection went from 63/2348 to 63/68 ok",
+   "source": "live-activities"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Resolve-URL joiner fix attempt 1 (rawResolve absolute endpoint)",
+   "where": "goal-host-vessel 6c98916 (2026-09-22 07:12, substrate-authored via mitosis cutover)",
+   "tried": "1-line fix so rawResolve stops concatenating an absolute resolve_endpoint onto the row endpoint",
+   "outcome": "failed",
+   "date": "2026-09-22",
+   "evidence": "`fetch() URL is invalid` kept failing afterward: 09-24 1751, 09-25 1562, 09-26 3422, 09-27 2196, 09-28 897 (about 9.8k, plus about 2.5k via compose sub-activities); top activities auto-bridge-problem_detection 2107, auto-bridge-source_code 1000",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Resolve-URL fix attempt 2 (walk path sites 7457/15128)",
+   "where": "goal-host-vessel 5ca51be (2026-09-28 13:00)",
+   "tried": "Inline startsWith('http') ternaries at index.ts:7457 and :15128",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "Invalid-URL failures stop after 09-28T13; after 14:00, auto-bridge-problem_detection 64 ok / 5 fail. asResolvePath (index.ts:448) still returns absolute URLs and is concatenated at 9460, 12746, 12776, 13507, 13519, 13994, 14347, 16678, 16797; 8251 and dev feature-compose.ts:538 are unguarded. Discovery still stores 3 resolve_endpoint formats",
+   "source": "live-resolvers"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "LLM callers single-pick dead local arm, patched per call site",
+   "where": "ddaf74e, dde7d33 (patch-with-tools); e252256 feature-compose discoverAll+llmCallWithFailover",
+   "tried": "Per-caller failover band-aids, then discovery egress + failover over the ranked list in feature-compose only",
+   "outcome": "partial",
+   "date": "2026-07-19",
+   "evidence": "Operator: 'We've fixed this particular error multiple times'. 8 other callers left on band-aids (author-producer:286 hardcoded :8220, goal-host llm-router, etc.). Recurred 09-22 as the resolve-URL joiner overshoot",
+   "source": "memory-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Producer selection first-match replaced by healthScore pick",
+   "where": "ias-executor-ts engine.ts:258; 8e8fd30 (substrate), 8602362 (operator)",
+   "tried": "System self-authored a healthScore reduce; operator rewrote it after it broke VesselResolver registration",
+   "outcome": "partial",
+   "date": "2026-07-21",
+   "evidence": "8e8fd30 seeded -Infinity; healthScore always undefined (discovery advertises string status). Reach-graded producer posterior never built; discovery index.ts:205 candidates[0] fossil remains",
+   "source": "memory-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Mask dead opus/haiku arms on spoke+hub to restore LLM plane",
+   "where": "substrate-live + syzygy hub llm-resolver units, 85d5edb",
+   "tried": "Restart hub llm-resolver, mask pinned arms",
+   "outcome": "partial",
+   "date": "2026-07-21",
+   "evidence": "Plane restored (value:OK), but it is a runtime stopgap that deploy scripts re-enable",
+   "source": "memory-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Directed gap hand-off without directed:true",
+   "where": "feature-compose.ts ~6272 autonomy-scope floor; gap-to-feature.ts ~3911",
+   "tried": "Handed the resolve-URL gap back 4 times",
+   "outcome": "failed",
+   "date": "2026-09-28",
+   "evidence": "WITHHELD FAVORABLE: verdict UNFAVORABLE with edits applied, tsc 0; the operator's own containment rule blocked the fix",
+   "source": "memory-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "asResolvePath absolute URL fix",
+   "where": "goal-host index.ts:380 vs rawResolve :7470, :6977, :8946, :12033, :12609",
+   "date": "2026-09-22",
+   "tried": "Producer returns absolute URL",
+   "outcome": "failed",
+   "evidence": "Consumers still prepend endpoint -> Invalid URL -> 'no producer' for llm_completion, web_search, shellResult, human surface",
+   "source": "memory-10"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Surface starters union registry",
+   "where": "human surface starters.ts 97867d1d",
+   "date": "2026-08-10",
+   "tried": "Union local+hub registries; word-match humanized names",
+   "outcome": "worked",
+   "evidence": "7 chips from 7 families; confident false negatives avoided",
+   "source": "memory-10"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Shared transient identity failure classifier",
+   "where": "activity-api auth.ts 160b660",
+   "date": "2026-08-11",
+   "tried": "'timed out' vs 'timeout' in both copies via shared fn",
+   "outcome": "worked",
+   "evidence": "Paired test control; substrate pulled+restarted in ~7 min",
+   "source": "memory-10"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "llm_completion de-advertise policy",
+   "where": "9c17905/17dc3d0 (never un-advertise) \u2192 llm-resolver 1f14a69",
+   "tried": "De-advertise when all providers cool, resume on expiry",
+   "outcome": "superseded",
+   "date": "2026-07-19",
+   "evidence": "Design reversed in 24h; the de-advertise direction won",
+   "source": "memory-2"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Stale METABOB_API_KEY in volume secrets shadowed env -> discover() empty",
+   "where": "/workspace/.substrate-secrets vs /etc/substrate/env",
+   "tried": "Operator aligned the key by hand and restarted dev-vessel.",
+   "outcome": "worked",
+   "date": "2026-07-24",
+   "evidence": "Self-dev restored (bfdd173, 5ca4f0b, 691142d substrate-authored). The class fix (volume must not diverge; federation_join_health) was proposed only.",
+   "source": "memory-3"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Dead discovery row eviction",
+   "where": "discovery-vessel 7cc9da4",
+   "tried": "/register validation plus a probe-and-evict for dead head rows.",
+   "outcome": "partial",
+   "date": "2026-09-20",
+   "evidence": "The 0-byte grounding class struck 4-5 times. The rogue registrant is unidentified and the class self-heals rather than being eliminated.",
+   "source": "memory-5"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Cockpit client loopback rehost",
+   "where": "metabob-mcp bd87b62, 59b350e",
+   "date": "2026-08-08",
+   "tried": "port-gated derivation; rehost loopback; path-only resolve",
+   "outcome": "superseded",
+   "evidence": "09-22 resolve-URL joiner overshot: absolute resolvePath + endpoint = invalid URL killing floor",
+   "source": "memory-6"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Producer discovery 8s timeout fail-open",
+   "where": "goal-host discover-by-shapes call; hub saturation fixed operator-side",
+   "tried": "Hub saturation relieved",
+   "outcome": "partial",
+   "date": "2026-08-08",
+   "evidence": "55-77s -> 0.2s; reuse 0.21%->5.54%; gap producer-discovery-fails-open-to-no-producer filed; abstain-not-absence not implemented in note",
+   "source": "memory-7"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "LLM failover on 401",
+   "where": "llm-resolver isUnauthenticatedProviderError",
+   "date": "2026-08-12",
+   "tried": "classify 401 as failover",
+   "outcome": "worked",
+   "evidence": "717 401s -> 1",
+   "source": "memory-9"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "llmCallWithFailover retries",
+   "where": "c8a1383",
+   "date": "2026-08-07",
+   "tried": "3 rounds, 5xx only",
+   "outcome": "worked",
+   "evidence": "the 'credit-dead' operator blocker was retracted; hub failover served",
+   "source": "memory-9"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Repoint obsidian endpoint by env",
+   "where": "gen-env.sh OBSIDIAN_PLUGIN_ENDPOINT, super-repo 41feb26b3",
+   "tried": "host:27183 to 127.0.0.1:27182",
+   "outcome": "worked",
+   "date": "2026-06-22",
+   "evidence": "269 events modelled; still a pin (recurs as 09-22 :8270)",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Discovery-client pointer envelope fix",
+   "where": "activity-api 3013e76",
+   "tried": "bare {shape} to {pointer:{type:vesselCapability,shape}}",
+   "outcome": "worked",
+   "date": "2026-07-04",
+   "evidence": "had returned HTTP 400 forever with zero callers noticing",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Pin GOAL_HOST_ENDPOINT on the UI spoke",
+   "where": "substrate-ui spoke env",
+   "tried": "bypass the bad discovery row (:8401)",
+   "outcome": "superseded",
+   "date": "2026-08-08",
+   "evidence": "recovered on goal-host restart; 08-21 stale 127.0.0.1:18401 row recurs",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Autonomous palette write resolvers",
+   "where": "dev-vessel src/seed/draft-gap-closing-activity.ts:116-118",
+   "tried": "let the drafter mint concepts, links and gaps via http_fetch to hardcoded ports",
+   "outcome": "dormant",
+   "date": "2026-05-30",
+   "evidence": "the prompt still says substrateGap_write -> 127.0.0.1:8270, which is now stateful-ui-vessel (dev-vessel is 8090); 9 src files pin :8270; 3 executions retained",
+   "source": "openspec-10"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Obsidian point-and-go config + honest Test Connection",
+   "where": "2026-07-19-obsidian-pebkac-config; obsidian settings-tab.ts:232",
+   "tried": "Spec: validate discovery/apiKey, probe via getActiveSidecarPort, auto-pick ports",
+   "outcome": "dormant",
+   "date": "2026-07-19",
+   "evidence": "T1-T6 unchecked; settings-tab.ts:232 still fetches 127.0.0.1:${federationHealthPort}/health",
+   "source": "openspec-4"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Vessel duplicate-handling genres (duplicate_policy)",
+   "where": "openspec/changes/2026-07-19-vessel-duplicate-genres; discovery-vessel 6ab2e24 (2026-07-31) types.ts:77-96; goal-host satisfier-pick.ts:40-55",
+   "date": "2026-07-19",
+   "tried": "6-genre shape-visible policy honored by discovery /resolve instead of candidates[0]; retire _fedTargetVessel pin, identity split-brain, goal-host-only LLM selection; data-driven LLM arms",
+   "outcome": "partial",
+   "evidence": "Built as distribution_policy (6ab2e24) + satisfier-pick honors it, but tasks.md 0/19 checked; no vessel except obsidian federation-sidecar declares a policy, vessels.inventory.json has no genre, _fedTargetVessel 'concept-db-local' literal still at obsidian-vessel/src/concept-db-client.ts:484",
+   "source": "openspec-5"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Loopback registry address -> remap to discovery host",
+   "where": "repos/human-surface-vessel/src/routes/proxy.ts",
+   "tried": "rewrite 127.0.0.1 endpoint to discovery host with offset port; GOAL_HOST_ENDPOINT env unset test",
+   "outcome": "worked",
+   "date": "2026-08-07",
+   "evidence": "activeDispatches 502->200 (VALIDATION-2 s8); but env pins remain config.ts:43, proxy.ts:86-89, impulses.ts:338",
+   "source": "openspec-9"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "d4: resolve activity-api by shape instead of env pin (substrate dispatch 49f8c0b6)",
+   "where": "repos/human-surface-vessel/src/routes/proxy.ts; openspec/changes/human-surface-stack/drafts/d4-activity-api-by-shape.patch",
+   "tried": "feature_compose edit replacing ACTIVITY_API_ENDPOINT env with candidateEndpointsFor",
+   "outcome": "failed",
+   "date": "2026-08-08",
+   "evidence": "staged-not-landed UNFAVORABLE rolled_back, yet left in working tree and blocked git pull --ff-only; env pin still present 09-28",
+   "source": "openspec-9"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "asResolvePath absolute-URL branch",
+   "where": "7bb864b (substrate-authored)",
+   "date": "2026-09-20",
+   "tried": "Operator-filed gap; substrate chose form",
+   "outcome": "partial",
+   "evidence": "http_fetch worked 30 min later (chain A); 'fetch() URL is invalid' recurred 09-21; MEMORY 09-22 says joiner overshot at 5 call sites",
+   "source": "reports-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Host watchdog restarts local-tools when its discovery row is hijacked (#25)",
+   "where": "operator host script",
+   "tried": "Mitigate the ephemeral-endpoint hijack during the acceptance window.",
+   "outcome": "partial",
+   "date": "2026-09-24",
+   "evidence": "Symptom mitigation only. The gap a-transient-verify-instance-registers-an-ephemeral-endpoint... is still open x2 live on 09-29.",
+   "source": "reports-2"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Resolve-URL walk-path sites",
+   "where": "goal-host 5ca51be",
+   "tried": "System-drafted directed fix at 2 join sites with a class2 measured falsifier.",
+   "outcome": "partial",
+   "date": "2026-09-28",
+   "evidence": "0 invalid-URL failures after 13:10 and a system landed_verified (first on its own measurement); ~6 broken sites remain; the chain went correct 07-05 b135638, broken 09-20 9531c5f.",
+   "source": "reports-6"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Port-preserving spoke join derivation",
+   "where": "gen-env.sh and Makefile",
+   "tried": "Recover the offset from the discovery port; the first fix went only in gen-env, which the Makefile bypasses",
+   "outcome": "worked",
+   "date": "2026-08-20",
+   "evidence": "The spoke had joined a different substrate (:23100 became :18100). Fixed in two layers and verified across five endpoint shapes.",
+   "source": "reports-7"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Fleet API keys revoked by a secret rotation whose re-issue never ran; operator re-issued them",
+   "where": "ADDENDUM sections R and S; /etc/substrate/env; seed-identity 9069838e not in image",
+   "tried": "Issue 4 vessel keys, each verified against discovery before wiring, then restart",
+   "outcome": "worked",
+   "date": "2026-09-10",
+   "evidence": "0-step terminations 85/12h -> 0. Auth failures ~60/min -> 1/min. The reach oracle, silent for 21h, resumed writing.",
+   "source": "reports-8"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Executor unquoted & backgrounds synthesized curl",
+   "where": "0f5cd43b 2026-08-30T02:00 goal-host 99d6305 llmExtractPointerArgs",
+   "tried": "deterministic quoting at single chokepoint, 12 tests",
+   "outcome": "worked",
+   "date": "2026-08-30",
+   "evidence": "reproduced in-container; tell had sat in a 08-15 comment",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Unauthenticated key mint",
+   "where": "eb163c50 2026-08-25T11:38 identity-vessel",
+   "tried": "require auth on /v1/keys/generate",
+   "outcome": "worked",
+   "date": "2026-08-25",
+   "evidence": "no-auth -> 401; hub :18101 exposure unconfirmed",
+   "source": "transcripts-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Engine VesselResolver multiaddr-as-URL fix",
+   "where": "80ab9659 @ 2026-09-18T03:07",
+   "tried": "substrate composed 2084b4b for gap-mu6dazag",
+   "outcome": "partial",
+   "evidence": "landed locally; the push failed on an invalid PAT until a new PAT was supplied at 03:16",
+   "date": "2026-09-18",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "Discovery row shadowed by dead endpoint",
+   "where": "80ab9659 @ 2026-09-18T15:11-15:16",
+   "tried": "restart local-tools to rewrite its row",
+   "outcome": "partial",
+   "evidence": "healed by restart after ~45 min of fleet-wide grounding failure; class gap filed, not fixed",
+   "date": "2026-09-18",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "ReAct floor tool plane: fetch() URL is invalid",
+   "where": "goal-host resolve-URL joins",
+   "date": "2026-09-28T13:00Z",
+   "tried": "directed gap -> system-drafted 5ca51be (2 join sites); 4 seam fixes (listing b8671c9/89f04fb, reporter, sweep starvation, cutover stamp)",
+   "outcome": "partial",
+   "evidence": "0 invalid-URL since 13:10, closed landed_verified 15:27; 9 more join sites remain; class correct on 07-05, broken by autonomous 9531c5f 09-20",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "analysis-vessel discovery registration",
+   "where": "ias-executor-ts 85a651a",
+   "tried": "Re-register the vessel on heartbeat 404",
+   "outcome": "worked",
+   "date": "2026-05-25",
+   "evidence": "F-084 401 then 404 on every heartbeat; resolved and stable 11+ hours (inv-026)",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "endpoint-routing",
+   "title": "MCP cockpit TRACK/INSPECT planes",
+   "where": ".mcp.json -> metabob-mcp; .metabob/config.json endpoint localhost:18080",
+   "tried": "goal_status / registry_query via discovery derived at localhost:18100",
+   "outcome": "failed",
+   "date": "2026-09-29",
+   "evidence": "registry_query failed with 'socket connection was closed unexpectedly'. goal_status returned 'could not find goal-host-vessel via discovery'.",
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "problems": [
+  {
+   "key": "endpoint-routing",
+   "symptom": "15 live src files keep .svc.cluster.local defaults (the doc's known-gap list names 5); boredom vessel-addition scaffold references deprecated /v2/vessels/register",
+   "root_cause": "The system is held closed by env-var discipline; there is no detector for the default",
+   "source": "docs-2"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Default drift: SURREALDB_URL 5 defaults, SURREALDB_PASSWORD 4 (changeme vs root), DISCOVERY_ENDPOINT 4, GOAL_HOST_VESSEL_ENDPOINT :8210 x12 vs :8090 x1, FED_HEALTH_PORT 8401 vs 8402, 11 API-key aliases; doc examples hardcode activity.metabob.com",
+   "source": "docs-3"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "/bootstrap returns identity_endpoint 127.0.0.1 (node 1) or host.containers.internal (node 2), empty discovery_endpoint, empty relays",
+   "first_seen": "2026-07-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 3,
+   "root_cause": "Anchors come from PUBLIC_IP/*_PUBLIC_URL env; request-derived fix never landed (compose grounding refusal)",
+   "source": "federation-relay"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "The public droplet serves unauthenticated /vessels/:id and /metrics exposing fleet topology; the libp2p ingress confused deputy is still open",
+   "first_seen": "2026-09-12",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "root_cause": "No authorization on discovery reads or ingress",
+   "source": "federation-relay"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "8 hardcoded host:port literals in src; CI webhook pointed at a nonexistent host",
+   "root_cause": "Self-calls and peer calls bypass discovery",
+   "first_seen": "2026-08-04",
+   "last_seen": "2026-09-07",
+   "recurrences": 3,
+   "source": "git-activityapi"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Hardcoded loopback/ports/nonexistent routes; LLM failover pinned to one URL; spokes refuse hub-owned calls",
+   "first_seen": "2026-05-22",
+   "last_seen": "2026-08-13",
+   "recurrences": 15,
+   "root_cause": "llmCall/discovery failover reimplemented per file. The drafter confabulates endpoints and sees env-default literals as idiom.",
+   "source": "git-devvessel-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Empty-env ?? defaults, pinned ports, vessel absent from discovery",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-23",
+   "recurrences": 6,
+   "source": "git-devvessel-2"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Shape resolves fail with an invalid URL or 'no producer' because callers join endpoint + absolute resolve URL, or pick a loopback address",
+   "first_seen": "2026-06-15",
+   "last_seen": "2026-09-28",
+   "recurrences": 9,
+   "root_cause": "No single URL-joining seam. asResolvePath's contract changed (09-20) without updating its 10 call sites, which are patched one gap at a time. Endpoint preference is a hand-coded heuristic that the drafter oscillates on.",
+   "source": "git-goalhost"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "resolve_endpoint absolute-vs-path joining reimplemented per vessel (goal-host, ias discovery-adapter, boredom); fetch URL invalid on spokes",
+   "first_seen": "2026-07-11",
+   "last_seen": "2026-09-27",
+   "recurrences": 3,
+   "root_cause": "No shared URL-construction primitive; each caller re-derives it",
+   "source": "git-mid"
+  },
+  {
+   "key": "auth-credential-plumbing",
+   "symptom": "401s on register or resolve; retire-sweep 401 covering 0/0 templates; SurrealDB function-name churn; unauthenticated JWT mint",
+   "first_seen": "2026-04-29",
+   "last_seen": "2026-09-29",
+   "recurrences": 10,
+   "root_cause": "auth scheme and issuer rules differ per caller (Bearer vs ApiKey); security hardening does not check its consumers",
+   "source": "git-small"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Hardcoded loopback fallbacks (\u224823 sites) and inconsistent env names; the 'surgical' fix just wrapped the literal",
+   "first_seen": "2026-07-05",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "root_cause": "endpoint resolution not centralised in discovery client",
+   "source": "git-small"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "vessels invisible in discovery; hardcoded ports and URLs",
+   "first_seen": "2026-03-05",
+   "last_seen": "2026-06-22",
+   "recurrences": 9,
+   "root_cause": "registration fields and ids inconsistent per vessel; pinned host ports",
+   "source": "git-super-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Loopback/port/resolve-path rows undialable remotely; silent 401 reads as an empty registry",
+   "root_cause": "Endpoints derived per consumer instead of routed by shape; credentials scoped to one trust domain",
+   "first_seen": "2026-07-07",
+   "last_seen": "2026-09-28",
+   "recurrences": 16,
+   "source": "git-super-2"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "'fetch() URL is invalid' killed auto-bridge, compose-auto-bridge, learned-auto-bridge and several learned-composition arms",
+   "root_cause": "Resolve-URL joiner produced absolute URLs while call sites still prepended the endpoint; the 09-22 fix covered one site",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-28T13",
+   "recurrences": 2,
+   "source": "live-activities"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "ephemeral ports in discovery, host-mapped endpoints undialable in-container, pinned remedy targets",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-28",
+   "recurrences": 12,
+   "root_cause": "register accepts unverified endpoint changes under live id; pinned URLs and template ids",
+   "source": "live-gaps"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "resolve URL built as endpoint+absolute resolve_endpoint gives an invalid URL, which reads as 'no producer'",
+   "root_cause": "discovery stores resolve_endpoint in 3 formats (6 absolute, 4 relative, 1 /dispatch) without normalizing; the shared helper asResolvePath returns absolute URLs; fixes patch call sites one at a time",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-28T13 (loud sites); 11+ latent sites remain",
+   "recurrences": 3,
+   "source": "live-resolvers"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Callers hand-build resolve URLs or single-pick the first/local producer, reaching dead arms, and the result reads as 'no producer'",
+   "root_cause": "Discovery candidates[0] / engine first-match used as the chooser; raw endpoint + resolvePath joins; call sites bypass discovery egress",
+   "first_seen": "2026-07-12",
+   "last_seen": "2026-09-28",
+   "recurrences": 6,
+   "source": "memory-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Hardcoded loopback ports on spokes, /resolve vs /v2/impulses/resolve, federated dead-relay producer preferred over local, invalid concatenated resolve URLs ('no producer'), fabricated external hosts, envelope inconsistency across vessels",
+   "root_cause": "Consumers hardcode addresses/envelopes instead of reading registry contract fields; fixes land at producer only",
+   "first_seen": "2026-08-03",
+   "last_seen": "2026-09-22",
+   "recurrences": 8,
+   "source": "memory-10"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Hardcoded loopback endpoints, egress rewrite duplicated 3\u00d7 and missing in the 4th, remapEndpoint laundering, per-vessel envelope drift",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-08-04",
+   "recurrences": 7,
+   "root_cause": "No shared resolveThroughDiscovery client",
+   "source": "memory-2"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Pinned loopback peers, libp2p rows rewritten to HTTP, hardcoded fallback endpoints, per-vessel /resolve envelope drift, discover() returning [] on 401, stale keys shadowing env, MCP concept tools returning 404.",
+   "first_seen": "2026-07-13",
+   "last_seen": "2026-09-22",
+   "recurrences": 8,
+   "root_cause": "Callers pin addresses instead of routing by shape, and failure modes return success-shaped empties.",
+   "source": "memory-3"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Hardcoded ports and loopback defaults, dead discovery rows with fresh heartbeats, wrong-door probes",
+   "first_seen": "2026-07-31",
+   "last_seen": "2026-09-18",
+   "recurrences": 6,
+   "root_cause": "Pinned peers can't learn of replacement; heartbeat doesn't prove the socket; hub-local defaults on spokes",
+   "source": "memory-4"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Pinned loopback endpoints (ribosome LLM, CONCEPT_DB_ENDPOINT), wrong envelopes, dead discovery rows giving 0-byte grounding.",
+   "root_cause": "Raw endpoint constants bypass discovery, and there is no rogue-registrant detection.",
+   "first_seen": "2026-08-03",
+   "last_seen": "2026-09-20",
+   "recurrences": 6,
+   "source": "memory-5"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Hardcoded vessel names and ports, stale pinned ingress, target-less egress landing on the obsidian sidecar, and auth schemes that differ per route",
+   "root_cause": "Consumers pin names or ports instead of using the llm-router or discovery pattern. Discovered values get persisted as config",
+   "first_seen": "2026-07-15",
+   "last_seen": "2026-08-08",
+   "recurrences": 7,
+   "source": "memory-7"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "The cockpit pointed at a dead hub, discovery /resolve executes a shape instead of listing it, an unauthenticated response reads as '0 producers', resolve envelopes differ between vessels.",
+   "root_cause": "A dead-plane miss and a real no-producer look the same. Config lives in multiple files.",
+   "first_seen": "2026-07-16",
+   "last_seen": "2026-08-23",
+   "recurrences": 5,
+   "source": "memory-8"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Loopback advertisement, the libp2p proxy envelope, pinned endpoints to masked vessels, a revoked operator key rendered as 'not found', per-vessel envelope differences",
+   "first_seen": "2026-08-08",
+   "last_seen": "2026-09-22",
+   "recurrences": 8,
+   "root_cause": "derivePublicEndpoint keeps the loopback host; the reachableFrom fix exists in one consumer; failure rendered as absence",
+   "source": "memory-9"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Producer answers but the caller sees no producer or silence (pinned ports, loopback registrations, wrong envelope)",
+   "first_seen": "2026-05-25",
+   "last_seen": "2026-09-22",
+   "recurrences": 8,
+   "root_cause": "writers pin peer endpoints or URL formats; registration writes the transport address; fail-soft to empty",
+   "source": "memory-adjacent"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "6844 discovery 'identity rejected the key (HTTP 401)' and 1194 goal-host 'Failed to resolve SHA \u2026 401' on node 2; 211 walkBudget 404 fallbacks; 241 goal_execution 4xx 'goal or target_template_id is required'",
+   "root_cause": "Unattributed, load-correlated key rejections by hub identity; walkBudget has no producer on node 2; callers bind the wrong payload",
+   "first_seen": "2026-09-26",
+   "last_seen": "2026-09-29",
+   "source": "node2-runtime"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "The drafter prompt and 9 dev-vessel files POST to 127.0.0.1:8270, which is now stateful-ui-vessel",
+   "root_cause": "a hardcoded port in an LLM prompt and in resolvers instead of discovery routing",
+   "first_seen": "2026-05-30",
+   "last_seen": "2026-09-29",
+   "source": "openspec-10"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Hardcoded 127.0.0.1 URLs baked into seed template JSON and drafting prompt; obsidian Test Connection probes wrong port",
+   "root_cause": "Loopback treated as transport model; follow-up slices never written",
+   "first_seen": "2026-07-04",
+   "last_seen": "2026-09-29",
+   "recurrences": 2,
+   "source": "openspec-4"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "The live goal_summary resolver hardcodes the fallback process.env.ACTIVITY_API_ENDPOINT ?? 'http://127.0.0.1:8080' and a similar one for the dev-vessel endpoint.",
+   "root_cause": "The substrate-authored resolver pins ports instead of routing through discovery.",
+   "first_seen": "2026-07-01",
+   "last_seen": "2026-09-28",
+   "source": "openspec-6"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Registry advertises 127.0.0.1 in-container addresses, so a lookup succeeds, the env fallback never fires and the result is a silent 502",
+   "first_seen": "2026-08-07",
+   "last_seen": "2026-09-22",
+   "recurrences": 2,
+   "root_cause": "Vessels register their in-container address. Callers pin env overrides instead of remapping via discovery, and the pins remain in the surface's config.ts and proxy.ts.",
+   "source": "openspec-9"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "No producer / 0-byte grounding from bad URLs: poisoned discovery row with ephemeral port, hardcoded :8080/:8100, dead hub config, alias vs advertised shape, unmounted endpoints",
+   "root_cause": "Heartbeats keep swapped endpoints alive; env/const endpoints; resolve-URL joining",
+   "first_seen": "2026-08-16",
+   "last_seen": "2026-09-22",
+   "recurrences": 7,
+   "source": "reports-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "local-tools' discovery row points at an ephemeral port, and compose grounding windows are 0 bytes.",
+   "root_cause": "Transient verify instances register under the live vessel id. The real vessel registers only at boot, so the row never heals.",
+   "first_seen": "2026-09-24 (#3)",
+   "last_seen": "2026-09-29 (gap open x2)",
+   "recurrences": 2,
+   "source": "reports-2"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Federated routes hang or fail (NO_RESERVATION 72/h, hub goal-host :18401 answers nothing, ingress loops on shape collision)",
+   "root_cause": "Locality bonus worth half a priority step; ingress resolves by shape ignoring caller's vessel=; MCP federated vs local registry disagree",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-16",
+   "recurrences": 4,
+   "source": "reports-3"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Dead discovery rows on ephemeral ports (0-byte grounding); producer collision by registry order; hardcoded :8270; absolute vs relative resolve endpoints; stale template list cache",
+   "first_seen": "2026-09-19",
+   "last_seen": "2026-09-29",
+   "recurrences": 4,
+   "root_cause": "Registration not bound to stable identity/port; consumers pin endpoints; caches not invalidated. gap-something-re-registers-local-tools-grounding-shapes-on-ephemeral-ports still OPEN.",
+   "source": "reports-4"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "fetch() URL is invalid on generic tool steps: 100-800 per 6h all week; ReAct floor broken; the human surface re-probes goal-host 68-170 times a minute.",
+   "first_seen": "2026-09-20",
+   "last_seen": "2026-09-28",
+   "recurrences": 4,
+   "root_cause": "The asResolvePath contract changed to absolute (9531c5f), callers still prepend the endpoint; the gap was closed without a falsifier; the fix site is on an autonomy-excluded path; new broken sites were written after the defect was documented.",
+   "source": "reports-6"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Credentials and discovery repeatedly broken: every per-vessel key revoked after a secret rotation (09-10); MCP key revoked (09-10); project MCP key rejected (09-10); the cockpit cannot find goal-host via discovery while it is healthy (09-11); 8220 remapped to an unpublished 18220; memory 09-22 resolve-URL joiner overshoot.",
+   "root_cause": "The rotation re-issue step never ran and the fixed seeder (9069838e) was not in the image. Clients resolve routes differently from the vessels' own registration.",
+   "first_seen": "2026-09-10",
+   "last_seen": "2026-09-22",
+   "recurrences": 5,
+   "source": "reports-8"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "The inventory goal-host logs 'failed to register dev-vessel proxies: Unable to connect' 9,172 times and expectation-watchdog failures 917 times in 6.4 days.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "recurrences": 9172,
+   "root_cause": "Loopback endpoints are pinned for units masked in this inventory (development-vessel, llm-resolver at 127.0.0.1:8220).",
+   "source": "syzygy"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "The hub registry advertises goal-host-vessel@syzygy-local-inventory as a producer of goal_execution and goalDispatchAsync, but it cannot execute because it has no LLM.",
+   "first_seen": "2026-09-22",
+   "last_seen": "2026-09-29",
+   "root_cause": "The inventory has no dependency-completeness check before advertising. Registry rows are identity_status 'unverified' and count as healthy.",
+   "source": "syzygy"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Loopback public_endpoint; dead-port discovery row with fresh lastSeen; multiaddr treated as URL",
+   "first_seen": "2026-09-18",
+   "last_seen": "2026-09-18",
+   "recurrences": 3,
+   "root_cause": "Liveness by heartbeat, not socket; advertisement not computed from the caller's view",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Invalid resolve URLs kill ReAct floor tools; host-mapped ports; boot-order registration loss",
+   "first_seen": "2026-09-24",
+   "last_seen": "2026-09-28",
+   "recurrences": 5,
+   "root_cause": "endpoint + absolute resolvePath join, regressed by autonomous 9531c5f on 09-20 from a 07-05 fix",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "hub run-goal/resolve accept unauthenticated internet POSTs; admin key management lockout",
+   "first_seen": "2026-08-11",
+   "last_seen": "2026-08-26",
+   "recurrences": 2,
+   "root_cause": "no auth gate on those ports; /v1/keys/issue never persists plaintext",
+   "source": "validation-other-1"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "401/404 between vessels and discovery/identity; only self registered; port not mapped",
+   "first_seen": "2026-05-23 F-019",
+   "last_seen": "2026-05-25 F-084",
+   "recurrences": 4,
+   "root_cause": "Credential divergence across validators; boot ordering",
+   "source": "validation-other-2"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "21 validation scripts hardcode localhost:18xxx/8xxx, 17 embed /home/avi, and 13 target canary/minibob",
+   "root_cause": "Operator-side scripts bypass discovery and substrate-connect config",
+   "first_seen": "2026-05",
+   "last_seen": "2026-08-28",
+   "source": "validation-other-3"
+  },
+  {
+   "key": "endpoint-routing",
+   "symptom": "Host tools using 'localhost' get a connection reset for vessels bound IPv4-only (8090, 8100, 8260, 8270, 8310), because pasta forwards ::1. This breaks the session-start hook, the edit-gate S3 branch and the MCP goal_status/registry_query. 127.0.0.1 works.",
+   "root_cause": "Vessels bind hostname 0.0.0.0 (v4-only). Hooks and MCP default to localhost:18xxx and none read the substrate-connect config.",
+   "first_seen": "unknown (post podman migration)",
+   "last_seen": "2026-09-29",
+   "recurrences": 1,
+   "source": "vessel-docs-tooling"
+  }
+ ],
+ "claims": [
+  {
+   "key": "endpoint-routing",
+   "claimed_at": "2026-07-19",
+   "claim": "Honest /bootstrap specified (then again 09-12)",
+   "where": "07-19 item 3; 09-12 step 2",
+   "later": "Still loopback/host-dependent on 09-29 on node 1 and node 2; fed:join_door_host_dependent open for 18 sweeps",
+   "source": "federation-relay"
+  },
+  {
+   "key": "endpoint-routing",
+   "claimed_at": "2026-05-30",
+   "claim": "Palette write resolvers unlocked; drafter can mint gaps/concepts",
+   "where": "archive/2026-05-30-autonomous-palette-write-resolvers",
+   "later": "prompt still pins substrateGap_write to :8270 = stateful-ui-vessel today; stop-doing signal never evidenced",
+   "source": "openspec-10"
+  },
+  {
+   "key": "endpoint-routing",
+   "claimed_at": "2026-08-07",
+   "claim": "502 fixed at its documented cause, env gate retired as the only remedy",
+   "where": "VALIDATION-2 s8",
+   "later": "the remap holds for goal-host, but the GOAL_HOST_ENDPOINT, ACTIVITY_API_ENDPOINT and DEV_VESSEL_ENDPOINT env pins with 127.0.0.1 defaults remain in the surface; resolve-URL joiner overshoot class recurred 09-22",
+   "source": "openspec-9"
+  },
+  {
+   "key": "endpoint-routing",
+   "claimed_at": "2026-09-18",
+   "claim": "A substrate-authored commit landed (2084b4b)",
+   "where": "80ab9659 @ 2026-09-18T03:07",
+   "later": "03:08: not pushed (dead PAT), so the autonomy criterion was not met until 03:16",
+   "source": "transcripts-3"
+  },
+  {
+   "key": "endpoint-routing",
+   "claimed_at": "2026-09-28T13:48Z",
+   "claim": "That would be the first time the system verifies a fix to its own tool plane",
+   "where": "ac8b0aad 2026-09-28T13:48Z",
+   "later": "13:58 retracted 'almost certainly isn't'; listing change b8671c9 landed without reading history, reverted on inference, re-applied on measurement",
+   "source": "transcripts-4"
+  },
+  {
+   "key": "endpoint-routing",
+   "claimed_at": "2026-09-28T15:27Z",
+   "claim": "System closed a landing on its own measurement (5ca51be, landed_verified)",
+   "where": "ac8b0aad 2026-09-28T15:27Z",
+   "later": "Directed not autonomous; needed 4 seam repairs; 9 join sites remain; class originally fixed 07-05, broken by autonomous 9531c5f 09-20",
+   "source": "transcripts-4"
+  }
+ ]
+}

@@ -1,0 +1,14 @@
+{
+  "title": "Increase timeout for goal_summary resolver",
+  "description": "Increases the timeout for fetch calls within the goal_summary resolver to prevent timeouts and ensure successful execution.",
+  "change": {
+    "type": "patch",
+    "files": [
+      {
+        "filePath": "repos/development-vessel/src/resolvers/goal-summary.ts",
+        "patch": "--- a/repos/development-vessel/src/resolvers/goal-summary.ts\n+++ b/repos/development-vessel/src/resolvers/goal-summary.ts\n@@ -19,19 +19,19 @@\n   // --- 1. Fetch activity templates ---\n   const templatesRes = await fetch(\n     `${activityEndpoint}/v2/activities/templates?limit=200`,\n-    { headers, signal: AbortSignal.timeout(20000) }\n+    { headers, signal: AbortSignal.timeout(60000) }\n   );\n   const templatesData = templatesRes.ok ? ((await templatesRes.json()) as any) : {};\n   const templates: any[] = Array.isArray(templatesData?.templates) ? templatesData.templates : [];\n \n   // --- 2. Fetch composition graph ---\n   const graphRes = await fetch(\n     `${activityEndpoint}/v2/activities/composition/graph?limit=200`,\n-    { headers, signal: AbortSignal.timeout(20000) }\n+    { headers, signal: AbortSignal.timeout(60000) }\n   );
+   const graphData = graphRes.ok ? ((await graphRes.json()) as any) : {};\n   const edges: any[] = Array.isArray(graphData?.edges)\n     ? graphData.edges\n     : Array.isArray(graphData?.nodes)\n     ? graphData.nodes\n     : [];\n \n   // --- 3. Fetch substrate gaps from dev-vessel ---\n   const gapsRes = await fetch(`${devVesselEndpoint}/v2/impulses/resolve`, {\n     method: \"POST\",\n     headers,\n-    signal: AbortSignal.timeout(20000),\n+    signal: AbortSignal.timeout(60000),\n     body: JSON.stringify({\n       impulse: { pointer: { type: \"substrateGap\", status: \"open\", limit: 200 } },\n     }),"
+      }
+    ]
+  }
+}

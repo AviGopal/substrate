@@ -1,0 +1,12 @@
+[Unit]
+Description=Validator-liveness detector timer
+
+[Timer]
+OnActiveSec=12min
+OnUnitActiveSec=6h
+Persistent=true
+AccuracySec=1min
+Unit=validator-liveness.service
+
+[Install]
+WantedBy=timers.target

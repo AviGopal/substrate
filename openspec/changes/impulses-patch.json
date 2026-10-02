@@ -1,0 +1,5 @@
+{
+    "old_string": "case \"http_response\":",
+    "new_string": "case \"httpResponse\":",
+    "path": "/workspace/git/super-repo/repos/development-vessel/src/routes/impulses.ts"
+}

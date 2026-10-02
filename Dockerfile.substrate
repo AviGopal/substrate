@@ -1,0 +1,578 @@
+# Dockerfile.substrate — single-container autonomous development substrate
+#
+# Runs the entire vessel fleet under systemd PID 1.
+# All inter-vessel calls are localhost — no trust boundary to cross.
+#
+# Build:
+#   docker build -f Dockerfile.substrate --target base -t metabob/substrate:dev .
+#   (CI adds --build-arg IMAGE_REVISION/IMAGE_CREATED/IMAGE_SOURCE, which become the
+#   org.opencontainers.image.* labels and /etc/substrate/image-revision; build in
+#   Docker format so the HEALTHCHECK survives Podman)
+#
+# Run: the launch manifest this image runs under is baked in, and
+# `substrate-manifest` prints it; README § Installation is the install path.
+
+FROM debian:bookworm-slim AS base-build
+
+# systemd requires these
+ENV container=docker
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    systemd \
+    systemd-sysv \
+    dbus \
+    curl \
+    ca-certificates \
+    unzip \
+    git \
+    jq \
+    redis-server \
+    && rm -rf /var/lib/apt/lists/* \
+    # Remove units that try to mount real hardware or start udev
+    && systemctl mask \
+        dev-hugepages.mount \
+        sys-fs-fuse-connections.mount \
+        systemd-remount-fs.service \
+        systemd-udev-settle.service \
+        systemd-udevd.service \
+        getty.target \
+        serial-getty@.service \
+        console-getty.service \
+        systemd-journald-audit.socket
+
+# --- Bun ---
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH=/root/.bun/bin:$PATH
+# Global tsc + a node→bun shim (tsc's shebang wants node; this is a bun-only
+# image). The compose verify gate runs each vessel's `typecheck` script in a
+# TRANSIENT checkout with no node_modules, so a repo-local typescript can never
+# serve it — a vessel without this was structurally un-editable through the
+# learning loop (every draft rolled back with exit 127, measured 2026-09-15).
+RUN bun install -g typescript && ln -sf /root/.bun/bin/bun /usr/local/bin/node
+
+# --- SurrealDB ---
+ARG SURREAL_VERSION=2.3.3
+RUN curl -sSf https://install.surrealdb.com | sh -s -- --version v${SURREAL_VERSION}
+
+# --- Valkey (provided by redis-server installed above) ---
+# redis-server is Redis-compatible; symlink as valkey-server for unit naming consistency
+RUN ln -s /usr/bin/redis-server /usr/local/bin/valkey-server
+
+# --- Vessel sources ---
+WORKDIR /vessels
+
+# Copy shared packages first (used by multiple vessels)
+COPY packages ./packages
+
+# vessel-discovery-client exposes its entry point via built dist/ (main/exports ->
+# ./dist/*), but dist/ is gitignored. A from-scratch build (no host bind-mount to
+# supply a locally-built dist/) must compile it here, or every vessel that consumes
+# it via `file:` fails at runtime with "Cannot find module @.../vessel-discovery-client".
+RUN cd packages/vessel-discovery-client && bun install && bun run build
+
+# discovery-vessel
+COPY repos/discovery-vessel/package.json repos/discovery-vessel/bun.lock* ./discovery-vessel/
+RUN cd discovery-vessel && bun install --frozen-lockfile
+COPY repos/discovery-vessel/src ./discovery-vessel/src
+COPY repos/discovery-vessel/index.ts ./discovery-vessel/
+COPY repos/discovery-vessel/tsconfig.json ./discovery-vessel/
+
+# identity-vessel
+COPY repos/identity-vessel/package.json repos/identity-vessel/bun.lock* ./identity-vessel/
+RUN cd identity-vessel && \
+    sed -i 's|file:../../packages/vessel-discovery-client|file:/vessels/packages/vessel-discovery-client|g' package.json && \
+    bun install
+COPY repos/identity-vessel/src ./identity-vessel/src
+COPY repos/identity-vessel/sql ./identity-vessel/sql
+COPY repos/identity-vessel/tsconfig.json ./identity-vessel/
+
+# activity-api
+COPY repos/activity-api/package.json repos/activity-api/bun.lock* ./activity-api/
+RUN cd activity-api && bun install --frozen-lockfile
+COPY repos/activity-api/src ./activity-api/src
+COPY repos/activity-api/sql ./activity-api/sql
+COPY repos/activity-api/scripts ./activity-api/scripts
+COPY repos/activity-api/tsconfig.json ./activity-api/
+
+# ias-executor-ts (shared executor library for goal-host, local-tools, llm-resolver vessels)
+# `dist/` is built in-container from `src/` — NOT copied from the host. The host
+# `dist/` is gitignored, so a fresh clone has none; copying it would make the
+# build depend on whatever a prior local build happened to leave behind (or fail
+# outright). Building here keeps the image reproducible on any device.
+COPY repos/ias-executor-ts/package.json repos/ias-executor-ts/bun.lock* ./ias-executor-ts/
+COPY repos/ias-executor-ts/src ./ias-executor-ts/src
+COPY repos/ias-executor-ts/tsconfig*.json ./ias-executor-ts/
+RUN cd ias-executor-ts && bun install --frozen-lockfile && bun run build
+
+# cpg-inference-ts (shared code analysis library for analysis-vessel)
+# tree-sitter runs via web-tree-sitter (WASM) so there is no node-gyp native
+# build here — works on arm64 and x86_64 alike. The vendored grammar `.wasm`
+# files must be copied in; the parser loads them from `../wasm/` at runtime.
+# `dist/` is built in-container (gitignored on the host — see ias-executor-ts).
+COPY repos/cpg-inference-ts/package.json repos/cpg-inference-ts/bun.lock* ./cpg-inference-ts/
+COPY repos/cpg-inference-ts/src ./cpg-inference-ts/src
+COPY repos/cpg-inference-ts/wasm ./cpg-inference-ts/wasm
+COPY repos/cpg-inference-ts/tsconfig*.json ./cpg-inference-ts/
+RUN cd cpg-inference-ts && bun install --frozen-lockfile && bun run build
+
+# development-vessel
+COPY repos/development-vessel/package.json repos/development-vessel/bun.lock* ./development-vessel/
+RUN cd development-vessel && bun install --frozen-lockfile
+COPY repos/development-vessel/src ./development-vessel/src
+COPY repos/development-vessel/tsconfig.json ./development-vessel/
+
+# local-tools-vessel
+COPY repos/local-tools-vessel/package.json ./local-tools-vessel/
+RUN cd local-tools-vessel && \
+    sed -i 's|file:../ias-executor-ts|file:/vessels/ias-executor-ts|g' package.json && \
+    bun install
+COPY repos/local-tools-vessel/src ./local-tools-vessel/src
+COPY repos/local-tools-vessel/tsconfig.json ./local-tools-vessel/
+
+# llm-resolver-vessel
+COPY repos/llm-resolver-vessel/package.json repos/llm-resolver-vessel/bun.lock* ./llm-resolver-vessel/
+RUN cd llm-resolver-vessel && \
+    sed -i 's|file:../ias-executor-ts|file:/vessels/ias-executor-ts|g' package.json && \
+    bun install
+COPY repos/llm-resolver-vessel/src ./llm-resolver-vessel/src
+COPY repos/llm-resolver-vessel/tsconfig.json ./llm-resolver-vessel/
+
+# goal-host-vessel
+COPY repos/goal-host-vessel/package.json ./goal-host-vessel/
+RUN cd goal-host-vessel && \
+    sed -i 's|file:../ias-executor-ts|file:/vessels/ias-executor-ts|g' package.json && \
+    bun install
+COPY repos/goal-host-vessel/src ./goal-host-vessel/src
+COPY repos/goal-host-vessel/tsconfig.json ./goal-host-vessel/
+
+# boredom-vessel
+COPY repos/boredom-vessel/package.json repos/boredom-vessel/bun.lock* ./boredom-vessel/
+RUN cd boredom-vessel && bun install
+COPY repos/boredom-vessel/src ./boredom-vessel/src
+COPY repos/boredom-vessel/tsconfig.json ./boredom-vessel/
+
+# ribosome-vessel
+COPY repos/ribosome-vessel/package.json repos/ribosome-vessel/bun.lock* ./ribosome-vessel/
+RUN cd ribosome-vessel && bun install
+COPY repos/ribosome-vessel/src ./ribosome-vessel/src
+COPY repos/ribosome-vessel/tsconfig.json ./ribosome-vessel/
+
+# concept-db
+COPY repos/concept-db/package.json repos/concept-db/bun.lock* ./concept-db/
+RUN cd concept-db && bun install
+COPY repos/concept-db/src ./concept-db/src
+COPY repos/concept-db/sql ./concept-db/sql
+COPY repos/concept-db/scripts ./concept-db/scripts
+COPY repos/concept-db/tsconfig.json ./concept-db/
+
+# analysis-vessel (replaces metabob-analysis-api; depends on cpg-inference-ts above)
+COPY repos/analysis-vessel/package.json ./analysis-vessel/
+RUN cd analysis-vessel && \
+    sed -i 's|file:../ias-executor-ts|file:/vessels/ias-executor-ts|g' package.json && \
+    sed -i 's|file:../cpg-inference-ts|file:/vessels/cpg-inference-ts|g' package.json && \
+    bun install
+COPY repos/analysis-vessel/src ./analysis-vessel/src
+COPY repos/analysis-vessel/tsconfig.json ./analysis-vessel/
+
+# stateful-ui-vessel (substrate's face — port 8270)
+COPY repos/stateful-ui-vessel/package.json ./stateful-ui-vessel/
+RUN cd stateful-ui-vessel && bun install
+COPY repos/stateful-ui-vessel/src ./stateful-ui-vessel/src
+COPY repos/stateful-ui-vessel/tsconfig.json ./stateful-ui-vessel/
+
+# light-dispatch-vessel (stateless dispatcher — :8280). LOAD-BEARING: boredom
+# routes EVERY autonomous dispatch through this vessel; if it's absent the whole
+# loop livelocks (the unit's own comment warns this).
+COPY repos/light-dispatch-vessel/package.json repos/light-dispatch-vessel/bun.lock* ./light-dispatch-vessel/
+RUN cd light-dispatch-vessel && bun install
+COPY repos/light-dispatch-vessel/src ./light-dispatch-vessel/src
+COPY repos/light-dispatch-vessel/tsconfig.json ./light-dispatch-vessel/
+
+# metric-collector-vessel
+COPY repos/metric-collector-vessel/package.json repos/metric-collector-vessel/bun.lock* ./metric-collector-vessel/
+RUN cd metric-collector-vessel && bun install
+COPY repos/metric-collector-vessel/src ./metric-collector-vessel/src
+COPY repos/metric-collector-vessel/tsconfig.json ./metric-collector-vessel/
+
+# relevance-sink-vessel (impulse-relevance penalty writes, decoupled from the
+# activity-api trace store — port 8255). Self-contained single file, no runtime
+# deps, so no `bun install`. Added 2026-06-21 but was never baked into the image,
+# so every container recreate lost it and the unit crash-looped on a missing
+# /vessels/relevance-sink-vessel/src/index.ts (penalty-write decoupling inert).
+COPY repos/relevance-sink-vessel/package.json ./relevance-sink-vessel/
+COPY repos/relevance-sink-vessel/src ./relevance-sink-vessel/src
+COPY repos/relevance-sink-vessel/tsconfig.json ./relevance-sink-vessel/
+
+# --- Substrate runtime config ---
+RUN mkdir -p /etc/substrate /workspace /var/lib/surrealdb /scripts
+
+# Vendor units in /usr/lib/systemd/system (not /etc): /etc outranks every other
+# unit dir, so units living there can never be masked — apply-inventory's role
+# subsetting writes /etc/systemd/system/<unit> -> /dev/null masks, which only
+# shadow units vendored at lower precedence. Dynamic (vessel-ctl) units still
+# install into /etc.
+COPY scripts/substrate/units/ /usr/lib/systemd/system/
+COPY scripts/substrate/entrypoint.sh /usr/local/bin/substrate-entrypoint
+COPY scripts/substrate/gen-env.sh /usr/local/bin/gen-env
+COPY scripts/substrate/setup-git-push.sh /usr/local/bin/setup-git-push
+COPY scripts/substrate/git-hooks-ledger/ /usr/local/share/substrate/git-hooks-ledger/
+# Self-bootstrap + self-diagnosis (2026-07-02): readiness gate, doctor, and the
+# identity-seeder wrapper. These make `docker run` the COMPLETE launch contract —
+# no host-side make seed-live / "wait ~15s" / configure step is load-bearing.
+COPY scripts/substrate/substrate-ready.sh /usr/local/bin/substrate-ready
+COPY scripts/substrate/substrate-doctor.sh /usr/local/bin/substrate-doctor
+# The install verdict and the client hand-off. substrate-status is the one done
+# signal (five levels: live, seeded, served, usable, connected) — the HEALTHCHECK,
+# substrate-ready.service and every wrapper read it; substrate-connect prints the
+# client config once `seeded` passes; substrate-manifest prints the launch
+# manifest baked below, so a host with no checkout gets the same declaration.
+COPY scripts/substrate/substrate-status.sh /usr/local/bin/substrate-status
+COPY scripts/substrate/substrate-connect.sh /usr/local/bin/substrate-connect
+COPY scripts/substrate/substrate-manifest.sh /usr/local/bin/substrate-manifest
+COPY scripts/substrate/substrate-install.sh /usr/local/bin/substrate-install
+COPY scripts/substrate/reseed-restart.sh /usr/local/bin/reseed-restart
+# Config provenance (`substrate-config`) answers the one question no other tool
+# could: WHERE a resolved value came from — the operator's env, a PRIOR boot's
+# persisted secret, or a hardcoded default. It reads /etc/substrate/env, which
+# exists only INSIDE the container, so shipping it here is what makes the
+# documented `docker exec <container> substrate-config` real. It was written and
+# documented as an exec command while living only in the host checkout, so every
+# copy of that instruction was unrunnable — authored at the host layer, consumed
+# at the container layer, which is the same mistake this file keeps paying for.
+COPY scripts/substrate/substrate-config.sh /usr/local/bin/substrate-config
+# In-container source-of-truth channel (2026-07-02): the substrate pulls its own
+# updates from origin/dev via the /workspace/git clones and mirrors them into
+# the live /vessels runtime — git remotes are the ONLY code channel; no host
+# docker-cp / bind-mount path is load-bearing.
+COPY scripts/substrate/substrate-pull-sync.sh /usr/local/bin/substrate-pull-sync
+COPY scripts/substrate/mirror-to-live.sh /usr/local/bin/mirror-to-live
+# Fleet-membership tooling ships IN the image (2026-07-02): install/uninstall/
+# sync a dynamic vessel from the in-container git clones — runnable natively
+# in-container (and dispatchable via local-tools' shell resolver), no host
+# checkout involved. self-recovery-tick is image-baked for the same reason.
+COPY scripts/substrate/vessel-ctl.sh /usr/local/bin/vessel-ctl
+# Shared by entrypoint.sh (at boot) and `vessel-ctl apply` (at runtime). One copy
+# on purpose: the arm-selection logic lived only in the entrypoint, which is why
+# changing which arms run used to require a container restart.
+COPY scripts/substrate/apply-llm-arms.sh /usr/local/bin/apply-llm-arms
+# Key/token issuance surface: humans get keys via `substrate-key issue <name>`
+# (identity-vessel is internal-only, so the tool lives in-container).
+COPY scripts/substrate/substrate-key.sh /usr/local/bin/substrate-key
+COPY scripts/substrate/render-unit.sh /usr/local/bin/render-unit
+COPY scripts/substrate/discovery-deregister.sh /usr/local/bin/discovery-deregister
+COPY scripts/substrate/self-recovery-tick.sh /usr/local/bin/self-recovery-tick
+COPY scripts/substrate/secrets.env.sh /usr/local/share/substrate/secrets.env.sh
+# Vessel-subset selection: the inventory + the boot-time enabler (entrypoint runs it
+# before systemd). Default (no ENABLED_* env) keeps every unit — identical to today.
+COPY scripts/substrate/apply-inventory.sh /usr/local/bin/apply-inventory
+RUN mkdir -p /usr/local/share/substrate
+COPY scripts/substrate/vessels.inventory.json /usr/local/share/substrate/vessels.inventory.json
+COPY scripts/substrate/vessels.manifest.json /usr/local/share/substrate/vessels.manifest.json
+# Image-baked copy of the tick scripts: substrate-active-scripts-seed seeds the
+# writable run-dir from the super-repo clone when present, else from this bake —
+# never from a host bind path.
+RUN mkdir -p /usr/local/share/substrate/active-scripts
+COPY scripts/substrate/*.ts /usr/local/share/substrate/active-scripts/
+RUN chmod +x /usr/local/bin/apply-inventory
+# Side-loop tick scripts referenced by their .service units' ExecStart. Without
+# these baked in, the units exit 127 (command not found) on every fire — which is
+# how obsidian-learn + goal-host-behavior (two LEARNING loops) sat silently dead
+# after a container recreate. (Now also surfaced by systemd_unit_health_observer.)
+COPY scripts/substrate/obsidian-learn-tick.sh /usr/local/bin/obsidian-learn-tick.sh
+COPY scripts/substrate/obsidian-intake-tick.sh /usr/local/bin/obsidian-intake-tick.sh
+COPY scripts/substrate/obsidian-collaborate-tick.sh /usr/local/bin/obsidian-collaborate-tick.sh
+COPY scripts/substrate/goal-host-behavior-tick.sh /usr/local/bin/goal-host-behavior-tick.sh
+COPY scripts/substrate/light-dispatch-healthcheck.sh /usr/local/bin/light-dispatch-healthcheck
+RUN chmod +x /usr/local/bin/obsidian-learn-tick.sh /usr/local/bin/obsidian-intake-tick.sh /usr/local/bin/obsidian-collaborate-tick.sh /usr/local/bin/goal-host-behavior-tick.sh /usr/local/bin/light-dispatch-healthcheck
+# Offline super-repo fallback: dynamic vessels run from the in-container
+# super-repo working tree (/workspace/git/super-repo — e.g. the federation
+# transport's workdir is <super-repo>/scripts/substrate/federation-relay), but
+# the canonical repo is private, so a PULLED image with no GitHub credentials
+# can never clone it. Bake the fleet scripts and pre-install the relay deps;
+# setup-git-push seeds the working tree from this copy when the clone fails.
+COPY scripts/substrate /usr/local/share/substrate/super-repo/scripts/substrate
+# The vessel inventory: setup-git-push derives which vessel repos to clone from
+# .gitmodules, and falls back to this copy when the super-repo clone fails.
+COPY .gitmodules /usr/local/share/substrate/super-repo/.gitmodules
+# The relay depends on @avigopal/libp2p-federation-transport via a PRIVATE
+# github: URL — unfetchable during an image build. Vendor the submodule and
+# rewrite the dep to a file: path (same pattern as ias-executor-ts above).
+COPY repos/libp2p-federation-transport/package.json /vessels/libp2p-federation-transport/
+COPY repos/libp2p-federation-transport/src /vessels/libp2p-federation-transport/src
+COPY repos/libp2p-federation-transport/tsconfig.json /vessels/libp2p-federation-transport/
+RUN cd /vessels/libp2p-federation-transport && bun install
+
+# human-surface-vessel — the UI a human resolver talks to. Its unit expects
+# /vessels/human-surface-vessel (image convention), but no COPY ever baked it:
+# every fresh volume produced a unit that crash-looped on CHDIR until an
+# operator hand-seeded the source from another node. Bake it like its peers.
+COPY repos/human-surface-vessel/package.json /vessels/human-surface-vessel/
+COPY repos/human-surface-vessel/src /vessels/human-surface-vessel/src
+COPY repos/human-surface-vessel/tsconfig*.json /vessels/human-surface-vessel/
+# The server resolves its bundle as <workdir>/ui/dist relative to src/index.ts
+# (UI_DIST in src/index.ts) and answers 503 ui_not_built when index.html is
+# absent. ui/dist is git-tracked (git is the delivery channel), so baking it is
+# a plain COPY — without it every fresh image serves /health 200 and / 503.
+COPY repos/human-surface-vessel/ui/dist /vessels/human-surface-vessel/ui/dist
+RUN cd /vessels/human-surface-vessel && bun install || true
+# bun links a file: dep as a symlink STUB (three symlinks, no src), so the baked
+# relay dir could never resolve @avigopal/libp2p-federation-transport at runtime —
+# the exact crash the 2026-09-16 falsifier recorded. The install below therefore
+# MATERIALISES the real package over the stub, making the image copy self-contained.
+RUN cd /usr/local/share/substrate/super-repo/scripts/substrate/federation-relay && \
+    sed -i 's|"@avigopal/libp2p-federation-transport": "[^"]*"|"@avigopal/libp2p-federation-transport": "file:/vessels/libp2p-federation-transport"|' package.json && \
+    rm -f bun.lock && bun install && \
+    rm -rf node_modules/@avigopal/libp2p-federation-transport && \
+    mkdir -p node_modules/@avigopal/libp2p-federation-transport && \
+    cp -a /vessels/libp2p-federation-transport/package.json /vessels/libp2p-federation-transport/src \
+      node_modules/@avigopal/libp2p-federation-transport/ && \
+    bun -e 'const p=JSON.parse(await Bun.file("package.json").text()); delete p.dependencies["@avigopal/libp2p-federation-transport"]; await Bun.write("package.json", JSON.stringify(p,null,2))' && \
+    rm -f bun.lock
+COPY scripts/substrate/spoke-federate.sh /usr/local/bin/spoke-federate
+RUN chmod +x /usr/local/bin/spoke-federate
+
+COPY scripts/substrate/seed-identity.ts /vessels/seed-identity.ts
+COPY scripts/substrate/seed-concepts.ts /vessels/seed-concepts.ts
+COPY scripts/bootstrap-seeder.ts /scripts/bootstrap-seeder.ts
+
+# The launch manifest, baked. The repository's root docker-compose.yml is the single
+# source; this copy is what `substrate-manifest` prints and what the substrate's own
+# deploy activities read when they have no checkout. The build fails if what the
+# tool prints is not byte-identical to the tracked file, so the baked copy and the
+# printing path can never quietly diverge from the source.
+COPY docker-compose.yml /usr/local/share/substrate/docker-compose.yml
+COPY docker-compose.yml /tmp/docker-compose.source.yml
+RUN bash /usr/local/bin/substrate-manifest > /tmp/docker-compose.printed.yml \
+    && cmp /tmp/docker-compose.source.yml /tmp/docker-compose.printed.yml \
+    || { echo "substrate-manifest does not print the tracked docker-compose.yml byte for byte" >&2; exit 1; }; \
+    rm -f /tmp/docker-compose.source.yml /tmp/docker-compose.printed.yml
+
+# Per-vessel revision markers. substrate-status reports, per vessel, whether the
+# running /vessels/<v> is still the code this image baked or pull-sync has moved it.
+# The content hash is taken over each baked src tree with the same command the
+# status tool re-runs; VESSEL_REVISIONS (optional, "name=sha" pairs from the
+# builder's submodule table) names the baked commits when the builder knows them.
+# vessel-tree.sha256 widens the surface to what pull-sync can change (src, sql, scripts,
+# package.json, bun.lock, nested dist), with the one command substrate-status re-runs;
+# vessel-src.sha256 stays for status builds that predate it.
+COPY scripts/substrate/vessel-tree-hash.sh /usr/local/bin/vessel-tree-hash
+ARG VESSEL_REVISIONS=""
+RUN set -e; chmod +x /usr/local/bin/vessel-tree-hash; \
+    for d in /vessels/*/; do \
+      v="$(basename "$d")"; [ -d "$d/src" ] || continue; \
+      h="$(cd "$d" && find src -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16)"; \
+      printf '%s %s\n' "$h" "$v"; \
+    done > /usr/local/share/substrate/vessel-src.sha256; \
+    for d in /vessels/*/; do \
+      v="$(basename "$d")"; [ -d "$d/src" ] || continue; \
+      printf '%s %s\n' "$(vessel-tree-hash "$d")" "$v"; \
+    done > /usr/local/share/substrate/vessel-tree.sha256; \
+    { printf '%s\n' $VESSEL_REVISIONS | grep '=' || true; } > /usr/local/share/substrate/vessel-revisions
+
+RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/local/bin/setup-git-push \
+        /usr/local/bin/substrate-ready /usr/local/bin/substrate-doctor /usr/local/bin/reseed-restart \
+        /usr/local/bin/substrate-status /usr/local/bin/substrate-connect /usr/local/bin/substrate-manifest /usr/local/bin/substrate-install \
+        /usr/local/bin/substrate-config \
+        /usr/local/bin/substrate-pull-sync /usr/local/bin/mirror-to-live \
+        /usr/local/bin/vessel-ctl /usr/local/bin/apply-llm-arms \
+        /usr/local/bin/render-unit /usr/local/bin/discovery-deregister \
+        /usr/local/bin/self-recovery-tick && \
+    systemctl enable \
+        git-push-setup.service \
+        identity-seeder.service \
+        substrate-ready.service \
+        substrate-pull-sync.timer \
+        substrate-active-scripts-seed.service \
+        surrealdb.service \
+        valkey.service \
+        discovery-vessel.service \
+        identity-vessel.service \
+        activity-api.service \
+        development-vessel.service \
+        local-tools-vessel.service \
+        llm-resolver-vessel.service \
+        goal-host-vessel.service \
+        bootstrap-seeder.service \
+        boredom-vessel.timer \
+        ribosome-vessel.service \
+        concept-db.service \
+        concept-db-seeder.service \
+        analysis-vessel.service \
+        stateful-ui-vessel.service \
+        human-surface-vessel.service \
+        light-dispatch-vessel.service \
+        relevance-sink-vessel.service \
+        light-dispatch-healthcheck.timer \
+        self-recovery.timer \
+        journald-stdout-forwarder.service \
+        m1-trainer.timer \
+        funnel-drain.timer \
+        composition-edge-reconcile.timer \
+        model-reality-audit.timer \
+        observe-orthogonal-refresh.timer \
+        spectral-gap.timer \
+        autonomy-metrics.timer \
+        self-operational-health.timer \
+        self-repair-operational.timer \
+        operator-goal-generator.timer \
+        auto-describe-resolvers.timer \
+        surgical-gap-scan.timer \
+        ingest-docs.timer \
+        obsidian-intake.timer \
+        obsidian-learn.timer \
+        obsidian-collaborate.timer && \
+    : "Valkey is the cache; redis-server is a vestigial apt transitive that the" \
+      "package's postinst auto-enables. Mask it so it never starts or shows as a" \
+      "failed unit (the live substrate runs valkey.service, not redis)." && \
+    systemctl mask redis-server.service
+
+# SurrealDB writes the learning state (traces, Thompson posteriors, concept
+# graph) to file:/var/lib/surrealdb/data.db. Declaring it a volume — like
+# /workspace — documents that it must be backed by a volume (the launch manifest
+# names both); otherwise the state lands in the ephemeral container layer.
+VOLUME ["/workspace", "/var/lib/surrealdb"]
+
+STOPSIGNAL SIGRTMIN+3
+
+# Host-visible readiness: `docker inspect --format '{{.State.Health.Status}}'`.
+# The verdict at level `seeded`: the core units AND every unit serving a port are
+# up (one quick sample — the coverage this healthcheck has always had, so a dead
+# non-core vessel with a port still reads unhealthy), and the key a client would be
+# handed validates. The launch manifest does not override it. Higher levels are not
+# the healthcheck's to run — `usable` dispatches a goal.
+HEALTHCHECK --interval=30s --timeout=25s --start-period=240s --retries=3 \
+    CMD /usr/local/bin/substrate-status --quick --level seeded >/dev/null 2>&1 || exit 1
+
+# Image identity, readable before running (labels) and after (the verdict prints
+# /etc/substrate/image-revision). Declared last so a new revision does not
+# invalidate any earlier layer's cache.
+ARG IMAGE_REVISION=unknown
+ARG IMAGE_CREATED=unknown
+ARG IMAGE_SOURCE=https://github.com/AviGopal/substrate
+LABEL org.opencontainers.image.revision="${IMAGE_REVISION}" \
+      org.opencontainers.image.created="${IMAGE_CREATED}" \
+      org.opencontainers.image.source="${IMAGE_SOURCE}"
+RUN printf '%s\n' "${IMAGE_REVISION}" > /etc/substrate/image-revision
+
+ENTRYPOINT ["/usr/local/bin/substrate-entrypoint"]
+
+# ──────────────────────────────────────────────────────────────────────────
+# base — the published fleet image: base-build's filesystem as ONE layer.
+#
+# Docker's overlay storage refuses an image deeper than about 125 layers
+# ("failed to register layer: max depth exceeded"), and base-build has well over
+# a hundred. Podman tolerates deeper stacks, so the image ran on every Podman host
+# while `docker run` failed on every Docker host. Copying the finished filesystem
+# into a scratch stage makes the depth independent of how many build steps
+# base-build has. The build steps stay above, where the layer cache works.
+#
+# COPY --from=… / / keeps no image config, so everything base-build declared is
+# declared again here; keep the two in step.
+# ──────────────────────────────────────────────────────────────────────────
+FROM scratch AS base
+COPY --from=base-build / /
+ENV container=docker \
+    DEBIAN_FRONTEND=noninteractive \
+    PATH=/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+WORKDIR /vessels
+VOLUME ["/workspace", "/var/lib/surrealdb"]
+STOPSIGNAL SIGRTMIN+3
+HEALTHCHECK --interval=30s --timeout=25s --start-period=240s --retries=3 \
+    CMD /usr/local/bin/substrate-status --quick --level seeded >/dev/null 2>&1 || exit 1
+ARG IMAGE_REVISION=unknown
+ARG IMAGE_CREATED=unknown
+ARG IMAGE_SOURCE=https://github.com/AviGopal/substrate
+LABEL org.opencontainers.image.revision="${IMAGE_REVISION}" \
+      org.opencontainers.image.created="${IMAGE_CREATED}" \
+      org.opencontainers.image.source="${IMAGE_SOURCE}"
+ENTRYPOINT ["/usr/local/bin/substrate-entrypoint"]
+
+# ──────────────────────────────────────────────────────────────────────────
+# substrate-obsidian — base fleet + an in-container Obsidian desktop as the
+# primary interface, reachable from a browser via noVNC.
+#
+#   docker build -f Dockerfile.substrate --target substrate-obsidian \
+#       -t metabob/substrate:obsidian .
+#
+# In this flavour Obsidian stops being a host peer (host.docker.internal:27183)
+# and becomes an in-substrate citizen: the obsidian-vessel plugin talks to
+# activity-api / concept-db over plain localhost. Operator opens the GUI at
+# http://localhost:16080/vnc.html (host-mapped from the container's :6080).
+# ──────────────────────────────────────────────────────────────────────────
+FROM base AS substrate-obsidian
+
+# GUI + remote-access stack. The Electron runtime libs (libnss3/gtk/asound/gbm)
+# are what an extracted Obsidian AppImage needs to start under Xvfb.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        xvfb x11vnc fluxbox novnc websockify \
+        libnss3 libgtk-3-0 libasound2 libgbm1 libdrm2 libxshmfence1 \
+        libgtk-3-bin xdg-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Obsidian desktop. AppImage is extracted (no FUSE inside the container).
+ARG OBSIDIAN_VERSION=1.6.7
+RUN curl -fsSL -o /tmp/obsidian.AppImage \
+        "https://github.com/obsidianmd/obsidian-releases/releases/download/v${OBSIDIAN_VERSION}/Obsidian-${OBSIDIAN_VERSION}.AppImage" \
+    && cd /opt && chmod +x /tmp/obsidian.AppImage \
+    && /tmp/obsidian.AppImage --appimage-extract \
+    && mv squashfs-root /opt/obsidian && rm -f /tmp/obsidian.AppImage \
+    && ln -sf /opt/obsidian/obsidian.png /opt/obsidian/icon.png 2>/dev/null || true
+
+# obsidian-vessel plugin — built IN the substrate so it is directly editable.
+# The source lives at /vessels/obsidian-vessel (like every other vessel); the
+# vault's plugin files are symlinks to the build artifacts, so the dev loop is
+# edit → rebuild (bun esbuild) → restart-obsidian-vessel. esbuild.config.mjs
+# uses esbuild as a library, so it runs under bun (the base image has no node).
+COPY repos/obsidian-vessel/package.json repos/obsidian-vessel/bun.lock* ./obsidian-vessel/
+RUN cd obsidian-vessel && bun install
+# Sidecar package: esbuild.config.mjs embeds its source (__SIDECAR_SOURCE__) and
+# pre-bundles it with deps vendored (__SIDECAR_BUNDLE__), so the sidecar sources
+# and node_modules must exist before the plugin build runs.
+COPY repos/obsidian-vessel/sidecar/package.json repos/obsidian-vessel/sidecar/bun.lock* ./obsidian-vessel/sidecar/
+RUN cd obsidian-vessel/sidecar && bun install
+COPY repos/obsidian-vessel/sidecar/federation-sidecar.ts ./obsidian-vessel/sidecar/
+COPY repos/obsidian-vessel/src ./obsidian-vessel/src
+COPY repos/obsidian-vessel/styles.css ./obsidian-vessel/styles.css
+COPY repos/obsidian-vessel/esbuild.config.mjs \
+     repos/obsidian-vessel/manifest.json \
+     repos/obsidian-vessel/tsconfig.json \
+     ./obsidian-vessel/
+RUN cd obsidian-vessel && bun esbuild.config.mjs production
+# The base stage took the per-vessel revision markers before this vessel existed;
+# add its line with the same command, so substrate-status can check it too.
+RUN d=/vessels/obsidian-vessel \
+    && h="$(cd "$d" && find src -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16)" \
+    && printf '%s %s\n' "$h" obsidian-vessel >> /usr/local/share/substrate/vessel-src.sha256 \
+    && printf '%s %s\n' "$(vessel-tree-hash "$d")" obsidian-vessel >> /usr/local/share/substrate/vessel-tree.sha256
+
+# Build the vault from scratch — NO host-directory dependency. The vault is
+# reproducible from the built plugin alone: the three loadable files are
+# symlinked to the in-container build artifacts, and data.json is created +
+# port-pointed at boot by obsidian-desktop-launch (it printf '{}'s a fresh
+# data.json when missing, then jq-merges the in-container fleet endpoints).
+# An empty notes set is the correct default; concept notes mirror in at runtime.
+# (Previously this COPYied the operator-side host vault/, which is gitignored
+# runtime state and absent from a fresh clone — that broke the build.)
+RUN PLUGIN_DIR=/vaults/substrate-vault/.obsidian/plugins/obsidian-vessel \
+    && mkdir -p "$PLUGIN_DIR" \
+    && rm -f "$PLUGIN_DIR/main.js" "$PLUGIN_DIR/manifest.json" "$PLUGIN_DIR/styles.css" \
+    && ln -sf /vessels/obsidian-vessel/main.js       "$PLUGIN_DIR/main.js" \
+    && ln -sf /vessels/obsidian-vessel/manifest.json "$PLUGIN_DIR/manifest.json" \
+    && ln -sf /vessels/obsidian-vessel/styles.css    "$PLUGIN_DIR/styles.css" \
+    && printf '%s\n' '["obsidian-vessel"]' \
+        > /vaults/substrate-vault/.obsidian/community-plugins.json
+
+COPY scripts/substrate/obsidian-xorg-launch.sh /usr/local/bin/obsidian-xorg-launch
+COPY scripts/substrate/obsidian-desktop-launch.sh /usr/local/bin/obsidian-desktop-launch
+RUN chmod +x /usr/local/bin/obsidian-xorg-launch /usr/local/bin/obsidian-desktop-launch \
+    && systemctl enable obsidian-xorg.service obsidian-desktop.service novnc.service
+
+# In this flavour the vault is in-container on localhost, so the side-loop
+# learner targets 127.0.0.1:27183 instead of the host-peer default. Drop-in
+# override keeps the shared unit's host-Obsidian default intact for other images.
+RUN mkdir -p /etc/systemd/system/obsidian-learn.service.d \
+    && printf '[Service]\nEnvironment=OBSIDIAN_LEARN_ENDPOINT=http://127.0.0.1:27183\n' \
+        > /etc/systemd/system/obsidian-learn.service.d/override.conf
+
+ENTRYPOINT ["/usr/local/bin/substrate-entrypoint"]

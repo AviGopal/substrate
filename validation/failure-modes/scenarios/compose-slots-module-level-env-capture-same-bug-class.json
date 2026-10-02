@@ -1,0 +1,19 @@
+{
+  "id": "compose-slots-module-level-env-capture-same-bug-class",
+  "routing_class": "recombination",
+  "target_template_id": "development-vessel:draft-gap-closing-activity",
+  "mode_class": "systematic_failure",
+  "stage": "detection",
+  "outcome_class": "gap",
+  "title": "development-vessel/src/compose-slots.ts reads SLOT_DIR as a module-level const (process.env['COMPOSE_SLOT_DIR'] ?? defau",
+  "description": "development-vessel/src/compose-slots.ts reads SLOT_DIR as a module-level const (process.env['COMPOSE_SLOT_DIR'] ?? default) captured once at import time, the same defect class fixed today in substrate-gap.ts (workspaceRoot) and in local-tools-vessel's test-exec-slots.ts (caught during its own first draft). Not yet proven to cause a live incident for compose-slots.ts specifically -- its own test suite may not vary COMPOSE_SLOT_DIR per test the way test-exec-slots.test.ts did -- but the same class of silent test-isolation failure (or a future env-var override anywhere in the process never taking effect) is latent. Fix by reading process.env at call time, same as the other two fixes today.",
+  "goal_text": "development-vessel/src/compose-slots.ts reads SLOT_DIR as a module-level const (process.env['COMPOSE_SLOT_DIR'] ?? default) captured once at import time, the same defect class fixed today in substrate-gap.ts (workspaceRoot) and in local-tools-vessel's test-exec-slots.ts (caught during its own first draft). Not yet proven to cause a live incident for compose-slots.ts specifically -- its own test suite may not vary COMPOSE_SLOT_DIR per test the way test-exec-slots.test.ts did -- but the same class of silent test-isolation failure (or a future env-var override anywhere in the process never taking effect) is latent. Fix by reading process.env at call time, same as the other two fixes today.",
+  "expected_input_shapes": [],
+  "expected_output_shapes": [],
+  "cite_principle": null,
+  "target_file_paths": [],
+  "operator_seed": false,
+  "bridge_source": "gap_to_scenario_bridge",
+  "source_gap_id": "compose-slots-module-level-env-capture-same-bug-class",
+  "source_gap_source": "operator_narration"
+}
