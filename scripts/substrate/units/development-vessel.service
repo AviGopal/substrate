@@ -37,12 +37,6 @@ WorkingDirectory=/vessels/development-vessel
 # development-vessel.service.d/10-secrets-out-of-reach.conf (-> vessel.d/). /etc/substrate stays
 # readable on purpose: env-gate-scan reads the variable NAMES there, and the push credential helper
 # sources it at push time.
-# The scoped trust-root secret files (secrets-manifest.json): this vessel consumes none
-# of them, so none exists in its namespace. Not containment on its own (the process is
-# still root, so PID1 and other units' /proc environ remain reachable); it closes the
-# plain file read.
-InaccessiblePaths=-/etc/substrate/env.d
-InaccessiblePaths=-/etc/substrate/admin.env
 # First-boot policy records (bootstrap tier): on a FRESH pool only (no pool file yet), write the initial
 # autonomyScope and spendEnvelope from the committed scripts/substrate/autonomy-scope.json; the policy
 # reads otherwise refuse them as absent. Before the vessel serves, so no writer races it; with this unit's
