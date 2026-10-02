@@ -21,7 +21,7 @@ The substrate develops itself, so the same thing that lands a change has to deci
   - no new failure class in the canary's journal compared with before the change.
 
   If all of that passes, it pushes one `fleet` commit naming exactly the revisions it observed, and writes the verdict as a trace. If it fails, it files a gap that names the revision and its evidence, and `fleet` does not move.
-- **A node that lands code is a canary.** Drafting and grounding read the running tree, and landings are committed onto `dev`, so an authoring node must run `dev`. gen-env enforces it: such a node defaults to `canary` and refuses `fleet` or `hold`. A non-canary node therefore only consumes, and pull-sync converges its single tree per vessel to the channel's ref (`design.md`).
+- **A node that lands code is a canary.** Drafting and grounding read the running tree, and landings are committed onto `dev`, so an authoring node must run `dev`. gen-env enforces it: no channel means `canary` (today's behaviour), and `fleet` or `hold` turn landing off, refusing an explicitly set landing switch and the gap-store holder. A non-canary node therefore only consumes, and pull-sync converges its single tree per vessel to the channel's ref (`design.md`).
 - **The human interface is one value.** Changing a node's channel is a single `.env` line followed by the install command. `substrate-status` shows the channel, the revision the node runs, the head of the channel's ref, and the gap between them.
 
 ## What This Does Not Change

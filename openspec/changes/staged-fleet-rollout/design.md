@@ -21,7 +21,9 @@ Two answers were possible:
 The second was chosen: **a node that lands code is a canary.** gen-env enforces it (`f3596a2c`, correcting `ddbecca4`). What makes a node author is the landing switch, not a token: with `MITOSIS_DIRECT_PUSH` anything but `0`, the cutover still commits into the push clone, and `2` lands through host sync. So:
 - **No channel:** `canary`, which is today's behaviour (every node follows `dev`). Nothing changes until a node opts in.
 - **`fleet` or `hold`:** the node consumes. An unset `MITOSIS_DIRECT_PUSH` is set to `0`; an explicit `1` or `2` is refused.
-- **The gap-store holder** (`GAP_STORE_ENDPOINT` empty) is refused on `fleet` or `hold` (qa item 4). It judges `dev` landings against its own clones, so it must run `dev`. Pointing `GAP_STORE_ENDPOINT` at an authoring node's gap store makes a node a non-holder.
+- **The gap-store holder** (a node that runs development-vessel with `GAP_STORE_ENDPOINT` empty) is refused on `fleet` or `hold` (qa item 4). gen-env asks apply-inventory, in a dry run, whether development-vessel is selected, so surface profiles and nodes that disable it are not holders. It judges `dev` landings against its own clones, so it must run `dev`. Pointing `GAP_STORE_ENDPOINT` at an authoring node's gap store makes a node a non-holder.
+
+**"Consumes" means no authoring at all, not only no landing** (qa review 4, B). `MITOSIS_DIRECT_PUSH=0` stops the cutover, but gap-to-feature only pre-checks push scope when the switch is `1`, and admission never asks whether landings are stopped. So a fleet node would still pick gaps from the forwarded store, run typecheck admission, pay for an LLM draft against its stale tree and write compose worktrees, only to be refused at cutover. Admission must exclude a node whose landings are stopped (task 3.8).
 
 Consequences:
 - **A non-canary node has one tree per vessel, and it follows the manifest.** pull-sync converges each vessel clone to the revision the super-repo `fleet` commit names, instead of `origin/dev`. Its skip, last-good pin, unhealthy revert, marker, `DIST_RETRY` and owed-restart all already key on that one tree, so they stay mutually consistent. No two-tree split is needed.
@@ -29,11 +31,20 @@ Consequences:
 - **Landing verification is a canary's job.** The gap sweep, `evidence_resolve` and check-first all run on authoring nodes, which run `dev`. The gap-store holder lands code (node 1 today), so it is a canary.
 - **The hub stays on `fleet` by not authoring and not holding a gap store.** syzygy today lands code and holds its own gap store (a second store, separate from node 1's). Keeping it on `fleet` means setting its channel to `fleet`, which turns its landing off, and pointing `GAP_STORE_ENDPOINT` at an authoring node (task 3.7).
 
+### Converging to the manifest is by revision, not by branch
+
+pull-sync's convergence is branch-shaped today. It fetches `origin $BRANCH`, checks out `-B`, pulls `--ff-only`, and judges ancestry and divergence against `origin/$BRANCH`. Following the manifest is a different operation (qa review 4, C):
+- fetch the super-repo `fleet` branch;
+- for each vessel, fetch the exact revision its gitlink names, and check it out detached;
+- divergence and ancestry checks do not apply: a consumer node has no local commits, because it does not author.
+
+**A missing revision fails closed for the whole set.** If a `dev` force-push removed a revision the manifest names, the fetch fails. pull-sync then converges nothing, keeps every vessel at last-good, records the failure in the convergence record, and files one gap. Converging some vessels and not others would run a combination no canary ran.
+
 ### The test gate runs on canaries only
 
 `tracked_fail_names` decides "red on purpose" from the files one commit changed. A `fleet` delta spans many `dev` commits, so that per-commit reasoning doesn't apply there.
 - **Canaries:** run the gate per `dev` commit, as today.
-- **Non-canary nodes:** skip it. The revisions they receive were judged on canaries.
+- **Non-canary nodes:** skip it, and skip the failing-test gap generator that rides on it (qa review 4, E). The revisions they receive were judged on canaries, and a fleet revision's failures filed into the holder's store would describe code no canary runs.
 - **Test-only restart skip** (`afb2af1e`): it already classifies the clone's `PREV_GOOD..HEAD`. On a non-canary node that clone follows `fleet`, so it classifies the fleet delta with no change.
 
 ### A missing ref fails closed

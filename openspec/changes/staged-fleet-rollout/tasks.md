@@ -1,6 +1,6 @@
 ## 1. Channel as an install input (deployment lane)
 
-- [x] 1.1 Add `SUBSTRATE_UPDATE_CHANNEL` (`canary` | `fleet` | `hold`, default `fleet`) to the manifest's install inputs, and carry it in the installer (8ef21023).
+- [x] 1.1 Add `SUBSTRATE_UPDATE_CHANNEL` (`canary` | `fleet` | `hold`, default `canary`) to the manifest's install inputs, and carry it in the installer (8ef21023).
 - [x] 1.2 Make gen-env render it into `/etc/substrate/env` and refuse an unknown value, naming the three (8ef21023; placement and comment fixed in 0263d724).
 - [x] 1.3 Make `substrate-status` report `channel`, plus `enforced`, `ref`, `sha`, `converged_at` and `ref_missing`, read from pull-sync's convergence record, never from its source (0263d724).
 - [x] 1.4 Add a README § Installation usage row (8ef21023).
@@ -14,13 +14,14 @@
 
 ## 3. Converge to the channel (pull-sync; coordinator; builder (a))
 
-- [x] 3.0 Authoring nodes are canaries: no channel means `canary`; `fleet`/`hold` turn landing off, refuse an explicit landing switch, and refuse the gap-store holder (f3596a2c, correcting ddbecca4).
-- [ ] 3.1 On a non-canary node, converge the super-repo clone to `origin/fleet`, and each vessel clone to the revision that commit's gitlink names, instead of `origin/dev`. Skip, last-good, revert, marker, `DIST_RETRY` and owed-restart are unchanged; they already key on that one tree.
-- [ ] 3.2 Run the check-first test gate only on canaries.
+- [x] 3.0 Authoring nodes are canaries: no channel means `canary`; `fleet`/`hold` turn landing off, refuse an explicit landing switch, and refuse the gap-store holder, a node that runs development-vessel without `GAP_STORE_ENDPOINT` (f3596a2c, correcting ddbecca4; holder detection fixed in the next commit).
+- [ ] 3.1 On a non-canary node, converge the super-repo clone to `origin/fleet`, and each vessel clone, detached, to the revision that commit's gitlink names (fetch by revision). Skip ancestry and divergence checks there. If any named revision cannot be fetched, converge nothing, keep last-good, record it and file one gap. Skip, last-good, revert, marker, `DIST_RETRY` and owed-restart keep keying on the one tree.
+- [ ] 3.2 Run the check-first test gate, and the failing-test gap generator that rides on it, only on canaries.
 - [ ] 3.3 On a missing channel ref, converge nothing, record `ref_missing`, and file one gap per window. Never fall back to `dev`.
 - [ ] 3.4 Write `/workspace/.pull-sync/channel.json` each run (channel, ref, super-repo and per-vessel SHAs, at, ref_missing).
 - [ ] 3.5 Read a time-limited `updateHold` impulse that overrides the channel until it expires, on any node including canaries (after 4.2). It is the only way to freeze a canary.
 - [ ] 3.6 On `fleet` nodes not under hold, file one gap when `behind` exceeds its threshold for longer than its window (the no-canary watchdog).
+- [ ] 3.8 Exclude a node whose landings are stopped from gap admission (gap-to-feature), so a consumer node drafts nothing (development-vessel).
 - [ ] 3.7 Set syzygy (the hub) to `fleet` (which turns its landing off) and point its `GAP_STORE_ENDPOINT` at an authoring node, after 2.1 and 3.1.
 
 ## 4. Preconditions for advancing (other owners)
