@@ -30,6 +30,13 @@ Environment=MITOSIS_RUNTIME_DIR=/vessels
 Environment=EXTRA_WORKSPACE_ROOTS=/vessels/packages
 Environment=MITOSIS_PUSH_CLONE_DIR=/workspace/git/vessels
 WorkingDirectory=/vessels/development-vessel
+# Secrets stay out of agent reach (user locality ruling, 10-02). This process runs agent-directed
+# reads (fs_read, fs_grep) with a lexical-only path check, so a secret file inside its roots is one
+# path away. systemd reads the EnvironmentFile above BEFORE applying the namespace, so blocking the
+# file here does not stop it loading. /etc/substrate stays readable: env-gate-scan reads the variable
+# NAMES there, and the push credential helper sources it at push time.
+InaccessiblePaths=-/workspace/.substrate-secrets
+InaccessiblePaths=-/workspace/.substrate-secrets.d
 # First-boot policy records (bootstrap tier): on a FRESH pool only (no pool file yet), write the initial
 # autonomyScope and spendEnvelope from the committed scripts/substrate/autonomy-scope.json; the policy
 # reads otherwise refuse them as absent. Before the vessel serves, so no writer races it; with this unit's
