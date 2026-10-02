@@ -43,7 +43,7 @@ INPUT_NAMES="$(names_in < "$MANIFEST")"
 # a notice) when it is only ambient in the shell, so .env is the one declaration.
 PROVIDER_NAMES="$(awk '/# ── Provider keys/{f=1;next} f&&/# ──/{exit} f' "$MANIFEST" | names_in)"
 [ -n "$PROVIDER_NAMES" ] || { echo "[install] found no provider-key section in the manifest" >&2; exit 1; }
-CARRY_NAMES="SUBSTRATE_IMAGE SUBSTRATE_NAME SUBSTRATE_PORT_PREFIX PROFILE DISCOVERY_ENDPOINT METABOB_API_KEY PUBLIC_IP SUBSTRATE_GIT_PAT SUBSTRATE_REPO_OWNER ${PROVIDER_NAMES}"
+CARRY_NAMES="SUBSTRATE_IMAGE SUBSTRATE_NAME SUBSTRATE_PORT_PREFIX PROFILE SUBSTRATE_UPDATE_CHANNEL DISCOVERY_ENDPOINT METABOB_API_KEY PUBLIC_IP SUBSTRATE_GIT_PAT SUBSTRATE_REPO_OWNER ${PROVIDER_NAMES}"
 for n in $CARRY_NAMES; do
   case " $INPUT_NAMES " in *" $n "*) ;; *) echo "[install] install input $n is not read by the manifest" >&2; exit 1 ;; esac
 done

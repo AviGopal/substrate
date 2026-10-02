@@ -15,6 +15,8 @@
 #   PROFILE                 standalone | hub | hub-minimal | spoke | surface | compute
 #   PUBLIC_IP               the address a hub advertises to its spokes
 #   SUBSTRATE_GIT_PAT + SUBSTRATE_REPO_OWNER   push capability and its scope
+#   SUBSTRATE_UPDATE_CHANNEL  canary | fleet | hold (default fleet): which revision
+#                           this node runs; canaries run a change before the fleet
 # Everything else below is advanced configuration, forwarded unchanged.
 #
 # Every derivation (role, endpoints, key requirement, alias checks) runs in the
@@ -152,6 +154,7 @@ services:
       # Precedence (highest first): PROFILE > ENABLED_VESSELS > ENABLED_ROLES,
       # then + ENABLED_EXTRA_VESSELS, then - DISABLED_VESSELS.
       PROFILE: ${PROFILE:-}
+      SUBSTRATE_UPDATE_CHANNEL: ${SUBSTRATE_UPDATE_CHANNEL:-}
       ENABLED_VESSELS: ${ENABLED_VESSELS:-}
       ENABLED_ROLES: ${ENABLED_ROLES:-}
       ENABLED_EXTRA_VESSELS: ${ENABLED_EXTRA_VESSELS:-}

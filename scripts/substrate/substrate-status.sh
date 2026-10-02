@@ -757,6 +757,16 @@ if [ "$WAIT" = 1 ]; then
 fi
 [ "$QUICK" = 1 ] || scan_revisions
 
+# ── Update channel ───────────────────────────────────────────────────────────
+# Which revision this node runs: canary (dev first), fleet (what canaries verified)
+# or hold. A declared channel that the installed pull-sync does not read is still
+# converging to dev, so "enforced" says which: a setting nothing reads must not
+# look like a working one.
+UPDATE_CHANNEL="$(envval SUBSTRATE_UPDATE_CHANNEL)"; UPDATE_CHANNEL="${UPDATE_CHANNEL:-fleet}"
+CHANNEL_ENFORCED=false
+PULL_SYNC_BIN="$(command -v substrate-pull-sync 2>/dev/null || true)"
+[ -n "$PULL_SYNC_BIN" ] && grep -q SUBSTRATE_UPDATE_CHANNEL "$PULL_SYNC_BIN" 2>/dev/null && CHANNEL_ENFORCED=true
+
 # ── Output ───────────────────────────────────────────────────────────────────
 verdict_json() {
   local l levels_json="[]" vessels_json
@@ -773,8 +783,10 @@ verdict_json() {
     --arg target "$TARGET" --arg value "${VAL[$TARGET]}" --arg img "$IMAGE_REVISION" \
     --arg profile "$PROFILE" --arg engine "$ENGINE" --arg prefix "$PORT_PREFIX" \
     --arg thp "$TRACE_HOST_PORT" --argjson bym "$BY_MANIFEST" --arg aliases "$ALIASES_USED" \
+    --arg channel "$UPDATE_CHANNEL" --argjson enforced "$CHANNEL_ENFORCED" \
     '{requested_level:$target, value:$value, ok:($value=="pass"), image_revision:$img,
       profile:$profile, engine:$engine, port_prefix:$prefix,
+      update_channel:{channel:$channel, enforced:$enforced},
       trace_host_port:$thp, launched_by_manifest:($bym == 1),
       deprecated_port_aliases:($aliases | split(" ") | map(select(length > 0))),
       levels:$levels, vessels:$vessels}'
@@ -784,6 +796,8 @@ if [ "$JSON" = 1 ]; then
   verdict_json
 else
   printf 'substrate-status  image %s  profile %s  engine %s  port prefix %s\n' "$IMAGE_REVISION" "$PROFILE" "$ENGINE" "$PORT_PREFIX"
+  if [ "$CHANNEL_ENFORCED" = true ]; then printf '  update channel %s\n' "$UPDATE_CHANNEL"
+  else printf '  update channel %s (declared; this image'"'"'s pull-sync does not read it yet, so every vessel still follows dev)\n' "$UPDATE_CHANNEL"; fi
   for l in $LEVELS; do printf '  %-10s %-8s %s\n' "$l" "${VAL[$l]}" "${EVID[$l]}"; done
   if [ -n "$VESSEL_ROWS" ]; then
     moved="$(printf '%s' "$VESSEL_ROWS" | awk -F'|' '$2=="moved"{printf "    %-28s image %s -> clone head %s\n", $1, ($3==""?"(baked)":$3), ($4==""?"(no clone)":$4)}')"
