@@ -295,7 +295,12 @@ if [ -n "${target:-}" ] && [ -n "${hub_key:-}" ]; then
     # fleet lives rather than where the page's blocks ran.
     spoke_dir="$(eng container inspect -f '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' "$SPOKE_C" 2>/dev/null)"
     log "stopping the first spoke the way an operator does (compose stop in its fleet directory ${spoke_dir:-?})"
-    ( cd "${spoke_dir:-/nonexistent}" && eng compose stop ) >"$RESULT_DIR/diag/spoke-stop.txt" 2>&1
+    # The same compose the page's blocks ran under: on the Podman leg that is podman-compose
+    # itself. `podman compose` picks a provider, and on a runner that also has Docker it
+    # chose the docker-compose plugin, which found no Podman socket, so the stop never
+    # happened (CI run 37046962127, podman leg).
+    fleet_compose() { if [ "$ENGINE" = podman ]; then "$pc" "$@"; else eng compose "$@"; fi; }
+    ( cd "${spoke_dir:-/nonexistent}" && fleet_compose stop ) >"$RESULT_DIR/diag/spoke-stop.txt" 2>&1
     spoke_id="$first_id"; target="$first_target"
   fi
   # A departure that did not happen cannot be judged: every leave check would pass on a
@@ -319,7 +324,7 @@ if [ -n "${target:-}" ] && [ -n "${hub_key:-}" ]; then
       *) set_check leave_no_foreign_answer pass "$(jq -nc --arg t "$first_target" --arg a "$(printf '%s' "$leave_answer" | head -c 200)" '{addressed: $t, answer: $a}')" ;;
     esac
     log "starting the first spoke again"
-    ( cd "${spoke_dir:-/nonexistent}" && eng compose start ) >>"$RESULT_DIR/diag/spoke-stop.txt" 2>&1
+    ( cd "${spoke_dir:-/nonexistent}" && fleet_compose start ) >>"$RESULT_DIR/diag/spoke-stop.txt" 2>&1
     spoke_id="$first_id"
     if poll 240 registered && poll 120 read_via_spoke; then set_check rejoin pass "$(jq -nc --arg t "$target" '{vessel: $t}')"
     else set_check rejoin fail "$(jq -nc --arg t "${target:-}" --arg a "$(printf '%s' "${answer:-}" | head -c 200)" '{vessel: $t, answer: $a}')"; fi
