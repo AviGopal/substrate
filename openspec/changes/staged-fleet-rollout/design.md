@@ -53,7 +53,9 @@ Each run, pull-sync writes `/workspace/.pull-sync/channel.json`: `{channel, ref,
 
 As an install input, the channel is placement, legitimate bootstrap like `PROFILE` (law 1, law 11). Freezing a node for a drain or a rebuild is behaviour, though, so pull-sync also reads a time-limited `updateHold` impulse (`{node, until, reason}`). A hold impulse overrides any channel until it expires. It is visible in traces, and it does not need a recreate. Setting `hold` in `.env` remains available for a node that should never update.
 
-**Open (qa item 2): freezing a canary.** `hold` is a consumer channel, so an authoring node cannot use it without stopping landing, and `updateHold` waits on §9.0 (task 4.2). Today the only way to stop a canary taking a bad landing is `MITOSIS_DIRECT_PUSH=0` plus a recreate, and that stops landing, not updating. This needs a decision; see `tasks.md` 2.4.
+**Freezing a canary is `updateHold` only (decided by the user, 2026-10-02).** `updateHold` is chosen over a config switch because it leaves the least residue: a time-limited impulse that expires by itself and is visible in traces, rather than a `.env` line or a pinned revision someone has to remember to remove. `hold` in `.env` stays a consumer channel and is not extended to authoring nodes.
+
+Until §9.0 (task 4.2) lets pull-sync honour `updateHold`, a canary has no freeze. The interim stop, `MITOSIS_DIRECT_PUSH=0` plus a recreate, stops it landing but not updating. That gap is accepted and explicit, not papered over.
 
 ### Out of scope: masked but owned vessels on authoring nodes
 

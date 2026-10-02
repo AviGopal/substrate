@@ -10,7 +10,7 @@
 - [ ] 2.1 Create the super-repo `fleet` branch: one commit whose tree is the current `dev` tree and whose gitlinks are each vessel's current `dev` head. No vessel repository needs a `fleet` branch.
 - [ ] 2.2 Record the grant to push `fleet` in the pushPolicy, as its own scope, separate from landing scope.
 - [ ] 2.3 Choose the first `fleet` nodes (everything else stays `canary`, today's behaviour). Proposed: syzygy, the hub.
-- [ ] 2.4 Decide how a canary is frozen (qa item 2; see design §"hold").
+- [x] 2.4 Decide how a canary is frozen: `updateHold` only, no `.env` freeze for canaries (user, 2026-10-02; until 4.2 lands, a canary has no freeze).
 
 ## 3. Converge to the channel (pull-sync; coordinator; builder (a))
 
@@ -19,7 +19,7 @@
 - [ ] 3.2 Run the check-first test gate only on canaries.
 - [ ] 3.3 On a missing channel ref, converge nothing, record `ref_missing`, and file one gap per window. Never fall back to `dev`.
 - [ ] 3.4 Write `/workspace/.pull-sync/channel.json` each run (channel, ref, super-repo and per-vessel SHAs, at, ref_missing).
-- [ ] 3.5 Read a time-limited `updateHold` impulse that overrides the channel until it expires (after 4.2).
+- [ ] 3.5 Read a time-limited `updateHold` impulse that overrides the channel until it expires, on any node including canaries (after 4.2). It is the only way to freeze a canary.
 - [ ] 3.6 On `fleet` nodes not under hold, file one gap when `behind` exceeds its threshold for longer than its window (the no-canary watchdog).
 - [ ] 3.7 Set syzygy (the hub) to `fleet` (which turns its landing off) and point its `GAP_STORE_ENDPOINT` at an authoring node, after 2.1 and 3.1.
 
