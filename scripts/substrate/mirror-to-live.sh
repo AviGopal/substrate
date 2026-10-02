@@ -101,13 +101,52 @@ if [ -d "$SRC/sql" ]; then
 fi
 # scripts/ carries init-database.ts + apply-migration helpers the runtime runs;
 # mirror so changes to the migration runner itself also deploy.
-# The directories copied here (src/, sql/, scripts/) MUST equal the ones
-# substrate-pull-sync.sh's content_hash fingerprints; a directory copied here
-# but not hashed there never converges.
+# The directories copied here (src/, sql/, scripts/, and the tracked build
+# output below) MUST equal the ones substrate-pull-sync.sh's content_hash
+# fingerprints; a directory copied here but not hashed there never converges.
 if [ -d "$SRC/scripts" ]; then
   rm -rf "$DST/scripts"
   cp -r "$SRC/scripts" "$DST/scripts"
 fi
+# TRACKED BUILD OUTPUT — a dist/ the vessel repo COMMITS (human-surface-vessel's
+# ui/dist: its .gitignore says git is the only channel by which a UI change
+# reaches a running surface, since nothing rebuilds on pull). The three copies
+# above never carried it, so a UI commit was pulled into the clone and the
+# runtime kept serving the previous bundle — index.html naming an asset hash the
+# clone no longer had. Which dirs count is READ FROM GIT, not listed here:
+# tracked_output_dirs below. Root dist/ is excluded by rule — that one is the
+# gitignored package build pull-sync's fan-out owns (.dist.stage/.dist.prev).
+# THIS FUNCTION MUST EQUAL substrate-pull-sync.sh's tracked_output_dirs, which
+# feeds content_hash; a dir mirrored here but not hashed there never converges.
+tracked_output_dirs() { # clone-root -> one dir per line (e.g. ui/dist), sorted, may be empty
+  git -C "$1" ls-files 2>/dev/null \
+    | awk '/^(src|sql|scripts|dist)\// || /(^|\/)node_modules\// {next}
+           { n = index($0, "/dist/"); if (n > 0) print substr($0, 1, n + 4) }' \
+    | LC_ALL=C sort -u
+}
+# Swapped in whole, exactly as pull-sync swaps a package dist: stage the TRACKED
+# files beside the live dir as .dist.stage, move live aside to .dist.prev, rename
+# the stage in, drop prev. Staging from the tracked list (not cp -r of the
+# working tree) is what drops assets a commit deleted; the rename means a
+# request mid-mirror reads either the old bundle or the new one, never a mix of the two. (Between the two renames ui/dist is briefly absent, so a
+# request in that window can 404 — microseconds; a tab still holding the old index.html
+# will 404 its deleted assets until reloaded.)
+while IFS= read -r _od; do
+  [ -n "$_od" ] || continue
+  _parent="$DST/$(dirname "$_od")"; _live="$DST/$_od"
+  _stage="$_parent/.dist.stage"; _prev="$_parent/.dist.prev"
+  mkdir -p "$_parent" && rm -rf "$_stage" && mkdir -p "$_stage" || { log "ERROR cannot stage $_od"; exit 1; }
+  if ! (cd "$SRC/$_od" && git -C "$SRC" ls-files -z -- "$_od" \
+          | sed -z "s|^$_od/||" | tar --null -T - -cf -) | (cd "$_stage" && tar -xf -); then
+    rm -rf "$_stage"; log "ERROR staging tracked $_od failed — live $_od untouched"; exit 1
+  fi
+  rm -rf "$_prev"
+  [ -e "$_live" ] && mv "$_live" "$_prev"
+  mv "$_stage" "$_live" || { [ -e "$_prev" ] && mv "$_prev" "$_live"; log "ERROR swapping $_od failed"; exit 1; }
+  rm -rf "$_prev"
+done <<EOF
+$(tracked_output_dirs "$SRC")
+EOF
 # NB: deliberately NOT bun.lock/bun.lockb — the clone's lockfile pins the
 # RELATIVE file: paths and poisons resolution in the runtime layout.
 for f in tsconfig.json index.ts; do
@@ -147,5 +186,10 @@ if [ -d "$SRC/src" ] && [ ! -d "$DST/src" ]; then
   log "ERROR $DST/src is missing after the mirror — the copy did not land"
   exit 1
 fi
+while IFS= read -r _od; do
+  [ -z "$_od" ] || [ -d "$DST/$_od" ] || { log "ERROR $DST/$_od is missing after the mirror — the swap did not land"; exit 1; }
+done <<EOF
+$(tracked_output_dirs "$SRC")
+EOF
 
 log "$VESSEL mirrored (${FINAL_SHA%"${FINAL_SHA#???????}"}${EXPECT_SHA:+ verified}) -> $DST"

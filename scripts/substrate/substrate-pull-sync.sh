@@ -739,7 +739,17 @@ converge_fleet_defs() {
   done
 }
 
-content_hash() { # vessel-root -> md5 over sorted src/ + sql/ + scripts/ (.ts/.json/.surql/.sh); "none" if missing
+# TRACKED BUILD OUTPUT (e.g. human-surface-vessel's ui/dist, committed on purpose
+# because nothing rebuilds on pull). Read from git, never listed. MUST EQUAL
+# mirror-to-live.sh's tracked_output_dirs — that is the copy side of this hash.
+tracked_output_dirs() { # clone-root -> one dir per line (e.g. ui/dist), sorted, may be empty
+  git -C "$1" ls-files 2>/dev/null \
+    | awk '/^(src|sql|scripts|dist)\// || /(^|\/)node_modules\// {next}
+           { n = index($0, "/dist/"); if (n > 0) print substr($0, 1, n + 4) }' \
+    | LC_ALL=C sort -u
+}
+
+content_hash() { # vessel-root [clone-root] -> md5 over sorted src/ + sql/ + scripts/ (.ts/.json/.surql/.sh) + tracked build output; "none" if missing
   [ -d "$1" ] || { echo none; return; }
   # .json included so pure-template/config edits (e.g. lifecycle *.json activity
   # templates like ribosome-extract) are detected — a .ts-only hash left a
@@ -754,12 +764,32 @@ content_hash() { # vessel-root -> md5 over sorted src/ + sql/ + scripts/ (.ts/.j
   # and never mirrored or run on any fleet but the one that landed it.
   # THE DIRECTORY LIST HERE MUST EQUAL THE ONE mirror-to-live.sh COPIES; a
   # directory it copies but this hash omits can never converge.
-  (cd "$1" && find src sql scripts -type f \( -name '*.ts' -o -name '*.json' -o -name '*.surql' -o -name '*.sh' \) -not -path '*/node_modules/*' 2>/dev/null | sort | xargs -r md5sum | md5sum | cut -d' ' -f1)
+  # And a fourth time: a tracked ui/dist was neither copied nor hashed, so a
+  # UI-only commit hashed identically and the runtime served the previous
+  # bundle indefinitely. The dir list comes from the CLONE ($2, default $1) —
+  # the runtime has no .git — and every file under it counts, any extension,
+  # on BOTH sides: an asset left in the runtime that git no longer tracks is
+  # drift too. Appended only when the repo tracks such a dir, so every other
+  # vessel's hash (and its marker) is unchanged by this.
+  _ch_base="$(cd "$1" && find src sql scripts -type f \( -name '*.ts' -o -name '*.json' -o -name '*.surql' -o -name '*.sh' \) -not -path '*/node_modules/*' 2>/dev/null | sort | xargs -r md5sum | md5sum | cut -d' ' -f1)"
+  _ch_out="$(tracked_output_dirs "${2:-$1}")"
+  [ -n "$_ch_out" ] || { echo "$_ch_base"; return; }
+  # Clone side: the TRACKED files only — the set mirror-to-live ships — so a
+  # stray untracked file in the clone's dist cannot read as permanent drift
+  # (a mirror/restart loop). Runtime side: everything on disk, so an asset git
+  # no longer tracks still counts as drift there.
+  if [ -d "$1/.git" ]; then
+    _ch_outsum="$(cd "$1" && for _ch_d in $_ch_out; do git ls-files -- "$_ch_d"; done | LC_ALL=C sort | xargs -r md5sum | md5sum | cut -d' ' -f1)"
+  else
+    _ch_outsum="$(cd "$1" && for _ch_d in $_ch_out; do [ -d "$_ch_d" ] && find "$_ch_d" -type f; done | LC_ALL=C sort | xargs -r md5sum | md5sum | cut -d' ' -f1)"
+  fi
+  echo "$_ch_base-$_ch_outsum"
 }
 
 # A TEST-ONLY RANGE OWES NO RESTART. clone-dir from-sha to-sha -> 0 iff the diff
 # from..to is computable, non-empty, and every changed path is a test file
-# (*.test.ts, *.spec.ts, or under a test/ or tests/ directory). Anything else —
+# (*.test.ts, *.spec.ts, or under a test/ or tests/ directory) or tracked build
+# output under a nested <dir>/dist/ (see tracked_output_dirs). Anything else —
 # empty range, unknown sha, a single non-test path — returns 1, i.e. restart as
 # before. The range is the last-good pin (the sha the running unit was last
 # converged to) .. HEAD, so a deferred or reverted non-test commit stays inside
@@ -767,6 +797,14 @@ content_hash() { # vessel-root -> md5 over sorted src/ + sql/ + scripts/ (.ts/.j
 # Why: the check-first repair pattern lands every fix as two commits (test, then
 # fix); each restarted the vessel, and a hub restart is minutes of outage for a
 # commit whose runtime code is byte-identical.
+# Tracked build output is in the same class: mirror-to-live swaps it on disk and
+# a vessel serves it per request (human-surface-vessel: Bun.file under a path
+# fixed at load, src/index.ts serveUiFile), so a UI-only commit is live the
+# moment the swap lands and a restart buys only an outage. Root dist/ and
+# anything under src/ sql/ scripts/ are code the unit loads — never skipped.
+# ASSUMPTION: every vessel that tracks a nested dist/ SERVES it from disk per
+# request. A vessel that IMPORTS a tracked nested dist at load would need a
+# restart this rule skips; today only human-surface-vessel tracks one.
 test_only_range() {
   [ -n "${2:-}" ] && [ -n "${3:-}" ] || return 1
   _tor_paths="$(git -C "$1" diff --no-renames --name-only "$2" "$3" 2>/dev/null)" || return 1
@@ -774,6 +812,8 @@ test_only_range() {
   while IFS= read -r _tor_p; do
     case "$_tor_p" in
       *.test.ts|*.spec.ts|test/*|tests/*|*/test/*|*/tests/*) ;;
+      src/*|sql/*|scripts/*|dist/*|*/node_modules/*) return 1 ;;
+      */dist/*) ;;
       *) return 1 ;;
     esac
   done <<EOF
@@ -886,7 +926,7 @@ for d in "$CLONE_DIR"/*/; do
   LAST="$(cat "$MARKER" 2>/dev/null || true)"
   CLONE_HASH="$(content_hash "$d")"
   [ -d "$RUNTIME_DIR/$v" ] || { echo "$CLONE_HASH" > "$MARKER"; continue; }  # not part of this runtime
-  RUNTIME_HASH="$(content_hash "$RUNTIME_DIR/$v")"
+  RUNTIME_HASH="$(content_hash "$RUNTIME_DIR/$v" "$d")"
   # dist-freshness retry: a shared package whose src is already mirrored but whose
   # last fan-out was rolled back (an unhealthy consumer) leaves dist STALE vs src
   # with no retry — the src-only comparison below never re-enters 2c. Detect the
@@ -966,7 +1006,7 @@ for d in "$CLONE_DIR"/*/; do
       # skip in silence, which is how a scripts-only landing sat unrun for hours with
       # `synced=0` and no line naming the vessel. Once per HEAD.
       if [ "$(cat "$MARKER_DIR/$v.noop-head" 2>/dev/null)" != "$HEAD" ]; then
-        log "$v: clone at ${HEAD:0:10}, but the mirrored trees (src/ sql/ scripts/) already match the runtime — nothing to mirror"
+        log "$v: clone at ${HEAD:0:10}, but the mirrored trees (src/ sql/ scripts/ + tracked build output) already match the runtime — nothing to mirror"
         echo "$HEAD" > "$MARKER_DIR/$v.noop-head" 2>/dev/null || true
       fi
       continue
@@ -1082,8 +1122,18 @@ EOF
     # silent mirror-to-live failure that re-mirroring also repairs. Quiet by
     # construction.
     if [ -z "$TRUNCATED" ] && [ -z "$(ls "$AUTHORING_MARKER_DIR"/*-"$v".json 2>/dev/null)" ]; then
-      RUNTIME_HASH="$(content_hash "$RUNTIME_DIR/$v")"
-      if [ "$RUNTIME_HASH" != none ] && [ "$CLONE_HASH" != none ] && [ "$RUNTIME_HASH" != "$CLONE_HASH" ]; then
+      RUNTIME_HASH="$(content_hash "$RUNTIME_DIR/$v" "$d")"
+      # Repair runs TOWARD THE CLONE, so it is only a repair while the clone IS
+      # origin. Step 1 already lands the clone on origin, so this only restates
+      # that invariant at the point of use. It does NOT close the
+      # drift-repair-reverted-a-security-fix class: in that incident the clone
+      # WAS origin (the newer code was never pushed), so this check passes and
+      # the newer runtime is still overwritten. That class stays open (gap:
+      # human-surface-two-sources-of-truth-and-drift-repair-reverted-a-security-fix).
+      if [ "$RUNTIME_HASH" != none ] && [ "$CLONE_HASH" != none ] && [ "$RUNTIME_HASH" != "$CLONE_HASH" ] \
+         && [ "$HEAD" != "$(git -C "$d" rev-parse "origin/$BRANCH" 2>/dev/null)" ]; then
+        log "$v: live content drifts from the clone, but the clone (${HEAD:0:10}) is not origin/$BRANCH — NOT repairing toward it"
+      elif [ "$RUNTIME_HASH" != none ] && [ "$CLONE_HASH" != none ] && [ "$RUNTIME_HASH" != "$CLONE_HASH" ]; then
         TRUNCATED="content drift (live ${RUNTIME_HASH%"${RUNTIME_HASH#??????????}"} != clone ${CLONE_HASH%"${CLONE_HASH#??????????}"})"
       fi
     fi
