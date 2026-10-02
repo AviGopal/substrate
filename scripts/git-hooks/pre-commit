@@ -408,4 +408,94 @@ EOF
   fi
 fi
 
+# ── verdict-token: the vendored copies must stay byte-identical ──────────────
+#
+# WHY THIS IS A GATE. activity-api STAMPS a failure class `deterministic:<token>` and
+# development-vessel FILES one gap per class as `verdict-class-<token>`, each from its
+# own vendored copy of packages/verdict-token/verdict-token.ts. If the copies drift, a
+# stamped class can be one the filer refuses forever: the generator counts zero and files
+# nothing, silently.
+#
+# WHAT IT JUDGES: the content the commit will carry, read from the object store, never a
+# working tree. The package as staged (`git show :path`), and each vessel's copy at the
+# STAGED gitlink (`cat-file` in that submodule's git dir), are hashed against the pin
+# VERDICT_TOKEN_SHA256 in validation/scripts/verdict-token-copies.test.ts (as staged); the
+# vessels' own pin tests carry the same constant. Plain sha256sum, so no bun dependency.
+# A submodule worktree that lags its pointer is irrelevant: only objects are read.
+#
+# WHEN: the package or the copies test is staged (both vessels are judged), or a vessel's
+# gitlink is staged (that vessel is judged). Refuses on a real mismatch, or when the
+# pointed commit is absent from an existing submodule git dir (fetch it). A submodule
+# with no git dir at all cannot be read: it is reported as NOT VERIFIED (never as passed)
+# and the commit proceeds; that vessel's own pin test at the pull-sync gate is the guard.
+# CI pointer bumps (bump-submodules.yml) run no hooks; the same pin tests cover them.
+mapfile -t VT_STAGED < <(
+  git diff --cached --name-only \
+    | grep -E '^(packages/verdict-token/|validation/scripts/verdict-token-copies\.test\.ts$|repos/(activity-api|development-vessel)$)' || true
+)
+if [[ ${#VT_STAGED[@]} -gt 0 ]]; then
+  vt_fail() {
+    printf '\n%s\n' "${RED}━━━ verdict-token: $1 ━━━${NC}"
+    printf '%s\n' "staged: ${VT_STAGED[*]}"
+    [[ -n "${2:-}" ]] && printf '%s\n' "$2"
+    cat <<'EOF'
+
+The three verdict-token copies (packages/verdict-token, activity-api src/lib,
+development-vessel src/lib) and their three sha256 pins change together.
+
+Bypass (only when you have verified the copies by other means):
+  git commit --no-verify
+EOF
+    exit 1
+  }
+  vt_sha() { sha256sum | awk '{print $1}'; }
+  VT_TEST=validation/scripts/verdict-token-copies.test.ts
+  VT_PIN="$(git show ":$VT_TEST" 2>/dev/null | sed -n 's/^const VERDICT_TOKEN_SHA256 = "\([0-9a-f]\{64\}\)".*/\1/p' | head -n1 || true)"
+  [[ -n "$VT_PIN" ]] || vt_fail "no VERDICT_TOKEN_SHA256 pin in the staged $VT_TEST"
+  VT_JUDGE=()
+  if printf '%s\n' "${VT_STAGED[@]}" | grep -qE '^(packages/|validation/)'; then
+    VT_JUDGE=(activity-api development-vessel)
+    git cat-file -e :packages/verdict-token/verdict-token.ts 2>/dev/null \
+      || vt_fail "packages/verdict-token/verdict-token.ts is not in the index"
+    vt_got="$(git show :packages/verdict-token/verdict-token.ts | vt_sha)"
+    [[ "$vt_got" == "$VT_PIN" ]] \
+      || vt_fail "packages/verdict-token/verdict-token.ts does not match the pin" "staged sha256 $vt_got, pin $VT_PIN"
+  else
+    for vt_v in activity-api development-vessel; do
+      printf '%s\n' "${VT_STAGED[@]}" | grep -qx "repos/$vt_v" && VT_JUDGE+=("$vt_v")
+    done
+  fi
+  VT_TOP="$(pwd -P)"
+  for vt_v in "${VT_JUDGE[@]}"; do
+    vt_want="$(git ls-files -s "repos/$vt_v" | awk '$1=="160000"{print $2}')"
+    [[ -n "$vt_want" ]] || vt_fail "repos/$vt_v is not a staged gitlink"
+    # The submodule's git dir. `git -C repos/<v>` on an uninitialised (empty) checkout
+    # resolves to the SUPER-repo, so accept it only when its toplevel is the submodule.
+    vt_gd=""
+    if [[ -e "repos/$vt_v/.git" ]] \
+       && [[ "$(git -C "repos/$vt_v" rev-parse --show-toplevel 2>/dev/null)" == "$VT_TOP/repos/$vt_v" ]]; then
+      vt_gd="$(git -C "repos/$vt_v" rev-parse --absolute-git-dir)"
+    else
+      vt_name="$(git config -f .gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null \
+        | awk -v p="repos/$vt_v" '$2==p {print $1}' | sed -E 's/^submodule\.(.*)\.path$/\1/' | head -n1 || true)"
+      vt_mod="$(git rev-parse --git-common-dir)/modules/${vt_name:-repos/$vt_v}"
+      [[ -d "$vt_mod" ]] && git --git-dir="$vt_mod" rev-parse -q --git-dir >/dev/null 2>&1 && vt_gd="$vt_mod"
+    fi
+    if [[ -z "$vt_gd" ]]; then
+      printf '%s\n' "${YELLOW}verdict-token: repos/$vt_v is not initialised (no git dir); its copy at ${vt_want:0:10} was NOT verified.${NC}"
+      printf '%s\n' "      run: git submodule update --init repos/$vt_v   (that vessel's pin test at the pull-sync gate still guards it)"
+      continue
+    fi
+    git --git-dir="$vt_gd" cat-file -e "$vt_want^{commit}" 2>/dev/null \
+      || vt_fail "repos/$vt_v: staged commit $vt_want is not in its object store" \
+           "fetch it: git -C repos/$vt_v fetch origin   (then retry the commit)"
+    git --git-dir="$vt_gd" cat-file -e "$vt_want:src/lib/verdict-token.ts" 2>/dev/null \
+      || vt_fail "repos/$vt_v at $vt_want has no src/lib/verdict-token.ts"
+    vt_got="$(git --git-dir="$vt_gd" cat-file -p "$vt_want:src/lib/verdict-token.ts" | vt_sha)"
+    [[ "$vt_got" == "$VT_PIN" ]] \
+      || vt_fail "repos/$vt_v src/lib/verdict-token.ts at the staged pointer does not match the pin" \
+           "pointer $vt_want: sha256 $vt_got, pin $VT_PIN"
+  done
+fi
+
 exit 0

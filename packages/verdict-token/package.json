@@ -1,0 +1,6 @@
+{
+  "name": "@avigopal/verdict-token",
+  "version": "0.1.0",
+  "description": "The one rule for a deterministic verdict token (vendored byte-identical into activity-api and development-vessel)",
+  "type": "module"
+}
