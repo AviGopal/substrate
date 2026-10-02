@@ -11,9 +11,9 @@
 - [ ] 2.2 Under `hold`, fetch, report `behind`, and mirror nothing.
 - [ ] 2.3 Make the test gate run against the revision being mirrored, not the clone's HEAD.
 
-## 3. Promotion activity (development-vessel; landing path)
+## 3. Advancing activity (development-vessel; landing path)
 
-- [ ] 3.1 Add a `fleet_promotion` activity: settle window → levels → cross-node known-answer goal → failure-class comparison.
+- [ ] 3.1 Add a `fleet_advance` activity: settle window → levels → cross-node known-answer goal → failure-class comparison.
 - [ ] 3.2 On pass: fast-forward `fleet` in dependency order, then write a trace naming the revisions and the evidence.
 - [ ] 3.3 On fail: file a gap naming the revision and the failing check, and leave `fleet` where it is.
 - [ ] 3.4 Store the settle window and the failure-class tolerance as tuning parameters, not env.
@@ -25,6 +25,6 @@
 
 ## 5. Verification
 
-- [ ] 5.1 Positive control: a harmless landing on `dev` reaches the canaries, is promoted, and then reaches `fleet` nodes.
+- [ ] 5.1 Positive control: a harmless landing on `dev` reaches the canaries, is advanced, and then reaches `fleet` nodes.
 - [ ] 5.2 Negative control: a landing that fails a check (for example, one that breaks a status level on purpose, on a canary only) is refused, files a gap, and never reaches `fleet` nodes.
 - [ ] 5.3 Run `hold` on the hub during a drain: the hub's running revision stays fixed and `behind` grows.

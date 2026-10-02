@@ -15,7 +15,7 @@ The substrate develops itself, so the same thing that lands a change has to deci
   - `canary`: converge to `dev`. These nodes run a change first.
   - `fleet`, the default: converge to `fleet`.
   - `hold`: converge to nothing. The node keeps what it runs and reports how far behind it is.
-- **Promotion is an activity the substrate runs, not a human step and not CI.** On a canary node, after it converges to a `dev` revision, the activity waits a settle window, then judges the change across the live constellation:
+- **Advancing is an activity the substrate runs, not a human step and not CI.** On a canary node, after it converges to a `dev` revision, the activity waits a settle window, then judges the change across the live constellation:
   - the canary's own `substrate-status` levels;
   - a known-answer goal dispatched from the canary that reaches across nodes;
   - no new failure class in the canary's journal compared with before the change.
@@ -26,13 +26,24 @@ The substrate develops itself, so the same thing that lands a change has to deci
 
 ## What This Does Not Change
 
-- The autonomy criterion is unchanged: a substrate-authored commit on `origin/dev` still counts the moment it lands. Promotion to `fleet` is a separate, later fact.
-- CI install acceptance stays as an outside witness on published images. If it ever catches something promotion let through, that's a gap in the promotion check.
+- The autonomy criterion is unchanged: a substrate-authored commit on `origin/dev` still counts the moment it lands. Advancing to `fleet` is a separate, later fact.
+- CI install acceptance stays as an outside witness on published images. If it ever catches something advancing let through, that's a gap in the advancing check.
 - Constellations the live network does not have (no hub, half a vessel set) are out of scope here. They need sandboxed fleets, which is a separate decision (see `design.md`).
+
+## Prior Attempts, and What Differs
+
+| Attempt | Why it did not hold |
+|---|---|
+| `2026-05-23-substrate-self-deployment` (canary regressions, `revert-self-deployed-change`) | 0 of 36 tasks. Its safety was a post-merge revert. REALIGNMENT §7 (R1-12) counts it among five unbuilt revert specifications, superseded by contained-self-development 8.3/8.4. |
+| contained-self-development 8.3/8.4 (settlement-triggered lane revert) | The carried revert path. Still a revert *after* every node runs the change. |
+
+What differs: nothing here reverts. A change reaches `fleet` nodes only after it is judged on canaries, so the default for a bad change is "it never left the canaries", not "it is undone everywhere". This complements 8.3/8.4 rather than replacing it: revert still matters for a change that passed the canary judgement and was wrong anyway.
+
+Naming: "advance" is used for moving the `fleet` ref, because "promotion" already means the pushPolicy's evidence-cited widening of landing scope (`gen-env.sh`, `pushPolicy.promotion`).
 
 ## Impact
 
 - `scripts/substrate/gen-env.sh`, `docker-compose.yml` (manifest input), `substrate-install.sh` and `substrate-status.sh`: the channel input and its reporting (deployment lane).
 - `scripts/substrate/substrate-pull-sync.sh`: converge `/vessels` to the channel's ref while keeping push clones on `dev`. This is the coordinator's file.
-- development-vessel: a `fleet_promotion` activity and its producer shape (code; goes through the landing path).
+- development-vessel: a `fleet_advance` activity and its producer shape (code; goes through the landing path).
 - Git remotes: a `fleet` branch per repository, created once at `dev`'s current head. That's an outward action, done once with the user's approval.
