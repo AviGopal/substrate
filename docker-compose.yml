@@ -17,6 +17,8 @@
 #   SUBSTRATE_GIT_PAT + SUBSTRATE_REPO_OWNER   push capability and its scope
 #   SUBSTRATE_UPDATE_CHANNEL  canary | fleet | hold (default canary): which revision
 #                           this node runs; fleet and hold nodes consume and do not land
+#   SUBSTRATE_ACCEPTANCE    1 on a throwaway acceptance install only: lets its gap-store
+#                           holder take the hold channel, so the run judges the image it names
 # Everything else below is advanced configuration, forwarded unchanged.
 #
 # Every derivation (role, endpoints, key requirement, alias checks) runs in the
@@ -155,6 +157,7 @@ services:
       # then + ENABLED_EXTRA_VESSELS, then - DISABLED_VESSELS.
       PROFILE: ${PROFILE:-}
       SUBSTRATE_UPDATE_CHANNEL: ${SUBSTRATE_UPDATE_CHANNEL:-}
+      SUBSTRATE_ACCEPTANCE: ${SUBSTRATE_ACCEPTANCE:-}
       ENABLED_VESSELS: ${ENABLED_VESSELS:-}
       ENABLED_ROLES: ${ENABLED_ROLES:-}
       ENABLED_EXTRA_VESSELS: ${ENABLED_EXTRA_VESSELS:-}

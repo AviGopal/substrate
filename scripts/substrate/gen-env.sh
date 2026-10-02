@@ -236,6 +236,14 @@ case "${SUBSTRATE_UPDATE_CHANNEL:-}" in
   *) _refuse "SUBSTRATE_UPDATE_CHANNEL=${SUBSTRATE_UPDATE_CHANNEL} is not an update channel." \
        "Use canary (the default: run dev), fleet (run what canaries verified) or hold (keep what runs)." ;;
 esac
+# SUBSTRATE_ACCEPTANCE=1 declares a throwaway acceptance install (its only effect: the
+# gap-store holder may take the hold channel, below). Anything else is refused rather
+# than read as false, so a mistyped declaration is not silently a production node.
+case "${SUBSTRATE_ACCEPTANCE:-}" in
+  ""|1) ;;
+  *) _refuse "SUBSTRATE_ACCEPTANCE=${SUBSTRATE_ACCEPTANCE} is not a declaration." \
+       "Set SUBSTRATE_ACCEPTANCE=1 on a throwaway acceptance install, or leave it unset." ;;
+esac
 
 # PROFILE AGAINST ANCHOR. A hub profile holds the network's identity and learning
 # state; a remote discovery anchor makes this container a spoke of someone else's.
@@ -680,7 +688,16 @@ case "${SUBSTRATE_UPDATE_CHANNEL:-}" in
       _inv_plan="$(DRY_RUN=1 /usr/local/bin/apply-inventory 2>&1 || true)"
       case "$_inv_plan" in *"would disable: development-vessel.service"*) _dv_selected=0 ;; esac
     fi
-    if [ -z "${GAP_STORE_ENDPOINT:-}" ] && [ "$_dv_selected" = 1 ]; then
+    # The one exception (qa ruling, 2026-10-02): an acceptance install may hold. Its gap
+    # store is a throwaway nobody else lands into, so there is nothing for a frozen holder
+    # to misjudge, and holding is what lets the run judge the image it names rather than
+    # whatever dev has moved to by the time boot convergence finishes. It is declared by
+    # the launch (SUBSTRATE_ACCEPTANCE=1), never inferred from a missing token: a node with
+    # no token can still be written to by peers, and "no token" is not "cannot push".
+    if [ -z "${GAP_STORE_ENDPOINT:-}" ] && [ "$_dv_selected" = 1 ] \
+      && [ "$SUBSTRATE_UPDATE_CHANNEL" = hold ] && [ "${SUBSTRATE_ACCEPTANCE:-}" = 1 ]; then
+      echo "[gen-env] update channel hold on the gap-store holder: allowed because this is a declared acceptance install (SUBSTRATE_ACCEPTANCE=1), whose gap store has no outside writers" >&2
+    elif [ -z "${GAP_STORE_ENDPOINT:-}" ] && [ "$_dv_selected" = 1 ]; then
       _refuse "SUBSTRATE_UPDATE_CHANNEL=${SUBSTRATE_UPDATE_CHANNEL} on the node that holds its gap store." \
         "The gap-store holder judges landings on dev against its own clones, so it must run dev." \
         "Use SUBSTRATE_UPDATE_CHANNEL=canary, or point GAP_STORE_ENDPOINT at an authoring node's resolve URL so this node no longer holds a gap store."
@@ -1317,6 +1334,8 @@ MITOSIS_DIRECT_PUSH="${MITOSIS_DIRECT_PUSH:-1}"
 # it converges /vessels (openspec staged-fleet-rollout, task 3); until that lands,
 # every node still follows dev. Landings and their verification always use dev.
 SUBSTRATE_UPDATE_CHANNEL="${SUBSTRATE_UPDATE_CHANNEL:-canary}"
+# A declared acceptance install (see the validation above); empty on every other node.
+SUBSTRATE_ACCEPTANCE="${SUBSTRATE_ACCEPTANCE:-}"
 MITOSIS_RUNTIME_DIR=${MITOSIS_RUNTIME_DIR:-/vessels}
 MITOSIS_PUSH_CLONE_DIR=${MITOSIS_PUSH_CLONE_DIR:-/workspace/git/vessels}
 LOCAL_TOOLS_VESSEL_API_KEY=${LOCAL_TOOLS_VESSEL_API_KEY}
