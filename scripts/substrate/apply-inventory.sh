@@ -500,11 +500,19 @@ log "done — $disabled_count unit(s) $( [ "$DRY_RUN" = "1" ] && echo 'would be'
 #
 # Widen the comparison set only; manageable_units() itself is untouched, so
 # selection semantics are unchanged.
-all_inventory_units() { jq -r '.vessels[].unit' "$INV"; }
+# A timer's own service counts as governed when the inventory names the timer: masking the
+# timer is what keeps the service from firing.
+#
+# The shipped-unit pattern also matches ${SUBSTRATE_ROOT} and the super-repo clone. Script
+# units run the super-repo's scripts through that variable, and the pattern used to name only
+# /vessels/ and the image paths, so six timer-driven probes shipped with no inventory entry
+# and no warning. Four of them query SurrealDB directly and failed on every compute and spoke
+# node, where there is no local store (measured 2026-10-02 on node 2 and the public spoke).
+all_inventory_units() { jq -r '.vessels[].unit' "$INV"; jq -r '.vessels[].unit' "$INV" | sed -n 's/\.timer$/.service/p'; }
 unmanaged="$(comm -13 \
   <(all_inventory_units | sort -u) \
   <(cd /usr/lib/systemd/system 2>/dev/null \
-      && grep -lE '/vessels/|/usr/local/share/substrate|/opt/substrate' -- *.service *.timer 2>/dev/null \
+      && grep -lE '/vessels/|/usr/local/share/substrate|/opt/substrate|SUBSTRATE_ROOT|/workspace/git/super-repo' -- *.service *.timer 2>/dev/null \
       | grep -v -- '-mitosis-' | sort -u) 2>/dev/null || true)"
 if [ -n "$unmanaged" ]; then
   log "warn: $(echo "$unmanaged" | wc -l) shipped unit(s) absent from the inventory — ungoverned by ENABLED_ROLES, they run in every role:"
