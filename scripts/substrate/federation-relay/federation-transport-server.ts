@@ -821,8 +821,13 @@ Bun.serve({
             const rows = await localDiscoveryResolve({ type: 'vesselCapability', shape: wantedShape }, true).catch(() => [] as any[])
             const named = rows.find((v: any) => (v?.vesselId ?? v?.id) === targetVessel
               && Array.isArray(v?.libp2p_multiaddr) && v.libp2p_multiaddr[0] && !isSelfCircuit(v))
+            // Both misses below used to be silent, so a failing hub_to_spoke showed only
+            // the live-circuit fallback's "could not reach … over any live circuit" and
+            // never which half failed: the registered row, or the dial through it.
+            if (!named) console.log('[fed-transport] egress ' + wantedShape + ': no registered libp2p row for ' + targetVessel + ' (' + rows.length + ' row(s) for the shape)')
             if (named) {
               const alt = await resolveOverLibp2p(String(named.libp2p_multiaddr[0]), pointer).catch(errOf)
+              if (!alt || alt.error || isHollowErr(alt)) console.log('[fed-transport] egress ' + wantedShape + ': registered circuit of ' + targetVessel + ' failed: ' + String(alt?.error ?? 'hollow answer').slice(0, 200) + ' (…' + String(named.libp2p_multiaddr[0]).slice(-24) + ')')
               if (alt && !alt.error && !isHollowErr(alt)) { console.log('[fed-transport] egress -> ' + wantedShape + ' via the registered circuit of ' + targetVessel); res = alt; reached = true }
               else res = res ?? alt
             }
