@@ -319,6 +319,21 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
   // DUPLICATE shapes across the fleet individually addressable (two goal-hosts, two
   // activity-apis) instead of collapsing onto whichever vessel shape-lookup finds.
   const wanted = String(pointer?._fedTargetVessel ?? '').split('@')[0]
+  // A target qualified with ANOTHER substrate (`<vessel>@<substrate>`) is never served from
+  // here: matching only its bare name let a peer answer with its OWN copy of the vessel, so
+  // a read addressed to a departed spoke came back with a different spoke's file (measured
+  // 2026-10-02: the addressed spoke stopped, the egress fallback asked the next live circuit,
+  // and that spoke served its local fileContent). Forward to the owner's registered row when
+  // there is one; otherwise refuse, which the egress loop reads as "not a hit" and moves on.
+  const fedTarget = String(pointer?._fedTargetVessel ?? '')
+  const fedOwner = fedTarget.includes('@') ? fedTarget.slice(fedTarget.lastIndexOf('@') + 1) : ''
+  if (fedOwner && fedOwner !== SUBSTRATE_ID) {
+    const rows = await localDiscoveryResolve({ type: 'vesselRegistry' })
+    const ownerRow = rows.find((v: any) => String(v?.vesselId ?? v?.id ?? '') === fedTarget)
+    if (hop < 1 && ownerRow?.protocol === 'libp2p' && Array.isArray(ownerRow.libp2p_multiaddr) && ownerRow.libp2p_multiaddr[0] && !isSelfCircuit(ownerRow))
+      return forwardLibp2p(ownerRow)
+    return { error: 'not the owner: ' + fedTarget + ' is a vessel of substrate ' + fedOwner + ', this is ' + SUBSTRATE_ID }
+  }
   if (wanted) {
     const all = await localDiscoveryResolve({ type: 'vesselRegistry' })
     const cand = all.find((v: any) => String(v?.vesselId ?? '') === wanted && !String(v.vesselId).startsWith(VESSEL_ID))
@@ -832,8 +847,27 @@ Bun.serve({
               else res = res ?? alt
             }
           }
+          // For an addressed call the named owner is what was asked for, so an answer counts
+          // only when its produced_by POSITIVELY names that owner. A foreign, bare or absent
+          // produced_by is not a hit and the read fails honestly. Every transport, old ones
+          // included, stamps proxied answers `<vessel>@<its transport id>`, so the owner's own
+          // answer always carries it. The receiving side also refuses foreign targets itself;
+          // this guard covers peers that predate that refusal.
+          const wantedOwner = targetVessel.includes('@') ? targetVessel.slice(targetVessel.lastIndexOf('@') + 1) : ''
+          const foreignAnswer = (r: any) => {
+            if (!wantedOwner) return false
+            const by = String(r?.content?.produced_by ?? '')
+            return !(by.includes('@') && by.slice(by.lastIndexOf('@') + 1) === wantedOwner)
+          }
           for (const a of (reached ? [] : circuits)) {
             const alt = await resolveOverLibp2p(a, pointer).catch(errOf)
+            if (alt && foreignAnswer(alt)) {
+              console.log('[fed-transport] egress ' + String((pointer as any)?.type ?? '?') + ': skipped an answer from ' + String(alt?.content?.produced_by ?? 'an unattributed peer') + ' for ' + targetVessel)
+              // Keep a refusal's own explanation; never keep skipped DATA, which would go back
+              // to the caller as a 200 from the wrong node.
+              res = res ?? ((alt.error || isHollowErr(alt)) ? alt : { error: 'no answer from the owner of ' + targetVessel + ' (skipped one from ' + String(alt?.content?.produced_by ?? 'an unattributed peer') + ')' })
+              continue
+            }
             if (alt && !alt.error && !isHollowErr(alt)) { console.log('[fed-transport] egress repair -> ' + String((pointer as any)?.type ?? '?') + ' via live circuit …' + a.slice(-16)); res = alt; reached = true; break }
             res = res ?? alt
           }
