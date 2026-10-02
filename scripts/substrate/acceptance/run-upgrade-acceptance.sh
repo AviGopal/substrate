@@ -17,6 +17,8 @@
 #   key_valid_after   the key issued before the upgrade still validates
 #   fleet_seeded      the fleet's own client key still validates (substrate-status)
 #   identity_kept     the federation id is the one the fleet had before
+#   channel_kept      the update channel declared at install (hold, as a declared
+#                     acceptance install) is still the node's channel after the upgrade
 #
 # Both images are reached through ONE local tag that is moved from the previous image
 # to the candidate between the installs, as a registry :dev moves under an operator.
@@ -85,7 +87,11 @@ same_image=false; [ "$prev_id" = "$cand_id" ] && same_image=true
 eng tag "$PREVIOUS_IMAGE" "$TAG"
 log "installing the previous image as $TAG"
 eng run --rm "$PREVIOUS_IMAGE" install 2>"$RESULT_DIR/diag/emit-previous.err" >"$root/install-previous.sh"
+# A declared acceptance install on hold, like the other runs: the verdict is about the two
+# images, not about what dev became while the fleet booted. The installer writes both into
+# the fleet's .env, and the upgrade below must keep them (channel_kept).
 ( SUBSTRATE_IMAGE="$TAG" METABOB_CONFIG_PATH="$root/client-config.json" \
+    SUBSTRATE_ACCEPTANCE=1 SUBSTRATE_UPDATE_CHANNEL=hold \
     sh "$root/install-previous.sh" --name "$NAME" --prefix "$PREFIX" --dir "$fleet" --engine "$ENGINE" --wait seeded ) \
   >"$RESULT_DIR/diag/install-previous.log" 2>&1
 before_rc=$?
@@ -128,6 +134,11 @@ if [ "$after_rc" = 0 ]; then
 
   if eng exec "$C" substrate-status --quick --level seeded >"$RESULT_DIR/diag/status-seeded.txt" 2>&1; then set_check fleet_seeded pass null
   else set_check fleet_seeded fail null; fi
+
+  # The re-run reads the fleet's .env, so a declared input survives the upgrade.
+  ch_after="$(eng exec "$C" substrate-status --level live --json 2>/dev/null | jq -r '.update_channel.channel // empty')"
+  if [ "$ch_after" = hold ]; then set_check channel_kept pass null
+  else set_check channel_kept fail "$(jq -nc --arg c "${ch_after:-}" '{channel_after: $c, expected: "hold"}')"; fi
 
   fed_after="$(fed_id)"
   if [ -n "$fed_before" ] && [ "$fed_after" = "$fed_before" ]; then set_check identity_kept pass null
