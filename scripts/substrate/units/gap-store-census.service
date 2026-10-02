@@ -24,6 +24,11 @@ After=development-vessel.service
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/substrate/env
+# It measures the store where the store lives (law 11): only the holder, the node that runs
+# development-vessel with no GAP_STORE_ENDPOINT, the same predicate gen-env uses. A node
+# that forwards to another store would only re-count that store, so it is skipped
+# (inactive, not failed), as identity-seeder skips a node with no identity to seed.
+ExecCondition=/bin/sh -c '[ -z "$${GAP_STORE_ENDPOINT:-}" ] && [ "$$(systemctl is-enabled development-vessel.service 2>/dev/null)" != masked ]'
 ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/gap-store-census-tick.ts
 StandardOutput=journal
 StandardError=journal
