@@ -45,9 +45,16 @@ verdict() { # verdict reason [passes]
   [ "$before" = "$CAND $1 ${3:-0}" ] || jq -c '{at, kind:("candidate_"+.verdict), sha, reason, passes}' "$STATE" >> "$G/notices.jsonl" 2>/dev/null || true
   echo "verdict $1 ${c12}: $2"
 }
-in_globs() { # path jq-array-of-globs-file-key
+in_globs() { # path globs... -> 0 when any glob matches ('*' crosses '/')
   local p="$1" g; shift
   for g in "$@"; do [[ "$p" == $g ]] && return 0; done; return 1
+}
+is_gate() { # path -> a MANIFEST gate glob matches and no "!" exclusion does
+  local p="$1" g hit=1
+  for g in "${GATE[@]}"; do
+    if [[ "$g" == '!'* ]]; then [[ "$p" == ${g#!} ]] && return 1; else [[ "$p" == $g ]] && hit=0; fi
+  done
+  return $hit
 }
 mapfile -t GATE < <(jq -r '.gate_paths[]?' "$ACC_DIR/MANIFEST.json" 2>/dev/null)
 mapfile -t FIX < <(jq -r '.fixture_paths[]?' "$POL" 2>/dev/null)
@@ -64,7 +71,7 @@ mapfile -t CHANGED < <(git -C "$SUPER" diff --name-status --no-renames "$ACC" "$
 GATE_CHANGED=(); WIDEN=()
 for line in "${CHANGED[@]}"; do
   st="${line%%$'\t'*}"; p="${line#*$'\t'}"
-  in_globs "$p" "${GATE[@]}" || continue
+  is_gate "$p" || continue
   GATE_CHANGED+=("$st $p")
   if in_globs "$p" "${FIX[@]}"; then in_globs "$st" "${ORD[@]}" || WIDEN+=("$st $p (accepted fixture edited or removed)"); fi
 done
@@ -74,12 +81,15 @@ git -C "$SUPER" merge-base --is-ancestor "$ACC" "$CAND" 2>/dev/null || {
   verdict refused "does not descend from the accepted sha"
   gap "gate-candidate-refused-$c12" gate_candidate_refused "Gate candidate $CAND does not descend from the accepted gate $ACC; it is not judged and not promoted."
   exit 0; }
-# Dropping a protected or fixture glob is a widening, whatever the files say.
+# Dropping a protected or fixture glob, or ADDING a non-root exclusion, is a widening,
+# whatever the files say: a candidate policy may only grow the gated set.
 cand_pol="$(git -C "$SUPER" show "$CAND:$POLICY_REL" 2>/dev/null || echo '{}')"
 for key in gate_paths fixture_paths; do
   while IFS= read -r dropped; do [ -n "$dropped" ] && WIDEN+=("$POLICY_REL drops $key entry '$dropped'"); done < <(
     jq -r --argjson c "$cand_pol" --arg k "$key" '(.[$k] // []) - ($c[$k] // []) | .[]' "$POL" 2>/dev/null)
 done
+while IFS= read -r added; do [ -n "$added" ] && WIDEN+=("$POLICY_REL adds non_root_paths entry '$added'"); done < <(
+  jq -r --argjson c "$cand_pol" '($c.non_root_paths // []) - (.non_root_paths // []) | .[]' "$POL" 2>/dev/null)
 if [ "${#WIDEN[@]}" -gt 0 ]; then
   verdict widening "$(printf '%s; ' "${WIDEN[@]}")"
   gap "gate-candidate-widening-$c12" authority_widening "Gate candidate $CAND widens the accepted gate (${ACC:0:12}): $(printf '%s; ' "${WIDEN[@]}")A widening is judged as such (H2), never promoted on fixture parity; it needs criterion evidence relevant to the newly accepted class, which this slice does not yet provide."

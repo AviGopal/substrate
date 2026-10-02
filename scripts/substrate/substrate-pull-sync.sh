@@ -429,28 +429,34 @@ glue_divergence_gap() { # super path what
 }
 
 # gate_overlay <stage-dir> <sha> (gated mode only): every gate path in the staged tree
-# (MANIFEST.gate_paths of the ACCEPTED copy) is replaced by the accepted file, a gate path
+# (MANIFEST.gate_paths of the ACCEPTED copy, minus its "!"-prefixed non-root exclusions:
+# everything root runs from the glue, render-secret-scope.sh, gen-env.sh, units, …) is
+# replaced by the accepted file, a gate path
 # the accepted version lacks is removed, and an accepted gate file the commit deleted comes
 # back. Installs below then never read a candidate's gate file; candidate.sh judges it.
 gate_overlay() {
-  local d="$1" sha="$2" rel g n=0 globs=()
+  local d="$1" sha="$2" rel g n=0 hit globs=()
   mapfile -t globs < <(jq -r '.gate_paths[]?' "$PULLSYNC_ACCEPTED_DIR/MANIFEST.json" 2>/dev/null)
   [ "${#globs[@]}" -gt 0 ] || { log "gate: !!! the accepted MANIFEST names no gate_paths"; return 1; }
   while IFS= read -r rel; do
+    hit=1   # a gate glob matches and no "!"-prefixed (non-root) exclusion does
     for g in "${globs[@]}"; do
-      [[ "$rel" == $g ]] || continue
-      if [ -f "$PULLSYNC_ACCEPTED_DIR/$rel" ]; then
-        cmp -s "$PULLSYNC_ACCEPTED_DIR/$rel" "$d/$rel" || { rm -f "$d/$rel"; cp -p "$PULLSYNC_ACCEPTED_DIR/$rel" "$d/$rel" || return 1; n=$((n+1)); }
-      else
-        rm -f "$d/$rel" || return 1; n=$((n+1))
-      fi
-      break
+      if [[ "$g" == '!'* ]]; then [[ "$rel" == ${g#!} ]] && { hit=1; break; }; else [[ "$rel" == $g ]] && hit=0; fi
     done
+    [ "$hit" = 0 ] || continue
+    if [ -e "$PULLSYNC_ACCEPTED_DIR/$rel" ] || [ -L "$PULLSYNC_ACCEPTED_DIR/$rel" ]; then
+      if [ -L "$PULLSYNC_ACCEPTED_DIR/$rel" ] || [ -L "$d/$rel" ]; then
+        [ "$(readlink "$PULLSYNC_ACCEPTED_DIR/$rel" 2>/dev/null)" = "$(readlink "$d/$rel" 2>/dev/null)" ] && continue
+      else cmp -s "$PULLSYNC_ACCEPTED_DIR/$rel" "$d/$rel" && continue; fi
+      rm -f "$d/$rel"; cp -P -p "$PULLSYNC_ACCEPTED_DIR/$rel" "$d/$rel" || return 1; n=$((n+1))
+    else
+      rm -f "$d/$rel" || return 1; n=$((n+1))
+    fi
   done < <(cd "$d" && find scripts ! -type d 2>/dev/null)
   while IFS= read -r rel; do
-    [ -e "$d/$rel" ] && continue
-    mkdir -p "$d/$(dirname "$rel")" && cp -p "$PULLSYNC_ACCEPTED_DIR/$rel" "$d/$rel" || return 1; n=$((n+1))
-  done < <(cd "$PULLSYNC_ACCEPTED_DIR" && find scripts -type f 2>/dev/null)
+    [ -e "$d/$rel" ] || [ -L "$d/$rel" ] && continue
+    mkdir -p "$d/$(dirname "$rel")" && cp -P -p "$PULLSYNC_ACCEPTED_DIR/$rel" "$d/$rel" || return 1; n=$((n+1))
+  done < <(cd "$PULLSYNC_ACCEPTED_DIR" && find scripts ! -type d 2>/dev/null)
   [ "$n" -gt 0 ] && log "gate: $n gate path(s) in ${sha:0:10} differ from the accepted gate — installing the ACCEPTED copies; the candidate is judged by shadow evaluation"
   return 0
 }

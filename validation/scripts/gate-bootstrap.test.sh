@@ -22,9 +22,10 @@ jq -e --arg s "$HEAD0" 'select(.kind=="bootstrap") | .sha==$s and .by=="bootstra
   && ok "the bootstrap record carries sha, by, node, time" || bad "bootstrap record incomplete: $(cat "$G/ledger.jsonl")"
 [ ! -e "$T/WT-RAN" ] && ok "nothing from the clone's working tree or local commit ran" || bad "clone content was EXECUTED"
 grep -q "body $G/accepted/scripts/substrate/substrate-pull-sync.sh acc=$G/accepted\$" "$GT_RUNS" && ok "the body ran from accepted/ with PULLSYNC_ACCEPTED_DIR set" || bad "body runs: $(cat "$GT_RUNS")"
-jq -e '.files["scripts/substrate/substrate-pull-sync.sh"] and .files["scripts/substrate/gate/gate-policy.json"] and .files["validation/scripts/gate/fixtures/parses.sh"] and (.files["scripts/substrate/other.sh"]|not) and (.gate_paths|length>0)' \
+jq -e '.files["scripts/substrate/substrate-pull-sync.sh"] and .files["scripts/substrate/gate/gate-policy.json"] and .files["validation/scripts/gate/fixtures/parses.sh"] and (.files["docs/other.md"]|not) and (.gate_paths|length>0)' \
   "$G/accepted/MANIFEST.json" >/dev/null && ok "MANIFEST holds the gate paths only, with their globs" || bad "MANIFEST: $(cat "$G/accepted/MANIFEST.json")"
 [ "$(stat -c %a "$G")" = 700 ] && ok "gate dir is 0700" || bad "gate dir mode $(stat -c %a "$G")"
+[ "$(cut -d' ' -f1 "$G/bootstrapped" 2>/dev/null)" = "$HEAD0" ] && ok "the bootstrap writes the explicit bootstrapped marker" || bad "no bootstrapped marker"
 
 gt_runner tick; gt_runner tick
 [ "$RC" = 0 ] && [ "$(gt_records bootstrap)" = 1 ] && [ "$(cat "$G/accepted.sha")" = "$HEAD0" ] \

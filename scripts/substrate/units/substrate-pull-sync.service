@@ -12,12 +12,13 @@ Wants=git-push-setup.service
 Type=oneshot
 EnvironmentFile=/etc/substrate/env
 # PINNED JUDGE: the tick runs gate-runner, which executes only the ACCEPTED pull-sync
-# staged under /workspace/.gate/accepted (scripts/substrate/gate/gate-runner.sh). A node
-# whose runner has not arrived yet and that was never bootstrapped runs the pre-gate
-# pull-sync once more (that tick installs the runner); a BOOTSTRAPPED node whose runner
-# is missing refuses (exit 3) rather than fall back to the self-judging path.
-# $$ escapes systemd's own variable expansion.
-ExecStart=/bin/sh -c 'r=/usr/local/libexec/substrate/gate-runner; if [ -x "$$r" ]; then exec "$$r" tick; elif [ ! -e /workspace/.gate/accepted.sha ]; then echo "gate-runner absent, gate never bootstrapped: running the pre-gate pull-sync"; exec /usr/local/bin/substrate-pull-sync; else echo "GAP gate-runner-missing: /workspace/.gate is bootstrapped but $$r is absent; refusing the ungated path. Break-glass: reinstall the runner from the image"; exit 3; fi'
+# staged under /workspace/.gate/accepted (scripts/substrate/gate/gate-runner.sh). Only a
+# node with NO gate state at all (none of accepted.sha, accepted/, history/, ledger.jsonl,
+# bootstrapped — the dir itself is pre-created by entrypoint.sh, so it is no signal) and no
+# runner yet runs the pre-gate pull-sync (the arrival tick, which installs the runner). Any
+# gate state without the runner refuses (exit 3): losing one file never re-opens the
+# ungated path. $$ escapes systemd's own variable expansion.
+ExecStart=/bin/sh -c 'r=/usr/local/libexec/substrate/gate-runner; g=/workspace/.gate; if [ -x "$$r" ]; then exec "$$r" tick; fi; for f in accepted.sha accepted history ledger.jsonl bootstrapped; do if [ -e "$$g/$$f" ]; then echo "GAP gate-runner-missing: $$g holds gate state ($$f) but $$r is absent; refusing the ungated path. Break-glass: reinstall the runner from the image"; exit 3; fi; done; echo "gate-runner absent, no gate state: running the pre-gate pull-sync"; exec /usr/local/bin/substrate-pull-sync'
 TimeoutStartSec=900
 StandardOutput=journal
 StandardError=journal

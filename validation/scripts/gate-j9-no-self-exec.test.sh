@@ -11,25 +11,11 @@
 #                     pre-gate pull-sync only while the gate was never bootstrapped
 # usage: validation/scripts/gate-j9-no-self-exec.test.sh   (bash, git, jq, flock; no root)
 source "$(dirname "$0")/lib/gate-test-lib.sh"
-PS="$GT_ROOT/scripts/substrate/substrate-pull-sync.sh"
-rew() { sed -e "s#/usr/local/share/substrate#$T/share#g" -e "s#/usr/local/bin#$T/bin#g" -e "s#/usr/local/libexec/substrate#$T/libexec#g" \
-            -e "s#/usr/lib/systemd/system#$T/unit#g" -e "s#/etc/substrate#$T/etc#g" -e "s#/workspace#$T/ws#g" "$1"; }
-mkdir -p "$T/stub" "$T/bin" "$T/unit" "$T/etc" "$T/share" "$T/rt" "$T/ws/git/vessels" "$T/ws/.pull-sync" "$T/ws/.last-good"
-printf '#!/bin/sh\ncase "$1" in is-active) exit 3;; is-enabled) echo enabled;; esac\nexit 0\n' > "$T/stub/systemctl"
-printf '#!/bin/sh\nexit 7\n' > "$T/stub/curl"; chmod +x "$T/stub/"*
-
-gt_repo 1
-rew "$PS" > "$T/seed/scripts/substrate/substrate-pull-sync.sh"
+gt_live
 mkdir -p "$T/seed/scripts/substrate/units/vessel.d"; printf '[Service]\n# accepted\n' > "$T/seed/scripts/substrate/units/vessel.d/10-x.conf"
 A0="$(gt_push "the accepted pull-sync")"
-G="$T/ws/.gate"
-git -C "$T/super" rev-parse HEAD > "$T/ws/.pull-sync/super-repo.sha"
-install -m 0755 "$T/seed/scripts/substrate/substrate-pull-sync.sh" "$T/bin/substrate-pull-sync"
-tick() {
-  ( env -u SUBSTRATE_UPDATE_CHANNEL PATH="$T/stub:$PATH" GATE_DIR="$G" GATE_SUPER_DIR="$T/super" SUPER_REPO_DIR="$T/super" \
-      MITOSIS_PUSH_CLONE_DIR="$T/ws/git/vessels" MITOSIS_RUNTIME_DIR="$T/rt" STAGGER_SECONDS=0 GATE_BUDGET_SECONDS=0 \
-      DEV_VESSEL_ENDPOINT=http://127.0.0.1:9 timeout 240 sh "$GT_RUNNER" tick ) > "$T/out.txt" 2>&1; RC=$?
-}
+gt_live_converged
+tick() { gt_live_tick; }
 tick
 [ "$RC" = 0 ] && [ "$(cat "$G/accepted.sha" 2>/dev/null)" = "$A0" ] && ok "bootstrap: the real pull-sync is accepted and runs gated" || { bad "bootstrap: rc $RC"; show; }
 
@@ -50,27 +36,31 @@ grep -q 'gate: gate paths changed' "$T/out.txt" && grep -q 'gate: verdict promot
   && ok "judged by the accepted classifier: shadow pass, promote.request for $C" || { bad "no candidate verdict"; show; }
 
 grep -q '# accepted' "$T/unit/vessel.d/10-x.conf" 2>/dev/null && ok "a gate-path unit drop-in installs the ACCEPTED copy, not the candidate's" || bad "vessel.d drop-in: $(cat "$T/unit/vessel.d/10-x.conf" 2>&1)"
-[ -f "$T/unit/plain.service" ] && ok "a non-gate unit in the same commit keeps converging" || bad "the non-gate unit did not converge"
+[ ! -e "$T/unit/plain.service" ] && ok "a NEW unit in the candidate (scripts/substrate/* is gated) is not installed before promotion" || bad "a candidate unit was installed before promotion"
 
 tick
 [ "$(cat "$G/accepted.sha")" = "$C" ] && [ "$(gt_records promote)" = 1 ] && ok "control: promoted by the runner, promote record" || { bad "control: not promoted"; show; }
 [ -e "$T/bin/j9-ran" ] && ok "control: the promoted pull-sync runs (marker reachable)" || bad "control: promoted copy did not run"
 grep -q '# candidate' "$T/unit/vessel.d/10-x.conf" && ok "control: after promotion the drop-in converges to the promoted copy" || bad "control: drop-in still the old copy"
+[ -f "$T/unit/plain.service" ] && ok "control: after promotion the new unit converges" || bad "control: the new unit did not converge after promotion"
 
 # The unit: ExecStart is gate-runner, and the ungated fallback is gated on never-bootstrapped.
 U="$GT_ROOT/scripts/substrate/units/substrate-pull-sync.service"
 X="$(sed -n 's/^ExecStart=//p' "$U")"
 case "$X" in *'/usr/local/libexec/substrate/gate-runner'*'tick'*) ok "unit: ExecStart runs gate-runner tick" ;; *) bad "unit: ExecStart is $X" ;; esac
-unit_run() { # runner-present gate-bootstrapped -> stdout of the unit's command with paths moved to $T/u
-  rm -rf "$T/u"; mkdir -p "$T/u/libexec" "$T/u/bin" "$T/u/ws/.gate"
+unit_run() { # runner-present gate-state-entry|- -> output of the unit's command with paths moved to $T/u
+  rm -rf "$T/u"; mkdir -p "$T/u/libexec" "$T/u/bin" "$T/u/ws/.gate"   # entrypoint pre-creates the dir
   printf '#!/bin/sh\necho RUNNER "$@"\n' > "$T/u/libexec/gate-runner"; printf '#!/bin/sh\necho UNGATED\n' > "$T/u/bin/substrate-pull-sync"
   chmod +x "$T/u/libexec/gate-runner" "$T/u/bin/substrate-pull-sync"
-  [ "$1" = 1 ] || rm -f "$T/u/libexec/gate-runner"; [ "$2" = 1 ] && : > "$T/u/ws/.gate/accepted.sha"
+  [ "$1" = 1 ] || rm -f "$T/u/libexec/gate-runner"
+  case "$2" in -) ;; accepted|history) mkdir -p "$T/u/ws/.gate/$2" ;; *) : > "$T/u/ws/.gate/$2" ;; esac
   c="$(printf '%s' "$X" | sed -e 's/\$\$/$/g' -e "s#/usr/local/libexec/substrate#$T/u/libexec#g" -e "s#/usr/local/bin#$T/u/bin#g" -e "s#/workspace#$T/u/ws#g")"
-  eval "$c"
+  ( eval "$c" ) 2>&1
 }
-[ "$(unit_run 1 1 2>&1)" = "RUNNER tick" ] && ok "unit: runner present -> gate-runner tick" || bad "unit: runner present -> $(unit_run 1 1 2>&1)"
-unit_run 0 0 2>&1 | grep -q '^UNGATED$' && ok "unit: no runner, never bootstrapped -> the pre-gate pull-sync (arrival tick)" || bad "unit: arrival fallback missing"
-o="$( (unit_run 0 1) 2>&1)"; rc=$?
-case "$o" in *UNGATED*) bad "unit: bootstrapped node without runner ran UNGATED" ;; *'GAP gate-runner-missing'*) ok "unit: bootstrapped node without runner refuses (GAP line)" ;; *) bad "unit: $o" ;; esac
+[ "$(unit_run 1 accepted.sha)" = "RUNNER tick" ] && ok "unit: runner present -> gate-runner tick" || bad "unit: runner present -> $(unit_run 1 accepted.sha)"
+unit_run 0 - | grep -q '^UNGATED$' && ok "unit: no runner, empty pre-created gate dir -> the pre-gate pull-sync (arrival tick)" || bad "unit: arrival fallback missing"
+for st in accepted.sha accepted history ledger.jsonl bootstrapped; do
+  o="$(unit_run 0 "$st")"
+  case "$o" in *UNGATED*) bad "unit: gate state '$st' without runner ran UNGATED" ;; *'GAP gate-runner-missing'*) ok "unit: gate state '$st' alone, no runner -> refuses (GAP line)" ;; *) bad "unit: $st -> $o" ;; esac
+done
 done_tests

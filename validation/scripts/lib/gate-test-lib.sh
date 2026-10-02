@@ -30,7 +30,7 @@ gt_repo() { # [soak] -> $T/o (origin), $T/seed (author), $T/super (the node's cl
   jq --argjson n "$soak" '.soak_ticks.default=$n' "$GT_ROOT/scripts/substrate/gate/gate-policy.json" > "$T/seed/scripts/substrate/gate/gate-policy.json"
   cp "$GT_ROOT/validation/scripts/gate/fixtures/parses.sh" "$T/seed/validation/scripts/gate/fixtures/"
   gt_stub_body > "$T/seed/scripts/substrate/substrate-pull-sync.sh"
-  echo "not a gate path" > "$T/seed/scripts/substrate/other.sh"
+  mkdir -p "$T/seed/docs"; echo "not a gate path" > "$T/seed/docs/other.md"
   git -C "$T/seed" init -q -b dev; g "$T/seed" add -A; g "$T/seed" commit -m base
   g "$T/seed" remote add origin "$T/o/super.git"; g "$T/seed" push origin dev
   git clone -q --branch dev "$T/o/super.git" "$T/super"
@@ -49,3 +49,24 @@ gt_records() { # kind -> count of ledger records of that kind
 }
 gt_runs() { wc -l < "$GT_RUNS" | tr -d ' '; }
 show() { sed 's/^/    /' "$T/out.txt" | tail -20; }
+
+# ── live layout: the REAL pull-sync as the gate body, fixed paths moved under $T ────────────
+gt_rew() { sed -e "s#/usr/local/share/substrate#$T/share#g" -e "s#/usr/local/bin#$T/bin#g" -e "s#/usr/local/libexec/substrate#$T/libexec#g" \
+               -e "s#/usr/lib/systemd/system#$T/unit#g" -e "s#/etc/substrate#$T/etc#g" -e "s#/workspace#$T/ws#g" "$1"; }
+gt_live() { # -> gt_repo 1 whose body is the rewritten real pull-sync; systemctl/curl stubbed; G under $T/ws
+  mkdir -p "$T/stub" "$T/bin" "$T/unit" "$T/etc" "$T/share" "$T/rt" "$T/ws/git/vessels" "$T/ws/.pull-sync" "$T/ws/.last-good"
+  printf '#!/bin/sh\ncase "$1" in is-active) exit 3;; is-enabled) echo enabled;; esac\nexit 0\n' > "$T/stub/systemctl"
+  printf '#!/bin/sh\nexit 7\n' > "$T/stub/curl"; chmod +x "$T/stub/"*
+  gt_repo 1
+  gt_rew "$GT_ROOT/scripts/substrate/substrate-pull-sync.sh" > "$T/seed/scripts/substrate/substrate-pull-sync.sh"
+  G="$T/ws/.gate"
+}
+gt_live_tick() { # -> RC; output in $T/out.txt
+  ( env -u SUBSTRATE_UPDATE_CHANNEL PATH="$T/stub:$PATH" GATE_DIR="$G" GATE_SUPER_DIR="$T/super" SUPER_REPO_DIR="$T/super" \
+      MITOSIS_PUSH_CLONE_DIR="$T/ws/git/vessels" MITOSIS_RUNTIME_DIR="$T/rt" STAGGER_SECONDS=0 GATE_BUDGET_SECONDS=0 \
+      DEV_VESSEL_ENDPOINT=http://127.0.0.1:9 timeout 240 sh "$GT_RUNNER" tick ) > "$T/out.txt" 2>&1; RC=$?
+}
+gt_live_converged() { # the node's markers say the clone's HEAD is already converged
+  git -C "$T/super" rev-parse HEAD > "$T/ws/.pull-sync/super-repo.sha"
+  install -m 0755 "$T/seed/scripts/substrate/substrate-pull-sync.sh" "$T/bin/substrate-pull-sync"
+}

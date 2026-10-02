@@ -32,16 +32,23 @@ judge; [ "$(grep -c candidate_widening "$G/notices.jsonl")" = 1 ] && ok "edit: r
 fresh; git -C "$T/seed" rm -q "$FX/parses.sh"; mkdir -p "$T/seed/$FX"; echo '#!/usr/bin/env bash' > "$T/seed/$FX/other.sh"; gt_push "remove fixture" >/dev/null; judge
 grep -q '^verdict widening' "$T/cand.txt" && no_request && ok "remove (even with an add): widening, no request" || { bad "remove: not widening"; shows; }
 
-fresh; jq '.gate_paths -= ["scripts/substrate/units/vessel.d/*"]' "$T/seed/scripts/substrate/gate/gate-policy.json" > "$T/p" && mv "$T/p" "$T/seed/scripts/substrate/gate/gate-policy.json"
+fresh; jq '.gate_paths -= ["validation/scripts/*"]' "$T/seed/scripts/substrate/gate/gate-policy.json" > "$T/p" && mv "$T/p" "$T/seed/scripts/substrate/gate/gate-policy.json"
 gt_push "drop a gate glob" >/dev/null; judge
-grep -q "^verdict widening.*drops gate_paths entry 'scripts/substrate/units/vessel.d/\*'" "$T/cand.txt" && no_request && ok "policy drops a gate glob: widening" || { bad "policy glob drop: not widening"; shows; }
+grep -q "^verdict widening.*drops gate_paths entry 'validation/scripts/\*'" "$T/cand.txt" && no_request && ok "policy drops a gate glob: widening" || { bad "policy glob drop: not widening"; shows; }
 
 fresh; printf '#!/usr/bin/env bash\nif then fi\n' > "$T/seed/scripts/substrate/substrate-pull-sync.sh"; gt_push "unparseable" >/dev/null; judge
 grep -q '^verdict refused.*shadow' "$T/cand.txt" && grep -q '"category":"gate_candidate_refused"' "$T/cand.txt" && no_request \
   && ok "unparseable body: shadow refused, gap, no request" || { bad "unparseable: not refused"; shows; }
 
-fresh; echo "x" > "$T/seed/scripts/substrate/other.sh"; gt_push "not a gate path" >/dev/null; judge
+fresh; echo "x" > "$T/seed/docs/other.md"; gt_push "not a gate path" >/dev/null; judge
 grep -q '^verdict none' "$T/cand.txt" && no_request && ok "non-gate change: verdict none" || { bad "non-gate: $(cat "$T/cand.txt")"; }
+fresh; echo "x" > "$T/seed/scripts/substrate/deploy-hub-pull.sh"; gt_push "explicit non-root path" >/dev/null; judge
+grep -q '^verdict none' "$T/cand.txt" && no_request && ok "a listed non_root_paths file: verdict none (the exclusion applies)" || { bad "non-root: $(cat "$T/cand.txt")"; }
+fresh; echo "x" > "$T/seed/scripts/substrate/render-secret-scope.sh"; gt_push "root glue" >/dev/null; judge
+grep -q 'gate paths changed.*render-secret-scope.sh' "$T/cand.txt" && ok "root glue (render-secret-scope.sh) is a gate path" || { bad "render-secret-scope.sh not gated"; shows; }
+fresh; jq '.non_root_paths += ["scripts/substrate/render-secret-scope.sh"]' "$T/seed/scripts/substrate/gate/gate-policy.json" > "$T/p" && mv "$T/p" "$T/seed/scripts/substrate/gate/gate-policy.json"
+gt_push "add an exclusion" >/dev/null; judge
+grep -q "^verdict widening.*adds non_root_paths entry 'scripts/substrate/render-secret-scope.sh'" "$T/cand.txt" && no_request && ok "policy ADDS a non-root exclusion: widening" || { bad "added exclusion: not widening"; shows; }
 
 # control: an ADDED fixture -> soak 2 -> promote; the fixture joins the corpus on promotion
 fresh 2; printf '#!/usr/bin/env bash\n# kind: known-valid\nexit 0\n' > "$T/seed/$FX/added.sh"; C="$(gt_push "add fixture")"; judge
