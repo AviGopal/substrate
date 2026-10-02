@@ -709,7 +709,13 @@ VESSEL_ROWS=""
 scan_revisions() {
   VESSEL_ROWS=""
   local marks=/usr/local/share/substrate/vessel-src.sha256 revs=/usr/local/share/substrate/vessel-revisions
-  local d v img_hash now_hash img_rev run_rev state
+  local d v img_hash now_hash img_rev run_rev state tree=0
+  # An image that records the wider tree hash (src, sql, scripts, package.json, bun.lock,
+  # nested dist: what pull-sync can change) is compared on that surface, with the same
+  # command the build ran; older images keep the src-only marker and command below.
+  if [ -f /usr/local/share/substrate/vessel-tree.sha256 ] && command -v vessel-tree-hash >/dev/null 2>&1; then
+    marks=/usr/local/share/substrate/vessel-tree.sha256; tree=1
+  fi
   for d in /vessels/*/; do
     v="$(basename "$d")"
     case "$v" in *-mitosis-*|packages) continue ;; esac
@@ -722,7 +728,8 @@ scan_revisions() {
     elif [ -z "$img_hash" ]; then
       state="unmarked"   # the marker exists but was taken before this vessel was added
     else
-      now_hash="$(cd "$d" && find src -type f -print0 2>/dev/null | LC_ALL=C sort -z | xargs -0 sha256sum 2>/dev/null | sha256sum | cut -c1-16)"
+      if [ "$tree" = 1 ]; then now_hash="$(vessel-tree-hash "$d" 2>/dev/null || true)"
+      else now_hash="$(cd "$d" && find src -type f -print0 2>/dev/null | LC_ALL=C sort -z | xargs -0 sha256sum 2>/dev/null | sha256sum | cut -c1-16)"; fi
       if [ "$now_hash" = "$img_hash" ]; then state="image"; else state="moved"; fi
     fi
     VESSEL_ROWS="${VESSEL_ROWS}${v}|${state}|${img_rev:-}|${run_rev:-}

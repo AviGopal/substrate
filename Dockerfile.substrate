@@ -353,13 +353,21 @@ RUN bash /usr/local/bin/substrate-manifest > /tmp/docker-compose.printed.yml \
 # The content hash is taken over each baked src tree with the same command the
 # status tool re-runs; VESSEL_REVISIONS (optional, "name=sha" pairs from the
 # builder's submodule table) names the baked commits when the builder knows them.
+# vessel-tree.sha256 widens the surface to what pull-sync can change (src, sql, scripts,
+# package.json, bun.lock, nested dist), with the one command substrate-status re-runs;
+# vessel-src.sha256 stays for status builds that predate it.
+COPY scripts/substrate/vessel-tree-hash.sh /usr/local/bin/vessel-tree-hash
 ARG VESSEL_REVISIONS=""
-RUN set -e; \
+RUN set -e; chmod +x /usr/local/bin/vessel-tree-hash; \
     for d in /vessels/*/; do \
       v="$(basename "$d")"; [ -d "$d/src" ] || continue; \
       h="$(cd "$d" && find src -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16)"; \
       printf '%s %s\n' "$h" "$v"; \
     done > /usr/local/share/substrate/vessel-src.sha256; \
+    for d in /vessels/*/; do \
+      v="$(basename "$d")"; [ -d "$d/src" ] || continue; \
+      printf '%s %s\n' "$(vessel-tree-hash "$d")" "$v"; \
+    done > /usr/local/share/substrate/vessel-tree.sha256; \
     { printf '%s\n' $VESSEL_REVISIONS | grep '=' || true; } > /usr/local/share/substrate/vessel-revisions
 
 RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/local/bin/setup-git-push \
@@ -535,7 +543,8 @@ RUN cd obsidian-vessel && bun esbuild.config.mjs production
 # add its line with the same command, so substrate-status can check it too.
 RUN d=/vessels/obsidian-vessel \
     && h="$(cd "$d" && find src -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16)" \
-    && printf '%s %s\n' "$h" obsidian-vessel >> /usr/local/share/substrate/vessel-src.sha256
+    && printf '%s %s\n' "$h" obsidian-vessel >> /usr/local/share/substrate/vessel-src.sha256 \
+    && printf '%s %s\n' "$(vessel-tree-hash "$d")" obsidian-vessel >> /usr/local/share/substrate/vessel-tree.sha256
 
 # Build the vault from scratch — NO host-directory dependency. The vault is
 # reproducible from the built plugin alone: the three loadable files are
