@@ -521,7 +521,7 @@ Also ruled 10-03:
 | syzygy-local-surface | 04:47:00 | MATCH; relay at 60ae05a0 (af119736 absent) | discriminating not-owner check PASS (old image FAIL) |
 | syzygy-local-inventory | 04:49:22 | MATCH | not-owner check flipped FAIL→PASS on the same container |
 | pubspoke | 04:51:35 | 8/8 MATCH | secret-mask 0 VISIBLE (dbus residual cleared) |
-| node 1 (substrate-live) | in progress | — | restarts everything, including SurrealDB |
+| node 1 (substrate-live) | 04:59:39 | 9/9 MATCH; relay at 60ae05a0 (af119736 absent) | secret-mask 0 VISIBLE (dbus and surrealdb residuals gone); rotation intact (PREVIOUS empty) |
 
 The SurrealDB 2.3.10 upgrade follows per node as a SEPARATE deploy event, after that node's image recreate, with its own time (law 12).
 - 326061de's ingress half is verified by effect (the discriminating check); its egress half is verified by hash only.
@@ -578,3 +578,5 @@ A regression class counts as covered only if negating or removing the shipped ch
   6. F;
   7. B as the self-certification admission rule.
 - The staged_base_sha check is re-aimed from route-edit-61819178 to a cutover-sited gap.
+
+**Local rollout complete at 04:59:39Z.** The secret-mask probe passes by effect on every LOCAL node, which meets the re-apply condition for the scripts/substrate autonomyScope widening locally only; the hub is unmeasured (it needs its own recreate and probe through the user). SurrealDB 2.3.10 is on hold until the database session's compat check passes (node 1's recreate interrupted its export at ~04:58; the quiet gate will now also check for running exports).
