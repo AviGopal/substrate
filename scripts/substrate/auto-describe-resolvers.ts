@@ -167,7 +167,7 @@ async function gatherEvidence(shape: string): Promise<string> {
 }
 
 /** Ask the canonical LLM resolver for ONE concrete line. Returns null on failure. */
-async function generateDescription(shape: string, evidence: string): Promise<string | null> {
+export async function generateDescription(shape: string, evidence: string): Promise<string | null> {
   const prompt =
     `You are cataloguing a software substrate's data resolvers so an automated planner ` +
     `can match goals to them. Write a SINGLE concise line (one sentence, <200 chars) ` +
@@ -279,7 +279,8 @@ async function main(): Promise<void> {
   await appendLog({ event: "tick_done", gap: undescribed.length, batch: batch.length, applied, advertised: advertised.length, described: described.size });
 }
 
-main().catch((e) => {
+// Run only as the entry point: credential-refused-branches.test.ts imports generateDescription.
+if (import.meta.main) main().catch((e) => {
   // Top-level guard — the tick must never crash the timer.
   console.error("[auto-describe] fatal (suppressed):", e);
 });

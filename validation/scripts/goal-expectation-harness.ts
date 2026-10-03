@@ -106,7 +106,7 @@ async function poll(dispatchId: string): Promise<DispatchOutcome> {
 // Override the endpoint with LLM_RESOLVER; an anthropic path is kept only if ANTHROPIC_API_KEY
 // is explicitly set (for host runs with a real key).
 const LLM_RESOLVER = process.env.LLM_RESOLVER ?? "http://127.0.0.1:8220/resolve";
-async function llmJudge(goal: string, rubric: string, answer: string): Promise<{ correct: boolean | null; detail: string }> {
+export async function llmJudge(goal: string, rubric: string, answer: string): Promise<{ correct: boolean | null; detail: string }> {
   const prompt = `You are an independent grader. Judge ONLY correctness against the rubric — ignore fluency and length.\n\nGOAL: ${goal}\n\nRUBRIC: ${rubric}\n\nANSWER UNDER TEST:\n"""${answer.slice(0, 4000)}"""\n\nReply with a single JSON object and nothing else: {"verdict":"CORRECT"|"INCORRECT","why":"<one sentence>"}. No prose, no fences.`;
   try {
     const r = await fetch(LLM_RESOLVER, {
@@ -248,4 +248,5 @@ async function main() {
   process.exit(confab > 0 ? 1 : 0);
 }
 
-main();
+// Run only as the entry point: credential-refused-branches.test.ts imports llmJudge.
+if (import.meta.main) main();

@@ -90,7 +90,7 @@ interface GroundTruth {
   errors: string[];
 }
 
-async function measureGroundTruth(): Promise<GroundTruth> {
+export async function measureGroundTruth(): Promise<GroundTruth> {
   const errors: string[] = [];
   const g: GroundTruth = { registryShapeCount: null, registryVesselCount: null, openGapCount: null, errors };
   try {
@@ -255,7 +255,7 @@ async function dispatch(goal: string) {
  * under live traffic, so a slow poll can lose a finished dispatch off the end.
  * Poll often enough that a completed record is caught before it ages out.
  */
-async function poll(dispatchId: string): Promise<Record<string, unknown> | null> {
+export async function poll(dispatchId: string): Promise<Record<string, unknown> | null> {
   const deadline = Date.now() + POLL_TIMEOUT_S * 1000;
   let lastSeen: Record<string, unknown> | null = null;
   while (Date.now() < deadline) {
@@ -323,7 +323,7 @@ function extractAnswer(rec: Record<string, unknown>): string {
   return parts.join("\n");
 }
 
-async function verifySideEffect(titleContains: string, expectValues: string[]) {
+export async function verifySideEffect(titleContains: string, expectValues: string[]) {
   try {
     const r = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
       method: "POST", headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
@@ -591,4 +591,5 @@ async function main() {
   console.log(`\nwrote ${OUT}`);
 }
 
-await main();
+// Run only as the entry point: credential-refused-branches.test.ts imports the measurement functions.
+if (import.meta.main) await main();
