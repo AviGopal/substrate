@@ -19,6 +19,9 @@
 
 set -euo pipefail
 
+# apikey_cfg KEY: the curl config line that carries an ApiKey, for `curl -K <(apikey_cfg "$K")` or
+# `apikey_cfg "$K" | curl -K -`. The key never reaches argv (printf is a builtin), so no process listing shows it.
+apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$1"; return 0; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VALIDATION_DIR="$(dirname "$SCRIPT_DIR")"
 BENCHMARK_V2="${VALIDATION_DIR}/activity-reuse-benchmark-v2.json"
@@ -229,7 +232,7 @@ ENDPOINT="\${METABOB_ENDPOINT}"
 # Pull all registered tests, ignoring transport failures.
 REG_RESPONSE=$(curl -s -X POST "${ENDPOINT}/v2/impulses/resolve" \
   -H "Content-Type: application/json" \
-  -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+  -K <(apikey_cfg "${METABOB_API_KEY:-}") \
   -d '{"pointer":{"type":"test_registration","limit":200}}' 2>/dev/null || echo "")
 
 REG_IDS=()
@@ -256,7 +259,7 @@ for TEST_ID in "${REG_IDS[@]}"; do
   DISP_EXIT=0
   curl -s -X POST "${ENDPOINT}/v2/activities/recommend" \
     -H "Content-Type: application/json" \
-    -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+    -K <(apikey_cfg "${METABOB_API_KEY:-}") \
     -d "$(printf '{"goal_text":"run sensitivity probe","filters":{"template_id":"run-sensitivity-probe"},"variables":{"test_registration_id":"%s"}}' "$TEST_ID")" \
     > /dev/null 2>&1 || DISP_EXIT=$?
   SWEEP_DISPATCHED+=("$TEST_ID:$DISP_EXIT")

@@ -11,14 +11,17 @@ echo '{"stages":{}}' > "$RESULTS"
 
 API_KEY=$(docker exec substrate-live bash -c 'source /etc/substrate/env && echo $METABOB_API_KEY')
 [ -z "$API_KEY" ] && { echo "no API key"; exit 1; }
+# apikey_cfg KEY: the curl config line that carries an ApiKey, for `curl -K <(apikey_cfg "$K")` or
+# `apikey_cfg "$K" | curl -K -`. The key never reaches argv (printf is a builtin), so no process listing shows it.
+apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$1"; return 0; }
 RESOLVE_URL="http://localhost:8090/v2/impulses/resolve"
 
 # Helper: POST a resolve, echo "<http_status>|<body_shape>|<raw_body_first_400>"
 resolve() {
   local body="$1"
   local out
-  out=$(docker exec substrate-live curl -s -w '\nHTTP:%{http_code}' -X POST "$RESOLVE_URL" \
-    -H "Authorization: ApiKey $API_KEY" -H "Content-Type: application/json" \
+  out=$(apikey_cfg "$API_KEY" | docker exec -i substrate-live curl -K - -s -w '\nHTTP:%{http_code}' -X POST "$RESOLVE_URL" \
+    -H "Content-Type: application/json" \
     -d "$body" --max-time 90 2>&1)
   local code=$(echo "$out" | sed -n 's/^HTTP://p' | tail -1)
   local payload=$(echo "$out" | sed '/^HTTP:/d')
@@ -81,8 +84,8 @@ SCENARIO_ID=$(docker exec substrate-live bash -c 'ls /workspace/validation/failu
 PROP_BEFORE=$(docker exec substrate-live bash -c 'ls /workspace/proposals/ 2>/dev/null | grep -v "^.applied" | wc -l')
 echo "  scenario_id=$SCENARIO_ID" | tee -a "$LOG"
 GOAL_BODY=$(jq -n --arg sid "$SCENARIO_ID" '{goal:"draft a gap-closing activity for scenario \($sid). Scenario file at /workspace/validation/failure-modes/scenarios/\($sid).json. Use the draft-gap-closing-activity template.", variables:{scenario_id:$sid}}')
-GOAL_OUT=$(docker exec substrate-live curl -s -X POST http://localhost:8210/run-goal \
-  -H "Authorization: ApiKey $API_KEY" -H "Content-Type: application/json" \
+GOAL_OUT=$(apikey_cfg "$API_KEY" | docker exec -i substrate-live curl -K - -s -X POST http://localhost:8210/run-goal \
+  -H "Content-Type: application/json" \
   -d "$GOAL_BODY" --max-time 300 2>&1)
 GOAL_STATUS=$(echo "$GOAL_OUT" | jq -r '.status // "error"' 2>/dev/null)
 GOAL_TEMPLATE=$(echo "$GOAL_OUT" | jq -r '.selectedTemplateId // "?"' 2>/dev/null)
