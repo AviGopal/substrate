@@ -120,6 +120,8 @@ restart_breadcrumb() { # vessel reason [in_flight]
 # RA_PROGRESSING=1. EXTEND-ONLY: progress never shortens the age deferral, so a vessel that does not publish
 # it (or has not stamped yet) keeps today's ceiling exactly, and the stall bound is read only when it does.
 # The owed path bounds how long progress may hold a restart (pull_sync.owed_restart_max_hold_seconds).
+# RA_FRESH=1 says the same thing whatever the age (published progress under the stall bound): the mirror
+# path's quiesce bound reads it, because there the tick budget, not the age, is what ran out.
 # AN OPEN PROBE WINDOW HOLDS EVERY RESTART ON THIS NODE (qa's rule, 2026-10-03: a declared held-out probe
 # window is a maintenance hold; restarts inside one turn environment failures into reach misses). The window
 # is a shaped poolImpulse (shape probeWindow, body {node, from, until, tag, reason}) read at use time from this
@@ -178,7 +180,7 @@ probe_window_open() { # -> 0 iff an open, in-cap window names this node and no o
 }
 
 restart_age_defer() {
-  RA_INFLIGHT=""; RA_OLDEST=""; RA_DEFER=0; RA_WHY=""; RA_PROBE=0; RA_PROGRESS=""; RA_PROGRESS_ID=""; RA_PROGRESSING=0
+  RA_INFLIGHT=""; RA_OLDEST=""; RA_DEFER=0; RA_WHY=""; RA_PROBE=0; RA_PROGRESS=""; RA_PROGRESS_ID=""; RA_PROGRESSING=0; RA_FRESH=0; RA_STALL_S=""
   if probe_window_open; then RA_DEFER=1; RA_PROBE=1; RA_WHY="$PW_WHY open on this node — restart held until it closes"; return 0; fi
   if [ -n "$1" ]; then
     _ra_h="$(curl -s --max-time 5 "http://127.0.0.1:$1/health" 2>/dev/null)"
@@ -189,12 +191,16 @@ restart_age_defer() {
   fi
   _ra_ceiling="${COMPOSE_CEILING_MS:-900000}"
   [ -n "$RA_INFLIGHT" ] && [ "$RA_INFLIGHT" -gt 0 ] 2>/dev/null || return 0
+  if [ -n "$RA_PROGRESS" ]; then
+    tuning_param pull_sync.stall_seconds 600; RA_STALL_S="$TP_VALUE"
+    [ "$RA_PROGRESS" -lt $(( RA_STALL_S * 1000 )) ] 2>/dev/null && RA_FRESH=1
+  fi
   if [ -n "$RA_OLDEST" ]; then
     if [ "$RA_OLDEST" -lt "$_ra_ceiling" ] 2>/dev/null; then
       RA_DEFER=1; RA_WHY="$RA_INFLIGHT in flight, oldest ${RA_OLDEST}ms < ceiling ${_ra_ceiling}ms"
-    elif [ -n "$RA_PROGRESS" ] && { tuning_param pull_sync.stall_seconds 600; [ "$RA_PROGRESS" -lt $(( TP_VALUE * 1000 )) ] 2>/dev/null; }; then
+    elif [ "$RA_FRESH" = 1 ]; then
       RA_DEFER=1; RA_PROGRESSING=1
-      RA_WHY="oldest of $RA_INFLIGHT in-flight request(s) is ${RA_OLDEST}ms, past the ${_ra_ceiling}ms ceiling, but progressing: last stage transition ${RA_PROGRESS}ms ago < pull_sync.stall_seconds ${TP_VALUE}s${RA_PROGRESS_ID:+ (attempt $RA_PROGRESS_ID)}"
+      RA_WHY="oldest of $RA_INFLIGHT in-flight request(s) is ${RA_OLDEST}ms, past the ${_ra_ceiling}ms ceiling, but progressing: last stage transition ${RA_PROGRESS}ms ago < pull_sync.stall_seconds ${RA_STALL_S}s${RA_PROGRESS_ID:+ (attempt $RA_PROGRESS_ID)}"
     else
       RA_WHY="oldest of $RA_INFLIGHT in-flight request(s) is ${RA_OLDEST}ms, past the ${_ra_ceiling}ms compose ceiling${RA_PROGRESS:+, and no stage transition for ${RA_PROGRESS}ms (stalled)}"
     fi
@@ -581,10 +587,42 @@ pullsync_glue_cleanup() { for _d in $PULLSYNC_GLUE_STAGES; do rm -rf "$_d"; done
 # Called first in every vessel pass (every `continue` lands there), right after the restart,
 # after the loop, and on EXIT, so no exit path leaves admission closed. A tick killed outright
 # leaves the marker behind; the vessel fails open on a marker past its QUIESCE_MAX_MS.
-Q_HELD=""; Q_BOUND=""
+# A CARRIED HOLD IS THE ONE DELIBERATE SURVIVOR. When the mirror path's quiesce runs out of tick budget
+# while the compose is still progressing, the restart is owed instead of taken and admission must STAY
+# closed across ticks, or new work enters and the drain bought nothing. That pass sets Q_CARRY to the
+# marker and records it in <vessel>.quiesce-carry; quiesce_release (loop head, after the loop, EXIT) then
+# leaves that one marker in place. Each later tick's owed path re-touches it (the vessel ignores a marker
+# older than its QUIESCE_MAX_MS, 20 min, and a hold may last pull_sync.owed_restart_max_hold_seconds) and
+# releases it the moment the hold ends: restart taken (drained, silent past the stall bound, max hold),
+# nothing owed any more, or any deferral that is not progress (a probe window). If pull-sync stops
+# ticking, nothing re-touches it and the vessel fails open within QUIESCE_MAX_MS.
+Q_HELD=""; Q_BOUND=""; Q_CARRY=""
 quiesce_release() {
-  [ -n "${Q_HELD:-}" ] && rm -f "$Q_HELD" 2>/dev/null
-  Q_HELD=""; Q_BOUND=""; return 0
+  if [ -n "${Q_HELD:-}" ] && [ "${Q_CARRY:-}" != "$Q_HELD" ]; then
+    rm -f "$Q_HELD" "$MARKER_DIR/${Q_HELD##*/}.quiesce-carry" 2>/dev/null
+  fi
+  Q_HELD=""; Q_BOUND=""; Q_CARRY=""; return 0
+}
+# owed_hold_bound <vessel> — progress may hold an owed restart, but not forever. Returns 0 (and sets
+# RA_DEFER=0, OH_LOSSY=1, RA_WHY, logs LOSSY + a forced_owed_restart_lossy DEFERRAL_LOG record naming the
+# attempt /health published) once the restart has been owed (<vessel>.restart-owed-since) for at least
+# pull_sync.owed_restart_max_hold_seconds (shaped tuning row, default 2700); 1 while the hold may continue.
+# Called only for a progress hold, so vessels that publish no progress never read the row.
+# TODO(gap the-causal-attempt-ledger-records-only-landings-so-failed-attempts-have-no-ledger-entry): the
+# killed attempt gets a log line and a DEFERRAL_LOG record only; record it in the attempt ledger as a
+# killed outcome once that ledger carries failures.
+owed_hold_bound() {
+  OH_LOSSY=""
+  tuning_param pull_sync.owed_restart_max_hold_seconds 2700; _oh_max="$TP_VALUE"
+  _oh_since="$(cat "$MARKER_DIR/$1.restart-owed-since" 2>/dev/null || true)"; case "$_oh_since" in ''|*[!0-9]*) return 1 ;; esac
+  _oh_held=$(( $(date +%s) - _oh_since ))
+  [ "$_oh_held" -ge "$_oh_max" ] 2>/dev/null || return 1
+  RA_DEFER=0; OH_LOSSY=1
+  RA_WHY="owed for ${_oh_held}s, past pull_sync.owed_restart_max_hold_seconds (${_oh_max}s), though still progressing (${RA_WHY})"
+  log "$1: LOSSY owed restart — restarting into ${RA_INFLIGHT:-?} in-flight request(s) still progressing (last stage transition ${RA_PROGRESS:-?}ms ago) after holding the restart ${_oh_held}s (max hold ${_oh_max}s); attempt ${RA_PROGRESS_ID:-unknown} IS lost"
+  printf '{"at":"%s","actor":"pull-sync","action":"forced_owed_restart_lossy","vessel":"%s","in_flight":%s,"held_s":%s,"max_hold_s":%s,"last_progress_ms":%s,"attempt":"%s"}\n' \
+    "$(date -Iseconds)" "$1" "${RA_INFLIGHT:-0}" "$_oh_held" "$_oh_max" "${RA_PROGRESS:-null}" "${RA_PROGRESS_ID:-unknown}" >> "$DEFERRAL_LOG" 2>/dev/null || true
+  return 0
 }
 trap 'pullsync_glue_cleanup; quiesce_release' EXIT
 
@@ -1966,7 +2004,14 @@ for d in "$CLONE_DIR"/*/; do
   # When the restart was first owed (epoch s), for the max-hold bound below. The pending marker cannot be
   # the clock: the mirror path rewrites it on every deferral. A clock with no pending marker is stale.
   OWED_SINCE_FILE="$MARKER_DIR/$v.restart-owed-since"
-  [ -s "$PENDING_FILE" ] || rm -f "$OWED_SINCE_FILE" 2>/dev/null || true
+  P_CARRY_FILE="$MARKER_DIR/$v.quiesce-carry"
+  if [ ! -s "$PENDING_FILE" ]; then   # nothing owed: no hold clock, and no carried admission hold
+    rm -f "$OWED_SINCE_FILE" 2>/dev/null || true
+    if [ -s "$P_CARRY_FILE" ]; then
+      log "$v: dropping a carried quiesce hold — no restart is owed any more; admission reopened"
+      rm -f "$(cat "$P_CARRY_FILE" 2>/dev/null)" "$P_CARRY_FILE" 2>/dev/null || true
+    fi
+  fi
   P_UNIT="$(vessel_unit "$v")"; P_OWED=""
   if [ -s "$PENDING_FILE" ]; then
     P_OWED="restart recorded as pending (for content $(cut -c1-10 < "$PENDING_FILE" 2>/dev/null); clone now ${CLONE_HASH:0:10})"
@@ -1980,24 +2025,25 @@ for d in "$CLONE_DIR"/*/; do
     P_DEFER_FILE="$MARKER_DIR/$v.restart-deferrals"
     P_DEFERRED_N="$(cat "$P_DEFER_FILE" 2>/dev/null || echo 0)"
     case "$P_DEFERRED_N" in ''|*[!0-9]*) P_DEFERRED_N=0 ;; esac
-    restart_age_defer "$P_PORT" "$P_DEFERRED_N"; P_INFLIGHT="$RA_INFLIGHT"; P_LOSSY=""
+    # A CARRIED HOLD (see quiesce_release): keep admission closed while this tick decides, re-touched so
+    # the vessel's QUIESCE_MAX_MS staleness never reopens it under a hold that is still live.
+    P_CARRIED=""
+    if [ -s "$P_CARRY_FILE" ]; then
+      P_CARRIED="$(cat "$P_CARRY_FILE" 2>/dev/null)"; Q_HELD="$P_CARRIED"
+      : > "$Q_HELD" 2>/dev/null || true
+    fi
+    restart_age_defer "$P_PORT" "$P_DEFERRED_N"; P_INFLIGHT="$RA_INFLIGHT"; P_LOSSY=""; P_HOLD=""
     # PROGRESS MAY HOLD AN OWED RESTART, BUT NOT FOREVER. A past-ceiling request that is still making stage
-    # transitions is deferred (restart_age_defer), yet a lane that never goes idle would hold the mirrored
-    # code unloaded indefinitely. Once the restart has been owed for pull_sync.owed_restart_max_hold_seconds
-    # (shaped tuning row, default 2700) it is taken anyway and the loss is said out loud: LOSSY, naming the
-    # attempt /health published. A probe window is not progress and is never overridden here.
-    # TODO(gap the-causal-attempt-ledger-records-only-landings-so-failed-attempts-have-no-ledger-entry): the
-    # killed attempt gets a log line and a DEFERRAL_LOG record only; record it in the attempt ledger as a
-    # killed outcome once that ledger carries failures.
-    if [ "$RA_DEFER" = 1 ] && [ "${RA_PROGRESSING:-0}" = 1 ] && [ "$RA_PROBE" != 1 ]; then
-      tuning_param pull_sync.owed_restart_max_hold_seconds 2700; P_MAX_HOLD="$TP_VALUE"
-      P_SINCE="$(cat "$OWED_SINCE_FILE" 2>/dev/null || true)"; case "$P_SINCE" in ''|*[!0-9]*) P_SINCE="" ;; esac
-      if [ -n "$P_SINCE" ] && [ $(( $(date +%s) - P_SINCE )) -ge "$P_MAX_HOLD" ] 2>/dev/null; then
-        P_HELD=$(( $(date +%s) - P_SINCE )); RA_DEFER=0; P_LOSSY=1
-        RA_WHY="owed for ${P_HELD}s, past pull_sync.owed_restart_max_hold_seconds (${P_MAX_HOLD}s), though still progressing (${RA_WHY})"
-        log "$v: LOSSY owed restart — restarting into $RA_INFLIGHT in-flight request(s) still progressing (last stage transition ${RA_PROGRESS}ms ago) after holding the restart ${P_HELD}s (max hold ${P_MAX_HOLD}s); attempt ${RA_PROGRESS_ID:-unknown} IS lost"
-        printf '{"at":"%s","actor":"pull-sync","action":"forced_owed_restart_lossy","vessel":"%s","in_flight":%s,"held_s":%s,"max_hold_s":%s,"last_progress_ms":%s,"attempt":"%s"}\n' \
-          "$(date -Iseconds)" "$v" "${RA_INFLIGHT:-0}" "$P_HELD" "$P_MAX_HOLD" "${RA_PROGRESS:-null}" "${RA_PROGRESS_ID:-unknown}" >> "$DEFERRAL_LOG" 2>/dev/null || true
+    # transitions is deferred (restart_age_defer), and so is any request under a carried quiesce hold that
+    # still publishes fresh progress; owed_hold_bound ends either at the max hold, LOSSY. A carried hold whose
+    # compose is no longer progressing restarts, as the quiesce that carried it announced. A probe window is
+    # not progress and is never overridden here.
+    if [ "$RA_DEFER" = 1 ] && [ "$RA_PROBE" != 1 ]; then
+      if [ "${RA_PROGRESSING:-0}" = 1 ] || { [ -n "$P_CARRIED" ] && [ "${RA_FRESH:-0}" = 1 ]; }; then
+        P_HOLD=1
+        if owed_hold_bound "$v"; then P_HOLD=""; P_LOSSY=1; fi
+      elif [ -n "$P_CARRIED" ]; then
+        RA_DEFER=0; RA_WHY="carried quiesce hold, but no fresh progress ($RA_WHY) — restarting as the quiesce announced"
       fi
     fi
     # AN OWED RESTART MUST NOT BE STARVED BY A BUSY VESSEL. The age ceiling resets with
@@ -2008,7 +2054,7 @@ for d in "$CLONE_DIR"/*/; do
     # close admission and drain (the mirror path's quiesce) instead of deferring again.
     # A PROGRESS deferral does not count toward this: the drain's bound would kill the progressing run at
     # deferral N, pre-empting the max-hold bound above, which is the one hard bound for progress.
-    if [ "$RA_DEFER" = 1 ] && [ "$RA_PROBE" != 1 ] && [ "${RA_PROGRESSING:-0}" != 1 ] && [ "$P_DEFERRED_N" -ge "${RESTART_DEFER_MAX:-3}" ] 2>/dev/null; then
+    if [ "$RA_DEFER" = 1 ] && [ "$RA_PROBE" != 1 ] && [ -z "$P_HOLD" ] && [ "$P_DEFERRED_N" -ge "${RESTART_DEFER_MAX:-3}" ] 2>/dev/null; then
       quiesce_drain "$v" "$P_PORT"
       RA_DEFER=0
       RA_WHY="owed restart deferred ${P_DEFERRED_N} time(s); quiesced: $QD_WHY"
@@ -2016,6 +2062,9 @@ for d in "$CLONE_DIR"/*/; do
     if [ "$RA_DEFER" = 1 ]; then
       echo "$((P_DEFERRED_N + 1))" > "$P_DEFER_FILE" 2>/dev/null || true
       [ -s "$OWED_SINCE_FILE" ] || date +%s > "$OWED_SINCE_FILE" 2>/dev/null || true
+      if [ -n "$P_HOLD" ] && [ -n "$P_CARRIED" ]; then
+        Q_CARRY="$Q_HELD"; RA_WHY="$RA_WHY; admission stays closed (carried quiesce hold, marker re-touched)"
+      fi
       log "$v: owed restart still deferred — $RA_WHY ($P_OWED)"
     else
       P_REASON="owed restart after deferral"
@@ -2029,8 +2078,10 @@ for d in "$CLONE_DIR"/*/; do
       if [ -n "$P_UNIT" ] && systemctl is-active --quiet "$P_UNIT" 2>/dev/null; then
         restart_breadcrumb "$v" "$P_REASON" "$P_INFLIGHT"
         systemctl restart "$P_UNIT" 2>/dev/null || true
+        Q_CARRY=""; quiesce_release   # a carried hold ends with the restart: the new process must find admission open
         sleep "$STAGGER_SECONDS"
       fi
+      Q_CARRY=""; quiesce_release     # and with the owed restart dropped for an inactive unit
     fi
   fi
   if [ "$CLONE_HASH" = "$RUNTIME_HASH" ]; then
@@ -2356,7 +2407,7 @@ EOF
         else
           # Bound exists so a wedged vessel cannot block deploys forever. Say what
           # is being given up, in the same terms as the old branch.
-          log "$v: still $NOW in flight after ${QSPENT}s of quiesce (bound ${QWAIT}s) — converging anyway; that run IS lost and its outcome will not be attributable"
+          log "$v: still $NOW in flight after ${QSPENT}s of quiesce (bound ${QWAIT}s) — converging anyway unless it is still progressing (decided at the restart); otherwise that run IS lost and its outcome will not be attributable"
           INFLIGHT=0; Q_BOUND=1
         fi
         # ADMISSION STAYS CLOSED UNTIL THE RESTART. The marker used to be removed right here,
@@ -3212,8 +3263,20 @@ EOF
     restart_age_defer "$PORT" "$DEFERRED_N"; INFLIGHT="$RA_INFLIGHT"
     # The quiesce above already gave up on the run it could not drain ("converging anyway"):
     # deferring now would strand the restart behind that same run. A probe window still holds.
+    # UNLESS THAT RUN IS STILL PROGRESSING: then the tick budget ran out, not the compose. Hold instead —
+    # the restart is owed (deferral below), and admission stays closed across ticks (Q_CARRY, see
+    # quiesce_release) so no new work enters; the owed path ends the hold on drain, on silence past
+    # pull_sync.stall_seconds, or LOSSY at pull_sync.owed_restart_max_hold_seconds (owed_hold_bound).
+    # A vessel that publishes no progress keeps today's converge-anyway.
     if [ -n "${Q_BOUND:-}" ] && [ "$RA_DEFER" = 1 ] && [ "$RA_PROBE" != 1 ]; then
-      RA_DEFER=0; RA_WHY="quiesce bound reached this tick, $RA_WHY — restarting as the quiesce announced"
+      if [ "${RA_FRESH:-0}" = 1 ]; then
+        if ! owed_hold_bound "$v"; then
+          Q_CARRY="$Q_HELD"; echo "$Q_HELD" > "$MARKER_DIR/$v.quiesce-carry" 2>/dev/null || true
+          RA_WHY="quiesce bound reached this tick, but the compose is progressing ($RA_WHY) — holding admission closed across ticks instead of restarting into it"
+        fi
+      else
+        RA_DEFER=0; RA_WHY="quiesce bound reached this tick, $RA_WHY — restarting as the quiesce announced"
+      fi
     fi
     if [ "$RA_DEFER" = 1 ]; then
       echo "$((DEFERRED_N + 1))" > "$DEFER_FILE" 2>/dev/null || true
@@ -3242,7 +3305,7 @@ EOF
     rm -f "$MARKER_DIR/$v.restart-pending" "$MARKER_DIR/$v.restart-owed-since" 2>/dev/null || true
     restart_breadcrumb "$v" "converged to origin/dev${RA_OLDEST:+ (oldest in-flight ${RA_OLDEST}ms)}" "$INFLIGHT"
     systemctl restart "$UNIT" 2>/dev/null || true
-    quiesce_release   # the new process must find admission open
+    Q_CARRY=""; quiesce_release   # the new process must find admission open, a carried hold included
     sleep "$STAGGER_SECONDS"
     if [ -n "$PORT" ]; then
       ok=0
