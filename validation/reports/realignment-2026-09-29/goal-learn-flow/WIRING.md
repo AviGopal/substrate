@@ -812,3 +812,13 @@ Ranked by lane time:
 - **Also filed:** failing families re-win picks through fresh-lineage children (`a-failed-attempt-mints-a-narrowed-or-step-child-with-fresh-lineage-…`, medium).
 - **The compose cap is env-only** (COMPOSE_MAX_CONCURRENT default 2, so the autonomous lane gets 1). That's census topic B.
 - **Rate implication:** lane capacity, not drafting ability, is the binding constraint, and class 1 plus the semantic overrule waste most of it. These are the next check-first targets.
+- **Shared tracked-red lib (725983e7) VERIFIED BY EFFECT (deployment, hermetic fixture store with one open and one closed gap):**
+  - **Image** :dev 4277b49d (contains 725983e7 and e7e51785, SurrealDB 2.3.10): the lib and connect-merge.sh are present. tracked_fail_names returns the tracked name from the share dir AND from a body-relative lib with an EMPTY share dir; with neither present it returns nothing (the negative control). The closed gap's name never counts.
+  - **Gated nodes** (node 1, node 2, pubspoke) promoted 0c90e87e via Gate P; accepted/ carries the lib and returns the name with an empty share dir.
+  - **"TRACKED-RED LIB MISSING":** 0 lines in 6 h on all 5 nodes.
+  - **Next, each its own event:** the client-config re-emit, then node 1's re-pin to 4277b49d (retention hold re-applied).
+- **Retention pause release time drifted** to 2026-10-04T07:17:05Z: vessel-ctl install reset the transient timer. The pause stays env-held until then, and the tuning-row throttle stays beneath it.
+- **Lane yield check-in (node 1, since 06:03Z):** 17 composes → 0 landings → 0 verified. Check-first done for the three ranked blockers:
+  - (a) semantic dissent advisory: 4bba1a5, round 2 underway;
+  - (b) relocation hint: 51f2e6af, in qa review;
+  - (c) bounce quiesce: test plus fix landing as one operator commit.
