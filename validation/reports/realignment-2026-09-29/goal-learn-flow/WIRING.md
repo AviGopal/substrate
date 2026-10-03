@@ -663,3 +663,12 @@ A regression class counts as covered only if negating or removing the shipped ch
     - the pruned set was only policy kinds;
     - zero gradable rows were pruned (positive-controlled);
     - how the cap actually evicts.
+- **Retention discontinuity CONFIRMED (db fork, read-only on the pre-upgrade backup, positive-controlled).**
+  - **Cause:** on 2.3.3 the sweep's cold count via `idx_execution_activity_success_time` was 0 for validator-dispatch and slot-binding; on the same data, NOINDEX and 2.3.10 both gave 51,719 / 724 / 10,677. Every sweep from 10-02 13:15Z to the upgrade logged coldCount 0. Migration 198 (08-22) had removed this index for this reason; it was re-created by DEFINE … OVERWRITE in schemas/020 and migration 113 (folded into the migration-runner gap).
+  - **Removed by the first 2.3.10 sweep:** 61,465 rows, all policy kinds (validator-dispatch 51,119; slot-binding 10,077; auth_resolve_v1 269, stamped reached=false at insert). The "153 orphans" were in other tables.
+  - **Zero gradable rows lost:**
+    - 0 reach_graded (6,607 present in both);
+    - 0 label-referenced (3,021 present);
+    - 0 open-gap-referenced (295 present);
+    - 0 attempt-ledger-referenced (111 present).
+  - **Consequence, now confirmed from code:** the global-ceiling valve evicts oldest-first with no filter on kind or grading. Under 2.3.3 it did all the deleting while telemetry held about 41% of the ring, so gradable history was evicted alongside telemetry. The historical count is unmeasurable (no earlier backup). Filed: `the-trace-ceiling-valve-evicts-oldest-first-across-all-kinds-…` (high).
