@@ -444,8 +444,5 @@ The organs that carry it already exist: self_fact_reconcile rows (selfFactSpec),
 - **Treat it as excluded or marked in every measurement window:** selection and elimination, reach verdicts, failed traces, the lane's landings, and the ed58e66 post-landing effect window. It is not a system fault, and nothing should learn from it (failure memory, credit, extraction).
 - **Correction:** an earlier DB "inactive" reading attributed to key rotation was this kill.
 
-## Step 5 constraint: cross-version contamination of posteriors (10-03, database session)
-The insert-path context_thompson_scores UPDATE (ctxSql/rdSql) filters account scope, template and bucket but NOT signature_version. Every v0 outcome write therefore also increments a signature_version 1 cell with the same (org, template, bucket): in a fixture, a v1 cell went from 6 to 8 n_observations after two v0 writes. Some v1 evidence may therefore be v0 outcomes.
-- Before any re-baseline (step 5) or v1-only analysis, size the v0/v1 key collisions (read-only, in progress).
-- Treat colliding v1 cells as contaminated until the writer filters signature_version.
-- Recorded on the-trace-ingest-request-path-scans-two-whole-tables-for-learning-writes.
+## Cross-version posterior write: LATENT, not a step-5 constraint (corrected 10-03)
+The insert-path context_thompson_scores UPDATE (ctxSql/rdSql) omits signature_version from its filter, so a v0 write COULD increment a v1 cell with the same (org, template, bucket); a fixture showed it. **Measured on node 1 (read-only, WITH NOINDEX): ZERO v0/v1 colliding keys among 10,506 v1 keys, so 0 of 765,717 v1 observations sit in a colliding cell.** The two versions use disjoint bucket formats: v0 is 8-hex, v1 is 16-hex or cluster:…. Current v1 data is NOT contaminated, and this is not a constraint on the re-baseline. The defect is latent (it bites only if the formats ever coincide). The test pins it, so a fix cannot rely on format luck. Recorded on the-trace-ingest-request-path-scans-two-whole-tables-for-learning-writes. (An earlier version of this section, 4b2a82fa, recorded it as a step-5 constraint before measurement; superseded.)
