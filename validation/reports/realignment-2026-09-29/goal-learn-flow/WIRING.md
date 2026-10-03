@@ -356,3 +356,28 @@ Recorded with the admission-cap gap (selection-candidates-are-silently-truncated
   - WIRING_CORRECTION_METHOD and cross-vessel-wiring-repair (08-28/29);
   - MECHANISM-AUDIT and WHY-THINGS-KEEP-BREAKING (09-28);
   - REALIGNMENT (09-29).
+
+## The plan of record becomes executable (user observation; qa-approved 10-03)
+**Why the synthesis documents go stale (user):** progress is made, then something regresses. The regression gets fixed, the goal still fails at the next broken joint, and a new synthesis is written instead of the old list being continued. No synthesis re-runs, nothing ties a change to its effect, and several joints are broken at once.
+
+**The rule.** REALIGNMENT §2.1 (Rank 1: one standing expectation evaluator, proven able to fail, that every mechanism registers into), executed by REALIGNMENT §7 step 2, IS the executable plan of record. This adds only three things:
+- every WIRING and WIRING-ADDENDUM must-fail is a registered row;
+- WIRING becomes a VIEW of those rows (REALIGNMENT §8; law 9), updated by them, not rewritten by the next audit;
+- each later step lands with its must-fail REGISTERED as a standing row, not only run once.
+
+The organs that carry it already exist: self_fact_reconcile rows (selfFactSpec), the expectation and expectation-trend batteries, and rhythm scheduling. No new probe runner (09-28 ruling).
+
+**Placement.** REALIGNMENT §7 step 2, run immediately after WIRING step 2 (code version per step), because per-commit attribution of a red row depends on it. Until step 2 lands, a red row names the deploy window and the commits deployed in it, not one commit.
+
+**Must-fail for the mechanism:**
+- sever one joint, in a fixture or sandbox node only. Its row goes red within one tick; repair turns it green within one tick; the class row stays red until all of its joints are green;
+- positive control: an intact joint's row stays green over the same ticks;
+- completion: each tick, rows evaluated per node = rows registered per node. A row that silently did not run never reads as a pass.
+
+**qa's constraints:**
+1. **Held-out burn.** Class-acceptance probe runs are quarantined from learning: a probe tag on their traces, excluded by credit, extraction and failure memory. Must-fail: after a probe run, no posterior or template changes. Slow cadence; fresh sealed probes rotate in on a schedule.
+2. **No self-certification.** A landing cannot edit or weaken the row that judges it in the same change. Rows change only through the criterion path and are evaluated by the already-accepted evaluator. (See also the gap the-lane-can-edit-the-gates-and-tests-that-judge-its-own-landings.)
+3. **Outputs.** Results go to a sandboxed row store, never to memory, conventions or traces. Red becomes work: N consecutive red ticks files or bumps exactly ONE deduplicated gap per joint, citing the row, through one gated path (no repeat of the 09-22 flood).
+4. **Instance and class rows are tagged.** An instance row retires when its joint is retired or replaced by a class row.
+5. **Spend.** Spend per rhythm is declared within the $5/h envelope. Row and probe dispatches are excluded from the lane's reach and close-rate denominators.
+6. **Reporting.** "N/M rows green" is NOT the headline (law 7: registering easy rows games it). Progress is reported as the gap triple, with row state as evidence.
