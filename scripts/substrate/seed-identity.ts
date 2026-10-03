@@ -6,6 +6,7 @@
 //   Requires METABOB_API_KEY, JWT_SECRET env vars (set via EnvironmentFile).
 
 import { writeFileSync, readFileSync, existsSync, renameSync } from "node:fs";
+import { createHash } from "node:crypto";
 
 const IDENTITY_URL = process.env.IDENTITY_VESSEL_URL ?? "http://127.0.0.1:8101";
 // Fallback authed route for key validation when identity exposes no /v1/keys/validate.
@@ -14,10 +15,27 @@ const SEED_KEY = process.env.METABOB_API_KEY ?? "";
 const JWT_SECRET = process.env.JWT_SECRET ?? "";
 const SECRETS_FILE = "/workspace/.substrate-private/substrate-secrets"; // masked directory; identity-seeder is a declared exemption
 
-if (!SEED_KEY || !JWT_SECRET) {
-  console.error("[seed-identity] METABOB_API_KEY and JWT_SECRET must be set");
-  process.exit(1);
+// A KEY IS NAMED IN THE JOURNAL BY ITS FINGERPRINT, NEVER BY ITS VALUE.
+//
+// This seeder runs as a unit, so everything it prints lands in the journal, which every
+// root process (and anyone with `journalctl`) can read and which is copied off-node in
+// diagnostics. It used to print the freshly issued fleet key verbatim
+// ("issued API key (substrate-default): <key>"), and the env-write failure path printed
+// "manually set METABOB_API_KEY=<key>": the key left the masked secret store through the
+// log, on every genuine first boot. A fingerprint (identity's key_id when it returned
+// one, plus a short sha256 prefix of the value) is enough to tell two keys apart and to
+// correlate with identity's own "[KeyIssuance] Issued key: { key_id }" line, and is
+// useless as a credential.
+export function keyFingerprint(key: string): string {
+  return `sha256:${createHash("sha256").update(key).digest("hex").slice(0, 12)}`;
 }
+export function describeIssuedKey(name: string, key: IssuedKey): string {
+  const id = key.keyId ? ` key_id=${key.keyId}` : "";
+  return `[seed-identity] issued API key (${name})${id} fingerprint=${keyFingerprint(key.key)}`;
+}
+
+/** An issued key: the value (to persist) and identity's id for it (safe to log). */
+export interface IssuedKey { key: string; keyId?: string }
 
 // Replace an existing `KEY=...` line or append it if absent. Used for keys that
 // are not present in the base env template (e.g. the admin key).
@@ -127,7 +145,7 @@ async function issueKey(
   org_id: string,
   name: string,
   scopes: string[] = ["read", "write"],
-): Promise<string> {
+): Promise<IssuedKey> {
   const issueRes = await fetch(`${IDENTITY_URL}/v1/keys/issue`, {
     method: "POST",
     headers: {
@@ -142,10 +160,11 @@ async function issueKey(
     throw new Error(`key issue failed for '${name}' ${issueRes.status}: ${body}`);
   }
 
-  const body = await issueRes.json() as { key?: string; data?: { key: string } };
+  const body = await issueRes.json() as { key?: string; key_id?: string; data?: { key: string; key_id?: string } };
   const key = body.key ?? body.data?.key;
-  if (!key) throw new Error(`key issue for '${name}': unexpected response shape: ${JSON.stringify(body)}`);
-  return key;
+  // Name the fields, not the body: a body with an unexpected shape may still carry a key.
+  if (!key) throw new Error(`key issue for '${name}': unexpected response shape (fields: ${Object.keys(body ?? {}).join(",")})`);
+  return { key, keyId: body.key_id ?? body.data?.key_id };
 }
 
 /** The key the fleet is actually carrying, read from the file vessels are started with. */
@@ -228,6 +247,10 @@ function writeFleetKey(key: string): void {
 }
 
 async function main() {
+  if (!SEED_KEY || !JWT_SECRET) {
+    console.error("[seed-identity] METABOB_API_KEY and JWT_SECRET must be set");
+    process.exit(1);
+  }
   await waitForIdentity();
 
   // Attempt signup — creates org + user + returns JWT
@@ -295,9 +318,9 @@ async function main() {
     }
     const { token, user_id, org_id } = await loginRes.json() as { token: string; user_id: string; org_id: string };
     const reissued = await issueKey(token, user_id, org_id, "substrate-default");
-    writeFleetKey(reissued);
-    console.log("[seed-identity] re-issued substrate-default and wrote it to env + secrets — key consumers must restart");
-    await ensureAdminKey(reissued);
+    writeFleetKey(reissued.key);
+    console.log(`${describeIssuedKey("substrate-default", reissued)} — re-issued and wrote it to env + secrets; key consumers must restart`);
+    await ensureAdminKey(reissued.key);
     return;
   }
 
@@ -315,8 +338,9 @@ async function main() {
   console.log(`[seed-identity] org created: ${org_id}, user: ${user_id}`);
 
   // Issue the shared substrate default key
-  const defaultKey = await issueKey(token, user_id, org_id, "substrate-default");
-  console.log(`[seed-identity] issued API key (substrate-default): ${defaultKey}`);
+  const issuedDefault = await issueKey(token, user_id, org_id, "substrate-default");
+  const defaultKey = issuedDefault.key;
+  console.log(describeIssuedKey("substrate-default", issuedDefault));
 
   // Write the issued key back to .substrate-secrets and /etc/substrate/env
   // so configure-local.sh and subsequent vessel restarts use the proper HMAC key.
@@ -339,7 +363,7 @@ async function main() {
     console.log("[seed-identity] updated METABOB_API_KEY in /etc/substrate/env and .substrate-secrets");
   } catch (e) {
     console.warn(`[seed-identity] could not update env file: ${(e as Error).message}`);
-    console.warn(`[seed-identity] manually set METABOB_API_KEY=${defaultKey}`);
+    console.warn(`[seed-identity] METABOB_API_KEY (${keyFingerprint(defaultKey)}) is persisted nowhere: re-run this seeder once the env file is writable (it re-issues), or issue one with substrate-key`);
   }
 
   // Issue the substrate self-admin key — the mint credential for managing this
@@ -348,10 +372,10 @@ async function main() {
   // directly. Persist it under SUBSTRATE_ADMIN_KEY so operators (and the keyctl
   // CLI) can retrieve it as the keyspace's bootstrap credential.
   const adminKey = await issueKey(token, user_id, org_id, "substrate-admin", ["read", "write", "admin"]);
-  persistAdminKey(adminKey);
+  persistAdminKey(adminKey.key);
   // Name only: the journal is readable by every root process, so an admin key
   // printed here is an admin key handed to the whole fleet.
-  console.log("[seed-identity] issued self-admin key (substrate-admin)");
+  console.log(describeIssuedKey("substrate-admin", adminKey));
   console.log("[seed-identity] set SUBSTRATE_ADMIN_KEY in its scoped files (secrets-manifest.json) and .substrate-secrets");
 
   // Issue dedicated per-vessel keys (per D4 — per-vessel trace attribution) and
@@ -366,22 +390,25 @@ async function main() {
   // showed it because the key never changes there. upsertEnvVar is the same
   // helper the admin key above already uses.
   const localToolsKey = await issueKey(token, user_id, org_id, "local-tools-vessel");
-  upsertEnvVar("/etc/substrate/env", "LOCAL_TOOLS_VESSEL_API_KEY", localToolsKey);
-  upsertEnvVar(SECRETS_FILE, "LOCAL_TOOLS_VESSEL_API_KEY", localToolsKey);
-  console.log(`[seed-identity] issued + wrote LOCAL_TOOLS_VESSEL_API_KEY (local-tools-vessel)`);
+  upsertEnvVar("/etc/substrate/env", "LOCAL_TOOLS_VESSEL_API_KEY", localToolsKey.key);
+  upsertEnvVar(SECRETS_FILE, "LOCAL_TOOLS_VESSEL_API_KEY", localToolsKey.key);
+  console.log(`${describeIssuedKey("local-tools-vessel", localToolsKey)} — wrote LOCAL_TOOLS_VESSEL_API_KEY`);
 
   const goalHostKey = await issueKey(token, user_id, org_id, "goal-host-vessel");
-  upsertEnvVar("/etc/substrate/env", "GOAL_HOST_VESSEL_API_KEY", goalHostKey);
-  upsertEnvVar(SECRETS_FILE, "GOAL_HOST_VESSEL_API_KEY", goalHostKey);
-  console.log(`[seed-identity] issued + wrote GOAL_HOST_VESSEL_API_KEY (goal-host-vessel)`);
+  upsertEnvVar("/etc/substrate/env", "GOAL_HOST_VESSEL_API_KEY", goalHostKey.key);
+  upsertEnvVar(SECRETS_FILE, "GOAL_HOST_VESSEL_API_KEY", goalHostKey.key);
+  console.log(`${describeIssuedKey("goal-host-vessel", goalHostKey)} — wrote GOAL_HOST_VESSEL_API_KEY`);
 
   const conceptDbKey = await issueKey(token, user_id, org_id, "concept-db");
-  upsertEnvVar("/etc/substrate/env", "CONCEPT_DB_API_KEY", conceptDbKey);
-  upsertEnvVar(SECRETS_FILE, "CONCEPT_DB_API_KEY", conceptDbKey);
-  console.log(`[seed-identity] issued + wrote CONCEPT_DB_API_KEY (concept-db)`);
+  upsertEnvVar("/etc/substrate/env", "CONCEPT_DB_API_KEY", conceptDbKey.key);
+  upsertEnvVar(SECRETS_FILE, "CONCEPT_DB_API_KEY", conceptDbKey.key);
+  console.log(`${describeIssuedKey("concept-db", conceptDbKey)} — wrote CONCEPT_DB_API_KEY`);
 }
 
-main().catch(e => {
-  console.error("[seed-identity]", e);
-  process.exit(1);
-});
+// Imported (by its test) it only defines; run as the seeder it seeds.
+if (import.meta.main) {
+  main().catch(e => {
+    console.error("[seed-identity]", e);
+    process.exit(1);
+  });
+}
