@@ -49,6 +49,9 @@
 #      to curl as a config line instead: on stdin (`printf … | curl -K -`) or on a file
 #      descriptor (`curl -K <(apikey_cfg "$KEY")`, printf being a builtin). Bearer/JWT and
 #      registry tokens are a different credential and are not linted here.
+#      validation/scripts/** is scanned for this predicate too (*.sh, *.ts, *.mjs; this file excluded,
+#      since its fixtures quote the very lines it refuses): harnesses there run on a schedule
+#      (run-weekly-harness) or by hand on a live node, and their argv is as readable as a unit's.
 #      Unit files are scanned for this predicate too: every scripts/substrate/units/**/*.service and
 #      drop-in *.conf, on its ExecStart=/ExecStartPre=/ExecStartPost=/ExecReload=/ExecStop= lines and
 #      their backslash continuations (a unit's command line is a process's argv like any other; `$$K`
@@ -176,6 +179,11 @@ scan_tree() { # <root> -> every uncredentialed request site under scripts/ and .
 scan_tree_argv() { # <root> -> every key on curl argv under scripts/, .claude/hooks/ and the unit files
   local r="$1" f
   scanned_files "$r" | while IFS= read -r f; do scan_argv_file "$f" "${f#"$r"/}"; done
+  if [ -d "$r/validation/scripts" ]; then
+    find "$r/validation/scripts" -type f \( -name '*.sh' -o -name '*.ts' -o -name '*.mjs' \) -not -name '*.d.ts' \
+      -not -name 'resolve-writers-send-credentials.test.sh' -not -path '*/node_modules/*' -print | LC_ALL=C sort \
+      | while IFS= read -r f; do scan_argv_file "$f" "${f#"$r"/}"; done
+  fi
   [ -d "$r/scripts/substrate/units" ] || return 0
   find "$r/scripts/substrate/units" -type f \( -name '*.service' -o -name '*.conf' \) -print | LC_ALL=C sort \
     | while IFS= read -r f; do scan_unit_argv_file "$f" "${f#"$r"/}"; done
@@ -375,7 +383,7 @@ fi
 
 hits="$(scan_tree_argv "$ROOT")"
 if [ -z "$hits" ]; then
-  ok "no script under scripts/ or .claude/hooks/, and no unit Exec line, puts an ApiKey/x-api-key on curl argv"
+  ok "no script under scripts/, .claude/hooks/ or validation/scripts/, and no unit Exec line, puts an ApiKey/x-api-key on curl argv"
 else
   while IFS= read -r h; do bad "$h: a key on curl argv (readable in any process listing); send it with curl -K - or -K <(…)"; done <<< "$hits"
 fi
