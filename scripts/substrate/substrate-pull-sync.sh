@@ -112,6 +112,14 @@ restart_breadcrumb() { # vessel reason [in_flight]
 # A vessel that publishes in_flight_oldest_ms is deferred until its OLDEST request passes the
 # compose ceiling — only then is it stuck. A vessel that does not publish the age keeps the
 # RESTART_DEFER_MAX count bound: without an age nothing distinguishes busy from wedged.
+# PROGRESS, NOT AGE, SAYS WHETHER A PAST-CEILING REQUEST IS STUCK. A compose that walks scope -> plan ->
+# apply -> verify -> own-check -> cutover routinely runs past the 900 s ceiling while still moving, and the
+# age rule restarted into it. A vessel that also publishes in_flight_last_progress_ms (ms since the most
+# recent STAGE TRANSITION of any in-flight request; null/absent until one has stamped) keeps a past-ceiling
+# request deferred while that is under pull_sync.stall_seconds (shaped tuning row, default 600) and sets
+# RA_PROGRESSING=1. EXTEND-ONLY: progress never shortens the age deferral, so a vessel that does not publish
+# it (or has not stamped yet) keeps today's ceiling exactly, and the stall bound is read only when it does.
+# The owed path bounds how long progress may hold a restart (pull_sync.owed_restart_max_hold_seconds).
 # AN OPEN PROBE WINDOW HOLDS EVERY RESTART ON THIS NODE (qa's rule, 2026-10-03: a declared held-out probe
 # window is a maintenance hold; restarts inside one turn environment failures into reach misses). The window
 # is a shaped poolImpulse (shape probeWindow, body {node, from, until, tag, reason}) read at use time from this
@@ -170,20 +178,25 @@ probe_window_open() { # -> 0 iff an open, in-cap window names this node and no o
 }
 
 restart_age_defer() {
-  RA_INFLIGHT=""; RA_OLDEST=""; RA_DEFER=0; RA_WHY=""; RA_PROBE=0
+  RA_INFLIGHT=""; RA_OLDEST=""; RA_DEFER=0; RA_WHY=""; RA_PROBE=0; RA_PROGRESS=""; RA_PROGRESS_ID=""; RA_PROGRESSING=0
   if probe_window_open; then RA_DEFER=1; RA_PROBE=1; RA_WHY="$PW_WHY open on this node — restart held until it closes"; return 0; fi
   if [ -n "$1" ]; then
     _ra_h="$(curl -s --max-time 5 "http://127.0.0.1:$1/health" 2>/dev/null)"
     RA_INFLIGHT="$(printf '%s' "$_ra_h" | sed -n 's/.*"in_flight"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -1)"
     RA_OLDEST="$(printf '%s' "$_ra_h" | sed -n 's/.*"in_flight_oldest_ms"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -1)"
+    RA_PROGRESS="$(printf '%s' "$_ra_h" | sed -n 's/.*"in_flight_last_progress_ms"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -1)"
+    RA_PROGRESS_ID="$(printf '%s' "$_ra_h" | sed -n 's/.*"in_flight_last_progress_id"[[:space:]]*:[[:space:]]*"\([A-Za-z0-9._:-]*\)".*/\1/p' | head -1)"
   fi
   _ra_ceiling="${COMPOSE_CEILING_MS:-900000}"
   [ -n "$RA_INFLIGHT" ] && [ "$RA_INFLIGHT" -gt 0 ] 2>/dev/null || return 0
   if [ -n "$RA_OLDEST" ]; then
     if [ "$RA_OLDEST" -lt "$_ra_ceiling" ] 2>/dev/null; then
       RA_DEFER=1; RA_WHY="$RA_INFLIGHT in flight, oldest ${RA_OLDEST}ms < ceiling ${_ra_ceiling}ms"
+    elif [ -n "$RA_PROGRESS" ] && { tuning_param pull_sync.stall_seconds 600; [ "$RA_PROGRESS" -lt $(( TP_VALUE * 1000 )) ] 2>/dev/null; }; then
+      RA_DEFER=1; RA_PROGRESSING=1
+      RA_WHY="oldest of $RA_INFLIGHT in-flight request(s) is ${RA_OLDEST}ms, past the ${_ra_ceiling}ms ceiling, but progressing: last stage transition ${RA_PROGRESS}ms ago < pull_sync.stall_seconds ${TP_VALUE}s${RA_PROGRESS_ID:+ (attempt $RA_PROGRESS_ID)}"
     else
-      RA_WHY="oldest of $RA_INFLIGHT in-flight request(s) is ${RA_OLDEST}ms, past the ${_ra_ceiling}ms compose ceiling"
+      RA_WHY="oldest of $RA_INFLIGHT in-flight request(s) is ${RA_OLDEST}ms, past the ${_ra_ceiling}ms compose ceiling${RA_PROGRESS:+, and no stage transition for ${RA_PROGRESS}ms (stalled)}"
     fi
   elif [ "${2:-0}" -lt "${RESTART_DEFER_MAX:-3}" ] 2>/dev/null; then
     RA_DEFER=1; RA_WHY="$RA_INFLIGHT in flight ($(( ${2:-0} + 1 ))/${RESTART_DEFER_MAX:-3}, no in_flight_oldest_ms published)"
@@ -1950,6 +1963,10 @@ for d in "$CLONE_DIR"/*/; do
   # runtime content that changed while the unit kept running means the loaded code
   # is not the code on disk, and that alone owes a restart (loaded_code_stale).
   PENDING_FILE="$MARKER_DIR/$v.restart-pending"
+  # When the restart was first owed (epoch s), for the max-hold bound below. The pending marker cannot be
+  # the clock: the mirror path rewrites it on every deferral. A clock with no pending marker is stale.
+  OWED_SINCE_FILE="$MARKER_DIR/$v.restart-owed-since"
+  [ -s "$PENDING_FILE" ] || rm -f "$OWED_SINCE_FILE" 2>/dev/null || true
   P_UNIT="$(vessel_unit "$v")"; P_OWED=""
   if [ -s "$PENDING_FILE" ]; then
     P_OWED="restart recorded as pending (for content $(cut -c1-10 < "$PENDING_FILE" 2>/dev/null); clone now ${CLONE_HASH:0:10})"
@@ -1963,29 +1980,52 @@ for d in "$CLONE_DIR"/*/; do
     P_DEFER_FILE="$MARKER_DIR/$v.restart-deferrals"
     P_DEFERRED_N="$(cat "$P_DEFER_FILE" 2>/dev/null || echo 0)"
     case "$P_DEFERRED_N" in ''|*[!0-9]*) P_DEFERRED_N=0 ;; esac
-    restart_age_defer "$P_PORT" "$P_DEFERRED_N"; P_INFLIGHT="$RA_INFLIGHT"
+    restart_age_defer "$P_PORT" "$P_DEFERRED_N"; P_INFLIGHT="$RA_INFLIGHT"; P_LOSSY=""
+    # PROGRESS MAY HOLD AN OWED RESTART, BUT NOT FOREVER. A past-ceiling request that is still making stage
+    # transitions is deferred (restart_age_defer), yet a lane that never goes idle would hold the mirrored
+    # code unloaded indefinitely. Once the restart has been owed for pull_sync.owed_restart_max_hold_seconds
+    # (shaped tuning row, default 2700) it is taken anyway and the loss is said out loud: LOSSY, naming the
+    # attempt /health published. A probe window is not progress and is never overridden here.
+    # TODO(gap the-causal-attempt-ledger-records-only-landings-so-failed-attempts-have-no-ledger-entry): the
+    # killed attempt gets a log line and a DEFERRAL_LOG record only; record it in the attempt ledger as a
+    # killed outcome once that ledger carries failures.
+    if [ "$RA_DEFER" = 1 ] && [ "${RA_PROGRESSING:-0}" = 1 ] && [ "$RA_PROBE" != 1 ]; then
+      tuning_param pull_sync.owed_restart_max_hold_seconds 2700; P_MAX_HOLD="$TP_VALUE"
+      P_SINCE="$(cat "$OWED_SINCE_FILE" 2>/dev/null || true)"; case "$P_SINCE" in ''|*[!0-9]*) P_SINCE="" ;; esac
+      if [ -n "$P_SINCE" ] && [ $(( $(date +%s) - P_SINCE )) -ge "$P_MAX_HOLD" ] 2>/dev/null; then
+        P_HELD=$(( $(date +%s) - P_SINCE )); RA_DEFER=0; P_LOSSY=1
+        RA_WHY="owed for ${P_HELD}s, past pull_sync.owed_restart_max_hold_seconds (${P_MAX_HOLD}s), though still progressing (${RA_WHY})"
+        log "$v: LOSSY owed restart — restarting into $RA_INFLIGHT in-flight request(s) still progressing (last stage transition ${RA_PROGRESS}ms ago) after holding the restart ${P_HELD}s (max hold ${P_MAX_HOLD}s); attempt ${RA_PROGRESS_ID:-unknown} IS lost"
+        printf '{"at":"%s","actor":"pull-sync","action":"forced_owed_restart_lossy","vessel":"%s","in_flight":%s,"held_s":%s,"max_hold_s":%s,"last_progress_ms":%s,"attempt":"%s"}\n' \
+          "$(date -Iseconds)" "$v" "${RA_INFLIGHT:-0}" "$P_HELD" "$P_MAX_HOLD" "${RA_PROGRESS:-null}" "${RA_PROGRESS_ID:-unknown}" >> "$DEFERRAL_LOG" 2>/dev/null || true
+      fi
+    fi
     # AN OWED RESTART MUST NOT BE STARVED BY A BUSY VESSEL. The age ceiling resets with
     # every new request, so a vessel that is never idle (the compose lane picks again as
     # soon as a draft ends) defers its owed restart on every tick, forever: measured
     # 2026-10-03, development-vessel held a mirrored fix unloaded from 13:54 on while
     # each tick logged "owed restart still deferred". After RESTART_DEFER_MAX deferrals,
     # close admission and drain (the mirror path's quiesce) instead of deferring again.
-    if [ "$RA_DEFER" = 1 ] && [ "$RA_PROBE" != 1 ] && [ "$P_DEFERRED_N" -ge "${RESTART_DEFER_MAX:-3}" ] 2>/dev/null; then
+    # A PROGRESS deferral does not count toward this: the drain's bound would kill the progressing run at
+    # deferral N, pre-empting the max-hold bound above, which is the one hard bound for progress.
+    if [ "$RA_DEFER" = 1 ] && [ "$RA_PROBE" != 1 ] && [ "${RA_PROGRESSING:-0}" != 1 ] && [ "$P_DEFERRED_N" -ge "${RESTART_DEFER_MAX:-3}" ] 2>/dev/null; then
       quiesce_drain "$v" "$P_PORT"
       RA_DEFER=0
       RA_WHY="owed restart deferred ${P_DEFERRED_N} time(s); quiesced: $QD_WHY"
     fi
     if [ "$RA_DEFER" = 1 ]; then
       echo "$((P_DEFERRED_N + 1))" > "$P_DEFER_FILE" 2>/dev/null || true
+      [ -s "$OWED_SINCE_FILE" ] || date +%s > "$OWED_SINCE_FILE" 2>/dev/null || true
       log "$v: owed restart still deferred — $RA_WHY ($P_OWED)"
     else
       P_REASON="owed restart after deferral"
       if [ -n "$RA_WHY" ]; then
         log "$v: owed restart proceeding — $RA_WHY"
         [ -n "$RA_OLDEST" ] && P_REASON="owed restart: oldest in-flight ${RA_OLDEST}ms exceeded ceiling"
+        [ -n "$P_LOSSY" ] && P_REASON="owed restart LOSSY: held past max hold while attempt ${RA_PROGRESS_ID:-unknown} was progressing"
       fi
       log "$v: taking OWED restart for already-mirrored content ${CLONE_HASH:0:10} — $P_OWED"
-      rm -f "$P_DEFER_FILE" "$PENDING_FILE" 2>/dev/null || true
+      rm -f "$P_DEFER_FILE" "$PENDING_FILE" "$OWED_SINCE_FILE" 2>/dev/null || true
       if [ -n "$P_UNIT" ] && systemctl is-active --quiet "$P_UNIT" 2>/dev/null; then
         restart_breadcrumb "$v" "$P_REASON" "$P_INFLIGHT"
         systemctl restart "$P_UNIT" 2>/dev/null || true
@@ -3191,6 +3231,7 @@ EOF
       # the fixes it was supposed to load sat unread. The deferral counter was
       # frozen at 1 of 3 and three later ticks said nothing about the vessel.
       echo "$CLONE_HASH" > "$MARKER_DIR/$v.restart-pending" 2>/dev/null || true
+      [ -s "$MARKER_DIR/$v.restart-owed-since" ] || date +%s > "$MARKER_DIR/$v.restart-owed-since" 2>/dev/null || true
       log "$v: DEFERRING restart — $RA_WHY; restart recorded as PENDING and will be taken on a later tick"
       printf '{"at":"%s","actor":"pull-sync","action":"deferred_restart_inflight","vessel":"%s","in_flight":%s,"deferral":%s}\n' \
         "$(date -Iseconds)" "$v" "$INFLIGHT" "$((DEFERRED_N + 1))" >> "$DEFERRAL_LOG" 2>/dev/null || true
@@ -3198,7 +3239,7 @@ EOF
     fi
     [ -n "$RA_WHY" ] && log "$v: restarting — $RA_WHY"
     rm -f "$DEFER_FILE" 2>/dev/null || true
-    rm -f "$MARKER_DIR/$v.restart-pending" 2>/dev/null || true
+    rm -f "$MARKER_DIR/$v.restart-pending" "$MARKER_DIR/$v.restart-owed-since" 2>/dev/null || true
     restart_breadcrumb "$v" "converged to origin/dev${RA_OLDEST:+ (oldest in-flight ${RA_OLDEST}ms)}" "$INFLIGHT"
     systemctl restart "$UNIT" 2>/dev/null || true
     quiesce_release   # the new process must find admission open
