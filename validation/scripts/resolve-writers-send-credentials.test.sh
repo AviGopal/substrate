@@ -99,6 +99,22 @@
 #      a vessel's source can be checked from a scratch clone without its submodule. Test files
 #      (*.test.*, *.check.sh, test/ and __tests__/ directories), *.d.ts, node_modules and this file
 #      (its fixtures quote the very lines it refuses) are not scanned.
+#      MODE. P7 ENFORCES on scripts/, validation/scripts/ and unit Exec lines. A vessel's src/ is
+#      judged in TRACKED-RED mode until the vessel is on P7_ENFORCED_VESSELS (below): its offenders
+#      are listed under `TRACKED-RED - P7 vessel src: <v> sends resolve requests without a
+#      credential (gap a-gate-added-to-a-route-is-not-swept-against-its-in-repo-callers)` and do not
+#      fail, and every run logs one trend line, `P7 tracked-red: <v> N offender(s), ...` (or
+#      `(no vessel src checked out)`). A vessel at 0 is logged as eligible for the enforced list.
+#      An ENFORCED vessel's offenders fail under the static label `FAIL - P7 vessel src: <v> sends
+#      resolve requests without a credential`; that label is what an open gap names to let a
+#      check-first red through the glue runner (scripts/substrate/lib/gap-tracked-red.sh), with
+#        classification_metadata.evidence_resolve = {shape:"test_suite", input:{vessel:"super-repo",
+#          test_file:"validation/scripts/resolve-writers-send-credentials.test.sh",
+#          only_tests:["P7 vessel src: <v> sends resolve requests without a credential"]}}
+#      WHY A LIST, NOT AUTO-ENFORCE AT ZERO. Auto-enforcing needs the previous count, and this lint
+#      keeps no state: the pre-commit hook runs it in a checkout-index export under a fresh TMPDIR,
+#      and a committed count file would be a file the runs rewrite (runtime state does not belong in
+#      git). The list is one reviewable line; flipping a vessel is a diff with a reason.
 #
 # CONTROLS. A writer fixture with no credential (fetch, curl, fetch through a bound route name)
 # must be flagged at the exact lines; a credentialed fixture in each idiom must pass; a prose-only
@@ -109,7 +125,11 @@ ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 fails=0
 ok()  { echo "  ok   $*"; }
-bad() { echo "  FAIL $*"; fails=$((fails + 1)); }
+# A failure prints "FAIL - <text>" (the glue runner's case format). Only P7's per-vessel labels are
+# static; every other failure interpolates a file:line, so no gap can name it and the glue runner's
+# tracked-red exemption never covers it (run-glue-tests.sh exempts a red file only when EVERY
+# "FAIL - " label is tracked).
+bad() { echo "FAIL - $*"; fails=$((fails + 1)); }
 
 SCAN_AWK='
 function trim(s) { sub(/^[ \t]+/, "", s); return s }
@@ -383,6 +403,58 @@ p7_vessel_trees() { # <root> -> every vessel src/ under <root>/repos (gitmodules
     if [ -n "$(find "$r/$v/src" -type f 2>/dev/null | head -1)" ]; then echo "$v/src"
     else echo "SKIP $v/src (not checked out)" >&3; fi
   done
+}
+# P7: the vessels whose src/ is ENFORCED (space-separated). Initially empty: every vessel starts in
+# tracked-red mode. Add a vessel once its trend line reads 0.
+P7_ENFORCED_VESSELS=""
+P7_GAP_ID="a-gate-added-to-a-route-is-not-swept-against-its-in-repo-callers"
+scan_scope_any_resolve() { # <root> -> uncredentialed resolve requests in the ENFORCED super-repo scope
+  local r="$1" f d
+  for d in "$r/scripts" "$r/validation/scripts"; do
+    [ -d "$d" ] && p7_files "$d" | while IFS= read -r f; do scan_any_resolve_file "$f" "${f#"$r"/}"; done
+  done
+  if [ -d "$r/scripts/substrate/units" ]; then
+    find "$r/scripts/substrate/units" -type f \( -name '*.service' -o -name '*.conf' \) -print | LC_ALL=C sort \
+      | while IFS= read -r f; do scan_any_resolve_file "$f" "${f#"$r"/}" 1; done
+  fi
+}
+p7_judge() { # <root> <enforced vessels> -> verdict lines on stdout; exit status = failures (max 255)
+  local r="$1" enforced=" ${2:-} " hits h d v n f=0 tr="" en="" clean="" sk
+  hits="$(scan_scope_any_resolve "$r")"
+  if [ -z "$hits" ]; then
+    echo "  ok   every fetch/curl to a resolve route under $r (scripts/, validation/scripts/, unit Exec lines) sends a credential"
+  else
+    while IFS= read -r h; do echo "FAIL - $h: a request to a resolve route sends no Authorization [$r]"; f=$((f + 1)); done <<< "$hits"
+  fi
+  while IFS= read -r d; do
+    case "$d" in
+      "SKIP "*) echo "  $d [$r]"; continue ;;
+    esac
+    v="${d#repos/}"; v="${v%/src}"
+    hits="$(p7_files "$r/$d" | while IFS= read -r h; do scan_any_resolve_file "$h" "${h#"$r"/}"; done)"
+    n="$(printf '%s' "$hits" | grep -c . || true)"
+    if [[ "$enforced" == *" $v "* ]]; then
+      en="${en:+$en, }$v $n offender(s)"
+      if [ "$n" -gt 0 ]; then
+        echo "FAIL - P7 vessel src: $v sends resolve requests without a credential"
+        printf '%s\n' "$hits" | sed "s|\$| [$r]|; s/^/    /"
+        f=$((f + 1))
+      fi
+    else
+      tr="${tr:+$tr, }$v $n offender(s)"
+      if [ "$n" -gt 0 ]; then
+        echo "TRACKED-RED - P7 vessel src: $v sends resolve requests without a credential (gap $P7_GAP_ID)"
+        printf '%s\n' "$hits" | sed "s|\$| [$r]|; s/^/    /"
+      else
+        clean="${clean:+$clean, }$v"
+      fi
+    fi
+  done < <(p7_vessel_trees "$r" 3>&1)
+  echo "P7 tracked-red: ${tr:-(no vessel src checked out)}"
+  [ -n "$en" ] && echo "P7 enforced: $en"
+  [ -n "$clean" ] && echo "P7 clean: $clean — eligible for P7_ENFORCED_VESSELS"
+  [ "$f" -gt 255 ] && f=255
+  return "$f"
 }
 scan_tree_any_resolve() { # <root> -> every uncredentialed resolve-route request in predicate 7's scope
   local r="$1" f d
@@ -797,13 +869,7 @@ p7_roots=("$ROOT")
 if [ -n "${LINT_EXTRA_ROOTS:-}" ]; then IFS=: read -r -a _extra <<< "$LINT_EXTRA_ROOTS"; p7_roots+=("${_extra[@]}"); fi
 for r in "${p7_roots[@]}"; do
   [ -d "$r" ] || { bad "LINT_EXTRA_ROOTS entry is not a directory: $r"; continue; }
-  hits="$(scan_tree_any_resolve "$r" 3>"$T/p7-tree-skips")"
-  while IFS= read -r sk; do [ -n "$sk" ] && echo "  $sk [$r]"; done < "$T/p7-tree-skips"
-  if [ -z "$hits" ]; then
-    ok "every fetch/curl to a /resolve or /v2/impulses/resolve URL under $r (scripts/, validation/scripts/, unit Exec lines, checked-out vessel src/) sends a credential"
-  else
-    while IFS= read -r h; do bad "$h: a request to a resolve route sends no Authorization [$r]"; done <<< "$hits"
-  fi
+  p7_judge "$r" "$P7_ENFORCED_VESSELS"; fails=$((fails + $?))
 done
 
 if [ "$fails" -eq 0 ]; then echo "PASSED"; exit 0; fi
