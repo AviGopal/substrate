@@ -8,7 +8,8 @@
 # throwaway worktree and run the accepted corpus with gate/shadow-eval.sh. The claim holds only if every
 # named fixture FAILS. Then a negative control: a sample of `none` entries outside the units dir (all of them
 # with --all) is mutated the same way, and no fixture may fail; a fixture that does means the map
-# undercounts. Also FAILS once units_exempt.expires has passed: renew it knowingly or build the fixture.
+# undercounts. Also FAILS once an exemption record (units_exempt, converges_today_exempt) has passed its
+# expires date: renew it knowingly or build the fixture.
 # Positive control first: the unmutated tree must pass the corpus, else no verdict below means anything.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -73,9 +74,11 @@ for src in "${NONE[@]}"; do
 done
 [ "$under" = 0 ] && ok "none entries stay unnoticed by the corpus (${#NONE[@]} replayed)" || bad "none entries stay unnoticed by the corpus"
 
-# 3. The units exemption is a dated decision, not a permanent carve-out.
-exp=$(jq -r '.units_exempt.expires // empty' "$CM")
-if [ -z "$exp" ]; then ok "no units exemption to expire"
-elif [[ "$(date -u +%F)" > "$exp" ]]; then bad "the units exemption has not expired ($exp; owner $(jq -r .units_exempt.owner_gap "$CM"))"
-else ok "the units exemption has not expired ($exp)"; fi
+# 3. An exemption is a dated decision, not a permanent carve-out.
+for rec in units_exempt converges_today_exempt; do
+  exp=$(jq -r --arg k "$rec" '.[$k].expires // empty' "$CM")
+  if [ -z "$exp" ]; then ok "no $rec record to expire"
+  elif [[ "$(date -u +%F)" > "$exp" ]]; then bad "$rec has not expired ($exp; owner $(jq -r --arg k "$rec" '.[$k].owner_gap' "$CM"))"
+  else ok "$rec has not expired ($exp)"; fi
+done
 done_tests

@@ -8,7 +8,8 @@
 #   parse      only a syntax mutation does
 #   none       no fixture fails; reason says why it stays baked or why its convergence is uncovered:
 #              outside-gate-paths, units-exempt (the named units_exempt record, with owner gap and expiry),
-#              converges-today-uncovered (pull-sync installs it with no fixture), unreached (baked only)
+#              converges-today-uncovered (pull-sync installs it with no fixture; each one listed in the
+#              converges_today_exempt record, with its own owner gap and expiry), unreached (baked only)
 # The mutation proofs and the exemption expiry are judged by image-coverage-map.check.sh (slow, and a date
 # must not turn every unrelated commit red). This test keeps
 # the map consistent with the manifest, the corpus, gate_paths and what pull-sync installs today, so a
@@ -55,11 +56,18 @@ mapfile -t GLOBS < <(jq -r '.gate_paths[]' "$POL")
 in_gate() { local g; for g in "${GLOBS[@]}"; do case "$1" in $g) return 0 ;; esac; done; return 1; }
 bash "$HERE/image-convergence-surface.test.sh" 2>/dev/null | sed -n 's/^  never converged: //p' | sort > "$T/never"
 [ -s "$T/never" ] || echo "  (note: pull-sync installs every tier A path; no path reads as unreached)"
+owned() { jq -e --arg k "$1" '.[$k]|(.owner_gap|type=="string" and length>0) and (.expires|type=="string" and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))' "$CM" >/dev/null 2>&1; }
 UDIR=$(jq -r '.units_exempt.dir // empty' "$CM")
-if [ -n "$UDIR" ] && jq -e '.units_exempt|(.owner_gap|length>0) and (.expires|test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$"))' "$CM" >/dev/null 2>&1; then
+if [ -n "$UDIR" ] && owned units_exempt; then
   ok "the units exemption is a named record with an owner gap and an expiry"
   echo "  units exempt, uncovered: $(jq '[.paths[]|select(.reason=="units-exempt")]|length' "$CM") paths under $UDIR until $(jq -r .units_exempt.expires "$CM") (owner: $(jq -r .units_exempt.owner_gap "$CM"))"
 else UDIR="/nonexistent-units-dir"; bad "the units exemption is a named record with an owner gap and an expiry"; fi
+# Every path that converges today with no fixture is listed, by name, in its own owned and dated record.
+if owned converges_today_exempt && diff <(jq -r '.converges_today_exempt.paths[]?' "$CM" | sort) \
+     <(jq -r '.paths|to_entries[]|select(.value.reason=="converges-today-uncovered")|.key' "$CM" | sort) > "$T/cte"; then
+  ok "every uncovered converging path is listed in an owned, dated exemption"
+  echo "  converges today, uncovered: $(jq '.converges_today_exempt.paths|length' "$CM") paths until $(jq -r .converges_today_exempt.expires "$CM") (owner: $(jq -r .converges_today_exempt.owner_gap "$CM"))"
+else head -10 "$T/cte" 2>/dev/null | sed 's/^/  exemption drift: /'; bad "every uncovered converging path is listed in an owned, dated exemption"; fi
 rs_bad=0
 while IFS=$'\t' read -r dst level reason _ _; do
   src=$(jq -r --arg d "$dst" '.paths[$d].src' "$CM")

@@ -227,6 +227,19 @@ set_check glue_tests "$glue_r" "$(jq -nc --argjson rc "$glue_rc" --argjson f "$g
   '{exit: $rc, failed: $f, skipped: $s, log: "diag/glue-tests.txt"}')"
 log "glue tests: $glue_r ($(tail -n 1 "$RESULT_DIR/diag/glue-tests.txt" 2>/dev/null))"
 
+# ── 0b. Coverage map replay (validation/scripts/image-coverage-map.check.sh) ─────
+# The gate's coverage map decides which tooling paths converge in place. Its claims are
+# mutation proofs, and its exemptions carry an expiry; this run is their caller, so a stale
+# claim or a lapsed exemption blocks the image instead of passing unobserved. Hermetic: git
+# worktrees of this checkout and the gate's shadow evaluator, no engine or network.
+cov_rc=0
+bash "$repo_root/validation/scripts/image-coverage-map.check.sh" >"$RESULT_DIR/diag/coverage-map.txt" 2>&1 || cov_rc=$?
+cov_r=fail; [ "$cov_rc" -eq 0 ] && cov_r=pass
+set_check coverage_map "$cov_r" "$(jq -nc --argjson rc "$cov_rc" \
+  --argjson f "$(sed -n 's/^FAIL - //p' "$RESULT_DIR/diag/coverage-map.txt" | jq -R . | jq -sc .)" \
+  '{exit: $rc, failed: $f, log: "diag/coverage-map.txt"}')"
+log "coverage map: $cov_r ($(tail -n 1 "$RESULT_DIR/diag/coverage-map.txt" 2>/dev/null))"
+
 # ── 1. Cold host ───────────────────────────────────────────────────────────────
 warm=()
 eng version >"$RESULT_DIR/diag/engine-version.txt" 2>&1 || warm+=("engine does not answer '$ENGINE version' in the fence environment")
@@ -759,7 +772,7 @@ digest="$(eng image inspect --format '{{json .RepoDigests}}' "$IMAGE" 2>/dev/nul
 
 # ── Judgement ──────────────────────────────────────────────────────────────────
 judged_levels=(live seeded served)
-judged_checks=(cold extraction image_format healthcheck revision stop_timeout image_code glue_tests secret_scan_clean)
+judged_checks=(cold extraction image_format healthcheck revision stop_timeout image_code glue_tests coverage_map secret_scan_clean)
 [ "$contained_runner_judged" = 1 ] && judged_checks+=(contained_runner)
 [ "$secret_mask_judged" = 1 ] && judged_checks+=(secret_mask)
 if [ "$mode" = "gating" ]; then
