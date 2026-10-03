@@ -62,6 +62,16 @@
 #      `() => null` before its statement ends. Once the vessel answers 401, such a writer loses
 #      its gap or pool impulse with no line anywhere; a writer must at least say so (a journal
 #      line naming the HTTP status and what was not written).
+#   6. SECRET IN A CURL BODY ON ARGV — in every file predicate 4 scans (scripts/, .claude/hooks/,
+#      validation/scripts/ minus this file, and unit Exec lines): a curl data option (-d, --data,
+#      --data-raw, --data-binary, --data-urlencode) whose argument expands a variable named like a
+#      credential: *SECRET*, *PASSWORD*, *TOKEN* or *_KEY, case-insensitive (`-d "{\"s\":\"$API_KEY_SECRET\"}"`,
+#      `--data "$(printf '…' "$X_TOKEN")"`, a unit's `$$PASSWORD`). A request body on argv is as readable
+#      in a process listing as a header is (predicate 4). The option may sit on a backslash-continuation
+#      line of the curl command; a `[ -d "$KEY_DIR" ]` test with no curl in its command chain is not a
+#      request. Build the body with printf (a builtin) and pipe it: `printf '…' "$S" | curl --data-binary @-`.
+#      An argument starting with @ (`@-`, `@file`, `@<(printf …)`) reads the body from a file or stdin and
+#      is not flagged. Blind spot: a secret first copied into a variable with an unremarkable name.
 #
 # CONTROLS. A writer fixture with no credential (fetch, curl, fetch through a bound route name)
 # must be flagged at the exact lines; a credentialed fixture in each idiom must pass; a prose-only
@@ -188,9 +198,78 @@ scan_tree_argv() { # <root> -> every key on curl argv under scripts/, .claude/ho
   find "$r/scripts/substrate/units" -type f \( -name '*.service' -o -name '*.conf' \) -print | LC_ALL=C sort \
     | while IFS= read -r f; do scan_unit_argv_file "$f" "${f#"$r"/}"; done
 }
+# Predicate 6: a curl data option whose argument expands a credential-named variable. A line is in
+# a curl command when any line of its backslash-continuation chain names curl. UNIT=1 limits the scan
+# to Exec*= lines and their continuations (a unit's `$$X` is a shell `$X`).
+BODY_AWK='
+function trim(s) { sub(/^[ \t]+/, "", s); return s }
+function iscomment(s) { s = trim(s); if (UNIT) return (s ~ /^[#;]/); return (s ~ /^(#|\/\/|\*|\/\*)/) }
+function contd(s) { return (s ~ /\\[ \t]*$/) }
+function argof(s,   c, q, i, d, out) { # the option argument at the start of s
+  c = substr(s, 1, 1)
+  if (c == "\"" || c == "\047") {
+    q = c; d = 0; out = c
+    for (i = 2; i <= length(s); i++) {
+      c = substr(s, i, 1); out = out c
+      if (q == "\"" && c == "\\") { i++; out = out substr(s, i, 1); continue }
+      if (q == "\"" && c == "$" && substr(s, i + 1, 1) == "(") { d++; continue }
+      if (q == "\"" && c == ")" && d > 0) { d--; continue }
+      if (c == q && d == 0) break
+    }
+    return out
+  }
+  match(s, /^[^ \t]*/); return substr(s, 1, RLENGTH)
+}
+function secretvar(a,   v) {
+  while (match(a, /\$\$?\{?[A-Za-z_][A-Za-z0-9_]*/)) {
+    v = tolower(substr(a, RSTART, RLENGTH)); a = substr(a, RSTART + RLENGTH)
+    gsub(/[^a-z0-9_]/, "", v)
+    if (v ~ /secret|password|token|_key$/) return 1
+  }
+  return 0
+}
+function bodyhit(s,   rest, a) {
+  rest = s
+  while (match(rest, /(^|[ \t"\047])(-d|--data|--data-raw|--data-binary|--data-urlencode)([ \t]+|=)/)) {
+    rest = substr(rest, RSTART + RLENGTH)
+    a = argof(rest)
+    if (substr(a, 1, 1) != "@" && substr(a, 2, 1) != "@" && secretvar(a)) return 1
+  }
+  return 0
+}
+{ line[NR] = $0; n = NR }
+END {
+  inexec = 0
+  for (i = 1; i <= n; i++) {
+    w = line[i]
+    start = !(i > 1 && contd(line[i - 1]))
+    if (start) {
+      chain = 0; inexec = (!UNIT || w ~ /^[ \t]*Exec(Start|StartPre|StartPost|Reload|Stop|StopPost|Condition)=/)
+      for (j = i; j <= n; j++) { if (!iscomment(line[j]) && line[j] ~ /curl/) chain = 1; if (!contd(line[j])) break }
+    }
+    if (!inexec || !chain || iscomment(w)) continue
+    if (bodyhit(w)) printf "%s:%d\n", DISPLAY, i
+  }
+}'
+scan_body_file() { # <file> <display-name> [unit] -> lines that put a credential-named variable in a curl body on argv
+  awk -v DISPLAY="$2" -v UNIT="${3:-0}" "$BODY_AWK" "$1"
+}
 scan_tree_silent() { # <root> -> every silent writer request under scripts/ and .claude/hooks/
   local r="$1" f
   scanned_files "$r" | while IFS= read -r f; do scan_silent_file "$f" "${f#"$r"/}"; done
+}
+
+scan_tree_body() { # <root> -> every curl body on argv carrying a credential-named variable (predicate 4's scope)
+  local r="$1" f
+  scanned_files "$r" | while IFS= read -r f; do scan_body_file "$f" "${f#"$r"/}"; done
+  if [ -d "$r/validation/scripts" ]; then
+    find "$r/validation/scripts" -type f \( -name '*.sh' -o -name '*.ts' -o -name '*.mjs' \) -not -name '*.d.ts' \
+      -not -name 'resolve-writers-send-credentials.test.sh' -not -path '*/node_modules/*' -print | LC_ALL=C sort \
+      | while IFS= read -r f; do scan_body_file "$f" "${f#"$r"/}"; done
+  fi
+  [ -d "$r/scripts/substrate/units" ] || return 0
+  find "$r/scripts/substrate/units" -type f \( -name '*.service' -o -name '*.conf' \) -print | LC_ALL=C sort \
+    | while IFS= read -r f; do scan_body_file "$f" "${f#"$r"/}" 1; done
 }
 
 echo "== resolve-writers-send-credentials ($ROOT)"
@@ -373,6 +452,46 @@ got="$(scan_silent_file "$F/loud.sh" loud.sh)$(scan_silent_file "$F/loud.ts" lou
 [ -z "$got" ] && ok "positive control (silent): a writer that logs its status passes, and a read whose output goes to a file is not silent" \
   || bad "positive control (silent) flagged: $(echo $got)"
 
+cat > "$F/body.sh" <<'EOF'
+#!/usr/bin/env bash
+curl -s -X POST "$ID/v1/x" -d "{\"s\":\"$API_KEY_SECRET\"}"
+resp=$(curl -s "$ID/v1/y" -H "Content-Type: application/json" \
+         -K <(apikey_cfg "$K") \
+         --data "{\"api_key\":\"${metabob_api_key}\"}")
+curl -s "$ID/v1/z" --data-raw "$(printf '{"t":"%s"}' "$X_TOKEN")"
+curl -s "$ID/v1/w" --data-urlencode "password=$DB_PASSWORD"
+# a comment that quotes curl -d "{\"s\":\"$API_KEY_SECRET\"}" is not a request
+EOF
+cat > "$F/bodyok.sh" <<'EOF'
+#!/usr/bin/env bash
+printf '{"s":"%s"}' "$API_KEY_SECRET" | curl -s -X POST "$ID/v1/x" --data @-
+curl -s "$ID/v1/x" --data-binary @"$BODY_FILE_KEY"
+curl -s "$ID/v1/x" --data-binary @body.json
+curl -s "$ID/v1/x" --data-binary @<(printf '{"s":"%s"}' "$API_KEY_SECRET")
+curl -s "$ID/v1/x" -d "$BODY" -d "{\"id\":\"$key_id\",\"n\":\"$NAME\"}"
+[ -d "$PULLSYNC_GLUE_KEY_DIR" ] && [ -d "$SECRET_DIR" ] && echo present
+EOF
+cat > "$F/body.service" <<'EOF'
+[Service]
+# ExecStart=/bin/bash -c 'curl -d "p=$$DB_PASSWORD" x' is a comment, not a request
+Description=not a request: curl -d "p=$$DB_PASSWORD"
+ExecStartPre=/bin/bash -c 'curl -s -d "p=$$DB_PASSWORD" "${E}/x"'
+ExecStart=/usr/bin/env bash -c 'curl -s \
+  --data "{\"t\":\"$${SVC_TOKEN}\"}" "${E}/x"'
+ExecStartPost=/bin/bash -c 'printf "p=%%s" "$$DB_PASSWORD" | curl -s --data-binary @- "${E}/x"'
+EOF
+got="$(scan_body_file "$F/body.sh" body.sh | tr '\n' ' ')"
+[ "$got" = "body.sh:2 body.sh:5 body.sh:6 body.sh:7 " ] \
+  && ok "negative control (body): a credential-named variable in -d (same line), --data (continuation line), --data-raw \$(printf …) and --data-urlencode is flagged (body.sh:2, :5, :6, :7); a comment is not" \
+  || bad "negative control (body): expected 'body.sh:2 body.sh:5 body.sh:6 body.sh:7', got '${got}'"
+got="$(scan_body_file "$F/bodyok.sh" bodyok.sh)"
+[ -z "$got" ] && ok "positive control (body): printf | curl --data @-, --data-binary @file / @<(…), a non-secret variable and a [ -d \"\$KEY_DIR\" ] test pass" \
+  || bad "positive control (body) flagged: $(echo $got)"
+got="$(scan_body_file "$F/body.service" body.service 1 | tr '\n' ' ')"
+[ "$got" = "body.service:4 body.service:6 " ] \
+  && ok "unit files (body): \$\$PASSWORD on an ExecStartPre= line and \$\${TOKEN} on an ExecStart= continuation are flagged (body.service:4, :6); a comment, a non-Exec line and --data-binary @- are not" \
+  || bad "unit files (body): expected 'body.service:4 body.service:6', got '${got}'"
+
 # ── the tree ────────────────────────────────────────────────────────────────────
 hits="$(scan_tree "$ROOT")"
 if [ -z "$hits" ]; then
@@ -392,6 +511,13 @@ if [ -z "$hits" ]; then
   ok "no writer under scripts/ or .claude/hooks/ discards both the output and the status of a resolve-route request"
 else
   while IFS= read -r h; do bad "$h: a writer request that swallows its output and status (a 401 would lose the write with no line anywhere)"; done <<< "$hits"
+fi
+
+hits="$(scan_tree_body "$ROOT")"
+if [ -z "$hits" ]; then
+  ok "no curl under scripts/, .claude/hooks/ or validation/scripts/, and no unit Exec line, carries a secret/password/token/*_KEY variable in its body on argv"
+else
+  while IFS= read -r h; do bad "$h: a credential in a curl body on argv (readable in any process listing); printf it into curl --data-binary @-"; done <<< "$hits"
 fi
 
 if [ "$fails" -eq 0 ]; then echo "PASSED"; exit 0; fi
