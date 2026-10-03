@@ -14,7 +14,7 @@ Conventions:
   prints nothing on those files.
 - `evidence/helpers/surql.sh` reads SurrealQL on stdin and posts it with the container's
   own credentials.
-- `evidence/helpers/devvessel-resolve.sh` resolves shapes on development-vessel.
+- `evidence/helpers/devvessel-resolve.sh` (since removed: nothing invoked it) resolved shapes on development-vessel.
   **It has side effects on some shapes:** `systemd_unit_health_observer` re-emits gaps
   unless given `emit_gap:false`, and `substrate_health_tick` rewrites the heartbeat file.
 - SurrealDB answers a query on a misspelled table with an empty successful result, not
@@ -84,4 +84,4 @@ Evidence files:
 | Fact | Re-derive |
 |---|---|
 | The API key in the host `~/.metabob/config.json` is rejected by identity | `docker exec substrate-live curl -s localhost:8100/registry/shapes -H "Authorization: ApiKey <host key>"` returns `INVALID_API_KEY` |
-| development-vessel resolve takes `{"impulse":{"pointer":{…}}}`; a bare `pointer` returns 400 | see `evidence/helpers/devvessel-resolve.sh` |
+| development-vessel resolve takes `{"impulse":{"pointer":{…}}}`; a bare `pointer` returns 400 | request form recorded in `evidence/readers-observers.md` §4 (the helper was removed) |

@@ -85,7 +85,7 @@ Also separate crystallization stores that act on reach without the ribosome: rea
 
 **Clean positive controls:** systemd_unit_health_observer, push_health_observer (200, real data). **Contaminated by the activity-api 401/restart window, unattributed until re-run against a healthy activity-api:** authoring_chain_health_report, detector_coverage_scan (`traces_examined:0` is a false zero — fetch errors swallowed), substrate_health_tick.
 
-Re-derive: `docker cp evidence/helpers/devvessel-resolve.sh substrate-live:/tmp/ && docker exec substrate-live bash /tmp/devvessel-resolve.sh <shape…>` where res.sh POSTs `{"impulse":{"pointer":{"type":"$s"}}}` to `127.0.0.1:8090/v2/impulses/resolve` with `ApiKey $METABOB_API_KEY` from `/etc/substrate/env`.
+Re-derive (the helper script `evidence/helpers/devvessel-resolve.sh` has been removed under the script-retention law: nothing invoked it): for each shape, POST `{"impulse":{"pointer":{"type":"$s"}}}` to `127.0.0.1:8090/v2/impulses/resolve` with `ApiKey $METABOB_API_KEY` from `/etc/substrate/env`.
 
 ## 5. Rhythm impulses
 
