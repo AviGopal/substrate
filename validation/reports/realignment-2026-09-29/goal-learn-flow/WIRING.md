@@ -644,3 +644,14 @@ A regression class counts as covered only if negating or removing the shipped ch
   - Nothing was in flight: the last trace was persisted at 05:46:29Z, and no cutover or post-land suite was running.
   - The restore from the volume tar into a scratch volume matched all 10 baseline tables, including init_migrations 228/228, which the export path loses. So the volume tar, not the export, is the backup of record.
   - After the restart: 0 failed units, and activity-api answers 200.
+- **Node 1, stop (b), the SurrealDB 2.3.10 upgrade:** stopped 2026-10-03T05:59:45Z; backup done 06:03:04Z; **deploy time 06:03:08Z** (new container). EXCLUSION window: 05:59:45Z until the first retention sweep finished at 06:04:50Z.
+  - The quiet gate passed at 05:59:12Z; nothing was interrupted.
+  - **Result:** engine 2.3.10. The #6060 check gives 0/60 mismatches (60/60 on 2.3.3). 0 failed units, secret-mask 0 VISIBLE, /health and /recommend 200.
+  - **Exclude the probe selection rows** `sel_1791007460613_92z75p_0/1/2`.
+  - **DISCONTINUITY at 06:03:44Z:** the first retention sweep after boot pruned about 61.6k execution rows by policy (150,257 → 88,805).
+    - validator-dispatch stratum: 51,119 removed (cap 600);
+    - slot-binding stratum: 10,077 removed;
+    - the global-ceiling valve drained 269 auth_resolve_v1 rows;
+    - 153 orphans were reaped.
+  - **Hypothesis, unverified:** stratum cold-row selection uses the composite index #6060 broke, so on 2.3.3 those rows were invisible to retention, and 2.3.10 exposed them. The db fork is testing the cold-row query against the pre-upgrade backup on a throwaway 2.3.3. Until that's settled, every execution-count or retention-dependent series (including step 5's re-baseline) is split at 06:03:44Z and never compared across it.
+- **Local SurrealDB rollout complete:** surface, inventory, node 1. Node 2 and pubspoke run no SurrealDB. The hub goes through the user.
