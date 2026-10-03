@@ -28,7 +28,9 @@
 #   (k) a converged shared package's clone dist is made current from the runtime build
 #       (refresh_clone_dependants) and its file: dependants are refreshed; non-file:
 #       clones untouched; no copy when last-good != the clone HEAD or dist is tracked;
-#       a dependant with a young authoring marker is skipped that tick;
+#       a dependant (or the package itself) with a young authoring marker is skipped that
+#       tick; a tick whose budget cannot fit one more install defers the rest (logged);
+#       a file: spec with a trailing slash is still discovered;
 #       called from the no-op branch and after a credited fan-out
 #
 # usage: validation/scripts/pull-sync-clone-deps.test.sh [path/to/substrate-pull-sync.sh]
@@ -47,6 +49,7 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
   sed -n '/^tree_digest() {/,/^}/p' "$SCRIPT"
   sed -n '/^clone_file_deps() {/,/^}/p' "$SCRIPT"
   sed -n '/^file_dep_identity() {/,/^}/p' "$SCRIPT"
+  sed -n '/^young_authoring_marker() {/,/^}/p' "$SCRIPT"
   sed -n '/^sync_clone_dist() {/,/^}/p' "$SCRIPT"
   sed -n '/^refresh_clone_dependants() {/,/^}/p' "$SCRIPT"
   sed -n '/^clone_deps_install() {/,/^}/p' "$SCRIPT"
@@ -342,6 +345,32 @@ if declare -F refresh_clone_dependants >/dev/null; then
   : > "$CALLS"
   refresh_clone_dependants ias-executor-ts "$DEP/"
   grep -q '^INSTALL' "$CALLS" && bad "(k3) control: an already-current dist reinstalled dependants" || ok "(k3) control: current dist -> no reinstall"
+  # (k8) budget: an exhausted tick installs nothing and says so; with budget left it refreshes
+  k_setup; GATE_T0=$(( $(date +%s) - 10000 ))
+  refresh_clone_dependants ias-executor-ts "$DEP/"
+  grep -q '^INSTALL' "$CALLS" && bad "(k8) installed with the tick budget exhausted" || ok "(k8) budget exhausted: no install"
+  grep -q 'ias-executor-ts: clone dependant refresh deferred to next tick — tick budget left' "$LOG" && ok "(k8) deferral logged" || bad "(k8) no deferral log: $(cat "$LOG")"
+  GATE_T0=$(date +%s); : > "$LOG"
+  refresh_clone_dependants ias-executor-ts "$DEP/"
+  grep -q "^INSTALL ${CLONE_DIR}/demo-vessel " "$CALLS" && ok "(k8) control: budget left -> refreshed" || bad "(k8) not refreshed with budget left"
+  grep -q 'deferred to next tick' "$LOG" && bad "(k8) deferred with budget left" || ok "(k8) control: no deferral with budget left"
+  unset GATE_T0
+  # (k9) a trailing slash in the file: spec is still a dependant
+  k_setup
+  printf '{"name":"slash","dependencies":{"@avigopal/ias-executor-ts":"file:../ias-executor-ts/"}}\n' > "$CLONE_DIR/slash-vessel/package.json" 2>/dev/null \
+    || { mkdir -p "$CLONE_DIR/slash-vessel"; printf '{"name":"slash","dependencies":{"@avigopal/ias-executor-ts":"file:../ias-executor-ts/"}}\n' > "$CLONE_DIR/slash-vessel/package.json"; }
+  refresh_clone_dependants ias-executor-ts "$DEP/"
+  grep -q "^INSTALL ${CLONE_DIR}/slash-vessel " "$CALLS" && ok "(k9) file:../pkg/ (trailing slash) is discovered" || bad "(k9) trailing-slash dependant missed"
+  rm -rf "$CLONE_DIR/slash-vessel"
+  # (k10) a live authoring marker on the PACKAGE itself: its clone dist is not swapped
+  k_setup; AUTHORING_MARKER_DIR="$T/authoring"; mkdir -p "$AUTHORING_MARKER_DIR"
+  echo '{"pid":1}' > "$AUTHORING_MARKER_DIR/feature_compose-ias-executor-ts.json"
+  refresh_clone_dependants ias-executor-ts "$DEP/"
+  grep -q 'exports.v = 1' "$DEP/dist/index.js" && ok "(k10) live marker on the package: clone dist not swapped" || bad "(k10) swapped the package dist under a live draft"
+  grep -q '^INSTALL' "$CALLS" && bad "(k10) dependants refreshed although the dist was held" || ok "(k10) no dependant install while held"
+  rm -f "$AUTHORING_MARKER_DIR"/*.json
+  refresh_clone_dependants ias-executor-ts "$DEP/"
+  cmp -s "$DEP/dist/index.js" "$RUNTIME_DIR/ias-executor-ts/dist/index.js" && ok "(k10) marker gone: swapped on the next call" || bad "(k10) not swapped once the marker cleared"
   # a dependant with a young authoring marker is not refreshed under its draft
   k_setup; AUTHORING_MARKER_DIR="$T/authoring"; mkdir -p "$AUTHORING_MARKER_DIR"
   echo '{"pid":1}' > "$AUTHORING_MARKER_DIR/feature_compose-demo-vessel.json"

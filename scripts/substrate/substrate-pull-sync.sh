@@ -1558,6 +1558,10 @@ clone_deps_gap() { # id-prefix vessel why summary-lead
     || _cg_json="{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"$1$2\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"status\":\"open\",\"summary\":\"$4\"}}}}"
   emit_gap "$_cg_json"
 }
+# COST: tree_digest runs EVERY TICK for every clone with a file: dependency (its marker
+# hash) and twice per shared package (runtime vs clone dist). Acceptable at today's dist
+# sizes (ias-executor-ts: ~160 files, six dependants -> well under a second per tick);
+# revisit if a shared dist grows by orders of magnitude.
 tree_digest() { # dir -> md5 over its sorted relative paths and contents; "none" if absent
   [ -d "$1" ] || { echo none; return; }
   (cd "$1" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 -r md5sum) | md5sum | cut -d' ' -f1
@@ -1700,13 +1704,25 @@ ensure_clone_deps() { # vessel clone-dir
 # (a rolled-back or not-yet-credited fan-out). A dependant with a young authoring marker
 # is skipped this tick — swapping node_modules under its typecheck is the failure this
 # exists to prevent. Test: validation/scripts/pull-sync-clone-deps.test.sh (k).
+young_authoring_marker() { # vessel -> path of a young (< TTL) authoring marker naming it, or nothing; never reaps
+  local _ya_mk
+  for _ya_mk in "${AUTHORING_MARKER_DIR:-/workspace/authoring-inflight}"/*-"$1".json; do
+    [ -f "$_ya_mk" ] && [ -n "$(find "$_ya_mk" -mmin "-${AUTHORING_MARKER_TTL_MIN:-40}" 2>/dev/null)" ] && { printf '%s\n' "$_ya_mk"; return 0; }
+  done
+  return 0
+}
 sync_clone_dist() { # pkg-vessel clone-dir -> 0 when the clone dist is current (SCD_STATE current|copied)
-  local _sc_v="$1" _sc_d="${2%/}" _sc_rt="$RUNTIME_DIR/$1" _sc_stage
+  local _sc_v="$1" _sc_d="${2%/}" _sc_rt="$RUNTIME_DIR/$1" _sc_stage _sc_busy
   SCD_STATE=skipped
   [ -d "$_sc_rt/dist" ] && [ -f "$_sc_d/package.json" ] || return 1
   [ "$(cat "$LAST_GOOD_DIR/$_sc_v" 2>/dev/null)" = "$(git -C "$_sc_d" rev-parse HEAD 2>/dev/null)" ] || return 1
   [ -z "$(git -C "$_sc_d" ls-files -- dist 2>/dev/null | head -1)" ] || return 1
   if [ "$(tree_digest "$_sc_rt/dist")" = "$(tree_digest "$_sc_d/dist")" ]; then SCD_STATE=current; return 0; fi
+  _sc_busy="$(young_authoring_marker "$_sc_v")"
+  if [ -n "$_sc_busy" ]; then   # a draft on the package itself reads this dist: no rm/mv under it
+    SCD_STATE=busy; log "$_sc_v: authoring run in flight ($(basename "$_sc_busy")) — not swapping its clone dist this tick"
+    return 1
+  fi
   _sc_stage="$MARKER_DIR/$_sc_v.clone-dist-stage"; rm -rf "$_sc_stage" 2>/dev/null || true
   if cp -a "$_sc_rt/dist" "$_sc_stage" 2>/dev/null && rm -rf "$_sc_d/dist" && mv "$_sc_stage" "$_sc_d/dist"; then
     SCD_STATE=copied
@@ -1718,7 +1734,7 @@ sync_clone_dist() { # pkg-vessel clone-dir -> 0 when the clone dist is current (
   return 1
 }
 refresh_clone_dependants() { # pkg-vessel clone-dir
-  local _rd_v="$1" _rd_c _rd_mk _rd_busy _rd_u
+  local _rd_v="$1" _rd_c _rd_busy _rd_u _rd_left _rd_need
   _rd_u="$(vessel_unit "$_rd_v")"
   [ -z "$_rd_u" ] || [ "${_rd_u%.service}" = "$_rd_u" ] || return 0      # a vessel, not a shared package
   grep -q '"build"[[:space:]]*:' "$RUNTIME_DIR/$_rd_v/package.json" 2>/dev/null || return 0
@@ -1726,12 +1742,19 @@ refresh_clone_dependants() { # pkg-vessel clone-dir
   BUN_BIN="${BUN_BIN:-/root/.bun/bin/bun}"
   [ -x "$BUN_BIN" ] || BUN_BIN="$(command -v bun 2>/dev/null || true)"
   [ -n "$BUN_BIN" ] || return 0
-  for _rd_c in $(grep -lE "\"file:[^\"]*/$_rd_v\"" "$CLONE_DIR"/*/package.json 2>/dev/null | xargs -r -n1 dirname | xargs -r -n1 basename); do
+  # BUDGETED like the mirror quiesce (_Q_LEFT): one dependant can cost 2 x the install
+  # timeout, and six of them outlive TimeoutStartSec, so a SIGTERM would land mid-tick.
+  # Stop before a dependant whose worst case does not fit; the markers make it resumable.
+  : "${GATE_T0:=$(date +%s)}"
+  _rd_need=$(( 2 * ${CLONE_DEPS_INSTALL_TIMEOUT_SECONDS:-180} + ${QUIESCE_MARGIN_S:-120} ))
+  for _rd_c in $(grep -lE "\"file:[^\"]*/$_rd_v/?\"" "$CLONE_DIR"/*/package.json 2>/dev/null | xargs -r -n1 dirname | xargs -r -n1 basename); do
     [ "$_rd_c" = "$_rd_v" ] && continue
-    _rd_busy=""
-    for _rd_mk in "${AUTHORING_MARKER_DIR:-/workspace/authoring-inflight}"/*-"$_rd_c".json; do
-      [ -f "$_rd_mk" ] && [ -n "$(find "$_rd_mk" -mmin "-${AUTHORING_MARKER_TTL_MIN:-40}" 2>/dev/null)" ] && { _rd_busy="$_rd_mk"; break; }
-    done
+    _rd_left=$(( ${UNIT_TIMEOUT_S:-900} - ( $(date +%s) - GATE_T0 ) - ${QUIESCE_MARGIN_S:-120} ))
+    if [ "$_rd_left" -lt "$_rd_need" ]; then
+      log "$_rd_v: clone dependant refresh deferred to next tick — tick budget left ${_rd_left}s (one install needs up to ${_rd_need}s)"
+      return 0
+    fi
+    _rd_busy="$(young_authoring_marker "$_rd_c")"
     if [ -n "$_rd_busy" ]; then
       log "$_rd_c: authoring run in flight ($(basename "$_rd_busy")) — not refreshing its clone's $_rd_v copy this tick"
       continue
