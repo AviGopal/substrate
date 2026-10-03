@@ -727,3 +727,12 @@ A regression class counts as covered only if negating or removing the shipped ch
 - The pull-sync half lands check-first after the shared tracked-red exemption is pushed.
 - **Deploy (deployment): public :dev = 189ffdcc,** with transport gitlink 69256d9 and relay af119736 (both noise halves). Install acceptance promoted it after the network leg PASSED on both engines (large_frame_concurrency 48/48, 0 cipher errors, 0 resets). This is the measurement that verifies lane landing 69256d9 by effect. A run labelled 189ffdcc that FAILED had actually judged image a8bd1e74 (built before the bump): **a run's label is not the judged image; read the status file's "image <sha>".**
 - **SurrealDB pin:** super-repo e7e51785 sets the Dockerfile SURREAL_VERSION to 2.3.10. Until CI promotes an image carrying it, NO node is recreated onto :dev, because a recreate would downgrade 2.3.10-written data to 2.3.3. The next wave re-pins all 5 local nodes to that image, node 1 last, with its retention hold re-applied (the 2026-10-04T06:47:20Z release kept).
+- **Floor LLM leg on node 1, root cause (read-only trace; NOT funding).**
+  - **The plane serves:** 976 successful completions since 06:03Z, including dispatcher calls on paid OpenRouter.
+  - **The probes failed because:**
+    1. The walk invoked the learned llm_completion_dispatch satisfier with NO prompt, and the dispatcher passed it through unchecked.
+    2. llm-resolver refused silently, before any provider, yet graded the refusal as a failure of the drawn model arm (the learned satisfier was also billed).
+    3. The dispatcher overwrote that reason with the stale :8401 federated arms' "Unable to connect".
+  - **Filed:** prompt-less satisfier (high), a malformed request graded against an arm (high), the masked failure (medium), model-policy catalog drift with the fallback walk in declaration order (medium), and stale discovery registrations (high).
+  - **Chutes:** its 402s are real (that account is unfunded) but non-blocking.
+  - The earlier "funding blocker" framing is retracted.
