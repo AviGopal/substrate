@@ -28,6 +28,10 @@
 # binds the minted token's org_id and user_id to that key's own identity, so the
 # key can only mint for itself. The resulting admin JWT is presented to the
 # admin-only /v1/keys/* endpoints.
+# apikey_cfg KEY: the curl config line that carries an ApiKey, for `curl -K <(apikey_cfg "$K")` or
+# `apikey_cfg "$K" | curl -K -`. The key never reaches argv (printf is a builtin), so no process listing shows it.
+apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$1"; return 0; }
+
 set -euo pipefail
 
 set -a; source /etc/substrate/env 2>/dev/null || true; set +a
@@ -116,7 +120,7 @@ mint_jwt() { # $1=role $2=expires_seconds
   # tenant-binding check still passes. Fall back to METABOB_API_KEY when unset.
   case "$role" in admin|owner) key="${SUBSTRATE_ADMIN_KEY:-$METABOB_API_KEY}";; esac
   j=$(curl -s "$IDENTITY/v1/jwt/generate" -H "Content-Type: application/json" \
-        -H "Authorization: ApiKey $key" \
+        -K <(apikey_cfg "$key") \
         -d "{\"user_id\":\"$USER_ID\",\"org_id\":\"$ORG_ID\",\"role\":\"$role\",\"expires_in_seconds\":${2:-900}}")
   JWT=$(echo "$j" | jq -r '.data.token // empty')
   [[ -n "$JWT" ]] || die "JWT generation failed: $j"
@@ -218,7 +222,7 @@ case "$cmd" in
       exit 0
     fi
     resp=$(curl -s "$IDENTITY/v1/keys/bootstrap-admin" -H "Content-Type: application/json" \
-             -H "Authorization: ApiKey $METABOB_API_KEY" \
+             -K <(apikey_cfg "$METABOB_API_KEY") \
              -d "{\"bootstrap_secret\":\"$API_KEY_SECRET\",\"name\":\"substrate-admin-bootstrap\"}")
     key=$(echo "$resp" | jq -r '.data.key // empty')
     [[ -n "$key" ]] || die "bootstrap failed: $resp"

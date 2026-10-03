@@ -104,8 +104,10 @@ async function main(): Promise<void> {
       body: JSON.stringify({ impulse: { type: "memoryNote_write", note } }),
     });
     if (!res.ok) {
+      // NON-ZERO, so the hook's `|| echo "mirror failed"` fires: a refused write (401 for a missing or
+      // revoked key) is a lost note, not a skip. The hook itself still fails open.
       console.error(`[mirror-memory-note] ${id}: HTTP ${res.status} ${await res.text()}`);
-      process.exit(0);
+      process.exit(1);
     }
     const json = (await res.json()) as { body?: { action?: string } };
     console.error(`[mirror-memory-note] ${id}: ${json?.body?.action ?? "ok"}`);

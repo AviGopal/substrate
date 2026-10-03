@@ -9,6 +9,10 @@
 # falls back to TTL expiry). Matches registrations whose vesselId/name contains
 # the argument (vessels self-assign ids, often instance-suffixed). Best-effort:
 # never fails the caller.
+# apikey_cfg KEY: the curl config line that carries an ApiKey, for `curl -K <(apikey_cfg "$K")` or
+# `apikey_cfg "$K" | curl -K -`. The key never reaches argv (printf is a builtin), so no process listing shows it.
+apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$1"; return 0; }
+
 set -uo pipefail
 
 NEEDLE="${1:?usage: discovery-deregister.sh <vessel-name-or-id-substring>}"
@@ -24,7 +28,7 @@ KEY="${METABOB_API_KEY:-$(grep -m1 '^METABOB_API_KEY=' /etc/substrate/env 2>/dev
 # our FED_SUBSTRATE_ID; with no id configured, '@'-qualified rows are treated
 # as not-ours (TTL expiry remains their backstop).
 SUB="${FED_SUBSTRATE_ID:-$(grep -m1 '^FED_SUBSTRATE_ID=' /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d '"')}"
-IDS="$(curl -s -m 5 -X POST -H "Authorization: ApiKey $KEY" -H 'Content-Type: application/json' \
+IDS="$(curl -s -m 5 -X POST -K <(apikey_cfg "$KEY") -H 'Content-Type: application/json' \
   -d '{"pointer":{"type":"vesselRegistry"}}' "$DISCOVERY/resolve" 2>/dev/null \
   | jq -r --arg n "$NEEDLE" --arg sub "$SUB" '.content.vessels[]?
       | (.vesselId // .id // "") as $vid
@@ -47,7 +51,7 @@ IDS="$(curl -s -m 5 -X POST -H "Authorization: ApiKey $KEY" -H 'Content-Type: ap
 # no-op as a hard failure would make repeat deregistration look broken.
 _removed=0
 for id in $IDS; do
-  if curl -s -m 5 -X DELETE -H "Authorization: ApiKey $KEY" "$DISCOVERY/vessels/$id" >/dev/null 2>&1; then
+  if curl -s -m 5 -X DELETE -K <(apikey_cfg "$KEY") "$DISCOVERY/vessels/$id" >/dev/null 2>&1; then
     echo "[discovery-deregister] removed $id"
     _removed=$((_removed+1))
   else

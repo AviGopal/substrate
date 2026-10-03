@@ -6,6 +6,10 @@
 #
 # Fail-open: if the substrate is unreachable, emit nothing and exit 0 so the
 # session still starts (cache fallback applies, per CLAUDE.md §Memory).
+# apikey_cfg KEY: the curl config line that carries an ApiKey, for `curl -K <(apikey_cfg "$K")` or
+# `apikey_cfg "$K" | curl -K -`. The key never reaches argv (printf is a builtin), so no process listing shows it.
+apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$1"; return 0; }
+
 set -uo pipefail
 
 EP="${DEV_VESSEL_ENDPOINT:-http://localhost:18090}"
@@ -49,7 +53,7 @@ GW="${DISCOVERY_ENDPOINT:-http://localhost:18100}"
 APIKEY="$(jq -r '.metabob.apiKey // .apiKey // empty' "$HOME/.metabob/config.json" 2>/dev/null)"
 if [ -n "$APIKEY" ]; then
   priors="$(curl -s --max-time 8 -X POST "$GW/resolve" \
-    -H "Authorization: ApiKey $APIKEY" -H 'Content-Type: application/json' \
+    -K <(apikey_cfg "$APIKEY") -H 'Content-Type: application/json' \
     -d '{"pointer":{"type":"concept_select_for_prompt"}}' 2>/dev/null)"
   if [ -n "$priors" ] && echo "$priors" | jq -e '.success and ((.body.selected | length) > 0)' >/dev/null 2>&1; then
     cctx="$(echo "$priors" | jq -r '

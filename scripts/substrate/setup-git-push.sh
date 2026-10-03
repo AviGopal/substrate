@@ -323,10 +323,10 @@ cat "$d/out" >&2
       source:"substrate_detected",status:"open",
       summary:("A commit to the super-repo clone was refused by the placement gate (scripts/git-hooks/pre-commit). The route that made it either wrote outside the tracked layout or changed human-surface UI source without its rebuilt bundle; the landing did not happen. Findings:\n" + $r),
       classification_metadata:{repo:$top, hook:"scripts/git-hooks/pre-commit", exit_status:$rc, staged:$staged}}}}}')" || exit 0
-  auth=()
-  [ -n "${METABOB_API_KEY:-}" ] && auth=(-H "Authorization: ApiKey ${METABOB_API_KEY}")
-  curl -s --max-time 8 -o /dev/null -X POST "${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}/v2/impulses/resolve" \
-    -H 'Content-Type: application/json' "${auth[@]}" -d "$body" \
+  # The key reaches curl as a config line on stdin, never on argv (a process listing shows argv).
+  { [ -n "${METABOB_API_KEY:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; true; } \
+    | curl -K - -sf --max-time 8 -o /dev/null -X POST "${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}/v2/impulses/resolve" \
+    -H 'Content-Type: application/json' -d "$body" \
     || echo "[placement-gate] WARN could not file the refusal as a gap" >&2
 )
 exit "$rc"

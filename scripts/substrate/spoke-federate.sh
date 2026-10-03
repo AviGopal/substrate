@@ -14,6 +14,10 @@
 # ingress advertisement when not given: the relay and the hub live on the same
 # public host by convention, and the ingress circuit multiaddr embeds the relay
 # prefix before /p2p-circuit.
+# apikey_cfg KEY: the curl config line that carries an ApiKey, for `curl -K <(apikey_cfg "$K")` or
+# `apikey_cfg "$K" | curl -K -`. The key never reaches argv (printf is a builtin), so no process listing shows it.
+apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$1"; return 0; }
+
 set -euo pipefail
 C="${1:?usage: spoke-federate.sh <container> <fed-substrate-id> [relay-multiaddr]}"
 SID="${2:?FED_SUBSTRATE_ID required (unique per substrate in the hub namespace)}"
@@ -40,7 +44,7 @@ KEY=$(cexec 'source /etc/substrate/env 2>/dev/null || true; source /workspace/.s
 
 hub_resolve() { # <pointer-json>
   curl -sm 10 -X POST "$HUB/resolve" -H 'Content-Type: application/json' \
-    ${KEY:+-H "Authorization: ApiKey $KEY"} -d "$1"
+    -K <(apikey_cfg "$KEY") -d "$1"
 }
 
 if [ -z "$RELAY" ]; then

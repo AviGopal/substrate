@@ -5,6 +5,10 @@
 # no UI shuffling, idempotent (only new commands persisted). Set
 # OBSIDIAN_LEARN_MODE=probe + a probe endpoint for execution-based effect
 # learning. Unreachable instance is a graceful idle, never a hard failure.
+# apikey_cfg KEY: the curl config line that carries an ApiKey, for `curl -K <(apikey_cfg "$K")` or
+# `apikey_cfg "$K" | curl -K -`. The key never reaches argv (printf is a builtin), so no process listing shows it.
+apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$1"; return 0; }
+
 set -uo pipefail
 
 MODE="${OBSIDIAN_LEARN_MODE:-catalog}"
@@ -42,7 +46,7 @@ _surface_present() {
   local body
   body=$(curl -s -m 8 -X POST "${DISCOVERY}/resolve" \
     -H "Content-Type: application/json" \
-    -H "Authorization: ApiKey ${METABOB_API_KEY:-}" \
+    -K <(apikey_cfg "${METABOB_API_KEY:-}") \
     -d '{"pointer":{"type":"vesselCapability","shape":"obsidian:note"}}' 2>/dev/null) || return 0
   [ -z "${body}" ] && return 0
   case "${body}" in
@@ -69,7 +73,7 @@ read -r -d '' REQUEST_BODY <<JSON
 JSON
 curl -s -m 60 -X POST "${DEV_VESSEL}/v2/impulses/resolve" \
   -H "Content-Type: application/json" \
-  -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+  -K <(apikey_cfg "${METABOB_API_KEY}") \
   -d "${REQUEST_BODY}" | head -c 400
 echo
 
@@ -79,7 +83,7 @@ JSON
 
 curl -s -m 200 -X POST "${DEV_VESSEL}/v2/impulses/resolve" \
   -H "Content-Type: application/json" \
-  -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+  -K <(apikey_cfg "${METABOB_API_KEY}") \
   -d "${BODY}" | head -c 1000
 echo
 
@@ -91,7 +95,7 @@ read -r -d '' BEHAVIOR_BODY <<JSON
 JSON
 curl -s -m 60 -X POST "${DEV_VESSEL}/v2/impulses/resolve" \
   -H "Content-Type: application/json" \
-  -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+  -K <(apikey_cfg "${METABOB_API_KEY}") \
   -d "${BEHAVIOR_BODY}" | head -c 1000
 echo
 
@@ -103,7 +107,7 @@ read -r -d '' REFLECT_BODY <<JSON
 JSON
 curl -s -m 30 -X POST "${DEV_VESSEL}/v2/impulses/resolve" \
   -H "Content-Type: application/json" \
-  -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+  -K <(apikey_cfg "${METABOB_API_KEY}") \
   -d "${REFLECT_BODY}" | head -c 600
 echo
 
@@ -116,15 +120,15 @@ read -r -d '' UIPERC_BODY <<JSON
 JSON
 curl -s -m 40 -X POST "${DEV_VESSEL}/v2/impulses/resolve" \
   -H "Content-Type: application/json" \
-  -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+  -K <(apikey_cfg "${METABOB_API_KEY}") \
   -d "${UIPERC_BODY}" | head -c 500
 echo
 
 # Fourth pass: develop + deliver + GRADE obsidian functionality (autonomous, non-intrusive).
 # Two assist CLASSES so reaction-grading can learn which kind of help the operator uses.
-call() { curl -s -m 60 -X POST "${DEV_VESSEL}/v2/impulses/resolve" -H "Content-Type: application/json" -H "Authorization: ApiKey ${METABOB_API_KEY}" -d "$1" | head -c 300; echo; }
+call() { curl -s -m 60 -X POST "${DEV_VESSEL}/v2/impulses/resolve" -H "Content-Type: application/json" -K <(apikey_cfg "${METABOB_API_KEY}") -d "$1" | head -c 300; echo; }
 call '{"impulse":{"pointer":{"type":"obsidian_assist_bridge"}}}'
 # active-note: run the SUBSTRATE-AUTHORED activity so it accrues trace evidence + auto-promotes
-curl -s -m 60 -X POST "${GOAL_HOST:-http://127.0.0.1:8210}/run-goal" -H "Content-Type: application/json" -H "Authorization: ApiKey ${METABOB_API_KEY}" -d '{"goal":"deliver obsidian active-note assist","targetTemplateId":"proposed_pattern_authored_obsidian_assist_active_note","variables":{}}' | head -c 200; echo
+curl -s -m 60 -X POST "${GOAL_HOST:-http://127.0.0.1:8210}/run-goal" -H "Content-Type: application/json" -K <(apikey_cfg "${METABOB_API_KEY}") -d '{"goal":"deliver obsidian active-note assist","targetTemplateId":"proposed_pattern_authored_obsidian_assist_active_note","variables":{}}' | head -c 200; echo
 call '{"impulse":{"pointer":{"type":"obsidian_deliver_assist","assistPath":"Substrate/Assists/next-actions.md","promptFocus":"the operator next concrete actions given their open notes and goal-dispatch state"}}}'
 call '{"impulse":{"pointer":{"type":"obsidian_assist_feedback_scan"}}}'

@@ -3,6 +3,10 @@
 # Dispatches a memory-consolidation goal to the substrate (goal-host-vessel) so
 # the session's learnings are absorbed by the loop. Detached + non-blocking so
 # session teardown is not delayed. Fail-open: substrate down => skip.
+# apikey_cfg KEY: the curl config line that carries an ApiKey, for `curl -K <(apikey_cfg "$K")` or
+# `apikey_cfg "$K" | curl -K -`. The key never reaches argv (printf is a builtin), so no process listing shows it.
+apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$1"; return 0; }
+
 set -uo pipefail
 
 GH="${GOAL_HOST_ENDPOINT:-http://localhost:18210}"
@@ -18,10 +22,14 @@ fi
 GOAL='Consolidate the most recent operator memoryNotes into durable substrate knowledge: review recent memoryNote impulses and link load-bearing findings/conventions into the concept graph, superseding any that are now stale.'
 
 # Detach so the session can end immediately; the dispatch runs to completion.
-setsid bash -c "
+# The key goes to the detached shell in its environment and to curl as a config line on a
+# descriptor: spliced into the `bash -c` string it would sit on that shell's argv, readable in any
+# process listing for as long as the 90-second dispatch runs.
+export -f apikey_cfg
+SESSION_END_KEY="$KEY" setsid bash -c "
   resp=\$(curl -s --max-time 90 -X POST '$GH/run-goal' \
     -H 'Content-Type: application/json' \
-    -H 'Authorization: ApiKey ${KEY}' \
+    -K <(apikey_cfg \"\$SESSION_END_KEY\") \
     -d '$(jq -nc --arg g "$GOAL" '{goal:$g,variables:{}}')' 2>&1)
   echo \"\$(date -u) dispatched: \$resp\" >>'$LOG'
 " >/dev/null 2>&1 &

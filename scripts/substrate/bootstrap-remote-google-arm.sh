@@ -25,6 +25,10 @@
 # Usage:  bash scripts/substrate/bootstrap-remote-google-arm.sh
 # Env:    SSH_KEY (default ~/.ssh/syzygy_deploy)  HUB=root@<hub-host>  (REQUIRED)
 
+# apikey_cfg KEY: the curl config line that carries an ApiKey, for `curl -K <(apikey_cfg "$K")` or
+# `apikey_cfg "$K" | curl -K -`. The key never reaches argv (printf is a builtin), so no process listing shows it.
+apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$1"; return 0; }
+
 set -euo pipefail
 # No default hub. This previously defaulted to a specific droplet, which meant a script
 # shipped in the image pointed every operator at one machine — the same law-11 violation as
@@ -54,7 +58,7 @@ VESSEL_ID="llm-resolver-google-remote"
 
 cleanup() {
   echo "[bootstrap-google-arm] cleaning up…"
-  curl -s -m 5 -X DELETE "$DISCOVERY/vessels/$VESSEL_ID" -H "Authorization: ApiKey $MKEY" >/dev/null || true
+  curl -s -m 5 -X DELETE "$DISCOVERY/vessels/$VESSEL_ID" -K <(apikey_cfg "$MKEY") >/dev/null || true
   [ -n "${TUNNEL_PID:-}" ] && kill "$TUNNEL_PID" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
@@ -73,7 +77,7 @@ probe() {
 echo "[bootstrap-google-arm] probe: $(probe | head -c 120)"
 
 register() {
-  curl -s -m 10 -X POST "$DISCOVERY/register" -H "Authorization: ApiKey $MKEY" -H 'Content-Type: application/json' -d @- <<JSON
+  curl -s -m 10 -X POST "$DISCOVERY/register" -K <(apikey_cfg "$MKEY") -H 'Content-Type: application/json' -d @- <<JSON
 { "vesselId": "$VESSEL_ID", "vesselName": "hub google arm via ssh conduit (bootstrap)",
   "endpoint": "http://${BRIDGE_IP}:${PORT}",
   "shapes": ["llm_completion", "llmCompletion"],

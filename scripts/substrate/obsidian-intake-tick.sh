@@ -21,6 +21,10 @@
 #                failure/timeout we default to ANSWER (safe, prior behavior).
 # Idempotent: request-scan marks the inbox, so a request is picked up (and served)
 # exactly once. Graceful idle if the plugin / llm vessel / goal-host is unreachable.
+# apikey_cfg KEY: the curl config line that carries an ApiKey, for `curl -K <(apikey_cfg "$K")` or
+# `apikey_cfg "$K" | curl -K -`. The key never reaches argv (printf is a builtin), so no process listing shows it.
+apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$1"; return 0; }
+
 set -uo pipefail
 
 DEV="${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}"
@@ -41,7 +45,7 @@ _surface_present() {
   local body
   body=$(curl -s -m 8 -X POST "${DISCOVERY}/resolve" \
     -H "Content-Type: application/json" \
-    -H "Authorization: ApiKey ${METABOB_API_KEY:-}" \
+    -K <(apikey_cfg "${METABOB_API_KEY:-}") \
     -d '{"pointer":{"type":"vesselCapability","shape":"obsidian:note"}}' 2>/dev/null) || return 0
   [ -z "${body}" ] && return 0
   case "${body}" in
@@ -70,7 +74,7 @@ Request: \"${text}\"
 Respond with ONLY the single word DEVELOP, ACTION, or ANSWER."
   resp=$(curl -s -m 20 -X POST "${LLM}" \
     -H "Content-Type: application/json" \
-    -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+    -K <(apikey_cfg "${METABOB_API_KEY}") \
     -d "$(jq -nc --arg p "${prompt}" --arg m "${CLASSIFY_MODEL}" \
           '{type:"llm_completion",prompt:$p,model:$m,max_tokens:10}')" 2>/dev/null)
   word=$(printf '%s' "${resp}" | jq -r '.content // empty' 2>/dev/null \
@@ -85,7 +89,7 @@ Respond with ONLY the single word DEVELOP, ACTION, or ANSWER."
 # 1. INTAKE
 SCAN=$(curl -s -m 60 -X POST "${DEV}/v2/impulses/resolve" \
   -H "Content-Type: application/json" \
-  -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+  -K <(apikey_cfg "${METABOB_API_KEY}") \
   -d "{\"impulse\":{\"pointer\":{\"type\":\"obsidian_request_scan\",\"obsidianEndpoint\":\"${OBS}\"}}}")
 printf '%s\n' "${SCAN}" | head -c 500; echo
 
@@ -133,11 +137,11 @@ printf '%s' "${SCAN}" | jq -r '.body.requests[]? | select(.text != null) | .text
     GAPBODY=$(jq -nc --arg id "${GAPID}" --arg s "${TEXT}" --argjson m "${META}" \
       '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"systematic_failure",status:"open",summary:$s,classification_metadata:$m}}}}')
     curl -s -m 20 -X POST "${DEV}/v2/impulses/resolve" \
-      -H "Content-Type: application/json" -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+      -H "Content-Type: application/json" -K <(apikey_cfg "${METABOB_API_KEY}") \
       -d "${GAPBODY}" 2>/dev/null | head -c 200
     NOTE_BODY="---\nsubstrate_develop: queued\ngenerated_at: $(date -u +%Y-%m-%dT%H:%M:%SZ)\n---\n\n# 🔧 queued for the development loop\n\nRouted into autonomous self-development (gap \`${GAPID}\`). I'll author a quality-gated change and land it on dev if it passes typecheck + the stub/semantic gates; otherwise it's rejected and stays open.\n\nRequest: ${TEXT}\n"
     curl -s -m 15 -X POST "${OBS}/resolve" \
-      -H "Content-Type: application/json" -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+      -H "Content-Type: application/json" -K <(apikey_cfg "${METABOB_API_KEY}") \
       -d "$(jq -nc --arg p "Substrate/Responses/${SLUG}-develop.md" --arg c "${NOTE_BODY}" \
             '{type:"obsidian:write_note",pointer:{type:"obsidian:write_note",path:$p,content:$c}}')" 2>/dev/null | head -c 200
     printf ' <- queued for dev loop (gap %s): %s\n' "${GAPID}" "${SLUG}"
@@ -145,7 +149,7 @@ printf '%s' "${SCAN}" | jq -r '.body.requests[]? | select(.text != null) | .text
     # ACTION → let goal-host PERFORM it (the walk's vessel-resolve satisfier does the real action).
     DISP=$(curl -s -m 90 -X POST "${GOALHOST}/run-goal" \
       -H "Content-Type: application/json" \
-      -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+      -K <(apikey_cfg "${METABOB_API_KEY}") \
       -d "$(jq -nc --arg g "${TEXT}" '{goal:$g,expected_output_shapes:["obsidian:note"]}')" 2>/dev/null)
     DISPID=$(printf '%s' "${DISP}" | jq -r '.executionId // .dispatchId // .id // "?"' 2>/dev/null)
     [ -z "${DISPID}" ] && DISPID="?"
@@ -153,7 +157,7 @@ printf '%s' "${SCAN}" | jq -r '.body.requests[]? | select(.text != null) | .text
     NOTE_BODY="---\nsubstrate_action: performing\ngenerated_at: $(date -u +%Y-%m-%dT%H:%M:%SZ)\n---\n\n# 🔧 performing\n\nperforming: ${TEXT} (dispatch ${DISPID})\n"
     curl -s -m 15 -X POST "${OBS}/resolve" \
       -H "Content-Type: application/json" \
-      -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+      -K <(apikey_cfg "${METABOB_API_KEY}") \
       -d "$(jq -nc --arg p "Substrate/Responses/${SLUG}-action.md" --arg c "${NOTE_BODY}" \
             '{type:"obsidian:write_note",pointer:{type:"obsidian:write_note",path:$p,content:$c}}')" 2>/dev/null | head -c 200
     printf ' <- performing (dispatch %s): %s\n' "${DISPID}" "${SLUG}"
@@ -165,7 +169,7 @@ printf '%s' "${SCAN}" | jq -r '.body.requests[]? | select(.text != null) | .text
       '{impulse:{pointer:{type:"obsidian_deliver_assist",assistPath:$p,promptFocus:$f,maxTokens:$mt}}}')
     curl -s -m 90 -X POST "${DEV}/v2/impulses/resolve" \
       -H "Content-Type: application/json" \
-      -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+      -K <(apikey_cfg "${METABOB_API_KEY}") \
       -d "${REQ}" | head -c 200
     printf ' <- served: %s\n' "${SLUG}"
   fi

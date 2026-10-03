@@ -141,6 +141,16 @@ async function post(url: string, body: unknown, timeoutMs = 8000): Promise<any> 
   return { status: r.status, body: await r.json().catch(() => ({})) }
 }
 
+// A pool write that did not land is said, not swallowed. post() returns the status rather than
+// throwing on it, so the old `.catch(() => {})` lost a 401 (an uncredentialed or revoked key) with
+// no line anywhere. These name the status, or the failure when nothing answered.
+const writeHeard = (what: string) => (r: { status: number }) => {
+  if (r.status < 200 || r.status >= 300) console.error(`[fed-probe] pool write FAILED http=${r.status} — ${what} NOT written`)
+}
+const writeLost = (what: string) => (e: unknown) => {
+  console.error(`[fed-probe] pool write FAILED (no answer: ${String((e as Error)?.message ?? e)}) — ${what} NOT written`)
+}
+
 async function discoveryResolve(pointer: Record<string, unknown>, timeoutMs = 8000): Promise<any> {
   try {
     const r = await post(`${DISCOVERY}/resolve`, { pointer }, timeoutMs)
@@ -1402,17 +1412,17 @@ async function main() {
   for (const v of real) {
     await post(`${DEV_VESSEL}/v2/impulses/resolve`, {
       impulse: { type: 'poolImpulse_write', id: `fedverdict:${SWEEP_ID}:${v.invariant}:${v.config_class.payload ?? v.config_class.path ?? v.config_class.topology ?? 'base'}`, shape: 'federationProbeVerdict', source: 'federation-probe-tick', body: v },
-    }, 5000).catch(() => {})
+    }, 5000).then(writeHeard(`federationProbeVerdict ${v.invariant}`), writeLost(`federationProbeVerdict ${v.invariant}`))
   }
   await post(`${DEV_VESSEL}/v2/impulses/resolve`, {
     impulse: { type: 'poolImpulse_write', id: `fedreport:${SWEEP_ID}`, shape: 'federationVerificationReport', source: 'federation-probe-tick', body: report },
-  }, 5000).catch(() => {})
+  }, 5000).then(writeHeard('federationVerificationReport'), writeLost('federationVerificationReport'))
   await post(`${DEV_VESSEL}/v2/impulses/resolve`, {
     impulse: {
       type: 'poolImpulse_write', id: `fedroster:${SWEEP_ID}`, shape: 'federationRosterExpectation', source: 'federation-probe-tick',
       body: { substrate_id: SUBSTRATE_ID, selection_source: 'systemd mask state (applied result, not a re-derived precedence)', masked_by_selection: masked, churned: churned, quiescent, ts: Date.now() },
     },
-  }, 5000).catch(() => {})
+  }, 5000).then(writeHeard('federationRosterExpectation'), writeLost('federationRosterExpectation'))
 
   writeState({
     last_sweep_id: SWEEP_ID,
@@ -1458,6 +1468,6 @@ main().catch(async (e) => {
       type: 'poolImpulse_write', id: `fedreport:${SWEEP_ID}`, shape: 'federationVerificationReport', source: 'federation-probe-tick',
       body: { sweep_id: SWEEP_ID, probe_id: PROBE_ID, planned: verdicts.length, attempted: verdicts.length, decided: 0, coverage_fraction: 0, blocking_reason: 'probe_threw', error: msg, sweep_validity: 'invalid(probe_threw)', ts: Date.now() },
     },
-  }, 5000).catch(() => {})
+  }, 5000).then(writeHeard('federationVerificationReport (probe_threw)'), writeLost('federationVerificationReport (probe_threw)'))
   process.exit(1)
 })

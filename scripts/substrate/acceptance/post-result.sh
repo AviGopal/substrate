@@ -60,6 +60,10 @@
 #   unreachable, erroring or without a producer; retry later) · 5 the hub rejected a
 #   write, or stored the note under a type other than installAcceptance (retrying will
 #   not help; read the log) · 64 usage
+# apikey_cfg KEY: the curl config line that carries an ApiKey, for `curl -K <(apikey_cfg "$K")` or
+# `apikey_cfg "$K" | curl -K -`. The key never reaches argv (printf is a builtin), so no process listing shows it.
+apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$1"; return 0; }
+
 set -uo pipefail
 
 close_on_pass=0
@@ -91,7 +95,7 @@ log() { printf '[post-result] %s\n' "$*" >&2; }
 resolve_once() {
   local code
   code="$(curl -sS -m 30 -o "$tmp/resp" -w '%{http_code}' -X POST "$hub/resolve" \
-    -H 'Content-Type: application/json' -H "Authorization: ApiKey $key" \
+    -H 'Content-Type: application/json' -K <(apikey_cfg "$key") \
     --data-binary "$(jq -c '{pointer: .}' <<<"$1")" 2>"$tmp/curl.err")" || code="000"
   case "$code" in
     2??)

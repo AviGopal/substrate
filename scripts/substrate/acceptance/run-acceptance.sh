@@ -105,6 +105,10 @@
 #
 # EXIT
 #   0 pass or report-only with no judged failure · 1 a judged failure · 64 usage
+# apikey_cfg KEY: the curl config line that carries an ApiKey, for `curl -K <(apikey_cfg "$K")` or
+# `apikey_cfg "$K" | curl -K -`. The key never reaches argv (printf is a builtin), so no process listing shows it.
+apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$1"; return 0; }
+
 set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -622,7 +626,7 @@ fi
 
 if [ "$(jq -r '.client_config.result' <<<"$checks")" = "pass" ]; then
   code="$(curl -sS -m 30 -o "$RESULT_DIR/diag/auth-request.body" -w '%{http_code}' \
-    -H "Authorization: ApiKey $api_key" "${endpoint%/}/v2/activities/execution-traces?limit=1" 2>"$RESULT_DIR/diag/auth-request.err" || true)"
+    -K <(apikey_cfg "$api_key") "${endpoint%/}/v2/activities/execution-traces?limit=1" 2>"$RESULT_DIR/diag/auth-request.err" || true)"
   r=fail; [[ "$code" =~ ^2 ]] && r=pass
   set_check auth_request "$r" "$(jq -nc --arg u "${endpoint%/}/v2/activities/execution-traces?limit=1" --arg c "$code" '{url: $u, http_status: $c}')"
 

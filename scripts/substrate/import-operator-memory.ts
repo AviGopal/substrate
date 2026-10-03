@@ -165,6 +165,7 @@ async function main(): Promise<void> {
   let imported = 0;
   let skipped = 0;
   let updated = 0;
+  let failed = 0;
 
   for (const filename of files) {
     const content = await readFile(join(MEMORY_DIR, filename), "utf-8");
@@ -205,9 +206,10 @@ async function main(): Promise<void> {
       try {
         await importViaHttp(note);
       } catch (err) {
-        console.warn(`[import-memory] HTTP write failed for ${id}: ${(err as Error).message}`);
-        // Fall through to direct write
-        byId.set(id, note);
+        // NOT written: with DEV_VESSEL_ENDPOINT set there is no direct-write fallback (saveNotes runs
+        // only on the offline path), so the note is lost. Count it and exit non-zero below.
+        console.error(`[import-memory] HTTP write failed for ${id}: ${(err as Error).message}`);
+        failed++;
       }
     } else {
       byId.set(id, note);
@@ -221,7 +223,11 @@ async function main(): Promise<void> {
     console.log(`[import-memory] Wrote ${merged.length} notes to ${NOTES_PATH}`);
   }
 
-  console.log(`[import-memory] Done. imported=${imported} updated=${updated} skipped=${skipped}`);
+  console.log(`[import-memory] Done. imported=${imported} updated=${updated} skipped=${skipped} failed=${failed}`);
+  if (failed > 0) {
+    console.error(`[import-memory] ${failed} note(s) were NOT written (see the HTTP errors above)`);
+    process.exit(1);
+  }
 }
 
 await main();

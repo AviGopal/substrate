@@ -210,17 +210,24 @@ function rowsOf(res: unknown[], i: number): Record<string, unknown>[] {
   return Array.isArray(r) ? (r as Record<string, unknown>[]) : [];
 }
 
+// A gap the store did not take is said, not swallowed: development-vessel answers an uncredentialed or
+// revoked key with 401, and an unchecked fetch lost the gap with no line anywhere.
 async function emitGap(id: string, summary: string, meta: Record<string, unknown>): Promise<void> {
-  await fetch(`${DEV}/v2/impulses/resolve`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
-    body: JSON.stringify({
-      impulse: {
-        type: "substrateGap_write",
-        gap: { id, status: "open", category: "instrumentation_gap", source: "substrate_detected", summary, classification_metadata: meta },
-      },
-    }),
-  }).catch(() => undefined);
+  try {
+    const r = await fetch(`${DEV}/v2/impulses/resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+      body: JSON.stringify({
+        impulse: {
+          type: "substrateGap_write",
+          gap: { id, status: "open", category: "instrumentation_gap", source: "substrate_detected", summary, classification_metadata: meta },
+        },
+      }),
+    });
+    if (!r.ok) console.error(`[selftest] emitGap FAILED http=${r.status} — gap ${id} NOT filed`);
+  } catch (e) {
+    console.error(`[selftest] emitGap FAILED (no answer: ${e instanceof Error ? e.message : String(e)}) — gap ${id} NOT filed`);
+  }
 }
 
 /** Snapshot of every arm's belief, keyed by arm id, for before/after comparison. */

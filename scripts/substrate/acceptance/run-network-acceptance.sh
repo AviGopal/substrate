@@ -40,6 +40,10 @@
 # optional ACCEPTANCE_PROVIDER_KEY + ACCEPTANCE_PROVIDER_VAR, INSTALL_DOC (README.md),
 # INSTALL_IMAGE_REF (ghcr.io/avigopal/substrate:dev), PODMAN_COMPOSE.
 # Exit: 0 when every judged check passes, 1 otherwise, 64 on a harness input error.
+# apikey_cfg KEY: the curl config line that carries an ApiKey, for `curl -K <(apikey_cfg "$K")` or
+# `apikey_cfg "$K" | curl -K -`. The key never reaches argv (printf is a builtin), so no process listing shows it.
+apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$1"; return 0; }
+
 set -uo pipefail
 
 ENGINE="${ENGINE:-}"; IMAGE="${IMAGE:-}"
@@ -194,7 +198,7 @@ if [ "$spoke_rc" = 0 ] || [ "$spoke_rc" = 20 ]; then
   # never something a caller (or this check) may depend on.
   target=""
   registered() {
-    target="$(eng exec "$HUB_C" curl -s -m10 -H "Authorization: ApiKey $hub_key" -H 'Content-Type: application/json' \
+    target="$(apikey_cfg "$hub_key" | eng exec -i "$HUB_C" curl -K - -s -m10 -H 'Content-Type: application/json' \
       -X POST http://127.0.0.1:8100/resolve -d '{"pointer":{"type":"vesselCapability","shape":"fileContent"}}' 2>/dev/null \
       | jq -r --arg s "@${spoke_id}" '[.content.vessels[]? | select(((.id // .vesselId) | endswith($s)) and .protocol == "libp2p" and ((.libp2p_multiaddr // []) | length) > 0) | (.id // .vesselId)][0] // empty')"
     [ -n "$target" ]
@@ -222,17 +226,17 @@ if [ "$spoke_rc" = 0 ] || [ "$spoke_rc" = 20 ]; then
   # A goal from the spoke, graded on the hub. Needs a model, so it is judged only with a key.
   if [ -n "${ACCEPTANCE_PROVIDER_KEY:-}" ]; then
     spoke_client_key="$(jq -r '.metabob.apiKey // empty' "$root/spoke-config.json" 2>/dev/null)"; secrets+=("$spoke_client_key")
-    done_goal() { rec="$(eng exec "$SPOKE_C" curl -s -m10 -H "Authorization: ApiKey $spoke_client_key" "http://127.0.0.1:8210/executions/$did" 2>/dev/null)"; case "$(jq -r '.status // empty' <<<"$rec")" in running|pending|"") return 1 ;; esac; }
+    done_goal() { rec="$(apikey_cfg "$spoke_client_key" | eng exec -i "$SPOKE_C" curl -K - -s -m10 "http://127.0.0.1:8210/executions/$did" 2>/dev/null)"; case "$(jq -r '.status // empty' <<<"$rec")" in running|pending|"") return 1 ;; esac; }
     # Up to three dispatches, the same budget substrate-status gives its own known-answer
     # goal: reach is expected with high probability, not certainty, and one miss must not
     # decide a publish. Every attempt is recorded, so a miss stays visible in the result.
     r=fail; attempts='[]'
     for attempt in 1 2 3; do
-      did="$(eng exec "$SPOKE_C" sh -c "curl -s -m30 -X POST http://127.0.0.1:8210/run-goal -H 'Content-Type: application/json' -H 'Authorization: ApiKey $spoke_client_key' -d '{\"goal\":\"Read $marker_path and tell me exactly what it says.\",\"operator\":\"operator:network-acceptance\",\"tags\":[\"network_acceptance\"]}'" 2>/dev/null | jq -r '.dispatchId // empty')"
+      did="$(apikey_cfg "$spoke_client_key" | eng exec -i "$SPOKE_C" sh -c "curl -K - -s -m30 -X POST http://127.0.0.1:8210/run-goal -H 'Content-Type: application/json' -d '{\"goal\":\"Read $marker_path and tell me exactly what it says.\",\"operator\":\"operator:network-acceptance\",\"tags\":[\"network_acceptance\"]}'" 2>/dev/null | jq -r '.dispatchId // empty')"
       reached=""; on_hub=""; quoted=""
       if [ -n "$did" ] && poll 600 done_goal; then
         reached="$(jq -r '.goalReached // .reached // false' <<<"$rec")"; exe="$(jq -r '.executionId // .execution_id // empty' <<<"$rec")"
-        on_hub="$(curl -s -m10 -o /dev/null -w '%{http_code}' -H "Authorization: ApiKey $hub_key" "http://localhost:${HUB_PREFIX}080/v2/activities/execution-traces/$exe")"
+        on_hub="$(curl -s -m10 -o /dev/null -w '%{http_code}' -K <(apikey_cfg "$hub_key") "http://localhost:${HUB_PREFIX}080/v2/activities/execution-traces/$exe")"
         # Which copy the answer quoted: the spoke's marker (right), the hub's decoy (the read
         # was placed on the wrong node), or neither (the walk never read the file).
         quoted=neither

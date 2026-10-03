@@ -15,6 +15,10 @@
 #      reward signal for whether the collaboration is earning continued interaction.
 # Reuses obsidian_deliver_assist (fetch workspace -> llm -> write_note). Graceful idle if the
 # plugin / llm vessel is unreachable. Bounded: one contribution per pass.
+# apikey_cfg KEY: the curl config line that carries an ApiKey, for `curl -K <(apikey_cfg "$K")` or
+# `apikey_cfg "$K" | curl -K -`. The key never reaches argv (printf is a builtin), so no process listing shows it.
+apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$1"; return 0; }
+
 set -uo pipefail
 
 DEV="${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}"
@@ -35,7 +39,7 @@ _surface_present() {
   local body
   body=$(curl -s -m 8 -X POST "${DISCOVERY}/resolve" \
     -H "Content-Type: application/json" \
-    -H "Authorization: ApiKey ${METABOB_API_KEY:-}" \
+    -K <(apikey_cfg "${METABOB_API_KEY:-}") \
     -d '{"pointer":{"type":"vesselCapability","shape":"obsidian:note"}}' 2>/dev/null) || return 0
   [ -z "${body}" ] && return 0
   case "${body}" in
@@ -78,6 +82,6 @@ REQ=$(jq -nc --arg p "Substrate/Collaboration/toward-your-goal-${TS}.md" --arg f
   '{impulse:{pointer:{type:"obsidian_deliver_assist",assistPath:$p,promptFocus:$f,maxTokens:1400}}}')
 curl -s -m 120 -X POST "${DEV}/v2/impulses/resolve" \
   -H "Content-Type: application/json" \
-  -H "Authorization: ApiKey ${METABOB_API_KEY}" \
+  -K <(apikey_cfg "${METABOB_API_KEY}") \
   -d "${REQ}" | head -c 300
 echo " <- collaboration contribution delivered (Substrate/Collaboration/)"

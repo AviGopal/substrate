@@ -231,15 +231,33 @@ healthy() { # vessel-name port -> 0 if /health returns 200 within the probe budg
   done
   return 1
 }
+# A GAP THE STORE DID NOT TAKE IS SAID, NOT SWALLOWED. development-vessel answers an uncredentialed or
+# revoked key with 401, and these writers used to discard both the answer and its status, so the
+# detector fired and nothing was queryable anywhere. Now a non-2xx (000 = no answer) writes a journal
+# line naming the HTTP status and the gap id, and touches /workspace/state/self-recovery-gap-unfiled.<id>
+# (via csh, so it lands in-container from either context) for a later tick or an operator to find.
+gap_id_of() { sed -n 's/.*"gap":{"id":"\([^"]*\)".*/\1/p' | head -n1 | tr -cd 'A-Za-z0-9._-'; }
+gap_unfiled() { # <http-code> <gap-id>
+  log "emit_gap FAILED http=${1:-000} — gap ${2:-unknown} NOT filed (the detector fired but nothing is queryable)"
+  csh "mkdir -p /workspace/state && touch '/workspace/state/self-recovery-gap-unfiled.${2:-unknown}'" >/dev/null 2>&1 \
+    || log "could not write the unfiled-gap marker for ${2:-unknown}"
+}
+http_code_of() { tr -dc '0-9' | tail -c 3; }
 emit_gap() {
-  srv_auth | cshi "curl -K - -s --max-time 8 -X POST $DEV_VESSEL/v2/impulses/resolve -H 'Content-Type: application/json' -d '$1'" >/dev/null 2>&1 || true
+  local code
+  code="$(srv_auth | cshi "curl -K - -s -o /dev/null -w '%{http_code}' --max-time 8 -X POST $DEV_VESSEL/v2/impulses/resolve -H 'Content-Type: application/json' -d '$1'" 2>/dev/null | http_code_of)"
+  case "$code" in 2??) return 0 ;; esac
+  gap_unfiled "${code:-000}" "$(printf '%s' "$1" | gap_id_of)"
 }
 # Quote-safe variant: the diagnostic text below is arbitrary journal output and WILL contain
 # quotes, backslashes and newlines, none of which survive emit_gap's `-d '$1'` interpolation.
 # base64's alphabet cannot break out of a single-quoted shell string, so the payload is built
 # once (with jq, which does the JSON escaping) and shipped opaquely.
 emit_gap_b64() {
-  srv_auth | cshi "echo '$1' | base64 -d > /tmp/self-recovery-gap.json && curl -K - -s --max-time 8 -X POST $DEV_VESSEL/v2/impulses/resolve -H 'Content-Type: application/json' -d @/tmp/self-recovery-gap.json" >/dev/null 2>&1 || true
+  local code
+  code="$(srv_auth | cshi "echo '$1' | base64 -d > /tmp/self-recovery-gap.json && curl -K - -s -o /dev/null -w '%{http_code}' --max-time 8 -X POST $DEV_VESSEL/v2/impulses/resolve -H 'Content-Type: application/json' -d @/tmp/self-recovery-gap.json" 2>/dev/null | http_code_of)"
+  case "$code" in 2??) return 0 ;; esac
+  gap_unfiled "${code:-000}" "$(printf '%s' "$1" | base64 -d 2>/dev/null | gap_id_of)"
 }
 # WHAT THE ESCALATION ALREADY KNOWS, AND USED TO THROW AWAY.
 #
