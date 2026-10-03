@@ -896,3 +896,21 @@ Recorded before the fixes land so the measurement cannot be fitted afterwards.
 2. **One recorded lineage reset** for the 4 stuck families (inference-chooses-targets, a-regex-literal-holds-control-bytes, dispatch-accepts-a-missing-prompt, goal-target-inference-proposes-a-terminal-shape), cap value unchanged, logged as a law-12 intervention with time, family ids and prior counter values. Nothing else changed in the same window.
 3. **Measure** for 24 h or N ≥ 10 composes on those families, whichever first: composes → landings → verified, with each attempt's fail stage (install / resolve / typecheck / shape-dispatch / tests / own_check). **Success:** ≥ 1 verified landing with no operator hands. **If 0:** the fail-stage histogram names the next layer — filed as a gap, not hand-fixed.
 4. **Held-out re-run** only after step 3 has a reading, in a declared probe window.
+
+### 2026-10-03 — Window readings PRE-REGISTERED before it opens (qa, after nudgefix; amends the protocol above)
+
+Recorded before the reset and before the window opens, so the readings cannot be chosen afterwards.
+- **PRIMARY:** on the 4 families only: composes → landings → verified, with each attempt's fail stage. **Success** = ≥ 1 verified landing with no operator hands.
+- **SECONDARY** (reported separately, NEVER merged into the primary): any autonomous verified landing on ANY gap during the window. For example, the requeue/BOOKKEEPING verbatim-read gap filed before the window opened is in the candidate pool. A secondary landing is evidence the lane works, not the families' yield.
+- **EXCLUDED from both:** any gap whose fix an operator lands during the window.
+- **Constants at window start:**
+  - analysis-vessel masked on node 1, compose2 and pubspoke (security containment; being retired);
+  - `source_code` is a dead floor tool;
+  - gapseam (development-vessel 13733795) and nudgefix (e7b0e33a) live;
+  - exceptions list empty.
+- **Reset recording.** Every reset row write carries the operator marker, so the gap store's `[gap-audit]` line is the evidence it happened as recorded. Afterwards, check that the 10 rows read `failed_attempts` 0 and that `lineageBackoffState` computes 0 for each family root.
+- **Changes that may land during the window**, each recorded as an exception with its landing time (none touches the compose path):
+  - the keys-first super-repo batch (which carries the analysis-vessel inventory retirement);
+  - gapauth (development-vessel write auth);
+  - the analysis-vessel confinement fix.
+- **Opening condition:** nudgefix live on both nodes, plus its natural by-effect (a "pickup triggered" or "compose nudge … finished" line), or 20:35Z, whichever comes first. If the window opens at 20:35Z without the by-effect, the nudge by-effect is recorded as PENDING.
