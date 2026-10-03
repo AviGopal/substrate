@@ -640,3 +640,7 @@ A regression class counts as covered only if negating or removing the shipped ch
   - (a) Restore proof: export, restart unchanged on 2.3.3, restore into a scratch volume and compare counts.
   - (b) Upgrade: export, recreate on 2.3.10, then the check.
   - Each stop window is a measurement exclusion; times are appended when deployment reports them.
+- **Node 1, stop (a), the restore proof:** stopped 2026-10-03T05:50:09Z, started 05:53:43Z, unchanged on 2.3.3 at image 60ae05a0. This is a measurement EXCLUSION window.
+  - Nothing was in flight: the last trace was persisted at 05:46:29Z, and no cutover or post-land suite was running.
+  - The restore from the volume tar into a scratch volume matched all 10 baseline tables, including init_migrations 228/228, which the export path loses. So the volume tar, not the export, is the backup of record.
+  - After the restart: 0 failed units, and activity-api answers 200.
