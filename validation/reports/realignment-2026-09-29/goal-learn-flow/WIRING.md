@@ -513,3 +513,20 @@ Also ruled 10-03:
 - **The deployment session owns image tagging:** both the re-tag of public :dev to the accepted sha, and CI publishing only from the accepted sha (6b).
 - **SurrealDB 2.3.3 → 2.3.10 is approved,** rolled out by the deployment session per node.
 - **Cockpit reconnect:** deferred.
+
+## Security rollout from the accepted image 60ae05a0 (10-03): image recreate times (UTC)
+| Node | Image recreate | Loaded-blob check | Notes |
+|---|---|---|---|
+| node 2 (compose2-live) | 03:33:50 | all MATCH 60ae05a0 | transport masked (user's temporary mask); secret-mask canary pass |
+| syzygy-local-surface | 04:47:00 | MATCH; relay at 60ae05a0 (af119736 absent) | discriminating not-owner check PASS (old image FAIL) |
+| syzygy-local-inventory | 04:49:22 | MATCH | not-owner check flipped FAIL→PASS on the same container |
+| pubspoke | 04:51:35 | 8/8 MATCH | secret-mask 0 VISIBLE (dbus residual cleared) |
+| node 1 (substrate-live) | in progress | — | restarts everything, including SurrealDB |
+
+The SurrealDB 2.3.10 upgrade follows per node as a SEPARATE deploy event, after that node's image recreate, with its own time (law 12).
+- 326061de's ingress half is verified by effect (the discriminating check); its egress half is verified by hash only.
+
+**USER RULING on public :dev (told directly to the deployment session).** Install acceptance stays the authority, and CI is already gated (INSTALL_ACCEPTANCE_GATES_DEV=true). af119736 became :dev only after accept, network and upgrade passed on both engines, so public :dev is NOT rolled back.
+- **The real hole:** acceptance never exercises the change it promotes. The deployment session adds a large-frame concurrent-read check to the network leg and re-judges af119736 with it.
+- Local nodes stay pinned to 60ae05a0 until that check passes.
+- (This corrects the coordinator's earlier claim that CI publishes :dev ungated from HEAD.)
