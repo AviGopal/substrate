@@ -29,6 +29,25 @@
 #   (k) at the cap but the deferral is an open probe window -> no quiesce, no restart,
 #       still deferred (a probe window is not starvation)
 #
+# THE MIRROR PATH'S QUIESCE HOLDS ADMISSION UNTIL THE RESTART (l-o). Runs the script's
+# own in-flight quiesce block (`if [ -z "$DEFER_MARKER" ]` .. the 3-pre test gate) and
+# its restart block (`# 3. Restart` .. the restart's stagger sleep), with the test gate
+# and mirror replaced by a stub, and the REAL restart_age_defer reading a /health stub.
+# The vessel is modelled, not canned: in_flight is a counter, `sleep` drains it by one,
+# and a request that tries to start during the gate is admitted only while the
+# quiesce marker is absent (development-vessel's quiesced() check).
+# Measured 2026-10-03 (node 1): drained 19:41:55, the marker was removed at once, the
+# gate ran to 19:47:00, a compose was admitted ~19:45:20, and the restart logged
+# "DEFERRING restart — 1 in flight" at 19:47:01: the drain bought nothing.
+#   (l) 1 in flight, drains to 0, new content in the same tick, a request arrives
+#       during the gate -> it is REFUSED (admission still closed), restart taken in
+#       this tick, no "DEFERRING restart", marker released after the restart
+#   (m) control: nothing in flight -> no quiesce, no marker, gate, mirror, restart
+#   (n) the quiesce hits its bound (never drains) -> the announced "converging
+#       anyway" is honoured: restart taken, not deferred; marker released
+#   (o) structural: the release runs first in every vessel-loop pass (every
+#       `continue` lands there), after the loop, and in the EXIT trap
+#
 # usage: validation/scripts/pull-sync-owed-restart.test.sh [path/to/substrate-pull-sync.sh]
 # Needs bash, awk, sed, find, GNU date/touch. No root: every path is a temp dir.
 set -uo pipefail
@@ -165,6 +184,85 @@ setup; echo oldhash > "$P"; echo 5 > "$DF"; DEFER=1; PROBE=1; health_seq 0
 run_block
 if ! restarted && [ ! -e "$QUIESCE_DIR/$VESSEL" ] && ! grep -q QUIESCED "$LOG" && [ -e "$P" ]; then ok "(k) probe window at the cap: no quiesce, no restart, still owed"
 else bad "(k) probe window at the cap: expected a plain deferral (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
+
+# ══ (l-o) the mirror path's quiesce holds admission through gate, mirror, restart ══
+{
+  sed -n '/^restart_age_defer() {/,/^}/p' "$SCRIPT"
+  sed -n '/^quiesce_release() {/,/^}/p' "$SCRIPT"
+  echo 'run_mirror_block() {'
+  echo 'for v in "$VESSEL"; do'
+  echo 'quiesce_release'
+  echo 'DEFER_MARKER=""; IS_AUTHORING_HOST=""'
+  awk '/^  if \[ -z "\$DEFER_MARKER" \]; then$/{on=1} on && /^  # 3-pre\. TEST GATE/{exit} on{print}' "$SCRIPT"
+  echo 'gate_and_mirror_stub || continue'
+  awk '/^  # 3\. Restart \+ health-gate/{on=1} on{print} on && /^    sleep "\$STAGGER_SECONDS"$/{exit}' "$SCRIPT"
+  echo '  fi'
+  echo 'done'
+  echo 'quiesce_release'
+  echo '}'
+} > "$T/mfns.sh"
+grep -q 'drained to 0 in' "$T/mfns.sh" && grep -q 'DEFERRING restart' "$T/mfns.sh" \
+  || { echo "FAIL - could not extract the mirror quiesce and restart blocks"; exit 1; }
+quiesce_release() { :; }   # absent before the fix; the extracted definition replaces this
+IFC="$T/inflight"          # the vessel's in_flight counter
+curl() { printf '{"in_flight":%s,"drain_ms":80000}' "$(cat "$IFC" 2>/dev/null || echo 0)"; }
+sleep() {                  # time passing drains one request (admission closed or not)
+  [ "${NODRAIN:-0}" = 1 ] && return 0
+  local n; n="$(cat "$IFC" 2>/dev/null || echo 0)"; [ "$n" -gt 0 ] && echo $((n - 1)) > "$IFC"; return 0
+}
+probe_window_open() { return 1; }
+test_only_range() { return 1; }
+emit_gap() { :; }
+gate_and_mirror_stub() {   # new content in the same tick; a request tries to start mid-gate
+  HEAD=head-newer; CLONE_HASH=content-newer
+  echo "GATE $HEAD" >> "$CALLS"
+  if [ "${ARRIVE:-0}" = 1 ]; then
+    if [ -e "$QUIESCE_DIR/$VESSEL" ]; then echo "REFUSED new request (admission closed)" >> "$CALLS"
+    else echo $(( $(cat "$IFC") + 1 )) > "$IFC"; echo "ADMITTED new request" >> "$CALLS"; fi
+  fi
+  echo "MIRROR $CLONE_HASH" >> "$CALLS"
+  [ -e "$QUIESCE_DIR/$VESSEL" ] && echo "MARKER-HELD-AT-MIRROR" >> "$CALLS"
+  return 0
+}
+# shellcheck disable=SC1090
+source "$T/mfns.sh"
+HEAD=head-old; DEFERRAL_LOG="$T/deferrals.jsonl"; AUTHORING_HOST_VESSEL=other-vessel
+COMPOSE_CEILING_MS=900000; GATE_T0="$(date +%s)"; RUNTIME_NONTEST=old; CLONE_NONTEST=new; PREV_GOOD=""
+msetup() { setup; skipped=0; deferred=0; synced=0; failed=0; rm -rf "$QUIESCE_DIR"; echo "$1" > "$IFC"; ARRIVE="${2:-0}"; NODRAIN=0; rm -f "$DEFERRAL_LOG"; HEAD=head-old; CLONE_HASH=content-old; }
+order() { grep -n "$1" "$CALLS" | head -1 | cut -d: -f1; }
+
+# ── (l) drained, new content, a request arrives during the gate ────────────────
+msetup 1 1
+run_mirror_block
+if restarted && grep -q "drained to 0" "$LOG" && grep -q "^REFUSED" "$CALLS" && ! grep -q "^ADMITTED" "$CALLS" \
+   && ! grep -q "DEFERRING restart" "$LOG" && [ ! -e "$QUIESCE_DIR/$VESSEL" ] \
+   && [ "$(order '^MIRROR')" -lt "$(order '^RESTART')" ] && grep -q '^MARKER-HELD-AT-MIRROR' "$CALLS"; then
+  ok "(l) drained under quiesce: the mid-gate request is refused, restart taken this tick, marker released after it"
+else bad "(l) drained under quiesce: expected admission held closed through gate+mirror and a restart this tick (calls: $(tr '\n' ' ' < "$CALLS"); log: $(grep -a 'drained\|DEFERRING\|restarting' "$LOG" | tr '\n' ' '))"; fi
+
+# ── (m) control: nothing in flight ─────────────────────────────────────────────
+msetup 0 0
+run_mirror_block
+if restarted && ! grep -q QUIESCED "$LOG" && [ ! -e "$QUIESCE_DIR/$VESSEL" ] && ! grep -q '^MARKER-HELD' "$CALLS" \
+   && grep -q '^GATE' "$CALLS" && grep -q '^MIRROR' "$CALLS" && ! grep -q "DEFERRING restart" "$LOG"; then
+  ok "(m) control, nothing in flight: no quiesce, gate + mirror + restart as before"
+else bad "(m) control: expected plain gate/mirror/restart (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
+
+# ── (n) the quiesce hits its bound: the announced converge-anyway is honoured ──
+msetup 1 0; NODRAIN=1
+run_mirror_block
+if restarted && grep -q "converging anyway" "$LOG" && ! grep -q "DEFERRING restart" "$LOG" && [ ! -e "$QUIESCE_DIR/$VESSEL" ]; then
+  ok "(n) quiesce bound hit: restart taken this tick (the run was already declared lost), marker released"
+else bad "(n) quiesce bound hit: expected the restart, not a deferral (calls: $(tr '\n' ' ' < "$CALLS"); log: $(grep -a 'anyway\|DEFERRING\|restarting' "$LOG" | tr '\n' ' '))"; fi
+NODRAIN=0
+
+# ── (o) structural: where the release runs in the real script ─────────────────
+LOOP_HEAD="$(awk '/^for d in "\$CLONE_DIR"\/\*\/; do$/{on=1;n=0} on{print; if (++n>=4) exit}' "$SCRIPT")"
+AFTER_LOOP="$(awk '/^for d in "\$CLONE_DIR"\/\*\/; do$/{inloop=1} inloop && /^done$/{getline; print; exit}' "$SCRIPT")"
+if printf '%s' "$LOOP_HEAD" | grep -q '^  quiesce_release$' && [ "$AFTER_LOOP" = quiesce_release ] \
+   && grep -q '^trap .*quiesce_release.* EXIT$' "$SCRIPT"; then
+  ok "(o) the quiesce hold is released first in every vessel pass, after the loop, and on EXIT"
+else bad "(o) expected quiesce_release at the vessel-loop head, right after its done, and in the EXIT trap (head: $(printf '%s' "$LOOP_HEAD" | tr '\n' '|'); after: $AFTER_LOOP)"; fi
 
 echo
 [ "$FAILS" = 0 ] && { echo "PASS - owed restarts survive content moving on"; exit 0; }
