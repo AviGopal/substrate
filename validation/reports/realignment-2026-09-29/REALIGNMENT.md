@@ -20,6 +20,8 @@
 >
 > **Amended 2026-10-02:** the continuity amendment (`CONTINUITY-AMENDMENT-2026-10-02.md`) is integrated into §§1, 2.0b, 2.1, 2.2, 2.6, 3.4, 4.2, 6.2, 7 and 8. §10 records what was adopted and the decisions it leaves open. It grants no new runtime authority and has no runtime effect until each integrated item names its writer and reader.
 >
+> **Amended 2026-10-03:** §2.2 gains *The unit of evidence, and what conditions selection* (user review): the execution record is the particle and learning is an idempotent fold over attached verdicts; selection is conditioned by evidence pooled across nodes and grouped by code version, never by the node's ambient store; credit, reuse and "reached" are keyed by (arm, target shape, goal class) with the verdict's instrument recorded.
+>
 > **Amended again 2026-10-02 (user rulings on authority):** §2.1 item 6, §7 step 9 and §10 no longer define a human-governed boundary. The system changes its own limits on evidence applied by the previously accepted version; humans are informed, not gating (§10 item 1).
 
 ### Review disposition (09-29 revision)
@@ -293,6 +295,38 @@ What follows from the split:
 - Later observations extend the history. **A correction names the observation and the derived update it supersedes.** Updates carry stable identities and go through an idempotent ingestion path, so retries and replication do not multiply evidence.
 - The existing landing, authentication and closure safeguards stay. An incomplete view cannot certify the unseen outcome. Partial learning does not authorize deployment. A verifier is itself a characterized consumer with tested limits.
 - **Acceptance:** one chain with a successful intermediate consumer and a later failure yields separately attributable observations; an unavailable observation does not become a negative outcome; duplicate delivery does not duplicate an update; selection demonstrably reads the resulting characterization.
+
+**The unit of evidence, and what conditions selection (amended 10-03, user review).**
+
+*What is atomic.* The chain execution → closure → grading → trace → learning update is **not** one atomic step. Verdicts arrive late, and some never arrive, so forcing them at exit time produces exit-graded credit. The measured result: arms valued 0.69–0.93 with zero reached rows, ungraded failures charged β, rows graded at insert and again at `/reach`, and hollow walks charged β.
+- **The particle.** One immutable execution record. Besides the information contract above, it carries:
+  - the **candidate set and the selection propensity** at decision time; today only `candidates_count` is logged, and only on the `/recommend` path;
+  - the **code version** of the arm that ran; traces carry none today;
+  - the **goal class and the instrument** that judged it (see *Shapes and goals* below).
+- **Verdicts are observations attached to that record.** Each names its instrument and its horizon. They accumulate and can be superseded.
+- **The learning update is a fold, keyed by (execution, observation), not a step.** Retries and replication then cannot double-count, a re-baseline is a re-fold, and a wrong verdict is retracted by superseding it.
+- The particle is the unit of credit. Continuity is the chain: need → output → actual consumption → consequence → changed selection. A walk's verdict is attributed back to its steps. An intermediate step's output being consumed is itself an observation about that step.
+
+*How prior executions condition selection.* They should condition it, as **evidence and never as ambient state**:
+- **The selection context is computed from the goal's own execution and its related impulses**, never from the node's shared store. Reading the node's store conditions one run on unrelated runs and is self-reinforcing: arms that run often leave the impulses that select them again. That is the effect-as-cause of law 12.
+- **Evidence about an arm is pooled across nodes** (§2.4). The node is a condition only where it changes the outcome, which by law 11 means data locality. That means partial pooling: a global per-arm estimate, with per-node and per-context deviations that move only on evidence.
+- **Evidence is grouped by the code version that produced it.** A changed arm's prior evidence is discounted or kept as a separate group. Time decay addresses drift in the world, not code change. One decay rule, not two.
+- **Recorded candidates and propensities** let past executions be reweighted (counterfactuals recorded at decision time, law 12). Without them, "this arm is good" cannot be separated from "this arm was the only candidate offered". That confound sits under the Spearman ≈ 0 in §7 step 8.
+
+*Shapes and goals.* A shape names a region of informational state and a goal names a destination plus an acceptance test. The walk compiles a goal into target shapes (`completionShapes`) and backward-chains to them. That is correct for routing, but it is where the shape stands in for the goal:
+- **A hollow completion** is the measured gap: the target shape was produced and the goal's test was not met.
+- **A satisfier reach** is the target shape already present, with no transition.
+- **Credit, reuse and "reached" are keyed by (arm, target shape, goal class), with the verdict's instrument recorded.** Goal class means the parse, the command and the oracle class. Credit is never keyed by arm or shape alone, which averages unrelated tasks that share a generic target such as `fileEditResult` or `shellResult`. Nor is it keyed by `goal_hash` alone, which transfers nothing to near-misses.
+- **A learned pathway's signature includes the acceptance class it passed**, not only its input→output shapes. First- and last-mile adaptation reuses a direction **together with** its test class. Reusing the shape signature alone is a learned hollow completion.
+- **A hollow cluster over goals sharing surface form is the demand signal** to construct the parse, command and oracle for that class (CLAUDE.md, operator role).
+
+Where this rides: the candidate set, propensity, code version and goal-class keying belong in the verdict→credit reader (WIRING step 3, with the grading fixes). The execution-scoped context is the armed state-signature gap in ias-executor. The pathway signature belongs to extraction (the ribosome mints only from reached executions).
+- **Acceptance:**
+  - two identical runs, one alone and one beside unrelated concurrent executions, select from the same context;
+  - two goals with the same target shape but different goal classes update different cells;
+  - an arm's code change opens a new evidence group;
+  - a hollow walk and an ungraded exit leave the posterior unchanged;
+  - each logged decision can be reweighted from its recorded candidates and propensity.
 
 **Prerequisite ordering (R2-P11).** `grounded` has never been true in 14,125 rows. Making `grounded` settable by a passing control comes **before** `posterior-update.ts` reads labels. Otherwise the new reader reads only abstentions.
 
