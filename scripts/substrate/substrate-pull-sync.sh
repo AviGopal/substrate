@@ -847,6 +847,34 @@ fi
 # <<< gap-tracked-red missing
 
 # Vessel -> unit map from the inventory (fallback: every clone dir, unit <v>.service).
+# LOADED CODE OLDER THAN THE CODE ON DISK. vessel runtime-dir unit -> 0 iff the
+# unit's non-test runtime content changed while the unit kept running; sets LCS_WHY.
+# Bun does not hot-reload, so changed content under an unrestarted unit is code it
+# is not running, and no health signal shows it. mtime cannot tell: mirror-to-live
+# copies with `cp -r`, so every mirror (test-only ones included) refreshes every
+# file. So the marker $v.loaded records "<unit start>\t<non-test hash>": a start
+# time that differs from the record means the unit (re)started outside this check
+# and loaded what is on disk, so re-baseline; the same start with a different hash
+# means content moved under a running unit. Uncomputable -> 1 (not stale): this
+# check only ever ADDS a restart, so failing it leaves the pending-marker path as is.
+loaded_code_stale() {
+  LCS_WHY=""
+  _lcs_m="$MARKER_DIR/$1.loaded"
+  _lcs_at="$(systemctl show -p ActiveEnterTimestamp --value "$3" 2>/dev/null)"
+  [ -n "$_lcs_at" ] || return 1
+  _lcs_h="$(content_hash_nontest "$2")"
+  [ -n "$_lcs_h" ] && [ "$_lcs_h" != none ] || return 1
+  _lcs_rec="$(cat "$_lcs_m" 2>/dev/null || true)"
+  if [ "${_lcs_rec%%	*}" != "$_lcs_at" ]; then
+    printf '%s\t%s\n' "$_lcs_at" "$_lcs_h" > "$_lcs_m" 2>/dev/null || true
+    return 1
+  fi
+  [ "${_lcs_rec#*	}" = "$_lcs_h" ] && return 1
+  LCS_WHY="non-test content ${_lcs_rec#*	} -> $_lcs_h under a unit running since $_lcs_at"
+  LCS_WHY="$(printf '%s' "$LCS_WHY" | sed -E 's/([0-9a-f]{10})[0-9a-f]{22}/\1/g')"
+  return 0
+}
+
 vessel_unit() { # vessel -> systemd unit or empty
   if command -v jq >/dev/null 2>&1 && [ -f "$INV" ]; then
     jq -r --arg v "$1" '.vessels[] | select(.repo == $v) | .unit' "$INV" | head -1
@@ -1661,23 +1689,42 @@ for d in "$CLONE_DIR"/*/; do
   # the time a restart is owed (the mirror ran), so without this the vessel is skipped
   # forever and mirrored code is never loaded. Bun does not hot-reload, and no health
   # signal can see the difference: the discriminator is unit start time vs file mtime.
+  #
+  # OWED MEANS OWED, WHATEVER THE CONTENT IS NOW. The marker used to count only when
+  # it equalled the current CLONE_HASH, but the clone can move between the hash and
+  # the mirror in the same tick (the mirror copies the newer commit). The marker then
+  # named a hash that no longer exists, never matched again, and the restart was
+  # stranded: measured 2026-10-03, development-vessel deferred at 10:52, later ticks
+  # said nothing, and the unit kept serving 10:26 code under green health. A restart
+  # loads whatever is on disk, so any recorded marker is owed. And because a marker
+  # can be lost by any other path too, the effect is checked directly: non-test
+  # runtime content that changed while the unit kept running means the loaded code
+  # is not the code on disk, and that alone owes a restart (loaded_code_stale).
   PENDING_FILE="$MARKER_DIR/$v.restart-pending"
-  if [ "$(cat "$PENDING_FILE" 2>/dev/null || true)" = "$CLONE_HASH" ]; then
-    P_UNIT="$(vessel_unit "$v")"; P_PORT="$(health_port "$v")"
+  P_UNIT="$(vessel_unit "$v")"; P_OWED=""
+  if [ -s "$PENDING_FILE" ]; then
+    P_OWED="restart recorded as pending (for content $(cut -c1-10 < "$PENDING_FILE" 2>/dev/null); clone now ${CLONE_HASH:0:10})"
+  elif [ -n "$P_UNIT" ] && systemctl is-active --quiet "$P_UNIT" 2>/dev/null \
+       && loaded_code_stale "$v" "$RUNTIME_DIR/$v" "$P_UNIT"; then
+    P_OWED="loaded code is older than the code on disk ($LCS_WHY)"
+    echo "$CLONE_HASH" > "$PENDING_FILE" 2>/dev/null || true
+  fi
+  if [ -n "$P_OWED" ]; then
+    P_PORT="$(health_port "$v")"
     P_DEFER_FILE="$MARKER_DIR/$v.restart-deferrals"
     P_DEFERRED_N="$(cat "$P_DEFER_FILE" 2>/dev/null || echo 0)"
     case "$P_DEFERRED_N" in ''|*[!0-9]*) P_DEFERRED_N=0 ;; esac
     restart_age_defer "$P_PORT" "$P_DEFERRED_N"; P_INFLIGHT="$RA_INFLIGHT"
     if [ "$RA_DEFER" = 1 ]; then
       echo "$((P_DEFERRED_N + 1))" > "$P_DEFER_FILE" 2>/dev/null || true
-      log "$v: owed restart still deferred — $RA_WHY"
+      log "$v: owed restart still deferred — $RA_WHY ($P_OWED)"
     else
       P_REASON="owed restart after deferral"
       if [ -n "$RA_WHY" ]; then
         log "$v: owed restart proceeding — $RA_WHY"
         [ -n "$RA_OLDEST" ] && P_REASON="owed restart: oldest in-flight ${RA_OLDEST}ms exceeded ceiling"
       fi
-      log "$v: taking OWED restart for already-mirrored content ${CLONE_HASH:0:10}"
+      log "$v: taking OWED restart for already-mirrored content ${CLONE_HASH:0:10} — $P_OWED"
       rm -f "$P_DEFER_FILE" "$PENDING_FILE" 2>/dev/null || true
       if [ -n "$P_UNIT" ] && systemctl is-active --quiet "$P_UNIT" 2>/dev/null; then
         restart_breadcrumb "$v" "$P_REASON" "$P_INFLIGHT"
