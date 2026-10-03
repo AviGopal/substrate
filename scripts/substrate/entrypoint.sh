@@ -142,8 +142,15 @@ case ",$(echo "${DISABLED_VESSELS:-}" | tr -d '[:space:]')," in
 esac
 if [ "$_ftv_disabled" = 1 ]; then
   echo "[substrate] spoke federation: federation-transport-vessel is in DISABLED_VESSELS — auto-enable skipped"
-elif { [ -n "${HUB_DISCOVERY_URL:-}" ] || [ -n "${PEER_MULTIADDR:-}" ]; } && [ -x /usr/local/bin/vessel-ctl ]; then
-  echo "[substrate] spoke federation: enabling federation-transport-vessel (hub=${HUB_DISCOVERY_URL:-none} peer_multiaddr=${PEER_MULTIADDR:-none})"
+# PEER_DISCOVERY_ENDPOINTS is the third join form: a root that peers with another
+# substrate's discovery. Peering mirrors that substrate's libp2p producers into this
+# discovery with endpoint 127.0.0.1:8401 (this node's transport), so without a
+# transport every mirrored arm is an advertised route nothing can serve. Measured
+# 2026-10-03 on node 1: its local llm-resolver was failing and both mirrored
+# llm-resolver@syzygy-hub arms answered "Unable to connect", taking down the LLM leg
+# of the ReAct floor; with the transport up the same arm answered in 0.9 s.
+elif { [ -n "${HUB_DISCOVERY_URL:-}" ] || [ -n "${PEER_MULTIADDR:-}" ] || [ -n "$(echo "${PEER_DISCOVERY_ENDPOINTS:-}" | tr -d '[:space:],"')" ]; } && [ -x /usr/local/bin/vessel-ctl ]; then
+  echo "[substrate] spoke federation: enabling federation-transport-vessel (hub=${HUB_DISCOVERY_URL:-none} peer_multiaddr=${PEER_MULTIADDR:-none} peers=${PEER_DISCOVERY_ENDPOINTS:-none})"
   # DO NOT DISCARD THIS OUTPUT. It used to be `>/dev/null 2>&1 || true`, and that
   # redirect hid the single most useful line in the whole boot: the install failed
   # with "WORKDIR ABSENT (/workspace/git/super-repo/scripts/substrate/federation-relay)
