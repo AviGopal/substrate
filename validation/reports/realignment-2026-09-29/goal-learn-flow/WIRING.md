@@ -1,0 +1,294 @@
+# WIRING — the goal → learn flow, as built vs as it should be (2026-10-03)
+
+> **Read the "qa ruling — ADOPTED ORDER" section at the end first.** It supersedes the order and the four "should" bullets tagged (superseded).
+
+**Method.** 7 development goals were dispatched on node 1 (L12 interventions; the held-out set was not touched):
+- 4 first runs;
+- 2 repeats;
+- 1 changed-input variant.
+
+The 2 failing first runs served as the unrelated controls. Three read-only investigators traced the executions through code at origin/dev and the deployed state (goal-host acf4922, activity-api 1df2eab, discovery 19e8e78, ribosome 5a374df). qa's expectations are in tmp/flow/EXPECTATIONS-qa.md. **Every posterior reading is CONTAMINATED** while gap idle-ticks-earn-alpha… is open.
+
+Results: reached = 57de00ab, 92a530c4, 4fdbebd6, 59cb8b01, 36f596ab; not reached = 4e4dac67, b3d1dd39. Every reach came from a satisfier.
+
+## The one-paragraph diagnosis
+The flow has every organ but almost no correct joints.
+- **Selection is unlogged.** The selector that goals actually use (the satisfier plane and the OR-edge bundles) does not log its decisions, and the selector that logs (/recommend) is not what goals use.
+- **Six writers compute credit independently.** goal-host reports credit into a table nothing reads, while the stores that selection reads are moved by other writers that override goal-host's withhold decisions in both directions. One of those writers grades on exit status.
+- **Verification evidence never reaches the corpus.** The verification corpus is structurally never grounded (the sender omits the evidence fields), and the learner reads 0 labels.
+- **Extraction learns from wrong outputs, and they are reused.** Extraction fires on reaches that goal-host's own gate calls hollow, and it binds impulses across concurrent executions. That minted a wrong template, which an unrelated goal then ran.
+- **Repeats re-borrow instead of learning.** They show no learning: they re-borrow a shape-signature donor, and lineage is not recorded.
+- **Selection ignores belief.** Selection share is uncorrelated with belief: ρ ≈ 0 across 35,730 selections, contaminated.
+
+## Stage by stage
+
+### 1. Inference
+- **As built:** `inferGoalTargetDecision` (gh :12976) over `fetchKnownShapes` (gh :5874). It sees BARE shape names (discovery /registry/shapes, plus peer and learned shapes), with deterministic rules plus an LLM fallback.
+- **Measured:**
+  - a need-phrased goal got ≥1 target: HOLDS (7/7);
+  - reads descriptions: FAILS (0 readers; 72/409 shapes even have one);
+  - own-substrate vocabulary: FAILS ("Summarize repos/clock-vessel" went to LLM prose because `NOT_PROSE_RE` requires a trailing slash; git_log ran outside a repo, and the web fallback then queried an unrelated external repo);
+  - unserved shape → no fabricated target: holds in code (`filterShape`), untested.
+- **Should:**
+  - fold `/registry/shape-descriptions` into `fetchKnownShapes` (render `name: description` where present);
+  - make `NOT_PROSE_RE` accept `repos/<v>` with or without the slash;
+  - reuse the file-count path binder (gh ~8771) for git-shaped pointers.
+- **Expect:** the clock-vessel summary infers a source-read/registry shape. **Must-fail:** a goal naming `foo_unserved_shape` → `shapes:[]` (a unit test).
+
+### 2. Selection
+- **As built:**
+  - Reuse is `recommendReachingPath` (gh :6978), keyed by SHAPE SIGNATURE: every reach borrowed a donor (9d3e2add 118/118; 0441a5be 31/31). The pathway head `satisfier:X` (gh :13670) means no Thompson draw (`candidates:[]`).
+  - The floor/OR-edge bundles (gh :10820–10917) take α/β from global, unscoped VPM (dbs.ts:261/294). Both branches run and the "winner" is chosen afterwards.
+  - Only /recommend writes `thompson_selection_log` (act.ts:7601–7681; 687 candidates; no used_scope column; no state_signature). Partial pooling exists in code but is unmeasured live.
+- **Measured:**
+  - logged = used: FAILS 3 ways (satisfier steps log nothing; bundle `source:"thompson"` is mislabelled and β goes to a sibling; the recovery loop picks goal-unrelated arms);
+  - retired excluded: HOLDS for retired, but 16 deprecated rows stay selectable via /recommend, and a pinned retired id surfaces as "not found" rather than "retired";
+  - Spearman ≈ 0.03 (all stores and filters, ρ −0.29…0.06, contaminated);
+  - `SATISFIER_PROVEN_BAD_ARMED` is an env gate (law 1): a PROVEN-BAD belief is read and then deliberately ignored.
+- **Should:**
+  - one decision log: every walk `recordStep` writes the same selection row (source, store, scope, α/β used, correlation_id), with `correlationTag` carried on satisfier and bundle executions;
+  - bundles labelled `source:"fanout"`;
+  - deprecated filtered everywhere; a pinned retired id refused explicitly;
+  - the env gate moved into the shaped selection policy;
+  - the pathway reuse policy gets a posterior lower bound, not absolute counts.
+- **Expect:** every step execution has a selection row whose α/β equal the step's. **Must-fail:** a satisfier step with no row fails the decision-credit join (decision-credit.ts:187).
+
+### 3. Walk
+- **As built:** route-around records only at the no-pick stall (gh :11202) and floor reuse (gh :13635). Hollow terminations (feedback-retry, suppress, widen, reframe) record nothing. The floor tool counter (gh :5379) reads client-side `tool_calls`. llm-resolver returns tool calls top-level (llm.ts:812); dev-vessel's wrapper reads `content.tool_calls` and drops them (llm-completion-dispatch.ts:465–474).
+- **Measured:**
+  - C6: PARTIAL/FAIL (no route shape; none on 4e4dac67);
+  - tools=0/0 is a mis-addressed instrument: 1,976/1,976 floor runs read 0, while 55 final texts say they used a tool. **K4 resolved: the instrument is the finding.**
+  - The floor re-ran AFTER a satisfier reach (adding reached=false rows to pathway denominators).
+  - One shape has two addresses (the satisfier failed where the floor's ufResolveUrl reached).
+- **Should:**
+  - the wrapper also reads top-level `rawBody.tool_calls` and passes the executed trace through, and the floor counts it;
+  - a `kind:"hollow"` route-around at every hollow-termination site (failed producer + reason);
+  - the floor is skipped once the goal has reached.
+- **Expect:** a floor run whose LLM used a tool shows `tools_total ≥ 1`, and 4e4dac67's class records "git_log hollow → webSearchResult". **Must-fail:** a text-only floor answer keeps 0.
+
+### 4. Verdict
+- **As built:** `verifyGoalReached` (gh :3677). Deterministic verdicts are mirrored by `recordDeterministicLabel` (gh :4284), which returns early for LLM verdicts. `/reach` stamps `verdict_class` and has a supersede history (execution-traces.ts:5438–5476).
+- **Measured:**
+  - reached ≠ status: HOLDS;
+  - **grounded: two different things share the name.** The walk's mint gate was true on the file-count runs. The label's `grounded` (impulses.ts:2995) requires source/probe/expected/observed, and the sender never passes them: **0 of 14,864 labels ever grounded** (positive control: the deterministic labels exist). LLM verdicts never reach the corpus.
+  - Y1: `verdict_class` is stamped (62 rows); `superseded_verdicts` has NEVER been written (0).
+  - Truncation abstain: 0 hits; not measurable without a positive control.
+- **Should:**
+  - `recordDeterministicLabel` passes the oracle's evidence (verified-file-count already holds expected/observed);
+  - remove the early return so LLM verdicts are labelled as `automated` (the branch exists but is unreachable); *(superseded — see qa ruling §4)*
+  - rename one of the two "grounded" fields.
+- **Expect:** a verified-file-count reach writes a label with grounded=true. **Must-fail:** an LLM-judged reach stays grounded=false.
+
+### 5. Credit
+- **As built: SIX independent writers, no single reader.**
+
+  | # | Writer | Notes |
+  |---|---|---|
+  | (a) | goal-host /feedback → `impulse_shape_activity_score` | NO reader; this is what goal-host reports as "learning" |
+  | (b) | insert-path `applyOutcomeToPosteriors` | VPM / cluster CTS / shape counter, by tags |
+  | (c) | /reach `applyOutcomeToPosteriors` | no metadata, so the idle gate is lost |
+  | (d) | CTS v0 | reach-gated |
+  | (e) | CTS re-derived | **on exit status** |
+  | (f) | CTS v2 | |
+
+  Also writing: ancestor credit, ψ, and a dead legacy writer.
+- **Measured:**
+  - goal-host WITHHELD α for system_load_report, yet writer (b) credited VPM (the tag at gh :12232).
+  - goal-host WITHHELD β for 4e4dac67, yet writer (c) added β; writer (e) gave +α to a CTS bucket for a run that did NOT reach.
+  - A correct reach adds β too (+0.66 α / +0.34 β).
+  - "reach-patch MATCHED NO ROW" filed false `lost-reached-verdict-*` gaps while the rows were reached (K4).
+  - posterior-update reads 0 labels.
+  - Failure memory steers the prompt and `disableReuse` only, never producer choice, and recorded the wrong pick.
+- **Should:**
+  - ONE verdict→credit reader: `reachVerdictBody` (gh :1160) carries `alpha_withheld` / `beta_withheld` and /reach honours them;
+  - the `reached:` tag is stamped only when goal-host's α gate passed;
+  - /reach passes `information_yield` (as the insert path does at :3568);
+  - writer (e) is gated on `classifyReach` like (d);
+  - writer (a) is retired, or `learning` is built from the /reach response; *(superseded: retired only)*
+  - posterior-update reads grounded labels once (4) lands;
+  - the failure record feeds selection, not only the prompt.
+- **Expect:** a β-withheld walk leaves its last pick's VPM β unchanged (**fails today**: +1 on exec_vx8l7f5j); an idle tick moves nothing at /reach. **Must-fail:** a deterministic hollow verdict still adds β.
+
+### 6. Extraction
+- **As built:**
+  - The ribosome subscribes over WS, then the reach re-read (`reachVerdictFromTraceRow`), then a census `allSucceeded`, then a POST to goal-host `/run-goal` `targetTemplateId:"ribosome-extract"`. The endpoint is pinned by env (ribosome :88), not discovered.
+  - The lifecycle hard-codes `qualityEligible:true`, `goalSignature:null` and `templateAuthor:""`.
+  - goal-host's own `mintReachedTrace` (gh :7260) skips satisfier-only/ungrounded/trivial reaches; the two gates disagree.
+  - Registration fails because the ribosome declares `shapes:[]` against discovery's non-empty rule (discovery :333): 180×400 in 3h.
+- **Measured:**
+  - Only reached goal executions extracted: passes BY ACCIDENT. Of 298 ALLOWED in 3h, 272 were dev-vessel ticks (their `reached` column is true; who stamps it is unknown), stopped only by the census.
+  - Ungrounded and single-satisfier reaches ARE extracted.
+  - Provenance is partial (two goal-hash domains: 8-hex walk vs 16-hex store).
+  - **CRITICAL: cross-execution impulse binding.** 3/5 concurrent extract runs consumed another run's output (ias-executor engine.ts:355–380, first match over the shared store). That minted the wrong `learned-satisfier-system-load-report` (advertising shellResult), and **unrelated control 4e4dac67 then RAN it**; every extract still graded REACHED.
+  - The replay observer matches anything (`inputShapes:[]`).
+- **Should:**
+  - slot resolution scoped to the execution (in progress, qa-approved);
+  - the reach/extract gate checks consumed-impulse provenance;
+  - ONE extraction predicate shared with goal-host (`isGroundedHonestReach` + not-satisfier-only), read from the execution row, not hard-coded;
+  - the ribosome serves `extractionPolicy` / `extractionEligibilityPolicy` (which also fixes the 400);
+  - tick executions explicitly excluded;
+  - one goal-hash domain.
+- **Expect:** every extract's consumed impulse ids ∈ that execution's own outputs. **Must-fail:** today's 3/5. Also: a single-satisfier reach yields no extract dispatch, while a grounded ≥2-step reach does.
+
+### 7. Reuse and composition (the learning proof)
+- **As built:** reuse retrieval is keyed by shape signature (passes §2.6 for retrieval). The variant rebound the first mile (same `path_signature`, new goal_hash). `pathwayReusePicks` increments only on REUSE-BEFORE-DERIVE (gh 10432/10963), so a satisfier-head reuse writes `reused_from_goal_hash:null`.
+- **Measured:**
+  - **Confounded:** the first runs already borrowed donors, so no "learned from run 1" signal is possible on these goals.
+  - Repeats: same steps (2→2, 1→1), no learned template selected; the only gain was the reached-command cache.
+  - Lineage: FAIL.
+  - Must-fail: **FAILED** (the unrelated control ran the contaminated template).
+  - The compose probe (separate run): D failed; A and B were unused.
+- **Should:**
+  - count an honoured pathway head as a reuse pick, or pass the donor as lineage;
+  - unify the goal-hash domains;
+  - a cold-shape discriminator goal (no donor) to show learning from the run's own outcome; *(superseded: chosen by rule)*
+  - the compose probe's (a)–(e).
+- **Expect:** every path row written after "pathway reuse: accepted" carries `reused_from_goal_hash` = the donor. **Must-fail:** a no-donor walk writes null. And the compose probe's acceptance.
+
+## Cross-cutting
+- **No code version per step anywhere** (`state_snapshot.git = unknown`; `vessel_version` unpopulated). As-built findings cannot name the commit that produced them. **Should:** the engine stamps vessel + sha per task.
+- **Unauthenticated internal call:** goal-host `landedShaForGoal` sends no Authorization header, so 401s.
+- **C21 (node 2 visibility):** not measured. The failure memory and reached-command jsonl are node-local by design; replication last pulled from the hub on 08-22.
+- **K4:** the tools counter, the "MATCHED NO ROW" gaps and trace_digest's `failure_mode_type` on success rows are each instruments reporting wrong, not system facts.
+
+## What this means for the goal
+The system cannot currently learn correctly, because each joint between the organs is wrong:
+- **Learning:** credit goes to unread or conflicting stores.
+- **Verification:** verification never grounds.
+- **Extraction:** extraction mints from cross-bound and hollow runs.
+- **Reuse:** reuse borrows by generic signature without lineage.
+
+A higher landing rate on top of this would just reinforce noise. The order that follows (§7: the slice's first break decides):
+1. **Stop the active harm:** retire the contaminated template and stop cross-binding. Both are in progress.
+2. **One verdict→credit reader:** withhold flags honoured, idle gate, exit-status writer gated, writer (a) retired.
+3. **Evidence into labels:** grounded settable, the learner reads labels.
+4. **One decision log** for the selectors goals actually use.
+5. **One extraction predicate,** with provenance.
+6. **Lineage on reuse;** cold-shape and compose probes as acceptance.
+7. **Code version per step,** so every later finding names its commit.
+
+Each step lands with its must-fail control, then the held-out set and the compose probe are run.
+
+## qa ruling (2026-10-03) — ADOPTED ORDER (supersedes the order above)
+1. **Stop active harm, widened:**
+   - retire the contaminated template, plus the slot-scope fix (both in progress);
+   - the cheap extraction part: exclude tick executions and honour goal-host's hollow / satisfier-only / ungrounded gate before an extract is dispatched;
+   - the template-corpus audit (the cross-binding quarantine), extended to templates minted from satisfier-only or hollow reaches.
+2. **Code version per step** (moved up from 7). It's cheap, and every later must-fail can then name the commit that changed behaviour rather than attribute by timing (K15).
+3. **One verdict→credit reader.**
+4. **Evidence into labels,** in §2.2 prerequisite order: grounded settable first, THEN posterior-update reads labels.
+5. **NEW: re-baseline beliefs.** Fixing the writers doesn't fix the stored α/β, which were built from idle alpha, overridden withholds, exit-status CTS, β on correct reaches and cross-bound extractions.
+   - Decide explicitly, as an L12 record: reset arms to priors, OR re-derive them from trace evidence through the corrected single reader.
+   - This includes the idle-credit gap's reset decision.
+   - Then re-measure ρ(belief, selection).
+6. Then the decision log, the extraction predicate (unified, with provenance and one hash domain), and lineage plus probes.
+
+"Should" changes:
+- **§5:** the failure record feeds selection as SHARED evidence (a shaped record, replicated like verdict evidence), never from the node-local jsonl (that would be a learned-state fork, K9/C21).
+- **§5 writer (a):** RETIRED (goal-host reports what the store says); not rebuilt from the /reach response.
+- **§4:** LLM verdicts are labelled `automated`, stay distinguishable (labeler + grounded=false), and never count toward the deterministic-verifier requirement (K3/C2).
+- **§6:** the ribosome's goal-host endpoint is resolved by discovery, not pinned by env (K8, law 1); fold this into the shapes:[] registration fix.
+- **§7:** the cold-shape discriminator goal is chosen by a held-out-style RULE, not by hand.
+- **Cross-cutting:** the unauthenticated landedShaForGoal call joins the credential-caller sweep from ingress step 2.
+
+**Stated plainly:** every reach in this sample came from a satisfier, so the learned-pathway CEILING produced no reach. Together with ρ(belief, selection) ≈ 0, that is the strongest evidence the ceiling is not functioning yet.
+
+**Prior art for step 2 (checked 10-03).** The trace store already has `vessel_version`:
+- the type is at execution-traces.ts:449;
+- it is persisted (paradigm.ts:369);
+- it is tested (execution-traces.test.ts:364).
+
+Its only writer is minibob's MCP. goal-host, development-vessel and ias-executor never send it. Step 2 is therefore a CALLER fix (stamp the sha on every trace write) on an existing organ, not a new field. No live row count was taken (the DB read failed on auth and was not retried).
+
+## qa ruling on containment (10-03)
+- **The retire through `activityTemplate_update` is ACCEPTED for this one case,** as an L12 intervention (evidence: upkeep-1790985199131-vghr2u).
+  - CLASS GAP: `_update` bypasses `_deprecate`'s evidence gate. Fix: same evidence, or a logged operator-override field.
+- **Step 1 gains: re-extraction can NEVER clear retirement.**
+  - The ribosome's UPSERT merges and preserves retired/deprecated. Un-retiring happens only by an explicit operator or criterion action.
+  - Do NOT version ids (a -v2 would bypass the retire).
+  - No re-extraction of system_load_report until the slot fix lands.
+- **Throttle: build no unread knob.** extractionPolicy resolved 0 of 1,446 times; that is the same root as the ribosome's "eligibility policy unresolved" WARN.
+  - Instead, PAUSE the ribosome's extract dispatch, with a TTL, until the slot fix and the step-1 gates land. (Live action → user approval.)
+- **Dispositions:**
+  - retire the 2 zero-run id defects (source-code, substrategy);
+  - HOLD the 4 advertised≠produced templates and the 10 suspects, pending a POSITIVE CONTROL on the audit comparison. 432 of 1,436 mismatched, which may be an instrument issue (K4);
+  - the 577 provenance-unknown templates stay as they are, flagged, and count toward the blast radius.
+- **Slot fix:** the scope key is (execution_id, impulse_id), because impulse ids reuse across dispatches. Falsifier: same impulse id in two executions → no cross-binding.
+- **Node 2:** verify the retire by effect there too. Minor gap: a pinned retired id says "not found" instead of "retired".
+
+## Positive control result (10-03): the audit's mismatch count was an instrument artefact
+- **The instrument is sound on the control set.** The 7 seeded tick templates showed 0–2 mismatches per 600 runs, all of them failed runs. `output_impulse_shapes` is the union over the steps that produced output (trace-sink.ts:384), so a failed final step records only the intermediate shape.
+- **Corrected comparison:** success=true runs only, last task's output vs advertised. 1 mismatch in 321 successful runs, which is exec_pcg54bbs itself.
+- **Confirmed contamination = 1 run** (system-load-report, retired). llm-completion is suspect only. The 10 suspects must be re-checked under the corrected comparison.
+- **NEW CLASS: dead mints.** execution-trace (0/296), substrategap-write (0/102) and memory-note-write (0/18) never succeed: the step-2 binding never works. They stay selectable.
+- **Impulse id reuse CONFIRMED.** goal-host index.ts:7451 runs a per-walk counter (`walk-<shape>-<n>`). 289 ids are reused across 2+ dispatches; walk-shellResult-3 alone appears in 351. Every join on impulse id (slot binding, relevance, lineage) merges unrelated impulses.
+- **Node 2** is PROFILE=compute with no DB of its own. It reads node 1's activity table through node 1's activity-api, so the retire is shared (shown by config, not by effect).
+
+## qa rulings after the positive control (10-03)
+- **Retire the 3 dead templates through the EVIDENCED `_deprecate` path.** If it refuses with hundreds of failures as evidence, that refusal is a finding about the deprecate gate: report it, don't route around it.
+  - Live evidence for the retire sweep (§2.5 item 3): templates with 0% success and α+β ≥ 30 stayed selectable.
+- **dispatch-goal: KEEP.** Infrastructure failures abstain (K14).
+- **The 10 suspects:** re-check under the corrected comparison before any hold.
+- **"1 confirmed" is a LOWER BOUND.** The check is shape-level and blind to same-shape, wrong-content cross-binding. The extraction PAUSE stands until the slot fix lands; a content audit needs provenance (step 1).
+- **Impulse-id reuse is its own HIGH.** It corrupts relevance scoring and lineage too. Fix: execution-qualified, globally unique ids at mint. Falsifier: two dispatches never share an id, and relevance updates for one never touch the other.
+- **Node 2:** if its key is rejected by node 1's activity-api, node 2's selection may be failing silently. Measure by effect.
+
+## Node 2 and suspect re-check (10-03)
+- **Node 2's template path works.** ApiKey → 200; the earlier INVALID_AUTH was the probe sending Bearer.
+- **NODE 2 HAS NO CONCEPT RECALL.** goal-host pins recall to 127.0.0.1:8401/egress, and federation-transport is masked by the compute profile. Result: 1545 recall failures in about 9h.
+  - The same dark 8401 is advertised as the producer of federation_verification_report on both nodes. That is why two fed-report templates are at 0% since 10-02.
+- **The retire sweep sends Bearer → 401 → sweeps nothing** (a gap exists). This is why 0%-success templates stay selectable.
+- **activity-api, 1711 401s in 24h:** 1188 with no header; 323 rejected keys, including an UNIDENTIFIED 8-character test-style credential. Source addresses aren't logged.
+- **Node attribution is missing.** origin_* is stamped by the receiver, so node-level lineage is impossible.
+- **The 10 suspects show 0 corrected mismatches.** Three are at 0% since 10-02 because of missing resolvers (shellResultProcessor; the dark 8401).
+- `failure_mode.type="execution_error"` appears on every success row, so the field carries no signal.
+
+## qa (10-03): dispositions and priorities
+- **Suspects:** release 7. HOLD 3 (shellresult-to-memorynote-write; the 2 fed-report templates) with reason "producer absent: <name>", auto-released when the producer registers. They belong to REALIGNMENT §4.1, the unregistered-resolver class. llm-completion stays suspect.
+- **#1 node-2 recall / dark 8401: HIGH.** COUPLED to the user's federation-containment decision: stopping transports would turn recall dark on every node that routes recall through 8401.
+  - Recall must route by shape to the local concept-db FIRST (as with boredom).
+- **#4 auth failures: HIGH.**
+  - Step 1: log the remote address and user-agent on activity-api auth failures.
+  - The 8-character key looks like test residue hitting a live endpoint.
+  - The 1188 calls with no header are internal callers silently failing, so dark features. They join the credential-caller sweep.
+- **#5 origin_* and the failure_mode field:** file both. failure_mode is a K4 instrument fault: stop using it in analysis.
+- **§4 verdict:** reached≈0 even on successes. Must-fail control: a deterministically verified success → reached=true.
+
+## Slot fix: qa APPROVED (10-03)
+- **Commits:** ias 3f6d8c4 and gh c8bf673; 18/18 in qa's own copy.
+- **Ordering:** land ias first, confirm the fan-out, AND use a namespace import with an optional call in goal-host. When the gate is missing, degrade LOUDLY (a distinct log line plus a gap).
+- **The no-provenance fail-open window** needs an explicit, recorded end condition.
+- **Extraction pause condition:**
+  - (i) the slot fix deployed on all nodes, by effect;
+  - (ii) consumedProvenance crosses the trace-sink wire, with an activity-api reader and a ribosome gate;
+  - (iii) the step-1 extraction gates.
+- **HIGH:** goal-host.ts:810's recommend state signature reads the whole shared store. This is the read-side twin of the binding bug.
+- **Impulse-id format:** UNVERIFIED. The cockpit execution_trace doesn't render impulse ids (a cockpit gap), and a DB read needs user approval.
+
+## Slot fix: final (10-03). qa confirmed goal-host 2ddb3f4, 13/13.
+- **Push order, once the user clears it:**
+  1. ias 3f6d8c4;
+  2. confirm the shared-package fan-out to every consumer;
+  3. goal-host c8bf673 + cc6f37b + 2ddb3f4.
+- **Post-deploy check by effect:** inspect the consumedProvenance of one composite trace. buildCompositeTraceFromChain is untested because it lives in index.ts.
+
+## Deploy times (10-03 UTC). Traces carry no code version; split measurement windows here.
+| Change | Repo / sha | Live on node 1 |
+|---|---|---|
+| identity: failed queries log param names only | identity-vessel 7ce0af3 | 01:55:18 |
+| OBO validation; idle-test guard fix; check-first scratch tests | activity-api 0e92a70 | ~02:06 (no runtime change for the tests) |
+| slot binding by (execution, impulse) | ias-executor-ts 0f38dc0 | fan-out healthy 02:08:56 |
+| key-logging glue, secret scan, pull-sync starvation-break + aging | super-repo 60ae05a0 | glue 02:09; gate promoting through shadow |
+| deferred-cutover own-check (fail closed) | development-vessel 040d7e1 | mirrored 02:16:19 (restart deferred while in flight) |
+| foreign-consumption gate (reach + strict mint) | goal-host a6e3506 | next pull-sync tick after ~02:20 (confirm) |
+| unmeasurable own-check counted and demoted | development-vessel 3770906 | pending tick |
+| state-signature check-first test (test only) | ias-executor-ts f155e05 | 02:28:45 (unneeded consumer fan-out) |
+| pooled-query check-first test (test only) | activity-api f060319 | pending tick |
+
+## WIRING step 3 (qa, 10-03)
+Step 3 consists of:
+- gap 1: one grading occasion with two-sided abstention, in activity-api;
+- gap 2: the hollow withhold, consumer first, then producer;
+- the single decay rule.
+
+Step 5 (re-baseline) runs only after all three land and are verified by effect. The legacy 8-hex reader (activities ~6474) is measured before anything is folded in.
