@@ -292,3 +292,26 @@ Step 3 consists of:
 - the single decay rule.
 
 Step 5 (re-baseline) runs only after all three land and are verified by effect. The legacy 8-hex reader (activities ~6474) is measured before anything is folded in.
+
+## Step 3: target design (REALIGNMENT §2.2, "The unit of evidence", amended 10-03 by user review)
+Sequence: land gap 1 (one grading occasion, two-sided abstention) and gap 2 (the hollow withhold, consumer first, then producer) as already scoped. Then extend the key. The target design for the credit reader:
+1. **The particle.** The execution record carries the candidate set and the selection propensity at decision time. Today only `candidates_count` is logged, and only on `/recommend`; satisfier and bundle picks log nothing (§2 above).
+2. **Code version.** The record carries the arm's code version, and evidence is grouped by it. A changed arm opens a new evidence group. Time decay is for drift in the world, not for code change. One decay rule (this replaces the two-writer decay gap's "pick one" with "decay for drift only").
+3. **Keying.** Credit, reuse and "reached" are keyed by (arm, target shape, goal class = parse + command + oracle class), with the verdict's instrument recorded. Never by arm or shape alone (which averages unrelated tasks sharing fileEditResult or shellResult), and never by goal_hash alone (which transfers nothing to near-misses).
+4. **Fold, not step.** The update is an idempotent fold keyed by (execution, observation). Double grading becomes impossible by construction rather than by guard; a re-baseline is a re-fold; a wrong verdict is retracted by superseding it. (Gap 1's interim verdict-source tag is the measurement bridge until the fold lands.)
+- **Execution-scoped selection context:** the armed ias gap recommend-state-signature-… (check-first test f155e05, confirmed red).
+- **Pathway signature includes the acceptance class it passed:** extraction (§6), minting only from reached executions.
+- **Acceptance (from §2.2):**
+  - two identical runs, one alone and one beside unrelated concurrent executions, select from the same context;
+  - same target shape with different goal classes updates different cells;
+  - an arm's code change opens a new evidence group;
+  - a hollow walk and an ungraded exit leave the posterior unchanged;
+  - each logged decision can be reweighted from its recorded candidates and propensity.
+- **Prerequisite (R2-P11):** grounded settable by a passing control comes before posterior-update reads labels (step 4).
+
+## Armed for the lane (10-03), each confirmed red at a sha containing its test
+| Gap | Repo | Test commit | Birth verdict |
+|---|---|---|---|
+| recommend-state-signature-… | ias-executor-ts | f155e05 | present at f155e05 |
+| the-pooled-authenticated-query-path-… | activity-api | f060319 | present at f060319 |
+| active-dispatches-pagination-test-file-fails-to-load-… | goal-host | 0cf7800, df1880f, 1ecacf5 | present at 1ecacf5 |
