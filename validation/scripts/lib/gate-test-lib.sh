@@ -59,6 +59,9 @@ gt_live() { # -> gt_repo 1 whose body is the rewritten real pull-sync; systemctl
   printf '#!/bin/sh\nexit 7\n' > "$T/stub/curl"; chmod +x "$T/stub/"*
   gt_repo 1
   gt_rew "$GT_ROOT/scripts/substrate/substrate-pull-sync.sh" > "$T/seed/scripts/substrate/substrate-pull-sync.sh"
+  # The accepted archive carries the body's tracked-red predicate beside it (a body that cannot
+  # source it is a no-op tick, and the gate's lib-sources fixture refuses to promote it).
+  mkdir -p "$T/seed/scripts/substrate/lib" && cp "$GT_ROOT/scripts/substrate/lib/gap-tracked-red.sh" "$T/seed/scripts/substrate/lib/"
   G="$T/ws/.gate"
 }
 gt_live_tick() { # -> RC; output in $T/out.txt

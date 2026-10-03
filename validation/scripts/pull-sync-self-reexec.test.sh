@@ -67,6 +67,9 @@ chmod +x "$T/stub/"* "$T/mangle/install"
 setup() {
   rm -rf "$T/ws" "$T/o" "$T/seed" "$T/bin" "$T/unit" "$T/etc" "$T/share"; : > "$CALLS"
   mkdir -p "$T/ws/git/vessels" "$T/ws/.last-good" "$T/ws/.pull-sync" "$T/rt" "$T/o" "$T/bin" "$T/unit" "$T/etc" "$T/share"
+  # The image ships the tracked-red predicate (Dockerfile.substrate: scripts/substrate/lib/ -> share/lib);
+  # without it every tick is a TRACKED-RED LIB MISSING no-op (pull-sync-gtr-lib-missing.test.sh).
+  mkdir -p "$T/share/lib" && cp "$(dirname "$SCRIPT")/lib/gap-tracked-red.sh" "$T/share/lib/"
   echo 'SHARED=1' > "$T/etc/env"   # the render precondition: this node has a shared env
   git init -q --bare "$T/o/super.git"; git -C "$T/o/super.git" symbolic-ref HEAD refs/heads/dev
   mkdir -p "$T/seed/super/scripts/substrate/units"

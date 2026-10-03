@@ -55,6 +55,9 @@ CALLS="$T/calls.txt"; OUT="$T/out.txt"
 
 # ── stubs: lifecycle calls recorded, health follows the runtime's content ───────
 mkdir -p "$T/stub" "$T/bin" "$T/share" "$T/unit" "$T/etc"
+# The image ships the tracked-red predicate (Dockerfile.substrate: scripts/substrate/lib/ -> share/lib);
+# without it every tick is a TRACKED-RED LIB MISSING no-op (pull-sync-gtr-lib-missing.test.sh).
+mkdir -p "$T/share/lib" && cp "$(dirname "$SCRIPT")/lib/gap-tracked-red.sh" "$T/share/lib/"
 cat > "$T/stub/systemctl" <<EOF
 #!/usr/bin/env bash
 echo "systemctl \$*" >> "$CALLS"

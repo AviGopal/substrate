@@ -30,6 +30,9 @@ sed -e "s#/usr/local/share/substrate#$T/share#g" -e "s#/usr/local/bin#$T/bin#g" 
 
 # ── stubs: every lifecycle call is recorded, none acts outside $T ───────────────
 mkdir -p "$T/stub" "$T/bin" "$T/share" "$T/unit" "$T/etc"
+# The image ships the tracked-red predicate (Dockerfile.substrate: scripts/substrate/lib/ -> share/lib);
+# without it every tick is a TRACKED-RED LIB MISSING no-op (pull-sync-gtr-lib-missing.test.sh).
+mkdir -p "$T/share/lib" && cp "$(dirname "$SCRIPT")/lib/gap-tracked-red.sh" "$T/share/lib/"
 CALLS="$T/calls.txt"
 cat > "$T/stub/systemctl" <<EOF
 #!/usr/bin/env bash

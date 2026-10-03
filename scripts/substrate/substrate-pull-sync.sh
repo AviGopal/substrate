@@ -139,27 +139,35 @@ restart_age_defer() {
 # Keyed on the commit touching the check file, so a tracked test broken by an UNRELATED change still counts
 # as a regression. Empty output (store unreachable, no jq, no match) keeps the stricter gate.
 # THE PREDICATE IS SHARED (scripts/substrate/lib/gap-tracked-red.sh): the pre-commit glue runner sources
-# the same file, so the two gates cannot drift. It is found next to this script (a checkout, the gated
-# accepted/ archive) or under $SHARE_DIR/lib (the image's /usr/local/bin install; SELF-CONVERGE FIRST
-# converges that copy every ungated tick, before any re-exec). Not found = no name is tracked: the
-# stricter gate, as before.
+# the same file, so the two gates cannot drift. It is found next to this script FIRST (a checkout, the
+# gated accepted/ archive), then under $SHARE_DIR/lib (the image's /usr/local/bin install; SELF-CONVERGE
+# FIRST converges that copy every ungated tick, before any re-exec).
+# A TICK WITHOUT THE PREDICATE IS A LOUD NO-OP, never a silently strict gate: "nothing is tracked" would
+# refuse every armed check-first red as a regression and charge it to an innocent commit, freezing the
+# fleet under a wrong name. gtr_try_load runs here and again after SELF-CONVERGE FIRST (the heal path);
+# if it still fails there, the tick converges nothing and files one high-severity gap (see TRACKED-RED
+# LIB MISSING below), so tracked_fail_names is only ever called with the predicate loaded.
 # >>> gap-tracked-red loader
 PULLSYNC_SELF_DIR="${PULLSYNC_SELF_DIR:-$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")}"
 GTR_LIB=""
-for _gtr_c in "$PULLSYNC_SELF_DIR/lib/gap-tracked-red.sh" "${PULLSYNC_SHARE_DIR:-/usr/local/share/substrate}/lib/gap-tracked-red.sh"; do
-  if [ -r "$_gtr_c" ] && . "$_gtr_c" && declare -F gtr_load gtr_tracked_names gtr_select >/dev/null; then GTR_LIB="$_gtr_c"; break; fi
-done
-if [ -n "$GTR_LIB" ]; then
-  tracked_fail_names() {
-    local st
-    st="$(mktemp "${TMPDIR:-/tmp}/pullsync-gtr.XXXXXX" 2>/dev/null)" || return 0
-    gtr_load "$DEV_VESSEL" "$st" && gtr_tracked_names "$st" "$1" "$2"
-    rm -f "$st"
-  }
-else
-  # Fail closed: no predicate, nothing is tracked, every newly-failing name counts.
-  tracked_fail_names() { echo "pull-sync: gap-tracked-red.sh not found next to $PULLSYNC_SELF_DIR — no failing test is exempted" >&2; }
-fi
+gtr_lib_candidates() { printf '%s\n' "$PULLSYNC_SELF_DIR/lib/gap-tracked-red.sh" "${PULLSYNC_SHARE_DIR:-/usr/local/share/substrate}/lib/gap-tracked-red.sh"; }
+gtr_try_load() { # -> 0 and GTR_LIB set when a candidate sources and defines the three functions
+  local c
+  [ -n "$GTR_LIB" ] && return 0
+  while IFS= read -r c; do
+    # shellcheck disable=SC1090
+    if [ -r "$c" ] && . "$c" && declare -F gtr_load gtr_tracked_names gtr_select >/dev/null; then GTR_LIB="$c"; return 0; fi
+  done < <(gtr_lib_candidates)
+  return 1
+}
+tracked_fail_names() {
+  local st
+  [ -n "$GTR_LIB" ] || return 0
+  st="$(mktemp "${TMPDIR:-/tmp}/pullsync-gtr.XXXXXX" 2>/dev/null)" || return 0
+  gtr_load "$DEV_VESSEL" "$st" && gtr_tracked_names "$st" "$1" "$2"
+  rm -f "$st"
+}
+gtr_try_load || true
 # <<< gap-tracked-red loader
 
 # FAILING-TEST GAP GENERATOR (2026-09-30, user-cleared; qa-reviewed). Its evidence_resolve carries zero_field
@@ -747,6 +755,45 @@ elif [ "${PULLSYNC_REEXECED:-}" = 1 ]; then
     log "self: still not the committed substrate-pull-sync after one re-exec — NOT re-executing again this tick (no loop); the next tick retries"
   fi
 fi
+
+# TRACKED-RED LIB MISSING: A LOUD NO-OP TICK (qa, 10-02). Placed after SELF-CONVERGE FIRST, the heal path:
+# an ungated tick has just converged $SHARE_DIR/lib from the super-repo (and may have re-exec'd on a newer
+# pull-sync); a gated one has just judged the pulled commit, whose fixture corpus refuses a body that cannot
+# source its lib. If the predicate still loads from neither place, this tick restarts, mirrors, writes and
+# installs NOTHING (no vessel, baseline, unit, fleet-def or generator step runs): without it every armed
+# check-first red would read as a regression. It logs one line and files or BUMPS one high-severity gap with
+# a stable per-node id; first_seen persists in $MARKER_DIR across ticks. The self_fact row
+# pull_sync_tracked_red_lib_missing (scripts/substrate/self-facts.json) reads that log line from the journal,
+# so the frozen state stands as a self-fact too, not only as a closable gap. A tick that loads it again
+# closes the gap. The super-repo fetch above keeps running, so a fixing commit can still arrive.
+# >>> gap-tracked-red missing
+GTR_MISSING_FIRST="$MARKER_DIR/gap-tracked-red-lib-missing.first_seen"
+GTR_MISSING_TICKS="$MARKER_DIR/gap-tracked-red-lib-missing.ticks"
+GTR_NODE="$(hostname 2>/dev/null || cat /proc/sys/kernel/hostname 2>/dev/null)"; GTR_NODE="${GTR_NODE:-${HOSTNAME:-unknown}}"
+GTR_MISSING_ID="pull-sync-gap-tracked-red-lib-missing-$(printf '%s' "$GTR_NODE" | tr -c 'A-Za-z0-9._-' '-')"
+if ! gtr_try_load; then
+  mkdir -p "$MARKER_DIR" 2>/dev/null
+  [ -s "$GTR_MISSING_FIRST" ] || date -u +%Y-%m-%dT%H:%M:%SZ > "$GTR_MISSING_FIRST" 2>/dev/null
+  _gm_n="$(cat "$GTR_MISSING_TICKS" 2>/dev/null)"; case "$_gm_n" in ''|*[!0-9]*) _gm_n=0 ;; esac; _gm_n=$((_gm_n + 1))
+  echo "$_gm_n" > "$GTR_MISSING_TICKS" 2>/dev/null
+  _gm_where="$(gtr_lib_candidates | tr '\n' ' ')"
+  log "!!! TRACKED-RED LIB MISSING — gap-tracked-red.sh loads from neither ${_gm_where% }; NO-OP TICK: nothing is restarted, mirrored, written or installed (tick $_gm_n since $(cat "$GTR_MISSING_FIRST" 2>/dev/null)) — $GTR_MISSING_ID"
+  emit_gap "$(jq -n -c --arg id "$GTR_MISSING_ID" --arg node "$GTR_NODE" \
+      --arg first "$(cat "$GTR_MISSING_FIRST" 2>/dev/null)" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg n "$_gm_n" --arg where "${_gm_where% }" \
+      '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"service_failure",source:"substrate_detected",status:"open",severity:"high",
+        summary:("pull-sync on " + $node + " cannot load its tracked-red predicate (scripts/substrate/lib/gap-tracked-red.sh) from " + $where + ", so it is converging NOTHING: every tick is a no-op until the lib is present. Without the predicate an armed check-first red would be refused as a regression. Since " + $first + ", " + $n + " tick(s)."),
+        classification_metadata:{node:$node,first_seen:$first,last_seen:$now,missing_ticks:($n|tonumber),looked_in:($where|split(" ")),edit_site:"scripts/substrate/substrate-pull-sync.sh"}}}}}' 2>/dev/null)"
+  exit 0
+fi
+if [ -s "$GTR_MISSING_FIRST" ]; then
+  log "tracked-red predicate loads again ($GTR_LIB) — closing $GTR_MISSING_ID"
+  emit_gap "$(jq -n -c --arg id "$GTR_MISSING_ID" --arg first "$(cat "$GTR_MISSING_FIRST" 2>/dev/null)" --arg lib "$GTR_LIB" \
+      '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"service_failure",source:"substrate_detected",status:"closed",closed_reason:"lib_loads_again",
+        summary:("pull-sync loads its tracked-red predicate again from " + $lib + "; it was missing since " + $first + "."),
+        classification_metadata:{first_seen:$first,loaded_from:$lib}}}}}' 2>/dev/null)"
+  rm -f "$GTR_MISSING_FIRST" "$GTR_MISSING_TICKS"
+fi
+# <<< gap-tracked-red missing
 
 # Vessel -> unit map from the inventory (fallback: every clone dir, unit <v>.service).
 vessel_unit() { # vessel -> systemd unit or empty
