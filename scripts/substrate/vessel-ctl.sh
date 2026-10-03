@@ -101,7 +101,7 @@ csh() { if [ "$IN_CONTAINER" = 1 ]; then bash -c "$1"; else docker exec "$CONTAI
 # node, so no unit restarts or stops there while a probeWindow record is open (qa's rule, 2026-10-03,
 # gap probe-windows-are-announced-by-message-so-a-restart-can-land-inside-one). The record is a shaped
 # poolImpulse, shape probeWindow, body {node, from, until, tag, reason}, read at use time from this node's
-# development-vessel. It applies when body.node is this node's FED_SUBSTRATE_ID, its hostname, or "*",
+# development-vessel. It applies when body.node is this node's FED_SUBSTRATE_ID, or its hostname (a "*" window is ignored: any fleet-key holder could freeze every node), capped at 12 h from its start,
 # and now is inside [from, until) (a missing until means open-ended). An unreadable store refuses too
 # (fail closed). Overrides, each logged to the journal: --security-incident (a live incident outranks a
 # probe) and --probe-window-unverified (the store cannot be read, e.g. development-vessel itself is down).
@@ -109,7 +109,7 @@ probe_window_state() {
   csh 'k=$(grep -a -m1 "^METABOB_API_KEY=" /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d "\""); me=$(grep -a -m1 "^FED_SUBSTRATE_ID=" /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d "\""); h=$(hostname)
     r=$(curl -s -m10 -X POST http://127.0.0.1:8090/v2/impulses/resolve -H "Content-Type: application/json" -H "Authorization: ApiKey $k" -d "{\"impulse\":{\"type\":\"poolImpulse\",\"shape\":\"probeWindow\",\"status\":\"open\"}}" 2>/dev/null)
     printf "%s" "$r" | jq -e ". != null" >/dev/null 2>&1 || { echo UNREADABLE; exit 0; }
-    printf "%s" "$r" | jq -r --arg me "${me:-$h}" --arg h "$h" --argjson now "$(date -u +%s)" "[.. | objects | select(has(\"body\") and has(\"id\")) | select((.shape // \"probeWindow\") == \"probeWindow\") | select(.body.node == \$me or .body.node == \$h or .body.node == \"*\") | select((.body.from // null) == null or ((.body.from | sub(\"\\\\.[0-9]+Z$\"; \"Z\") | fromdateiso8601? // 0) <= \$now)) | select((.body.until // null) == null or ((.body.until | sub(\"\\\\.[0-9]+Z$\"; \"Z\") | fromdateiso8601? // 0) > \$now))] | if length > 0 then \"OPEN \" + (.[0].id | tostring) + \" until=\" + ((.[0].body.until // \"open-ended\") | tostring) + \" tag=\" + ((.[0].body.tag // \"\") | tostring) else \"NONE\" end"'
+    printf "%s" "$r" | jq -r --arg me "${me:-$h}" --arg h "$h" --argjson now "$(date -u +%s)" "[.. | objects | select(has(\"body\") and has(\"id\")) | select((.shape // \"probeWindow\") == \"probeWindow\") | select(.body.node == \$me or .body.node == \$h) | select((.body.from // null) == null or ((.body.from | sub(\"\\\\.[0-9]+Z$\"; \"Z\") | fromdateiso8601? // 0) <= \$now)) | select((((.body.from // null) | if . == null then \$now else (sub(\"\\\\.[0-9]+Z$\"; \"Z\") | fromdateiso8601? // \$now) end) + 43200) > \$now) | select((.body.until // null) == null or ((.body.until | sub(\"\\\\.[0-9]+Z$\"; \"Z\") | fromdateiso8601? // 0) > \$now))] | if length > 0 then \"OPEN \" + (.[0].id | tostring) + \" until=\" + ((.[0].body.until // \"open-ended\") | tostring) + \" tag=\" + ((.[0].body.tag // \"\") | tostring) else \"NONE\" end"'
 }
 probe_window_guard() { # action -> 0 to proceed, 1 refused (after printing the refusal JSON)
   local st; st="$(probe_window_state 2>/dev/null | head -1)"
