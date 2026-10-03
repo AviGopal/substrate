@@ -133,6 +133,22 @@ restart_age_defer() {
     RA_WHY="$RA_INFLIGHT in flight after ${2:-0} deferral(s) and no in_flight_oldest_ms published — convergence must not be starved"
   fi
 }
+# tuning_param <name> <default> — a SHAPED value read at use time: the substrate_tuning_param row
+# that activity-api serves at GET /v2/tuning-params/<name> (the same table its learner reads through
+# getTuningParam, written through POST /v2/tuning-params). pull-sync had no shaped-setting reader, so
+# its bounds were named constants; this is the nearest existing shaped path. Authenticates with the
+# service key the unit's EnvironmentFile already carries (as setup-git-push does). A non-numeric
+# value, a null row, or an unreachable/unauthorised store yields <default>: a bound is never lifted
+# by a read failure. Prints a non-negative integer.
+tuning_param() {
+  local _tp_v _tp_auth=()
+  [ -n "${METABOB_API_KEY:-}" ] && _tp_auth=(-H "Authorization: ApiKey $METABOB_API_KEY")
+  _tp_v="$(curl -s --max-time 5 ${_tp_auth[@]+"${_tp_auth[@]}"} \
+    "${ACTIVITY_API_ENDPOINT:-http://127.0.0.1:8080}/v2/tuning-params/$1" 2>/dev/null \
+    | sed -n 's/.*"value"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\)\(\.[0-9]*\)\{0,1\}[[:space:]]*[,}].*/\1/p' | head -1)"
+  case "$_tp_v" in ''|*[!0-9]*) _tp_v="$2" ;; esac
+  printf '%s' "$_tp_v"
+}
 # Failing-test names that are red ON PURPOSE in this commit: an OPEN gap's class2 check (evidence_resolve
 # test_suite for vessel $1) whose test_file is among the files the commit changed ($2, newline-separated).
 # That is a check-first landing (the check landed before its fix), a filed failure, not a regression.
@@ -1477,7 +1493,7 @@ unresolved_modules() { # test-output -> names, one per line
     | sed -E "s/^Cannot find (module|package) ['\"]//; s/['\"]\$//" | sort -u || true
 }
 
-synced=0; skipped=0; failed=0
+synced=0; skipped=0; deferred=0; failed=0
 for d in "$CLONE_DIR"/*/; do
   [ -d "$d/.git" ] || continue
   v="$(basename "$d")"
@@ -1862,9 +1878,9 @@ EOF
   # field yield 0 and are untouched. This deliberately sets IS_AUTHORING_HOST so the
   # STARVATION BOUND below applies unchanged: a permanently busy dispatch host must not freeze
   # the deploy channel forever, so after AUTHORING_HOST_MAX_DEFERS consecutive ticks it
-  # converges anyway. NOTE this does NOT cover the shared-package fan-out restart, which
-  # restarts goal-host as a CONSUMER while iterating another vessel — same permanent loss,
-  # rarer trigger. That leg of the class is still open.
+  # converges anyway. The shared-package fan-out, which restarts goal-host and the other
+  # consumers while iterating ANOTHER vessel, asks the same /health through restart_age_defer
+  # before it bounces anyone (2c, "THE DEPENDENCY BOUNCE HONOURS THE SAME IN-FLIGHT QUIESCE").
   if [ -z "$DEFER_MARKER" ]; then
     IFPORT="$(health_port "$v")"
     if [ -n "$IFPORT" ]; then
@@ -2559,6 +2575,59 @@ EOF
     CONSUMERS="$(grep -lE "file:[^\"]*/$v\"" "$RUNTIME_DIR"/*/package.json 2>/dev/null | xargs -r -n1 dirname | xargs -r -n1 basename | grep -vx "$v" || true)"
     if [ -n "$CONSUMERS" ]; then
       log "$v: shared package changed -- rebuilding dist for consumers: $(echo $CONSUMERS | tr '\n' ' ')"
+      # THE DEPENDENCY BOUNCE HONOURS THE SAME IN-FLIGHT QUIESCE AS A VESSEL'S OWN RESTART.
+      #
+      # The loop below restarts every consumer, and the consumers serve each other's work:
+      # a compose on development-vessel runs its suite through local-tools-vessel, so
+      # bouncing EITHER loses it. Measured: a compose died when this fan-out restarted
+      # local-tools-vessel and then development-vessel under a young in-flight request
+      # ("1 request(s) ... not waited for"; no trace, no lesson), while a vessel's own
+      # convergence restart would have deferred on the same /health. So ask every active
+      # consumer with the shared restart_age_defer (same ceiling, same count bound) BEFORE
+      # the build and the swap (a symlinked consumer sees the swap by reference): if any
+      # is busy, bounce none this tick.
+      #
+      # THE BOUNCE STAYS OWED WITHOUT A MARKER: LAST_GOOD is not written, so DIST_RETRY
+      # (top of loop) re-enters this fan-out on the next tick. COST, not correctness: that
+      # retry re-runs this package's test gate each deferred tick, which spends gate budget.
+      #
+      # BOUNDED BY AGE AND BY TICKS. "Defer all if any consumer is busy" must not postpone
+      # a dependency rollout forever: a fleet whose consumers take turns being busy has no
+      # idle tick. Once the first deferral is older than pull_sync.bounce_defer_max_seconds
+      # OR has repeated pull_sync.bounce_defer_max_ticks times, the bounce proceeds,
+      # logs FORCED-AFTER-DEFER, and files (or bumps) ONE gap with a stable id. Both bounds
+      # are shaped tuning rows read at use time (tuning_param), not env constants.
+      BQ_FILE="$MARKER_DIR/$v.bounce-deferrals"; BQ_SINCE_FILE="$MARKER_DIR/$v.bounce-deferred-since"
+      BQ_N="$(cat "$BQ_FILE" 2>/dev/null || echo 0)"; case "$BQ_N" in ''|*[!0-9]*) BQ_N=0 ;; esac
+      BQ_SINCE="$(cat "$BQ_SINCE_FILE" 2>/dev/null || true)"; case "$BQ_SINCE" in ''|*[!0-9]*) BQ_SINCE="" ;; esac
+      BQ_BUSY=""; BQ_WHY=""
+      for c in $CONSUMERS; do
+        CU="$(vessel_unit "$c")"; CP="$(health_port "$c")"
+        [ -n "$CU" ] && [ "${CU%.service}" != "$CU" ] && [ -n "$CP" ] || continue
+        systemctl is-active "$CU" >/dev/null 2>&1 || continue
+        restart_age_defer "$CP" "$BQ_N"
+        [ -n "$RA_WHY" ] && log "$v: consumer $c — $RA_WHY"
+        [ "$RA_DEFER" = 1 ] && { BQ_BUSY="$BQ_BUSY $c"; BQ_WHY="${BQ_WHY:+$BQ_WHY; }$c: $RA_WHY"; }
+      done
+      if [ -n "$BQ_BUSY" ]; then
+        BQ_MAX_TICKS="$(tuning_param pull_sync.bounce_defer_max_ticks 6)"
+        BQ_MAX_S="$(tuning_param pull_sync.bounce_defer_max_seconds 5400)"
+        BQ_AGE=0; [ -n "$BQ_SINCE" ] && BQ_AGE=$(( $(date +%s) - BQ_SINCE ))
+        if [ "$BQ_N" -ge "$BQ_MAX_TICKS" ] || { [ -n "$BQ_SINCE" ] && [ "$BQ_AGE" -ge "$BQ_MAX_S" ]; }; then
+          log "$v: dependency bounce FORCED-AFTER-DEFER — deferred $BQ_N tick(s) over ${BQ_AGE}s (bounds ${BQ_MAX_TICKS} ticks / ${BQ_MAX_S}s); bouncing anyway, in-flight work on$BQ_BUSY may be lost ($BQ_WHY)"
+          printf '{"at":"%s","actor":"pull-sync","action":"forced_dependency_bounce","vessel":"%s","busy":"%s","deferrals":%s,"age_s":%s}\n' \
+            "$(date -Iseconds)" "$v" "${BQ_BUSY# }" "$BQ_N" "$BQ_AGE" >> "$DEFERRAL_LOG" 2>/dev/null || true
+          emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-bounce-forced-$v\",\"category\":\"convergence_deferral\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync forced the $v dependency bounce after deferring it $BQ_N tick(s) over ${BQ_AGE}s because consumers$BQ_BUSY always had young in-flight work; in-flight work may have been lost. A fleet with no idle tick needs a drain that does not depend on one.\",\"status\":\"open\"}}}}"
+        else
+          [ -n "$BQ_SINCE" ] || date +%s > "$BQ_SINCE_FILE" 2>/dev/null || true
+          echo "$((BQ_N + 1))" > "$BQ_FILE" 2>/dev/null || true
+          log "$v: DEFERRING dependency bounce of$(echo " "$CONSUMERS | tr '\n' ' ') — in flight on$BQ_BUSY ($BQ_WHY); bounce recorded as PENDING (last-good withheld) and will be taken on a later tick ($((BQ_N + 1))/${BQ_MAX_TICKS})"
+          printf '{"at":"%s","actor":"pull-sync","action":"deferred_dependency_bounce_inflight","vessel":"%s","busy":"%s","deferral":%s}\n' \
+            "$(date -Iseconds)" "$v" "${BQ_BUSY# }" "$((BQ_N + 1))" >> "$DEFERRAL_LOG" 2>/dev/null || true
+          deferred=$((deferred+1)); continue
+        fi
+      fi
+      rm -f "$BQ_FILE" "$BQ_SINCE_FILE" 2>/dev/null || true
       STAGE="$RUNTIME_DIR/$v/.dist.stage"; rm -rf "$STAGE"
       # A package whose tsconfig.build.json is declarations-only (cpg-inference-ts: `bun build`
       # emits the JS, tsc only the .d.ts) can never yield index.js from tsc alone, so this check
@@ -2761,7 +2830,7 @@ EOF
       log "$v: DEFERRING restart — $RA_WHY; restart recorded as PENDING and will be taken on a later tick"
       printf '{"at":"%s","actor":"pull-sync","action":"deferred_restart_inflight","vessel":"%s","in_flight":%s,"deferral":%s}\n' \
         "$(date -Iseconds)" "$v" "$INFLIGHT" "$((DEFERRED_N + 1))" >> "$DEFERRAL_LOG" 2>/dev/null || true
-      continue
+      deferred=$((deferred+1)); continue
     fi
     [ -n "$RA_WHY" ] && log "$v: restarting — $RA_WHY"
     rm -f "$DEFER_FILE" 2>/dev/null || true
@@ -3105,7 +3174,7 @@ while IFS='|' read -r gv gq gh gd; do
   rm -rf "$gq"
 done <<< "$GEN_QUEUE"
 
-log "done — synced=$synced skipped=$skipped failed=$failed"
+log "done — synced=$synced skipped=$skipped deferred=$deferred failed=$failed"
 
 # EXIT NON-ZERO WHEN SOMETHING FAILED.
 #
