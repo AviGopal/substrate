@@ -289,7 +289,7 @@ run
   || bad "(i) a 401 tuning store is not recorded exactly once per name in the tick"
 grep -q 'DEFERRING dependency bounce .*(1/6)' "$OUT" && ok "(i) the default applies when the tuning store answers 401" \
   || bad "(i) the default does not apply when the tuning store answers 401"
-[ "$(grep -c '"action":"tuning_param_fallback"' "$T/ws/pull-sync-deferrals.jsonl" 2>/dev/null)" = 2 ] \
+[ "$(grep '"action":"tuning_param_fallback"' "$T/ws/pull-sync-deferrals.jsonl" 2>/dev/null | grep -c '"name":"pull_sync.bounce_defer_max_')" = 2 ] \
   && ok "(i) the fallback is recorded in the deferral log once per name" || bad "(i) the fallback is not recorded in the deferral log once per name"
 echo down > "$T/tuning-mode"
 run

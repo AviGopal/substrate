@@ -26,6 +26,8 @@
 #       quiesce (admission marker written, then removed), drain to 0, restart taken
 #   (j) same, but in-flight never drains within the bound -> restart taken anyway,
 #       the loss is logged, the quiesce marker is removed
+#   (k) at the cap but the deferral is an open probe window -> no quiesce, no restart,
+#       still deferred (a probe window is not starvation)
 #
 # usage: validation/scripts/pull-sync-owed-restart.test.sh [path/to/substrate-pull-sync.sh]
 # Needs bash, awk, sed, find, GNU date/touch. No root: every path is a temp dir.
@@ -63,7 +65,8 @@ systemctl() {
 vessel_unit() { echo "$1.service"; }
 health_port() { echo 9999; }
 DEFER=0
-restart_age_defer() { RA_INFLIGHT=0; RA_OLDEST=""; RA_DEFER="$DEFER"; RA_WHY=""; [ "$DEFER" = 1 ] && { RA_INFLIGHT=2; RA_WHY="2 in flight"; }; return 0; }
+PROBE=0
+restart_age_defer() { RA_INFLIGHT=0; RA_OLDEST=""; RA_DEFER="$DEFER"; RA_WHY=""; RA_PROBE="$PROBE"; [ "$DEFER" = 1 ] && { RA_INFLIGHT=2; RA_WHY="2 in flight"; }; return 0; }
 restart_breadcrumb() { :; }
 HEALTH_SEQ_FILE="$T/health-seq"   # one in_flight value per line, one per /health call; the last repeats
 health_seq() { printf '%s\n' "$@" > "$HEALTH_SEQ_FILE"; }
@@ -87,7 +90,7 @@ setup() { # a running unit and its runtime src
   echo 'export const x = 1;' > "$RUNTIME_DIR/$VESSEL/src/x.ts"
   echo 'test("x", () => {});' > "$RUNTIME_DIR/$VESSEL/src/x.test.ts"
   UNIT_STARTED="Sat 2026-10-03 10:26:55 UTC"
-  UNIT_ACTIVE=1; DEFER=0; CLONE_HASH=newhash; : > "$CALLS"; : > "$LOG"
+  UNIT_ACTIVE=1; DEFER=0; PROBE=0; CLONE_HASH=newhash; : > "$CALLS"; : > "$LOG"
 }
 restarted() { grep -q "^RESTART $VESSEL.service$" "$CALLS"; }
 
@@ -156,6 +159,12 @@ setup; echo oldhash > "$P"; echo 3 > "$DF"; DEFER=1; health_seq 1
 run_block
 if restarted && [ ! -e "$QUIESCE_DIR/$VESSEL" ] && grep -q "IS lost" "$LOG"; then ok "(j) never drains: restart taken anyway, loss logged, marker removed"
 else bad "(j) never drains: expected a logged forced restart (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
+
+# ── (k) at the cap, deferral is a probe window: stays deferred ─────────────────
+setup; echo oldhash > "$P"; echo 5 > "$DF"; DEFER=1; PROBE=1; health_seq 0
+run_block
+if ! restarted && [ ! -e "$QUIESCE_DIR/$VESSEL" ] && ! grep -q QUIESCED "$LOG" && [ -e "$P" ]; then ok "(k) probe window at the cap: no quiesce, no restart, still owed"
+else bad "(k) probe window at the cap: expected a plain deferral (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
 
 echo
 [ "$FAILS" = 0 ] && { echo "PASS - owed restarts survive content moving on"; exit 0; }

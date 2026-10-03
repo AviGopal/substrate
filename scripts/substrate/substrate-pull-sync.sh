@@ -112,8 +112,66 @@ restart_breadcrumb() { # vessel reason [in_flight]
 # A vessel that publishes in_flight_oldest_ms is deferred until its OLDEST request passes the
 # compose ceiling — only then is it stuck. A vessel that does not publish the age keeps the
 # RESTART_DEFER_MAX count bound: without an age nothing distinguishes busy from wedged.
+# AN OPEN PROBE WINDOW HOLDS EVERY RESTART ON THIS NODE (qa's rule, 2026-10-03: a declared held-out probe
+# window is a maintenance hold; restarts inside one turn environment failures into reach misses). The window
+# is a shaped poolImpulse (shape probeWindow, body {node, from, until, tag, reason}) read at use time from this
+# node's development-vessel, the record vessel-ctl's probe_window_guard reads. Read once per tick.
+#  - BOUNDED: a window holds at most pull_sync.probe_window_max_seconds (shaped tuning row, default 7200) from
+#    its `from` (or the record's creation time), whatever its `until` says, because this hold stops ALL
+#    convergence on the node, security fixes included. A window the cap expires is logged once.
+#  - EXPLICIT NODE ONLY: pull-sync ignores node "*". Any fleet-key holder can write a pool record, so a
+#    wildcard would let any of them freeze convergence fleet-wide.
+#  - OVERRIDE: an open probeWindowOverride record naming this node (body {node, reason}) lets convergence
+#    through the hold, logged once per tick, for a security fix that cannot wait.
+#  - UNREADABLE does NOT hold here (unlike vessel-ctl, where an operator can override): pull-sync must be able
+#    to restart the very vessel that serves the record. The line names the last window seen open, so a probe
+#    report can join on it and flag its results environment-suspect.
+PW_STATE=""
+probe_window_open() { # -> 0 iff an open, in-cap window names this node and no override is open; sets PW_WHY
+  if [ -z "$PW_STATE" ]; then
+    _pw_me="${FED_SUBSTRATE_ID:-$(hostname 2>/dev/null)}"; _pw_h="$(hostname 2>/dev/null)"
+    tuning_param pull_sync.probe_window_max_seconds 7200; _pw_max="$TP_VALUE"
+    _pw_read() {
+      if [ -n "${METABOB_API_KEY:-}" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; fi \
+        | curl -K - -s --max-time 10 -X POST "${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}/v2/impulses/resolve" \
+            -H 'Content-Type: application/json' -d "{\"impulse\":{\"type\":\"poolImpulse\",\"shape\":\"$1\",\"status\":\"open\"}}" 2>/dev/null
+    }
+    _pw_sel='def ts: if . == null then null else (sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601? // null) end;
+      if (.body.impulses | type) != "array" then "UNREADABLE" else
+      [.body.impulses[] | select(.shape == $shape) | select(.body.node == $me or .body.node == $h)
+        | ((.body.from | ts) // (.injected_at | ts) // (.created_at | ts)) as $from
+        | ((.body.until | ts)) as $until
+        | (if $from == null then null else $from + $max end) as $cap
+        | {id, tag: (.body.tag // ""), from: $from, until: $until, cap: $cap}
+        | select(.from == null or .from <= $now)
+        | .expired_by_cap = (.cap != null and .cap <= $now and (.until == null or .until > $now))
+        | select(.until == null or .until > $now)] as $w
+      | ($w | map(select(.expired_by_cap | not))) as $live
+      | if ($live | length) > 0 then "OPEN " + ($live[0].id | tostring) + " tag=" + ($live[0].tag | tostring)
+        elif ($w | length) > 0 then "CAPPED " + ($w[0].id | tostring)
+        else "NONE" end end'
+    _pw_now="$(date -u +%s)"
+    PW_STATE="$(_pw_read probeWindow | jq -r --arg shape probeWindow --arg me "$_pw_me" --arg h "$_pw_h" --argjson now "$_pw_now" --argjson max "$_pw_max" "$_pw_sel" 2>/dev/null)"
+    [ -n "$PW_STATE" ] || PW_STATE="UNREADABLE"
+    case "$PW_STATE" in
+      OPEN*)
+        echo "${PW_STATE#OPEN }" > "$MARKER_DIR/probe-window.last" 2>/dev/null || true
+        _pw_ov="$(_pw_read probeWindowOverride | jq -r --arg shape probeWindowOverride --arg me "$_pw_me" --arg h "$_pw_h" --argjson now "$_pw_now" --argjson max "$_pw_max" "$_pw_sel" 2>/dev/null)"
+        case "$_pw_ov" in OPEN*)
+          log "probe window ${PW_STATE#OPEN } is open but override ${_pw_ov#OPEN } lets convergence through (security override)"
+          PW_STATE="OVERRIDDEN ${PW_STATE#OPEN }" ;;
+        esac ;;
+      CAPPED*) log "probe window ${PW_STATE#CAPPED } passed pull_sync.probe_window_max_seconds (${_pw_max}s) — no longer holding convergence" ;;
+      UNREADABLE) log "probe window: probeWindow records unreadable this tick — restarts are NOT held (pull-sync must be able to restart the record's own server); last window seen open: $(cat "$MARKER_DIR/probe-window.last" 2>/dev/null || echo none) — flag its probe results environment-suspect" ;;
+    esac
+  fi
+  PW_WHY="probe window ${PW_STATE#OPEN }"
+  case "$PW_STATE" in OPEN*) return 0 ;; *) return 1 ;; esac
+}
+
 restart_age_defer() {
-  RA_INFLIGHT=""; RA_OLDEST=""; RA_DEFER=0; RA_WHY=""
+  RA_INFLIGHT=""; RA_OLDEST=""; RA_DEFER=0; RA_WHY=""; RA_PROBE=0
+  if probe_window_open; then RA_DEFER=1; RA_PROBE=1; RA_WHY="$PW_WHY open on this node — restart held until it closes"; return 0; fi
   if [ -n "$1" ]; then
     _ra_h="$(curl -s --max-time 5 "http://127.0.0.1:$1/health" 2>/dev/null)"
     RA_INFLIGHT="$(printf '%s' "$_ra_h" | sed -n 's/.*"in_flight"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -1)"
@@ -1592,6 +1650,12 @@ synced=0; skipped=0; deferred=0; failed=0
 for d in "$CLONE_DIR"/*/; do
   [ -d "$d/.git" ] || continue
   v="$(basename "$d")"
+  # A held-out probe window freezes this node's code: no fetch, mirror or restart for any vessel while
+  # an open probeWindow record names the node (see probe_window_open), so probes run on one version.
+  if probe_window_open; then
+    [ -n "${PW_LOGGED:-}" ] || { log "$PW_WHY open on this node — holding ALL vessel convergence (no fetch, mirror or restart) until it closes"; PW_LOGGED=1; }
+    skipped=$((skipped+1)); continue
+  fi
 
   # 1. Fetch + classify vs origin.
   if ! git -C "$d" fetch -q origin "$BRANCH" 2>/dev/null; then
@@ -1761,7 +1825,7 @@ for d in "$CLONE_DIR"/*/; do
     # 2026-10-03, development-vessel held a mirrored fix unloaded from 13:54 on while
     # each tick logged "owed restart still deferred". After RESTART_DEFER_MAX deferrals,
     # close admission and drain (the mirror path's quiesce) instead of deferring again.
-    if [ "$RA_DEFER" = 1 ] && [ "$P_DEFERRED_N" -ge "${RESTART_DEFER_MAX:-3}" ] 2>/dev/null; then
+    if [ "$RA_DEFER" = 1 ] && [ "$RA_PROBE" != 1 ] && [ "$P_DEFERRED_N" -ge "${RESTART_DEFER_MAX:-3}" ] 2>/dev/null; then
       quiesce_drain "$v" "$P_PORT"
       RA_DEFER=0
       RA_WHY="owed restart deferred ${P_DEFERRED_N} time(s); quiesced: $QD_WHY"
@@ -2725,7 +2789,7 @@ EOF
       BQ_FILE="$MARKER_DIR/$v.bounce-deferrals"; BQ_SINCE_FILE="$MARKER_DIR/$v.bounce-deferred-since"
       BQ_N="$(cat "$BQ_FILE" 2>/dev/null || echo 0)"; case "$BQ_N" in ''|*[!0-9]*) BQ_N=0 ;; esac
       BQ_SINCE="$(cat "$BQ_SINCE_FILE" 2>/dev/null || true)"; case "$BQ_SINCE" in ''|*[!0-9]*) BQ_SINCE="" ;; esac
-      BQ_BUSY=""; BQ_WHY=""
+      BQ_BUSY=""; BQ_WHY=""; BQ_PROBE=0
       for c in $CONSUMERS; do
         CU="$(vessel_unit "$c")"; CP="$(health_port "$c")"
         [ -n "$CU" ] && [ "${CU%.service}" != "$CU" ] && [ -n "$CP" ] || continue
@@ -2733,12 +2797,14 @@ EOF
         restart_age_defer "$CP" "$BQ_N"
         [ -n "$RA_WHY" ] && log "$v: consumer $c — $RA_WHY"
         [ "$RA_DEFER" = 1 ] && { BQ_BUSY="$BQ_BUSY $c"; BQ_WHY="${BQ_WHY:+$BQ_WHY; }$c: $RA_WHY"; }
+        [ "$RA_PROBE" = 1 ] && BQ_PROBE=1
       done
       if [ -n "$BQ_BUSY" ]; then
         tuning_param pull_sync.bounce_defer_max_ticks 6; BQ_MAX_TICKS="$TP_VALUE"
         tuning_param pull_sync.bounce_defer_max_seconds 5400; BQ_MAX_S="$TP_VALUE"
         BQ_AGE=0; [ -n "$BQ_SINCE" ] && BQ_AGE=$(( $(date +%s) - BQ_SINCE ))
-        if [ "$BQ_N" -ge "$BQ_MAX_TICKS" ] || { [ -n "$BQ_SINCE" ] && [ "$BQ_AGE" -ge "$BQ_MAX_S" ]; }; then
+        # An open probe window is not a busy consumer: it never counts toward FORCED-AFTER-DEFER.
+        if [ "$BQ_PROBE" != 1 ] && { [ "$BQ_N" -ge "$BQ_MAX_TICKS" ] || { [ -n "$BQ_SINCE" ] && [ "$BQ_AGE" -ge "$BQ_MAX_S" ]; }; }; then
           log "$v: dependency bounce FORCED-AFTER-DEFER — deferred $BQ_N tick(s) over ${BQ_AGE}s (bounds ${BQ_MAX_TICKS} ticks / ${BQ_MAX_S}s); bouncing anyway, in-flight work on$BQ_BUSY may be lost ($BQ_WHY)"
           printf '{"at":"%s","actor":"pull-sync","action":"forced_dependency_bounce","vessel":"%s","busy":"%s","deferrals":%s,"age_s":%s}\n' \
             "$(date -Iseconds)" "$v" "${BQ_BUSY# }" "$BQ_N" "$BQ_AGE" >> "$DEFERRAL_LOG" 2>/dev/null || true
