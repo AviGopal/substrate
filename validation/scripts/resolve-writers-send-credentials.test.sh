@@ -742,6 +742,29 @@ grep -qx 'SKIP repos/absent-vessel/src (not checked out)' "$T/p7-skips" \
   && ok "vessel src (P7): a vessel whose src/ is not checked out is reported as SKIP, not passed silently" \
   || bad "vessel src (P7): no SKIP line for an absent vessel src/ (got: $(tr '\n' ' ' < "$T/p7-skips"))"
 
+# P7 per-vessel MODE (tracked-red vs enforcing). p7_judge <root> <enforced vessels, space-separated>
+# judges one tree and prints its verdict lines; its exit status is the number of failures.
+V="$T/p7-mode"; mkdir -p "$V/repos/fx-vessel/src" "$V/repos/fx-clean/src"
+printf 'export async function f() { await fetch(`${process.env.DISCOVERY_ENDPOINT}/resolve`, { method: "POST" }); }\n' > "$V/repos/fx-vessel/src/a.ts"
+printf 'export const x = 1;\n' > "$V/repos/fx-clean/src/a.ts"
+out="$(p7_judge "$V" "" 2>&1)"; rc=$?
+[ "$rc" = 0 ] && printf '%s\n' "$out" | grep -qx 'P7 tracked-red: fx-clean 0 offender(s), fx-vessel 1 offender(s)' \
+  && printf '%s\n' "$out" | grep -q '^TRACKED-RED - P7 vessel src: fx-vessel ' && ! printf '%s\n' "$out" | grep -q '^ *FAIL' \
+  && ok "P7 mode: a vessel offender in tracked-red mode is reported with its count and does not fail (exit 0)" \
+  || bad "P7 mode: tracked-red vessel: expected exit 0, the count line and a TRACKED-RED line, got exit $rc: $(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"
+out="$(p7_judge "$V" "fx-vessel" 2>&1)"; rc=$?
+[ "$rc" -gt 0 ] && printf '%s\n' "$out" | grep -qx 'FAIL - P7 vessel src: fx-vessel sends resolve requests without a credential' \
+  && ok "P7 mode: the same vessel on the enforced list fails, with a static 'FAIL - <label>' line the glue runner can match to a gap" \
+  || bad "P7 mode: enforced vessel: expected a failure and the FAIL - label, got exit $rc: $(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"
+out="$(p7_judge "$V" "fx-clean" 2>&1)"; rc=$?
+[ "$rc" = 0 ] && printf '%s\n' "$out" | grep -q 'P7 enforced: fx-clean 0 offender(s)' \
+  && ok "P7 mode: a clean enforced vessel passes and is logged as enforced" \
+  || bad "P7 mode: clean enforced vessel: exit $rc: $(printf '%s' "$out" | tr '\n' '|' | cut -c1-300)"
+out="$(p7_judge "$T/p7-none" "" 2>&1)"
+printf '%s\n' "$out" | grep -qx 'P7 tracked-red: (no vessel src checked out)' \
+  && ok "P7 mode: with no vessel src checked out the count line still prints" \
+  || bad "P7 mode: no count line for an empty tree: $(printf '%s' "$out" | tr '\n' '|' | cut -c1-200)"
+
 # ── the tree ────────────────────────────────────────────────────────────────────
 hits="$(scan_tree "$ROOT")"
 if [ -z "$hits" ]; then
