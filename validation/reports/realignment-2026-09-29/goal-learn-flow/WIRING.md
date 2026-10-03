@@ -339,3 +339,9 @@ Full text: WIRING-ADDENDUM.md (sections A capability construction and content th
 - **Pending the user:**
   - "one execution" restated as one dispatch that may SUSPEND on a prerequisite and RESUME, not restart;
   - two read-only DB reads: attributing the 620/24h wrong-form rejections (trace state_space_signature joined to cts_sig_lookup), and the #8 used_scope count.
+
+## Constraint on step 5, re-baseline (measured 10-03)
+The execution table caps at 150k rows. At about 13.8k executions/day that is roughly 11 days of retention. A §2.2 re-fold can only re-fold observations still retained, so evicted evidence cannot be re-derived. Step 5 therefore chooses one of:
+- re-fold the retained window and reset older arms to priors, with the cut recorded;
+- persist the fold's inputs (verdict observations) outside the capped table before the re-baseline.
+Recorded with the admission-cap gap (selection-candidates-are-silently-truncated-by-recency-at-the-admission-cap).
