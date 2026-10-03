@@ -457,7 +457,11 @@ if [ "$ss_fail" -eq 0 ] && [ "$(jq 'length' <<<"$ss")" -ge 2 ]; then set_check s
 else set_check secret_scan_clean fail "$ss"; fi
 for f in "$RESULT_DIR"/diag/*; do [ -f "$f" ] && { t="$(cat "$f")"; redact "$t" >"$f"; }; done
 
-failed="$(jq -r '[to_entries[] | select(.value.result == "fail") | .key] | join(",")' <<<"$checks")"
+# An unjudged check is not a passed one. spoke_goal alone may stay unknown (it needs a
+# provider key); any other unknown means part of the promise was never measured, e.g. a
+# second spoke that never joined leaves the leave case, rejoin and large_frame_concurrency
+# unjudged, and counting only "fail" let that leg pass with none of them run.
+failed="$(jq -r '[to_entries[] | select(.value.result == "fail" or (.value.result == "unknown" and .key != "spoke_goal")) | .key] | join(",")' <<<"$checks")"
 verdict=pass; [ -n "$failed" ] && verdict=fail
 jq -n --arg v "$verdict" --arg e "$ENGINE" --arg i "$IMAGE" --arg f "$failed" --argjson c "$checks" \
   '{kind: "network", verdict: $v, engine: $e, image: $i, failing: ($f | split(",") | map(select(. != ""))), checks: $c}' \
