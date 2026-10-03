@@ -2,7 +2,7 @@
 # run-weekly-harness-endpoint — the weekly harness's sensitivity sweep reaches the endpoint it was given,
 # and says so loudly when it cannot.
 #
-#   bash validation/scripts/run-weekly-harness-endpoint.check.sh [repo-root]
+#   bash validation/scripts/run-weekly-harness-endpoint.test.sh [repo-root]
 #
 # WHY. run-weekly-harness.sh resolves METABOB_ENDPOINT (env, else ~/.metabob/config.json, else FATAL)
 # and then built ENDPOINT as "\${METABOB_ENDPOINT}": an escaped dollar, so ENDPOINT was the literal text
@@ -14,9 +14,12 @@
 # WHAT IT RUNS. The harness from the sensitivity-sweep section to its end (the sweep, the sidecar and the
 # Phase 25 block, whose scripts are absent here so it takes its own skip branch, and the final exit),
 # extracted by its section header and run in a scratch dir with a placeholder key against:
-#   1. a loopback stub HTTP server answering the registry read with one test_id: the stub must receive
-#      the registry read (POST /v2/impulses/resolve) and the per-test dispatch (POST
-#      /v2/activities/recommend), and the step must exit 0;
+#   1. a loopback stub HTTP server answering the registry read with one test_id, its content a JSON
+#      string (quotes backslash-escaped) as the registry returns it: the stub must receive the registry
+#      read (POST /v2/impulses/resolve) and the per-test dispatch (POST /v2/activities/recommend), and
+#      the step must exit 0;
+#   1b. the same stub answering with no registrations: the step must exit 0 and report 0 tests (a grep
+#      that matches nothing under set -e + pipefail once ended the harness here with no message);
 #   2. a loopback port nothing listens on: the step must exit non-zero and name the endpoint it could
 #      not reach.
 # Plus a static check: no line of the harness carries the escaped "\${METABOB_ENDPOINT}" literal.
@@ -54,14 +57,16 @@ mkdir -p "$T/scripts" "$T/results"
 } > "$T/sweep.sh"
 
 cat > "$T/stub.py" <<'EOF'
-import http.server, sys
+import http.server, os, sys
 log = sys.argv[1]
 class H(http.server.BaseHTTPRequestHandler):
     def _h(self):
         n = int(self.headers.get('Content-Length') or 0)
         if n: self.rfile.read(n)
         with open(log, 'a') as f: f.write(self.command + ' ' + self.path + '\n')
-        body = b'{"content":"{\\"entries\\":[{\\"test_id\\":\\"t1\\"}]}"}' if self.path == '/v2/impulses/resolve' else b'{}'
+        empty = os.path.exists(log + '.empty')
+        entries = b'' if empty else b'{\\"test_id\\":\\"t1\\"}'
+        body = (b'{"content":"{\\"entries\\":[' + entries + b']}"}') if self.path == '/v2/impulses/resolve' else b'{}'
         self.send_response(200); self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body)
     do_POST = _h; do_GET = _h
@@ -86,6 +91,16 @@ grep -q '^POST /v2/activities/recommend$' "$T/req.log" \
   || bad "the sweep dispatches each registered test to METABOB_ENDPOINT (stub received: $(tr '\n' ' ' < "$T/req.log"))"
 [ "$rc" = 0 ] && ok "a reachable endpoint: the step exits 0" \
   || { tail -5 "$T/up.out" | sed 's/^/  step: /'; bad "a reachable endpoint: the step exits 0 (got $rc)"; }
+
+# 1b. Reachable, no registrations: zero tests is not an error.
+: > "$T/req.log"; : > "$T/req.log.empty"
+rc=0; METABOB_ENDPOINT="http://127.0.0.1:$PORT" timeout 120 bash "$T/sweep.sh" > "$T/empty.out" 2>&1 || rc=$?
+rm -f "$T/req.log.empty"
+if [ "$rc" = 0 ] && grep -q '^Registered tests : 0$' "$T/empty.out" && grep -q '^POST /v2/impulses/resolve$' "$T/req.log"; then
+  ok "a reachable endpoint with no registrations: the step reads it, reports 0 tests and exits 0"
+else
+  tail -5 "$T/empty.out" | sed 's/^/  step: /'; bad "a reachable endpoint with no registrations: the step reads it, reports 0 tests and exits 0 (got $rc)"
+fi
 
 # 2. Unreachable: a loopback port nothing listens on. The step must fail and say where it could not reach.
 DEAD="$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')"

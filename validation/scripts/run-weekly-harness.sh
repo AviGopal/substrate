@@ -188,7 +188,7 @@ echo "Log : ${FORGE_LOG}"
 FORGE_EXIT=0
 TARGET_SHAPE="$TARGET_SHAPE" \
 METABOB_API_KEY="$METABOB_API_KEY" \
-ACTIVITY_API_URL="\${METABOB_ENDPOINT}" \
+ACTIVITY_API_URL="${METABOB_ENDPOINT}" \
 DISCOVERY_URL="${DISCOVERY_URL:-https://discovery.metabob.com}" \
 bun run "${SCRIPT_DIR}/test-forge-goal-completion.ts" \
   > "$FORGE_LOG" 2>&1 || FORGE_EXIT=$?
@@ -216,8 +216,11 @@ fi
 # For every registered test, dispatch the run-sensitivity-probe meta-activity
 # so the audit loop has fresh sensitivity_evidence rows for its trailing-7-day
 # query. The dispatch posts an `executeAsActivity` request per registration;
-# missing dispatch endpoints OR an empty registration list collapses to a
-# zero-iteration loop (the sweep is best-effort and never fails the harness).
+# an empty registration list collapses to a zero-iteration loop, and a failed
+# per-test dispatch is recorded in the sidecar. A registry read that cannot
+# reach ${ENDPOINT} (transport failure or a non-2xx answer) is a harness
+# error: it is logged with the URL, the suites below still run, and the
+# harness exits 1 at the end.
 #
 # Sensitivity-probe results land as `sensitivity_evidence` impulses and are
 # aggregated alongside the main reuse report's audit_summary block; a per-run
@@ -227,21 +230,35 @@ echo ""
 echo "=== Sensitivity-probe sweep (test-audit-loop §C/§G.2) ==="
 
 SENSITIVITY_REPORT_JSON="${RESULTS_DIR}/${TODAY}-sensitivity-report.json"
-ENDPOINT="\${METABOB_ENDPOINT}"
+ENDPOINT="${METABOB_ENDPOINT}"
 
-# Pull all registered tests, ignoring transport failures.
-REG_RESPONSE=$(curl -s -X POST "${ENDPOINT}/v2/impulses/resolve" \
+# Pull all registered tests. A transport failure or a non-2xx answer is said
+# loudly (curl's own error on stderr, then a FAIL line naming the URL) and
+# fails the harness at the end, instead of reading as "0 registered tests".
+SWEEP_FAILED=0
+REG_RC=0
+REG_OUT=$(curl -sS -w '\n%{http_code}' -X POST "${ENDPOINT}/v2/impulses/resolve" \
   -H "Content-Type: application/json" \
   -K <(apikey_cfg "${METABOB_API_KEY:-}") \
-  -d '{"pointer":{"type":"test_registration","limit":200}}' 2>/dev/null || echo "")
+  -d '{"pointer":{"type":"test_registration","limit":200}}') || REG_RC=$?
+REG_CODE="${REG_OUT##*$'\n'}"
+REG_RESPONSE="${REG_OUT%$'\n'*}"
+if [[ "$REG_RC" -ne 0 || "$REG_CODE" != 2* ]]; then
+  echo "FAIL: sensitivity sweep could not read test registrations from ${ENDPOINT}/v2/impulses/resolve (curl exit ${REG_RC}, http ${REG_CODE:-000})" >&2
+  SWEEP_FAILED=1
+  REG_RESPONSE=""
+fi
 
 REG_IDS=()
 if [[ -n "$REG_RESPONSE" ]]; then
-  # The content field is a JSON string of {entries: [{test_id, ...}, ...]}.
+  # The content field is a JSON string of {entries: [{test_id, ...}, ...]}, so its
+  # quotes arrive backslash-escaped; match either form. No match is zero
+  # registrations, not an error (`|| true`: under set -e + pipefail a grep that
+  # finds nothing would otherwise end the harness here with no message).
   REG_IDS=( $(echo "$REG_RESPONSE" \
-    | grep -oE '"test_id"[ ]*:[ ]*"[^"]*"' \
-    | sed -E 's/.*"test_id"[ ]*:[ ]*"([^"]+)"/\1/' \
-    | sort -u) )
+    | grep -oE '\\?"test_id\\?"[ ]*:[ ]*\\?"[^"\\]+' \
+    | sed -E 's/.*"[ ]*:[ ]*\\?"//' \
+    | sort -u || true) )
 fi
 
 echo "Registered tests : ${#REG_IDS[@]}"
@@ -327,7 +344,7 @@ else
 
   HELD_OUT_EXIT=0
   METABOB_API_KEY="$METABOB_API_KEY" \
-  METABOB_ENDPOINT="\${METABOB_ENDPOINT}" \
+  METABOB_ENDPOINT="${METABOB_ENDPOINT}" \
   bun run "$GOAL_GEN_SCRIPT" \
     --held-out \
     --count 8 \
@@ -338,7 +355,7 @@ else
     echo "held-out goal-gen: WARN (exit=${HELD_OUT_EXIT}) — see ${HELD_OUT_LOG}.gen"
   elif [[ -f "$HELD_OUT_GOALS" ]]; then
     METABOB_API_KEY="$METABOB_API_KEY" \
-    METABOB_ENDPOINT="\${METABOB_ENDPOINT}" \
+    METABOB_ENDPOINT="${METABOB_ENDPOINT}" \
     bun run "$STRATIFIED_SCRIPT" \
       --goals "$HELD_OUT_GOALS" \
       --label "held-out" \
@@ -361,7 +378,7 @@ else
 
   STRATIFIED_EXIT=0
   METABOB_API_KEY="$METABOB_API_KEY" \
-  METABOB_ENDPOINT="\${METABOB_ENDPOINT}" \
+  METABOB_ENDPOINT="${METABOB_ENDPOINT}" \
   bun run "$GOAL_GEN_SCRIPT" \
     --seed 12345 \
     --count 24 \
@@ -372,7 +389,7 @@ else
     echo "rolling-pool goal-gen: WARN (exit=${STRATIFIED_EXIT}) — see ${STRATIFIED_LOG}.gen"
   elif [[ -f "$ROLLING_GOALS" ]]; then
     METABOB_API_KEY="$METABOB_API_KEY" \
-    METABOB_ENDPOINT="\${METABOB_ENDPOINT}" \
+    METABOB_ENDPOINT="${METABOB_ENDPOINT}" \
     bun run "$STRATIFIED_SCRIPT" \
       --goals "$ROLLING_GOALS" \
       --label "weekly" \
@@ -387,4 +404,9 @@ else
   fi
 fi
 
+if [[ "$SWEEP_FAILED" -ne 0 ]]; then
+  echo "" >&2
+  echo "RESULT: FAIL — the sensitivity sweep could not reach ${ENDPOINT} (see the FAIL line above)." >&2
+  exit 1
+fi
 exit 0
