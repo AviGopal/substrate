@@ -48,8 +48,11 @@
 #      a credential there is disclosed to every local user and container co-tenant. The key goes
 #      to curl as a config line instead: on stdin (`printf … | curl -K -`) or on a file
 #      descriptor (`curl -K <(apikey_cfg "$KEY")`, printf being a builtin). Bearer/JWT and
-#      registry tokens are a different credential and are not linted here; neither are unit
-#      files (*.service), which this lint does not scan.
+#      registry tokens are a different credential and are not linted here.
+#      Unit files are scanned for this predicate too: every scripts/substrate/units/**/*.service and
+#      drop-in *.conf, on its ExecStart=/ExecStartPre=/ExecStartPost=/ExecReload=/ExecStop= lines and
+#      their backslash continuations (a unit's command line is a process's argv like any other; `$$K`
+#      is systemd's escape for a shell `$K`). Comments and non-Exec lines are not requests.
 #   5. SILENT WRITER — in a writer file, a request site whose request discards both its output and
 #      its status: a shell request ending `>/dev/null 2>&1 || true` (or `|| :`) on its own line
 #      or a continuation line, or a fetch/post chained to `.catch(() => {})` / `() => undefined` /
@@ -125,6 +128,20 @@ function trim(s) { sub(/^[ \t]+/, "", s); return s }
 scan_argv_file() { # <file> <display-name> -> lines that put a key on curl argv
   awk -v DISPLAY="$2" "$ARGV_AWK" "$1"
 }
+# Predicate 4 on unit files: only Exec*= lines and their continuations are command lines.
+UNIT_ARGV_AWK='
+{
+  line = $0
+  if (line ~ /^[ \t]*[#;]/) { cont = 0; next }
+  isexec = (line ~ /^[ \t]*Exec(Start|StartPre|StartPost|Reload|Stop|StopPost|Condition)=/)
+  if (isexec || cont) {
+    if (line ~ /(-H|--header)[ \t=]*["\047]?([Aa]uthorization:[ \t]*[Aa]pi[Kk]ey|[Xx]-[Aa][Pp][Ii]-[Kk][Ee][Yy]:)[ \t]*\$/) printf "%s:%d\n", DISPLAY, FNR
+    cont = (line ~ /\\[ \t]*$/)
+  } else cont = 0
+}'
+scan_unit_argv_file() { # <unit-file> <display-name> -> Exec lines that put a key on argv
+  awk -v DISPLAY="$2" "$UNIT_ARGV_AWK" "$1"
+}
 # Predicate 5: a request site in a writer file whose request swallows both output and status.
 SILENT_AWK='
 function trim(s) { sub(/^[ \t]+/, "", s); return s }
@@ -156,9 +173,12 @@ scan_tree() { # <root> -> every uncredentialed request site under scripts/ and .
   local r="$1" f
   scanned_files "$r" | while IFS= read -r f; do scan_file "$f" "${f#"$r"/}"; done
 }
-scan_tree_argv() { # <root> -> every key on curl argv under scripts/ and .claude/hooks/
+scan_tree_argv() { # <root> -> every key on curl argv under scripts/, .claude/hooks/ and the unit files
   local r="$1" f
   scanned_files "$r" | while IFS= read -r f; do scan_argv_file "$f" "${f#"$r"/}"; done
+  [ -d "$r/scripts/substrate/units" ] || return 0
+  find "$r/scripts/substrate/units" -type f \( -name '*.service' -o -name '*.conf' \) -print | LC_ALL=C sort \
+    | while IFS= read -r f; do scan_unit_argv_file "$f" "${f#"$r"/}"; done
 }
 scan_tree_silent() { # <root> -> every silent writer request under scripts/ and .claude/hooks/
   local r="$1" f
@@ -319,6 +339,20 @@ got="$(scan_argv_file "$F/keyfd.sh" keyfd.sh)"
   || bad "positive control (argv) flagged: $(echo $got)"
 got="$(scan_argv_file "$F/pos.sh" pos.sh)"
 [ -z "$got" ] && ok "positive control (argv): the printf | curl -K - writer passes" || bad "positive control (argv) flagged pos.sh: $(echo $got)"
+cat > "$F/argv.service" <<'EOF'
+[Service]
+# ExecStart=/bin/bash -c 'curl -H "Authorization: ApiKey $$K" x' is a comment, not a request
+Description=not a request: -H "Authorization: ApiKey $$K"
+ExecStartPre=/bin/bash -c 'K=$$(cat /k); curl -s -H "Authorization: ApiKey $$K" "${E}/health"'
+ExecStart=/usr/bin/env bash -c 'curl -s \
+  -H "Authorization: ApiKey $${METABOB_API_KEY}" "${E}/x"'
+ExecStartPost=/bin/bash -c 'K=$$(cat /k); printf "Authorization: ApiKey %%s" "$$K" | curl -s -H @- "${E}/x"'
+ExecReload=/bin/bash -c 'printf "header = \"Authorization: ApiKey %%s\"" "$$K" | curl -K - "${E}/x"'
+EOF
+got="$(scan_unit_argv_file "$F/argv.service" argv.service | tr '\n' ' ')"
+[ "$got" = "argv.service:4 argv.service:6 " ] \
+  && ok "unit files (argv): a key in -H on an ExecStartPre= line and on an ExecStart= continuation is flagged (argv.service:4, :6); a comment, a non-Exec line, -H @- and -K - are not" \
+  || bad "unit files (argv): expected 'argv.service:4 argv.service:6', got '${got}'"
 got="$(scan_silent_file "$F/silent.sh" silent.sh | tr '\n' ' ')"
 [ "$got" = "silent.sh:3 silent.sh:6 " ] \
   && ok "negative control (silent, sh): a writer request ending >/dev/null 2>&1 || true (same line, continuation line) is flagged (silent.sh:3, :6)" \
@@ -341,7 +375,7 @@ fi
 
 hits="$(scan_tree_argv "$ROOT")"
 if [ -z "$hits" ]; then
-  ok "no script under scripts/ or .claude/hooks/ puts an ApiKey/x-api-key on curl argv"
+  ok "no script under scripts/ or .claude/hooks/, and no unit Exec line, puts an ApiKey/x-api-key on curl argv"
 else
   while IFS= read -r h; do bad "$h: a key on curl argv (readable in any process listing); send it with curl -K - or -K <(…)"; done <<< "$hits"
 fi
