@@ -594,14 +594,27 @@ pullsync_glue_cleanup() { for _d in $PULLSYNC_GLUE_STAGES; do rm -rf "$_d"; done
 # leaves that one marker in place. Each later tick's owed path re-touches it (the vessel ignores a marker
 # older than its QUIESCE_MAX_MS, 20 min, and a hold may last pull_sync.owed_restart_max_hold_seconds) and
 # releases it the moment the hold ends: restart taken (drained, silent past the stall bound, max hold),
-# nothing owed any more, or any deferral that is not progress (a probe window). If pull-sync stops
-# ticking, nothing re-touches it and the vessel fails open within QUIESCE_MAX_MS.
+# nothing owed any more, or any deferral that is not progress (a probe window). The vessel loop's own
+# skips that `continue` before the owed path release it too (release_carried_hold), or the marker would
+# go stale unannounced: a MASKED unit (nothing will ever restart it) and an open PROBE WINDOW (holding
+# admission through it would refuse the probes' own composes for up to the window cap, past the max hold;
+# the restart stays owed and the owed path takes it, or quiesces again, once the window closes). If
+# pull-sync stops ticking, nothing re-touches it and the vessel fails open within QUIESCE_MAX_MS.
 Q_HELD=""; Q_BOUND=""; Q_CARRY=""
 quiesce_release() {
   if [ -n "${Q_HELD:-}" ] && [ "${Q_CARRY:-}" != "$Q_HELD" ]; then
     rm -f "$Q_HELD" "$MARKER_DIR/${Q_HELD##*/}.quiesce-carry" 2>/dev/null
   fi
   Q_HELD=""; Q_BOUND=""; Q_CARRY=""; return 0
+}
+# release_carried_hold <vessel> <why> — end a carried hold from a vessel-loop skip that never reaches the
+# owed path: drop the admission marker the carry names and the carry itself, and say why. The owed
+# restart (restart-pending, its clock and counter) is left as it is.
+release_carried_hold() {
+  _rc_f="$MARKER_DIR/$1.quiesce-carry"
+  [ -s "$_rc_f" ] || return 0
+  log "$1: releasing a carried quiesce hold — $2; admission reopened, the restart stays owed"
+  rm -f "$(cat "$_rc_f" 2>/dev/null)" "$_rc_f" 2>/dev/null || true
 }
 # owed_hold_bound <vessel> — progress may hold an owed restart, but not forever. Returns 0 (and sets
 # RA_DEFER=0, OH_LOSSY=1, RA_WHY, logs LOSSY + a forced_owed_restart_lossy DEFERRAL_LOG record naming the
@@ -1850,6 +1863,7 @@ for d in "$CLONE_DIR"/*/; do
   # an open probeWindow record names the node (see probe_window_open), so probes run on one version.
   if probe_window_open; then
     [ -n "${PW_LOGGED:-}" ] || { log "$PW_WHY open on this node — holding ALL vessel convergence (no fetch, mirror or restart) until it closes"; PW_LOGGED=1; }
+    release_carried_hold "$v" "$PW_WHY is open: the restart cannot be taken until it closes, and closed admission would refuse the probes' own work"
     skipped=$((skipped+1)); continue
   fi
 
@@ -1976,6 +1990,7 @@ for d in "$CLONE_DIR"/*/; do
   if [ -n "$SELF_UNIT" ] && [ "${SELF_UNIT%.service}" != "$SELF_UNIT" ] \
      && [ "$(systemctl is-enabled "$SELF_UNIT" 2>/dev/null)" = masked ]; then
     log "$v: SKIPPED — $SELF_UNIT is MASKED on this deployment; not fetching, not testing, not mirroring (its suite would spend the tick budget on a vessel that cannot start)"
+    release_carried_hold "$v" "$SELF_UNIT is MASKED, so nothing will restart it"
     skipped=$((skipped+1)); continue
   fi
   if { [ -z "$SELF_UNIT" ] || [ "${SELF_UNIT%.service}" = "$SELF_UNIT" ]; } \
