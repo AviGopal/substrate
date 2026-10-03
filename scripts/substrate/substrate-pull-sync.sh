@@ -241,6 +241,14 @@ gen_failing_test_gaps() {
         --argjson g "$( { command grep -qE 'readFileSync\(|Bun\.file\(' "$dir/$tf" && command grep -qE 'import\.meta\.(dir|url)|/src/|["'"'"'`][^"'"'"'`]*[A-Za-z0-9_-]\.tsx?["'"'"'`]' "$dir/$tf"; } && echo true || echo false)" '. + {($f): {mocks: $m, guard: $g}}')"
     done <<< "$(printf '%s\n' "$rows" | cut -f1 | sort -u)"
   fi
+  # A DIFFERENT PREDICATE FROM gap-tracked-red.sh — DO NOT UNIFY THEM. This read asks "is this failure
+  # ALREADY FILED?" (dedup before WRITING a gap): any open test_suite gap for this vessel that checks the
+  # file, or names the test in any file, suppresses a new one, and it counts the generator's own open gaps
+  # against its caps; an unreadable store files nothing. scripts/substrate/lib/gap-tracked-red.sh asks
+  # "may this red pass the gate?" (EXEMPTION): only names an open gap tracks for a file the caller passes,
+  # matched exactly. Routing dedup through the exemption predicate would let a name tracked in one file
+  # suppress filing its failure in another, and widening the exemption to this dedup's looser match would
+  # exempt reds no gap checks. Changing one is not a reason to change the other.
   st="$(mktemp "${TMPDIR:-/tmp}/pullsync-gen-XXXXXX")" || return 0
   curl -s --max-time 30 -X POST "$DEV_VESSEL/v2/impulses/resolve" -H 'Content-Type: application/json' \
     -d '{"impulse":{"pointer":{"type":"substrateGap","status":"open","limit":5000}}}' > "$st" 2>/dev/null || true
