@@ -186,6 +186,7 @@ async function generateDescription(shape: string, evidence: string): Promise<str
       body: JSON.stringify({ type: "llm_completion", prompt, model: LLM_MODEL, max_tokens: 120 }),
       signal: AbortSignal.timeout(30000),
     });
+    if (r.status === 401) { console.error("credential refused (401) — key stale? auto-describe: the llm resolver refused the node key; no description written (environment, not a failure)"); return null; }
     if (!r.ok) return null;
     const d = (await r.json()) as { resolved?: boolean; content?: string };
     if (!d.resolved || typeof d.content !== "string") return null;

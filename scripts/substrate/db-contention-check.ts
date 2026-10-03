@@ -21,6 +21,11 @@ async function main(): Promise<void> {
       body: JSON.stringify({ impulse: { type: "db_contention_observer" } }),
       signal: AbortSignal.timeout(20_000),
     });
+    if (resp.status === 401) {
+      console.error("credential refused (401) — key stale? db-contention-check: development-vessel refused the node key; verdict unknown (environment, not a failure)");
+      console.log(JSON.stringify({ ok: false, http: 401, verdict: "unknown", environment: "credential refused (401) — key stale?" }));
+      return;
+    }
     if (!resp.ok) {
       console.log(JSON.stringify({ ok: false, http: resp.status }));
       return;

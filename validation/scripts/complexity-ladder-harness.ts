@@ -105,6 +105,11 @@ async function measureGroundTruth(): Promise<GroundTruth> {
       body: JSON.stringify({ impulse: { type: "substrateGap", status: "open", limit: 5000 } }),
       signal: AbortSignal.timeout(90_000),
     });
+    if (r.status === 401) {
+      console.error("credential refused (401) — key stale? complexity-ladder: the gap store refused the node key; openGapCount unknown (environment)");
+      g.openGapCount = null;
+      return g;
+    }
     const j = (await r.json()) as { body?: { gaps?: unknown[] } };
     g.openGapCount = Array.isArray(j.body?.gaps) ? j.body!.gaps!.length : null;
   } catch (e) { errors.push(`substrateGap: ${(e as Error).message}`); }
@@ -260,6 +265,11 @@ async function poll(dispatchId: string): Promise<Record<string, unknown> | null>
         body: JSON.stringify({ pointer: { type: "activeDispatches", limit: 200 } }),
         signal: AbortSignal.timeout(30_000),
       });
+      if (r.status === 401) {
+        // Polling again with the same key cannot succeed; the dispatch's outcome is unknown, not failed.
+        console.error("credential refused (401) — key stale? complexity-ladder: goal-host refused the node key while polling " + dispatchId + "; outcome unknown (environment)");
+        return { ...(lastSeen ?? { dispatchId }), status: "UNKNOWN_CREDENTIAL_REFUSED" };
+      }
       const j = (await r.json()) as { body?: { dispatches?: Array<Record<string, unknown>> } };
       const rec = (j.body?.dispatches ?? []).find((d) => d.dispatchId === dispatchId);
       if (rec) {
@@ -320,6 +330,10 @@ async function verifySideEffect(titleContains: string, expectValues: string[]) {
       body: JSON.stringify({ impulse: { type: "memoryNote", title_prefix: titleContains, limit: 20 } }),
       signal: AbortSignal.timeout(30_000),
     });
+    if (r.status === 401) {
+      console.error("credential refused (401) — key stale? complexity-ladder: the memoryNote read was refused; side effect unknown (environment)");
+      return { found: false, carries: false, refused: true };
+    }
     const j = (await r.json()) as { body?: { notes?: Array<Record<string, unknown>> } };
     const notes = j.body?.notes ?? [];
     if (notes.length === 0) return { found: false, carries: false };
@@ -408,10 +422,11 @@ async function scoreOne(
     out.correctnessNote = "ground truth unavailable — correctness UNDECIDABLE, not false";
   } else if (r.sideEffect) {
     const numeric = exp.values.filter((v) => /^\d+$/.test(v));
-    const se = await verifySideEffect(r.sideEffect.titleContains, numeric);
-    out.sideEffectFound = se.found;
-    out.correct = se.found && se.carries;
-    out.correctnessNote = !se.found
+    const se: { found: boolean; carries: boolean; refused?: boolean } = await verifySideEffect(r.sideEffect.titleContains, numeric);
+    out.sideEffectFound = se.refused ? null : se.found;
+    out.correct = se.refused ? null : se.found && se.carries;
+    out.correctnessNote = se.refused ? "UNSCORED: credential refused (401) — key stale? (the side effect could not be read; environment, not a failure)"
+      : !se.found
       ? `no memory note titled "${r.sideEffect.titleContains}" exists — the durable effect the goal asked for was never produced`
       : se.carries ? `note exists and carries ${numeric.join(", ")}`
       : `note exists but does NOT carry ${numeric.join(", ")} — persisted, wrong content`;

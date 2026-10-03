@@ -92,6 +92,7 @@ async function leaseHeld(name: string): Promise<boolean> {
       body: JSON.stringify({ impulse: { type: "maintenanceLease", name } }),
       signal: AbortSignal.timeout(3_000),
     });
+    if (res.status === 401) console.error("credential refused (401) — key stale? watchdog-tick: the lease read was refused; lease state unknown, treated as not held (the existing fail-open)");
     if (!res.ok) return false;
     const body = (await res.json())?.body ?? {};
     return body.held === true;
@@ -157,6 +158,12 @@ async function main(): Promise<void> {
         delete record["error"];
         if (res.ok) break;
         record["error"] = `http ${res.status}`;
+        if (res.status === 401) {
+          // Retrying with the same key cannot succeed: report the environment fault and stop.
+          console.error("credential refused (401) — key stale? watchdog-tick: the restart dispatch was refused; restart not attempted (environment)");
+          record["environment"] = "credential refused (401) — key stale?";
+          break;
+        }
       } catch (e) {
         record["ok"] = false; record["error"] = e instanceof Error ? e.message : String(e);
       }

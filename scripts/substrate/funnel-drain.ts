@@ -32,6 +32,11 @@ async function main(): Promise<void> {
       body: JSON.stringify({ impulse: { type: "apply_proposal_as_patch", config: { type: "apply_proposal_as_patch" } } }),
       signal: AbortSignal.timeout(200_000),
     });
+    if (res.status === 401) {
+      console.error("credential refused (401) — key stale? funnel-drain: development-vessel refused the node key; nothing drained (environment, not a failure)");
+      console.log(JSON.stringify({ ...outcome, http: 401, verdict: "unknown", environment: "credential refused (401) — key stale?" }));
+      return;
+    }
     const body = (await res.json()) as { shape?: string; body?: Record<string, unknown> };
     const b = body.body ?? {};
     outcome = {

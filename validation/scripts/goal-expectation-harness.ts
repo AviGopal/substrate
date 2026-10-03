@@ -114,6 +114,10 @@ async function llmJudge(goal: string, rubric: string, answer: string): Promise<{
       headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
       body: JSON.stringify({ type: "llm_completion", prompt }),
     });
+    if (r.status === 401) {
+      console.error("credential refused (401) — key stale? goal-expectation: the llm judge refused the node key (environment)");
+      return { correct: null, detail: "llm_judge UNSCORED: credential refused (401) — key stale?" };
+    }
     const j = (await r.json()) as { resolved?: boolean; content?: unknown; model?: string; error?: string };
     if (!j.resolved || typeof j.content !== "string") {
       // A broken judge must NEVER fabricate a verdict — UNSCORED with the real cause.

@@ -1216,24 +1216,34 @@ if (wanted("S10")) {
 
 if (wanted("S11")) {
   const f: FixtureResult[] = [];
-  const poolStats = (): { total: number; phantom: number } | null => {
+  const poolStats = (): { total: number; phantom: number } | "refused" | null => {
     try {
       // The node key goes to curl as a config on stdin (-K -), never on argv.
       const key = process.env.METABOB_API_KEY ?? "";
-      const out = execFileSync("curl", ["-K", "-", "-s", "-m", "25", "-X", "POST",
+      const raw = execFileSync("curl", ["-K", "-", "-s", "-w", "\n%{http_code}", "-m", "25", "-X", "POST",
         "http://localhost:18090/v2/impulses/resolve", "-H", "Content-Type: application/json",
         "-d", '{"impulse":{"type":"substrateGap","pointer":{"limit":400}}}'],
         { input: key ? `header = "Authorization: ApiKey ${key}"\n` : "", encoding: "utf-8", stdio: ["pipe", "pipe", "ignore"], timeout: 30_000, maxBuffer: 64 * 1024 * 1024 });
+      const nl = raw.lastIndexOf("\n");
+      const out = raw.slice(0, nl);
+      if (raw.slice(nl + 1) === "401") {
+        console.error("credential refused (401) — key stale? stage-harness S11: the gap store refused the node key; S11 not measured (environment)");
+        return "refused";
+      }
       const gaps = (JSON.parse(out)?.body?.gaps ?? []) as Array<{ summary?: string }>;
       if (gaps.length === 0) return null;
       const phantom = gaps.filter((g) => /apability gap/.test(g.summary ?? "") && /needs a producer/.test(g.summary ?? "")).length;
       return { total: gaps.length, phantom };
     } catch { return null; }
   };
-  const st = poolStats();
+  const st0 = poolStats();
+  // A refused key (401) is an environment fault: both S11 checks report ERROR (not measured), never a regression.
+  const refused = st0 === "refused";
+  const st = refused ? null : st0;
+  const refusedNote = "credential refused (401) — key stale? the gap store refused the node key; not measured (environment)";
 
   check(f, "S11.store-reachable", "an absent measurement must not read as a healthy one",
-    "true", () => String(st !== null),
+    "true", () => { if (refused) throw new Error(refusedNote); return String(st !== null); },
     { note: st ? `pool=${st.total}, walk-minted capability gaps=${st.phantom}` : "gap store unreachable" });
 
   check(f, "S11.pool-not-dominated-by-unclosable-gaps",
@@ -1247,6 +1257,7 @@ if (wanted("S11")) {
     // this set; the near-misses are naming-mismatch bugs worth repairing.
     "over-10-percent",
     () => {
+      if (refused) throw new Error(refusedNote);
       if (st === null) return "<unreachable>";
       const pct = (st.phantom / Math.max(1, st.total)) * 100;
       return pct > 10 ? "over-10-percent" : "under-10-percent";

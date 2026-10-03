@@ -21,6 +21,10 @@ async function post(impulse: Record<string, unknown>): Promise<any> {
       body: JSON.stringify({ impulse }),
       signal: AbortSignal.timeout(120_000),
     });
+    if (res.status === 401) {
+      console.error("credential refused (401) — key stale? efficiency-failure-tick: development-vessel refused the node key (environment, not a failure)");
+      return { error: "credential refused (401) — key stale?", environment: true };
+    }
     return await res.json().catch(() => ({}));
   } catch (e) {
     return { error: (e as Error).message };

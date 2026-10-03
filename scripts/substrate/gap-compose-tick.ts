@@ -49,6 +49,11 @@ async function composeOne(): Promise<Record<string, unknown> | null> {
     }),
     signal: AbortSignal.timeout(240_000),
   });
+  if (resp.status === 401) {
+    console.error("credential refused (401) — key stale? gap-compose-tick: development-vessel refused the node key; no gap composed (environment, not a failure)");
+    console.log(JSON.stringify({ ok: false, http: 401, verdict: "unknown", environment: "credential refused (401) — key stale?" }));
+    return null;
+  }
   if (!resp.ok) { console.log(JSON.stringify({ ok: false, http: resp.status })); return null; }
   return ((await resp.json())?.body ?? {}) as Record<string, unknown>;
 }
