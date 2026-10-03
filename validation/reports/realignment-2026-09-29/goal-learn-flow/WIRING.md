@@ -446,3 +446,25 @@ The organs that carry it already exist: self_fact_reconcile rows (selfFactSpec),
 
 ## Cross-version posterior write: LATENT, not a step-5 constraint (corrected 10-03)
 The insert-path context_thompson_scores UPDATE (ctxSql/rdSql) omits signature_version from its filter, so a v0 write COULD increment a v1 cell with the same (org, template, bucket); a fixture showed it. **Measured on node 1 (read-only, WITH NOINDEX): ZERO v0/v1 colliding keys among 10,506 v1 keys, so 0 of 765,717 v1 observations sit in a colliding cell.** The two versions use disjoint bucket formats: v0 is 8-hex, v1 is 16-hex or cluster:…. Current v1 data is NOT contaminated, and this is not a constraint on the re-baseline. The defect is latent (it bites only if the formats ever coincide). The test pins it, so a fix cannot rely on format luck. Recorded on the-trace-ingest-request-path-scans-two-whole-tables-for-learning-writes. (An earlier version of this section, 4b2a82fa, recorded it as a step-5 constraint before measurement; superseded.)
+
+## Step 1(d)(ii) answered (10-03): the 42 rejected orphan gaps record no reasons; the scanner is the defect
+**Of 89 orphaned-capability-* gaps (42 open, 42 rejected, 5 closed), every one prescribes `mint`, and all have candidate_consumers [].**
+- 35 of the rejected are the 10-01 phantom rows (node 2's stale-store closes turned into inserts, then quarantined).
+- 7 are scanner auto-rejects on one missed registry sample, with no actor or time recorded. Their producers are live, mostly with code callers, or are placement-dependent: the transport's substrateBootstrap, and metabob-mcp's session-scoped shapes.
+- **No restore candidates among them.** The 5 closures record no reason.
+
+**The scanner (development-vessel src/resolvers/orphaned-capability-scan.ts @3770906):**
+- "Caller" means template tasks only. A substring grep over repos/ then drops any shape with a hit, which also matches the producer's own registration, so the rewire branch (:286-292) is dead and every emitted gap says mint.
+- It is blind outside repos/ (scripts/, packages/, seeds, JSON) and does not use git history.
+- Reject is terminal and untyped (:366-390), and nothing closes an open gap when its shape gains a caller.
+- Any closed orphan gap suppresses its shape forever (:335-357), and hyphen/underscore duplicate ids slip past.
+
+**Requirements for 1(d)(i):**
+1. A caller is an invocation OUTSIDE the producer's own vessel; registration and bare mentions are excluded.
+2. Widen the roots (scripts/, packages/, plain-file vessels, seed and template JSON, non-.ts files), with a positive control proving the root is populated.
+3. Use git log -S per repo to name the commit that removed the last external caller, and prescribe restore-or-retire; mint only when no caller ever existed.
+4. Reject only after N misses or a positive control, recording actor, time and registry fingerprint; classify session-scoped and placement-dependent registrants as placement; make reject non-terminal.
+5. Add a typed close (consumer_appeared: file:line or commit); stop treating every closed gap as bridged; normalise ids.
+6. Treat the 35 phantom rows as the 10-01 incident.
+
+The plan's must-fail (author_producer / af61dee) is in the OPEN set.
