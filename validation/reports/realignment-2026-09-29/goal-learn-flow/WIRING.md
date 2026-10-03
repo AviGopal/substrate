@@ -707,3 +707,10 @@ A regression class counts as covered only if negating or removing the shipped ch
   - **Ceiling valve:** total 59,013 against 150,000, `willPrune: false`.
   - **Aux:** trace_digest 500 and concept_usage 734 removed (separate tables, not executions).
   - The hold stands until its lift condition.
+- **INTERVENTION (law 12), the user's ruling to deployment: retention PAUSED with a release timer.**
+  - From about 2026-10-03T06:47Z on node 1: TRACE_RETENTION_DRY_RUN=true via /etc/substrate/retention-hold.env, loaded as a second EnvironmentFile by the drop-in activity-api.service.d/90-retention-hold.conf. activity-api was restarted through the quiet gate.
+  - Verified by effect: the first sweep ran with dryRun:true, 0 deletions.
+  - **Release:** the transient retention-hold-release.timer at 2026-10-04T06:47:20Z (24 h, deployment's default) removes the drop-in and restarts activity-api.
+  - **Caveats:** a container recreate or restart drops the drop-in and the transient timer, and deletion resumes at once; a unit re-render loses the hold silently. It is env-gated (law 1) by explicit user decision; the durable form, a shaped retention-hold read by the sweep, is a gap.
+  - **Layering:** the 06:27:04Z tuning throttle (PHASE_BUDGET 1000) stays underneath. When the timer releases the pause, the throttle still caps strata at 1 s until its own lift condition (the compact-or-exempt fix green).
+  - **Sweep 3** (06:38Z, before the pause): validator-dispatch 152, slot-binding 32, orphans 30. No new strata.
