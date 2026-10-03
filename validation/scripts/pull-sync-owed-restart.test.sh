@@ -43,8 +43,13 @@
 #       during the gate -> it is REFUSED (admission still closed), restart taken in
 #       this tick, no "DEFERRING restart", marker released after the restart
 #   (m) control: nothing in flight -> no quiesce, no marker, gate, mirror, restart
-#   (n) the quiesce hits its bound (never drains) -> the announced "converging
-#       anyway" is honoured: restart taken, not deferred; marker released
+#   (n) the quiesce hits its bound (never drains) while the compose PROGRESSED 30 s
+#       ago -> NO restart: the tick budget ran out, not the compose. The marker stays
+#       held past the tick (carry recorded) and the restart is owed
+#   (n2) control, no progress field: the announced "converging anyway" is honoured:
+#       restart taken, not deferred; marker released (today's behaviour)
+#   (n3) progress published but silent past the stall bound -> restart, released
+#   (n4) progressing but owed past the max hold -> LOSSY restart, released
 #   (o) structural: the release runs first in every vessel-loop pass (every
 #       `continue` lands there), after the loop, and in the EXIT trap
 #
@@ -62,6 +67,8 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
   sed -n '/^content_hash_nontest() {/,/^}/p' "$SCRIPT"
   sed -n '/^loaded_code_stale() {/,/^}/p' "$SCRIPT"
   sed -n '/^quiesce_drain() {/,/^}/p' "$SCRIPT"
+  sed -n '/^quiesce_release() {/,/^}/p' "$SCRIPT"
+  sed -n '/^owed_hold_bound() {/,/^}/p' "$SCRIPT"
   echo 'run_block() {'
   echo 'for v in "$VESSEL"; do'
   awk '/^  # AN OWED RESTART OUTRANKS THE CONTENT SHORT-CIRCUIT/{on=1} on && /^  if \[ "\$CLONE_HASH" = "\$RUNTIME_HASH" \]; then$/{exit} on{print}' "$SCRIPT"
@@ -255,10 +262,49 @@ if restarted && grep -q '^TP pull_sync.stall_seconds$' "$CALLS"; then ok "(u) sh
 else bad "(u) shaped stall bound: expected the shaped 20 s to apply (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
 TP_STALL=""
 
+# ══ (v-y) A HOLD CARRIED ACROSS TICKS (mirror-path quiesce bound with a progressing compose) ══
+# When the mirror path's quiesce runs out of tick budget while a compose is still progressing,
+# pull-sync does not restart: it keeps the admission marker (so no NEW work enters) and records
+# the carry in <vessel>.quiesce-carry. On later ticks the owed path re-touches that marker (the
+# vessel ignores markers older than QUIESCE_MAX_MS, 20 min, and a hold may run 45 min) and ends
+# the hold the moment the compose drains, goes silent, or the max hold passes.
+#   (v) carry + progressing, marker 25 min old -> no restart, marker RE-TOUCHED, still held after
+#       the tick ends (quiesce_release, as the loop head and EXIT trap run it)
+#   (w) carry + silent past the stall bound (young, under the ceiling) -> restart, marker released
+#   (x) carry + drained to 0 -> restart, marker released
+#   (y) carry with no restart owed any more (pending marker gone) -> stale carry dropped, marker released
+QD2="$T/quiesce2"
+csetup() { psetup "$1"; mkdir -p "$QD2"; : > "$QD2/$VESSEL"; echo "$QD2/$VESSEL" > "$MARKER_DIR/$VESSEL.quiesce-carry"; Q_HELD=""; Q_CARRY=""; Q_BOUND=""; }
+fresh() { [ -e "$1" ] && [ $(( $(date +%s) - $(stat -c %Y "$1") )) -lt 60 ]; }
+
+csetup '{"in_flight":1,"in_flight_oldest_ms":1000000,"in_flight_last_progress_ms":30000,"in_flight_last_progress_id":"gap-demo"}'
+touch -d '25 minutes ago' "$QD2/$VESSEL"
+run_block; quiesce_release
+if ! restarted && fresh "$QD2/$VESSEL" && [ -s "$MARKER_DIR/$VESSEL.quiesce-carry" ] && [ -e "$P" ]; then
+  ok "(v) carried hold, compose progressing: no restart, marker re-touched past the vessel's 20 min staleness, still held across the tick"
+else bad "(v) carried hold, progressing: expected a held, re-touched marker and no restart (calls: $(tr '\n' ' ' < "$CALLS"); marker $( [ -e "$QD2/$VESSEL" ] && stat -c %y "$QD2/$VESSEL" || echo gone); log: $(tr '\n' ' ' < "$LOG"))"; fi
+
+csetup '{"in_flight":1,"in_flight_oldest_ms":200000,"in_flight_last_progress_ms":700000}'
+run_block; quiesce_release
+if restarted && [ ! -e "$QD2/$VESSEL" ] && [ ! -e "$MARKER_DIR/$VESSEL.quiesce-carry" ]; then ok "(w) carried hold, compose silent past stall: restarted, marker released"
+else bad "(w) carried hold, silent: expected a restart and a released marker (calls: $(tr '\n' ' ' < "$CALLS"); marker $( [ -e "$QD2/$VESSEL" ] && echo held || echo gone); log: $(tr '\n' ' ' < "$LOG"))"; fi
+
+csetup '{"in_flight":0}'
+run_block; quiesce_release
+if restarted && [ ! -e "$QD2/$VESSEL" ] && [ ! -e "$MARKER_DIR/$VESSEL.quiesce-carry" ]; then ok "(x) carried hold, drained: restarted, marker released"
+else bad "(x) carried hold, drained: expected a restart and a released marker (calls: $(tr '\n' ' ' < "$CALLS"); marker $( [ -e "$QD2/$VESSEL" ] && echo held || echo gone))"; fi
+
+csetup '{"in_flight":1,"in_flight_oldest_ms":1000000,"in_flight_last_progress_ms":30000}'; rm -f "$P"
+run_block; quiesce_release
+if [ ! -e "$QD2/$VESSEL" ] && [ ! -e "$MARKER_DIR/$VESSEL.quiesce-carry" ]; then ok "(y) carry with nothing owed: stale carry dropped, marker released"
+else bad "(y) stale carry: expected the marker released (marker $( [ -e "$QD2/$VESSEL" ] && echo held || echo gone))"; fi
+Q_HELD=""; Q_CARRY=""; Q_BOUND=""
+
 # ══ (l-o) the mirror path's quiesce holds admission through gate, mirror, restart ══
 {
   sed -n '/^restart_age_defer() {/,/^}/p' "$SCRIPT"
   sed -n '/^quiesce_release() {/,/^}/p' "$SCRIPT"
+  sed -n '/^owed_hold_bound() {/,/^}/p' "$SCRIPT"
   echo 'run_mirror_block() {'
   echo 'for v in "$VESSEL"; do'
   echo 'quiesce_release'
@@ -275,7 +321,8 @@ grep -q 'drained to 0 in' "$T/mfns.sh" && grep -q 'DEFERRING restart' "$T/mfns.s
   || { echo "FAIL - could not extract the mirror quiesce and restart blocks"; exit 1; }
 quiesce_release() { :; }   # absent before the fix; the extracted definition replaces this
 IFC="$T/inflight"          # the vessel's in_flight counter
-curl() { printf '{"in_flight":%s,"drain_ms":80000}' "$(cat "$IFC" 2>/dev/null || echo 0)"; }
+MOLD=""; MPROG=""   # in_flight_oldest_ms / in_flight_last_progress_ms the vessel publishes, when set
+curl() { printf '{"in_flight":%s,"drain_ms":80000%s%s}' "$(cat "$IFC" 2>/dev/null || echo 0)" "${MOLD:+,\"in_flight_oldest_ms\":$MOLD}" "${MPROG:+,\"in_flight_last_progress_ms\":$MPROG,\"in_flight_last_progress_id\":\"gap-mirror\"}"; }
 sleep() {                  # time passing drains one request (admission closed or not)
   [ "${NODRAIN:-0}" = 1 ] && return 0
   local n; n="$(cat "$IFC" 2>/dev/null || echo 0)"; [ "$n" -gt 0 ] && echo $((n - 1)) > "$IFC"; return 0
@@ -298,7 +345,7 @@ gate_and_mirror_stub() {   # new content in the same tick; a request tries to st
 source "$T/mfns.sh"
 HEAD=head-old; DEFERRAL_LOG="$T/deferrals.jsonl"; AUTHORING_HOST_VESSEL=other-vessel
 COMPOSE_CEILING_MS=900000; GATE_T0="$(date +%s)"; RUNTIME_NONTEST=old; CLONE_NONTEST=new; PREV_GOOD=""
-msetup() { setup; skipped=0; deferred=0; synced=0; failed=0; rm -rf "$QUIESCE_DIR"; echo "$1" > "$IFC"; ARRIVE="${2:-0}"; NODRAIN=0; rm -f "$DEFERRAL_LOG"; HEAD=head-old; CLONE_HASH=content-old; }
+msetup() { MOLD=""; MPROG=""; Q_CARRY=""; setup; skipped=0; deferred=0; synced=0; failed=0; rm -rf "$QUIESCE_DIR"; echo "$1" > "$IFC"; ARRIVE="${2:-0}"; NODRAIN=0; rm -f "$DEFERRAL_LOG"; HEAD=head-old; CLONE_HASH=content-old; }
 order() { grep -n "$1" "$CALLS" | head -1 | cut -d: -f1; }
 
 # ── (l) drained, new content, a request arrives during the gate ────────────────
@@ -318,13 +365,39 @@ if restarted && ! grep -q QUIESCED "$LOG" && [ ! -e "$QUIESCE_DIR/$VESSEL" ] && 
   ok "(m) control, nothing in flight: no quiesce, gate + mirror + restart as before"
 else bad "(m) control: expected plain gate/mirror/restart (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
 
-# ── (n) the quiesce hits its bound: the announced converge-anyway is honoured ──
+# ── (n) the quiesce hits its bound while the compose is still PROGRESSING: hold, do not kill ──
+# The tick budget ran out, not the compose. Admission stays closed (marker held across the tick
+# end, carry recorded) and the restart is owed; the owed path ends the hold on a later tick.
+msetup 1 0; NODRAIN=1; MOLD=1000000; MPROG=30000
+run_mirror_block
+if ! restarted && [ -e "$QUIESCE_DIR/$VESSEL" ] && [ -s "$MARKER_DIR/$VESSEL.quiesce-carry" ] && [ -e "$P" ] \
+   && grep -q "progressing" "$LOG"; then
+  ok "(n) quiesce bound hit, compose progressed 30 s ago: NO restart, admission marker still held, restart owed"
+else bad "(n) quiesce bound hit while progressing: expected a held marker and no restart (calls: $(tr '\n' ' ' < "$CALLS"); marker $( [ -e "$QUIESCE_DIR/$VESSEL" ] && echo held || echo gone); log: $(grep -a 'anyway\|DEFERRING\|restarting\|progressing\|LOSSY' "$LOG" | tr '\n' ' '))"; fi
+quiesce_release; Q_CARRY=""
+
+# ── (n2) CONTROL: no progress field published -> today's converge-anyway ──────────────────────
 msetup 1 0; NODRAIN=1
 run_mirror_block
 if restarted && grep -q "converging anyway" "$LOG" && ! grep -q "DEFERRING restart" "$LOG" && [ ! -e "$QUIESCE_DIR/$VESSEL" ]; then
-  ok "(n) quiesce bound hit: restart taken this tick (the run was already declared lost), marker released"
-else bad "(n) quiesce bound hit: expected the restart, not a deferral (calls: $(tr '\n' ' ' < "$CALLS"); log: $(grep -a 'anyway\|DEFERRING\|restarting' "$LOG" | tr '\n' ' '))"; fi
-NODRAIN=0
+  ok "(n2) control, no progress field: quiesce bound hit, restart taken this tick as before, marker released"
+else bad "(n2) control: expected the restart, not a deferral (calls: $(tr '\n' ' ' < "$CALLS"); log: $(grep -a 'anyway\|DEFERRING\|restarting' "$LOG" | tr '\n' ' '))"; fi
+
+# ── (n3) progress published but silent past the stall bound -> restart as today ──────────────
+msetup 1 0; NODRAIN=1; MOLD=1000000; MPROG=700000
+run_mirror_block
+if restarted && [ ! -e "$QUIESCE_DIR/$VESSEL" ] && [ ! -e "$MARKER_DIR/$VESSEL.quiesce-carry" ]; then
+  ok "(n3) quiesce bound hit, compose silent 700 s: restart taken, marker released"
+else bad "(n3) silent past stall: expected the restart (calls: $(tr '\n' ' ' < "$CALLS"); log: $(grep -a 'anyway\|DEFERRING\|restarting' "$LOG" | tr '\n' ' '))"; fi
+
+# ── (n4) progressing, but the restart has been owed past the max hold -> LOSSY restart ────────
+msetup 1 0; NODRAIN=1; MOLD=1000000; MPROG=30000
+echo $(( $(date +%s) - 3000 )) > "$MARKER_DIR/$VESSEL.restart-owed-since"
+run_mirror_block
+if restarted && grep -q "LOSSY" "$LOG" && grep -q "gap-mirror" "$LOG" && [ ! -e "$QUIESCE_DIR/$VESSEL" ] && [ ! -e "$MARKER_DIR/$VESSEL.quiesce-carry" ]; then
+  ok "(n4) quiesce bound hit, progressing, owed 3000 s > max hold: LOSSY restart naming the attempt, marker released"
+else bad "(n4) past max hold: expected a LOSSY restart (calls: $(tr '\n' ' ' < "$CALLS"); log: $(grep -a 'anyway\|DEFERRING\|restarting\|LOSSY' "$LOG" | tr '\n' ' '))"; fi
+NODRAIN=0; MOLD=""; MPROG=""
 
 # ── (o) structural: where the release runs in the real script ─────────────────
 LOOP_HEAD="$(awk '/^for d in "\$CLONE_DIR"\/\*\/; do$/{on=1;n=0} on{print; if (++n>=4) exit}' "$SCRIPT")"
