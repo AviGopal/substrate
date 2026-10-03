@@ -691,3 +691,4 @@ A regression class counts as covered only if negating or removing the shipped ch
   - **Reverse** by restoring 120000 or removing the row, once retention exempts or compacts graded evidence (gap `the-trace-ceiling-valve-evicts-…`, being widened to every phase).
   - **Growth during the hold:** under ~600 rows/h. Watch disk and SurrealDB RSS.
 - **Refold sources preserved:** substrate-surreal-pre-2.3.10-20261003T060017Z.tar and the 05:50 restore-proof tar, both mode 400 and excluded from rotation. Independent copies and sha256s pending from deployment.
+- **LIFT CONDITION for the 06:27:04Z retention throttle (qa):** lifted only when the widened retention gap's compact-or-exempt fix lands and its falsifier reads green (no graded or labelled row deleted without its observation record first). Never by elapsed time. The lift itself is a recorded law-12 event (restore 120000 or remove the row), followed by a verify-by-effect sweep.
