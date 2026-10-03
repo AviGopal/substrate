@@ -777,3 +777,13 @@ A regression class counts as covered only if negating or removing the shipped ch
 - **Both edit sites are IN autonomy scope**, so the lane can take them. The linked live wiring (`inference-shape-catalog-is-not-wired-into-the-live-dispatch-path`) and index.ts:1908/:18435 are excluded paths (operator).
 - **Acceptance:** the held-out re-run, never the fixtures alone.
 - **Class noted (qa): repairing a dead check can unmask breakage it was hiding.** The dead :499 regex hid a missing composition guard; the dead transport hid the prompt refusal. A revived check gets a full-suite run, and newly red tests are findings.
+
+### Rate check (2026-10-03 ~08:00Z) against the goal "double the rate"
+- **Baseline:** 0.11/h verified autonomous landings over 7 days. Target: ≥0.22/h, sustained over 7 days.
+- **Store-derived** (classification_metadata.closed_reason = landed_verified, quarantined rows excluded): 24 h: 19 (0.79/h) · 48 h: 21 (0.44/h) · 7 d: 28 (0.17/h).
+- **Raw autonomous commits** on node 1's push clones: 24 h: 21 · 7 d: 255 (dominated by an earlier burst).
+- **This is NOT yet an honest doubling:**
+  - (1) The store verdict is weaker than the realignment standard. The sweep can close on a literal predicate (open high gap), and the own-check went fail-closed only at about 02:27Z.
+  - (2) Three of the 24 h closes are vocabulary-rule landings in goal-host (countable-goal, enumeration exclusion, superlative rule: the b260a15 family). The inference class armed tonight replaces them, so they must not count as useful.
+  - (3) Since the fail-closed own-check: 3 store-verified closes in about 5.5 h. b69296f is independently operator-verified.
+- **Next measurement:** a 7-day honest count (landings whose armed check went green, no revert, and a by-effect check where one exists), split by author and kind, taken after the inference, binding and abstention gaps are armed and the lane has had a full window on them.
