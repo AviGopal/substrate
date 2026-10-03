@@ -593,3 +593,16 @@ A regression class counts as covered only if negating or removing the shipped ch
 - **Gate promotion cannot make a relay change live.** pull-sync's gate overlay copies accepted gate paths only into the staged glue and clone trees under /workspace. On every node checked (node 2 with the relay active; node 1 and pubspoke with the transport), federation-relay and federation-transport-vessel run from the image-baked copy under /usr/local/share/substrate/super-repo, and no drop-in overrides ExecStart.
 - **Consequence for audits:** a node's `accepted.sha` can name a commit ahead of the code the node actually runs. Judge liveness by the loaded blob (`git hash-object` of the file the unit loads), never by `accepted.sha`. Federation changes go live only through an image rebuild and recreate (the open gap on the image-baked federation copy).
 - nethub-live (compose project "nethub", ghcr :dev af119736) belongs to the network fork's large-frame acceptance fleet. It is temporary and is torn down with compose down only.
+
+### Class A armed; the own-check fix's guard measured (2026-10-03)
+- **Class A (a stale copy overwrites newer committed work at cutover) is armed.** Tests: development-vessel 0975b9e and de985d6, `test/resolvers/cutover-stale-base-over-newer-commit.test.ts`.
+  - Must-fails: (1) the clean-at-HEAD exemption admits a base that is an older committed version; (2) the commit-tree check reads the clone before the cutover's own fetch and reset; (3) a file-content hash is handed to git as a revision.
+  - Controls: the 08-29 uncommitted-patched-hash case proceeds; base == HEAD lands; a newer commit to an unrelated file does not block.
+  - The gap's check reads present on de985d657daa. It is operator-only (the cutover is an excluded path).
+  - Mutation proof on the exact fix sketch: guard off turns must-fails 1 and 2 red; restoring the content-hash reset turns must-fail 3 red.
+- **Guard row for the cutover own-check fix (040d7e1/3770906): unit tests plus a tip-only gate; the range hole is open.**
+  - With the weakening commit at the tip, pull-sync's newly-failing gate refuses it. Real bun: 10 attributable for always-pass and 16 for never-loaded, each matching the unit-level red set.
+  - It is not durable. The gate compares the tip only against HEAD^, so one later commit in the same range makes the regression 0-attributable, and its names enter the baseline permanently (measured). Gap `pull-sync-test-gate-compares-only-the-tip-against-head-parent-…` (high).
+  - The landing node never runs the gate on its own cutover commit; there the post-land suite is the only check.
+  - The starvation break still deploys after 3 refusals, holding the names outstanding.
+  - A suite over 240s converges ungated.
