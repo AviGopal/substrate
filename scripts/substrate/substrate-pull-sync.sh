@@ -2060,7 +2060,10 @@ for d in "$CLONE_DIR"/*/; do
       RA_WHY="owed restart deferred ${P_DEFERRED_N} time(s); quiesced: $QD_WHY"
     fi
     if [ "$RA_DEFER" = 1 ]; then
-      echo "$((P_DEFERRED_N + 1))" > "$P_DEFER_FILE" 2>/dev/null || true
+      # A progress hold is not a busy-vessel deferral: it neither counts toward RESTART_DEFER_MAX nor
+      # resets it (owed_hold_bound is its bound). Counting it ran the counter to the cap, so the first
+      # ordinary deferral after progress stopped went straight to quiesce_drain.
+      [ -n "$P_HOLD" ] || echo "$((P_DEFERRED_N + 1))" > "$P_DEFER_FILE" 2>/dev/null || true
       [ -s "$OWED_SINCE_FILE" ] || date +%s > "$OWED_SINCE_FILE" 2>/dev/null || true
       if [ -n "$P_HOLD" ] && [ -n "$P_CARRIED" ]; then
         Q_CARRY="$Q_HELD"; RA_WHY="$RA_WHY; admission stays closed (carried quiesce hold, marker re-touched)"
@@ -3279,7 +3282,9 @@ EOF
       fi
     fi
     if [ "$RA_DEFER" = 1 ]; then
-      echo "$((DEFERRED_N + 1))" > "$DEFER_FILE" 2>/dev/null || true
+      # A progress hold (past-ceiling progress, or a carried quiesce hold) does not count toward
+      # RESTART_DEFER_MAX, as on the owed path.
+      { [ "${RA_PROGRESSING:-0}" = 1 ] || [ -n "${Q_CARRY:-}" ]; } || echo "$((DEFERRED_N + 1))" > "$DEFER_FILE" 2>/dev/null || true
       # RECORD THAT A RESTART IS OWED. Without this the deferral is permanent, and
       # the log line below is a lie. The content marker was already written at the
       # mirror step, and the top-of-loop short-circuit compares CLONE_HASH to
