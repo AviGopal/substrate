@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# image-convergence-surface.test.sh: every file the image bakes from the super-repo has an in-place installer.
+#
+# The boot image only needs to be good enough to boot and run the update gate. Everything it copies
+# from scripts/ (and the manifest) should then converge in place from the node's committed glue tree,
+# the way vessel code already does, so a landed fix goes live without anyone recreating the container.
+# The Dockerfile's COPY set and pull-sync's install lists are both hand-kept, and nothing compares them.
+# This test does:
+#   - expand every Dockerfile.substrate COPY whose source is in the super-repo into destination files;
+#   - collect every destination substrate-pull-sync.sh installs to (its "src:dst[:mode]" tuples, its
+#     self-converge pairs, the unit dir, the gap-tracked-red lib, the gate runner, itself, the
+#     active-scripts seed);
+#   - FAIL once (one static label) when any baked destination has no installer, listing each one.
+# The baked super-repo tree that the federation transport and relay run from
+# (/usr/local/share/substrate/super-repo/scripts/substrate) is listed as one counted entry: whether it
+# should converge in place is a separate decision (it needs a behavioural gate first).
+set -uo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$HERE/../.." && pwd)"
+. "$HERE/lib/gate-test-lib.sh"
+DF="$ROOT/Dockerfile.substrate"; PS="$ROOT/scripts/substrate/substrate-pull-sync.sh"
+[ -f "$DF" ] && [ -f "$PS" ] || { bad "inputs present (Dockerfile.substrate, substrate-pull-sync.sh)"; done_tests; }
+BIN=/usr/local/bin; SHARE=/usr/local/share/substrate; UNITS=/usr/lib/systemd/system; LIBEXEC=/usr/local/libexec/substrate
+T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
+
+# 1. Baked destinations (one per file). COPY lines from another stage (--from) are not super-repo files.
+grep -E '^\s*COPY ' "$DF" | grep -v -- '--from' | sed -E 's/\s+/ /g' | awk '{print $NF"\t"$2}' \
+  | grep -E $'\t(scripts/|docker-compose\\.yml)' | while IFS=$'\t' read -r dst src; do
+    if [ -d "$ROOT/${src%/}" ]; then
+      (cd "$ROOT/${src%/}" && git ls-files . 2>/dev/null) | while read -r f; do echo "${dst%/}/$f"; done
+    elif [[ "$src" == *'*'* ]]; then
+      for f in $ROOT/$src; do [ -f "$f" ] && echo "${dst%/}/$(basename "$f")"; done
+    else
+      case "$dst" in */) echo "${dst%/}/$(basename "$src")" ;; *) echo "$dst" ;; esac
+    fi
+  done | sort -u > "$T/baked"
+
+# 2. Installed destinations.
+{
+  # "src:dst[:mode]" tuples and self-converge pairs ("a.sh:name" means $BIN_DIR/name)
+  grep -o -E '"[A-Za-z0-9_.-]+\.(sh|ts|json):[^":]+(:[0-7]{4})?"' "$PS" | tr -d '"' | while IFS=: read -r _ d _; do
+    d="${d//\$BIN_DIR/$BIN}"; d="${d//\$SHARE_DIR/$SHARE}"; d="${d//\$\{SHARE_DIR\}/$SHARE}"
+    case "$d" in /*) echo "$d" ;; *) echo "$BIN/$d" ;; esac
+  done
+  echo "$BIN/substrate-pull-sync"
+  grep -q '_se_lib_to="\$SHARE_DIR/lib/gap-tracked-red.sh"' "$PS" && echo "$SHARE/lib/gap-tracked-red.sh"
+  grep -q 'GATE_LIBEXEC_DIR/.gate-runner.new' "$PS" && echo "$LIBEXEC/gate-runner"
+  # units converge from scripts/substrate/units into $UNIT_DIR (whole tree)
+  (cd "$ROOT/scripts/substrate/units" && git ls-files .) | sed "s#^#$UNITS/#"
+  # active-scripts: the image copy is the boot seed of /workspace/active-scripts, which pull-sync refreshes
+  grep -q 'cp -f "\$_sg_src"/\*.ts /workspace/active-scripts/' "$PS" && grep "^$SHARE/active-scripts/" "$T/baked"
+  # the fleet definition converges into the volume (FLEET_DIR); the image copy is its fallback
+  if grep -q '_cf_dir="\${FLEET_DIR:-/workspace/substrate/fleet}"' "$PS"; then
+    echo "$SHARE/vessels.inventory.json"; echo "$SHARE/vessels.manifest.json"
+  fi
+} | sort -u > "$T/installed"
+# A build-time temp file (copied, compared and deleted inside one RUN) is not baked.
+grep -q 'rm -f /tmp/docker-compose.source.yml' "$DF" && sed -i '\#^/tmp/docker-compose.source.yml$#d' "$T/baked"
+
+# 3. Compare.
+tierb_prefix="$SHARE/super-repo/scripts/substrate/"
+comm -23 "$T/baked" "$T/installed" > "$T/missing"
+tierb=$(grep -c "^$tierb_prefix" "$T/missing")
+grep -v "^$tierb_prefix" "$T/missing" > "$T/tiera"
+echo "baked from the super-repo: $(wc -l < "$T/baked") files; with an installer: $(comm -12 "$T/baked" "$T/installed" | wc -l)"
+while read -r d; do echo "  never converged: $d"; done < "$T/tiera"
+echo "  never converged (federation runtime tree, separate decision): $tierb files under $tierb_prefix"
+if [ -s "$T/tiera" ]; then bad "every baked script destination has an in-place installer"
+else ok "every baked script destination has an in-place installer"; fi
+done_tests
