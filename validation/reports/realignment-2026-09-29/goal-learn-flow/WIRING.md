@@ -443,3 +443,9 @@ The organs that carry it already exist: self_fact_reconcile rows (selfFactSpec),
 - **Duration:** about 12 minutes without a database, until node 1 restarted around 03:40Z (restarts also at 03:30-03:31Z).
 - **Treat it as excluded or marked in every measurement window:** selection and elimination, reach verdicts, failed traces, the lane's landings, and the ed58e66 post-landing effect window. It is not a system fault, and nothing should learn from it (failure memory, credit, extraction).
 - **Correction:** an earlier DB "inactive" reading attributed to key rotation was this kill.
+
+## Step 5 constraint: cross-version contamination of posteriors (10-03, database session)
+The insert-path context_thompson_scores UPDATE (ctxSql/rdSql) filters account scope, template and bucket but NOT signature_version. Every v0 outcome write therefore also increments a signature_version 1 cell with the same (org, template, bucket): in a fixture, a v1 cell went from 6 to 8 n_observations after two v0 writes. Some v1 evidence may therefore be v0 outcomes.
+- Before any re-baseline (step 5) or v1-only analysis, size the v0/v1 key collisions (read-only, in progress).
+- Treat colliding v1 cells as contaminated until the writer filters signature_version.
+- Recorded on the-trace-ingest-request-path-scans-two-whole-tables-for-learning-writes.
