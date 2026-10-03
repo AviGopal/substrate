@@ -99,22 +99,39 @@ csh() { if [ "$IN_CONTAINER" = 1 ]; then bash -c "$1"; else docker exec "$CONTAI
 
 # PROBE WINDOWS ARE MAINTENANCE HOLDS. A held-out probe run on a node is measured against an undisturbed
 # node, so no unit restarts or stops there while a probeWindow record is open (qa's rule, 2026-10-03,
-# gap probe-windows-are-announced-by-message-so-a-restart-can-land-inside-one). The record is a shaped
-# poolImpulse, shape probeWindow, body {node, from, until, tag, reason}, read at use time from this node's
-# development-vessel. It applies when body.node is this node's FED_SUBSTRATE_ID, or its hostname (a "*" window is ignored: any fleet-key holder could freeze every node), capped at 12 h from its start,
-# and now is inside [from, until) (a missing until means open-ended). An unreadable store refuses too
-# (fail closed). Overrides, each logged to the journal: --security-incident (a live incident outranks a
-# probe) and --probe-window-unverified (the store cannot be read, e.g. development-vessel itself is down).
-probe_window_state() {
-  csh 'k=$(grep -a -m1 "^METABOB_API_KEY=" /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d "\""); me=$(grep -a -m1 "^FED_SUBSTRATE_ID=" /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d "\""); h=$(hostname)
-    r=$(curl -s -m10 -X POST http://127.0.0.1:8090/v2/impulses/resolve -H "Content-Type: application/json" -H "Authorization: ApiKey $k" -d "{\"impulse\":{\"type\":\"poolImpulse\",\"shape\":\"probeWindow\",\"status\":\"open\"}}" 2>/dev/null)
-    printf "%s" "$r" | jq -e ". != null" >/dev/null 2>&1 || { echo UNREADABLE; exit 0; }
-    printf "%s" "$r" | jq -r --arg me "${me:-$h}" --arg h "$h" --argjson now "$(date -u +%s)" "[.. | objects | select(has(\"body\") and has(\"id\")) | select((.shape // \"probeWindow\") == \"probeWindow\") | select(.body.node == \$me or .body.node == \$h) | select((.body.from // null) == null or ((.body.from | sub(\"\\\\.[0-9]+Z$\"; \"Z\") | fromdateiso8601? // 0) <= \$now)) | select((((.body.from // null) | if . == null then \$now else (sub(\"\\\\.[0-9]+Z$\"; \"Z\") | fromdateiso8601? // \$now) end) + 43200) > \$now) | select((.body.until // null) == null or ((.body.until | sub(\"\\\\.[0-9]+Z$\"; \"Z\") | fromdateiso8601? // 0) > \$now))] | if length > 0 then \"OPEN \" + (.[0].id | tostring) + \" until=\" + ((.[0].body.until // \"open-ended\") | tostring) + \" tag=\" + ((.[0].body.tag // \"\") | tostring) else \"NONE\" end"'
-}
+# gap probe-windows-are-announced-by-message-so-a-restart-can-land-inside-one). Same rules as pull-sync's
+# side of the hold:
+#   - probeWindow: shaped poolImpulse, body {node, from, until, tag, reason}, read at use time from this
+#     node's development-vessel. Applies when body.node names THIS node (FED_SUBSTRATE_ID or hostname; a
+#     "*" window is ignored, since any fleet-key holder can write one) and now is in [from, until), capped
+#     at from + pull_sync.probe_window_max_seconds (the shaped tuning row pull-sync reads; default 7200,
+#     with a logged tuning_param_fallback).
+#   - probeWindowOverride: the same shape and rules ({node, from, until, reason}); while one is open for
+#     this node, the hold is overridden as a recorded, shaped act.
+#   - An unreadable store refuses (fail closed). CLI overrides, logged: --security-incident,
+#     --probe-window-unverified.
+# Keys never touch argv: headers go to curl on stdin (-K -).
+PW_STATE_SCRIPT='
+env_v() { grep -a -m1 "^$1=" /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d "\""; }
+K=$(env_v METABOB_API_KEY); ME=$(env_v FED_SUBSTRATE_ID); H=$(hostname); NOW=$(date -u +%s)
+hdr() { [ -n "$K" ] && printf "header = \"Authorization: ApiKey %s\"\n" "$K"; }
+cap=""; o=$(hdr | curl -K - -s --max-time 5 -w "\n%{http_code}" "${ACTIVITY_API_ENDPOINT:-http://127.0.0.1:8080}/v2/tuning-params/pull_sync.probe_window_max_seconds" 2>/dev/null)
+case "${o##*$'"'"'\n'"'"'}" in 2[0-9][0-9]) cap=$(printf "%s" "${o%$'"'"'\n'"'"'*}" | jq -r ".value // empty | floor? // empty" 2>/dev/null) ;; esac
+case "$cap" in ""|*[!0-9]*) cap=7200; logger -t vessel-ctl "tuning_param_fallback name=pull_sync.probe_window_max_seconds default=7200" 2>/dev/null ;; esac
+q() { hdr | curl -K - -s -m10 -X POST http://127.0.0.1:8090/v2/impulses/resolve -H "Content-Type: application/json" -d "{\"impulse\":{\"type\":\"poolImpulse\",\"shape\":\"$1\",\"status\":\"open\"}}" 2>/dev/null; }
+pick() { jq -r --arg sh "$1" --arg me "${ME:-$H}" --arg h "$H" --argjson now "$NOW" --argjson cap "$cap" "[.. | objects | select(has(\"body\") and has(\"id\")) | select((.shape // \$sh) == \$sh) | select(.body.node == \$me or .body.node == \$h) | ((.body.from // null) | if . == null then null else (sub(\"\\\\.[0-9]+Z$\"; \"Z\") | fromdateiso8601? // null) end) as \$f | ((.body.until // null) | if . == null then null else (sub(\"\\\\.[0-9]+Z$\"; \"Z\") | fromdateiso8601? // null) end) as \$u | select(\$f == null or \$f <= \$now) | select(\$u == null or \$u > \$now) | select(\$f != null and (\$f + \$cap) > \$now)] | if length > 0 then (.[0].id | tostring) + \" until=\" + ((.[0].body.until // \"open-ended\") | tostring) + \" tag=\" + ((.[0].body.tag // \"\") | tostring) else \"\" end" 2>/dev/null; }
+w=$(q probeWindow); printf "%s" "$w" | jq -e ". != null" >/dev/null 2>&1 || { echo UNREADABLE; exit 0; }
+win=$(printf "%s" "$w" | pick probeWindow); [ -n "$win" ] || { echo NONE; exit 0; }
+ov=$(q probeWindowOverride | pick probeWindowOverride)
+if [ -n "$ov" ]; then echo "OVERRIDDEN $win by $ov"; else echo "OPEN $win"; fi
+'
+probe_window_state() { csh "$PW_STATE_SCRIPT"; }
 probe_window_guard() { # action -> 0 to proceed, 1 refused (after printing the refusal JSON)
   local st; st="$(probe_window_state 2>/dev/null | head -1)"
   case "$st" in
     NONE) return 0 ;;
+    OVERRIDDEN*)
+      csh "logger -t vessel-ctl 'PROBE WINDOW OVERRIDDEN (probeWindowOverride record): $1 $VESSEL; ${st#OVERRIDDEN }'" 2>/dev/null || true; return 0 ;;
     OPEN*)
       if [ "${SECURITY_INCIDENT:-0}" = 1 ]; then
         csh "logger -t vessel-ctl 'PROBE WINDOW OVERRIDDEN (--security-incident): $1 $VESSEL during ${st#OPEN }'" 2>/dev/null || true; return 0; fi
