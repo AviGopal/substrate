@@ -92,7 +92,6 @@ const PORT_ROLE: Record<string, { role: string; constName: string; envVar: strin
   "8210": { role: "goal-host-vessel", constName: "GOAL_HOST_ENDPOINT", envVar: "GOAL_HOST_VESSEL_ENDPOINT" },
   "8220": { role: "llm-resolver-vessel", constName: "LLM_VESSEL_ENDPOINT", envVar: "LLM_VESSEL_ENDPOINT" },
   "8240": { role: "ribosome-vessel", constName: "RIBOSOME_ENDPOINT", envVar: "RIBOSOME_VESSEL_ENDPOINT" },
-  "8250": { role: "analysis-vessel", constName: "ANALYSIS_ENDPOINT", envVar: "ANALYSIS_VESSEL_ENDPOINT" },
   "8260": { role: "concept-db", constName: "CONCEPT_DB_ENDPOINT", envVar: "CONCEPT_DB_ENDPOINT" },
 };
 

@@ -59,7 +59,7 @@ for (let i = 0; i < 60; i++) {
 
 **Live references:**
 
-- `repos/analysis-vessel/` — the stateless resolver exemplar (port 8250; six code-analysis shapes via `VesselDaemon` + `ActivityExecutor`; no SurrealDB). Read `src/index.ts` for the canonical localhost-default + `VesselDaemon.start()` shape.
+- `repos/analysis-vessel/` — the stateless resolver exemplar as source (retired from the running fleet, so read it, do not expect it running; six code-analysis shapes via `VesselDaemon` + `ActivityExecutor`; no SurrealDB). Read `src/index.ts` for the canonical localhost-default + `VesselDaemon.start()` shape.
 - `repos/local-tools-vessel/` — resolver vessel built on `VesselDaemon`
 - `repos/goal-host-vessel/` — the async goal-dispatch surface; `DiscoveryRegistrationLoop` without `VesselDaemon`
 - `repos/ribosome-vessel/` — pure WebSocket consumer (no shapes); shows when NOT to use VesselDaemon
@@ -408,7 +408,7 @@ Each local vessel is a `Type=simple` Bun process launched by a systemd unit unde
 `scripts/substrate/units/<vessel>.service`. The container maps each vessel's internal
 port to a host port with an **18000 offset** (`18xxx → 8xxx`) — activity-api
 `18080→8080`, development-vessel `18090→8090`, discovery-vessel `18100→8100`,
-goal-host `18210→8210`, analysis-vessel `18250→8250`, concept-db `18260→8260`.
+goal-host `18210→8210`, concept-db `18260→8260`.
 Internal vessel-to-vessel calls use `127.0.0.1:8xxx` directly inside the container;
 you reach a vessel from the host at `http://localhost:18xxx`.
 
@@ -462,7 +462,7 @@ The iteration loop is then:
 ```bash
 # edit repos/<vessel>/src/** → hot-reload into the running container → validate
 docker exec <container> vessel-ctl sync <vessel>             # mirror the in-container clone + restart
-curl -s http://localhost:18250/health | jq .         # vessel reachable on its host port
+curl -s http://localhost:18xxx/health | jq .         # vessel reachable on its host port (18000 + its port)
 curl -s http://localhost:18080/v2/activities/templates  # validate against the substrate
 ```
 

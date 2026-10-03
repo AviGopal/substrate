@@ -149,7 +149,7 @@ fi
 port_alias() {
   case "$1" in
     8080) echo ACTIVITY_API_PORT ;; 8090) echo DEV_VESSEL_PORT ;; 8100) echo DISCOVERY_PORT ;;
-    8101) echo IDENTITY_PORT ;; 8210) echo GOAL_HOST_PORT ;; 8250) echo ANALYSIS_PORT ;;
+    8101) echo IDENTITY_PORT ;; 8210) echo GOAL_HOST_PORT ;;
     8260) echo CONCEPT_DB_PORT ;; 8270) echo STATEFUL_UI_PORT ;; 8310) echo HUMAN_SURFACE_PORT ;;
     30333) echo RELAY_PORT ;;
   esac
@@ -161,7 +161,7 @@ host_port_for() { # container port -> host port the manifest maps it to
   if [ -n "$v" ]; then printf '%s' "$v"; else printf '%s%s' "$PORT_PREFIX" "${1: -3}"; fi
 }
 ALIASES_USED=""
-for _p in 8080 8090 8100 8101 8210 8250 8260 8270 8310 30333; do
+for _p in 8080 8090 8100 8101 8210 8260 8270 8310 30333; do
   _a="$(port_alias "$_p")"
   [ -n "$(launchval "$_a")" ] && ALIASES_USED="${ALIASES_USED:+$ALIASES_USED }$_a"
 done
@@ -549,7 +549,7 @@ published_ports() {
     awk '/^[[:space:]]*ports:/{p=1; next} p && /^[[:space:]]*[a-z_]+:/{p=0} p' "$MANIFEST" \
       | sed -n -E 's/^[[:space:]]*-[[:space:]]*"?[^"#]*:([0-9]{2,5})(\/tcp)?"?[[:space:]]*(#.*)?$/\1/p' | sort -un
   else
-    printf '%s\n' 8080 8090 8100 8101 8210 8250 8260 8270 8310
+    printf '%s\n' 8080 8090 8100 8101 8210 8260 8270 8310
   fi
 }
 # Units that serve a container port: the inventory's health_port, plus the relay,

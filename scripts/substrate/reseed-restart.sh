@@ -70,7 +70,7 @@ if command -v jq >/dev/null 2>&1 && [ -f "$INV" ]; then
 $(basename "$_a")"
   done
 else
-  UNITS="discovery-vessel.service identity-vessel.service activity-api.service development-vessel.service local-tools-vessel.service llm-resolver-vessel.service goal-host-vessel.service ribosome-vessel.service concept-db.service analysis-vessel.service light-dispatch-vessel.service relevance-sink-vessel.service stateful-ui-vessel.service"
+  UNITS="discovery-vessel.service identity-vessel.service activity-api.service development-vessel.service local-tools-vessel.service llm-resolver-vessel.service goal-host-vessel.service ribosome-vessel.service concept-db.service light-dispatch-vessel.service relevance-sink-vessel.service stateful-ui-vessel.service"
 fi
 # A key consumer is a unit that loaded this file, whatever the inventory says about it.
 # The inventory's `manifest` flag means "apply-inventory never selects this unit", not

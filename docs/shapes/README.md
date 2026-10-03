@@ -165,15 +165,14 @@ carries a posterior earned by a body that no longer exists. See
 `codebaseSearch`, and `problemCluster` still have cases in activity-api's
 router, but each answers 410 Gone with a pointer to the analysis resolver. They
 were a proxy path that violated "resolvers live where the data lives"; they are
-marked `@shape-dispatch:private` and are not advertised. Resolve code-analysis
-shapes against analysis-vessel directly.
+marked `@shape-dispatch:private` and are not advertised.
 
 ## Code analysis shapes
 
-Resolver: `analysis-vessel`, which is stateless — it builds a code property
-graph per request through `@avigopal/cpg-inference` and holds no datastore.
-Advertised in `repos/analysis-vessel/src/index.ts`: `source_code`, `error_log`,
-`problem_detection`, `code_quality`, `code_annotation`, `cpg_query_result`.
+No running producer. `source_code`, `error_log`, `problem_detection`, `code_quality`,
+`code_annotation` and `cpg_query_result` were served by analysis-vessel, which is retired from
+the fleet: its inventory entry is marked `"retired": true`, so every profile masks its unit. A
+resolve of these shapes finds no producer in discovery (`registry_query` shows what is served).
 
 ## Concept and memory shapes
 

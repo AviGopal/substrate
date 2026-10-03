@@ -51,7 +51,7 @@ done
 add SUBSTRATE_IMAGE "${IMAGE:-}"
 add ENABLED_ROLES hub
 # The compute vessels this hub has always run on top of the hub role group.
-add ENABLED_EXTRA_VESSELS "${ENABLED_EXTRA_VESSELS:-goal-host-vessel.service,development-vessel.service,local-tools-vessel.service,ribosome-vessel.service,analysis-vessel.service,light-dispatch-vessel.service}"
+add ENABLED_EXTRA_VESSELS "${ENABLED_EXTRA_VESSELS:-goal-host-vessel.service,development-vessel.service,local-tools-vessel.service,ribosome-vessel.service,light-dispatch-vessel.service}"
 add SUBSTRATE_BIND_HOST 0.0.0.0
 add SUBSTRATE_ROOT "${SUBSTRATE_ROOT:-/workspace/git/super-repo}"
 add PUBLIC_IP "$PUBLIC_IP"

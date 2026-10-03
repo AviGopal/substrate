@@ -181,7 +181,7 @@ probe_lane() {  # $1 = lane name; writes $WORK/<lane>.{env,secrets,values}
       # gen-env refuses a contradiction; they are consumed, never delivered.
       SUBSTRATE_CONTAINER|WORKSPACE_VOLUME|SURREAL_VOLUME|LIVE_NAME|\
       ACTIVITY_API_PORT|DEV_VESSEL_PORT|DISCOVERY_PORT|IDENTITY_PORT|GOAL_HOST_PORT|\
-      ANALYSIS_PORT|CONCEPT_DB_PORT|STATEFUL_UI_PORT|HUMAN_SURFACE_PORT)
+      CONCEPT_DB_PORT|STATEFUL_UI_PORT|HUMAN_SURFACE_PORT)
         echo "$n" >> "$WORK/$lane.unjudged" ;;
       *) envargs+=( -e "$n=$(sentinel_for "$n")" ) ;;
     esac

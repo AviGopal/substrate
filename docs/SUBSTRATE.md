@@ -63,7 +63,7 @@ selection to name when an obsidian image must keep its surface.
 > `PROFILE=hub` is a composition defined separately in the inventory's
 > `composed_profiles`: the `hub` group plus the `autonomy` role, plus the compute
 > services a hub needs to dispatch (goal-host, development, local-tools, ribosome,
-> analysis, light-dispatch) and boredom. `hub-minimal` is the `hub` group alone.
+> light-dispatch) and boredom. `hub-minimal` is the `hub` group alone.
 > Read the current compositions from the inventory rather than from this note:
 > `jq '.composed_profiles' scripts/substrate/vessels.inventory.json`. What each
 > profile is for is in [README § Installation](../README.md#installation).

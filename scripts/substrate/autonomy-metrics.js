@@ -219,7 +219,7 @@ try {
     const VESSELS = [
         "development-vessel", "goal-host-vessel", "llm-resolver-vessel", "ribosome-vessel",
         "local-tools-vessel", "light-dispatch-vessel", "discovery-vessel", "boredom-vessel",
-        "ias-executor-ts", "concept-db", "activity-api", "analysis-vessel",
+        "ias-executor-ts", "concept-db", "activity-api",
         "stateful-ui-vessel", "obsidian-vessel", "identity-vessel",
     ];
     const gitCount = async (repo, sinceArgs) => {

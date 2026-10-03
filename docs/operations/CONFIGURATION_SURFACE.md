@@ -78,7 +78,7 @@ used, a partial set is warned about and boots as before.
 | `SUBSTRATE_CONTAINER`, `WORKSPACE_VOLUME`, `SURREAL_VOLUME` | `SUBSTRATE_NAME` | honoured as exact names; gen-env warns on each |
 | `LIVE_NAME` | `SUBSTRATE_NAME` | honoured; `make up` and gen-env warn |
 | `PORT_OFFSET` | `SUBSTRATE_PORT_PREFIX` | translated to prefix `18 + n/1000` by `make up` (with a warning); `ui-only-up.sh` accepts the same value only as its `--port-offset` flag and ignores the variable |
-| `ACTIVITY_API_PORT`, `DEV_VESSEL_PORT`, `DISCOVERY_PORT`, `IDENTITY_PORT`, `GOAL_HOST_PORT`, `ANALYSIS_PORT`, `CONCEPT_DB_PORT`, `STATEFUL_UI_PORT`, `HUMAN_SURFACE_PORT` | `SUBSTRATE_PORT_PREFIX` | honoured by the manifest as a per-port override; gen-env warns on each, and refuses one that contradicts an explicit `SUBSTRATE_PORT_PREFIX` |
+| `ACTIVITY_API_PORT`, `DEV_VESSEL_PORT`, `DISCOVERY_PORT`, `IDENTITY_PORT`, `GOAL_HOST_PORT`, `CONCEPT_DB_PORT`, `STATEFUL_UI_PORT`, `HUMAN_SURFACE_PORT` | `SUBSTRATE_PORT_PREFIX` | honoured by the manifest as a per-port override; gen-env warns on each, and refuses one that contradicts an explicit `SUBSTRATE_PORT_PREFIX` |
 | `ENABLED_ROLES=hub` + a hand-listed `ENABLED_EXTRA_VESSELS` | `PROFILE=hub` | honoured: both still refine the unit set |
 | `MITOSIS_DIRECT_PUSH` as the autonomy switch | push capability (`SUBSTRATE_GIT_PAT` + `SUBSTRATE_REPO_OWNER`) + `pushPolicy` | honoured only as the kill switch (`0` stops autonomous landing) |
 

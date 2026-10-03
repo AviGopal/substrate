@@ -167,7 +167,7 @@ graph TD
     Proxy --> Where{"Who advertises it?"}
     Where -->|"local-tools-vessel"| LT["shellResult, fileContent, fileWriteResult,<br/>fileEditResult, gitStatus, gitDiff,<br/>gitCommitResult, codeSearchResult,<br/>codeTypecheckResult, webSearchResult, …"]
     Where -->|"activity-api"| AA["activityExecutionTrace, activityTemplate,<br/>activityMetrics, compositionGraph,<br/>impulseRelevance, toolUsage_write,<br/>executionSequences_write, …"]
-    Where -->|"another vessel"| Other["development-vessel, concept-db,<br/>obsidian-vessel, analysis-vessel, …"]
+    Where -->|"another vessel"| Other["development-vessel, concept-db,<br/>obsidian-vessel, …"]
     Where -->|"a peer substrate"| Peer["forwardResolveToPeers →<br/>federation transport egress"]
 
     Builtin --> Out([Loaded impulse])

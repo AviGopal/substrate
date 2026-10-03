@@ -197,7 +197,7 @@ done
 # Only the digits after the last ':' are compared, since a legacy value may carry
 # a host address (127.0.0.1:18310).
 for _pp in ACTIVITY_API_PORT:8080 DEV_VESSEL_PORT:8090 DISCOVERY_PORT:8100 IDENTITY_PORT:8101 \
-           GOAL_HOST_PORT:8210 ANALYSIS_PORT:8250 CONCEPT_DB_PORT:8260 STATEFUL_UI_PORT:8270 \
+           GOAL_HOST_PORT:8210 CONCEPT_DB_PORT:8260 STATEFUL_UI_PORT:8270 \
            HUMAN_SURFACE_PORT:8310; do
   _pn="${_pp%%:*}"; _pc="${_pp##*:}"
   _pv="${!_pn:-}"
@@ -1428,9 +1428,9 @@ REDIS_URL="${REDIS_URL:-redis://127.0.0.1:6379}"
 #
 # Each concept below has drifted into TWO+ historical env-var names across the
 # fleet (confirmed by grepping every vessel's src/ for process.env.*DISCOVERY*
-# and process.env.*ACTIVITY_API* — 2026-07-02): local-tools-vessel/analysis-vessel
-# read DISCOVERY_ENDPOINT; goal-host/llm-resolver/ribosome/concept-db/analysis/
-# stateful-ui read DISCOVERY_VESSEL_ENDPOINT; concept-db/analysis-vessel also read
+# and process.env.*ACTIVITY_API* — 2026-07-02): local-tools-vessel
+# reads DISCOVERY_ENDPOINT; goal-host/llm-resolver/ribosome/concept-db/
+# stateful-ui read DISCOVERY_VESSEL_ENDPOINT; concept-db also reads
 # ACTIVITY_API_URL alongside ACTIVITY_API_ENDPOINT; goal-host additionally reads
 # PRODUCER_DISCOVERY_ENDPOINT for its forward-producer walk (defaults to the same
 # vessel as ACTIVITY_API_ENDPOINT unless deliberately split). All aliases for a

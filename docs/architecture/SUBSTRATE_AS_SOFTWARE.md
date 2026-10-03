@@ -129,7 +129,6 @@ not this chart).
 | **llm-resolver-vessel** | owns `llm_completion`; wanted by any task whose resolver tier is `llm` | step 2/4: the high-directional-uncertainty resolver (§4) | authored-durable (impl) / ephemeral (a call) |
 | **local-tools-vessel** | owns filesystem/process resolvers + `code_verify_typecheck` | step 2/4: deterministic resolvers + verification | authored-durable / ephemeral |
 | **concept-db** | owns concept-graph shapes + dense semantic search | step 1 recall priors; step 8 concept promotion | learned-durable (concepts) |
-| **analysis-vessel** | owns `problem_detection`/`source_code`/`code_quality`/`cpg_query_result` (cpg-inference, stateless) — the discovery-registered analyzer | step 2/4: code-analysis resolution | authored-durable (stateless) |
 | **ribosome-vessel** | wants successful traces (activity-api WS); owns template extraction | step 8c: mint a template from a reached trace | writes structural learned-durable |
 | **boredom-vessel** | wants idle time; owns the autonomous goal drive | step 0 generator — the substrate's heartbeat | drives Recall |
 | **development-vessel** | owns `memoryNote` (authoritative memory) + dev meta-activities (gap→feature, feature-compose, cutover) | the self-* machinery (§5); memory across sessions | authored-durable (it authors code) + learned-durable (memory) |

@@ -416,7 +416,6 @@ RUN chmod +x /usr/local/bin/substrate-entrypoint /usr/local/bin/gen-env /usr/loc
         ribosome-vessel.service \
         concept-db.service \
         concept-db-seeder.service \
-        analysis-vessel.service \
         stateful-ui-vessel.service \
         human-surface-vessel.service \
         light-dispatch-vessel.service \

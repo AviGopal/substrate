@@ -125,7 +125,7 @@ printf '%s' "${SCAN}" | jq -r '.body.requests[]? | select(.text != null) | .text
     # → cutover loop authors it, gates it (typecheck + stub + semantic), and lands it on
     # origin/dev (or rejects via the gates). We only CREATE the gap + ack; landing stays gated.
     GAPID="human-request-${SLUG}"
-    VHINT=$(printf '%s' "${TEXT}" | grep -oiE 'goal-host-vessel|activity-api|development-vessel|discovery-vessel|identity-vessel|llm-resolver-vessel|local-tools-vessel|analysis-vessel|concept-db|boredom-vessel|ribosome-vessel|stateful-ui-vessel|relevance-sink-vessel|obsidian-vessel|obsidian' | head -1 | tr '[:upper:]' '[:lower:]')
+    VHINT=$(printf '%s' "${TEXT}" | grep -oiE 'goal-host-vessel|activity-api|development-vessel|discovery-vessel|identity-vessel|llm-resolver-vessel|local-tools-vessel|concept-db|boredom-vessel|ribosome-vessel|stateful-ui-vessel|relevance-sink-vessel|obsidian-vessel|obsidian' | head -1 | tr '[:upper:]' '[:lower:]')
     # An "obsidian" hint (the human's own surface) canonicalises to obsidian-vessel,
     # which is in CANONICAL_VESSELS — so "develop obsidian ..." routes the gap to
     # obsidian-vessel authoring (feature_compose can target it) rather than staying

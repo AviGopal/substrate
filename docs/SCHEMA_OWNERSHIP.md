@@ -24,8 +24,7 @@ so the boundary is enforced by table `PERMISSIONS` and by the discipline below.
    table, not of the calling code.
 5. **Not every store is SurrealDB.** A vessel can own state without owning a
    table — development-vessel's `memoryNote` store is a JSON file under the
-   workspace root, and analysis-vessel is stateless (per-request analysis over
-   the code property graph, no datastore connection at all). Ownership of a
+   workspace root. Ownership of a
    store is still ownership; the write path is still the owner's resolver.
 
 ## Where schema lives and who applies it

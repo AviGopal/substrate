@@ -7,8 +7,8 @@
 #
 #   deploy.sh --env-file <generated .env> --ship-image user@host
 #
-# The same node: a full substrate publishing the same seven ports beyond the
-# host — 18080, 18090, 18100, 18210, 18250, 18260, 18270. The manifest's other
+# The same node: a full substrate publishing the same six ports beyond the
+# host — 18080, 18090, 18100, 18210, 18260, 18270. The manifest's other
 # ports are published on 127.0.0.1 only.
 #
 # Inputs it still reads (from the environment only — ~/.metabob is no longer

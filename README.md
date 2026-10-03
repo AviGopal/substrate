@@ -101,7 +101,7 @@ substrate itself; the cockpit adds node/npx and [Bun](https://bun.sh) (the cockp
 | Profile | Runs | Local data | Resolves remotely | Use it for |
 |---|---|---|---|---|
 | `standalone` (root default) | everything: store, control, api, models, compute, ui, transport, autonomy | all of it | nothing | one self-contained substrate |
-| `hub` | registry, identity, trace store + learner, stores, models, transport + relay, plus goal-host, development, local-tools, ribosome, analysis, light-dispatch, and the self-development loop (autonomy + boredom) | the network's learning state and gap store | nothing | the network's home; it dispatches and self-develops next to its posteriors (its landings still need push capability) |
+| `hub` | registry, identity, trace store + learner, stores, models, transport + relay, plus goal-host, development, local-tools, ribosome, light-dispatch, and the self-development loop (autonomy + boredom) | the network's learning state and gap store | nothing | the network's home; it dispatches and self-develops next to its posteriors (its landings still need push capability) |
 | `hub-minimal` | the `hub` role without compute | as `hub` | goal execution (a spoke) | a control-plane or relay-only node |
 | `spoke` (remote-anchor default) | registry (local), compute, ui, transport | the host's files and tools (why the spoke exists) | identity, traces, learning, lessons, LLM arms, from the hub | adding compute or local data to a network |
 | `surface` | registry, transport, human surface | none | everything | a human's local window onto a network |
@@ -133,7 +133,6 @@ only the vessels the profile selects.
 | `P100` | discovery | clients, spokes, peers | all |
 | `P101` | identity | clients, spokes | standalone, hub, hub-minimal |
 | `P210` | goal-host | clients | standalone, hub, spoke, compute |
-| `P250` | analysis | clients | standalone, hub, spoke, compute |
 | `P260` | concept-db | spokes (lessons) | standalone, hub, hub-minimal |
 | `P270` | stateful UI | humans | standalone, spoke |
 | `P310` | human surface | humans | standalone, spoke, surface |
@@ -502,7 +501,7 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 - **concept-db** (`repos/concept-db`) — concept-graph shapes + dense semantic search.
 - **development-vessel** (`repos/development-vessel`) — meta-vessel for substrate self-development; owns the authoritative `memoryNote` store.
 - **identity-vessel** (`repos/identity-vessel`) — single source of truth for authentication (HMAC API keys + JWT issuance).
-- **analysis-vessel** (`repos/analysis-vessel`) — code-analysis resolver (supersedes the standalone analysis-api as the discovery-registered surface).
+- **analysis-vessel** (`repos/analysis-vessel`) — *retired from the running fleet.* The code-analysis resolver. Its inventory entry is marked `"retired": true`, so `apply-inventory` masks its unit under every profile and no deployment publishes a port for it; the source stays in the tree.
 - **workbench** (`repos/workbench`) — *source-only, not part of the running fleet.* An observability and human-in-the-loop authoring surface over `activity-api`. It ships no systemd unit, is absent from `scripts/substrate/vessels.inventory.json`, and no deployment publishes a port for it — do not expect to find it on a running substrate.
 - **stateful-ui-vessel** (`repos/stateful-ui-vessel`) — the substrate's own UI: a pool of panels and interactor impulses served as a three-region view (pool / execution / decisions).
 - **obsidian-vessel** (`repos/obsidian-vessel`) — the human interface; each connected vault is a surface to a different human resolver, reached through the vessel's sidecar conduit.

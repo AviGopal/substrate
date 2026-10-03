@@ -261,7 +261,7 @@ done
 # The engine's view is not the host's: a fresh HOME gives rootless Podman a fresh
 # store, which cannot see a fleet another user or store already runs. A listener on
 # a port the page publishes is that fleet, whatever store it lives in.
-for port in ${ACCEPTANCE_PORTS:-18080 18090 18100 18101 18210 18250 18260 18270 18310 18333}; do
+for port in ${ACCEPTANCE_PORTS:-18080 18090 18100 18101 18210 18260 18270 18310 18333}; do
   (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null && warm+=("port $port already answers on this host")
 done
 # No build toolchain: a page step that quietly builds instead of pulling would pass here
