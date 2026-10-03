@@ -580,3 +580,11 @@ A regression class counts as covered only if negating or removing the shipped ch
 - The staged_base_sha check is re-aimed from route-edit-61819178 to a cutover-sited gap.
 
 **Local rollout complete at 04:59:39Z.** The secret-mask probe passes by effect on every LOCAL node, which meets the re-apply condition for the scripts/substrate autonomyScope widening locally only; the hub is unmeasured (it needs its own recreate and probe through the user). SurrealDB 2.3.10 is on hold until the database session's compat check passes (node 1's recreate interrupted its export at ~04:58; the quiet gate will now also check for running exports).
+
+### Post-rollout liveness re-audit (10-03 ~05:05Z; blob hashes of the code each unit LOADS)
+- **All 5 rollout nodes run image 6f062c16, label 60ae05a0.**
+  - 326061de, 496d9896 and cecb0925 are LIVE wherever the unit runs: syzygy-local-surface, syzygy-local-inventory and pubspoke; on disk on node 1 (transport unit not running) and node 2 (transport masked).
+  - af119736 and lib 69256d9 are loaded on none of them.
+- **Deviation 1:** nethub-live (compose project "nethub", started 04:58:49Z from ghcr :dev at af119736) runs af119736's relay.ts, so the unmeasured relay change is LIVE there. Ownership and pinning are being asked of the deployment session.
+- **Deviation 2:** pubspoke's pull-sync mirrored lib 69256d9 into /vessels at 04:59:07Z and restarted the transport, which still loads the baked copy (c90decc). Nothing new became live; it was a no-op restart.
+- **Watch:** node 2's pull-sync gate shadow-evaluates af119736's relay.ts ("verdict soaking 865b4a28: shadow pass 1/3"). It may promote it through the gate path without an image change. Unverified; asked.
