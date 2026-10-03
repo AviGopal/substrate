@@ -24,6 +24,7 @@ import { createLibp2p } from 'libp2p'
 import { tcp } from '@libp2p/tcp'
 import { webSockets } from '@libp2p/websockets'
 import { noise } from '@chainsafe/libp2p-noise'
+import { asCrypto, defaultCrypto } from '@chainsafe/libp2p-noise/crypto'
 import { yamux } from '@chainsafe/libp2p-yamux'
 import { identify } from '@libp2p/identify'
 import { circuitRelayServer } from '@libp2p/circuit-relay-v2'
@@ -106,7 +107,15 @@ const node = await createLibp2p({
   privateKey,
   addresses: { listen, announce },
   transports: [tcp(), webSockets()],
-  connectionEncrypters: [noise()],
+  // Noise's default crypto hands every frame of 1200 bytes or more to node:crypto's
+  // chacha20-poly1305, which Bun does not implement ("Unknown cipher"). A frame that
+  // size only forms when writes coalesce under backpressure, so the link works until two
+  // circuits carry large bodies at once, then aborts and resets every circuit on it.
+  // Use the AssemblyScript cipher at every size; it is the same algorithm on the wire,
+  // so this only matters to the process that encrypts or decrypts. Keep it identical to
+  // createVesselLibp2p's encrypter: a peer still on the default fails to decrypt the
+  // large frames this side can now send.
+  connectionEncrypters: [noise({ crypto: { ...defaultCrypto, chaCha20Poly1305Encrypt: asCrypto.chaCha20Poly1305Encrypt, chaCha20Poly1305Decrypt: asCrypto.chaCha20Poly1305Decrypt } })],
   streamMuxers: [yamux()],
   services: {
     identify: identify(),
