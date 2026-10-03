@@ -494,7 +494,7 @@ Measured from the live autonomyScope pool row. The count is how load-bearing the
 |---|---|---|---|
 | ias-executor-ts ed58e66 (state signature) | lane-authored (operator-armed: SUPERVISED) | own check PASSED at cutover (node 1) | consumer effect check still owed, in a clean window after 03:40Z |
 | activity-api fa73778 (pooled query) | lane-authored (operator-armed) | UNGATED: node 2 ran pre-gate code | correct by its own check (2/2) |
-| libp2p-federation-transport 69256d9 (noise cipher) | lane-landed but OPERATOR-DERIVED (byte-identical to the network session's verified patch) | landed_unverified; post-land suite ran=false; the sweep is set to close it landed_verified on a literal | unmeasured |
+| libp2p-federation-transport 69256d9 (noise cipher) | lane-landed but OPERATOR-DERIVED (byte-identical to the network session's verified patch) | landed_unverified; post-land suite ran=false; the sweep is set to close it landed_verified on a literal | unmeasured AND NOT LIVE: the transport runs the image-baked copy (e1c06f60), so the fix runs nowhere until an image rebuild and recreate |
 
 **Autonomous AND gate-verified: 1 of 3, and not yet by effect.**
 
