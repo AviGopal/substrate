@@ -315,3 +315,27 @@ Sequence: land gap 1 (one grading occasion, two-sided abstention) and gap 2 (the
 | recommend-state-signature-… | ias-executor-ts | f155e05 | present at f155e05 |
 | the-pooled-authenticated-query-path-… | activity-api | f060319 | present at f060319 |
 | active-dispatches-pagination-test-file-fails-to-load-… | goal-host | 0cf7800, df1880f, 1ecacf5 | present at 1ecacf5 |
+
+## Addendum folded (qa-CONFIRMED 10-03): capability, closure, vocabulary
+Full text: WIRING-ADDENDUM.md (sections A capability construction and content threading, B closure after output, C vocabulary and intent), written by the human-surface session's three read-only investigators. The adopted order gains:
+- **Step 1, stop active harm, adds:**
+  - (a) the NARROW 77785f4 fix: deliverable-shapes admits a composite's terminal when every task RESOLVER is advertised. Must-fail: obsidian:write_note with no live producer stays non-aimable. Must-pass: conceptDescription with an all-live-resolver composite. It is one shared function that step 3's "claimed" predicate extends.
+  - (b) an SF_BLEND latch OFF-PATH, in code. The blend stays ON until a reach-graded A/B split by author and kind.
+  - (c) retire, or make honest, concept-db's hollow write advertisements (supersede, retire, delete answer 400).
+  - (d) CALLER-LOSS (static, at diff time) and CONTRACT-MISMATCH (by effect, at the packages/ HTTP seam) detectors, sharing one gap output, plus a backfill since 06-01. Findings become gaps or retirement records, not restorations. K6 fixtures; af61dee and the hydrate are the positive controls.
+- **Steps 2, 4 and 5:** unchanged.
+- **Step 3:** after gaps 1 and 2, inside the single reader:
+  - B§1 publish graded, content-bearing outputs (secret scan; PERMISSIONS on org_id);
+  - B§3 offer, with composition_impulse_flow rows and a named reader;
+  - B§4 offered-consumption credit (the 07-20 law) in the §2.2 fold;
+  - A§4 content threading (author-producer slot-append via acc.ts:521-539; unresolved placeholders fail);
+  - the C§1 claimed predicate (the 06-04 ruling enforced; coverage-tick stops rewarding novelty).
+- **After step 3 plus the extraction gates (this activates minting):**
+  - re-author the af61dee callers as a LANE GOAL, with the old body as reference and no revert. Must-fail: an in-run mint that does not reach is retired or held provisional.
+  - the 5c974cb7 envelope fix, after resolving the VesselResolver contradiction.
+- **Then step 6.**
+- **Then class capability:** solicitation at the stall, credentials by locality, floor tools, vesselization. Acceptance: two held-out probes of "unserved outbound shape → compose, credential, send, read back". Stage must-fail: a send with no read-back never grades reached.
+- **The standing-pool hydrate:** DELETE (born broken, no consumer; B§3 replaces it).
+- **Pending the user:**
+  - "one execution" restated as one dispatch that may SUSPEND on a prerequisite and RESUME, not restart;
+  - two read-only DB reads: attributing the 620/24h wrong-form rejections (trace state_space_signature joined to cts_sig_lookup), and the #8 used_scope count.
