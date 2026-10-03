@@ -618,3 +618,10 @@ A regression class counts as covered only if negating or removing the shipped ch
 - **Live on node 1** (`accelerator-flag-tick.ts` blob 581617175ee6 loaded; activity-api restarted 05:35:24Z, after the file changed at 05:35:23Z). Node 2 masks activity-api by design.
 - **The effect is latent.** The off path reads the `SF_BLEND_VERDICT` tuning param, and nothing writes it yet; the reach-graded A/B is its writer (the open gap sf-blend-has-no-reach-graded-a-b-…). The blend stays on until that A/B, as WIRING step 1(b) requires.
 - Guard row: unit check (armed) plus a tip-only deploy gate; range unproven (the range rule).
+
+### Measurement exclusion: node 1 selection log, 2026-10-03 05:42:30–05:44:30Z
+- **Source:** the database session's post-upgrade smoke dry runs: 4 /recommend groups, 12 rows.
+  - One tagged probe: `sel_1791006263630_kxkhrd_0/1/2`.
+  - Three untagged groups: `sel_1791006165568_4vxfa8`, `sel_1791006166635_sju385`, `sel_1791006191530_3hex6y`.
+- **Rule:** every selection or credit measurement excludes this window.
+- **Why a time window:** the log has no caller or probe field to exclude these rows by identity. That is now part of the selection-log gap (the-selection-log-keeps-no-state-signature-…), which comes first in step 3's selection work.
