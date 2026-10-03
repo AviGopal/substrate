@@ -84,9 +84,10 @@
 #      log message that says "curl exit" is not one) on it, on one of the 3 lines above, or on its
 #      backslash-continuation chain; or a `fetch(NAME` / curl `$NAME` of a name bound to such a URL.
 #      The credential window is predicate 3's (3 above to 8 below), except that a name bound near a
-#      credential counts only when the window CALLS it or its name says what it carries (auth, header,
-#      hdrs, cred, key): in a large vessel file a bare `body` or `ok` bound near some credential
-#      elsewhere is not evidence. In a unit file the window is the request's own Exec line chain.
+#      credential counts only on the request's own line or below, and only when it is CALLED there or
+#      its name says what it carries (auth, header, hdrs, cred, key): in a large vessel file a bare
+#      `body` or `ok` bound near some credential elsewhere is not evidence, nor is an unrelated
+#      `await main()` on the line above. In a unit file the window is the request's own Exec line chain.
 #      A request that exists to prove the route refuses an unauthenticated caller (it expects 401) is
 #      exempt when a comment within the 2 lines above it says `resolve-auth: deliberately
 #      unauthenticated`, so the exemption is greppable and reviewed with the line. identity-vessel's
@@ -358,6 +359,7 @@ END {
       # A credential-bound name counts when it is CALLED here (a headers()/post() helper) or is named
       # for what it carries; a bare token such as body / ok / pointer that happens to be bound near some
       # credential elsewhere in a large file is not evidence.
+      if (k < i) continue # a bound name is evidence only in the request itself (its line and below)
       m = split(v, tok, /[^A-Za-z0-9_]+/)
       for (j = 1; j <= m; j++) if (tok[j] in authid && (tolower(tok[j]) ~ /auth|header|hdrs?$|cred|key/ || v ~ ("(^|[^A-Za-z0-9_])" tok[j] "[ \t]*\\("))) { cred = 1; break }
     }
@@ -671,6 +673,21 @@ Description=not a request: curl "$${E}/resolve"
 ExecStartPre=/bin/bash -c 'curl -s -X POST "$${DISCOVERY}/resolve" -d "{}"'
 ExecStart=/bin/bash -c 'srv_auth | curl -K - -s -X POST "$${DISCOVERY}/resolve" -d "{}"'
 EOF
+cat > "$F/p7-near.ts" <<'EOF'
+const KEY = process.env.METABOB_API_KEY ?? "";
+async function main() {
+  await fetch(`${DEV}/v2/impulses/resolve`, { method: "POST", headers: { Authorization: `ApiKey ${KEY}` } });
+  console.log("one");
+  console.log("two");
+  console.log("three");
+}
+await main();
+export async function probe() { return fetch(`${DISCOVERY}/resolve`, { method: "POST", body: "{}" }); }
+EOF
+got="$(scan_any_resolve_file "$F/p7-near.ts" p7-near.ts | tr '\n' ' ')"
+[ "$got" = "p7-near.ts:9 " ] \
+  && ok "negative control (P7, near a credential): an uncredentialed fetch right after an unrelated call to a credentialed helper is flagged (p7-near.ts:9)" \
+  || bad "negative control (P7, near a credential): expected 'p7-near.ts:9', got '${got}'"
 got="$(scan_any_resolve_file "$F/p7-neg.ts" p7-neg.ts | tr '\n' ' ')"
 [ "$got" = "p7-neg.ts:4 p7-neg.ts:8 p7-neg.ts:12 " ] \
   && ok "negative control (P7, ts): a discovery /resolve read, a fetch through a bound route name and a multi-line fetch with no credential are flagged (p7-neg.ts:4, :8, :12)" \
