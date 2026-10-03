@@ -42,14 +42,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         systemd-journald-audit.socket
 
 # --- Bun ---
-RUN curl -fsSL https://bun.sh/install | bash
+# Installed under /opt/bun (0755), with /root/.bun a symlink to it so every /root/.bun/bin/bun reference
+# still resolves. /root is 0700, so a bun reachable only through it is unusable by any other uid, and the
+# gate's shadow evaluator runs its fixtures as nobody: a fixture that needs bun there could judge nothing.
+RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/opt/bun bash \
+ && ln -s /opt/bun /root/.bun && ln -s /opt/bun/bin/bun /usr/local/bin/bun
 ENV PATH=/root/.bun/bin:$PATH
 # Global tsc + a node→bun shim (tsc's shebang wants node; this is a bun-only
 # image). The compose verify gate runs each vessel's `typecheck` script in a
 # TRANSIENT checkout with no node_modules, so a repo-local typescript can never
 # serve it — a vessel without this was structurally un-editable through the
 # learning loop (every draft rolled back with exit 127, measured 2026-09-15).
-RUN bun install -g typescript && ln -sf /root/.bun/bin/bun /usr/local/bin/node
+RUN bun install -g typescript && ln -sf /usr/local/bin/bun /usr/local/bin/node
 
 # --- SurrealDB ---
 ARG SURREAL_VERSION=2.3.10

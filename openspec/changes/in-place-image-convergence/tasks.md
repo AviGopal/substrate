@@ -14,11 +14,13 @@
 
 ## 2. Tier B: federation runtime tree
 
-- [ ] 2.1 Fixture script: candidate relay plus two transports on random loopback ports, concurrent ≥1 MiB reads across two circuits; a small-frame single-circuit control; time-bounded, no egress, every spawned process killed.
-- [ ] 2.2 Mutation proof, side by side: FAIL on lib 542e712, PASS on 69256d9, control passes on both. Recorded as 69256d9's first measurement.
+- [ ] 2.0 Prerequisite: the image gives the shadow sandbox's nobody an executable bun (bun under `/opt/bun`, `/root/.bun` a symlink to it). Until nodes run such an image, a bun-based fixture can only report "cannot judge", so the fixture lands after the recreate.
+- [ ] 2.1 Fixture `validation/scripts/gate/fixtures/federation-relay-large-frames.sh`: the candidate relay on a random loopback port, with three fixture-owned nodes (DCUtR and AutoNAT off, AssemblyScript cipher) and two circuits. A 200-byte control runs first, then 1 MiB on both circuits at once in 16 KiB writes. A run that sent no frame of 1200 bytes or more is "cannot judge". The candidate transport server is not run: by default it calls live loopback services, and the sandbox shares the node's network.
+- [ ] 2.2 Mutation proof, side by side, on `relay.ts`: FAIL at af119736^, PASS at af119736, with the control passing on both (measured 5 of 5 each, as nobody under env -i). The lib (542e712 vs 69256d9) is not the variable: it is not in the converged tree (see 2.6), and swapping it does not change the result.
 - [ ] 2.3 Add it under `fixture_paths` (ordinary under gate-policy).
 - [ ] 2.4 pull-sync converges `/usr/local/share/substrate/super-repo/scripts/substrate` from `accepted/`, keeping last-good (coordinator).
-- [ ] 2.5 Verify by effect: a transport change judged by the fixture goes live on a canary without a recreate; loaded-blob hash plus the large-frame check.
+- [ ] 2.5 Verify by effect: a relay change judged by the fixture goes live on a canary without a recreate; loaded-blob hash plus the large-frame check.
+- [ ] 2.6 The relay tree's `@avigopal/libp2p-federation-transport` is a copy made at image build. A lib fix (the transport side of the noise fix was one) therefore still needs a recreate even after 2.4. Converging it needs its own installer and a fixture that varies it.
 
 ## 3. Tier C: base runtime upgrade activity
 

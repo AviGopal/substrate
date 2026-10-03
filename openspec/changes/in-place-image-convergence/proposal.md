@@ -31,14 +31,22 @@ reviewed by qa.
   are outside, and stay baked unless `gate_paths` is extended through the criterion path.
 
 **Tier B: the federation runtime tree converges after a behavioural gate fixture exists.**
-- A Gate P shadow fixture runs the candidate's relay and two transports on random loopback ports inside the
-  shadow sandbox. It drives concurrent ≥1 MiB reads across two circuits and fails on any `Unknown cipher` or
-  short read. A control (small frames, single circuit) passes on both libs. It is time-bounded, uses no
-  egress, and kills every process it spawns.
-- Mutation proof before it counts: FAIL on lib 542e712, PASS on 69256d9, side by side. That run is 69256d9's
-  first measurement.
+- A Gate P shadow fixture runs the candidate's relay on a random loopback port, with fixture-owned nodes on
+  either side of two circuits. DCUtR and AutoNAT are off and every node uses the AssemblyScript cipher, so
+  only the candidate relay can mis-encrypt a large frame. A 200-byte control must pass first. Then 1 MiB
+  goes over both circuits at once, in writes large enough that frames of 1200 bytes or more are certain. A
+  run that sent none is "cannot judge", never a pass. It is time-bounded, uses no egress, and kills every
+  process it spawns. The candidate transport server is not run: by default it calls live loopback services,
+  and the shadow sandbox shares the node's network.
+- Mutation proof before it counts: FAIL with `relay.ts` at af119736^, PASS at af119736, side by side. The
+  lib pair (542e712, 69256d9) named earlier is not the variable: the lib is not in the converged tree, and
+  swapping it does not change the result.
+- The fixture needs a bun that the sandbox's nobody can execute. The image provides one from the change that
+  adds it; the fixture lands only after nodes run that image.
 - Then pull-sync converges `/usr/local/share/substrate/super-repo/scripts/substrate` from `accepted/`,
   keeping the last-good copy as fallback. Adding a fixture path is ordinary under gate-policy, not a widening.
+- Not covered: the relay tree's copy of `@avigopal/libp2p-federation-transport` is made at image build, so a
+  lib fix still needs a recreate. Converging it is a separate step with its own fixture.
 
 **Tier C: base runtime upgrades through an in-place upgrade activity, not a recreate.**
 - A primitive, `scripts/substrate/runtime-upgrade.sh`, generalised from the hub procedure. It is wrapped by an
