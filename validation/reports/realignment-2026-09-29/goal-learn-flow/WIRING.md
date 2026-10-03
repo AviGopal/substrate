@@ -381,3 +381,13 @@ The organs that carry it already exist: self_fact_reconcile rows (selfFactSpec),
 4. **Instance and class rows are tagged.** An instance row retires when its joint is retired or replaced by a class row.
 5. **Spend.** Spend per rhythm is declared within the $5/h envelope. Row and probe dispatches are excluded from the lane's reach and close-rate denominators.
 6. **Reporting.** "N/M rows green" is NOT the headline (law 7: registering easy rows games it). Progress is reported as the gap triple, with row state as evidence.
+
+## RULING (user, 10-03): one execution. This replaces the PENDING item above.
+"So long as the dispatch is 'live' and not graded it counts as one execution. It can pause while waiting for a human to provide credentials iff it is through an interface the system provides (a shape)."
+1. **One execution** is one dispatch from start until its reach verdict is graded. Suspend and resume inside that window count; a new dispatch or a re-grade does not.
+2. **The pause goes only through a system-provided shape**: the human as resolver via a shaped request, never an out-of-band ask, an operator edit or an env change.
+3. **A credential never enters the pool, the trace or the LLM context.** The solicitation answer path (opts.variables.human_input) must not carry one. A shaped value-blind credential entry is required, writing to the secret store under the 10-02 secret_set ruling, with the walk receiving a reference by name. This is the missing shape, filed as a-human-supplied-credential-has-no-shaped-value-blind-path-so-solicitation-would-put-the-secret-into-the-run.
+4. **Grading waits for a suspended dispatch.** No reach verdict is written while it is paused on a human.
+   - Timeout outcome (coordinator decision): grade "not reached: prerequisite_unmet", tagged with the prerequisite class. The ARM ABSTAINS (no α, no β), because the arm did not fail.
+   - The class tag feeds demand for the prerequisite (wrongness as a goal seed).
+5. **Outbound-class acceptance uses this.** Within ONE execution: suspend for the credential through the shape, resume, send, read back, then grade. A send with no read-back never grades reached, and a probe whose credential arrived out of band does not count.
