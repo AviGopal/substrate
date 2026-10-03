@@ -52,7 +52,7 @@ ENV PATH=/root/.bun/bin:$PATH
 RUN bun install -g typescript && ln -sf /root/.bun/bin/bun /usr/local/bin/node
 
 # --- SurrealDB ---
-ARG SURREAL_VERSION=2.3.3
+ARG SURREAL_VERSION=2.3.10
 RUN curl -sSf https://install.surrealdb.com | sh -s -- --version v${SURREAL_VERSION}
 
 # --- Valkey (provided by redis-server installed above) ---
