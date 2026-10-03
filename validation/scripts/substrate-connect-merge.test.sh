@@ -7,8 +7,9 @@
 #   keep      an existing config with extra top-level keys (providers, defaults, a nested object
 #             with a unicode string and a 20-digit integer) and extra keys under metabob/substrate:
 #             every key but the three this command owns is kept, value-for-value (compact form
-#             identical, the big integer's literal intact); substrate.gapStoreEndpoint is UPDATED,
-#             metabob.endpoint/apiKey set
+#             identical); substrate.gapStoreEndpoint is UPDATED, metabob.endpoint/apiKey set. The
+#             integer keeps its literal on a jq that preserves literals (1.7+); a lossy jq (1.6,
+#             the image's) REFUSES the file, byte-identical, instead of rewriting it
 #   create    no file: the file is created with the three keys
 #   no dev    a fleet without development-vessel: an up-to-date file is left BYTE-identical
 #             (an existing gapStoreEndpoint is not removed), and stderr says why no gap store
@@ -56,10 +57,20 @@ cat > "$F" <<'EOF'
 }
 EOF
 cp "$F" "$T/before.json"
-emit
+# The big integer: a jq that keeps number literals (1.7+) merges and keeps it; an older, lossy jq
+# must REFUSE the file (left byte-identical) rather than rewrite it. Probed with the jq connect uses.
+if [ "$(echo 100000000000000000001 | jq . 2>/dev/null)" = 100000000000000000001 ]; then
+  emit
+  grep -q '12345678901234567890' "$F" && ok "keep: a 20-digit integer keeps its literal ($(jq --version))" || bad "keep: the big integer was rewritten"
+else
+  emit
+  [ "$RC" != 0 ] && cmp -s "$F" "$T/before.json" && grep -q 'beyond 2^53' "$T/err.txt" \
+    && ok "keep: a lossy $(jq --version) refuses a file with a 20-digit integer, file byte-identical" || bad "keep: lossy jq rc $RC, file $(cmp -s "$F" "$T/before.json" && echo same || echo CHANGED)"
+  jq '.nested.x.big = 12345' "$T/before.json" > "$F"; cp "$F" "$T/before.json"   # the rest of the leg without it
+  emit
+fi
 [ "$RC" = 0 ] && ok "keep: the instruction exits 0" || { bad "keep: exit $RC"; sed 's/^/    /' "$T/err.txt"; }
 [ "$(jq -c "$owned" "$T/before.json")" = "$(jq -c "$owned" "$F" 2>/dev/null)" ] && ok "keep: every key not owned by substrate-connect is kept, value for value" || bad "keep: other keys changed: $(jq -c "$owned" "$F" 2>&1)"
-grep -q '12345678901234567890' "$F" && ok "keep: a 20-digit integer keeps its literal" || bad "keep: the big integer was rewritten"
 jq -e --arg g "$GS" --arg e "$EP" --arg k "$KEY" '.substrate.gapStoreEndpoint == $g and .metabob.endpoint == $e and .metabob.apiKey == $k' "$F" >/dev/null \
   && ok "keep: gapStoreEndpoint updated, endpoint and apiKey set" || bad "keep: owned keys wrong: $(jq -c '{metabob,substrate}' "$F")"
 [ ! -e "$F.new" ] && ok "keep: no temp file left" || bad "keep: $F.new left behind"

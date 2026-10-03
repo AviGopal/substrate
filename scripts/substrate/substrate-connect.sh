@@ -118,11 +118,17 @@ NEW="$(jq -n -c --arg e "$ENDPOINT" --arg k "$KEY" --arg g "$GAP_STORE_EP" \
 if [ "$MERGE" = 0 ]; then
   printf '%s' "$NEW" | jq .
 else
-  MERGED="$(jq -s --argjson new "$NEW" '
+  # jq before 1.7 parses every number as a double: a merge would silently rewrite an integer
+  # beyond 2^53 in a key this command does not own. Probe the jq in use; when it is lossy, refuse
+  # such a file instead of rewriting it.
+  LOSSY=false; [ "$(echo 100000000000000000001 | jq . 2>/dev/null)" = 100000000000000000001 ] || LOSSY=true
+  MERGED="$(jq -s --argjson new "$NEW" --argjson lossy "$LOSSY" --arg jqv "$(jq --version 2>/dev/null)" '
       if length != 1 then error("the existing config is not one JSON value") else .[0] end
       | if type != "object" then error("the existing config is not a JSON object") else . end
       | if has("metabob") and (.metabob | type) != "object" then error("metabob is not an object") else . end
       | if has("substrate") and (.substrate | type) != "object" then error("substrate is not an object") else . end
+      | if $lossy and ([.. | numbers | select(. > 9007199254740991 or . < -9007199254740991)] | length) > 0
+        then error("the existing config holds a number beyond 2^53 and this jq (\($jqv)) would rewrite it") else . end
       | .metabob = ((.metabob // {}) + $new.metabob)
       | if $new.substrate then .substrate = ((.substrate // {}) + $new.substrate) else . end' "$EXISTING_F" 2>&1)" || {
     echo "[connect] refusing to merge: $(printf '%s' "$MERGED" | tail -1) — nothing printed, so the file is left as it is" >&2
