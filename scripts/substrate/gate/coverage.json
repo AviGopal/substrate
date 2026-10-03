@@ -1,0 +1,2244 @@
+{
+  "_doc": "Tier A coverage map (in-place-image-convergence 1.2). One entry per tier A destination of image-files.manifest. level behaviour: committing the evidence mutation of src makes the named accepted fixture(s) FAIL in gate/shadow-eval.sh; parse: only a syntax mutation does; none: no fixture fails. A tooling path converges in place only at level behaviour with src inside gate_paths; everything else is converged by the image. reason for none: outside-gate-paths (src is not a gate path), units-exempt (see units_exempt), converges-today-uncovered (pull-sync installs it today with no fixture), unreached (baked only). src_blob is the git blob the proof ran on; a live src blob that differs means the proof is older than the code and must be re-earned. Kept consistent by validation/scripts/image-coverage-map.test.sh; proofs re-run by image-coverage-map.check.sh.",
+  "units_exempt": {
+    "dir": "/usr/lib/systemd/system",
+    "reason": "converges today; gated after a unit-verify fixture exists",
+    "owner_gap": "unit-files-converge-in-place-with-no-fixture-that-verifies-them",
+    "expires": "2026-10-17"
+  },
+  "paths": {
+    "/scripts/bootstrap-seeder.ts": {
+      "src": "scripts/bootstrap-seeder.ts",
+      "src_blob": "132776f201c3b4831401347f8c38a9d1034c4e00",
+      "level": "none",
+      "reason": "outside-gate-paths",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/activity-api.service": {
+      "src": "scripts/substrate/units/activity-api.service",
+      "src_blob": "b2819be35c5967abdfc1239f4cd0b07b3af1589e",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/activity-api.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/activity-api.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/analysis-vessel.service": {
+      "src": "scripts/substrate/units/analysis-vessel.service",
+      "src_blob": "9766f2262cc45acb6372dca8bc04007bf45b4848",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/analysis-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/analysis-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/auto-describe-resolvers.service": {
+      "src": "scripts/substrate/units/auto-describe-resolvers.service",
+      "src_blob": "31f7e6490a23c83e11015643ac425123280ff1d7",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/auto-describe-resolvers.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/auto-describe-resolvers.service.d/run-dir.conf",
+      "src_blob": "1bbfd1e867bc6d13a9d1f818b85f761d44694de5",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/auto-describe-resolvers.timer": {
+      "src": "scripts/substrate/units/auto-describe-resolvers.timer",
+      "src_blob": "72d1afbd74a9d35c63483f903c734188426d564d",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/auto-describe-resolvers.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/auto-describe-resolvers.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/autonomy-metrics.service": {
+      "src": "scripts/substrate/units/autonomy-metrics.service",
+      "src_blob": "a06859f1e3cb07acd61c87ba27c51a0211ad66ae",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/autonomy-metrics.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/autonomy-metrics.service.d/run-dir.conf",
+      "src_blob": "ac9f03869a93677176f9fb0da2664a631c333d60",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/autonomy-metrics.timer": {
+      "src": "scripts/substrate/units/autonomy-metrics.timer",
+      "src_blob": "c39aa42a33841d833bddfcf83216c1244b05521b",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/autonomy-metrics.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/autonomy-metrics.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/bootstrap-seeder.service": {
+      "src": "scripts/substrate/units/bootstrap-seeder.service",
+      "src_blob": "fa4361a57943ed750f1c544b5f5ed8a5c7046710",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/boredom-vessel.service": {
+      "src": "scripts/substrate/units/boredom-vessel.service",
+      "src_blob": "3bb2dfbe87faf0923d3354a79866e46cf496a199",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/boredom-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/boredom-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/boredom-vessel.service.d/watchdog.conf": {
+      "src": "scripts/substrate/units/boredom-vessel.service.d/watchdog.conf",
+      "src_blob": "3b31b3ae8cfe533133c72032202aafe998684696",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/boredom-vessel.timer": {
+      "src": "scripts/substrate/units/boredom-vessel.timer",
+      "src_blob": "3cb8a220e527cd53b27a08bbfb72393a1754a610",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/boredom-vessel.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/boredom-vessel.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/coherence-metric.service": {
+      "src": "scripts/substrate/units/coherence-metric.service",
+      "src_blob": "3f2e1411e02d97241f13404f815337cfaa5c5eac",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/coherence-metric.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/coherence-metric.service.d/run-dir.conf",
+      "src_blob": "350c7242a8a569ce4dbbd02ae31d6a9a0b0e7699",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/coherence-metric.timer": {
+      "src": "scripts/substrate/units/coherence-metric.timer",
+      "src_blob": "c49f1d93c6ef49cd17fd5e95d44939c950922142",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/coherence-recover.service": {
+      "src": "scripts/substrate/units/coherence-recover.service",
+      "src_blob": "32ec1056fae3607d2aa96919f5da79f460fb95e8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/coherence-recover.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/coherence-recover.service.d/run-dir.conf",
+      "src_blob": "1884a08ed10796d7fbdfa180f4a5a848b0d1a68d",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/coherence-recover.timer": {
+      "src": "scripts/substrate/units/coherence-recover.timer",
+      "src_blob": "62b37ee5073226748b5848282ed37d30261e7a18",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/compose-drift.service": {
+      "src": "scripts/substrate/units/compose-drift.service",
+      "src_blob": "e933edecd3639d0dd8fc3086104962bdf3f6ac5d",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/compose-drift.timer": {
+      "src": "scripts/substrate/units/compose-drift.timer",
+      "src_blob": "d00c0f9f12fd9e81ce20534ab1c84e34569f5681",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/compose-teacher.service": {
+      "src": "scripts/substrate/units/compose-teacher.service",
+      "src_blob": "82d38caae206b76793934612050855f5deabd770",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/compose-teacher.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/compose-teacher.service.d/run-dir.conf",
+      "src_blob": "d3bb2d91f9f8c349c196ed5ec964ce3ed176945b",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/compose-teacher.service.d/watchdog.conf": {
+      "src": "scripts/substrate/units/compose-teacher.service.d/watchdog.conf",
+      "src_blob": "6e6fd9c9d704411bf7c3cd41aa592b7ce6af7d61",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/compose-teacher.timer": {
+      "src": "scripts/substrate/units/compose-teacher.timer",
+      "src_blob": "c8ad1a288b7102fbd39d031c8ae16c1c0ed88c3a",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/composition-edge-reconcile.service": {
+      "src": "scripts/substrate/units/composition-edge-reconcile.service",
+      "src_blob": "c9efa34a235c22747c23ba4233b60e6fd20a0310",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/composition-edge-reconcile.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/composition-edge-reconcile.service.d/run-dir.conf",
+      "src_blob": "18c566aaefbcee1ac1ab697b4b26e91ba633358b",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/composition-edge-reconcile.timer": {
+      "src": "scripts/substrate/units/composition-edge-reconcile.timer",
+      "src_blob": "2e3e20484e4f638644f2827b2a85fe2b08b2a126",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/composition-edge-reconcile.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/composition-edge-reconcile.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/concept-db-seeder.service": {
+      "src": "scripts/substrate/units/concept-db-seeder.service",
+      "src_blob": "0a8d870e673d405ed1f769f437968a85fa7e6b92",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/concept-db.service": {
+      "src": "scripts/substrate/units/concept-db.service",
+      "src_blob": "30304aa2dd0bca3e882881ccaab23fe5db2ee61b",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/concept-db.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/concept-db.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/db-contention-check.service": {
+      "src": "scripts/substrate/units/db-contention-check.service",
+      "src_blob": "dcccd17c7be6a742d9e397af282aedbbcc92076b",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/db-contention-check.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/db-contention-check.service.d/run-dir.conf",
+      "src_blob": "e1446a332cbcc3ee9675798aa52e38e17345aa27",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/db-contention-check.timer": {
+      "src": "scripts/substrate/units/db-contention-check.timer",
+      "src_blob": "697623b1010f218356036a80b49548001d94bd8b",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/db-maintenance.service": {
+      "src": "scripts/substrate/units/db-maintenance.service",
+      "src_blob": "bb7417a9684df64f214674740ec030036c27e8bf",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/db-maintenance.timer": {
+      "src": "scripts/substrate/units/db-maintenance.timer",
+      "src_blob": "f6497daf9ad3250debd78193cadeeba344089007",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/development-vessel-seed.service": {
+      "src": "scripts/substrate/units/development-vessel-seed.service",
+      "src_blob": "413d05747c7e6882be3c5c6f4a36202b06a01b82",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/development-vessel-seed.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/development-vessel-seed.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/development-vessel.service": {
+      "src": "scripts/substrate/units/development-vessel.service",
+      "src_blob": "36f83c2b286435d5ec7f9e32ed55521e29948049",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/development-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/development-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/development-vessel.service.d/drain-timeout.conf": {
+      "src": "scripts/substrate/units/development-vessel.service.d/drain-timeout.conf",
+      "src_blob": "479813495bb53f098f7f0aeb32ad5fb3a3f52838",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/discovery-vessel.service": {
+      "src": "scripts/substrate/units/discovery-vessel.service",
+      "src_blob": "66116c625837ffc4e2595579c47fba7de6544666",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/discovery-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/discovery-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/discovery-vessel.service.d/federation-peering.conf": {
+      "src": "scripts/substrate/units/discovery-vessel.service.d/federation-peering.conf",
+      "src_blob": "79d12e7e31d7ddc89ec298b4b2694d303a5f9649",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/efficiency-failure-tick.service": {
+      "src": "scripts/substrate/units/efficiency-failure-tick.service",
+      "src_blob": "92d0f1f5d29a5979f5751fef5c0c075c6fecf336",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/efficiency-failure-tick.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/efficiency-failure-tick.service.d/run-dir.conf",
+      "src_blob": "70f06968c54ad2a0e8683694a56ca24d79d6738f",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/efficiency-failure-tick.timer": {
+      "src": "scripts/substrate/units/efficiency-failure-tick.timer",
+      "src_blob": "eb8f88ebfc4a344372c794472c8e02fde014e186",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/federation-relay.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/federation-relay.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/federation-transport-vessel.service": {
+      "src": "scripts/substrate/units/federation-transport-vessel.service",
+      "src_blob": "48e2fc805f96d27cd94d7112f2463f01904647c0",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/federation-transport-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/federation-transport-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/federation-transport-vessel.service.d/lib-refresh.conf": {
+      "src": "scripts/substrate/units/federation-transport-vessel.service.d/lib-refresh.conf",
+      "src_blob": "47d9229b1ab1f0054fa19837886c893fbba51f27",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/funnel-drain.service": {
+      "src": "scripts/substrate/units/funnel-drain.service",
+      "src_blob": "ddcef45c9d853564618a80e04ad60264a2fe51d4",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/funnel-drain.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/funnel-drain.service.d/run-dir.conf",
+      "src_blob": "4e142f6b92dec8f2cf89885431bdcc8d342bb4a6",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/funnel-drain.service.d/watchdog.conf": {
+      "src": "scripts/substrate/units/funnel-drain.service.d/watchdog.conf",
+      "src_blob": "d9c11b0685adeb191e77a9e81581cb7c19d134af",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/funnel-drain.timer": {
+      "src": "scripts/substrate/units/funnel-drain.timer",
+      "src_blob": "332aa7a346f3c0cf17426c8f415198dc4d54b11a",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/funnel-drain.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/funnel-drain.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/gap-compose.service": {
+      "src": "scripts/substrate/units/gap-compose.service",
+      "src_blob": "3b65f0f3e0ad133d9e14f69856dbf65b6f64b163",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/gap-compose.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/gap-compose.service.d/run-dir.conf",
+      "src_blob": "2a020849384a9b13de2190ee639710b84ed914fb",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/gap-compose.service.d/watchdog.conf": {
+      "src": "scripts/substrate/units/gap-compose.service.d/watchdog.conf",
+      "src_blob": "89734692561a7ff8c4abe8ae05e67404f725d636",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/gap-compose.timer": {
+      "src": "scripts/substrate/units/gap-compose.timer",
+      "src_blob": "0bd59cf534c5524fb8cc1a3da3a00a3a5e3b07f9",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/gap-store-census.service": {
+      "src": "scripts/substrate/units/gap-store-census.service",
+      "src_blob": "639eb1657550a27965b08dcf4bbefd2c8ae1b605",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/gap-store-census.timer": {
+      "src": "scripts/substrate/units/gap-store-census.timer",
+      "src_blob": "49196e92272d4ff3e207deaa646149e4f6198977",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/git-push-setup.service": {
+      "src": "scripts/substrate/units/git-push-setup.service",
+      "src_blob": "fcd93d93ea1cb4733737ee72db4d330caf6f6955",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/git-push-setup.service.d/05-secret-dir-out-of-reach.conf": {
+      "src": "scripts/substrate/units/git-push-setup.service.d/05-secret-dir-out-of-reach.conf",
+      "src_blob": "90b334b6dddb3dd22562cad5950b82e6b7e5494e",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/goal-host-behavior.service": {
+      "src": "scripts/substrate/units/goal-host-behavior.service",
+      "src_blob": "ed6535dff03b426cad269b2dc069ea89a024d392",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/goal-host-behavior.timer": {
+      "src": "scripts/substrate/units/goal-host-behavior.timer",
+      "src_blob": "4725cef92256c4319b1e286ad0a03cac296bbe4b",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/goal-host-vessel.service": {
+      "src": "scripts/substrate/units/goal-host-vessel.service",
+      "src_blob": "50ce0bcbb1029f11a2a3df028c7ec3b3071d3691",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/goal-host-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/goal-host-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/goal-host-vessel.service.d/drain-timeout.conf": {
+      "src": "scripts/substrate/units/goal-host-vessel.service.d/drain-timeout.conf",
+      "src_blob": "ccbcc87ee95c149a17874f4ae1d312f76e10c2bf",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/goal-host-vessel.service.d/federation-route-preference.conf": {
+      "src": "scripts/substrate/units/goal-host-vessel.service.d/federation-route-preference.conf",
+      "src_blob": "2602f33bce4bb22bf6bb60023e8b0b992ce59b47",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/human-surface-vessel.service": {
+      "src": "scripts/substrate/units/human-surface-vessel.service",
+      "src_blob": "1b9da9abd43d00c2fdc83380082ed9395cc1a334",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/human-surface-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/human-surface-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/identity-seeder.service": {
+      "src": "scripts/substrate/units/identity-seeder.service",
+      "src_blob": "ba905af50672adb956714ee6a67b0d0fa8c12c8c",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/identity-seeder.service.d/05-secret-dir-out-of-reach.conf": {
+      "src": "scripts/substrate/units/identity-seeder.service.d/05-secret-dir-out-of-reach.conf",
+      "src_blob": "e5a92e07520c7960b84cf6889177a128efec95f4",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/identity-vessel.service": {
+      "src": "scripts/substrate/units/identity-vessel.service",
+      "src_blob": "d234a47c892766ff41e58fbc1edcbfa1185a74fa",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/identity-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/identity-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/ingest-docs.service": {
+      "src": "scripts/substrate/units/ingest-docs.service",
+      "src_blob": "7aebc52ac0e374cb5d5cbc10646040d9d1e8f54c",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/ingest-docs.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/ingest-docs.service.d/run-dir.conf",
+      "src_blob": "b9d2b931648dd874059ed60c1dc8366d0f2e422d",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/ingest-docs.timer": {
+      "src": "scripts/substrate/units/ingest-docs.timer",
+      "src_blob": "84727b22e5ba5095711db40a2fdc905be8883498",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/ingest-docs.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/ingest-docs.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/joint-liveness.service": {
+      "src": "scripts/substrate/units/joint-liveness.service",
+      "src_blob": "7a558bce0f50aa4654abfdd58a0ab16849556e4e",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/joint-liveness.timer": {
+      "src": "scripts/substrate/units/joint-liveness.timer",
+      "src_blob": "69df222ef85791b66ca2ae16fd57d43eed629a95",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/journald-stdout-forwarder.service": {
+      "src": "scripts/substrate/units/journald-stdout-forwarder.service",
+      "src_blob": "124c39b40b73dd71f6a3e8e07ab410c3f8e6fcb6",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/learning-liveness-probe.service": {
+      "src": "scripts/substrate/units/learning-liveness-probe.service",
+      "src_blob": "4e08f3855e8c211e308477e5ed34d9254e2ac676",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/learning-liveness-probe.timer": {
+      "src": "scripts/substrate/units/learning-liveness-probe.timer",
+      "src_blob": "6e7b7a7300a4886633ffe7b35424885748dd8b4c",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/learning-loop-selftest.service": {
+      "src": "scripts/substrate/units/learning-loop-selftest.service",
+      "src_blob": "b59b2731acdb30a8b3160b157c18a421fd0768c0",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/learning-loop-selftest.timer": {
+      "src": "scripts/substrate/units/learning-loop-selftest.timer",
+      "src_blob": "60406593423fba7d119c80f548eac77c9ddbcbaf",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/light-dispatch-healthcheck.service": {
+      "src": "scripts/substrate/units/light-dispatch-healthcheck.service",
+      "src_blob": "7be85bfa349033c2ee365932e4cc61f4113fc530",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/light-dispatch-healthcheck.timer": {
+      "src": "scripts/substrate/units/light-dispatch-healthcheck.timer",
+      "src_blob": "c114b75b299365d00e78cc17d9540fc16bcea024",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/light-dispatch-healthcheck.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/light-dispatch-healthcheck.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/light-dispatch-vessel.service": {
+      "src": "scripts/substrate/units/light-dispatch-vessel.service",
+      "src_blob": "e4c739ec26b37bd3186bae13edff60c10d496e88",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/light-dispatch-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/light-dispatch-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/llm-resolver-vessel.service": {
+      "src": "scripts/substrate/units/llm-resolver-vessel.service",
+      "src_blob": "3c79ef671c3e5b22b7f92e798e9499449563173e",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/llm-resolver-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/llm-resolver-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/llm-resolver-vessel.service.d/stop-timeout.conf": {
+      "src": "scripts/substrate/units/llm-resolver-vessel.service.d/stop-timeout.conf",
+      "src_blob": "d0b575f67bb882572ad37d4b06800fc446e7d938",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/local-tools-vessel.service": {
+      "src": "scripts/substrate/units/local-tools-vessel.service",
+      "src_blob": "ed2b3341032bf229535cdb968a41826c75b8308e",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/local-tools-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/local-tools-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/m1-trainer.service": {
+      "src": "scripts/substrate/units/m1-trainer.service",
+      "src_blob": "009a019240b5063220b383c607f143868bc3e666",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/m1-trainer.timer": {
+      "src": "scripts/substrate/units/m1-trainer.timer",
+      "src_blob": "78eea0a985cdb76d194032395ace03eefc89c80c",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/m1-trainer.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/m1-trainer.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/memory-budget-check.service": {
+      "src": "scripts/substrate/units/memory-budget-check.service",
+      "src_blob": "e265e098f9e409d199fa5aeac57c6a4e9783d3af",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/memory-budget-check.timer": {
+      "src": "scripts/substrate/units/memory-budget-check.timer",
+      "src_blob": "aa42b93f5295dd77b454ed93392c3d8f042f7535",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/metric-collector-vessel.service": {
+      "src": "scripts/substrate/units/metric-collector-vessel.service",
+      "src_blob": "369537ce69aabedae08163811b2abccd1a14deb8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/metric-collector-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/metric-collector-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/model-reality-audit.service": {
+      "src": "scripts/substrate/units/model-reality-audit.service",
+      "src_blob": "f6e6ec551d361bb85942e3263b470f1c0f4a2019",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/model-reality-audit.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/model-reality-audit.service.d/run-dir.conf",
+      "src_blob": "fcedc178987dd7f2207c5e6c832540966a0e62c3",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/model-reality-audit.timer": {
+      "src": "scripts/substrate/units/model-reality-audit.timer",
+      "src_blob": "e32d872c4df1724f2ac287de5a6c3ffa5723b1e3",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/model-reality-audit.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/model-reality-audit.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/novnc.service": {
+      "src": "scripts/substrate/units/novnc.service",
+      "src_blob": "4fa0c456dd11d88b1a8a0f60a9bcea41c867d4d6",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/observe-orthogonal-refresh.service": {
+      "src": "scripts/substrate/units/observe-orthogonal-refresh.service",
+      "src_blob": "bb1c9dabb880afb78d8d54417688fc6eda20fb8b",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/observe-orthogonal-refresh.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/observe-orthogonal-refresh.service.d/run-dir.conf",
+      "src_blob": "178ebb8a8e03b65959e023ed898799008cbd0516",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/observe-orthogonal-refresh.timer": {
+      "src": "scripts/substrate/units/observe-orthogonal-refresh.timer",
+      "src_blob": "313ef874b14536839cfe62537da2630975f96c43",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/observe-orthogonal-refresh.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/observe-orthogonal-refresh.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/obsidian-collaborate.service": {
+      "src": "scripts/substrate/units/obsidian-collaborate.service",
+      "src_blob": "81ee2276e05cd6cb9115451af2dda7e7e60bf4da",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/obsidian-collaborate.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/obsidian-collaborate.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/obsidian-collaborate.timer": {
+      "src": "scripts/substrate/units/obsidian-collaborate.timer",
+      "src_blob": "9b4856613aeb3fc2aa608dfa891077f3c95dbe32",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/obsidian-desktop.service": {
+      "src": "scripts/substrate/units/obsidian-desktop.service",
+      "src_blob": "5290b9d2e084f61d2ec993b951fb73895357dab0",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/obsidian-desktop.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/obsidian-desktop.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/obsidian-intake.service": {
+      "src": "scripts/substrate/units/obsidian-intake.service",
+      "src_blob": "b02de2639d330a5a4bceeb6e4fa15c12036f81c8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/obsidian-intake.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/obsidian-intake.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/obsidian-intake.timer": {
+      "src": "scripts/substrate/units/obsidian-intake.timer",
+      "src_blob": "1a668a7fc41ef9c4a32a9700378c1584e5a7c4c6",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/obsidian-learn.service": {
+      "src": "scripts/substrate/units/obsidian-learn.service",
+      "src_blob": "0fd5f304b3c7228ac01266b5a72b4ce2ae7645f0",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/obsidian-learn.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/obsidian-learn.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/obsidian-learn.timer": {
+      "src": "scripts/substrate/units/obsidian-learn.timer",
+      "src_blob": "b846b8fcf4bd7b4619b532717134dfa70dcae6f0",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/obsidian-xorg.service": {
+      "src": "scripts/substrate/units/obsidian-xorg.service",
+      "src_blob": "f3dc35441ebcc6909c5d96983d2c4c46bf8e38b6",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/obsidian-xorg.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/obsidian-xorg.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/operator-goal-generator.service": {
+      "src": "scripts/substrate/units/operator-goal-generator.service",
+      "src_blob": "a27d7363288c510a9a8e51d19d28f68d7de9ce68",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/operator-goal-generator.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/operator-goal-generator.service.d/run-dir.conf",
+      "src_blob": "8820f9e3037f9149e0984c2081c8d70bb6133bff",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/operator-goal-generator.service.d/watchdog.conf": {
+      "src": "scripts/substrate/units/operator-goal-generator.service.d/watchdog.conf",
+      "src_blob": "898c2f8429a9f1e217727bbb223d9193a68afd3c",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/operator-goal-generator.timer": {
+      "src": "scripts/substrate/units/operator-goal-generator.timer",
+      "src_blob": "f31763488905e5567a639d1a4e2aedba2676fd06",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/operator-goal-generator.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/operator-goal-generator.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/relevance-sink-vessel.service": {
+      "src": "scripts/substrate/units/relevance-sink-vessel.service",
+      "src_blob": "9a38ae006f2f2c4469ba086d439f75c114a5d4c5",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/relevance-sink-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/relevance-sink-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/rhythm-cadence.service": {
+      "src": "scripts/substrate/units/rhythm-cadence.service",
+      "src_blob": "330f6853c067e417cc37b3eb2bbd81fa3b17e205",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/rhythm-cadence.timer": {
+      "src": "scripts/substrate/units/rhythm-cadence.timer",
+      "src_blob": "9efabcc3567e6611ef04f5492d32eafd4096e64c",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/ribosome-vessel.service": {
+      "src": "scripts/substrate/units/ribosome-vessel.service",
+      "src_blob": "b19cfaa16940f4a87892413811175c14fb40646e",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/ribosome-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/ribosome-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/runtime-drift.service": {
+      "src": "scripts/substrate/units/runtime-drift.service",
+      "src_blob": "44460f1cb881f45ff15cddba39a31d442e28d132",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/runtime-drift.timer": {
+      "src": "scripts/substrate/units/runtime-drift.timer",
+      "src_blob": "97862c325fe4c72c0858615dc2fa6b2b8e402af1",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/self-development-trend.service": {
+      "src": "scripts/substrate/units/self-development-trend.service",
+      "src_blob": "9aff502fc6d7c7e2c0a937f7a1580f2674a5fc05",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/self-development-trend.timer": {
+      "src": "scripts/substrate/units/self-development-trend.timer",
+      "src_blob": "7692b1a1d983f521f0bc62e5955ba3dee111105f",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/self-operational-health.service": {
+      "src": "scripts/substrate/units/self-operational-health.service",
+      "src_blob": "e166670d3456a2dd23b33d3d51a2c19009a3e34c",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/self-operational-health.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/self-operational-health.service.d/run-dir.conf",
+      "src_blob": "6d00c396b177a13443584e844546891ac040007f",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/self-operational-health.timer": {
+      "src": "scripts/substrate/units/self-operational-health.timer",
+      "src_blob": "44b8594f6626928c82788ef58a5133cda3954491",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/self-operational-health.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/self-operational-health.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/self-recovery.service": {
+      "src": "scripts/substrate/units/self-recovery.service",
+      "src_blob": "ca2e9492dbe7b306ace072b9a83f2ba36e205045",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/self-recovery.timer": {
+      "src": "scripts/substrate/units/self-recovery.timer",
+      "src_blob": "e8e263637c8de2880d292a62b96fc26f38afb65e",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/self-recovery.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/self-recovery.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/self-repair-operational.service": {
+      "src": "scripts/substrate/units/self-repair-operational.service",
+      "src_blob": "c2ae92edbe5763feb49dd18b98b52cd86d9d3b96",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/self-repair-operational.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/self-repair-operational.service.d/run-dir.conf",
+      "src_blob": "36645687aecd5293244b9092962082002efe80d9",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/self-repair-operational.timer": {
+      "src": "scripts/substrate/units/self-repair-operational.timer",
+      "src_blob": "cbf779903279ee34957aebce50b882d6593dda49",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/self-repair-operational.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/self-repair-operational.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/service.d/05-secret-dir-out-of-reach.conf": {
+      "src": "scripts/substrate/units/service.d/05-secret-dir-out-of-reach.conf",
+      "src_blob": "285fb7cc4588bf40bb9449f7ad5b17497c07b958",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/service.d/EXEMPT": {
+      "src": "scripts/substrate/units/service.d/EXEMPT",
+      "src_blob": "dc4e044373623a0834e69b8de7f7aba3c4ff26ce",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/spectral-gap.service": {
+      "src": "scripts/substrate/units/spectral-gap.service",
+      "src_blob": "0b8f83aae9c9e086f8c08bef981924de73f57349",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/spectral-gap.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/spectral-gap.service.d/run-dir.conf",
+      "src_blob": "7867c8741d12a9813fb83f2280d4ac8306d78554",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/spectral-gap.timer": {
+      "src": "scripts/substrate/units/spectral-gap.timer",
+      "src_blob": "297422be1ba089edf02485e077c73b194d555ce3",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/spectral-gap.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/spectral-gap.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/stateful-ui-vessel.service": {
+      "src": "scripts/substrate/units/stateful-ui-vessel.service",
+      "src_blob": "ea9d27815e6a2b0e9bcba0b23a4a47403966555f",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/stateful-ui-vessel.service.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/stateful-ui-vessel.service.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/substrate-active-scripts-seed.service": {
+      "src": "scripts/substrate/units/substrate-active-scripts-seed.service",
+      "src_blob": "cfa590107aaed0369efa9c166aaf59d2e3c5c0fc",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/substrate-pull-sync.service": {
+      "src": "scripts/substrate/units/substrate-pull-sync.service",
+      "src_blob": "e87496ef9b70d7fbde12f049a16248d88c7446f6",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/substrate-pull-sync.service.d/05-secret-dir-out-of-reach.conf": {
+      "src": "scripts/substrate/units/substrate-pull-sync.service.d/05-secret-dir-out-of-reach.conf",
+      "src_blob": "693657658e5ecc2f6a733b38c31c696ee9c90490",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/substrate-pull-sync.timer": {
+      "src": "scripts/substrate/units/substrate-pull-sync.timer",
+      "src_blob": "2bceec62b6b19205305f1d27fef3c3405f6f2b77",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/substrate-pull-sync.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/substrate-pull-sync.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/substrate-ready.service": {
+      "src": "scripts/substrate/units/substrate-ready.service",
+      "src_blob": "bd0a669420020f4e9aa573c018ee1afa8c1352f7",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/surgical-gap-scan.service": {
+      "src": "scripts/substrate/units/surgical-gap-scan.service",
+      "src_blob": "2e3b1450e3c15981d94f70029096c4f82d21e9fd",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/surgical-gap-scan.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/surgical-gap-scan.service.d/run-dir.conf",
+      "src_blob": "874233e7139fc2e99a4a51905eb627984f9b1aa9",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/surgical-gap-scan.timer": {
+      "src": "scripts/substrate/units/surgical-gap-scan.timer",
+      "src_blob": "c3c6b16b9eb16f30e730a0b2a5d1d56f619d2d11",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/surgical-gap-scan.timer.d/ready-gate.conf": {
+      "src": "scripts/substrate/units/surgical-gap-scan.timer.d/ready-gate.conf",
+      "src_blob": "ffbdc6bcf87b904fb813dc6246f4bc6ef3a324a8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/surrealdb.service": {
+      "src": "scripts/substrate/units/surrealdb.service",
+      "src_blob": "416058698bd5fe319907c4827275982b6fa98436",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/trace-store-health-check.service": {
+      "src": "scripts/substrate/units/trace-store-health-check.service",
+      "src_blob": "c7c361d64c6a7aa6a9a958920f1cd0c92cc9bde3",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/trace-store-health-check.timer": {
+      "src": "scripts/substrate/units/trace-store-health-check.timer",
+      "src_blob": "89ab3a86d1bb840cd6caac859031c9cd125c66cf",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/typecheck-scenario-gen.service": {
+      "src": "scripts/substrate/units/typecheck-scenario-gen.service",
+      "src_blob": "1de8f25fd3360b76a4c6a4e78d77b47301bfce9b",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/typecheck-scenario-gen.service.d/run-dir.conf": {
+      "src": "scripts/substrate/units/typecheck-scenario-gen.service.d/run-dir.conf",
+      "src_blob": "3512779770fea01ed6bc3da43fe550fc906d5ea8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/typecheck-scenario-gen.timer": {
+      "src": "scripts/substrate/units/typecheck-scenario-gen.timer",
+      "src_blob": "933b6ffe880268179b6301468247c5498033beff",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/validator-liveness.service": {
+      "src": "scripts/substrate/units/validator-liveness.service",
+      "src_blob": "e4a0d1e49735821f86aa94d94cf93b7a331c44ea",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/validator-liveness.timer": {
+      "src": "scripts/substrate/units/validator-liveness.timer",
+      "src_blob": "4ff633eb441a0b42d0a5e31efa47cf55df22250b",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/valkey.service": {
+      "src": "scripts/substrate/units/valkey.service",
+      "src_blob": "8e8da4835ac5694df7b4159417b3c05c9baec261",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/vessel.d/10-secrets-out-of-reach.conf": {
+      "src": "scripts/substrate/units/vessel.d/10-secrets-out-of-reach.conf",
+      "src_blob": "5edc729deb06af74f476c92c81b6638c355c4f97",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/vessel.d/EXCEPTIONS": {
+      "src": "scripts/substrate/units/vessel.d/EXCEPTIONS",
+      "src_blob": "1c6dbb91b5232a3338c0ce488a015c627b476d1d",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/local/bin/apply-inventory": {
+      "src": "scripts/substrate/apply-inventory.sh",
+      "src_blob": "eb6215b394cfa78bda62e5791b044ac463111c77",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/bin/apply-llm-arms": {
+      "src": "scripts/substrate/apply-llm-arms.sh",
+      "src_blob": "e0c00b2ebf2f2cf7d2b3ec73fdc55d38b991151e",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/discovery-deregister": {
+      "src": "scripts/substrate/discovery-deregister.sh",
+      "src_blob": "053bf7ff649200b40309fe6899dff3fd204c7b78",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/gen-env": {
+      "src": "scripts/substrate/gen-env.sh",
+      "src_blob": "8bb8b796e1bfc608e9e461bbb673cff02293b5e0",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/bin/goal-host-behavior-tick.sh": {
+      "src": "scripts/substrate/goal-host-behavior-tick.sh",
+      "src_blob": "2c7b7d19f20607eb867d99b3a5ca658ba5c47e9e",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/light-dispatch-healthcheck": {
+      "src": "scripts/substrate/light-dispatch-healthcheck.sh",
+      "src_blob": "bdf4fb840b5b5c93464928b958d1f03b1973c1ee",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/mirror-to-live": {
+      "src": "scripts/substrate/mirror-to-live.sh",
+      "src_blob": "37a876961a1703c5c749f57ee21e9a7b1b5c149c",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/bin/obsidian-collaborate-tick.sh": {
+      "src": "scripts/substrate/obsidian-collaborate-tick.sh",
+      "src_blob": "6ac8926f32289e04e76a77237d06e8f651c6a0f6",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/obsidian-desktop-launch": {
+      "src": "scripts/substrate/obsidian-desktop-launch.sh",
+      "src_blob": "7d96b0ecab27db0d52a281bbb31ccb8fe45c9c14",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/obsidian-intake-tick.sh": {
+      "src": "scripts/substrate/obsidian-intake-tick.sh",
+      "src_blob": "a201259ffdb919c8ef0875c2e7916454398ca2e4",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/obsidian-learn-tick.sh": {
+      "src": "scripts/substrate/obsidian-learn-tick.sh",
+      "src_blob": "3f4b66d57be012b8260050a230d074d6d547aa4a",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/obsidian-xorg-launch": {
+      "src": "scripts/substrate/obsidian-xorg-launch.sh",
+      "src_blob": "48e49d7b8f3f55ed98ff62a7505b98f5af5e1a37",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/render-secret-scope": {
+      "src": "scripts/substrate/render-secret-scope.sh",
+      "src_blob": "5e6f98e8e4e04d823793dfb23f02fd4b4b1c29b3",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/bin/render-unit": {
+      "src": "scripts/substrate/render-unit.sh",
+      "src_blob": "ca0197863e5f0df5881257d902d7ad3f16c7e283",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/bin/reseed-restart": {
+      "src": "scripts/substrate/reseed-restart.sh",
+      "src_blob": "3acebae2030afc0e2f86dcb163749fbde7c3af53",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/secret-mask-probe": {
+      "src": "scripts/substrate/secret-mask-probe.sh",
+      "src_blob": "99d5d50118f20a239aecc5aa41afc58c1404fd9a",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/bin/self-recovery-tick": {
+      "src": "scripts/substrate/self-recovery-tick.sh",
+      "src_blob": "6ab109e80663dab33bb6034ed264c509f49d78d5",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/bin/setup-git-push": {
+      "src": "scripts/substrate/setup-git-push.sh",
+      "src_blob": "9945b547516c19b478b9cdd6458bb5ef530dc88e",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/bin/spoke-federate": {
+      "src": "scripts/substrate/spoke-federate.sh",
+      "src_blob": "e5f4c2eae524b2120cca9ac55178c43ab1991cf2",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/substrate-config": {
+      "src": "scripts/substrate/substrate-config.sh",
+      "src_blob": "785298939fd1643b961589a12c00f7d2a55d9b9e",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/substrate-connect": {
+      "src": "scripts/substrate/substrate-connect.sh",
+      "src_blob": "ae1b1cbfd4d1408f6dca2e95871bf2204b7c19b2",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/substrate-doctor": {
+      "src": "scripts/substrate/substrate-doctor.sh",
+      "src_blob": "0702a03db89ca6e57ccd6e0e236178af2c659a66",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/substrate-entrypoint": {
+      "src": "scripts/substrate/entrypoint.sh",
+      "src_blob": "214df1e4da9b2d580e59dd896b8f05eea5005874",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/substrate-install": {
+      "src": "scripts/substrate/substrate-install.sh",
+      "src_blob": "50dc51297b14aaeabdb91c4cac91f99d7eef2156",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/substrate-key": {
+      "src": "scripts/substrate/substrate-key.sh",
+      "src_blob": "861528715f26f2f01407560f141f648e96b6eadf",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/bin/substrate-manifest": {
+      "src": "scripts/substrate/substrate-manifest.sh",
+      "src_blob": "79c3610415879b6307be1e50182180e1989c56d3",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/substrate-pull-sync": {
+      "src": "scripts/substrate/substrate-pull-sync.sh",
+      "src_blob": "9fd7958cf572a64b5aaa9ea7f30ffd7d7d344ab3",
+      "level": "behaviour",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "no-self-exec-847025e2.sh"
+      ],
+      "evidence": {
+        "accepted": "ac413feeaa16e68dde1a169a9d7748fd28d95ce8",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "3f0c6383dcb1475fa07972f6ab73fa20b2ac4042"
+      }
+    },
+    "/usr/local/bin/substrate-ready": {
+      "src": "scripts/substrate/substrate-ready.sh",
+      "src_blob": "5f41bc0553132ca449c46b08c3de06103e63ed61",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/substrate-status": {
+      "src": "scripts/substrate/substrate-status.sh",
+      "src_blob": "d767d451f09bc68ae525d460e1fe531653ffd2ea",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/bin/vessel-ctl": {
+      "src": "scripts/substrate/vessel-ctl.sh",
+      "src_blob": "17ad1df42d9c32947e1ba225723eb8f186e4c5ca",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/bin/vessel-tree-hash": {
+      "src": "scripts/substrate/vessel-tree-hash.sh",
+      "src_blob": "377fbd4f73deff651772462736d7bd722d9f6485",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/libexec/substrate/gate-runner": {
+      "src": "scripts/substrate/gate/gate-runner.sh",
+      "src_blob": "4c03a50da53ef4289d278743168db69e4c5f3459",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/auto-describe-resolvers.d.ts": {
+      "src": "scripts/substrate/auto-describe-resolvers.d.ts",
+      "src_blob": "18a1ab63544f359a1824da49479c63c4b5556b1d",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/auto-describe-resolvers.ts": {
+      "src": "scripts/substrate/auto-describe-resolvers.ts",
+      "src_blob": "e151aa90492ad76877d9796f2facc1cf2342bbe2",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/autonomy-metrics.d.ts": {
+      "src": "scripts/substrate/autonomy-metrics.d.ts",
+      "src_blob": "b5f68ad42a1a70b407b27b2b7b1f79aceb0009cf",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/autonomy-metrics.ts": {
+      "src": "scripts/substrate/autonomy-metrics.ts",
+      "src_blob": "c4d08810d2ead2416ca79f9228335315f0aa2efa",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/autonomy-status.d.ts": {
+      "src": "scripts/substrate/autonomy-status.d.ts",
+      "src_blob": "5217f384945c7634e976e8eac595b90c733be7bb",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/autonomy-status.ts": {
+      "src": "scripts/substrate/autonomy-status.ts",
+      "src_blob": "c2fbbedf6dc5cbe64fcf1941ccdb635d77f3e20e",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/coherence-metric.d.ts": {
+      "src": "scripts/substrate/coherence-metric.d.ts",
+      "src_blob": "2fa8a45cbf7a2a29ac39e8b2094ad30cfea825f8",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/coherence-metric.ts": {
+      "src": "scripts/substrate/coherence-metric.ts",
+      "src_blob": "a7fddd654da2b462ff806fd5294da39f8696bc10",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/coherence-recover.d.ts": {
+      "src": "scripts/substrate/coherence-recover.d.ts",
+      "src_blob": "8b42fd07d3989248328699fd506e7a96fa7b39c8",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/coherence-recover.ts": {
+      "src": "scripts/substrate/coherence-recover.ts",
+      "src_blob": "9c6cafe7a42916bd2d2b395c1d3495cb537adf48",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/compose-drift-tick.d.ts": {
+      "src": "scripts/substrate/compose-drift-tick.d.ts",
+      "src_blob": "757778572cd4165976cf2885f3023a7e6ad51b2f",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/compose-drift-tick.ts": {
+      "src": "scripts/substrate/compose-drift-tick.ts",
+      "src_blob": "4b121bd297a2e7ad26004c69cd10165d673c09d9",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/compose-teacher.d.ts": {
+      "src": "scripts/substrate/compose-teacher.d.ts",
+      "src_blob": "19e8de9d75029a7d171e8848dc2be15ac70b7137",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/compose-teacher.ts": {
+      "src": "scripts/substrate/compose-teacher.ts",
+      "src_blob": "9b8a13f0cae644ca22bfe981011c6ed7c771e102",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/composition-edge-reconcile.d.ts": {
+      "src": "scripts/substrate/composition-edge-reconcile.d.ts",
+      "src_blob": "e09e6b90736e12ba0af4f147d48882fe24744240",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/composition-edge-reconcile.ts": {
+      "src": "scripts/substrate/composition-edge-reconcile.ts",
+      "src_blob": "a188907015b8c2d1cba8fb4be5ffe0f4724ce4f9",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/concept-db-bench.d.ts": {
+      "src": "scripts/substrate/concept-db-bench.d.ts",
+      "src_blob": "782cb07d0ce56592f62d06c147cc7f65d35eb536",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/concept-db-bench.ts": {
+      "src": "scripts/substrate/concept-db-bench.ts",
+      "src_blob": "5c646cdeb518bcfae6cacbe09d06df4848355215",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/db-contention-check.d.ts": {
+      "src": "scripts/substrate/db-contention-check.d.ts",
+      "src_blob": "875638e94e4d200321392fff63e27ac05270bec6",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/db-contention-check.ts": {
+      "src": "scripts/substrate/db-contention-check.ts",
+      "src_blob": "11bbc44b2b63a15e99247f9d8456d7a4a18bf0ca",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/db-maintenance-tick.d.ts": {
+      "src": "scripts/substrate/db-maintenance-tick.d.ts",
+      "src_blob": "ee65d905d80a8ad078eeefdf11d0acc60ab8d726",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/db-maintenance-tick.ts": {
+      "src": "scripts/substrate/db-maintenance-tick.ts",
+      "src_blob": "e5ef0692571b0a57be27cc08a7169a056e4a50b7",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/efficiency-failure-tick.d.ts": {
+      "src": "scripts/substrate/efficiency-failure-tick.d.ts",
+      "src_blob": "2600b6ace6670b380b85b086df75d2bf762bd0a5",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/efficiency-failure-tick.ts": {
+      "src": "scripts/substrate/efficiency-failure-tick.ts",
+      "src_blob": "e61122a5fd507edb025101e63b2ddc97ad02dc79",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/funnel-drain.d.ts": {
+      "src": "scripts/substrate/funnel-drain.d.ts",
+      "src_blob": "fd285bb4248771d029a0c3d1535aa1de0512ddf1",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/funnel-drain.ts": {
+      "src": "scripts/substrate/funnel-drain.ts",
+      "src_blob": "8ef8b4a799c883dd1b8db4bbf335e5451f5d9b4f",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/gap-compose-tick.d.ts": {
+      "src": "scripts/substrate/gap-compose-tick.d.ts",
+      "src_blob": "f72a4531da6954995450c727d0bacd5e94d8cf58",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/gap-compose-tick.ts": {
+      "src": "scripts/substrate/gap-compose-tick.ts",
+      "src_blob": "11fe2513d191b5e5c720774bec20566ea1085e98",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/gap-store-census-tick.d.ts": {
+      "src": "scripts/substrate/gap-store-census-tick.d.ts",
+      "src_blob": "14de099d7d7bc669c46a69d7de246b250358fed7",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/gap-store-census-tick.ts": {
+      "src": "scripts/substrate/gap-store-census-tick.ts",
+      "src_blob": "911e823741daab0705edfa9d440906fab2fe9a1a",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/identical-failure-run-tick.d.ts": {
+      "src": "scripts/substrate/identical-failure-run-tick.d.ts",
+      "src_blob": "d92aa24caa968edcbfbd528aafd22f7c0a8bca08",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/identical-failure-run-tick.ts": {
+      "src": "scripts/substrate/identical-failure-run-tick.ts",
+      "src_blob": "cbf092ba18b109c9cb7e02f78173bbd6265ed412",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/import-operator-memory.d.ts": {
+      "src": "scripts/substrate/import-operator-memory.d.ts",
+      "src_blob": "d3fe0af1d838c9e9c35840156193e2096f0da2f2",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/import-operator-memory.ts": {
+      "src": "scripts/substrate/import-operator-memory.ts",
+      "src_blob": "aabe40b2ecc7c3e5b63ebede78e174226a853c0f",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/ingest-docs-as-concepts.d.ts": {
+      "src": "scripts/substrate/ingest-docs-as-concepts.d.ts",
+      "src_blob": "fb4341d87d3622d2948a5c084c163a861f4d4a29",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/ingest-docs-as-concepts.ts": {
+      "src": "scripts/substrate/ingest-docs-as-concepts.ts",
+      "src_blob": "9beabafb896b7a1ab3904bdf543ffda875f9c85e",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/joint-liveness-tick.d.ts": {
+      "src": "scripts/substrate/joint-liveness-tick.d.ts",
+      "src_blob": "6df8e40b80509ab618a64f2bd5fa19ae4531096f",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/joint-liveness-tick.ts": {
+      "src": "scripts/substrate/joint-liveness-tick.ts",
+      "src_blob": "4f720856639adf674fe46f085c8c05f958785931",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/learning-liveness-probe.d.ts": {
+      "src": "scripts/substrate/learning-liveness-probe.d.ts",
+      "src_blob": "834d560536a54f74933b779546d4a2d625c83935",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/learning-liveness-probe.ts": {
+      "src": "scripts/substrate/learning-liveness-probe.ts",
+      "src_blob": "07026560b6df0119300f9b48342f7b0388952b2b",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/learning-loop-selftest-tick.d.ts": {
+      "src": "scripts/substrate/learning-loop-selftest-tick.d.ts",
+      "src_blob": "ef197009f290caa169b18c6dc3312c43c115b1e1",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/learning-loop-selftest-tick.ts": {
+      "src": "scripts/substrate/learning-loop-selftest-tick.ts",
+      "src_blob": "485f39d26f849d87df141ed87019c48e0625b90a",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/mirror-memory-note.d.ts": {
+      "src": "scripts/substrate/mirror-memory-note.d.ts",
+      "src_blob": "829c719d26aacddef131e77aea7877f875ce5f5b",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/mirror-memory-note.ts": {
+      "src": "scripts/substrate/mirror-memory-note.ts",
+      "src_blob": "81b7f5ea3a2edabe12ecc2e106bb93905023cf76",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/model-reality-audit.d.ts": {
+      "src": "scripts/substrate/model-reality-audit.d.ts",
+      "src_blob": "962f3080952698cd936606f8912f8d0d493414ed",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/model-reality-audit.ts": {
+      "src": "scripts/substrate/model-reality-audit.ts",
+      "src_blob": "d3bf47721b80977fe3bf867df1586901c81a5c2b",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/observe-orthogonal-refresh.d.ts": {
+      "src": "scripts/substrate/observe-orthogonal-refresh.d.ts",
+      "src_blob": "2c3b3aef01530b9484f9a946bb97a28d8a56e88a",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/observe-orthogonal-refresh.ts": {
+      "src": "scripts/substrate/observe-orthogonal-refresh.ts",
+      "src_blob": "0e06c928e14350af040f1306b804740736e408bf",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/operator-goal-generator.d.ts": {
+      "src": "scripts/substrate/operator-goal-generator.d.ts",
+      "src_blob": "7d53f31c4f8a98fa97cf5d935cf9e43ada820695",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/operator-goal-generator.ts": {
+      "src": "scripts/substrate/operator-goal-generator.ts",
+      "src_blob": "10ea842333824019308e4652506b28fe2576e9c8",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/operator-goal-signal.d.ts": {
+      "src": "scripts/substrate/operator-goal-signal.d.ts",
+      "src_blob": "c9762de99016e53bb9de926aec4cf3ef05568765",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/operator-goal-signal.ts": {
+      "src": "scripts/substrate/operator-goal-signal.ts",
+      "src_blob": "5be8f1ec41ec178fff1e680d4e6be73e0bd9d58c",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/performance-status.d.ts": {
+      "src": "scripts/substrate/performance-status.d.ts",
+      "src_blob": "4e4c05b576e175cc541d06a8e9319b3adf126fa3",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/performance-status.ts": {
+      "src": "scripts/substrate/performance-status.ts",
+      "src_blob": "17b5d377b56a05c4cadb515b723b8daca762586c",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/rhythm-conduct-tick.d.ts": {
+      "src": "scripts/substrate/rhythm-conduct-tick.d.ts",
+      "src_blob": "e34c7edbf82335f65703495e83bddd1ae8ac45c6",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/rhythm-conduct-tick.ts": {
+      "src": "scripts/substrate/rhythm-conduct-tick.ts",
+      "src_blob": "e1895e8823b7bde62f72ece0a6850de104b7c050",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/rhythm-seed-tick.d.ts": {
+      "src": "scripts/substrate/rhythm-seed-tick.d.ts",
+      "src_blob": "b54138b8b605d3b39d0c642efdc0ec1114d5b817",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/rhythm-seed-tick.ts": {
+      "src": "scripts/substrate/rhythm-seed-tick.ts",
+      "src_blob": "f1be4b3ab4a235f9d967a9fc5bac1175d28a13a9",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/runtime-drift-tick.d.ts": {
+      "src": "scripts/substrate/runtime-drift-tick.d.ts",
+      "src_blob": "e814273850c0407cece42f438681b542b0f743dd",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/runtime-drift-tick.ts": {
+      "src": "scripts/substrate/runtime-drift-tick.ts",
+      "src_blob": "f965ef438737c79eadb3377dfae706ec218cbdc7",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/seed-concepts.d.ts": {
+      "src": "scripts/substrate/seed-concepts.d.ts",
+      "src_blob": "fe567c1194033a32c17b8b4ffa911e4d4372d1d7",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/seed-concepts.ts": {
+      "src": "scripts/substrate/seed-concepts.ts",
+      "src_blob": "9f5e24b14a0e2a5bb6683415aabeed1a1c601bca",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/seed-identity.ts": {
+      "src": "scripts/substrate/seed-identity.ts",
+      "src_blob": "0e889847108030c8edec918e0df2a99b747240cf",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/self-development-trend.d.ts": {
+      "src": "scripts/substrate/self-development-trend.d.ts",
+      "src_blob": "c82228198bad3c6856465d32baad4cb43f55913f",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/self-development-trend.ts": {
+      "src": "scripts/substrate/self-development-trend.ts",
+      "src_blob": "e07dc96d068f35abe515fb616a4757643683a39a",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/self-operational-health.d.ts": {
+      "src": "scripts/substrate/self-operational-health.d.ts",
+      "src_blob": "8e8eb28a9d9f814ad477610f37b61c735130791a",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/self-operational-health.ts": {
+      "src": "scripts/substrate/self-operational-health.ts",
+      "src_blob": "2a8be5d9a4caa0338cd89786fb9d4873162d4c98",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/self-repair-operational.d.ts": {
+      "src": "scripts/substrate/self-repair-operational.d.ts",
+      "src_blob": "dfbc5613e89413b25929a03b19687d6293d6db9e",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/self-repair-operational.ts": {
+      "src": "scripts/substrate/self-repair-operational.ts",
+      "src_blob": "3e81a278967920ec896bee762259aa34b78d11b7",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/spectral-gap.d.ts": {
+      "src": "scripts/substrate/spectral-gap.d.ts",
+      "src_blob": "e815f639285a98caaf0f9c6fe4b056a0d6264484",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/spectral-gap.ts": {
+      "src": "scripts/substrate/spectral-gap.ts",
+      "src_blob": "c221392f6dc4e0b4b6a2d5ae706507aaa147bec1",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/surgical-gap-scan.d.ts": {
+      "src": "scripts/substrate/surgical-gap-scan.d.ts",
+      "src_blob": "d0174e3e53cb7de9b2d59979bd16fad6d4f03cf8",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/surgical-gap-scan.ts": {
+      "src": "scripts/substrate/surgical-gap-scan.ts",
+      "src_blob": "77af40427e102490d64dc7a9328268cf4a3ca6ef",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/trace-store-health-check.d.ts": {
+      "src": "scripts/substrate/trace-store-health-check.d.ts",
+      "src_blob": "657d2ccd9aa3db3202a51b518357d093836c72fc",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/trace-store-health-check.ts": {
+      "src": "scripts/substrate/trace-store-health-check.ts",
+      "src_blob": "95bd3eef145e1eeff51dd52d576f5735d5cbf4a9",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/typecheck-scenario-gen.d.ts": {
+      "src": "scripts/substrate/typecheck-scenario-gen.d.ts",
+      "src_blob": "9eff58393285c95fe050b302e9315ff90570be6d",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/typecheck-scenario-gen.ts": {
+      "src": "scripts/substrate/typecheck-scenario-gen.ts",
+      "src_blob": "0f2670c88e1f30c9189456a87c54b4d446e7fd10",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/validate-build.d.ts": {
+      "src": "scripts/substrate/validate-build.d.ts",
+      "src_blob": "1ed248fa9d8d28a3718d00003dbd6d59171eb728",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/validate-build.ts": {
+      "src": "scripts/substrate/validate-build.ts",
+      "src_blob": "f065bdafed8103d434c1a8cbf1029ffb800998ef",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/validator-liveness-tick.d.ts": {
+      "src": "scripts/substrate/validator-liveness-tick.d.ts",
+      "src_blob": "cd11576ab6ab4ac91e6d195daca27ad7423ddf31",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/validator-liveness-tick.ts": {
+      "src": "scripts/substrate/validator-liveness-tick.ts",
+      "src_blob": "7ca196a92ff717369a23add4c669e2572204a616",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/watchdog-tick.d.ts": {
+      "src": "scripts/substrate/watchdog-tick.d.ts",
+      "src_blob": "b4b3669337334b4e6eddd1839f63cf844b98d3db",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/watchdog-tick.ts": {
+      "src": "scripts/substrate/watchdog-tick.ts",
+      "src_blob": "680cf79f60508a91df313362e929bfb6a61143ce",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/connect-merge.sh": {
+      "src": "scripts/substrate/connect-merge.sh",
+      "src_blob": "7d39364357d6040bebbefdf06b20fdcc5a000674",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/docker-compose.yml": {
+      "src": "docker-compose.yml",
+      "src_blob": "65276d662c482494940f32821265cd80f9567878",
+      "level": "none",
+      "reason": "outside-gate-paths",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/git-hooks-ledger/post-commit": {
+      "src": "scripts/substrate/git-hooks-ledger/post-commit",
+      "src_blob": "a9cc17c067593bc05b65d492c7af7465dce029d4",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/git-hooks-ledger/post-rewrite": {
+      "src": "scripts/substrate/git-hooks-ledger/post-rewrite",
+      "src_blob": "0068731d691813ee76a7806114cc9068e4294ebe",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/git-hooks-ledger/pre-commit": {
+      "src": "scripts/substrate/git-hooks-ledger/pre-commit",
+      "src_blob": "e78ca74e1883b0a86112b8217ca74aea231528c2",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/git-hooks-ledger/_record.sh": {
+      "src": "scripts/substrate/git-hooks-ledger/_record.sh",
+      "src_blob": "7dc14de54518d01ac8006a0a778e7883ecd8d0a8",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/git-hooks-ledger/reference-transaction": {
+      "src": "scripts/substrate/git-hooks-ledger/reference-transaction",
+      "src_blob": "2869bddba01283bdeb4aa00f5236375187dccd75",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/lib/gap-tracked-red.sh": {
+      "src": "scripts/substrate/lib/gap-tracked-red.sh",
+      "src_blob": "6181a325969e3e504491d01991b96622a6a47378",
+      "level": "behaviour",
+      "reason": "mutation-proven",
+      "fixtures": [
+        "lib-sources.sh"
+      ],
+      "evidence": {
+        "accepted": "ac413feeaa16e68dde1a169a9d7748fd28d95ce8",
+        "mutation": "insert `exit 99` after line 1",
+        "mutated_blob": "5b082685cfdb15aedcc47898d741dc840e2dcba3"
+      }
+    },
+    "/usr/local/share/substrate/secrets.env.sh": {
+      "src": "scripts/substrate/secrets.env.sh",
+      "src_blob": "e78f1e54d8de83b8b97e58411aea12bee7596f3c",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/secrets-manifest.json": {
+      "src": "scripts/substrate/secrets-manifest.json",
+      "src_blob": "69bfa4206da513a5d37bbc6622989dda95f38756",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/vessels.inventory.json": {
+      "src": "scripts/substrate/vessels.inventory.json",
+      "src_blob": "a0d6a23a843d0e2d4423f14a336d12ba01eff7f7",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/vessels.manifest.json": {
+      "src": "scripts/substrate/vessels.manifest.json",
+      "src_blob": "ade86930f5b163db25040ac4d3cf50ba7f9158f2",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/vessels/seed-concepts.ts": {
+      "src": "scripts/substrate/seed-concepts.ts",
+      "src_blob": "9f5e24b14a0e2a5bb6683415aabeed1a1c601bca",
+      "level": "none",
+      "reason": "unreached",
+      "fixtures": []
+    },
+    "/vessels/seed-identity.ts": {
+      "src": "scripts/substrate/seed-identity.ts",
+      "src_blob": "0e889847108030c8edec918e0df2a99b747240cf",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    }
+  }
+}

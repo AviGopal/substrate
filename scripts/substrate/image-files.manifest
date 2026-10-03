@@ -449,6 +449,7 @@ scripts/substrate/gap-store-census-tick.js	/usr/local/share/substrate/super-repo
 scripts/substrate/gap-store-census-tick.js.map	/usr/local/share/substrate/super-repo/scripts/substrate/gap-store-census-tick.js.map	0644	B
 scripts/substrate/gap-store-census-tick.ts	/usr/local/share/substrate/super-repo/scripts/substrate/gap-store-census-tick.ts	0644	B
 scripts/substrate/gate/candidate.sh	/usr/local/share/substrate/super-repo/scripts/substrate/gate/candidate.sh	0755	B
+scripts/substrate/gate/coverage.json	/usr/local/share/substrate/super-repo/scripts/substrate/gate/coverage.json	0644	B
 scripts/substrate/gate/gate-policy.json	/usr/local/share/substrate/super-repo/scripts/substrate/gate/gate-policy.json	0644	B
 scripts/substrate/gate/gate-runner.sh	/usr/local/share/substrate/super-repo/scripts/substrate/gate/gate-runner.sh	0755	B
 scripts/substrate/gate/shadow-eval.sh	/usr/local/share/substrate/super-repo/scripts/substrate/gate/shadow-eval.sh	0755	B

@@ -5,8 +5,8 @@
 
 ## 1. Tier A: tooling (deployment lane + coordinator)
 
-- [ ] 1.1 `scripts/substrate/image-files.manifest` listing every baked super-repo file (src, dst, mode); the Dockerfile COPYs from it.
-- [ ] 1.2 Coverage map: for each manifest path, the gate fixture that exercises it, or `none` (stays baked).
+- [ ] 1.1 `scripts/substrate/image-files.manifest` listing every baked super-repo file (src, dst, mode); the Dockerfile COPYs from it. The manifest exists and a lint holds it equal to the COPY set; the Dockerfile does not yet COPY from it.
+- [x] 1.2 Coverage map: for each manifest path, the gate fixture that exercises it, or `none` (stays baked). `scripts/substrate/gate/coverage.json`, proven by mutation: behaviour for `substrate-pull-sync` (no-self-exec) and `lib/gap-tracked-red.sh` (lib-sources), none for the other 315. Units are exempt under a named record with an owner gap and an expiry; 99 other paths converge today with no fixture (`converges-today-uncovered`). Kept consistent by `image-coverage-map.test.sh`; replayed by `image-coverage-map.check.sh`.
 - [ ] 1.3 pull-sync installs manifest paths that are covered and inside `gate_paths` from the committed glue tree (coordinator).
 - [ ] 1.4 Canary order enforced for Tier A: first canary, then N clean soak ticks, then the rest (coordinator; interim until the fleet channel).
 - [ ] 1.5 Extend the lint: manifest == Dockerfile COPY set == pull-sync install set; uncovered paths are reported, not converged.
