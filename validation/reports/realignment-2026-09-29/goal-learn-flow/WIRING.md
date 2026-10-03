@@ -437,3 +437,9 @@ The organs that carry it already exist: self_fact_reconcile rows (selfFactSpec),
 - **Still owed:** a consumer effect check, i.e. one live /recommend from a runGoal path whose signature is built only from goal plus seeds.
 - **Side effect:** seed entries no longer carry task_id (the producedBy mapping is gone). If activity-api's signature derivation uses task_id, seeded and recovery cells are re-keyed and start cold. That's acceptable under the pending re-baseline; split measurement windows at 03:10:17Z.
 - **Classification:** SUPERVISED (S2). The gap was operator-armed (directed:true) with an operator-written check. It is the milestone's shape, a lane-authored landing on origin/dev verified by its own check, but NOT detection-originated autonomy (REALIGNMENT §11 "operator-free" acceptance).
+
+## Operator-caused outage window: 03:28-03:40Z, 10-03 (L12)
+- **Cause:** an operator session ran an unfiltered host-wide `kill` over every process named `surreal` (meant for throwaway test instances). Rootless podman container processes share the operator's uid, so it SIGTERMed node 1's live SurrealDB, and probably the other DB-hosting containers.
+- **Duration:** about 12 minutes without a database, until node 1 restarted around 03:40Z (restarts also at 03:30-03:31Z).
+- **Treat it as excluded or marked in every measurement window:** selection and elimination, reach verdicts, failed traces, the lane's landings, and the ed58e66 post-landing effect window. It is not a system fault, and nothing should learn from it (failure memory, credit, extraction).
+- **Correction:** an earlier DB "inactive" reading attributed to key rotation was this kill.
