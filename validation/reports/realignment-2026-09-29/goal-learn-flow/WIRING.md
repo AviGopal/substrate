@@ -844,3 +844,15 @@ Ranked by lane time:
 - **Pushed: bounce quiesce, super-repo c2886041.** The shared-package bounce waits for in-flight work; shaped tick and age bounds force it with one gap; the key stays off argv; fallbacks are visible. Glue 30/0. By-effect check on node 1 pending (deployment).
 - **Filed:** scripts-pass-api-keys-and-tokens-on-command-argv-… (high, about 23 scripts; detector: an argv-secret rule in secret-scope-lint).
 - **Relocation tests** rebased to f6de031b on 968265e6, awaiting the user's push.
+- **Hub on SurrealDB 2.3.10 (in place, user-run, third attempt).**
+  - Timeline: stopped 09:01:54Z (with `mask --runtime` so dependents can't restart it), quiesced 09:02:19Z; tar 78 GB mode 400 done 09:05:50Z; started 09:05:58Z.
+  - Checks: #6060 0/60; all 10 baseline counts OK; /recommend 200. Probe rows to exclude: sel_1791018618588_mzypf6_0/1/2.
+  - The hold stayed on throughout; the hub's release timer is being disarmed by the user.
+  - The two earlier attempts rolled back cleanly: a tar taken while the engine was still flushing, and a Wants= dependent restarting the engine. Fixed by a quiesce wait plus the runtime mask.
+- **Guarded release script** (~/substrate-backups-preserved/release-retention-hold.sh, mode 500, fails closed) enforces the three conditions and runs the fresh test_suite itself. It refuses today because the retention gap is unarmed. `--manual-by-user` still requires the sha256 re-verify.
+- **All three lane-rate checks armed:**
+  - (a) semantic dissent: 968265e6;
+  - (b) relocation hint: f6de031b (20 tests);
+  - (c) bounce quiesce: fix pushed as c2886041.
+  - The operator fixes for (a) and (b) are being built as two commits on f6de031b (ETA 60–90 min), then qa review, then the user's push.
+- **Retention compact-or-exempt check-first:** in progress. Its armed check becomes the release predicate.
