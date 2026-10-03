@@ -48,8 +48,9 @@ curl -sf "$IDENTITY/health" >/dev/null || die "identity-vessel not reachable at 
 
 resolve_identity() {
   local v
-  v=$(curl -s "$IDENTITY/v1/keys/validate" -H "Content-Type: application/json" \
-        -d "{\"api_key\":\"$METABOB_API_KEY\"}")
+  # The key rides in the body on stdin (printf is a builtin), never on curl's argv.
+  v=$(printf '{"api_key":"%s"}' "$METABOB_API_KEY" \
+        | curl -s "$IDENTITY/v1/keys/validate" -H "Content-Type: application/json" --data-binary @-)
   ORG_ID=$(echo "$v" | jq -r '.data.org_id // empty')
   USER_ID=$(echo "$v" | jq -r '.data.user_id // empty')
   [[ -n "$ORG_ID" && -n "$USER_ID" ]] || die "operator key did not validate: $v"
@@ -133,8 +134,8 @@ case "$cmd" in
     ;;
 
   whoami)
-    curl -s "$IDENTITY/v1/keys/validate" -H "Content-Type: application/json" \
-      -d "{\"api_key\":\"$METABOB_API_KEY\"}" | jq '.data'
+    printf '{"api_key":"%s"}' "$METABOB_API_KEY" \
+      | curl -s "$IDENTITY/v1/keys/validate" -H "Content-Type: application/json" --data-binary @- | jq '.data'
     ;;
 
   issue)
@@ -221,9 +222,11 @@ case "$cmd" in
       echo "[substrate-key] To mint an ADDITIONAL admin key, use: substrate-key issue <name> read,write,admin" >&2
       exit 0
     fi
-    resp=$(curl -s "$IDENTITY/v1/keys/bootstrap-admin" -H "Content-Type: application/json" \
+    # The secret rides in the body on stdin (printf is a builtin), never on curl's argv.
+    resp=$(printf '{"bootstrap_secret":"%s","name":"substrate-admin-bootstrap"}' "$API_KEY_SECRET" \
+           | curl -s "$IDENTITY/v1/keys/bootstrap-admin" -H "Content-Type: application/json" \
              -K <(apikey_cfg "$METABOB_API_KEY") \
-             -d "{\"bootstrap_secret\":\"$API_KEY_SECRET\",\"name\":\"substrate-admin-bootstrap\"}")
+             --data-binary @-)
     key=$(echo "$resp" | jq -r '.data.key // empty')
     [[ -n "$key" ]] || die "bootstrap failed: $resp"
     persist_admin_key "$key"
