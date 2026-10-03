@@ -13,6 +13,13 @@
 #   (b2) the NEXT commit (tests unchanged, the name still failing) converges, the name
 #       is still absent from failnames, still reported outstanding, the gap re-emitted
 #   (b3) the name passing again clears it; failing again later is a fresh regression
+#   (b3) ... and that pass is the ONLY thing that closes the gap (status closed, closed_reason
+#       outstanding_tests_passed)
+#   (d) AGED: a name first outstanding longer ago than the window (3 days) escalates the gap to
+#       severity high with a distinct OUTSTANDING REGRESSION AGED line; the gap stays open, the
+#       name stays outstanding, its first-outstanding stamp is kept
+#   (e) aging never clears: ticks after the window keep it outstanding and the gap open; only
+#       the name passing closes it
 #   (c) control: a runtime range whose failures are unchanged converges on the first
 #       tick with no refusal and an unchanged baseline
 #
@@ -94,6 +101,10 @@ setup() { # base commit pinned as last-good, measured with only `old > one` fail
 tick() { : > "$CALLS"; : > "$LOG"; HEAD="$(git -C "$d" rev-parse HEAD)"; run_gate; }
 pin()  { git -C "$d" rev-parse HEAD > "$LAST_GOOD_DIR/$VESSEL"; }   # what the post-mirror step writes
 in_failnames() { grep -qxF "$1" "$TEST_BASELINE_DIR/$VESSEL.failnames"; }
+og() { # jq filter over the outstanding-regression gap(s) emitted this tick
+  grep '^GAP ' "$CALLS" | sed 's/^GAP //' \
+    | jq -r "select(.impulse.pointer.gap.id? == \"pull-sync-testgate-outstanding-regression-$VESSEL\") | .impulse.pointer.gap | $1" 2>/dev/null || true
+}
 outstanding_gap_names() { # names in the outstanding-regression gap emitted this tick
   grep '^GAP ' "$CALLS" | sed 's/^GAP //' \
     | jq -r 'select(.impulse.pointer.gap.classification_metadata.outstanding_tests? != null) | .impulse.pointer.gap.classification_metadata.outstanding_tests[]' 2>/dev/null || true
@@ -138,6 +149,9 @@ grep -q "^CONVERGED $VESSEL" "$CALLS" && ok "(b2) the next commit converges (the
 in_failnames "$X" && bad "(b2) the outstanding name was absorbed into failnames on the next commit" || ok "(b2) the outstanding name is still absent from failnames"
 grep -qF "$X" "$LOG" && grep -qi 'outstanding' "$LOG" && ok "(b2) the tick reports the name as outstanding" || bad "(b2) the tick does not report '$X' as outstanding"
 outstanding_gap_names | grep -qxF "$X" && ok "(b2) the outstanding gap is re-emitted with the name" || bad "(b2) the outstanding gap was not re-emitted"
+[ "$(og .severity)" = medium ] && ok "(b2) inside the window the gap is severity medium" || bad "(b2) severity inside the window: '$(og .severity)'"
+grep -q 'OUTSTANDING REGRESSION AGED' "$LOG" && bad "(b2) escalated inside the window" || ok "(b2) no AGED escalation inside the window"
+[ -n "$(og '.classification_metadata.outstanding_since["'"$X"'"] // empty')" ] && ok "(b2) the gap records when the name first went outstanding" || bad "(b2) no outstanding_since for the name"
 
 # ── (b3) the name passes again: cleared; failing later is a fresh regression ──
 pin; printf '%s\n' "$NEW_OUT" > "$T/stub/out-$(git -C "$d" rev-parse HEAD)"
@@ -147,11 +161,54 @@ tick
 grep -q "^CONVERGED $VESSEL" "$CALLS" && ok "(b3) the repair converges" || bad "(b3) the repair did not converge"
 grep -qi 'cleared' "$LOG" && grep -qF "$X" "$LOG" && ok "(b3) the outstanding name is logged as cleared" || bad "(b3) no 'cleared' line naming '$X'"
 [ -z "$(outstanding_gap_names)" ] && ok "(b3) no outstanding gap once the name passes" || bad "(b3) outstanding gap still emitted: $(outstanding_gap_names | tr '\n' '|')"
+[ "$(og '.status + " " + (.closed_reason // "")')" = "closed outstanding_tests_passed" ] && ok "(b3) the name passing closes the gap (closed_reason outstanding_tests_passed)" || bad "(b3) the gap was not closed by the pass: '$(og '.status + " " + (.closed_reason // "")')'"
 pin; printf '%s\n' "$OLD_OUT" > "$T/stub/out-$(git -C "$d" rev-parse HEAD)"
 echo 'export const x = 5;' > "$d/src/x.ts"; g commit -am rebreak
 printf '%s\n' "$NEW_OUT" > "$T/stub/clone-out"
 tick
 grep -q 'GAP .*pull-sync-test-regression-demo-vessel' "$CALLS" && ok "(b3) failing again after clearing is a fresh regression (refused)" || bad "(b3) a re-break after clearing was not refused"
+
+# ── (d) aged outstanding: escalates, stays open ───────────────────────────────
+setup
+echo 'export const x = 2;' > "$d/src/x.ts"; g commit -am runtime
+printf '%s\n' "$NEW_OUT" > "$T/stub/clone-out"
+for i in 1 2 3 4; do tick; done
+grep -q "^CONVERGED $VESSEL" "$CALLS" && ok "(d) setup: the break converged" || bad "(d) setup: the break did not converge"
+SINCE="$TEST_BASELINE_DIR/$VESSEL.outstanding-since"
+[ -s "$SINCE" ] && ok "(d) the first-outstanding time is recorded" || bad "(d) no first-outstanding stamp ($SINCE)"
+OLD=$(( $(date +%s) - 4 * 86400 ))   # fake clock: first outstanding 4 days ago (window 3 days)
+printf '%s\t%s\n' "$OLD" "$X" > "$SINCE"
+pin; printf '%s\n' "$NEW_OUT" > "$T/stub/out-$(git -C "$d" rev-parse HEAD)"
+echo 'export const x = 3;' > "$d/src/x.ts"; g commit -am runtime-2
+tick
+grep -q "^CONVERGED $VESSEL" "$CALLS" && ok "(d) the next commit still converges" || bad "(d) the next commit was refused"
+grep -q 'OUTSTANDING REGRESSION AGED' "$LOG" && grep 'OUTSTANDING REGRESSION AGED' "$LOG" | grep -qF "$X" && ok "(d) a distinct AGED notice names the name" || bad "(d) no 'OUTSTANDING REGRESSION AGED' line naming '$X'"
+[ "$(og .severity)" = high ] && ok "(d) the aged gap is escalated to severity high" || bad "(d) severity after the window: '$(og .severity)'"
+og '.classification_metadata.aged_tests[]' | grep -qxF "$X" && ok "(d) aged_tests names it" || bad "(d) aged_tests does not name it"
+[ "$(og .status)" = open ] && ok "(d) the aged gap stays OPEN" || bad "(d) aged gap status: '$(og .status)'"
+grep '^GAP ' "$CALLS" | grep -q '"status":"closed"' && bad "(d) aging emitted a closed gap" || ok "(d) aging closed nothing"
+outstanding_gap_names | grep -qxF "$X" && ok "(d) the name is still outstanding" || bad "(d) the name left the outstanding set by aging"
+in_failnames "$X" && bad "(d) aging absorbed the name into failnames" || ok "(d) aging did not absorb it into failnames"
+[ "$(cut -f1 "$SINCE")" = "$OLD" ] && ok "(d) the first-outstanding stamp is kept, not reset" || bad "(d) stamp reset to $(cut -f1 "$SINCE")"
+
+# ── (e) aging does not clear: still failing after the window = still outstanding ──
+E_OPEN=0; E_CLOSED=0
+for i in 1 2 3; do
+  pin; printf '%s\n' "$NEW_OUT" > "$T/stub/out-$(git -C "$d" rev-parse HEAD)"
+  echo "export const x = 1$i;" > "$d/src/x.ts"; g commit -am "aging-$i"
+  tick
+  [ "$(og .status)" = open ] && outstanding_gap_names | grep -qxF "$X" && E_OPEN=$((E_OPEN+1))
+  grep '^GAP ' "$CALLS" | grep -q '"status":"closed"' && E_CLOSED=$((E_CLOSED+1))
+done
+[ "$E_OPEN" = 3 ] && ok "(e) 3 more ticks past the window: outstanding and open every time" || bad "(e) open+outstanding on $E_OPEN of 3 ticks"
+[ "$E_CLOSED" = 0 ] && ok "(e) never closed while still failing" || bad "(e) closed on $E_CLOSED tick(s) while still failing"
+grep -qxF "$X" "$TEST_BASELINE_DIR/$VESSEL.outstanding" && ok "(e) still in the outstanding set" || bad "(e) dropped from the outstanding set"
+pin; printf '%s\n' "$NEW_OUT" > "$T/stub/out-$(git -C "$d" rev-parse HEAD)"
+echo 'export const x = 99;' > "$d/src/x.ts"; g commit -am repair
+printf '%s\n' "$OLD_OUT" > "$T/stub/clone-out"
+tick
+[ "$(og '.status + " " + (.closed_reason // "")')" = "closed outstanding_tests_passed" ] && ok "(e) only the name passing closes the aged gap" || bad "(e) aged gap not closed by the pass: '$(og '.status + " " + (.closed_reason // "")')'"
+[ ! -e "$SINCE" ] && ok "(e) the stamp is dropped once cleared" || bad "(e) stamp left behind after clearing"
 
 # ── (c) control: unchanged failures converge normally ─────────────────────────
 setup

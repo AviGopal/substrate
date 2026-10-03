@@ -2154,13 +2154,47 @@ EOF
       OUT_FILE="$TEST_BASELINE_DIR/$v.outstanding"
       tg_minus_outstanding() { comm -23 <(printf '%s\n' "$1" | sort -u) <(sort -u "$OUT_FILE" 2>/dev/null) 2>/dev/null | grep . || true; }
       tg_write_failnames() { printf '%s\n' "$(tg_minus_outstanding "$1")" > "$B_NAMES_FILE"; }
+      # OUTSTANDING NAMES AGE (qa, 2026-10-02). Without an age, "baseline + outstanding" is a
+      # permanent shadow baseline. $v.outstanding-since holds "<epoch-first-outstanding>\t<name>";
+      # a name outstanding longer than TG_OUTSTANDING_ESCALATE_SECONDS escalates: the gap goes from
+      # severity "medium" to "high" (boredom-vessel gapPriorityWeight reads gap.severity, so an aged
+      # regression outranks routine work) and a distinct OUTSTANDING REGRESSION AGED line is logged.
+      # Aging never clears and never closes anything: the gap closes ONLY when every name passes.
+      # A named constant, not an env knob: pull-sync has no shaped-setting reader, and an env var
+      # would be frozen and invisible to traces (law 1). 3 days.
+      TG_OUTSTANDING_ESCALATE_SECONDS=259200
+      OUT_SINCE="$OUT_FILE-since"
+      # Stamp every outstanding name that has none; drop stamps of names no longer outstanding.
+      tg_stamp_outstanding() {
+        local now; now="$(date +%s)"
+        { cat "$OUT_SINCE" 2>/dev/null || true; } | awk -F'\t' -v now="$now" -v outf="$OUT_FILE" 'BEGIN{while((getline l < outf)>0) if(l!="") O[l]=1}
+          ($2 in O) && !($2 in S) && $1 ~ /^[0-9]+$/ {S[$2]=$1}
+          END{for(n in O) printf "%s\t%s\n", ((n in S)?S[n]:now), n}' | sort -t$'\t' -k2 > "$OUT_SINCE.tmp" \
+          && mv "$OUT_SINCE.tmp" "$OUT_SINCE"
+      }
       # One gap per vessel, re-emitted every gated tick while any name is outstanding, so the
-      # regression the break deployed stays queryable (names in classification_metadata).
+      # regression the break deployed stays queryable (names, first-outstanding times, aged names
+      # in classification_metadata). Open while anything is outstanding; closed only by tg_close_outstanding.
       tg_emit_outstanding() {
+        tg_stamp_outstanding
+        local now aged; now="$(date +%s)"
+        aged="$(awk -F'\t' -v now="$now" -v w="$TG_OUTSTANDING_ESCALATE_SECONDS" '$1 ~ /^[0-9]+$/ && now - $1 > w {print $2}' "$OUT_SINCE" 2>/dev/null || true)"
+        if [ -n "$aged" ]; then
+          log "$v: !!! OUTSTANDING REGRESSION AGED — $(printf '%s' "$aged" | grep -c .) test(s) live and failing for longer than ${TG_OUTSTANDING_ESCALATE_SECONDS}s, escalating the gap to severity high: $(printf '%s' "$aged" | tr '\n' ';' | cut -c1-400)"
+        fi
+        emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg names "$1" --arg aged "$aged" --arg w "$TG_OUTSTANDING_ESCALATE_SECONDS" \
+          --argjson since "$(jq -R -s -c 'split("\n") | map(select(length > 0) | split("\t") | {key: .[1], value: (.[0] | tonumber | todate)}) | from_entries' "$OUT_SINCE" 2>/dev/null || echo '{}')" \
+          '($names | split("\n") | map(select(length > 0))) as $n | ($aged | split("\n") | map(select(length > 0))) as $a | {impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-outstanding-regression-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",
+            severity:(if ($a | length) > 0 then "high" else "medium" end),
+            summary:("Repair needed: pull-sync converged " + $v + " past its test gate on a starvation break, so " + ($n | length | tostring) + " regressed test(s) are LIVE and still failing at " + $head + ": " + ($n | join("; ")) + ". They are held outstanding, never written into the baseline: later commits are judged against the pre-regression baseline, and this closes only when the named tests pass again." + (if ($a | length) > 0 then " ESCALATED: " + ($a | length | tostring) + " outstanding for longer than " + $w + "s." else "" end)),
+            classification_metadata:{vessel:$v,outstanding_tests:$n,outstanding_since:($since | with_entries(select(.key as $k | $n | index($k)))),aged_tests:$a,escalate_after_seconds:($w | tonumber),head:$head}}}}}' 2>/dev/null)"
+      }
+      # The only closing path: every outstanding name passed again.
+      tg_close_outstanding() {
         emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg names "$1" \
-          '($names | split("\n") | map(select(length > 0))) as $n | {impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-outstanding-regression-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",
-            summary:("Repair needed: pull-sync converged " + $v + " past its test gate on a starvation break, so " + ($n | length | tostring) + " regressed test(s) are LIVE and still failing at " + $head + ": " + ($n | join("; ")) + ". They are held outstanding, never written into the baseline: later commits are judged against the pre-regression baseline, and this clears only when the named tests pass again."),
-            classification_metadata:{vessel:$v,outstanding_tests:$n,head:$head}}}}}' 2>/dev/null)"
+          '($names | split("\n") | map(select(length > 0))) as $n | {impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-outstanding-regression-" + $v),category:"systematic_failure",source:"substrate_detected",status:"closed",closed_reason:"outstanding_tests_passed",
+            summary:("pull-sync test gate: every outstanding regressed test of " + $v + " passes again at " + $head + ": " + ($n | join("; "))),
+            classification_metadata:{vessel:$v,outstanding_tests:[],cleared_tests:$n,head:$head}}}}}' 2>/dev/null)"
       }
       if [ -s "$OUT_FILE" ]; then
         OUT_STILL="$(comm -12 <(sort -u "$OUT_FILE") <(printf '%s\n' "$T_NAMES" | sort -u) 2>/dev/null | grep . || true)"
@@ -2171,7 +2205,8 @@ EOF
           log "$v: $(printf '%s' "$OUT_STILL" | grep -c .) outstanding regression(s) still failing at ${HEAD:0:10} (deployed by a starvation break; never absorbed into the baseline): $(printf '%s' "$OUT_STILL" | tr '\n' ';' | cut -c1-400)"
           tg_emit_outstanding "$OUT_STILL"
         else
-          rm -f "$OUT_FILE" 2>/dev/null || true
+          tg_close_outstanding "$OUT_CLEARED"
+          rm -f "$OUT_FILE" "$OUT_SINCE" 2>/dev/null || true
         fi
       fi
       # The reference a candidate is judged against: the pre-regression baseline plus what is
