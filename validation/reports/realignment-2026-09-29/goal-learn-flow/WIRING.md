@@ -702,3 +702,8 @@ A regression class counts as covered only if negating or removing the shipped ch
 - **Refold sources, independent copies (deployment):** separate inodes (cp --reflink=never), mode 400, labelled, outside rotation. Same device as the originals: the other disk is unmounted, and mounting it is the user's call.
   - 06:00 pre-upgrade tar: sha256 `2d947e6e509fae119331a3728eca3e1923e289d7c46f39a51f419fb67b8d3bb1` (original and copy match).
   - 05:50 restore-proof tar: sha256 `510e96543a264e486c09e93a15dc615520a36e59eead3207ed7ed48125920f0a` (original and copy match).
+- **Retention throttle, effect at sweep 3 (06:38:31Z):**
+  - **Strata phase:** 373 ms, `stoppedBy: done`, 184 rows removed (validator-dispatch 152, slot-binding 32; both telemetry kinds, 0 gradable per the sweep-1 check). The 1 s cap did NOT bind: the remaining over-cap strata are small now. The throttle is confirmed in place, but its binding effect is unproven until a large stratum appears.
+  - **Ceiling valve:** total 59,013 against 150,000, `willPrune: false`.
+  - **Aux:** trace_digest 500 and concept_usage 734 removed (separate tables, not executions).
+  - The hold stands until its lift condition.
