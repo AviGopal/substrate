@@ -530,3 +530,38 @@ The SurrealDB 2.3.10 upgrade follows per node as a SEPARATE deploy event, after 
 - **The real hole:** acceptance never exercises the change it promotes. The deployment session adds a large-frame concurrent-read check to the network leg and re-judges af119736 with it.
 - Local nodes stay pinned to 60ae05a0 until that check passes.
 - (This corrects the coordinator's earlier claim that CI publishes :dev ungated from HEAD.)
+
+### Scope criterion, first application: vessel-mitosis-cutover.ts STAYS excluded (advisory evidence for the evaluator, 10-03)
+**Regression history:** 119 commits on the file, 15 regression classes. (R) marks a class that re-broke after a fix.
+- A, stale-base overwrite (R)
+- B, the lane edits its own drift gate (R)
+- C, precutover baseline (R)
+- D, commit-tree misfire (R)
+- E, deferred typecheck-only landing
+- F, self-restart, quiesce and coalescing
+- G, pending lock and dirty index (R)
+- H, landing trace (R)
+- I, drafter-corruption and parse guards
+- J, evidence deletion
+- K, lease and change window
+- L, mirror gated on push
+- M, soft-refuse shape
+- N, land credit despite failed verification
+- O, stale gate on a node
+
+**Coverage:**
+- **Strict reading (armed means an evidence_resolve row): 0 of 15.** The only armed cutover test, "refuses cutover when staged_base_sha is missing", is RED and subtracted from the gate as tracked-red. It is also mis-aimed as the check of route-edit-61819178, whose edit_site is patch-with-tools.ts.
+- **Loose reading (a green test of shipped code): ~4 of 15** (C, E, L, M); 3 partial (D, K, G).
+- **The largest escape class, A, is UNCOVERED,** and its gap is held as falsifier=unresolvable.
+- **Test-covered is not gate-covered here:** step 5d fails open and has an env kill switch, and pull-sync's post-land gate has a starvation break.
+- staged-mitosis-own-check (E) has NO evidence_resolve row, so tonight's gate-fix suites are tested but not armed.
+
+**To arm before the file can leave the list:**
+1. a git-backed must-fail for A (stale base);
+2. 5d failing closed, with the kill switch removed;
+3. the no_measurement_available refusal;
+4. a stale-gate-version must-fail for O;
+5. shipped-code tests for I, J, G and H;
+6. a first test, then a must-fail, for F;
+7. the self-certification admission rule for B;
+8. fixing or re-aiming the red staged_base_sha test, and re-pointing route-edit-61819178's check.
