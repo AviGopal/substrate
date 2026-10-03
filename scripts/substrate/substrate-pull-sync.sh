@@ -2051,7 +2051,7 @@ EOF
   # DOWN, so a suite that grew could never converge again. Left as a comment rather than
   # deleted silently because its absence is the point: no count of failures, however measured,
   # can distinguish "a test broke" from "more tests exist".
-  REG=""; REG_F=""; REG_P=""; REG_U=""
+  REG=""; REG_F=""; REG_P=""; REG_U=""; REG_NAMED=""; CONF_SET=""; OUT_STILL=""
   if [ -z "$BUN_BIN" ]; then
     log "$v: !!! TEST GATE BLIND — no test runner available (bun missing, or the per-tick budget line above disabled it); this is not 'no tests', it is no instrument. Converging ungated."
     # Only file when the runner is genuinely missing. When the budget branch above cleared
@@ -2142,6 +2142,41 @@ EOF
       # comparing across formats — which is the very mistake being fixed.
       B_NAMES_FILE="$TEST_BASELINE_DIR/$v.failnames"
       T_NAMES="$(fail_names "$T_OUT")"
+      # OUTSTANDING REGRESSIONS ARE NEVER ABSORBED INTO THE BASELINE (2026-10-02). The starvation
+      # break below used to write the regressed names into failnames, and so did every later
+      # baseline refresh — after which the gate could no longer see the regression at all. A
+      # regression the break deployed is held in $v.outstanding instead: failnames stays the
+      # pre-regression baseline, every write to it goes through tg_write_failnames (which subtracts
+      # the outstanding set), an outstanding name is not re-charged to later commits (it is
+      # already live; the gap below tracks it, like the tracked-by-open-gap subtraction), and it
+      # leaves the list only when it no longer fails. Absent from the fail set is read as passing;
+      # a file that stops loading is the load-error gate's to catch.
+      OUT_FILE="$TEST_BASELINE_DIR/$v.outstanding"
+      tg_minus_outstanding() { comm -23 <(printf '%s\n' "$1" | sort -u) <(sort -u "$OUT_FILE" 2>/dev/null) 2>/dev/null | grep . || true; }
+      tg_write_failnames() { printf '%s\n' "$(tg_minus_outstanding "$1")" > "$B_NAMES_FILE"; }
+      # One gap per vessel, re-emitted every gated tick while any name is outstanding, so the
+      # regression the break deployed stays queryable (names in classification_metadata).
+      tg_emit_outstanding() {
+        emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg names "$1" \
+          '($names | split("\n") | map(select(length > 0))) as $n | {impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-outstanding-regression-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",
+            summary:("Repair needed: pull-sync converged " + $v + " past its test gate on a starvation break, so " + ($n | length | tostring) + " regressed test(s) are LIVE and still failing at " + $head + ": " + ($n | join("; ")) + ". They are held outstanding, never written into the baseline: later commits are judged against the pre-regression baseline, and this clears only when the named tests pass again."),
+            classification_metadata:{vessel:$v,outstanding_tests:$n,head:$head}}}}}' 2>/dev/null)"
+      }
+      if [ -s "$OUT_FILE" ]; then
+        OUT_STILL="$(comm -12 <(sort -u "$OUT_FILE") <(printf '%s\n' "$T_NAMES" | sort -u) 2>/dev/null | grep . || true)"
+        OUT_CLEARED="$(comm -23 <(sort -u "$OUT_FILE") <(printf '%s\n' "$T_NAMES" | sort -u) 2>/dev/null | grep . || true)"
+        [ -n "$OUT_CLEARED" ] && log "$v: outstanding regression(s) cleared — no longer failing at ${HEAD:0:10}: $(printf '%s' "$OUT_CLEARED" | tr '\n' ';' | cut -c1-400)"
+        if [ -n "$OUT_STILL" ]; then
+          printf '%s\n' "$OUT_STILL" > "$OUT_FILE"
+          log "$v: $(printf '%s' "$OUT_STILL" | grep -c .) outstanding regression(s) still failing at ${HEAD:0:10} (deployed by a starvation break; never absorbed into the baseline): $(printf '%s' "$OUT_STILL" | tr '\n' ';' | cut -c1-400)"
+          tg_emit_outstanding "$OUT_STILL"
+        else
+          rm -f "$OUT_FILE" 2>/dev/null || true
+        fi
+      fi
+      # The reference a candidate is judged against: the pre-regression baseline plus what is
+      # already outstanding (live, tracked, not this commit's).
+      B_REF="$( { cat "$B_NAMES_FILE" 2>/dev/null; printf '%s\n' "$OUT_STILL"; } | grep . | sort -u || true)"
       # Before the baseline is refreshed below: B_NAMES_FILE still holds the PREVIOUS tick's fail set,
       # which is what the generator's two-tick flake filter compares against. Never fatal.
       # Queued, not run: the generator's alone-runs (up to 3 x 165 s) must never sit in front of a deploy in a
@@ -2191,9 +2226,9 @@ EOF
         log "$v: load-error gate — $REG"
       elif [ ! -s "$B_NAMES_FILE" ]; then
         log "$v: test baseline recorded — $T_FAIL fail / ${T_PASS:-?} pass, $(printf '%s' "$T_NAMES" | grep -c . || true) named failing tests (no gate on first observation)"
-        printf '%s\n' "$T_NAMES" > "$B_NAMES_FILE"
+        tg_write_failnames "$T_NAMES"
         echo "$T_FAIL ${T_PASS:-0} $T_UNNAMED" > "$TEST_BASELINE_DIR/$v"
-      elif [ -n "$(comm -23 <(printf '%s\n' "$T_NAMES") <(sort -u "$B_NAMES_FILE") 2>/dev/null | grep -c . | grep -v '^0$')" ]; then
+      elif [ -n "$(comm -23 <(printf '%s\n' "$T_NAMES") <(printf '%s\n' "$B_REF") 2>/dev/null | grep -c . | grep -v '^0$')" ]; then
         # BEST OF TWO: these suites are measurably flaky (development-vessel reported
         # 98 then 103 failures on an identical tree). Noise is additive, so the minimum
         # failure count approximates the deterministic one; a single second sample
@@ -2210,8 +2245,8 @@ EOF
         # regression. Intersecting the two runs' newly-failing sets is the set-valued analogue
         # of the old best-of-two minimum.
         T2_NAMES="$(fail_names "$T2_OUT")"
-        NEW1="$(comm -23 <(printf '%s\n' "$T_NAMES") <(sort -u "$B_NAMES_FILE") 2>/dev/null || true)"
-        NEW2="$(comm -23 <(printf '%s\n' "$T2_NAMES") <(sort -u "$B_NAMES_FILE") 2>/dev/null || true)"
+        NEW1="$(comm -23 <(printf '%s\n' "$T_NAMES") <(printf '%s\n' "$B_REF") 2>/dev/null || true)"
+        NEW2="$(comm -23 <(printf '%s\n' "$T2_NAMES") <(printf '%s\n' "$B_REF") 2>/dev/null || true)"
         CONFIRMED="$(comm -12 <(printf '%s\n' "$NEW1" | sort -u) <(printf '%s\n' "$NEW2" | sort -u) 2>/dev/null | grep -c . || true)"
         if [ "${CONFIRMED:-0}" -gt 0 ]; then
           # CONFIRM AGAINST A FRESHLY-MEASURED PARENT, NOT ONLY THE STORED SNAPSHOT.
@@ -2281,7 +2316,7 @@ EOF
         if [ "${CONFIRMED:-0}" -gt 0 ]; then
           FIRST_NEW="$(printf '%s' "${CONF_SET:-}" | grep -m1 . || true)"
           REG="$CONFIRMED test(s) newly failing in both candidate runs and attributable to this commit, e.g. ${FIRST_NEW:-?} (counts: $B_NAMED -> $BEST_F fail)"
-          REG_F="$BEST_F"; REG_P="${BEST_P:-0}"; REG_U="$T_UNNAMED"
+          REG_F="$BEST_F"; REG_P="${BEST_P:-0}"; REG_U="$T_UNNAMED"; REG_NAMED=1
         else
           if [ -n "$TRACKED_ONLY" ]; then
             log "$v: every newly-failing test is tracked by an open gap — converging"
@@ -2295,16 +2330,16 @@ EOF
           # accuracy test kept the gate on this path every tick. When the gate has decided to
           # converge, the tree it converged is the new reference — otherwise the same drift is
           # re-litigated, and re-charged to an innocent commit, on every subsequent tick.
-          printf '%s\n' "$T_NAMES" > "$B_NAMES_FILE"
+          tg_write_failnames "$T_NAMES"
           echo "$T_FAIL ${T_PASS:-0} $T_UNNAMED" > "$TEST_BASELINE_DIR/$v"
         fi
       else
         # No newly-failing test. Re-baseline whenever the SET changed at all, so a suite that
         # grows or whose flakes settle does not carry a stale reference forward — the failure
         # mode that wedged this gate in the first place.
-        if [ "$(printf '%s\n' "$T_NAMES")" != "$(cat "$B_NAMES_FILE" 2>/dev/null)" ]; then
+        if [ "$(tg_minus_outstanding "$T_NAMES")" != "$(grep . "$B_NAMES_FILE" 2>/dev/null)" ]; then
           log "$v: no newly-failing test; refreshing baseline ($B_NAMED -> $T_NAMED named failing; $T_FAIL fail in the summary)"
-          printf '%s\n' "$T_NAMES" > "$B_NAMES_FILE"
+          tg_write_failnames "$T_NAMES"
           echo "$T_FAIL ${T_PASS:-0} $T_UNNAMED" > "$TEST_BASELINE_DIR/$v"
         fi
       fi
@@ -2314,23 +2349,44 @@ EOF
     RC_FILE="$MARKER_DIR/$v.testgate-refusals"
     RC="$(cat "$RC_FILE" 2>/dev/null || echo 0)"; case "$RC" in ''|*[!0-9]*) RC=0 ;; esac
     RC=$((RC + 1)); echo "$RC" > "$RC_FILE" 2>/dev/null || true
+    # A TEST-ONLY RANGE NEVER TAKES THE STARVATION BREAK (2026-10-02). The break exists because
+    # indefinite staleness of RUNTIME code is the worse failure. A range that changes only tests
+    # (last-good pin .. HEAD, test_only_range) leaves the unit's code byte-identical, so refusing
+    # it costs no staleness at all — and breaking would deploy nothing but the regression's
+    # absorption. It is refused for as long as it regresses. Uncomputable -> not test-only.
+    TG_PREV_GOOD="$(cat "${LAST_GOOD_DIR:-/nonexistent}/$v" 2>/dev/null || true)"
+    TG_TESTONLY=""
+    test_only_range "$d" "$TG_PREV_GOOD" "$HEAD" && TG_TESTONLY=1
+    if [ -n "$TG_TESTONLY" ]; then
+      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. The range ${TG_PREV_GOOD:0:10}..${HEAD:0:10} changes only tests, so it is refused until repaired (refusal $RC); the starvation break never applies to a test-only range, which changes no runtime code.\",\"status\":\"open\"}}}}"
+      log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge (refusal $RC; ${TG_PREV_GOOD:0:10}..${HEAD:0:10} is test-only, so no starvation break); runtime keeps running its current code"
+      skipped=$((skipped + 1)); continue
+    fi
     emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. Refusal $RC of ${TEST_GATE_MAX_REFUSALS:-3}; the runtime stays on the code it is already running until this is repaired or the refusal bound is reached.\",\"status\":\"open\"}}}}"
     if [ "$RC" -le "${TEST_GATE_MAX_REFUSALS:-3}" ]; then
       log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge ($RC/${TEST_GATE_MAX_REFUSALS:-3}); runtime keeps running its current code"
       skipped=$((skipped + 1)); continue
     fi
-    # D1 FIX. Accept the observed numbers as the new baseline on the starvation break.
-    # Without this the old, better baseline persists forever, so EVERY later commit to
-    # this vessel is re-judged a regression and pays 3 refusals (~30min of deploy
-    # staleness) plus 6 full suite runs — permanently, until someone hand-edits the
-    # baseline file. Accepting a degraded baseline blinds the gate to THIS regression,
-    # so the acceptance itself is filed as its own gap rather than passing silently.
-    log "$v: TEST-GATE STARVATION BREAK — refused $RC consecutive runs at ${HEAD:0:10} ($REG); indefinite staleness is the worse failure, converging anyway and accepting $REG_F fail/$REG_P pass as the new baseline"
+    # THE BREAK DEPLOYS; IT DOES NOT FORGIVE. Converging past a confirmed regression is the
+    # lesser evil for runtime code, but the regressed names are NOT written into failnames (that
+    # was the old D1 fix, and it made the gate permanently blind to the regression it had just
+    # let through, with only a "baseline degraded" gap to show for it). They are held in
+    # $v.outstanding: failnames stays the pre-regression baseline, later commits are not
+    # re-charged for names already live (the D1 starvation it fixed stays fixed), every gated
+    # tick re-reports them and re-emits their gap, and they clear only when they pass again.
+    # The count file still records the observed counts; its unnamed field is what the
+    # load-error gate reads.
     echo "$REG_F $REG_P ${REG_U:-}" > "$TEST_BASELINE_DIR/$v"
-    # Accept the names too: a count-only rewrite left the names file describing the OLD tree, so
-    # every later commit was re-judged against a baseline that no longer matched the counts.
-    printf '%s\n' "${T_NAMES:-}" > "$TEST_BASELINE_DIR/$v.failnames"
-    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-testgate-baseline-degraded-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate accepted a DEGRADED baseline for $v ($REG) after $RC refusals. The gate is now blind to this regression until the suite is repaired and the baseline lowered.\",\"status\":\"open\"}}}}"
+    if [ -n "$REG_NAMED" ] && [ -n "$(printf '%s' "${CONF_SET:-}" | grep . || true)" ]; then
+      { cat "$OUT_FILE" 2>/dev/null; printf '%s\n' "$CONF_SET"; } | grep . | sort -u > "$OUT_FILE.tmp" && mv "$OUT_FILE.tmp" "$OUT_FILE"
+      log "$v: TEST-GATE STARVATION BREAK — refused $RC consecutive runs at ${HEAD:0:10} ($REG); indefinite staleness is the worse failure, converging anyway. The regressed test(s) are held OUTSTANDING, not written into the baseline: $(printf '%s' "$CONF_SET" | tr '\n' ';' | cut -c1-400)"
+      tg_emit_outstanding "$(cat "$OUT_FILE")"
+    else
+      # A load regression (unnamed count) has no names to hold outstanding; unchanged behaviour.
+      log "$v: TEST-GATE STARVATION BREAK — refused $RC consecutive runs at ${HEAD:0:10} ($REG); indefinite staleness is the worse failure, converging anyway and accepting $REG_F fail/$REG_P pass as the new baseline"
+      tg_write_failnames "${T_NAMES:-}"
+      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-testgate-baseline-degraded-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate accepted a DEGRADED baseline for $v ($REG) after $RC refusals. The gate is now blind to this regression until the suite is repaired and the baseline lowered.\",\"status\":\"open\"}}}}"
+    fi
   fi
   rm -f "$MARKER_DIR/$v.testgate-refusals" 2>/dev/null || true
 

@@ -39,6 +39,7 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
   sed -n '/^clone_deps_gap() {/,/^}/p' "$SCRIPT"
   sed -n '/^ensure_clone_deps() {/,/^}/p' "$SCRIPT"
   sed -n '/^unresolved_modules() {/,/^}/p' "$SCRIPT"
+  sed -n '/^test_only_range() {/,/^}/p' "$SCRIPT"
   echo 'run_gate() {'
   echo 'for v in "$VESSEL"; do'
   awk '/^  # 3-pre\. TEST GATE/{on=1} on{print} on && /^  rm -f "\$MARKER_DIR\/\$v\.testgate-refusals"/{exit}' "$SCRIPT"
