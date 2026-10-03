@@ -465,6 +465,7 @@ scripts/substrate/identical-failure-run-tick.d.ts.map	/usr/local/share/substrate
 scripts/substrate/identical-failure-run-tick.js	/usr/local/share/substrate/super-repo/scripts/substrate/identical-failure-run-tick.js	0644	B
 scripts/substrate/identical-failure-run-tick.js.map	/usr/local/share/substrate/super-repo/scripts/substrate/identical-failure-run-tick.js.map	0644	B
 scripts/substrate/identical-failure-run-tick.ts	/usr/local/share/substrate/super-repo/scripts/substrate/identical-failure-run-tick.ts	0644	B
+scripts/substrate/image-files.manifest	/usr/local/share/substrate/super-repo/scripts/substrate/image-files.manifest	0644	B
 scripts/substrate/import-operator-memory.d.ts	/usr/local/share/substrate/super-repo/scripts/substrate/import-operator-memory.d.ts	0644	B
 scripts/substrate/import-operator-memory.d.ts.map	/usr/local/share/substrate/super-repo/scripts/substrate/import-operator-memory.d.ts.map	0644	B
 scripts/substrate/import-operator-memory.js	/usr/local/share/substrate/super-repo/scripts/substrate/import-operator-memory.js	0644	B

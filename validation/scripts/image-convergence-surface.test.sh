@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# image-convergence-surface.test.sh: every file the image bakes from the super-repo has an in-place installer.
+# image-convergence-surface.test.sh: the image-files manifest equals the Dockerfile COPY set (pre-commit glue test).
+# The companion image-convergence-surface.check.sh judges the installer side: every baked file has an in-place installer.
 #
 # The boot image only needs to be good enough to boot and run the update gate. Everything it copies
 # from scripts/ (and the manifest) should then converge in place from the node's committed glue tree,
@@ -22,12 +23,20 @@ DF="$ROOT/Dockerfile.substrate"; PS="$ROOT/scripts/substrate/substrate-pull-sync
 [ -f "$DF" ] && [ -f "$PS" ] || { bad "inputs present (Dockerfile.substrate, substrate-pull-sync.sh)"; done_tests; }
 BIN=/usr/local/bin; SHARE=/usr/local/share/substrate; UNITS=/usr/lib/systemd/system; LIBEXEC=/usr/local/libexec/substrate
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
+# The glue hook runs this on a checkout-index export with no .git; a work tree lists tracked files only.
+if git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 && [ "$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null)" = "$ROOT" ]; then
+  lsf() { (cd "$ROOT/$1" && git ls-files . 2>/dev/null); }
+  fmode() { local m; m=$(cd "$ROOT" && git ls-files -s -- "$1" | awk '{print $1}' | head -1); [ "$m" = 100755 ] && echo 0755 || echo 0644; }
+else
+  lsf() { (cd "$ROOT/$1" && find . \( -type f -o -type l \) | sed 's#^\./##' | sort); }
+  fmode() { [ -x "$ROOT/$1" ] && echo 0755 || echo 0644; }
+fi
 
 # 1. Baked destinations (one per file). COPY lines from another stage (--from) are not super-repo files.
 grep -E '^\s*COPY ' "$DF" | grep -v -- '--from' | sed -E 's/\s+/ /g' | awk '{print $NF"\t"$2}' \
   | grep -E $'\t(scripts/|docker-compose\\.yml)' | while IFS=$'\t' read -r dst src; do
     if [ -d "$ROOT/${src%/}" ]; then
-      (cd "$ROOT/${src%/}" && git ls-files . 2>/dev/null) | while read -r f; do printf '%s\t%s\n' "${src%/}/$f" "${dst%/}/$f"; done
+      lsf "${src%/}" | while read -r f; do printf '%s\t%s\n' "${src%/}/$f" "${dst%/}/$f"; done
     elif [[ "$src" == *'*'* ]]; then
       for f in $ROOT/$src; do [ -f "$f" ] && printf '%s\t%s\n' "${f#$ROOT/}" "${dst%/}/$(basename "$f")"; done
     else
@@ -41,8 +50,7 @@ tierb_prefix="$SHARE/super-repo/scripts/substrate/"
 # The manifest form: src<TAB>dst<TAB>mode<TAB>tier (mode from git; tier A = tooling, B = federation runtime tree).
 manifest_lines() {
   while IFS=$'\t' read -r src dst; do
-    m=$(cd "$ROOT" && git ls-files -s -- "$src" | awk '{print $1}' | head -1)
-    case "$m" in 100755) mode=0755 ;; *) mode=0644 ;; esac
+    mode=$(fmode "$src")
     case "$dst" in "$tierb_prefix"*) tier=B ;; *) tier=A ;; esac
     printf '%s\t%s\t%s\t%s\n' "$src" "$dst" "$mode" "$tier"
   done < "$T/pairs"
@@ -60,7 +68,7 @@ if [ "${1:-}" = --print-manifest ]; then manifest_lines; exit 0; fi
   grep -q '_se_lib_to="\$SHARE_DIR/lib/gap-tracked-red.sh"' "$PS" && echo "$SHARE/lib/gap-tracked-red.sh"
   grep -q 'GATE_LIBEXEC_DIR/.gate-runner.new' "$PS" && echo "$LIBEXEC/gate-runner"
   # units converge from scripts/substrate/units into $UNIT_DIR (whole tree)
-  (cd "$ROOT/scripts/substrate/units" && git ls-files .) | sed "s#^#$UNITS/#"
+  lsf scripts/substrate/units | sed "s#^#$UNITS/#"
   # active-scripts: the image copy is the boot seed of /workspace/active-scripts, which pull-sync refreshes
   grep -q 'cp -f "\$_sg_src"/\*.ts /workspace/active-scripts/' "$PS" && grep "^$SHARE/active-scripts/" "$T/baked"
   # the fleet definition converges into the volume (FLEET_DIR); the image copy is its fallback
@@ -75,7 +83,7 @@ if [ -f "$MF" ]; then
   if diff <(grep -v '^#' "$MF" | grep -v '^$' | sort) <(manifest_lines | sort) > "$T/mdiff"; then
     ok "the image-files manifest equals the Dockerfile COPY set"
   else
-    sed 's/^/  manifest drift: /' "$T/mdiff" | head -20; bad "the image-files manifest equals the Dockerfile COPY set"
+    head -20 "$T/mdiff" | sed 's/^/  manifest drift: /'; bad "the image-files manifest equals the Dockerfile COPY set"
   fi
 else bad "the image-files manifest equals the Dockerfile COPY set"; fi
 
@@ -86,6 +94,12 @@ grep -v "^$tierb_prefix" "$T/missing" > "$T/tiera"
 echo "baked from the super-repo: $(wc -l < "$T/baked") files; with an installer: $(comm -12 "$T/baked" "$T/installed" | wc -l)"
 while read -r d; do echo "  never converged: $d"; done < "$T/tiera"
 echo "  never converged (federation runtime tree, separate decision): $tierb files under $tierb_prefix"
-if [ -s "$T/tiera" ]; then bad "every baked script destination has an in-place installer"
-else ok "every baked script destination has an in-place installer"; fi
+# The installer verdict is judged by image-convergence-surface.check.sh (not a pre-commit glue test, so its
+# intended red cannot block commits); here it is reported only.
+if [ "${IMAGE_CONVERGENCE_JUDGE_INSTALLERS:-0}" = 1 ]; then
+  if [ -s "$T/tiera" ]; then bad "every baked script destination has an in-place installer"
+  else ok "every baked script destination has an in-place installer"; fi
+else
+  echo "  (installer verdict: judged by validation/scripts/image-convergence-surface.check.sh; $(wc -l < "$T/tiera") tier A paths without an installer)"
+fi
 done_tests
