@@ -65,6 +65,8 @@ LINES=50
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --container) CONTAINER="$2"; shift 2;;
+    --security-incident) SECURITY_INCIDENT=1; shift;;
+    --probe-window-unverified) PW_UNVERIFIED=1; shift;;
     -n|--lines)  LINES="$2";     shift 2;;
     *) shift;;
   esac
@@ -94,6 +96,35 @@ else
   IN_CONTAINER=1
 fi
 csh() { if [ "$IN_CONTAINER" = 1 ]; then bash -c "$1"; else docker exec "$CONTAINER" bash -c "$1"; fi; }
+
+# PROBE WINDOWS ARE MAINTENANCE HOLDS. A held-out probe run on a node is measured against an undisturbed
+# node, so no unit restarts or stops there while a probeWindow record is open (qa's rule, 2026-10-03,
+# gap probe-windows-are-announced-by-message-so-a-restart-can-land-inside-one). The record is a shaped
+# poolImpulse, shape probeWindow, body {node, from, until, tag, reason}, read at use time from this node's
+# development-vessel. It applies when body.node is this node's FED_SUBSTRATE_ID, its hostname, or "*",
+# and now is inside [from, until) (a missing until means open-ended). An unreadable store refuses too
+# (fail closed). Overrides, each logged to the journal: --security-incident (a live incident outranks a
+# probe) and --probe-window-unverified (the store cannot be read, e.g. development-vessel itself is down).
+probe_window_state() {
+  csh 'k=$(grep -a -m1 "^METABOB_API_KEY=" /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d "\""); me=$(grep -a -m1 "^FED_SUBSTRATE_ID=" /etc/substrate/env 2>/dev/null | cut -d= -f2- | tr -d "\""); h=$(hostname)
+    r=$(curl -s -m10 -X POST http://127.0.0.1:8090/v2/impulses/resolve -H "Content-Type: application/json" -H "Authorization: ApiKey $k" -d "{\"impulse\":{\"type\":\"poolImpulse\",\"shape\":\"probeWindow\",\"status\":\"open\"}}" 2>/dev/null)
+    printf "%s" "$r" | jq -e ". != null" >/dev/null 2>&1 || { echo UNREADABLE; exit 0; }
+    printf "%s" "$r" | jq -r --arg me "${me:-$h}" --arg h "$h" --argjson now "$(date -u +%s)" "[.. | objects | select(has(\"body\") and has(\"id\")) | select((.shape // \"probeWindow\") == \"probeWindow\") | select(.body.node == \$me or .body.node == \$h or .body.node == \"*\") | select((.body.from // null) == null or ((.body.from | sub(\"\\\\.[0-9]+Z$\"; \"Z\") | fromdateiso8601? // 0) <= \$now)) | select((.body.until // null) == null or ((.body.until | sub(\"\\\\.[0-9]+Z$\"; \"Z\") | fromdateiso8601? // 0) > \$now))] | if length > 0 then \"OPEN \" + (.[0].id | tostring) + \" until=\" + ((.[0].body.until // \"open-ended\") | tostring) + \" tag=\" + ((.[0].body.tag // \"\") | tostring) else \"NONE\" end"'
+}
+probe_window_guard() { # action -> 0 to proceed, 1 refused (after printing the refusal JSON)
+  local st; st="$(probe_window_state 2>/dev/null | head -1)"
+  case "$st" in
+    NONE) return 0 ;;
+    OPEN*)
+      if [ "${SECURITY_INCIDENT:-0}" = 1 ]; then
+        csh "logger -t vessel-ctl 'PROBE WINDOW OVERRIDDEN (--security-incident): $1 $VESSEL during ${st#OPEN }'" 2>/dev/null || true; return 0; fi
+      echo "{\"ok\":false,\"action\":\"$1\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"error\":\"probe window open on this node (${st#OPEN }); restarts are held until it ends. A live security incident: pass --security-incident (logged).\"}"; return 1 ;;
+    *)
+      if [ "${PW_UNVERIFIED:-0}" = 1 ] || [ "${SECURITY_INCIDENT:-0}" = 1 ]; then
+        csh "logger -t vessel-ctl 'PROBE WINDOW UNVERIFIED (store unreadable): $1 $VESSEL allowed by override'" 2>/dev/null || true; return 0; fi
+      echo "{\"ok\":false,\"action\":\"$1\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"error\":\"cannot read probeWindow records (development-vessel unreachable?); refusing (fail closed). Pass --probe-window-unverified to proceed (logged).\"}"; return 1 ;;
+  esac
+}
 
 # A selection injected with `docker exec -e` must OUTRANK the one in the env file.
 #
@@ -345,6 +376,7 @@ case "$ACTION" in
 
   restart)
     [ -n "$VESSEL" ] || { echo '{"ok":false,"error":"usage: vessel-ctl restart <vessel>"}'; exit 1; }
+    probe_window_guard restart || exit 1
     U="$(unit_of "$VESSEL")"
     # Refuse a unit the fleet does not have, rather than reporting a cheerful
     # success for a typo — `systemctl restart` on an unknown unit is an error
@@ -378,6 +410,7 @@ case "$ACTION" in
     ;;
 
   start|stop)
+    [ "$ACTION" = stop ] && { probe_window_guard stop || exit 1; }
     # `apply` can mask a unit the selection no longer wants, and a masked unit
     # cannot be restarted — without these verbs the documented surface could
     # take a vessel out of service and then not act on it at all.
