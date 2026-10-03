@@ -81,7 +81,7 @@ STALE_AUTHORING_MARKER_MIN="${STALE_AUTHORING_MARKER_MIN:-90}"
 DEFERRAL_LOG=/workspace/pull-sync-deferrals.jsonl
 
 mkdir -p "$MARKER_DIR" "$LAST_GOOD_DIR"
-log() { echo "[pull-sync $(date -Iseconds)] $*"; }
+log() { PASS_LAST_LOG="$*"; echo "[pull-sync $(date -Iseconds)] $*"; }   # PASS_LAST_LOG: see carry_pass_end
 
 # DECLARE YOURSELF BEFORE RESTARTING SOMETHING.
 #
@@ -594,12 +594,17 @@ pullsync_glue_cleanup() { for _d in $PULLSYNC_GLUE_STAGES; do rm -rf "$_d"; done
 # leaves that one marker in place. Each later tick's owed path re-touches it (the vessel ignores a marker
 # older than its QUIESCE_MAX_MS, 20 min, and a hold may last pull_sync.owed_restart_max_hold_seconds) and
 # releases it the moment the hold ends: restart taken (drained, silent past the stall bound, max hold),
-# nothing owed any more, or any deferral that is not progress (a probe window). The vessel loop's own
-# skips that `continue` before the owed path release it too (release_carried_hold), or the marker would
-# go stale unannounced: a MASKED unit (nothing will ever restart it) and an open PROBE WINDOW (holding
-# admission through it would refuse the probes' own composes for up to the window cap, past the max hold;
-# the restart stays owed and the owed path takes it, or quiesces again, once the window closes). If
-# pull-sync stops ticking, nothing re-touches it and the vessel fails open within QUIESCE_MAX_MS.
+# nothing owed any more, or any deferral that is not progress (a probe window). A vessel pass that leaves
+# the loop BEFORE the owed path releases it too, or the marker would go stale unannounced. That is
+# structural, not one call per `continue` (see carry_pass_end): every pass opens with carry_pass_begin,
+# reaching the owed path closes it as handled, and a pass still open when the next one begins (or the
+# loop ends, or the tick exits) is released with the pass's last log line as the reason. Two skips also
+# release explicitly with a tailored reason: a MASKED unit (nothing will ever restart it) and an open
+# PROBE WINDOW (holding admission through it would refuse the probes' own composes for up to the window
+# cap, past the max hold; the restart stays owed and the owed path takes it, or quiesces again, once the
+# window closes). A carry whose vessel the loop never reached this tick (an outer `break` halted the run,
+# or the clone is gone) is released after the loop (carry_sweep). If pull-sync stops ticking, nothing
+# re-touches it and the vessel fails open within QUIESCE_MAX_MS.
 Q_HELD=""; Q_BOUND=""; Q_CARRY=""
 quiesce_release() {
   if [ -n "${Q_HELD:-}" ] && [ "${Q_CARRY:-}" != "$Q_HELD" ]; then
@@ -615,6 +620,37 @@ release_carried_hold() {
   [ -s "$_rc_f" ] || return 0
   log "$1: releasing a carried quiesce hold — $2; admission reopened, the restart stays owed"
   rm -f "$(cat "$_rc_f" 2>/dev/null)" "$_rc_f" 2>/dev/null || true
+}
+# THE CARRY FINALISER: a vessel pass may leave the loop anywhere, by any `continue` written now or later,
+# so no exit is trusted to remember the carried hold. carry_pass_begin <clone-dir> (first thing in every
+# pass) ends the previous pass and opens this one; the owed path marks the pass handled (CARRY_PASS_V="",
+# vessel added to CARRY_HANDLED) the moment it takes over the carry; carry_pass_end releases the carry of
+# a pass still open, i.e. one that left before the owed path, naming the pass's last log line (an exit
+# that logged nothing gets a plain default). It runs at the next pass's head, after the loop and on EXIT.
+# The owed restart is left owed, exactly as release_carried_hold leaves it.
+CARRY_PASS_V=""; CARRY_HANDLED=""; PASS_LAST_LOG=""
+carry_pass_end() {
+  if [ -n "${CARRY_PASS_V:-}" ]; then
+    _cp_said="${PASS_LAST_LOG:-}"; _cp_said="${_cp_said#"$CARRY_PASS_V: "}"
+    [ -n "$_cp_said" ] && _cp_said="last word: $_cp_said" || _cp_said="it logged no reason"
+    release_carried_hold "$CARRY_PASS_V" "its pass left the vessel loop before the owed path ($_cp_said)"
+  fi
+  CARRY_PASS_V=""; return 0
+}
+carry_pass_begin() {
+  carry_pass_end
+  CARRY_PASS_V="$(basename "$1")"; PASS_LAST_LOG=""
+}
+# carry_sweep — after the loop only (never on EXIT: a tick that exits before the loop does not own the
+# holds): release every carry whose vessel's pass did not reach the owed path this tick.
+carry_sweep() {
+  for _cs_f in "$MARKER_DIR"/*.quiesce-carry; do
+    [ -s "$_cs_f" ] || continue
+    _cs_v="$(basename "$_cs_f" .quiesce-carry)"
+    case " ${CARRY_HANDLED:-} " in *" $_cs_v "*) continue ;; esac
+    release_carried_hold "$_cs_v" "the vessel loop did not reach its owed path this tick (the run halted before it, or it has no clone)"
+  done
+  return 0
 }
 # owed_hold_bound <vessel> — progress may hold an owed restart, but not forever. Returns 0 (and sets
 # RA_DEFER=0, OH_LOSSY=1, RA_WHY, logs LOSSY + a forced_owed_restart_lossy DEFERRAL_LOG record naming the
@@ -637,7 +673,7 @@ owed_hold_bound() {
     "$(date -Iseconds)" "$1" "${RA_INFLIGHT:-0}" "$_oh_held" "$_oh_max" "${RA_PROGRESS:-null}" "${RA_PROGRESS_ID:-unknown}" >> "$DEFERRAL_LOG" 2>/dev/null || true
   return 0
 }
-trap 'pullsync_glue_cleanup; quiesce_release' EXIT
+trap 'pullsync_glue_cleanup; carry_pass_end; quiesce_release' EXIT
 
 glue_divergence_gap() { # super path what
   local id summary
@@ -1857,8 +1893,9 @@ unresolved_modules() { # test-output -> names, one per line
 synced=0; skipped=0; deferred=0; failed=0
 for d in "$CLONE_DIR"/*/; do
   quiesce_release
-  [ -d "$d/.git" ] || continue
+  carry_pass_begin "$d"   # ends the previous pass, releasing a carried hold it left unhandled
   v="$(basename "$d")"
+  [ -d "$d/.git" ] || continue
   # A held-out probe window freezes this node's code: no fetch, mirror or restart for any vessel while
   # an open probeWindow record names the node (see probe_window_open), so probes run on one version.
   if probe_window_open; then
@@ -2019,6 +2056,7 @@ for d in "$CLONE_DIR"/*/; do
   # When the restart was first owed (epoch s), for the max-hold bound below. The pending marker cannot be
   # the clock: the mirror path rewrites it on every deferral. A clock with no pending marker is stale.
   OWED_SINCE_FILE="$MARKER_DIR/$v.restart-owed-since"
+  CARRY_PASS_V=""; CARRY_HANDLED="${CARRY_HANDLED:-} $v"   # the owed path below owns the carried hold now
   P_CARRY_FILE="$MARKER_DIR/$v.quiesce-carry"
   if [ ! -s "$PENDING_FILE" ]; then   # nothing owed: no hold clock, and no carried admission hold
     rm -f "$OWED_SINCE_FILE" 2>/dev/null || true
@@ -3396,6 +3434,8 @@ EOF
   synced=$((synced+1))
 done
 quiesce_release
+carry_pass_end   # the last pass, if it left before the owed path
+carry_sweep      # carries whose vessel this tick never reached
 
 # 4. Super-repo convergence — the glue layer the vessel loop can't see: the
 # federation transport server wrapper (federation-transport-vessel's ExecStart

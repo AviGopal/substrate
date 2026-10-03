@@ -491,6 +491,7 @@ else bad "(o) expected quiesce_release at the vessel-loop head, right after its 
 #   (eb) the loop HALTS (an outer `break`, as an unhealthy restart or fan-out does) after a vessel
 #        whose carry the owed path handled: a LATER vessel's carry, never visited this tick, is
 #        released after the loop; the handled one is kept
+#   (el) the LAST pass leaves early: released after the loop, still naming its own reason
 #   (ec) control: a pass that reaches the carry handling keeps the carry, logs no release
 {
   sed -n '/^log() {/p' "$SCRIPT"
@@ -578,6 +579,12 @@ lsetup a-synthetic-said:clean:carry zz-control:clean; run_loop >> "$OUT" 2>&1
 released a-synthetic-said "synthetic early exit" "(ex) GENERIC: an exit injected after the fact releases the carried hold with its own last log line as the reason"
 lsetup a-synthetic-silent:clean:carry zz-control:clean; run_loop >> "$OUT" 2>&1
 released a-synthetic-silent "" "(es) GENERIC: a silent injected exit releases the carried hold too"
+
+# (el) the LAST pass of the loop leaves early: released after the loop, still naming its own reason
+lsetup a-control:clean zz-last:fetchfail:carry; run_loop >> "$OUT" 2>&1
+if [ ! -e "$QD2/zz-last" ] && [ ! -e "$MARKER_DIR/zz-last.quiesce-carry" ] && rel_line zz-last | grep -q "fetch failed" && owed_kept zz-last; then
+  ok "(el) the last pass leaves early: its carry is released after the loop, naming its own reason, restart still owed"
+else bad "(el) last pass: expected the carry released naming the fetch failure (marker $(held_v zz-last); out: $(tr '\n' '|' < "$OUT" | cut -c1-700))"; fi
 
 lsetup a-halt:clean:carry b-after:clean:carry zz-control:clean; run_loop >> "$OUT" 2>&1
 if grep -q '^PAST-CARRY a-halt$' "$OUT" && ! grep -q '^PAST-CARRY b-after$' "$OUT" \
