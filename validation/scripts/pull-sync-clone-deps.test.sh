@@ -21,6 +21,15 @@
 #   (e) a file: dependency whose target is missing -> no install, gap, NOT converged
 #   (f) a file: dependency on a present sibling clone -> installed
 #   (g) an install that rewrites the tracked bun.lock is restored
+#   (j) a file: dependency whose target HEAD or built dist moved reinstalls the dependant
+#       although its own package.json/bun.lock did not change, and the installed copy is
+#       the target's current build (a stale directory copy is replaced, not kept);
+#       unchanged target -> no reinstall; a missing marker with a file: dep -> install
+#   (k) a converged shared package's clone dist is made current from the runtime build
+#       (refresh_clone_dependants) and its file: dependants are refreshed; non-file:
+#       clones untouched; no copy when last-good != the clone HEAD or dist is tracked;
+#       a dependant with a young authoring marker is skipped that tick;
+#       called from the no-op branch and after a credited fan-out
 #
 # usage: validation/scripts/pull-sync-clone-deps.test.sh [path/to/substrate-pull-sync.sh]
 # Needs bash, git, jq, awk, sed.
@@ -35,6 +44,11 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
   sed -n '/^scrubbed_env() {/,/^}/p' "$SCRIPT"
   sed -n '/^clone_dep_missing() {/,/^}/p' "$SCRIPT"
+  sed -n '/^tree_digest() {/,/^}/p' "$SCRIPT"
+  sed -n '/^clone_file_deps() {/,/^}/p' "$SCRIPT"
+  sed -n '/^file_dep_identity() {/,/^}/p' "$SCRIPT"
+  sed -n '/^sync_clone_dist() {/,/^}/p' "$SCRIPT"
+  sed -n '/^refresh_clone_dependants() {/,/^}/p' "$SCRIPT"
   sed -n '/^clone_deps_install() {/,/^}/p' "$SCRIPT"
   sed -n '/^clone_deps_gap() {/,/^}/p' "$SCRIPT"
   sed -n '/^ensure_clone_deps() {/,/^}/p' "$SCRIPT"
@@ -72,7 +86,9 @@ case "\$1" in
     [ -f "\$S/install-dirties-lock" ] && echo "# rewritten" >> bun.lock
     [ -f "\$S/install-fails" ] && { echo "error: simulated registry failure"; exit 1; }
     mkdir -p node_modules
-    jq -r '[(.dependencies // {}), (.devDependencies // {})] | add // {} | keys[]' package.json | while read -r n; do mkdir -p "node_modules/\$n"; done
+    jq -r '[(.dependencies // {}), (.devDependencies // {})] | add // {} | to_entries[] | "\(.key)\t\(.value)"' package.json | while IFS=\$'\t' read -r n spec; do
+      case "\$spec" in file:*) [ -e "node_modules/\$n" ] || { mkdir -p "\$(dirname "node_modules/\$n")"; cp -a "\${spec#file:}" "node_modules/\$n"; } ;; *) mkdir -p "node_modules/\$n" ;; esac
+    done
     exit 0 ;;
   test)
     if [ -f ./.is-clone ]; then echo "TEST clone" >> "$CALLS"; cat "\$S/clone-out"
@@ -257,5 +273,97 @@ setup '{"left-pad":"1.0.0"}'
 touch "$T/stub/install-dirties-lock"
 run
 [ -z "$(git -C "$d" status --porcelain -- bun.lock package.json)" ] && ok "(g) tracked bun.lock restored after install" || bad "(g) clone left dirty: $(git -C "$d" status --porcelain)"
+
+# ── (j) a file: dependency's target moved: reinstall although the manifest did not ─
+# Measured 2026-10-03: goal-host's clone held a directory copy of ias-executor-ts from
+# August while the sibling clone had moved on, because the marker hashed only the
+# dependant's own package.json/bun.lock.
+DEP="$CLONE_DIR/ias-executor-ts"
+mk_dep() { # build a sibling clone with a committed src and an untracked dist
+  mkdir -p "$DEP/src" "$DEP/dist"
+  printf '{"name":"@avigopal/ias-executor-ts","version":"0.1.1","main":"./dist/index.js","scripts":{"build":"tsc"}}\n' > "$DEP/package.json"
+  printf 'dist/\nnode_modules/\n' > "$DEP/.gitignore"
+  echo 'export const v = 1;' > "$DEP/src/index.ts"; echo 'exports.v = 1;' > "$DEP/dist/index.js"
+  git -C "$DEP" init -q -b dev; git -C "$DEP" -c user.name=t -c user.email=t@t add -A >/dev/null; git -C "$DEP" -c user.name=t -c user.email=t@t commit -qm base
+}
+IDX="$d/node_modules/@avigopal/ias-executor-ts/dist/index.js"
+setup '{"@avigopal/ias-executor-ts":"file:../ias-executor-ts"}'
+mk_dep
+run
+grep -q '^INSTALL' "$CALLS" && ok "(j0) first install with a file: dependency" || bad "(j0) no first install"
+: > "$CALLS"; : > "$LOG"
+run
+grep -q '^INSTALL' "$CALLS" && bad "(j1) control: unchanged file: dependency reinstalled" || ok "(j1) control: unchanged file: dependency -> no reinstall"
+# the dependency's dist is rebuilt (HEAD unchanged): dependant's manifest is untouched
+echo 'exports.v = 2; exports.consumedProvenance = 1;' > "$DEP/dist/index.js"
+: > "$CALLS"; : > "$LOG"
+run
+grep -q '^INSTALL' "$CALLS" && ok "(j2) a rebuilt file: dependency dist triggers a reinstall" || bad "(j2) rebuilt file: dependency dist did NOT trigger a reinstall (manifest-only marker)"
+grep -q consumedProvenance "$IDX" 2>/dev/null && ok "(j2) the installed copy is the current build (stale copy replaced)" || bad "(j2) the installed copy is still stale: $(cat "$IDX" 2>/dev/null)"
+[ -z "$(git -C "$d" status --porcelain -- package.json bun.lock)" ] && ok "(j2) dependant manifest unchanged" || bad "(j2) dependant manifest modified"
+# the dependency's HEAD moves (dist not yet rebuilt)
+echo 'export const v = 3;' > "$DEP/src/index.ts"; git -C "$DEP" -c user.name=t -c user.email=t@t commit -qam move
+: > "$CALLS"; : > "$LOG"
+run
+grep -q '^INSTALL' "$CALLS" && ok "(j3) a moved file: dependency HEAD triggers a reinstall" || bad "(j3) moved file: dependency HEAD did NOT trigger a reinstall"
+: > "$CALLS"; : > "$LOG"
+run
+grep -q '^INSTALL' "$CALLS" && bad "(j4) control: reinstalled again with nothing changed" || ok "(j4) control: settled after the reinstall"
+# a stale directory copy and NO marker: cannot be dated, so it is reinstalled, not adopted
+setup '{"@avigopal/ias-executor-ts":"file:../ias-executor-ts"}'
+mk_dep; mkdir -p "$(dirname "$IDX")"; echo 'exports.v = 0; // august' > "$IDX"
+run
+grep -q '^INSTALL' "$CALLS" && ok "(j5) missing marker + file: dependency: installs (a copy cannot be dated)" || bad "(j5) a stale file: copy was adopted without a marker"
+grep -q 'exports.v = 1' "$IDX" 2>/dev/null && ok "(j5) the stale copy was replaced" || bad "(j5) stale copy kept: $(cat "$IDX" 2>/dev/null)"
+
+# ── (k) the shared package's CLONE dist follows its runtime build ──────────────
+RUNTIME_DIR="$T/runtime"; LAST_GOOD_DIR="$T/lastgood"
+vessel_unit() { :; }
+k_setup() {
+  setup '{"@avigopal/ias-executor-ts":"file:../ias-executor-ts"}'
+  rm -rf "$RUNTIME_DIR" "$LAST_GOOD_DIR"; mkdir -p "$RUNTIME_DIR/ias-executor-ts/dist" "$LAST_GOOD_DIR"
+  mk_dep
+  cp "$DEP/package.json" "$RUNTIME_DIR/ias-executor-ts/package.json"
+  echo 'exports.v = 9; exports.consumedProvenance = 1;' > "$RUNTIME_DIR/ias-executor-ts/dist/index.js"
+  git -C "$DEP" rev-parse HEAD > "$LAST_GOOD_DIR/ias-executor-ts"
+  # an unrelated clone with no file: dependency, deliberately unsatisfied
+  mkdir -p "$CLONE_DIR/other-vessel"; printf '{"name":"o","dependencies":{"left-pad":"1.0.0"}}\n' > "$CLONE_DIR/other-vessel/package.json"
+  # demo-vessel already installed against the OLD dist
+  run; : > "$CALLS"; : > "$LOG"
+}
+if declare -F refresh_clone_dependants >/dev/null; then
+  k_setup
+  refresh_clone_dependants ias-executor-ts "$DEP/"
+  cmp -s "$DEP/dist/index.js" "$RUNTIME_DIR/ias-executor-ts/dist/index.js" && ok "(k1) clone dist made current from the runtime build" || bad "(k1) clone dist still stale: $(cat "$DEP/dist/index.js")"
+  grep -q "^INSTALL ${CLONE_DIR}/demo-vessel " "$CALLS" && ok "(k1) the file: dependant's clone was reinstalled" || bad "(k1) dependant not reinstalled: $(cat "$CALLS")"
+  grep -q consumedProvenance "$IDX" 2>/dev/null && ok "(k1) the dependant resolves the current build" || bad "(k1) dependant still resolves stale: $(cat "$IDX" 2>/dev/null)"
+  grep -q "^INSTALL ${CLONE_DIR}/other-vessel" "$CALLS" && bad "(k2) a clone with no file: dependency on the package was touched" || ok "(k2) control: non-file: clone untouched"
+  [ -z "$(git -C "$DEP" status --porcelain)" ] && ok "(k1) the package clone's tree stays clean (dist ignored, no stage left)" || bad "(k1) package clone dirty: $(git -C "$DEP" status --porcelain)"
+  : > "$CALLS"
+  refresh_clone_dependants ias-executor-ts "$DEP/"
+  grep -q '^INSTALL' "$CALLS" && bad "(k3) control: an already-current dist reinstalled dependants" || ok "(k3) control: current dist -> no reinstall"
+  # a dependant with a young authoring marker is not refreshed under its draft
+  k_setup; AUTHORING_MARKER_DIR="$T/authoring"; mkdir -p "$AUTHORING_MARKER_DIR"
+  echo '{"pid":1}' > "$AUTHORING_MARKER_DIR/feature_compose-demo-vessel.json"
+  refresh_clone_dependants ias-executor-ts "$DEP/"
+  grep -q '^INSTALL' "$CALLS" && bad "(k7) reinstalled a dependant under a live authoring marker" || ok "(k7) live authoring marker on the dependant: not reinstalled this tick"
+  rm -f "$AUTHORING_MARKER_DIR"/*.json
+  refresh_clone_dependants ias-executor-ts "$DEP/"
+  grep -q "^INSTALL ${CLONE_DIR}/demo-vessel " "$CALLS" && ok "(k7) marker gone: refreshed on the next call" || bad "(k7) not refreshed once the marker cleared"
+  # last-good != clone HEAD: the runtime dist is not the clone's build -> no copy
+  k_setup; echo stale-head > "$LAST_GOOD_DIR/ias-executor-ts"
+  refresh_clone_dependants ias-executor-ts "$DEP/"
+  grep -q 'exports.v = 1' "$DEP/dist/index.js" && ok "(k4) last-good != clone HEAD: clone dist not overwritten" || bad "(k4) copied a runtime dist built from another HEAD"
+  # a tracked dist belongs to git
+  k_setup; git -C "$DEP" -c user.name=t -c user.email=t@t add -f dist >/dev/null; git -C "$DEP" -c user.name=t -c user.email=t@t commit -qm track
+  git -C "$DEP" rev-parse HEAD > "$LAST_GOOD_DIR/ias-executor-ts"
+  refresh_clone_dependants ias-executor-ts "$DEP/"
+  grep -q 'exports.v = 1' "$DEP/dist/index.js" && ok "(k5) tracked dist: left to git" || bad "(k5) overwrote a tracked dist"
+else
+  bad "(k) refresh_clone_dependants is not defined in the script"
+fi
+NOOP="$(awk '/^  if \[ "\$CLONE_HASH" = "\$RUNTIME_HASH" \]; then/{on=1} on{print} on && /re-running fan-out/{exit}' "$SCRIPT")"
+printf '%s' "$NOOP" | grep -q 'refresh_clone_dependants "\$v" "\$d"' && ok "(k6) called from the no-op (already converged) branch" || bad "(k6) not called from the no-op branch"
+grep -B2 -A2 'echo "\$HEAD" > "\$LAST_GOOD_DIR/\$v"; rm -f "\$MARKER_DIR/\$v.fanout-fail"; log "\$v: fan-out healthy' "$SCRIPT" | grep -q 'refresh_clone_dependants "\$v" "\$d"' && ok "(k6) called after a credited fan-out" || bad "(k6) not called after a credited fan-out"
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

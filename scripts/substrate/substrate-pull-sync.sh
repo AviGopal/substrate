@@ -1491,9 +1491,22 @@ content_hash_nontest() { # vessel-root -> md5 over src/ sql/ scripts/ minus test
 # So before the gate, the clone's node_modules must satisfy its manifest. Install when
 #   - node_modules is missing, or
 #   - a declared dependency (dependencies + devDependencies) is absent from it, or
-#   - package.json / bun.lock changed since the last install recorded here.
+#   - package.json / bun.lock changed since the last install recorded here, or
+#   - a file: dependency's TARGET moved: its git HEAD or its built output (the tree
+#     holding its package.json "main", default dist/) differs from the install recorded.
+# A file: dependency is a DIRECTORY COPY of another clone, and nothing in the
+# dependant's own manifest changes when that clone moves on or is rebuilt. Measured
+# 2026-10-03 on both nodes: goal-host-vessel's clone held an ias-executor-ts copy from
+# August/September (0.1.1) while the sibling clone was at a 10-02 HEAD, because the
+# marker hashed only package.json/bun.lock. goal-host's typecheck in the compose clone
+# was red at baseline, so every lane draft on goal-host failed before its own check ran.
+# So the marker folds in each file: target's identity, and a reinstall first removes the
+# dependant's copy of every file: dependency (bun keeps an existing copy in place).
+# For a manifest with NO file: dependency the marker is the manifest hash, byte for byte
+# as before, so this keying reinstalls nothing else.
 # A missing marker with every dependency present is ADOPTED, not reinstalled: the
-# first tick after this lands must not reinstall the whole fleet.
+# first tick after this lands must not reinstall the whole fleet. EXCEPT with a file:
+# dependency: a directory copy cannot be dated, so without a marker it is reinstalled.
 #
 # THE MANIFEST IS THE CANDIDATE'S, AND NOTHING HAS JUDGED IT YET. This runs before any
 # gate, as root, in a unit that loads the substrate's secrets, so a commit's lifecycle
@@ -1545,15 +1558,42 @@ clone_deps_gap() { # id-prefix vessel why summary-lead
     || _cg_json="{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"$1$2\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"status\":\"open\",\"summary\":\"$4\"}}}}"
   emit_gap "$_cg_json"
 }
+tree_digest() { # dir -> md5 over its sorted relative paths and contents; "none" if absent
+  [ -d "$1" ] || { echo none; return; }
+  (cd "$1" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 -r md5sum) | md5sum | cut -d' ' -f1
+}
+clone_file_deps() { # clone-dir -> "name<TAB>absolute-target" per file: dependency (needs jq; empty without)
+  local _cf_d="${1%/}" _cf_n _cf_s
+  command -v jq >/dev/null 2>&1 || return 0
+  jq -r '[(.dependencies // {}), (.devDependencies // {})] | add // {} | to_entries[] | "\(.key)\t\(.value)"' "$_cf_d/package.json" 2>/dev/null \
+    | while IFS=$'\t' read -r _cf_n _cf_s; do
+        [ -n "$_cf_n" ] || continue
+        case "$_cf_s" in file:*) ;; *) continue ;; esac
+        printf '%s\t%s\n' "$_cf_n" "$(realpath -m "$_cf_d/${_cf_s#file:}" 2>/dev/null || echo "$_cf_d/${_cf_s#file:}")"
+      done
+}
+file_dep_identity() { # target-dir -> "<git HEAD> <digest of the built output dir>"
+  local _fi_main _fi_dir
+  _fi_main="$(jq -r '.main // "dist/index.js"' "$1/package.json" 2>/dev/null)"; _fi_main="${_fi_main#./}"
+  _fi_dir="$(dirname "${_fi_main:-dist/index.js}")"
+  case "$_fi_dir" in .|''|/*|*..*) _fi_dir=dist ;; esac
+  printf '%s %s\n' "$(git -C "$1" rev-parse HEAD 2>/dev/null || echo no-git)" "$(tree_digest "$1/$_fi_dir")"
+}
 ensure_clone_deps() { # vessel clone-dir
   local _cd_v="$1" _cd_d="${2%/}" _cd_mark _cd_fail _cd_hash _cd_why="" _cd_missing _cd_log _cd_rc _cd_dirty_before _cd_dirty_after
-  local _cd_name _cd_spec _cd_target _cd_unres="" _cd_aside _cd_fhash="" _cd_ftime="" _cd_now
+  local _cd_name _cd_target _cd_unres="" _cd_aside _cd_fhash="" _cd_ftime="" _cd_now _cd_fdeps
   CD_STATE=ok; CD_WHY=""
   [ -f "$_cd_d/package.json" ] || return 0
   _cd_mark="$MARKER_DIR/$_cd_v.clone-deps"; _cd_fail="$MARKER_DIR/$_cd_v.clone-deps-failed"
   _cd_aside="$MARKER_DIR/$_cd_v.node_modules-prev"
   rm -rf "$_cd_d/node_modules.pullsync-prev" 2>/dev/null || true
   _cd_hash="$(cat "$_cd_d/package.json" "$_cd_d/bun.lock" "$_cd_d/bun.lockb" 2>/dev/null | md5sum | cut -d' ' -f1)"
+  _cd_fdeps="$(clone_file_deps "$_cd_d")"
+  if [ -n "$_cd_fdeps" ]; then
+    _cd_hash="$( { echo "$_cd_hash"; while IFS=$'\t' read -r _cd_name _cd_target; do
+        printf '%s %s %s\n' "$_cd_name" "$_cd_target" "$( [ -d "$_cd_target" ] && file_dep_identity "$_cd_target" || echo missing)"
+      done <<< "$_cd_fdeps"; } | md5sum | cut -d' ' -f1)"
+  fi
   command -v jq >/dev/null 2>&1 || log "$_cd_v: jq missing — clone dependency presence unchecked; installing only on a missing node_modules or a manifest change"
   _cd_missing="$(clone_dep_missing "$_cd_d")"
   if [ ! -d "$_cd_d/node_modules" ]; then
@@ -1561,7 +1601,9 @@ ensure_clone_deps() { # vessel clone-dir
   elif [ -n "$_cd_missing" ]; then
     _cd_why="declared dependencies absent from node_modules: $(printf '%s' "$_cd_missing" | tr '\n' ' ' | sed 's/ $//')"
   elif [ -f "$_cd_mark" ] && [ "$(cat "$_cd_mark" 2>/dev/null)" != "$_cd_hash" ]; then
-    _cd_why="package.json/bun.lock changed since the last clone install"
+    _cd_why="package.json/bun.lock${_cd_fdeps:+ or the HEAD/built output of a file: dependency} changed since the last clone install"
+  elif [ ! -f "$_cd_mark" ] && [ -n "$_cd_fdeps" ]; then
+    _cd_why="no install recorded and file: dependencies present (a directory copy cannot be dated)"
   fi
   if [ -z "$_cd_why" ]; then
     if [ ! -f "$_cd_mark" ]; then echo "$_cd_hash" > "$_cd_mark" 2>/dev/null || true; CD_STATE=adopted; fi
@@ -1569,14 +1611,10 @@ ensure_clone_deps() { # vessel clone-dir
     return 0
   fi
   # file: dependencies must name something that exists BEFORE bun is asked to link it.
-  if command -v jq >/dev/null 2>&1; then
-    while IFS=$'\t' read -r _cd_name _cd_spec; do
-      [ -n "$_cd_name" ] || continue
-      case "$_cd_spec" in file:*) ;; *) continue ;; esac
-      _cd_target="$(realpath -m "$_cd_d/${_cd_spec#file:}" 2>/dev/null || echo "$_cd_d/${_cd_spec#file:}")"
-      [ -d "$_cd_target" ] || _cd_unres="${_cd_unres}${_cd_unres:+, }$_cd_name -> $_cd_target"
-    done < <(jq -r '[(.dependencies // {}), (.devDependencies // {})] | add // {} | to_entries[] | "\(.key)\t\(.value)"' "$_cd_d/package.json" 2>/dev/null)
-  fi
+  while IFS=$'\t' read -r _cd_name _cd_target; do
+    [ -n "$_cd_name" ] || continue
+    [ -d "$_cd_target" ] || _cd_unres="${_cd_unres}${_cd_unres:+, }$_cd_name -> $_cd_target"
+  done <<< "$_cd_fdeps"
   if [ -n "$_cd_unres" ]; then
     CD_STATE=failed; CD_WHY="install needed ($_cd_why) but file: dependency target(s) do not exist: $_cd_unres"
     log "$_cd_v: !!! CLONE DEPENDENCIES UNSATISFIABLE — $CD_WHY; not fabricating them, NOT converging $_cd_v this tick"
@@ -1596,6 +1634,12 @@ ensure_clone_deps() { # vessel clone-dir
   _cd_log="$(mktemp "${TMPDIR:-/tmp}/pullsync-clonedeps-XXXXXX")"
   _cd_dirty_before="$(git -C "$_cd_d" status --porcelain -- package.json bun.lock bun.lockb 2>/dev/null || true)"
   log "$_cd_v: clone node_modules does not satisfy its manifest ($_cd_why) — bun install in the clone before the test gate (scrubbed env, --ignore-scripts)"
+  # bun leaves an existing file: copy in place, so the stale copy goes first; a target
+  # that exists was checked above, and a failed install leaves it missing -> fail closed.
+  while IFS=$'\t' read -r _cd_name _cd_target; do
+    case "$_cd_name" in ''|*..*|/*) continue ;; esac
+    rm -rf "$_cd_d/node_modules/$_cd_name" 2>/dev/null || true
+  done <<< "$_cd_fdeps"
   clone_deps_install "$_cd_d" "$_cd_log"; _cd_rc=$?
   _cd_missing="$(clone_dep_missing "$_cd_d")"
   if { [ "$_cd_rc" -ne 0 ] || [ -n "$_cd_missing" ]; } && [ -d "$_cd_d/node_modules" ]; then
@@ -1635,6 +1679,67 @@ ensure_clone_deps() { # vessel clone-dir
   clone_deps_gap pull-sync-clone-deps-install-failed- "$_cd_v" "$CD_WHY" \
     "Repair needed: pull-sync could not install $_cd_v's clone node_modules before its test gate, so it refused to converge $_cd_v (a gate over unloadable test files measures nothing)."
   return 1
+}
+
+# A SHARED PACKAGE'S CLONE DIST FOLLOWS ITS CREDITED RUNTIME BUILD.
+#
+# The fan-out (2c) builds a shared package into $RUNTIME_DIR/<pkg>/dist, and the runtime
+# consumers resolve that. The compose clones do not: a dependant clone's file:../<pkg>
+# names the package's GIT CLONE, whose dist is untracked and was built by nobody after
+# the clone was first made. Measured 2026-10-03 on both nodes: ias-executor-ts's clone
+# dist dated 09-30 while its HEAD (and the runtime build, LAST_GOOD == HEAD) was 10-02,
+# so it lacked newer exports, and every goal-host draft typechecked against it red.
+#
+# So once the fan-out is credited (LAST_GOOD == the clone HEAD — the runtime dist IS this
+# HEAD's build), copy that build into the clone's dist when it differs, then satisfy each
+# clone that file:-depends on the package (ensure_clone_deps sees the moved dist in its
+# marker and replaces the dependant's copy). Reuses the fan-out's build instead of a
+# second tsc run. Called from the fan-out's credit line and from the already-converged
+# branch, so an existing stale copy heals on the next tick with no hands.
+# Not copied: a dist the clone TRACKS (git owns it), or a runtime dist from another HEAD
+# (a rolled-back or not-yet-credited fan-out). A dependant with a young authoring marker
+# is skipped this tick — swapping node_modules under its typecheck is the failure this
+# exists to prevent. Test: validation/scripts/pull-sync-clone-deps.test.sh (k).
+sync_clone_dist() { # pkg-vessel clone-dir -> 0 when the clone dist is current (SCD_STATE current|copied)
+  local _sc_v="$1" _sc_d="${2%/}" _sc_rt="$RUNTIME_DIR/$1" _sc_stage
+  SCD_STATE=skipped
+  [ -d "$_sc_rt/dist" ] && [ -f "$_sc_d/package.json" ] || return 1
+  [ "$(cat "$LAST_GOOD_DIR/$_sc_v" 2>/dev/null)" = "$(git -C "$_sc_d" rev-parse HEAD 2>/dev/null)" ] || return 1
+  [ -z "$(git -C "$_sc_d" ls-files -- dist 2>/dev/null | head -1)" ] || return 1
+  if [ "$(tree_digest "$_sc_rt/dist")" = "$(tree_digest "$_sc_d/dist")" ]; then SCD_STATE=current; return 0; fi
+  _sc_stage="$MARKER_DIR/$_sc_v.clone-dist-stage"; rm -rf "$_sc_stage" 2>/dev/null || true
+  if cp -a "$_sc_rt/dist" "$_sc_stage" 2>/dev/null && rm -rf "$_sc_d/dist" && mv "$_sc_stage" "$_sc_d/dist"; then
+    SCD_STATE=copied
+    log "$_sc_v: clone dist was not the credited build of ${_sc_rt##*/} at $(git -C "$_sc_d" rev-parse --short HEAD 2>/dev/null) — copied the runtime build in, so file: dependants in $CLONE_DIR resolve current code"
+    return 0
+  fi
+  rm -rf "$_sc_stage" 2>/dev/null || true
+  SCD_STATE=failed; log "$_sc_v: !!! could not copy the runtime dist into the clone — its file: dependants keep resolving a stale build"
+  return 1
+}
+refresh_clone_dependants() { # pkg-vessel clone-dir
+  local _rd_v="$1" _rd_c _rd_mk _rd_busy _rd_u
+  _rd_u="$(vessel_unit "$_rd_v")"
+  [ -z "$_rd_u" ] || [ "${_rd_u%.service}" = "$_rd_u" ] || return 0      # a vessel, not a shared package
+  grep -q '"build"[[:space:]]*:' "$RUNTIME_DIR/$_rd_v/package.json" 2>/dev/null || return 0
+  sync_clone_dist "$_rd_v" "$2" || return 0
+  BUN_BIN="${BUN_BIN:-/root/.bun/bin/bun}"
+  [ -x "$BUN_BIN" ] || BUN_BIN="$(command -v bun 2>/dev/null || true)"
+  [ -n "$BUN_BIN" ] || return 0
+  for _rd_c in $(grep -lE "\"file:[^\"]*/$_rd_v\"" "$CLONE_DIR"/*/package.json 2>/dev/null | xargs -r -n1 dirname | xargs -r -n1 basename); do
+    [ "$_rd_c" = "$_rd_v" ] && continue
+    _rd_busy=""
+    for _rd_mk in "${AUTHORING_MARKER_DIR:-/workspace/authoring-inflight}"/*-"$_rd_c".json; do
+      [ -f "$_rd_mk" ] && [ -n "$(find "$_rd_mk" -mmin "-${AUTHORING_MARKER_TTL_MIN:-40}" 2>/dev/null)" ] && { _rd_busy="$_rd_mk"; break; }
+    done
+    if [ -n "$_rd_busy" ]; then
+      log "$_rd_c: authoring run in flight ($(basename "$_rd_busy")) — not refreshing its clone's $_rd_v copy this tick"
+      continue
+    fi
+    ensure_clone_deps "$_rd_c" "$CLONE_DIR/$_rd_c" || true
+    [ "$CD_STATE" = installed ] && log "$_rd_c: clone's file: copy of $_rd_v refreshed after $_rd_v's build moved"
+  done
+  return 0
 }
 
 # Module names a test run could not resolve ("Cannot find module 'x' from …" /
@@ -1859,6 +1964,7 @@ for d in "$CLONE_DIR"/*/; do
         log "$v: clone at ${HEAD:0:10}, but the mirrored trees (src/ sql/ scripts/ + tracked build output) already match the runtime — nothing to mirror"
         echo "$HEAD" > "$MARKER_DIR/$v.noop-head" 2>/dev/null || true
       fi
+      refresh_clone_dependants "$v" "$d"   # a converged shared package: its clone dist and file: dependants follow the build
       continue
     fi
     log "$v: src converged but dist stale (last-good != ${HEAD:0:10}) — re-running fan-out"
@@ -2757,6 +2863,9 @@ EOF
   # prior dist, restarts the already-bounced consumers, emits a gap and HALTS. Reuses
   # vessel_unit/health_port/healthy/STAGGER_SECONDS/LAST_GOOD_DIR/emit_gap. Generic:
   # consumers are discovered at use-time (no hardcoded package/consumer list).
+  # Once credited, the build is also carried into the package's CLONE dist and its
+  # file: dependants in $CLONE_DIR are refreshed (refresh_clone_dependants): those
+  # resolve the clone, not /vessels, and are what feature_compose drafts against.
   SELF_UNIT="$(vessel_unit "$v")"
   if { [ -z "$SELF_UNIT" ] || [ "${SELF_UNIT%.service}" = "$SELF_UNIT" ]; } \
      && [ -d "$RUNTIME_DIR/$v/dist" ] \
@@ -2914,7 +3023,9 @@ EOF
         emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-unpropagated-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$v fan-out at ${HEAD:0:10} left consumers$UNPROP resolving a stale dist while reporting healthy; a built artifact that no consumer resolves is inert, and health cannot witness it\",\"status\":\"open\"}}}}"
         failed=$((failed+1)); continue
       fi
-      rm -rf "$RUNTIME_DIR/$v/.dist.prev"; echo "$HEAD" > "$LAST_GOOD_DIR/$v"; rm -f "$MARKER_DIR/$v.fanout-fail"; log "$v: fan-out healthy AND propagated across$BOUNCED"; synced=$((synced+1)); continue
+      rm -rf "$RUNTIME_DIR/$v/.dist.prev"; echo "$HEAD" > "$LAST_GOOD_DIR/$v"; rm -f "$MARKER_DIR/$v.fanout-fail"; log "$v: fan-out healthy AND propagated across$BOUNCED"
+      refresh_clone_dependants "$v" "$d"   # the compose clones' file: dependants resolve the clone, not /vessels: carry the credited build there too
+      synced=$((synced+1)); continue
     fi
   fi
 
