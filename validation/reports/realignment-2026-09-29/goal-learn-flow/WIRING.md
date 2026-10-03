@@ -345,3 +345,14 @@ The execution table caps at 150k rows. At about 13.8k executions/day that is rou
 - re-fold the retained window and reset older arms to priors, with the cut recorded;
 - persist the fold's inputs (verdict observations) outside the capped table before the re-baseline.
 Recorded with the admission-cap gap (selection-candidates-are-silently-truncated-by-recency-at-the-admission-cap).
+
+## Step 1(d), amended (qa, 10-03). This supersedes the "two new detectors" wording in the addendum fold above.
+- (i) **EXTEND orphaned_capability_scan; build no new detector.** Its notion of a caller becomes template invocations plus static code call sites plus git history. If a call site was removed, file a restore-or-retire gap naming the commit; if it never had a caller, keep minting as today. Must-fail: running it on af61dee^ vs af61dee flags author_composed_capability with af61dee named. (The existing scan measures "no template invokes X", so it could not see af61dee, 5c974cb7 or d737edb; its orphaned-capability-author_producer row, detected 10-01, is not detection of the af61dee loss.)
+- (ii) First read the 42 REJECTED orphaned-capability gaps' rejection reasons. They measure what the mint prescription gets wrong: "detection never becomes repair".
+- (iii) CONTRACT-MISMATCH: only the non-2xx-by-effect counter at the packages/ HTTP seam, and only after checking whether jointBinding, joint-liveness or self_fact_reconcile rows already cover it. The declaration-drift scan at 0 ticks is a finding to file or attach.
+- (iv) The backfill is the one-time run of (i) over history since 06-01.
+- **Prior audits, cited, not restated:**
+  - COMPOSITION_WIRING_AUDIT and SELF_DEVELOPMENT_WIRING_AUDIT (08-13);
+  - WIRING_CORRECTION_METHOD and cross-vessel-wiring-repair (08-28/29);
+  - MECHANISM-AUDIT and WHY-THINGS-KEEP-BREAKING (09-28);
+  - REALIGNMENT (09-29).

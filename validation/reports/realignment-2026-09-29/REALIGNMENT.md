@@ -57,7 +57,7 @@ R1 = history lens, R2 = architecture lens, R3 = evidence lens. "Fixed" means the
 | R2-P6 | birth control can be gamed | Fixed. Same rule as R1-3, executed by the evaluator | §2.1 item 2 |
 | R2-P7 | refusing at write violates law 13 | Fixed. Accept as needs-localization. Refuse only placeholder or malformed rows | §2.3 |
 | R2-P8 | "one holder" contradicts C21 | Fixed. Evidence replicated, posteriors derived locally, holder-abstain on partition | §2.4 |
-| R2-P9 | component exits, no vertical slice | Fixed. The slice is the only "done"; ranks widen from what it lacked | §7 step 1 |
+| R2-P9 | component exits, no vertical slice | Rule stands: the slice is the only "done". **Status 10-03: NOT DONE** (a news-goal reach was claimed as the slice; withdrawn, see §7 step 1 status) | §7 step 1 |
 | R2-P10 | enforcement in git hooks and a script | Fixed. `landing_admission` activity; hook is observer only; runner wrapped as a shape with a canary | §2.1 item 2, §2.5 |
 | R2-P11 | callers depend on broken parts | Fixed. Prerequisites ordered | §7 |
 | R2-P12 | redispatch livelock under-weighted | Fixed. Own exit, own builder | §2.6, §7 step 4 |
@@ -778,6 +778,18 @@ The loop to close runs: **need or detection → contracted gap → admitted → 
 The agentic-runner approach stays the implementation-sequencing reference named by the October 2 companion reports. The slice maps into that work and the existing ledger and realignment changes; it is not another runner or a new gate program. The operational readers are the existing consumers, trace ingestion and credit paths, activity selection, extraction, the expectation evaluator and the dispatch scope checks. Each implemented item names its concrete writer and reader and demonstrates consumption.
 
 1. **Vertical slice on both nodes (Rank 0).** Builder: (a) for the goal-host parts.
+   - **STATUS 2026-10-03: NOT DONE. A "done" claim is withdrawn (user, qa: done from a proxy).** The "news goal" reached only after goal-specific operator surgery, recorded here as L12 interventions:
+     - 7fe068c: a news-only writer step keyed on question words;
+     - b260a15, 7295de1, acf4922: vocabulary lists in isCountableQuestion;
+     - armed by the operator-written check-first tests decb28c, 462a277, ed21374, d7e1674.
+
+     Against this step's own definition it showed at most a route-around: no chained output consumed, no reworded reuse, no held-out generality, and a single node. The compose probe (D, "give me a briefing…") lost both halves.
+   - **Acceptance from 10-03 (qa):**
+     - (a) held-out CLASS probes from the sealed set (sha256 0ed9e4dd…), at least 2 per class, reached with ZERO operator commits in the window (checked by diffing operator-authored commits across all repos from arming to verdict);
+     - (b) the compose chain: D consumes A's and B's published outputs (foreign-but-offered), reaches, and credits them;
+     - (c) grounded reach only (satisfier-only and hollow walks do not count);
+     - (d) must-fail: the same probes on a tree with the surgery reverted reach at the SAME rate; if not, the surgery was what produced the reach.
+   - The surgery is not reverted blind. Commits that do not generalize are retired through restore-or-retire gaps.
    - One need-phrased goal (no component name) and one detector-filed gap each run end to end on node 1 **and** node 2.
    - The walk routes around at least one hole, with the route-around traced as a record.
    - The output is chained into at least one follow-on goal.
