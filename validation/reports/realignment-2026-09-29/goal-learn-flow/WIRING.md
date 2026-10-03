@@ -655,3 +655,11 @@ A regression class counts as covered only if negating or removing the shipped ch
     - 153 orphans were reaped.
   - **Hypothesis, unverified:** stratum cold-row selection uses the composite index #6060 broke, so on 2.3.3 those rows were invisible to retention, and 2.3.10 exposed them. The db fork is testing the cold-row query against the pre-upgrade backup on a throwaway 2.3.3. Until that's settled, every execution-count or retention-dependent series (including step 5's re-baseline) is split at 06:03:44Z and never compared across it.
 - **Local SurrealDB rollout complete:** surface, inventory, node 1. Node 2 and pubspoke run no SurrealDB. The hub goes through the user.
+- **Retention was inert on 2.3.3 (known cause; the consequence is being measured).**
+  - The 10-01 gap `surrealdb-2-3-3-plans-execution-counts-wrong-…` had measured node 1's cold count for validator-dispatch at 0 while 23,414 rows matched. The 2.3.10 upgrade resolved that instance through the engine, not code; the self-check that gap asks for is still owed.
+  - **The detector class is filed now (qa):** `trace-retention-has-no-effect-check-…`. Each sweep must record eligible vs removed per kind and raise on eligible > 0 with removed ≈ 0.
+  - **Consequence, CONDITIONAL until measured:** if the execution cap evicts regardless of kind, then under 2.3.3 the cap pushed out gradable history to keep about 61k telemetry rows that retention should have removed. Tonight's "~11 days of retention" figure was then shortened by the bug, and history evicted before tonight is recoverable only from backups. This is the 10-01 ruling (the trace store is for gradable executions; routine work goes to counters) seen from the eviction side, and more reason to move the validator-dispatch and slot-binding writers to counters.
+  - **Pending from the db fork, read-only on the pre-upgrade backup:**
+    - the pruned set was only policy kinds;
+    - zero gradable rows were pruned (positive-controlled);
+    - how the cap actually evicts.
