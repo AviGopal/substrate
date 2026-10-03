@@ -72,6 +72,32 @@
 #      request. Build the body with printf (a builtin) and pipe it: `printf '…' "$S" | curl --data-binary @-`.
 #      An argument starting with @ (`@-`, `@file`, `@<(printf …)`) reads the body from a file or stdin and
 #      is not flagged. Blind spot: a secret first copied into a variable with an unremarkable name.
+#   7. EVERY RESOLVE CALL SENDS A CREDENTIAL — writer or not, reads included: a `fetch(` or `curl`
+#      to a URL ending in `/resolve` or `/v2/impulses/resolve` (any vessel, discovery included) must
+#      send Authorization: an ApiKey header, a curl config on stdin or a file (`-K -`, `-K <(…)`,
+#      `--config`), a header read from stdin (`-H @-`), a name the file binds to a credential (as in
+#      3), or a headers object spread from a name containing `auth` (`...authHeaders`, `headers:
+#      auth`: the caller built it). Every vessel validates its caller against identity-vessel; an
+#      unauthenticated call is refused, or served as an anonymous tenant, and a read that silently
+#      returns nothing is the same lost signal as a refused write. A request site is a line that
+#      names such a URL with `fetch(` or curl (followed by an option or a quoted/expanded word, so a
+#      log message that says "curl exit" is not one) on it, on one of the 3 lines above, or on its
+#      backslash-continuation chain; or a `fetch(NAME` / curl `$NAME` of a name bound to such a URL.
+#      The credential window is predicate 3's (3 above to 8 below), except that a name bound near a
+#      credential counts only when the window CALLS it or its name says what it carries (auth, header,
+#      hdrs, cred, key): in a large vessel file a bare `body` or `ok` bound near some credential
+#      elsewhere is not evidence. In a unit file the window is the request's own Exec line chain.
+#      A request that exists to prove the route refuses an unauthenticated caller (it expects 401) is
+#      exempt when a comment within the 2 lines above it says `resolve-auth: deliberately
+#      unauthenticated`, so the exemption is greppable and reviewed with the line. identity-vessel's
+#      `/v1/auth/resolve` is exempt: it is the validation step, its credential is the body.
+#      SCOPE: scripts/** and validation/scripts/** (*.sh, *.ts, *.mjs), unit Exec lines, and every
+#      vessel's src/** under repos/<vessel>/ (.gitmodules names them). A vessel whose src/ is not
+#      checked out is SKIPPED with a logged line, never passed silently. LINT_EXTRA_ROOTS (colon-
+#      separated directories, each laid out like this repo: <dir>/repos/<vessel>/src) adds trees, so
+#      a vessel's source can be checked from a scratch clone without its submodule. Test files
+#      (*.test.*, *.check.sh, test/ and __tests__/ directories), *.d.ts, node_modules and this file
+#      (its fixtures quote the very lines it refuses) are not scanned.
 #
 # CONTROLS. A writer fixture with no credential (fetch, curl, fetch through a bound route name)
 # must be flagged at the exact lines; a credentialed fixture in each idiom must pass; a prose-only
@@ -270,6 +296,104 @@ scan_tree_body() { # <root> -> every curl body on argv carrying a credential-nam
   [ -d "$r/scripts/substrate/units" ] || return 0
   find "$r/scripts/substrate/units" -type f \( -name '*.service' -o -name '*.conf' \) -print | LC_ALL=C sort \
     | while IFS= read -r f; do scan_body_file "$f" "${f#"$r"/}" 1; done
+}
+
+# Predicate 7: every request to a resolve route carries a credential (no writer gate). UNIT=1 limits
+# the scan to Exec*= lines and their continuations.
+ANY_RESOLVE_AWK='
+function trim(s) { sub(/^[ \t]+/, "", s); return s }
+function iscomment(s) { s = trim(s); if (UNIT) return (s ~ /^[#;]/); return (s ~ /^(#|\/\/|\*|\/\*)/) }
+function defname(s,   m) {
+  if (match(s, /function[ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*\(/)) { m = substr(s, RSTART, RLENGTH); sub(/^function[ \t]+/, "", m); sub(/[ \t]*\($/, "", m); return m }
+  if (match(s, /^[ \t]*[A-Za-z_][A-Za-z0-9_]*[ \t]*\(\)[ \t]*\{/)) { m = substr(s, RSTART, RLENGTH); m = trim(m); sub(/[ \t]*\(.*/, "", m); return m }
+  if (match(s, /(const|let|var)[ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*[=:]/)) { m = substr(s, RSTART, RLENGTH); sub(/^(const|let|var)[ \t]+/, "", m); sub(/[ \t]*[=:]$/, "", m); return m }
+  if (match(s, /^[ \t]*(local[ \t]+|export[ \t]+)?[A-Za-z_][A-Za-z0-9_]*=/)) { m = substr(s, RSTART, RLENGTH); m = trim(m); sub(/^(local|export)[ \t]+/, "", m); sub(/=$/, "", m); return m }
+  return ""
+}
+function credline(s) { return (s ~ /ApiKey/ || (s ~ /Authorization/ && s !~ /Basic|sql[A-Za-z]*Auth/)) }
+function isroute(s) { return (s ~ /\/(v2\/impulses\/)?resolve(["\047`\\ \t]|$)/ && s !~ /\/auth\/resolve(["\047`\\ \t]|$)/) }
+function transport(s) { return (s ~ /fetch\(/ || s ~ /(^|[^A-Za-z0-9_.-])curl[ \t]+[-"\047$]/ || s ~ /["\047]curl["\047]/) }
+function contd(s) { return (s ~ /\\[ \t]*$/) }
+{ line[NR] = $0; n = NR }
+END {
+  inexec = 0
+  for (i = 1; i <= n; i++) {
+    w = line[i]
+    if (!(i > 1 && contd(line[i - 1]))) cs = i
+    chain[i] = cs
+    if (UNIT) {
+      if (cs == i) inexec = (w ~ /^[ \t]*Exec(Start|StartPre|StartPost|Reload|Stop|StopPost|Condition)=/)
+      ex[i] = inexec
+    } else ex[i] = 1
+    if (iscomment(w)) continue
+    d = (transport(w) || w ~ /await/) ? "" : defname(w)
+    if (isroute(w) && d != "" && w !~ /=>/) { routeid[d] = 1; routedef[i] = 1 }
+    if (d != "") defat[i] = d
+    if (credline(w)) for (k = i - 15; k <= i; k++) if (k in defat) authid[defat[k]] = 1
+  }
+  for (i = 1; i <= n; i++) {
+    w = line[i]
+    if (!ex[i] || iscomment(w) || routedef[i]) continue
+    site = 0
+    if (isroute(w) && w !~ /[A-Za-z_]["\047]?[ \t]*:[ \t]*["\047`]\/(v2\/impulses\/)?resolve["\047`]/) {
+      for (k = i - 3; k <= i && !site; k++) if (k >= 1 && ex[k] && !iscomment(line[k]) && transport(line[k])) site = 1
+      for (k = i; !site && k > 1 && contd(line[k - 1]); k--) if (transport(line[k - 1])) site = 1
+    }
+    if (!site) for (r in routeid) {
+      if (w ~ ("fetch\\([ \t]*" r "([^A-Za-z0-9_]|$)")) { site = 1; break }
+      if (w ~ /curl/ && (w ~ ("\\$" r "([^A-Za-z0-9_]|$)") || index(w, "${" r "}"))) { site = 1; break }
+    }
+    if (!site) continue
+    # A deliberate unauthenticated probe (a test that the route answers 401) says so within 2 lines above.
+    allow = 0
+    for (k = i - 2; k <= i; k++) if (k >= 1 && line[k] ~ /resolve-auth: deliberately unauthenticated/) allow = 1
+    if (allow) continue
+    cred = 0
+    for (k = i - 3; k <= i + 8 && !cred; k++) {
+      if (k < 1 || k > n || !ex[k] || iscomment(line[k])) continue
+      if (UNIT && chain[k] != chain[i]) continue # a unit request is credentialed on its own Exec line
+      v = line[k]
+      if (credline(v) || v ~ /curl[^|]*[ \t](-K|--config)([ \t=]|$)/ || v ~ /(-H|--header)[ \t]+@-/ \
+          || v ~ /\.\.\.[ \t]*[A-Za-z_]*[Aa]uth[A-Za-z0-9_]*/ || v ~ /headers[ \t]*:[ \t]*[A-Za-z_]*[Aa]uth[A-Za-z0-9_]*[ \t]*[,})]/) { cred = 1; break }
+      # A credential-bound name counts when it is CALLED here (a headers()/post() helper) or is named
+      # for what it carries; a bare token such as body / ok / pointer that happens to be bound near some
+      # credential elsewhere in a large file is not evidence.
+      m = split(v, tok, /[^A-Za-z0-9_]+/)
+      for (j = 1; j <= m; j++) if (tok[j] in authid && (tolower(tok[j]) ~ /auth|header|hdrs?$|cred|key/ || v ~ ("(^|[^A-Za-z0-9_])" tok[j] "[ \t]*\\("))) { cred = 1; break }
+    }
+    if (!cred) printf "%s:%d\n", DISPLAY, i
+  }
+}'
+scan_any_resolve_file() { # <file> <display-name> [unit] -> resolve-route requests with no credential
+  awk -v DISPLAY="$2" -v UNIT="${3:-0}" "$ANY_RESOLVE_AWK" "$1"
+}
+p7_files() { # <dir> -> scannable non-test source files under it
+  find "$1" -type f \( -name '*.sh' -o -name '*.ts' -o -name '*.mjs' \) -not -name '*.d.ts' -not -name '*.test.*' \
+    -not -name '*.check.sh' -not -name 'resolve-writers-send-credentials.test.sh' \
+    -not -path '*/node_modules/*' -not -path '*/test/*' -not -path '*/tests/*' -not -path '*/__tests__/*' -print | LC_ALL=C sort
+}
+p7_vessel_trees() { # <root> -> every vessel src/ under <root>/repos (gitmodules + present dirs); SKIP lines on fd 3
+  local r="$1" v
+  {
+    [ -f "$r/.gitmodules" ] && sed -n 's/^[ \t]*path[ \t]*=[ \t]*\(repos\/[^ \t]*\)[ \t]*$/\1/p' "$r/.gitmodules"
+    for v in "$r"/repos/*/; do [ -d "$v" ] && echo "repos/$(basename "$v")"; done
+  } | LC_ALL=C sort -u | while IFS= read -r v; do
+    if [ -n "$(find "$r/$v/src" -type f 2>/dev/null | head -1)" ]; then echo "$v/src"
+    else echo "SKIP $v/src (not checked out)" >&3; fi
+  done
+}
+scan_tree_any_resolve() { # <root> -> every uncredentialed resolve-route request in predicate 7's scope
+  local r="$1" f d
+  for d in "$r/scripts" "$r/validation/scripts"; do
+    [ -d "$d" ] && p7_files "$d" | while IFS= read -r f; do scan_any_resolve_file "$f" "${f#"$r"/}"; done
+  done
+  if [ -d "$r/scripts/substrate/units" ]; then
+    find "$r/scripts/substrate/units" -type f \( -name '*.service' -o -name '*.conf' \) -print | LC_ALL=C sort \
+      | while IFS= read -r f; do scan_any_resolve_file "$f" "${f#"$r"/}" 1; done
+  fi
+  p7_vessel_trees "$r" | while IFS= read -r d; do
+    p7_files "$r/$d" | while IFS= read -r f; do scan_any_resolve_file "$f" "${f#"$r"/}"; done
+  done
 }
 
 echo "== resolve-writers-send-credentials ($ROOT)"
@@ -492,6 +616,115 @@ got="$(scan_body_file "$F/body.service" body.service 1 | tr '\n' ' ')"
   && ok "unit files (body): \$\$PASSWORD on an ExecStartPre= line and \$\${TOKEN} on an ExecStart= continuation are flagged (body.service:4, :6); a comment, a non-Exec line and --data-binary @- are not" \
   || bad "unit files (body): expected 'body.service:4 body.service:6', got '${got}'"
 
+# predicate 7 controls (file names are p7-* so they never collide with another predicate's fixtures)
+cat > "$F/p7-neg.ts" <<'EOF'
+const DISCOVERY = process.env.DISCOVERY_ENDPOINT ?? "http://127.0.0.1:8100";
+const RESOLVE_URL = `${DISCOVERY}/resolve`;
+async function shapeOwner(shape: string) {
+  const r = await fetch(`${DISCOVERY}/resolve`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pointer: { type: "vesselCapability", shape } }) });
+  return r.json();
+}
+async function viaName() {
+  return fetch(RESOLVE_URL, { method: "POST", body: "{}" });
+}
+async function gaps() {
+  const r = await fetch(
+    `${DEV}/v2/impulses/resolve`,
+    { method: "POST", body: JSON.stringify({ impulse: { type: "substrateGap" } }) },
+  );
+}
+EOF
+cat > "$F/p7-neg.sh" <<'EOF'
+#!/usr/bin/env bash
+curl -s -X POST "$DISCOVERY/resolve" -H 'Content-Type: application/json' -d '{"pointer":{"type":"vesselRegistry"}}'
+out="$(curl -s --max-time 4 -X POST \
+  "$DEV/v2/impulses/resolve" -d '{}')"
+EOF
+cat > "$F/p7-pos.ts" <<'EOF'
+const KEY = process.env.METABOB_API_KEY ?? "";
+async function a() { await fetch(`${DISCOVERY}/resolve`, { method: "POST", headers: { Authorization: `ApiKey ${KEY}` } }); }
+async function b(endpoint: string, authHeaders: Record<string, string>) {
+  await fetch(`${endpoint}/resolve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders },
+  });
+}
+async function c(obsidian: string, auth: Record<string, string>) { await fetch(`${obsidian}/resolve`, { method: "POST", headers: auth }); }
+async function d(base: string) { await fetch(`${base}/v1/auth/resolve`, { method: "POST", body: "{}" }); }
+async function e() { await fetch(`${DISCOVERY}/v1/resolve-url?shape=x`); }
+const field = { resolve_endpoint: "/v2/impulses/resolve" };
+// resolve-auth: deliberately unauthenticated (expects 401)
+async function f() { return fetch(`${DEV}/v2/impulses/resolve`, { method: "POST", body: "{}" }); }
+const HEADERS = { "Content-Type": "application/json", Authorization: `ApiKey ${KEY}` };
+async function g() { await fetch(`${DEV}/v2/impulses/resolve`, { method: "POST", headers: HEADERS }); }
+EOF
+cat > "$F/p7-pos.sh" <<'EOF'
+#!/usr/bin/env bash
+srv_auth | curl -K - -s -X POST "$DISCOVERY/resolve" -d '{}'
+printf 'Authorization: ApiKey %s' "$K" | curl -s -H @- -X POST "$DEV/v2/impulses/resolve" -d '{}'
+echo "FAIL: could not read ${ENDPOINT}/v2/impulses/resolve (curl exit ${RC})" >&2
+# curl -s "$DISCOVERY/resolve"  (a comment is not a request)
+EOF
+cat > "$F/p7.service" <<'EOF'
+[Service]
+Description=not a request: curl "$${E}/resolve"
+ExecStartPre=/bin/bash -c 'curl -s -X POST "$${DISCOVERY}/resolve" -d "{}"'
+ExecStart=/bin/bash -c 'srv_auth | curl -K - -s -X POST "$${DISCOVERY}/resolve" -d "{}"'
+EOF
+got="$(scan_any_resolve_file "$F/p7-neg.ts" p7-neg.ts | tr '\n' ' ')"
+[ "$got" = "p7-neg.ts:4 p7-neg.ts:8 p7-neg.ts:12 " ] \
+  && ok "negative control (P7, ts): a discovery /resolve read, a fetch through a bound route name and a multi-line fetch with no credential are flagged (p7-neg.ts:4, :8, :12)" \
+  || bad "negative control (P7, ts): expected 'p7-neg.ts:4 p7-neg.ts:8 p7-neg.ts:12', got '${got}'"
+got="$(scan_any_resolve_file "$F/p7-neg.sh" p7-neg.sh | tr '\n' ' ')"
+[ "$got" = "p7-neg.sh:2 p7-neg.sh:4 " ] \
+  && ok "negative control (P7, sh): a curl read with no credential, on its own line and on a continuation line, is flagged (p7-neg.sh:2, :4)" \
+  || bad "negative control (P7, sh): expected 'p7-neg.sh:2 p7-neg.sh:4', got '${got}'"
+got="$(scan_any_resolve_file "$F/p7-pos.ts" p7-pos.ts)$(scan_any_resolve_file "$F/p7-pos.sh" p7-pos.sh)"
+[ -z "$got" ] && ok "positive control (P7): an ApiKey header, a spread authHeaders / headers: auth, curl -K - and -H @- pass; /v1/auth/resolve, /v1/resolve-url, a resolve_endpoint field, a log line and a comment are not requests; a marked 401 probe is exempt; a HEADERS object bound to a credential passes" \
+  || bad "positive control (P7) flagged: $(echo $got)"
+got="$(scan_any_resolve_file "$F/p7.service" p7.service 1 | tr '\n' ' ')"
+[ "$got" = "p7.service:3 " ] \
+  && ok "unit files (P7): an Exec line's uncredentialed curl to a resolve route is flagged (p7.service:3); a non-Exec line and curl -K - are not" \
+  || bad "unit files (P7): expected 'p7.service:3', got '${got}'"
+# A vessel's src/ through LINT_EXTRA_ROOTS: goal-host-vessel src/index.ts landedShaForGoal, verbatim
+# (lines 27-50 at the time this control was written: the discovery fetch at :32 sends only Content-Type).
+X="$T/p7-root"; mkdir -p "$X/repos/goal-host-vessel/src" "$X/repos/goal-host-vessel/test" "$X/repos/absent-vessel"
+printf 'path = repos/absent-vessel\n' > "$X/.gitmodules"
+{ for _ in $(seq 1 27); do echo "// line"; done; cat <<'EOF'
+const FED_SUBSTRATE_ID = process.env.FED_SUBSTRATE_ID ?? 'local';
+
+async function landedShaForGoal(goal: string): Promise<string | null> {
+  try {
+    const response = await fetch(`${Config.discoveryEndpoint}/resolve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pointer: { type: 'goal_path_sha', goal },
+      }),
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!response.ok) {
+      console.warn(`Failed to resolve SHA for goal '${goal.slice(0, 50)}...': ${response.status} ${response.statusText}`);
+      return null;
+    }
+    const json = await response.json();
+    return json?.content?.sha ?? null;
+  } catch (e) {
+    console.error(`Error resolving SHA for goal '${goal.slice(0, 50)}...': ${e}`);
+    return null;
+  }
+}
+EOF
+} > "$X/repos/goal-host-vessel/src/index.ts"
+cp "$X/repos/goal-host-vessel/src/index.ts" "$X/repos/goal-host-vessel/test/index.test.ts"
+got="$(scan_tree_any_resolve "$X" 3>"$T/p7-skips" | tr '\n' ' ')"
+[ "$got" = "repos/goal-host-vessel/src/index.ts:32 " ] \
+  && ok "vessel src (P7): goal-host-vessel's uncredentialed discovery fetch is flagged at src/index.ts:32; its test/ copy is not scanned" \
+  || bad "vessel src (P7): expected 'repos/goal-host-vessel/src/index.ts:32', got '${got}'"
+grep -qx 'SKIP repos/absent-vessel/src (not checked out)' "$T/p7-skips" \
+  && ok "vessel src (P7): a vessel whose src/ is not checked out is reported as SKIP, not passed silently" \
+  || bad "vessel src (P7): no SKIP line for an absent vessel src/ (got: $(tr '\n' ' ' < "$T/p7-skips"))"
+
 # ── the tree ────────────────────────────────────────────────────────────────────
 hits="$(scan_tree "$ROOT")"
 if [ -z "$hits" ]; then
@@ -519,6 +752,19 @@ if [ -z "$hits" ]; then
 else
   while IFS= read -r h; do bad "$h: a credential in a curl body on argv (readable in any process listing); printf it into curl --data-binary @-"; done <<< "$hits"
 fi
+
+p7_roots=("$ROOT")
+if [ -n "${LINT_EXTRA_ROOTS:-}" ]; then IFS=: read -r -a _extra <<< "$LINT_EXTRA_ROOTS"; p7_roots+=("${_extra[@]}"); fi
+for r in "${p7_roots[@]}"; do
+  [ -d "$r" ] || { bad "LINT_EXTRA_ROOTS entry is not a directory: $r"; continue; }
+  hits="$(scan_tree_any_resolve "$r" 3>"$T/p7-tree-skips")"
+  while IFS= read -r sk; do [ -n "$sk" ] && echo "  $sk [$r]"; done < "$T/p7-tree-skips"
+  if [ -z "$hits" ]; then
+    ok "every fetch/curl to a /resolve or /v2/impulses/resolve URL under $r (scripts/, validation/scripts/, unit Exec lines, checked-out vessel src/) sends a credential"
+  else
+    while IFS= read -r h; do bad "$h: a request to a resolve route sends no Authorization [$r]"; done <<< "$hits"
+  fi
+done
 
 if [ "$fails" -eq 0 ]; then echo "PASSED"; exit 0; fi
 echo "FAILED ($fails)"; exit 1
