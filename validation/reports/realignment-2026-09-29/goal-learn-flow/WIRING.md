@@ -499,3 +499,17 @@ Measured from the live autonomyScope pool row. The count is how load-bearing the
 **Autonomous AND gate-verified: 1 of 3, and not yet by effect.**
 
 New rule filed (qa): a landing with no measurement that actually ran is REFUSED (no_measurement_available), not landed.
+
+## USER RULING (10-03): scope widening on evidence is ADOPTED (REALIGNMENT §7 step 9, slice L's first criterion)
+**Criterion:** a path leaves autonomyScope excluded_paths when its armed check-first suites cover the behaviours that regressions there have historically broken, judged by the accepted evaluator through the criterion path, never by operator fiat.
+- **Evidence base:** the check-first suites armed 10-03 on cutover and gap files (fail-closed own-check, unmeasurable demotion, orphan scanner and expiry, stale gate version) plus the regression inventory (51 regressions, 09-19 → 10-03).
+- **Working the criterion per excluded file:**
+  - list the historical regressions there;
+  - map each one to an armed must-fail;
+  - an uncovered regression keeps the file excluded and names the missing check.
+- **Effect:** each file that leaves the list reduces the operator-only count above, the measure of operator load.
+
+Also ruled 10-03:
+- **The deployment session owns image tagging:** both the re-tag of public :dev to the accepted sha, and CI publishing only from the accepted sha (6b).
+- **SurrealDB 2.3.3 → 2.3.10 is approved,** rolled out by the deployment session per node.
+- **Cockpit reconnect:** deferred.
