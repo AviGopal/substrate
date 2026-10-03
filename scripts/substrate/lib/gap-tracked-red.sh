@@ -36,13 +36,20 @@
 # parse to an array) is reported by gtr_load's exit status, and every caller treats it as "no
 # name is tracked": the stricter gate stands. A wrong address is unreadable, never "zero gaps".
 #
+# A REFUSED CREDENTIAL IS NOT A VERDICT. The store is read with the node key. A 401 means the key
+# is stale or wrong: an environment fault that says nothing about any test. gtr_load prints
+# `credential refused (401) — key stale?` on stderr and returns 2, distinct from 1, and callers
+# report the verdict they could not reach as UNKNOWN (the glue runner) or hold (pull-sync), never
+# as a red or a regression.
+#
 # Interface (no globals set, no exit, safe under set -u):
 #   gtr_load <src> <out-file>
 #       src: a JSON file (a flat array of gaps, as gaps/gaps.json; or {gaps:[...]}; or a
 #            resolver response {shape:"substrateGap", body:{gaps:[...]}}), or an http(s)://
 #            development-vessel base, read with the substrateGap resolver
 #            (status "open", limit GTR_LIMIT, timeout GTR_MAX_TIME seconds).
-#       Writes the OPEN gaps as one JSON array to <out-file>. Returns 0, or 1 = unreadable.
+#       Writes the OPEN gaps as one JSON array to <out-file>. Returns 0, 1 = unreadable, or
+#       2 = the store refused the credential (HTTP 401; the distinct line is on stderr).
 #   gtr_tracked_names <loaded-file> <vessel> <files, newline-separated>
 #       Prints the tracked names, one per line. Prints nothing on any error.
 #   gtr_select tracked|untracked <tracked names, newline-sep.> <red lines, newline-sep.>
@@ -51,16 +58,25 @@
 GTR_LIMIT="${GTR_LIMIT:-5000}"
 
 gtr_load() {
-  local src="${1:-}" out="${2:-}" raw
+  local src="${1:-}" out="${2:-}" raw code
   [ -n "$src" ] && [ -n "$out" ] || return 1
   command -v jq >/dev/null 2>&1 || return 1
   case "$src" in
     http://*|https://*)
       # The store is read with the node key when one is set (on stdin as a curl config, never argv):
       # every resolve route validates its caller, and an anonymous read can come back empty.
+      # -w appends the HTTP status on its own line; output without a 3-digit last line is all body.
       raw="$({ if [ -n "${METABOB_API_KEY:-}" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; fi; } \
-        | curl -K - -s --max-time "${GTR_MAX_TIME:-30}" -X POST "${src%/}/v2/impulses/resolve" -H 'Content-Type: application/json' \
+        | curl -K - -s -w '\n%{http_code}' --max-time "${GTR_MAX_TIME:-30}" -X POST "${src%/}/v2/impulses/resolve" -H 'Content-Type: application/json' \
         -d "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap\",\"status\":\"open\",\"limit\":$GTR_LIMIT}}}" 2>/dev/null)" || return 1
+      code=""
+      case "$raw" in
+        *$'\n'[0-9][0-9][0-9]) code="${raw##*$'\n'}"; raw="${raw%$'\n'*}" ;;
+      esac
+      if [ "$code" = 401 ]; then
+        echo "credential refused (401) — key stale? the gap store at ${src%/} refused the node key (METABOB_API_KEY $([ -n "${METABOB_API_KEY:-}" ] && echo set || echo unset); the key is never printed); tracked-red verdict unknown (environment), not red" >&2
+        : > "$out"; return 2
+      fi
       ;;
     *)
       [ -f "$src" ] && [ -r "$src" ] || return 1

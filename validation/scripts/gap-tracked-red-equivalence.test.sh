@@ -12,9 +12,11 @@
 #              stub) over a synthetic store (repos/ prefixes, blank/non-string only_tests,
 #              string classification_metadata, non-object rows, closed/reopened/"Open" rows, a
 #              shape mismatch, missing fields, a non-array only_tests) x vessels x file lists
-#   request    both send the byte-identical resolver request, except that the lib's request leads
-#              with `-K -`: the node key travels as a curl config on stdin (every resolve call sends
-#              a credential; resolve-writers-send-credentials P7). The data requested is unchanged.
+#   request    both send the byte-identical resolver request, except for two additions to the lib's:
+#              a leading `-K -` (the node key travels as a curl config on stdin: every resolve call
+#              sends a credential, resolve-writers-send-credentials P7) and `-w \n%{http_code}` right
+#              after `-s` (the status trailer that tells a refused key, 401, from an unreadable store;
+#              credential-refused-401.test.sh). The data requested is unchanged.
 #   file kind  gtr_load on the RAW store file (no resolver filter) gives the same names
 #   matcher    the reference awk pair vs gtr_select over 48+ adversarial name/line sets
 #   unreachable curl failing, garbage, an error JSON, an HTML 500 and empty output: both empty
@@ -119,12 +121,16 @@ done
 [ "$(ref_names demo test/a.test.ts | tr '\n' ',')" = "alpha,describe > beta,gamma,alpha,xi > leaf," ] && ok "names: the reference sees what it should (positive control)" || bad "names: reference control gave '$(ref_names demo test/a.test.ts | tr '\n' ',')'"
 
 # ── request ────────────────────────────────────────────────────────────────────
-# The only permitted difference is the credential carrier: every new request leads with `-K -`.
+# The only permitted differences are the credential carrier (a leading `-K -`) and the status trailer
+# (`-w \n%{http_code}` after `-s`).
 [ -s "$T/curl-new.log" ] && ! grep -qv '^-K - ' "$T/curl-new.log" \
   && ok "request: the lib sends its credential as a curl config on stdin (-K -) on every request" \
   || bad "request: a lib request without the leading -K - credential carrier: [$(grep -v '^-K - ' "$T/curl-new.log" | sort -u)]"
-[ -s "$T/curl-ref.log" ] && cmp -s <(sort -u "$T/curl-ref.log") <(sed 's/^-K - //' "$T/curl-new.log" | sort -u) \
-  && ok "request: byte-identical resolver request apart from -K - ($(sort -u "$T/curl-ref.log" | head -1 | cut -c1-60)...)" || bad "request differs: ref=[$(sort -u "$T/curl-ref.log")] new=[$(sort -u "$T/curl-new.log")]"
+[ -s "$T/curl-new.log" ] && ! grep -qvF -- '-s -w \n%{http_code} ' "$T/curl-new.log" \
+  && ok "request: the lib asks for the HTTP status trailer (-w \\n%{http_code}) on every request" \
+  || bad "request: a lib request without the -w status trailer: [$(grep -vF -- '-s -w \n%{http_code} ' "$T/curl-new.log" | sort -u)]"
+[ -s "$T/curl-ref.log" ] && cmp -s <(sort -u "$T/curl-ref.log") <(sed 's/^-K - //; s/^-s -w \\n%{http_code} /-s /' "$T/curl-new.log" | sort -u) \
+  && ok "request: byte-identical resolver request apart from -K - and the status trailer ($(sort -u "$T/curl-ref.log" | head -1 | cut -c1-60)...)" || bad "request differs: ref=[$(sort -u "$T/curl-ref.log")] new=[$(sort -u "$T/curl-new.log")]"
 
 # ── unreachable ────────────────────────────────────────────────────────────────
 for RESP_MODE in fail garbage error html empty; do

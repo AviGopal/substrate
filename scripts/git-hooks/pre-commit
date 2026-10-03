@@ -550,6 +550,20 @@ if [[ ${#GLUE_STAGED[@]} -gt 0 ]]; then
   glue_rc=0
   glue_out="$(bash "$GLUE_TREE/validation/scripts/run-glue-tests.sh" "${GLUE_ARGS[@]}" 2>&1)" || glue_rc=$?
   printf '%s\n' "$glue_out"
+  if [[ $glue_rc -eq 3 ]]; then
+    # ENVIRONMENT, NOT A TEST FAILURE: the gap store refused the node key (401), so whether a red
+    # check-first test is tracked is unknown. Still blocking (a gate that opens on a fault in its own
+    # input is worse than none), under its own banner so nobody goes looking for a broken test.
+    printf '\n%s\n' "${RED}━━━ glue tests: environment fault — credential refused (401) — key stale? no test failed ━━━${NC}"
+    printf '%s\n' "$glue_out" | grep -E '^(UNKNOWN|unknown:)' | sed 's/^/  /' || true
+    cat <<EOF
+
+The gap store refused this node's key, so the tracked-red exemption for the red glue test(s)
+above could not be read. Refresh METABOB_API_KEY (or the client config's store address) and
+commit again. Logs: ${GLUE_LOGS}/<test>.log
+EOF
+    exit 1
+  fi
   if [[ $glue_rc -ne 0 ]]; then
     printf '\n%s\n' "${RED}━━━ glue tests failed against the staged tree ━━━${NC}"
     printf '%s\n' "$glue_out" | grep -E '^(FAIL|failed:)' | sed 's/^/  /' || true

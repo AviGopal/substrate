@@ -273,12 +273,18 @@ gtr_try_load() { # -> 0 and GTR_LIB set when a candidate sources and defines the
   done < <(gtr_lib_candidates)
   return 1
 }
+# Returns 2 when the store refused the node key (401; gtr_load printed the distinct line): the
+# tracked set is UNKNOWN, and the caller holds instead of judging. Any other unreadable store is
+# "nothing tracked" (0), as before: the stricter gate stands.
 tracked_fail_names() {
-  local st
+  local st rc
   [ -n "$GTR_LIB" ] || return 0
   st="$(mktemp "${TMPDIR:-/tmp}/pullsync-gtr.XXXXXX" 2>/dev/null)" || return 0
-  gtr_load "$DEV_VESSEL" "$st" && gtr_tracked_names "$st" "$1" "$2"
+  gtr_load "$DEV_VESSEL" "$st"; rc=$?
+  [ "$rc" -eq 0 ] && gtr_tracked_names "$st" "$1" "$2"
   rm -f "$st"
+  [ "$rc" -eq 2 ] && return 2
+  return 0
 }
 gtr_try_load || true
 # <<< gap-tracked-red loader
@@ -2768,7 +2774,16 @@ EOF
         # check. Names in an open gap's evidence_resolve.only_tests for this vessel are subtracted.
         TRACKED_ONLY=""
         if [ "${CONFIRMED:-0}" -gt 0 ]; then
-          TRACKED="$(tracked_fail_names "$v" "$(git -C "$d" diff --name-only "${HEAD}^" "$HEAD" 2>/dev/null || true)")"
+          TRACKED="$(tracked_fail_names "$v" "$(git -C "$d" diff --name-only "${HEAD}^" "$HEAD" 2>/dev/null || true)")"; TFN_RC=$?
+          if [ "$TFN_RC" -eq 2 ]; then
+            # A STALE KEY IS NOT A REGRESSION. The gap store refused the node key (401), so whether
+            # these failures are tracked is unknown. Refusing would count a refusal and file a
+            # regression gap blaming the commit for an environment fault; converging would wave an
+            # untracked regression through. Hold: neither, until the store answers. (A gap about the
+            # stale key would be written with the same key and refused too: this line is the report.)
+            log "$v: credential refused (401) — key stale? the gap store refused the node key, so whether the ${CONFIRMED} newly-failing test(s) at ${HEAD:0:10} are tracked by open gaps is UNKNOWN (environment fault, not a regression) — HOLDING $v this tick: no refusal counted, no regression gap, runtime keeps its current code"
+            skipped=$((skipped + 1)); continue
+          fi
           if [ -n "$TRACKED" ]; then
             # Exact leaf match (the line ENDS with " > <name>"), at most ONE line per tracked name: a leaf name
             # shared by another test file must not hide that file's real regression (qa, 09-30).
