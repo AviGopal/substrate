@@ -38,6 +38,12 @@
 #                  baked (substrate-status's per-vessel src/ hash against the build-time
 #                  marker). The fleet is installed on the hold channel as a declared
 #                  acceptance install, so a verdict is about the image, not about dev.
+#   7. secrets     no value in the node's secret store (every name in the persisted
+#                  store, /etc/substrate/private and the secret-named lines of
+#                  /etc/substrate/env) appears in any journal line of any retained boot,
+#                  in the container's log, or in a trace-store data row
+#                  (secret-leak-scan.sh: counts and names only, compared inside the
+#                  container, each source proven sighted by a planted canary)
 #
 # MODES
 #
@@ -733,15 +739,27 @@ if [ "$have_container" -eq 1 ]; then
   else
     set_check image_code fail '{"why":"substrate-status gave no vessel rows at the end of the run"}'
   fi
+  # No value in the node's secret store appears in what the node recorded about itself:
+  # every unit's journal over every retained boot, the container's own log, and the trace
+  # store's data rows. Counts and NAMES only, compared inside the container
+  # (secret-leak-scan.sh); a source whose planted canary is not found is blind, and blind
+  # fails. Read last, so the whole run's journal is in scope.
+  ss_rc=0
+  timeout 600 bash "$here/secret-leak-scan.sh" node "$ACCEPTANCE_CONTAINER" -- env -i "${fence_env[@]}" "$ENGINE" \
+    >"$RESULT_DIR/diag/secret-leak-scan.json" 2>"$RESULT_DIR/diag/secret-leak-scan.err" || ss_rc=$?
+  ss_json="$(jq -c . "$RESULT_DIR/diag/secret-leak-scan.json" 2>/dev/null || echo null)"
+  ss_r=fail; [ "$ss_rc" -eq 0 ] && ss_r=pass
+  set_check secret_scan_clean "$ss_r" "$(jq -nc --argjson rc "$ss_rc" --argjson s "$ss_json" '{exit: $rc, scan: $s, log: "diag/secret-leak-scan.json"}')"
 else
   status_note="the install page launched no container named $ACCEPTANCE_CONTAINER"
+  set_check secret_scan_clean unknown '{"detail":"no container to inspect"}'
 fi
 digest="$(eng image inspect --format '{{json .RepoDigests}}' "$IMAGE" 2>/dev/null | jq -r '.[0] // empty' 2>/dev/null)"
 [ -n "$digest" ] || { [[ "$IMAGE" == *@sha256:* ]] && digest="$IMAGE"; }
 
 # ── Judgement ──────────────────────────────────────────────────────────────────
 judged_levels=(live seeded served)
-judged_checks=(cold extraction image_format healthcheck revision stop_timeout image_code glue_tests)
+judged_checks=(cold extraction image_format healthcheck revision stop_timeout image_code glue_tests secret_scan_clean)
 [ "$contained_runner_judged" = 1 ] && judged_checks+=(contained_runner)
 [ "$secret_mask_judged" = 1 ] && judged_checks+=(secret_mask)
 if [ "$mode" = "gating" ]; then

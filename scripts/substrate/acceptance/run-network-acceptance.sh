@@ -21,6 +21,9 @@
 #                     to the stopped spoke must not return the second spoke's (or the hub's)
 #                     copy of the file; within 60 s the hub stops offering it; after a start
 #                     it is registered again and reads its own marker
+#   secret_scan_clean no value in any node's own secret store appears in that node's
+#                     journals (all units, all retained boots), its container log, or its
+#                     trace store's data rows (secret-leak-scan.sh; counts and names only)
 #   spoke_goal        with a provider key only: a goal dispatched on the spoke reaches,
 #                     and its trace is in the hub's trace store (the network learns
 #                     from the spoke's work); unjudged without a key
@@ -359,6 +362,21 @@ done
 if jq -e 'to_entries | length >= 2 and all(.value.moved != null and (.value.moved | length) == 0 and (.value.unchecked | length) == 0)' <<<"$ic" >/dev/null 2>&1; then
   set_check image_code pass "$ic"
 else set_check image_code fail "$ic"; fi
+# No value in ANY node's own secret store appears in what that node recorded: every
+# unit's journal over every retained boot, the container's log, and (where the node runs
+# the datastore) the trace store's data rows. The scan reads each node's store inside
+# that node and reports counts and names only (secret-leak-scan.sh); a blind source fails.
+ss='{}'; ss_fail=0
+for c in "$HUB_C" "$SPOKE_C" "$SPOKE2_C"; do
+  eng container inspect "$c" >/dev/null 2>&1 || continue
+  rc=0
+  timeout 600 bash "$here/secret-leak-scan.sh" node "$c" -- "$ENGINE" >"$RESULT_DIR/diag/secret-leak-scan-$c.json" 2>/dev/null || rc=$?
+  [ "$rc" -eq 0 ] || ss_fail=1
+  ss="$(jq -c --arg c "$c" --argjson rc "$rc" --argjson s "$(jq -c . "$RESULT_DIR/diag/secret-leak-scan-$c.json" 2>/dev/null || echo null)" \
+    '. + {($c): {exit: $rc, scan: $s}}' <<<"$ss")"
+done
+if [ "$ss_fail" -eq 0 ] && [ "$(jq 'length' <<<"$ss")" -ge 2 ]; then set_check secret_scan_clean pass "$ss"
+else set_check secret_scan_clean fail "$ss"; fi
 for f in "$RESULT_DIR"/diag/*; do [ -f "$f" ] && { t="$(cat "$f")"; redact "$t" >"$f"; }; done
 
 failed="$(jq -r '[to_entries[] | select(.value.result == "fail") | .key] | join(",")' <<<"$checks")"
