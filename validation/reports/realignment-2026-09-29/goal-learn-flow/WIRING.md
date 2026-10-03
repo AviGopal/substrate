@@ -473,3 +473,18 @@ The plan's must-fail (author_producer / af61dee) is in the OPEN set.
 Until the 10-01 phantom rows are retired through the gap store's own typed path (a quarantine or retire status naming gap-lifecycle-scan-on-a-non-holder-node-closes-live-gaps-from-a-stale-local-copy; never a hand edit of gaps.json), every store-derived count excludes quarantined or phantom rows and says so. A count that silently includes them reintroduces the false-baseline class.
 - Correction to the orphan figures above: excluding the 35 phantom rows, the real orphaned-capability set is 54 (42 open, 7 rejected, 5 closed).
 - Docs-drift, reopen and other store-derived totals in this document were counted before this rule and may include phantom rows.
+
+## Operator load: items that are operator-only because of autonomyScope excluded_paths (count, 10-03)
+Measured from the live autonomyScope pool row. The count is how load-bearing the operator still is (qa); re-count as items land or paths leave the list.
+
+| Excluded file | Operator-only items (10-03) |
+|---|---|
+| development-vessel src/resolvers/vessel-mitosis-cutover.ts | 4: the fail-closed own-check (040d7e1, operator build); unmeasurable-check demotion (3770906, operator); a-node-can-land-with-landing-gate-code-older-…(cutover half); the-precutover-suite-gate-fails-open-… |
+| development-vessel src/resolvers/gap-lifecycle-scan.ts | 2: orphan-scan expiry via the scan record (step 1(d) ruling 4); the-gap-demoted-for-a-broken-own-check-… re-derivation path |
+| goal-host-vessel src/index.ts | 2: code-version sink wiring (the-code-version-stamp-is-never-produced-…); the hollow-withhold producer (hollow-walk-withhold-is-never-sent-…) |
+| scripts/substrate (pull-sync, a gate path under P) | 4: starvation break (b3db2b91/d7528ae4, operator); stale-gate suppression and deferred restart; load-regression names; fan-out keyed on content |
+| development-vessel src/resolvers/feature-compose.ts / gap-to-feature.ts | 1: 5c974cb7 envelope fix (after step 3 and the extraction gates) |
+
+**Total: 13 operator-only items on 5 excluded areas.**
+
+**Proposal (qa; user's decision): slice L's first concrete criterion.** A path leaves excluded_paths when its armed check-first suites cover the behaviours that regressions there have historically broken, judged by the accepted evaluator through the criterion path (Delta 3, REALIGNMENT §7 step 9). The suites armed tonight on cutover and gap files are the evidence such a widening needs.
