@@ -859,6 +859,21 @@ fresh_check() {
 }
 [ "$QUICK" = 1 ] || fresh_check
 
+# ── Pending reports ──────────────────────────────────────────────────────────
+# Reports that could not be delivered wait in the volume's spool: --report spools its own
+# installAcceptance note and gap there, and the super-repo placement-gate wrapper
+# (setup-git-push) spools a refused-commit gap whose filing was itself refused (a stale key
+# refuses the filing too). The next --report re-posts them. Until then this lists them, so an
+# undelivered report is visible instead of living only on the stderr of the route that made it.
+pending_reports() { # -> one line per spooled report: "<type> <id> <file>"
+  local spool="${SUBSTRATE_INSTALL_DIR:-/workspace/.install}/pending-reports" f
+  for f in "$spool"/*.json; do
+    [ -f "$f" ] || continue
+    jq -r --arg f "$f" '"\(.type // "unknown") \(.gap.id // .note.id // "?") \($f)"' "$f" 2>/dev/null || echo "unreadable ? $f"
+  done
+}
+PENDING_REPORTS="$(pending_reports)"
+
 # ── Output ───────────────────────────────────────────────────────────────────
 verdict_json() {
   local l levels_json="[]" vessels_json
@@ -874,7 +889,7 @@ verdict_json() {
   jq -nc --argjson levels "$levels_json" --argjson vessels "$vessels_json" \
     --arg target "$TARGET" --arg value "${VAL[$TARGET]}" --arg img "$IMAGE_REVISION" \
     --arg profile "$PROFILE" --arg engine "$ENGINE" --arg prefix "$PORT_PREFIX" \
-    --arg thp "$TRACE_HOST_PORT" --argjson bym "$BY_MANIFEST" --arg aliases "$ALIASES_USED" \
+    --arg thp "$TRACE_HOST_PORT" --argjson bym "$BY_MANIFEST" --arg aliases "$ALIASES_USED" --arg pending "$PENDING_REPORTS" \
     --arg channel "$UPDATE_CHANNEL" --argjson enforced "$CHANNEL_ENFORCED" \
     --arg cref "$CHANNEL_REF" --arg csha "$CHANNEL_SHA" --arg cat "$CHANNEL_AT" --argjson cmiss "$CHANNEL_REF_MISSING" --argjson cstale "$CHANNEL_STALE" \
     --arg fref "$IMAGE_FRESH_REF" --arg fdev "$FRESH_DEV" --arg fstate "$FRESH_STATE" --arg fbehind "$FRESH_BEHIND" --arg fat "$FRESH_AT" --arg fwhy "$FRESH_WHY" --argjson fquick "$([ "$QUICK" = 1 ] && echo true || echo false)" \
@@ -889,6 +904,7 @@ verdict_json() {
         checked_at:(if $fat=="" then null else $fat end), why:(if $fwhy=="" then null else $fwhy end)} end),
       trace_host_port:$thp, launched_by_manifest:($bym == 1),
       deprecated_port_aliases:($aliases | split(" ") | map(select(length > 0))),
+      pending_reports:($pending | split("\n") | map(select(length > 0) | split(" ") | {type:.[0], id:.[1], file:.[2]})),
       levels:$levels, vessels:$vessels}'
 }
 
@@ -911,6 +927,11 @@ else
     esac
   fi
   for l in $LEVELS; do printf '  %-10s %-8s %s\n' "$l" "${VAL[$l]}" "${EVID[$l]}"; done
+  if [ -n "$PENDING_REPORTS" ]; then
+    printf '  %s report(s) NOT DELIVERED, spooled in %s (the next --report re-posts them):\n' \
+      "$(printf '%s\n' "$PENDING_REPORTS" | grep -c .)" "${SUBSTRATE_INSTALL_DIR:-/workspace/.install}/pending-reports"
+    printf '%s\n' "$PENDING_REPORTS" | awk '{printf "    %s %s\n", $1, $2}'
+  fi
   if [ -n "$VESSEL_ROWS" ]; then
     moved="$(printf '%s' "$VESSEL_ROWS" | awk -F'|' '$2=="moved"{printf "    %-28s image %s -> clone head %s\n", $1, ($3==""?"(baked)":$3), ($4==""?"(no clone)":$4)}')"
     nomark="$(printf '%s' "$VESSEL_ROWS" | awk -F'|' '$2=="nomarker"{n++} END{print n+0}')"

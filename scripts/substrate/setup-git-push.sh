@@ -275,6 +275,9 @@ fi
 #    A REFUSAL IS FILED. A refused commit fails the committing route; the wrapper
 #    also files the hook's findings through substrateGap_write, keyed by the
 #    violation set, so refused landings on a gated fleet are measured, not silent.
+#    The summary leads with the cause the hook printed; a 401 from the gap store
+#    (a stale node key) is filed as an environment fault under its own id. A
+#    filing that is itself refused is spooled where substrate-status shows it.
 #
 #    WHERE IT CAN BE INERT. git runs .git/hooks only when no core.hooksPath is in
 #    effect. A container-wide hooks path shadows the wrapper unless that directory
@@ -310,24 +313,50 @@ cat "$d/out" >&2
 [ "$rc" -eq 0 ] && exit 0
 # A refusal is information: file it so refused landings are measured, not silent.
 # Filing never changes the verdict and never blocks on the network.
+# THE CAUSE IS READ FROM THE HOOK'S OWN BANNERS (its "━━━ … ━━━" lines), never assumed: a glue run the
+# gap store refused (401, a stale node key) is an environment fault, filed under its own id with a
+# summary that says so; any other refusal leads with the banners the hook printed.
+# A FILING THAT IS REFUSED IS SPOOLED. The filing uses the same key, so a stale key refuses it too.
+# The gap pointer then goes to ${SUBSTRATE_INSTALL_DIR:-/workspace/.install}/pending-reports (the
+# volume, not git): substrate-status lists that spool and --report re-posts it.
 (
   command -v jq >/dev/null 2>&1 && command -v curl >/dev/null 2>&1 || exit 0
   if [ -z "${METABOB_API_KEY:-}" ] && [ -r /etc/substrate/env ]; then . /etc/substrate/env 2>/dev/null; fi
   report="$(sed 's/\x1b\[[0-9;]*m//g' "$d/out" | head -c 3000)"
-  key="$(printf '%s\n' "$report" | grep -E '✗|━━━' | sort -u | sha1sum | cut -c1-12)"
+  banners="$(printf '%s\n' "$report" | sed -n 's/^[[:space:]]*━━━ \(.*\) ━━━[[:space:]]*$/\1/p' | sort -u | paste -sd';' -)"
   staged="$(git diff --cached --name-only --diff-filter=ACMR | head -50 | jq -R . | jq -sc .)"
   top="$(git rev-parse --show-toplevel 2>/dev/null)"
-  body="$(jq -nc --arg id "super-repo-commit-refused-$key" --arg r "$report" --arg top "$top" \
+  if printf '%s\n' "$report" | grep -qF 'credential refused (401)'; then
+    cause=environment_credential_refused
+    id="super-repo-commit-refused-credential-401"
+    lead="A commit to the super-repo clone was refused by an environment fault — credential refused (401) — key stale? The pre-commit glue tests could not read the gap store with this node's key, so whether a red check-first test is tracked is unknown; no test failed. Refresh METABOB_API_KEY (or the client config's gap-store address). The landing did not happen."
+  else
+    cause=hook_refusal
+    id="super-repo-commit-refused-$(printf '%s\n' "$report" | grep -E '✗|━━━' | sort -u | sha1sum | cut -c1-12)"
+    lead="A commit to the super-repo clone was refused by scripts/git-hooks/pre-commit: ${banners:-no banner printed (exit $rc)}. The landing did not happen."
+  fi
+  ptr="$(jq -nc --arg id "$id" --arg lead "$lead" --arg r "$report" --arg top "$top" --arg cause "$cause" --arg banners "$banners" \
       --argjson staged "$staged" --argjson rc "$rc" \
-    '{impulse:{pointer:{type:"substrateGap_write",gap:{id:$id,category:"systematic_failure",
+    '{type:"substrateGap_write",gap:{id:$id,category:"systematic_failure",
       source:"substrate_detected",status:"open",
-      summary:("A commit to the super-repo clone was refused by the placement gate (scripts/git-hooks/pre-commit). The route that made it either wrote outside the tracked layout or changed human-surface UI source without its rebuilt bundle; the landing did not happen. Findings:\n" + $r),
-      classification_metadata:{repo:$top, hook:"scripts/git-hooks/pre-commit", exit_status:$rc, staged:$staged}}}}}')" || exit 0
+      summary:($lead + " Hook output:\n" + $r),
+      classification_metadata:{repo:$top, hook:"scripts/git-hooks/pre-commit", exit_status:$rc, cause:$cause,
+        banners:($banners | split(";") | map(select(length > 0))), staged:$staged}}}')" || exit 0
+  body="$(jq -nc --argjson p "$ptr" '{impulse:{pointer:$p}}')" || exit 0
   # The key reaches curl as a config line on stdin, never on argv (a process listing shows argv).
-  { [ -n "${METABOB_API_KEY:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; true; } \
-    | curl -K - -sf --max-time 8 -o /dev/null -X POST "${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}/v2/impulses/resolve" \
-    -H 'Content-Type: application/json' -d "$body" \
-    || echo "[placement-gate] WARN could not file the refusal as a gap" >&2
+  code="$({ [ -n "${METABOB_API_KEY:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; true; } \
+    | curl -K - -s --max-time 8 -o /dev/null -w '%{http_code}' -X POST "${DEV_VESSEL_ENDPOINT:-http://127.0.0.1:8090}/v2/impulses/resolve" \
+    -H 'Content-Type: application/json' -d "$body" 2>/dev/null)"
+  case "$code" in
+    2??) exit 0 ;;
+  esac
+  spool="${SUBSTRATE_INSTALL_DIR:-/workspace/.install}/pending-reports"
+  why="http ${code:-000}"; [ "$code" = 401 ] && why="credential refused (401) — key stale?"
+  if mkdir -p "$spool" 2>/dev/null && printf '%s' "$ptr" > "$spool/$(date +%s)-$id.json" 2>/dev/null; then
+    echo "[placement-gate] WARN the refusal could not be filed ($why); gap $id spooled in $spool — substrate-status lists it and --report re-posts it" >&2
+  else
+    echo "[placement-gate] WARN the refusal could not be filed ($why) and could not be spooled in $spool; gap $id is lost" >&2
+  fi
 )
 exit "$rc"
 HOOK

@@ -97,6 +97,10 @@ n="$(grep -c . "$T/req.log")"
 S="$(summary_of 1)"; ID_ENV="$(id_of 1)"
 printf '%s' "$S" | head -n1 | grep -qF 'credential refused (401) — key stale?' && ok "(a) the summary's lead line names the credential fault" \
   || bad "(a) the summary does not name the credential fault: $(printf '%s' "$S" | head -c 200)"
+C="$(sed -n 1p "$T/req.log" | jq -r '.impulse.pointer.gap.classification_metadata.cause // empty' 2>/dev/null)"
+[ "$C" = environment_credential_refused ] && printf '%s' "$S" | head -n1 | grep -qF 'METABOB_API_KEY' \
+  && ok "(a) the gap is classified environment_credential_refused and names the remedy (refresh METABOB_API_KEY)" \
+  || bad "(a) cause '$C' / no remedy in the lead line: the reader cannot tell an environment fault from a code refusal"
 printf '%s' "$S" | head -n1 | grep -qi 'placement' && bad "(a) the summary's lead line still blames the placement gate: $(printf '%s' "$S" | head -n1 | head -c 200)" \
   || ok "(a) the summary's lead line does not blame placement"
 
