@@ -391,3 +391,25 @@ The organs that carry it already exist: self_fact_reconcile rows (selfFactSpec),
    - Timeout outcome (coordinator decision): grade "not reached: prerequisite_unmet", tagged with the prerequisite class. The ARM ABSTAINS (no α, no β), because the arm did not fail.
    - The class tag feeds demand for the prerequisite (wrongness as a goal seed).
 5. **Outbound-class acceptance uses this.** Within ONE execution: suspend for the credential through the shape, resume, send, read back, then grade. A send with no read-back never grades reached, and a probe whose credential arrived out of band does not count.
+
+### One-execution ruling: qa's endorsement and additions (10-03). Resolves addendum pending item (c).
+- **Durable "live".** A suspended dispatch survives a goal-host restart and pruneStore. Today the node-local dispatch file blanks provenance past 100 records and deletes them past 2000, so suspension needs durable state.
+- **Attributed answers.** The answer carries the human's identity (human as resolver, law 13). The request is visible on the surface and addressed by discovery, never pinned. The surface's routes are unauthenticated today (§9.0), so a surface answer cannot carry a verified identity until route auth lands.
+- **Credential constraints:**
+  - a solicited credential may only SET the declared name its solicitation requested;
+  - an overwrite needs compare-and-set (expect_sha);
+  - fleet and identity secrets are never writable via solicitation;
+  - the new value is validated (one authenticated read against the target) before it goes live, with rollback by hash;
+  - the secret store version references the solicitation id.
+- **The timeout outcome**, consistent with the coordinator decision above:
+  - counted NOT reached in reach statistics;
+  - an abstention in credit (no β; an unavailable observation is not a negative, §2.2);
+  - it files or bumps the prerequisite gap;
+  - the timeout length is a shaped policy value, not an env constant.
+- **Must-fails:**
+  - (i) a suspended dispatch that resumes because of an OUT-OF-BAND change (an env edit, a file, or a secret version not linked to its solicitation id) never grades reached. A credential set via secret_set BEFORE dispatch is legitimate setup.
+  - (ii) after a credential-via-shape run, a secret scan finds 0 hits across the trace, pool, dispatch record, prompts, the surface → sidecar → secret-store hop logs, journals and replication.
+  - (iii) a re-dispatch after grading is a second execution; a "resume" arriving after grading is refused, not appended.
+  - (iv) durability: suspend, restart goal-host, push dispatches past the prune window, answer, and it resumes the SAME dispatch.
+  - (v) a solicitation answer naming an existing fleet secret is refused.
+- **Order.** The shaped secret path comes AFTER the key-rotation runbook (awaiting the user). No identity or secret state is touched until the user approves that runbook.
