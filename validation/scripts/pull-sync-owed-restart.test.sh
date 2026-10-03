@@ -185,6 +185,76 @@ run_block
 if ! restarted && [ ! -e "$QUIESCE_DIR/$VESSEL" ] && ! grep -q QUIESCED "$LOG" && [ -e "$P" ]; then ok "(k) probe window at the cap: no quiesce, no restart, still owed"
 else bad "(k) probe window at the cap: expected a plain deferral (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
 
+# ══ (p-u) PROGRESS, NOT AGE, DECIDES WHETHER A PAST-CEILING COMPOSE IS STUCK ══
+# The owed block again, now with the REAL restart_age_defer reading a file-backed
+# /health that publishes in_flight_oldest_ms and (when the vessel stamps stage
+# transitions) in_flight_last_progress_ms: ms since the most recent stage transition
+# of any in-flight request. Age alone killed composes that were still working
+# (scope -> plan -> apply -> verify routinely runs past the 900 s ceiling).
+#   (p) aged 1000 s, last progress 30 s ago -> NOT restarted: deferred, "progressing",
+#       still owed, the owed-since clock started
+#   (q) aged 1000 s, silent 700 s (> stall 600 s) -> restarted
+#   (r) aged 1000 s, progressing, but owed for 3000 s (> max hold 2700 s) -> restarted
+#       anyway, LOSSY logged, naming the attempt /health published
+#   (s) CONTROL: no progress field, aged 1000 s -> restarted (today's ceiling)
+#   (t) CONTROL: no progress field, aged 100 s -> deferred (today's ceiling)
+#   (u) the stall bound is the SHAPED pull_sync.stall_seconds: 20 s -> progress 30 s
+#       ago is a stall, restarted
+{
+  sed -n '/^restart_age_defer() {/,/^}/p' "$SCRIPT"
+} > "$T/rad.sh"
+grep -q '^restart_age_defer() {' "$T/rad.sh" || { echo "FAIL - could not extract restart_age_defer"; exit 1; }
+# shellcheck disable=SC1090
+source "$T/rad.sh"
+probe_window_open() { return 1; }
+DEFERRAL_LOG="$T/deferrals.jsonl"
+TP_STALL=""   # a shaped pull_sync.stall_seconds row, when set; otherwise the default is taken
+tuning_param() { TP_VALUE="$2"; case "$1" in pull_sync.stall_seconds) [ -n "$TP_STALL" ] && TP_VALUE="$TP_STALL" ;; esac; echo "TP $1" >> "$CALLS"; }
+HEALTH_JSON="$T/health.json"
+curl() { cat "$HEALTH_JSON" 2>/dev/null; }
+OS="$MARKER_DIR/$VESSEL.restart-owed-since"
+psetup() { setup; OS="$MARKER_DIR/$VESSEL.restart-owed-since"; echo oldhash > "$P"; rm -f "$DEFERRAL_LOG"; TP_STALL=""; printf '%s' "$1" > "$HEALTH_JSON"; }
+
+# ── (p) MUST-FAIL before the fix: past the ceiling but progressing ─────────────
+psetup '{"in_flight":1,"in_flight_oldest_ms":1000000,"in_flight_last_progress_ms":30000,"in_flight_last_progress_id":"gap-demo"}'
+run_block
+if ! restarted && [ -e "$P" ] && grep -q "progressing" "$LOG" && [ -s "$OS" ]; then
+  ok "(p) aged 1000 s, progress 30 s ago: owed restart deferred as progressing, still owed, hold clock started"
+else bad "(p) aged 1000 s, progress 30 s ago: expected a deferral logged as progressing (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
+
+# ── (q) past the ceiling and silent longer than the stall bound ────────────────
+psetup '{"in_flight":1,"in_flight_oldest_ms":1000000,"in_flight_last_progress_ms":700000}'
+run_block
+if restarted && [ ! -e "$P" ] && [ ! -e "$OS" ]; then ok "(q) aged 1000 s, silent 700 s: restarted, markers cleared"
+else bad "(q) aged 1000 s, silent 700 s: expected a restart (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
+
+# ── (r) progressing, but the restart has been owed past the max hold ───────────
+psetup '{"in_flight":1,"in_flight_oldest_ms":1000000,"in_flight_last_progress_ms":30000,"in_flight_last_progress_id":"gap-demo"}'
+echo $(( $(date +%s) - 3000 )) > "$OS"
+run_block
+if restarted && grep -q "LOSSY" "$LOG" && grep -q "gap-demo" "$LOG" && grep -q '"action":"forced_owed_restart_lossy"' "$DEFERRAL_LOG" 2>/dev/null && [ ! -e "$OS" ]; then
+  ok "(r) owed 3000 s > max hold 2700 s: restarted anyway, LOSSY logged naming the attempt"
+else bad "(r) owed past the max hold: expected a LOSSY restart (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
+
+# ── (s) CONTROL: no progress published, past the ceiling -> today's restart ────
+psetup '{"in_flight":1,"in_flight_oldest_ms":1000000}'
+run_block
+if restarted && ! grep -q "progressing\|LOSSY" "$LOG" && ! grep -q '^TP ' "$CALLS"; then ok "(s) control, no progress field, aged 1000 s: restarted at the ceiling as before, no tuning read"
+else bad "(s) control, no progress field: expected today's ceiling restart (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
+
+# ── (t) CONTROL: no progress published, under the ceiling -> today's deferral ──
+psetup '{"in_flight":1,"in_flight_oldest_ms":100000}'
+run_block
+if ! restarted && [ -e "$P" ] && ! grep -q "progressing" "$LOG"; then ok "(t) control, no progress field, aged 100 s: deferred under the ceiling as before"
+else bad "(t) control, under the ceiling: expected today's deferral (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
+
+# ── (u) the stall bound is shaped ──────────────────────────────────────────────
+psetup '{"in_flight":1,"in_flight_oldest_ms":1000000,"in_flight_last_progress_ms":30000}'; TP_STALL=20
+run_block
+if restarted && grep -q '^TP pull_sync.stall_seconds$' "$CALLS"; then ok "(u) shaped pull_sync.stall_seconds=20: progress 30 s ago is a stall, restarted"
+else bad "(u) shaped stall bound: expected the shaped 20 s to apply (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
+TP_STALL=""
+
 # ══ (l-o) the mirror path's quiesce holds admission through gate, mirror, restart ══
 {
   sed -n '/^restart_age_defer() {/,/^}/p' "$SCRIPT"
