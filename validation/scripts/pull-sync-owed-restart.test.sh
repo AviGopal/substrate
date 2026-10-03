@@ -85,6 +85,7 @@ systemctl() {
     is-active) [ "$UNIT_ACTIVE" = 1 ] ;;
     restart) echo "RESTART $2" >> "$CALLS" ;;
     show) [ "$2" = "-p" ] && [ "$3" = "ActiveEnterTimestamp" ] && echo "$UNIT_STARTED" ;;
+    is-enabled) echo "${UNIT_ENABLED:-enabled}" ;;
     *) : ;;
   esac
 }
@@ -275,6 +276,13 @@ TP_STALL=""
 #   (y) carry with no restart owed any more (pending marker gone) -> stale carry dropped, marker released
 #   (z) 4 progress deferrals, then progress stops under the age ceiling -> an ordinary deferral
 #       (counter 1), not an immediate drain: progress deferrals do not count toward RESTART_DEFER_MAX
+#   (cm) carry + the unit is MASKED -> the vessel-loop skip releases the marker and the carry (nothing
+#       will restart a masked unit), says so, keeps the owed restart; no restart
+#   (cp) carry + an open probe window -> the loop-head hold releases the marker and the carry with a
+#       logged reason (a closed admission would refuse the probes' own composes for up to the window
+#       cap, past the max hold), keeps the owed restart; no restart
+#   Both skips `continue` BEFORE the owed path, so without an explicit release the carried marker was
+#   neither re-touched nor released and silently went stale (fail-open after QUIESCE_MAX_MS).
 QD2="$T/quiesce2"
 csetup() { psetup "$1"; mkdir -p "$QD2"; : > "$QD2/$VESSEL"; echo "$QD2/$VESSEL" > "$MARKER_DIR/$VESSEL.quiesce-carry"; Q_HELD=""; Q_CARRY=""; Q_BOUND=""; }
 fresh() { [ -e "$1" ] && [ $(( $(date +%s) - $(stat -c %Y "$1") )) -lt 60 ]; }
@@ -314,6 +322,48 @@ run_block
 if ! restarted && [ "$_z_after_progress" = 0 ] && [ "$(cat "$DF" 2>/dev/null)" = 1 ] && ! grep -q QUIESCED "$LOG"; then
   ok "(z) 4 progress deferrals leave the counter at 0; the next under-ceiling deferral is ordinary (counter 1), no drain"
 else bad "(z) progress deferrals counted: counter after 4 progress ticks $_z_after_progress, then $(cat "$DF" 2>/dev/null || echo none) (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
+
+# ── (cm, cp) the vessel loop's own skips must not strand a carried hold ─────────
+# The probe-window skip (loop head) and the masked-unit skip, taken from the script, run before the
+# owed path, so they are the only code that sees a carried hold on those ticks.
+{
+  sed -n '/^release_carried_hold() {/,/^}/p' "$SCRIPT"
+  echo 'run_skips() {'
+  echo 'for v in "$VESSEL"; do'
+  awk '$0 == "  if probe_window_open; then" {on=1} on{print} on && /^  fi$/{exit}' "$SCRIPT"
+  awk 'index($0, "  if [ -n \"$SELF_UNIT\" ] && [ \"${SELF_UNIT%.service}\" != \"$SELF_UNIT\" ] \\") == 1 {on=1} on{print} on && /^  fi$/{exit}' "$SCRIPT"
+  echo 'echo PAST-SKIPS >> "$CALLS"'
+  echo 'done'
+  echo '}'
+} > "$T/sfns.sh"
+grep -q 'PW_LOGGED' "$T/sfns.sh" && grep -q 'is MASKED' "$T/sfns.sh" \
+  || { echo "FAIL - could not extract the vessel loop's probe-window and masked-unit skips"; exit 1; }
+# shellcheck disable=SC1090
+source "$T/sfns.sh"
+PW_OPEN=0
+probe_window_open() { PW_WHY="probe window pw-demo tag=r9"; [ "$PW_OPEN" = 1 ]; }
+held() { [ -e "$QD2/$VESSEL" ] && echo held || echo gone; }
+
+csetup '{"in_flight":1}'; SELF_UNIT="$VESSEL.service"; UNIT_ENABLED=masked; PW_OPEN=0; PW_LOGGED=""; skipped=0
+run_skips; quiesce_release
+if ! restarted && ! grep -q PAST-SKIPS "$CALLS" && [ ! -e "$QD2/$VESSEL" ] && [ ! -e "$MARKER_DIR/$VESSEL.quiesce-carry" ] \
+   && [ -e "$P" ] && grep -q "carried quiesce hold" "$LOG" && grep -q "MASKED" "$LOG"; then
+  ok "(cm) carried hold, unit masked: marker and carry released with a log line, restart still owed, no restart"
+else bad "(cm) carried hold, unit masked: expected the marker and the carry released and logged (marker $(held); carry $( [ -e "$MARKER_DIR/$VESSEL.quiesce-carry" ] && echo kept || echo gone); calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
+
+csetup '{"in_flight":1}'; SELF_UNIT="$VESSEL.service"; UNIT_ENABLED=enabled; PW_OPEN=1; PW_LOGGED=""; skipped=0
+run_skips; quiesce_release
+if ! restarted && ! grep -q PAST-SKIPS "$CALLS" && [ ! -e "$QD2/$VESSEL" ] && [ ! -e "$MARKER_DIR/$VESSEL.quiesce-carry" ] \
+   && [ -e "$P" ] && grep -q "carried quiesce hold" "$LOG" && grep -q "pw-demo" "$LOG"; then
+  ok "(cp) carried hold, probe window open: marker and carry released with the window named, restart still owed, no restart"
+else bad "(cp) carried hold, probe window open: expected the marker and the carry released and logged (marker $(held); carry $( [ -e "$MARKER_DIR/$VESSEL.quiesce-carry" ] && echo kept || echo gone); calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
+
+csetup '{"in_flight":1}'; SELF_UNIT="$VESSEL.service"; UNIT_ENABLED=enabled; PW_OPEN=0; PW_LOGGED=""; skipped=0
+run_skips; quiesce_release
+if grep -q PAST-SKIPS "$CALLS" && [ -e "$QD2/$VESSEL" ] && [ -s "$MARKER_DIR/$VESSEL.quiesce-carry" ] && ! grep -q "carried quiesce hold" "$LOG"; then
+  ok "(cc) control, unmasked and no window: neither skip fires, the carried hold is left for the owed path"
+else bad "(cc) control: expected no skip and the carry untouched (marker $(held); calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
+probe_window_open() { return 1; }; UNIT_ENABLED=""; Q_HELD=""; Q_CARRY=""; Q_BOUND=""
 
 # ══ (l-o) the mirror path's quiesce holds admission through gate, mirror, restart ══
 {
