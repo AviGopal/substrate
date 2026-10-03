@@ -831,3 +831,16 @@ Ranked by lane time:
   - 968265e6, semantic dissent advisory: AST pins, settle-after-push, the reader contract, and a shared exec guard that blocks systemctl, docker, podman and vessel-ctl from tests.
   - Linked operator gaps filed: the sweep must resolve dissent outcomes; systemd-restart tests that never execute.
 - **In qa review:** relocation round 2 (00722669) and the bounce fix's argv-safe key handling.
+- **USER RULING (to deployment, 09:06Z), superseding deployment's timer:** the retention hold lifts ONLY when the compact-or-exempt fix's armed check reads green, or on an explicit user release. Never on time.
+  - Node 1's retention-hold-release.timer was stopped and disabled at 09:06:47Z (the script renamed to *.disarmed). The hub's timer is disarmed after the user's SurrealDB upgrade run.
+  - **Law-1 exception, recorded:** a temporary operator containment steered by an env file (TRACE_RETENTION_DRY_RUN via the activity-api drop-in) on node 1 and the hub. It migrates to a shaped row with the tuning-seed work.
+  - **Machine release predicate**, given to deployment; fail-closed, all required:
+    1. the-trace-ceiling-valve-evicts-… gap is closed landed_verified with no regressed_by;
+    2. a FRESH test_suite run of its only_tests passes;
+    3. both refold-copy sha256s re-verify.
+  - The gap is NOT yet armed, so the release is manual-only until then.
+- **Fleet key re-issued on node 1 (deployment):** the new key is in the store and all 5 env names; consumers restarted with 0 failures; the old key is revoked and validates INVALID (control). Scope: node 1 only.
+- **Armed (09:10Z):** the semantic-dissent gap (16 tests) and the-pending-land-sweep-never-resolves-semantic-dissent-outcomes (the operator half) on development-vessel 968265e6.
+- **Pushed: bounce quiesce, super-repo c2886041.** The shared-package bounce waits for in-flight work; shaped tick and age bounds force it with one gap; the key stays off argv; fallbacks are visible. Glue 30/0. By-effect check on node 1 pending (deployment).
+- **Filed:** scripts-pass-api-keys-and-tokens-on-command-argv-… (high, about 23 scripts; detector: an argv-secret rule in secret-scope-lint).
+- **Relocation tests** rebased to f6de031b on 968265e6, awaiting the user's push.
