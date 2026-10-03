@@ -767,3 +767,13 @@ A regression class counts as covered only if negating or removing the shipped ch
   - **The judge passed:** invented news with a fabricated 2023 date, a non-answer, and the backing model's identity as "what are you". alpha was withheld (credit clean), but reached=true is stored.
   - **Filed:** `the-llm-reach-judge-accepts-ungrounded-answers-to-current-information-and-self-description-goals` (high), with generic judge fixtures.
   - **Working as intended:** PROVEN-BAD suppression held pending re-baseline, and alpha withheld on ungrounded reaches.
+
+### Armed: the inference class on goal-host-vessel 1b9e6c7 (07:53Z, checks read present)
+- **`inference-chooses-targets-without-shape-descriptions-or-producer-input-validity`:** 52 tests in `test/goal-target-needs.test.ts` (38 red, 14 green at base).
+  - Generality: 4 synthetic registries, including opaque names with reworded descriptions.
+  - Validity is a constraint, not a preference; the chooser is the LLM shown descriptions; lexical matching is a labelled fallback tier only.
+  - Compound needs are kept; "do not change" is never edit-intent.
+- **`a-regex-literal-holds-control-bytes-…`:** 5 tests in `test/regex-control-bytes.test.ts` (the count fallback, a repo lint, and the count-and-persist control).
+- **Both edit sites are IN autonomy scope**, so the lane can take them. The linked live wiring (`inference-shape-catalog-is-not-wired-into-the-live-dispatch-path`) and index.ts:1908/:18435 are excluded paths (operator).
+- **Acceptance:** the held-out re-run, never the fixtures alone.
+- **Class noted (qa): repairing a dead check can unmask breakage it was hiding.** The dead :499 regex hid a missing composition guard; the dead transport hid the prompt refusal. A revived check gets a full-suite run, and newly red tests are findings.
