@@ -760,3 +760,10 @@ A regression class counts as covered only if negating or removing the shipped ch
   - the decision is logged so reach can grade it.
 - Siblings filed: a copied edit-intent regex at goal-host index.ts:18435 (drift), and a regex with literal 0x08 bytes (with a repo lint as the class detector).
 - Check-first is in progress (goal-host f078095, round 2 underway).
+- **Probe r3 (qa, 07:18:55Z, 3 LLM held-out goals, excluded window): 3 FALSE REACHES (judge). Honest held-out reach is still 0/9.**
+  - **The pre-registration was wrong:** all 3 reported reached=true.
+  - **Logs:** the walk's direct llm_completion_dispatch call began prompt-less and then "succeeded after arg-correction". Before 07:17Z the dead :8401 arms masked the prompt refusal, so arg-correction was blind.
+  - **Causal chain:** prompt-less first call → masked error → no correction. The dispatcher-masking gap is raised to high; the prompt gap is refined.
+  - **The judge passed:** invented news with a fabricated 2023 date, a non-answer, and the backing model's identity as "what are you". alpha was withheld (credit clean), but reached=true is stored.
+  - **Filed:** `the-llm-reach-judge-accepts-ungrounded-answers-to-current-information-and-self-description-goals` (high), with generic judge fixtures.
+  - **Working as intended:** PROVEN-BAD suppression held pending re-baseline, and alpha withheld on ungrounded reaches.
