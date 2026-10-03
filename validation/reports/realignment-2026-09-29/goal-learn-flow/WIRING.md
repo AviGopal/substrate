@@ -565,3 +565,16 @@ The SurrealDB 2.3.10 upgrade follows per node as a SEPARATE deploy event, after 
 6. a first test, then a must-fail, for F;
 7. the self-certification admission rule for B;
 8. fixing or re-aiming the red staged_base_sha test, and re-pointing route-edit-61819178's check.
+
+### Scope criterion: "covered" is defined by MUTATION (qa ruling, 10-03)
+A regression class counts as covered only if negating or removing the shipped check makes an ARMED test go red. The cheap form is a mutation run on a scratch copy that comments out the guard, recorded once per class as the coverage evidence.
+- "Loose" coverage (green tests of shipped code that are not armed or not mutation-proven) does NOT count toward a scope decision; it is reported only as a lead. Reason: copied-predicate tests (cutover-unparseable-guard, freshness-per-file) stay green when the shipped check is deleted.
+- **Arming order for vessel-mitosis-cutover.ts, each with a mutation proof:**
+  1. A, stale-base overwrite (the af61dee class; its gap's falsifier=unresolvable disposition is wrong, since a git-backed must-fail is feasible);
+  2. O, stale gate version on a node;
+  3. no_measurement_available;
+  4. 5d fail-closed, with the kill switch removed;
+  5. shipped-code tests for I, J, G and H;
+  6. F;
+  7. B as the self-certification admission rule.
+- The staged_base_sha check is re-aimed from route-edit-61819178 to a cutover-sited gap.
