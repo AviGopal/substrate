@@ -692,3 +692,13 @@ A regression class counts as covered only if negating or removing the shipped ch
   - **Growth during the hold:** under ~600 rows/h. Watch disk and SurrealDB RSS.
 - **Refold sources preserved:** substrate-surreal-pre-2.3.10-20261003T060017Z.tar and the 05:50 restore-proof tar, both mode 400 and excluded from rotation. Independent copies and sha256s pending from deployment.
 - **LIFT CONDITION for the 06:27:04Z retention throttle (qa):** lifted only when the widened retention gap's compact-or-exempt fix lands and its falsifier reads green (no graded or labelled row deleted without its observation record first). Never by elapsed time. The lift itself is a recorded law-12 event (restore 120000 or remove the row), followed by a verify-by-effect sweep.
+
+### Armed 2026-10-03 06:36Z on development-vessel 0b68a7a3 (all checks read present)
+- **`a-landing-with-no-measurement-that-actually-ran-is-cut-over-instead-of-refused`:** 7 must-fails (A, B, B', C, D, E, F) and 3 controls, in `cutover-no-measurement-refuses.test.ts`.
+- **`the-precutover-suite-gate-fails-open-and-has-an-env-kill-switch`:** K1–K3 and CONTROL K. Armed together with the no-measurement gap: one fix, and the env switch is removed in it.
+- **Class A, re-armed:** its tests now carry a measurement and assert `stale_base_superseded`, so no other guard can mask them.
+- **Test hygiene shipped in the same commits:** shared fetch and fs guards with an afterAll restore (bun's mock.restore() does not undo mock.module), a leak-probe test, and an in-memory fixture gap store.
+- **Mutation proofs:** recorded per gap in the check-first review. "Guarded by" still needs the range proof (the range rule).
+- **Refold sources, independent copies (deployment):** separate inodes (cp --reflink=never), mode 400, labelled, outside rotation. Same device as the originals: the other disk is unmounted, and mounting it is the user's call.
+  - 06:00 pre-upgrade tar: sha256 `2d947e6e509fae119331a3728eca3e1923e289d7c46f39a51f419fb67b8d3bb1` (original and copy match).
+  - 05:50 restore-proof tar: sha256 `510e96543a264e486c09e93a15dc615520a36e59eead3207ed7ed48125920f0a` (original and copy match).
