@@ -424,3 +424,16 @@ The organs that carry it already exist: self_fact_reconcile rows (selfFactSpec),
 2. **Row equals falsifier.** A row's red files a gap whose class-2 falsifier IS that row, so the row going green is the closure. Every row has a recorded must-fail run before it counts.
 3. **Doc rows use the same closure.** 27 docs-drift-* gaps are open and none has ever closed; "WIRING as a view" must not become number 28.
 4. **Solicitation durability is a known failure, not a hypothetical.** solicitHumanInput keeps pending state in process memory (default ≤120s), so must-fail (iv) of the one-execution ruling fails today.
+
+## First lane landing of an armed check-first gap (10-03): SUPERVISED (S2)
+- **ias-executor-ts ed58e66** (Substrate Autonomous, 02:58:05Z, on origin/dev) is the lane's fix for recommend-state-signature-…. It drops the store-wide `store.all()` read from GoalHost.runGoal's state signature, which is now goal plus seed impulses.
+- **Verified:**
+  - the cutover re-ran the gap's own class-2 check on the staged tree (`[cutover-own-check] outcome=own_check_passed`, the 040d7e1 gate);
+  - f155e05's two tests pass at ed58e66 (operator and qa, independently);
+  - the full ias suite shows 394 pass / 25 fail, with no new failing names.
+- **qa: correct scope.** The signature is built before the execution produces anything, so goal plus seeds IS its own state; the ownership ledger isn't needed there.
+- **Deployed:** the node-1 fan-out reported healthy at 03:10:17Z; the dist has no store.all() read.
+- **Live callers:** goal-host host.runGoal (ribosome-extract, the recovery/target path, auto-draft). goal-host's walk uses its own recommendExcluding, which sends no impulse_shapes.
+- **Still owed:** a consumer effect check, i.e. one live /recommend from a runGoal path whose signature is built only from goal plus seeds.
+- **Side effect:** seed entries no longer carry task_id (the producedBy mapping is gone). If activity-api's signature derivation uses task_id, seeded and recovery cells are re-keyed and start cold. That's acceptable under the pending re-baseline; split measurement windows at 03:10:17Z.
+- **Classification:** SUPERVISED (S2). The gap was operator-armed (directed:true) with an operator-written check. It is the milestone's shape, a lane-authored landing on origin/dev verified by its own check, but NOT detection-originated autonomy (REALIGNMENT §11 "operator-free" acceptance).
