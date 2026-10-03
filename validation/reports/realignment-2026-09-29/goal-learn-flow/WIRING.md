@@ -468,3 +468,8 @@ The insert-path context_thompson_scores UPDATE (ctxSql/rdSql) omits signature_ve
 6. Treat the 35 phantom rows as the 10-01 incident.
 
 The plan's must-fail (author_producer / af61dee) is in the OPEN set.
+
+### Counting rule: phantom rows excluded (qa, 10-03)
+Until the 10-01 phantom rows are retired through the gap store's own typed path (a quarantine or retire status naming gap-lifecycle-scan-on-a-non-holder-node-closes-live-gaps-from-a-stale-local-copy; never a hand edit of gaps.json), every store-derived count excludes quarantined or phantom rows and says so. A count that silently includes them reintroduces the false-baseline class.
+- Correction to the orphan figures above: excluding the 35 phantom rows, the real orphaned-capability set is 54 (42 open, 7 rejected, 5 closed).
+- Docs-drift, reopen and other store-derived totals in this document were counted before this rule and may include phantom rows.
