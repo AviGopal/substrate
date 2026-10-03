@@ -1,10 +1,22 @@
 #!/usr/bin/env bash
 # substrate-connect.sh — hand a client its connection to this substrate.
 #
-#   docker exec <container> substrate-connect > ~/.metabob/config.json
+#   f=~/.metabob/config.json; mkdir -p "${f%/*}"
+#   { cat "$f" 2>/dev/null || echo '{}'; } | docker exec -i <container> substrate-connect --merge > "$f.new" \
+#     && mv "$f.new" "$f" || { rm -f "$f.new"; false; }
+#
+# --merge READS THE EXISTING CONFIG ON STDIN AND PRINTS IT MERGED, never a replacement: a client
+# config also holds keys this command does not own (the cockpit's providers, defaults, ...), and a
+# plain `> config.json` redirect deleted them. Only the keys this command owns are set:
+# metabob.endpoint, metabob.apiKey and, where this fleet runs development-vessel,
+# substrate.gapStoreEndpoint (a fleet without one leaves any existing value alone). Every other key
+# is kept; a merge that changes nothing prints the input byte-for-byte. Input that is not a JSON
+# object (or an object under metabob/substrate) is refused with a non-zero exit and nothing on
+# stdout, so the `> new && mv` above never replaces the file with a truncated one. Without
+# --merge, stdout is the fresh config alone (the installer's first write).
 #
 # STDOUT CARRIES ONLY THE CLIENT CONFIG, {"metabob":{"endpoint","apiKey"}} plus, where this fleet
-# runs development-vessel, {"substrate":{"gapStoreEndpoint"}}, so the redirect above is safe.
+# runs development-vessel, {"substrate":{"gapStoreEndpoint"}}, so the redirects above are safe.
 # Everything meant for a person — the cockpit registration line, the location rule, warnings —
 # goes to stderr and shows in the terminal.
 #
@@ -25,9 +37,23 @@
 # conditional warning; detecting an actual shadowing file is the host-side
 # launcher's to do, where that directory is visible.
 set -uo pipefail
+MERGE=0
+case "${1:-}" in
+  --merge) MERGE=1 ;;
+  "") ;;
+  *) echo "usage: substrate-connect [--merge  (existing config on stdin)]" >&2; exit 64 ;;
+esac
+# Read the existing config FIRST, so a refusal below never leaves stdin half-consumed.
+EXISTING_F=""
+if [ "$MERGE" = 1 ]; then
+  EXISTING_F="$(mktemp "${TMPDIR:-/tmp}/connect-existing.XXXXXX")" || { echo "[connect] mktemp failed; nothing printed" >&2; exit 2; }
+  trap 'rm -f "$EXISTING_F"' EXIT
+  cat > "$EXISTING_F"
+  [ -n "$(tr -d '[:space:]' < "$EXISTING_F")" ] || echo '{}' > "$EXISTING_F"
+fi
 
 STATUS_BIN=""
-for c in /usr/local/bin/substrate-status "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/substrate-status.sh"; do
+for c in ${SUBSTRATE_STATUS_BIN:+"$SUBSTRATE_STATUS_BIN"} /usr/local/bin/substrate-status "$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/substrate-status.sh"; do
   [ -x "$c" ] && { STATUS_BIN="$c"; break; }
 done
 [ -n "$STATUS_BIN" ] || { echo "[connect] substrate-status is missing from this image" >&2; exit 2; }
@@ -86,11 +112,36 @@ else
   GAP_STORE_EP=""
   echo "[connect] this fleet runs no development-vessel, so the config names no gap store: a check-first glue test cannot be committed from this client (its tracked red is refused)" >&2
 fi
-jq -n --arg e "$ENDPOINT" --arg k "$KEY" --arg g "$GAP_STORE_EP" \
-  '{metabob:{endpoint:$e, apiKey:$k}} + (if $g == "" then {} else {substrate:{gapStoreEndpoint:$g}} end)'
+NEW="$(jq -n -c --arg e "$ENDPOINT" --arg k "$KEY" --arg g "$GAP_STORE_EP" \
+  '{metabob:{endpoint:$e, apiKey:$k}} + (if $g == "" then {} else {substrate:{gapStoreEndpoint:$g}} end)')" \
+  || { echo "[connect] jq could not build the config; nothing printed" >&2; exit 2; }
+if [ "$MERGE" = 0 ]; then
+  printf '%s' "$NEW" | jq .
+else
+  MERGED="$(jq -s --argjson new "$NEW" '
+      if length != 1 then error("the existing config is not one JSON value") else .[0] end
+      | if type != "object" then error("the existing config is not a JSON object") else . end
+      | if has("metabob") and (.metabob | type) != "object" then error("metabob is not an object") else . end
+      | if has("substrate") and (.substrate | type) != "object" then error("substrate is not an object") else . end
+      | .metabob = ((.metabob // {}) + $new.metabob)
+      | if $new.substrate then .substrate = ((.substrate // {}) + $new.substrate) else . end' "$EXISTING_F" 2>&1)" || {
+    echo "[connect] refusing to merge: $(printf '%s' "$MERGED" | tail -1) — nothing printed, so the file is left as it is" >&2
+    exit 1
+  }
+  if [ "$(jq -S -c . "$EXISTING_F" 2>/dev/null)" = "$(printf '%s' "$MERGED" | jq -S -c .)" ]; then
+    cat "$EXISTING_F"   # nothing changed: the input, byte-for-byte
+  else
+    printf '%s\n' "$MERGED"
+  fi
+fi
 
 {
-  echo "[connect] stdout above is the client config — redirect it to ~/.metabob/config.json (the redirect replaces the whole file)."
+  if [ "$MERGE" = 1 ]; then
+    echo "[connect] stdout above is your client config with this fleet's keys merged in; write it through a temp file and mv (see the header), never straight over the file."
+  else
+    echo "[connect] stdout above is a FRESH client config. To update an existing ~/.metabob/config.json without losing its other keys, pipe it through --merge:"
+    echo "  f=~/.metabob/config.json; { cat \"\$f\" 2>/dev/null || echo '{}'; } | docker exec -i <container> substrate-connect --merge > \"\$f.new\" && mv \"\$f.new\" \"\$f\" || { rm -f \"\$f.new\"; false; }"
+  fi
   echo "[connect] WARNING if either applies where the cockpit runs: METABOB_CONFIG_PATH, when set, overrides ~/.metabob/config.json; and if ./.metabob/config.json exists in the directory the cockpit starts in, it takes precedence over the file written here."
   echo "[connect] Register the cockpit (needs node/npx and Bun: https://bun.sh), then make one call such as registry_query:"
   echo "  claude mcp add metabob -- npx -y @metabob/mcp"

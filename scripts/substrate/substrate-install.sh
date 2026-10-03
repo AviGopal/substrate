@@ -356,10 +356,19 @@ if [ "$connect" = 1 ] && [ "$first_wait" = seeded ]; then
       # Never overwrite another fleet's client config: leave it, point at ours.
       say "$target already points at another fleet and was left as it is."
       say "to use this fleet: export METABOB_CONFIG_PATH=$(pwd)/metabob-config.json"
+    elif [ -f "$target" ]; then
+      # Same fleet: MERGE this fleet's keys into it (substrate-connect --merge), keeping every key the
+      # file already holds; written through a temp file and mv, so a refused merge never truncates it.
+      if "$engine" exec -i "$container" substrate-connect --merge < "$target" > "$target.new" 2>/dev/null \
+         && [ -s "$target.new" ] && chmod 600 "$target.new" && mv -f "$target.new" "$target"; then
+        say "client configuration merged into $target (its other keys kept)"
+      else
+        rm -f "$target.new"
+        say "could not merge into $target; it was left as it is (this fleet's config: $(pwd)/metabob-config.json)"
+      fi
     else
       mkdir -p "$(dirname "$target")"
-      cp metabob-config.json "$target"
-      chmod 600 "$target"
+      cp metabob-config.json "$target.new" && chmod 600 "$target.new" && mv -f "$target.new" "$target"
       say "client configuration written to $target"
     fi
   else

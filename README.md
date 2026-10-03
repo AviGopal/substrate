@@ -245,7 +245,8 @@ echo 'ANTHROPIC_API_KEY=sk-ant-…' > .env        # the install inputs, one per 
 docker compose up -d
 docker exec substrate-live substrate-status --wait seeded
 mkdir -p ~/.metabob
-docker exec substrate-live substrate-connect > ~/.metabob/config.json   # stdout is only the config
+f=~/.metabob/config.json   # merged, never overwritten: keys the config already holds are kept
+{ cat "$f" 2>/dev/null || echo '{}'; } | docker exec -i substrate-live substrate-connect --merge > "$f.new" && mv "$f.new" "$f" || { rm -f "$f.new"; false; }
 docker exec substrate-live substrate-status --wait usable
 ```
 
