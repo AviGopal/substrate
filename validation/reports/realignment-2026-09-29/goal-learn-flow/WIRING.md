@@ -860,3 +860,19 @@ Ranked by lane time:
   - retention-hold-release.timer is listed, firing 2026-10-04T09:01:33Z; /usr/local/bin/retention-hold-release is still executable.
   - The hold drop-in is loaded, and job starts since 09:05Z are dryRun:true, so no deletions now.
   - The disarm (stop and disable the timer; rename the script to .disarmed) goes through the user. Until it runs, the hub would resume deletions on time, contrary to the user's lift-on-green ruling.
+
+### Redispatch livelock (2026-10-03 09:34–09:50Z), held
+- **The chain:** boredom-vessel's gap-goal supply (tags boredom_autonomous, gap_generated) dispatched a recommit of the orphan-scanner family whose goal names a src file. goal-host's early edit-intent composed it under a synthetic route-edit-53199615 that is NEVER persisted, so it landed landed_unverified "no gap row".
+  - development-vessel b5147869 (09:39Z, a one-name hand list) and 35f07934 (09:48Z, a comment plus a trailing comma).
+  - The source gap never closed, and the supplier re-dispatched about every 10 min.
+- **HOLD (law 12, ~09:56Z, reversible):** the 4 recommit "-verify_failed" duplicates set to rejected (livelock_hold) through the typed path.
+  - operator_hold could NOT be used: the supply read doesn't filter it, and directed composes ignore it. Filed `operator-hold-is-invisible-to-gap-suppliers-and-ignored-by-directed-composes-…` (high); once fixed, the 4 rows convert to open+operator_hold.
+- **Filed:** `edit-intent-route-gaps-are-never-persisted-…` (high), with a second falsifier: the supplier won't re-supply a source gap whose last dispatch had no effect.
+- **MEASUREMENT EXCLUSIONS:**
+  - lane yield excludes b5147869 and 35f07934 as "livelock, unmeasured";
+  - reach statistics exclude dispatches 709b06f6 and 03af9683, which boredom recorded as reached:true. That is FALSE (the landings were unverified, the gap stayed open).
+- **Live-DB HTTP pollution, excluded from org-blind aggregates by signature:**
+  - variant_performance_metrics test-learning-routing-* and test-unclassified-routing-* (org metabob, 2,083 rows);
+  - execution vessel_id test-integration / account_id accounts:test (1,080 rows);
+  - activity fts_tags_test_18_1_* (4 rows).
+- **Lane yield check-in (node 1):** since 06:03Z, 2 autonomous landings, both livelock no-ops, so 0 verified by effect. The operator fixes for the two top blockers (dissent, relocation) await the push.
