@@ -13,7 +13,7 @@ import { VesselDaemon } from '@avigopal/ias-executor-ts';
 
 const daemon = new VesselDaemon({
   vesselId: process.env.VESSEL_ID ?? 'my-vessel',
-  port: parseInt(process.env.PORT ?? '8250', 10),
+  port: parseInt(process.env.PORT ?? '8299', 10),   // a port no inventory/manifest entry claims (health_port)
   discoveryEndpoint: process.env.DISCOVERY_VESSEL_ENDPOINT ?? 'http://127.0.0.1:8100',
   apiKey: process.env.METABOB_API_KEY ?? '',
   activityApiEndpoint: process.env.ACTIVITY_API_ENDPOINT ?? 'http://127.0.0.1:8080',
@@ -59,8 +59,7 @@ for (let i = 0; i < 60; i++) {
 
 **Live references:**
 
-- `repos/analysis-vessel/` — the stateless resolver exemplar as source (retired from the running fleet, so read it, do not expect it running; six code-analysis shapes via `VesselDaemon` + `ActivityExecutor`; no SurrealDB). Read `src/index.ts` for the canonical localhost-default + `VesselDaemon.start()` shape.
-- `repos/local-tools-vessel/` — resolver vessel built on `VesselDaemon`
+- `repos/local-tools-vessel/` — the live stateless-resolver exemplar (port 8230; no datastore; `VesselDaemon` + `ActivityExecutor` advertising its file, shell, git and code-tool shapes). Read the `new VesselDaemon({…}).start()` block at the end of `src/index.ts` and the `process.env.… ?? "http://127.0.0.1:…"` defaults at the top.
 - `repos/goal-host-vessel/` — the async goal-dispatch surface; `DiscoveryRegistrationLoop` without `VesselDaemon`
 - `repos/ribosome-vessel/` — pure WebSocket consumer (no shapes); shows when NOT to use VesselDaemon
 - `repos/activity-api/` — the north-star implementation (full feature set)
@@ -412,24 +411,25 @@ goal-host `18210→8210`, concept-db `18260→8260`.
 Internal vessel-to-vessel calls use `127.0.0.1:8xxx` directly inside the container;
 you reach a vessel from the host at `http://localhost:18xxx`.
 
-A minimal unit, copied from the real `scripts/substrate/units/analysis-vessel.service`
-(the stateless-resolver exemplar — port 8250):
+A minimal unit, cut down from the real `scripts/substrate/units/local-tools-vessel.service`
+(the live stateless-resolver exemplar: inventory `health_port` 8230, `core: true`). The real
+unit adds sandbox lines (`InaccessiblePaths=`, `ReadOnlyPaths=`) and a per-vessel
+`EnvironmentFile=-/etc/substrate/local-tools-vessel.env`, because that vessel runs the
+agent's shell; a resolver that runs no caller-supplied commands needs none of them:
 
 ```ini
 [Unit]
-Description=analysis-vessel
-After=discovery-vessel.service identity-vessel.service
-Wants=discovery-vessel.service identity-vessel.service
+Description=local-tools-vessel
+After=activity-api.service discovery-vessel.service identity-vessel.service
+Wants=activity-api.service
 
 [Service]
 Type=simple
-EnvironmentFile=/etc/substrate/env                       # shared substrate env (METABOB_API_KEY, ACTIVITY_API_URL, DISCOVERY_VESSEL_ENDPOINT, …)
-Environment=PORT=8250
+EnvironmentFile=/etc/substrate/env                       # shared substrate env (METABOB_API_KEY, DISCOVERY_ENDPOINT, ACTIVITY_API_ENDPOINT, …)
+Environment=PORT=8230
 Environment=HOST=127.0.0.1
-Environment=VESSEL_ID=analysis-vessel-local
-Environment=VESSEL_ENDPOINT=http://127.0.0.1:8250
-WorkingDirectory=/vessels/analysis-vessel
-ExecStart=/root/.bun/bin/bun /vessels/analysis-vessel/src/index.ts
+WorkingDirectory=/vessels/local-tools-vessel
+ExecStart=/root/.bun/bin/bun /vessels/local-tools-vessel/src/index.ts
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
@@ -442,27 +442,32 @@ WantedBy=multi-user.target
 Notes:
 
 - **No secretKeyRef / no POD_NAME fieldRef.** Inside the container, `METABOB_API_KEY`
-  comes from the shared `EnvironmentFile=/etc/substrate/env`, and `VESSEL_ID` is a
-  fixed `<vessel>-local` literal (single replica — no per-pod ID needed).
-- **`After=`/`Wants=` discovery-vessel + identity-vessel** is the unit-level analogue
+  comes from the shared `EnvironmentFile=/etc/substrate/env`, and the vessel id is a fixed
+  literal or a source default (single replica — no per-pod ID needed).
+- **Secrets drop-in.** Every vessel unit also gets the shared
+  `<unit>.service.d/10-secrets-out-of-reach.conf` symlink (checked by
+  `validation/scripts/vessel-secrets-dropin.test.sh`).
+- **`After=` discovery-vessel + identity-vessel** is the unit-level analogue
   of the Helm `needs:` clause; it orders startup so discovery and auth are up first.
 - **Only per-vessel values belong in the unit.** Peer endpoints are fleet-wide, so they
   live in `/etc/substrate/env` (written by `scripts/substrate/gen-env.sh`) rather than
-  being repeated per unit. The vessel reads them from env — `DISCOVERY_VESSEL_ENDPOINT`,
-  `ACTIVITY_API_URL`/`ACTIVITY_API_ENDPOINT` — defaulting to in-container localhost
-  (`http://127.0.0.1:8100`, `http://127.0.0.1:8080`); see `repos/analysis-vessel/src/index.ts`
+  being repeated per unit. The vessel reads them from env — local-tools reads
+  `DISCOVERY_ENDPOINT`; other vessels read the `DISCOVERY_VESSEL_ENDPOINT` /
+  `ACTIVITY_API_ENDPOINT` aliases gen-env also writes — defaulting to in-container localhost
+  (`http://127.0.0.1:8100`, `http://127.0.0.1:8080`); see `repos/local-tools-vessel/src/index.ts`
   for the `process.env.… ?? "http://127.0.0.1:…"` pattern.
 
 To activate the new unit, add it to the fleet inventory (`scripts/substrate/vessels.inventory.json`) and register
 `vessel-ctl sync` / `vessel-ctl restart`, which ship in the image (mirror the
-analysis-vessel block — `vessel-ctl sync <vessel>` mirrors the vessel's
+local-tools-vessel block — `vessel-ctl sync <vessel>` mirrors the vessel's
 in-container clone into `/vessels/<vessel>` and restarts the unit).
 The iteration loop is then:
 
 ```bash
 # edit repos/<vessel>/src/** → hot-reload into the running container → validate
 docker exec <container> vessel-ctl sync <vessel>             # mirror the in-container clone + restart
-curl -s http://localhost:18xxx/health | jq .         # vessel reachable on its host port (18000 + its port)
+docker exec <container> curl -s http://127.0.0.1:8230/health | jq .   # in-container (local-tools' port is not published)
+curl -s http://localhost:18xxx/health | jq .         # a vessel the manifest publishes: 18000 + its port
 curl -s http://localhost:18080/v2/activities/templates  # validate against the substrate
 ```
 
