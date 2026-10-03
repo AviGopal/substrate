@@ -22,6 +22,8 @@
 >
 > **Amended 2026-10-03:** §2.2 gains *The unit of evidence, and what conditions selection* (user review): the execution record is the particle and learning is an idempotent fold over attached verdicts; selection is conditioned by evidence pooled across nodes and grouped by code version, never by the node's ambient store; credit, reuse and "reached" are keyed by (arm, target shape, goal class) with the verdict's instrument recorded.
 >
+> **Amended 2026-10-03 (later):** §11 records the prior art behind the 10-03 rulings: the executable plan of record has been attempted at least ten times, human solicitation and credentials repeatedly, and about thirty "done" claims rested on proxies. It states the four reasons none held and what that binds: fix `self_fact_reconcile` flapping before adding rows; the row is the falsifier; durable solicitation; operator-free end-to-end acceptance.
+>
 > **Amended again 2026-10-02 (user rulings on authority):** §2.1 item 6, §7 step 9 and §10 no longer define a human-governed boundary. The system changes its own limits on evidence applied by the previously accepted version; humans are informed, not gating (§10 item 1).
 
 ### Review disposition (09-29 revision)
@@ -986,3 +988,70 @@ stateful-ui is still live (805 panels) and was still being written to on 10-01. 
      - Until a deploy-side check judged by the accepted version lands, a lane push can change root code on every node within one tick (pull-sync runs the newly pulled version of itself). So step 9 holds for the runtime path only, not for landing → deploy.
    - `6ac1aa6` is a live case of a candidate weakening its own evidence source: a lane draft added entries to a guard test's allowlist so its own landing passed. The guard is now frozen.
    - Proposed, not live: the slice Y verdict stamping in review on 10-02 (Y1c) would not meet §2.2's "a correction names what it supersedes" as drafted, because a failure class stamped on a run stays when the run later reaches, so readers would have to filter it.
+
+## 11. Amendment (2026-10-03): prior art for the 10-03 rulings
+
+**Basis.** The user's review: "none of what we are seeing as issues are 'new' per-se. When have we done something like this before." Three of the 10-03 rulings restate earlier attempts, which this realignment's own dossiers already trace (`dossiers/docs-drift.md`, `dormant-mechanism.md`, `false-verification.md`, `human-surface-escalation.md`, `credential-hygiene.md`):
+- the executable plan of record (`061b8651`);
+- suspend/resume with a credential path (`533b8f72`);
+- the slice withdrawal (`4b0c8d99`).
+
+Tags: [V] verified in git, code or the live gap store on 10-03. [D] taken from a dossier and not re-checked.
+
+**11.1 The executable plan of record has been attempted at least ten times.**
+- Six manual realignment passes ran from 02-24 to 06-24 (`af9d8308`…`e53f0266`); this document is the seventh. [D]
+- The failure-mode harness moved into the `harness-run-matrix` activity (05-23): 0 journal hits since 09-21. [D]
+- `closure-audit` (05-27, `86186cb4`) was never scheduled. [D]
+- Docs-as-expectation phases 1–3 (07-01, `a0f40fb2`): `doc_drift_fix` has never run. [D]
+- `docs_align_scan` (07-10) is orphaned, and the 27 `docs-drift-*` gaps are all open with 0 ever closed. [V]
+- `joint-liveness-tick` (08-25, `daa2632c`) had 1 binding for 33 days and caught 0 of ~180 breaks. [D]
+- `validator-liveness` (09-09): `validator-cadence-severed` is still open. [V]
+- The expectation batteries (09-19) ran 273 ticks with 0 violations across a day of breaks. [D]
+- `self_fact_reconcile` (09-23; data rows since 09-29, `56f140e7`, 15 rows) is live and is §2.1's named home. Its closures FLAP: of 34 `self-fact-divergence-*` gaps, 13 are open and the maximum `reopen_count` is 28 (24 on the fleet-inventory row, as §2.1 notes). [V]
+- Synthesis documents, 08-13 → 10-02 [V]:
+  - PROCESS_MEANT_VS_ACTUAL; BUILT_BUT_NOT_RESOLVED; LEARNING_MECHANISM_AUDIT; SEAM_MAP;
+  - NEEDLE_MOVERS / AUDIT_EXPECTATIONS / RECTIFICATION; PROCESS_MAP; ARCHITECTURE_FALSIFICATION;
+  - WORKING_SYSTEM_EXPECTATIONS; WHY-THINGS-KEEP-BREAKING / MECHANISM-AUDIT;
+  - REALIGNMENT; WIRING.
+
+  Every one except REALIGNMENT and WIRING stopped being edited within about two days of creation. That is the user's account: progress, a regression somewhere, a fix that still leaves the goal red, and a new synthesis.
+
+**11.2 Human solicitation and credentials.**
+- The interactor passthrough (06-02, `b5b3f695`) was pinned to `:8270`, and 336 questions went to a store no human reads. [D]
+- WS1–WS6 (07-05, `6b984bdb`). [V]
+- `solicitHumanInput` (07-06, goal-host `77d320f`, now `index.ts:15054`) [V]:
+  - it is reachable only after recovery has run out;
+  - the pending request lives in process memory, so a restart loses it;
+  - it waits at most 120s by default;
+  - the answer is injected as `opts.variables.human_input`.
+
+  Mechanism audit M26 records "effectively no" answered solicitations. [D]
+- The docs-decision solicit/answer scan (07-12) has 0 executions. [D]
+- The escalation-disposition executor (08-28, `9cb83d00`) has closed 0 gaps by human disposition. [D]
+- `solicitation-outcome-scan-pins-one-ui-endpoint-instead-of-discovery` is open. [V]
+- No value-blind credential path has ever existed. No `secret_set` or `secretRef` code exists in any vessel, and 27 related gaps are open. [V]
+
+**11.3 "Done" declared from a proxy, then withdrawn: about thirty claims** (`dossiers/false-verification.md` §1). Examples:
+- the harness "LIFT CANDIDATE" produced by changing the harness (05-22); [D]
+- the self-approved S1→S2 lift (05-26); [D]
+- "13 gaps closed", 12 of them by hand commits (08-28); [D]
+- "50 landed_verified", 78% of them ancestry stamps (09-07); [D]
+- crystallization "proven" and conformance "converged" on toy arithmetic classes with operator restorations (09-18);
+- the causal-attempt-ledger "3×10/10", which depended on pausing four autonomous paths (09-26);
+- "it was working", retracted 15 minutes later because the post-land suite had been dead since 08-31 (09-28);
+- the canon reach figures withdrawn (`32c5bbe5`) and the news-goal slice withdrawn (`4b0c8d99`) (10-02).
+
+§6.2 counts the goal-walk floor declared "fixed" seven times.
+
+**11.4 Why none of them held.** These reasons are common to all three:
+1. Each attempt shipped one part (a finder, a store, a fixer or a harness). It was declared working on its own check and never measured end to end.
+2. Nothing re-runs a claim after a fix, so documents and "done" verdicts go stale and the next session rediscovers the problem.
+3. Checks that cannot fail, and operator-assisted outcomes, were counted as the system working.
+4. Checks were never connected to gap closure. Doc, credential and solicitation gaps are filed with `falsifier: none` and no landing path, so they cannot close by measurement.
+
+**11.5 What follows (binding on the 10-03 rulings).**
+- **Flapping before rows.** Diagnose why `self_fact_reconcile` closures flap (the fencing root of §2.1? a stale write flipping an honest false? a predicate without hysteresis?) **before** registering WIRING's must-fails as rows. Rows added to an evaluator that flaps multiply the noise.
+- **The row is the falsifier.** A row that goes red files, or bumps, one gap whose class-2 falsifier **is that row**, so the row going green is the closure. Every row has a recorded must-fail run (K6) and a recorded completion count per tick (rows evaluated = rows registered). Doc rows use the same closure, or "WIRING as a view" becomes the 28th open docs-drift gap.
+- **Durable solicitation is a known failure, not a hypothesis.** The suspend/resume acceptance (`533b8f72`) must begin with the in-memory, ≤120s `solicitHumanInput`: the pending request survives a restart and is addressed by discovery.
+- **Acceptance is end to end and operator-free** (§1, §7 step 1; the 10-02 user rulings). A part's own check is never "done". Each declared "done" names the consumer-side measurement and the window in which no operator commits landed.
+- **Prior art first.** Before a ruling or a synthesis is written, search git (super-repo and submodules), the live gap store and this document's dossiers. Cite what was tried, and say why the new attempt differs.
