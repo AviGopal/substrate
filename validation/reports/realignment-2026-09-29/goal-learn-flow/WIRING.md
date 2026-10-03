@@ -856,3 +856,7 @@ Ranked by lane time:
   - (c) bounce quiesce: fix pushed as c2886041.
   - The operator fixes for (a) and (b) are being built as two commits on f6de031b (ETA 60–90 min), then qa review, then the user's push.
 - **Retention compact-or-exempt check-first:** in progress. Its armed check becomes the release predicate.
+- **HUB retention state (deployment, read-only, as of the 2.3.10 upgrade): hold ON, timer STILL ARMED.**
+  - retention-hold-release.timer is listed, firing 2026-10-04T09:01:33Z; /usr/local/bin/retention-hold-release is still executable.
+  - The hold drop-in is loaded, and job starts since 09:05Z are dryRun:true, so no deletions now.
+  - The disarm (stop and disable the timer; rename the script to .disarmed) goes through the user. Until it runs, the hub would resume deletions on time, contrary to the user's lift-on-green ruling.
