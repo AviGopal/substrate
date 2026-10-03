@@ -787,3 +787,28 @@ A regression class counts as covered only if negating or removing the shipped ch
   - (2) Three of the 24 h closes are vocabulary-rule landings in goal-host (countable-goal, enumeration exclusion, superlative rule: the b260a15 family). The inference class armed tonight replaces them, so they must not count as useful.
   - (3) Since the fail-closed own-check: 3 store-verified closes in about 5.5 h. b69296f is independently operator-verified.
 - **Next measurement:** a 7-day honest count (landings whose armed check went green, no revert, and a by-effect check where one exists), split by author and kind, taken after the inference, binding and abstention gaps are armed and the lane has had a full window on them.
+
+### Armed (08:30Z): the binding / caller-fault / masking set, one gap per test file (all read present)
+- **goal-host e75f316d:** `the-walk-invokes-llm-completion-dispatch-with-no-prompt-…` (20 tests).
+- **development-vessel 6e92dcfe:**
+  - `dispatch-accepts-a-missing-prompt-and-declares-no-input-contract` (7 tests);
+  - the masking gap, `llm-completion-dispatch-overwrites-the-real-failure-…` (4 tests).
+- **llm-resolver 23c2ba8e:** `a-malformed-llm-request-is-graded-…` (10 tests).
+- **activity-api 0781d71c:** `credit-writers-grade-caller-fault-outcomes-at-leaf-and-ancestors` (10 tests).
+- **Required by-effect falsifiers** after landing: an empty-prompt request leaves arm alpha and beta unchanged and increments the caller's malformed_request count.
+- **Landing order:** development-vessel → llm-resolver + activity-api → goal-host.
+
+### Lane yield, node 1, 06:03–08:13Z (read-only trace): 17 composes, about 11 autonomous picks, 0 landings
+Ranked by lane time:
+1. **The draft doesn't move its own check (no_effect_vs_parent): about 42 min, 7 composes.**
+   - Nothing relocates the next attempt: suspected_real_location is written only on the FAVORABLE path. The file-scope gate drops the edits to the right file.
+   - Filed: `a-draft-that-does-not-move-its-own-check-leaves-no-relocation-hint-…` (high).
+2. **Environment: about 31 min, 3 composes.**
+   - pull-sync's dependency bounce restarted services under an in-flight compose. Filed: `pull-syncs-dependency-bounce-restarts-a-vessel-under-an-in-flight-compose` (high).
+   - The development-vessel suite hit the hardcoded 240 s timeout (covered: route-edit-d3de035e and the truncated-baseline gap).
+   - The LLM outage, since fixed.
+3. **Idle, nothing admitted: about 25 min.** Most ticks admit 0 of about 2,000.
+4. **The semantic gate overturned the ONLY draft that turned its own check red→green** (07:03Z). Covered by the open `semantic-gate-refuters-overturn-a-green-class2-draft-…`, which has no check. Highest value per event.
+- **Also filed:** failing families re-win picks through fresh-lineage children (`a-failed-attempt-mints-a-narrowed-or-step-child-with-fresh-lineage-…`, medium).
+- **The compose cap is env-only** (COMPOSE_MAX_CONCURRENT default 2, so the autonomous lane gets 1). That's census topic B.
+- **Rate implication:** lane capacity, not drafting ability, is the binding constraint, and class 1 plus the semantic overrule waste most of it. These are the next check-first targets.
