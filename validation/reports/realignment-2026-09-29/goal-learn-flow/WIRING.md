@@ -824,3 +824,10 @@ Ranked by lane time:
   - (c) bounce quiesce: test plus fix landing as one operator commit.
 - **Measurement note (qa):** tonight's development-vessel check-first builders' ABSOLUTE base fail counts (141, 170, 179) were taken on the operator clone's stale ias-executor-ts dist (Aug 9; no typed discovery lookup, so discovery reads fail closed). They are NOT comparable across environments: a rebuilt dist gives 88. The DELTAS stand, because base and test runs shared one environment; qa's verification runs share that property.
 - **Builder rule from now on:** rebuild or verify the shared-package dist before a base run, so a stale dist cannot hide a regression.
+- **Node 1 re-pinned to image 4277b49d** (container up about 09:02Z; SurrealDB 2.3.10, both noise halves, the transport enabled from the entrypoint).
+  - **Retention hold verified:** the first activity-api start (09:02:30Z) had dryRun:false but was restarted under the hold at 09:02:32Z, BEFORE its first sweep. Every sweep since is dryRun:true: strata removed 0 (stopped by the 1 s throttle budget), and the orphan reap would have removed 89.
+  - The drop-in is present, and the release timer is absolute at 2026-10-04T07:17:05Z. No real deletion slipped through.
+- **Approved and ready to push (development-vessel, tests only):**
+  - 968265e6, semantic dissent advisory: AST pins, settle-after-push, the reader contract, and a shared exec guard that blocks systemctl, docker, podman and vessel-ctl from tests.
+  - Linked operator gaps filed: the sweep must resolve dissent outcomes; systemd-restart tests that never execute.
+- **In qa review:** relocation round 2 (00722669) and the bounce fix's argv-safe key handling.
