@@ -611,3 +611,10 @@ A regression class counts as covered only if negating or removing the shipped ch
   - The range gap carries baseline poisoning (the baseline never absorbs a newly failing name without an open gap or a recorded acceptance), the misleading "did not reproduce" log line, and the 240s timeout counting as ran=false and refusing.
   - The no-measurement gap carries: post-land ran=false on the landing node is no measurement.
   - The post-land gap references the range gap.
+
+### Lane landing: step 1(b), the SF_BLEND off-path (activity-api b69296f, 05:19Z, node 2)
+- **The first lane landing through the fail-closed cutover own-check.** Node 2 logged `own_check_passed` on the gap's armed check. The post-land suite ran (`ran=true`).
+- **Independent operator verification:** at b69296f's parent the CHECK test is red and both controls are green; at b69296f all three are green. The full activity-api suite at both commits (env -i) shows 0 new failing names; the only change is the CHECK turning green.
+- **Live on node 1** (`accelerator-flag-tick.ts` blob 581617175ee6 loaded; activity-api restarted 05:35:24Z, after the file changed at 05:35:23Z). Node 2 masks activity-api by design.
+- **The effect is latent.** The off path reads the `SF_BLEND_VERDICT` tuning param, and nothing writes it yet; the reach-graded A/B is its writer (the open gap sf-blend-has-no-reach-graded-a-b-…). The blend stays on until that A/B, as WIRING step 1(b) requires.
+- Guard row: unit check (armed) plus a tip-only deploy gate; range unproven (the range rule).
