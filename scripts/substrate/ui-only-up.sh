@@ -101,8 +101,8 @@ $(printf '%s\n' "${ENV_LINES[@]}" | sed -E 's/^(METABOB_API_KEY=).{4}.*/\1<redac
   EOF
   $COMPOSE up -d
   docker exec $C substrate-status --wait served
-  f=\${METABOB_CONFIG_PATH:-~/.metabob/config.json}   # optional: the cockpit; merged, never overwritten
-  { cat "\$f" 2>/dev/null || echo '{}'; } | docker exec -i $C substrate-connect --merge > "\$f.new" && mv "\$f.new" "\$f" || { rm -f "\$f.new"; false; }
+  # optional: the cockpit's config, merged on the host (scripts/substrate/connect-merge.sh), never overwritten
+  bash <checkout>/scripts/substrate/connect-merge.sh \${METABOB_CONFIG_PATH:-~/.metabob/config.json} docker exec $C substrate-connect --values
 PLAN
 
 if [ "$DRY_RUN" = 1 ]; then

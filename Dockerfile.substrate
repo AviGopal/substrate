@@ -236,6 +236,9 @@ COPY scripts/substrate/substrate-doctor.sh /usr/local/bin/substrate-doctor
 # manifest baked below, so a host with no checkout gets the same declaration.
 COPY scripts/substrate/substrate-status.sh /usr/local/bin/substrate-status
 COPY scripts/substrate/substrate-connect.sh /usr/local/bin/substrate-connect
+# The HOST-side client-config merge, printed by `substrate-connect --merge-script` for a host with no
+# checkout: the operator's config never enters the container, only the fleet's own values leave it.
+COPY scripts/substrate/connect-merge.sh /usr/local/share/substrate/connect-merge.sh
 COPY scripts/substrate/substrate-manifest.sh /usr/local/bin/substrate-manifest
 COPY scripts/substrate/substrate-install.sh /usr/local/bin/substrate-install
 COPY scripts/substrate/reseed-restart.sh /usr/local/bin/reseed-restart
