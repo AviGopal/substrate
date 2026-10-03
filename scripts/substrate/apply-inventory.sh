@@ -374,7 +374,16 @@ done
 DISABLED_EXPLICIT="$(resolve_list "${DISABLED_VESSELS:-}")"
 fatal_if_unresolved "DISABLED_VESSELS" "$DISABLED_EXPLICIT"
 
-is_desired() { echo "$DESIRED" | grep -qx "$1" && ! echo "$DISABLED_EXPLICIT" | grep -qx "$1"; }
+# RETIRED units are never desired, whatever selected them. A retired vessel keeps its inventory entry
+# ("retired": true) precisely so this loop governs it: a shipped unit absent from the inventory is not
+# masked but runs in every profile (see the conformance warning at the end). Applied last, after every
+# selection route and the timer/service pairing, so no PROFILE, ENABLED_* or EXTRA list can revive it.
+# validation/scripts/retired-vessels-stay-retired.test.sh pins this under each selection.
+RETIRED="$(jq -r '.vessels[] | select(.retired == true) | .unit' "$INV" 2>/dev/null || true)"
+for _r in $RETIRED; do
+  echo "$DESIRED" | grep -qx "$_r" && log "retired (masked whatever the selection): $_r"
+done
+is_desired() { echo "$DESIRED" | grep -qx "$1" && ! echo "$DISABLED_EXPLICIT" | grep -qx "$1" && ! echo "$RETIRED" | grep -qx "$1"; }
 
 disabled_count=0
 for u in $(manageable_units); do
