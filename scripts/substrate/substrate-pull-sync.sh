@@ -854,6 +854,39 @@ fi
 # <<< gap-tracked-red missing
 
 # Vessel -> unit map from the inventory (fallback: every clone dir, unit <v>.service).
+# QUIESCE AND DRAIN. vessel port -> 0 iff in-flight reached 0; sets QD_WHY. Closes admission with
+# the same marker the mirror path writes (QUIESCE_DIR/<vessel>; the vessel refuses new long-running
+# work while it exists), then polls /health in_flight until 0 or until what is left of the unit's
+# start timeout (less a margin) runs out. Closing admission makes in-flight fall monotonically, so
+# the wait is bounded by the longest single run. The marker is always removed.
+quiesce_drain() {
+  QD_WHY=""
+  _qd_dir="${QUIESCE_DIR:-/workspace/quiesce}"
+  mkdir -p "$_qd_dir" 2>/dev/null || true
+  : > "$_qd_dir/$1" 2>/dev/null || true
+  log "$1: owed restart QUIESCED (admission closed); waiting for in-flight work to finish"
+  : "${GATE_T0:=$(date +%s)}"
+  _qd_wait="${QUIESCE_WAIT_S:-900}"
+  _qd_left=$(( ${UNIT_TIMEOUT_S:-900} - ( $(date +%s) - GATE_T0 ) - ${QUIESCE_MARGIN_S:-120} ))
+  [ "$_qd_left" -lt 0 ] && _qd_left=0
+  [ "$_qd_wait" -gt "$_qd_left" ] && _qd_wait="$_qd_left"
+  _qd_spent=0; _qd_now=1
+  while :; do
+    _qd_now="$(curl -s --max-time 5 "http://127.0.0.1:$2/health" 2>/dev/null \
+      | grep -o '"in_flight"[[:space:]]*:[[:space:]]*[0-9][0-9]*' | grep -o '[0-9]*$' | head -1)"
+    _qd_now="${_qd_now:-0}"; case "$_qd_now" in *[!0-9]*) _qd_now=0 ;; esac
+    [ "$_qd_now" -eq 0 ] && break
+    [ "$_qd_spent" -ge "$_qd_wait" ] && break
+    sleep "${QUIESCE_STEP_S:-10}"; _qd_spent=$(( _qd_spent + ${QUIESCE_STEP_S:-10} ))
+  done
+  rm -f "$_qd_dir/$1" 2>/dev/null || true
+  if [ "$_qd_now" -eq 0 ]; then
+    QD_WHY="drained to 0 in ${_qd_spent}s, nothing lost"; log "$1: $QD_WHY"; return 0
+  fi
+  QD_WHY="still $_qd_now in flight after ${_qd_spent}s (bound ${_qd_wait}s); restarting anyway, that run IS lost"
+  log "$1: $QD_WHY"; return 1
+}
+
 # LOADED CODE OLDER THAN THE CODE ON DISK. vessel runtime-dir unit -> 0 iff the
 # unit's non-test runtime content changed while the unit kept running; sets LCS_WHY.
 # Bun does not hot-reload, so changed content under an unrestarted unit is code it
@@ -1722,6 +1755,17 @@ for d in "$CLONE_DIR"/*/; do
     P_DEFERRED_N="$(cat "$P_DEFER_FILE" 2>/dev/null || echo 0)"
     case "$P_DEFERRED_N" in ''|*[!0-9]*) P_DEFERRED_N=0 ;; esac
     restart_age_defer "$P_PORT" "$P_DEFERRED_N"; P_INFLIGHT="$RA_INFLIGHT"
+    # AN OWED RESTART MUST NOT BE STARVED BY A BUSY VESSEL. The age ceiling resets with
+    # every new request, so a vessel that is never idle (the compose lane picks again as
+    # soon as a draft ends) defers its owed restart on every tick, forever: measured
+    # 2026-10-03, development-vessel held a mirrored fix unloaded from 13:54 on while
+    # each tick logged "owed restart still deferred". After RESTART_DEFER_MAX deferrals,
+    # close admission and drain (the mirror path's quiesce) instead of deferring again.
+    if [ "$RA_DEFER" = 1 ] && [ "$P_DEFERRED_N" -ge "${RESTART_DEFER_MAX:-3}" ] 2>/dev/null; then
+      quiesce_drain "$v" "$P_PORT"
+      RA_DEFER=0
+      RA_WHY="owed restart deferred ${P_DEFERRED_N} time(s); quiesced: $QD_WHY"
+    fi
     if [ "$RA_DEFER" = 1 ]; then
       echo "$((P_DEFERRED_N + 1))" > "$P_DEFER_FILE" 2>/dev/null || true
       log "$v: owed restart still deferred — $RA_WHY ($P_OWED)"

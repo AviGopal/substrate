@@ -22,6 +22,10 @@
 #   (e) owed restart while work is in flight -> deferred, counter increments,
 #       marker kept, no restart
 #   (f) unit inactive -> marker cleared, no restart
+#   (i) owed restart deferred RESTART_DEFER_MAX times and work still in flight ->
+#       quiesce (admission marker written, then removed), drain to 0, restart taken
+#   (j) same, but in-flight never drains within the bound -> restart taken anyway,
+#       the loss is logged, the quiesce marker is removed
 #
 # usage: validation/scripts/pull-sync-owed-restart.test.sh [path/to/substrate-pull-sync.sh]
 # Needs bash, awk, sed, find, GNU date/touch. No root: every path is a temp dir.
@@ -36,6 +40,7 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
   sed -n '/^content_hash_nontest() {/,/^}/p' "$SCRIPT"
   sed -n '/^loaded_code_stale() {/,/^}/p' "$SCRIPT"
+  sed -n '/^quiesce_drain() {/,/^}/p' "$SCRIPT"
   echo 'run_block() {'
   echo 'for v in "$VESSEL"; do'
   awk '/^  # AN OWED RESTART OUTRANKS THE CONTENT SHORT-CIRCUIT/{on=1} on && /^  if \[ "\$CLONE_HASH" = "\$RUNTIME_HASH" \]; then$/{exit} on{print}' "$SCRIPT"
@@ -60,11 +65,21 @@ health_port() { echo 9999; }
 DEFER=0
 restart_age_defer() { RA_INFLIGHT=0; RA_OLDEST=""; RA_DEFER="$DEFER"; RA_WHY=""; [ "$DEFER" = 1 ] && { RA_INFLIGHT=2; RA_WHY="2 in flight"; }; return 0; }
 restart_breadcrumb() { :; }
+HEALTH_SEQ_FILE="$T/health-seq"   # one in_flight value per line, one per /health call; the last repeats
+health_seq() { printf '%s\n' "$@" > "$HEALTH_SEQ_FILE"; }
+curl() {   # runs inside $( ), so the sequence must live in a file, not a variable
+  local first; first="$(head -1 "$HEALTH_SEQ_FILE" 2>/dev/null)"
+  [ "$(wc -l < "$HEALTH_SEQ_FILE" 2>/dev/null || echo 0)" -gt 1 ] && sed -i 1d "$HEALTH_SEQ_FILE"
+  [ -n "$QDIR_SEEN_FILE" ] && [ -e "$QUIESCE_DIR/$VESSEL" ] && echo seen > "$QDIR_SEEN_FILE"
+  printf '{"in_flight":%s}' "${first:-0}"
+}
+sleep() { :; }
 # shellcheck disable=SC1090
 source "$T/fns.sh"
 
 VESSEL=demo-vessel
 RUNTIME_DIR="$T/runtime"; MARKER_DIR="$T/marker"; STAGGER_SECONDS=0
+QUIESCE_DIR="$T/quiesce"; QUIESCE_STEP_S=1; QUIESCE_WAIT_S=5; UNIT_TIMEOUT_S=900; QUIESCE_MARGIN_S=0; QDIR_SEEN_FILE=""
 P="$MARKER_DIR/$VESSEL.restart-pending"; DF="$MARKER_DIR/$VESSEL.restart-deferrals"
 
 setup() { # a running unit and its runtime src
@@ -128,6 +143,19 @@ setup; echo oldhash > "$P"; UNIT_ACTIVE=0
 run_block
 if ! restarted && [ ! -e "$P" ]; then ok "(f) unit inactive: no restart, marker cleared"
 else bad "(f) unit inactive: expected no restart and a cleared marker"; fi
+
+# ── (i) deferred to the cap, still busy: quiesce, drain, restart ───────────────
+setup; echo oldhash > "$P"; echo 3 > "$DF"; DEFER=1; health_seq 2 1 0; QDIR_SEEN_FILE="$T/seen"; rm -f "$QDIR_SEEN_FILE"
+run_block
+if restarted && [ -e "$QDIR_SEEN_FILE" ] && [ ! -e "$QUIESCE_DIR/$VESSEL" ] && grep -q "drained to 0" "$LOG" && [ ! -e "$P" ]; then ok "(i) deferred to the cap: quiesced, drained, restart taken, marker removed"
+else bad "(i) deferred to the cap: expected quiesce then restart (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
+QDIR_SEEN_FILE=""
+
+# ── (j) deferred to the cap, never drains: restart anyway, loss logged ─────────
+setup; echo oldhash > "$P"; echo 3 > "$DF"; DEFER=1; health_seq 1
+run_block
+if restarted && [ ! -e "$QUIESCE_DIR/$VESSEL" ] && grep -q "IS lost" "$LOG"; then ok "(j) never drains: restart taken anyway, loss logged, marker removed"
+else bad "(j) never drains: expected a logged forced restart (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
 
 echo
 [ "$FAILS" = 0 ] && { echo "PASS - owed restarts survive content moving on"; exit 0; }
