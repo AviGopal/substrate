@@ -714,3 +714,14 @@ A regression class counts as covered only if negating or removing the shipped ch
   - **Caveats:** a container recreate or restart drops the drop-in and the transient timer, and deletion resumes at once; a unit re-render loses the hold silently. It is env-gated (law 1) by explicit user decision; the durable form, a shaped retention-hold read by the sweep, is a gap.
   - **Layering:** the 06:27:04Z tuning throttle (PHASE_BUDGET 1000) stays underneath. When the timer releases the pause, the throttle still caps strata at 1 s until its own lift condition (the compact-or-exempt fix green).
   - **Sweep 3** (06:38Z, before the pause): validator-dispatch 152, slot-binding 32, orphans 30. No new strata.
+
+### Probe windows on node 1 (user-approved; EXCLUDED from reach, credit, selection and lane-rate measurements)
+- **Round 1:** dispatched 2026-10-03 06:53–06:58Z: 9 sealed held-out goals (operational set) plus compose probes CA and CB. CONTAMINATED: the probe tags were passed as run variables and became pool impulses (filed as `run-variables-become-pool-impulses-that-can-satisfy-goal-completion-…`). Ids: /home/avi/.claude/jobs/2d1e764f/tmp/probe-ids.txt (11).
+- **Round 2, clean:** dispatched from 06:59:50Z. Ids: /home/avi/.claude/jobs/2d1e764f/tmp/probe-ids-r2.txt (10). The window closes when qa reports round 2 done; nothing is tuned to these outcomes (the "dispatches are probes" ruling); the goal texts stay sealed.
+- **Round 1 findings, by mechanism only, pending confirmation on round 2:** 0/9 held-out reached. The candidate first break is the floor's LLM leg failing by ADDRESS on node 1: goal-host's rawResolve reports "Unable to connect" while llm-resolver-vessel is active.
+- **Found while dispatching:** goal-host POST /run-goal accepted an unauthenticated request from inside the container. Attached to the unauthenticated-route gap as a second instance.
+
+### Armed: O on development-vessel 926da4ea (07:00Z, check reads present)
+- `a-node-can-land-with-landing-gate-code-older-…`: 23 tests (20 must-fail, 1 control, 2 contracts) in `cutover-gate-version-stale.test.ts`.
+- The shared cutover test setup now carries an overridable running == accepted default.
+- The pull-sync half lands check-first after the shared tracked-red exemption is pushed.
