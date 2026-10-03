@@ -736,3 +736,9 @@ A regression class counts as covered only if negating or removing the shipped ch
   - **Filed:** prompt-less satisfier (high), a malformed request graded against an arm (high), the masked failure (medium), model-policy catalog drift with the fallback walk in declaration order (medium), and stale discovery registrations (high).
   - **Chutes:** its 402s are real (that account is unfunded) but non-blocking.
   - The earlier "funding blocker" framing is retracted.
+- **Node 1 federation transport ENABLED (user-approved, deployment) at 2026-10-03T07:17Z.**
+  - :8401/health 200; a direct egress llm_completion to the hub's llm-resolver answered.
+  - **Cause:** the entrypoint enabled the transport only for HUB_DISCOVERY_URL or PEER_MULTIADDR, so a node peering via PEER_DISCOVERY_ENDPOINTS never ran it, while peering mirrored the hub's libp2p arms at 127.0.0.1:8401.
+  - **Fixed for future recreates** in super-repo 4277b49d (DISABLED_VESSELS still outranks it). Stale registration remains its own gap.
+  - **Pre-registered for the probe re-run (qa's window):** the LLM-targeted probes should still fail on the missing prompt (the walk-binding gap), with a changed error, not reach.
+- **Wave hold:** deployment holds the re-pin wave and all SurrealDB upgrades (the hub included) until the 2.3.10 query-rejection sweep is clean or every site is filed.
