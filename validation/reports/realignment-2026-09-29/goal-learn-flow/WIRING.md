@@ -629,3 +629,14 @@ A regression class counts as covered only if negating or removing the shipped ch
   - **Env override, latent:** scoring still lets env SF_BLEND override the tuning row (activities.scoring.ts:126). No node sets it today, so the override is latent; it is tracked in the three-latch class gap with an env-on, verdict-off falsifier.
   - **The verdict is not env-gated:** SF_BLEND_VERDICT has no env fallback.
   - **The "-narrowed" duplicate is closed** as superseded_by_landing.
+
+### SurrealDB 2.3.3 → 2.3.10 deploy events (separate from image recreates)
+- **Why upgrade:** surrealdb#6060, a composite index with an unconstrained middle column returns 0 rows. Fixed in 2.3.8+; the compat pre-check passed against a 2.3.3 control.
+- **Spokes done:**
+  - syzygy-local-surface: 2026-10-03T05:45:05Z.
+  - syzygy-local-inventory: 2026-10-03T05:46:09Z.
+  - Both report engine 2.3.10, 0 failed units, secret-mask 0 VISIBLE, and baseline counts equal. The smoke check's FAIL there is expected: spokes run no activity-api.
+- **Node 1:** two stops.
+  - (a) Restore proof: export, restart unchanged on 2.3.3, restore into a scratch volume and compare counts.
+  - (b) Upgrade: export, recreate on 2.3.10, then the check.
+  - Each stop window is a measurement exclusion; times are appended when deployment reports them.
