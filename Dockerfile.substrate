@@ -254,6 +254,10 @@ COPY scripts/substrate/substrate-config.sh /usr/local/bin/substrate-config
 # docker-cp / bind-mount path is load-bearing.
 COPY scripts/substrate/substrate-pull-sync.sh /usr/local/bin/substrate-pull-sync
 COPY scripts/substrate/mirror-to-live.sh /usr/local/bin/mirror-to-live
+# The shared tracked-red predicate pull-sync sources (and the pre-commit glue runner, from a
+# checkout): one implementation, so the two gates cannot drift. pull-sync looks next to itself,
+# then here; it converges this copy from the super-repo on every ungated tick.
+COPY scripts/substrate/lib/ /usr/local/share/substrate/lib/
 # The pinned judge's core (bootstrap tier): substrate-pull-sync.service runs it; it executes
 # only the accepted gate staged under /workspace/.gate (scripts/substrate/gate/).
 COPY scripts/substrate/gate/gate-runner.sh /usr/local/libexec/substrate/gate-runner

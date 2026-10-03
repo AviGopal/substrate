@@ -138,13 +138,29 @@ restart_age_defer() {
 # That is a check-first landing (the check landed before its fix), a filed failure, not a regression.
 # Keyed on the commit touching the check file, so a tracked test broken by an UNRELATED change still counts
 # as a regression. Empty output (store unreachable, no jq, no match) keeps the stricter gate.
-tracked_fail_names() {
-  local files
-  files="$(printf '%s\n' "$2" | jq -R -s -c 'split("\n") | map(select(length > 0))' 2>/dev/null || echo '[]')"
-  curl -s --max-time 30 -X POST "$DEV_VESSEL/v2/impulses/resolve" -H 'Content-Type: application/json' \
-    -d '{"impulse":{"pointer":{"type":"substrateGap","status":"open","limit":5000}}}' 2>/dev/null \
-  | jq -r --arg v "$1" --argjson files "$files" '(.body.gaps // [])[] | .classification_metadata.evidence_resolve? // empty | select(.shape? == "test_suite") | select(((.input.vessel // "") | sub("^repos/"; "")) == $v) | select((.input.test_file // "") as $tf | $files | index($tf)) | (.input.only_tests // [])[] | select(type == "string" and test("\\S"))' 2>/dev/null || true
-}
+# THE PREDICATE IS SHARED (scripts/substrate/lib/gap-tracked-red.sh): the pre-commit glue runner sources
+# the same file, so the two gates cannot drift. It is found next to this script (a checkout, the gated
+# accepted/ archive) or under $SHARE_DIR/lib (the image's /usr/local/bin install; SELF-CONVERGE FIRST
+# converges that copy every ungated tick, before any re-exec). Not found = no name is tracked: the
+# stricter gate, as before.
+# >>> gap-tracked-red loader
+PULLSYNC_SELF_DIR="${PULLSYNC_SELF_DIR:-$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")}"
+GTR_LIB=""
+for _gtr_c in "$PULLSYNC_SELF_DIR/lib/gap-tracked-red.sh" "${PULLSYNC_SHARE_DIR:-/usr/local/share/substrate}/lib/gap-tracked-red.sh"; do
+  if [ -r "$_gtr_c" ] && . "$_gtr_c" && declare -F gtr_load gtr_tracked_names gtr_select >/dev/null; then GTR_LIB="$_gtr_c"; break; fi
+done
+if [ -n "$GTR_LIB" ]; then
+  tracked_fail_names() {
+    local st
+    st="$(mktemp "${TMPDIR:-/tmp}/pullsync-gtr.XXXXXX" 2>/dev/null)" || return 0
+    gtr_load "$DEV_VESSEL" "$st" && gtr_tracked_names "$st" "$1" "$2"
+    rm -f "$st"
+  }
+else
+  # Fail closed: no predicate, nothing is tracked, every newly-failing name counts.
+  tracked_fail_names() { echo "pull-sync: gap-tracked-red.sh not found next to $PULLSYNC_SELF_DIR — no failing test is exempted" >&2; }
+fi
+# <<< gap-tracked-red loader
 
 # FAILING-TEST GAP GENERATOR (2026-09-30, user-cleared; qa-reviewed). Its evidence_resolve carries zero_field
 # "requested_not_passing": gap-to-feature admission excludes a class2 check with no measured field as
@@ -669,6 +685,19 @@ if [ "${PULLSYNC_REEXECED:-}" != 1 ] && [ "$SUPER_FETCH_OK" = 1 ]; then
   _se_self="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || true)"
   if [ -n "$_se_self" ] && [ -r "$_se_self" ] && stage_committed_glue "$SUPER_DIR"; then
     _se_src="$PULLSYNC_GLUE_STAGE/scripts/substrate"
+    # The shared tracked-red predicate this script sources (see the gap-tracked-red loader). The
+    # /usr/local/bin copy reads it from $SHARE_DIR/lib, which the image may predate: converge it
+    # every ungated tick, before any re-exec, so the exec'd tick and a lib-only commit both reach
+    # it. A copy that fails `bash -n` is not installed (the old one, or none, keeps the gate strict).
+    _se_lib_from="$_se_src/lib/gap-tracked-red.sh"; _se_lib_to="$SHARE_DIR/lib/gap-tracked-red.sh"
+    if [ -z "$PULLSYNC_ACCEPTED_DIR" ] && [ -f "$_se_lib_from" ] && ! cmp -s "$_se_lib_from" "$_se_lib_to" 2>/dev/null; then
+      if bash -n "$_se_lib_from" 2>/dev/null && mkdir -p "$SHARE_DIR/lib" 2>/dev/null \
+         && install -m 0644 "$_se_lib_from" "$_se_lib_to.new" 2>/dev/null && mv -f "$_se_lib_to.new" "$_se_lib_to" 2>/dev/null; then
+        log "self: converged $_se_lib_to (the shared tracked-red predicate)"
+      else
+        log "self: !!! could not converge $_se_lib_to — the installed copy, if any, stays in use (none = no failing test is exempted)"
+      fi
+    fi
     if [ -n "$PULLSYNC_ACCEPTED_DIR" ]; then
       # GATED: no run-on-arrival. The helpers converge from the overlaid stage (a gate-path
       # helper such as mirror-to-live is the ACCEPTED copy there); the pulled commit is judged.
@@ -2338,8 +2367,8 @@ EOF
             # shared by another test file must not hide that file's real regression (qa, 09-30).
             # A FULL-PATH name ("describe > test") is the whole line after the "(fail) "/"✗ " marker, so it
             # can never end with " > <name>"; it matches only as the entire line (still exact, never substring).
-            SUBTRACTED="$(printf '%s\n' "${CONF_SET:-}" | awk -v names="$TRACKED" 'BEGIN{n=split(names,T,"\n")} $0=="" {next} {hit=0; for(i=1;i<=n;i++){ if(T[i]!="" && !used[i] && ((length($0)>=length(T[i])+3 && substr($0,length($0)-length(T[i])-2)==" > " T[i]) || $0=="(fail) " T[i] || $0=="✗ " T[i])){used[i]=1; hit=1; break} } if(hit) print}' || true)"
-            UNTRACKED="$(printf '%s\n' "${CONF_SET:-}" | awk -v names="$TRACKED" 'BEGIN{n=split(names,T,"\n")} $0=="" {next} {hit=0; for(i=1;i<=n;i++){ if(T[i]!="" && !used[i] && ((length($0)>=length(T[i])+3 && substr($0,length($0)-length(T[i])-2)==" > " T[i]) || $0=="(fail) " T[i] || $0=="✗ " T[i])){used[i]=1; hit=1; break} } if(!hit) print}' || true)"
+            SUBTRACTED="$(gtr_select tracked "$TRACKED" "${CONF_SET:-}")"
+            UNTRACKED="$(gtr_select untracked "$TRACKED" "${CONF_SET:-}")"
             N_LEFT="$(printf '%s' "$UNTRACKED" | grep -c . || true)"
             if [ "${N_LEFT:-0}" -lt "$CONFIRMED" ]; then
               log "$v: $((CONFIRMED - ${N_LEFT:-0})) newly-failing test(s) are tracked by open gaps (evidence_resolve.only_tests), not counted as a regression: $(printf '%s' "$SUBTRACTED" | tr '\n' ';' | cut -c1-400)"
