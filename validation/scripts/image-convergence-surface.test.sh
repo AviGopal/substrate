@@ -27,13 +27,27 @@ T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 grep -E '^\s*COPY ' "$DF" | grep -v -- '--from' | sed -E 's/\s+/ /g' | awk '{print $NF"\t"$2}' \
   | grep -E $'\t(scripts/|docker-compose\\.yml)' | while IFS=$'\t' read -r dst src; do
     if [ -d "$ROOT/${src%/}" ]; then
-      (cd "$ROOT/${src%/}" && git ls-files . 2>/dev/null) | while read -r f; do echo "${dst%/}/$f"; done
+      (cd "$ROOT/${src%/}" && git ls-files . 2>/dev/null) | while read -r f; do printf '%s\t%s\n' "${src%/}/$f" "${dst%/}/$f"; done
     elif [[ "$src" == *'*'* ]]; then
-      for f in $ROOT/$src; do [ -f "$f" ] && echo "${dst%/}/$(basename "$f")"; done
+      for f in $ROOT/$src; do [ -f "$f" ] && printf '%s\t%s\n' "${f#$ROOT/}" "${dst%/}/$(basename "$f")"; done
     else
-      case "$dst" in */) echo "${dst%/}/$(basename "$src")" ;; *) echo "$dst" ;; esac
+      case "$dst" in */) printf '%s\t%s\n' "$src" "${dst%/}/$(basename "$src")" ;; *) printf '%s\t%s\n' "$src" "$dst" ;; esac
     fi
-  done | sort -u > "$T/baked"
+  done | sort -u -t $'\t' -k2,2 > "$T/pairs"
+# A build-time temp file (copied, compared and deleted inside one RUN) is not baked.
+grep -q 'rm -f /tmp/docker-compose.source.yml' "$DF" && sed -i '\#\t/tmp/docker-compose.source.yml$#d' "$T/pairs"
+cut -f2 "$T/pairs" > "$T/baked"
+tierb_prefix="$SHARE/super-repo/scripts/substrate/"
+# The manifest form: src<TAB>dst<TAB>mode<TAB>tier (mode from git; tier A = tooling, B = federation runtime tree).
+manifest_lines() {
+  while IFS=$'\t' read -r src dst; do
+    m=$(cd "$ROOT" && git ls-files -s -- "$src" | awk '{print $1}' | head -1)
+    case "$m" in 100755) mode=0755 ;; *) mode=0644 ;; esac
+    case "$dst" in "$tierb_prefix"*) tier=B ;; *) tier=A ;; esac
+    printf '%s\t%s\t%s\t%s\n' "$src" "$dst" "$mode" "$tier"
+  done < "$T/pairs"
+}
+if [ "${1:-}" = --print-manifest ]; then manifest_lines; exit 0; fi
 
 # 2. Installed destinations.
 {
@@ -54,11 +68,18 @@ grep -E '^\s*COPY ' "$DF" | grep -v -- '--from' | sed -E 's/\s+/ /g' | awk '{pri
     echo "$SHARE/vessels.inventory.json"; echo "$SHARE/vessels.manifest.json"
   fi
 } | sort -u > "$T/installed"
-# A build-time temp file (copied, compared and deleted inside one RUN) is not baked.
-grep -q 'rm -f /tmp/docker-compose.source.yml' "$DF" && sed -i '\#^/tmp/docker-compose.source.yml$#d' "$T/baked"
 
-# 3. Compare.
-tierb_prefix="$SHARE/super-repo/scripts/substrate/"
+# 3. The committed manifest must equal the Dockerfile's COPY set (both directions), so they cannot drift.
+MF="$ROOT/scripts/substrate/image-files.manifest"
+if [ -f "$MF" ]; then
+  if diff <(grep -v '^#' "$MF" | grep -v '^$' | sort) <(manifest_lines | sort) > "$T/mdiff"; then
+    ok "the image-files manifest equals the Dockerfile COPY set"
+  else
+    sed 's/^/  manifest drift: /' "$T/mdiff" | head -20; bad "the image-files manifest equals the Dockerfile COPY set"
+  fi
+else bad "the image-files manifest equals the Dockerfile COPY set"; fi
+
+# 4. Compare with what pull-sync installs.
 comm -23 "$T/baked" "$T/installed" > "$T/missing"
 tierb=$(grep -c "^$tierb_prefix" "$T/missing")
 grep -v "^$tierb_prefix" "$T/missing" > "$T/tiera"
