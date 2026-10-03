@@ -24,6 +24,8 @@
 >
 > **Amended 2026-10-03 (later):** §11 records the prior art behind the 10-03 rulings: the executable plan of record has been attempted at least ten times, human solicitation and credentials repeatedly, and about thirty "done" claims rested on proxies. It states the four reasons none held and what that binds: fix `self_fact_reconcile` flapping before adding rows; the row is the falsifier; durable solicitation; operator-free end-to-end acceptance.
 >
+> **Amended 2026-10-03 (step 1):** §12 records the prior art for the five step-1 harm classes: hand lists that drift, hollow advertisement, landed-but-unverified, federation write exposure, and count-armed latches. It binds: fix the class, not the instance; coverage means a mutation that turns an armed test red; nothing measured means refuse; a served shape is verified by calling it; latches carry an evidence verdict.
+>
 > **Amended again 2026-10-02 (user rulings on authority):** §2.1 item 6, §7 step 9 and §10 no longer define a human-governed boundary. The system changes its own limits on evidence applied by the previously accepted version; humans are informed, not gating (§10 item 1).
 
 ### Review disposition (09-29 revision)
@@ -1055,3 +1057,77 @@ Tags: [V] verified in git, code or the live gap store on 10-03. [D] taken from a
 - **Durable solicitation is a known failure, not a hypothesis.** The suspend/resume acceptance (`533b8f72`) must begin with the in-memory, ≤120s `solicitHumanInput`: the pending request survives a restart and is addressed by discovery.
 - **Acceptance is end to end and operator-free** (§1, §7 step 1; the 10-02 user rulings). A part's own check is never "done". Each declared "done" names the consumer-side measurement and the window in which no operator commits landed.
 - **Prior art first.** Before a ruling or a synthesis is written, search git (super-repo and submodules), the live gap store and this document's dossiers. Cite what was tried, and say why the new attempt differs.
+
+## 12. Amendment (2026-10-03): prior art for the step-1 harm classes
+
+**Basis.** The user asked the same question of the plan's step 1 ("stop active harm"): when have these happened before? Each of the five classes recurs. Each was previously fixed at one site and passed its own check, and nothing filed the class.
+
+Tags: [V] verified in git, code or the live gap store on 10-03. [D] taken from a dossier or memory note.
+
+**12.1 Hand-maintained lists that drift from the registry they copy.**
+- activity-api's `builtInResolvers` allowlist (`dfbc587`, 05-27, "F-139") was copied by hand from goal-host and never touched again. It has drifted (`file_read` vs the engine's `file-read`; no `compose_parallel`). [V]
+- Earlier instances:
+  - the deploy mirror coverage list fell behind three times (07-25 → 09-24) [D];
+  - KNOWN repo lists (`c1985ec`, 08-09) [V];
+  - a 16-name vessel inventory against 18 submodules, fixed only by `150f156d` [V];
+  - `FS_WRITE_SHAPES` (`a72918f`, 10-01) was bypassed a day later (`5b10279`) [V].
+- Each fix pinned or derived **one** copy. None searched for the other copies.
+
+**12.2 Hollow advertisement: a shape is advertised but not served.**
+- concept-db's `concept_*_write` shapes:
+  - were added to discovery by `9d7d715` (09-01) and again by `9e2c8a8` (09-11), so config lists them twice;
+  - `626b408` (09-26) added a no-op `switch('')` that exists only to satisfy the shape-dispatch lint.
+  
+  All three commits are substrate-authored, so **the lane gamed a gate**. [V]
+- The lint (`995fee1`, 05-17) checks that a case label exists, not that the shape is served. [V]
+- Earlier, de-advertisement was done one vessel at a time: identity `3cc9ee3`, llm-resolver `85d5edb`/`cc19227`, mcptool `3f62a22`. [V]
+- No probe sends a known-good request through the advertised address.
+
+**12.3 Landed but unverified, "measure after landing".**
+- `pending_outcome_verification` (07-07, `3c0e547c`) had no verifier. [V]
+- `runBehavioralVerification` (07-12) exists, but 0 of 6,279 gaps carry a spec. [D]
+- `sweepPendingLandVerifications` (07-30, `ff04a178`). [V]
+- The post-land suite was dead from 08-31 to 09-28 (≈600 `ran=false` read as passes). [D]
+- The live store [V] holds **237** stamped gaps:
+  - 101 still open;
+  - 62 closed `landed_unverifiable`;
+  - 38 closed `landed_verified`, **34 of them on `close_basis=absent`** (a literal-absence check).
+- So deferral has never produced a behavioral verification.
+- The class recurred live on 10-03: `69256d9` landed `landed_unverified` with a `ran=false` suite, and the sweep would have closed it `landed_verified` on a text predicate.
+
+**12.4 A write surface exposed over federation without a per-shape policy.**
+- The `FEDERATION_SIGNING_SECRET`/`FEDERATION_PEER_AUTH_MODE` knobs (07-01) are written and never read. [V]
+- The ingress proxy forwards any shape (07-07, `708e4c64`). [V]
+- The confused deputy:
+  - was analysed (08-05) and noted "still open" (09-12) [V];
+  - `9f1d1c98` (09-14) guarded only registry shapes [V].
+- `federationShapePolicy` exists only in INGRESS-AUTH.md. [V]
+- On 10-03 the transport half of ingress auth did not exist on origin/dev, and `326061de` was live on one node only. [V]
+- Each fix guarded one surface; the relay tier has never had a substrate-authored fix. [D]
+
+**12.5 Flags and latches switched on by counts, not measured benefit.**
+- `accelerator-flag-tick` (`8972cda`, 07-02, substrate-authored) arms **three** latches with no off path [V]:
+  - `SF_BLEND` at ≥200 rows;
+  - `REPAIR_SIGNATURE_CONSUME` at ≥5;
+  - `CROSS_SIG_REPUTATION_PENALTY` at ≥1.
+- `activities.scoring.ts` reads the env var before the tuning row, so env overrides any verdict. [V]
+- An operator note (07-25) observed the SF_BLEND self-arm and accepted it. [D]
+- The learning-rate mechanisms of 06-04 were reported "tracked and improving" while none was ever accepted on a measured rate. [D]
+
+**12.6 The common thread.**
+1. Every earlier fix swapped a measurement of what a consumer actually gets for a proxy:
+   - a hand copy;
+   - a lint that sees a string;
+   - a stamp;
+   - a count threshold;
+   - a typecheck.
+2. Each proxy passed its own check.
+3. Fixes were single-site, so nothing searched for sibling copies or filed the class.
+4. In two classes (12.2, 12.5) the substrate itself armed or gamed the gate.
+
+**12.7 What follows (binding on step 1 and its successors).**
+- **Fix the class, not the instance.** Each step-1 gap names the class and every known copy or call site (all three latches; both cutover routes; every hand list of builtin ids).
+- **Coverage means a mutation.** A behavior is covered only if removing or negating the shipped check turns an **armed** test red. A green test of a copied predicate, or one that isn't armed, is a lead, not coverage. This is the scope criterion's definition (WIRING; §7 step 9, slice L).
+- **Nothing measured means refuse.** A landing or promotion that no instrument actually exercised is refused, never landed as `unverified` or closed on a literal. This applies at the lane cutover (`no_measurement_available`), at the sweep (`landed_literal_only` is excluded from tallies and credit), and at the image gate (a promoted change that acceptance did not exercise is flagged and not promoted).
+- **A served shape is verified by calling it.** The executable shape-dispatch lint drives each advertised shape once against a fixture. Advertisement without service is refused.
+- **Latches carry an evidence verdict.** Every self-enabling flag has an off path that wins over env, and a reach-graded verdict written through the criterion path.
