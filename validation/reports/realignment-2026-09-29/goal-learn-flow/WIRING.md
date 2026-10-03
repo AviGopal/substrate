@@ -413,3 +413,14 @@ The organs that carry it already exist: self_fact_reconcile rows (selfFactSpec),
   - (iv) durability: suspend, restart goal-host, push dispatches past the prune window, answer, and it resumes the SAME dispatch.
   - (v) a solicitation answer naming an existing fleet secret is refused.
 - **Order.** The shaped secret path comes AFTER the key-rotation runbook (awaiting the user). No identity or secret state is touched until the user approves that runbook.
+
+### Executable plan: prior art and preconditions (qa, 10-03)
+**These are restatements.** The executable plan, suspend/resume with credentials, and the withdrawal of "done" are already traced by REALIGNMENT's dossiers (docs-drift, dormant-mechanism, false-verification, human-surface-escalation, credential-hygiene). The common root of the earlier attempts:
+- checks never connected to gap closure (filed with falsifier none, no landing path);
+- checks never shown to fail;
+- "done" judged by proxies.
+
+1. **Diagnose the flapping first.** The plan's only live home is self_fact_reconcile (15 data rows, scripts/substrate/self-facts.json). Of its 34 self-fact-divergence-* gaps, 13 are open, with reopen_count up to 28: closures flap. Before any WIRING must-fail is registered as a row, find out why. Candidates: the fencing-root class, a stale write flipping an honest false, a predicate without hysteresis. Registering more rows into a flapping evaluator multiplies noise.
+2. **Row equals falsifier.** A row's red files a gap whose class-2 falsifier IS that row, so the row going green is the closure. Every row has a recorded must-fail run before it counts.
+3. **Doc rows use the same closure.** 27 docs-drift-* gaps are open and none has ever closed; "WIRING as a view" must not become number 28.
+4. **Solicitation durability is a known failure, not a hypothetical.** solicitHumanInput keeps pending state in process memory (default ≤120s), so must-fail (iv) of the one-execution ruling fails today.
