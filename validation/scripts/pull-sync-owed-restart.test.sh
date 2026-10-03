@@ -472,6 +472,125 @@ if printf '%s' "$LOOP_HEAD" | grep -q '^  quiesce_release$' && [ "$AFTER_LOOP" =
   ok "(o) the quiesce hold is released first in every vessel pass, after the loop, and on EXIT"
 else bad "(o) expected quiesce_release at the vessel-loop head, right after its done, and in the EXIT trap (head: $(printf '%s' "$LOOP_HEAD" | tr '\n' '|'); after: $AFTER_LOOP)"; fi
 
+
+# ══ (e*) EVERY vessel pass that leaves before the owed path releases a carried hold ══
+# The vessel loop has many early exits before the owed path's carry handling (`P_CARRY_FILE`):
+# fetch failed, HEAD unresolvable, clone ahead, ff-only failed, diverged, not in this runtime, not a
+# git clone, plus the probe-window and masked skips that release explicitly. A pass that leaves by
+# any of them neither re-touched nor released a carried quiesce hold: the marker went stale in
+# silence and the vessel only reopened admission by failing open after QUIESCE_MAX_MS (20 min).
+# These run the REAL loop, from its head to the carry handling, with the REAL log() and the real
+# lines after the loop's `done`, over temp clones with git stubbed per vessel. Each pass must
+# release the carry (marker + carry record) with a logged reason BEFORE the next vessel's pass
+# starts, and leave the owed restart owed (restart-pending, restart-owed-since, restart-deferrals).
+#   (ef) fetch failed      (ed) diverged (operator-authored local commit)   (ea) clone ahead
+#   (eo) ff-only failed    (eh) HEAD unresolvable (silent)   (er) not in this runtime (silent)
+#   (eg) not a git clone (silent)
+#   (ex) GENERIC: a synthetic early exit injected into the extracted loop, with a log line, and
+#   (es) a silent one: the mechanism must cover exits that do not exist yet, not today's list
+#   (eb) the loop HALTS (an outer `break`, as an unhealthy restart or fan-out does) after a vessel
+#        whose carry the owed path handled: a LATER vessel's carry, never visited this tick, is
+#        released after the loop; the handled one is kept
+#   (ec) control: a pass that reaches the carry handling keeps the carry, logs no release
+{
+  sed -n '/^log() {/p' "$SCRIPT"
+  sed -n '/^Q_HELD=""; Q_BOUND=""; Q_CARRY=""$/,/^trap /p' "$SCRIPT" | grep -v '^trap '
+  echo 'run_loop() {'
+  awk '/^for d in "\$CLONE_DIR"\/\*\/; do$/{on=1} on{print} on && /^  P_CARRY_FILE=/{exit}' "$SCRIPT" \
+    | awk '$0 == "  # 1. Fetch + classify vs origin." {
+        print "  case \"$v\" in"
+        print "    *-synthetic-said) log \"$v: a synthetic early exit added after this test was written\"; skipped=$((skipped+1)); continue ;;"
+        print "    *-synthetic-silent) continue ;;"
+        print "  esac"
+      } {print}'
+  echo '  echo "PAST-CARRY $v"'
+  echo '  [ "$v" = a-halt ] && break'
+  echo 'done'
+  awk '/^for d in "\$CLONE_DIR"\/\*\/; do$/{inloop=1} inloop && /^done$/{after=1; next} after && /^$/{exit} after{print}' "$SCRIPT"
+  echo '}'
+} > "$T/lfns.sh"
+grep -q 'synthetic-silent' "$T/lfns.sh" && grep -q 'fetch failed' "$T/lfns.sh" && grep -q 'clone DIVERGED' "$T/lfns.sh" \
+  && grep -q '^  P_CARRY_FILE=' "$T/lfns.sh" && grep -q '^log() {' "$T/lfns.sh" \
+  || { echo "FAIL - could not extract the vessel loop up to the carry handling"; exit 1; }
+# shellcheck disable=SC1090
+source "$T/lfns.sh"
+CLONE_DIR="$T/clones"; BRANCH=dev; LAST_GOOD_DIR="$T/lastgood"; GITMODE="$T/gitmode"; OUT="$T/loop.out"
+content_hash() { echo h; }
+git() {   # per-vessel modes in $GITMODE/<vessel>; default clean (HEAD == origin)
+  local dir=""; [ "${1:-}" = -C ] && { dir="$2"; shift 2; }
+  local mode; mode="$(cat "$GITMODE/$(basename "$dir")" 2>/dev/null || echo clean)"
+  case "$1" in
+    fetch) [ "$mode" != fetchfail ] ;;
+    rev-parse) case "$mode" in nohead) return 1 ;; clean|fetchfail) echo same ;; *) [ "$2" = HEAD ] && echo local || echo remote ;; esac ;;
+    merge-base) case "$mode" in ahead) [ "$3" = "origin/$BRANCH" ] ;; ffonly) [ "$3" = HEAD ] ;; *) return 1 ;; esac ;;
+    pull) return 1 ;;
+    log) echo "Some Operator" ;;
+    config) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+# lsetup <vessel>:<mode>[:carry][:noruntime][:nogit] ... — clones, runtimes, an owed restart, a carried hold each
+lsetup() {
+  rm -rf "$CLONE_DIR" "$GITMODE" "$RUNTIME_DIR" "$MARKER_DIR" "$QD2"; mkdir -p "$CLONE_DIR" "$GITMODE" "$RUNTIME_DIR" "$MARKER_DIR" "$QD2" "$LAST_GOOD_DIR"
+  : > "$OUT"; skipped=0; failed=0; UNIT_ENABLED=enabled; Q_HELD=""; Q_CARRY=""; Q_BOUND=""
+  local spec v mode
+  for spec in "$@"; do
+    v="${spec%%:*}"; mode="$(printf '%s' "$spec" | cut -d: -f2)"
+    mkdir -p "$CLONE_DIR/$v"; echo "$mode" > "$GITMODE/$v"
+    case "$spec" in *:nogit*) ;; *) mkdir -p "$CLONE_DIR/$v/.git" ;; esac
+    case "$spec" in *:noruntime*) ;; *) mkdir -p "$RUNTIME_DIR/$v/src" ;; esac
+    case "$spec" in *:carry*)
+      : > "$QD2/$v"; echo "$QD2/$v" > "$MARKER_DIR/$v.quiesce-carry"
+      echo oldhash > "$MARKER_DIR/$v.restart-pending"; echo 1700000000 > "$MARKER_DIR/$v.restart-owed-since"; echo 2 > "$MARKER_DIR/$v.restart-deferrals" ;;
+    esac
+  done
+}
+owed_kept() { [ "$(cat "$MARKER_DIR/$1.restart-pending" 2>/dev/null)" = oldhash ] && [ "$(cat "$MARKER_DIR/$1.restart-owed-since" 2>/dev/null)" = 1700000000 ] && [ "$(cat "$MARKER_DIR/$1.restart-deferrals" 2>/dev/null)" = 2 ]; }
+rel_line() { grep -an "$1: releasing a carried quiesce hold" "$OUT" | head -1; }
+first_at() { grep -an "$1" "$OUT" | head -1 | cut -d: -f1; }
+# released <vessel> <reason-pattern|""> <label>: released, said why, before the next pass, still owed
+released() {
+  local v="$1" why="$2" label="$3" line; line="$(rel_line "$v")"
+  if [ ! -e "$QD2/$v" ] && [ ! -e "$MARKER_DIR/$v.quiesce-carry" ] && [ -n "$line" ] \
+     && { [ -z "$why" ] || printf '%s' "$line" | grep -q -- "$why"; } \
+     && ! grep -q "^PAST-CARRY $v$" "$OUT" && owed_kept "$v" \
+     && [ -n "$(first_at '^PAST-CARRY zz-control$')" ] && [ "${line%%:*}" -lt "$(first_at '^PAST-CARRY zz-control$')" ]; then
+    ok "$label"
+  else bad "$label: expected the carry released with a logged reason before the next pass, the restart still owed (marker $(held_v "$v"); carry $( [ -e "$MARKER_DIR/$v.quiesce-carry" ] && echo kept || echo gone); owed $(owed_kept "$v" && echo kept || echo CHANGED); out: $(tr '\n' '|' < "$OUT" | cut -c1-700))"; fi
+}
+held_v() { [ -e "$QD2/$1" ] && echo held || echo gone; }
+
+lsetup a-target:fetchfail:carry zz-control:clean; run_loop >> "$OUT" 2>&1
+released a-target "fetch failed" "(ef) fetch failed: the carried hold is released, naming the fetch failure, before the next vessel; restart still owed"
+lsetup a-target:diverged:carry zz-control:clean; run_loop >> "$OUT" 2>&1
+released a-target "DIVERGED" "(ed) diverged: the carried hold is released, naming the divergence, before the next vessel; restart still owed"
+lsetup a-target:ahead:carry zz-control:clean; run_loop >> "$OUT" 2>&1
+released a-target "ahead of origin" "(ea) clone ahead: the carried hold is released with the reason, restart still owed"
+lsetup a-target:ffonly:carry zz-control:clean; run_loop >> "$OUT" 2>&1
+released a-target "ff-only pull failed" "(eo) ff-only failed: the carried hold is released with the reason, restart still owed"
+lsetup a-target:nohead:carry zz-control:clean; run_loop >> "$OUT" 2>&1
+released a-target "" "(eh) HEAD unresolvable (a silent exit): the carried hold is released anyway, restart still owed"
+lsetup a-target:clean:carry:noruntime zz-control:clean; run_loop >> "$OUT" 2>&1
+released a-target "" "(er) not in this runtime (a silent exit): the carried hold is released anyway, restart still owed"
+lsetup a-target:clean:carry:nogit zz-control:clean; run_loop >> "$OUT" 2>&1
+released a-target "" "(eg) not a git clone (a silent exit): the carried hold is released anyway, restart still owed"
+lsetup a-synthetic-said:clean:carry zz-control:clean; run_loop >> "$OUT" 2>&1
+released a-synthetic-said "synthetic early exit" "(ex) GENERIC: an exit injected after the fact releases the carried hold with its own last log line as the reason"
+lsetup a-synthetic-silent:clean:carry zz-control:clean; run_loop >> "$OUT" 2>&1
+released a-synthetic-silent "" "(es) GENERIC: a silent injected exit releases the carried hold too"
+
+lsetup a-halt:clean:carry b-after:clean:carry zz-control:clean; run_loop >> "$OUT" 2>&1
+if grep -q '^PAST-CARRY a-halt$' "$OUT" && ! grep -q '^PAST-CARRY b-after$' "$OUT" \
+   && [ -e "$QD2/a-halt" ] && [ -s "$MARKER_DIR/a-halt.quiesce-carry" ] && [ -z "$(rel_line a-halt)" ] \
+   && [ ! -e "$QD2/b-after" ] && [ ! -e "$MARKER_DIR/b-after.quiesce-carry" ] && [ -n "$(rel_line b-after)" ] && owed_kept b-after; then
+  ok "(eb) the loop halts: a later vessel's carry, never visited, is released after the loop; the handled one is kept"
+else bad "(eb) loop halt: expected b-after's carry released after the loop and a-halt's kept (a-halt $(held_v a-halt), b-after $(held_v b-after); out: $(tr '\n' '|' < "$OUT" | cut -c1-700))"; fi
+
+lsetup a-target:clean:carry zz-control:clean; run_loop >> "$OUT" 2>&1
+if grep -q '^PAST-CARRY a-target$' "$OUT" && [ -e "$QD2/a-target" ] && [ -s "$MARKER_DIR/a-target.quiesce-carry" ] && [ -z "$(rel_line a-target)" ] && owed_kept a-target; then
+  ok "(ec) control: a pass that reaches the carry handling keeps the carry for the owed path, no release logged"
+else bad "(ec) control: expected the carry left for the owed path (marker $(held_v a-target); out: $(tr '\n' '|' < "$OUT" | cut -c1-700))"; fi
+
 echo
 [ "$FAILS" = 0 ] && { echo "PASS - owed restarts survive content moving on"; exit 0; }
 echo "$FAILS failing"; exit 1
