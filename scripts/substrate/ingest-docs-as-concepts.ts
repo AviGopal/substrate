@@ -297,6 +297,9 @@ async function closeReapRefusedGap(reaped: number): Promise<"closed" | "none" | 
     closed_reason: "violation_not_reproduced_on_rescan",
     classification_metadata: {
       ...((open["classification_metadata"] as Record<string, unknown> | undefined) ?? {}),
+      // The gap store refuses a close that names no closer or evidence (development-vessel gapseam).
+      closed_by: "ingest-docs-as-concepts",
+      close_basis: "condition_gone_on_rescan",
       closed_by_run: { at: new Date().toISOString(), reaped },
     },
   });
