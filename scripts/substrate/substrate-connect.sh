@@ -3,9 +3,10 @@
 #
 #   docker exec <container> substrate-connect > ~/.metabob/config.json
 #
-# STDOUT CARRIES ONLY THE CLIENT CONFIG, {"metabob":{"endpoint","apiKey"}}, so the
-# redirect above is safe. Everything meant for a person — the cockpit registration
-# line, the location rule, warnings — goes to stderr and shows in the terminal.
+# STDOUT CARRIES ONLY THE CLIENT CONFIG, {"metabob":{"endpoint","apiKey"}} plus, where this fleet
+# runs development-vessel, {"substrate":{"gapStoreEndpoint"}}, so the redirect above is safe.
+# Everything meant for a person — the cockpit registration line, the location rule, warnings —
+# goes to stderr and shows in the terminal.
 #
 # The key is the one `substrate-status` checks at level `seeded`, and this command
 # refuses (non-zero exit, no key printed, the verdict on stderr) until that level
@@ -74,7 +75,19 @@ else
   esac
 fi
 
-jq -n --arg e "$ENDPOINT" --arg k "$KEY" '{metabob:{endpoint:$e, apiKey:$k}}'
+# The gap store a client's pre-commit glue gate reads (run-glue-tests.sh --gap-store client-config):
+# development-vessel's substrateGap resolver, published at <prefix>090. Top-level "substrate", not
+# inside "metabob": that object is the cockpit's, and the file already carries other top-level keys.
+# A fleet with no development-vessel of its own names none, and that client's check-first glue
+# commits fail closed (said here, not discovered at commit time).
+if [ "$(systemctl is-active development-vessel.service 2>/dev/null || true)" = "active" ]; then
+  GAP_STORE_EP="http://127.0.0.1:${PREFIX}090"
+else
+  GAP_STORE_EP=""
+  echo "[connect] this fleet runs no development-vessel, so the config names no gap store: a check-first glue test cannot be committed from this client (its tracked red is refused)" >&2
+fi
+jq -n --arg e "$ENDPOINT" --arg k "$KEY" --arg g "$GAP_STORE_EP" \
+  '{metabob:{endpoint:$e, apiKey:$k}} + (if $g == "" then {} else {substrate:{gapStoreEndpoint:$g}} end)'
 
 {
   echo "[connect] stdout above is the client config — redirect it to ~/.metabob/config.json (the redirect replaces the whole file)."

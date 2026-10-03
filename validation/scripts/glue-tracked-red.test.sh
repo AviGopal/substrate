@@ -15,6 +15,12 @@
 #   (f) control: no --gap-store -> refused
 #   (g) control: a red test with no "FAIL - " line -> refused (an unnamed failure is never tracked)
 #   (h) control: the same label tracked for ANOTHER file or vessel does not exempt this one
+#   (i) --gap-store client-config, no pinned default:
+#       must fail  no client config and no DEV_VESSEL_ENDPOINT -> refused, naming the missing config
+#       must fail  a config without .substrate.gapStoreEndpoint -> refused, naming the field
+#       control    a config naming a fixture server -> allowed (and the source is named)
+#       control    METABOB_CONFIG_PATH and ./.metabob/config.json take precedence over ~/.metabob;
+#                  DEV_VESSEL_ENDPOINT overrides any config
 #
 # usage: validation/scripts/glue-tracked-red.test.sh
 # Needs bash, jq, awk, sed, curl.
@@ -130,5 +136,39 @@ run --gap-store "$T/store.json"
 root h; synth scoped "shared label"; touch "$T/scoped.red"
 run --gap-store "$T/store.json"
 [ "$RC" = 1 ] && ok "(h) a label tracked for another file / vessel does not exempt this file" || { bad "(h) exit $RC"; show; }
+
+# ── (i) client-config resolution ───────────────────────────────────────────────
+# The fixture server: a curl on PATH that answers the resolver at fixture.invalid only.
+mkdir -p "$T/fx" "$T/home" "$T/cwd"
+jq -c '{shape:"substrateGap",body:{gaps:[.[] | objects | select(.status == "open")]}}' "$T/store.json" > "$T/resp.json"
+printf '#!/usr/bin/env bash\nfor a in "$@"; do case "$a" in http://fixture.invalid/v2/impulses/resolve) cat %q; exit 0 ;; esac; done\nexit 7\n' "$T/resp.json" > "$T/fx/curl"
+chmod +x "$T/fx/curl"
+crun() { # [VAR=value ...] -> RC, output in $T/out.txt; runs from $T/cwd with HOME=$T/home
+  ( cd "$T/cwd" && env -u METABOB_CONFIG_PATH -u DEV_VESSEL_ENDPOINT HOME="$T/home" PATH="$T/fx:$PATH" "$@" \
+      bash "$R/validation/scripts/run-glue-tests.sh" --root "$R" --log-dir "$R/logs" --gap-store client-config ) > "$T/out.txt" 2>&1; RC=$?
+}
+cfg() { jq -n --arg g "$2" '{metabob:{endpoint:"http://trace.invalid",apiKey:"not-a-key"}} + (if $g == "" then {} else {substrate:{gapStoreEndpoint:$g}} end)' > "$1"; }
+root i; synth check-first "$LABEL"; touch "$T/check-first.red"
+crun
+[ "$RC" = 1 ] && grep -q "not exempt: no client config: $T/home/.metabob/config.json is absent" "$T/out.txt" && grep -q 'DEV_VESSEL_ENDPOINT is unset' "$T/out.txt" \
+  && ok "(i) no client config, no env: refused, naming the missing config" || { bad "(i) no config: exit $RC"; show; }
+mkdir -p "$T/home/.metabob"; cfg "$T/home/.metabob/config.json" ""
+crun
+[ "$RC" = 1 ] && grep -q "names no .substrate.gapStoreEndpoint" "$T/out.txt" && ok "(i) a config without the field: refused, naming the field" || { bad "(i) no field: exit $RC"; show; }
+cfg "$T/home/.metabob/config.json" http://fixture.invalid
+crun
+[ "$RC" = 0 ] && grep -q '^TRACKED-RED .*check-first.test.sh' "$T/out.txt" && grep -qF "open gaps from http://fixture.invalid (from client config $T/home/.metabob/config.json)" "$T/out.txt" \
+  && ok "(i) a config naming a fixture server: allowed, source named" || { bad "(i) config with field: exit $RC"; show; }
+cfg "$T/home/.metabob/config.json" ""; cfg "$T/alt.json" http://fixture.invalid
+crun METABOB_CONFIG_PATH="$T/alt.json"
+[ "$RC" = 0 ] && grep -qF "(from client config $T/alt.json)" "$T/out.txt" && ok "(i) METABOB_CONFIG_PATH takes precedence" || { bad "(i) METABOB_CONFIG_PATH: exit $RC"; show; }
+mkdir -p "$T/cwd/.metabob"; cfg "$T/cwd/.metabob/config.json" http://fixture.invalid
+crun
+[ "$RC" = 0 ] && grep -qF "(from client config $T/cwd/.metabob/config.json)" "$T/out.txt" && ok "(i) ./.metabob/config.json shadows ~/.metabob" || { bad "(i) ./.metabob: exit $RC"; show; }
+rm -rf "$T/cwd/.metabob" "$T/home/.metabob"
+crun DEV_VESSEL_ENDPOINT=http://fixture.invalid
+[ "$RC" = 0 ] && grep -qF '(from DEV_VESSEL_ENDPOINT (explicit override))' "$T/out.txt" && ok "(i) DEV_VESSEL_ENDPOINT overrides, named as an override" || { bad "(i) env override: exit $RC"; show; }
+crun DEV_VESSEL_ENDPOINT=http://127.0.0.1:9
+[ "$RC" = 1 ] && grep -qF 'gap store unreadable: http://127.0.0.1:9 (from DEV_VESSEL_ENDPOINT' "$T/out.txt" && ok "(i) an override that answers nothing: refused" || { bad "(i) dead override: exit $RC"; show; }
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

@@ -37,10 +37,19 @@
 #               passes a checkout-index export of the index here.
 #   --log-dir   where per-test output lands (default: a fresh mktemp dir, kept)
 #   --gap-store the gap store that can exempt a tracked red: a development-vessel base URL
-#               (read through the substrateGap resolver) or a JSON file. Absent = no exemption.
+#               (read through the substrateGap resolver), a JSON file, or `client-config`:
+#               the address the emitted client config names (below). Absent = no exemption.
 #   --list      print the tests that would run, and exit
 # env: GLUE_TESTS_BUN  path to a bun binary (default: bun on PATH)
 #      GTR_MAX_TIME    seconds to wait for a --gap-store URL (default 10)
+#
+# --gap-store client-config. The store address is never a pinned default. It is, in order:
+#   DEV_VESSEL_ENDPOINT, when set (an explicit operator override, named in the output);
+#   else `.substrate.gapStoreEndpoint` of the client config substrate-connect emits, found by the
+#   cockpit's own rule: METABOB_CONFIG_PATH when set, else ./.metabob/config.json, else
+#   ~/.metabob/config.json.
+# No config file, or one without that field (a config emitted before substrate-connect wrote it),
+# is FAIL CLOSED: no exemption, and the output says which file was read and what it lacked.
 # exit: 0 no failure (a TRACKED-RED test is not a failure) · 1 a test failed · 64 usage
 set -uo pipefail
 
@@ -99,9 +108,32 @@ mkdir -p "$LOG_DIR" && LOG_DIR="$(cd "$LOG_DIR" && pwd)"
 
 # THE TRACKED-RED PREDICATE, loaded once from the tree under test (the staged copy, in the hook).
 # GTR_STATE: none (no --gap-store) | unreadable (fail closed) | loaded.
-GTR_STATE=none; GTR_STORE="$LOG_DIR/.open-gaps.json"
+GTR_STATE=none; GTR_STORE="$LOG_DIR/.open-gaps.json"; GTR_NONE_WHY=""; GAP_STORE_FROM=""
+client_config_store() { # -> prints the store address; or prints nothing and sets nothing (why on fd 3)
+  local cfg ep
+  if [ -n "${DEV_VESSEL_ENDPOINT:-}" ]; then printf '%s' "$DEV_VESSEL_ENDPOINT"; echo "DEV_VESSEL_ENDPOINT (explicit override)" >&3; return 0; fi
+  if [ -n "${METABOB_CONFIG_PATH:-}" ]; then cfg="$METABOB_CONFIG_PATH"
+  elif [ -f "$PWD/.metabob/config.json" ]; then cfg="$PWD/.metabob/config.json"
+  else cfg="${HOME:-/nonexistent}/.metabob/config.json"; fi
+  if [ ! -r "$cfg" ]; then
+    echo "no client config: $cfg is absent or unreadable (METABOB_CONFIG_PATH ${METABOB_CONFIG_PATH:+set}${METABOB_CONFIG_PATH:-unset}; no ./.metabob/config.json) and DEV_VESSEL_ENDPOINT is unset — emit one with substrate-connect" >&3
+    return 1
+  fi
+  ep="$(jq -r '.substrate.gapStoreEndpoint // empty' "$cfg" 2>/dev/null)"
+  if [ -z "$ep" ]; then
+    echo "client config $cfg names no .substrate.gapStoreEndpoint — re-emit it with substrate-connect" >&3
+    return 1
+  fi
+  printf '%s' "$ep"; echo "client config $cfg" >&3
+}
+if [ "$GAP_STORE" = client-config ]; then
+  GTR_SRC_NOTE="$(mktemp "${TMPDIR:-/tmp}/glue-gtr-src.XXXXXX")"
+  GAP_STORE="$(client_config_store 3>"$GTR_SRC_NOTE")" || GAP_STORE=""
+  GTR_SRC_WHY="$(cat "$GTR_SRC_NOTE" 2>/dev/null)"; rm -f "$GTR_SRC_NOTE"
+  if [ -z "$GAP_STORE" ]; then GTR_STATE=unreadable; GTR_NONE_WHY="$GTR_SRC_WHY"; else GAP_STORE_FROM="$GTR_SRC_WHY"; fi
+fi
 if [ -n "$GAP_STORE" ]; then
-  GTR_STATE=unreadable
+  GTR_STATE=unreadable; GTR_NONE_WHY="gap store unreadable: $GAP_STORE${GAP_STORE_FROM:+ (from $GAP_STORE_FROM)}"
   GTR_MAX_TIME="${GTR_MAX_TIME:-10}"
   # shellcheck disable=SC1091
   if [ -r "$ROOT/scripts/substrate/lib/gap-tracked-red.sh" ] && . "$ROOT/scripts/substrate/lib/gap-tracked-red.sh" \
@@ -116,7 +148,7 @@ tracked_red() {
   case "$1" in *.test.sh) ;; *) GTR_WHY="bun tests are not exempted"; return 1 ;; esac
   case "$GTR_STATE" in
     none) GTR_WHY="no --gap-store"; return 1 ;;
-    unreadable) GTR_WHY="gap store unreadable: $GAP_STORE"; return 1 ;;
+    unreadable) GTR_WHY="$GTR_NONE_WHY"; return 1 ;;
   esac
   labels="$(sed -n 's/^FAIL - //p' "$2" 2>/dev/null)"
   [ -n "$labels" ] || { GTR_WHY="no 'FAIL - <label>' line names the failure"; return 1; }
@@ -139,8 +171,8 @@ t_all="$(now)"
 mode="full"; [ "$FAST" = 1 ] && mode="fast"
 echo "glue tests ($mode) under $ROOT — logs: $LOG_DIR"
 case "$GTR_STATE" in
-  loaded) echo "tracked-red exemptions: open gaps from $GAP_STORE" ;;
-  unreadable) echo "tracked-red exemptions: NONE — gap store unreadable ($GAP_STORE); every red test fails" ;;
+  loaded) echo "tracked-red exemptions: open gaps from $GAP_STORE${GAP_STORE_FROM:+ (from $GAP_STORE_FROM)}" ;;
+  unreadable) echo "tracked-red exemptions: NONE — $GTR_NONE_WHY; every red test fails" ;;
 esac
 for b in "${TESTS[@]}"; do
   log="$LOG_DIR/$b.log"
