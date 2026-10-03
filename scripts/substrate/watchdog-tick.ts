@@ -88,7 +88,7 @@ async function leaseHeld(name: string): Promise<boolean> {
   try {
     const res = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
       body: JSON.stringify({ impulse: { type: "maintenanceLease", name } }),
       signal: AbortSignal.timeout(3_000),
     });
@@ -149,7 +149,7 @@ async function main(): Promise<void> {
       try {
         const res = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
           body: JSON.stringify({ impulse: { type: RESTART_IMPULSE, triggered_by: "watchdog", flow: FLOW } }),
           signal: AbortSignal.timeout(240_000),
         });

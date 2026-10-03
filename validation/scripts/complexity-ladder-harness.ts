@@ -101,7 +101,7 @@ async function measureGroundTruth(): Promise<GroundTruth> {
   } catch (e) { errors.push(`registry/stats: ${(e as Error).message}`); }
   try {
     const r = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
       body: JSON.stringify({ impulse: { type: "substrateGap", status: "open", limit: 5000 } }),
       signal: AbortSignal.timeout(90_000),
     });
@@ -256,7 +256,7 @@ async function poll(dispatchId: string): Promise<Record<string, unknown> | null>
   while (Date.now() < deadline) {
     try {
       const r = await fetch(`${GOAL_HOST}/resolve`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
         body: JSON.stringify({ pointer: { type: "activeDispatches", limit: 200 } }),
         signal: AbortSignal.timeout(30_000),
       });
@@ -316,7 +316,7 @@ function extractAnswer(rec: Record<string, unknown>): string {
 async function verifySideEffect(titleContains: string, expectValues: string[]) {
   try {
     const r = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
       body: JSON.stringify({ impulse: { type: "memoryNote", title_prefix: titleContains, limit: 20 } }),
       signal: AbortSignal.timeout(30_000),
     });

@@ -1218,10 +1218,12 @@ if (wanted("S11")) {
   const f: FixtureResult[] = [];
   const poolStats = (): { total: number; phantom: number } | null => {
     try {
-      const out = execFileSync("curl", ["-s", "-m", "25", "-X", "POST",
+      // The node key goes to curl as a config on stdin (-K -), never on argv.
+      const key = process.env.METABOB_API_KEY ?? "";
+      const out = execFileSync("curl", ["-K", "-", "-s", "-m", "25", "-X", "POST",
         "http://localhost:18090/v2/impulses/resolve", "-H", "Content-Type: application/json",
         "-d", '{"impulse":{"type":"substrateGap","pointer":{"limit":400}}}'],
-        { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"], timeout: 30_000, maxBuffer: 64 * 1024 * 1024 });
+        { input: key ? `header = "Authorization: ApiKey ${key}"\n` : "", encoding: "utf-8", stdio: ["pipe", "pipe", "ignore"], timeout: 30_000, maxBuffer: 64 * 1024 * 1024 });
       const gaps = (JSON.parse(out)?.body?.gaps ?? []) as Array<{ summary?: string }>;
       if (gaps.length === 0) return null;
       const phantom = gaps.filter((g) => /apability gap/.test(g.summary ?? "") && /needs a producer/.test(g.summary ?? "")).length;

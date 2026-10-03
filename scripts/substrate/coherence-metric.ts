@@ -33,7 +33,7 @@ const acts = (rows || []).filter((a: any) => a.id && !isHook(a.id));
 const sigs = acts.map((a: any) => `${(a.name || a.id).slice(0, 80)} :: in:${(a.input_shapes||[]).join(",")} out:${(a.output_shapes||[]).join(",")}`);
 // Embed via the concept-db generalization primitive (reuse the local MiniLM model).
 const er = await fetch("http://127.0.0.1:8260/v2/impulses/resolve", { method: "POST",
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
   body: JSON.stringify({ impulse: { pointer: { type: "embed", texts: sigs } } }) });
 const embeds: number[][] = ((await er.json()).content || []).map((c: any) => c.embedding);
 const norm = (v: number[]) => { let s = 0; for (const x of v) s += x * x; const n = Math.sqrt(s) || 1; return v.map((x) => x / n); };

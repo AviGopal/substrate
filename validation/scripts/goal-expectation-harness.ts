@@ -111,7 +111,7 @@ async function llmJudge(goal: string, rubric: string, answer: string): Promise<{
   try {
     const r = await fetch(LLM_RESOLVER, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
       body: JSON.stringify({ type: "llm_completion", prompt }),
     });
     const j = (await r.json()) as { resolved?: boolean; content?: unknown; model?: string; error?: string };

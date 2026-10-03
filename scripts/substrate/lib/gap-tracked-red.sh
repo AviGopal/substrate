@@ -56,7 +56,10 @@ gtr_load() {
   command -v jq >/dev/null 2>&1 || return 1
   case "$src" in
     http://*|https://*)
-      raw="$(curl -s --max-time "${GTR_MAX_TIME:-30}" -X POST "${src%/}/v2/impulses/resolve" -H 'Content-Type: application/json' \
+      # The store is read with the node key when one is set (on stdin as a curl config, never argv):
+      # every resolve route validates its caller, and an anonymous read can come back empty.
+      raw="$({ if [ -n "${METABOB_API_KEY:-}" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; fi; } \
+        | curl -K - -s --max-time "${GTR_MAX_TIME:-30}" -X POST "${src%/}/v2/impulses/resolve" -H 'Content-Type: application/json' \
         -d "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap\",\"status\":\"open\",\"limit\":$GTR_LIMIT}}}" 2>/dev/null)" || return 1
       ;;
     *)

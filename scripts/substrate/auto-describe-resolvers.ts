@@ -182,7 +182,7 @@ async function generateDescription(shape: string, evidence: string): Promise<str
   try {
     const r = await fetch(`${LLM}/resolve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
       body: JSON.stringify({ type: "llm_completion", prompt, model: LLM_MODEL, max_tokens: 120 }),
       signal: AbortSignal.timeout(30000),
     });

@@ -363,7 +363,7 @@ async function test_22_7_5_path_d(vesselEndpoint: string): Promise<{ success: bo
     console.log("  ⚠️ no vessel endpoint (skipping)");
     return { success: false, error: "no vessel endpoint" };
   }
-  // Unauthenticated → expect 401
+  // Unauthenticated → expect 401 (resolve-auth: deliberately unauthenticated)
   const noAuthRes = await fetch(`${vesselEndpoint}/v2/impulses/resolve`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

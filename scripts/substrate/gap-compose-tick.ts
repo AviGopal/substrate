@@ -43,7 +43,7 @@ const DEADLINE_MS = 12 * 60_000;
 async function composeOne(): Promise<Record<string, unknown> | null> {
   const resp = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
     body: JSON.stringify({
       impulse: { type: "gap_to_feature", dry_run: !APPLY, ...(CATEGORY ? { category: CATEGORY } : {}) },
     }),

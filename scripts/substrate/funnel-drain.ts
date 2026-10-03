@@ -28,7 +28,7 @@ async function main(): Promise<void> {
   try {
     const res = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
       body: JSON.stringify({ impulse: { type: "apply_proposal_as_patch", config: { type: "apply_proposal_as_patch" } } }),
       signal: AbortSignal.timeout(200_000),
     });

@@ -17,7 +17,7 @@ async function main(): Promise<void> {
   try {
     const resp = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
       body: JSON.stringify({ impulse: { type: "db_contention_observer" } }),
       signal: AbortSignal.timeout(20_000),
     });

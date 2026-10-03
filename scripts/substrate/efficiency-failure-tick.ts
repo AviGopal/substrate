@@ -17,7 +17,7 @@ async function post(impulse: Record<string, unknown>): Promise<any> {
   try {
     const res = await fetch(`${DEV}/v2/impulses/resolve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(process.env.METABOB_API_KEY ? { Authorization: `ApiKey ${process.env.METABOB_API_KEY}` } : {}) },
       body: JSON.stringify({ impulse }),
       signal: AbortSignal.timeout(120_000),
     });
