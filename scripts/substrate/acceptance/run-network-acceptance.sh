@@ -21,6 +21,10 @@
 #                     to the stopped spoke must not return the second spoke's (or the hub's)
 #                     copy of the file; within 60 s the hub stops offering it; after a start
 #                     it is registered again and reads its own marker
+#   large_frame_concurrency
+#                     the hub reads a 1 MiB file from both spokes at once (48 reads, 8 at a
+#                     time, each bounded at 30 s): every read returns the whole body, and no
+#                     transport or relay logs a cipher error
 #   secret_scan_clean no value in any node's own secret store appears in that node's
 #                     journals (all units, all retained boots), its container log, or its
 #                     trace store's data rows (secret-leak-scan.sh; counts and names only)
@@ -332,6 +336,80 @@ if [ -n "${target:-}" ] && [ -n "${hub_key:-}" ]; then
     if poll 240 registered && poll 120 read_via_spoke; then set_check rejoin pass "$(jq -nc --arg t "$target" '{vessel: $t}')"
     else set_check rejoin fail "$(jq -nc --arg t "${target:-}" --arg a "$(printf '%s' "${answer:-}" | head -c 200)" '{vessel: $t, answer: $a}')"; fi
   fi
+fi
+
+# ── 6. Large bodies from two spokes at once ───────────────────────────────────────
+# Noise encrypts every frame with chacha20-poly1305, and its default crypto hands frames
+# of 1200 bytes or more to node:crypto, which Bun does not implement ("Unknown cipher").
+# Writes of 1 KB or less only coalesce into a frame that size under backpressure, which
+# one caller reading large bodies from two peers at once produces. The throw aborts the
+# circuit, the relay resets it on the far side, and the read hangs until its caller gives
+# up. A single read, or many small ones, never forms such a frame, so nothing above
+# exercises it. The fix (the AssemblyScript cipher at every size) has to be on BOTH sides:
+# a fixed sender emits frames an unfixed receiver throws decrypting. So an image whose
+# relay or transport still runs the default fails here.
+#   large_frame_concurrency  every bounded read returns the whole body, and the hub's
+#                            relay and every node's transport log no cipher error
+# Circuit resets are counted and reported, not judged: they are the symptom and the
+# cipher error is the cause. DCUtR's own resets are left out because its upgrade attempts
+# reset their streams whatever the cipher is.
+lf_n=48; lf_c=8; lf_bytes=1048576; lf_bound=30
+if [ "$(jq -r '.rejoin.result // empty' <<<"$checks")" = pass ] && [ -n "${second_target:-}" ] && [ -n "${spoke2_id:-}" ]; then
+  lf_path=/workspace/validation/network-acceptance-large.txt
+  for c in "$SPOKE_C" "$SPOKE2_C"; do
+    eng exec "$c" sh -c "mkdir -p /workspace/validation && head -c $lf_bytes /dev/zero | tr '\\0' x > $lf_path" >/dev/null 2>&1
+  done
+  # libp2p logs only under DEBUG. Its error namespaces alone are a few lines a minute,
+  # enough to count cipher errors and resets without a trace-level flood. This is a
+  # logging drop-in, not code, so the image under judgement is unchanged (image_code
+  # below still compares every vessel's tree).
+  log "turning on libp2p error logging for the large-frame check (restarts the relay and transports)"
+  for c in "$HUB_C" "$SPOKE_C" "$SPOKE2_C"; do
+    eng exec "$c" sh -c 'for u in federation-relay federation-transport-vessel; do systemctl is-active -q $u || continue; mkdir -p /etc/systemd/system/$u.service.d; printf "[Service]\nEnvironment=DEBUG=libp2p:*:error\n" >/etc/systemd/system/$u.service.d/zz-acceptance-errors.conf; systemctl daemon-reload; systemctl restart $u; done' >/dev/null 2>&1
+  done
+  # Both spokes must be offered and answering again before the reads, or a restart's
+  # withdrawal would count as a stall.
+  lf_ready() {
+    spoke_id="$first_id"; registered || return 1; target="$first_target"; marker_saved="$marker"
+    read_via_spoke || return 1
+    spoke_id="$spoke2_id"; registered || return 1; target="$second_target"; marker="$marker2"
+    read_via_spoke; local r=$?; marker="$marker_saved"; target="$first_target"; spoke_id="$first_id"; return $r
+  }
+  if ! poll 240 lf_ready; then
+    set_check large_frame_concurrency fail "$(jq -nc '{note: "after the logging restart the two spokes were not both offered and readable within 240 s, so no large read ran"}')"
+  else
+    lf_since="$(date +%s)"; lf_t0="$(date +%s)"
+    log "reading ${lf_bytes}-byte bodies from both spokes: $lf_n reads, $lf_c at a time, ${lf_bound} s bound each"
+    for i in $(seq 1 $((lf_n / 2))); do printf '%s\n%s\n' "$first_target" "$second_target"; done \
+      | eng exec -i "$HUB_C" sh -c "xargs -P $lf_c -I{} curl -s -m $lf_bound -o /dev/null -w '{} %{http_code} %{size_download} %{time_total}\n' -H 'Content-Type: application/json' -X POST 'http://127.0.0.1:8401/egress/resolve?vessel={}' -d '{\"pointer\":{\"type\":\"fileContent\",\"path\":\"$lf_path\"}}'" \
+      >"$RESULT_DIR/diag/large-frame-reads.txt" 2>/dev/null
+    lf_wall=$(( $(date +%s) - lf_t0 ))
+    # A read counts only if it came back 200 with at least the file's bytes. A stall
+    # surfaces as code 000 at the bound, a truncation as a short body.
+    lf_stats="$(awk -v b="$lf_bytes" '{ n++; if ($2 == 200 && $3 >= b) ok++; else bad[$1]++; if ($4 > m) m = $4 }
+      END { printf "{\"n_ok\":%d,\"n_seen\":%d,\"max_s\":%.1f,\"failed_by_target\":{", ok, n, m; s = ""; for (t in bad) { printf "%s\"%s\":%d", s, t, bad[t]; s = "," } printf "}}" }' \
+      "$RESULT_DIR/diag/large-frame-reads.txt")"
+    lf_errs='{}'
+    for c in "$HUB_C" "$SPOKE_C" "$SPOKE2_C"; do
+      for u in federation-relay federation-transport-vessel; do
+        eng exec "$c" systemctl is-active -q "$u" 2>/dev/null || continue
+        eng exec "$c" sh -c "journalctl -u $u --since @$lf_since --no-pager -o cat" >"$RESULT_DIR/diag/large-frame-$u-$c.log" 2>/dev/null || true
+        ce="$(grep -ac 'Unknown cipher' "$RESULT_DIR/diag/large-frame-$u-$c.log")"
+        cr="$(grep -a 'StreamResetError' "$RESULT_DIR/diag/large-frame-$u-$c.log" | grep -avc -i dcutr)"
+        lf_errs="$(jq -c --arg k "$c/$u" --argjson e "${ce:-0}" --argjson r "${cr:-0}" '. + {($k): {cipher_errors: $e, circuit_resets: $r}}' <<<"$lf_errs")"
+      done
+    done
+    lf_detail="$(jq -nc --argjson s "$lf_stats" --argjson e "$lf_errs" --argjson n "$lf_n" --argjson c "$lf_c" --argjson b "$lf_bytes" --argjson m "$lf_bound" --argjson w "$lf_wall" \
+      '{n_ok: $s.n_ok, n_total: $n, concurrency: $c, body_bytes: $b, bound_s: $m, wall_s: $w, max_s: $s.max_s,
+        failed_by_target: $s.failed_by_target,
+        cipher_errors: ([$e[].cipher_errors] | add // 0), circuit_resets: ([$e[].circuit_resets] | add // 0),
+        by_unit: $e, reads: "diag/large-frame-reads.txt"}')"
+    if jq -e '.n_ok == .n_total and .cipher_errors == 0' <<<"$lf_detail" >/dev/null; then
+      set_check large_frame_concurrency pass "$lf_detail"
+    else set_check large_frame_concurrency fail "$lf_detail"; fi
+  fi
+else
+  set_check large_frame_concurrency unknown "$(jq -nc --arg r "$(jq -r '.rejoin.result // "not run"' <<<"$checks")" '{note: "needs both spokes joined and the first back after its rejoin", rejoin: $r}')"
 fi
 
 # ── Diagnostics and the verdict ───────────────────────────────────────────────────
