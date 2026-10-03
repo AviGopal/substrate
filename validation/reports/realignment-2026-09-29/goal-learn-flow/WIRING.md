@@ -588,3 +588,8 @@ A regression class counts as covered only if negating or removing the shipped ch
 - **Deviation 1:** nethub-live (compose project "nethub", started 04:58:49Z from ghcr :dev at af119736) runs af119736's relay.ts, so the unmeasured relay change is LIVE there. Ownership and pinning are being asked of the deployment session.
 - **Deviation 2:** pubspoke's pull-sync mirrored lib 69256d9 into /vessels at 04:59:07Z and restarted the transport, which still loads the baked copy (c90decc). Nothing new became live; it was a no-op restart.
 - **Watch:** node 2's pull-sync gate shadow-evaluates af119736's relay.ts ("verdict soaking 865b4a28: shadow pass 1/3"). It may promote it through the gate path without an image change. Unverified; asked.
+
+### Relay liveness after gate promotion (measured by deployment-redeployment)
+- **Gate promotion cannot make a relay change live.** pull-sync's gate overlay copies accepted gate paths only into the staged glue and clone trees under /workspace. On every node checked (node 2 with the relay active; node 1 and pubspoke with the transport), federation-relay and federation-transport-vessel run from the image-baked copy under /usr/local/share/substrate/super-repo, and no drop-in overrides ExecStart.
+- **Consequence for audits:** a node's `accepted.sha` can name a commit ahead of the code the node actually runs. Judge liveness by the loaded blob (`git hash-object` of the file the unit loads), never by `accepted.sha`. Federation changes go live only through an image rebuild and recreate (the open gap on the image-baked federation copy).
+- nethub-live (compose project "nethub", ghcr :dev af119736) belongs to the network fork's large-frame acceptance fleet. It is temporary and is torn down with compose down only.
