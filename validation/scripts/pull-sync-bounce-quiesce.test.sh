@@ -35,6 +35,12 @@
 #                  below it the bounce still defers; at it the bounce proceeds, logs
 #                  FORCED-AFTER-DEFER, and files exactly one gap with a stable id
 #   (g) STARVATION the same through the age bound (pull_sync.bounce_defer_max_seconds)
+#   (h) SECRET     the tuning read authenticates without the API key in any curl argv
+#                  (/proc/<pid>/cmdline is world-readable in the container); the key does
+#                  reach curl, through its stdin config
+#   (i) FALLBACK   a 401 or unreachable tuning store yields the default and is recorded
+#                  visibly, exactly once per name per tick, even with two shared packages
+#                  reading both names in the same tick
 #   The done line counts a deferred bounce as deferred, never as synced ((a), (b)).
 #
 # The fixture guard keys on the "shared package changed" line ANYWHERE in the output, or on
@@ -80,7 +86,12 @@ cat > "$T/stub/curl" <<EOF
 echo "curl \$*" >> "$CALLS"
 case "\$*" in
   */v2/tuning-params/*) a="\$*"; n="\${a##*/v2/tuning-params/}"; n="\${n%% *}"
-             cat "$T/tuning/\$n" 2>/dev/null || printf '{"name":"%s","value":null}' "\$n"; exit 0 ;;
+             case " \$* " in *" -K - "*) cat >> "$T/curlcfg" ;; esac
+             case "\$(cat "$T/tuning-mode" 2>/dev/null)" in
+               down) printf 000; exit 7 ;;
+               401) printf '{"error":"unauthorized"}\n401'; exit 0 ;;
+             esac
+             cat "$T/tuning/\$n" 2>/dev/null || printf '{"name":"%s","value":null}' "\$n"; printf '\n200'; exit 0 ;;
   *http_code*) printf 200; exit 0 ;;
   */health*) p="\$(printf '%s' "\$*" | grep -o '127\.0\.0\.1:[0-9]*' | head -1 | cut -d: -f2)"
              cat "$T/health/\$p" 2>/dev/null || printf '{"status":"ok"}'; exit 0 ;;
@@ -122,7 +133,7 @@ push_change() { # vessel
   echo "export const y = $RANDOM;" >> "$S/src/index.ts"; g "$S" commit -am change; g "$S" push origin dev
 }
 setup() {
-  rm -rf "$T/ws" "$T/rt" "$T/o" "$T/seed" "$T/health"/* "$T/tuning"/*; : > "$CALLS"; : > "$ALLCALLS"
+  rm -rf "$T/ws" "$T/rt" "$T/o" "$T/seed" "$T/health"/* "$T/tuning"/* "$T/tuning-mode" "$T/curlcfg"; : > "$CALLS"; : > "$ALLCALLS"
   mkdir -p "$T/ws/git/vessels" "$T/ws/.last-good" "$T/rt" "$T/o"
   local dep='{"name":"%s","dependencies":{"@avigopal/ias-executor-ts":"file:../ias-executor-ts"}}'
   # shellcheck disable=SC2059
@@ -145,7 +156,8 @@ run() { # [VAR=value ...] extra environment for this tick
     env "$@" timeout 120 bash "$T/pull-sync.sh" > "$OUT" 2>&1 ); RC=$?
   cat "$CALLS" >> "$ALLCALLS"
 }
-tuning() { printf '{"name":"%s","value":%s}\n' "$1" "$2" > "$T/tuning/$1"; }
+tuning() { printf '{"name":"%s","value":%s}' "$1" "$2" > "$T/tuning/$1"; }
+fallbacks() { grep -c "tuning_param_fallback name=$1 reason=$2 " "$OUT"; }
 done_line() { grep 'done — synced=' "$OUT" | tail -1; }
 fanout_ran() { grep -q "$PKG: shared package changed" "$OUT" || grep -q "\"vessel\":\"$PKG\"" "$T/ws/pull-sync-deferrals.jsonl" 2>/dev/null; }
 gaps_forced() { grep -c "pull-sync-bounce-forced-$PKG" "$ALLCALLS"; }
@@ -247,5 +259,44 @@ run
 [ "$(restarts "$DV")" = 1 ] && grep -q "FORCED-AFTER-DEFER" "$OUT" \
   && ok "(g) once the first deferral is older than the shaped age bound the bounce is forced" \
   || bad "(g) the shaped age bound did not force the bounce"
+
+# ── (h) the API key never reaches curl's argv ───────────────────────────────────
+FIXTURE_KEY="fixture-key-$$-$RANDOM"   # generated per run: a fixture, never a credential
+setup; push_change "$PKG"
+tuning pull_sync.bounce_defer_max_ticks 6
+health "$DV_PORT" 1 60000; health "$LT_PORT" 0 0
+run METABOB_API_KEY="$FIXTURE_KEY"
+grep -q 'v2/tuning-params/pull_sync.bounce_defer_max_ticks' "$CALLS" || bad "fixture: the tuning read never happened"
+grep -qF "$FIXTURE_KEY" "$ALLCALLS" && bad "(h) the API key value appears in a curl argument" \
+  || ok "(h) the API key value appears in no curl argument"
+grep -qF "Authorization: ApiKey $FIXTURE_KEY" "$T/curlcfg" 2>/dev/null && ok "(h) the API key reaches curl through its stdin config" \
+  || bad "(h) the API key does not reach curl through its stdin config"
+
+# ── (i) a failed tuning read falls back visibly, once per name per tick ──────────
+P2=zz-shared-ts
+setup
+seed "$P2" '{"name":"@avigopal/zz-shared-ts","scripts":{"build":"tsc"}}'
+echo '{}' > "$T/rt/$P2/tsconfig.build.json"
+mkdir -p "$T/rt/$P2/dist"; echo '// old build' > "$T/rt/$P2/dist/index.js"
+printf '{"name":"%s","dependencies":{"@avigopal/ias-executor-ts":"file:../ias-executor-ts","@avigopal/zz-shared-ts":"file:../zz-shared-ts"}}\n' "$DV" > "$T/rt/$DV/package.json"
+push_change "$PKG"; push_change "$P2"
+health "$DV_PORT" 1 60000; health "$LT_PORT" 0 0
+echo 401 > "$T/tuning-mode"
+run
+[ "$(grep -c "DEFERRING dependency bounce" "$OUT")" = 2 ] || bad "fixture: two shared packages did not both defer"
+[ "$(fallbacks pull_sync.bounce_defer_max_ticks http_401)" = 1 ] && [ "$(fallbacks pull_sync.bounce_defer_max_seconds http_401)" = 1 ] \
+  && ok "(i) a 401 tuning store is recorded exactly once per name in the tick" \
+  || bad "(i) a 401 tuning store is not recorded exactly once per name in the tick"
+grep -q 'DEFERRING dependency bounce .*(1/6)' "$OUT" && ok "(i) the default applies when the tuning store answers 401" \
+  || bad "(i) the default does not apply when the tuning store answers 401"
+[ "$(grep -c '"action":"tuning_param_fallback"' "$T/ws/pull-sync-deferrals.jsonl" 2>/dev/null)" = 2 ] \
+  && ok "(i) the fallback is recorded in the deferral log once per name" || bad "(i) the fallback is not recorded in the deferral log once per name"
+echo down > "$T/tuning-mode"
+run
+[ "$(fallbacks pull_sync.bounce_defer_max_ticks unreachable)" = 1 ] && [ "$(fallbacks pull_sync.bounce_defer_max_seconds unreachable)" = 1 ] \
+  && ok "(i) an unreachable tuning store is recorded again on the next tick, once per name" \
+  || bad "(i) an unreachable tuning store is not recorded once per name on the next tick"
+grep -q 'DEFERRING dependency bounce .*(2/6)' "$OUT" && ok "(i) the default applies when the tuning store is unreachable" \
+  || bad "(i) the default does not apply when the tuning store is unreachable"
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

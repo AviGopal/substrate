@@ -133,21 +133,48 @@ restart_age_defer() {
     RA_WHY="$RA_INFLIGHT in flight after ${2:-0} deferral(s) and no in_flight_oldest_ms published — convergence must not be starved"
   fi
 }
-# tuning_param <name> <default> — a SHAPED value read at use time: the substrate_tuning_param row
-# that activity-api serves at GET /v2/tuning-params/<name> (the same table its learner reads through
-# getTuningParam, written through POST /v2/tuning-params). pull-sync had no shaped-setting reader, so
-# its bounds were named constants; this is the nearest existing shaped path. Authenticates with the
-# service key the unit's EnvironmentFile already carries (as setup-git-push does). A non-numeric
-# value, a null row, or an unreachable/unauthorised store yields <default>: a bound is never lifted
-# by a read failure. Prints a non-negative integer.
+# tuning_param <name> <default> — sets TP_VALUE to a SHAPED value read at use time: the
+# substrate_tuning_param row that activity-api serves at GET /v2/tuning-params/<name> (the same
+# table its learner reads through getTuningParam, written through POST /v2/tuning-params).
+# pull-sync had no shaped-setting reader, so its bounds were named constants; this is the nearest
+# existing shaped path. Authenticates with the service key the unit's EnvironmentFile carries (as
+# setup-git-push does).
+#
+# THE KEY NEVER TOUCHES ARGV. A header given as `-H "Authorization: ApiKey $KEY"` is readable in
+# /proc/<pid>/cmdline by every process in the container for the life of the request. The header
+# goes to curl on stdin as a config (`-K -`), written by printf, a shell builtin with no argv of
+# its own.
+#
+# A FALLBACK IS VISIBLE. A null row, a non-numeric value, an unreachable store or a non-2xx (401)
+# yields <default> — a bound is never lifted by a read failure — and is recorded once per name per
+# tick (log line + DEFERRAL_LOG record `tuning_param_fallback`), so "the shaped value is not being
+# read" is observable instead of indistinguishable from "the shaped value equals the default".
+# Not a subshell: TP_VALUE and the once-per-tick set survive the call.
+TP_FALLBACK_SEEN=" "
 tuning_param() {
-  local _tp_v _tp_auth=()
-  [ -n "${METABOB_API_KEY:-}" ] && _tp_auth=(-H "Authorization: ApiKey $METABOB_API_KEY")
-  _tp_v="$(curl -s --max-time 5 ${_tp_auth[@]+"${_tp_auth[@]}"} \
-    "${ACTIVITY_API_ENDPOINT:-http://127.0.0.1:8080}/v2/tuning-params/$1" 2>/dev/null \
-    | sed -n 's/.*"value"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\)\(\.[0-9]*\)\{0,1\}[[:space:]]*[,}].*/\1/p' | head -1)"
-  case "$_tp_v" in ''|*[!0-9]*) _tp_v="$2" ;; esac
-  printf '%s' "$_tp_v"
+  local _tp_out _tp_code _tp_body _tp_why=""
+  TP_VALUE=""
+  _tp_out="$(if [ -n "${METABOB_API_KEY:-}" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; fi \
+    | curl -K - -s --max-time 5 -w '\n%{http_code}' \
+        "${ACTIVITY_API_ENDPOINT:-http://127.0.0.1:8080}/v2/tuning-params/$1" 2>/dev/null)"
+  _tp_code="${_tp_out##*$'\n'}"; _tp_body="${_tp_out%$'\n'*}"
+  [ "$_tp_out" = "$_tp_code" ] && _tp_body=""
+  case "$_tp_code" in
+    2[0-9][0-9])
+      TP_VALUE="$(printf '%s' "$_tp_body" | sed -n 's/.*"value"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\)\(\.[0-9]*\)\{0,1\}[[:space:]]*[,}].*/\1/p' | head -1)"
+      if [ -z "$TP_VALUE" ]; then
+        if printf '%s' "$_tp_body" | grep -q '"value"[[:space:]]*:[[:space:]]*null'; then _tp_why=null; else _tp_why=non_numeric; fi
+      fi ;;
+    ''|000|*[!0-9]*) _tp_why=unreachable ;;
+    *) _tp_why="http_$_tp_code" ;;
+  esac
+  case "$TP_VALUE" in ''|*[!0-9]*) TP_VALUE="$2"; _tp_why="${_tp_why:-non_numeric}" ;; esac
+  if [ -n "$_tp_why" ] && [ "${TP_FALLBACK_SEEN#* $1 }" = "$TP_FALLBACK_SEEN" ]; then
+    TP_FALLBACK_SEEN="$TP_FALLBACK_SEEN$1 "
+    log "tuning_param_fallback name=$1 reason=$_tp_why default=$2"
+    printf '{"at":"%s","actor":"pull-sync","action":"tuning_param_fallback","name":"%s","reason":"%s","default":%s}\n' \
+      "$(date -Iseconds)" "$1" "$_tp_why" "$2" >> "$DEFERRAL_LOG" 2>/dev/null || true
+  fi
 }
 # Failing-test names that are red ON PURPOSE in this commit: an OPEN gap's class2 check (evidence_resolve
 # test_suite for vessel $1) whose test_file is among the files the commit changed ($2, newline-separated).
@@ -2610,8 +2637,8 @@ EOF
         [ "$RA_DEFER" = 1 ] && { BQ_BUSY="$BQ_BUSY $c"; BQ_WHY="${BQ_WHY:+$BQ_WHY; }$c: $RA_WHY"; }
       done
       if [ -n "$BQ_BUSY" ]; then
-        BQ_MAX_TICKS="$(tuning_param pull_sync.bounce_defer_max_ticks 6)"
-        BQ_MAX_S="$(tuning_param pull_sync.bounce_defer_max_seconds 5400)"
+        tuning_param pull_sync.bounce_defer_max_ticks 6; BQ_MAX_TICKS="$TP_VALUE"
+        tuning_param pull_sync.bounce_defer_max_seconds 5400; BQ_MAX_S="$TP_VALUE"
         BQ_AGE=0; [ -n "$BQ_SINCE" ] && BQ_AGE=$(( $(date +%s) - BQ_SINCE ))
         if [ "$BQ_N" -ge "$BQ_MAX_TICKS" ] || { [ -n "$BQ_SINCE" ] && [ "$BQ_AGE" -ge "$BQ_MAX_S" ]; }; then
           log "$v: dependency bounce FORCED-AFTER-DEFER — deferred $BQ_N tick(s) over ${BQ_AGE}s (bounds ${BQ_MAX_TICKS} ticks / ${BQ_MAX_S}s); bouncing anyway, in-flight work on$BQ_BUSY may be lost ($BQ_WHY)"
