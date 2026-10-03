@@ -606,3 +606,8 @@ A regression class counts as covered only if negating or removing the shipped ch
   - The landing node never runs the gate on its own cutover commit; there the post-land suite is the only check.
   - The starvation break still deploys after 3 refusals, holding the names outstanding.
   - A suite over 240s converges ungated.
+- **Rule (qa, adopted): "guarded by" needs a mutation proof through a RANGE.** The range is the weakening commit plus at least one later commit, converged through the same gate a peer node runs. A tip-only proof is exactly what fails. The rule applies retroactively: every guard row claimed before 2026-10-03 reads "tip-only, range unproven" until it is re-proven.
+- **Folded into gaps:**
+  - The range gap carries baseline poisoning (the baseline never absorbs a newly failing name without an open gap or a recorded acceptance), the misleading "did not reproduce" log line, and the 240s timeout counting as ran=false and refusing.
+  - The no-measurement gap carries: post-land ran=false on the landing node is no measurement.
+  - The post-land gap references the range gap.
