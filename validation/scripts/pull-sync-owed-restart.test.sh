@@ -273,6 +273,8 @@ TP_STALL=""
 #   (w) carry + silent past the stall bound (young, under the ceiling) -> restart, marker released
 #   (x) carry + drained to 0 -> restart, marker released
 #   (y) carry with no restart owed any more (pending marker gone) -> stale carry dropped, marker released
+#   (z) 4 progress deferrals, then progress stops under the age ceiling -> an ordinary deferral
+#       (counter 1), not an immediate drain: progress deferrals do not count toward RESTART_DEFER_MAX
 QD2="$T/quiesce2"
 csetup() { psetup "$1"; mkdir -p "$QD2"; : > "$QD2/$VESSEL"; echo "$QD2/$VESSEL" > "$MARKER_DIR/$VESSEL.quiesce-carry"; Q_HELD=""; Q_CARRY=""; Q_BOUND=""; }
 fresh() { [ -e "$1" ] && [ $(( $(date +%s) - $(stat -c %Y "$1") )) -lt 60 ]; }
@@ -299,6 +301,19 @@ run_block; quiesce_release
 if [ ! -e "$QD2/$VESSEL" ] && [ ! -e "$MARKER_DIR/$VESSEL.quiesce-carry" ]; then ok "(y) carry with nothing owed: stale carry dropped, marker released"
 else bad "(y) stale carry: expected the marker released (marker $( [ -e "$QD2/$VESSEL" ] && echo held || echo gone))"; fi
 Q_HELD=""; Q_CARRY=""; Q_BOUND=""
+
+# ── (z) a PROGRESS deferral does not count toward RESTART_DEFER_MAX ─────────────
+# Four ticks deferred because a past-ceiling compose was progressing, then progress stops while
+# the request in flight is under the age ceiling: that tick is an ORDINARY deferral (counter 1),
+# not an immediate quiesce_drain because the progress ticks had already run the counter to the cap.
+psetup '{"in_flight":1,"in_flight_oldest_ms":1000000,"in_flight_last_progress_ms":30000}'; rm -f "$DF"
+for _ in 1 2 3 4; do run_block; done
+_z_after_progress="$(cat "$DF" 2>/dev/null || echo 0)"
+printf '%s' '{"in_flight":1,"in_flight_oldest_ms":100000}' > "$HEALTH_JSON"; : > "$LOG"
+run_block
+if ! restarted && [ "$_z_after_progress" = 0 ] && [ "$(cat "$DF" 2>/dev/null)" = 1 ] && ! grep -q QUIESCED "$LOG"; then
+  ok "(z) 4 progress deferrals leave the counter at 0; the next under-ceiling deferral is ordinary (counter 1), no drain"
+else bad "(z) progress deferrals counted: counter after 4 progress ticks $_z_after_progress, then $(cat "$DF" 2>/dev/null || echo none) (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
 
 # ══ (l-o) the mirror path's quiesce holds admission through gate, mirror, restart ══
 {
