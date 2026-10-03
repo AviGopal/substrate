@@ -26,6 +26,8 @@
 >
 > **Amended 2026-10-03 (step 1):** §12 records the prior art for the five step-1 harm classes: hand lists that drift, hollow advertisement, landed-but-unverified, federation write exposure, and count-armed latches. It binds: fix the class, not the instance; coverage means a mutation that turns an armed test red; nothing measured means refuse; a served shape is verified by calling it; latches carry an evidence verdict.
 >
+> **Amended 2026-10-03 (architecture review):** §13 records whether the method and the fixes adhere to the architecture. The fixes mostly adhere in behavior. The method bypasses dispatch-don't-edit and leaves the operator more load-bearing, and many fixes hard-code policy instead of using `landingAdmissionPolicy` or tuning rows, keep calibration with no reader, and add stores before proving reuse. It binds the corrections.
+>
 > **Amended again 2026-10-02 (user rulings on authority):** §2.1 item 6, §7 step 9 and §10 no longer define a human-governed boundary. The system changes its own limits on evidence applied by the previously accepted version; humans are informed, not gating (§10 item 1).
 
 ### Review disposition (09-29 revision)
@@ -1131,3 +1133,58 @@ Tags: [V] verified in git, code or the live gap store on 10-03. [D] taken from a
 - **Nothing measured means refuse.** A landing or promotion that no instrument actually exercised is refused, never landed as `unverified` or closed on a literal. This applies at the lane cutover (`no_measurement_available`), at the sweep (`landed_literal_only` is excluded from tallies and credit), and at the image gate (a promoted change that acceptance did not exercise is flagged and not promoted).
 - **A served shape is verified by calling it.** The executable shape-dispatch lint drives each advertised shape once against a fixture. Advertisement without service is refused.
 - **Latches carry an evidence verdict.** Every self-enabling flag has an off path that wins over env, and a reach-graded verdict written through the criterion path.
+
+## 13. Amendment (2026-10-03): architecture adherence review of the method and the fixes
+
+**Basis.** The user asked whether we are adhering to the architecture: first of the working method, then of the fixes. The answer is split. The fixes mostly adhere in BEHAVIOR. The method, and the form many fixes take, deviate in the same direction: toward operator-held, code-frozen policy.
+
+**13.1 Where the method and fixes adhere.**
+- **Law 1 (shapes):** violations were found and filed rather than added: env-file holds, unseeded tuning rows (19 of 22 read keys ran on code constants), an env-only compose cap. The retention hold's time-based release was replaced by a release gated on the fix's green check or an explicit user release.
+- **Law 3 (reuse before mint):** existing organs were extended (`self_fact_reconcile`, the orphan scanner, shared test helpers), with prior art searched each time (§11, §12).
+- **Law 8:** the inference fix reads shape descriptions at choice time.
+- **Law 12:** pre-registered probe expectations, sequenced deploy events, excluded measurement windows, one recorded change at a time.
+- **Reach, not status:** false reaches were recorded as false (held-out reach stayed 0/9), and α was withheld on ungrounded reaches.
+- **The fixes, by behavior:**
+  - caller-fault abstention and the planned idempotent fold (§2.2);
+  - required-input binding by declared contract, never by name;
+  - inference as deterministic validity plus an LLM or posterior chooser plus a logged decision ("the LLM is one resolver among many");
+  - execution-scoped selection context;
+  - pull-sync's bounce quiesce with a shaped starvation bound, and the key kept off argv;
+  - retention compacting graded evidence before deletion;
+  - the shared tracked-red predicate and the loud no-op;
+  - the single-source gate-file list;
+  - running-version checks.
+
+**13.2 Where the METHOD deviates.**
+1. **"Dispatch, don't edit" is systematically bypassed.** Builders wrote code in scratch clones under job directories and pushed from there. The PreToolUse gate watches only `repos/<vessel>/src`, so it never fired, and none of tonight's operator code produced a substrate trace. That is necessary for excluded paths (the lane can't author them), but it became the default for in-scope files too.
+2. **Law 6 / "wrongness is a goal seed":** operators authored every check-first test and filed about 155 gaps in one day. The missing generator, verdict class → test or goal minted by the system, is itself the gap.
+3. **The operator role:** the operator became MORE load-bearing (about 25 operator pushes reviewed; 2 supervised lane landings; the open backlog growing about 450 per day).
+4. **Law 7:** the gap triple was not reported each check-in; check-first counts were.
+5. **Law 9:** WIRING grew dozens of dated sections, which is the §11 synthesis pattern until it becomes a view of standing rows.
+
+**13.3 Where the FIXES deviate.**
+1. **Policy is hard-coded, not shaped (law 1; Delta 3 / §7 step 9: limits are shapes changed through the criterion path).** Examples:
+   - the gate's escalation threshold (`OWN_CHECK_UNMEASURABLE_ESCALATE_AT = 3`);
+   - the semantic gate's four veto classes and its advisory rule;
+   - the no-measurement rule and what counts as a measurement;
+   - the relocation hint's maximum of 3 files.
+
+   §8 already names the home: `landing_admission` refuses by the `landingAdmissionPolicy` shape's condition. As built, these rules are frozen, mostly in EXCLUDED files, so only an operator can change them and the system can't change them on evidence. Only some bounds were shaped (the gate-version stale bound, SF_BLEND_VERDICT).
+2. **Calibration with no reader that changes behavior (law 2):** semantic dissents and their later outcomes are recorded "for calibration", but nothing reads that calibration to change the gate's veto weight.
+3. **New stores before proving reuse (law 3; §2.2 "an information contract, not a mandate for a new store"):** retention adds `execution_observation` and `trace_evidence_ref`. Whether `goal_verification_labels` or the trace store can hold observations, and whether gap and ledger references belong with the gap store's own publisher, was not established first.
+4. **Hand-copied cross-repo contract strings (§12.1):** the caller-fault carrier and `synthesize_from` are byte-identical fixtures in four repos, with a filed move to `packages/`.
+5. **Instance patches:** the lane's own `b5147869` adds a one-name allowlist in the orphan scanner. The armed general fix must subsume it.
+6. **Temporary exceptions:** the env-file retention hold, and pull-sync's pinned activity-api default (bootstrap tier). Both are recorded as exceptions with lift conditions.
+
+**13.4 What follows (binding).**
+- **Method:**
+  - lane-scope changes are dispatched as goals (an edit-intent goal naming the file → `feature_compose`), so the system authors them and they are traced. Builders hand-write only excluded-path fixes;
+  - every operator push carries an `Operator-Authored:` trailer and an L12 ledger record, so operator load is measured and kept out of lane yield;
+  - tonight's check-first tests are the seed corpus for a system test generator from verdict classes. Report the system-authored share of new checks;
+  - widen scope by the adopted criterion, starting with the cutover files whose checks now exist;
+  - every check-in reports the gap triple by author, lane yield (composes → landings → verified by effect), and held-out reach.
+- **Fixes:**
+  - each gate's thresholds, veto classes and measurement definitions move into `landingAdmissionPolicy` or tuning rows, evaluated by code and changed only through the criterion path, judged by the accepted gate. New gate fixes read from there rather than adding constants. Before each operator fix is pushed, its new constants are either shaped or filed on the tuning-seed root;
+  - the semantic gate's calibration gets a consumer: a criterion that raises or lowers its veto weight from the measured dissent outcomes;
+  - before the retention fix lands, establish reuse (existing label or trace stores) or record why a new table is required;
+  - the cross-repo contract strings move to one `packages/` definition with a copy-diff check.
