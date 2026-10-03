@@ -790,3 +790,21 @@ Both #8 and the ψ blend live only in `/v2/activities/recommend`, and WIRING §2
 **Must-fail controls:**
 - with ψ blending on but every cell uninformed, the order equals pure Thompson byte-for-byte (the code claims this; it is the falsifier);
 - if reach(on) < reach(off) over the window, the flag flips off.
+
+## Checks owed, resolved (10-03, read-only, sent to qa)
+**Check 1: absence claims with positive controls.** Scope: every repo under repos/ at origin/dev, all non-test, non-.md files (seeds, scripts and committed bundles included), plus super-repo scripts/ and packages/. NOT covered: activity templates stored in the DB, where a template task with resolver X is a caller; that needs a DB read.
+- **A.** "No caller of activity-api POST /v2/impulses": HOLDS.
+  - Control: /v2/impulses/resolve, with 530 call sites found by the same search.
+  - The bare route appears only in mounts and the auth path list.
+  - The only inserts into `impulse` are the upkeep audit (impulses.ts:280), POST / (:495) and cluster_shadow_decision.
+  - Legacy react-renderer and .minibob demo scripts post to `${endpoint}/impulses` (endpoint unverified, legacy).
+- **B.** "No vessel src calls POST /v2/activities/composition": HOLDS.
+  - Control: /composition/graph, with 34 sites.
+  - obsidian-vessel api-client.ts:537 defines a getImpulseSuccessMetrics reader with no call site: a dormant client.
+- **C.** "No 'consumed' status assignment in development-vessel": HOLDS. Control: 144 status:'open' assignments, 0 'consumed'.
+- **D.** "author_composed_capability has no caller": REFINED to "no goal-host caller". Its one caller, development-vessel feature-compose.ts:5087, uses the broken 5c974cb7 envelope, so it is effectively dead, not callerless.
+
+**Check 2: the 5c974cb7 / VesselResolver contradiction is RESOLVED; 5c974cb7 stays dead by code reading.**
+- development-vessel /v2/impulses/resolve (impulses.ts:1100-1119) accepts {impulse:{pointer}}, {impulse:{type}} or a bare {type}. A body of {pointer} alone gets 400 "pointer.type is required". The 400 is not logged (0 journal lines in 24h), and no normalising middleware exists.
+- The census line (output-shapes/2-output-chaining.md:203) attributing bridge synthesis to ias vessel-resolver.ts:96 is wrong: :96 is the response unwrap. Inside goal-host, development-vessel shapes run through goal-host's own proxy resolver (index.ts ~15675), which sends {impulse:{pointer}}. ias registers a VesselResolver only when no local resolver has that id (engine.ts:545), so in goal-host the proxy wins.
+- **NEW LATENT FINDING:** ias VesselResolver itself sends {pointer} (vessel-resolver.ts:77, the same in the deployed dist), and engine.ts:562 auto-registers it for any remotely discovered resolver. Any ias engine without a local proxy that calls a development-vessel shape gets a silent 400 and then closes on failure. Unmeasured by effect. It is a direct case for the step 1(d)(iii) contract-mismatch counter. Filed as a gap.
