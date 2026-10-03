@@ -822,3 +822,5 @@ Ranked by lane time:
   - (a) semantic dissent advisory: 4bba1a5, round 2 underway;
   - (b) relocation hint: 51f2e6af, in qa review;
   - (c) bounce quiesce: test plus fix landing as one operator commit.
+- **Measurement note (qa):** tonight's development-vessel check-first builders' ABSOLUTE base fail counts (141, 170, 179) were taken on the operator clone's stale ias-executor-ts dist (Aug 9; no typed discovery lookup, so discovery reads fail closed). They are NOT comparable across environments: a rebuilt dist gives 88. The DELTAS stand, because base and test runs shared one environment; qa's verification runs share that property.
+- **Builder rule from now on:** rebuild or verify the shared-package dist before a base run, so a stale dist cannot hide a regression.
