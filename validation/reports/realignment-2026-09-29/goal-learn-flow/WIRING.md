@@ -683,3 +683,11 @@ A regression class counts as covered only if negating or removing the shipped ch
   - Posteriors already absorbed these verdicts, so current belief is unchanged. But their trace evidence is gone, so a refold cannot re-fold them.
   - **Cause:** the retention STRATUM sweep, a uniform random sample of the cold tail, has no exemption for graded rows. Later sweeps will continue as more strata become visible on 2.3.10.
   - **The pre-upgrade backup tar is now the only source for those rows.** A hold on retention and preservation of the backup are pending qa's ruling.
+- **INTERVENTION (law 12), user-approved: retention throttled at 2026-10-03T06:27:04Z on node 1.**
+  - Tuning row `TRACE_RETENTION_PHASE_BUDGET_MS=1000` (default 120000), written through the activity-api tuning API with updated_by and evidence; read back.
+  - It is shaped, reversible and traced. It caps the strata and aux phases at the code's 1 s minimum. The stratum delete batch (25) is env-configured, so the worst case is a few batches per sweep, against thousands before.
+  - **Not a full stop.** The ceiling valve is unbudgeted but acts only above the cap; node 1 is at about 58k of 150k.
+  - **Verified by effect on the next sweep:** pending (expected about 06:38–06:40Z).
+  - **Reverse** by restoring 120000 or removing the row, once retention exempts or compacts graded evidence (gap `the-trace-ceiling-valve-evicts-…`, being widened to every phase).
+  - **Growth during the hold:** under ~600 rows/h. Watch disk and SurrealDB RSS.
+- **Refold sources preserved:** substrate-surreal-pre-2.3.10-20261003T060017Z.tar and the 05:50 restore-proof tar, both mode 400 and excluded from rotation. Independent copies and sha256s pending from deployment.
