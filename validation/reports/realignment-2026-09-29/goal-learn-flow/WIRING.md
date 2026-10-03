@@ -742,3 +742,21 @@ A regression class counts as covered only if negating or removing the shipped ch
   - **Fixed for future recreates** in super-repo 4277b49d (DISABLED_VESSELS still outranks it). Stale registration remains its own gap.
   - **Pre-registered for the probe re-run (qa's window):** the LLM-targeted probes should still fail on the missing prompt (the walk-binding gap), with a changed error, not reach.
 - **Wave hold:** deployment holds the re-pin wave and all SurrealDB upgrades (the hub included) until the 2.3.10 query-rejection sweep is clean or every site is filed.
+
+### SurrealDB 2.3.10 query sweep: CLEAN of engine regressions (db fork, dry-parse on both engines)
+- **CORRECTION:** the claim that "success-rate retirement broke on 2.3.10" was WRONG. The query (ORDER BY a field not in the selection) fails on every 2.x engine, with 298 occurrences in pre-upgrade 2.3.3 journals, so that retirement path has likely never worked on 2.x. The wrong gap is retracted in state (status rejected, superseded_by).
+- **The real class, filed:** `statically-malformed-surrealql-ships-in-source-and-migrations-because-nothing-parses-it-before-deploy`. 6 sites:
+  - activity-api: signature-count, ORDER BY not selected, count(*), and a `<string> id` cast;
+  - concept-db: the ';'-splitting schema applier, and an upkeep views file that never parses, so those views likely never exist.
+  - Detector: a corpus dry-parse against the target engine in CI and in upgrade acceptance.
+- **Not this class:** JSON.parse failures on resolver responses (the dynamic-content class).
+- **Timeouts** rose after the upgrade, but are confounded by retention catch-up and CPU pressure; re-measure once settled.
+- **Holds lifted:** the SurrealDB upgrade hold and the re-pin-wave hold (from this session's side). The hub upgrade remains the user's call.
+
+### Inference class filed (from the held-out probes)
+- `inference-chooses-targets-without-shape-descriptions-or-producer-input-validity` (root):
+  - a deterministic VALIDITY layer (a live producer AND bindable required inputs);
+  - choice by the LLM shown the descriptions, or a posterior; lexical matching only as a labelled fallback;
+  - the decision is logged so reach can grade it.
+- Siblings filed: a copied edit-intent regex at goal-host index.ts:18435 (drift), and a regex with literal 0x08 bytes (with a repo lint as the class detector).
+- Check-first is in progress (goal-host f078095, round 2 underway).
