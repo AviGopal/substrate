@@ -677,3 +677,9 @@ A regression class counts as covered only if negating or removing the shipped ch
   - It adds `large_frame_concurrency` to the network leg, and it discriminates. :dev af119736, with the unfixed transport lib, FAILS: 34/48 reads, 30 cipher errors. With lib 69256d9 it PASSES: 48/48, 0 errors. Cost about 20 s.
   - **Consequence:** no :dev candidate promotes until the transport gitlink reaches 69256d9. The 07:00Z nightly bump's acceptance run is the measurement that lets the lane-landed lib 69256d9 (landed_unverified, post-land ran=false) move.
   - Local nodes stay pinned to 60ae05a0 (SurrealDB 2.3.10 on three of them) until a coordinated recreate wave onto an accepted image carrying both noise halves.
+- **CORRECTION: the "0 gradable rows lost" note holds for sweep 1 ONLY.** Sweep 2 (db fork, same backup method) deleted **2,015 reach_graded executions**: gap-to-scenario-bridge-tick 1,789 (reached=true) and mitosis-tick 226 (reached=false).
+  - Label, open-gap and attempt-ledger refs: 0 (controls present). These are tick rows, not lane cutovers.
+  - Cumulative removed: 92,474.
+  - Posteriors already absorbed these verdicts, so current belief is unchanged. But their trace evidence is gone, so a refold cannot re-fold them.
+  - **Cause:** the retention STRATUM sweep, a uniform random sample of the cold tail, has no exemption for graded rows. Later sweeps will continue as more strata become visible on 2.3.10.
+  - **The pre-upgrade backup tar is now the only source for those rows.** A hold on retention and preservation of the backup are pending qa's ruling.
