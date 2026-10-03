@@ -557,7 +557,17 @@ PULLSYNC_GLUE_KEY=""
 PULLSYNC_GLUE_KEY_DIR=""
 PULLSYNC_GLUE_STAGES=""
 pullsync_glue_cleanup() { for _d in $PULLSYNC_GLUE_STAGES; do rm -rf "$_d"; done; PULLSYNC_GLUE_STAGES=""; }
-trap pullsync_glue_cleanup EXIT
+# THE MIRROR PATH'S QUIESCE IS HELD UNTIL ITS RESTART (see "QUIESCE INSTEAD OF ACCEPTING THE
+# LOSS" in the vessel loop). Q_HELD is the admission marker that pass still holds; this drops it.
+# Called first in every vessel pass (every `continue` lands there), right after the restart,
+# after the loop, and on EXIT, so no exit path leaves admission closed. A tick killed outright
+# leaves the marker behind; the vessel fails open on a marker past its QUIESCE_MAX_MS.
+Q_HELD=""; Q_BOUND=""
+quiesce_release() {
+  [ -n "${Q_HELD:-}" ] && rm -f "$Q_HELD" 2>/dev/null
+  Q_HELD=""; Q_BOUND=""; return 0
+}
+trap 'pullsync_glue_cleanup; quiesce_release' EXIT
 
 glue_divergence_gap() { # super path what
   local id summary
@@ -1776,6 +1786,7 @@ unresolved_modules() { # test-output -> names, one per line
 
 synced=0; skipped=0; deferred=0; failed=0
 for d in "$CLONE_DIR"/*/; do
+  quiesce_release
   [ -d "$d/.git" ] || continue
   v="$(basename "$d")"
   # A held-out probe window freezes this node's code: no fetch, mirror or restart for any vessel while
@@ -2300,9 +2311,16 @@ EOF
           # Bound exists so a wedged vessel cannot block deploys forever. Say what
           # is being given up, in the same terms as the old branch.
           log "$v: still $NOW in flight after ${QSPENT}s of quiesce (bound ${QWAIT}s) — converging anyway; that run IS lost and its outcome will not be attributable"
-          INFLIGHT=0
+          INFLIGHT=0; Q_BOUND=1
         fi
-        rm -f "$QDIR/$v" 2>/dev/null || true
+        # ADMISSION STAYS CLOSED UNTIL THE RESTART. The marker used to be removed right here,
+        # and the test gate below runs for minutes: measured 2026-10-03 on node 1, drained at
+        # 19:41:55, a new compose admitted ~19:45:20 while the gate ran, and the restart at
+        # 19:47:01 logged "DEFERRING restart — 1 in flight". The drain bought nothing. It is
+        # re-touched (the vessel fails open on a marker older than its QUIESCE_MAX_MS) and
+        # released by quiesce_release: after the restart, or on any other exit from this pass.
+        : > "$QDIR/$v" 2>/dev/null || true
+        Q_HELD="$QDIR/$v"
       fi
       if [ "$INFLIGHT" -gt 0 ]; then
         DEFER_MARKER="in-flight:$INFLIGHT"
@@ -3135,7 +3153,13 @@ EOF
     DEFER_FILE="$MARKER_DIR/$v.restart-deferrals"
     DEFERRED_N="$(cat "$DEFER_FILE" 2>/dev/null || echo 0)"
     case "$DEFERRED_N" in ''|*[!0-9]*) DEFERRED_N=0 ;; esac
+    [ -n "${Q_HELD:-}" ] && { : > "$Q_HELD" 2>/dev/null || true; }   # keep the held marker fresh past a long gate
     restart_age_defer "$PORT" "$DEFERRED_N"; INFLIGHT="$RA_INFLIGHT"
+    # The quiesce above already gave up on the run it could not drain ("converging anyway"):
+    # deferring now would strand the restart behind that same run. A probe window still holds.
+    if [ -n "${Q_BOUND:-}" ] && [ "$RA_DEFER" = 1 ] && [ "$RA_PROBE" != 1 ]; then
+      RA_DEFER=0; RA_WHY="quiesce bound reached this tick, $RA_WHY — restarting as the quiesce announced"
+    fi
     if [ "$RA_DEFER" = 1 ]; then
       echo "$((DEFERRED_N + 1))" > "$DEFER_FILE" 2>/dev/null || true
       # RECORD THAT A RESTART IS OWED. Without this the deferral is permanent, and
@@ -3162,6 +3186,7 @@ EOF
     rm -f "$MARKER_DIR/$v.restart-pending" 2>/dev/null || true
     restart_breadcrumb "$v" "converged to origin/dev${RA_OLDEST:+ (oldest in-flight ${RA_OLDEST}ms)}" "$INFLIGHT"
     systemctl restart "$UNIT" 2>/dev/null || true
+    quiesce_release   # the new process must find admission open
     sleep "$STAGGER_SECONDS"
     if [ -n "$PORT" ]; then
       ok=0
@@ -3231,6 +3256,7 @@ EOF
   echo "$HEAD" > "$LAST_GOOD_DIR/$v"
   synced=$((synced+1))
 done
+quiesce_release
 
 # 4. Super-repo convergence — the glue layer the vessel loop can't see: the
 # federation transport server wrapper (federation-transport-vessel's ExecStart
