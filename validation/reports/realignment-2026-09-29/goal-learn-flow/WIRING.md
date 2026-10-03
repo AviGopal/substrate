@@ -625,3 +625,7 @@ A regression class counts as covered only if negating or removing the shipped ch
   - Three untagged groups: `sel_1791006165568_4vxfa8`, `sel_1791006166635_sju385`, `sel_1791006191530_3hex6y`.
 - **Rule:** every selection or credit measurement excludes this window.
 - **Why a time window:** the log has no caller or probe field to exclude these rows by identity. That is now part of the selection-log gap (the-selection-log-keeps-no-state-signature-…), which comes first in step 3's selection work.
+- **b69296f is an S2 landing (qa):** lane-authored, through the fail-closed own-check, on a supervised (operator-armed) gap. It fixes the SF_BLEND latch only.
+  - **Env override, latent:** scoring still lets env SF_BLEND override the tuning row (activities.scoring.ts:126). No node sets it today, so the override is latent; it is tracked in the three-latch class gap with an env-on, verdict-off falsifier.
+  - **The verdict is not env-gated:** SF_BLEND_VERDICT has no env fallback.
+  - **The "-narrowed" duplicate is closed** as superseded_by_landing.
