@@ -513,8 +513,15 @@ fi
 # verdict-token block above judges that pin from the object store instead.
 #
 # WHEN: a staged path under scripts/substrate/, validation/scripts/, the seeder, the
-# vendored packages, or this hook. Full run (measured ~28s, under the 60s budget); set
-# GLUE_TESTS_FAST=1 to run the declared --fast subset (~7s) instead.
+# vendored packages, or this hook. Set GLUE_TESTS_FAST=1 to run the declared --fast subset
+# instead (it drops pull-sync-hold-channel, ~21s of the run).
+# HOW LONG (measured 2026-10-03, the whole hook, wall clock, in a disposable container from the
+# image node 1 runs, 16 CPUs and no CPU limit, as on the live node, with the live node busy
+# alongside): 78s, 111s and 88s over three runs (glue tests 29 files); the base before the
+# tracked-red work took 62-80s (23 files). The in-container commit path this must fit
+# (vessel-mitosis-cutover's runGit commit) passes no timeout to git; the bound around it is the
+# compose ceiling COMPOSE_CEILING_MS, 15 min (development-vessel src/compose-slots.ts), so the
+# worst run leaves about 8x headroom. Re-measure when adding a slow test.
 mapfile -t GLUE_STAGED < <(
   git diff --cached --name-only --diff-filter=ACMRD \
     | grep -E '^(scripts/substrate/|validation/scripts/|scripts/bootstrap-seeder\.ts$|packages/(verdict-token|write-containment)/|scripts/git-hooks/pre-commit$)' || true
