@@ -56,7 +56,13 @@ PRESSURE_STREAK_FILE="${PRESSURE_STREAK_FILE:-/workspace/.surreal-pressure-strea
 # the change_window lease, a vessel mid-cutover is ALLOWED to look broken; a
 # restart/revert here would fight the cutover. Defer the whole recovery pass
 # (lease is TTL-bounded; next tick recovers normally after release/expiry).
-CW_HELD="$(curl -s --max-time 5 -X POST "$DEV_VESSEL/v2/impulses/resolve" \
+# srv_auth — the curl config line that carries the service key (the unit's EnvironmentFile holds
+# METABOB_API_KEY), for `curl -K -` on stdin. development-vessel authenticates write-type pointers
+# (substrateGap_write) against identity-vessel, so an uncredentialed gap is answered 401 and lost.
+# The key never touches argv: printf is a builtin, and the header reaches curl on stdin, exactly as
+# substrate-pull-sync.sh's tuning_param and dev_resolve send it. Prints nothing when there is no key.
+srv_auth() { if [ -n "${METABOB_API_KEY:-}" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; fi; }
+CW_HELD="$(srv_auth | curl -K - -s --max-time 5 -X POST "$DEV_VESSEL/v2/impulses/resolve" \
   -H 'Content-Type: application/json' \
   -d '{"impulse":{"type":"maintenanceLease","name":"change_window"}}' 2>/dev/null \
   | grep -o '"held":true' || true)"
@@ -73,6 +79,9 @@ else
 fi
 # Run a shell command in the container's context (directly in-container, else via docker).
 csh()  { if [ "$IN_CONTAINER" = 1 ]; then sh -c "$1"; else docker exec "$CONTAINER" sh -c "$1"; fi; }
+# cshi: csh with this shell's stdin passed through (docker exec -i), so a credential piped in by
+# srv_auth reaches the inner curl on stdin instead of being spliced into the command string.
+cshi() { if [ "$IN_CONTAINER" = 1 ]; then sh -c "$1"; else docker exec -i "$CONTAINER" sh -c "$1"; fi; }
 csys() { if [ "$IN_CONTAINER" = 1 ]; then systemctl "$@"; else docker exec "$CONTAINER" systemctl "$@"; fi; }
 # Role-awareness (2026-07-30): a unit is intentionally-disabled for the active
 # ENABLED_ROLES iff apply-inventory.sh masked it — an /etc-level symlink
@@ -223,14 +232,14 @@ healthy() { # vessel-name port -> 0 if /health returns 200 within the probe budg
   return 1
 }
 emit_gap() {
-  csh "curl -s --max-time 8 -X POST $DEV_VESSEL/v2/impulses/resolve -H 'Content-Type: application/json' -d '$1'" >/dev/null 2>&1 || true
+  srv_auth | cshi "curl -K - -s --max-time 8 -X POST $DEV_VESSEL/v2/impulses/resolve -H 'Content-Type: application/json' -d '$1'" >/dev/null 2>&1 || true
 }
 # Quote-safe variant: the diagnostic text below is arbitrary journal output and WILL contain
 # quotes, backslashes and newlines, none of which survive emit_gap's `-d '$1'` interpolation.
 # base64's alphabet cannot break out of a single-quoted shell string, so the payload is built
 # once (with jq, which does the JSON escaping) and shipped opaquely.
 emit_gap_b64() {
-  csh "echo '$1' | base64 -d > /tmp/self-recovery-gap.json && curl -s --max-time 8 -X POST $DEV_VESSEL/v2/impulses/resolve -H 'Content-Type: application/json' -d @/tmp/self-recovery-gap.json" >/dev/null 2>&1 || true
+  srv_auth | cshi "echo '$1' | base64 -d > /tmp/self-recovery-gap.json && curl -K - -s --max-time 8 -X POST $DEV_VESSEL/v2/impulses/resolve -H 'Content-Type: application/json' -d @/tmp/self-recovery-gap.json" >/dev/null 2>&1 || true
 }
 # WHAT THE ESCALATION ALREADY KNOWS, AND USED TO THROW AWAY.
 #

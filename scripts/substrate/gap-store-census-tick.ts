@@ -46,6 +46,9 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const DEV = process.env.DEV_VESSEL_ENDPOINT || process.env.DEVELOPMENT_VESSEL_URL || "http://127.0.0.1:8090";
+// The service key the unit's EnvironmentFile carries; development-vessel authenticates write-type
+// pointers (every *_write shape) against identity-vessel, so a write without it is answered 401.
+const KEY = process.env.METABOB_API_KEY ?? "";
 /** The census lives outside the gap store: a store that loses itself must not
  *  also lose the record proving it did. */
 const CENSUS_PATH =
@@ -63,7 +66,7 @@ async function gapCount(): Promise<number | null> {
   try {
     const resp = await fetch(`${DEV}/v2/impulses/resolve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
       // `total` in the response reflects the RETURNED PAGE, not the store, so it
       // cannot be used as a count. The rows themselves must be counted.
       //
@@ -114,7 +117,7 @@ function appendCensus(count: number): void {
 async function emitGap(id: string, summary: string, meta: Record<string, unknown>): Promise<void> {
   await fetch(`${DEV}/v2/impulses/resolve`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
     body: JSON.stringify({
       impulse: {
         type: "substrateGap_write",

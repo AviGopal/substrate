@@ -93,6 +93,9 @@ const SLOT_DIR =
 // converging one tree is a race. See the REPAIR note in the header.
 const REPAIR_ENABLED = process.env.RUNTIME_DRIFT_REPAIR === "1";
 const DEV_VESSEL = process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";
+// The service key the unit's EnvironmentFile carries; development-vessel authenticates write-type
+// pointers (every *_write shape) against identity-vessel, so a write without it is answered 401.
+const KEY = process.env.METABOB_API_KEY ?? "";
 
 type Drift = { vessel: string; files: string[]; runtimeOnly: string[]; cloneOnly: string[] };
 
@@ -283,7 +286,7 @@ async function emitUncoveredGap(vessel: string) {
   try {
     await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
       body: JSON.stringify({
         impulse: {
           type: "substrateGap_write",
@@ -332,7 +335,7 @@ async function emitGap(vessel: string, d: Omit<Drift, "vessel">, broken: string[
   try {
     await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
       body: JSON.stringify({
         impulse: {
           type: "substrateGap_write",

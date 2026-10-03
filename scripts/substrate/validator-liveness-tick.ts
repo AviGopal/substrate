@@ -40,6 +40,9 @@ const PASS = process.env.SURREALDB_PASSWORD || process.env.SURREAL_PASS || "";
 const USER = process.env.SURREALDB_USERNAME || "root";
 const SQL_URL = (process.env.SURREALDB_URL || "http://127.0.0.1:8000").replace(/\/$/, "") + "/sql";
 const DEV = process.env.DEV_VESSEL_ENDPOINT || process.env.DEVELOPMENT_VESSEL_URL || "http://127.0.0.1:8090";
+// The service key the unit's EnvironmentFile carries; development-vessel authenticates write-type
+// pointers (every *_write shape) against identity-vessel, so a write without it is answered 401.
+const KEY = process.env.METABOB_API_KEY ?? "";
 const sqlAuth = "Basic " + Buffer.from(`${USER}:${PASS}`).toString("base64");
 
 /** Fleet-idle guard: a quiet fleet makes every validator look severed. */
@@ -87,7 +90,7 @@ function median(xs: number[]): number {
 async function emitGap(id: string, summary: string, meta: Record<string, unknown>): Promise<void> {
   await fetch(`${DEV}/v2/impulses/resolve`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
     body: JSON.stringify({
       impulse: {
         type: "substrateGap_write",

@@ -133,6 +133,18 @@ restart_age_defer() {
     RA_WHY="$RA_INFLIGHT in flight after ${2:-0} deferral(s) and no in_flight_oldest_ms published — convergence must not be starved"
   fi
 }
+# dev_resolve <json-body> [curl-args...] — POST <json-body> to development-vessel's
+# /v2/impulses/resolve with the service key the unit's EnvironmentFile carries, and print the
+# response. development-vessel authenticates write-type pointers (substrateGap_write, every other
+# *_write) against identity-vessel; an uncredentialed write is answered 401 and the gap is lost.
+# Every resolve request here goes through this one function, reads included, so none can be
+# added without the key. The key never touches argv: the header goes to curl on stdin as a
+# config (`-K -`), exactly as tuning_param below sends it. Extra args (--max-time, -w, -o) follow.
+dev_resolve() {
+  local _dr_body="$1"; shift
+  { if [ -n "${METABOB_API_KEY:-}" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$METABOB_API_KEY"; fi; } \
+    | curl -K - -s -X POST "$DEV_VESSEL/v2/impulses/resolve" -H 'Content-Type: application/json' -d "$_dr_body" "$@"
+}
 # tuning_param <name> <default> — sets TP_VALUE to a SHAPED value read at use time: the
 # substrate_tuning_param row that activity-api serves at GET /v2/tuning-params/<name> (the same
 # table its learner reads through getTuningParam, written through POST /v2/tuning-params).
@@ -293,8 +305,7 @@ gen_failing_test_gaps() {
   # suppress filing its failure in another, and widening the exemption to this dedup's looser match would
   # exempt reds no gap checks. Changing one is not a reason to change the other.
   st="$(mktemp "${TMPDIR:-/tmp}/pullsync-gen-XXXXXX")" || return 0
-  curl -s --max-time 30 -X POST "$DEV_VESSEL/v2/impulses/resolve" -H 'Content-Type: application/json' \
-    -d '{"impulse":{"pointer":{"type":"substrateGap","status":"open","limit":5000}}}' > "$st" 2>/dev/null || true
+  dev_resolve '{"impulse":{"pointer":{"type":"substrateGap","status":"open","limit":5000}}}' --max-time 30 > "$st" 2>/dev/null || true
   jq -e '.body.gaps | type == "array"' "$st" >/dev/null 2>&1 || { rm -f "$st"; log "$v: failing-test generator: gap store unreadable; nothing filed"; return 0; }
   payloads="$(printf '%s\n' "$rows" | jq -R -s -c --arg v "$v" --arg head "${head:0:10}" \
     --argjson flags "$flags" --argjson cap "${FAILTEST_GEN_PER_TICK:-3}" --argjson openmax "${FAILTEST_GEN_OPEN_MAX:-8}" --argjson infomax "${FAILTEST_GEN_INFO_MAX:-20}" --slurpfile st "$st" '
@@ -342,8 +353,7 @@ gen_failing_test_gaps() {
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     id="$(printf '%s' "$p" | jq -r '.impulse.pointer.gap.id')"
-    ex="$(curl -s --max-time 30 -X POST "$DEV_VESSEL/v2/impulses/resolve" -H 'Content-Type: application/json' \
-         -d "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap\",\"id\":\"$id\",\"limit\":1}}}" 2>/dev/null \
+    ex="$(dev_resolve "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap\",\"id\":\"$id\",\"limit\":1}}}" --max-time 30 2>/dev/null \
        | jq -c 'if (.body.gaps | type) == "array" then ((.body.gaps[0] // {}) | {s: (.status // ""), n: (.classification_metadata.evidence_resolve.input.only_tests // [])}) else {err: true} end' 2>/dev/null || true)"
     # FAIL CLOSED (qa): an unreadable answer must not read as "no such id", or a CLOSED row would be rewritten open
     # with its closed_reason/falsifier_exercise carried forward. Unknown existence means: not this tick.
@@ -396,8 +406,7 @@ gen_failing_test_gaps() {
 # Keep it non-fatal (a detector must never break convergence) but never silent.
 emit_gap() {
   local body code
-  body="$(curl -s --max-time 30 -w '\n%{http_code}' -X POST "$DEV_VESSEL/v2/impulses/resolve" \
-    -H 'Content-Type: application/json' -d "$1" 2>/dev/null || printf '\n000')"
+  body="$(dev_resolve "$1" --max-time 30 -w '\n%{http_code}' 2>/dev/null || printf '\n000')"
   code="${body##*$'\n'}"
   case "$code" in
     2*) ;;
@@ -690,9 +699,7 @@ rm -f "$MITOSIS_DEFER_COUNT_FILE" 2>/dev/null || true
 # Change-window (2026-07-09 contiguous-shape-flow §5): a held change_window lease
 # means a change-set is landing; pull-sync defers rather than converging mid-swap.
 # TTL-bounded on the lease side, so a crashed holder cannot defer us forever.
-CW_HELD="$(curl -s --max-time 5 -X POST "$DEV_VESSEL/v2/impulses/resolve" \
-  -H 'Content-Type: application/json' \
-  -d '{"impulse":{"type":"maintenanceLease","name":"change_window"}}' 2>/dev/null \
+CW_HELD="$(dev_resolve '{"impulse":{"type":"maintenanceLease","name":"change_window"}}' --max-time 5 2>/dev/null \
   | grep -o '"held":true' || true)"
 if [ -n "$CW_HELD" ]; then
   log "change_window lease held — deferring this run"

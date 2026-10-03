@@ -60,6 +60,9 @@ import { join } from "node:path";
 import { createHash } from "node:crypto";
 
 const DEV_VESSEL = process.env.DEV_VESSEL_ENDPOINT ?? "http://127.0.0.1:8090";
+// The service key the unit's EnvironmentFile carries; development-vessel authenticates write-type
+// pointers (every *_write shape) against identity-vessel, so a write without it is answered 401.
+const KEY = process.env.METABOB_API_KEY ?? "";
 const CAP = Number(process.env.SURGICAL_SCAN_CAP ?? "4");
 const DRYRUN = process.env.SURGICAL_SCAN_DRYRUN === "1";
 // Default repos root: this script lives at <repo>/scripts/substrate/, so repos is ../../repos.
@@ -225,7 +228,7 @@ async function writeGap(gap: ReturnType<typeof gapFromHit>): Promise<{ ok: boole
   try {
     const resp = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
       body: JSON.stringify({ impulse: { type: "substrateGap_write", gap } }),
       signal: AbortSignal.timeout(15_000),
     });

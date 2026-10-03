@@ -24,6 +24,9 @@
 
 const DEV = process.env["DEV_VESSEL_ENDPOINT"] || process.env["DEVELOPMENT_VESSEL_URL"] || "http://127.0.0.1:8090";
 const RESOLVE = DEV.replace(/\/$/, "") + "/v2/impulses/resolve";
+// The service key the unit's EnvironmentFile carries; development-vessel authenticates write-type
+// pointers (every *_write shape) against identity-vessel, so a write without it is answered 401.
+const KEY = process.env.METABOB_API_KEY ?? "";
 
 /**
  * THE AFFORDABILITY GATE WAS MEASURING THE WRONG THING, AND IT HAD CLOSED PERMANENTLY.
@@ -124,7 +127,7 @@ async function raiseFederationStalenessOnChange(): Promise<string> {
     try {
       const r = await fetch(RESOLVE, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
         body: JSON.stringify({ impulse: { type: "poolImpulse", shape: "timeShapedRhythm", limit: 50 } }),
         signal: AbortSignal.timeout(8000),
       });
@@ -133,7 +136,7 @@ async function raiseFederationStalenessOnChange(): Promise<string> {
       if (row) {
         await fetch(RESOLVE, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
           body: JSON.stringify({ impulse: { type: "poolImpulse_write", id: row.id, shape: "timeShapedRhythm", source: "rhythm-conduct-change-signal", body: { ...row.body, staleness: 1 } } }),
           signal: AbortSignal.timeout(8000),
         });
@@ -152,7 +155,7 @@ async function main(): Promise<void> {
   try {
     const r = await fetch(RESOLVE, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
       body: JSON.stringify({ impulse: { type: "rhythm_conductor_tick", bucket_load: nb.bucket } }),
       signal: c.signal,
     });

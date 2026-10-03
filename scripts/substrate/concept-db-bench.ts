@@ -24,6 +24,9 @@
  */
 
 const CDB = process.env.CDB ?? "http://localhost:43260";
+// The caller credential: the bench writes concept_write / conceptLink_write / conceptUsage_write
+// pointers, and a write-type pointer is authenticated. Never printed.
+const KEY = process.env.METABOB_API_KEY ?? "";
 const OUT = process.env.OUT ?? "";
 const TAG = process.env.RUN_TAG ?? "cdb-bench";
 
@@ -36,7 +39,7 @@ async function http(method: string, path: string, body?: unknown, timeoutMs = 30
   try {
     const res = await fetch(`${CDB}${path}`, {
       method,
-      headers: body ? { "Content-Type": "application/json" } : undefined,
+      headers: { ...(body ? { "Content-Type": "application/json" } : {}), ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
       body: body ? JSON.stringify(body) : undefined,
       signal: ctl.signal,
     });

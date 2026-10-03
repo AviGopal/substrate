@@ -40,6 +40,9 @@
 const WINDOW_HOURS = Number(process.env["IFR_WINDOW_HOURS"] ?? 24);
 const MIN_RUN = Number(process.env["IFR_MIN_RUN"] ?? 25);
 const DEV_VESSEL = process.env["DEV_VESSEL_ENDPOINT"] ?? "http://127.0.0.1:8090";
+// The service key the unit's EnvironmentFile carries; development-vessel authenticates write-type
+// pointers (every *_write shape) against identity-vessel, so a write without it is answered 401.
+const KEY = process.env.METABOB_API_KEY ?? "";
 const SURREAL = process.env["SURREALDB_URL"] ?? "http://127.0.0.1:8000";
 const NS = process.env["SURREALDB_NAMESPACE"] ?? "activity-system";
 const DB = process.env["SURREALDB_DATABASE"] ?? "learning_loop";
@@ -77,7 +80,7 @@ async function hasOpenGapNaming(activityId: string): Promise<boolean> {
   try {
     const r = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
       body: JSON.stringify({ impulse: { type: "substrateGap", status: "open", limit: 400 } }),
       signal: AbortSignal.timeout(15_000),
     });
@@ -154,7 +157,7 @@ async function main(): Promise<void> {
     try {
       const r = await fetch(`${DEV_VESSEL}/v2/impulses/resolve`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
         body: JSON.stringify({
           impulse: {
             type: "substrateGap_write",

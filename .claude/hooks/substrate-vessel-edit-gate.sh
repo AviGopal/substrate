@@ -40,7 +40,12 @@ ie_body="$(jq -nc --arg t "$rel" --arg s "$summary" --arg st "$strictness" \
 # 9s budget: intervention_evaluate fans out to concept-db + traces + git
 # (~5s typical). Only runs on non-bypassed vessel-src edits, so the latency is
 # scoped to exactly the interventions the substrate should weigh in on.
-ie_resp="$(curl -s --max-time 9 -X POST "$dev/v2/impulses/resolve" -H 'Content-Type: application/json' -d "$ie_body" 2>/dev/null)"
+# intervention_evaluate records the refusal it returns (interventionRefused), so it is a write: it
+# carries the caller key, read as substrate-session-end.sh reads it (METABOB_API_KEY, else the
+# client config). The header goes to curl on stdin (-K -), never on argv.
+ie_key="${METABOB_API_KEY:-$(jq -r '.metabob.apiKey // .apiKey // empty' "$HOME/.metabob/config.json" 2>/dev/null)}"
+ie_resp="$( { if [ -n "$ie_key" ]; then printf 'header = "Authorization: ApiKey %s"\n' "$ie_key"; fi; } \
+  | curl -K - -s --max-time 9 -X POST "$dev/v2/impulses/resolve" -H 'Content-Type: application/json' -d "$ie_body" 2>/dev/null)"
 if [ "$(printf '%s' "$ie_resp" | jq -r '.body.verdict // empty' 2>/dev/null)" = "REFUSE" ]; then
   basis="$(printf '%s' "$ie_resp" | jq -r '.body.refusal_basis // .body.reason // "substrate refused this intervention"' 2>/dev/null)"
   pushback="SUBSTRATE PUSH-AWAY (S3): the substrate REFUSED this operator edit to $rel with cited evidence — ${basis}. The substrate gates its own authored code. To proceed, either supply cited evidence justifying the change (dispatch via mcp__metabob__run_goal so the substrate authors it), or set SUBSTRATE_ALLOW_DIRECT_EDIT=1 for a conscious operator override."

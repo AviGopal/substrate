@@ -36,6 +36,9 @@
 
 const DEV = process.env["DEV_VESSEL_ENDPOINT"] || process.env["DEVELOPMENT_VESSEL_URL"] || "http://127.0.0.1:8090";
 const RESOLVE = DEV.replace(/\/$/, "") + "/v2/impulses/resolve";
+// The service key the unit's EnvironmentFile carries; development-vessel authenticates write-type
+// pointers (every *_write shape) against identity-vessel, so a write without it is answered 401.
+const KEY = process.env.METABOB_API_KEY ?? "";
 
 const SEED = {
   "rhythms": [
@@ -274,7 +277,7 @@ async function post(body: unknown, timeoutMs = 4000): Promise<any> {
   const c = new AbortController();
   const t = setTimeout(() => c.abort(), timeoutMs);
   try {
-    const r = await fetch(RESOLVE, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: c.signal });
+    const r = await fetch(RESOLVE, { method: "POST", headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) }, body: JSON.stringify(body), signal: c.signal });
     return await r.json();
   } finally { clearTimeout(t); }
 }

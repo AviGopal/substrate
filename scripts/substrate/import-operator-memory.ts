@@ -23,6 +23,7 @@
  * When DEV_VESSEL_ENDPOINT is set, it uses the memoryNote_write HTTP resolver.
  */
 
+import { readFileSync } from "node:fs";
 import { readdir, readFile, writeFile, rename, mkdir } from "node:fs/promises";
 import { join, basename } from "node:path";
 import { homedir } from "node:os";
@@ -45,6 +46,23 @@ const MEMORY_DIR = join(
 const WORKSPACE_DIR = process.env["WORKSPACE_DIR"] ?? join(import.meta.dir, "workspace");
 const NOTES_PATH = join(WORKSPACE_DIR, "memory", "notes.json");
 const DEV_VESSEL_ENDPOINT = process.env["DEV_VESSEL_ENDPOINT"] ?? "";
+
+// The caller credential. development-vessel authenticates write-type pointers (memoryNote_write
+// among them) against identity-vessel, so a write without a key is answered 401. This runs on the
+// operator host, outside any unit, so the key is read the way the session hooks read it
+// (.claude/hooks/substrate-session-end.sh, substrate-session-start.sh): METABOB_API_KEY, else the
+// client config's .metabob.apiKey (or a flat .apiKey). Never printed.
+function resolveApiKey(): string {
+  const env = process.env["METABOB_API_KEY"];
+  if (env) return env;
+  try {
+    const cfg = JSON.parse(readFileSync(join(homedir(), ".metabob", "config.json"), "utf8"));
+    return cfg?.metabob?.apiKey ?? cfg?.apiKey ?? "";
+  } catch {
+    return "";
+  }
+}
+const KEY = resolveApiKey();
 const IMPORT_TAG = "provenance:operator-import-2026-05-25";
 
 interface MemoryNote {
@@ -113,7 +131,7 @@ async function saveNotes(notes: MemoryNote[]): Promise<void> {
 async function importViaHttp(note: MemoryNote): Promise<void> {
   const res = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
     body: JSON.stringify({ impulse: { type: "memoryNote_write", note } }),
   });
   if (!res.ok) {

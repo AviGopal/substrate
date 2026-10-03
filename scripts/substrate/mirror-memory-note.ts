@@ -12,10 +12,29 @@
  * memory mirror must never break the caller.
  */
 
+import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { basename } from "node:path";
+import { homedir } from "node:os";
+import { basename, join } from "node:path";
 
 const DEV_VESSEL_ENDPOINT = process.env["DEV_VESSEL_ENDPOINT"] ?? "http://localhost:18090";
+
+// The caller credential. development-vessel authenticates write-type pointers (memoryNote_write
+// among them) against identity-vessel, so a write without a key is answered 401. This runs on the
+// operator host, outside any unit, so the key is read the way the session hooks read it
+// (.claude/hooks/substrate-session-end.sh, substrate-session-start.sh): METABOB_API_KEY, else the
+// client config's .metabob.apiKey (or a flat .apiKey). Never printed.
+function resolveApiKey(): string {
+  const env = process.env["METABOB_API_KEY"];
+  if (env) return env;
+  try {
+    const cfg = JSON.parse(readFileSync(join(homedir(), ".metabob", "config.json"), "utf8"));
+    return cfg?.metabob?.apiKey ?? cfg?.apiKey ?? "";
+  } catch {
+    return "";
+  }
+}
+const KEY = resolveApiKey();
 
 type NoteType = "finding" | "feedback" | "reference" | "project";
 
@@ -81,7 +100,7 @@ async function main(): Promise<void> {
   try {
     const res = await fetch(`${DEV_VESSEL_ENDPOINT}/v2/impulses/resolve`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
       body: JSON.stringify({ impulse: { type: "memoryNote_write", note } }),
     });
     if (!res.ok) {
