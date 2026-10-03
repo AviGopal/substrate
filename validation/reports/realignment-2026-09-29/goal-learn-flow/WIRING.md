@@ -488,3 +488,14 @@ Measured from the live autonomyScope pool row. The count is how load-bearing the
 **Total: 13 operator-only items on 5 excluded areas.**
 
 **Proposal (qa; user's decision): slice L's first concrete criterion.** A path leaves excluded_paths when its armed check-first suites cover the behaviours that regressions there have historically broken, judged by the accepted evaluator through the criterion path (Delta 3, REALIGNMENT §7 step 9). The suites armed tonight on cutover and gap files are the evidence such a widening needs.
+
+## Lane landings tally, 10-03 (qa wording)
+| Landing | Authorship | Gate | Status |
+|---|---|---|---|
+| ias-executor-ts ed58e66 (state signature) | lane-authored (operator-armed: SUPERVISED) | own check PASSED at cutover (node 1) | consumer effect check still owed, in a clean window after 03:40Z |
+| activity-api fa73778 (pooled query) | lane-authored (operator-armed) | UNGATED: node 2 ran pre-gate code | correct by its own check (2/2) |
+| libp2p-federation-transport 69256d9 (noise cipher) | lane-landed but OPERATOR-DERIVED (byte-identical to the network session's verified patch) | landed_unverified; post-land suite ran=false; the sweep is set to close it landed_verified on a literal | unmeasured |
+
+**Autonomous AND gate-verified: 1 of 3, and not yet by effect.**
+
+New rule filed (qa): a landing with no measurement that actually ran is REFUSED (no_measurement_available), not landed.
