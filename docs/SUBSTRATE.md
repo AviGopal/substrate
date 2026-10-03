@@ -271,6 +271,8 @@ join token instead, which `substrate-key join <name>` prints on the hub: it carr
 hub's advertised discovery endpoint and a freshly issued key, and the joiner's install
 command consumes it (README § Installation, sequences B and C).
 
+**Revocation is not instant everywhere.** A revoked key stops authenticating at identity-vessel immediately, but a vessel that validates callers through identity may still accept it from its own short validation cache. That lag is bounded by the cache's lifetime, and nothing extends it. development-vessel's write gate reuses a successful validation for at most 60 seconds. Discovery's auth middleware does the same, and it serves an older validation only while identity is failing or unreachable, never after identity has refused the key. So after `substrate-key revoke`, expect the key to be refused everywhere within 60 seconds. A rotation that has to be immediate should take the old key's holder offline first. Failed validations are never cached, so a newly issued key works on first use.
+
 **Auth model.** The operator's `METABOB_API_KEY` identifies the caller and resolves
 the substrate org. Minting a token is itself an authenticated operation:
 `POST /v1/jwt/generate` on identity-vessel requires an `Authorization` header —
