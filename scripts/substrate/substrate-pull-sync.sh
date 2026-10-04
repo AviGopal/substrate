@@ -2768,19 +2768,21 @@ EOF
     if [ -n "$GATE_BLIND_WHY" ]; then
       : # blind (above): no verdict, no baseline write
     elif [ -z "$T_FAIL" ]; then
-      log "$v: !!! TEST GATE BLIND — suite produced no countable result (errored or absent); converging ungated"
+      log "$v: !!! TEST GATE BLIND — suite produced no countable result (errored or absent); HOLDING $v (a gate that did not measure never promotes; runtime keeps its current code)"
       # A blind verdict that discards its output cannot be diagnosed: the same command run
       # by hand, in the unit's cgroup, TasksMax and PATH, printed a summary every time, so
       # the generator is tick-dependent and only the tick's own output can name it. Keep
-      # the size and tail, and file it so an ungated convergence is queryable, not a log line.
+      # the size and tail, and file it so the hold is queryable, not a log line. It used to converge
+      # ungated; it HOLDS now (qa, 2026-10-03: a gate that did not measure never promotes).
       _blind_tail="$(printf '%s' "$T_OUT" | grep -v '^[[:space:]]*$' | tail -5 | cut -c1-240)"
       log "$v: blind output bytes=${#T_OUT} tail: $(printf '%s' "$_blind_tail" | tr '\n' '|')"
       if command -v jq >/dev/null 2>&1; then
         emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg bytes "${#T_OUT}" --arg tail "$_blind_tail" \
           '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-blind-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",
-            summary:("Repair needed: pull-sync converged " + $v + " to " + $head + " UNGATED because its test suite produced no countable pass/fail summary (" + $bytes + " bytes of output). The run ended without bun printing its totals, so every test was unconsulted. Output tail: " + $tail),
+            summary:("Repair needed: pull-sync HELD " + $v + " at " + $head + " (not converged) because its test suite produced no countable pass/fail summary (" + $bytes + " bytes of output). The run ended without bun printing its totals, so no test was consulted, and a gate that did not measure never promotes. Output tail: " + $tail),
             classification_metadata:{blind_output_bytes:($bytes|tonumber),blind_output_tail:$tail,head:$head}}}}}')"
       fi
+      skipped=$((skipped + 1)); continue
     else
       # ── SET-BASED GATE ────────────────────────────────────────────────────────────────
       # A COUNT CANNOT EXPRESS "REGRESSION", AND THE COUNT VERSION WEDGED CONVERGENCE.
