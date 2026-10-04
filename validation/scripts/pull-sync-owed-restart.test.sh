@@ -63,6 +63,16 @@
 #   (o) structural: the release runs first in every vessel-loop pass (every
 #       `continue` lands there), after the loop, and in the EXIT trap
 #
+# THE MARKER SELF-EXPIRES (q). An EXIT trap does not run on SIGKILL (systemd's TimeoutStartSec
+# kill), so a killed tick left admission closed until development-vessel's 20-min mtime bound.
+# Every marker pull-sync writes or re-touches carries expires_at (ISO-8601 UTC): the tick's
+# start + the unit's TimeoutStartSec while the tick holds it; now + 20 min for a CARRIED hold,
+# which is meant to outlive the tick (the vessel's own staleness bound, so a carry is unchanged).
+#   (q1) the owed path's quiesce_drain marker carries the tick expiry
+#   (q2) the mirror path's marker, as the mirror sees it, carries the tick expiry
+#   (q3) a carried hold's marker carries the carry horizon (now + 20 min), not the tick expiry
+#   (q4) structural: UNIT_TIMEOUT_S's default equals the unit file's TimeoutStartSec
+#
 # usage: validation/scripts/pull-sync-owed-restart.test.sh [path/to/substrate-pull-sync.sh]
 # Needs bash, awk, sed, find, GNU date/touch. No root: every path is a temp dir.
 set -uo pipefail
@@ -77,6 +87,7 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
   sed -n '/^content_hash_nontest() {/,/^}/p' "$SCRIPT"
   sed -n '/^loaded_code_stale() {/,/^}/p' "$SCRIPT"
   sed -n '/^quiesce_drain() {/,/^}/p' "$SCRIPT"
+  sed -n '/^quiesce_mark() {/,/^}/p' "$SCRIPT"
   sed -n '/^quiesce_release() {/,/^}/p' "$SCRIPT"
   sed -n '/^owed_hold_bound() {/,/^}/p' "$SCRIPT"
   echo 'run_block() {'
@@ -110,7 +121,7 @@ health_seq() { printf '%s\n' "$@" > "$HEALTH_SEQ_FILE"; }
 curl() {   # runs inside $( ), so the sequence must live in a file, not a variable
   local first; first="$(head -1 "$HEALTH_SEQ_FILE" 2>/dev/null)"
   [ "$(wc -l < "$HEALTH_SEQ_FILE" 2>/dev/null || echo 0)" -gt 1 ] && sed -i 1d "$HEALTH_SEQ_FILE"
-  [ -n "$QDIR_SEEN_FILE" ] && [ -e "$QUIESCE_DIR/$VESSEL" ] && echo seen > "$QDIR_SEEN_FILE"
+  [ -n "$QDIR_SEEN_FILE" ] && [ -e "$QUIESCE_DIR/$VESSEL" ] && cp "$QUIESCE_DIR/$VESSEL" "$QDIR_SEEN_FILE"
   printf '{"in_flight":%s}' "${first:-0}"
 }
 sleep() { :; }
@@ -120,6 +131,9 @@ source "$T/fns.sh"
 VESSEL=demo-vessel
 RUNTIME_DIR="$T/runtime"; MARKER_DIR="$T/marker"; STAGGER_SECONDS=0
 QUIESCE_DIR="$T/quiesce"; QUIESCE_STEP_S=1; QUIESCE_WAIT_S=5; UNIT_TIMEOUT_S=900; QUIESCE_MARGIN_S=0; QDIR_SEEN_FILE=""
+PULLSYNC_TICK_T0=$(( $(date +%s) - 800 ))   # this tick started 800 s ago: its expiry (T0 + 900) is 100 s away
+EXP_TICK="$(date -u -d "@$(( PULLSYNC_TICK_T0 + 900 ))" +%Y-%m-%dT%H:%M:%SZ)"
+expires_of() { jq -r '.expires_at // empty' "$1" 2>/dev/null || true; }
 P="$MARKER_DIR/$VESSEL.restart-pending"; DF="$MARKER_DIR/$VESSEL.restart-deferrals"
 
 setup() { # a running unit and its runtime src
@@ -189,6 +203,8 @@ setup; echo oldhash > "$P"; echo 3 > "$DF"; DEFER=1; health_seq 2 1 0; QDIR_SEEN
 run_block
 if restarted && [ -e "$QDIR_SEEN_FILE" ] && [ ! -e "$QUIESCE_DIR/$VESSEL" ] && grep -q "drained to 0" "$LOG" && [ ! -e "$P" ]; then ok "(i) deferred to the cap: quiesced, drained, restart taken, marker removed"
 else bad "(i) deferred to the cap: expected quiesce then restart (calls: $(tr '\n' ' ' < "$CALLS"); log: $(tr '\n' ' ' < "$LOG"))"; fi
+[ "$(expires_of "$QDIR_SEEN_FILE")" = "$EXP_TICK" ] && ok "(q1) the owed path's quiesce marker carries expires_at = tick start + TimeoutStartSec ($EXP_TICK)" \
+  || bad "(q1) owed-path marker expires_at '$(expires_of "$QDIR_SEEN_FILE")', expected $EXP_TICK (marker: $(head -c 300 "$QDIR_SEEN_FILE" 2>/dev/null))"
 QDIR_SEEN_FILE=""
 
 # ── (j) deferred to the cap, never drains: restart anyway, loss logged ─────────
@@ -386,6 +402,7 @@ probe_window_open() { return 1; }; UNIT_ENABLED=""; Q_HELD=""; Q_CARRY=""; Q_BOU
   echo 'DEFER_MARKER=""; IS_AUTHORING_HOST=""'
   awk '/^  if \[ -z "\$DEFER_MARKER" \]; then$/{on=1} on && /^  # 3-pre\. TEST GATE/{exit} on{print}' "$SCRIPT"
   sed -n '/^mirror_quiesce_drain() {/,/^}/p' "$SCRIPT"
+  sed -n '/^quiesce_mark() {/,/^}/p' "$SCRIPT"
   echo 'gate_stub || continue'
   awk '/^  rm -f "\$MARKER_DIR\/\$v\.testgate-refusals"/{on=1; next} on && /^  PREV_GOOD=/{exit} on{print}' "$SCRIPT"
   echo 'mirror_stub'
@@ -423,6 +440,7 @@ gate_stub() {   # new content in the same tick; the gate reads only the clone
 }
 mirror_stub() {
   echo "MIRROR marker=$(mstate)" >> "$CALLS"
+  [ -e "$QUIESCE_DIR/$VESSEL" ] && echo "MIRROR-EXPIRES $(expires_of "$QUIESCE_DIR/$VESSEL")" >> "$CALLS"
   case " ${ARRIVE:-} " in *" mirror "*) try_admit mirror ;; esac
   return 0
 }
@@ -451,6 +469,9 @@ if restarted && grep -q "drained to 0" "$LOG" && grep -q '^REFUSED new request a
    && ! grep -q "DEFERRING restart" "$LOG" && [ ! -e "$QUIESCE_DIR/$VESSEL" ] && [ "$(cat "$IFC")" = 0 ]; then
   ok "(l) the drain covers the request admitted mid-gate, the mirror-time request is refused, restart this tick, marker released after it"
 else bad "(l) expected a full drain, a refused mirror-time request and a restart this tick (calls: $(tr '\n' ' ' < "$CALLS"); log: $(grep -a 'drained\|DEFERRING\|restarting\|QUIESCED' "$LOG" | tr '\n' ' '))"; fi
+
+grep -qxF "MIRROR-EXPIRES $EXP_TICK" "$CALLS" && ok "(q2) the mirror path's marker carries expires_at = tick start + TimeoutStartSec" \
+  || bad "(q2) mirror-path marker expiry: '$(grep -a '^MIRROR-EXPIRES' "$CALLS")', expected $EXP_TICK"
 
 # ── (l2) qrace control: nothing is admitted between the drain and the restart ──
 msetup 1 "mirror"
@@ -493,6 +514,9 @@ if ! restarted && [ -e "$QUIESCE_DIR/$VESSEL" ] && [ -s "$MARKER_DIR/$VESSEL.qui
    && grep -q "progressing" "$LOG"; then
   ok "(n) quiesce bound hit, compose progressed 30 s ago: NO restart, admission marker still held, restart owed"
 else bad "(n) quiesce bound hit while progressing: expected a held marker and no restart (calls: $(tr '\n' ' ' < "$CALLS"); marker $( [ -e "$QUIESCE_DIR/$VESSEL" ] && echo held || echo gone); log: $(grep -a 'anyway\|DEFERRING\|restarting\|progressing\|LOSSY' "$LOG" | tr '\n' ' '))"; fi
+_q3="$(expires_of "$QUIESCE_DIR/$VESSEL")"; _q3e="$(date -u -d "$_q3" +%s 2>/dev/null || echo 0)"
+if [ -n "$_q3" ] && [ "$_q3e" -ge $(( $(date +%s) + 1100 )) ] && [ "$_q3e" -le $(( $(date +%s) + 1300 )) ]; then ok "(q3) a carried hold's marker carries the carry horizon (now + 20 min): $_q3"
+else bad "(q3) carried marker expires_at '$_q3', expected ~now + 1200 s (the tick expiry $EXP_TICK would reopen admission between ticks)"; fi
 quiesce_release; Q_CARRY=""
 
 # ── (n2) CONTROL: no progress field published -> today's converge-anyway ──────────────────────
@@ -651,6 +675,14 @@ lsetup a-target:clean:carry zz-control:clean; run_loop >> "$OUT" 2>&1
 if grep -q '^PAST-CARRY a-target$' "$OUT" && [ -e "$QD2/a-target" ] && [ -s "$MARKER_DIR/a-target.quiesce-carry" ] && [ -z "$(rel_line a-target)" ] && owed_kept a-target; then
   ok "(ec) control: a pass that reaches the carry handling keeps the carry for the owed path, no release logged"
 else bad "(ec) control: expected the carry left for the owed path (marker $(held_v a-target); out: $(tr '\n' '|' < "$OUT" | cut -c1-700))"; fi
+
+# ── (q4) structural: the unit's TimeoutStartSec is what the expiry adds ───────
+_unit="$(dirname "$SCRIPT")/units/substrate-pull-sync.service"
+_ts="$(sed -n 's/^TimeoutStartSec=\([0-9]*\)$/\1/p' "$_unit" 2>/dev/null)"
+_df="$(grep -o 'UNIT_TIMEOUT_S:-[0-9]*' "$SCRIPT" | sort -u)"
+if [ -n "$_ts" ] && [ "$_df" = "UNIT_TIMEOUT_S:-$_ts" ] && sed -n '/^quiesce_mark() {/,/^}/p' "$SCRIPT" | grep -q 'UNIT_TIMEOUT_S'; then
+  ok "(q4) quiesce_mark adds UNIT_TIMEOUT_S, whose every default ($_df) is the unit's TimeoutStartSec=$_ts"
+else bad "(q4) UNIT_TIMEOUT_S defaults '$(echo $_df)' vs TimeoutStartSec='$_ts', or quiesce_mark does not read UNIT_TIMEOUT_S"; fi
 
 echo
 [ "$FAILS" = 0 ] && { echo "PASS - owed restarts survive content moving on"; exit 0; }
