@@ -14,6 +14,9 @@
 #       pull_sync.testgate_budget_defer_max, default 3) -> gap pull-sync-testgate-budget-starved-<v>,
 #       and still no convergence; a NEW candidate starts the count again
 #   (e) structural: the vessel loop iterates pass_order's order
+#   (f) NO COUNTABLE RESULT (the suite ran but printed no pass/fail totals) is the same "did not
+#       measure": HOLD, gap pull-sync-testgate-blind-<v> with the output tail, baseline untouched
+#       (not in the ruling's list of three; the ruling's principle covers it)
 #
 # usage: validation/scripts/pull-sync-testgate-unmeasured.test.sh [path/to/substrate-pull-sync.sh]
 # Needs bash, git, jq, awk, sed.
@@ -161,4 +164,15 @@ gap_ids | grep -q 'budget-starved' && bad "(d) a new candidate inherited the sta
 grep -q '^mapfile -t PASS_ORDER < <(pass_order)$' "$SCRIPT" && grep -q '^for d in "${PASS_ORDER\[@\]}"; do$' "$SCRIPT" \
   && ok "(e) the vessel loop iterates pass_order" || bad "(e) the vessel loop does not iterate pass_order"
 
+
+# ── (f) the suite printed no countable result ─────────────────────────────────
+setup
+printf 'error: something went wrong before the totals\n' > "$T/stub/clone-out"
+BEFORE="$(cat "$TEST_BASELINE_DIR/$VESSEL")"
+tick
+converged && bad "(f) an uncountable suite converged ungated" || ok "(f) no countable result: no convergence"
+gap_ids | grep -qxF "pull-sync-testgate-blind-$VESSEL" && ok "(f) gap pull-sync-testgate-blind-$VESSEL" || bad "(f) no pull-sync-testgate-blind gap (ids: $(gap_ids | tr '\n' ' '))"
+gap_field "pull-sync-testgate-blind-$VESSEL" '.summary' | grep -qi 'held' && ok "(f) the gap says the vessel is HELD" || bad "(f) the gap does not say the vessel is held: $(gap_field "pull-sync-testgate-blind-$VESSEL" '.summary' | cut -c1-200)"
+[ "$skipped" -ge 1 ] && ok "(f) counted as skipped" || bad "(f) not counted as skipped"
+[ "$(cat "$TEST_BASELINE_DIR/$VESSEL")" = "$BEFORE" ] && ok "(f) baseline untouched" || bad "(f) baseline rewritten"
 echo; [ "$FAILS" = 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAILED"; exit 1; }
