@@ -7,9 +7,11 @@
 #
 #   (a) a TEST-ONLY range with a newly failing name is refused on every tick, past
 #       TEST_GATE_MAX_REFUSALS: no break, no convergence, baseline byte-identical
-#   (b) a RUNTIME range that hits the break converges, but the regressed name is NOT
-#       written into <v>.failnames; it is held outstanding, and a gap carries it
-#       (classification_metadata.outstanding_tests)
+#   (b) a RUNTIME range past the refusal bound is NOT converged: the starvation break may
+#       defer, never promote past red. The regression gap is escalated (severity high), the
+#       regressed name is not written into <v>.failnames, nothing is held outstanding
+#   OUTSTANDING STATE (b2-e) is what a break left behind before it stopped promoting; it is
+#   seeded directly (seed_outstanding), and the gate keeps draining it:
 #   (b2) the NEXT commit (tests unchanged, the name still failing) converges, the name
 #       is still absent from failnames, still reported outstanding, the gap re-emitted
 #   (b3) the name passing again clears it; failing again later is a fresh regression
@@ -128,17 +130,24 @@ done
 [ "$(cat "$TEST_BASELINE_DIR/$VESSEL.failnames"; echo; cat "$TEST_BASELINE_DIR/$VESSEL")" = "$BEFORE" ] && ok "(a) baseline (names + counts) byte-identical" || bad "(a) baseline rewritten: $(tr '\n' '|' < "$TEST_BASELINE_DIR/$VESSEL.failnames")"
 in_failnames "$X" && bad "(a) the regressed name was absorbed into failnames" || ok "(a) the regressed name is not in failnames"
 
-# ── (b) runtime range hits the break: converges, name held outstanding ────────
+# ── (b) runtime range past the bound: deferred and escalated, never promoted ──
 setup
 echo 'export const x = 2;' > "$d/src/x.ts"; g commit -am runtime
 printf '%s\n' "$NEW_OUT" > "$T/stub/clone-out"
 for i in 1 2 3; do tick; done
 grep -q "^CONVERGED $VESSEL" "$CALLS" && bad "(b) converged before the refusal bound" || ok "(b) refused up to the bound"
-tick
-grep -q "^CONVERGED $VESSEL" "$CALLS" && ok "(b) the break converges a runtime range" || bad "(b) the break did not converge a runtime range"
-in_failnames "$X" && bad "(b) the regressed name was written into failnames at the break" || ok "(b) the regressed name is NOT in failnames after the break"
+B_CONV=0
+for i in 4 5 6; do tick; grep -q "^CONVERGED $VESSEL" "$CALLS" && B_CONV=$((B_CONV+1)); done
+[ "$B_CONV" = 0 ] && ok "(b) past the bound a runtime range is still refused (the break defers, never promotes past red)" || bad "(b) the break promoted a runtime range past red on $B_CONV of 3 ticks"
+rg() { grep '^GAP ' "$CALLS" | sed 's/^GAP //' | jq -r "select(.impulse.pointer.gap.id? == \"pull-sync-test-regression-$VESSEL\") | .impulse.pointer.gap | $1" 2>/dev/null || true; }
+[ "$(rg .severity)" = high ] && ok "(b) past the bound the regression gap is escalated (severity high)" || bad "(b) regression gap severity past the bound: '$(rg .severity)'"
+in_failnames "$X" && bad "(b) the regressed name was written into failnames" || ok "(b) the regressed name is NOT in failnames"
 in_failnames "$BASE_NAMES" && ok "(b) the pre-regression baseline names are kept" || bad "(b) the pre-regression baseline lost '$BASE_NAMES'"
-outstanding_gap_names | grep -qxF "$X" && ok "(b) a gap carries the name in outstanding_tests" || bad "(b) no gap carries '$X' in classification_metadata.outstanding_tests"
+[ -s "$TEST_BASELINE_DIR/$VESSEL.outstanding" ] && bad "(b) a refused regression was held outstanding (it is not live)" || ok "(b) nothing held outstanding: nothing was deployed"
+# What a break left behind before it stopped promoting: the regressed commit is live and the
+# name is held outstanding (the gate still drains such state on live nodes).
+seed_outstanding() { pin; printf '%s\n' "$X" > "$TEST_BASELINE_DIR/$VESSEL.outstanding"; rm -f "$MARKER_DIR/$VESSEL.testgate-refusals"; }
+seed_outstanding
 
 # ── (b2) next commit, tests unchanged, name still failing ─────────────────────
 BREAK_SHA="$(git -C "$d" rev-parse HEAD)"; pin
@@ -172,8 +181,11 @@ grep -q 'GAP .*pull-sync-test-regression-demo-vessel' "$CALLS" && ok "(b3) faili
 setup
 echo 'export const x = 2;' > "$d/src/x.ts"; g commit -am runtime
 printf '%s\n' "$NEW_OUT" > "$T/stub/clone-out"
-for i in 1 2 3 4; do tick; done
-grep -q "^CONVERGED $VESSEL" "$CALLS" && ok "(d) setup: the break converged" || bad "(d) setup: the break did not converge"
+seed_outstanding
+printf '%s\n' "$NEW_OUT" > "$T/stub/out-$(git -C "$d" rev-parse HEAD)"
+echo 'export const x = 21;' > "$d/src/x.ts"; g commit -am runtime-1b
+tick
+grep -q "^CONVERGED $VESSEL" "$CALLS" && ok "(d) setup: the commit after the seeded break converged" || bad "(d) setup: the commit after the seeded break did not converge"
 SINCE="$TEST_BASELINE_DIR/$VESSEL.outstanding-since"
 [ -s "$SINCE" ] && ok "(d) the first-outstanding time is recorded" || bad "(d) no first-outstanding stamp ($SINCE)"
 OLD=$(( $(date +%s) - 4 * 86400 ))   # fake clock: first outstanding 4 days ago (window 3 days)
