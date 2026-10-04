@@ -18,7 +18,8 @@
 #   (b) NON-ENVIRONMENT load regression (unnamed rise, nothing unresolvable) past the bound
 #       -> no convergence, the regression gap is ESCALATED (severity high), the baseline is
 #       not degraded and no baseline-degraded gap is filed
-#   (c) control: a green gate (failures unchanged) converges on the first tick
+#   (c) control: a green gate (failures unchanged) converges on the first tick, and the
+#       unresolvable-modules gap is still filed when no hold replaces it
 #
 # usage: validation/scripts/pull-sync-testgate-environment-hold.test.sh [path/to/substrate-pull-sync.sh]
 # Needs bash, git, jq, awk, sed.
@@ -156,5 +157,6 @@ printf '%s\n' "$BASE_OUT" > "$T/stub/clone-out"
 tick
 grep -q "^CONVERGED $VESSEL" "$CALLS" && ok "(c) a green gate converges on the first tick" || bad "(c) a green gate did not converge (log: $(tr '\n' '|' < "$LOG" | cut -c1-400))"
 gap_ids | grep -qxF "$ENV_GAP_ID" && bad "(c) a green gate filed an environment gap" || ok "(c) no environment gap"
+gap_ids | grep -qxF "pull-sync-testgate-unresolvable-modules-$VESSEL" && ok "(c) a green gate with a shared unresolvable module still files the unresolvable-modules gap" || bad "(c) the unresolvable-modules gap was not filed outside a hold (ids: $(gap_ids | tr '\n' ' '))"
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

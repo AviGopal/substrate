@@ -2662,7 +2662,7 @@ EOF
     # baseline), and the name-set gate still judges every file that DID load. Only when no
     # test loaded at all (no pass, no named failure) is the gate blind and v converged ungated.
     # Modules only the candidate cannot resolve were introduced by the commit: not excluded.
-    U_MODS=""
+    U_MODS=""; U_SHARED=""; U_GAP_JSON=""
     if [ -n "$T_FAIL" ]; then
       U_MODS="$(unresolved_modules "$T_OUT")"
       if [ -n "$U_MODS" ]; then
@@ -2681,7 +2681,9 @@ EOF
           else
             log "$v: $U_WHY — excluding $U_EXCL file(s) that fail to load on them from the unnamed-failure count; the files that loaded are still gated"
           fi
-          emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg why "$U_WHY" --arg mode "$([ -n "$GATE_BLIND_WHY" ] && echo "The gate is BLIND: no test file loaded, so $v converged ungated." || echo "The $U_EXCL file(s) failing on them are excluded from the gate; files that loaded are still judged.")" --arg mods "$(printf '%s' "$U_SHARED" | tr '\n' ',' | sed 's/,$//')" \
+          # Filed after the verdict (below), not here: when this tick turns out to be an ENVIRONMENT
+          # hold, the per-(node, vessel) environment gap replaces it, so one cause files one gap.
+          U_GAP_JSON="$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg why "$U_WHY" --arg mode "$([ -n "$GATE_BLIND_WHY" ] && echo "The gate is BLIND: no test file loaded, so $v converged ungated." || echo "The $U_EXCL file(s) failing on them are excluded from the gate; files that loaded are still judged.")" --arg mods "$(printf '%s' "$U_SHARED" | tr '\n' ',' | sed 's/,$//')" \
             '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-unresolvable-modules-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",
               summary:("Repair needed: pull-sync test gate for " + $v + " at " + $head + ": " + $why + ". Every test file importing them fails to load and hides its tests, so neither side measured them. " + $mode + " Usually the clone node_modules does not satisfy package.json, or a dependency needs a build step the pre-gate install (scripts disabled) does not run."),
               classification_metadata:{unresolvable_modules:($mods | split(",")),head:$head}}}}}' 2>/dev/null)"
@@ -2978,6 +2980,26 @@ EOF
       fi
     fi
   fi
+  # AN ENVIRONMENT RED IS A BLIND GATE: HOLD, NEVER COUNT, NEVER BREAK (qa, 2026-10-03). Measured on a
+  # spoke: development-vessel 0d6c70a3 was refused 4x by the load-error gate (unnamed 185 -> 196) while its
+  # test files could not resolve @avigopal/ias-executor-ts/adapters at the parent AND the candidate, and the
+  # 4th refusal took the starvation break and PROMOTED it. When the red is the load-error gate's (no names)
+  # and modules are unresolvable on both sides (U_SHARED, the unresolvable-module classifier above), the
+  # clone's environment is what fails to load those files: the gate cannot tell a good commit from a bad
+  # one, so it neither refuses (no refusal counted, no regression gap inviting a lane to "repair" a
+  # non-defect) nor converges. It HOLDS, and files ONE environment gap per (node, vessel) — a stable id,
+  # so the store dedupes re-filing — naming the modules, in place of the unresolvable-modules gap.
+  if [ -n "$REG" ] && [ -z "$REG_NAMED" ] && [ -n "${U_SHARED:-}" ]; then
+    _env_node="${GTR_NODE:-$(hostname 2>/dev/null || echo unknown)}"
+    _env_mods="$(printf '%s' "$U_SHARED" | tr '\n' ',' | sed 's/,$//')"
+    log "$v: !!! TEST GATE BLIND — ENVIRONMENT at ${HEAD:0:10}: $REG, and test files cannot resolve $(printf '%s' "$U_SHARED" | tr '\n' ' ' | sed 's/ $//') at the parent ${U_PARENT_REF:0:10} and the candidate alike — the environment, not the commit, fails to load them; HOLDING $v (no refusal counted, no starvation break, no convergence; runtime keeps its current code)"
+    emit_gap "$(jq -n -c --arg v "$v" --arg node "$_env_node" --arg nid "$(printf '%s' "$_env_node" | tr -c 'A-Za-z0-9._-' '-')" --arg head "${HEAD:0:10}" --arg reg "$REG" --arg mods "$_env_mods" \
+      '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-environment-" + $nid + "-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
+        summary:("Repair needed: pull-sync test gate for " + $v + " on node " + $node + " is BLIND — environment: test files cannot resolve " + $mods + " at the parent and at the candidate " + $head + " (" + $reg + "). The clone environment, not the commit, fails to load them, so " + $v + " is HELD (not converged, not refused) until they resolve. Usually the clone node_modules copy of a file: dependency has no built output (its sibling clone dist is untracked and was never built or synced)."),
+        classification_metadata:{class:"gate_blind_environment",node:$node,vessel:$v,unresolvable_modules:($mods | split(",")),head:$head,regression:$reg}}}}}' 2>/dev/null)"
+    skipped=$((skipped + 1)); continue
+  fi
+  [ -n "${U_GAP_JSON:-}" ] && emit_gap "$U_GAP_JSON"
   if [ -n "$REG" ]; then
     RC_FILE="$MARKER_DIR/$v.testgate-refusals"
     RC="$(cat "$RC_FILE" 2>/dev/null || echo 0)"; case "$RC" in ''|*[!0-9]*) RC=0 ;; esac
@@ -2995,31 +3017,23 @@ EOF
       log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge (refusal $RC; ${TG_PREV_GOOD:0:10}..${HEAD:0:10} is test-only, so no starvation break); runtime keeps running its current code"
       skipped=$((skipped + 1)); continue
     fi
-    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. Refusal $RC of ${TEST_GATE_MAX_REFUSALS:-3}; the runtime stays on the code it is already running until this is repaired or the refusal bound is reached.\",\"status\":\"open\"}}}}"
+    # THE BREAK DEFERS; IT NEVER PROMOTES PAST RED (qa, 2026-10-03). It used to converge here once
+    # RC passed the bound — named regressions held "outstanding", load regressions as a degraded
+    # baseline — and on a spoke it deployed a commit the gate had refused four times. Staleness is a
+    # cost the gap below makes visible and ranks; a deployed regression is a defect the gate exists to
+    # stop. So past the bound the refusal stands and the gap is ESCALATED (severity high, which the gap
+    # picker ranks above routine work). Outstanding state left by earlier breaks is still drained above.
     if [ "$RC" -le "${TEST_GATE_MAX_REFUSALS:-3}" ]; then
+      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. Refusal $RC of ${TEST_GATE_MAX_REFUSALS:-3}; the runtime stays on the code it is already running until this is repaired.\",\"status\":\"open\"}}}}"
       log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge ($RC/${TEST_GATE_MAX_REFUSALS:-3}); runtime keeps running its current code"
       skipped=$((skipped + 1)); continue
     fi
-    # THE BREAK DEPLOYS; IT DOES NOT FORGIVE. Converging past a confirmed regression is the
-    # lesser evil for runtime code, but the regressed names are NOT written into failnames (that
-    # was the old D1 fix, and it made the gate permanently blind to the regression it had just
-    # let through, with only a "baseline degraded" gap to show for it). They are held in
-    # $v.outstanding: failnames stays the pre-regression baseline, later commits are not
-    # re-charged for names already live (the D1 starvation it fixed stays fixed), every gated
-    # tick re-reports them and re-emits their gap, and they clear only when they pass again.
-    # The count file still records the observed counts; its unnamed field is what the
-    # load-error gate reads.
-    echo "$REG_F $REG_P ${REG_U:-}" > "$TEST_BASELINE_DIR/$v"
-    if [ -n "$REG_NAMED" ] && [ -n "$(printf '%s' "${CONF_SET:-}" | grep . || true)" ]; then
-      { cat "$OUT_FILE" 2>/dev/null; printf '%s\n' "$CONF_SET"; } | grep . | sort -u > "$OUT_FILE.tmp" && mv "$OUT_FILE.tmp" "$OUT_FILE"
-      log "$v: TEST-GATE STARVATION BREAK — refused $RC consecutive runs at ${HEAD:0:10} ($REG); indefinite staleness is the worse failure, converging anyway. The regressed test(s) are held OUTSTANDING, not written into the baseline: $(printf '%s' "$CONF_SET" | tr '\n' ';' | cut -c1-400)"
-      tg_emit_outstanding "$(cat "$OUT_FILE")"
-    else
-      # A load regression (unnamed count) has no names to hold outstanding; unchanged behaviour.
-      log "$v: TEST-GATE STARVATION BREAK — refused $RC consecutive runs at ${HEAD:0:10} ($REG); indefinite staleness is the worse failure, converging anyway and accepting $REG_F fail/$REG_P pass as the new baseline"
-      tg_write_failnames "${T_NAMES:-}"
-      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-testgate-baseline-degraded-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate accepted a DEGRADED baseline for $v ($REG) after $RC refusals. The gate is now blind to this regression until the suite is repaired and the baseline lowered.\",\"status\":\"open\"}}}}"
-    fi
+    emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg reg "$REG" --arg rc "$RC" --arg max "${TEST_GATE_MAX_REFUSALS:-3}" \
+      '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-test-regression-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
+        summary:("Repair needed (ESCALATED): pull-sync test gate has refused " + $v + " " + $rc + " consecutive runs, past the bound of " + $max + ", at " + $head + " (" + $reg + "). The starvation break defers convergence; it never promotes past red, so the runtime stays on its current code until the regression is repaired."),
+        classification_metadata:{vessel:$v,head:$head,refusals:($rc | tonumber),refusal_bound:($max | tonumber),escalated:true,regression:$reg}}}}}' 2>/dev/null)"
+    log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge (refusal $RC, past the bound ${TEST_GATE_MAX_REFUSALS:-3}: gap ESCALATED; the starvation break defers, it never promotes past red); runtime keeps running its current code"
+    skipped=$((skipped + 1)); continue
   fi
   rm -f "$MARKER_DIR/$v.testgate-refusals" 2>/dev/null || true
 
