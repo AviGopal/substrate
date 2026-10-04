@@ -122,10 +122,13 @@ setup() { # mirror-binary
   g "$S" add -A; g "$S" commit -m unhealthy; g "$S" push origin dev
   VNEW="$(git -C "$S" rev-parse HEAD)"
 }
+# A PASSING test-gate runner (the gate is not what this test is about; a gate that did not measure
+# never promotes, so the budget-0 bypass this test used to take now defers instead of converging).
+mkdir -p "$T/gatebun"; printf '#!/usr/bin/env bash\ncase "$1" in test) printf "(pass) stub > ok\\n 1 pass\\n 0 fail\\n"; exit 0 ;; install) mkdir -p node_modules; exit 0 ;; esac\nexit 0\n' > "$T/gatebun/bun"; chmod +x "$T/gatebun/bun"
 run() {
   ( unset SUBSTRATE_UPDATE_CHANNEL
     PATH="$T/stub:$PATH" MITOSIS_PUSH_CLONE_DIR="$T/ws/git/vessels" MITOSIS_RUNTIME_DIR="$T/rt" \
-    SUPER_REPO_DIR="$T/ws/git/no-super-repo" STAGGER_SECONDS=0 GATE_BUDGET_SECONDS=0 DEV_VESSEL_ENDPOINT=http://127.0.0.1:9 \
+    SUPER_REPO_DIR="$T/ws/git/no-super-repo" STAGGER_SECONDS=0 BUN_BIN="$T/gatebun/bun" DEV_VESSEL_ENDPOINT=http://127.0.0.1:9 \
     timeout 120 bash "$T/pull-sync.sh" > "$OUT" 2>&1 ); RC=$?
 }
 show() { sed 's/^/    /' "$OUT" | grep -v '^    $' | tail -25; }

@@ -545,8 +545,8 @@ else bad "(n4) past max hold: expected a LOSSY restart (calls: $(tr '\n' ' ' < "
 NODRAIN=0; MOLD=""; MPROG=""
 
 # ── (o) structural: where the release runs in the real script ─────────────────
-LOOP_HEAD="$(awk '/^for d in "\$CLONE_DIR"\/\*\/; do$/{on=1;n=0} on{print; if (++n>=4) exit}' "$SCRIPT")"
-AFTER_LOOP="$(awk '/^for d in "\$CLONE_DIR"\/\*\/; do$/{inloop=1} inloop && /^done$/{getline; print; exit}' "$SCRIPT")"
+LOOP_HEAD="$(awk '/^for d in "\$.PASS_ORDER\[@\].\"; do$/{on=1;n=0} on{print; if (++n>=4) exit}' "$SCRIPT")"
+AFTER_LOOP="$(awk '/^for d in "\$.PASS_ORDER\[@\].\"; do$/{inloop=1} inloop && /^done$/{getline; print; exit}' "$SCRIPT")"
 if printf '%s' "$LOOP_HEAD" | grep -q '^  quiesce_release$' && [ "$AFTER_LOOP" = quiesce_release ] \
    && grep -q '^trap .*quiesce_release.* EXIT$' "$SCRIPT"; then
   ok "(o) the quiesce hold is released first in every vessel pass, after the loop, and on EXIT"
@@ -577,7 +577,8 @@ else bad "(o) expected quiesce_release at the vessel-loop head, right after its 
   sed -n '/^log() {/p' "$SCRIPT"
   sed -n '/^Q_HELD=""; Q_BOUND=""; Q_CARRY=""$/,/^trap /p' "$SCRIPT" | grep -v '^trap '
   echo 'run_loop() {'
-  awk '/^for d in "\$CLONE_DIR"\/\*\/; do$/{on=1} on{print} on && /^  P_CARRY_FILE=/{exit}' "$SCRIPT" \
+  sed -n '/^pass_order() {/,/^}/p' "$SCRIPT"
+  awk '/^mapfile -t PASS_ORDER < <\(pass_order\)$/{on=1} on{print} on && /^  P_CARRY_FILE=/{exit}' "$SCRIPT" \
     | awk '$0 == "  # 1. Fetch + classify vs origin." {
         print "  case \"$v\" in"
         print "    *-synthetic-said) log \"$v: a synthetic early exit added after this test was written\"; skipped=$((skipped+1)); continue ;;"
@@ -587,7 +588,7 @@ else bad "(o) expected quiesce_release at the vessel-loop head, right after its 
   echo '  echo "PAST-CARRY $v"'
   echo '  [ "$v" = a-halt ] && break'
   echo 'done'
-  awk '/^for d in "\$CLONE_DIR"\/\*\/; do$/{inloop=1} inloop && /^done$/{after=1; next} after && /^$/{exit} after{print}' "$SCRIPT"
+  awk '/^for d in "\$.PASS_ORDER\[@\].\"; do$/{inloop=1} inloop && /^done$/{after=1; next} after && /^$/{exit} after{print}' "$SCRIPT"
   echo '}'
 } > "$T/lfns.sh"
 grep -q 'synthetic-silent' "$T/lfns.sh" && grep -q 'fetch failed' "$T/lfns.sh" && grep -q 'clone DIVERGED' "$T/lfns.sh" \

@@ -1974,8 +1974,23 @@ mirror_quiesce_drain() {
   Q_HELD="$QDIR/$1"
 }
 
+# pass_order — the clone dirs in this tick's vessel-pass order: every candidate the previous tick
+# DEFERRED for want of test-gate budget (<v>.testgate-budget-defers) first, so it gates with a fresh
+# budget instead of starving behind the same vessels again; then every other clone, in glob order.
+pass_order() {
+  local _po_d
+  for _po_d in "$CLONE_DIR"/*/; do
+    [ -s "$MARKER_DIR/$(basename "$_po_d").testgate-budget-defers" ] && printf '%s\n' "$_po_d"
+  done
+  for _po_d in "$CLONE_DIR"/*/; do
+    [ -s "$MARKER_DIR/$(basename "$_po_d").testgate-budget-defers" ] || printf '%s\n' "$_po_d"
+  done
+  return 0
+}
+
 synced=0; skipped=0; deferred=0; failed=0
-for d in "$CLONE_DIR"/*/; do
+mapfile -t PASS_ORDER < <(pass_order)
+for d in "${PASS_ORDER[@]}"; do
   quiesce_release
   carry_pass_begin "$d"   # ends the previous pass, releasing a carried hold it left unhandled
   v="$(basename "$d")"
@@ -2577,25 +2592,37 @@ EOF
   # TEST_TIMEOUT_SECONDS). Exceeding 900s gets the unit SIGTERMed — and the kill
   # would land between this gate and mirror-to-live, i.e. mid-convergence. An
   # unbounded step has already wedged the sibling host loop for 56 minutes once;
-  # bound it. Past the budget the gate converges UNGATED and says so, because a
-  # stalled deploy channel is a worse failure than an unmeasured convergence.
+  # bound it. Past the budget the candidate is DEFERRED, never converged ungated (qa,
+  # 2026-10-03): a stalled deploy channel is visible — logged, counted per candidate,
+  # filed once it starves — while an unmeasured convergence is silent, the gate simply
+  # absent precisely when a tick is slow. A deferred candidate gates FIRST on the next
+  # tick (pass_order), with that tick's fresh budget. After
+  # pull_sync.testgate_budget_defer_max (shaped, default 3) consecutive deferrals of the
+  # SAME candidate the starvation is filed, and it is still not converged.
   : "${GATE_T0:=$(date +%s)}" ; GATE_BUDGET_SECONDS="${GATE_BUDGET_SECONDS:-1000}"
   GATE_ELAPSED=$(( $(date +%s) - GATE_T0 ))
+  BD_FILE="$MARKER_DIR/$v.testgate-budget-defers"
   if [ "$GATE_ELAPSED" -ge "${GATE_BUDGET_SECONDS:-900}" ]; then
-    log "$v: !!! TEST GATE SKIPPED — per-tick budget ${GATE_BUDGET_SECONDS:-900}s exhausted (${GATE_ELAPSED}s elapsed); converging UNGATED rather than risk a SIGTERM mid-convergence"
-    # FILE IT, do not merely log it. A test REGRESSION emits a gap (below); the gate
-    # DISABLING ITSELF did not — and that is the more serious condition, because a
-    # regression means the gate ran and objected while this means no gate ran at all.
-    # Reporting the worse condition through the weaker channel is how it stayed invisible:
-    # a loud line nobody queries is a silent failure. Measured 2026-08-17: several changes
-    # converged under this branch and the only trace was a log line.
-    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-testgate-skipped-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"Repair needed: pull-sync converged $v to ${HEAD:0:10} with NO test gate — the per-tick budget (${GATE_BUDGET_SECONDS:-900}s) was exhausted after ${GATE_ELAPSED}s, so the suite never ran. This is not a passing gate, it is an absent one, and it is absent precisely when a tick is slow, which is when convergence is riskiest. Repair the capability by raising the budget, sharding the gate across ticks, or running the suite before the tick's other work.\",\"status\":\"open\"}}}}"
-    BUN_BIN=""
+    BD_HEAD=""; BD_N=0
+    read -r BD_HEAD BD_N < "$BD_FILE" 2>/dev/null || true
+    case "$BD_N" in ''|*[!0-9]*) BD_N=0 ;; esac
+    [ "$BD_HEAD" = "$HEAD" ] || BD_N=0
+    BD_N=$((BD_N + 1)); echo "$HEAD $BD_N" > "$BD_FILE" 2>/dev/null || true
+    tuning_param pull_sync.testgate_budget_defer_max 3; BD_MAX="$TP_VALUE"
+    log "$v: TEST GATE DEFERRED — per-tick budget ${GATE_BUDGET_SECONDS:-900}s exhausted (${GATE_ELAPSED}s elapsed); NOT converging ${HEAD:0:10} this tick (consecutive budget deferral $BD_N of this candidate, bound $BD_MAX); it gates FIRST next tick with a fresh budget"
+    if [ "$BD_N" -ge "$BD_MAX" ]; then
+      emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg n "$BD_N" --arg max "$BD_MAX" --arg b "${GATE_BUDGET_SECONDS:-900}" \
+        '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-budget-starved-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
+          summary:("Repair needed: pull-sync deferred " + $v + " at " + $head + " " + $n + " consecutive ticks because the per-tick test-gate budget (" + $b + "s) was spent before its gate could run, past pull_sync.testgate_budget_defer_max (" + $max + "). It is NOT converged ungated: a gate that did not measure never promotes. Repair the capability: a faster suite, a larger budget, or a gate sharded across ticks."),
+          classification_metadata:{vessel:$v,head:$head,consecutive_deferrals:($n | tonumber),bound:($max | tonumber),budget_seconds:($b | tonumber)}}}}}' 2>/dev/null)"
+    fi
+    skipped=$((skipped + 1)); continue
   fi
+  rm -f "$BD_FILE" 2>/dev/null || true
   # The gate measures the clone's suite against the clone's node_modules: satisfy the
   # manifest first (see ensure_clone_deps). Unsatisfiable, failed or backed-off -> gap
   # (filed there) and NO convergence this tick: fail closed, never ungated.
-  GATE_BLIND_WHY=""; U_EXCL=0
+  GATE_BLIND_WHY=""; U_EXCL=0; U_MODS=""; U_SHARED=""; U_GAP_JSON=""
   if [ -n "$BUN_BIN" ]; then
     if ! ensure_clone_deps "$v" "$d"; then skipped=$((skipped + 1)); continue; fi
   fi
@@ -2688,13 +2715,16 @@ EOF
   # can distinguish "a test broke" from "more tests exist".
   REG=""; REG_F=""; REG_P=""; REG_U=""; REG_NAMED=""; CONF_SET=""; OUT_STILL=""
   if [ -z "$BUN_BIN" ]; then
-    log "$v: !!! TEST GATE BLIND — no test runner available (bun missing, or the per-tick budget line above disabled it); this is not 'no tests', it is no instrument. Converging ungated."
-    # Only file when the runner is genuinely missing. When the budget branch above cleared
-    # BUN_BIN it already filed, and two gaps for one cause would double-count the demand
-    # the gap picker reads.
-    if [ "$GATE_ELAPSED" -lt "${GATE_BUDGET_SECONDS:-900}" ]; then
-      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-testgate-no-runner-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"Repair needed: pull-sync converged $v to ${HEAD:0:10} with no test runner present, so the gate could not execute a single test. This is no instrument rather than no tests — the vessel's suite was never consulted. Repair the capability by ensuring bun is on PATH in the convergence environment.\",\"status\":\"open\"}}}}"
-    fi
+    # NO INSTRUMENT IS NOT A PASS: HOLD (qa, 2026-10-03). This used to converge ungated. A runner is a
+    # property of the node, not of the vessel, so the gap is one per node; every vessel holds until it
+    # is back.
+    _nr_node="${GTR_NODE:-$(hostname 2>/dev/null || echo unknown)}"
+    log "$v: !!! TEST GATE BLIND — no test runner available (bun missing from BUN_BIN and PATH); this is not 'no tests', it is no instrument. HOLDING $v (not converged; runtime keeps its current code)"
+    emit_gap "$(jq -n -c --arg v "$v" --arg node "$_nr_node" --arg nid "$(printf '%s' "$_nr_node" | tr -c 'A-Za-z0-9._-' '-')" --arg head "${HEAD:0:10}" \
+      '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-no-runner-" + $nid),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
+        summary:("Repair needed: pull-sync on node " + $node + " has no test runner (bun is missing from BUN_BIN and PATH), so no vessel test gate can run and every vessel is HELD, not converged (" + $v + " at " + $head + " among them). Repair the capability by putting bun on PATH in the convergence environment."),
+        classification_metadata:{node:$node,vessel:$v,head:$head}}}}}' 2>/dev/null)"
+    skipped=$((skipped + 1)); continue
   else
     T_OUT="$(run_suite)"; T_FAIL="$(count_pf "$T_OUT" fail)"; T_PASS="$(count_pf "$T_OUT" pass)"
     # UNRESOLVABLE MODULES THE PARENT SHARES ARE EXCLUDED, NOT CARRIED AS A SHARED COUNT. A
@@ -2708,7 +2738,6 @@ EOF
     # baseline), and the name-set gate still judges every file that DID load. Only when no
     # test loaded at all (no pass, no named failure) is the gate blind and v converged ungated.
     # Modules only the candidate cannot resolve were introduced by the commit: not excluded.
-    U_MODS=""; U_SHARED=""; U_GAP_JSON=""
     if [ -n "$T_FAIL" ]; then
       U_MODS="$(unresolved_modules "$T_OUT")"
       if [ -n "$U_MODS" ]; then
@@ -2723,13 +2752,13 @@ EOF
           U_WHY="test files cannot resolve module(s) at both the parent ${U_PARENT_REF:0:10} and the candidate ${HEAD:0:10}: $(printf '%s' "$U_SHARED" | tr '\n' ' ' | sed 's/ $//')"
           if [ "${T_PASS:-0}" -eq 0 ] && [ -z "$(fail_names "$T_OUT")" ]; then
             GATE_BLIND_WHY="$U_WHY; no test file loaded at all"
-            log "$v: !!! TEST GATE BLIND — $GATE_BLIND_WHY; converging UNGATED (baseline untouched)"
+            log "$v: no test file loaded at all ($U_WHY) — the gate is blind; held below as an environment red"
           else
             log "$v: $U_WHY — excluding $U_EXCL file(s) that fail to load on them from the unnamed-failure count; the files that loaded are still gated"
           fi
           # Filed after the verdict (below), not here: when this tick turns out to be an ENVIRONMENT
           # hold, the per-(node, vessel) environment gap replaces it, so one cause files one gap.
-          U_GAP_JSON="$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg why "$U_WHY" --arg mode "$([ -n "$GATE_BLIND_WHY" ] && echo "The gate is BLIND: no test file loaded, so $v converged ungated." || echo "The $U_EXCL file(s) failing on them are excluded from the gate; files that loaded are still judged.")" --arg mods "$(printf '%s' "$U_SHARED" | tr '\n' ',' | sed 's/,$//')" \
+          U_GAP_JSON="$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg why "$U_WHY" --arg mode "$([ -n "$GATE_BLIND_WHY" ] && echo "The gate is BLIND: no test file loaded, so $v is held." || echo "The $U_EXCL file(s) failing on them are excluded from the gate; files that loaded are still judged.")" --arg mods "$(printf '%s' "$U_SHARED" | tr '\n' ',' | sed 's/,$//')" \
             '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-unresolvable-modules-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",
               summary:("Repair needed: pull-sync test gate for " + $v + " at " + $head + ": " + $why + ". Every test file importing them fails to load and hides its tests, so neither side measured them. " + $mode + " Usually the clone node_modules does not satisfy package.json, or a dependency needs a build step the pre-gate install (scripts disabled) does not run."),
               classification_metadata:{unresolvable_modules:($mods | split(",")),head:$head}}}}}' 2>/dev/null)"
@@ -3035,7 +3064,10 @@ EOF
   # one, so it neither refuses (no refusal counted, no regression gap inviting a lane to "repair" a
   # non-defect) nor converges. It HOLDS, and files ONE environment gap per (node, vessel) — a stable id,
   # so the store dedupes re-filing — naming the modules, in place of the unresolvable-modules gap.
-  if [ -n "$REG" ] && [ -z "$REG_NAMED" ] && [ -n "${U_SHARED:-}" ]; then
+  # A gate that loaded NO test file on the same shared modules (GATE_BLIND_WHY) is the same environment
+  # fault with nothing measured at all: held identically (qa, 2026-10-03; it used to converge ungated).
+  if { [ -n "$REG" ] && [ -z "$REG_NAMED" ] && [ -n "${U_SHARED:-}" ]; } || [ -n "${GATE_BLIND_WHY:-}" ]; then
+    REG="${REG:-$GATE_BLIND_WHY}"
     _env_node="${GTR_NODE:-$(hostname 2>/dev/null || echo unknown)}"
     _env_mods="$(printf '%s' "$U_SHARED" | tr '\n' ',' | sed 's/,$//')"
     log "$v: !!! TEST GATE BLIND — ENVIRONMENT at ${HEAD:0:10}: $REG, and test files cannot resolve $(printf '%s' "$U_SHARED" | tr '\n' ' ' | sed 's/ $//') at the parent ${U_PARENT_REF:0:10} and the candidate alike — the environment, not the commit, fails to load them; HOLDING $v (no refusal counted, no starvation break, no convergence; runtime keeps its current code)"

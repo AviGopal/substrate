@@ -99,13 +99,21 @@ esac
 exit 7
 EOF
 printf '#!/usr/bin/env bash\nexit 0\n' > "$T/stub/sleep"
-# bun: the package build writes a dist; anything else is a no-op
+# bun: the package build writes a dist; `test` passes; anything else is a no-op
 cat > "$T/bunbin/bun" <<'EOF'
 #!/usr/bin/env bash
 out=""; prev=""
 for a in "$@"; do [ "$prev" = --outDir ] && out="$a"; prev="$a"; done
 if [ "$1" = run ] && [ "$2" = tsc ] && [ -n "$out" ]; then mkdir -p "$out"; echo "// built $(date +%s%N)" > "$out/index.js"; exit 0; fi
 if [ "$1" = run ] && [ "$2" = build ]; then mkdir -p dist; echo "// built $(date +%s%N)" > dist/index.js; exit 0; fi
+# the test gate passes (a gate that did not measure never promotes, so it has to measure something)
+if [ "$1" = test ]; then printf '(pass) stub > ok\n 1 pass\n 0 fail\n'; exit 0; fi
+if [ "$1" = install ]; then   # every declared dependency present (a file: one as a copy of its target)
+  mkdir -p node_modules
+  jq -r '[(.dependencies // {}), (.devDependencies // {})] | add // {} | to_entries[] | "\(.key)\t\(.value)"' package.json 2>/dev/null \
+    | while IFS=$'\t' read -r n spec; do mkdir -p "$(dirname "node_modules/$n")"; case "$spec" in file:*) cp -a "${spec#file:}" "node_modules/$n" 2>/dev/null || mkdir -p "node_modules/$n" ;; *) mkdir -p "node_modules/$n" ;; esac; done
+  exit 0
+fi
 exit 0
 EOF
 sed -e "s#/root/.bun/bin#$T/bunbin#g" "$MIRROR" > "$T/bin/mirror-to-live"
@@ -152,7 +160,7 @@ run() { # [VAR=value ...] extra environment for this tick
   : > "$CALLS"
   ( unset SUBSTRATE_UPDATE_CHANNEL COMPOSE_CEILING_MS RESTART_DEFER_MAX METABOB_API_KEY ACTIVITY_API_ENDPOINT
     PATH="$T/stub:$PATH" MITOSIS_PUSH_CLONE_DIR="$T/ws/git/vessels" MITOSIS_RUNTIME_DIR="$T/rt" \
-    SUPER_REPO_DIR="$T/ws/git/no-super-repo" STAGGER_SECONDS=0 GATE_BUDGET_SECONDS=0 DEV_VESSEL_ENDPOINT=http://127.0.0.1:9 \
+    SUPER_REPO_DIR="$T/ws/git/no-super-repo" STAGGER_SECONDS=0 GATE_BUDGET_SECONDS=100000 DEV_VESSEL_ENDPOINT=http://127.0.0.1:9 \
     env "$@" timeout 120 bash "$T/pull-sync.sh" > "$OUT" 2>&1 ); RC=$?
   cat "$CALLS" >> "$ALLCALLS"
 }
