@@ -69,7 +69,8 @@
 # start + the unit's TimeoutStartSec while the tick holds it; now + 20 min for a CARRIED hold,
 # which is meant to outlive the tick (the vessel's own staleness bound, so a carry is unchanged).
 #   (q1) the owed path's quiesce_drain marker carries the tick expiry
-#   (q2) the mirror path's marker, as the mirror sees it, carries the tick expiry
+#   (q2) the mirror path's marker carries the tick expiry at the mirror and after the
+#        pre-restart re-touch (a bare `: >` re-touch would truncate it)
 #   (q3) a carried hold's marker carries the carry horizon (now + 20 min), not the tick expiry
 #   (q4) structural: UNIT_TIMEOUT_S's default equals the unit file's TimeoutStartSec
 #
@@ -450,7 +451,7 @@ HEAD=head-old; DEFERRAL_LOG="$T/deferrals.jsonl"; AUTHORING_HOST_VESSEL=other-ve
 COMPOSE_CEILING_MS=900000; GATE_T0="$(date +%s)"; RUNTIME_NONTEST=old; CLONE_NONTEST=new; PREV_GOOD=""
 msetup() { MOLD=""; MPROG=""; Q_CARRY=""; setup; skipped=0; deferred=0; synced=0; failed=0; rm -rf "$QUIESCE_DIR"; echo "$1" > "$IFC"; ARRIVE="${2:-}"; NODRAIN=0; GATE_RC=0; GATE_T0="$(date +%s)"; rm -f "$DEFERRAL_LOG"; HEAD=head-old; CLONE_HASH=content-old; }
 _sysctl_base="$(declare -f systemctl)"
-systemctl() { [ "$1" = restart ] && echo "RESTART-SEES marker=$([ -e "$QUIESCE_DIR/$VESSEL" ] && echo held || echo absent)" >> "$CALLS"; _sysctl_inner "$@"; }
+systemctl() { [ "$1" = restart ] && { echo "RESTART-SEES marker=$([ -e "$QUIESCE_DIR/$VESSEL" ] && echo held || echo absent)"; [ -e "$QUIESCE_DIR/$VESSEL" ] && echo "RESTART-EXPIRES $(expires_of "$QUIESCE_DIR/$VESSEL")"; } >> "$CALLS"; _sysctl_inner "$@"; }
 eval "${_sysctl_base/systemctl ()/_sysctl_inner ()}"
 order() { grep -n "$1" "$CALLS" | head -1 | cut -d: -f1; }
 
@@ -470,8 +471,8 @@ if restarted && grep -q "drained to 0" "$LOG" && grep -q '^REFUSED new request a
   ok "(l) the drain covers the request admitted mid-gate, the mirror-time request is refused, restart this tick, marker released after it"
 else bad "(l) expected a full drain, a refused mirror-time request and a restart this tick (calls: $(tr '\n' ' ' < "$CALLS"); log: $(grep -a 'drained\|DEFERRING\|restarting\|QUIESCED' "$LOG" | tr '\n' ' '))"; fi
 
-grep -qxF "MIRROR-EXPIRES $EXP_TICK" "$CALLS" && ok "(q2) the mirror path's marker carries expires_at = tick start + TimeoutStartSec" \
-  || bad "(q2) mirror-path marker expiry: '$(grep -a '^MIRROR-EXPIRES' "$CALLS")', expected $EXP_TICK"
+grep -qxF "MIRROR-EXPIRES $EXP_TICK" "$CALLS" && grep -qxF "RESTART-EXPIRES $EXP_TICK" "$CALLS" && ok "(q2) the mirror path's marker carries expires_at = tick start + TimeoutStartSec, at the mirror and after the pre-restart re-touch" \
+  || bad "(q2) mirror-path marker expiry: '$(grep -a 'EXPIRES' "$CALLS" | tr '\n' ' ')', expected $EXP_TICK at the mirror and at the restart"
 
 # ── (l2) qrace control: nothing is admitted between the drain and the restart ──
 msetup 1 "mirror"

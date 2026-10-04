@@ -27,6 +27,8 @@
 set -uo pipefail
 # The args this tick was started with, kept for the one self re-exec (see SELF-CONVERGE FIRST).
 PULLSYNC_ARGS=("$@")
+# When this tick started (epoch s): what an admission marker's expires_at counts from (quiesce_mark).
+PULLSYNC_TICK_T0="$(date +%s)"
 # A re-exec'd tick keeps the ORIGINAL start time: the failing-test generator's budget is
 # measured against the unit timeout, which the exec does not reset.
 if [ "${PULLSYNC_REEXECED:-}" = 1 ] && [ -n "${PULLSYNC_T0:-}" ]; then :; else PULLSYNC_T0="$(date +%s)"; fi
@@ -613,6 +615,23 @@ quiesce_release() {
   fi
   Q_HELD=""; Q_BOUND=""; Q_CARRY=""; Q_PENDING_PORT=""; return 0
 }
+# quiesce_mark <marker> [carry] — write (or re-touch) an admission marker. THE MARKER SELF-EXPIRES.
+# quiesce_release runs from the EXIT trap, which does not run on SIGKILL: a tick systemd killed at
+# TimeoutStartSec left admission closed until development-vessel's 20-min mtime staleness bound. So
+# the marker carries expires_at (ISO-8601 UTC) and the vessel treats a past-expiry marker as absent:
+#   - held by this tick: tick start + the unit's TimeoutStartSec (UNIT_TIMEOUT_S, the same value the
+#     drain budgets use; the unit file's TimeoutStartSec=900). No tick outlives that, so a killed
+#     tick's marker expires the moment systemd kills it.
+#   - CARRIED (meant to outlive the tick, see above): now + 20 min, the vessel's own staleness bound,
+#     so a carry behaves exactly as before; the next tick's owed path re-touches it.
+# Every write goes through here: a bare `: >` re-touch would truncate the content and drop expires_at.
+quiesce_mark() {
+  local _qm_exp
+  if [ "${2:-}" = carry ]; then _qm_exp=$(( $(date +%s) + 1200 ))
+  else _qm_exp=$(( ${PULLSYNC_TICK_T0:-$(date +%s)} + ${UNIT_TIMEOUT_S:-900} )); fi
+  printf '{"written_by":"pull-sync","pid":%s,"hold":"%s","expires_at":"%s"}\n' "$$" "${2:-tick}" \
+    "$(date -u -d "@$_qm_exp" +%Y-%m-%dT%H:%M:%SZ)" > "$1" 2>/dev/null || true
+}
 # release_carried_hold <vessel> <why> — end a carried hold from a vessel-loop skip that never reaches the
 # owed path: drop the admission marker the carry names and the carry itself, and say why. The owed
 # restart (restart-pending, its clock and counter) is left as it is.
@@ -1038,7 +1057,7 @@ quiesce_drain() {
   QD_WHY=""
   _qd_dir="${QUIESCE_DIR:-/workspace/quiesce}"
   mkdir -p "$_qd_dir" 2>/dev/null || true
-  : > "$_qd_dir/$1" 2>/dev/null || true
+  quiesce_mark "$_qd_dir/$1"
   log "$1: owed restart QUIESCED (admission closed); waiting for in-flight work to finish"
   : "${GATE_T0:=$(date +%s)}"
   _qd_wait="${QUIESCE_WAIT_S:-900}"
@@ -1900,7 +1919,7 @@ mirror_quiesce_drain() {
   local _mq_port="$2"
   QDIR="${QUIESCE_DIR:-/workspace/quiesce}"
   mkdir -p "$QDIR" 2>/dev/null || true
-  : > "$QDIR/$1" 2>/dev/null || true
+  quiesce_mark "$QDIR/$1"
   # BOUND THE WAIT BY WHAT IS LEFT OF THE UNIT'S OWN START TIMEOUT, or the branch below
   # that promises "this wait terminates on its own" is unreachable.
   #
@@ -1952,7 +1971,7 @@ mirror_quiesce_drain() {
   # drain follows the gate and the marker is held through mirror and restart; it is
   # re-touched (the vessel fails open on a marker older than its QUIESCE_MAX_MS) and
   # released by quiesce_release: after the restart, or on any other exit from this pass.
-  : > "$QDIR/$1" 2>/dev/null || true
+  quiesce_mark "$QDIR/$1"
   Q_HELD="$QDIR/$1"
 }
 
@@ -2149,7 +2168,7 @@ for d in "$CLONE_DIR"/*/; do
     P_CARRIED=""
     if [ -s "$P_CARRY_FILE" ]; then
       P_CARRIED="$(cat "$P_CARRY_FILE" 2>/dev/null)"; Q_HELD="$P_CARRIED"
-      : > "$Q_HELD" 2>/dev/null || true
+      quiesce_mark "$Q_HELD"
     fi
     restart_age_defer "$P_PORT" "$P_DEFERRED_N"; P_INFLIGHT="$RA_INFLIGHT"; P_LOSSY=""; P_HOLD=""
     # PROGRESS MAY HOLD AN OWED RESTART, BUT NOT FOREVER. A past-ceiling request that is still making stage
@@ -2185,7 +2204,7 @@ for d in "$CLONE_DIR"/*/; do
       [ -n "$P_HOLD" ] || echo "$((P_DEFERRED_N + 1))" > "$P_DEFER_FILE" 2>/dev/null || true
       [ -s "$OWED_SINCE_FILE" ] || date +%s > "$OWED_SINCE_FILE" 2>/dev/null || true
       if [ -n "$P_HOLD" ] && [ -n "$P_CARRIED" ]; then
-        Q_CARRY="$Q_HELD"; RA_WHY="$RA_WHY; admission stays closed (carried quiesce hold, marker re-touched)"
+        Q_CARRY="$Q_HELD"; quiesce_mark "$Q_HELD" carry; RA_WHY="$RA_WHY; admission stays closed (carried quiesce hold, marker re-touched)"
       fi
       log "$v: owed restart still deferred — $RA_WHY ($P_OWED)"
     else
@@ -3359,7 +3378,7 @@ EOF
     DEFER_FILE="$MARKER_DIR/$v.restart-deferrals"
     DEFERRED_N="$(cat "$DEFER_FILE" 2>/dev/null || echo 0)"
     case "$DEFERRED_N" in ''|*[!0-9]*) DEFERRED_N=0 ;; esac
-    [ -n "${Q_HELD:-}" ] && { : > "$Q_HELD" 2>/dev/null || true; }   # keep the held marker fresh past a long gate
+    [ -n "${Q_HELD:-}" ] && quiesce_mark "$Q_HELD"   # keep the held marker fresh past a long gate
     restart_age_defer "$PORT" "$DEFERRED_N"; INFLIGHT="$RA_INFLIGHT"
     # The quiesce above already gave up on the run it could not drain ("converging anyway"):
     # deferring now would strand the restart behind that same run. A probe window still holds.
@@ -3371,7 +3390,7 @@ EOF
     if [ -n "${Q_BOUND:-}" ] && [ "$RA_DEFER" = 1 ] && [ "$RA_PROBE" != 1 ]; then
       if [ "${RA_FRESH:-0}" = 1 ]; then
         if ! owed_hold_bound "$v"; then
-          Q_CARRY="$Q_HELD"; echo "$Q_HELD" > "$MARKER_DIR/$v.quiesce-carry" 2>/dev/null || true
+          Q_CARRY="$Q_HELD"; quiesce_mark "$Q_HELD" carry; echo "$Q_HELD" > "$MARKER_DIR/$v.quiesce-carry" 2>/dev/null || true
           RA_WHY="quiesce bound reached this tick, but the compose is progressing ($RA_WHY) — holding admission closed across ticks instead of restarting into it"
         fi
       else
