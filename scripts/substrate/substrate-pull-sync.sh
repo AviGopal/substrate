@@ -27,8 +27,6 @@
 set -uo pipefail
 # The args this tick was started with, kept for the one self re-exec (see SELF-CONVERGE FIRST).
 PULLSYNC_ARGS=("$@")
-# When this tick started (epoch s): what an admission marker's expires_at counts from (quiesce_mark).
-PULLSYNC_TICK_T0="$(date +%s)"
 # A re-exec'd tick keeps the ORIGINAL start time: the failing-test generator's budget is
 # measured against the unit timeout, which the exec does not reset.
 if [ "${PULLSYNC_REEXECED:-}" = 1 ] && [ -n "${PULLSYNC_T0:-}" ]; then :; else PULLSYNC_T0="$(date +%s)"; fi
@@ -619,7 +617,8 @@ quiesce_release() {
 # quiesce_release runs from the EXIT trap, which does not run on SIGKILL: a tick systemd killed at
 # TimeoutStartSec left admission closed until development-vessel's 20-min mtime staleness bound. So
 # the marker carries expires_at (ISO-8601 UTC) and the vessel treats a past-expiry marker as absent:
-#   - held by this tick: tick start + the unit's TimeoutStartSec (UNIT_TIMEOUT_S, the same value the
+#   - held by this tick: tick start (PULLSYNC_T0, carried across the self re-exec) + the unit's
+#     TimeoutStartSec (UNIT_TIMEOUT_S, the same value the
 #     drain budgets use; the unit file's TimeoutStartSec=900). No tick outlives that, so a killed
 #     tick's marker expires the moment systemd kills it.
 #   - CARRIED (meant to outlive the tick, see above): now + 20 min, the vessel's own staleness bound,
@@ -628,7 +627,7 @@ quiesce_release() {
 quiesce_mark() {
   local _qm_exp
   if [ "${2:-}" = carry ]; then _qm_exp=$(( $(date +%s) + 1200 ))
-  else _qm_exp=$(( ${PULLSYNC_TICK_T0:-$(date +%s)} + ${UNIT_TIMEOUT_S:-900} )); fi
+  else _qm_exp=$(( ${PULLSYNC_T0:-$(date +%s)} + ${UNIT_TIMEOUT_S:-900} )); fi
   printf '{"written_by":"pull-sync","pid":%s,"hold":"%s","expires_at":"%s"}\n' "$$" "${2:-tick}" \
     "$(date -u -d "@$_qm_exp" +%Y-%m-%dT%H:%M:%SZ)" > "$1" 2>/dev/null || true
 }
@@ -1941,7 +1940,7 @@ mirror_quiesce_drain() {
   NOW="$(curl -s --max-time 5 "http://127.0.0.1:$_mq_port/health" 2>/dev/null \
     | grep -o '"in_flight"[[:space:]]*:[[:space:]]*[0-9][0-9]*' | grep -o '[0-9]*$' | head -1)"
   NOW="${NOW:-0}"; case "$NOW" in *[!0-9]*) NOW=0 ;; esac
-  log "$1: test gate passed; $NOW unit(s) in flight — QUIESCED (admission closed) until the restart; waiting for them to finish rather than restarting into them"
+  log "$1: test gate done; $NOW unit(s) in flight — QUIESCED (admission closed) until the restart; waiting for them to finish rather than restarting into them"
   : "${GATE_T0:=$(date +%s)}" ; GATE_BUDGET_SECONDS="${GATE_BUDGET_SECONDS:-1000}"
   _Q_LEFT=$(( ${UNIT_TIMEOUT_S:-900} - ( $(date +%s) - GATE_T0 ) - ${QUIESCE_MARGIN_S:-120} ))
   [ "$_Q_LEFT" -lt 0 ] && _Q_LEFT=0
