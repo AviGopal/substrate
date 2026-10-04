@@ -54,6 +54,8 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 {
   sed -n '/^scrubbed_env() {/,/^}/p' "$SCRIPT"
   sed -n '/^clone_dep_missing() {/,/^}/p' "$SCRIPT"
+  sed -n '/^file_dep_unbuilt() {/,/^}/p' "$SCRIPT"
+  sed -n '/^build_file_dep() {/,/^}/p' "$SCRIPT"
   sed -n '/^tree_digest() {/,/^}/p' "$SCRIPT"
   sed -n '/^clone_file_deps() {/,/^}/p' "$SCRIPT"
   sed -n '/^file_dep_identity() {/,/^}/p' "$SCRIPT"

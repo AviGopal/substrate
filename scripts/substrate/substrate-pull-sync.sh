@@ -1670,13 +1670,62 @@ content_hash_nontest() { # vessel-root -> md5 over src/ sql/ scripts/ minus test
 # ok/adopted/installed and 1 otherwise (the caller must NOT converge v this tick).
 # Test: validation/scripts/pull-sync-clone-deps.test.sh.
 clone_dep_missing() { # clone-dir -> missing declared dependency names, one per line
-  local _cdm_d="$1" _cdm_n
+  local _cdm_d="$1" _cdm_n _cdm_s
   command -v jq >/dev/null 2>&1 || return 0
-  jq -r '[(.dependencies // {}), (.devDependencies // {})] | add // {} | keys[]' "$_cdm_d/package.json" 2>/dev/null \
-    | while IFS= read -r _cdm_n; do
+  jq -r '[(.dependencies // {}), (.devDependencies // {})] | add // {} | to_entries[] | "\(.key)\t\(.value)"' "$_cdm_d/package.json" 2>/dev/null \
+    | while IFS=$'\t' read -r _cdm_n _cdm_s; do
         [ -n "$_cdm_n" ] || continue
-        [ -e "$_cdm_d/node_modules/$_cdm_n" ] || [ -L "$_cdm_d/node_modules/$_cdm_n" ] || printf '%s\n' "$_cdm_n"
+        if ! { [ -e "$_cdm_d/node_modules/$_cdm_n" ] || [ -L "$_cdm_d/node_modules/$_cdm_n" ]; }; then printf '%s\n' "$_cdm_n"; continue; fi
+        # A file: copy that lacks its own entry points (main, exports) is as missing as no copy: every
+        # import of it fails to load, at the parent and the candidate alike, and blinds the gate.
+        case "$_cdm_s" in file:*) [ -z "$(file_dep_unbuilt "$_cdm_d/node_modules/$_cdm_n")" ] || printf '%s\n' "$_cdm_n" ;; esac
       done
+}
+# file_dep_unbuilt <package-dir> -> the package's own RUNTIME entry points (package.json main and every
+# exports path except "types"/"typings": a test run loads code, not declarations) that do not exist under
+# it, one per line; nothing when all exist, or when it has no package.json (or no jq) to say what they
+# are. Wildcard export patterns are not checked.
+file_dep_unbuilt() {
+  local _fu_p
+  [ -f "$1/package.json" ] && command -v jq >/dev/null 2>&1 || return 0
+  jq -r '[(.main // empty), (.exports // {} | if type == "string" then . else (.. | objects | to_entries[] | select(.key != "types" and .key != "typings") | .value | strings) end)] | unique[]' "$1/package.json" 2>/dev/null \
+    | while IFS= read -r _fu_p; do
+        case "$_fu_p" in ''|/*|*..*|*'*'*) continue ;; esac
+        _fu_p="${_fu_p#./}"
+        [ -e "$1/$_fu_p" ] || printf '%s\n' "$_fu_p"
+      done
+}
+# build_file_dep <dependant-vessel> <dep-name> <target-dir> — A FILE: DEPENDENCY WITH NO BUILT OUTPUT IS
+# BUILT IN ITS OWN CLONE before the dependant installs a copy of it (gap pull-sync-clone-installs-an-empty-
+# file-dependency-so-the-test-gate-is-blind-to-a-missing-dist). Its dist is untracked and nothing else
+# builds it there: sync_clone_dist only copies the runtime build once the package itself has converged on
+# this node, so a dependant installed before that got an empty copy and its gate went blind (the spoke's
+# @avigopal/ias-executor-ts/adapters hold). Under scrubbed_env like the install and the suite, bounded by
+# CLONE_DEPS_BUILD_TIMEOUT_SECONDS; the sibling's own node_modules are installed first when absent
+# (--ignore-scripts). A tracked output, no build script, a failed build or entry points still missing ->
+# BD_WHY set, return 1 (the caller fails closed with a gap naming the package).
+build_file_dep() {
+  local _bf_v="$1" _bf_n="$2" _bf_t="$3" _bf_log _bf_root _bf_rc _bf_left
+  BD_WHY=""
+  _bf_left="$(file_dep_unbuilt "$_bf_t")"
+  [ -n "$_bf_left" ] || return 0
+  if [ -n "$(git -C "$_bf_t" ls-files -- $(printf '%s\n' "$_bf_left" | sed 's#/.*##' | sort -u) 2>/dev/null | head -1)" ]; then
+    BD_WHY="its entry point(s) $(printf '%s' "$_bf_left" | tr '\n' ' ' | sed 's/ $//') are missing from TRACKED output in $_bf_t (a checkout problem, not a build to run)"; return 1
+  fi
+  jq -e '.scripts.build' "$_bf_t/package.json" >/dev/null 2>&1 \
+    || { BD_WHY="its entry point(s) $(printf '%s' "$_bf_left" | tr '\n' ' ' | sed 's/ $//') are missing and its package.json has no build script"; return 1; }
+  _bf_log="$(mktemp "${TMPDIR:-/tmp}/pullsync-depbuild-XXXXXX")"
+  log "$_bf_v: file: dependency $_bf_n ($_bf_t) has no built output ($(printf '%s' "$_bf_left" | tr '\n' ' ' | sed 's/ $//')) — building it in its clone before installing a copy (scrubbed env, ${CLONE_DEPS_BUILD_TIMEOUT_SECONDS:-180}s bound)"
+  if [ ! -d "$_bf_t/node_modules" ]; then clone_deps_install "$_bf_t" "$_bf_log" || true; fi
+  _bf_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")"
+  (cd "$_bf_t" && scrubbed_env "$_bf_root" timeout --kill-after=15 "${CLONE_DEPS_BUILD_TIMEOUT_SECONDS:-180}" "$BUN_BIN" run build) >> "$_bf_log" 2>&1; _bf_rc=$?
+  rm -rf "$_bf_root" 2>/dev/null || true
+  _bf_left="$(file_dep_unbuilt "$_bf_t")"
+  if [ "$_bf_rc" -eq 0 ] && [ -z "$_bf_left" ]; then
+    log "$_bf_v: built file: dependency $_bf_n in its clone"; rm -f "$_bf_log"; return 0
+  fi
+  BD_WHY="building it in its clone failed (rc=$_bf_rc)${_bf_left:+; still missing: $(printf '%s' "$_bf_left" | tr '\n' ' ' | sed 's/ $//')}; output tail: $(grep -v '^[[:space:]]*$' "$_bf_log" 2>/dev/null | tail -5 | tr '\n' '|' | cut -c1-400)"
+  rm -f "$_bf_log"; return 1
 }
 clone_deps_install() { # clone-dir log-file -> bun's exit status; candidate code never runs, secrets never visible
   local _cdi_root _cdi_rc
@@ -1726,8 +1775,20 @@ ensure_clone_deps() { # vessel clone-dir
   _cd_mark="$MARKER_DIR/$_cd_v.clone-deps"; _cd_fail="$MARKER_DIR/$_cd_v.clone-deps-failed"
   _cd_aside="$MARKER_DIR/$_cd_v.node_modules-prev"
   rm -rf "$_cd_d/node_modules.pullsync-prev" 2>/dev/null || true
-  _cd_hash="$(cat "$_cd_d/package.json" "$_cd_d/bun.lock" "$_cd_d/bun.lockb" 2>/dev/null | md5sum | cut -d' ' -f1)"
   _cd_fdeps="$(clone_file_deps "$_cd_d")"
+  # Every present file: target must carry its own entry points BEFORE a copy of it is installed or the
+  # marker hashes it (build_file_dep). A target that cannot be built fails closed, naming the package.
+  while IFS=$'\t' read -r _cd_name _cd_target; do
+    [ -n "$_cd_name" ] && [ -d "$_cd_target" ] || continue
+    if ! build_file_dep "$_cd_v" "$_cd_name" "$_cd_target"; then
+      CD_STATE=failed; CD_WHY="file: dependency $_cd_name ($_cd_target) has no built output and $BD_WHY"
+      log "$_cd_v: !!! CLONE DEPENDENCY UNBUILT — $CD_WHY; NOT converging $_cd_v this tick (its tests would fail to load on it and blind the gate)"
+      clone_deps_gap pull-sync-clone-dep-unbuilt- "$(printf '%s' "$_cd_name" | tr -c 'A-Za-z0-9._-' '-')" "$CD_WHY." \
+        "Repair needed: pull-sync cannot build the file: dependency $_cd_name in its clone, so $_cd_v (and every other dependant) would install an empty copy whose imports fail to load and blind the test gate; $_cd_v is not converged until it builds."
+      return 1
+    fi
+  done <<< "$_cd_fdeps"
+  _cd_hash="$(cat "$_cd_d/package.json" "$_cd_d/bun.lock" "$_cd_d/bun.lockb" 2>/dev/null | md5sum | cut -d' ' -f1)"
   if [ -n "$_cd_fdeps" ]; then
     _cd_hash="$( { echo "$_cd_hash"; while IFS=$'\t' read -r _cd_name _cd_target; do
         printf '%s %s %s\n' "$_cd_name" "$_cd_target" "$( [ -d "$_cd_target" ] && file_dep_identity "$_cd_target" || echo missing)"
