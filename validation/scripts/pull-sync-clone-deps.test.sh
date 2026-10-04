@@ -16,8 +16,8 @@
 #       a changed manifest or an expired backoff retries
 #   (d) parent AND candidate "Cannot find module" -> one gap naming it; those files are
 #       excluded from the unnamed count (no refusal, no 10->11 trap) while loaded files
-#       are still judged (a new attributable failure is refused); blind and ungated only
-#       when no test file loads; candidate-only load error -> not excluded
+#       are still judged (a new attributable failure is refused); when no test file loads
+#       the gate is blind and v is HELD; candidate-only load error -> not excluded
 #   (e) a file: dependency whose target is missing -> no install, gap, NOT converged
 #   (f) a file: dependency on a present sibling clone -> installed
 #   (g) an install that rewrites the tracked bun.lock is restored
@@ -234,7 +234,7 @@ printf '(fail) old > one\n' > "$TEST_BASELINE_DIR/$VESSEL.failnames"; echo "1 5 
 run
 grep -q 'GAP .*pull-sync-test-regression-demo-vessel' "$CALLS" && ok "(d3) a new attributable failure in a loaded file is still refused" || bad "(d3) the loaded files were not judged"
 grep -q "^CONVERGED" "$CALLS" && bad "(d3) converged over an attributable regression" || ok "(d3) not converged"
-# no test file loads at all -> blind, ungated, baseline untouched
+# no test file loads at all -> blind: HELD (environment gap), baseline untouched
 setup '{"left-pad":"1.0.0"}'
 mkdir -p "$d/node_modules/left-pad"
 NOLOAD="error: Cannot find module '@avigopal/ias-executor-ts' from '/x/src/index.ts'
@@ -245,8 +245,8 @@ printf '%s\n' "$NOLOAD" > "$T/stub/clone-out"; printf '%s\n' "$NOLOAD" > "$T/stu
 printf '(fail) old > one\n' > "$TEST_BASELINE_DIR/$VESSEL.failnames"; echo "1 5 0" > "$TEST_BASELINE_DIR/$VESSEL"
 run
 grep -q 'TEST GATE BLIND' "$LOG" && ok "(d4) nothing loads: logged blind" || bad "(d4) nothing loaded but not blind"
-grep -q 'GAP .*unresolvable-modules' "$CALLS" && ok "(d4) gap filed" || bad "(d4) no gap"
-grep -q "^CONVERGED $VESSEL" "$CALLS" && ok "(d4) converges ungated" || bad "(d4) did not converge"
+grep -q 'GAP .*pull-sync-testgate-environment-' "$CALLS" && ok "(d4) the environment gap is filed" || bad "(d4) no environment gap"
+grep -q "^CONVERGED $VESSEL" "$CALLS" && bad "(d4) a gate that measured nothing converged (ungated)" || ok "(d4) held, not converged: a gate that did not measure never promotes"
 [ "$(cat "$TEST_BASELINE_DIR/$VESSEL")" = "1 5 0" ] && ok "(d4) baseline untouched" || bad "(d4) baseline rewritten: $(cat "$TEST_BASELINE_DIR/$VESSEL")"
 # candidate-only: the commit introduced it -> not excluded
 setup '{"left-pad":"1.0.0"}'
