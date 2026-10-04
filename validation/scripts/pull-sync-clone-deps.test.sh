@@ -32,6 +32,14 @@
 #       tick; a tick whose budget cannot fit one more install defers the rest (logged);
 #       a file: spec with a trailing slash is still discovered;
 #       called from the no-op branch and after a credited fan-out
+#   (l) a file: dependency whose package main / exported dist is MISSING is unsatisfied: the
+#       sibling clone is built (`bun run build` there, its own deps installed first) BEFORE the
+#       dependant's install and the suite, the dependant's copy then carries the dist, and the
+#       gate is not blind (converges, no BLIND/ENVIRONMENT line)
+#   (l2) the build fails -> fail closed: a gap naming the package, no install, no suite, NOT
+#       converged; a sibling with no build script fails closed the same way
+#   (l3) control: a sibling that HAS its dist is not built and installs unchanged
+#   (l4) an installed copy without the dist (marker current) is unsatisfied and reinstalled
 #
 # usage: validation/scripts/pull-sync-clone-deps.test.sh [path/to/substrate-pull-sync.sh]
 # Needs bash, git, jq, awk, sed.
@@ -92,6 +100,13 @@ case "\$1" in
     jq -r '[(.dependencies // {}), (.devDependencies // {})] | add // {} | to_entries[] | "\(.key)\t\(.value)"' package.json | while IFS=\$'\t' read -r n spec; do
       case "\$spec" in file:*) [ -e "node_modules/\$n" ] || { mkdir -p "\$(dirname "node_modules/\$n")"; cp -a "\${spec#file:}" "node_modules/\$n"; } ;; *) mkdir -p "node_modules/\$n" ;; esac
     done
+    exit 0 ;;
+  run)
+    [ "\$2" = build ] || exit 0
+    echo "BUILD \$PWD" >> "$CALLS"
+    [ -f "\$S/build-fails" ] && { echo "error TS2307: simulated build failure"; exit 2; }
+    jq -e '.scripts.build' package.json >/dev/null 2>&1 || { echo 'error: Script not found "build"'; exit 1; }
+    mkdir -p dist/adapters; echo 'exports.v = 1;' > dist/index.js; echo 'exports.a = 1;' > dist/adapters/index.js
     exit 0 ;;
   test)
     if [ -f ./.is-clone ]; then echo "TEST clone" >> "$CALLS"; cat "\$S/clone-out"
@@ -395,4 +410,51 @@ NOOP="$(awk '/^  if \[ "\$CLONE_HASH" = "\$RUNTIME_HASH" \]; then/{on=1} on{prin
 printf '%s' "$NOOP" | grep -q 'refresh_clone_dependants "\$v" "\$d"' && ok "(k6) called from the no-op (already converged) branch" || bad "(k6) not called from the no-op branch"
 grep -B2 -A2 'echo "\$HEAD" > "\$LAST_GOOD_DIR/\$v"; rm -f "\$MARKER_DIR/\$v.fanout-fail"; log "\$v: fan-out healthy' "$SCRIPT" | grep -q 'refresh_clone_dependants "\$v" "\$d"' && ok "(k6) called after a credited fan-out" || bad "(k6) not called after a credited fan-out"
 
+
+# ── (l) a file: dependency with no built output is built before the gate ──────
+UB="$CLONE_DIR/ias-executor-ts"
+mk_unbuilt() { # a sibling clone whose dist (main + ./adapters export) is untracked and absent
+  rm -rf "$UB"; mkdir -p "$UB/src"
+  printf '%s\n' '{"name":"@avigopal/ias-executor-ts","version":"0.1.1","main":"./dist/index.js","exports":{".":{"types":"./dist/index.d.ts","import":"./dist/index.js"},"./adapters":{"import":"./dist/adapters/index.js"}},"scripts":{"build":"tsc"},"devDependencies":{"typescript":"5.0.0"}}' > "$UB/package.json"
+  [ "${1:-}" = nobuild ] && jq 'del(.scripts)' "$UB/package.json" > "$UB/p.json" && mv "$UB/p.json" "$UB/package.json"
+  printf 'dist/\nnode_modules/\n' > "$UB/.gitignore"; echo 'export const v = 1;' > "$UB/src/index.ts"
+  git -C "$UB" init -q -b dev; git -C "$UB" -c user.name=t -c user.email=t@t add -A >/dev/null; git -C "$UB" -c user.name=t -c user.email=t@t commit -qm base
+}
+ADP="$d/node_modules/@avigopal/ias-executor-ts/dist/adapters/index.js"
+setup '{"@avigopal/ias-executor-ts":"file:../ias-executor-ts"}'
+mk_unbuilt
+run
+grep -q "^BUILD $UB\$" "$CALLS" && ok "(l) the unbuilt sibling is built in its clone" || bad "(l) the sibling with no dist was not built (calls: $(tr '\n' ' ' < "$CALLS" | cut -c1-300))"
+grep -q "^INSTALL $UB " "$CALLS" && [ "$(line_of "^INSTALL $UB ")" -lt "$(line_of '^BUILD')" ] && ok "(l) the sibling's own dependencies are installed before its build" || bad "(l) the sibling's dependencies were not installed before its build"
+[ -n "$(line_of '^BUILD')" ] && [ "$(line_of '^BUILD')" -lt "$(line_of "^INSTALL ${d%/} ")" ] && [ "$(line_of "^INSTALL ${d%/} ")" -lt "$(line_of '^TEST')" ] \
+  && ok "(l) build, then the dependant's install, then the suite" || bad "(l) order is not build < dependant install < suite (calls: $(tr '\n' ' ' < "$CALLS" | cut -c1-300))"
+[ -s "$ADP" ] && ok "(l) the dependant's copy carries dist/adapters" || bad "(l) the dependant's copy has no dist/adapters/index.js"
+grep -q "^CONVERGED $VESSEL" "$CALLS" && ! grep -q 'TEST GATE BLIND' "$LOG" && ok "(l) the gate is not blind: converged" || bad "(l) not converged, or the gate was blind (log: $(grep -a 'BLIND\|UNBUILT\|unbuilt\|FAILED' "$LOG" | tr '\n' '|' | cut -c1-300))"
+grep -q 'clone-dep-unbuilt' "$CALLS" && bad "(l) an unbuilt gap although the build succeeded" || ok "(l) no unbuilt gap"
+# ── (l2) the build fails: fail closed with a gap naming the package ──
+setup '{"@avigopal/ias-executor-ts":"file:../ias-executor-ts"}'
+mk_unbuilt; touch "$T/stub/build-fails"
+run
+grep -q "^CONVERGED $VESSEL" "$CALLS" && bad "(l2) converged over an unbuilt file: dependency" || ok "(l2) build failed: not converged"
+grep -q '^TEST' "$CALLS" && bad "(l2) the suite ran over an unbuilt dependency" || ok "(l2) no suite over an unbuilt dependency"
+grep 'GAP .*clone-dep-unbuilt' "$CALLS" | grep -q '@avigopal/ias-executor-ts' && ok "(l2) a gap names the package" || bad "(l2) no clone-dep-unbuilt gap naming @avigopal/ias-executor-ts (calls: $(grep -a '^GAP' "$CALLS" | cut -c1-200))"
+grep -q "^INSTALL ${d%/} " "$CALLS" && bad "(l2) the dependant was installed with an empty copy" || ok "(l2) the dependant was not installed with an empty copy"
+rm -f "$T/stub/build-fails"
+setup '{"@avigopal/ias-executor-ts":"file:../ias-executor-ts"}'
+mk_unbuilt nobuild
+run
+grep -q "^CONVERGED $VESSEL" "$CALLS" && bad "(l2) converged over a sibling with no build script" || ok "(l2) no build script: not converged"
+grep -q 'GAP .*clone-dep-unbuilt' "$CALLS" && ok "(l2) no build script: gap filed" || bad "(l2) no build script: no gap"
+# ── (l3) control: the sibling has its dist ──
+setup '{"@avigopal/ias-executor-ts":"file:../ias-executor-ts"}'
+mk_unbuilt; mkdir -p "$UB/dist/adapters"; echo 'exports.v = 1;' > "$UB/dist/index.js"; echo 'exports.a = 1;' > "$UB/dist/adapters/index.js"; echo 'export {};' > "$UB/dist/index.d.ts"
+run
+grep -q '^BUILD' "$CALLS" && bad "(l3) a built sibling was rebuilt" || ok "(l3) control: a built sibling is not rebuilt"
+grep -q "^INSTALL ${d%/} " "$CALLS" && grep -q "^CONVERGED $VESSEL" "$CALLS" && ok "(l3) control: installs and converges as before" || bad "(l3) control: no install or no convergence"
+# ── (l4) the installed copy lost its dist while the marker is current ──
+: > "$CALLS"; : > "$LOG"
+rm -rf "$d/node_modules/@avigopal/ias-executor-ts/dist"
+run
+grep -q "^INSTALL ${d%/} " "$CALLS" && ok "(l4) a copy without its dist is unsatisfied: reinstalled" || bad "(l4) a copy without its dist was accepted (no reinstall)"
+[ -s "$ADP" ] && ok "(l4) the reinstalled copy carries the dist" || bad "(l4) the copy still has no dist"
 echo; [ "$FAILS" = 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAILED"; exit 1; }
