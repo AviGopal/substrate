@@ -606,11 +606,12 @@ pullsync_glue_cleanup() { for _d in $PULLSYNC_GLUE_STAGES; do rm -rf "$_d"; done
 # or the clone is gone) is released after the loop (carry_sweep). If pull-sync stops ticking, nothing
 # re-touches it and the vessel fails open within QUIESCE_MAX_MS.
 Q_HELD=""; Q_BOUND=""; Q_CARRY=""
+Q_PENDING_PORT=""   # a mirror-path quiesce owed after the test gate (mirror_quiesce_drain)
 quiesce_release() {
   if [ -n "${Q_HELD:-}" ] && [ "${Q_CARRY:-}" != "$Q_HELD" ]; then
     rm -f "$Q_HELD" "$MARKER_DIR/${Q_HELD##*/}.quiesce-carry" 2>/dev/null
   fi
-  Q_HELD=""; Q_BOUND=""; Q_CARRY=""; return 0
+  Q_HELD=""; Q_BOUND=""; Q_CARRY=""; Q_PENDING_PORT=""; return 0
 }
 # release_carried_hold <vessel> <why> — end a carried hold from a vessel-loop skip that never reaches the
 # owed path: drop the admission marker the carry names and the carry itself, and say why. The owed
@@ -1890,6 +1891,71 @@ unresolved_modules() { # test-output -> names, one per line
     | sed -E "s/^Cannot find (module|package) ['\"]//; s/['\"]\$//" | sort -u || true
 }
 
+# mirror_quiesce_drain <vessel> <health-port> — THE MIRROR PATH'S QUIESCE, run after the test gate passed
+# and before the mirror (see "THE QUIESCE RUNS AFTER THE TEST GATE" in the vessel loop): close admission,
+# wait (bounded by what is left of the unit's TimeoutStartSec) for in-flight work to drain, and hold the
+# marker (Q_HELD) through the mirror and the restart; Q_BOUND when the bound was hit with work still in
+# flight. quiesce_release drops it after the restart or on any other exit from the pass.
+mirror_quiesce_drain() {
+  local _mq_port="$2"
+  QDIR="${QUIESCE_DIR:-/workspace/quiesce}"
+  mkdir -p "$QDIR" 2>/dev/null || true
+  : > "$QDIR/$1" 2>/dev/null || true
+  # BOUND THE WAIT BY WHAT IS LEFT OF THE UNIT'S OWN START TIMEOUT, or the branch below
+  # that promises "this wait terminates on its own" is unreachable.
+  #
+  # QUIESCE_WAIT_S defaulted to 900 and the unit is TimeoutStartSec=900, but systemd starts
+  # counting when the unit starts and this wait begins after fetch/skip work has already
+  # spent part of the tick. So the 900s wait ALWAYS outlives the budget: measured
+  # 2026-08-16, quiesce opened at 03:30:56 and systemd SIGTERMed the unit at 03:45:49,
+  # `Result=timeout`, before a single iteration of the converge-anyway path could run.
+  #
+  # The failure is silent and self-perpetuating. The timer simply fires again ten minutes
+  # later, quiesces again, and dies again, so a vessel with continuous in-flight work never
+  # receives new code while every tick looks like ordinary caution in the log. The rest of
+  # this script already reasons this way — the test gate carries a 420s per-tick budget for
+  # exactly this reason — and this wait was the one step that did not.
+  QWAIT="${QUIESCE_WAIT_S:-900}"; QSTEP=10; QSPENT=0
+  # Measured NOW, not inherited: the gate ran between the decision and this drain, and a wait
+  # capped to 0 never enters the loop, so an unset (or a previous pass's) NOW would read as
+  # "drained to 0" and restart into live work.
+  NOW="$(curl -s --max-time 5 "http://127.0.0.1:$_mq_port/health" 2>/dev/null \
+    | grep -o '"in_flight"[[:space:]]*:[[:space:]]*[0-9][0-9]*' | grep -o '[0-9]*$' | head -1)"
+  NOW="${NOW:-0}"; case "$NOW" in *[!0-9]*) NOW=0 ;; esac
+  log "$1: test gate passed; $NOW unit(s) in flight — QUIESCED (admission closed) until the restart; waiting for them to finish rather than restarting into them"
+  : "${GATE_T0:=$(date +%s)}" ; GATE_BUDGET_SECONDS="${GATE_BUDGET_SECONDS:-1000}"
+  _Q_LEFT=$(( ${UNIT_TIMEOUT_S:-900} - ( $(date +%s) - GATE_T0 ) - ${QUIESCE_MARGIN_S:-120} ))
+  [ "$_Q_LEFT" -lt 0 ] && _Q_LEFT=0
+  if [ "$QWAIT" -gt "$_Q_LEFT" ]; then
+    log "$1: quiesce wait capped ${QWAIT}s -> ${_Q_LEFT}s by what remains of TimeoutStartSec (${UNIT_TIMEOUT_S:-900}s) less a ${QUIESCE_MARGIN_S:-120}s margin — an uncapped wait outlives the unit and converges nothing"
+    QWAIT="$_Q_LEFT"
+  fi
+  while [ "$NOW" -gt 0 ] && [ "$QSPENT" -lt "$QWAIT" ]; do
+    sleep "$QSTEP"; QSPENT=$((QSPENT+QSTEP))
+    NOW="$(curl -s --max-time 5 "http://127.0.0.1:$_mq_port/health" 2>/dev/null \
+      | grep -o '"in_flight"[[:space:]]*:[[:space:]]*[0-9][0-9]*' | grep -o '[0-9]*$' | head -1)"
+    NOW="${NOW:-0}"; case "$NOW" in *[!0-9]*) NOW=0 ;; esac
+    [ "$NOW" -eq 0 ] && break
+  done
+  if [ "${NOW:-0}" -eq 0 ]; then
+    log "$1: drained to 0 in ${QSPENT}s under quiesce — converging with NOTHING in flight, so no run is lost and its outcome stays attributable"
+  else
+    # Bound exists so a wedged vessel cannot block deploys forever. Say what
+    # is being given up, in the same terms as the old branch.
+    log "$1: still $NOW in flight after ${QSPENT}s of quiesce (bound ${QWAIT}s) — converging anyway unless it is still progressing (decided at the restart); otherwise that run IS lost and its outcome will not be attributable"
+    Q_BOUND=1
+  fi
+  # ADMISSION STAYS CLOSED UNTIL THE RESTART. The marker used to be removed right after the
+  # drain, which then ran BEFORE the test gate: measured 2026-10-03 on node 1, drained at
+  # 19:41:55, a new compose admitted ~19:45:20 while the gate ran, and the restart at
+  # 19:47:01 logged "DEFERRING restart — 1 in flight". The drain bought nothing. Now the
+  # drain follows the gate and the marker is held through mirror and restart; it is
+  # re-touched (the vessel fails open on a marker older than its QUIESCE_MAX_MS) and
+  # released by quiesce_release: after the restart, or on any other exit from this pass.
+  : > "$QDIR/$1" 2>/dev/null || true
+  Q_HELD="$QDIR/$1"
+}
+
 synced=0; skipped=0; deferred=0; failed=0
 for d in "$CLONE_DIR"/*/; do
   quiesce_release
@@ -2423,57 +2489,19 @@ EOF
       # on its own — bounded by the longest single compose, not unbounded — and
       # nothing is lost. The vessel already refuses new long-running work while
       # draining; the marker just lets a converger open that early.
+      # THE QUIESCE RUNS AFTER THE TEST GATE, NOT HERE (qa, 2026-10-03). It used to close
+      # admission and drain right here, then hold the marker through the gate (minutes) to
+      # keep the drain's guarantee (ed8ed66a: nothing admitted between the drain and the
+      # restart). That kept development-vessel refusing work for the whole gate on every
+      # convergence, and closed admission even for a commit the gate then refused. The gate
+      # reads only the clone, never the runtime, so it needs no quiesce: this records that one
+      # is owed (Q_PENDING_PORT) and mirror_quiesce_drain runs it once the gate has passed,
+      # right before the mirror; the marker is then held through mirror and restart exactly
+      # as before, so the qrace guarantee is unchanged.
       if [ "$INFLIGHT" -gt 0 ] && [ "$DRAINMS" -ge "${MIN_TRUSTED_DRAIN_MS:-15000}" ]; then
-        QDIR="${QUIESCE_DIR:-/workspace/quiesce}"
-        mkdir -p "$QDIR" 2>/dev/null || true
-        : > "$QDIR/$v" 2>/dev/null || true
-        log "$v: $INFLIGHT unit(s) in flight — QUIESCED (admission closed); waiting for them to finish rather than restarting into them"
-        # BOUND THE WAIT BY WHAT IS LEFT OF THE UNIT'S OWN START TIMEOUT, or the branch below
-        # that promises "this wait terminates on its own" is unreachable.
-        #
-        # QUIESCE_WAIT_S defaulted to 900 and the unit is TimeoutStartSec=900, but systemd starts
-        # counting when the unit starts and this wait begins after fetch/skip work has already
-        # spent part of the tick. So the 900s wait ALWAYS outlives the budget: measured
-        # 2026-08-16, quiesce opened at 03:30:56 and systemd SIGTERMed the unit at 03:45:49,
-        # `Result=timeout`, before a single iteration of the converge-anyway path could run.
-        #
-        # The failure is silent and self-perpetuating. The timer simply fires again ten minutes
-        # later, quiesces again, and dies again, so a vessel with continuous in-flight work never
-        # receives new code while every tick looks like ordinary caution in the log. The rest of
-        # this script already reasons this way — the test gate carries a 420s per-tick budget for
-        # exactly this reason — and this wait was the one step that did not.
-        QWAIT="${QUIESCE_WAIT_S:-900}"; QSTEP=10; QSPENT=0
-        : "${GATE_T0:=$(date +%s)}" ; GATE_BUDGET_SECONDS="${GATE_BUDGET_SECONDS:-1000}"
-        _Q_LEFT=$(( ${UNIT_TIMEOUT_S:-900} - ( $(date +%s) - GATE_T0 ) - ${QUIESCE_MARGIN_S:-120} ))
-        [ "$_Q_LEFT" -lt 0 ] && _Q_LEFT=0
-        if [ "$QWAIT" -gt "$_Q_LEFT" ]; then
-          log "$v: quiesce wait capped ${QWAIT}s -> ${_Q_LEFT}s by what remains of TimeoutStartSec (${UNIT_TIMEOUT_S:-900}s) less a ${QUIESCE_MARGIN_S:-120}s margin — an uncapped wait outlives the unit and converges nothing"
-          QWAIT="$_Q_LEFT"
-        fi
-        while [ "$QSPENT" -lt "$QWAIT" ]; do
-          sleep "$QSTEP"; QSPENT=$((QSPENT+QSTEP))
-          NOW="$(curl -s --max-time 5 "http://127.0.0.1:$IFPORT/health" 2>/dev/null \
-            | grep -o '"in_flight"[[:space:]]*:[[:space:]]*[0-9][0-9]*' | grep -o '[0-9]*$' | head -1)"
-          NOW="${NOW:-0}"; case "$NOW" in *[!0-9]*) NOW=0 ;; esac
-          [ "$NOW" -eq 0 ] && break
-        done
-        if [ "${NOW:-0}" -eq 0 ]; then
-          log "$v: drained to 0 in ${QSPENT}s under quiesce — converging with NOTHING in flight, so no run is lost and its outcome stays attributable"
-          INFLIGHT=0
-        else
-          # Bound exists so a wedged vessel cannot block deploys forever. Say what
-          # is being given up, in the same terms as the old branch.
-          log "$v: still $NOW in flight after ${QSPENT}s of quiesce (bound ${QWAIT}s) — converging anyway unless it is still progressing (decided at the restart); otherwise that run IS lost and its outcome will not be attributable"
-          INFLIGHT=0; Q_BOUND=1
-        fi
-        # ADMISSION STAYS CLOSED UNTIL THE RESTART. The marker used to be removed right here,
-        # and the test gate below runs for minutes: measured 2026-10-03 on node 1, drained at
-        # 19:41:55, a new compose admitted ~19:45:20 while the gate ran, and the restart at
-        # 19:47:01 logged "DEFERRING restart — 1 in flight". The drain bought nothing. It is
-        # re-touched (the vessel fails open on a marker older than its QUIESCE_MAX_MS) and
-        # released by quiesce_release: after the restart, or on any other exit from this pass.
-        : > "$QDIR/$v" 2>/dev/null || true
-        Q_HELD="$QDIR/$v"
+        Q_PENDING_PORT="$IFPORT"
+        log "$v: $INFLIGHT unit(s) in flight and the vessel drains — gating with admission OPEN (the gate reads only the clone); it is quiesced after the gate, before the mirror"
+        INFLIGHT=0
       fi
       if [ "$INFLIGHT" -gt 0 ]; then
         DEFER_MARKER="in-flight:$INFLIGHT"
@@ -3036,6 +3064,8 @@ EOF
     skipped=$((skipped + 1)); continue
   fi
   rm -f "$MARKER_DIR/$v.testgate-refusals" 2>/dev/null || true
+  # The owed quiesce (Q_PENDING_PORT, set before the gate): only now that the gate has passed.
+  if [ -n "${Q_PENDING_PORT:-}" ]; then mirror_quiesce_drain "$v" "$Q_PENDING_PORT"; fi
 
   PREV_GOOD="$(cat "$LAST_GOOD_DIR/$v" 2>/dev/null || true)"
   # THE LIVE TREE IS NOT WHAT PULL-SYNC LAST PUT THERE: copy it aside before the
