@@ -73,6 +73,7 @@
 #        pre-restart re-touch (a bare `: >` re-touch would truncate it)
 #   (q3) a carried hold's marker carries the carry horizon (now + 20 min), not the tick expiry
 #   (q4) structural: UNIT_TIMEOUT_S's default equals the unit file's TimeoutStartSec
+#   (q5) structural: the expiry counts from PULLSYNC_T0, which the self re-exec carries over
 #
 # usage: validation/scripts/pull-sync-owed-restart.test.sh [path/to/substrate-pull-sync.sh]
 # Needs bash, awk, sed, find, GNU date/touch. No root: every path is a temp dir.
@@ -132,8 +133,8 @@ source "$T/fns.sh"
 VESSEL=demo-vessel
 RUNTIME_DIR="$T/runtime"; MARKER_DIR="$T/marker"; STAGGER_SECONDS=0
 QUIESCE_DIR="$T/quiesce"; QUIESCE_STEP_S=1; QUIESCE_WAIT_S=5; UNIT_TIMEOUT_S=900; QUIESCE_MARGIN_S=0; QDIR_SEEN_FILE=""
-PULLSYNC_TICK_T0=$(( $(date +%s) - 800 ))   # this tick started 800 s ago: its expiry (T0 + 900) is 100 s away
-EXP_TICK="$(date -u -d "@$(( PULLSYNC_TICK_T0 + 900 ))" +%Y-%m-%dT%H:%M:%SZ)"
+PULLSYNC_T0=$(( $(date +%s) - 800 ))   # this tick started 800 s ago (the tick start pull-sync carries across its self re-exec): expiry T0 + 900 is 100 s away
+EXP_TICK="$(date -u -d "@$(( PULLSYNC_T0 + 900 ))" +%Y-%m-%dT%H:%M:%SZ)"
 expires_of() { jq -r '.expires_at // empty' "$1" 2>/dev/null || true; }
 P="$MARKER_DIR/$VESSEL.restart-pending"; DF="$MARKER_DIR/$VESSEL.restart-deferrals"
 
@@ -684,6 +685,15 @@ _df="$(grep -o 'UNIT_TIMEOUT_S:-[0-9]*' "$SCRIPT" | sort -u)"
 if [ -n "$_ts" ] && [ "$_df" = "UNIT_TIMEOUT_S:-$_ts" ] && sed -n '/^quiesce_mark() {/,/^}/p' "$SCRIPT" | grep -q 'UNIT_TIMEOUT_S'; then
   ok "(q4) quiesce_mark adds UNIT_TIMEOUT_S, whose every default ($_df) is the unit's TimeoutStartSec=$_ts"
 else bad "(q4) UNIT_TIMEOUT_S defaults '$(echo $_df)' vs TimeoutStartSec='$_ts', or quiesce_mark does not read UNIT_TIMEOUT_S"; fi
+
+# ── (q5) structural: the tick start survives the self re-exec ─────────────────
+# pull-sync re-execs itself mid-tick when the committed copy differs; a tick start taken afresh
+# there would push expires_at past systemd's kill by the pre-re-exec interval.
+if sed -n '/^quiesce_mark() {/,/^}/p' "$SCRIPT" | grep -q 'PULLSYNC_T0' \
+   && grep -q 'exec env PULLSYNC_REEXECED=1 PULLSYNC_T0="\$PULLSYNC_T0"' "$SCRIPT" \
+   && grep -q '^if \[ "\${PULLSYNC_REEXECED:-}" = 1 \] && \[ -n "\${PULLSYNC_T0:-}" \]; then :; else PULLSYNC_T0=' "$SCRIPT"; then
+  ok "(q5) quiesce_mark counts from PULLSYNC_T0, the tick start the self re-exec carries over"
+else bad "(q5) quiesce_mark does not count from PULLSYNC_T0, or the re-exec no longer carries it"; fi
 
 echo
 [ "$FAILS" = 0 ] && { echo "PASS - owed restarts survive content moving on"; exit 0; }
