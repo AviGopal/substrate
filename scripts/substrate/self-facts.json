@@ -307,7 +307,19 @@
             "repos/development-vessel/test/resolvers/scope-earn-in.test.ts",
             "repos/development-vessel/test/resolvers/evaluator-grant-scan.test.ts",
             "repos/development-vessel/test/resolvers/scope-change-pin.test.ts",
-            "repos/development-vessel/test/resolvers/system-authored-gap-checks.test.ts"
+            "repos/development-vessel/test/resolvers/system-authored-gap-checks.test.ts",
+            "repos/development-vessel/src/resolvers/composer-interruption-sweep.ts",
+            "repos/goal-host-vessel/src/goal-target-inference.ts",
+            "repos/concept-db/tests/write-shapes.test.ts",
+            "repos/development-vessel/src/lib/caller-credential.ts",
+            "repos/development-vessel/src/lib/self-auth.ts",
+            "repos/development-vessel/src/resolvers/write-containment.ts",
+            "repos/development-vessel/src/resolvers/super-repo-checkout.ts",
+            "repos/development-vessel/src/resolvers/behavioral-verification.ts",
+            "repos/development-vessel/src/removed-line-predicate.ts",
+            "repos/development-vessel/src/vacuous-edit.ts",
+            "repos/development-vessel/src/resolvers/staged-mitosis-gate.ts",
+            "repos/development-vessel/src/resolvers/retry-evidence.ts"
           ],
           "require_falsifier_classes": [
             "class2"
@@ -348,7 +360,19 @@
             "repos/development-vessel/test/resolvers/scope-earn-in.test.ts",
             "repos/development-vessel/test/resolvers/evaluator-grant-scan.test.ts",
             "repos/development-vessel/test/resolvers/scope-change-pin.test.ts",
-            "repos/development-vessel/test/resolvers/system-authored-gap-checks.test.ts"
+            "repos/development-vessel/test/resolvers/system-authored-gap-checks.test.ts",
+            "repos/development-vessel/src/resolvers/composer-interruption-sweep.ts",
+            "repos/goal-host-vessel/src/goal-target-inference.ts",
+            "repos/concept-db/tests/write-shapes.test.ts",
+            "repos/development-vessel/src/lib/caller-credential.ts",
+            "repos/development-vessel/src/lib/self-auth.ts",
+            "repos/development-vessel/src/resolvers/write-containment.ts",
+            "repos/development-vessel/src/resolvers/super-repo-checkout.ts",
+            "repos/development-vessel/src/resolvers/behavioral-verification.ts",
+            "repos/development-vessel/src/removed-line-predicate.ts",
+            "repos/development-vessel/src/vacuous-edit.ts",
+            "repos/development-vessel/src/resolvers/staged-mitosis-gate.ts",
+            "repos/development-vessel/src/resolvers/retry-evidence.ts"
           ],
           "require_falsifier_classes": [
             "class2"
