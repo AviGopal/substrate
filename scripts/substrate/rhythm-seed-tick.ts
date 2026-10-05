@@ -1,5 +1,5 @@
 /**
- * rhythm-seed-tick.ts — restore the time-shaped rhythm registry if it is empty.
+ * rhythm-seed-tick.ts — insert the time-shaped rhythms and family goals missing by id; never overwrite.
  *
  * WHY THIS EXISTS. Law 5 puts cadence in the pool as time-shaped rhythm impulses that
  * rhythm_conductor_tick reads, scores by due-ness and enqueues. On 2026-09-07 thirteen
@@ -238,6 +238,29 @@ const SEED = {
         "paces": "federation overlay probe sweep from a foreign vantage",
         "description": "Dial the federation overlay from an ephemeral nonce-identity libp2p peer and grade join/find/route/leave/payload invariants against the live roster. Cheapest budget in the registry on purpose: verification must stay affordable during churn, because churn is when federation breaks."
       }
+    },
+    // NEW POLICY (2026-10-05, bootstrap item 2: system-authored gap checks). Paces
+    // development-vessel's gap_check_supply_tick, which dispatches ONE "write a failing test
+    // that reproduces <symptom>" edit goal per needs_localization gap (bounded, with backoff),
+    // so the lane authors its own checks instead of the operator writing them.
+    // budget 0.30 is COST: each goal is a full feature_compose, so this family is priced out
+    // first under load. alpha/beta 1/1 is an uninformed prior; staleness 1.0 = never run.
+    // axis freshness, not presence: it must not freeze when no human surface is connected.
+    {
+      "id": "rhythm-gap-check-supply",
+      "shape": "timeShapedRhythm",
+      "body": {
+        "axis": "freshness",
+        "axis_code": 2,
+        "family": "gap-check-supply",
+        "budget": 0.3,
+        "alpha": 1,
+        "beta": 1,
+        "staleness": 1,
+        "transient": false,
+        "paces": "gap_check_supply_tick (system-authored failing tests for gaps without a check)",
+        "description": "Turn gaps that have no check into armed gaps: one edit goal per needs_localization gap to write a failing test; armed only when it is red at HEAD for the right reason."
+      }
     }
   ],
   "familyGoals": [
@@ -288,24 +311,32 @@ async function readRhythms(): Promise<any[]> {
   return r?.body?.impulses ?? [];
 }
 
-async function main(): Promise<void> {
-  const existing = await readRhythms();
-  if (existing.length > 0) {
-    console.log(`[rhythm-seed] registry already holds ${existing.length} rhythm(s) — no action`);
-    return;
-  }
-  console.log("[rhythm-seed] registry EMPTY — restoring the pre-outage set");
+/** Does the pool already hold a row with this id and shape? (read by id: no page limit can hide it) */
+async function present(shape: string, id: string): Promise<boolean> {
+  const r = await post({ impulse: { type: "poolImpulse", shape, id } });
+  return (r?.body?.impulses ?? []).some((x: any) => x?.id === id);
+}
 
-  let wrote = 0;
+async function main(): Promise<void> {
+  // INSERT WHAT IS MISSING BY ID, NEVER OVERWRITE. Returning whenever the registry was non-empty meant a
+  // family added to this list never reached a live node (every live registry holds ~50 rhythms). An
+  // existing row keeps its learned credit and staleness; only absent ids are written.
+  let wrote = 0, kept = 0;
   for (const r of SEED.rhythms as any[]) {
+    if (await present("timeShapedRhythm", r.id)) { kept++; continue; }
     await post({ impulse: { type: "poolImpulse_write", id: r.id, shape: "timeShapedRhythm", source: "rhythm-seed-tick", body: r.body } });
     wrote++;
     console.log(`[rhythm-seed] seeded rhythm family=${r.body.family} budget=${r.body.budget} credit=${r.body.alpha}/${r.body.beta} staleness=${r.body.staleness}`);
   }
   for (const g of SEED.familyGoals as any[]) {
+    if (await present("rhythmFamilyGoal", g.id)) { kept++; continue; }
     await post({ impulse: { type: "poolImpulse_write", id: g.id, shape: "rhythmFamilyGoal", source: "rhythm-seed-tick", body: g.body } });
     wrote++;
     console.log(`[rhythm-seed] seeded familyGoal family=${g.body.family}`);
+  }
+  if (wrote === 0) {
+    console.log(`[rhythm-seed] every seeded id is present (${kept}) — no action`);
+    return;
   }
 
   // Verify at the consuming layer: re-read through the conductor path, do not trust the writes.
