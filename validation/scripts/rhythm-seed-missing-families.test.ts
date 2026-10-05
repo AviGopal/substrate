@@ -14,7 +14,7 @@ type Row = { id: string; shape: string; body: Record<string, unknown> };
 let server: ReturnType<typeof Bun.serve> | null = null;
 afterEach(() => { server?.stop(true); server = null; });
 
-function fakeVessel(initial: Row[]): { url: string; rows: Map<string, Row>; writes: string[] } {
+function fakeVessel(initial: Row[], opts: { readStatus?: number } = {}): { url: string; rows: Map<string, Row>; writes: string[] } {
   const rows = new Map(initial.map((r) => [r.id, r]));
   const writes: string[] = [];
   server = Bun.serve({
@@ -22,8 +22,9 @@ function fakeVessel(initial: Row[]): { url: string; rows: Map<string, Row>; writ
     async fetch(req) {
       const j = (await req.json()) as { impulse: Record<string, unknown> };
       const p = j.impulse;
+      if (p.type === "poolImpulse" && opts.readStatus) return Response.json({ success: false, error: "unavailable" }, { status: opts.readStatus });
       if (p.type === "poolImpulse") {
-        let list = [...rows.values()].filter((r) => r.shape === p.shape && (p.id === undefined || r.id === p.id));
+        let list = [...rows.values()].filter((r) => (p.shape === undefined || r.shape === p.shape) && (p.id === undefined || r.id === p.id));
         const total = list.length;
         if (typeof p.limit === "number") list = list.slice(0, p.limit);
         return Response.json({ body: { impulses: list, count: list.length, total } });
@@ -81,5 +82,23 @@ describe("rhythm seeder delivers families missing by id to a populated registry"
     expect(r.code).toBe(0);
     expect(v.writes).toContain("rhythm-reality-modeling");
     expect(v.writes).toContain("rhythm-gap-check-supply");
+  });
+
+  it("MUST-FAIL: a failing read (503 {success:false}) writes NOTHING and exits nonzero — never overwrite on a blind read", async () => {
+    const learned: Row = { id: "rhythm-reality-modeling", shape: "timeShapedRhythm", body: { family: "reality-modeling", budget: 0.15, alpha: 999, beta: 7, staleness: 0.01 } };
+    const v = fakeVessel([...filler(55), learned], { readStatus: 503 });
+    const r = await runSeeder(v.url);
+    expect(v.writes).toEqual([]);
+    expect(r.code).not.toBe(0);
+    expect(v.rows.get("rhythm-reality-modeling")?.body.alpha).toBe(999);
+  });
+
+  it("MUST-FAIL: an id held under a DIFFERENT shape is a collision — refused, not overwritten", async () => {
+    const clash: Row = { id: "rhythm-gap-check-supply", shape: "somethingElse", body: { keep: true } };
+    const v = fakeVessel([...filler(10), clash]);
+    const r = await runSeeder(v.url);
+    expect(v.writes).not.toContain("rhythm-gap-check-supply");
+    expect(v.rows.get("rhythm-gap-check-supply")?.shape).toBe("somethingElse");
+    expect(r.code).not.toBe(0);
   });
 });

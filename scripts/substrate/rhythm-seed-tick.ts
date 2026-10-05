@@ -301,7 +301,8 @@ async function post(body: unknown, timeoutMs = 4000): Promise<any> {
   const t = setTimeout(() => c.abort(), timeoutMs);
   try {
     const r = await fetch(RESOLVE, { method: "POST", headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) }, body: JSON.stringify(body), signal: c.signal });
-    return await r.json();
+    const j = await r.json().catch(() => null);
+    return j && typeof j === "object" ? Object.assign(j, { __status: r.status, __ok: r.ok }) : { __status: r.status, __ok: false };
   } finally { clearTimeout(t); }
 }
 
@@ -311,25 +312,40 @@ async function readRhythms(): Promise<any[]> {
   return r?.body?.impulses ?? [];
 }
 
-/** Does the pool already hold a row with this id and shape? (read by id: no page limit can hide it) */
+/**
+ * Does the pool already hold a row with this id? Read by id ALONE (no page limit can hide it, and a row held
+ * under another shape is seen). FAIL CLOSED: a read that is not a healthy answer throws, because treating it
+ * as "absent" would rewrite every existing rhythm and wipe its learned credit; an id held under a different
+ * shape is a collision and throws rather than being overwritten.
+ */
 async function present(shape: string, id: string): Promise<boolean> {
-  const r = await post({ impulse: { type: "poolImpulse", shape, id } });
-  return (r?.body?.impulses ?? []).some((x: any) => x?.id === id);
+  const r = await post({ impulse: { type: "poolImpulse", id } });
+  const rows = r?.body?.impulses;
+  if (!r?.__ok || r?.success === false || !Array.isArray(rows)) {
+    throw new Error(`read of ${id} failed (HTTP ${r?.__status ?? "?"}${r?.error ? `: ${String(r.error).slice(0, 120)}` : ""}) — writing nothing`);
+  }
+  const hit = rows.find((x: any) => x?.id === id);
+  if (!hit) return false;
+  if (hit.shape !== undefined && hit.shape !== shape) throw new Error(`id collision: ${id} is held as ${hit.shape}, not ${shape} — refusing to overwrite`);
+  return true;
 }
 
 async function main(): Promise<void> {
   // INSERT WHAT IS MISSING BY ID, NEVER OVERWRITE. Returning whenever the registry was non-empty meant a
   // family added to this list never reached a live node (every live registry holds ~50 rhythms). An
   // existing row keeps its learned credit and staleness; only absent ids are written.
-  let wrote = 0, kept = 0;
-  for (const r of SEED.rhythms as any[]) {
-    if (await present("timeShapedRhythm", r.id)) { kept++; continue; }
+  // Decide everything BEFORE the first write: any read failure or collision aborts with zero writes.
+  const missingRhythms: any[] = [], missingGoals: any[] = [];
+  for (const r of SEED.rhythms as any[]) if (!(await present("timeShapedRhythm", r.id))) missingRhythms.push(r);
+  for (const g of SEED.familyGoals as any[]) if (!(await present("rhythmFamilyGoal", g.id))) missingGoals.push(g);
+  const kept = (SEED.rhythms.length + SEED.familyGoals.length) - missingRhythms.length - missingGoals.length;
+  let wrote = 0;
+  for (const r of missingRhythms) {
     await post({ impulse: { type: "poolImpulse_write", id: r.id, shape: "timeShapedRhythm", source: "rhythm-seed-tick", body: r.body } });
     wrote++;
     console.log(`[rhythm-seed] seeded rhythm family=${r.body.family} budget=${r.body.budget} credit=${r.body.alpha}/${r.body.beta} staleness=${r.body.staleness}`);
   }
-  for (const g of SEED.familyGoals as any[]) {
-    if (await present("rhythmFamilyGoal", g.id)) { kept++; continue; }
+  for (const g of missingGoals) {
     await post({ impulse: { type: "poolImpulse_write", id: g.id, shape: "rhythmFamilyGoal", source: "rhythm-seed-tick", body: g.body } });
     wrote++;
     console.log(`[rhythm-seed] seeded familyGoal family=${g.body.family}`);
