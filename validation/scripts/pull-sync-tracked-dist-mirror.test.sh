@@ -19,6 +19,10 @@
 #       a range touching it restarts
 #   (g) a repo with no tracked output hashes exactly as before (no fleet re-mirror)
 #   (h) both scripts' tracked_output_dirs agree
+#   (i) identity-vessel's shape: the clone tracks scripts/ that the image never copied, and
+#       package.json names file:../../packages/<pkg> (rewritten for the runtime). Before a mirror the
+#       hashes differ (the drift heal's "content drift"); ONE real mirror makes them equal, so the next
+#       tick sees no drift and owes no restore/restart; the deploy-rewritten package.json is not hashed.
 #
 # usage: validation/scripts/pull-sync-tracked-dist-mirror.test.sh [repo-root]
 # Needs bash, git, awk, sed, tar. No root: every path is a temp dir.
@@ -146,4 +150,18 @@ want="$(printf 'pkg/web/dist\nui/dist')"
 [ "$(tracked_output_dirs "$d" 2>/dev/null)" = "$want" ] && ok "(h) pull-sync lists ui/dist + pkg/web/dist (not src/dist)" || bad "(h) pull-sync tracked_output_dirs = '$(tracked_output_dirs "$d" 2>/dev/null | tr '\n' ' ')'"
 [ "$(mirror_tracked_output_dirs "$d" 2>/dev/null)" = "$want" ] && ok "(h) mirror-to-live lists the same dirs" || bad "(h) mirror-to-live tracked_output_dirs disagrees"
 
+# ── (i) a clone-only scripts/ is drift exactly once: one mirror settles it ─────
+rm -rf "$T/clones" "$T/runtime"; mkdir -p "$d/src" "$d/scripts/git-hooks" "$R/src"
+echo 'export const i = 1;' > "$d/src/index.ts"; echo 'echo key' > "$d/scripts/generate-api-key.sh"
+echo 'export {};' > "$d/scripts/generate-bootstrap-key.ts"; echo '# hooks' > "$d/scripts/git-hooks/README.md"
+printf '%s\n' '{"name":"iv","dependencies":{"@x/vdc":"file:../../packages/vdc"}}' > "$d/package.json"
+git -C "$d" init -q -b dev; g add -A; g commit -m base
+cp "$d/src/index.ts" "$R/src/index.ts"
+sed "s|file:\.\./\.\./packages/|file:$RUNTIME_DIR/packages/|g; s|file:\.\./|file:$RUNTIME_DIR/|g" "$d/package.json" > "$R/package.json"
+[ "$(hc "$d")" != "$(hc "$R")" ] && ok "(i) a clone-only scripts/ reads as drift before the mirror" || bad "(i) no drift although the runtime lacks scripts/"
+MITOSIS_RUNTIME_DIR="$RUNTIME_DIR" bash "$MIRROR" "$VESSEL" "$CLONE_DIR" > "$T/mi.out" 2>&1 && ok "(i) mirror-to-live exits 0" || { bad "(i) mirror-to-live failed"; cat "$T/mi.out"; }
+[ "$(hc "$d")" = "$(hc "$R")" ] && ok "(i) one mirror settles it: the next tick sees no drift (no restore, no restart)" || bad "(i) hashes still differ after the mirror — the drift heal would restore+restart every tick"
+grep -q 'package.json changed' "$T/mi.out" && bad "(i) the runtime-rewritten package.json read as a dependency change" || ok "(i) the rewritten package.json is not a dependency change"
+before="$(hc "$R")"; printf '%s\n' '{"name":"iv","dependencies":{"@x/vdc":"file:/elsewhere/vdc"}}' > "$R/package.json"
+[ "$(hc "$R")" = "$before" ] && ok "(i) a deploy-rewritten package.json is not hashed as drift" || bad "(i) package.json is hashed: a deploy rewrite reads as drift"
 echo; [ "$FAILS" = 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

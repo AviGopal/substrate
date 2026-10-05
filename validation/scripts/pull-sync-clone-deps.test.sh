@@ -40,6 +40,15 @@
 #       converged; a sibling with no build script fails closed the same way
 #   (l3) control: a sibling that HAS its dist is not built and installs unchanged
 #   (l4) an installed copy without the dist (marker current) is unsatisfied and reinstalled
+#   (m) a file:../../packages/<pkg> dependency (the shared packages, not a sibling clone) installs in
+#       the clone layout: $(dirname CLONE_DIR)/packages is provided as a link to $RUNTIME_DIR/packages
+#       (the copy the runtime resolves), the dependant converges, no target-missing gap
+#   (m2) control: no runtime packages directory -> nothing linked, still fail closed (target-missing gap)
+#   (m3) an existing real packages directory beside the clones is never replaced
+#   (m4) a runtime package with no built output is never built in the runtime tree: fail closed
+#   (m5) no write-through: a runtime shared package carrying preinstall/install/postinstall/prepare
+#       scripts is byte-identical (tree hash) after a gated clone install through the link, and the
+#       install ran with --ignore-scripts
 #
 # usage: validation/scripts/pull-sync-clone-deps.test.sh [path/to/substrate-pull-sync.sh]
 # Needs bash, git, jq, awk, sed.
@@ -64,6 +73,7 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
   sed -n '/^refresh_clone_dependants() {/,/^}/p' "$SCRIPT"
   sed -n '/^clone_deps_install() {/,/^}/p' "$SCRIPT"
   sed -n '/^clone_deps_gap() {/,/^}/p' "$SCRIPT"
+  sed -n '/^clone_shared_packages() {/,/^}/p' "$SCRIPT"
   sed -n '/^ensure_clone_deps() {/,/^}/p' "$SCRIPT"
   sed -n '/^unresolved_modules() {/,/^}/p' "$SCRIPT"
   sed -n '/^test_only_range() {/,/^}/p' "$SCRIPT"
@@ -459,4 +469,46 @@ rm -rf "$d/node_modules/@avigopal/ias-executor-ts/dist"
 run
 grep -q "^INSTALL ${d%/} " "$CALLS" && ok "(l4) a copy without its dist is unsatisfied: reinstalled" || bad "(l4) a copy without its dist was accepted (no reinstall)"
 [ -s "$ADP" ] && ok "(l4) the reinstalled copy carries the dist" || bad "(l4) the copy still has no dist"
+# ── (m) the shared packages: file:../../packages/<pkg> in the clone layout ──
+SP="$T/packages"; RUNTIME_DIR="$T/runtime"
+mk_runtime_pkg() { # the image-built shared package under $RUNTIME_DIR/packages (dist present unless $1 = unbuilt)
+  rm -rf "$RUNTIME_DIR"; mkdir -p "$RUNTIME_DIR/packages/vessel-discovery-client"
+  printf '%s\n' '{"name":"@avigopal/vessel-discovery-client","version":"1.0.0","main":"./dist/index.js","scripts":{"build":"tsc"}}' > "$RUNTIME_DIR/packages/vessel-discovery-client/package.json"
+  [ "${1:-}" = unbuilt ] || { mkdir -p "$RUNTIME_DIR/packages/vessel-discovery-client/dist"; echo 'exports.d = 1;' > "$RUNTIME_DIR/packages/vessel-discovery-client/dist/index.js"; }
+}
+VDC='{"@avigopal/vessel-discovery-client":"file:../../packages/vessel-discovery-client"}'
+rm -rf "$SP"; setup "$VDC"; mk_runtime_pkg
+run
+grep -q "^INSTALL ${d%/} " "$CALLS" && ok "(m) the shared-packages dependant installs in the clone layout" || bad "(m) no install (calls: $(tr '\n' ' ' < "$CALLS" | cut -c1-300); log: $(grep -a 'UNSATISFIABLE\|linked' "$LOG" | cut -c1-200))"
+grep -q 'target-missing' "$CALLS" && bad "(m) target-missing gap although the runtime has the package" || ok "(m) no target-missing gap"
+[ -s "$d/node_modules/@avigopal/vessel-discovery-client/dist/index.js" ] && ok "(m) the installed copy is the runtime's built package" || bad "(m) the installed copy has no dist/index.js"
+grep -q "^CONVERGED $VESSEL" "$CALLS" && ok "(m) converged through the gate" || bad "(m) not converged"
+[ "$(readlink "$SP" 2>/dev/null)" = "$RUNTIME_DIR/packages" ] && ok "(m) the clone layout links packages to the runtime's" || bad "(m) $SP is not a link to $RUNTIME_DIR/packages"
+grep -q '^BUILD' "$CALLS" && bad "(m) a built runtime package was rebuilt" || ok "(m) nothing built"
+# (m2) control: the runtime holds no packages directory
+rm -rf "$SP" "$RUNTIME_DIR"; setup "$VDC"
+run
+[ -e "$SP" ] || [ -L "$SP" ] && bad "(m2) linked a packages path to nothing" || ok "(m2) nothing linked without runtime packages"
+grep -q 'GAP .*pull-sync-clone-dep-target-missing-demo-vessel' "$CALLS" && ! grep -q "^CONVERGED" "$CALLS" && ok "(m2) still fail closed: gap, not converged" || bad "(m2) did not fail closed"
+# (m3) a real packages directory beside the clones is never replaced
+rm -rf "$SP"; mkdir -p "$SP/other"; setup "$VDC"; mk_runtime_pkg
+run
+[ -d "$SP/other" ] && [ ! -L "$SP" ] && ok "(m3) the existing directory is untouched" || bad "(m3) the existing packages directory was replaced"
+grep -q 'GAP .*pull-sync-clone-dep-target-missing-demo-vessel' "$CALLS" && ok "(m3) its missing package still fails closed" || bad "(m3) no target-missing gap"
+# (m4) the runtime package has no built output: never built in the runtime tree
+rm -rf "$SP"; setup "$VDC"; mk_runtime_pkg unbuilt
+run
+grep -q '^BUILD' "$CALLS" && bad "(m4) built inside the runtime tree" || ok "(m4) a runtime package is never built by pull-sync"
+grep -q "^CONVERGED $VESSEL" "$CALLS" && bad "(m4) converged over an unbuilt runtime package" || ok "(m4) fail closed: not converged"
+grep -q 'GAP .*clone-dep-unbuilt' "$CALLS" && ok "(m4) a gap names the unbuilt package" || bad "(m4) no clone-dep-unbuilt gap"
+# (m5) no write-through into the runtime package
+rm -rf "$SP"; setup "$VDC"; mk_runtime_pkg
+RP="$RUNTIME_DIR/packages/vessel-discovery-client"
+jq '.scripts += {preinstall:"touch PRE_RAN", install:"touch INSTALL_RAN", postinstall:"touch POST_RAN", prepare:"touch PREPARE_RAN"}' "$RP/package.json" > "$RP/p" && mv "$RP/p" "$RP/package.json"
+th() { (cd "$1" && find . -print0 | LC_ALL=C sort -z | xargs -0 stat -c '%n %s %Y %a' | md5sum | cut -d' ' -f1); }
+h0="$(th "$RP")"
+run
+grep -q "^INSTALL ${d%/} .*--ignore-scripts" "$CALLS" && ok "(m5) the gated clone install ran with --ignore-scripts" || bad "(m5) no gated clone install with --ignore-scripts (calls: $(grep -a '^INSTALL' "$CALLS" | cut -c1-200))"
+[ "$(th "$RP")" = "$h0" ] && ok "(m5) the runtime package tree is byte-identical after the install" || bad "(m5) the install wrote into the runtime package: $(ls -a "$RP" | tr '\n' ' ')"
+rm -rf "$SP"
 echo; [ "$FAILS" = 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

@@ -1709,6 +1709,11 @@ build_file_dep() {
   BD_WHY=""
   _bf_left="$(file_dep_unbuilt "$_bf_t")"
   [ -n "$_bf_left" ] || return 0
+  # A runtime shared package (reached through the clone_shared_packages link) is built by the image, never
+  # here: building it would write into the live runtime tree.
+  case "$(realpath -m "$_bf_t" 2>/dev/null || echo "$_bf_t")/" in "$(realpath -m "${RUNTIME_DIR:-/nonexistent}" 2>/dev/null)"/*)
+    BD_WHY="its entry point(s) $(printf '%s' "$_bf_left" | tr '\n' ' ' | sed 's/ $//') are missing and it is a runtime package under ${RUNTIME_DIR:-} (built by the image, never by pull-sync)"; return 1 ;;
+  esac
   if [ -n "$(git -C "$_bf_t" ls-files -- $(printf '%s\n' "$_bf_left" | sed 's#/.*##' | sort -u) 2>/dev/null | head -1)" ]; then
     BD_WHY="its entry point(s) $(printf '%s' "$_bf_left" | tr '\n' ' ' | sed 's/ $//') are missing from TRACKED output in $_bf_t (a checkout problem, not a build to run)"; return 1
   fi
@@ -1767,6 +1772,26 @@ file_dep_identity() { # target-dir -> "<git HEAD> <digest of the built output di
   case "$_fi_dir" in .|''|/*|*..*) _fi_dir=dist ;; esac
   printf '%s %s\n' "$(git -C "$1" rev-parse HEAD 2>/dev/null || echo no-git)" "$(tree_digest "$1/$_fi_dir")"
 }
+# THE SHARED PACKAGES ARE THE ONE file: TARGET THAT IS NOT A SIBLING CLONE. A vessel names one as
+# file:../../packages/<pkg> (identity-vessel: @avigopal/vessel-discovery-client). In the super-repo that is
+# repos/<v>/../../packages; at runtime mirror-to-live (and the image) rewrite it to $RUNTIME_DIR/packages,
+# which the image built. In the clone layout ($CLONE_DIR/<v>) the same relative path names
+# $(dirname $CLONE_DIR)/packages, which nothing provided, so every install was "target missing" and
+# identity-vessel never converged (measured 10-05 on node1: "file: dependency target(s) do not exist:
+# @avigopal/vessel-discovery-client -> /workspace/git/packages/vessel-discovery-client", every tick).
+# Provide that path as a link to the runtime's packages: the clone then installs and is gated against the
+# exact copy the runtime resolves. A path that already exists (a directory, a file, any link) is never
+# touched, and nothing is linked when the runtime has no packages directory (the target stays missing and
+# the caller fails closed as before).
+clone_shared_packages() {
+  local _sp_link _sp_src
+  [ -n "${RUNTIME_DIR:-}" ] && [ -n "${CLONE_DIR:-}" ] || return 0
+  _sp_link="$(dirname "${CLONE_DIR%/}")/packages"; _sp_src="${RUNTIME_DIR%/}/packages"
+  [ -d "$_sp_src" ] || return 0
+  [ -e "$_sp_link" ] || [ -L "$_sp_link" ] && return 0
+  ln -s "$_sp_src" "$_sp_link" 2>/dev/null && log "clone layout: linked $_sp_link -> $_sp_src (the shared packages file:../../packages/<pkg> names, as the runtime resolves them)"
+  return 0
+}
 ensure_clone_deps() { # vessel clone-dir
   local _cd_v="$1" _cd_d="${2%/}" _cd_mark _cd_fail _cd_hash _cd_why="" _cd_missing _cd_log _cd_rc _cd_dirty_before _cd_dirty_after
   local _cd_name _cd_target _cd_unres="" _cd_aside _cd_fhash="" _cd_ftime="" _cd_now _cd_fdeps
@@ -1775,6 +1800,7 @@ ensure_clone_deps() { # vessel clone-dir
   _cd_mark="$MARKER_DIR/$_cd_v.clone-deps"; _cd_fail="$MARKER_DIR/$_cd_v.clone-deps-failed"
   _cd_aside="$MARKER_DIR/$_cd_v.node_modules-prev"
   rm -rf "$_cd_d/node_modules.pullsync-prev" 2>/dev/null || true
+  clone_shared_packages
   _cd_fdeps="$(clone_file_deps "$_cd_d")"
   # Every present file: target must carry its own entry points BEFORE a copy of it is installed or the
   # marker hashes it (build_file_dep). A target that cannot be built fails closed, naming the package.
