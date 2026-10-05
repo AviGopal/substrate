@@ -272,7 +272,7 @@
       "must_fail": "each node's run plants a path into excluded_paths and a class into require_falsifier_classes of the copy it read; both must be reported as a mismatch",
       "pool_shape": "autonomyScope",
       "expected_by_node": {
-        "c951b44f4a99": {
+        "key-595289e706e5": {
           "excluded_paths": [
             "repos/development-vessel/src/resolvers/feature-compose.ts",
             "repos/development-vessel/src/resolvers/vessel-mitosis-cutover.ts",
@@ -379,9 +379,9 @@
           ]
         }
       },
-      "notes": "autonomyScope is a trust root and the containment the autonomous lane obeys; an absent record reads closed, so drift is the remaining failure: one node's copy gaining or losing an excluded path, or its falsifier classes changing, while the other keeps the old value. Compared: excluded_paths and require_falsifier_classes as exact-string sets (a directory entry 'x/' and a file entry 'x' differ); the reason text is not compared. Node keys are thisNode() (SUBSTRATE_NAME, else hostname), matching substrate_nodes_pinned: substrate-live sets no SUBSTRATE_NAME, so its key is the container hostname c951b44f4a99 and a recreated container SKIPS this row until SUBSTRATE_NAME is set and the key renamed; compose2-live sets SUBSTRATE_NAME=compose2. Rows naming nodes are skipped on every other node and substrate (nodes field). The pinned value is operator-authored here (a git object), never read from the pool it checks; changing the record means changing this row in the same operator act.",
+      "notes": "autonomyScope is a trust root and the containment the autonomous lane obeys; an absent record reads closed, so drift is the remaining failure: one node's copy gaining or losing an excluded path, or its falsifier classes changing, while the other keeps the old value. Compared: excluded_paths and require_falsifier_classes as exact-string sets (a directory entry 'x/' and a file entry 'x' differ); the reason text is not compared. Node keys are thisNode(): SUBSTRATE_NAME when set (compose2-live sets compose2), else the node's volume-held vessel identity key, key-<12 hex of sha256(public key)>, which survives a container recreate (substrate-live sets no SUBSTRATE_NAME, so its key is key-595289e706e5). A node that holds the record but has no pinned value here is reported <node>-unpinned, never skipped. Rows naming nodes are skipped on every other node and substrate (nodes field). The pinned value is operator-authored here (a git object), never read from the pool it checks; changing the record means changing this row in the same operator act.",
       "nodes": [
-        "c951b44f4a99",
+        "key-595289e706e5",
         "compose2"
       ]
     },
@@ -395,7 +395,7 @@
       "must_fail": "each node's run perturbs usd_cap_per_hour and flips paused in the copy it read; both must be reported as a mismatch",
       "pool_shape": "spendEnvelope",
       "expected_by_node": {
-        "c951b44f4a99": {
+        "key-595289e706e5": {
           "usd_cap_per_hour": 2,
           "paused": false
         },
@@ -404,9 +404,9 @@
           "paused": false
         }
       },
-      "notes": "spendEnvelope is a trust root and the budget the autonomous lane obeys; an absent record reads closed, so drift is the remaining failure: a cap raised, a pause lifted or set, or the cap replaced by uncapped:true on one node. Compared: usd_cap_per_hour and paused by equality; the reason text is not compared. Node keys are thisNode() (SUBSTRATE_NAME, else hostname), matching substrate_nodes_pinned: substrate-live sets no SUBSTRATE_NAME, so its key is the container hostname c951b44f4a99 and a recreated container SKIPS this row until SUBSTRATE_NAME is set and the key renamed; compose2-live sets SUBSTRATE_NAME=compose2. Rows naming nodes are skipped on every other node and substrate (nodes field). The pinned value is operator-authored here (a git object), never read from the pool it checks; changing the record means changing this row in the same operator act.",
+      "notes": "spendEnvelope is a trust root and the budget the autonomous lane obeys; an absent record reads closed, so drift is the remaining failure: a cap raised, a pause lifted or set, or the cap replaced by uncapped:true on one node. Compared: usd_cap_per_hour and paused by equality; the reason text is not compared. Node keys are thisNode(): SUBSTRATE_NAME when set (compose2-live sets compose2), else the node's volume-held vessel identity key, key-<12 hex of sha256(public key)>, which survives a container recreate (substrate-live sets no SUBSTRATE_NAME, so its key is key-595289e706e5). A node that holds the record but has no pinned value here is reported <node>-unpinned, never skipped. Rows naming nodes are skipped on every other node and substrate (nodes field). The pinned value is operator-authored here (a git object), never read from the pool it checks; changing the record means changing this row in the same operator act.",
       "nodes": [
-        "c951b44f4a99",
+        "key-595289e706e5",
         "compose2"
       ]
     }
