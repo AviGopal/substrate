@@ -301,7 +301,13 @@
             "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts",
             "repos/development-vessel/src/resolvers/self-fact-reconcile.ts",
             "repos/development-vessel/src/resolvers/vessel-mitosis-evaluate.ts",
-            "scripts/bootstrap-seeder.ts"
+            "scripts/bootstrap-seeder.ts",
+            "repos/development-vessel/src/resolvers/scope-earn-in.ts",
+            "repos/development-vessel/src/resolvers/test-suite.ts",
+            "repos/development-vessel/test/resolvers/scope-earn-in.test.ts",
+            "repos/development-vessel/test/resolvers/evaluator-grant-scan.test.ts",
+            "repos/development-vessel/test/resolvers/scope-change-pin.test.ts",
+            "repos/development-vessel/test/resolvers/system-authored-gap-checks.test.ts"
           ],
           "require_falsifier_classes": [
             "class2"
@@ -336,7 +342,13 @@
             "repos/development-vessel/src/resolvers/gap-lifecycle-scan.ts",
             "repos/development-vessel/src/resolvers/self-fact-reconcile.ts",
             "repos/development-vessel/src/resolvers/vessel-mitosis-evaluate.ts",
-            "scripts/bootstrap-seeder.ts"
+            "scripts/bootstrap-seeder.ts",
+            "repos/development-vessel/src/resolvers/scope-earn-in.ts",
+            "repos/development-vessel/src/resolvers/test-suite.ts",
+            "repos/development-vessel/test/resolvers/scope-earn-in.test.ts",
+            "repos/development-vessel/test/resolvers/evaluator-grant-scan.test.ts",
+            "repos/development-vessel/test/resolvers/scope-change-pin.test.ts",
+            "repos/development-vessel/test/resolvers/system-authored-gap-checks.test.ts"
           ],
           "require_falsifier_classes": [
             "class2"
