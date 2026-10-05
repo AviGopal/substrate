@@ -261,6 +261,27 @@ const SEED = {
         "paces": "gap_check_supply_tick (system-authored failing tests for gaps without a check)",
         "description": "Turn gaps that have no check into armed gaps: one edit goal per needs_localization gap to write a failing test; armed only when it is red at HEAD for the right reason."
       }
+    },
+    // NEW POLICY (2026-10-05, bootstrap item 3: scope earn-in). Paces development-vessel's
+    // scope_earn_in_tick, which applies the adopted criterion (WIRING.md, 10-03: every regression on an
+    // excluded file maps to an armed must-fail, and a mutation of the guarded lines reddens it) and only
+    // PROPOSES; the accepted applier re-runs the evidence itself before any scope change. budget 0.20:
+    // it runs checks and mutations, no compose, so cheaper than gap-check-supply. 1/1 uninformed prior.
+    {
+      "id": "rhythm-scope-earn-in",
+      "shape": "timeShapedRhythm",
+      "body": {
+        "axis": "freshness",
+        "axis_code": 2,
+        "family": "scope-earn-in",
+        "budget": 0.2,
+        "alpha": 1,
+        "beta": 1,
+        "staleness": 1,
+        "transient": false,
+        "paces": "scope_earn_in_tick (criterion-made autonomy-scope proposals; applied only by the accepted applier)",
+        "description": "Propose scope changes per excluded file by the adopted earn-in criterion; never self-applied."
+      }
     }
   ],
   "familyGoals": [

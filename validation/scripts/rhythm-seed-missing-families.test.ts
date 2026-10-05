@@ -101,4 +101,13 @@ describe("rhythm seeder delivers families missing by id to a populated registry"
     expect(v.rows.get("rhythm-gap-check-supply")?.shape).toBe("somethingElse");
     expect(r.code).not.toBe(0);
   });
+
+  it("MUST-FAIL: the scope-earn-in family (bootstrap item 3) is delivered to a registry that already holds gap-check-supply", async () => {
+    const v = fakeVessel([...filler(12), { id: "rhythm-gap-check-supply", shape: "timeShapedRhythm", body: { family: "gap-check-supply", budget: 0.3, alpha: 4, beta: 2, staleness: 0.4 } }]);
+    const r = await runSeeder(v.url);
+    expect(r.code).toBe(0);
+    expect(v.writes).toContain("rhythm-scope-earn-in");
+    expect(v.writes).not.toContain("rhythm-gap-check-supply");
+    expect(v.rows.get("rhythm-scope-earn-in")?.body.family).toBe("scope-earn-in");
+  });
 });
