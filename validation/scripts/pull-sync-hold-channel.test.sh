@@ -18,6 +18,9 @@
 set -uo pipefail
 SCRIPT="${1:-$(cd "$(dirname "$0")/../.." && pwd)/scripts/substrate/substrate-pull-sync.sh}"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
+# This harness exercises other pull-sync behaviour: no protected judge tests (the gate reads the protected
+# set from autonomy-scope.json and HOLDS when it is unreadable, so an empty set is stated, not omitted).
+export PROTECTED_SCOPE_FILE="$T/autonomy-scope.json"; echo '{"autonomyScope":{"excluded_paths":[]}}' > "$PROTECTED_SCOPE_FILE"
 FAILS=0
 ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }

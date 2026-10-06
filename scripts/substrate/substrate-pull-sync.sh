@@ -3166,6 +3166,46 @@ EOF
         classification_metadata:{class:"gate_blind_environment",node:$node,vessel:$v,unresolvable_modules:($mods | split(",")),head:$head,regression:$reg}}}}}' 2>/dev/null)"
     skipped=$((skipped + 1)); continue
   fi
+  # PROTECTED JUDGE TESTS ARE JUDGED ALONE, NOT BY THE DIFF (qa, 2026-10-05). The lane may tighten
+  # arming but never loosen it, and that rests on this gate seeing the protected judge tests (the test
+  # files autonomyScope.excluded_paths lists under repos/<v>/) go red. Measured 2026-10-05: development-
+  # vessel's system-authored-gap-checks.test.ts is ORDER-POLLUTED, red inside one full run and green
+  # alone on an unchanged sha. Already red in the full run at base, a real loosening shows the SAME
+  # failure names at base and tip, the name-set diff reads "no newly-failing test", and the protection
+  # silently fails. So each protected file also runs in ITS OWN `bun test <file>` process at the
+  # candidate, where it is deterministic, and must be GREEN there: any red, a deleted file, a run with no
+  # countable result, or an unreadable scope file is a refusal, whatever the diff said. Pollution alone
+  # (red in the full run, green alone) never holds. The scope file is the super-repo's own
+  # autonomy-scope.json (JSON, read without importing the vessel's TypeScript): the ACCEPTED gate's copy
+  # first (the gate-runner runs this script from $PULLSYNC_ACCEPTED_DIR, where it sits beside it), then
+  # this script's own directory, then the super-repo clone (the pre-gate path from /usr/local/bin).
+  if [ -z "${PROTECTED_SCOPE_FILE:-}" ]; then
+    for _psf in "${PULLSYNC_ACCEPTED_DIR:+$PULLSYNC_ACCEPTED_DIR/scripts/substrate/autonomy-scope.json}" "${PULLSYNC_SELF_DIR:-.}/autonomy-scope.json" "${SUPER_DIR:-/workspace/git/super-repo}/scripts/substrate/autonomy-scope.json"; do
+      [ -n "$_psf" ] && [ -f "$_psf" ] && { PROTECTED_SCOPE_FILE="$_psf"; break; }
+    done
+  fi
+  PROTECTED_SCOPE_FILE="${PROTECTED_SCOPE_FILE:-${PULLSYNC_SELF_DIR:-.}/autonomy-scope.json}"
+  if [ -z "$REG" ] && [ -n "$BUN_BIN" ]; then
+    PROT_RED=""
+    if ! PROT_FILES="$(jq -er --arg p "repos/$v/" '[.autonomyScope.excluded_paths[]? | select(type == "string" and startswith($p) and test("\\.test\\.(ts|tsx|js|mjs)$")) | ltrimstr($p)] | .[]' "$PROTECTED_SCOPE_FILE" 2>/dev/null)" \
+      && ! jq -e '.autonomyScope.excluded_paths | type == "array"' "$PROTECTED_SCOPE_FILE" >/dev/null 2>&1; then
+      PROT_RED="protected-set unreadable ($PROTECTED_SCOPE_FILE)"
+    fi
+    while IFS= read -r _pf; do
+      [ -n "$_pf" ] || continue
+      if [ ! -f "$d/$_pf" ]; then PROT_RED="${PROT_RED:+$PROT_RED; }$_pf deleted at the candidate"; continue; fi
+      _pa_out="$( (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_o="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${PROTECTED_TEST_TIMEOUT_SECONDS:-120}" "$BUN_BIN" test "./$_pf" > "$_rs_o" 2>&1; echo "__PROT_RC=$?" >> "$_rs_o"; cat "$_rs_o"; rm -rf "$_rs_root" "$_rs_o" 2>/dev/null) || true )"
+      _pa_rc="$(printf '%s' "$_pa_out" | sed -n 's/^__PROT_RC=//p' | tail -1)"
+      _pa_pass="$(count_pf "$_pa_out" pass)"; _pa_fail="$(count_pf "$_pa_out" fail)"
+      if [ "${_pa_rc:-x}" = 0 ] && [ -n "$_pa_pass" ] && [ "$_pa_pass" -gt 0 ] && [ "${_pa_fail:-0}" = 0 ]; then continue; fi
+      PROT_RED="${PROT_RED:+$PROT_RED; }$_pf red alone (rc ${_pa_rc:-?}, ${_pa_pass:-?} pass / ${_pa_fail:-?} fail$( [ -z "$_pa_pass" ] && echo ', no countable result'))"
+    done <<< "${PROT_FILES:-}"
+    if [ -n "$PROT_RED" ]; then
+      REG="protected judge test(s) not green when run ALONE at the candidate, independent of the full-suite diff: $PROT_RED"
+      REG_NAMED=1
+      log "$v: protected judge tests at ${HEAD:0:10} — $PROT_RED"
+    fi
+  fi
   [ -n "${U_GAP_JSON:-}" ] && emit_gap "$U_GAP_JSON"
   if [ -n "$REG" ]; then
     RC_FILE="$MARKER_DIR/$v.testgate-refusals"
