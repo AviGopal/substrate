@@ -30,6 +30,27 @@ PULLSYNC_ARGS=("$@")
 # A re-exec'd tick keeps the ORIGINAL start time: the failing-test generator's budget is
 # measured against the unit timeout, which the exec does not reset.
 if [ "${PULLSYNC_REEXECED:-}" = 1 ] && [ -n "${PULLSYNC_T0:-}" ]; then :; else PULLSYNC_T0="$(date +%s)"; fi
+# THE UNIT'S OWN TimeoutStartSec, READ LIVE (2026-10-06). systemd SIGTERMs the tick at the unit's
+# TimeoutStartSec, so every budget that must end before that kill (the test gate's, the quiesce and drain
+# waits, the failing-test generator's) is derived from the value systemd will actually enforce, read from
+# systemd at tick start: a drop-in that changes the timeout is honoured, not shadowed by a constant. Only a
+# LOADED unit's value is trusted (an unknown unit reports systemd's 90 s default, which would starve every
+# gate); unreadable, unparseable, zero or infinity -> 900, the shipped unit file's value. UNIT_TIMEOUT_S
+# set in the environment wins (tests, and an operator pinning it).
+unit_timeout_s() {
+  local _ut_unit="${PULLSYNC_UNIT:-substrate-pull-sync.service}" _ut_v
+  [ "$(systemctl show "$_ut_unit" -p LoadState --value 2>/dev/null || true)" = loaded ] || { echo 900; return 0; }
+  _ut_v="$(systemctl show "$_ut_unit" -p TimeoutStartUSec --value 2>/dev/null || true)"
+  case "$_ut_v" in ''|infinity) echo 900; return 0 ;; esac
+  printf '%s\n' "$_ut_v" | awk '{ t = 0
+    for (i = 1; i <= NF; i++) { n = $i; sub(/[a-z]+$/, "", n); u = $i; sub(/^[0-9.]+/, "", u)
+      if (n == "") { print 900; exit }
+      if (u == "us") t += n / 1e6; else if (u == "ms") t += n / 1e3; else if (u == "" || u == "s" || u == "sec") t += n
+      else if (u == "min" || u == "m") t += n * 60; else if (u == "h") t += n * 3600; else if (u == "d") t += n * 86400
+      else { print 900; exit } }
+    if (t < 1) t = 900; printf "%d\n", t }'
+}
+: "${UNIT_TIMEOUT_S:=$(unit_timeout_s)}"
 GEN_QUEUE=""
 # PINNED JUDGE (scripts/substrate/gate/). gate-runner (substrate-pull-sync.service's ExecStart)
 # runs THIS file from /workspace/.gate/accepted/ — a `git archive` of the accepted sha — and
@@ -1719,6 +1740,12 @@ build_file_dep() {
   fi
   jq -e '.scripts.build' "$_bf_t/package.json" >/dev/null 2>&1 \
     || { BD_WHY="its entry point(s) $(printf '%s' "$_bf_left" | tr '\n' ' ' | sed 's/ $//') are missing and its package.json has no build script"; return 1; }
+  # Called from the test gate (CD_BUDGET_CHECK=1): a build that cannot finish, leaving the gate its first
+  # suite run, is not started; ensure_clone_deps reports it as a budget deferral (return 2), not a failure.
+  if [ -n "${CD_BUDGET_CHECK:-}" ] && declare -F gate_left >/dev/null \
+     && [ "$(gate_left)" -lt $(( ${CLONE_DEPS_BUILD_TIMEOUT_SECONDS:-180} + 15 + ${SUITE_COST_S:-270} )) ]; then
+    CD_BUDGET_SHORT="building file: dependency $_bf_n"; BD_WHY="not started: the time left cannot fit it"; return 1
+  fi
   _bf_log="$(mktemp "${TMPDIR:-/tmp}/pullsync-depbuild-XXXXXX")"
   log "$_bf_v: file: dependency $_bf_n ($_bf_t) has no built output ($(printf '%s' "$_bf_left" | tr '\n' ' ' | sed 's/ $//')) — building it in its clone before installing a copy (scrubbed env, ${CLONE_DEPS_BUILD_TIMEOUT_SECONDS:-180}s bound)"
   if [ ! -d "$_bf_t/node_modules" ]; then clone_deps_install "$_bf_t" "$_bf_log" || true; fi
@@ -1807,6 +1834,7 @@ ensure_clone_deps() { # vessel clone-dir
   while IFS=$'\t' read -r _cd_name _cd_target; do
     [ -n "$_cd_name" ] && [ -d "$_cd_target" ] || continue
     if ! build_file_dep "$_cd_v" "$_cd_name" "$_cd_target"; then
+      if [ -n "${CD_BUDGET_SHORT:-}" ]; then CD_STATE=deferred; CD_WHY="$CD_BUDGET_SHORT"; return 2; fi
       CD_STATE=failed; CD_WHY="file: dependency $_cd_name ($_cd_target) has no built output and $BD_WHY"
       log "$_cd_v: !!! CLONE DEPENDENCY UNBUILT — $CD_WHY; NOT converging $_cd_v this tick (its tests would fail to load on it and blind the gate)"
       clone_deps_gap pull-sync-clone-dep-unbuilt- "$(printf '%s' "$_cd_name" | tr -c 'A-Za-z0-9._-' '-')" "$CD_WHY." \
@@ -1856,6 +1884,12 @@ ensure_clone_deps() { # vessel clone-dir
     CD_STATE=suppressed; CD_WHY="install suppressed (same manifest failed at $(date -u -d "@$_cd_ftime" -Iseconds 2>/dev/null || echo "$_cd_ftime"); retry after ${CLONE_DEPS_RETRY_BACKOFF_SECONDS:-3600}s or a package.json/bun.lock change)"
     log "$_cd_v: $CD_WHY — still NOT converging $_cd_v this tick ($_cd_why)"
     return 1
+  fi
+  # Called from the test gate: the install (in place, then possibly once clean: two bounded runs) must fit
+  # with the gate's first suite run after it, or it is not started (return 2 = budget deferral).
+  if [ -n "${CD_BUDGET_CHECK:-}" ] && declare -F gate_left >/dev/null \
+     && [ "$(gate_left)" -lt $(( 2 * (${CLONE_DEPS_INSTALL_TIMEOUT_SECONDS:-180} + 15) + ${SUITE_COST_S:-270} )) ]; then
+    CD_STATE=deferred; CD_WHY="the clone dependency install ($_cd_why)"; CD_BUDGET_SHORT="$CD_WHY"; return 2
   fi
   _cd_log="$(mktemp "${TMPDIR:-/tmp}/pullsync-clonedeps-XXXXXX")"
   _cd_dirty_before="$(git -C "$_cd_d" status --porcelain -- package.json bun.lock bun.lockb 2>/dev/null || true)"
@@ -2686,32 +2720,54 @@ EOF
   # tick (pass_order), with that tick's fresh budget. After
   # pull_sync.testgate_budget_defer_max (shaped, default 3) consecutive deferrals of the
   # SAME candidate the starvation is filed, and it is still not converged.
+  # THE BUDGET IS CHECKED BEFORE EVERY RUN, AND IT ENDS BEFORE systemd's KILL (2026-10-06). Measured on the
+  # hub: GATE_BUDGET_SECONDS defaulted to 1000 against the unit's TimeoutStartSec of 900, and it was checked
+  # ONCE, before a vessel's gate; that gate then started up to five more suite runs (the unresolved-module
+  # parent run, the unnamed-rise re-run, the T2 confirmation, the parent/candidate overlay) plus the
+  # protected judge tests alone, each up to TEST_TIMEOUT_SECONDS + the kill grace. activity-api's slow suite
+  # took them all, systemd SIGTERMed every tick at 900 s, every vessel after it in pass order never
+  # converged, and the deferral/starvation path below never fired, so the stall was silent. So the time
+  # left is the SMALLER of the gate budget (from the gate's start) and the unit's live TimeoutStartSec less
+  # a margin (from the tick's start), and each run is started only if its worst case fits; otherwise the
+  # candidate is DEFERRED exactly as before (logged, counted, starvation filed at the bound), never
+  # converged on a partial measurement. The counter resets only when a gate finishes measuring.
   : "${GATE_T0:=$(date +%s)}" ; GATE_BUDGET_SECONDS="${GATE_BUDGET_SECONDS:-1000}"
-  GATE_ELAPSED=$(( $(date +%s) - GATE_T0 ))
   BD_FILE="$MARKER_DIR/$v.testgate-budget-defers"
-  if [ "$GATE_ELAPSED" -ge "${GATE_BUDGET_SECONDS:-900}" ]; then
-    BD_HEAD=""; BD_N=0
-    read -r BD_HEAD BD_N < "$BD_FILE" 2>/dev/null || true
+  gate_left() {
+    local _gl_now _gl_a _gl_b
+    _gl_now=$(date +%s)
+    _gl_a=$(( GATE_BUDGET_SECONDS - (_gl_now - GATE_T0) ))
+    _gl_b=$(( ${UNIT_TIMEOUT_S:-900} - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} - (_gl_now - ${PULLSYNC_T0:-$GATE_T0}) ))
+    if [ "$_gl_a" -lt "$_gl_b" ]; then echo "$_gl_a"; else echo "$_gl_b"; fi
+  }
+  SUITE_COST_S=$(( ${TEST_TIMEOUT_SECONDS:-240} + ${TEST_KILL_GRACE_SECONDS:-30} ))
+  PROT_COST_S=$(( ${PROTECTED_TEST_TIMEOUT_SECONDS:-120} + ${TEST_KILL_GRACE_SECONDS:-30} ))
+  testgate_budget_defer() { # <the run that would start> <its worst case, s>
+    local BD_HEAD="" BD_N=0 BD_MAX _gl
+    _gl="$(gate_left)"
+    { read -r BD_HEAD BD_N < "$BD_FILE"; } 2>/dev/null || true
     case "$BD_N" in ''|*[!0-9]*) BD_N=0 ;; esac
     [ "$BD_HEAD" = "$HEAD" ] || BD_N=0
     BD_N=$((BD_N + 1)); echo "$HEAD $BD_N" > "$BD_FILE" 2>/dev/null || true
     tuning_param pull_sync.testgate_budget_defer_max 3; BD_MAX="$TP_VALUE"
-    log "$v: TEST GATE DEFERRED — per-tick budget ${GATE_BUDGET_SECONDS:-900}s exhausted (${GATE_ELAPSED}s elapsed); NOT converging ${HEAD:0:10} this tick (consecutive budget deferral $BD_N of this candidate, bound $BD_MAX); it gates FIRST next tick with a fresh budget"
+    log "$v: TEST GATE DEFERRED — $1 needs up to ${2}s but ${_gl}s remain (gate budget ${GATE_BUDGET_SECONDS}s, capped by the unit's TimeoutStartSec ${UNIT_TIMEOUT_S:-900}s less ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}}s from the tick's start); NOT converging ${HEAD:0:10} this tick (consecutive budget deferral $BD_N of this candidate, bound $BD_MAX); it gates FIRST next tick with a fresh budget"
     if [ "$BD_N" -ge "$BD_MAX" ]; then
-      emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg n "$BD_N" --arg max "$BD_MAX" --arg b "${GATE_BUDGET_SECONDS:-900}" \
+      emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg n "$BD_N" --arg max "$BD_MAX" --arg b "$GATE_BUDGET_SECONDS" \
         '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-budget-starved-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
-          summary:("Repair needed: pull-sync deferred " + $v + " at " + $head + " " + $n + " consecutive ticks because the per-tick test-gate budget (" + $b + "s) was spent before its gate could run, past pull_sync.testgate_budget_defer_max (" + $max + "). It is NOT converged ungated: a gate that did not measure never promotes. Repair the capability: a faster suite, a larger budget, or a gate sharded across ticks."),
+          summary:("Repair needed: pull-sync deferred " + $v + " at " + $head + " " + $n + " consecutive ticks because the per-tick test-gate budget (" + $b + "s, capped by the unit timeout) was too short for its gate to finish its runs, past pull_sync.testgate_budget_defer_max (" + $max + "). It is NOT converged ungated: a gate that did not measure never promotes. Repair the capability: a faster suite, a larger budget, or a gate sharded across ticks."),
           classification_metadata:{vessel:$v,head:$head,consecutive_deferrals:($n | tonumber),bound:($max | tonumber),budget_seconds:($b | tonumber)}}}}}' 2>/dev/null)"
     fi
-    skipped=$((skipped + 1)); continue
-  fi
-  rm -f "$BD_FILE" 2>/dev/null || true
+  }
+  if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the suite run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
   # The gate measures the clone's suite against the clone's node_modules: satisfy the
   # manifest first (see ensure_clone_deps). Unsatisfiable, failed or backed-off -> gap
   # (filed there) and NO convergence this tick: fail closed, never ungated.
   GATE_BLIND_WHY=""; U_EXCL=0; U_MODS=""; U_SHARED=""; U_GAP_JSON=""
   if [ -n "$BUN_BIN" ]; then
-    if ! ensure_clone_deps "$v" "$d"; then skipped=$((skipped + 1)); continue; fi
+    CD_BUDGET_SHORT=""; CD_BUDGET_CHECK=1 ensure_clone_deps "$v" "$d"; _cd_grc=$?
+    if [ "$_cd_grc" -eq 2 ]; then
+      testgate_budget_defer "$CD_BUDGET_SHORT" "$(( 2 * (${CLONE_DEPS_INSTALL_TIMEOUT_SECONDS:-180} + 15) + SUITE_COST_S ))"; skipped=$((skipped + 1)); continue
+    elif [ "$_cd_grc" -ne 0 ]; then skipped=$((skipped + 1)); continue; fi
   fi
   count_pf() { printf '%s' "$1" | grep -oE "^ *[0-9]+ $2" | grep -oE '[0-9]+' | tail -1 || true; }
   # The SET of failing test names, sorted and stripped of timings/colour. A regression is a
@@ -2813,6 +2869,8 @@ EOF
         classification_metadata:{node:$node,vessel:$v,head:$head}}}}}' 2>/dev/null)"
     skipped=$((skipped + 1)); continue
   else
+    # Re-checked here: ensure_clone_deps (above) can install for minutes.
+    if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the suite run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
     T_OUT="$(run_suite)"; T_FAIL="$(count_pf "$T_OUT" fail)"; T_PASS="$(count_pf "$T_OUT" pass)"
     # UNRESOLVABLE MODULES THE PARENT SHARES ARE EXCLUDED, NOT CARRIED AS A SHARED COUNT. A
     # test file that cannot resolve an import is one UNNAMED failure that hides every test in
@@ -2830,6 +2888,7 @@ EOF
       if [ -n "$U_MODS" ]; then
         U_PARENT_REF="$(git -C "$d" rev-parse --verify --quiet "${HEAD}^" 2>/dev/null || true)"
         U_P_MODS=""
+        if [ -n "$U_PARENT_REF" ] && [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the parent's unresolved-module run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
         [ -n "$U_PARENT_REF" ] && U_P_MODS="$(unresolved_modules "$(run_suite_at "$U_PARENT_REF" || true)")"
         U_SHARED="$(comm -12 <(printf '%s\n' "$U_MODS") <(printf '%s\n' "$U_P_MODS") 2>/dev/null | grep . || true)"
         if [ -n "$U_SHARED" ]; then
@@ -2999,6 +3058,7 @@ EOF
       if [ -z "$B_UNNAMED" ] && [ -n "$B_SUM_FAIL" ] && [ "$B_SUM_FAIL" -ge "$B_NAMED" ]; then B_UNNAMED=$((B_SUM_FAIL - B_NAMED)); fi
       if [ -s "$B_NAMES_FILE" ] && [ -n "$B_UNNAMED" ]; then
         if [ "$T_UNNAMED" -gt "$B_UNNAMED" ]; then
+          if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the unnamed-rise re-run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
           L_OUT="$(run_suite)"; L_FAIL="$(count_pf "$L_OUT" fail)"
           L_NAMED="$(fail_names "$L_OUT" | grep -c . || true)"; L_NAMED="$(( ${L_NAMED:-0} + U_EXCL ))"
           if [ -n "$L_FAIL" ] && [ $((L_FAIL - L_NAMED)) -gt "$B_UNNAMED" ]; then
@@ -3023,6 +3083,7 @@ EOF
         # 98 then 103 failures on an identical tree). Noise is additive, so the minimum
         # failure count approximates the deterministic one; a single second sample
         # would fire on that spread, the minimum does not.
+        if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the T2 confirmation run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
         T2_OUT="$(run_suite)"; F2="$(count_pf "$T2_OUT" fail)"; P2="$(count_pf "$T2_OUT" pass)"
         BEST_F="$T_FAIL"; BEST_P="$T_PASS"
         if [ -n "$F2" ] && [ "$F2" -lt "$BEST_F" ]; then BEST_F="$F2"; fi
@@ -3058,6 +3119,7 @@ EOF
             # worktree would be subtracted from the candidate's set and mask a real regression —
             # a fail-open, the one direction this gate must never take. Measuring both refs the
             # same way is what makes the difference attributable to the commit and nothing else.
+            if [ "$(gate_left)" -lt $((2 * SUITE_COST_S)) ]; then testgate_budget_defer "the parent/candidate overlay (two runs)" "$((2 * SUITE_COST_S))"; skipped=$((skipped + 1)); continue; fi
             P_OUT="$(run_suite_at "$PARENT_REF" || true)"
             C_OUT="$(run_suite_at "$HEAD" || true)"
             P_PASS="$(count_pf "$P_OUT" pass)"; C_PASS="$(count_pf "$C_OUT" pass)"
@@ -3186,7 +3248,7 @@ EOF
   fi
   PROTECTED_SCOPE_FILE="${PROTECTED_SCOPE_FILE:-${PULLSYNC_SELF_DIR:-.}/autonomy-scope.json}"
   if [ -z "$REG" ] && [ -n "$BUN_BIN" ]; then
-    PROT_RED=""
+    PROT_RED=""; PROT_DEFER=""
     if ! PROT_FILES="$(jq -er --arg p "repos/$v/" '[.autonomyScope.excluded_paths[]? | select(type == "string" and startswith($p) and test("\\.test\\.(ts|tsx|js|mjs)$")) | ltrimstr($p)] | .[]' "$PROTECTED_SCOPE_FILE" 2>/dev/null)" \
       && ! jq -e '.autonomyScope.excluded_paths | type == "array"' "$PROTECTED_SCOPE_FILE" >/dev/null 2>&1; then
       PROT_RED="protected-set unreadable ($PROTECTED_SCOPE_FILE)"
@@ -3194,18 +3256,23 @@ EOF
     while IFS= read -r _pf; do
       [ -n "$_pf" ] || continue
       if [ ! -f "$d/$_pf" ]; then PROT_RED="${PROT_RED:+$PROT_RED; }$_pf deleted at the candidate"; continue; fi
+      # A protected run that cannot finish is not started: the candidate HOLDS (deferred), never converges unchecked.
+      # RED BEATS DEFER: a protected file already red alone is a refusal now, never re-reported as "budget".
+      if [ "$(gate_left)" -lt "$PROT_COST_S" ]; then [ -z "$PROT_RED" ] && PROT_DEFER="$_pf"; break; fi
       _pa_out="$( (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_o="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${PROTECTED_TEST_TIMEOUT_SECONDS:-120}" "$BUN_BIN" test "./$_pf" > "$_rs_o" 2>&1; echo "__PROT_RC=$?" >> "$_rs_o"; cat "$_rs_o"; rm -rf "$_rs_root" "$_rs_o" 2>/dev/null) || true )"
       _pa_rc="$(printf '%s' "$_pa_out" | sed -n 's/^__PROT_RC=//p' | tail -1)"
       _pa_pass="$(count_pf "$_pa_out" pass)"; _pa_fail="$(count_pf "$_pa_out" fail)"
       if [ "${_pa_rc:-x}" = 0 ] && [ -n "$_pa_pass" ] && [ "$_pa_pass" -gt 0 ] && [ "${_pa_fail:-0}" = 0 ]; then continue; fi
       PROT_RED="${PROT_RED:+$PROT_RED; }$_pf red alone (rc ${_pa_rc:-?}, ${_pa_pass:-?} pass / ${_pa_fail:-?} fail$( [ -z "$_pa_pass" ] && echo ', no countable result'))"
     done <<< "${PROT_FILES:-}"
+    if [ -n "$PROT_DEFER" ]; then testgate_budget_defer "the protected judge test $PROT_DEFER alone" "$PROT_COST_S"; skipped=$((skipped + 1)); continue; fi
     if [ -n "$PROT_RED" ]; then
       REG="protected judge test(s) not green when run ALONE at the candidate, independent of the full-suite diff: $PROT_RED"
       REG_NAMED=1
       log "$v: protected judge tests at ${HEAD:0:10} — $PROT_RED"
     fi
   fi
+  rm -f "$BD_FILE" 2>/dev/null || true
   [ -n "${U_GAP_JSON:-}" ] && emit_gap "$U_GAP_JSON"
   if [ -n "$REG" ]; then
     RC_FILE="$MARKER_DIR/$v.testgate-refusals"
