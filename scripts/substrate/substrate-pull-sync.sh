@@ -3984,9 +3984,51 @@ if [ -z "$PULLSYNC_ACCEPTED_DIR" ] && [ "$SUPER_FETCH_OK" = 1 ] && stage_committ
   fi
 fi
 
+# revive_failed_timers — a timer whose service could not be QUEUED (a Requires= on a masked unit, a unit file
+# that failed to load) enters the failed state and never fires again until reset-failed + start; fixing the
+# cause does not revive it. On 2026-10-06 compose2's rhythm-cadence and gap-store-census timers stayed failed
+# for 11 h after the fix (b9bd860f) promoted, until an operator reset them. Each tick, after the units
+# converge: every ENABLED timer in the failed state whose service now loads and whose Requires=/Requisite=
+# are all loadable is reset and started, and logged. One whose cause persists is left failed and logged. A
+# timer revived on 3 consecutive ticks keeps failing, so it is filed as a gap (one per timer) instead of
+# looping silently. Disabled or masked timers are never touched: their state is the inventory's decision.
+revive_failed_timers() {
+  local sc="${PULLSYNC_SYSTEMCTL:-systemctl}" t svc d why n f revived=" "
+  for t in $($sc list-units --type=timer --state=failed --no-legend --plain 2>/dev/null | awk '{print $1}'); do
+    case "$t" in *.timer) ;; *) continue ;; esac
+    [ "$($sc is-enabled "$t" 2>/dev/null)" = enabled ] || continue
+    svc="$($sc show "$t" -p Unit --value 2>/dev/null)"; [ -n "$svc" ] || svc="${t%.timer}.service"
+    why=""
+    [ "$($sc show "$svc" -p LoadState --value 2>/dev/null)" = loaded ] || why="$svc does not load"
+    for d in $($sc show "$svc" -p Requires -p Requisite --value 2>/dev/null | tr ' ' '\n' | grep .); do
+      case "$($sc show "$d" -p LoadState --value 2>/dev/null)" in loaded) ;; *) why="${why:+$why; }$svc requires $d, which does not load (masked or missing)" ;; esac
+    done
+    if [ -n "$why" ]; then log "timers: $t stays failed — $why"; continue; fi
+    f="$MARKER_DIR/timer-revive.$t"; n=$(( $(cat "$f" 2>/dev/null || echo 0) + 1 ))
+    if $sc reset-failed "$t" 2>/dev/null && $sc start "$t" 2>/dev/null; then
+      log "timers: revived $t (failed; its service $svc now loads and its requirements load) — revive $n"
+      echo "$n" > "$f" 2>/dev/null || true; revived="$revived$t "
+      if [ "$n" -ge 3 ]; then
+        emit_gap "$(jq -n -c --arg t "$t" --arg s "$svc" --arg n "$n" \
+          '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-timer-keeps-failing-" + ($t|gsub("[^A-Za-z0-9._-]";"-"))),category:"service_failure",source:"substrate_detected",status:"open",summary:("pull-sync revived the failed timer " + $t + " on " + $n + " consecutive ticks and it failed again each time, although " + $s + " loads and its requirements load. The cause is in the service run itself or a dependency that fails at start; read journalctl -u " + $t + " -u " + $s + ".")}}}}' 2>/dev/null)"
+      fi
+    else
+      log "timers: !!! could not reset/start $t"
+    fi
+  done
+  # A timer found healthy on a LATER tick clears its revive count, so only CONSECUTIVE revives escalate. One
+  # revived this tick is skipped: start only arms it, and whether it fails again shows when it next fires.
+  for f in "$MARKER_DIR"/timer-revive.*.timer; do
+    [ -e "$f" ] || continue; t="${f##*/timer-revive.}"
+    case "$revived" in *" $t "*) continue ;; esac
+    [ "$($sc is-failed "$t" 2>/dev/null)" = failed ] || [ "$($sc show "$t" -p ActiveState --value 2>/dev/null)" = failed ] || rm -f "$f"
+  done
+}
+
 # Converge systemd units every tick, independent of whether the super-repo sha advanced.
 # See converge_units for why this must NOT sit inside the marker-gated refresh above.
 converge_units "${SUPER_REPO_DIR:-/workspace/git/super-repo}"
+revive_failed_timers
 
 # Same reasoning, same cadence: the selector and the fleet definition it reads
 # must converge on every tick, not only when the super-repo sha advances — a
