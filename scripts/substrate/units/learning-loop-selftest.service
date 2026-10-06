@@ -22,9 +22,14 @@ Description=Learning-loop selftest — does the execution→learning chain actua
 # behavioural predicates. Read-only except gap emission and its own probe dispatch.
 After=activity-api.service surrealdb.service development-vessel.service
 
+# Runs the gate-ACCEPTED copy: ${SUBSTRATE_RUN_DIR} is filled from the accepted gate (pull-sync, and
+# substrate-active-scripts-seed at boot), never from the super-repo clone, whose HEAD is an unjudged candidate.
+Requires=substrate-active-scripts-seed.service
+After=substrate-active-scripts-seed.service
+
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/substrate/env
-ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/learning-loop-selftest-tick.ts
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_RUN_DIR}/learning-loop-selftest-tick.ts
 StandardOutput=journal
 StandardError=journal

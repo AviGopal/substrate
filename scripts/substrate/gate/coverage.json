@@ -64,6 +64,7 @@
       "/usr/local/share/substrate/active-scripts/learning-liveness-probe.ts",
       "/usr/local/share/substrate/active-scripts/learning-loop-selftest-tick.d.ts",
       "/usr/local/share/substrate/active-scripts/learning-loop-selftest-tick.ts",
+      "/usr/local/share/substrate/active-scripts/memory-budget-check.sh",
       "/usr/local/share/substrate/active-scripts/mirror-memory-note.d.ts",
       "/usr/local/share/substrate/active-scripts/mirror-memory-note.ts",
       "/usr/local/share/substrate/active-scripts/model-reality-audit.d.ts",
@@ -103,6 +104,7 @@
       "/usr/local/share/substrate/active-scripts/validate-build.ts",
       "/usr/local/share/substrate/active-scripts/validator-liveness-tick.d.ts",
       "/usr/local/share/substrate/active-scripts/validator-liveness-tick.ts",
+      "/usr/local/share/substrate/active-scripts/vessels.inventory.json",
       "/usr/local/share/substrate/active-scripts/watchdog-tick.d.ts",
       "/usr/local/share/substrate/active-scripts/watchdog-tick.ts",
       "/usr/local/share/substrate/secrets-manifest.json",
@@ -1954,6 +1956,13 @@
       "reason": "converges-today-uncovered",
       "fixtures": []
     },
+    "/usr/local/share/substrate/active-scripts/memory-budget-check.sh": {
+      "src": "scripts/substrate/memory-budget-check.sh",
+      "src_blob": "dbeb1d391a4102491f792916e6c57801e5a2067c",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
     "/usr/local/share/substrate/active-scripts/mirror-memory-note.d.ts": {
       "src": "scripts/substrate/mirror-memory-note.d.ts",
       "src_blob": "829c719d26aacddef131e77aea7877f875ce5f5b",
@@ -2223,6 +2232,13 @@
     "/usr/local/share/substrate/active-scripts/validator-liveness-tick.ts": {
       "src": "scripts/substrate/validator-liveness-tick.ts",
       "src_blob": "7ca196a92ff717369a23add4c669e2572204a616",
+      "level": "none",
+      "reason": "converges-today-uncovered",
+      "fixtures": []
+    },
+    "/usr/local/share/substrate/active-scripts/vessels.inventory.json": {
+      "src": "scripts/substrate/vessels.inventory.json",
+      "src_blob": "b35ce1b4248b09a1fd1fb4ceb04f81b1fe9e26b4",
       "level": "none",
       "reason": "converges-today-uncovered",
       "fixtures": []

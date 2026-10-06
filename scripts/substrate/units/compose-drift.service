@@ -20,9 +20,14 @@ Description=Compose-drift detector — flags the composer degrading its own anch
 # threefold for two days while passing every gate on the way in.
 After=activity-api.service surrealdb.service development-vessel.service
 
+# Runs the gate-ACCEPTED copy: ${SUBSTRATE_RUN_DIR} is filled from the accepted gate (pull-sync, and
+# substrate-active-scripts-seed at boot), never from the super-repo clone, whose HEAD is an unjudged candidate.
+Requires=substrate-active-scripts-seed.service
+After=substrate-active-scripts-seed.service
+
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/substrate/env
-ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/compose-drift-tick.ts
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_RUN_DIR}/compose-drift-tick.ts
 StandardOutput=journal
 StandardError=journal

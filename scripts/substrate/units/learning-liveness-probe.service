@@ -17,10 +17,15 @@ Description=Learning-liveness probe — proves credit still flows, by intervenin
 After=goal-host-vessel.service
 Wants=goal-host-vessel.service
 
+# Runs the gate-ACCEPTED copy: ${SUBSTRATE_RUN_DIR} is filled from the accepted gate (pull-sync, and
+# substrate-active-scripts-seed at boot), never from the super-repo clone, whose HEAD is an unjudged candidate.
+Requires=substrate-active-scripts-seed.service
+After=substrate-active-scripts-seed.service
+
 [Service]
 Type=oneshot
 EnvironmentFile=-/etc/substrate/env
-ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/learning-liveness-probe.ts
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_RUN_DIR}/learning-liveness-probe.ts
 # 2 is "inconclusive", which is a normal outcome on a busy substrate whose walk
 # picked a different arm. Only 3 (credit demonstrably did not follow an execution)
 # should read as a unit failure.

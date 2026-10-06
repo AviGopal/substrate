@@ -13,9 +13,14 @@ Description=Validator-liveness detector — flags validators that stopped keepin
 # by the mechanism it exists to recover — this is that stated bootstrap-tier exception.
 After=activity-api.service surrealdb.service development-vessel.service
 
+# Runs the gate-ACCEPTED copy: ${SUBSTRATE_RUN_DIR} is filled from the accepted gate (pull-sync, and
+# substrate-active-scripts-seed at boot), never from the super-repo clone, whose HEAD is an unjudged candidate.
+Requires=substrate-active-scripts-seed.service
+After=substrate-active-scripts-seed.service
+
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/substrate/env
-ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/validator-liveness-tick.ts
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_RUN_DIR}/validator-liveness-tick.ts
 StandardOutput=journal
 StandardError=journal

@@ -28,7 +28,14 @@ EnvironmentFile=/etc/substrate/env
 # this unit fail on any machine but the original operator's, 2026-07-02).
 # Substrate-authored deltas still accumulate on the volume between boots via
 # activate_substrate_script; each boot re-seeds from committed source.
-ExecStart=/bin/sh -c 'mkdir -p /workspace/active-scripts; SRC=/workspace/git/super-repo/scripts/substrate; ls "$SRC"/*.ts >/dev/null 2>&1 || SRC=/usr/local/share/substrate/active-scripts; cp -f "$SRC"/*.ts /workspace/active-scripts/ && echo "seeded $(ls /workspace/active-scripts/*.ts | wc -l) scripts from $SRC"'
+# A node with gate state seeds from the ACCEPTED gate, never the clone: the clone's HEAD is an unjudged
+# candidate, and a boot must not make it live (gap every-path-that-changes-running-code-must-pass-the-accepted-gate-first).
+# Gate state is the predicate substrate-pull-sync.service uses (any of accepted.sha, accepted, history,
+# ledger.jsonl, bootstrapped; the .gate dir itself is pre-created by entrypoint.sh, so it is no signal). With gate
+# state but no usable accepted copy it seeds the image's copy, never the clone: losing one file must not re-open
+# the ungated path. Only a node with no gate state at all seeds from the clone as before. Besides the .ts scripts, the run dir carries the one shell script a unit runs
+# from it and what that script reads beside itself: the inventory and units/ (else it counts every system unit).
+ExecStart=/bin/sh -c 'R=/workspace/active-scripts; G=/workspace/.gate; mkdir -p $$R; I=/usr/local/share/substrate/active-scripts; GATED=0; for f in accepted.sha accepted history ledger.jsonl bootstrapped; do if [ -e $$G/$$f ]; then GATED=1; fi; done; if [ $$GATED = 1 ]; then SRC=$$I; if [ -e $$G/accepted.sha ] && ls $$G/accepted/scripts/substrate/*.ts >/dev/null 2>&1; then SRC=$$G/accepted/scripts/substrate; fi; else SRC=/workspace/git/super-repo/scripts/substrate; ls $$SRC/*.ts >/dev/null 2>&1 || SRC=$$I; fi; cp -f $$SRC/*.ts $$R/ || exit 1; for x in memory-budget-check.sh vessels.inventory.json; do if [ -f $$SRC/$$x ]; then cp -f $$SRC/$$x $$R/; fi; done; if [ -d $$SRC/units ]; then rm -rf $$R/units.new && cp -r $$SRC/units $$R/units.new && rm -rf $$R/units && mv $$R/units.new $$R/units; fi; echo "seeded $$(ls $$R/*.ts | wc -l) scripts from $$SRC"'
 StandardOutput=journal
 StandardError=journal
 

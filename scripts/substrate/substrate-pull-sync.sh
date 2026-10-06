@@ -3872,8 +3872,17 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
       # Unit convergence itself now runs UNCONDITIONALLY each tick (converge_units,
       # called after this whole block) rather than only when origin advances. See the
       # rationale there — it is idempotent, so calling it here too would be redundant.
-      # Reseed the active-scripts run-dir (same source substrate-active-scripts-seed uses at boot).
-      [ "$_sg_ok" = 1 ] && cp -f "$_sg_src"/*.ts /workspace/active-scripts/ 2>/dev/null || true
+      # Reseed the active-scripts run-dir from the STAGE, whose gate paths are the accepted copies: units run
+      # their tick scripts from here, never from the clone (whose HEAD is an unjudged candidate). Besides the
+      # .ts, the one shell script a unit runs from here and what it reads beside itself.
+      [ "$_sg_ok" = 1 ] && { cp -f "$_sg_src"/*.ts /workspace/active-scripts/ 2>/dev/null
+        for _rd_x in memory-budget-check.sh vessels.inventory.json; do
+          [ -f "$_sg_src/$_rd_x" ] && cp -f "$_sg_src/$_rd_x" /workspace/active-scripts/ 2>/dev/null; done
+        # units/ beside it too: memory-budget-check enumerates the substrate's units from $(dirname "$0")/units,
+        # and without it falls back to every unit in /usr/lib/systemd/system. Swapped whole, so a removed unit goes.
+        [ -d "$_sg_src/units" ] && rm -rf /workspace/active-scripts/units.new \
+          && cp -r "$_sg_src/units" /workspace/active-scripts/units.new \
+          && rm -rf /workspace/active-scripts/units && mv /workspace/active-scripts/units.new /workspace/active-scripts/units; } || true
       # SUPER-REPO-HOSTED VESSELS — the last thing a convergence changes on disk
       # that nothing then restarts.
       #

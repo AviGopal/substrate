@@ -21,6 +21,11 @@ Description=Gap-store census — flags the gap store collapsing against its own 
 # would otherwise record its own findings, so the watcher cannot depend on it.
 After=development-vessel.service
 
+# Runs the gate-ACCEPTED copy: ${SUBSTRATE_RUN_DIR} is filled from the accepted gate (pull-sync, and
+# substrate-active-scripts-seed at boot), never from the super-repo clone, whose HEAD is an unjudged candidate.
+Requires=substrate-active-scripts-seed.service
+After=substrate-active-scripts-seed.service
+
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/substrate/env
@@ -29,6 +34,6 @@ EnvironmentFile=/etc/substrate/env
 # that forwards to another store would only re-count that store, so it is skipped
 # (inactive, not failed), as identity-seeder skips a node with no identity to seed.
 ExecCondition=/bin/sh -c '[ -z "$${GAP_STORE_ENDPOINT:-}" ] && [ "$$(systemctl is-enabled development-vessel.service 2>/dev/null)" != masked ]'
-ExecStart=/root/.bun/bin/bun ${SUBSTRATE_ROOT}/scripts/substrate/gap-store-census-tick.ts
+ExecStart=/root/.bun/bin/bun ${SUBSTRATE_RUN_DIR}/gap-store-census-tick.ts
 StandardOutput=journal
 StandardError=journal

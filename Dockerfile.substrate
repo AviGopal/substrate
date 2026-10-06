@@ -292,10 +292,12 @@ COPY scripts/substrate/vessels.inventory.json /usr/local/share/substrate/vessels
 COPY scripts/substrate/vessels.manifest.json /usr/local/share/substrate/vessels.manifest.json
 COPY scripts/substrate/secrets-manifest.json /usr/local/share/substrate/secrets-manifest.json
 # Image-baked copy of the tick scripts: substrate-active-scripts-seed seeds the
-# writable run-dir from the super-repo clone when present, else from this bake —
-# never from a host bind path.
+# writable run-dir from the accepted gate on a gated node (else the super-repo clone),
+# and from this bake when neither has the scripts — never from a host bind path.
 RUN mkdir -p /usr/local/share/substrate/active-scripts
 COPY scripts/substrate/*.ts /usr/local/share/substrate/active-scripts/
+COPY scripts/substrate/memory-budget-check.sh /usr/local/share/substrate/active-scripts/memory-budget-check.sh
+COPY scripts/substrate/vessels.inventory.json /usr/local/share/substrate/active-scripts/vessels.inventory.json
 RUN chmod +x /usr/local/bin/apply-inventory
 # Side-loop tick scripts referenced by their .service units' ExecStart. Without
 # these baked in, the units exit 127 (command not found) on every fire — which is

@@ -16,6 +16,11 @@ Description=Memory-budget check — does the fleet's declared memory budget fit 
 # Smoke: docker exec substrate-live systemctl start memory-budget-check.service
 #        docker exec substrate-live journalctl -u memory-budget-check.service --no-pager -n 30
 
+# Runs the gate-ACCEPTED copy: ${SUBSTRATE_RUN_DIR} is filled from the accepted gate (pull-sync, and
+# substrate-active-scripts-seed at boot), never from the super-repo clone, whose HEAD is an unjudged candidate.
+Requires=substrate-active-scripts-seed.service
+After=substrate-active-scripts-seed.service
+
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/substrate/env
@@ -23,7 +28,7 @@ EnvironmentFile=/etc/substrate/env
 # apply-inventory, nothing to recover) from a masked-and-therefore-unrecoverable one. Without
 # it the check's first output on a healthy spoke is a critical false alarm — which is how a
 # detector's real failure mode ("ignored") begins.
-ExecStart=/usr/bin/env bash ${SUBSTRATE_ROOT}/scripts/substrate/memory-budget-check.sh
+ExecStart=/usr/bin/env bash ${SUBSTRATE_RUN_DIR}/memory-budget-check.sh
 # A FAIL is a finding, not a crash. Exit 1 must not mark the unit failed, or the immune
 # system starts trying to "recover" a report.
 SuccessExitStatus=0 1

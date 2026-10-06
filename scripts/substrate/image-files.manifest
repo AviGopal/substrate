@@ -265,6 +265,7 @@ scripts/substrate/learning-liveness-probe.d.ts	/usr/local/share/substrate/active
 scripts/substrate/learning-liveness-probe.ts	/usr/local/share/substrate/active-scripts/learning-liveness-probe.ts	0644	A
 scripts/substrate/learning-loop-selftest-tick.d.ts	/usr/local/share/substrate/active-scripts/learning-loop-selftest-tick.d.ts	0644	A
 scripts/substrate/learning-loop-selftest-tick.ts	/usr/local/share/substrate/active-scripts/learning-loop-selftest-tick.ts	0644	A
+scripts/substrate/memory-budget-check.sh	/usr/local/share/substrate/active-scripts/memory-budget-check.sh	0755	A
 scripts/substrate/mirror-memory-note.d.ts	/usr/local/share/substrate/active-scripts/mirror-memory-note.d.ts	0644	A
 scripts/substrate/mirror-memory-note.ts	/usr/local/share/substrate/active-scripts/mirror-memory-note.ts	0644	A
 scripts/substrate/model-reality-audit.d.ts	/usr/local/share/substrate/active-scripts/model-reality-audit.d.ts	0644	A
@@ -304,6 +305,7 @@ scripts/substrate/validate-build.d.ts	/usr/local/share/substrate/active-scripts/
 scripts/substrate/validate-build.ts	/usr/local/share/substrate/active-scripts/validate-build.ts	0644	A
 scripts/substrate/validator-liveness-tick.d.ts	/usr/local/share/substrate/active-scripts/validator-liveness-tick.d.ts	0644	A
 scripts/substrate/validator-liveness-tick.ts	/usr/local/share/substrate/active-scripts/validator-liveness-tick.ts	0644	A
+scripts/substrate/vessels.inventory.json	/usr/local/share/substrate/active-scripts/vessels.inventory.json	0644	A
 scripts/substrate/watchdog-tick.d.ts	/usr/local/share/substrate/active-scripts/watchdog-tick.d.ts	0644	A
 scripts/substrate/watchdog-tick.ts	/usr/local/share/substrate/active-scripts/watchdog-tick.ts	0644	A
 scripts/substrate/connect-merge.sh	/usr/local/share/substrate/connect-merge.sh	0755	A
