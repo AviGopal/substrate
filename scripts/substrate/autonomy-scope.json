@@ -44,7 +44,13 @@
       "repos/development-vessel/src/removed-line-predicate.ts",
       "repos/development-vessel/src/vacuous-edit.ts",
       "repos/development-vessel/src/resolvers/staged-mitosis-gate.ts",
-      "repos/development-vessel/src/resolvers/retry-evidence.ts"
+      "repos/development-vessel/src/resolvers/retry-evidence.ts",
+      "repos/development-vessel/src/lib/apply-mutant.ts",
+      "repos/development-vessel/test/resolvers/test-suite-mutate-shell-gate.test.ts",
+      "repos/development-vessel/test/resolvers/shape-open-landing-verdict.test.ts",
+      "repos/development-vessel/test/resolvers/rhythm-conductor-psi-affordability.test.ts",
+      "repos/goal-host-vessel/src/escalation-target.ts",
+      "repos/goal-host-vessel/src/escalation-target.test.ts"
     ],
     "require_falsifier_classes": [
       "class2"
