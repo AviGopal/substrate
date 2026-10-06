@@ -2098,11 +2098,21 @@ mirror_quiesce_drain() {
 # pass_order — the clone dirs in this tick's vessel-pass order: every candidate the previous tick
 # DEFERRED for want of test-gate budget (<v>.testgate-budget-defers) first, so it gates with a fresh
 # budget instead of starving behind the same vessels again; then every other clone, in glob order.
+# THE DEFERRED SET ROTATES (2026-10-06). It used to come out in glob order too, so when EVERY candidate
+# was deferred the same one gated first every tick: measured on the hub, activity-api (alphabetically
+# first) ran its suite first on every tick, its own T2 never fit, and the six candidates behind it
+# deferred on the remainder, 0 convergences in 4 h, a fixed point rather than a rotation. Now the
+# deferred set is ordered by <v>.testgate-slot, the epoch at which each candidate last STARTED a
+# suite run (never = 0, first): whoever spent the budget last goes last, so every deferred
+# candidate reaches the first slot within as many ticks as there are deferred candidates.
 pass_order() {
-  local _po_d
+  local _po_d _po_s
   for _po_d in "$CLONE_DIR"/*/; do
-    [ -s "$MARKER_DIR/$(basename "$_po_d").testgate-budget-defers" ] && printf '%s\n' "$_po_d"
-  done
+    [ -s "$MARKER_DIR/$(basename "$_po_d").testgate-budget-defers" ] || continue
+    _po_s="$(cat "$MARKER_DIR/$(basename "$_po_d").testgate-slot" 2>/dev/null || echo 0)"
+    case "$_po_s" in ''|*[!0-9]*) _po_s=0 ;; esac
+    printf '%s\t%s\n' "$_po_s" "$_po_d"
+  done | sort -s -n -k1,1 | cut -f2-
   for _po_d in "$CLONE_DIR"/*/; do
     [ -s "$MARKER_DIR/$(basename "$_po_d").testgate-budget-defers" ] || printf '%s\n' "$_po_d"
   done
@@ -2741,6 +2751,29 @@ EOF
     if [ "$_gl_a" -lt "$_gl_b" ]; then echo "$_gl_a"; else echo "$_gl_b"; fi
   }
   SUITE_COST_S=$(( ${TEST_TIMEOUT_SECONDS:-240} + ${TEST_KILL_GRACE_SECONDS:-30} ))
+  # WHAT A KNOWN RESULT DEPENDS ON (2026-10-06). A candidate deferred mid-gate has MEASURED how long its
+  # gate needs; re-running the same suite on the same inputs only to defer again spends the tick's budget
+  # for nothing. The key is everything that result depends on: the HEAD, the outstanding-regression set,
+  # the clone's dependency identity (manifest + lock + the last install's marker + every file:
+  # dependency's identity now) and the test environment (runner version, the gate's timeouts). Any
+  # change re-measures; an unchanged key with a known need larger than the time left is deferred
+  # WITHOUT a run. A skip converges nothing and moves no gate state but the deferral count.
+  testgate_key() {
+    local _tk_fd _tk_n _tk_t
+    _tk_fd="$(clone_file_deps "$d" 2>/dev/null || true)"
+    {
+      echo "head $HEAD"
+      echo "outstanding $(sort -u "$TEST_BASELINE_DIR/$v.outstanding" 2>/dev/null | md5sum | cut -d' ' -f1)"
+      echo "manifest $(cat "$d/package.json" "$d/bun.lock" "$d/bun.lockb" 2>/dev/null | md5sum | cut -d' ' -f1)"
+      echo "installed $(cat "$MARKER_DIR/$v.clone-deps" 2>/dev/null || echo none)"
+      while IFS=$'\t' read -r _tk_n _tk_t; do
+        [ -n "$_tk_n" ] && echo "filedep $_tk_n $( [ -d "$_tk_t" ] && file_dep_identity "$_tk_t" || echo missing)"
+      done <<< "$_tk_fd"
+      echo "env $("$BUN_BIN" --version 2>/dev/null || echo none) ${TEST_TIMEOUT_SECONDS:-240} ${TEST_KILL_GRACE_SECONDS:-30} ${PROTECTED_TEST_TIMEOUT_SECONDS:-120}"
+    } | md5sum | cut -d' ' -f1
+  }
+  TG_NEED_FILE="$MARKER_DIR/$v.testgate-need"
+  GV_T0=$(date +%s)
   PROT_COST_S=$(( ${PROTECTED_TEST_TIMEOUT_SECONDS:-120} + ${TEST_KILL_GRACE_SECONDS:-30} ))
   testgate_budget_defer() { # <the run that would start> <its worst case, s>
     local BD_HEAD="" BD_N=0 BD_MAX _gl
@@ -2750,8 +2783,18 @@ EOF
     [ "$BD_HEAD" = "$HEAD" ] || BD_N=0
     BD_N=$((BD_N + 1)); echo "$HEAD $BD_N" > "$BD_FILE" 2>/dev/null || true
     tuning_param pull_sync.testgate_budget_defer_max 3; BD_MAX="$TP_VALUE"
+    # The gate's demonstrated need at this key: the time this candidate already spent measuring, plus
+    # the run it could not start. Never lowered by a deferral that measured less (a skip measures nothing).
+    local _tn_need _tn_key _tn_okey="" _tn_oneed=0 _tn_os=0
+    _tn_need=$(( $(date +%s) - GV_T0 + $2 )); _tn_key="${TG_KEY:-$(testgate_key)}"
+    { read -r _tn_okey _tn_oneed _tn_os < "$TG_NEED_FILE"; } 2>/dev/null || true
+    case "$_tn_oneed" in ''|*[!0-9]*) _tn_oneed=0 ;; esac
+    [ "$_tn_okey" = "$_tn_key" ] && [ "$_tn_oneed" -gt "$_tn_need" ] && _tn_need="$_tn_oneed"
+    echo "$_tn_key $_tn_need ${TG_SKIPS:-0}" > "$TG_NEED_FILE" 2>/dev/null || true
     log "$v: TEST GATE DEFERRED — $1 needs up to ${2}s but ${_gl}s remain (gate budget ${GATE_BUDGET_SECONDS}s, capped by the unit's TimeoutStartSec ${UNIT_TIMEOUT_S:-900}s less ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}}s from the tick's start); NOT converging ${HEAD:0:10} this tick (consecutive budget deferral $BD_N of this candidate, bound $BD_MAX); it gates FIRST next tick with a fresh budget"
     if [ "$BD_N" -ge "$BD_MAX" ]; then
+      log "$v: !!! TEST GATE BUDGET-STARVED — filing pull-sync-testgate-budget-starved-$v ($BD_N consecutive deferrals at ${HEAD:0:10}, bound $BD_MAX)"
+      echo "$HEAD $BD_N" > "$MARKER_DIR/$v.testgate-starved" 2>/dev/null || true
       emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg n "$BD_N" --arg max "$BD_MAX" --arg b "$GATE_BUDGET_SECONDS" \
         '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-budget-starved-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
           summary:("Repair needed: pull-sync deferred " + $v + " at " + $head + " " + $n + " consecutive ticks because the per-tick test-gate budget (" + $b + "s, capped by the unit timeout) was too short for its gate to finish its runs, past pull_sync.testgate_budget_defer_max (" + $max + "). It is NOT converged ungated: a gate that did not measure never promotes. Repair the capability: a faster suite, a larger budget, or a gate sharded across ticks."),
@@ -2759,6 +2802,20 @@ EOF
     fi
   }
   if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the suite run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
+  TG_KEY="$(testgate_key)"; TG_SKIPS=0
+  if [ -s "$TG_NEED_FILE" ]; then
+    _tg_okey=""; _tg_need=0; _tg_skips=0; { read -r _tg_okey _tg_need _tg_skips < "$TG_NEED_FILE"; } 2>/dev/null || true
+    case "$_tg_need" in ''|*[!0-9]*) _tg_need=0 ;; esac
+    case "$_tg_skips" in ''|*[!0-9]*) _tg_skips=0 ;; esac
+    # A slow re-measure cadence (shaped): an unchanged key is still measured again after this many
+    # consecutive skips, so a suite that became faster is not skipped forever on an old measurement.
+    tuning_param pull_sync.testgate_skip_recheck_ticks 6; _tg_recheck="$TP_VALUE"
+    if [ "$_tg_okey" = "$TG_KEY" ] && [ "$(gate_left)" -lt "$_tg_need" ] && [ "$_tg_skips" -lt "$_tg_recheck" ]; then
+      GV_T0=$(date +%s); TG_SKIPS=$((_tg_skips + 1))
+      testgate_budget_defer "its gate (skipped WITHOUT a run: the last measured attempt at this HEAD, outstanding set, dependency identity and test environment needed ${_tg_need}s)" "$_tg_need"
+      skipped=$((skipped + 1)); continue
+    fi
+  fi
   # The gate measures the clone's suite against the clone's node_modules: satisfy the
   # manifest first (see ensure_clone_deps). Unsatisfiable, failed or backed-off -> gap
   # (filed there) and NO convergence this tick: fail closed, never ungated.
@@ -2871,6 +2928,7 @@ EOF
   else
     # Re-checked here: ensure_clone_deps (above) can install for minutes.
     if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the suite run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
+    date +%s > "$MARKER_DIR/$v.testgate-slot" 2>/dev/null || true
     T_OUT="$(run_suite)"; T_FAIL="$(count_pf "$T_OUT" fail)"; T_PASS="$(count_pf "$T_OUT" pass)"
     # UNRESOLVABLE MODULES THE PARENT SHARES ARE EXCLUDED, NOT CARRIED AS A SHARED COUNT. A
     # test file that cannot resolve an import is one UNNAMED failure that hides every test in
@@ -3272,7 +3330,7 @@ EOF
       log "$v: protected judge tests at ${HEAD:0:10} — $PROT_RED"
     fi
   fi
-  rm -f "$BD_FILE" 2>/dev/null || true
+  rm -f "$BD_FILE" "$TG_NEED_FILE" 2>/dev/null || true
   [ -n "${U_GAP_JSON:-}" ] && emit_gap "$U_GAP_JSON"
   if [ -n "$REG" ]; then
     RC_FILE="$MARKER_DIR/$v.testgate-refusals"
@@ -3310,6 +3368,15 @@ EOF
     skipped=$((skipped + 1)); continue
   fi
   rm -f "$MARKER_DIR/$v.testgate-refusals" 2>/dev/null || true
+  # A STARVED CANDIDATE THAT GATED CLOSES ITS GAP: the gate finished and passed at this HEAD.
+  if [ -s "$MARKER_DIR/$v.testgate-starved" ]; then
+    log "$v: test gate finished within the budget at ${HEAD:0:10} after budget starvation — closing pull-sync-testgate-budget-starved-$v"
+    emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" \
+      '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-budget-starved-" + $v),category:"systematic_failure",source:"substrate_detected",status:"closed",closed_reason:"testgate_budget_recovered",
+        summary:("pull-sync test gate: " + $v + " gated within the per-tick budget again at " + $head + " after budget starvation."),
+        classification_metadata:{vessel:$v,head:$head,evidence:"gate finished and passed within the budget"}}}}}' 2>/dev/null)"
+    rm -f "$MARKER_DIR/$v.testgate-starved" 2>/dev/null || true
+  fi
   # The owed quiesce (Q_PENDING_PORT, set before the gate): only now that the gate has passed.
   if [ -n "${Q_PENDING_PORT:-}" ]; then mirror_quiesce_drain "$v" "$Q_PENDING_PORT"; fi
 
