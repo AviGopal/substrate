@@ -91,7 +91,10 @@
       "federation-transport-vessel.service",
       "substrate-ready.service",
       "journald-stdout-forwarder.service",
-      "git-push-setup.service"
+      "git-push-setup.service",
+      "substrate-pull-sync.timer",
+      "substrate-pull-sync.service",
+      "substrate-active-scripts-seed.service"
     ],
     "compute_node": [
       "discovery-vessel.service",
