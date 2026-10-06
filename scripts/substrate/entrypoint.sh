@@ -39,6 +39,10 @@ mkdir -p "$FLEET_DIR"
 # (vessel.d drop-in) skips a path that is absent when a unit's namespace is built, so a gate dir
 # created later by gate-runner would stay visible to every lane unit until its next restart.
 mkdir -p -m 0700 /workspace/.gate
+# The same rule for the two trust-root directories only pull-sync (and the boot seed, for the run dir) may write:
+# ReadOnlyPaths=-<dir> (units/service.d/06-gate-public-read-only.conf, 07-run-dir-read-only.conf) is skipped for a
+# directory absent when a unit starts, so both must exist before systemd starts anything.
+mkdir -p -m 0755 /workspace/.gate-public /workspace/active-scripts
 # Same rule for the scoped-secrets directory (gen-env above renders into it and creates it;
 # this is the belt). It is masked as a DIRECTORY by every unit, so it must exist before the
 # first unit starts and must never be replaced: mkdir -p only, never rm/mv/re-mkdir.

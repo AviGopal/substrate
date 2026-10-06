@@ -759,6 +759,73 @@ gate_overlay() {
   return 0
 }
 
+# publish_gate_public — every tick, on every node: /workspace/.gate-public holds the self-facts rows a
+# reader may trust, and source.json says where they came from. development-vessel cannot read .gate
+# (InaccessiblePaths) and must not trust the clone (its HEAD is an unjudged candidate), so this root-written,
+# fleet-wide read-only directory (units/service.d/06-gate-public-read-only.conf; pull-sync is the one writer)
+# is its view of the accepted gate. source.json (schema 1):
+#   gated              the gate-state predicate (scripts/substrate/gate/gate-state-markers.json)
+#   source             accepted (gated, from accepted/), none (gated, no usable accepted copy: no rows
+#                      published), clone (ungated: the clone's COMMITTED HEAD, never its working tree)
+#   accepted_sha       /workspace/.gate/accepted.sha when source=accepted, else null
+#   self_facts_sha256  sha256 of the published self-facts.json, null when none is published
+#   writer, written_at
+# Atomic for a reader: source.json is removed before anything changes and written last (tmp + mv), so a
+# marker never describes a half-written directory. Rewritten only when what it would say changes; that
+# includes a promote (accepted_sha), so the published rows follow the gate within one tick.
+GATE_PUBLIC_DIR="${PULLSYNC_GATE_PUBLIC_DIR:-/workspace/.gate-public}"
+publish_gate_public() {
+  local d="$GATE_PUBLIC_DIR" g="${PULLSYNC_GATE_DIR:-/workspace/.gate}" gated=false src=none acc="" facts="" f h want have
+  for f in accepted.sha accepted history ledger.jsonl bootstrapped; do [ -e "$g/$f" ] && gated=true; done
+  mkdir -p "$d" 2>/dev/null && chmod 0755 "$d" 2>/dev/null || { log "gate-public: !!! cannot create $d — no marker this tick"; return 0; }
+  if [ "$gated" = true ]; then
+    acc="$(tr -d '[:space:]' 2>/dev/null < "$g/accepted.sha")"
+    case "$acc" in *[!0-9a-f]*|'') acc="" ;; esac
+    [ "${#acc}" = 40 ] || acc=""
+    if [ -n "$acc" ] && [ -s "$g/accepted/scripts/substrate/self-facts.json" ] && jq -e . "$g/accepted/scripts/substrate/self-facts.json" >/dev/null 2>&1; then
+      src=accepted; facts="$(cat "$g/accepted/scripts/substrate/self-facts.json")"
+    else acc=""; fi
+  else
+    facts="$(git -C "${SUPER_DIR:-/workspace/git/super-repo}" show HEAD:scripts/substrate/self-facts.json 2>/dev/null)"
+    if [ -n "$facts" ] && printf '%s' "$facts" | jq -e . >/dev/null 2>&1; then src=clone; else src=none; facts=""; fi
+  fi
+  h=""; [ -n "$facts" ] && h="$(printf '%s\n' "$facts" | sha256sum | cut -d' ' -f1)"
+  want="$(jq -nc --argjson gated "$gated" --arg src "$src" --arg acc "$acc" --arg h "$h" \
+    '{schema:1, gated:$gated, source:$src, accepted_sha:(if $acc=="" then null else $acc end), self_facts_sha256:(if $h=="" then null else $h end)}')"
+  have="$(jq -c '{schema, gated, source, accepted_sha, self_facts_sha256}' "$d/source.json" 2>/dev/null)"
+  if [ "$want" = "$have" ] && { [ -z "$h" ] || [ "$(sha256sum < "$d/self-facts.json" 2>/dev/null | cut -d' ' -f1)" = "$h" ]; }; then return 0; fi
+  rm -f "$d/source.json"
+  if [ -n "$facts" ]; then
+    printf '%s\n' "$facts" > "$d/self-facts.json.tmp" && mv -f "$d/self-facts.json.tmp" "$d/self-facts.json" \
+      || { log "gate-public: !!! could not write self-facts.json — marker withheld (a reader fails closed)"; return 0; }
+  else rm -f "$d/self-facts.json"; fi
+  jq -c --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '. + {writer:"pull-sync", written_at:$at}' <<<"$want" > "$d/source.json.tmp" \
+    && mv -f "$d/source.json.tmp" "$d/source.json" \
+    && log "gate-public: published self-facts (gated=$gated source=$src${acc:+ accepted=${acc:0:12}})" \
+    || log "gate-public: !!! could not write source.json — a reader fails closed"
+}
+
+# reseed_run_dir_on_promote — gated nodes: the run dir follows the ACCEPTED gate on every tick, not only when the
+# super-repo HEAD moves. converge_units installs units every tick, so a promote that lands with no new commit
+# used to leave units pointing at run-dir files only the new pull-sync copies: on 2026-10-06, d9582c85's
+# memory-budget-check unit exited 127 on node1 and pubspoke for 2.5 h ("No such file") until an unrelated
+# commit moved HEAD. Compare-based: /workspace/active-scripts/.accepted.sha records the gate version the run
+# dir holds, and a mismatch reseeds from accepted/ (the same set the boot seed and the HEAD-change reseed copy).
+RUN_DIR="${PULLSYNC_RUN_DIR:-/workspace/active-scripts}"
+reseed_run_dir_on_promote() {
+  [ -n "$PULLSYNC_ACCEPTED_DIR" ] || return 0
+  local r="$RUN_DIR" src="$PULLSYNC_ACCEPTED_DIR/scripts/substrate" acc have x
+  acc="$(tr -d '[:space:]' 2>/dev/null < "${PULLSYNC_GATE_DIR:-/workspace/.gate}/accepted.sha")"
+  case "$acc" in *[!0-9a-f]*|'') return 0 ;; esac; [ "${#acc}" = 40 ] || return 0
+  have="$(cat "$r/.accepted.sha" 2>/dev/null)"; [ "$have" = "$acc" ] && return 0
+  ls "$src"/*.ts >/dev/null 2>&1 || { log "run-dir: !!! accepted/ has no scripts/substrate/*.ts — run dir left as is"; return 0; }
+  mkdir -p "$r" && cp -f "$src"/*.ts "$r"/ 2>/dev/null || { log "run-dir: !!! could not reseed $r from accepted ${acc:0:12}"; return 0; }
+  for x in memory-budget-check.sh vessels.inventory.json; do [ -f "$src/$x" ] && cp -f "$src/$x" "$r/" 2>/dev/null; done
+  [ -d "$src/units" ] && rm -rf "$r/units.new" && cp -r "$src/units" "$r/units.new" && rm -rf "$r/units" && mv "$r/units.new" "$r/units"
+  echo "$acc" > "$r/.accepted.sha.tmp" && mv -f "$r/.accepted.sha.tmp" "$r/.accepted.sha"
+  log "run-dir: reseeded from the accepted gate ${acc:0:12} (was ${have:0:12})"
+}
+
 # gate_candidate <sha> (gated mode only): judge a super-repo commit with candidate.sh from
 # accepted/. It never installs or runs the candidate; its GAP lines are filed here.
 gate_candidate() {
@@ -1039,6 +1106,9 @@ fi
 # so the frozen state stands as a self-fact too, not only as a closable gap. A tick that loads it again
 # closes the gap. The super-repo fetch above keeps running, so a fixing commit can still arrive.
 # >>> gap-tracked-red missing
+# The reader-facing view of the gate, before anything slow can end the tick (see publish_gate_public).
+publish_gate_public
+reseed_run_dir_on_promote
 GTR_MISSING_FIRST="$MARKER_DIR/gap-tracked-red-lib-missing.first_seen"
 GTR_MISSING_TICKS="$MARKER_DIR/gap-tracked-red-lib-missing.ticks"
 GTR_NODE="$(hostname 2>/dev/null || cat /proc/sys/kernel/hostname 2>/dev/null)"; GTR_NODE="${GTR_NODE:-${HOSTNAME:-unknown}}"

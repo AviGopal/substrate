@@ -1,0 +1,8 @@
+# The only units that may write the read-only trust-root directories, each overriding the default drop-in with a
+# same-named file in its own <unit>.service.d/. One list; nothing implicit; every addition is a new writer of a
+# trust root and goes through review (validation/scripts/gate-public-read-only.test.sh asserts this list equals
+# the overrides on disk). systemd reads only *.conf in a drop-in directory, so this file configures nothing.
+# Format: <drop-in> <unit> <reason>
+06-gate-public-read-only.conf  substrate-pull-sync.service           publish_gate_public writes self-facts.json and source.json
+07-run-dir-read-only.conf      substrate-pull-sync.service           the HEAD-change and on-promote reseeds copy the accepted tick scripts
+07-run-dir-read-only.conf      substrate-active-scripts-seed.service the boot seed fills the run dir before the first pull-sync tick

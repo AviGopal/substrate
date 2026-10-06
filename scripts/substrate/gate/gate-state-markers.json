@@ -1,0 +1,4 @@
+{
+  "_doc": "The files under /workspace/.gate whose presence means a node is GATED. One definition, read as data: substrate-pull-sync.service's ExecStart, substrate-active-scripts-seed.service and pull-sync's publish_gate_public spell the same list (validation/scripts/gate-public-read-only.test.sh asserts they match), and development-vessel's self-fact reader checks its own TS predicate against it. The .gate directory itself is pre-created by entrypoint.sh on every node, so it is no signal.",
+  "markers": ["accepted.sha", "accepted", "history", "ledger.jsonl", "bootstrapped"]
+}

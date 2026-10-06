@@ -1235,9 +1235,30 @@
       "reason": "units-exempt",
       "fixtures": []
     },
+    "/usr/lib/systemd/system/service.d/06-gate-public-read-only.conf": {
+      "src": "scripts/substrate/units/service.d/06-gate-public-read-only.conf",
+      "src_blob": "5b170fc57d6c97ba877fbc711939dc9f44711a4b",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/service.d/07-run-dir-read-only.conf": {
+      "src": "scripts/substrate/units/service.d/07-run-dir-read-only.conf",
+      "src_blob": "92575a6ffbc9a9d8516b80f65212ca0ed3b7fc93",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
     "/usr/lib/systemd/system/service.d/EXEMPT": {
       "src": "scripts/substrate/units/service.d/EXEMPT",
       "src_blob": "dc4e044373623a0834e69b8de7f7aba3c4ff26ce",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/service.d/WRITERS": {
+      "src": "scripts/substrate/units/service.d/WRITERS",
+      "src_blob": "ed0c9094a5084c93c639b030b196c5d34849817c",
       "level": "none",
       "reason": "units-exempt",
       "fixtures": []
@@ -1291,6 +1312,13 @@
       "reason": "units-exempt",
       "fixtures": []
     },
+    "/usr/lib/systemd/system/substrate-active-scripts-seed.service.d/07-run-dir-read-only.conf": {
+      "src": "scripts/substrate/units/substrate-active-scripts-seed.service.d/07-run-dir-read-only.conf",
+      "src_blob": "647248dd2386beae6460464a96d24af3080f31d8",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
     "/usr/lib/systemd/system/substrate-pull-sync.service": {
       "src": "scripts/substrate/units/substrate-pull-sync.service",
       "src_blob": "e87496ef9b70d7fbde12f049a16248d88c7446f6",
@@ -1301,6 +1329,20 @@
     "/usr/lib/systemd/system/substrate-pull-sync.service.d/05-secret-dir-out-of-reach.conf": {
       "src": "scripts/substrate/units/substrate-pull-sync.service.d/05-secret-dir-out-of-reach.conf",
       "src_blob": "693657658e5ecc2f6a733b38c31c696ee9c90490",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/substrate-pull-sync.service.d/06-gate-public-read-only.conf": {
+      "src": "scripts/substrate/units/substrate-pull-sync.service.d/06-gate-public-read-only.conf",
+      "src_blob": "8b2d2c2897bb9b770dc23405e1de2929fee1c1ed",
+      "level": "none",
+      "reason": "units-exempt",
+      "fixtures": []
+    },
+    "/usr/lib/systemd/system/substrate-pull-sync.service.d/07-run-dir-read-only.conf": {
+      "src": "scripts/substrate/units/substrate-pull-sync.service.d/07-run-dir-read-only.conf",
+      "src_blob": "e110272ed3e4b57e527834c7e70407b08d5e1a34",
       "level": "none",
       "reason": "units-exempt",
       "fixtures": []

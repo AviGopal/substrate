@@ -163,7 +163,10 @@ scripts/substrate/units/self-repair-operational.service.d/run-dir.conf	/usr/lib/
 scripts/substrate/units/self-repair-operational.timer	/usr/lib/systemd/system/self-repair-operational.timer	0644	A
 scripts/substrate/units/self-repair-operational.timer.d/ready-gate.conf	/usr/lib/systemd/system/self-repair-operational.timer.d/ready-gate.conf	0644	A
 scripts/substrate/units/service.d/05-secret-dir-out-of-reach.conf	/usr/lib/systemd/system/service.d/05-secret-dir-out-of-reach.conf	0644	A
+scripts/substrate/units/service.d/06-gate-public-read-only.conf	/usr/lib/systemd/system/service.d/06-gate-public-read-only.conf	0644	A
+scripts/substrate/units/service.d/07-run-dir-read-only.conf	/usr/lib/systemd/system/service.d/07-run-dir-read-only.conf	0644	A
 scripts/substrate/units/service.d/EXEMPT	/usr/lib/systemd/system/service.d/EXEMPT	0644	A
+scripts/substrate/units/service.d/WRITERS	/usr/lib/systemd/system/service.d/WRITERS	0644	A
 scripts/substrate/units/spectral-gap.service	/usr/lib/systemd/system/spectral-gap.service	0644	A
 scripts/substrate/units/spectral-gap.service.d/run-dir.conf	/usr/lib/systemd/system/spectral-gap.service.d/run-dir.conf	0644	A
 scripts/substrate/units/spectral-gap.timer	/usr/lib/systemd/system/spectral-gap.timer	0644	A
@@ -171,8 +174,11 @@ scripts/substrate/units/spectral-gap.timer.d/ready-gate.conf	/usr/lib/systemd/sy
 scripts/substrate/units/stateful-ui-vessel.service	/usr/lib/systemd/system/stateful-ui-vessel.service	0644	A
 scripts/substrate/units/stateful-ui-vessel.service.d/10-secrets-out-of-reach.conf	/usr/lib/systemd/system/stateful-ui-vessel.service.d/10-secrets-out-of-reach.conf	0644	A
 scripts/substrate/units/substrate-active-scripts-seed.service	/usr/lib/systemd/system/substrate-active-scripts-seed.service	0644	A
+scripts/substrate/units/substrate-active-scripts-seed.service.d/07-run-dir-read-only.conf	/usr/lib/systemd/system/substrate-active-scripts-seed.service.d/07-run-dir-read-only.conf	0644	A
 scripts/substrate/units/substrate-pull-sync.service	/usr/lib/systemd/system/substrate-pull-sync.service	0644	A
 scripts/substrate/units/substrate-pull-sync.service.d/05-secret-dir-out-of-reach.conf	/usr/lib/systemd/system/substrate-pull-sync.service.d/05-secret-dir-out-of-reach.conf	0644	A
+scripts/substrate/units/substrate-pull-sync.service.d/06-gate-public-read-only.conf	/usr/lib/systemd/system/substrate-pull-sync.service.d/06-gate-public-read-only.conf	0644	A
+scripts/substrate/units/substrate-pull-sync.service.d/07-run-dir-read-only.conf	/usr/lib/systemd/system/substrate-pull-sync.service.d/07-run-dir-read-only.conf	0644	A
 scripts/substrate/units/substrate-pull-sync.timer	/usr/lib/systemd/system/substrate-pull-sync.timer	0644	A
 scripts/substrate/units/substrate-pull-sync.timer.d/ready-gate.conf	/usr/lib/systemd/system/substrate-pull-sync.timer.d/ready-gate.conf	0644	A
 scripts/substrate/units/substrate-ready.service	/usr/lib/systemd/system/substrate-ready.service	0644	A
@@ -454,6 +460,7 @@ scripts/substrate/gate/candidate.sh	/usr/local/share/substrate/super-repo/script
 scripts/substrate/gate/coverage.json	/usr/local/share/substrate/super-repo/scripts/substrate/gate/coverage.json	0644	B
 scripts/substrate/gate/gate-policy.json	/usr/local/share/substrate/super-repo/scripts/substrate/gate/gate-policy.json	0644	B
 scripts/substrate/gate/gate-runner.sh	/usr/local/share/substrate/super-repo/scripts/substrate/gate/gate-runner.sh	0755	B
+scripts/substrate/gate/gate-state-markers.json	/usr/local/share/substrate/super-repo/scripts/substrate/gate/gate-state-markers.json	0644	B
 scripts/substrate/gate/shadow-eval.sh	/usr/local/share/substrate/super-repo/scripts/substrate/gate/shadow-eval.sh	0755	B
 scripts/substrate/gen-cluster-fixture.sh	/usr/local/share/substrate/super-repo/scripts/substrate/gen-cluster-fixture.sh	0755	B
 scripts/substrate/gen-env.sh	/usr/local/share/substrate/super-repo/scripts/substrate/gen-env.sh	0644	B
@@ -773,7 +780,10 @@ scripts/substrate/units/self-repair-operational.service.d/run-dir.conf	/usr/loca
 scripts/substrate/units/self-repair-operational.timer	/usr/local/share/substrate/super-repo/scripts/substrate/units/self-repair-operational.timer	0644	B
 scripts/substrate/units/self-repair-operational.timer.d/ready-gate.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/self-repair-operational.timer.d/ready-gate.conf	0644	B
 scripts/substrate/units/service.d/05-secret-dir-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/service.d/05-secret-dir-out-of-reach.conf	0644	B
+scripts/substrate/units/service.d/06-gate-public-read-only.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/service.d/06-gate-public-read-only.conf	0644	B
+scripts/substrate/units/service.d/07-run-dir-read-only.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/service.d/07-run-dir-read-only.conf	0644	B
 scripts/substrate/units/service.d/EXEMPT	/usr/local/share/substrate/super-repo/scripts/substrate/units/service.d/EXEMPT	0644	B
+scripts/substrate/units/service.d/WRITERS	/usr/local/share/substrate/super-repo/scripts/substrate/units/service.d/WRITERS	0644	B
 scripts/substrate/units/spectral-gap.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/spectral-gap.service	0644	B
 scripts/substrate/units/spectral-gap.service.d/run-dir.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/spectral-gap.service.d/run-dir.conf	0644	B
 scripts/substrate/units/spectral-gap.timer	/usr/local/share/substrate/super-repo/scripts/substrate/units/spectral-gap.timer	0644	B
@@ -781,8 +791,11 @@ scripts/substrate/units/spectral-gap.timer.d/ready-gate.conf	/usr/local/share/su
 scripts/substrate/units/stateful-ui-vessel.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/stateful-ui-vessel.service	0644	B
 scripts/substrate/units/stateful-ui-vessel.service.d/10-secrets-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/stateful-ui-vessel.service.d/10-secrets-out-of-reach.conf	0644	B
 scripts/substrate/units/substrate-active-scripts-seed.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/substrate-active-scripts-seed.service	0644	B
+scripts/substrate/units/substrate-active-scripts-seed.service.d/07-run-dir-read-only.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/substrate-active-scripts-seed.service.d/07-run-dir-read-only.conf	0644	B
 scripts/substrate/units/substrate-pull-sync.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/substrate-pull-sync.service	0644	B
 scripts/substrate/units/substrate-pull-sync.service.d/05-secret-dir-out-of-reach.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/substrate-pull-sync.service.d/05-secret-dir-out-of-reach.conf	0644	B
+scripts/substrate/units/substrate-pull-sync.service.d/06-gate-public-read-only.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/substrate-pull-sync.service.d/06-gate-public-read-only.conf	0644	B
+scripts/substrate/units/substrate-pull-sync.service.d/07-run-dir-read-only.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/substrate-pull-sync.service.d/07-run-dir-read-only.conf	0644	B
 scripts/substrate/units/substrate-pull-sync.timer	/usr/local/share/substrate/super-repo/scripts/substrate/units/substrate-pull-sync.timer	0644	B
 scripts/substrate/units/substrate-pull-sync.timer.d/ready-gate.conf	/usr/local/share/substrate/super-repo/scripts/substrate/units/substrate-pull-sync.timer.d/ready-gate.conf	0644	B
 scripts/substrate/units/substrate-ready.service	/usr/local/share/substrate/super-repo/scripts/substrate/units/substrate-ready.service	0644	B
