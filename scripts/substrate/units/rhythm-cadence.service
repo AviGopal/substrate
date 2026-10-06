@@ -18,7 +18,7 @@ After=activity-api.service surrealdb.service development-vessel.service
 
 # Runs the gate-ACCEPTED copy: ${SUBSTRATE_RUN_DIR} is filled from the accepted gate (pull-sync, and
 # substrate-active-scripts-seed at boot), never from the super-repo clone, whose HEAD is an unjudged candidate.
-Requires=substrate-active-scripts-seed.service
+Wants=substrate-active-scripts-seed.service
 After=substrate-active-scripts-seed.service
 
 [Service]

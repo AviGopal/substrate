@@ -64,6 +64,12 @@ for u in "$UNITS"/*.service; do
 done
 [ "$n" -gt 0 ] && ok "every \${SUBSTRATE_RUN_DIR} file a unit runs ($n) is one the run dir receives" || bad "no unit runs from \${SUBSTRATE_RUN_DIR} (the check is reading nothing)"
 
+# 2b. Nothing REQUIRES the seed: profiles compute and surface mask it (apply-inventory), and a unit that
+#     Requires= a masked unit never starts. Wants= keeps the ordering (with After=) and is skipped when masked.
+req="$(grep -rlE '^Requires=.*substrate-active-scripts-seed' "$UNITS" 2>/dev/null)"
+[ -z "$req" ] && ok "no unit Requires= the seed (masked on compute and surface nodes); Wants= + After= order it" \
+  || { printf '%s\n' "$req" | sed "s|^$UNITS/|  |"; bad "units Require the seed, so they cannot start where it is masked"; }
+
 # 3. The boot seed, RUN (its ExecStart with systemd's $$ unescaped and its four paths moved under $T), picks:
 #    no gate state -> the clone; accepted.sha + accepted copies -> accepted; gate state WITHOUT a usable accepted
 #    copy -> the image, never the clone (losing one file must not re-open the ungated path). Each source holds a
