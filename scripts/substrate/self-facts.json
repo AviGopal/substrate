@@ -396,11 +396,11 @@
       "pool_shape": "spendEnvelope",
       "expected_by_node": {
         "key-595289e706e5": {
-          "usd_cap_per_hour": 2,
+          "usd_cap_per_hour": 5,
           "paused": false
         },
         "compose2": {
-          "usd_cap_per_hour": 2,
+          "usd_cap_per_hour": 5,
           "paused": false
         }
       },
