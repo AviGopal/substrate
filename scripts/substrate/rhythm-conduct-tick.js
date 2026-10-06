@@ -25,7 +25,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const DEV = process.env["DEV_VESSEL_ENDPOINT"] || process.env["DEVELOPMENT_VESSEL_URL"] || "http://127.0.0.1:8090";
 const RESOLVE = DEV.replace(/\/$/, "") + "/v2/impulses/resolve";
+// The service key the unit's EnvironmentFile carries; development-vessel authenticates write-type
+// pointers (every *_write shape) against identity-vessel, so a write without it is answered 401.
+const KEY = process.env.METABOB_API_KEY ?? "";
 /**
+ * HISTORY (superseded 2026-10-06, see AFFORDABILITY IS THE CONDUCTOR'S TO MEASURE below).
  * THE AFFORDABILITY GATE WAS MEASURING THE WRONG THING, AND IT HAD CLOSED PERMANENTLY.
  *
  * `bucketLoadFromProc` in the conductor buckets the RAW 1-minute load average:
@@ -40,7 +44,7 @@ const RESOLVE = DEV.replace(/\/$/, "") + "/v2/impulses/resolve";
  * starvation. A load of 8 is "maximum congestion" on a 16-core box, which is half its
  * capacity.
  *
- * So the sensor is normalised here, in the bootstrap-tier caller, and passed through the
+ * So the sensor WAS normalised here, in the bootstrap-tier caller, and passed through the
  * `bucket_load` pointer field the conductor already accepts for exactly this purpose.
  * THE GUARD IS NOT REMOVED — a genuinely saturated host still buckets to 3 and still
  * prices families out. What changes is that "saturated" now means per-core saturation
@@ -51,20 +55,12 @@ const RESOLVE = DEV.replace(/\/$/, "") + "/v2/impulses/resolve";
  * opens is not conservative, it is inert; and a discriminator that measures the wrong
  * quantity is worse than a missing one, because it reports confidently.
  */
-function normalisedBucketLoad() {
-    try {
-        const load = parseFloat(require("node:fs").readFileSync("/proc/loadavg", "utf-8").split(/\s+/)[0] ?? "0");
-        const cores = Math.max(1, require("node:os").cpus().length);
-        const per = load / cores;
-        // Same shape as the conductor's own ladder, expressed per-core: a box is "busy" at
-        // ~1 runnable process per core, and saturated at ~2.
-        const bucket = per < 0.25 ? 0 : per < 0.75 ? 1 : per < 2 ? 2 : 3;
-        return { bucket, load, cores };
-    }
-    catch {
-        return { bucket: 0, load: 0, cores: 1 };
-    }
-}
+// AFFORDABILITY IS THE CONDUCTOR'S TO MEASURE (2026-10-06). This script used to compute the per-core
+// load-average bucket above and PIN it as bucket_load. A load average does not measure contention on a
+// workstation: node1 read load 23-25 on 16 cores (bucket 2) and enqueued nothing for ~8 h while PSI said
+// the host was idle. rhythm_conductor_tick (development-vessel 5691816e) now buckets on PSI cpu/io "some
+// avg60" against a shaped threshold and falls back to per-core load only when PSI is unreadable; this
+// script no longer pins a bucket, and journals what the conductor measured.
 /**
  * CONDITION-DRIVEN CADENCE: RAISE FEDERATION STALENESS WHEN THE SUBSTRATE CHANGES.
  *
@@ -126,7 +122,7 @@ async function raiseFederationStalenessOnChange() {
         try {
             const r = await fetch(RESOLVE, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
                 body: JSON.stringify({ impulse: { type: "poolImpulse", shape: "timeShapedRhythm", limit: 50 } }),
                 signal: AbortSignal.timeout(8000),
             });
@@ -135,7 +131,7 @@ async function raiseFederationStalenessOnChange() {
             if (row) {
                 await fetch(RESOLVE, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
                     body: JSON.stringify({ impulse: { type: "poolImpulse_write", id: row.id, shape: "timeShapedRhythm", source: "rhythm-conduct-change-signal", body: { ...row.body, staleness: 1 } } }),
                     signal: AbortSignal.timeout(8000),
                 });
@@ -155,15 +151,14 @@ async function raiseFederationStalenessOnChange() {
     return action;
 }
 async function main() {
-    const nb = normalisedBucketLoad();
     const changeAction = await raiseFederationStalenessOnChange();
     const c = new AbortController();
     const t = setTimeout(() => c.abort(), 30_000);
     try {
         const r = await fetch(RESOLVE, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ impulse: { type: "rhythm_conductor_tick", bucket_load: nb.bucket } }),
+            headers: { "Content-Type": "application/json", ...(KEY ? { Authorization: `ApiKey ${KEY}` } : {}) },
+            body: JSON.stringify({ impulse: { type: "rhythm_conductor_tick" } }),
             signal: c.signal,
         });
         const j = (await r.json());
@@ -174,8 +169,8 @@ async function main() {
         const ceiling = typeof load === "number" ? (1 - load / 3).toFixed(3) : "?";
         console.log(`[rhythm-conduct] considered=${b["considered"] ?? "?"} enqueued=${enq.length} skipped=${skip.length} ` +
             `drained=${b["drained"] ?? "?"} bucket_load=${load ?? "?"} affordability_ceiling=${ceiling} ` +
-            `(load=${nb.load.toFixed(2)} cores=${nb.cores} per_core=${(nb.load / nb.cores).toFixed(2)} -> bucket ${nb.bucket}; ` +
-            `raw-load bucketing would have said ${nb.load < 1 ? 0 : nb.load < 3 ? 1 : nb.load < 8 ? 2 : 3}) ` +
+            `(load_source=${b["load_source"] ?? "?"} psi_cpu=${b["psi_cpu"] ?? "?"} psi_io=${b["psi_io"] ?? "?"} ` +
+            `load=${b["load"] ?? "?"} cores=${b["cores"] ?? "?"} psi_fallback=${b["psi_fallback"] ?? "?"}) ` +
             `federation_change=${changeAction}`);
         if (enq.length > 0)
             console.log(`[rhythm-conduct] enqueued: ${JSON.stringify(enq).slice(0, 400)}`);
