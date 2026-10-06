@@ -231,19 +231,6 @@ set_check glue_tests "$glue_r" "$(jq -nc --argjson rc "$glue_rc" --argjson f "$g
   '{exit: $rc, failed: $f, skipped: $s, log: "diag/glue-tests.txt"}')"
 log "glue tests: $glue_r ($(tail -n 1 "$RESULT_DIR/diag/glue-tests.txt" 2>/dev/null))"
 
-# ── 0b. Coverage map replay (validation/scripts/image-coverage-map.check.sh) ─────
-# The gate's coverage map decides which tooling paths converge in place. Its claims are
-# mutation proofs, and its exemptions carry an expiry; this run is their caller, so a stale
-# claim or a lapsed exemption blocks the image instead of passing unobserved. Hermetic: git
-# worktrees of this checkout and the gate's shadow evaluator, no engine or network.
-cov_rc=0
-bash "$repo_root/validation/scripts/image-coverage-map.check.sh" >"$RESULT_DIR/diag/coverage-map.txt" 2>&1 || cov_rc=$?
-cov_r=fail; [ "$cov_rc" -eq 0 ] && cov_r=pass
-set_check coverage_map "$cov_r" "$(jq -nc --argjson rc "$cov_rc" \
-  --argjson f "$(sed -n 's/^FAIL - //p' "$RESULT_DIR/diag/coverage-map.txt" | jq -R . | jq -sc .)" \
-  '{exit: $rc, failed: $f, log: "diag/coverage-map.txt"}')"
-log "coverage map: $cov_r ($(tail -n 1 "$RESULT_DIR/diag/coverage-map.txt" 2>/dev/null))"
-
 # ── 1. Cold host ───────────────────────────────────────────────────────────────
 warm=()
 eng version >"$RESULT_DIR/diag/engine-version.txt" 2>&1 || warm+=("engine does not answer '$ENGINE version' in the fence environment")
@@ -391,6 +378,34 @@ if [ -n "$fence_failed_index" ]; then
     --argjson rc "$fence_rc" \
     '{index: $i, doc_line: ($doc_line | tonumber? // null), block_line: ($block_line | tonumber? // null), command: $cmd, exit: $rc, text: $text}')"
 fi
+
+# ── 2b. Coverage map replay (validation/scripts/image-coverage-map.check.sh) ─────
+# The gate's coverage map decides which tooling paths converge in place. Its claims are
+# mutation proofs, and its exemptions carry an expiry; this run is their caller, so a stale
+# claim or a lapsed exemption blocks the image instead of passing unobserved.
+# It runs INSIDE the image under test, because that is where the gate runs its corpus: the
+# relay fixture needs the image's bun and baked relay dependencies, and on the bare runner it
+# can only say "cannot judge", which failed every replay. So it waits for the install blocks
+# to have pulled the image (step 1 requires a cold host). No network; a clone of this commit,
+# handed back to its owner afterwards so a rootful engine leaves no root-owned files.
+cov_rc=0; cov_dir="$RESULT_DIR/coverage-clone"
+if ! eng image inspect "$IMAGE" >/dev/null 2>&1; then
+  cov_rc=2; echo "FAIL - the image under test is not present after the install blocks ($IMAGE)" >"$RESULT_DIR/diag/coverage-map.txt"
+elif ! { rm -rf "$cov_dir" && git clone -q "$repo_root" "$cov_dir" \
+         && git -C "$cov_dir" checkout -q --detach "$(git -C "$repo_root" rev-parse HEAD)"; } >"$RESULT_DIR/diag/coverage-map.txt" 2>&1; then
+  cov_rc=2; echo "FAIL - could not clone this commit for the replay" >>"$RESULT_DIR/diag/coverage-map.txt"
+else
+  eng run --rm --network none --entrypoint bash -v "$cov_dir:$cov_dir" -w "$cov_dir" \
+    -e GIT_CONFIG_COUNT=1 -e GIT_CONFIG_KEY_0=safe.directory -e 'GIT_CONFIG_VALUE_0=*' "$IMAGE" \
+    -c 'o=$(stat -c %u:%g .); bash validation/scripts/image-coverage-map.check.sh; rc=$?; chown -R "$o" .; exit $rc' \
+    >"$RESULT_DIR/diag/coverage-map.txt" 2>&1 || cov_rc=$?
+fi
+rm -rf "$cov_dir" 2>/dev/null || true
+cov_r=fail; [ "$cov_rc" -eq 0 ] && cov_r=pass
+set_check coverage_map "$cov_r" "$(jq -nc --argjson rc "$cov_rc" \
+  --argjson f "$(sed -n 's/^FAIL - //p' "$RESULT_DIR/diag/coverage-map.txt" | jq -R . | jq -sc .)" \
+  '{exit: $rc, failed: $f, log: "diag/coverage-map.txt"}')"
+log "coverage map: $cov_r ($(tail -n 1 "$RESULT_DIR/diag/coverage-map.txt" 2>/dev/null))"
 
 # ── 3–5. Inspect what the page produced ─────────────────────────────────────────
 have_container=0

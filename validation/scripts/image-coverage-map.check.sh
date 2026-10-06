@@ -20,6 +20,9 @@ git -C "$ROOT" rev-parse --verify -q HEAD >/dev/null || { bad "a git work tree t
 [ -z "$(git -C "$ROOT" status --porcelain -- scripts/substrate validation/scripts/gate)" ] \
   || echo "  note: uncommitted changes under scripts/substrate or the corpus are not judged; HEAD is"
 BASE=$(git -C "$ROOT" rev-parse HEAD)
+# The shadow evaluator runs fixtures as nobody when it is root (as in the image), and its sandbox lives
+# under TMPDIR: nobody must be able to traverse it, or every fixture exits 126 and nothing is judged.
+chmod 0755 "$T"
 export TMPDIR="$T"
 
 corpus() { timeout 1800 bash "$SE" --accepted "$ROOT" --super "$ROOT" --candidate "$1" 2>&1; }
@@ -45,8 +48,9 @@ run_mutant() { # src how -> GOT (failing fixtures, "-" for none, ERR) and MBLOB,
   git -C "$ROOT" worktree remove --force "$W" >/dev/null 2>&1
 }
 
-if corpus "$BASE" | grep -q '^shadow: .* pass'; then ok "positive control: the unmutated tree passes the corpus"
-else bad "positive control: the unmutated tree passes the corpus"; done_tests; fi
+corpus "$BASE" > "$T/pc"
+if grep -q '^shadow: .* pass' "$T/pc"; then ok "positive control: the unmutated tree passes the corpus"
+else sed -n 's/^/  corpus: /p' "$T/pc" | tail -n 12; bad "positive control: the unmutated tree passes the corpus"; done_tests; fi
 
 # 1. Replay every claim.
 while IFS=$'\t' read -r dst src level fixtures how mblob; do
