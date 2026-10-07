@@ -34,6 +34,12 @@
 
 ## 2. Readers move (super-repo directly; vessels through the substrate)
 
+**Deferred (user ruling, 2026-10-07).** Phase 2 waits until the learning-loop items queued ahead of it are done:
+the leaf org fix, coherence-recover, and view-liveness. No phase-2 goal is minted until then. Phase 1 finishes
+first: the alias is rendered node by node (pubspoke, compose2, node1, hub), each after 9fc83539 is accepted and
+the installed gen-env has converged, with the 1.5 report after each. Nothing reads the new names before phase 2,
+so the deferral leaves every node on the old names with the alias present and unused.
+
 Until phase 3 every moved reader reads the NEW name and falls back to the OLD one (`NEW ?? OLD`, `${NEW:-$OLD}`),
 and its test covers "only the old name set => still works" and "both set and different => the new name wins". A node whose shared env has not been re-rendered since
 phase 1 (it re-renders only at boot) carries the old name only, so a reader of the new name alone would read empty
