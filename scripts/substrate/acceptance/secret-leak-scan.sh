@@ -48,7 +48,7 @@
 #
 # POSITIVE CONTROLS. The canary is added to the same pattern file the values are, so the
 # grep that counts secrets is the grep that must find the canary; a source whose canary
-# count is 0 is reported "scan_blind", never 0. The value set must name METABOB_API_KEY
+# count is 0 is reported "scan_blind", never 0. The value set must name the fleet key (SUBSTRATE_API_KEY or the retiring METABOB_API_KEY)
 # (an empty pattern file matches nothing and would read as clean).
 #
 # OUTPUT (stdout, one JSON line): store files read, how many names, and per source
@@ -119,7 +119,11 @@ add_file /etc/substrate/env '(KEY|SECRET|TOKEN|PASS|PASSWORD|PAT|CREDENTIAL|CRED
 sort -t $'\t' -k2,2 -u "$pairs" -o "$pairs"
 cut -f2- "$pairs" >"$work/values"
 names_n="$(cut -f1 "$pairs" | sort -u | grep -c .)"
-has_fleet_key=false; cut -f1 "$pairs" | grep -qx METABOB_API_KEY && has_fleet_key=true
+# The fleet key is present under either name: SUBSTRATE_API_KEY, or the retiring METABOB_API_KEY (openspec
+# retire-metabob-names). Both carry the same value, so the de-duplication above keeps whichever came first; a node
+# whose store moved to the new name (phase 3) must not read as scan_blind.
+fleet_key_named() { cut -f1 "$1" | grep -qxE 'SUBSTRATE_API_KEY|METABOB_API_KEY'; }
+has_fleet_key=false; fleet_key_named "$pairs" && has_fleet_key=true
 printf '%s\n' "$canary" >"$work/canary"
 
 count_source() {  # name file -> JSON {hits, canary, by_name}

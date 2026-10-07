@@ -23,8 +23,9 @@
 - [ ] 1.2a local-tools (a goal in its repo): agentShellEnv with BOTH names in base and extra yields NEITHER
       (its allowlist already excludes both; the test pins it).
 - [ ] 1.3 Units, installer, acceptance runners and CI pass both names wherever they pass one.
-- [ ] 1.3a secret-leak-scan.sh and the secret-mask probe cover BOTH names (the alias is never an unscanned
-      copy of the fleet key); must-fail: a fixture leaking the value under the new name only is caught.
+- [x] 1.3a secret-leak-scan.sh recognises the fleet key under either name (fleet_key_named) and collects its value
+      under the alias; tested with the key only under SUBSTRATE_API_KEY. The secret-mask probe masks DIRECTORIES
+      (never names), so the alias in the shared env needs no change there.
 - [ ] 1.4 `substrate-connect`: write `~/.substrate/config.json`; keep `~/.metabob/config.json` resolving to
       it; registration line unchanged for the cockpit. Test: fresh host, existing old-path host, both.
 - [ ] 1.5 By effect on every node after its next boot: both names present with equal values (compared by
@@ -32,6 +33,12 @@
       diff = the alias only, on the same units; the hub through a user-run read.
 
 ## 2. Readers move (super-repo directly; vessels through the substrate)
+
+Until phase 3 every moved reader reads the NEW name and falls back to the OLD one (`NEW ?? OLD`, `${NEW:-$OLD}`),
+and its test covers "only the old name set => still works" and "both set and different => the new name wins". A node whose shared env has not been re-rendered since
+phase 1 (it re-renders only at boot) carries the old name only, so a reader of the new name alone would read empty
+and fail auth there. This transitional fallback is to the old NAME, not to a default value (2.3b), and phase 3
+removes it with the old name.
 
 - [ ] 2.1 Super-repo scripts, units, .claude hooks, docs (README install inputs; configuration reference
       migration table).
