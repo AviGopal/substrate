@@ -3240,7 +3240,14 @@ EOF
         # check. Names in an open gap's evidence_resolve.only_tests for this vessel are subtracted.
         TRACKED_ONLY=""
         if [ "${CONFIRMED:-0}" -gt 0 ]; then
-          TRACKED="$(tracked_fail_names "$v" "$(git -C "$d" diff --name-only "${HEAD}^" "$HEAD" 2>/dev/null || true)")"; TFN_RC=$?
+          # THE BATCH, NOT THE TOP COMMIT (2026-10-07). The candidate converges every commit since the last
+          # healthy mirror (last-good), so a check-first commit's check file counts as changed even when a later
+          # commit landed on top before convergence. HEAD^..HEAD alone left development-vessel 1fac31bc's four
+          # tracked reds untracked once cf99e54b (an unrelated test) stacked on it, forcing the overlay that no
+          # tick could fit. No pin, or a pin that is not an ancestor of HEAD: the top commit, as before.
+          _tf_base="$(cat "$LAST_GOOD_DIR/$v" 2>/dev/null || true)"
+          { [ -n "$_tf_base" ] && git -C "$d" merge-base --is-ancestor "$_tf_base" "$HEAD" 2>/dev/null; } || _tf_base="${HEAD}^"
+          TRACKED="$(tracked_fail_names "$v" "$(git -C "$d" diff --name-only "$_tf_base" "$HEAD" 2>/dev/null || true)")"; TFN_RC=$?
           if [ "$TFN_RC" -eq 2 ]; then
             # A STALE KEY IS NOT A REGRESSION. The gap store refused the node key (401), so whether
             # these failures are tracked is unknown. Refusing would count a refusal and file a
