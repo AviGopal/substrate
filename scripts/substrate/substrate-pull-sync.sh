@@ -3227,6 +3227,44 @@ EOF
         NEW1="$(comm -23 <(printf '%s\n' "$T_NAMES") <(printf '%s\n' "$B_REF") 2>/dev/null || true)"
         NEW2="$(comm -23 <(printf '%s\n' "$T2_NAMES") <(printf '%s\n' "$B_REF") 2>/dev/null || true)"
         CONFIRMED="$(comm -12 <(printf '%s\n' "$NEW1" | sort -u) <(printf '%s\n' "$NEW2" | sort -u) 2>/dev/null | grep -c . || true)"
+        # SUBTRACT TRACKED NAMES BEFORE THE OVERLAY (2026-10-07). The overlay only narrows CONF_SET
+        # (an intersection) and the tracked names used to be subtracted after it, so (C ∩ O) − T equals
+        # (C − T) ∩ O: doing it first gives the same verdict and runs the two-ref overlay only for
+        # names no open gap tracks. Doing it after cost every check-first candidate two extra worst-case
+        # runs, which with the two candidate runs already spent exceeds the unit-capped tick budget:
+        # development-vessel 1fac31bc deferred on every tick on node 1 and compose2 (needs 832s/810s, 778s left).
+        CONF_SET="$(comm -12 <(printf '%s\n' "$NEW1" | sort -u) <(printf '%s\n' "$NEW2" | sort -u) 2>/dev/null || true)"
+        # A FAILING TEST AN OPEN GAP ALREADY TRACKS IS NOT A REGRESSION (2026-09-30). Check-first landings
+        # (activity-api f636900 added a deliberately red check for an open performance gap) were refused
+        # here for 3 cycles, and the regression gap they filed invited a lane to "repair" by weakening the
+        # check. Names in an open gap's evidence_resolve.only_tests for this vessel are subtracted.
+        TRACKED_ONLY=""
+        if [ "${CONFIRMED:-0}" -gt 0 ]; then
+          TRACKED="$(tracked_fail_names "$v" "$(git -C "$d" diff --name-only "${HEAD}^" "$HEAD" 2>/dev/null || true)")"; TFN_RC=$?
+          if [ "$TFN_RC" -eq 2 ]; then
+            # A STALE KEY IS NOT A REGRESSION. The gap store refused the node key (401), so whether
+            # these failures are tracked is unknown. Refusing would count a refusal and file a
+            # regression gap blaming the commit for an environment fault; converging would wave an
+            # untracked regression through. Hold: neither, until the store answers. (A gap about the
+            # stale key would be written with the same key and refused too: this line is the report.)
+            log "$v: credential refused (401) — key stale? the gap store refused the node key, so whether the ${CONFIRMED} newly-failing test(s) at ${HEAD:0:10} are tracked by open gaps is UNKNOWN (environment fault, not a regression) — HOLDING $v this tick: no refusal counted, no regression gap, runtime keeps its current code"
+            skipped=$((skipped + 1)); continue
+          fi
+          if [ -n "$TRACKED" ]; then
+            # Exact leaf match (the line ENDS with " > <name>"), at most ONE line per tracked name: a leaf name
+            # shared by another test file must not hide that file's real regression (qa, 09-30).
+            # A FULL-PATH name ("describe > test") is the whole line after the "(fail) "/"✗ " marker, so it
+            # can never end with " > <name>"; it matches only as the entire line (still exact, never substring).
+            SUBTRACTED="$(gtr_select tracked "$TRACKED" "${CONF_SET:-}")"
+            UNTRACKED="$(gtr_select untracked "$TRACKED" "${CONF_SET:-}")"
+            N_LEFT="$(printf '%s' "$UNTRACKED" | grep -c . || true)"
+            if [ "${N_LEFT:-0}" -lt "$CONFIRMED" ]; then
+              log "$v: $((CONFIRMED - ${N_LEFT:-0})) newly-failing test(s) are tracked by open gaps (evidence_resolve.only_tests), not counted as a regression: $(printf '%s' "$SUBTRACTED" | tr '\n' ';' | cut -c1-400)"
+              CONF_SET="$UNTRACKED"; CONFIRMED="${N_LEFT:-0}"
+              [ "$CONFIRMED" -eq 0 ] && TRACKED_ONLY=1
+            fi
+          fi
+        fi
         if [ "${CONFIRMED:-0}" -gt 0 ]; then
           # CONFIRM AGAINST A FRESHLY-MEASURED PARENT, NOT ONLY THE STORED SNAPSHOT.
           #
@@ -3238,7 +3276,6 @@ EOF
           # invariant), yet the gate charged it to e785d13 and refused a commit measured, at the
           # same commit and its parent under identical conditions, to add zero failing tests.
           # A name that already fails at the parent RIGHT NOW is not this commit's regression.
-          CONF_SET="$(comm -12 <(printf '%s\n' "$NEW1" | sort -u) <(printf '%s\n' "$NEW2" | sort -u) 2>/dev/null || true)"
           PARENT_REF="$(git -C "$d" rev-parse --verify --quiet "${HEAD}^" 2>/dev/null || true)"
           if [ -n "$PARENT_REF" ]; then
             # BOTH SIDES IN A WORKTREE, NOT ONE OF EACH. Comparing candidate-in-clone against
@@ -3268,37 +3305,6 @@ EOF
               # (missing deps, timeout), not that the tree was healthy. Subtracting on that basis
               # would wave every candidate through, so keep the stored-baseline refusal instead.
               log "$v: overlay re-measure UNUSABLE (parent pass=${P_PASS:-none}, candidate pass=${C_PASS:-none}) — keeping the stored-baseline verdict rather than failing open"
-            fi
-          fi
-        fi
-        # A FAILING TEST AN OPEN GAP ALREADY TRACKS IS NOT A REGRESSION (2026-09-30). Check-first landings
-        # (activity-api f636900 added a deliberately red check for an open performance gap) were refused
-        # here for 3 cycles, and the regression gap they filed invited a lane to "repair" by weakening the
-        # check. Names in an open gap's evidence_resolve.only_tests for this vessel are subtracted.
-        TRACKED_ONLY=""
-        if [ "${CONFIRMED:-0}" -gt 0 ]; then
-          TRACKED="$(tracked_fail_names "$v" "$(git -C "$d" diff --name-only "${HEAD}^" "$HEAD" 2>/dev/null || true)")"; TFN_RC=$?
-          if [ "$TFN_RC" -eq 2 ]; then
-            # A STALE KEY IS NOT A REGRESSION. The gap store refused the node key (401), so whether
-            # these failures are tracked is unknown. Refusing would count a refusal and file a
-            # regression gap blaming the commit for an environment fault; converging would wave an
-            # untracked regression through. Hold: neither, until the store answers. (A gap about the
-            # stale key would be written with the same key and refused too: this line is the report.)
-            log "$v: credential refused (401) — key stale? the gap store refused the node key, so whether the ${CONFIRMED} newly-failing test(s) at ${HEAD:0:10} are tracked by open gaps is UNKNOWN (environment fault, not a regression) — HOLDING $v this tick: no refusal counted, no regression gap, runtime keeps its current code"
-            skipped=$((skipped + 1)); continue
-          fi
-          if [ -n "$TRACKED" ]; then
-            # Exact leaf match (the line ENDS with " > <name>"), at most ONE line per tracked name: a leaf name
-            # shared by another test file must not hide that file's real regression (qa, 09-30).
-            # A FULL-PATH name ("describe > test") is the whole line after the "(fail) "/"✗ " marker, so it
-            # can never end with " > <name>"; it matches only as the entire line (still exact, never substring).
-            SUBTRACTED="$(gtr_select tracked "$TRACKED" "${CONF_SET:-}")"
-            UNTRACKED="$(gtr_select untracked "$TRACKED" "${CONF_SET:-}")"
-            N_LEFT="$(printf '%s' "$UNTRACKED" | grep -c . || true)"
-            if [ "${N_LEFT:-0}" -lt "$CONFIRMED" ]; then
-              log "$v: $((CONFIRMED - ${N_LEFT:-0})) newly-failing test(s) are tracked by open gaps (evidence_resolve.only_tests), not counted as a regression: $(printf '%s' "$SUBTRACTED" | tr '\n' ';' | cut -c1-400)"
-              CONF_SET="$UNTRACKED"; CONFIRMED="${N_LEFT:-0}"
-              [ "$CONFIRMED" -eq 0 ] && TRACKED_ONLY=1
             fi
           fi
         fi
