@@ -564,6 +564,7 @@ scripts/substrate/runtime-drift-tick.js.map	/usr/local/share/substrate/super-rep
 scripts/substrate/runtime-drift-tick.ts	/usr/local/share/substrate/super-repo/scripts/substrate/runtime-drift-tick.ts	0644	B
 scripts/substrate/schema-proposals/identity-tenant-isolation.surql.PROPOSAL	/usr/local/share/substrate/super-repo/scripts/substrate/schema-proposals/identity-tenant-isolation.surql.PROPOSAL	0644	B
 scripts/substrate/secret-mask-probe.sh	/usr/local/share/substrate/super-repo/scripts/substrate/secret-mask-probe.sh	0755	B
+scripts/substrate/secret-scope-names.sh	/usr/local/share/substrate/super-repo/scripts/substrate/secret-scope-names.sh	0755	B
 scripts/substrate/secrets.env.sh	/usr/local/share/substrate/super-repo/scripts/substrate/secrets.env.sh	0755	B
 scripts/substrate/secrets-manifest.json	/usr/local/share/substrate/super-repo/scripts/substrate/secrets-manifest.json	0644	B
 scripts/substrate/seed-concepts.d.ts	/usr/local/share/substrate/super-repo/scripts/substrate/seed-concepts.d.ts	0644	B
