@@ -50,6 +50,12 @@ const sig = (a: any): string => {
 const RECOVER_CUT = new Date(Date.now() - 30 * 24 * 3600_000).toISOString();
 const [execs] = await sql(`SELECT activity_id, count() AS n FROM v_paradigm_execution_traces WHERE executed_at >= type::datetime("${RECOVER_CUT}") GROUP BY activity_id;`);
 const execN = new Map<string, number>((execs || []).map((r: any) => [r.activity_id, r.n ?? 0]));
+// KEY FORM (2026-10-07): execN is keyed by the view's bare activity_id ("dup-b"), while each member carries its RECORD
+// id ("activity:⟨dup-b⟩", or a backtick form). Looking a member up by its record id missed every time, so every count
+// read 0 and the "canonical" kept was whichever member the query returned first (node 1: 0 counts found where 802
+// exist; 813 live runs since 06-20 demoting 20,871). Look up by the bare id.
+const keyOf = (id: unknown): string => String(id ?? "").replace(/^activity:/, "").replace(/^[⟨`]/, "").replace(/[⟩`]$/, "");
+const countOf = (a: any): number => execN.get(keyOf(a.id)) ?? 0;
 const families = new Map<string, any[]>();
 for (const a of rows || []) {
   if (!a.id || isHook(a.id)) continue;
@@ -58,11 +64,12 @@ for (const a of rows || []) {
   if (!families.has(s)) families.set(s, []);
   families.get(s)!.push(a);
 }
-let demoted = 0; const report: any[] = [];
+let demoted = 0; let withCounts = 0; const report: any[] = [];
 for (const [s, members] of families) {
   if (members.length < 2 || demoted >= CAP) continue;
-  members.sort((x, y) => (execN.get(y.id) ?? 0) - (execN.get(x.id) ?? 0)); // most-exercised first = canonical
+  members.sort((x, y) => countOf(y) - countOf(x)); // most-exercised first = canonical
   const canonical = members[0];
+  if (countOf(canonical) > 0) withCounts++;
   const redundant = members.slice(1, 1 + (CAP - demoted));
   for (const r of redundant) {
     if (!DRY) await sql(`UPDATE ${r.id.startsWith("activity:") ? r.id : `activity:\`${r.id}\``} SET proposed = true, deduped_into = ${JSON.stringify(canonical.id)}, deduped_at = time::now();`);
@@ -70,7 +77,9 @@ for (const [s, members] of families) {
   }
   report.push({ signature: s.slice(0, 60), family_size: members.length, kept: canonical.id, demoted: redundant.length });
 }
-const out = { at: new Date().toISOString(), dry_run: DRY, demoted, families_collapsed: report.length,
+// families_with_counts: collapsed families whose kept member has a real execution count. 0 with families collapsed
+// means the canonical choice is blind again (the key form drifted, or the count source is empty).
+const out = { at: new Date().toISOString(), dry_run: DRY, demoted, families_collapsed: report.length, families_with_counts: withCounts,
   top: report.sort((a, b) => b.family_size - a.family_size).slice(0, 6) };
 console.log(JSON.stringify(out, null, 2));
 try { const f = "/workspace/metrics/coherence-recover.jsonl"; await Bun.write(Bun.file(f), (await Bun.file(f).exists() ? await Bun.file(f).text() : "") + JSON.stringify({ at: out.at, dry_run: DRY, demoted, families_collapsed: report.length }) + "\n"); } catch {}
