@@ -23,9 +23,11 @@ order. No per-runtime dual-read accessor is needed for values that arrive by env
 
 **Phase 1: producers emit both names.**
 - gen-env accepts `SUBSTRATE_API_KEY` / `SUBSTRATE_ENDPOINT` as install inputs (new name wins when
-  both are given and differ, and the conflict is logged by name, never by value), persists the key in
-  the secrets store under the new name as well, and writes both names into every file it renders. The
-  value-blind secret-set channel (versioned, CAS, auto-rollback by hash) is the only writer of the store.
+  both are given and differ, and the conflict is logged by name, never by value) and writes both names into
+  every file it renders. The persisted store keeps ONE copy, under the retiring name: seed-identity rewrites
+  that copy when it mints the fleet key, so a second stored copy would drift from it. The alias is always
+  derived from the one copy, and seed-identity's rewrites set both rendered names. The store moves to the
+  new name in phase 3.
 - Scoping stays identical: the new name goes to exactly the units that receive the old one. A
   names-only render (`secret-scope-names.sh`) prints each unit's key-name set; its diff before/after
   must show only the added alias on the units that already had the old name.

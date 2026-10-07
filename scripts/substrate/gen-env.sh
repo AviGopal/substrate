@@ -425,7 +425,7 @@ _ENV_SUPPLIED=""
 for _n in ANTHROPIC_API_KEY OPENAI_API_KEY OPENAI_BASE_URL GOOGLE_API_KEY GROQ_API_KEY \
           MISTRAL_API_KEY CHUTES_API_KEY OPENROUTER_API_KEY RUNPOD_API_KEY \
           VLLM_BASE_URL VLLM_MODELS VLLM_API_KEY VLLM_ENDPOINTS \
-          METABOB_API_KEY API_KEY_SECRET SURREAL_PASS JWT_SECRET SUBSTRATE_GIT_PAT \
+          METABOB_API_KEY SUBSTRATE_API_KEY SUBSTRATE_ENDPOINT API_KEY_SECRET SURREAL_PASS JWT_SECRET SUBSTRATE_GIT_PAT \
           DISCOVERY_ENDPOINT HUB_DISCOVERY_URL ACTIVITY_API_ENDPOINT IDENTITY_VESSEL_URL \
           FED_SUBSTRATE_ID RELAY_MULTIADDR PEER_MULTIADDR PEER_DISCOVERY_ENDPOINTS PEER_CREDENTIALS PUBLIC_IP \
           FED_EXTRA_SHAPE \
@@ -620,6 +620,21 @@ fi
 # Bootstrap key: used only for the initial identity-vessel signup call.
 # After seed-identity.ts runs, vessels use the HMAC keys it issues.
 # Stored in /workspace/.substrate-private/substrate-secrets so restarts reuse the same value.
+# RETIRING NAMES (openspec retire-metabob-names, phase 1). SUBSTRATE_API_KEY and SUBSTRATE_ENDPOINT are the
+# names going forward; METABOB_API_KEY and METABOB_ENDPOINT are retiring. Either is accepted as an input; the
+# new name wins when both are given and differ (logged by NAME, never by value). Every rendered file then
+# carries BOTH names with the same value, so existing readers keep working while they move. The persisted
+# store keeps ONE copy, under the old name, so the two can never drift (seed-identity rewrites that copy).
+resolve_retiring_alias() { # new-name old-name -> sets old-name to the resolved input (new wins), logs a conflict
+  local nn="$1" on="$2" nv ov
+  nv="${!nn:-}"; ov="${!on:-}"
+  if [[ -n "$nv" && -n "$ov" && "$nv" != "$ov" ]]; then
+    echo "[gen-env] both $nn and $on are set and differ; using $nn ($on is retiring)" >&2
+  fi
+  [[ -n "$nv" ]] && printf -v "$on" '%s' "$nv"
+  return 0
+}
+resolve_retiring_alias SUBSTRATE_API_KEY METABOB_API_KEY
 METABOB_API_KEY="${METABOB_API_KEY:-$(persisted_secret METABOB_API_KEY)}"
 
 # ★ A SPOKE MUST NOT MINT ITS OWN JOIN CREDENTIAL.
@@ -637,7 +652,7 @@ METABOB_API_KEY="${METABOB_API_KEY:-$(persisted_secret METABOB_API_KEY)}"
 # file from DISCOVERY_ENDPOINT / HUB_DISCOVERY_URL.
 if [[ "$_is_spoke" = "1" && -z "${METABOB_API_KEY:-}" ]]; then
   echo "[gen-env] ERROR: this container is configured as a SPOKE (a remote hub is set) but no hub-issued credential was supplied." >&2
-  echo "[gen-env]   Set METABOB_API_KEY to the key the HUB issued for this spoke." >&2
+  echo "[gen-env]   Set SUBSTRATE_API_KEY (or the retiring METABOB_API_KEY) to the key the HUB issued for this spoke." >&2
   echo "[gen-env]   Mint one on the hub with: docker exec <hub-container> substrate-key issue <this-spoke>" >&2
   echo "[gen-env]   Refusing to generate one locally: a self-minted key is not a member of the hub's identity group," >&2
   echo "[gen-env]   so the spoke would boot healthy and then fail every federated call with 401." >&2
@@ -648,6 +663,8 @@ if [[ -z "${METABOB_API_KEY:-}" ]]; then
   METABOB_API_KEY="$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 32)"
   prov METABOB_API_KEY generated
 fi
+
+SUBSTRATE_API_KEY="$METABOB_API_KEY"   # the alias: same value, rendered beside the retiring name
 
 # Optional per-vessel keys — fall back to METABOB_API_KEY if unset (D4)
 LOCAL_TOOLS_VESSEL_API_KEY="${LOCAL_TOOLS_VESSEL_API_KEY:-${METABOB_API_KEY}}"
@@ -997,7 +1014,9 @@ DISCOVERY_VESSEL_ENDPOINT="${DISCOVERY_VESSEL_ENDPOINT:-$DISCOVERY_ENDPOINT}"
 ACTIVITY_API_ENDPOINT="${ACTIVITY_API_ENDPOINT:-http://127.0.0.1:8080}"
 ACTIVITY_API_URL="${ACTIVITY_API_URL:-$ACTIVITY_API_ENDPOINT}"
 PRODUCER_DISCOVERY_ENDPOINT="${PRODUCER_DISCOVERY_ENDPOINT:-$ACTIVITY_API_ENDPOINT}"
+resolve_retiring_alias SUBSTRATE_ENDPOINT METABOB_ENDPOINT
 METABOB_ENDPOINT="${METABOB_ENDPOINT:-$ACTIVITY_API_ENDPOINT}"
+SUBSTRATE_ENDPOINT="$METABOB_ENDPOINT"
 # A multiaddr-only joiner has NO local identity-vessel: role spoke masks it, correctly,
 # because identity belongs on the hub. Defaulting it to loopback:8101 therefore points
 # every local vessel at a port nothing is listening on. MEASURED 2026-09-15: a spoke
@@ -1087,7 +1106,7 @@ _peer_file_val() {
 PEER_KEY_NAMES=""
 for _pair in ${PEER_CREDENTIALS//,/ }; do
   _pn="${_pair#*=}"
-  if [[ ! "$_pn" =~ ^[A-Z][A-Z0-9_]*_API_KEY$ ]] || [[ "$_pn" == METABOB_API_KEY || "$_pn" == HUB_API_KEY ]]; then
+  if [[ ! "$_pn" =~ ^[A-Z][A-Z0-9_]*_API_KEY$ ]] || [[ "$_pn" == METABOB_API_KEY || "$_pn" == SUBSTRATE_API_KEY || "$_pn" == HUB_API_KEY ]]; then
     echo "[gen-env] WARNING: PEER_CREDENTIALS maps ${_pair%%=*} to '${_pn}', which is not a peer key name (<NAME>_API_KEY); ignored" >&2
     continue
   fi
@@ -1302,6 +1321,7 @@ SURREAL_PASS="${SURREAL_PASS}"
 # rendered by render-secret-scope.sh into the files only their consumers load
 # (secrets-manifest.json is the one list) — see the call after the persisted store.
 METABOB_API_KEY="${METABOB_API_KEY}"
+SUBSTRATE_API_KEY="${SUBSTRATE_API_KEY}"
 # LLM provider credentials — at least one must be non-empty (validated above).
 # (2) provider-secret spot — resolved (env>persisted>empty) just above.
 ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"
@@ -1446,6 +1466,7 @@ PRODUCER_DISCOVERY_ENDPOINT="${PRODUCER_DISCOVERY_ENDPOINT}"
 # under two historical aliases; defaulted one from the other so overriding
 # ACTIVITY_API_ENDPOINT alone is sufficient.
 METABOB_ENDPOINT="${METABOB_ENDPOINT}"
+SUBSTRATE_ENDPOINT="${SUBSTRATE_ENDPOINT}"
 IDENTITY_VESSEL_URL="${IDENTITY_VESSEL_URL}"
 IDENTITY_ENDPOINT="${IDENTITY_ENDPOINT}"
 
@@ -1846,7 +1867,7 @@ if [[ -f "$SECRETS_STORE" ]]; then
       HUB_DISCOVERY_URL|DISCOVERY_ENDPOINT|DISCOVERY_VESSEL_ENDPOINT|\
       IDENTITY_VESSEL_URL|IDENTITY_ENDPOINT|\
       ACTIVITY_API_ENDPOINT|ACTIVITY_API_URL|PRODUCER_DISCOVERY_ENDPOINT|\
-      METABOB_ENDPOINT|RELAY_MULTIADDR)
+      METABOB_ENDPOINT|SUBSTRATE_ENDPOINT|RELAY_MULTIADDR)
         _dropped=$((_dropped + 1))
         echo "[gen-env] dropped stale routing anchor from persisted secrets: $_k (anchors are re-derived each boot, never persisted)" >&2
         continue

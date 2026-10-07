@@ -49,8 +49,8 @@ function upsertEnvVar(path: string, key: string, value: string): void {
   const line = `${key}=${value}`;
   const re = new RegExp(`^${key}=.*$`, "m");
   const updated = re.test(content)
-    ? content.replace(re, line)
-    : content.replace(/\n?$/, `\n${line}\n`);
+    ? content.replace(re, () => line)   // a function: $&, $1 or $$ in the value are never interpreted
+    : content.replace(/\n?$/, () => `\n${line}\n`);
   // temp + rename: units read these paths, and a torn write reads as "no key".
   const tmp = `${path}.tmp.${process.pid}`;
   writeFileSync(tmp, updated, { mode: 0o600 });
@@ -229,21 +229,35 @@ async function keyAuthenticates(key: string): Promise<boolean> {
   } catch { return false; }
 }
 
-/** Persist an issued key to both files vessels read, so a restart picks it up. */
-function writeFleetKey(key: string): void {
-  for (const f of ["/etc/substrate/env", SECRETS_FILE]) {
+const RENDERED_ENV = "/etc/substrate/env";
+
+/**
+ * Persist an issued fleet key so a restart picks it up. The rendered env carries the retiring name AND its alias
+ * with the same value (openspec retire-metabob-names, phase 1), so a re-mint sets both or the alias is left on the
+ * old key; the persisted store keeps ONE copy, under the retiring name, from which gen-env renders both. The paths
+ * are parameters so the test runs this writer against temp files. Returns whether the rendered env now carries
+ * the key under both names.
+ */
+export function writeFleetKey(
+  key: string,
+  paths: { rendered: string; store: string } = { rendered: RENDERED_ENV, store: SECRETS_FILE },
+): boolean {
+  const plan: Array<[string, string[]]> = [
+    [paths.rendered, ["METABOB_API_KEY", "SUBSTRATE_API_KEY"]],
+    [paths.store, ["METABOB_API_KEY"]],
+  ];
+  for (const [f, names] of plan) {
     try {
       if (!existsSync(f)) continue;
-      const c = readFileSync(f, "utf-8");
-      writeFileSync(
-        f,
-        /^METABOB_API_KEY=/m.test(c) ? c.replace(/^METABOB_API_KEY=.*/m, `METABOB_API_KEY=${key}`) : `${c}\nMETABOB_API_KEY=${key}\n`,
-        { mode: 0o600 },
-      );
+      for (const n of names) upsertEnvVar(f, n, key);
     } catch (e) {
       console.warn(`[seed-identity] could not update ${f}: ${(e as Error).message}`);
     }
   }
+  try {
+    const c = readFileSync(paths.rendered, "utf-8");
+    return c.split("\n").includes(`METABOB_API_KEY=${key}`) && c.split("\n").includes(`SUBSTRATE_API_KEY=${key}`);
+  } catch { return false; }
 }
 
 async function main() {
@@ -344,25 +358,9 @@ async function main() {
 
   // Write the issued key back to .substrate-secrets and /etc/substrate/env
   // so configure-local.sh and subsequent vessel restarts use the proper HMAC key.
-  try {
-    const envContent = readFileSync("/etc/substrate/env", "utf-8");
-    const updatedEnv = envContent.replace(
-      /^METABOB_API_KEY=.*/m,
-      `METABOB_API_KEY=${defaultKey}`,
-    );
-    writeFileSync("/etc/substrate/env", updatedEnv, { mode: 0o600 });
-
-    if (existsSync(SECRETS_FILE)) {
-      const secretsContent = readFileSync(SECRETS_FILE, "utf-8");
-      const updatedSecrets = secretsContent.replace(
-        /^METABOB_API_KEY=.*/m,
-        `METABOB_API_KEY=${defaultKey}`,
-      );
-      writeFileSync(SECRETS_FILE, updatedSecrets, { mode: 0o600 });
-    }
-    console.log("[seed-identity] updated METABOB_API_KEY in /etc/substrate/env and .substrate-secrets");
-  } catch (e) {
-    console.warn(`[seed-identity] could not update env file: ${(e as Error).message}`);
+  if (writeFleetKey(defaultKey)) {
+    console.log("[seed-identity] updated METABOB_API_KEY and its alias SUBSTRATE_API_KEY in /etc/substrate/env, and .substrate-secrets");
+  } else {
     console.warn(`[seed-identity] METABOB_API_KEY (${keyFingerprint(defaultKey)}) is persisted nowhere: re-run this seeder once the env file is writable (it re-issues), or issue one with substrate-key`);
   }
 
