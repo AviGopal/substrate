@@ -45,6 +45,15 @@
 apikey_cfg() { [ -n "${1:-}" ] && printf 'header = "Authorization: ApiKey %s"\n' "$1"; return 0; }
 
 set -uo pipefail
+# THE FENCE. The operator's own credentials and LLM settings never reach a throwaway fleet: the installer carries
+# the fleet key (both names), the push token and every provider-section name from its environment into the
+# fleet's .env, and this runner inherits the operator's shell. What a run needs is passed explicitly (the join
+# token, ACCEPTANCE_PROVIDER_KEY), never ambient. The provider names are read from the manifest's own provider
+# section, as the installer reads them, so the list cannot drift; no manifest means no run.
+_fence_manifest="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/docker-compose.yml"
+[ -f "$_fence_manifest" ] || { echo "[acceptance] refusing: cannot read $_fence_manifest to fence the operator's credentials" >&2; exit 64; }
+unset METABOB_API_KEY SUBSTRATE_API_KEY SUBSTRATE_GIT_PAT $(awk '/# ── Provider keys/{f=1;next} f&&/# ──/{exit} f' "$_fence_manifest" \
+  | grep -v '^[[:space:]]*#' | grep -oE '\$\{[A-Z][A-Z0-9_]*' | cut -c3- | sort -u)
 
 ENGINE="${ENGINE:-}"; IMAGE="${IMAGE:-}"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
