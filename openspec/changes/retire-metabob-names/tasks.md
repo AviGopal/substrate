@@ -48,6 +48,14 @@ removes it with the old name.
 
 - [ ] 2.1 Super-repo scripts, units, .claude hooks, docs (README install inputs; configuration reference
       migration table).
+
+Readers already on the new name, moved early by the 2026-10-07 security harm-stop (the presence-only
+X-Internal-Api-Key path). Each reads `SUBSTRATE_API_KEY` first, then `METABOB_API_KEY`, then a legacy name, so
+the migration table lists them as done. Because the phase-1 alias is byte-copied they behave the same as before;
+if a later change sets only one name, they follow the new-name-wins rule.
+  - identity-vessel `src/trace.ts` (auth-trace post, `Authorization: ApiKey`): SUBSTRATE_API_KEY → METABOB_API_KEY → INTERNAL_API_KEY.
+  - development-vessel `src/resolvers/substrate-gap.ts` (gap-event publish): SUBSTRATE_API_KEY → METABOB_API_KEY → API_KEY.
+  Phase 3 drops the METABOB_API_KEY step from both. The legacy third name is a 2.3b default-fallback read and moves with that task.
 - [ ] 2.2 Super-repo tests and validation fixtures.
 - [ ] 2.3 One whole-vessel goal per vessel repo (25), tagged `rename:metabob` and excluded from
       landing-rate counts; development-vessel and ias-executor-ts verified by effect (refusal trace
