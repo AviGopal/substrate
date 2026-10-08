@@ -345,16 +345,22 @@ if ! "$engine" exec "$container" substrate-status --wait "$first_wait"; then
 fi
 
 if [ "$connect" = 1 ] && [ "$first_wait" = seeded ]; then
-  target="${METABOB_CONFIG_PATH:-}"
-  [ -n "$target" ] || { [ -n "${HOME:-}" ] && target="$HOME/.metabob/config.json"; }
+  # The client config's home is ~/.substrate/config.json; connect-merge keeps ~/.metabob/config.json as a
+  # link to it for the cockpit. SUBSTRATE_CONFIG_PATH wins, then the retiring METABOB_CONFIG_PATH.
+  target="${SUBSTRATE_CONFIG_PATH:-${METABOB_CONFIG_PATH:-}}"
+  [ -n "$target" ] || { [ -n "${HOME:-}" ] && target="$HOME/.substrate/config.json"; }
+  # The file that holds the config today: on a host not yet converged, that is still the old path.
+  current="$target"
+  [ -n "${HOME:-}" ] && [ "$target" = "$HOME/.substrate/config.json" ] && [ ! -e "$target" ] && [ -e "$HOME/.metabob/config.json" ] \
+    && current="$HOME/.metabob/config.json"
   if [ -z "$target" ]; then
-    say "HOME and METABOB_CONFIG_PATH are unset; client configuration not written"
+    say "HOME, SUBSTRATE_CONFIG_PATH and METABOB_CONFIG_PATH are unset; client configuration not written"
   elif "$engine" exec "$container" substrate-connect > metabob-config.json; then
     chmod 600 metabob-config.json
     ep="$(grep -o '"endpoint"[^,}]*' metabob-config.json | head -1)"
-    if [ -f "$target" ] && ! grep -qF "$ep" "$target"; then
+    if [ -f "$current" ] && ! grep -qF "$ep" "$current"; then
       # Never overwrite another fleet's client config: leave it, point at ours.
-      say "$target already points at another fleet and was left as it is."
+      say "$current already points at another fleet and was left as it is."
       say "to use this fleet: export METABOB_CONFIG_PATH=$(pwd)/metabob-config.json"
     else
       # Same fleet, or no file yet: MERGE this fleet's values into it ON THE HOST with the one merge

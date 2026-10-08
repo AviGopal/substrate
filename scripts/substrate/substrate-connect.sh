@@ -2,7 +2,7 @@
 # substrate-connect.sh — hand a client its connection to this substrate.
 #
 #   docker exec <container> substrate-connect --merge-script \
-#     | bash -s -- ~/.metabob/config.json docker exec <container> substrate-connect --values
+#     | bash -s -- ~/.substrate/config.json docker exec <container> substrate-connect --values
 #
 # The client config is merged ON THE HOST, never in here: it can hold keys and secrets this fleet
 # does not own (the cockpit's providers and their API keys), and nothing of it may enter the
@@ -32,7 +32,8 @@
 #
 # The client reads its config by one rule (the cockpit's, not ours to change):
 # METABOB_CONFIG_PATH overrides everything; otherwise a `.metabob/config.json` in the
-# directory the cockpit starts in shadows `~/.metabob/config.json`. This command runs
+# directory the cockpit starts in shadows `~/.metabob/config.json`. That path is a symlink to the
+# config's home, `~/.substrate/config.json`, which connect-merge creates and keeps. This command runs
 # inside the container and cannot see that directory, so it prints the check as a
 # conditional warning; detecting an actual shadowing file is the host-side
 # launcher's to do, where that directory is visible.
@@ -125,8 +126,8 @@ jq -n --arg e "$ENDPOINT" --arg k "$KEY" --arg g "$GAP_STORE_EP" \
   || { echo "[connect] jq could not build the config; nothing printed" >&2; exit 2; }
 
 {
-  echo "[connect] stdout above is a FRESH client config. To update an existing ~/.metabob/config.json without losing its other keys, merge on the host (the file never enters the container):"
-  echo "  docker exec <container> substrate-connect --merge-script | bash -s -- ~/.metabob/config.json docker exec <container> substrate-connect --values"
+  echo "[connect] stdout above is a FRESH client config. To update an existing ~/.substrate/config.json without losing its other keys, merge on the host (the file never enters the container; ~/.metabob/config.json is kept as a link to it for the cockpit):"
+  echo "  docker exec <container> substrate-connect --merge-script | bash -s -- ~/.substrate/config.json docker exec <container> substrate-connect --values"
   echo "[connect] WARNING if either applies where the cockpit runs: METABOB_CONFIG_PATH, when set, overrides ~/.metabob/config.json; and if ./.metabob/config.json exists in the directory the cockpit starts in, it takes precedence over the file written here."
   echo "[connect] Register the cockpit (needs node/npx and Bun: https://bun.sh), then make one call such as registry_query:"
   echo "  claude mcp add metabob -- npx -y @metabob/mcp"

@@ -26,8 +26,12 @@
 - [x] 1.3a secret-leak-scan.sh recognises the fleet key under either name (fleet_key_named) and collects its value
       under the alias; tested with the key only under SUBSTRATE_API_KEY. The secret-mask probe masks DIRECTORIES
       (never names), so the alias in the shared env needs no change there.
-- [ ] 1.4 `substrate-connect`: write `~/.substrate/config.json`; keep `~/.metabob/config.json` resolving to
+- [x] 1.4 `substrate-connect`: write `~/.substrate/config.json`; keep `~/.metabob/config.json` resolving to
       it; registration line unchanged for the cockpit. Test: fresh host, existing old-path host, both.
+      Done in connect-merge.sh, the one host-side writer: given either default path, it converges the layout
+      (old-path file moved, old path a symlink) and refuses when both hold different files. It writes through
+      any other symlink. The installer targets SUBSTRATE_CONFIG_PATH, then METABOB_CONFIG_PATH, then the new
+      path (validation/scripts/client-config-layout.test.sh).
 - [x] 1.5 By effect on every node: both names present with equal values (compared by hash inside the
       container, never printed); the store holds the key under exactly ONE name; scope-name diff = the alias
       only, on the same units; the hub through a user-run read. Met on 2026-10-08 on pubspoke, compose2, node1

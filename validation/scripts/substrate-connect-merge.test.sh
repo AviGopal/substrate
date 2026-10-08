@@ -51,14 +51,14 @@ merge() { # [env...] -- connect-merge.sh directly with a values command -> RC
 }
 F="$T/home/.metabob/config.json"
 owned='del(.metabob.endpoint, .metabob.apiKey, .substrate.gapStoreEndpoint)'
-no_temp() { [ -z "$(find "$(dirname "$F")" -maxdepth 1 -name '.connect-*' 2>/dev/null)" ]; }
+no_temp() { [ -z "$(find "$(dirname "$F")" "$T/home/.substrate" -maxdepth 1 -name '.connect-*' 2>/dev/null)" ]; }   # temp files sit next to the REAL file, now under ~/.substrate
 
 # ── create ─────────────────────────────────────────────────────────────────────
 echo active > "$T/devvessel"
 emit
 jq -e --arg g "$GS" --arg e "$EP" --arg k "$KEY" '. == {metabob:{endpoint:$e,apiKey:$k},substrate:{gapStoreEndpoint:$g}}' "$F" >/dev/null 2>&1 \
   && ok "create: no file and no directory -> created with the three keys" || { bad "create: rc $RC, $(cat "$F" 2>&1)"; sed 's/^/    /' "$T/out.txt"; }
-[ "$(stat -c %a "$F" 2>/dev/null)" = 600 ] && ok "create: the file is mode 600" || bad "create: mode $(stat -c %a "$F" 2>/dev/null)"
+[ "$(stat -L -c %a "$F" 2>/dev/null)" = 600 ] && ok "create: the file is mode 600" || bad "create: mode $(stat -L -c %a "$F" 2>/dev/null)"
 
 # ── keep ───────────────────────────────────────────────────────────────────────
 cat > "$F" <<'EOF'
@@ -81,7 +81,7 @@ else
 fi
 jq -e --arg g "$GS" --arg e "$EP" --arg k "$KEY" '.substrate.gapStoreEndpoint == $g and .metabob.endpoint == $e and .metabob.apiKey == $k' "$F" >/dev/null \
   && ok "keep: gapStoreEndpoint updated, endpoint and apiKey set" || bad "keep: owned keys wrong"
-[ "$(stat -c %a "$F")" = 600 ] && no_temp && ok "keep: mode 600, no temp file left" || bad "keep: mode $(stat -c %a "$F") or temp left"
+[ "$(stat -L -c %a "$F")" = 600 ] && no_temp && ok "keep: mode 600, no temp file left" || bad "keep: mode $(stat -L -c %a "$F") or temp left"
 
 # ── secrecy ────────────────────────────────────────────────────────────────────
 grep -qF "$KEY" "$T/out.txt" && bad "secrecy: the API key was printed by the instruction" || ok "secrecy: the API key appears in no output, only in the target file"
