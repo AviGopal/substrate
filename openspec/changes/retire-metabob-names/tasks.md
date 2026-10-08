@@ -14,7 +14,7 @@
 
 - [x] 1.1 `secret-scope-names.sh` (cafdd281): per-unit secret NAMES from EnvironmentFile=, Environment= and
       PassEnvironment= (never values). Baselines captured on node1, compose2 and pubspoke; the hub's by a user-run read.
-- [ ] 1.2 gen-env: accept `SUBSTRATE_API_KEY` / `SUBSTRATE_ENDPOINT` as inputs (new wins, conflict logged
+- [x] 1.2 gen-env (9fc83539, seed-identity writeFleetKey): accept `SUBSTRATE_API_KEY` / `SUBSTRATE_ENDPOINT` as inputs (new wins, conflict logged
       by name), write both names in every rendered file. The persisted store keeps ONE copy, under the retiring
       name (seed-identity rewrites it on minting, and a second stored copy would drift from it); the alias is
       always derived from it. seed-identity's rewrites set both rendered names. SUBSTRATE_API_KEY is excluded
@@ -28,9 +28,15 @@
       (never names), so the alias in the shared env needs no change there.
 - [ ] 1.4 `substrate-connect`: write `~/.substrate/config.json`; keep `~/.metabob/config.json` resolving to
       it; registration line unchanged for the cockpit. Test: fresh host, existing old-path host, both.
-- [ ] 1.5 By effect on every node after its next boot: both names present with equal values (compared by
-      hash inside the container, never printed); the store holds the key under exactly ONE name; scope-name
-      diff = the alias only, on the same units; the hub through a user-run read.
+- [x] 1.5 By effect on every node: both names present with equal values (compared by hash inside the
+      container, never printed); the store holds the key under exactly ONE name; scope-name diff = the alias
+      only, on the same units; the hub through a user-run read. Met on 2026-10-08 on pubspoke, compose2, node1
+      and the hub without waiting for a boot. Each node got a quiet-gated alias render that byte-copies the
+      retiring name's line into the alias and swaps the file atomically, only once the node's installed gen-env
+      rendered the same alias, so the next boot reproduces it. gen-env is not re-run live, because it truncates
+      lines that runtime writers upserted after boot, and no unit is restarted, because nothing reads the new
+      names before phase 2. Every keyed unit gained only SUBSTRATE_API_KEY; discovery's peer-credential file
+      kept its names.
 
 ## 2. Readers move (super-repo directly; vessels through the substrate)
 
