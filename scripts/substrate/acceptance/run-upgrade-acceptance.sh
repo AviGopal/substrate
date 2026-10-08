@@ -90,7 +90,7 @@ eng run --rm "$PREVIOUS_IMAGE" install 2>"$RESULT_DIR/diag/emit-previous.err" >"
 # A declared acceptance install on hold, like the other runs: the verdict is about the two
 # images, not about what dev became while the fleet booted. The installer writes both into
 # the fleet's .env, and the upgrade below must keep them (channel_kept).
-( SUBSTRATE_IMAGE="$TAG" METABOB_CONFIG_PATH="$root/client-config.json" \
+( SUBSTRATE_IMAGE="$TAG" SUBSTRATE_CONFIG_PATH="$root/client-config.json" METABOB_CONFIG_PATH="$root/client-config.json" \
     SUBSTRATE_ACCEPTANCE=1 SUBSTRATE_UPDATE_CHANNEL=hold \
     sh "$root/install-previous.sh" --name "$NAME" --prefix "$PREFIX" --dir "$fleet" --engine "$ENGINE" --wait seeded ) \
   >"$RESULT_DIR/diag/install-previous.log" 2>&1
@@ -114,7 +114,7 @@ if [ -n "$key" ]; then
   eng tag "$IMAGE" "$TAG"
   log "upgrading: the tag now names the candidate; re-running its installer inside the fleet directory"
   eng run --rm "$IMAGE" install 2>"$RESULT_DIR/diag/emit-candidate.err" >"$root/install-candidate.sh"
-  ( cd "$fleet" && METABOB_CONFIG_PATH="$root/client-config.json" sh "$root/install-candidate.sh" --engine "$ENGINE" --wait seeded ) \
+  ( cd "$fleet" && SUBSTRATE_CONFIG_PATH="$root/client-config.json" METABOB_CONFIG_PATH="$root/client-config.json" sh "$root/install-candidate.sh" --engine "$ENGINE" --wait seeded ) \
     >"$RESULT_DIR/diag/install-candidate.log" 2>&1
   after_rc=$?
   if [ "$after_rc" = 0 ]; then set_check upgrade_install pass null

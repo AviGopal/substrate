@@ -134,7 +134,7 @@ key_sub_from='ANTHROPIC_API_KEY=sk-ant-…'; key_sub_to="${ACCEPTANCE_PROVIDER_V
 log "installing the hub from the page's install:hub blocks (public address $host_ip)"
 SUBSTRATE_NAME="$HUB_NAME" SUBSTRATE_PORT_PREFIX="$HUB_PREFIX" SUBSTRATE_IMAGE="$IMAGE" \
 SUBSTRATE_ACCEPTANCE=1 SUBSTRATE_UPDATE_CHANNEL=hold \
-METABOB_CONFIG_PATH="$root/hub-config.json" \
+SUBSTRATE_CONFIG_PATH="$root/hub-config.json" METABOB_CONFIG_PATH="$root/hub-config.json" \
   run_case hub "$root/hub" "$key_sub_from" "$key_sub_to" '<address spokes reach>' "$host_ip"
 hub_rc=$?
 case "$hub_rc" in
@@ -166,7 +166,7 @@ if [ -n "$join_token" ]; then
   log "installing the spoke from the page's install:spoke blocks, with the hub's join token"
   SUBSTRATE_NAME="$SPOKE_NAME" SUBSTRATE_PORT_PREFIX="$SPOKE_PREFIX" SUBSTRATE_IMAGE="$IMAGE" \
   SUBSTRATE_ACCEPTANCE=1 SUBSTRATE_UPDATE_CHANNEL=hold \
-  METABOB_CONFIG_PATH="$root/spoke-config.json" \
+  SUBSTRATE_CONFIG_PATH="$root/spoke-config.json" METABOB_CONFIG_PATH="$root/spoke-config.json" \
     run_case spoke "$root/spoke" '<join token from the hub>' "$join_token"
   spoke_rc=$?
 fi
@@ -281,7 +281,7 @@ if [ -n "${target:-}" ] && [ -n "${hub_key:-}" ]; then
     log "installing a second spoke, so a departure has another producer of the same shape"
     SUBSTRATE_NAME="$SPOKE2_NAME" SUBSTRATE_PORT_PREFIX="$SPOKE2_PREFIX" SUBSTRATE_IMAGE="$IMAGE" \
     SUBSTRATE_ACCEPTANCE=1 SUBSTRATE_UPDATE_CHANNEL=hold \
-    METABOB_CONFIG_PATH="$root/spoke2-config.json" \
+    SUBSTRATE_CONFIG_PATH="$root/spoke2-config.json" METABOB_CONFIG_PATH="$root/spoke2-config.json" \
       run_case spoke "$root/spoke2" '<join token from the hub>' "$spoke2_token"
     spoke2_rc=$?
   fi

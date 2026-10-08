@@ -126,12 +126,16 @@ services:
       LLM_ARMS: ${LLM_ARMS:-}
       # ── Join / federation ────────────────────────────────────────────────────
       # DISCOVERY_ENDPOINT + METABOB_API_KEY are the whole join; the rest are
-      # overrides of what the image derives from them.
+      # overrides of what the image derives from them. SUBSTRATE_API_KEY and
+      # SUBSTRATE_ENDPOINT are the new names for the key and endpoint: gen-env
+      # accepts either, and the new one wins a conflict (retire-metabob-names).
       DISCOVERY_ENDPOINT: ${DISCOVERY_ENDPOINT:-}
       METABOB_API_KEY: ${METABOB_API_KEY:-}
+      SUBSTRATE_API_KEY: ${SUBSTRATE_API_KEY:-}
       HUB_DISCOVERY_URL: ${HUB_DISCOVERY_URL:-}
       ACTIVITY_API_ENDPOINT: ${ACTIVITY_API_ENDPOINT:-}
       METABOB_ENDPOINT: ${METABOB_ENDPOINT:-}
+      SUBSTRATE_ENDPOINT: ${SUBSTRATE_ENDPOINT:-}
       IDENTITY_VESSEL_URL: ${IDENTITY_VESSEL_URL:-}
       IDENTITY_ENDPOINT: ${IDENTITY_ENDPOINT:-}
       FED_SUBSTRATE_ID: ${FED_SUBSTRATE_ID:-}

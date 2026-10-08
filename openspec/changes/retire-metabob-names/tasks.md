@@ -23,6 +23,12 @@
 - [ ] 1.2a local-tools (a goal in its repo): agentShellEnv with BOTH names in base and extra yields NEITHER
       (its allowlist already excludes both; the test pins it).
 - [ ] 1.3 Units, installer, acceptance runners and CI pass both names wherever they pass one.
+      Done except CI: the compose environment passes SUBSTRATE_API_KEY and SUBSTRATE_ENDPOINT; the installer
+      carries SUBSTRATE_API_KEY, and --key sets both names (otherwise an ambient SUBSTRATE_API_KEY overrode the
+      flag); the upgrade and network acceptance runners set SUBSTRATE_CONFIG_PATH beside every sandbox
+      METABOB_CONFIG_PATH (run-acceptance is fenced by env -i); units only READ the names, which is phase 2.
+      validation/scripts/retiring-names-pass-both.test.sh. HELD: .github/workflows/weekly-recommendation-validation.yml
+      (the one CI site, lane-editable) waits on the user's decision whether the weekly harness stays.
 - [x] 1.3a secret-leak-scan.sh recognises the fleet key under either name (fleet_key_named) and collects its value
       under the alias; tested with the key only under SUBSTRATE_API_KEY. The secret-mask probe masks DIRECTORIES
       (never names), so the alias in the shared env needs no change there.

@@ -43,7 +43,7 @@ INPUT_NAMES="$(names_in < "$MANIFEST")"
 # a notice) when it is only ambient in the shell, so .env is the one declaration.
 PROVIDER_NAMES="$(awk '/# ── Provider keys/{f=1;next} f&&/# ──/{exit} f' "$MANIFEST" | names_in)"
 [ -n "$PROVIDER_NAMES" ] || { echo "[install] found no provider-key section in the manifest" >&2; exit 1; }
-CARRY_NAMES="SUBSTRATE_IMAGE SUBSTRATE_NAME SUBSTRATE_PORT_PREFIX PROFILE SUBSTRATE_UPDATE_CHANNEL SUBSTRATE_ACCEPTANCE DISCOVERY_ENDPOINT METABOB_API_KEY PUBLIC_IP SUBSTRATE_GIT_PAT SUBSTRATE_REPO_OWNER ${PROVIDER_NAMES}"
+CARRY_NAMES="SUBSTRATE_IMAGE SUBSTRATE_NAME SUBSTRATE_PORT_PREFIX PROFILE SUBSTRATE_UPDATE_CHANNEL SUBSTRATE_ACCEPTANCE DISCOVERY_ENDPOINT METABOB_API_KEY SUBSTRATE_API_KEY PUBLIC_IP SUBSTRATE_GIT_PAT SUBSTRATE_REPO_OWNER ${PROVIDER_NAMES}"
 for n in $CARRY_NAMES; do
   case " $INPUT_NAMES " in *" $n "*) ;; *) echo "[install] install input $n is not read by the manifest" >&2; exit 1 ;; esac
 done
@@ -62,7 +62,7 @@ Prints an installer for this image. Pipe it to sh; options go after `sh -s --`.
                            (`substrate-key join <name>` on the hub; prefer SUBSTRATE_JOIN=<token>
                            in the environment, since it carries the key), or the hub's
                            discovery URL together with --key
-  --key <key>              the key the hub issued (METABOB_API_KEY; prefer the env form)
+  --key <key>              the key the hub issued (SUBSTRATE_API_KEY or METABOB_API_KEY; prefer the env form)
   --profile <p>            standalone | hub | hub-minimal | spoke | surface | compute (PROFILE)
   --public-ip <addr>       the address spokes reach; required for a hub (PUBLIC_IP)
   --name <n>               fleet name: container <n>-live, volumes <n>-* (SUBSTRATE_NAME)
@@ -144,7 +144,9 @@ esac
 
 # Flags are spellings of manifest inputs; they win over the same input in the environment.
 [ -n "$set_join" ] && DISCOVERY_ENDPOINT="$set_join" && export DISCOVERY_ENDPOINT
-[ -n "$set_key" ] && METABOB_API_KEY="$set_key" && export METABOB_API_KEY
+# Both names: gen-env lets SUBSTRATE_API_KEY win a conflict, so --key must set it too, or a SUBSTRATE_API_KEY
+# already in the environment would silently override the key given here.
+[ -n "$set_key" ] && METABOB_API_KEY="$set_key" && SUBSTRATE_API_KEY="$set_key" && export METABOB_API_KEY SUBSTRATE_API_KEY
 [ -n "$set_profile" ] && PROFILE="$set_profile" && export PROFILE
 [ -n "$set_public_ip" ] && PUBLIC_IP="$set_public_ip" && export PUBLIC_IP
 [ -n "$set_name" ] && SUBSTRATE_NAME="$set_name" && export SUBSTRATE_NAME
