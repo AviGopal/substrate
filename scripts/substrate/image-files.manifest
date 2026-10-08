@@ -470,6 +470,7 @@ scripts/substrate/git-hooks-ledger/pre-commit	/usr/local/share/substrate/super-r
 scripts/substrate/git-hooks-ledger/_record.sh	/usr/local/share/substrate/super-repo/scripts/substrate/git-hooks-ledger/_record.sh	0755	B
 scripts/substrate/git-hooks-ledger/reference-transaction	/usr/local/share/substrate/super-repo/scripts/substrate/git-hooks-ledger/reference-transaction	0755	B
 scripts/substrate/goal-host-behavior-tick.sh	/usr/local/share/substrate/super-repo/scripts/substrate/goal-host-behavior-tick.sh	0644	B
+scripts/substrate/hub-firewall.sh	/usr/local/share/substrate/super-repo/scripts/substrate/hub-firewall.sh	0755	B
 scripts/substrate/identical-failure-run-tick.d.ts	/usr/local/share/substrate/super-repo/scripts/substrate/identical-failure-run-tick.d.ts	0644	B
 scripts/substrate/identical-failure-run-tick.d.ts.map	/usr/local/share/substrate/super-repo/scripts/substrate/identical-failure-run-tick.d.ts.map	0644	B
 scripts/substrate/identical-failure-run-tick.js	/usr/local/share/substrate/super-repo/scripts/substrate/identical-failure-run-tick.js	0644	B
