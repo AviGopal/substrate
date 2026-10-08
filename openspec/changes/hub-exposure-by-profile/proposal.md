@@ -69,6 +69,6 @@ admits 18080 only from listed spoke addresses (`scripts/substrate/hub-firewall.s
    the table is wrong for a hub, or spokes have silently lost something they read. This must be resolved
    before `exposure.json` is written. It is a docs-against-reality discrepancy, so it is filed as a gap
    either way.
-2. Whether a fresh standalone should default to `local` (safer, and the right shape for a developer host)
-   or keep today's every-interface default (no change for existing installs). This proposal says `local`
-   for fresh installs only, because deploy.sh's preflight protects existing ones.
+2. **Ruled by the user (2026-10-08): `local` by default.** A fresh standalone publishes every port on
+   `127.0.0.1`, and an operator opts in to wider exposure with `SUBSTRATE_PUBLISH_IP`. Existing installs are
+   unchanged: deploy.sh's preflight refuses an exposure change without `--accept-ports`.

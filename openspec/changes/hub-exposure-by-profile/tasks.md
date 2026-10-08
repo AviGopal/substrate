@@ -3,7 +3,7 @@
 - [ ] 0.1 Open question 1, P090 and P260 on a hub: measure whether any spoke reads them. Use the socket sample
       `hub-18080-sources.sh` uses, on 8090 and 8260. Fix the README table or the firewall, and file the
       discrepancy as a gap.
-- [ ] 0.2 Open question 2: the user rules on the fresh-standalone default.
+- [x] 0.2 Open question 2: ruled 2026-10-08, a fresh standalone defaults to `local`.
 
 ## 1. Exposure as one table
 
