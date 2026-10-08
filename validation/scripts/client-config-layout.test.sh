@@ -11,6 +11,8 @@
 #   rerun     a second run changes nothing and keeps the link
 #   relink    the file is current but the old-path link was removed: the link comes back
 #   through   any other path that is a symlink: written through, the link survives
+#   key!=     a config holding a DIFFERENT apiKey: refused without --replace-key (byte-identical, neither key printed);
+#             merged with it; an equal key merges as before
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 M="$ROOT/scripts/substrate/connect-merge.sh"
@@ -57,5 +59,15 @@ home 10; run "$(OLD)"; rm -f "$(OLD)"; run "$(NEW)"
 
 home 9; mkdir -p "$H/real"; echo '{"k":"v"}' > "$H/real/c.json"; ln -s "$H/real/c.json" "$H/link.json"; run "$H/link.json"
 [ "$RC" = 0 ] && [ -L "$H/link.json" ] && merged "$H/real/c.json" && jq -e '.k == "v"' "$H/real/c.json" >/dev/null && [ ! -e "$(OLD)" ] && ok "any other symlinked path: written through, the link survives" || bad "through: rc=$RC $(cat "$T/out")"
+
+home 11; mkdir -p "$H/.substrate"; echo '{"metabob":{"endpoint":"http://old","apiKey":"operator-own-key-xyz"},"providers":{"p":1}}' > "$(NEW)"; chmod 600 "$(NEW)"
+k=$(sha256sum < "$(NEW)"); run "$(NEW)"
+[ "$RC" = 1 ] && [ "$(sha256sum < "$(NEW)")" = "$k" ] && grep -q -- "--replace-key" "$T/out" && ! grep -qE "operator-own-key-xyz|fixture-not-a-real-key" "$T/out" \
+  && ok "key!=: a different key is refused without --replace-key, file byte-identical, neither key printed" || bad "key!= refuse: rc=$RC $(cat "$T/out")"
+HOME="$H" bash "$M" --replace-key "$(NEW)" "$T/values" > "$T/out" 2>&1; RC=$?
+[ "$RC" = 0 ] && merged "$(NEW)" && jq -e '.providers.p == 1' "$(NEW)" >/dev/null && ! grep -qE "operator-own-key-xyz|fixture-not-a-real-key" "$T/out" \
+  && ok "key!=: with --replace-key the fleet key replaces it, other keys kept" || bad "key!= replace: rc=$RC $(cat "$T/out")"
+home 12; mkdir -p "$H/.substrate"; echo '{"metabob":{"endpoint":"http://old","apiKey":"fixture-not-a-real-key"}}' > "$(NEW)"; run "$(NEW)"
+[ "$RC" = 0 ] && merged "$(NEW)" && ok "key=: an equal key merges as before (endpoint updated)" || bad "key=: rc=$RC $(cat "$T/out")"
 
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

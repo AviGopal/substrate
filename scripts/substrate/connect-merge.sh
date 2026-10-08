@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # connect-merge.sh — merge one fleet's connection values into a client config, ON THE HOST.
 #
-#   connect-merge.sh <config-file> <command that prints the values...>
+#   connect-merge.sh [--replace-key] <config-file> <command that prints the values...>
 #   e.g. connect-merge.sh ~/.metabob/config.json docker exec substrate-live substrate-connect --values
 #
 # Without a checkout, the image prints this script (`substrate-connect --merge-script`):
@@ -37,13 +37,21 @@
 # symlink, the merge writes through to the link's target, so the link survives; a mv over the link
 # itself would turn it into a second, diverging copy.
 #
+# WHOSE KEY. The merge never replaces a DIFFERENT key silently. When the config already holds a non-empty
+# metabob.apiKey that differs from the fleet key offered, it is someone's identity (an operator's personal
+# key, re-signed apart from the fleet's): overwriting it would re-attribute every cockpit dispatch to the
+# fleet with nothing saying so. The merge then REFUSES, file byte-identical, unless --replace-key is given
+# (also the flag for a deliberate fleet-key rotation). The keys are compared inside jq, which prints only
+# "same" or "differs"; neither key is ever printed.
+#
 # env: CONNECT_MERGE_JQ  the jq binary (default: jq on PATH)
 # exit: 0 written or unchanged · 1 refused (file untouched) · 64 usage
 set -uo pipefail
 umask 077
 JQ="${CONNECT_MERGE_JQ:-jq}"
 say() { echo "[connect-merge] $*" >&2; }
-[ $# -ge 2 ] || { say "usage: connect-merge.sh <config-file> <command that prints the values...>"; exit 64; }
+REPLACE_KEY=0; [ "${1:-}" = --replace-key ] && { REPLACE_KEY=1; shift; }
+[ $# -ge 2 ] || { say "usage: connect-merge.sh [--replace-key] <config-file> <command that prints the values...>"; exit 64; }
 CFG="$1"; shift
 command -v "$JQ" >/dev/null 2>&1 || { say "refusing: jq not found on this host; $CFG left as it is"; exit 1; }
 OLD_CFG="${HOME:-/nonexistent}/.metabob/config.json"; NEW_CFG="${HOME:-/nonexistent}/.substrate/config.json"
@@ -113,6 +121,14 @@ if ! "$JQ" -s --slurpfile v "$VALS" --argjson lossy "$LOSSY" --arg jqv "$("$JQ" 
   rm -f "$NEW.err"; exit 1
 fi
 rm -f "$NEW.err"
+# Whose key: the existing one parsed above, so this reads a valid object. Only "same"/"differs" leaves jq.
+if [ "$EXISTING" != /dev/null ] && [ "$REPLACE_KEY" = 0 ]; then
+  kv="$("$JQ" -r --slurpfile v "$VALS" '((.metabob.apiKey // "") | tostring) as $k | if $k == "" or $k == $v[0].apiKey then "same" else "differs" end' "$CFG" 2>/dev/null)"
+  if [ "$kv" != same ]; then
+    say "refusing: $CFG holds a different API key from this fleet's (an operator's own key, or a rotation); replacing it would change whose identity the cockpit dispatches under. Re-run with --replace-key to replace it on purpose. $CFG left as it is (neither key shown)"
+    exit 1
+  fi
+fi
 if [ "$EXISTING" != /dev/null ] && [ "$("$JQ" -S -c . "$CFG" 2>/dev/null)" = "$("$JQ" -S -c . "$NEW")" ]; then
   say "$CFG already carries this fleet's values; left as it is"
   link_old_path

@@ -66,7 +66,7 @@ cat > "$F" <<'EOF'
   "providers": { "anthropic": { "apiKey": "provider-secret-placeholder" } },
   "defaults": { "provider": "anthropic", "model": "m-1" },
   "nested": { "x": { "y": [1, { "z": "ü→✓" }], "big": 12345678901234567890 } },
-  "metabob": { "endpoint": "http://old.invalid", "apiKey": "old-key", "extra": "keep-me" },
+  "metabob": { "endpoint": "http://old.invalid", "apiKey": "fixture-not-a-real-key-0001", "extra": "keep-me" },
   "substrate": { "gapStoreEndpoint": "http://old-gap.invalid", "other": "keep-too" }
 }
 EOF
