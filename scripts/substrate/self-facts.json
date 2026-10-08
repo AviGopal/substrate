@@ -307,9 +307,6 @@
             "repos/development-vessel/test/resolvers/evaluator-grant-scan.test.ts",
             "repos/development-vessel/test/resolvers/scope-change-pin.test.ts",
             "repos/development-vessel/test/resolvers/system-authored-gap-checks.test.ts",
-            "repos/development-vessel/src/resolvers/composer-interruption-sweep.ts",
-            "repos/goal-host-vessel/src/goal-target-inference.ts",
-            "repos/concept-db/tests/write-shapes.test.ts",
             "repos/development-vessel/src/lib/caller-credential.ts",
             "repos/development-vessel/src/lib/self-auth.ts",
             "repos/development-vessel/src/resolvers/write-containment.ts",
@@ -330,7 +327,9 @@
             "repos/development-vessel/test/helpers/ungated-rows-source.ts",
             "repos/development-vessel/test/resolvers/compose-admission.test.ts",
             "repos/development-vessel/test/resolvers/compose-ownership-unit-mask.test.ts",
-            "repos/goal-host-vessel/test/satisfier-trace-flush-order.test.ts"
+            "repos/goal-host-vessel/test/satisfier-trace-flush-order.test.ts",
+            "repos/development-vessel/src/lib/evaluator-tree.ts",
+            "repos/development-vessel/src/resolvers/check-supply-admission.ts"
           ],
           "require_falsifier_classes": [
             "class2"
@@ -371,9 +370,6 @@
             "repos/development-vessel/test/resolvers/evaluator-grant-scan.test.ts",
             "repos/development-vessel/test/resolvers/scope-change-pin.test.ts",
             "repos/development-vessel/test/resolvers/system-authored-gap-checks.test.ts",
-            "repos/development-vessel/src/resolvers/composer-interruption-sweep.ts",
-            "repos/goal-host-vessel/src/goal-target-inference.ts",
-            "repos/concept-db/tests/write-shapes.test.ts",
             "repos/development-vessel/src/lib/caller-credential.ts",
             "repos/development-vessel/src/lib/self-auth.ts",
             "repos/development-vessel/src/resolvers/write-containment.ts",
@@ -394,7 +390,9 @@
             "repos/development-vessel/test/helpers/ungated-rows-source.ts",
             "repos/development-vessel/test/resolvers/compose-admission.test.ts",
             "repos/development-vessel/test/resolvers/compose-ownership-unit-mask.test.ts",
-            "repos/goal-host-vessel/test/satisfier-trace-flush-order.test.ts"
+            "repos/goal-host-vessel/test/satisfier-trace-flush-order.test.ts",
+            "repos/development-vessel/src/lib/evaluator-tree.ts",
+            "repos/development-vessel/src/resolvers/check-supply-admission.ts"
           ],
           "require_falsifier_classes": [
             "class2"

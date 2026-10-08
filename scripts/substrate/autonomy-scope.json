@@ -55,7 +55,9 @@
       "repos/development-vessel/test/helpers/ungated-rows-source.ts",
       "repos/development-vessel/test/resolvers/compose-admission.test.ts",
       "repos/development-vessel/test/resolvers/compose-ownership-unit-mask.test.ts",
-      "repos/goal-host-vessel/test/satisfier-trace-flush-order.test.ts"
+      "repos/goal-host-vessel/test/satisfier-trace-flush-order.test.ts",
+      "repos/development-vessel/src/lib/evaluator-tree.ts",
+      "repos/development-vessel/src/resolvers/check-supply-admission.ts"
     ],
     "require_falsifier_classes": [
       "class2"
