@@ -524,9 +524,16 @@ emit_gap() {
 # WORKSPACE_ROOT (a suite once refreshed 16 fixture rows in the live gap store). The
 # suite runners, the failing-test generator and the clone dependency install all run
 # under this one construction so they cannot drift apart.
+# env -i also drops every runtime-root override, and a vessel then falls back to its compiled-in LIVE default:
+# development-vessel freezes RUNTIME_ROOT = MITOSIS_RUNTIME_DIR ?? /vessels at import (shape-vocabulary.ts), so a
+# test's own process.env assignment after another file imported it changes nothing, and a suite wrote into the live
+# /vessels tree. Only the process environment reaches that constant, so the runtime root (and the parked-landings
+# directory, default /workspace/parked-landings) point under the throwaway root, created first.
 scrubbed_env() { # throwaway-workspace-root cmd... -> runs cmd under env -i with a minimal environment
   local _se_root="$1"; shift
-  env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_se_root" "$@"
+  mkdir -p "$_se_root/runtime" "$_se_root/parked-landings" 2>/dev/null || true
+  env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_se_root" \
+    MITOSIS_RUNTIME_DIR="$_se_root/runtime" PARKED_LANDINGS_DIR="$_se_root/parked-landings" "$@"
 }
 
 # AN OVERWRITE OF CONTENT PULL-SYNC DID NOT WRITE MUST BE RECOVERABLE AND LOUD.

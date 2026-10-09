@@ -22,6 +22,9 @@
 #   (g) a vessel with no protected test files -> converges, and no alone run happens
 #   (h) a green-looking summary with a nonzero exit -> HELD (the exit code is part of "green")
 #   (i) a countable summary that ran zero tests (0 pass / 0 fail, rc 0) -> HELD (green needs >=1 pass)
+#   (j) the scrubbed environment those runs use sets MITOSIS_RUNTIME_DIR / PARKED_LANDINGS_DIR under its
+#       throwaway root, so a suite never falls back to the live /vessels tree
+#       (pull-sync-scrubbed-env-runtime-root.check.sh, run here as one case)
 #
 # usage: validation/scripts/pull-sync-testgate-protected-alone.test.sh [path/to/substrate-pull-sync.sh]
 # Needs bash, git, jq, awk, sed.
@@ -180,5 +183,11 @@ echo 'export const x = 2;' > "$d/src/x.ts"; g commit -am none
 tick
 converged && ok "(g) a vessel with no protected tests converges" || bad "(g) a vessel with no protected tests was held (log: $(tr '\n' '|' < "$LOG" | cut -c1-500))"
 [ ! -s "$T/alone-calls.txt" ] && ok "(g) no alone run when nothing is protected" || bad "(g) ran alone: $(tr '\n' ' ' < "$T/alone-calls.txt")"
+
+# ── (j) the scrubbed environment every alone run uses points the runtime root under its throwaway root ──
+# Its own check (controls: the minimal env is otherwise unchanged and env -i still drops a caller's variable).
+bash "$(dirname "$0")/pull-sync-scrubbed-env-runtime-root.check.sh" "$SCRIPT" > "$T/scrub" 2>&1 < /dev/null \
+  && ok "(j) the scrubbed-env runtime-root check passes ($(grep -c '^ok' "$T/scrub") cases)" \
+  || { bad "(j) the scrubbed-env runtime-root check: $(grep -c '^FAIL' "$T/scrub") failing"; grep '^FAIL' "$T/scrub" | sed 's/^/     /'; }
 
 echo; [ "$FAILS" = 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAILED"; exit 1; }
