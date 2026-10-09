@@ -598,8 +598,59 @@ const resolveHandler = async (pointer: any): Promise<any> => {
     return { error: 'ingress proxy failed: ' + String((e as Error)?.message ?? e) }
   }
 }
-await serveResolve(vl, resolveHandler)
-await serveResolveHttp(vl, resolveHandler)
+
+// ── INGRESS OBSERVABILITY (log-only) ────────────────────────────────────────────────
+// Every request that arrives as a libp2p FRAME — from a remote peer, on either inbound
+// protocol — writes exactly one `[fed-ingress]` line once the handler has finished. Until
+// this existed an inbound success logged nothing, so who resolves what over the overlay
+// could not be measured. Local callers of resolveHandler (/egress/resolve to self, POST
+// /v2/impulses/resolve) are not ingress and are not logged here.
+//
+// FED_INGRESS_SEED_ALLOWLIST is DATA for the `would_refuse` column, not enforcement:
+// nothing is refused. It answers "what would a default-deny with this seed list refuse?"
+// so that question can be judged from the log before anything is enforced. The four
+// registry shapes are the ones proxyToLocalOwner already checks (DISCOVERY_SHAPES).
+// Written as one space-separated list: these are names this file compares against, not
+// pointers it writes, and resolve-writers-send-credentials reads a quoted `*_write` name
+// as a writer.
+const FED_INGRESS_SEED_ALLOWLIST: ReadonlySet<string> = new Set((
+  'llm_completion executionReplicationPull activeDispatches goalWalkState composeOwnership ' +
+  'resolver_schema concept relatedConcepts conceptGraph concept_create_write ' +
+  'conceptSignatureUpsert_write conceptLink_write ' +
+  'vesselRegistry vesselCapability vesselEndpoint vesselHealth'
+).split(' '))
+// Key names (lowercased, non-alphanumerics stripped) that mark a credential-like field.
+// Exact names, not substrings: `max_tokens` is not a credential. Only the PRESENCE of
+// such a key is logged, never its value.
+const CREDENTIAL_KEYS = new Set([
+  'auth', 'authorization', 'apikey', 'xapikey', 'token', 'accesstoken', 'authtoken', 'bearer',
+  'idtoken', 'refreshtoken', 'sessiontoken', 'jwt', 'secret', 'clientsecret', 'password', 'credential', 'credentials',
+])
+function carriesCredential(v: any, depth = 0): boolean {
+  if (!v || typeof v !== 'object' || depth > 2) return false
+  for (const k of Object.keys(v)) {
+    if (CREDENTIAL_KEYS.has(k.toLowerCase().replace(/[^a-z0-9]/g, ''))) return true
+    if (carriesCredential(v[k], depth + 1)) return true
+  }
+  return false
+}
+// The shape and peer are remote-controlled text: keep one line one request.
+const logSafe = (x: unknown) => String(x ?? '').replace(/[^A-Za-z0-9_.:@\/-]/g, '?').slice(0, 96) || '?'
+// outcome=error when the handler threw or answered with a top-level `error` (resolveHandler
+// reports its failures as values, so a throw alone would call nearly everything ok).
+const ingressHandler = async (pointer: any, ctx?: { remotePeer?: string, transport?: string }): Promise<any> => {
+  let outcome = 'error'
+  try {
+    const res = await resolveHandler(pointer)
+    outcome = (res && typeof res === 'object' && 'error' in res) ? 'error' : 'ok'
+    return res
+  } finally {
+    const shape = String(pointer?.type ?? '')
+    console.log(`[fed-ingress] shape=${logSafe(shape)} peer=${logSafe(ctx?.remotePeer ?? 'unknown')} transport=${logSafe(ctx?.transport ?? 'unknown')} carries_credential=${carriesCredential(pointer) ? 'y' : 'n'} would_refuse=${FED_INGRESS_SEED_ALLOWLIST.has(shape) ? 'n' : 'y'} outcome=${outcome}`)
+  }
+}
+await serveResolve(vl, ingressHandler)
+await serveResolveHttp(vl, ingressHandler)
 
 // Dial a peer over the lpStream path (reliable for large bodies); fall back to the
 // legacy HTTP path if the peer hasn't migrated yet (protocol not supported). Keeps
@@ -1424,8 +1475,8 @@ async function adoptAnchor(anchor: string): Promise<void> {
   try {
     console.log(`[fed-transport] relay anchor acquired (${anchor}) — rebuilding the libp2p node to adopt it (listen addrs are construction-time)`)
     const next = await buildNode(anchor)
-    await serveResolve(next, resolveHandler)
-    await serveResolveHttp(next, resolveHandler)
+    await serveResolve(next, ingressHandler)
+    await serveResolveHttp(next, ingressHandler)
     RELAY = anchor        // must land before the swap: relayPeer()/redialRelay() read it
     vl = next
     await previous.stop().catch(() => {})
