@@ -139,6 +139,11 @@ at=$(grep -nxF "$want" "$T/log" | head -1 | cut -d: -f1); rej=$(grep -n "^iptabl
 [ -n "$at" ] && [ -n "$rej" ] && [ "$at" -lt "$rej" ] && ok "v4 admits NEW 18333 only from the list, ahead of the REJECTs" || bad "v4 18333 source rule missing or after the REJECTs"
 grep -qxF "iptables -A $CH -p tcp -m conntrack --ctorigdstport 18333 -j RETURN" "$T/log" && bad "v4 still opens 18333 to every source with the list set" || ok "v4 no longer opens 18333 to every source"
 grep -qE '^ip6tables .*18333.*-j RETURN' "$T/log" && bad "v6 still returns 18333 with the list set" || ok "v6 never returns 18333 with the list set (as 18080)"
+# pin: the restricted open list is the base ALLOW list minus 18333, nothing hard-coded beside it
+base_open="$(sed -n 's/^CH=[^;]*; ALLOW="\([^"]*\)".*/\1/p' "$T/body" | tr ' ' '\n' | grep -vx 18333 | sort | tr '\n' ' ')"
+got_open="$(sed -n "s/^iptables -A $CH -p tcp -m conntrack --ctorigdstport \([0-9]*\) -j RETURN$/\1/p" "$T/log" | sort | tr '\n' ' ')"
+[ -n "$base_open" ] && [ "$got_open" = "$base_open" ] && ok "pin: the restricted open list is the base list minus 18333 ($got_open)" \
+  || bad "pin: restricted open list '$got_open' != base list minus 18333 '$base_open'"
 grep -qxF "ip6tables -A $CH-IN -i eth0 -p tcp --dport 18333 -j REJECT --reject-with tcp-reset" "$T/log" \
   && grep -qxF "ip6tables -A $CH-IN -i eth1 -p tcp --dport 18333 -j REJECT --reject-with tcp-reset" "$T/log" \
   && ok "v6 INPUT rejects 18333 on eth0/eth1 (as 18080, via DENY6)" || bad "v6 INPUT does not reject 18333"

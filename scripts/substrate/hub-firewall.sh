@@ -51,7 +51,8 @@ valid_v4_list "$ALLOW_18080_SRC" || exit 2
 ALLOW_18333_SRC="${ALLOW_18333_SRC:-}"   # an allowlist file written before this variable existed has no line for it
 valid_v4_list "$ALLOW_18333_SRC" || exit 2
 # A set 18333 list mirrors 18080: out of the open list (v4 and both v6 chains), into DENY6. Unset leaves 18333 open.
-[ -n "$ALLOW_18333_SRC" ] && { ALLOW="18100 18101"; DENY6="$DENY6 18333"; }
+# The restricted list is derived from ALLOW above, word by word, so the open-port list has one source of truth.
+[ -n "$ALLOW_18333_SRC" ] && { a=" $ALLOW "; a="${a// 18333 / }"; a="${a# }"; ALLOW="${a% }"; DENY6="$DENY6 18333"; }
 v4() {
   iptables -N $CH 2>/dev/null; iptables -F $CH
   iptables -A $CH -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN
@@ -111,7 +112,7 @@ valid_v4_list "$RELAY" || exit 2
 SSH=(${HUB_FW_SSH:-ssh} -o BatchMode=yes); [ -n "${HUB_SSH_KEY:-}" ] && SSH+=(-o IdentitiesOnly=yes -i "$HUB_SSH_KEY")
 hub() { "${SSH[@]}" "$HUB" "$@"; }
 UNIT='[Unit]
-Description=Substrate hub firewall: default-deny for docker-published ports, activity-api 18080 source-restricted, relay 18333 optionally
+Description=Substrate hub firewall: default-deny for docker-published ports, activity-api 18080 source-restricted, relay 18333 source-restricted when ALLOW_18333_SRC is set
 After=docker.service
 PartOf=docker.service
 
