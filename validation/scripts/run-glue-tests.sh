@@ -67,6 +67,7 @@ SLOW=(pull-sync-hold-channel.test.sh)
 # Submodule worktrees a test reads (space-separated, relative to --root). Absent -> SKIP.
 declare -A NEEDS=(
   [argument-chain-check.test.ts]="repos/ias-executor-ts repos/activity-api"
+  [fed-ingress-log.test.ts]="repos/libp2p-federation-transport"
   [verdict-token-copies.test.ts]="repos/activity-api repos/development-vessel"
   [write-containment-copies.test.ts]="repos/local-tools-vessel repos/development-vessel"
 )
