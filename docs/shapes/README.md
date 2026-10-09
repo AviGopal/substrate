@@ -192,6 +192,33 @@ Resolver: `development-vessel` for substrate-resident memory and gap state —
 workspace root written atomically, not a table; the shape is the interface and
 the storage is the vessel's business.
 
+### `substrateGap_write` contract
+
+A gap write is a partial update of one row by id: keys the write omits are
+carried forward from the stored row, so a writer sends only what it changes.
+The resolver refuses a write that breaks any of these rules and names the rule
+in its `structuredError`. Expect the following:
+
+- **Writes are authenticated.** The resolver accepts a write only with a caller
+  credential that identity-vessel validates.
+- **An open gap describes itself.** Any write that leaves a gap `open` must carry a
+  non-empty `summary`, even when it changes only metadata. The drafter acts on the
+  summary. A metadata-only update to an open gap therefore resends the stored summary
+  unchanged.
+- **A held gap is the operator's.** On a row whose `operator_hold` is true, two
+  changes need the pointer-level operator marker (`operator: "operator:<id>"`
+  beside `gap`): a status change, and releasing the hold. A `falsifier_exercise`
+  claim in the payload does not bypass this. Without the marker, the row keeps its
+  stored `summary`, `category` and `edit_site`.
+- **A close carries its evidence.** A transition into `closed` or `rejected` needs
+  `closed_reason` (or `rejected_reason`) plus evidence. A write that keeps the
+  status is not gated by this rule.
+
+Where each rule lives in development-vessel: `existingRowGates` (hold marker,
+close evidence) and the open-gap summary check in
+`src/resolvers/substrate-gap.ts`. A doc claim here that disagrees with those is a
+docs-align gap.
+
 ## Local tool shapes
 
 Resolver: `local-tools-vessel`. Result shapes: `shellResult`, `fileContent`,
