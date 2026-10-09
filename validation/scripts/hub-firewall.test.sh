@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # hub-firewall.test.sh: scripts/substrate/hub-firewall.sh, with ssh stubbed (HUB_FW_SSH), so nothing reaches a hub.
 # The 18080 allowlist accepts only strict IPv4 and refuses before any ssh. The rule body that apply sends is the
-# same body install-boot installs. 18080 is never in the open-port list. Dry runs write nothing.
+# same body install-boot installs. 18080 is never in the open-port list. Dry runs write nothing. The relay 18333
+# allowlist (ALLOW_18333_SRC) is judged by hub-firewall-18333.check.sh, run here as one case.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 F="$HERE/../../scripts/substrate/hub-firewall.sh"
@@ -41,6 +42,10 @@ grep -qx 'After=docker.service' "$unit_in" && grep -qx 'PartOf=docker.service' "
 grep -qE '^CH=SUBSTRATE-HUB-FW; ALLOW="[^"]*\b18080\b' <(bash "$F" --print-body) && bad "18080 in the open-port list" || ok "18080 is not in the open-port list"
 grep -qE 'DENY6="[^"]*\b18080\b' <(bash "$F" --print-body) && ok "IPv6 18080 denied" || bad "IPv6 18080 not denied"
 bash "$F" --print-body | bash -n && ok "the rule body parses" || bad "rule body syntax"
+
+# 3b. the relay 18333 allowlist: its own stubbed check (controls: unset/empty byte-identical, 18080 unchanged)
+bash "$HERE/hub-firewall-18333.check.sh" > "$T/c18333" 2>&1 < /dev/null && ok "the 18333 allowlist check passes ($(grep -c '^ok' "$T/c18333") cases)" \
+  || { bad "the 18333 allowlist check: $(grep -c '^FAIL' "$T/c18333") failing"; grep '^FAIL' "$T/c18333" | sed 's/^/     /'; }
 
 # 4. dry runs write nothing
 ALLOW_18080_SRC=98.234.161.172 run root@hub install-boot; [ "$(calls)" = 0 ] && ok "install-boot without --go: no ssh" || bad "install-boot dry run touched the hub"

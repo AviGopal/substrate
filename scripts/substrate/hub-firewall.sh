@@ -2,7 +2,13 @@
 # hub-firewall.sh <user@hub> <apply|undo|status|install-boot|remove-boot> [--go]: operator tool, run by the user.
 # A default-deny backstop for a hub's docker-published ports, plus interim containment for activity-api.
 #
-#   allowed from outside: 18100 discovery, 18101 identity, 18333 relay. sshd 22 is untouched.
+#   allowed from outside: 18100 discovery, 18101 identity, 18333 relay (see below). sshd 22 is untouched.
+#   18333 federation relay: open to every source while ALLOW_18333_SRC is unset or empty; when it is set
+#     (comma-separated IPv4, the attached spokes' egress addresses, the same validator as ALLOW_18080_SRC), NEW
+#     connections are admitted only from the list and fall through to the default deny otherwise; IPv6 is then
+#     denied exactly as for 18080 (dropped from the open list, added to DENY6). The asymmetry with 18080 is
+#     deliberate: an empty 18080 list closes 18080, an empty 18333 list leaves 18333 OPEN, because closing the
+#     relay without a list would cut every spoke's federation. Restricting it is an explicit act.
 #   18080 activity-api: SOURCE-RESTRICTED to ALLOW_18080_SRC (comma-separated IPv4, the attached spokes' egress
 #     addresses; empty = closed to every outside source; IPv6 always denied). activity-api's jwtAuth admitted any
 #     X-Internal-Api-Key value on its trace, impulse and event writes, so an open 18080 let anyone write the
@@ -24,8 +30,8 @@
 # in depth, not the only guard. Proving a change from an allowlisted host needs an A/B: apply an empty list
 # (18080 must refuse while 18100 answers), then the real list.
 #
-# Inputs: ALLOW_18080_SRC; HUB_SSH_KEY (optional identity file). install-boot and remove-boot change the hub
-# only with --go.
+# Inputs: ALLOW_18080_SRC; ALLOW_18333_SRC (optional); HUB_SSH_KEY (optional identity file). install-boot and
+# remove-boot change the hub only with --go.
 set -euo pipefail
 valid_v4_list() { # comma-separated dotted quads, octets 0-255, no empty item; never a hostname (iptables would resolve it)
   local a o='(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])'   # no leading zeros (octal ambiguity)
@@ -42,11 +48,16 @@ valid_v4_list() { # comma-separated dotted quads, octets 0-255, no empty item; n
   local IFS=,; for a in $1; do [[ $a =~ ^($o\.){3}$o$ && $a != 0.* ]] || { echo "bad IPv4: $a"; return 1; }; done
 }
 valid_v4_list "$ALLOW_18080_SRC" || exit 2
+ALLOW_18333_SRC="${ALLOW_18333_SRC:-}"   # an allowlist file written before this variable existed has no line for it
+valid_v4_list "$ALLOW_18333_SRC" || exit 2
+# A set 18333 list mirrors 18080: out of the open list (v4 and both v6 chains), into DENY6. Unset leaves 18333 open.
+[ -n "$ALLOW_18333_SRC" ] && { ALLOW="18100 18101"; DENY6="$DENY6 18333"; }
 v4() {
   iptables -N $CH 2>/dev/null; iptables -F $CH
   iptables -A $CH -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN
   for p in $ALLOW; do iptables -A $CH -p tcp -m conntrack --ctorigdstport $p -j RETURN; done
   [ -n "$ALLOW_18080_SRC" ] && iptables -A $CH -s "$ALLOW_18080_SRC" -p tcp -m conntrack --ctorigdstport 18080 -j RETURN
+  [ -n "$ALLOW_18333_SRC" ] && iptables -A $CH -s "$ALLOW_18333_SRC" -p tcp -m conntrack --ctorigdstport 18333 -j RETURN
   # REJECT with a TCP reset, not DROP: a caller still holding an advertised endpoint fails at once instead of
   # hanging for its whole timeout (measured: a dropped connect held a spoke for its full 30 s bound).
   for i in eth0 eth1; do iptables -A $CH -i $i -p tcp -m conntrack --ctstate NEW -j REJECT --reject-with tcp-reset
@@ -77,12 +88,13 @@ undo() {
   ip6tables -D INPUT -j ${CH}-IN 2>/dev/null; ip6tables -F ${CH}-IN 2>/dev/null; ip6tables -X ${CH}-IN 2>/dev/null
 }
 case "$MODE" in
-  apply) v4; v6; logger -t hub-firewall "applied: allow $ALLOW; 18080 only from ${ALLOW_18080_SRC:-nobody}; deny other new inbound to docker-published ports"; echo "applied $(date -u +%T)Z" ;;
+  apply) v4; v6; logger -t hub-firewall "applied: allow $ALLOW; 18080 only from ${ALLOW_18080_SRC:-nobody}; 18333 $([ -n "$ALLOW_18333_SRC" ] && echo "only from $ALLOW_18333_SRC" || echo "open to all"); deny other new inbound to docker-published ports"; echo "applied $(date -u +%T)Z" ;;
   undo)  undo; logger -t hub-firewall "removed"; echo "removed $(date -u +%T)Z" ;;
 esac
 echo "== status"
 echo "v4 DOCKER-USER: $(iptables -S DOCKER-USER | tr '\n' ' ')"
 echo "v4 $CH: $(iptables -S $CH 2>/dev/null | grep -c '^-A') rules; 18080 rule: $(iptables -S $CH 2>/dev/null | grep 18080 || echo 'none (closed to all outside sources)')"
+echo "v4 $CH 18333 rule: $(iptables -S $CH 2>/dev/null | grep 18333 || echo 'none (chain absent)') (a rule without -s admits every source)"
 echo "v6 DOCKER-USER: $(ip6tables -S DOCKER-USER 2>/dev/null | tr '\n' ' ' || echo absent)"
 echo "v6 ${CH}-IN: $(ip6tables -S ${CH}-IN 2>/dev/null | grep -c '^-A') rules"
 echo "drops so far: v4 $(iptables -L $CH -v -n -x 2>/dev/null | awk '/DROP|REJECT/ {s+=$1} END {print s+0}') | v6 docker $(ip6tables -L $CH -v -n -x 2>/dev/null | awk '/DROP|REJECT/ {s+=$1} END {print s+0}') | v6 input $(ip6tables -L ${CH}-IN -v -n -x 2>/dev/null | awk '/DROP|REJECT/ {s+=$1} END {print s+0}') packets"
@@ -93,12 +105,13 @@ BODY
 }
 HUB="${1:-}"; MODE="${2:-}"; GO="${3:-}"
 case "$HUB" in --print-body) rule_body; exit 0 ;; ''|-*) echo "usage: hub-firewall.sh <user@hub> <apply|undo|status|install-boot|remove-boot> [--go]"; exit 2 ;; esac
-ALLOW="${ALLOW_18080_SRC:-}"
+ALLOW="${ALLOW_18080_SRC:-}"; RELAY="${ALLOW_18333_SRC:-}"
 valid_v4_list "$ALLOW" || exit 2
+valid_v4_list "$RELAY" || exit 2
 SSH=(${HUB_FW_SSH:-ssh} -o BatchMode=yes); [ -n "${HUB_SSH_KEY:-}" ] && SSH+=(-o IdentitiesOnly=yes -i "$HUB_SSH_KEY")
 hub() { "${SSH[@]}" "$HUB" "$@"; }
 UNIT='[Unit]
-Description=Substrate hub firewall: default-deny for docker-published ports, activity-api 18080 source-restricted
+Description=Substrate hub firewall: default-deny for docker-published ports, activity-api 18080 source-restricted, relay 18333 optionally
 After=docker.service
 PartOf=docker.service
 
@@ -114,19 +127,21 @@ WantedBy=multi-user.target docker.service'
 case "$MODE" in
   apply|undo|status)
     [ "$MODE" = apply ] && [ -z "$ALLOW" ] && echo "note: ALLOW_18080_SRC is empty, so 18080 is closed to every outside source"
-    rule_body | hub "MODE=$MODE ALLOW_18080_SRC='$ALLOW' bash -s" ;;
+    [ "$MODE" = apply ] && [ -n "$RELAY" ] && echo "note: ALLOW_18333_SRC is set, so the relay 18333 admits only $RELAY (a spoke not listed loses federation)"
+    rule_body | hub "MODE=$MODE ALLOW_18080_SRC='$ALLOW' ALLOW_18333_SRC='$RELAY' bash -s" ;;
   install-boot)
-    echo "install-boot: rule body -> /usr/local/sbin/substrate-hub-fw; ALLOW_18080_SRC=${ALLOW:-<empty: 18080 closed>}"
+    echo "install-boot: rule body -> /usr/local/sbin/substrate-hub-fw; ALLOW_18080_SRC=${ALLOW:-<empty: 18080 closed>}; ALLOW_18333_SRC=${RELAY:-<empty: 18333 open>}"
     [ "$GO" = --go ] || { echo "DRY RUN (pass --go)"; exit 0; }
     { printf '#!/bin/bash\n# Installed by scripts/substrate/hub-firewall.sh install-boot. Remove with remove-boot.\n'; rule_body; } \
       | hub 'install -m 0700 /dev/stdin /usr/local/sbin/substrate-hub-fw'
-    printf 'ALLOW_18080_SRC=%s\n' "$ALLOW" | hub 'install -m 0644 /dev/stdin /etc/default/substrate-hub-fw'
+    printf 'ALLOW_18080_SRC=%s\nALLOW_18333_SRC=%s\n' "$ALLOW" "$RELAY" | hub 'install -m 0644 /dev/stdin /etc/default/substrate-hub-fw'
     printf '%s\n' "$UNIT" | hub 'install -m 0644 /dev/stdin /etc/systemd/system/substrate-hub-fw.service'
     hub 'systemctl daemon-reload && systemctl enable substrate-hub-fw >/dev/null 2>&1 && systemctl restart substrate-hub-fw \
       && echo "unit: enabled=$(systemctl is-enabled substrate-hub-fw) active=$(systemctl is-active substrate-hub-fw)" \
       && echo "18080 rule: $(iptables -S SUBSTRATE-HUB-FW | grep 18080 || echo none)" \
+      && echo "18333 rule: $(iptables -S SUBSTRATE-HUB-FW | grep 18333 || echo none)" \
       && echo "jumps in DOCKER-USER: $(iptables -S DOCKER-USER | grep -c SUBSTRATE-HUB-FW)"'
-    echo "The boot path itself is proven only by the next hub reboot: then run status (want enabled, the 18080 rule, 1 jump)." ;;
+    echo "The boot path itself is proven only by the next hub reboot: then run status (want enabled, the 18080 and 18333 rules, 1 jump)." ;;
   remove-boot)
     [ "$GO" = --go ] || { echo "DRY RUN: would disable and delete the boot unit, its allowlist file and script (pass --go)"; exit 0; }
     hub 'systemctl disable --now substrate-hub-fw >/dev/null 2>&1; rm -f /etc/systemd/system/substrate-hub-fw.service /etc/default/substrate-hub-fw /usr/local/sbin/substrate-hub-fw; systemctl daemon-reload; echo "boot unit removed; current rules stay until reboot or undo"' ;;
