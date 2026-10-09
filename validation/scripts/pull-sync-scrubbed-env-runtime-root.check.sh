@@ -15,7 +15,8 @@
 # Must-fail: MITOSIS_RUNTIME_DIR and PARKED_LANDINGS_DIR are set, lie under the throwaway root (never /vessels or
 # /workspace), win over a live value exported by the caller, and the runtime directory exists before the command runs.
 # Controls: PATH, HOME, NODE_ENV, TZ and WORKSPACE_ROOT are what they were; the key set is exactly those plus the two
-# overrides and the service-isolation values, so an arbitrary variable exported by the caller never reaches the command
+# overrides, the other runtime directories (pull-sync-scrubbed-env-runtime-dirs.test.sh checks where they point) and
+# the service-isolation values, so an arbitrary variable exported by the caller never reaches the command
 # (env -i semantics stay).
 set -uo pipefail
 SCRIPT="${1:-$(cd "$(dirname "$0")/../.." && pwd)/scripts/substrate/substrate-pull-sync.sh}"
@@ -61,7 +62,7 @@ grep -q '^LEAKY_CALLER_VAR=' "$T/plain.out" && bad "a variable the caller export
 # pull-sync-scrubbed-env-isolates-services.test.sh checks which): any other value is a leak.
 iso='^(http://127\.0\.0\.1:9|redis://127\.0\.0\.1:9|pull-sync-test-placeholder|pull-sync-test)$'
 keys="$(sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' "$T/plain.out" | while read -r k; do val "$k" | grep -qE "$iso" || echo "$k"; done | sort | tr '\n' ' ' | sed 's/ $//')"
-want="HOME MITOSIS_RUNTIME_DIR NODE_ENV PARKED_LANDINGS_DIR PATH TZ WORKSPACE_ROOT"
+want="HOME IAS_TRACE_SPOOL_DIR LIGHT_DISPATCH_WORKDIR MITOSIS_RUNTIME_DIR NODE_ENV PARKED_LANDINGS_DIR PATH SUBSTRATE_STATE_DIR TZ WORKSPACE_ROOT"
 [ "$keys" = "$want" ] && ok "the environment is exactly: $want, plus service isolation" || bad "the environment is exactly: $want, plus service isolation (got: $keys)"
 
 echo "---"; [ "$FAILS" -eq 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS failing"; exit 1; }

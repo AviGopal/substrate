@@ -528,7 +528,12 @@ emit_gap() {
 # development-vessel freezes RUNTIME_ROOT = MITOSIS_RUNTIME_DIR ?? /vessels at import (shape-vocabulary.ts), so a
 # test's own process.env assignment after another file imported it changes nothing, and a suite wrote into the live
 # /vessels tree. Only the process environment reaches that constant, so the runtime root (and the parked-landings
-# directory, default /workspace/parked-landings) point under the throwaway root, created first.
+# directory, default /workspace/parked-landings) point under the throwaway root, created first. The same holds for
+# the other runtime directories vessel code defaults under /workspace: ias-executor-ts's trace spool
+# (IAS_TRACE_SPOOL_DIR, /workspace/trace-spool; importing goal-host's index creates it), goal-host's state
+# directory (SUBSTRATE_STATE_DIR, /workspace/state) and light-dispatch-vessel's work root (LIGHT_DISPATCH_WORKDIR,
+# /workspace/light-dispatch). Vessel code creates those itself, so they are pointed, not created.
+# validation/scripts/pull-sync-scrubbed-env-runtime-dirs.test.sh.
 #
 # env -i also drops every service address, and vessel code then falls back to `env.X || "http://127.0.0.1:8xxx"`:
 # the LIVE fleet on this node, SurrealDB on its default local address included. A suite that reached them wrote
@@ -573,6 +578,8 @@ scrubbed_env() { # throwaway-workspace-root cmd... -> runs cmd under env -i with
   mkdir -p "$_se_root/runtime" "$_se_root/parked-landings" 2>/dev/null || true
   env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_se_root" \
     MITOSIS_RUNTIME_DIR="$_se_root/runtime" PARKED_LANDINGS_DIR="$_se_root/parked-landings" \
+    IAS_TRACE_SPOOL_DIR="$_se_root/trace-spool" SUBSTRATE_STATE_DIR="$_se_root/state" \
+    LIGHT_DISPATCH_WORKDIR="$_se_root/light-dispatch" \
     "${_se_services[@]}" "$@"
 }
 
