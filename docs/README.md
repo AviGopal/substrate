@@ -121,7 +121,7 @@ the whole mechanism rather than merely skipping a check.
 - [RBAC Guide](RBAC_GUIDE.md) — roles, scopes, and how PERMISSIONS enforce them.
 - [RBAC Troubleshooting](RBAC_TROUBLESHOOTING.md) — diagnosing a denial without reaching for root.
 - [`auth_token_source` Contract Field](specs/auth-token-source-field.md) — which credential a caller must present to a given vessel.
-- [Identity Vessel curl examples](IDENTITY_VESSEL_CURL_EXAMPLES.md) — the request shapes for issuing and validating credentials by hand.
+- Credentials are issued and validated by the in-fleet identity-vessel, reached at its fleet address (see [README § Installation](../README.md#installation) for the port table); there is no out-of-fleet identity host.
 
 ## 7. Interface — the agent cockpit and the human surfaces
 
