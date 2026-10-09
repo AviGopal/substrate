@@ -284,11 +284,20 @@ like any other.
 
 Credit and penalty are applied after the loop (`creditReachedTemplate` /
 `penaliseHollowTemplate`), and it is the reach verdict — not the loop's exit
-condition — that drives which of the two applies. A negative verdict penalises the
-last pick; a positive one credits it only when the reach is substance-honest
-(a deterministic landed result, or an in-chain producer→consumer edge or command
-evidence that is not an unapplied fs-write effect), and the credit is otherwise
-withheld rather than granted on the verdict alone. The verdict itself
+condition — that drives which of the two applies. A positive verdict credits only
+when the reach is substance-honest (a deterministic landed result, or an in-chain
+producer→consumer edge or command evidence that is not an unapplied fs-write
+effect); otherwise the credit is withheld rather than granted on the verdict alone.
+
+A negative verdict is symmetric. Where credit could never have been earned (no
+oracle for the goal's class, or a non-deterministic step with no in-chain
+producer→consumer edge), the penalty is withheld as well, because an arm that
+can only lose learns nothing true. A withheld verdict is **final for its
+execution**: no later delivery, retry or replay of the same execution may grade
+it. If one does, the withhold has been lost in transit, and that is a defect to
+detect, not a race to accept. An unwithheld negative verdict penalises the
+execution that produced the judged deliverable. A penalty landing on whichever
+step happened to run last is a mis-attribution, not the rule. The verdict itself
 may have been reached incrementally: an early positive verdict is retained and
 reused after the loop rather than re-judging the end-state pool; otherwise the
 verdict is computed after the loop over the shapes actually produced and the
