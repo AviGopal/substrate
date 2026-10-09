@@ -104,6 +104,15 @@ if a later change sets only one name, they follow the new-name-wins rule.
         shipped module is fixed by importing the shipped module.
       - A test that needs a legacy external host to pass is not hermetic. It is stubbed with a fetch
         recorder, or deleted if it only exercised a removed fallback.
+- [ ] 2.3d Legacy first-party organisations and domains. Code still names the legacy GitHub organisations,
+      and one legacy install domain, as live targets. They are first-party, so this is not a security item, but
+      a target the fleet no longer uses is a misdirection waiting to fire.
+      - A seeded template that opens pull requests takes its owner and repository from the fleet's configured
+        repository owner, never a literal legacy organisation. The by-effect check: the template's rendered
+        pull-request target names the configured owner.
+      - CI workflows that push to a legacy organisation's repositories are retired, not left dormant: a
+        workflow that only fires on a branch the fleet does not use is untested code with a credential.
+      - Install hints and docs that point at the legacy install domain are removed with the rest of the names.
 - [ ] 2.4 Census re-run: zero old-name READS outside the compatibility shim and the migration table.
 
 ## 3. Stop emitting old names inside the substrate
