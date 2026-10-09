@@ -504,7 +504,8 @@ This repo pins each vessel via a submodule gitlink (`repos/<vessel>` → a commi
 - **analysis-vessel** (`repos/analysis-vessel`) — *retired from the running fleet.* The code-analysis resolver. Its inventory entry is marked `"retired": true`, so `apply-inventory` masks its unit under every profile and no deployment publishes a port for it; the source stays in the tree.
 - **workbench** (`repos/workbench`) — *source-only, not part of the running fleet.* An observability and human-in-the-loop authoring surface over `activity-api`. It ships no systemd unit, is absent from `scripts/substrate/vessels.inventory.json`, and no deployment publishes a port for it — do not expect to find it on a running substrate.
 - **stateful-ui-vessel** (`repos/stateful-ui-vessel`) — the substrate's own UI: a pool of panels and interactor impulses served as a three-region view (pool / execution / decisions).
-- **obsidian-vessel** (`repos/obsidian-vessel`) — the human interface; each connected vault is a surface to a different human resolver, reached through the vessel's sidecar conduit.
+- **human-surface-vessel** (`repos/human-surface-vessel`) — the human interface the substrate serves: the workbench at `<prefix>310`, where a person sends goals, answers the substrate's questions, and grades what it produced. A human is a resolver; their answers and verdicts return as shaped impulses.
+- **obsidian-vessel** (`repos/obsidian-vessel`) — an optional, additional human surface: each connected vault is a window for a different human resolver, reached through the vessel's sidecar conduit. A substrate runs without it.
 
 ## Learning loop
 
