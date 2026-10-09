@@ -21,7 +21,7 @@ The substrate consistently works on tasks that improve its ability to map **shap
 evidence**: every natural-language goal gets a shape-lattice entry point, walks toward it,
 passes the reach gate, records evidence keyed by state signature, and the substrate's own
 authored commits measurably improve this loop — including on the implicit human channel
-(obsidian-vessel), where the human's observed interaction is the verification signal and
+(human-surface-vessel, and any connected Obsidian vault), where the human's observed interaction is the verification signal and
 unmet interaction-expectations are real failures rather than noise to be dropped.
 
 ## Claim 1 — Target-shape seeding rate

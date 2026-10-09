@@ -231,7 +231,7 @@ same learning sinks.
   `goal_execution_paths` keyed by `goal_hash` (path = attribution, success = reached,
   per-goal α/β); `recommendReachingPath` reuses the reaching path for a repeated goal.
   This is the unified goal-learning mechanism — goals from the MCP surface
-  (`mcp__metabob__run_goal`) and from the human Obsidian surface both dispatch through
+  (`mcp__metabob__run_goal`) and from the human surface (human-surface-vessel, or an optional Obsidian vault) both dispatch through
   the same goal-host `/run-goal`+`/resolve`, both gated, both recorded. Canonical:
   [`GOAL_EXECUTION_PATHS_SCHEMA.md`](GOAL_EXECUTION_PATHS_SCHEMA.md).
 

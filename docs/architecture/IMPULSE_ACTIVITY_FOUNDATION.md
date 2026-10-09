@@ -1043,7 +1043,7 @@ The impulse-activity loop is not a recipe executor. It is a **topology discovery
 
 Each iteration reduces uncertainty about the composition graph in the vicinity of the goal. Convergence — reliably reaching goal-satisfying states — is evidence that enough topology has been learned, not that the graph is fully known.
 
-> **Schema and mechanism detail:** [`GOAL_EXECUTION_PATHS_SCHEMA.md`](GOAL_EXECUTION_PATHS_SCHEMA.md). The same gate fires whether a goal is dispatched via `mcp__metabob__run_goal` (MCP `/resolve` path) or the human obsidian-vessel surface — both route through goal-host `/run-goal`, both are reach-gated and recorded.
+> **Schema and mechanism detail:** [`GOAL_EXECUTION_PATHS_SCHEMA.md`](GOAL_EXECUTION_PATHS_SCHEMA.md). The same gate fires whether a goal is dispatched via `mcp__metabob__run_goal` (MCP `/resolve` path) or a human surface (human-surface-vessel, or an optional Obsidian vault) — both route through goal-host `/run-goal`, both are reach-gated and recorded.
 
 ### Reuse Before Mint
 
