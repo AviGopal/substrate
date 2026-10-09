@@ -208,11 +208,12 @@ From the surface in `repos/concept-db/src/routes/concepts.ts` and `src/tools/han
 
 ### Authorization
 
-Mirror activity-api:
+A write is never anonymous:
 
-- Every write case gates on the same check the REST handler applies: `if (config.auth.requireAuth && !jwtAuth) return 401;`. Same condition, same gate, applied before any payload validation.
+- **Writes require an authenticated caller, whatever `REQUIRE_AUTH` says.** The resolve route checks the caller before any resolver runs. An unauthenticated caller may resolve only a read allowlist (`UNAUTHENTICATED_READ_SHAPES` in `repos/concept-db/src/routes/impulses.ts`): shapes that perform no state-changing statement, not even a passive usage counter. A read whose form records usage (for example `concept` with a `concept_id`) is outside the allowlist. Every `*_write` shape and every unknown shape needs credentials.
+- **A refusal is visible.** It returns `401 AUTH_REQUIRED`, naming the shape and the allowlist, and logs exactly one `[auth-refused]` line, so refusals can be counted rather than inferred.
+- **Credentials are validated inside the fleet and fail closed.** An API key is validated by identity-vessel. There is no fallback to a host outside the fleet. A key the validator rejects, or cannot be asked about (error, timeout, unreachable), grants no credentials: the caller is unauthenticated, so the write guard above refuses it.
 - `org_id` flows through the same `getJwtAuthFromContext(c)` path the read resolvers use. Multi-tenant isolation is preserved because the resolver functions take `orgId` and use it in their queries.
-- Per-shape stronger policy is not needed for the non-destructive shapes. When `concept_update_write` and `conceptUpkeepTrigger_write` land, those add a `requireAuthenticated`-style early reject the same way activity-api's destructive resolvers do.
 
 The `auth_scheme` discovery field stays a single value advertised at the vessel level; finer-grained per-shape policy lives inside the dispatcher.
 
