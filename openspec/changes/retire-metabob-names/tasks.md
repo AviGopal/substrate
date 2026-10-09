@@ -82,6 +82,11 @@ if a later change sets only one name, they follow the new-name-wins rule.
       script-runner.ts's output redaction (by the key's value) moves in the same step, or it goes empty.
 - [ ] 2.3b Default-fallback reads (`??`, `||`, `:-` on these names) listed by the census and each moved
       explicitly; a fallback that "works" counts as a miss.
+      By effect, seeded concept writes are still credentialed after the rename. Activities that call
+      substrate-local endpoints through `http_fetch` get their key attached by that resolver, which reads the
+      key by name. If the old name goes before that reader moves, every such write loses its credential at
+      once, and concept-db refuses unauthenticated writes. The check: concept write counts per hour are
+      unchanged across the rename, and concept-db logs no unauthenticated-write refusals from fleet callers.
 - [ ] 2.3c Legacy `*.metabob.com` host defaults. A default URL that names a host outside the fleet is
       the same class as an old-name read: it silently takes effect when a variable is unset.
       - Auth fallbacks that send or trust credentials are security items, fixed separately and first.
