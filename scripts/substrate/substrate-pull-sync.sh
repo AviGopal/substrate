@@ -529,11 +529,51 @@ emit_gap() {
 # test's own process.env assignment after another file imported it changes nothing, and a suite wrote into the live
 # /vessels tree. Only the process environment reaches that constant, so the runtime root (and the parked-landings
 # directory, default /workspace/parked-landings) point under the throwaway root, created first.
+#
+# env -i also drops every service address, and vessel code then falls back to `env.X || "http://127.0.0.1:8xxx"`:
+# the LIVE fleet on this node, SurrealDB on its default local address included. A suite that reached them wrote
+# live rows and graded against live state. So every service URL a vessel reads with a local default points at
+# 127.0.0.1:9 (discard: nothing listens, a connect is refused at once), and the database credentials are a
+# non-secret placeholder in a namespace no live store uses. The list lives INSIDE the function because the glue
+# tests extract the function alone. A new `env.X || <local URL>` in vessel code belongs here;
+# validation/scripts/pull-sync-scrubbed-env-isolates-services.test.sh proves each listed address is refused.
 scrubbed_env() { # throwaway-workspace-root cmd... -> runs cmd under env -i with a minimal environment
   local _se_root="$1"; shift
+  local _se_nowhere="http://127.0.0.1:9" _se_cred="pull-sync-test-placeholder"
+  local -a _se_services=(
+    # database: address, credentials, namespace
+    SURREALDB_URL="$_se_nowhere"
+    SURREALDB_USERNAME="$_se_cred" SURREALDB_USER="$_se_cred" SURREAL_USER="$_se_cred"
+    SURREALDB_PASSWORD="$_se_cred" SURREALDB_PASS="$_se_cred" SURREAL_PASS="$_se_cred"
+    SURREALDB_NAMESPACE=pull-sync-test SURREALDB_NS=pull-sync-test
+    SURREALDB_DATABASE=pull-sync-test SURREALDB_DB=pull-sync-test
+    REDIS_URL="redis://127.0.0.1:9"
+    # fleet HTTP endpoints
+    ACTIVITY_API_ENDPOINT="$_se_nowhere" ACTIVITY_API_URL="$_se_nowhere" METABOB_ENDPOINT="$_se_nowhere"
+    TUNING_PARAM_ENDPOINT="$_se_nowhere" TEST_API_URL="$_se_nowhere" SUBSTRATE_API_URL="$_se_nowhere"
+    DISCOVERY_VESSEL_ENDPOINT="$_se_nowhere" DISCOVERY_ENDPOINT="$_se_nowhere"
+    PRODUCER_DISCOVERY_ENDPOINT="$_se_nowhere" PEER_DISCOVERY_ENDPOINT="$_se_nowhere"
+    IDENTITY_VESSEL_URL="$_se_nowhere"
+    DEV_VESSEL_ENDPOINT="$_se_nowhere" DEVELOPMENT_VESSEL_ENDPOINT="$_se_nowhere" DEV_VESSEL_IMPULSES_URL="$_se_nowhere"
+    DEV_VESSEL_SELF_ENDPOINT="$_se_nowhere" SELF_ENDPOINT="$_se_nowhere" SELF_RESOLVE_ENDPOINT="$_se_nowhere"
+    GAP_STORE_ENDPOINT="$_se_nowhere" FEATURE_COMPOSE_ENDPOINT="$_se_nowhere"
+    GOAL_HOST_VESSEL_ENDPOINT="$_se_nowhere" GOAL_HOST_ENDPOINT="$_se_nowhere"
+    CONCEPT_DB_ENDPOINT="$_se_nowhere" CONCEPT_DB_URL="$_se_nowhere"
+    CONCEPT_DB_CLUSTER_ENDPOINT="$_se_nowhere" CONCEPT_DB_EMBED_ENDPOINT="$_se_nowhere"
+    LLM_RESOLVER_VESSEL_ENDPOINT="$_se_nowhere" LLM_TOOL_DISPATCH_ENDPOINT="$_se_nowhere"
+    LLM_VESSEL_ENDPOINT="$_se_nowhere" LLM_ROUTER_API_ENDPOINT="$_se_nowhere"
+    RELEVANCE_SINK_ENDPOINT="$_se_nowhere" EVENT_BUS_ENDPOINT="$_se_nowhere"
+    LIGHT_DISPATCH_ENDPOINT="$_se_nowhere" LIGHT_DISPATCH_VESSEL_ENDPOINT="$_se_nowhere" LIGHT_DISPATCH_URL="$_se_nowhere"
+    STATEFUL_UI_VESSEL_ENDPOINT="$_se_nowhere" HUMAN_SURFACE_ENDPOINT="$_se_nowhere"
+    TRANSPORT_VESSEL_ENDPOINT="$_se_nowhere" FED_TRANSPORT_EGRESS="$_se_nowhere"
+    # the host's Obsidian plugin listeners (defaults name host.docker.internal)
+    OBSIDIAN_ENDPOINT="$_se_nowhere" OBSIDIAN_LEARN_ENDPOINT="$_se_nowhere"
+    OBSIDIAN_PLUGIN_ENDPOINT="$_se_nowhere" OBSIDIAN_PROBE_ENDPOINT="$_se_nowhere"
+  )
   mkdir -p "$_se_root/runtime" "$_se_root/parked-landings" 2>/dev/null || true
   env -i PATH="$PATH" HOME="${HOME:-/root}" NODE_ENV=test TZ=UTC WORKSPACE_ROOT="$_se_root" \
-    MITOSIS_RUNTIME_DIR="$_se_root/runtime" PARKED_LANDINGS_DIR="$_se_root/parked-landings" "$@"
+    MITOSIS_RUNTIME_DIR="$_se_root/runtime" PARKED_LANDINGS_DIR="$_se_root/parked-landings" \
+    "${_se_services[@]}" "$@"
 }
 
 # AN OVERWRITE OF CONTENT PULL-SYNC DID NOT WRITE MUST BE RECOVERABLE AND LOUD.
