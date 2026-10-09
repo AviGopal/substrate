@@ -343,8 +343,10 @@ depends on the traces being conformant, not on the sophistication of the model a
 The end state is that a detected runtime failure becomes a goal without an operator in the
 loop: investigate the failing resolver from its own traces, propose a change, deploy it
 narrowly, and let the subsequent traces decide whether it is promoted or reverted. The
-verdict must be the reach gate on the confirming execution — a deployment that exits cleanly
-and fixes nothing must not be promotable.
+verdict comes from the change's consumers: the executions that use the changed resolver
+after deployment, and the reach verdict on the confirming execution among them. A deployment
+that exits cleanly and fixes nothing must not be promotable, and a consumer that cannot fail
+on the broken behaviour does not count as a verdict.
 
 ## Conclusion
 

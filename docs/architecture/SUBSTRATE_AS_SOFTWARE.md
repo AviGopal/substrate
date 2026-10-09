@@ -207,7 +207,13 @@ authored-durable half.** Concretely along the steps:
 ### 3.2 The reach gate (step 6) and goal-path learning (step 8e): what "success" means
 
 Three ordinary parts of the walk together define success as *reaching the goal*, not
-exiting cleanly:
+exiting cleanly. They sit inside one rule: **an output is verified by the activity that
+consumes it.** The consumer's success, failure or refusal on that output is recorded against
+its producer, and credit flows back along declared data-flow provenance. A consumer counts as
+verification only if it can fail on bad input. The reach gate below is the walk's own
+consumer of the goal's deliverable. It is one consuming judgment, not the source of truth,
+and a human's verdict on the same deliverable carries the same standing and must reach the
+same learning sinks.
 
 - **The reach gate.** `verifyGoalReached` is an LLM-judge run **after** execution
   that emits `completion_shapes` and asks whether the goal was actually reached, not

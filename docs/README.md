@@ -36,10 +36,15 @@ splits the concept graph and costs the drafter a correct recall.
 
 **Purpose:** describe how a goal is turned into a walk over the shape graph, how producers
 are chosen, how data binds shape-to-shape between steps, and how the outcome is judged.
-The judged quantity is `reached` — whether the goal was actually attained — not the exit
-status of the template that ran. Hollow completion (clean exit, nothing reached) and
-satisfier reaches (dirty exit, goal attained) are both ordinary outcomes, so any document
-here that equates status with success is wrong on the load-bearing point.
+An output is verified by its use: the activity that consumes it succeeds, fails or declines
+on it, and that outcome is recorded against the producer. A consumer counts only if it can
+fail on bad input. The goal's `reached` verdict is the walk's own consumer verdict on the
+deliverable. It is one consuming judgment among many, not a separate verification layer, and
+a human's verdict on the same deliverable is a consumer verdict of equal standing. What is
+never evidence is the exit status of the template that ran: hollow completion (clean exit,
+nothing reached) and satisfier reaches (dirty exit, goal attained) are both ordinary
+outcomes, so any document here that equates status with success is wrong on the
+load-bearing point.
 
 - [The substrate as software](architecture/SUBSTRATE_AS_SOFTWARE.md) — the execution walk end to end, and its durability physics.
 - [The substrate is a Bayesian Q-learning MDP](architecture/SUBSTRATE_AS_MDP.md) — the walk as a decision process, including horizontal composition.

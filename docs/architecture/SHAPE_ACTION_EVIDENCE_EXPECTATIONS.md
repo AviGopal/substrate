@@ -149,6 +149,10 @@ These are claims about the present system that the closure loop can verify at an
 
 - The reach gate (`verifyGoalReached`, goal-host) runs after execution and β-penalises hollow
   completions; the reward is reaching the goal, not exiting cleanly.
+- Verification is consumption. Every output is verified by the activity that consumes it, and
+  that consumer's outcome is recorded against the producer's execution. The reach gate is the
+  walk's consumer of the final deliverable, and a human verdict is a consumer verdict that
+  reaches the same learning sinks. A consumer that cannot fail on bad input verifies nothing.
 - Failed traces receive a failure-conditioned `repair_signature` at ingest, computed at
   state-space signature version `1f` (shape + provenance + missing + failure mode).
 - Per-`(signature, template)` posterior deltas write through to a cluster posterior in the
