@@ -613,11 +613,18 @@ const resolveHandler = async (pointer: any): Promise<any> => {
 // Written as one space-separated list: these are names this file compares against, not
 // pointers it writes, and resolve-writers-send-credentials reads a quoted `*_write` name
 // as a writer.
+// The federation control shapes are on the list because refusing them would break the
+// overlay itself, not one caller:
+//   substrateBootstrap: deliberately unauthenticated, so a node can join knowing only a multiaddr.
+//   federation_probe: the transport's own reachability answer ("resolved over libp2p").
+//   federation_echo: the round trip federation-probe-tick sends to measure a circuit.
+//   federation_verification_report: serves the latest probe-witnessed reachability report.
 const FED_INGRESS_SEED_ALLOWLIST: ReadonlySet<string> = new Set((
   'llm_completion executionReplicationPull activeDispatches goalWalkState composeOwnership ' +
   'resolver_schema concept relatedConcepts conceptGraph concept_create_write ' +
   'conceptSignatureUpsert_write conceptLink_write ' +
-  'vesselRegistry vesselCapability vesselEndpoint vesselHealth'
+  'vesselRegistry vesselCapability vesselEndpoint vesselHealth ' +
+  'substrateBootstrap federation_probe federation_echo federation_verification_report'
 ).split(' '))
 // Key names (lowercased, non-alphanumerics stripped) that mark a credential-like field.
 // Exact names, not substrings: `max_tokens` is not a credential. Only the PRESENCE of

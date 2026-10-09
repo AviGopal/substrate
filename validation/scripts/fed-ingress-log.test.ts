@@ -195,6 +195,15 @@ test('an inbound HTTP-over-libp2p request writes one line; an allowlisted shape 
   expect(ingressLines().slice(before)).toEqual([`[fed-ingress] shape=concept peer=${client.peerId} transport=http carries_credential=n would_refuse=n outcome=ok`])
 }, 30_000)
 
+test('a federation control shape is on the seed list: would_refuse=n', async () => {
+  const before = ingressLines().length
+  const raw = await rawResolve({ type: 'federation_probe' })
+  expect(JSON.parse(raw).content.shape).toBe('federation_probe')
+  await waitFor(() => ingressLines().length > before, 5_000, 'the [fed-ingress] line')
+  await sleep(300)
+  expect(ingressLines().slice(before)).toEqual([`[fed-ingress] shape=federation_probe peer=${client.peerId} transport=lpstream carries_credential=n would_refuse=n outcome=ok`])
+}, 30_000)
+
 test('an inbound request the handler answers with an error logs outcome=error', async () => {
   const before = ingressLines().length
   const raw = await rawResolve({ type: 'fedlog_unowned' })
