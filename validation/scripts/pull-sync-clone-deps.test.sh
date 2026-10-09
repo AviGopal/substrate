@@ -78,6 +78,7 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
   sed -n '/^clone_deps_gap() {/,/^}/p' "$SCRIPT"
   sed -n '/^clone_shared_packages() {/,/^}/p' "$SCRIPT"
   sed -n '/^ensure_clone_deps() {/,/^}/p' "$SCRIPT"
+  sed -n '/^ensure_clone_nested_deps() {/,/^}/p' "$SCRIPT"
   sed -n '/^unresolved_modules() {/,/^}/p' "$SCRIPT"
   sed -n '/^test_only_range() {/,/^}/p' "$SCRIPT"
   echo 'run_gate() {'

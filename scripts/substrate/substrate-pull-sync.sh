@@ -2058,6 +2058,122 @@ ensure_clone_deps() { # vessel clone-dir
   return 1
 }
 
+# A VESSEL CLONE'S NESTED PACKAGES ARE INSTALLED BEFORE THE GATE TOO. ensure_clone_deps installs the vessel
+# ROOT. A sub-directory with its own package.json and lockfile is a separate bun project the root install
+# never touches: human-surface-vessel's ui/ (react, react-dom, @tanstack/react-query, happy-dom) had no
+# node_modules in the clone, so every surface DOM test (they resolve those from ui/src/) failed to LOAD at
+# the parent and the candidate alike, and the gate held the vessel "TEST GATE BLIND — ENVIRONMENT" with
+# none of those tests ever measured.
+#
+# DECLARED, NOT DISCOVERED. Which nested directories are packages is declared per vessel in the inventory
+# ("nested_packages": ["ui"] on the entry whose repo is the vessel, read from $INV like its unit and
+# health_port), so an install is never started by a stray package.json in a commit. A scan (depth <= 2, never
+# under node_modules/, .git/ or dist/, and only a directory holding BOTH package.json and a lockfile) is an
+# AUDIT: a scanned package the inventory does not declare is logged as NOT declared and NOT installed, so a
+# new one is neither silently skipped nor silently added.
+#
+# SAME POLICY AS THE ROOT INSTALL, STRICTER LOCK. Under scrubbed_env with --ignore-scripts (no lifecycle
+# script of the candidate's manifest or of a dependency runs pre-gate) and --no-save, plus --frozen-lockfile:
+# the committed lockfile is the only resolution, and a lockfile that does not match its package.json is a
+# loud failure (gap, NOT converged), never a fresh resolve. A declared package without a lockfile fails
+# closed the same way. Not --silent: bun's own error is what the gap carries. A failed manifest is not
+# retried within CLONE_DEPS_RETRY_BACKOFF_SECONDS, like the root install.
+#
+# Re-install when <dir>/node_modules is missing, a declared dependency is absent from it, or package.json /
+# the lockfile changed since the install recorded in $MARKER_DIR/<v>.nested-<dir>. CD_NESTED lists the
+# installed directories; run_suite_at links each one's node_modules into the worktree like the root's, so
+# the parent and the candidate are measured with the same nested install.
+#
+# -> 0 ok (nothing declared included), 2 budget deferral (CD_BUDGET_SHORT), 1 failed (logged, gap filed;
+# the caller must NOT converge v this tick). Test: validation/scripts/pull-sync-clone-nested-deps.test.sh.
+ensure_clone_nested_deps() { # vessel clone-dir
+  local _nd_v="$1" _nd_d="${2%/}" _nd_decl="" _nd_scan="" _nd_n _nd_p _nd_lock _nd_mark _nd_fail _nd_hash _nd_why
+  local _nd_missing _nd_log _nd_rc _nd_root _nd_fhash _nd_ftime _nd_now _nd_dirty_before _nd_dirty_after _nd_id
+  CD_NESTED=""
+  [ -d "$_nd_d" ] || return 0
+  if [ -f "${INV:-}" ] && command -v jq >/dev/null 2>&1; then
+    _nd_decl="$(jq -r --arg v "$_nd_v" '.vessels[]? | select(.repo == $v) | .nested_packages[]? | strings' "$INV" 2>/dev/null \
+      | sed 's#/*$##; s#^\./##' | grep -vE '^$|^/|(^|/)\.\.(/|$)|(^|/)(node_modules|\.git|dist)(/|$)' | LC_ALL=C sort -u || true)"
+  fi
+  # -mindepth 1, not 2: find applies no action (-prune included) above -mindepth, so the root's own node_modules
+  # would be descended into. The root's package.json (depth 1) is skipped by name instead.
+  _nd_scan="$(find "$_nd_d" -mindepth 1 -maxdepth 3 \( -name node_modules -o -name .git -o -name dist \) -prune -o -name package.json -type f -print 2>/dev/null \
+    | while IFS= read -r _nd_p; do
+        _nd_p="$(dirname "$_nd_p")"
+        [ "$_nd_p" = "$_nd_d" ] && continue
+        { [ -f "$_nd_p/bun.lock" ] || [ -f "$_nd_p/bun.lockb" ] || [ -f "$_nd_p/package-lock.json" ]; } && printf '%s\n' "${_nd_p#"$_nd_d"/}"
+      done | LC_ALL=C sort -u || true)"
+  while IFS= read -r _nd_n; do
+    [ -n "$_nd_n" ] || continue
+    printf '%s\n' "$_nd_decl" | grep -qxF -- "$_nd_n" \
+      || log "$_nd_v: nested package $_nd_n (package.json + lockfile) is NOT declared in the inventory's nested_packages for $_nd_v — not installed; its tests cannot resolve what only it declares (declare it in vessels.inventory.json)"
+  done <<< "$_nd_scan"
+  while IFS= read -r _nd_n; do
+    [ -n "$_nd_n" ] || continue
+    _nd_p="$_nd_d/$_nd_n"
+    if [ ! -f "$_nd_p/package.json" ]; then
+      log "$_nd_v: declared nested package $_nd_n has no package.json at this HEAD — nothing to install there"; continue
+    fi
+    _nd_id="$(printf '%s' "$_nd_n" | tr -c 'A-Za-z0-9._-' '-')"
+    _nd_mark="$MARKER_DIR/$_nd_v.nested-$_nd_id"; _nd_fail="$MARKER_DIR/$_nd_v.nested-$_nd_id-failed"
+    for _nd_lock in bun.lock bun.lockb package-lock.json ""; do [ -n "$_nd_lock" ] && [ -f "$_nd_p/$_nd_lock" ] && break; done
+    if [ -z "$_nd_lock" ]; then
+      CD_WHY="declared nested package $_nd_n has package.json but no lockfile (bun.lock, bun.lockb or package-lock.json), so a frozen install is impossible"
+      log "$_nd_v: !!! CLONE NESTED DEPENDENCY INSTALL FAILED — $CD_WHY; NOT converging $_nd_v this tick (tests resolving its dependencies would fail to load and blind the gate)"
+      clone_deps_gap pull-sync-clone-nested-deps-install-failed- "$_nd_v" "$CD_WHY." \
+        "Repair needed: pull-sync could not install $_nd_v's nested package $_nd_n before its test gate, so it refused to converge $_nd_v (a gate over unloadable test files measures nothing)."
+      return 1
+    fi
+    _nd_hash="$(cat "$_nd_p/package.json" "$_nd_p/$_nd_lock" 2>/dev/null | md5sum | cut -d' ' -f1)"
+    _nd_missing="$(clone_dep_missing "$_nd_p")"; _nd_why=""
+    if [ ! -d "$_nd_p/node_modules" ]; then _nd_why="node_modules missing"
+    elif [ -n "$_nd_missing" ]; then _nd_why="declared dependencies absent from node_modules: $(printf '%s' "$_nd_missing" | tr '\n' ' ' | sed 's/ $//')"
+    elif [ "$(cat "$_nd_mark" 2>/dev/null)" != "$_nd_hash" ]; then _nd_why="package.json/$_nd_lock changed since the last install (or none recorded)"
+    fi
+    if [ -z "$_nd_why" ]; then CD_NESTED="${CD_NESTED}${CD_NESTED:+ }$_nd_n"; rm -f "$_nd_fail" 2>/dev/null || true; continue; fi
+    _nd_fhash=""; _nd_ftime=""
+    [ -f "$_nd_fail" ] && { read -r _nd_fhash _nd_ftime < "$_nd_fail"; } 2>/dev/null || true
+    _nd_now="$(date +%s)"
+    case "$_nd_ftime" in ''|*[!0-9]*) _nd_ftime="" ;; esac
+    if [ -n "$_nd_ftime" ] && [ "$_nd_fhash" = "$_nd_hash" ] && [ $((_nd_now - _nd_ftime)) -lt "${CLONE_DEPS_RETRY_BACKOFF_SECONDS:-3600}" ]; then
+      CD_WHY="nested package $_nd_n install suppressed (same manifest failed at $(date -u -d "@$_nd_ftime" -Iseconds 2>/dev/null || echo "$_nd_ftime"); retry after ${CLONE_DEPS_RETRY_BACKOFF_SECONDS:-3600}s or a package.json/$_nd_lock change)"
+      log "$_nd_v: $CD_WHY — still NOT converging $_nd_v this tick ($_nd_why)"
+      return 1
+    fi
+    if [ -n "${CD_BUDGET_CHECK:-}" ] && declare -F gate_left >/dev/null \
+       && [ "$(gate_left)" -lt $(( ${CLONE_DEPS_INSTALL_TIMEOUT_SECONDS:-180} + 15 + ${SUITE_COST_S:-270} )) ]; then
+      CD_BUDGET_SHORT="the nested package $_nd_n install ($_nd_why)"; return 2
+    fi
+    _nd_log="$(mktemp "${TMPDIR:-/tmp}/pullsync-nesteddeps-XXXXXX")"
+    _nd_dirty_before="$(git -C "$_nd_d" status --porcelain -- "$_nd_n/package.json" "$_nd_n/$_nd_lock" 2>/dev/null || true)"
+    log "$_nd_v: nested package $_nd_n does not satisfy its manifest ($_nd_why) — bun install in $_nd_n before the test gate (scrubbed env, --frozen-lockfile, --ignore-scripts)"
+    _nd_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" || return 1
+    (cd "$_nd_p" && scrubbed_env "$_nd_root" timeout --kill-after=15 "${CLONE_DEPS_INSTALL_TIMEOUT_SECONDS:-180}" \
+       "$BUN_BIN" install --no-save --frozen-lockfile --ignore-scripts) >> "$_nd_log" 2>&1; _nd_rc=$?
+    rm -rf "$_nd_root" 2>/dev/null || true
+    _nd_dirty_after="$(git -C "$_nd_d" status --porcelain -- "$_nd_n/package.json" "$_nd_n/$_nd_lock" 2>/dev/null || true)"
+    if [ -z "$_nd_dirty_before" ] && [ -n "$_nd_dirty_after" ]; then
+      git -C "$_nd_d" checkout -- "$_nd_n/package.json" "$_nd_n/$_nd_lock" >/dev/null 2>&1 || true
+      log "$_nd_v: nested install modified tracked manifests in $_nd_n — restored so the ff-only pull stays clean"
+    fi
+    _nd_missing="$(clone_dep_missing "$_nd_p")"
+    if [ "$_nd_rc" -eq 0 ] && [ -z "$_nd_missing" ] && [ -d "$_nd_p/node_modules" ]; then
+      echo "$_nd_hash" > "$_nd_mark" 2>/dev/null || true; rm -f "$_nd_fail" "$_nd_log" 2>/dev/null || true
+      CD_NESTED="${CD_NESTED}${CD_NESTED:+ }$_nd_n"
+      log "$_nd_v: nested package $_nd_n dependencies installed ($_nd_why)"
+      continue
+    fi
+    echo "$_nd_hash $_nd_now" > "$_nd_fail" 2>/dev/null || true
+    CD_WHY="nested package $_nd_n: bun install --frozen-lockfile rc=$_nd_rc ($_nd_why)${_nd_missing:+; still missing: $(printf '%s' "$_nd_missing" | tr '\n' ' ' | sed 's/ $//')}; output tail: $(sed 's/\x1b\[[0-9;]*m//g' "$_nd_log" 2>/dev/null | grep -v '^[[:space:]]*$' | tail -5 | tr '\n' '|' | cut -c1-400)"
+    rm -f "$_nd_log" 2>/dev/null || true
+    log "$_nd_v: !!! CLONE NESTED DEPENDENCY INSTALL FAILED — $CD_WHY; NOT converging $_nd_v this tick (its test gate cannot measure the candidate); this manifest is not retried for ${CLONE_DEPS_RETRY_BACKOFF_SECONDS:-3600}s unless it changes"
+    clone_deps_gap pull-sync-clone-nested-deps-install-failed- "$_nd_v" "$CD_WHY" \
+      "Repair needed: pull-sync could not install $_nd_v's nested package $_nd_n before its test gate, so it refused to converge $_nd_v (a gate over unloadable test files measures nothing). A frozen-lockfile mismatch means the committed lockfile does not match its package.json: commit the updated lockfile."
+    return 1
+  done <<< "$_nd_decl"
+  return 0
+}
+
 # A SHARED PACKAGE'S CLONE DIST FOLLOWS ITS CREDITED RUNTIME BUILD.
 #
 # The fan-out (2c) builds a shared package into $RUNTIME_DIR/<pkg>/dist, and the runtime
@@ -2939,6 +3055,8 @@ EOF
   GATE_BLIND_WHY=""; U_EXCL=0; U_MODS=""; U_SHARED=""; U_GAP_JSON=""
   if [ -n "$BUN_BIN" ]; then
     CD_BUDGET_SHORT=""; CD_BUDGET_CHECK=1 ensure_clone_deps "$v" "$d"; _cd_grc=$?
+    # The vessel's declared nested packages (ui/ and the like) too, so tests resolving their dependencies load.
+    [ "$_cd_grc" -eq 0 ] && { CD_BUDGET_CHECK=1 ensure_clone_nested_deps "$v" "$d"; _cd_grc=$?; }
     if [ "$_cd_grc" -eq 2 ]; then
       testgate_budget_defer "$CD_BUDGET_SHORT" "$(( 2 * (${CLONE_DEPS_INSTALL_TIMEOUT_SECONDS:-180} + 15) + SUITE_COST_S ))"; skipped=$((skipped + 1)); continue
     elif [ "$_cd_grc" -ne 0 ]; then skipped=$((skipped + 1)); continue; fi
@@ -3002,7 +3120,7 @@ EOF
   # would otherwise fail wholesale — which would subtract everything and turn this into a
   # fail-open. Callers must treat an implausible result as UNUSABLE, not as "parent was broken".
   run_suite_at() {
-    local _rsa_ref="$1" _rsa_wt="" _rsa_out=""
+    local _rsa_ref="$1" _rsa_wt="" _rsa_out="" _rsa_n
     # SWEEP FIRST. `git worktree remove` was observed failing transiently at the end of a run
     # (test child processes still holding the directory) and then succeeding on a later retry,
     # so a single best-effort removal leaks a registered worktree every time that happens.
@@ -3016,6 +3134,12 @@ EOF
       rm -rf "$_rsa_wt" 2>/dev/null || true; return 1
     fi
     [ -d "$d/node_modules" ] && ln -s "$d/node_modules" "$_rsa_wt/node_modules" 2>/dev/null || true
+    # Each nested package's node_modules the same way (CD_NESTED, from ensure_clone_nested_deps): the parent and
+    # the candidate both resolve its dependencies from the one install, like the root's.
+    for _rsa_n in ${CD_NESTED:-}; do
+      [ -d "$d/$_rsa_n/node_modules" ] && [ -d "$_rsa_wt/$_rsa_n" ] && [ ! -e "$_rsa_wt/$_rsa_n/node_modules" ] \
+        && ln -s "$d/$_rsa_n/node_modules" "$_rsa_wt/$_rsa_n/node_modules" 2>/dev/null || true
+    done
     _rsa_out="$( (cd "$_rsa_wt" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test > "$_rs_out" 2>&1; cat "$_rs_out"; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true )"
     git -C "$d" worktree remove --force "$_rsa_wt" >/dev/null 2>&1 || rm -rf "$_rsa_wt" 2>/dev/null || true
     git -C "$d" worktree prune >/dev/null 2>&1 || true

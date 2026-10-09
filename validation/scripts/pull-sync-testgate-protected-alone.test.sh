@@ -56,6 +56,7 @@ log() { echo "$*" >> "$LOG"; }
 emit_gap() { echo "GAP $1" >> "$CALLS"; }
 tracked_fail_names() { :; }
 ensure_clone_deps() { return 0; }
+ensure_clone_nested_deps() { CD_NESTED=""; return 0; }
 
 mkdir -p "$T/bin" "$T/stub"
 # bun test            -> $S/full (the whole suite, same at every ref: the pollution is order, not code)

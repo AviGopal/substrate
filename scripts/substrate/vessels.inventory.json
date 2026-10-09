@@ -1,5 +1,5 @@
 {
-  "_comment": "Declarative vessel inventory for the substrate image. apply-inventory.sh reads this at boot (before systemd) to select which units run, so one image runs any SUBSET: a full local substrate, a minimal hub (store+control+api+transport), or a compute-only spoke. DEFAULT (no ENABLED_ROLES/ENABLED_VESSELS env) = every unit enabled, identical to today. Selection env: ENABLED_ROLES=comma,roles | ENABLED_VESSELS=comma,units (explicit, overrides roles) | DISABLED_VESSELS=comma,units (always off). Per-vessel fork remotes: repo_owner_default (or per-vessel repo_owner) + the `repo` field feed setup-git-push.sh so a fork can point vessels at its own GitHub org. RETIRED UNITS: an entry with \"retired\": true is never desired; apply-inventory masks it under every selection, and it carries no health_port. scripts/substrate/deploy-analysis-backend.sh still names analysis-vessel, which is retired, so that deployment no longer starts its analyzer.",
+  "_comment": "Declarative vessel inventory for the substrate image. apply-inventory.sh reads this at boot (before systemd) to select which units run, so one image runs any SUBSET: a full local substrate, a minimal hub (store+control+api+transport), or a compute-only spoke. DEFAULT (no ENABLED_ROLES/ENABLED_VESSELS env) = every unit enabled, identical to today. Selection env: ENABLED_ROLES=comma,roles | ENABLED_VESSELS=comma,units (explicit, overrides roles) | DISABLED_VESSELS=comma,units (always off). Per-vessel fork remotes: repo_owner_default (or per-vessel repo_owner) + the `repo` field feed setup-git-push.sh so a fork can point vessels at its own GitHub org. RETIRED UNITS: an entry with \"retired\": true is never desired; apply-inventory masks it under every selection, and it carries no health_port. scripts/substrate/deploy-analysis-backend.sh still names analysis-vessel, which is retired, so that deployment no longer starts its analyzer. NESTED PACKAGES: \"nested_packages\": [\"ui\"] names a vessel's sub-directories that are their own bun projects (package.json + lockfile); pull-sync installs each in the vessel clone (frozen lockfile, no lifecycle scripts) before the test gate, so tests resolving their dependencies load, and logs any such directory a scan finds that is not declared.",
   "repo_owner_default": "AviGopal",
   "branch_default": "dev",
   "roles": {
@@ -249,7 +249,8 @@
       "role": "ui",
       "repo": "human-surface-vessel",
       "health_port": 8310,
-      "manifest": true
+      "manifest": true,
+      "nested_packages": ["ui"]
     },
     {
       "unit": "obsidian-intake.timer",

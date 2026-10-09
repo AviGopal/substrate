@@ -58,6 +58,7 @@ log() { echo "$*" >> "$LOG"; }
 emit_gap() { echo "GAP $1" >> "$CALLS"; }
 tracked_fail_names() { :; }
 ensure_clone_deps() { return 0; }
+ensure_clone_nested_deps() { CD_NESTED=""; return 0; }
 
 # bun stub: run_suite runs under `env -i`, so its knobs are files. Output is chosen by
 # the ref being measured: $S/out-<sha> when present, otherwise the candidate's.

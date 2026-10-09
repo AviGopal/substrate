@@ -59,6 +59,7 @@ log() { echo "$*" >> "$LOG"; }
 emit_gap() { echo "GAP $1" >> "$CALLS"; }
 tracked_fail_names() { :; }
 ensure_clone_deps() { return 0; }
+ensure_clone_nested_deps() { CD_NESTED=""; return 0; }
 clone_file_deps() { :; }
 file_dep_identity() { echo x; }
 tuning_param() { local _k="TP_$(printf '%s' "$1" | tr '.-' '__')"; TP_VALUE="${!_k:-$2}"; }

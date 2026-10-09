@@ -59,6 +59,7 @@ log() { echo "$*" >> "$LOG"; }
 emit_gap() { echo "GAP $1" >> "$CALLS"; }
 tracked_fail_names() { :; }
 ensure_clone_deps() { sleep "${DEPS_SLEEP:-0}"; if [ -n "${DEPS_RC:-}" ]; then CD_BUDGET_SHORT="the clone dependency install (stub)"; return "$DEPS_RC"; fi; return 0; }
+ensure_clone_nested_deps() { CD_NESTED=""; return 0; }
 tuning_param() { TP_VALUE="$2"; }
 
 mkdir -p "$T/bin" "$T/stub"

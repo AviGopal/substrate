@@ -51,6 +51,7 @@ log() { echo "$*" >> "$LOG"; }
 emit_gap() { echo "GAP $1" >> "$CALLS"; }
 tracked_fail_names() { :; }
 ensure_clone_deps() { return 0; }
+ensure_clone_nested_deps() { CD_NESTED=""; return 0; }
 TP_MAX=3
 tuning_param() { echo "TUNING $1" >> "$CALLS"; TP_VALUE="$TP_MAX"; }   # the shaped row; default stands in
 

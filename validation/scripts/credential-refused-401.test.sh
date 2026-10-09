@@ -116,6 +116,7 @@ CALLS="$T/calls.txt"; LOG="$T/log.txt"
 log() { echo "$*" >> "$LOG"; }
 emit_gap() { echo "GAP $1" >> "$CALLS"; }
 ensure_clone_deps() { return 0; }
+ensure_clone_nested_deps() { CD_NESTED=""; return 0; }
 TFN_RC=0
 tracked_fail_names() { [ "$TFN_RC" = 2 ] && echo "$LINE" >&2; return "$TFN_RC"; }
 mkdir -p "$T/bin" "$T/stub"
