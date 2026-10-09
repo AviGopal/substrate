@@ -93,6 +93,12 @@ if a later change sets only one name, they follow the new-name-wins rule.
         identity.
       - The by-effect check: a request from a legacy origin gets no CORS allow header; a configured surface
         origin still does.
+      - Example and demo code outside the shipped build that still carries a legacy host default, and tests
+        that import it, move with the rest. Not shipping in a build does not make a default inert: the only
+        reader may be a test. A test whose base failures come from importing an example copy instead of the
+        shipped module is fixed by importing the shipped module.
+      - A test that needs a legacy external host to pass is not hermetic. It is stubbed with a fetch
+        recorder, or deleted if it only exercised a removed fallback.
 - [ ] 2.4 Census re-run: zero old-name READS outside the compatibility shim and the migration table.
 
 ## 3. Stop emitting old names inside the substrate
