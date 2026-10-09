@@ -82,6 +82,17 @@ if a later change sets only one name, they follow the new-name-wins rule.
       script-runner.ts's output redaction (by the key's value) moves in the same step, or it goes empty.
 - [ ] 2.3b Default-fallback reads (`??`, `||`, `:-` on these names) listed by the census and each moved
       explicitly; a fallback that "works" counts as a miss.
+- [ ] 2.3c Legacy `*.metabob.com` host defaults. A default URL that names a host outside the fleet is
+      the same class as an old-name read: it silently takes effect when a variable is unset.
+      - Auth fallbacks that send or trust credentials are security items, fixed separately and first.
+        Validation fails closed, with no external fallback.
+      - activity-api's CORS list allows legacy `*.metabob.com` origins (and a legacy GitHub Pages origin)
+        with `credentials: true` whenever `CORS_ORIGINS` is unset. It moves to fleet-local origins only,
+        driven by the configured surfaces.
+      - The issuer label written into fleet-minted JWTs, when `JWT_ISSUER` is unset, moves to a fleet
+        identity.
+      - The by-effect check: a request from a legacy origin gets no CORS allow header; a configured surface
+        origin still does.
 - [ ] 2.4 Census re-run: zero old-name READS outside the compatibility shim and the migration table.
 
 ## 3. Stop emitting old names inside the substrate
