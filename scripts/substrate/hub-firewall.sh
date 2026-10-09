@@ -64,6 +64,15 @@ v4() {
   for i in eth0 eth1; do iptables -A $CH -i $i -p tcp -m conntrack --ctstate NEW -j REJECT --reject-with tcp-reset
                          iptables -A $CH -i $i -m conntrack --ctstate NEW -j DROP; done
   iptables -C DOCKER-USER -j $CH 2>/dev/null || iptables -I DOCKER-USER 1 -j $CH
+  # HOST-NETWORK listeners never meet DOCKER-USER. The TLS terminator (hub-tls, host networking) serves activity-api on
+  # 9443 by proxying to 127.0.0.1:18080 from the host, which bypasses the 18080 rule above. So 9443 gets the SAME source
+  # list in INPUT (the host's INPUT policy is ACCEPT): listed sources pass, every other NEW connection on the public
+  # interfaces is reset. An empty ALLOW_18080_SRC therefore closes 9443 to everyone, as it closes 18080.
+  iptables -N ${CH}-IN4 2>/dev/null; iptables -F ${CH}-IN4
+  iptables -A ${CH}-IN4 -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN
+  [ -n "$ALLOW_18080_SRC" ] && iptables -A ${CH}-IN4 -s "$ALLOW_18080_SRC" -p tcp --dport 9443 -j RETURN
+  for i in eth0 eth1; do iptables -A ${CH}-IN4 -i $i -p tcp --dport 9443 -j REJECT --reject-with tcp-reset; done
+  iptables -C INPUT -j ${CH}-IN4 2>/dev/null || iptables -I INPUT 1 -j ${CH}-IN4
 }
 v6() {
   if ip6tables -S DOCKER-USER >/dev/null 2>&1; then
@@ -79,7 +88,7 @@ v6() {
   # default-deny for the 18xxx block, the same shape as v4: allowed ports return first, everything else drops
   ip6tables -A ${CH}-IN -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN
   for p in $ALLOW; do ip6tables -A ${CH}-IN -p tcp --dport $p -j RETURN; done
-  for p in $DENY6; do for i in eth0 eth1; do ip6tables -A ${CH}-IN -i $i -p tcp --dport $p -j REJECT --reject-with tcp-reset; done; done
+  for p in $DENY6 9443; do for i in eth0 eth1; do ip6tables -A ${CH}-IN -i $i -p tcp --dport $p -j REJECT --reject-with tcp-reset; done; done   # 9443: activity-api over TLS, IPv4 allowlist only
   for i in eth0 eth1; do ip6tables -A ${CH}-IN -i $i -p tcp --dport 18000:18999 -j REJECT --reject-with tcp-reset; done
   ip6tables -C INPUT -j ${CH}-IN 2>/dev/null || ip6tables -I INPUT 1 -j ${CH}-IN
 }
@@ -87,6 +96,7 @@ undo() {
   iptables -D DOCKER-USER -j $CH 2>/dev/null; iptables -F $CH 2>/dev/null; iptables -X $CH 2>/dev/null
   ip6tables -D DOCKER-USER -j $CH 2>/dev/null; ip6tables -F $CH 2>/dev/null; ip6tables -X $CH 2>/dev/null
   ip6tables -D INPUT -j ${CH}-IN 2>/dev/null; ip6tables -F ${CH}-IN 2>/dev/null; ip6tables -X ${CH}-IN 2>/dev/null
+  iptables -D INPUT -j ${CH}-IN4 2>/dev/null; iptables -F ${CH}-IN4 2>/dev/null; iptables -X ${CH}-IN4 2>/dev/null
 }
 case "$MODE" in
   apply) v4; v6; logger -t hub-firewall "applied: allow $ALLOW; 18080 only from ${ALLOW_18080_SRC:-nobody}; 18333 $([ -n "$ALLOW_18333_SRC" ] && echo "only from $ALLOW_18333_SRC" || echo "open to all"); deny other new inbound to docker-published ports"; echo "applied $(date -u +%T)Z" ;;
@@ -96,6 +106,7 @@ echo "== status"
 echo "v4 DOCKER-USER: $(iptables -S DOCKER-USER | tr '\n' ' ')"
 echo "v4 $CH: $(iptables -S $CH 2>/dev/null | grep -c '^-A') rules; 18080 rule: $(iptables -S $CH 2>/dev/null | grep 18080 || echo 'none (closed to all outside sources)')"
 echo "v4 $CH 18333 rule: $(iptables -S $CH 2>/dev/null | grep 18333 || echo 'none (chain absent)') (a rule without -s admits every source)"
+echo "v4 ${CH}-IN4 (INPUT, 9443 = activity-api over TLS): $(iptables -S ${CH}-IN4 2>/dev/null | grep 9443 | tr '\n' ' ' || echo absent)"
 echo "v6 DOCKER-USER: $(ip6tables -S DOCKER-USER 2>/dev/null | tr '\n' ' ' || echo absent)"
 echo "v6 ${CH}-IN: $(ip6tables -S ${CH}-IN 2>/dev/null | grep -c '^-A') rules"
 echo "drops so far: v4 $(iptables -L $CH -v -n -x 2>/dev/null | awk '/DROP|REJECT/ {s+=$1} END {print s+0}') | v6 docker $(ip6tables -L $CH -v -n -x 2>/dev/null | awk '/DROP|REJECT/ {s+=$1} END {print s+0}') | v6 input $(ip6tables -L ${CH}-IN -v -n -x 2>/dev/null | awk '/DROP|REJECT/ {s+=$1} END {print s+0}') packets"

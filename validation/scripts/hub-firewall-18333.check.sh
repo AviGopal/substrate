@@ -79,6 +79,14 @@ iptables -A SUBSTRATE-HUB-FW -i eth1 -p tcp -m conntrack --ctstate NEW -j REJECT
 iptables -A SUBSTRATE-HUB-FW -i eth1 -m conntrack --ctstate NEW -j DROP
 iptables -C DOCKER-USER -j SUBSTRATE-HUB-FW
 iptables -I DOCKER-USER 1 -j SUBSTRATE-HUB-FW
+iptables -N SUBSTRATE-HUB-FW-IN4
+iptables -F SUBSTRATE-HUB-FW-IN4
+iptables -A SUBSTRATE-HUB-FW-IN4 -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN
+iptables -A SUBSTRATE-HUB-FW-IN4 -s 98.234.161.172 -p tcp --dport 9443 -j RETURN
+iptables -A SUBSTRATE-HUB-FW-IN4 -i eth0 -p tcp --dport 9443 -j REJECT --reject-with tcp-reset
+iptables -A SUBSTRATE-HUB-FW-IN4 -i eth1 -p tcp --dport 9443 -j REJECT --reject-with tcp-reset
+iptables -C INPUT -j SUBSTRATE-HUB-FW-IN4
+iptables -I INPUT 1 -j SUBSTRATE-HUB-FW-IN4
 ip6tables -N SUBSTRATE-HUB-FW
 ip6tables -F SUBSTRATE-HUB-FW
 ip6tables -A SUBSTRATE-HUB-FW -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN
@@ -111,6 +119,8 @@ ip6tables -A SUBSTRATE-HUB-FW-IN -i eth0 -p tcp --dport 18270 -j REJECT --reject
 ip6tables -A SUBSTRATE-HUB-FW-IN -i eth1 -p tcp --dport 18270 -j REJECT --reject-with tcp-reset
 ip6tables -A SUBSTRATE-HUB-FW-IN -i eth0 -p tcp --dport 18310 -j REJECT --reject-with tcp-reset
 ip6tables -A SUBSTRATE-HUB-FW-IN -i eth1 -p tcp --dport 18310 -j REJECT --reject-with tcp-reset
+ip6tables -A SUBSTRATE-HUB-FW-IN -i eth0 -p tcp --dport 9443 -j REJECT --reject-with tcp-reset
+ip6tables -A SUBSTRATE-HUB-FW-IN -i eth1 -p tcp --dport 9443 -j REJECT --reject-with tcp-reset
 ip6tables -A SUBSTRATE-HUB-FW-IN -i eth0 -p tcp --dport 18000:18999 -j REJECT --reject-with tcp-reset
 ip6tables -A SUBSTRATE-HUB-FW-IN -i eth1 -p tcp --dport 18000:18999 -j REJECT --reject-with tcp-reset
 ip6tables -C INPUT -j SUBSTRATE-HUB-FW-IN
