@@ -1188,3 +1188,32 @@ Tags: [V] verified in git, code or the live gap store on 10-03. [D] taken from a
   - the semantic gate's calibration gets a consumer: a criterion that raises or lowers its veto weight from the measured dissent outcomes;
   - before the retention fix lands, establish reuse (existing label or trace stores) or record why a new table is required;
   - the cross-repo contract strings move to one `packages/` definition with a copy-diff check.
+
+## 14. Amendment (2026-10-10): the measurable form of sustained continuation
+
+**Basis.** §10 item 3 records that §1's broader autonomy criterion, "sustained continuation and learning within granted authority", had no measurable form. Without one, landing counts stay the de facto goal. This amendment supplies the form. It merges two candidates put to the user on 10-10, and the user adopted them ("follow the recommendations"). The structure it measures is stated in `docs/architecture/SUBSTRATE_AS_SOFTWARE.md` §5.0: one continuity loop containing horizon loops that couple only through shapes and are verified by the loops that consume them.
+
+**This is a target, not a status. None of the criteria below is measurable today,** because the instrument they require, §7 step 2's evaluator, is unbuilt.
+
+**The rule of measurement.** Every criterion is measured by the system's own §7 step 2 evaluator rows: rows that can fail, with checked == expected counted from the landing ledger. Operator instruments do not count, including session audits, hand-run probes and user-run SELECTs. If an operator has to measure a criterion, the operator is still the observer, and the criterion is not met.
+
+**The criterion.** Sustained continuation holds when all of the following hold at once, over the stated windows. Where a §7 step already has an exit, this amendment cites that exit rather than restating it.
+
+1. **Continuity.** Every loop named in SOFTWARE §5.0 is observed closing by its consumer within its window, for 7 consecutive days. The loops are the walk, credit, gap improvement and deployment, plus any added later.
+2. **Signal.** For 7 days:
+   - signature-row credit drops are ≈ 0;
+   - the α/β direction of chain credit is measured, not inferred;
+   - §7 step 1's held-out probes reach.
+   This extends §7 step 5's exits.
+3. **Repair.** For 7 days:
+   - gaps armed by the system itself (not by an operator) are above zero;
+   - lane landings from those gaps are verified at the consumer;
+   - both are rising.
+   This extends §7 steps 3 and 5.
+4. **Inflow.** Open gaps fall over 14 days with zero operator closes (§7 step 3; §2.5's retirement without a reader).
+5. **Durability.** For 30 days, no class recurs for the same reason. This is law 7's third measure; the class keys are §2.1's lineage counters.
+6. **Safety.** Every regressed landing is reverted by the system, with the revert naming the sha. This is §7 step 5's revert exit (contained-self-development 8.3/8.4 only).
+7. **Scope.** Scope widens only through earn-in, never by an operator record edit (§7 step 9's exit).
+8. **Operator load.** Operator-Authored commits are limited to L12-recorded harm or blocker work. The ratio of autonomous to operator commits is reported with every measurement. The 10-10 baseline is about 1 : 73 over 24 h across the super-repo and every vessel repo, of which four had commits (activity-api, concept-db, development-vessel, goal-host-vessel).
+
+**What it does not change.** It grants no authority, and it does not alter §7's ordering or exits. It names the end condition that §7's steps lead to, so that "autonomous" is never declared from a landing count, a single slice, or an operator's measurement again (§11.3).
