@@ -236,9 +236,11 @@ A hub is sequence B of the install page: `PROFILE=hub`, a provider key and `PUBL
 The profile carries the control plane, the stores and the relay, plus the compute a hub
 needs to dispatch next to its posteriors; `hub-minimal` omits the compute.
 
-**Open the firewall** on the hub for the ports the install page's port table marks
-"spokes" (trace store, development-vessel, discovery, identity, concept-db, relay). On a
-cloud VM the cloud firewall is usually the gate, not the host's own packet filter.
+**Open the firewall** on the hub for the plain ports the install page's port table marks
+"spokes" (trace store, discovery, identity, relay). Never open development-vessel or
+concept-db as plain ports on a hub reachable from a public network; the install page's
+port table says why, and what keeping them closed costs a spoke. On a cloud VM the cloud
+firewall is usually the gate, not the host's own packet filter.
 
 Verify before handing out a token — an empty array here is the whole failure,
 and it looks identical to a healthy hub from every other angle:
@@ -423,7 +425,9 @@ lost outright if its node goes down mid-run.
 (above, *The identity namespace is reached over HTTP*), trace writes and discovery reads
 go over HTTP to the hub's published ports. Noise protects only overlay traffic, so across
 a public network those requests, and the credentials they carry, travel in the clear
-unless the hub is fronted by TLS.
+unless the hub is fronted by TLS. A TLS front alone does not cover federated resolves:
+discovery rehomes a peer's rows onto derived plain public ports (next limitation), so a
+resolve to a hub-owned shape can still go over plain HTTP with its credential.
 
 **An advertised row is not observed reachability.** Discovery derives a vessel's public
 endpoint from its internal port plus a fixed offset (`DISCOVERY_PUBLIC_PORT_OFFSET`),

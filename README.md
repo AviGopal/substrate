@@ -129,16 +129,21 @@ only the vessels the profile selects.
 | Host port | Vessel | Must be reachable by | Profiles serving it |
 |---|---|---|---|
 | `P080` | activity-api (trace store) | clients, spokes | standalone, hub, hub-minimal |
-| `P090` | development-vessel (memory, lessons) | clients, spokes | standalone, hub, spoke, compute |
+| `P090` | development-vessel (memory, lessons) | clients; spokes only over an authenticated channel, never a plain port (below) | standalone, hub, spoke, compute |
 | `P100` | discovery | clients, spokes, peers | all |
 | `P101` | identity | clients, spokes | standalone, hub, hub-minimal |
 | `P210` | goal-host | clients | standalone, hub, spoke, compute |
-| `P260` | concept-db | spokes (lessons) | standalone, hub, hub-minimal |
+| `P260` | concept-db | spokes (lessons), only over an authenticated channel, never a plain port (below) | standalone, hub, hub-minimal |
 | `P270` | stateful UI | humans | standalone, spoke |
 | `P310` | human surface | humans | standalone, spoke, surface |
 | `P333` | federation relay | spokes (libp2p) | hub, hub-minimal |
 
-A hub's firewall list is this table filtered by "spokes". Exposure is decided only by the
+A hub's firewall list is this table filtered by "spokes", less `P090` and `P260`. On a hub
+reachable from a public network, never open those two as plain ports: they hold the hub's
+private learning state (memory, gaps, lessons, concepts) and are not hardened for public
+exposure.
+The install provides no authenticated channel to them, so on such a hub a spoke cannot reach
+the hub's lessons and memory; that is the cost of keeping them closed. Exposure is decided only by the
 manifest's port mapping, set by an install input rather than a compose override (an override
 merges port lists and cannot narrow one): `HUMAN_SURFACE_PUBLISH_IP=127.0.0.1` in `.env` keeps
 the surface on the local host, and `SUBSTRATE_PUBLISH_IP=127.0.0.1` keeps every port there.
