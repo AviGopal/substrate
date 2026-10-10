@@ -288,7 +288,12 @@ if [ -d "$SUPER_REPO_DIR/.git" ]; then
   _ph="$SUPER_REPO_DIR/.git/hooks/pre-commit"
   _ph_ours=0
   [ -f "$_ph" ] && grep -q "$PLACEMENT_HOOK_MARKER" "$_ph" 2>/dev/null && _ph_ours=1
-  if [ "$_ph_ours" = 1 ] || { [ "${SUPER_CLONED_THIS_BOOT:-0}" = 1 ] && [ ! -e "$_ph" ]; }; then
+  # INSTALLED WHEN ABSENT, ON EVERY BOOT. This used to install only into a clone created this boot ("an existing volume
+  # keeps its commit behaviour"). Measured 2026-10-10: node1's clone predates that rule, so .git/hooks/pre-commit never
+  # existed, the ledger's pre-commit chained to nothing and returned 0, and every system commit skipped the placement gate,
+  # the leak scan and the ignored-path check (edc68d49 force-added runtime leases/ that way). A clone without a hook gets
+  # the wrapper; a repo with its OWN hook (no marker) is still left alone.
+  if [ "$_ph_ours" = 1 ] || [ ! -e "$_ph" ]; then
     mkdir -p "$SUPER_REPO_DIR/.git/hooks"
     cat > "$_ph" <<'HOOK'
 #!/usr/bin/env bash
@@ -364,8 +369,6 @@ HOOK
     echo "[setup-git-push] super-repo placement gate installed (.git/hooks/pre-commit runs the committed scripts/git-hooks/pre-commit)"
   elif [ -e "$_ph" ]; then
     echo "[setup-git-push] super-repo has its own pre-commit hook; placement gate not installed"
-  else
-    echo "[setup-git-push] super-repo clone predates this boot; placement gate not installed (an existing volume keeps its commit behaviour)"
   fi
   # A hooks path in effect (system, global or local) replaces .git/hooks entirely.
   _hp="$(git -C "$SUPER_REPO_DIR" config --get core.hooksPath 2>/dev/null || true)"
