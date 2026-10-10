@@ -56,7 +56,7 @@ fi
 if git merge-base --is-ancestor "$REMOTE/$BRANCH" HEAD 2>/dev/null; then
   log "local $BRANCH at/ahead of $REMOTE — no pull; syncing committed changes since marker"
 elif git merge-base --is-ancestor HEAD "$REMOTE/$BRANCH" 2>/dev/null; then
-  git pull --ff-only --quiet "$REMOTE" "$BRANCH" || { log "ff-only pull failed; triage"; exit 1; }
+  git pull --ff-only --no-rebase --quiet "$REMOTE" "$BRANCH" || { log "ff-only pull failed; triage"; exit 1; }
   git submodule update --init --quiet 2>/dev/null || log "WARN submodule update had issues (continuing)"
 else
   log "local $BRANCH genuinely diverged from $REMOTE/$BRANCH — refusing; triage"; exit 1

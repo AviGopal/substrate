@@ -342,7 +342,7 @@ case "$ACTION" in
         echo "{\"ok\":false,\"action\":\"sync\",\"vessel\":\"$VESSEL\",\"container\":\"$CONTAINER\",\"error\":\"no manifest entry and no unit '$VESSEL.service' in this fleet — try: vessel-ctl status\"}"; exit 1
       fi
     fi
-    csh "cd '$CLONE_DIR/$VESSEL' 2>/dev/null && GIT_TERMINAL_PROMPT=0 git pull --ff-only -q origin dev" || true
+    csh "cd '$CLONE_DIR/$VESSEL' 2>/dev/null && GIT_TERMINAL_PROMPT=0 git pull --ff-only --no-rebase -q origin dev" || true
     csh "/usr/local/bin/mirror-to-live '$VESSEL' '$CLONE_DIR'" || { echo "{\"ok\":false,\"error\":\"mirror failed\"}"; exit 1; }
     csh "systemctl restart $VESSEL.service" >/dev/null 2>&1 || true
     active=$(csh "systemctl is-active '$VESSEL.service' 2>/dev/null || true" 2>/dev/null | head -n1)

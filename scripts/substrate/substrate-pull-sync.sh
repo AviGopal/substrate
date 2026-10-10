@@ -1080,7 +1080,7 @@ if [ "${PULLSYNC_REEXECED:-}" != 1 ] && [ "$SUPER_FETCH_OK" = 1 ]; then
   if [ -n "$_se_head" ] && [ -n "$_se_remote" ] && [ "$_se_head" != "$_se_remote" ] \
      && git -C "$SUPER_DIR" merge-base --is-ancestor HEAD "origin/$BRANCH" 2>/dev/null; then
     git -C "$SUPER_DIR" checkout -q "$BRANCH" 2>/dev/null || true
-    _se_err="$(git -C "$SUPER_DIR" pull -q --ff-only origin "$BRANCH" 2>&1)" \
+    _se_err="$(git -C "$SUPER_DIR" pull -q --ff-only --no-rebase origin "$BRANCH" 2>&1)" \
       || log "super-repo: early ff-only pull FAILED — this tick's self-update reads $(git -C "$SUPER_DIR" rev-parse --short HEAD 2>/dev/null); git said: $(printf '%s' "$_se_err" | tr '\n' ' ' | cut -c1-300)"
   fi
   _se_self="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || true)"
@@ -2399,7 +2399,7 @@ for d in "${PASS_ORDER[@]}"; do
       git -C "$d" clean -fd -q 2>/dev/null || true
       git -C "$d" checkout -q "$BRANCH" 2>/dev/null \
         || git -C "$d" checkout -qB "$BRANCH" "origin/$BRANCH" 2>/dev/null || true
-      if ! git -C "$d" pull --ff-only -q origin "$BRANCH" 2>/dev/null; then
+      if ! git -C "$d" pull --ff-only --no-rebase -q origin "$BRANCH" 2>/dev/null; then
         log "$v: ff-only pull failed — skipping"; skipped=$((skipped+1)); continue
       fi
       HEAD="$(git -C "$d" rev-parse HEAD)"
@@ -4111,7 +4111,11 @@ if [ "$SUPER_FETCH_OK" = 1 ]; then
         #
         # Which is the point of printing git's own message: I could not tell those two
         # causes apart from the journal, and one of them was wrong.
-        _sp_err="$(git -C "$SUPER_DIR" pull --ff-only origin "$BRANCH" 2>&1)"
+        # --no-rebase: a clone whose git config says pull.rebase=true turns this into a rebase, and a rebase refuses ANY dirty
+        # tracked file, even one the incoming range never touches. Measured 2026-10-10: the hub's glue layer stopped converging
+        # ("cannot pull with rebase: You have unstaged changes", a runtime lease file) while node1, without that config,
+        # pulled past the same kind of file. The flag makes the pull independent of local config.
+        _sp_err="$(git -C "$SUPER_DIR" pull --ff-only --no-rebase origin "$BRANCH" 2>&1)"
         if [ $? -eq 0 ]; then
           SHEAD="$(git -C "$SUPER_DIR" rev-parse HEAD)"
         else
