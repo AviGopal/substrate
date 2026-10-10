@@ -271,6 +271,28 @@ EOF
   exit 1
 fi
 
+# ─── ignored paths stay untracked ───
+# .gitignore names runtime state (leases/, pool/, gaps/, state/, the host-sync stream, ...). `git add -f` and
+# `git add -A` over a force-listed path still commit it, and once tracked, every node rewrites the file in its
+# clone: the clone carries a permanent modification, and a later commit touching it stalls that node's glue
+# pull. edc68d49 (an autonomous "drift sync", 2026-09-26) force-added leases/*.json this way. Refuse any staged
+# ADDITION whose path .gitignore ignores. Modifying an already-tracked file is not refused here; untracking
+# those is a separate, reviewed commit.
+mapfile -t ADDED_IGNORED < <(git diff --cached --name-only --diff-filter=AR -z | xargs -0 -r git check-ignore --no-index -- 2>/dev/null || true)
+if [[ ${#ADDED_IGNORED[@]} -gt 0 ]]; then
+  printf '%s\n' "${RED}━━━ staged addition of path(s) that .gitignore ignores ━━━${NC}"
+  for f in "${ADDED_IGNORED[@]}"; do
+    printf '  %s%s%s %s  %s(%s)%s\n' "$YELLOW" "✗" "$NC" "$f" "$DIM" "$(git check-ignore --no-index -v -- "$f" 2>/dev/null | cut -f1)" "$NC"
+  done
+  cat <<EOF
+
+${DIM}What to do${NC}
+  These paths are runtime state by .gitignore. Unstage them:  ${DIM}git restore --staged <path>${NC}
+  If one is genuinely source, change .gitignore in the same commit so the rule no longer matches it.
+EOF
+  exit 1
+fi
+
 # ─── SOPS encryption check ───
 # The super-repo doesn't host secrets/ today, but if anything ever lands
 # under <area>/secrets/*.secrets.yaml we want it encrypted before commit.
