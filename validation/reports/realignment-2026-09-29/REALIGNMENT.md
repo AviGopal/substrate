@@ -787,7 +787,7 @@ The agentic-runner approach stays the implementation-sequencing reference named 
    - **STATUS 2026-10-03: NOT DONE. A "done" claim is withdrawn (user, qa: done from a proxy).** The "news goal" reached only after goal-specific operator surgery, recorded here as L12 interventions:
      - 7fe068c: a news-only writer step keyed on question words;
      - b260a15, 7295de1, acf4922: vocabulary lists in isCountableQuestion;
-     - armed by the operator-written check-first tests decb28c, 462a277, ed21374, d7e1674.
+     - armed by the operator-written check-first tests decb28c, 462a277, ed21374, d7e1674, and 2df2d90 (which armed b260a15), with its controls e24a456.
 
      Against this step's own definition it showed at most a route-around: no chained output consumed, no reworded reuse, no held-out generality, and a single node. The compose probe (D, "give me a briefing…") lost both halves.
    - **Acceptance from 10-03 (qa):**
