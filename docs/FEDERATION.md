@@ -7,6 +7,50 @@ This document holds the protocol and the concepts. The commands that launch a hu
 spoke or a surface are in [README § Installation](../README.md#installation) (sequences
 B, C and D), the only place setup commands appear.
 
+## Design intent
+
+The network is meant to be decentralised: every substrate is a full member that runs the
+whole loop and owns its own learning, wherever it is deployed and in any constellation.
+The mechanism-level design is in
+[`SUBSTRATE_AS_NETWORK.md`](architecture/SUBSTRATE_AS_NETWORK.md) (how the crossings are
+realised) and [`SUBSTRATE_AS_FLEET.md`](architecture/SUBSTRATE_AS_FLEET.md) (what may
+cross). Every topology in this document is judged against these expectations:
+
+- **Calls route by shape, never by place.** Nothing above discovery sees a substrate.
+  Absence in one location is not absence: every shape a member may use is reachable from
+  every member over the overlay.
+- **Work does not move; resolution crosses.** An execution has exactly one owner, the
+  member whose resolvers and data it needs. What crosses is a resolution, or a whole goal
+  dispatched to where its data lives, so execution needs no agreement between members.
+- **Each member owns its learning.** Members share signed evidence (traces) and each folds
+  it into its own beliefs. Beliefs are never imported, and a peer can offer evidence but
+  never overwrite another member's state.
+- **Members converge without coordination.** Traces and artifacts are content-addressed
+  and append-only, so divergent stores reconcile when members reconnect. Only admitting
+  or revoking a member needs agreement.
+- **Discovery is the control plane; the overlay is the data plane.** Traffic between
+  members rides the encrypted libp2p overlay, direct where a hole punch succeeds and
+  relayed otherwise. A relay sees only ciphertext, and established paths keep working
+  while a coordinator is unreachable.
+- **Identity is a member's own key, proven on the wire.** A member does not need one
+  validator to be reachable in order to authenticate a peer.
+- **A hub is a role, not a dependency.** Hubs emerge as the common producers of popular
+  shapes. The one deliberate central point is the admission authority that ratifies
+  members.
+
+Each expectation is falsifiable by taking something away:
+
+| Take away | The expectation holds when |
+|---|---|
+| any one member | every other member keeps reaching goals; work the lost member held is not silently dropped |
+| the hub, or the link to it | members keep reaching goals with what they hold locally and reconcile on reconnect |
+| a relay | members with a direct path keep it; relayed members move to another relay |
+| a route to an unreachable producer | callers learn it is unreachable promptly and pick another producer, rather than waiting out a timeout |
+| the public network between members | nothing that crossed it was readable in transit |
+
+The shared-namespace hub described below is the supported join, and it does not meet
+all of these. *Known limitations* says where it falls short.
+
 ## Point-and-go (the default join)
 
 A node joins a network with **one** input: a **join token** the hub issues
@@ -67,7 +111,7 @@ relay multiaddrs, identity endpoint, and preferred transport are returned *by*
 
 ## Two topologies
 
-### 1. Shared namespace (hub + spokes) — recommended
+### 1. Shared namespace (hub + spokes) — the supported join
 
 One **hub** runs the control plane + store + relay; **spokes** register against it and
 land in the same namespace because they authenticate with keys issued by the **one**
@@ -93,6 +137,11 @@ namespace, no reconciliation code (`discovery/src/registry.ts isAccessibleTo`). 
 namespace is therefore a property of the key, not of the network: a join token carries a
 key in the hub operator's organisation, and a node meant to belong to a different
 organisation on the same hub needs a key issued in that organisation.
+
+This topology is the supported way to join, not the design intent. Its hub is designated
+rather than emergent, and it holds every spoke's identity, traces and beliefs, so the
+namespace depends on it. Read *Known limitations* for what that costs before treating a
+hub-and-spoke deployment as decentralised.
 
 ### 2. Federation peers — separate substrates that fan out
 
@@ -362,6 +411,27 @@ reachability, not the namespace.
 ## Known limitations
 
 Read these before concluding a deployment is federated.
+
+**A shared namespace depends on its hub.** A spoke resolves identity, the trace store and
+the model arms on its hub, so while the hub is unreachable a goal on the spoke cannot
+reach. Asynchronous dispatches persist on the node that accepted them and are requeued
+when *that* node boots again; if it never returns, its dispatches are lost, and no other
+node picks them up. A synchronous remote `goal_execution` runs inside the request and is
+lost outright if its node goes down mid-run.
+
+**Spoke-to-hub control and trace traffic leaves the overlay.** Identity validation
+(above, *The identity namespace is reached over HTTP*), trace writes and discovery reads
+go over HTTP to the hub's published ports. Noise protects only overlay traffic, so across
+a public network those requests, and the credentials they carry, travel in the clear
+unless the hub is fronted by TLS.
+
+**An advertised row is not observed reachability.** Discovery derives a vessel's public
+endpoint from its internal port plus a fixed offset (`DISCOVERY_PUBLIC_PORT_OFFSET`),
+whether or not that port is published or reachable, and a spoke rehomes the row onto
+the hub's address. A
+caller that picks such a row waits out its connect timeout when a firewall drops the
+connection rather than refusing it, as cloud firewalls commonly do, and an unreachable
+owner reads the same as no producer at all.
 
 **A substrate has exactly one overlay identity.** Every `<vessel>@<substrate>`
 row a transport mirrors carries *that transport's* libp2p peer id and circuit;
