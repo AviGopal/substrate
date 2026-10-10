@@ -349,6 +349,43 @@ that is what they each are.
 
 ## 5. The walk, closed and iterated: the self-* loop
 
+### 5.0 One continuity loop, many horizon loops
+
+The closed walk is one of several loops, and all of them sit inside a single outer loop:
+**the substrate's continuity of operation**. That outer loop carries a need through
+produced outputs, their actual consumption and observed consequences, to changed future
+behaviour, and keeps doing so across restarts, moves and breaks.
+
+Inside it run as many loops as there are horizons. Examples:
+- the walk (one goal);
+- credit (each graded outcome back into selection);
+- gap improvement (detect → arm → select → compose → land → verify → close → credit the choice);
+- deployment (accept → converge → observe);
+- loops on horizons not yet built.
+
+Each is **the same cycle**, select → act → trace → grade → update, applied to its own
+shapes on its own timescale. That generalizes the two timescales of
+[`SUBSTRATE_AS_DYNAMICS.md`](SUBSTRATE_AS_DYNAMICS.md) §1 and the one-operation
+"three scales" of [`SUBSTRATE_AS_DEC.md`](SUBSTRATE_AS_DEC.md) §0.3 to N horizons, each
+orthogonal to the others' shapes.
+
+Three expectations follow:
+
+- **Loops couple only through shapes.** One loop's outputs are another loop's impulses:
+  a walk's trace is credit's input, and a failed consumer is gap improvement's input. No
+  loop reaches into another's internals, so loops can be added, retired or replaced
+  without rewiring the rest.
+- **Each loop is verified by the loop that consumes it.** Its outputs are graded by their
+  use downstream, not by its own report. A loop whose outputs nothing consumes is not
+  verified, however busy it is.
+- **Continuity is the measure of the whole.** A loop that runs while the outer chain is
+  broken somewhere has not contributed. Examples: walks complete but credit never reaches
+  selection; gaps are filed but never armed. Each loop's expected effect is observed by its
+  consumer within a window. A missing effect is itself content for the gap-improvement
+  loop.
+
+### 5.1 The self-* properties of the closed walk
+
 When step 8's Learning output becomes step 0's Informational input for the next goal,
 the walk closes into a loop, and that loop is the substrate's autonomy. Each self-*
 property is a named feature of the closed walk; below, each is tied to its **canonical
