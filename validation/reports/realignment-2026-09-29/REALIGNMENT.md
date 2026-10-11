@@ -1217,3 +1217,307 @@ Tags: [V] verified in git, code or the live gap store on 10-03. [D] taken from a
 8. **Operator load.** Operator-Authored commits are limited to L12-recorded harm or blocker work. The ratio of autonomous to operator commits is reported with every measurement. The 10-10 baseline is about 1 : 73 over 24 h across the super-repo and every vessel repo, of which four had commits (activity-api, concept-db, development-vessel, goal-host-vessel).
 
 **What it does not change.** It grants no authority, and it does not alter §7's ordering or exits. It names the end condition that §7's steps lead to, so that "autonomous" is never declared from a landing count, a single slice, or an operator's measurement again (§11.3).
+
+## 15. Amendment (2026-10-10): opening the lane mechanics under the accepted gate
+
+**Status:** adopted by the user on 10-10 ("follow the recommendations"). **It takes effect only when the opening is applied.** Two things must both be true first: bootstrap builds 1–6 (15.3) have landed and been verified, and every opening precondition below is met.
+
+Build 7 (the judge/walk split, user amendment 10-10) does not gate the opening. It runs in parallel on its own dates (15.3). When it lands, it widens what can open later, under the same opening rule.
+
+**Dates.** Measured basis: a move commit of the `gap-to-feature` split took about 17 minutes wall time, including rebase, the suite and the protected runs.
+
+| Item | Date |
+|---|---|
+| **The opening (committed)** | **2026-10-12T06:00Z** |
+| The opening (target) | about 2026-10-11T07:30Z (range 07:30–10:00Z). An estimate from the measured critical path, which depends on how long the gate-budget fix takes to build. |
+| Build 3 | by 2026-10-12T18:00Z, or earlier on the critical path |
+| Build 4a: P3 (delete `SEMANTIC_CUTOVER_GATE`), P4 (the 3 fail-opens fail closed) and the P1 floor input | serial after evalenv, before the opening |
+| Build 4, the rest | by 2026-10-18T12:00Z |
+| Build 7 | lands no earlier than 24 hours after the slice T0, and no later than 2026-10-17 |
+| Slice T0 | the opening's effect PASS plus one cycle |
+
+The 2026-10-19T23:59Z it replaces was the earlier commitment. Under the closer-only rule, no date moves back.
+
+**Critical path to the target:**
+1. The gate-budget fix soaks, about 03:45Z.
+2. development-vessel and activity-api converge, about 04:30Z. This makes build 3, P6, the harm fix and build 4a live.
+3. The `gap-to-feature` split is live, about 06:30Z.
+4. The opening act soaks, about 07:30Z.
+
+**An infrastructure blocker, found 10-11.** Deploy convergence on node 1 was structurally starved:
+- development-vessel's gate needed about 1,014–1,019 s (a parent/candidate overlay), against a maximum of about 776–780 s per tick (the unit's TimeoutStartSec 900 s, less a 120 s margin);
+- the consecutive-deferral bound never tripped, because it was counted per candidate and every push reset it.
+
+The fix raises TimeoutStartSec to 1800 s with a derived `GATE_BUDGET`, and counts starvation per vessel. It is an infrastructure-blocker change under the operator exception, not a new precondition. The system's own starvation detector filed both gaps itself at 02:10Z. That was the old per-candidate path, in live accepted code (`99c43984`, `substrate-pull-sync.sh:3036`). It fired for development-vessel only once a single HEAD (`bd0fa990`) had stayed through 4 deferrals. This is a valid positive control for the per-candidate detector. The per-vessel count (`2a24249a`) was not yet promoted at the time.
+
+**The gate is unchanged:** builds 1–6 have landed and P1–P6 are met. Nothing is removed from it.
+
+**The opening depends on the `gap-to-feature` judge split.** That build's confirmation, **as reported by qa:** the user typed "Let's confirm build 8" in qa's session at about 2026-10-11T06:00Z. The docs session has not yet had the user's direct word; it is recorded on qa's attribution until then.
+- **Containment, as reported by qa.** The interim close of `src/judge/` (`close-judge-dir-v2.sh`, sha256 `d4becdd5…`) was run by qa as operator under a user ruling typed in qa's session at about 06:08Z: "Let's have the operator make the edit and then we should run the script and set a timer for the follow up. The json operator key is deliberately valid for a limited time to allow us to submit with it freely."
+  - **Runs:** node 1 at 06:10:34Z (60 entries; docs verified the live record read-only at 06:21Z), compose2 at 06:13:47Z, and the hub in progress.
+  - **Each run** made a tighten-only CAS write, then a read-back and an effect check.
+  - **The key** was read only by the script, passed to curl over stdin, and never printed.
+  - **Exposure:** the judge core was lane-editable from about 03:15Z to 06:10Z on node 1, with no judge edits in that time.
+- **Status:** pushed as development-vessel `bf81499f` (10 commits) at about 2026-10-11T03:01Z, and live on node 1 at 2026-10-11T03:15:13Z.
+- **Recorded drift:** it was pushed while this section listed it as awaiting the user's confirmation. qa disclosed this at once.
+- **If the user declines:** it is reverted, and the opening act does not land. If the split has not landed by the committed date, the opening opens nothing on schedule. It does not slip. **The plan:** if the user has not confirmed the split by about 2026-10-11T05:00Z, the opening takes place on time and opens nothing. That is not a slip.
+- **Recorded 2026-10-11:** 05:00Z passed with no ruling. The 07:30Z target is missed **by ruling, not by build**: everything on the operator side was built and approved.
+- **The committed 2026-10-12T06:00Z holds.** If the ruling arrives in time for the act, its soak and the re-pin (the re-pin before 2026-10-12T00:08Z), the opening opens `gap-to-feature.ts`. Otherwise it opens nothing, on the committed date.
+- **Containment.** Until the user-run interim close lands, `src/judge/` is lane-editable on node 1 and compose2, because the split created it after the last scope write. qa watches the judge hashes every 2 minutes.
+- **Funnel datapoint, 05:20:24Z:** 2,806 candidates, 4 admitted, the floor dropped 1, and a gap at landability 0.7 was picked. It is a human-reported gap targeting activity-api, not `src/judge/`, so it is not autonomy evidence. This was the first compose since the split.
+
+**Applied on 2026-10-11, about 23 hours before the committed date.** The applied record:
+- **The super-repo chain.** It is `dfc48345` (testwall3 plus the act's super commits). Gate P accepted `bc659706` (`dfc48345` plus a pointer bump) on node 1 at 07:07:37Z and on compose2 at 07:05:18Z.
+- **The act's development-vessel commit.** It is `a657ce6c`, live on compose2 at 06:06:05Z and on node 1 at 06:14:09Z.
+- **The scope write and re-pin.** Done by `repin-opening-v2.sh` (`4b4e98d6`). Its first dry run was correctly refused, on a transient self-read timeout; it then passed. The `--apply` was run by an operator under the user's ruling of about 06:08Z (quoted in this section), with the coordinator's agreement.
+  - **node 1, 07:12:53Z:** 103 entries, matching the accepted pin. `gap-to-feature.ts` is **open**, and `src/judge/` is excluded as a directory, together with the act's closes. The holds are kept, attested by the operator. Docs verified the live record read-only at 07:19Z: 103 entries, `gap-to-feature.ts` not excluded, `src/judge/` excluded.
+  - **compose2, 07:16:24Z:** 104 entries. `gap-to-feature.ts` **stays excluded** there.
+  - **The hub** converged development-vessel `a657ce6` after its `src/judge/` close. Its lane stays closed until its own P5 is met.
+
+**Opening preconditions: a closed list.** These are security and integrity fixes, not counted builds.
+- They are §9.0 requirements: the opening would be unsafe without them.
+- Each has a must-fail and a date. Each is recorded as an L12 entry, with its landing sha, when it lands.
+- The list is closed. Anything found later is a need or a ruling, not an addition here.
+- Each has a lift condition (its must-fail is green on the accepted checker) and a review date (the date given), per the user's rule that no hold is kept indefinitely.
+
+| # | Precondition | Must-fail | Date |
+|---|---|---|---|
+| P1 (F1) | A scope chokepoint at the cutover; directedness is accepted only from an authenticated operator origin | in its L12 record | 2026-10-11T18:00Z; **met**: `6c7a9df3`, live on node 1 at 2026-10-10T23:52:41Z |
+| P2 (F2) | The birth verdict cannot be forged | in its L12 record | 2026-10-14T18:00Z; **met**: `ad679983`, live on node 1 at 2026-10-11T00:03:09Z |
+| P3 (F3) | `SEMANTIC_CUTOVER_GATE` is deleted (delivered with build 4) | in its L12 record | 2026-10-18T12Z; **met**: `ae94fc7a`, live on node 1 at 2026-10-11T02:59:37Z (mirror `bd0fa99`) |
+| P4 | The 3 fail-opens are closed (delivered with build 4) | in its L12 record | 2026-10-18T12Z; **met**: build 4a, live on node 1 at 2026-10-11T02:59:37Z (mirror `bd0fa99`) |
+| P5 | The pre-commit chain on node 1's super-repo clone is no longer inert (owner: deployment-redeployment) | in its L12 record | 2026-10-11; **met on node 1** by effect at 2026-10-11T00:09:44Z (the control was refused); the hub is pending its user-run step |
+| P6 | **evalenv:** every test child the evaluator spawns runs with an environment scrubbed by one shared helper | (1) A test child cannot read a credential env var present in its parent. (2) Control: the suite passes under the scrubbed environment. | 2026-10-13T12:00Z; **met**: `2231876e`, live on node 1 at 2026-10-11T02:59:37Z (mirror `bd0fa99`; the live tree carries `withTestChildEnv`) |
+
+**Why P6.** Today development-vessel `vessel-mitosis-evaluate.ts:264` spawns `bun test` with `{ ...process.env }`. A lane-authored test would therefore run with the vessel's credentials, and once lane files open, §7 step 9's acceptance ("an unauthorized operation stays refused despite high confidence") would fail by construction.
+
+**P6 prior work.** A fix was sketched on 10-03 (a clone evalenv, red test `e6e8940f`). It never landed. Its must-fail belongs in build 4's protected fixture set, so that the lane cannot loosen it after the opening.
+
+Precondition records: each precondition's sha and live time are in the table above. Their must-fail references are in the L12 records under `validation/reports/realignment-2026-09-29/`.
+
+**A recorded loosening, and its repair as a hard predecessor.** To get a gate past an in-container red, operators removed one protected pin file (development-vessel `2c3ffdc5`, test-only). That is recorded as an L12 operator loosening: the self-loosening shape build 4 exists to prevent. Its re-add with the fix (`3e083e97`) is a **hard predecessor of the opening**. **Re-added:** live on node 1 at 2026-10-11T02:59:37Z, within mirror `bd0fa99`. The opening does not apply while any protected pin is missing.
+
+**Not a precondition: the human-verdict forgery fix.** It was found after the list closed. It proceeds under the standing harm and security exception (§9.0; "stop doing" keeps harm and security work), recorded as a harm L12 series. Step 1 is goal-host `c9cfb63` (with `292c7fa`). It does not gate the opening.
+
+The harm series also bounds the tuning-parameter write scope (activity-api `37fed29`):
+- writing a gate-input row needs a credential issued with `policy:write`;
+- learning rows are bounded server-side at the current clamps;
+- writes made on behalf of another principal (obo) are refused.
+
+So the system can still adjust its own learning, but only inside a closed envelope.
+
+### 15.1 Basis
+
+Every file through which the system would repair its own repair loop sat in `autonomyScope.excluded_paths`: feature composition, gap-to-feature, admission, cutover and settlement. So the system could never fix the organs it needs to improve itself.
+
+Both alternatives keep it dependent:
+- operators fixing those files by hand;
+- operators specifying exact edits for the lane to apply.
+
+The user, verbatim: "we can't keep making every edit forever and not have it do anything on its own. Nor can we tell it to just make changes we fully investigate and specify."
+
+### 15.2 What this reverses, deliberately
+
+This amendment **explicitly reverses** two earlier rules:
+- §14 item 7 ("scope widens only through earn-in");
+- the 10-02 exclusion of the lane core.
+
+Earn-in (§7 step 9) can only fire on verified landings in the governed area. **There have been none, and there can be none while the area is closed.** That's the chicken-and-egg that earn-in cannot break by itself. The opening is therefore a user decision, recorded as one, not a criterion firing. Earn-in remains the mechanism for every further change of scope, in either direction.
+
+### 15.3 Bootstrap first, then stop
+
+Seven operator bootstrap builds are bounded here. Builds 1–6 come before the opening. Build 7 runs in parallel on its own dates. Each is recorded as an L12 intervention under operator identity, with its own must-fail, and each is named for its intractable-blocker basis. **After them, operators stop building in the opened area.**
+
+1. **The targeted-dispatch gate** (gap-to-feature). A gap that is not compose-eligible is a non-attempt. It is not dispatched, and it is not escalated on every tick. *Basis:* compose-ineligible gaps consumed the lane's dispatches and escalations.
+2. **Verification, in three parts:**
+   - **(a) The verification sweep.** Held gaps are filtered out before the slice, and the ungrounded-label loop is released without a false close. *Basis:* the sweep spent its slice on gaps it could not judge, and looped on labels it could not ground.
+   - **(b) Retiring the dormant `verification_spec` mechanism.** It is a reader with no writer in any repo. Route-edit landings that carry no predicate go to the human lane explicitly. This is a retirement, not a fabricated producer. *Basis:* a reader with no writer passes by default, and silently.
+   - **(c) The arming red-reason classifier** (`retry-evidence.ts`). *Basis:* arming yielded zero because real assertion failures were misread as wrong-reason reds.
+3. **Auto-revert** (§7 step 5; contained-self-development 8.3/8.4). A regressed settlement is followed, within its window, by a lane revert that names the sha. No operator is involved. *Basis:* no reader turned a regressed verdict into a revert.
+4. **Behavioural-fixture must-fails against self-loosening.** These protected fixtures, outside the lane's reach, fail if a landing weakens:
+   - the landability floor;
+   - admission;
+   - compose eligibility;
+   - arming (only with a red-at-HEAD check verified by the accepted checker);
+   - the gap field contract (no fabricated `edit_site` or falsifier; §7 step 3).
+
+   The precedent is `6ac1aa6`. *Basis:* the lane has loosened its own gate before.
+
+   **Build 4 is frozen (10-10).** Its scope is exactly two parts:
+   - **4a:** deleting F3, closing the 3 fail-opens, the P1–P4 must-fails on stored rows and attempt sequences, and the adoptions;
+   - **4b:** the `blockingWeight` row (an input to a floor). The 22 gate must-fails of the earlier recount drop out: `feature-compose.ts` stays closed, and the gates of `gap-to-feature.ts` move into its closed core (§15.4).
+
+   Nothing else joins build 4 or the precondition list. Anything found later goes to the system as a need, or to the user as a ruling.
+5. **Build 7 (user amendment 10-10): the judge/walk split of goal-host `index.ts`.**
+   - The reach judge and the verdict sinks move to a module that stays closed.
+   - The walk mechanics move to a file that can open under the opening rule.
+   - It is a pure move, with no behaviour change.
+   - Design by 2026-10-14; landed by 2026-10-17.
+   - It does not gate the opening. Its result widens what can open later (the walk file).
+
+   *Basis:* every operator-only restore in RECONNECTION-2026-10-10 sits in `index.ts`.
+
+**Why seven.** The first list had four items. It grew to six because each time a cycle was attempted, the first zero sat in a closed judge file. That is the same structural cause each time, and it is why the bootstrap exists. The seventh is the split, which the evidence required: RECONNECTION-2026-10-10 found every operator-only restore in `index.ts`. The list stays bounded by the same rule: **until one cycle closes**, and no further.
+
+**Dates and scope (user rulings, 10-10).**
+- **Dates only move closer, never further back.** The objective is self-sufficiency within days.
+- **Vital items are resourced, not cut and not delayed.** They get done by their date.
+- **Non-vital items go to the system as needs.**
+
+**The opening rule.** A file opens only if every judging function it contains is covered by a protected must-fail the lane cannot edit.
+
+**What counts as a judging function.** This is qa's operationalization of the user's ruling "no change judges itself" (§10 item 1, 15.7). It is not a new ruling.
+- **Included:**
+  - **gates:** admit, refuse, arm, land, verify and close;
+  - **verdict computations:** reach, credit, settlement and close verdicts.
+- **Excluded:** rankers and throttles.
+- **Gate inputs** are protected through outcome-level fixtures: stored rows, plus attempt sequences driven to admit or refuse. So a change that alters what a gate sees fails as surely as a change to the gate itself.
+
+**Each build's must-fail is proven before the clock starts.** The proof is in isolated fixtures and in-container clone trees, never by modifying live state; §7 step 1 forbids supplying negative controls that way. It is then confirmed that the live gate loads the same protected files. **The bootstrap is capped at these seven.** An eighth is a ruling, not a quiet addition.
+
+The builds' shas (development-vessel unless noted):
+
+| Build | Sha |
+|---|---|
+| 1 | `9ca1f1c` (mirror) |
+| 2a | `51c04d5` |
+| 2b | `acc260d` (with `8a0f7ee4`) |
+| 2c | `f80a25e` |
+| 3 | `2ac7e4a2` |
+| 4a | within `bd0fa990`, including `ae94fc7a` |
+| 8, the `gap-to-feature` judge split | `bf81499f` |
+| the opening act | development-vessel `a657ce6c`; super-repo `dfc48345` |
+| 4, the rest | not yet landed |
+| 7 | not yet landed; it lands no earlier than T0 + 24 h and no later than 2026-10-17 |
+
+### 15.4 What opens, and what stays closed
+
+**What the first opening does (narrowed to one file):** it removes development-vessel `src/resolvers/gap-to-feature.ts` from `autonomyScope.excluded_paths`. That list is an **exclusion list** (59 paths live). Every file not on it is already editable by the lane. So the opening widens the lane's reach by one file; `gap-to-feature.ts` does not become the only open file.
+- **What makes it safe to open.** `gap-to-feature.ts` judges evidence it produces itself, and closed files run on its code, so tests alone cannot make it safe. It opens only after its **judge split** lands: its gates and verdict computations move into a closed core, leaving the openable mechanics. The split is a separate development-vessel build, due **2026-10-18**, resourced in parallel with build 7. **It is build 8, confirmed by the user** ("Let's confirm build 8", about 06:00Z on 2026-10-11, as attributed by qa).
+- **The recount**, against the opening rule's definition: `gap-to-feature.ts` holds 60 gates and verdicts, 11 of them uncovered. They move into the closed core rather than becoming must-fails.
+
+**`feature-compose.ts` stays closed at the first opening.** It is not vital for self-sufficiency: it already composes for every open file, and opening it would only let the system repair its own drafter.
+- Its recount (50 gates and verdicts; 10, plus 1 partial, uncovered) is recorded for a later opening.
+- Its own split (estimated 8–11 days) is undated. It gets a date only when evidence shows the drafter is the binding stall.
+
+**`apply-proposal-as-patch.ts` stays closed at the first opening.** Three reasons:
+- It has 12 gates with no protected must-fail.
+- It is the route of the F1 scope bypass.
+- It has had 0 landings, ever.
+
+It can open later, on evidence, under the same rule.
+
+**Stays closed**, everything else in the excluded set, including:
+- **judges and judge helpers:** `self-fact-reconcile`, `scope-earn-in`, `test-suite`, `gap-lifecycle-scan`, `behavioral-verification`, `vessel-mitosis-evaluate`, `staged-mitosis-gate`, `vacuous-edit`, `removed-line-predicate`, `apply-mutant`, `evaluator-tree`, `retry-evidence`, activity-api `posterior-update`, plus their protected tests;
+- **trust records:** `attempt-register.ts`; `pool-impulse.ts`, which is on the trust-root list;
+- **not yet covered by protected must-fails:** `check-supply-admission.ts`, `substrate-gap.ts`;
+- **the landing and push path, containment and auth, config and scope, and the limits:** `rhythm-conductor-tick`, boredom `index.ts`;
+- **goal-host:** `index.ts` and `escalation-target`, which hold the reach judge until the judge split. `goal-target-inference.ts` is not opened; its repair is already admitted under its own hold.
+
+**A correction, recorded.** The opened set was narrowed before application, from the user-approved list toward CLOSED, by applying the ruling's own principle that judges, trust records and anything with an uncovered judging function stay closed. **That is a tightening, not a widening.** A landing that touches a closed file is refused whatever it claims to be.
+
+The applied scope record: see the applied record under Status.
+
+### 15.5 Time limit, and how the opening is applied and closed
+
+**Mechanism.** The opening is applied by an operator record edit to `autonomyScope`, together with a re-pin of `autonomy_scope_pinned`. This is the §14 item 7 reversal in practice: scope changed by an operator edit, not by earn-in. **It resets §7 step 9's exit counter**, which requires two consecutive criterion-made scope changes with no operator record edit between them, so that count starts again after the close.
+
+**Window and close.** The opening lasts **7 days** from application. **The close is a pre-approved second operator edit** at opening + 7 days, restoring the previous exclusions, **unless** at least one landing in the opened files within the window is:
+- system-authored: from a gap the system armed itself, by a lane compose without operator edits;
+- consumer-verified: under 15.3's verification and settlement.
+
+The close is an operator edit because no time-boxed widening field exists, and adding one in `scope-earn-in.ts` was declined. That makes the close a commitment recorded here in advance, not a mechanism. Whether the opening is then extended, narrowed or made permanent is decided on the evidence the window produced.
+
+The application and close records:
+- **Applied:** 2026-10-11T07:12:53Z on node 1 (see Status).
+- **The close is due 2026-10-18T07:12:53Z** (the application plus 7 days), unless 15.5's condition is met before then.
+- **The close record:** **[TO FILL at close]**.
+
+**Non-use is not failure.** The opening closes if the opened files go unused. §14's success measure is separate, and wider: **any** system-authored, consumer-verified landing that originates from the probe, in **any** file the system may edit. That includes files that were never excluded, such as `gap-check-supply.ts`. If the opening closes unused while a probe-originated landing succeeded elsewhere, the record reads **"self-repair succeeded outside the opened files; opening unused"**, not a failure.
+
+
+### 15.6 The probe that follows, pre-registered
+
+After the opening, one need-phrased goal is dispatched. It names no file and no component. It is pre-registered here, before dispatch:
+
+**Baseline, recorded when the opening act lands.** Measured before the act at 2026-10-11T03:09:19Z (coordinator `ACT-BASELINE-FUNNEL-2026-10-11.md`, sha256 `84c35b29…`, accepted by qa); it is re-confirmed at the act: **[TO FILL at the act]**. The probe does not wait for an armed gap. Requiring one would make it wait for the very thing it exists to cause. Instead, two figures are recorded as a baseline when the act lands:
+- **The node 1 admission funnel.** At 2026-10-11 02:59 and 03:09Z it read: 2,803 candidates, then 1 admitted (`needs_information` 2,455, about 88%; `protected_vessel` 265; `autonomy_scope` 56), then 0 above the landability floor, so 0 composes.
+- **The count of armed, system-authored gaps whose `edit_site` is in the opened scope.**
+
+The measured figures:
+- **Funnel.** Before the 2,803 candidates, 38 gaps were held, 328 excluded by lineage and 13 in backoff. Of the 2,803, 1 was admitted, the floor dropped it, and 0 were composed.
+- **Armed gaps sited at `gap-to-feature.ts`: 3.** All three fail checks other than scope: class 1 against class 2 (`:538`), and a null `evidence_resolve` (`:560`). So **the opening alone admits 0 gaps**, and T0 rests on the probe.
+- **A self-measurement inconsistency.** The store counts 188 armed open gaps, while the server's `falsifier_coverage` header reports 39 of 197. The system's two measures of its own arming disagree.
+
+The probe passes only if a system-authored gap appears **and** lands. A hand-authored gap is not evidence (law 13).
+
+**Precondition.** The lane-need goal below is dispatched only if the lane has had **no landing in the 24 h before dispatch**. If anything has landed, including a gap armed at birth and landed through the lane before the opening, the goal's premise is false. In that case the pre-written alternative is dispatched instead:
+
+> "Your gaps are filed far faster than they are armed: about **[N filed per day]** gaps a day against **[M system-armed per day]** armed by the system itself. Find out why, and repair it."
+
+Its rates are re-measured from system rows at dispatch. For reference, the 10-10 figures were about 75–110 filed per day, 0 system-armed in 5 test-writing dispatches, and 5.5% of open gaps armed overall.
+
+- **Goal text:** "Your improvement lane hasn't landed anything in 24 hours; find out why and repair it."
+- **Expected outcome: low.** The 09-29 analogue, also with no component name, got target-inference confidence 0 and ended HOLLOW. Autonomous specs reached about 2.5% (09-13).
+- **Success:** the walk localizes the stuck stage, naming the file, **and** a system-authored landing in an OPEN file is verified at the consumer within the opening's window. Both are measured by the §14 rule, system rows only.
+- **Otherwise:** the window expires and 15.5 closes the opening.
+- **Expected-failure branches, pre-registered.** The walk may localize correctly to a file that stays CLOSED. If so, it cannot land the fix inside the window, by construction. Two kinds of closed file are recorded separately, because they are evidence for different things:
+  - **"Correct diagnosis, blocked by a closed JUDGE file"** (goal-host `index.ts`, activity-api `posterior-update.ts`, any judge or trust file). This is evidence for the judge split.
+  - **"Correct diagnosis, blocked by a closed LIMIT file"** (for example `rhythm-conductor-tick.ts`, where supply cadence lives). This is evidence for earn-in on that limit. The judge split does nothing for it.
+
+  Neither is a capability failure.
+  - **A third branch, distinct from supply and from closed judges: the lane fails on an open, armed gap.** This measures repair capability. The evidence already exists: the two filed `gap-drain-redispatches` gaps are sited at an open file (`gap-drain-observer.ts`), and between them they have 34 failed attempts and no landing. If the probe localizes to an open file and the lane still does not land, that is recorded under this branch: a shortfall in the lane's repair capability, not in supply and not in scope. The failure reasons recorded for those 34 attempts:
+- **Draft quality, 14 of 34:** `verify_failed` 5, `no_effect_region` 4, anchor 3, overwrite refused 1, dangling reference 1.
+- **No recorded reason, 20 of 34 (59%).** The system cannot learn from failures it does not record, which makes this an N-series candidate (N9).
+- **N9's measure, restated.** Failure lessons and attempt counts are written by separate writers, so lessons divided by attempts cannot be read as the fraction left unrecorded. N9 measures **failed composes, counted from the `verify_failed` verdict lines, that have no lesson**.
+
+**A sealed answer key for this branch.** An expected diagnosis was written and verified before the probe:
+- **Where it is.** It is kept **out of the tree** until the probe concludes, so that the walk cannot read it. Its sha256 is `72875824c6d18ca2cd5f36966cd0d4ea9878614e1e8233c17f0882ede3025ba3`.
+- **Copies.** docs, qa and the coordinator each hold one.
+- **Scoring rule.** This branch PASSES if the system localizes the cause whose sealed description matches the key, **and** lands a fix whose stated effect is verified by the key's positive control. The positive control is run on a fresh store dump after the landing, and its baseline is sealed with the key.
+- **Unsealing.** The key is published here when the probe concludes, and its hash is checked against the value above.
+- **No help.** It is neither hand-filed nor hand-fixed (law 13).
+- **The prediction is confirmed on a live, unseeded instance.** qa pre-registered three counts from the key (39, 18 and 15) before the coordinator's fresh store dump at 2026-10-11T05:46Z, and the dump read exactly 39, 18 and 15. What the counts measure stays under the seal.
+- **A further pre-registered closed-judge observation, also sealed.** It comes from a live compose at 05:28:38Z. Its sited file is held with the coordinator, with sha256 `9c7a560bbcb66be3e654990a8b1e11a516c28f7e1cd4a2e4b9bd79d5cb748482`. Like the key, it is published and hash-checked when the probe concludes. Its remedy is a user ruling if the probe's branch fires, and it is not hand-filed.
+  - **A pre-registered instance of the closed-JUDGE branch: the landability floor.** Today's funnel ends at the floor. It is `const LANDABILITY_FLOOR = 0.15` (development-vessel `src/judge/gap-admission.ts:1015`), an in-code constant that build 8 moved into the closed judge core. A correct diagnosis that names it can therefore not land inside the window. The constant is:
+    - invisible to the system as a shape (law 1);
+    - not changeable through the lane, because the core is closed;
+    - not a tuning row, so not changeable through `policy:write` either.
+  - **Its remedy, pre-registered so that it is not improvised if this branch fires.** Make `LANDABILITY_FLOOR` a gate-input tuning row: read at use time from `substrate_tuning_param`, failing closed to 0.15. The system can then see the floor and propose a change to it, while writing the change still needs `policy:write`. This is the same pattern as the `AUTO_REVERT_*` rows. It is an operator build on a closed file, so it is a **user ruling if and when this branch fires**, not before.
+  - **A second pre-registered instance: the floor is a fixed point.** The admitted gap `performance-inefficiency-execution_traces_list` computes a landability score of 0.10. The floor drops it without recording an attempt, so it is re-admitted on every tick, across restarts, and admits nothing else.
+    - **Remedy family:** the gate-input row above, plus having the floor record a non-attempt, so the gap leaves the admitted set.
+    - **Status:** a user ruling if the branch fires.
+    - **It is not hand-filed.** The file is closed, so a filed gap would be hollow. The detector for this class (a candidate re-admitted without an attempt) belongs in the N-series of needs instead.
+  - The basis is read-only evidence: publish/offer and verdict retraction are only half lane-reachable.
+  - Their pure halves sit in lane files: activity-api `impulses.ts` (the GET filter), goal-host `walk-pool.ts`, `reached-command-store.ts`.
+  - Their wiring is in goal-host `index.ts`, and producer credit goes through `posterior-update.ts`, both closed.
+
+A low prior is recorded so that a reach is evidence and a miss is information, not a surprise (law 12; §11.5 "pre-register the falsifier").
+
+**Cadence: stage by stage, not by calendar.** The window has no fixed checkpoints. Each lane stage has an expected latency:
+- admission: ~40 min;
+- compose → own-check: ~15 min;
+- own-check → cutover verdict: minutes;
+- cutover → mirrored and restarted: ~1 h;
+- settlement at the next consuming run: ~1–2 h.
+
+**When the next stage event is overdue, the evaluation pauses.** That stage is diagnosed, one fix is made at that stage, and the evaluation resumes. A stall is never waited out; the opening's own close is 15.5's rule.
+
+During the window this is watched by an **operator-side overdue watcher** over the existing journal lines, keyed by gap id, alerting on the first overdue stage. It is an **operator instrument**, so it does not count for §14. Its positive control is real stage events: the bootstrap's own deploys, observed going admission → mirror → effect. It is not a synthetic cycle, which would itself be an operator-authored landing. Shaped stage events with one cycle id, measured by the system, are not built now as a seventh bootstrap item; they are a candidate for the system's own first need after the opening *(user, 10-10)*.
+
+**Supply at T0.** Supply may still be the binding stage, so **"no armed gap in the opened files at T0"** is pre-registered as an outcome of its own. Raising the supply rhythm's budget is decided on 2c's effect evidence, not before: only if conversion is above 0 and cadence is then the binding stage, as an L12 intervention with a time limit *(user, 10-10)*.
+
+**What each outcome triggers, decided now:**
+- **Success** (a system-authored, consumer-verified landing that originates from the probe): extend, then widen only through earn-in.
+- **Blocked by a closed JUDGE file:** schedule the judge split, with a date and a bounded scope.
+- **Blocked by a closed LIMIT file:** earn-in on that limit.
+- **A stage overdue in an open file:** one fix at that stage, then resume.
+- **No armed gap at T0:** supply is the work. Decide the cadence on 2c's evidence *(user, 10-10)*.
+- **The result cannot be determined:** the instruments are fixed first. No other change.
+
+### 15.7 What this does not change
+
+- **Judges and trust stay operator-held.** "No change judges itself" (§10 item 1) applies in full.
+- **Security, locality and auth requirements stay** (§9.0).
+- **"Stop doing" applies outside the seven bootstrap builds.**
+- **An overdue stage pauses the evaluation, it does not close the opening** (15.6). The evaluation stops for one diagnosed fix at that stage, then resumes. The opening itself closes only by 15.5's rule, and the 7-day limit is its outer bound.
