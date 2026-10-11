@@ -1461,7 +1461,13 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
   - **What it did.** Node 1's lane picked it at 07:20:54Z, after the re-pin and before T0. Isolation refused it in under a second: no workspace, no draft, no landing.
   - **How it ends.** Its drift is resolved (the live record equals the pin), and the reconciler is expected to close it. It is not hand-closed during the window. If it is still open after two reconcile passes (about 08:30Z), that is reported to the user.
   - **Contamination rule.** If it ever lands anything, or displaces a probe-originated gap from a tick's pick, that is recorded as contamination of the probe.
-- **Outcome:** **[TO FILL as stage events arrive]**.
+- **Outcome of the first walk (read from `goal_reasoning`, 2026-10-11 at about 07:37Z):** **not reached.** The walk ran a fresh derivation over 9 attempts and ended HOLLOW. It did not localize a stage, and it filed no diagnosed gap.
+  - **The system could not read its own commit history.** Every attempt's `git_log` returned "not a git repository".
+  - **No shape exposed lane state.** Target inference chose generic report shapes. None of them carries admissions, composes, cutover verdicts or settlements, which matches the gap-loop map's list of what the system cannot see.
+  - **The only system-filed gap after T0** is a no-producer stall gap, `reach-gap-apply-proposal-as-patch` (07:33:21Z, no `edit_site`). It is not a diagnosis.
+  - **Reading under this section's rules:** the localization stage failed for lack of information (law 8), not capability. The rule applies: pause, diagnose, make one fix at that stage, then resume. The window stays open until 2026-10-18T07:12:53Z, and the key stays sealed.
+  - **A harm found in the same walk.** The `shellResult` executor's self-correction rewrote local commands into requests to invented external hosts, and accepted an unrelated external page as a result. Its suppression has been held since 08-19, although it is proven bad (α 471, β 2020). This is handled under the standing harm exception, outside the probe's scoring.
+  - **Later stage events:** **[TO FILL as they arrive]**.
 
 **Precondition.** The lane-need goal below is dispatched only if the lane has had **no landing in the 24 h before dispatch**. If anything has landed, including a gap armed at birth and landed through the lane before the opening, the goal's premise is false. In that case the pre-written alternative is dispatched instead:
 
