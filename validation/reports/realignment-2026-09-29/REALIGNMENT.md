@@ -1530,9 +1530,9 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **The judge fix:** yes. qa's session was blocked by its permission check when pushing `d949f753`, so **the user runs the push**.
         - **The learning values:** keep `TD_LAMBDA` 0.72 and `YIELD_FLOOR` 0.458.
         - **The hub's P5:** on the user's own schedule.
-        - **`goal-target-inference.ts`:** re-tightened only if its hold's expiry at 2026-10-12T00:08Z actually opens it, and kept closed until N6 is scored.
+        - **The earn-in holds that expire at 2026-10-12T00:08Z:** they lift as scope earn-in intends. A recommendation to re-tighten one of them was **withdrawn by qa** as an error of record: it conflicted with a pinned pre-registration's window rule. No re-tighten is made.
         - **The schedule is unchanged.**
-        - **The judge fix is pushed by the user.** goal-host origin/dev moved from `c336a544` to `d949f753` (patch-id `a9bbcccc041b` verified). N6 is dispatched once it is live on node 1; the 06:00Z fallback stays as a backstop.
+        - **The judge fix is pushed by the user.** goal-host origin/dev moved from `c336a544` to `d949f753` (patch-id `a9bbcccc041b` verified). It went live on node 1 at 15:47:39Z, when goal-host restarted. **Correction:** N6 is gated by the window rule in its own pinned pre-registration, not by the fix going live. The 2026-10-12T06:00Z backstop still stands.
         - **Expected effect, pre-registered.** The floor's reported reach on write and change goals falls, because prose reaches stop counting. Real reaches with a produced shape or a landed sha are unaffected, and that is the negative control.
       - **N6's dispatch rule, pre-registered.**
         - **If the user approves the judge fix earlier,** N6 is dispatched as soon as `d949f753` is live on node 1, and after N6's own eligibility (2026-10-12T00:08Z).
