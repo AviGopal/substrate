@@ -1512,7 +1512,10 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **Live learning values at dispatch:** `TD_LAMBDA` 0.72 and `YIELD_FLOOR` 0.458, both system-written; the user's keep-or-revert decision is still pending.
         - **No confound.** `YIELD_FLOOR` feeds only the posterior success-yield credit (`posterior-update.ts`), not lane-stage flow, so it does not confound N5's measure.
         - **Scoring:** from N5's own PASS 1–4 and FAIL criteria only.
-        - **Outcome:** **[TO FILL]**.
+        - **Outcome: NOT PASS** under N5's pre-registration. No system-written joints, alarm or admit records were produced; the coordinator is confirming read-only.
+          - The walk's own verdict was `reached=yes`, through reuse-before-derive straight to `universal-tool-fallback` (recorded as "10/10 reached" for this goal), in 1 attempt, with no produced shapes. Its "answer" was a plan.
+          - **This is the second reach-judge false positive, and now it is visible in selection.** Prose reaches appear to inflate the floor's recorded reach rate, so the system prefers writing a plan to attempting a change. It is recorded as an observation (closed: the goal-host reuse/floor path and the reach judge). The coordinator is measuring how many of the floor's `reached=true` traces have any produced shape or landed sha.
+          - **Consequence for the schedule (docs' recommendation to qa).** Further needs dispatched under this judge would reinforce prose reaches (law 12), so N7 is held at its latest-by. The reach judge becomes the binding blocker, and fixing it is vital: an operator build on a closed judge, put to the user.
       - **N10 is confirmed not passed** by the coordinator: the posterior is unchanged (α 1, β 460.3), and no retirement call was made. One caveat: the row's flags were not read directly.
       - **N6 follows N5,** at its eligibility of 2026-10-12T00:15Z. If N5 is still running then, N6 waits for N5 to reach a terminal state, or until 2026-10-12T06:00Z, whichever comes first.
     - **Pinned for the schedule** (all read-only):
