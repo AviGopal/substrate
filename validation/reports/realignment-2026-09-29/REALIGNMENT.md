@@ -1544,6 +1544,9 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **The confound, pre-registered:** "dispatched under the unfixed reach judge; reached=yes without the PREREG effect is an expected false positive, not evidence."
         - **The cost, pre-registered.** Under the unfixed judge, a prose reach also writes a new laundered `goal_execution_paths` donor row, with the requested targets as its endpoint. That row's id is recorded after dispatch, so that the later evidence re-grade covers it.
         - The record shows the outcome as bounded by a pending ruling, not by operators waiting.
+      - **N14 is added** (the user, as reported by qa: "follow the recommendations. stick to this schedule."). It is a class need: the floor's read tools are built from discovery, as its write tools already are.
+        - **Schedule:** queued after N6, one need in the lane at a time, with a latest-by of 2026-10-12T18:00Z. It goes ahead of N7 and N9, whose dates are unchanged; if they are not met, they are reported MISSED, not moved later.
+        - **Pre-registration:** the coordinator writes it, sealed. Nothing the walk can read names N14's site before it is scored; that makes four sealed answers.
       - **N6 follows N5,** at its eligibility of 2026-10-12T00:15Z. If N5 is still running then, N6 waits for N5 to reach a terminal state, or until 2026-10-12T06:00Z, whichever comes first.
     - **Pinned for the schedule** (all read-only):
       - **N5:** `PREREG-NEEDS.md` §N5, sha256 `8ed46df7…9867`.
