@@ -1,5 +1,7 @@
 # Topic B — env/constant-gated behavior (law 1) — 2026-10-01, read-only
 
+> **Superseded note (2026-10-11).** The `SEMANTIC_CUTOVER_GATE` env switch named below was deleted by development-vessel `ae94fc7a`, part of REALIGNMENT §15 build 4a, precondition P3. It went live on node 1 at 2026-10-11T02:59:37Z. feature-compose's semantic checks now run unconditionally and fail closed, and there is no switch left to set. This document is kept as it was written, as a dated record.
+
 Method: regex over repos/*/src (*.ts/js/tsx, excl tests/.d.ts/node_modules) for process.env.X, process.env['X'], env.X/env['X']. Heuristic name classifier with spot corrections. Lower bound (helper wrappers missed). Live-set = names in /etc/substrate/env + unit Environment= + EnvironmentFiles of vessel units.
 
 ## Counts (name x repo rows; 722 rows, 499 distinct names)

@@ -1,5 +1,7 @@
 # Semantic cutover-verification gate (the reach-gate, applied orthogonally to code)
 
+> **Superseded note (2026-10-11).** The `SEMANTIC_CUTOVER_GATE` env switch named below was deleted by development-vessel `ae94fc7a`, part of REALIGNMENT §15 build 4a, precondition P3. It went live on node 1 at 2026-10-11T02:59:37Z. feature-compose's semantic checks now run unconditionally and fail closed, and there is no switch left to set. This document is kept as it was written, as a dated record.
+
 **Date:** 2026-06-25
 **Vessel:** development-vessel (feature_compose verify path)
 **Stage:** SPEC (root-caused live — see evidence)

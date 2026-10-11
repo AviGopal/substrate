@@ -1,5 +1,7 @@
 # The gap-improvement loop, stage by stage: is each hand-off shaped and visible? (2026-10-10)
 
+> **Superseded note (2026-10-11).** The `SEMANTIC_CUTOVER_GATE` env switch named below was deleted by development-vessel `ae94fc7a`, part of REALIGNMENT §15 build 4a, precondition P3. It went live on node 1 at 2026-10-11T02:59:37Z. feature-compose's semantic checks now run unconditionally and fail closed, and there is no switch left to set. This document is kept as it was written, as a dated record.
+
 This is a read-only check of the gap-improvement loop against SUBSTRATE_AS_SOFTWARE §5.0, which says "loops couple only through shapes". The standing goal it serves: "ensure that all properties required for continuity and learning are shaped and visible to the system itself".
 
 For every stage hand-off it records four things:
