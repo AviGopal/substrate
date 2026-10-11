@@ -1359,6 +1359,15 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
 
 **Why seven.** The first list had four items. It grew to six because each time a cycle was attempted, the first zero sat in a closed judge file. That is the same structural cause each time, and it is why the bootstrap exists. The seventh is the split, which the evidence required: RECONNECTION-2026-10-10 found every operator-only restore in `index.ts`. The list stays bounded by the same rule: **until one cycle closes**, and no further.
 
+**Two further builds, each by explicit user ruling.**
+- **Build 8: the `gap-to-feature` judge split** (development-vessel `bf81499f`). It is confirmed by the user, as reported by qa; see Status.
+- **Build 9: the behaviour-switch ratchet** (the user, as reported by qa: "follow the recommendations. stick to this schedule."). It follows the user's ruling that "the system should not allow itself to be broken".
+  - **What it is:** per-vessel gate tests, plus a pinned, shrink-only list of the roughly 300 existing behaviour switches, plus a super-repo pre-commit check for unit drop-ins.
+  - **What it refuses:** any new behaviour environment variable, unit drop-in, hold without a lift condition, or side script, from **anyone**, operators included.
+  - **Who does what:** the coordinator builds it, qa reviews it, and the user pushes it.
+  - **Its must-fails:** a new behaviour env read, a new drop-in, and a hold with no lift condition are each refused; an entry already on the pinned list passes. **[TO FILL with the shas at landing.]**
+  - **Why it is the last one.** It is the single operator bootstrap that makes "operators stop adding" mechanically true.
+
 **Dates and scope (user rulings, 10-10).**
 - **Dates only move closer, never further back.** The objective is self-sufficiency within days.
 - **Vital items are resourced, not cut and not delayed.** They get done by their date.
@@ -1373,7 +1382,7 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
 - **Excluded:** rankers and throttles.
 - **Gate inputs** are protected through outcome-level fixtures: stored rows, plus attempt sequences driven to admit or refuse. So a change that alters what a gate sees fails as surely as a change to the gate itself.
 
-**Each build's must-fail is proven before the clock starts.** The proof is in isolated fixtures and in-container clone trees, never by modifying live state; §7 step 1 forbids supplying negative controls that way. It is then confirmed that the live gate loads the same protected files. **The bootstrap is capped at these seven.** An eighth is a ruling, not a quiet addition.
+**Each build's must-fail is proven before the clock starts.** The proof is in isolated fixtures and in-container clone trees, never by modifying live state; §7 step 1 forbids supplying negative controls that way. It is then confirmed that the live gate loads the same protected files. **The bootstrap is capped at nine:** the seven, plus builds 8 and 9, each added by explicit ruling. A tenth is a ruling, not a quiet addition.
 
 The builds' shas (development-vessel unless noted):
 
@@ -1665,5 +1674,5 @@ During the window this is watched by an **operator-side overdue watcher** over t
 
 - **Judges and trust stay operator-held.** "No change judges itself" (§10 item 1) applies in full.
 - **Security, locality and auth requirements stay** (§9.0).
-- **"Stop doing" applies outside the seven bootstrap builds.**
+- **"Stop doing" applies outside the nine bootstrap builds.**
 - **An overdue stage pauses the evaluation, it does not close the opening** (15.6). The evaluation stops for one diagnosed fix at that stage, then resumes. The opening itself closes only by 15.5's rule, and the 7-day limit is its outer bound.
