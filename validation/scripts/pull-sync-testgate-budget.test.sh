@@ -146,7 +146,9 @@ converged && bad "(c) converged WITHOUT the protected check" || ok "(c) HELD, no
 small; setup activity-api new; echo 2 > "$T/stub/sleep"
 tick 3; tick 3; tick 3
 grep -q 'pull-sync-testgate-budget-starved-activity-api' "$CALLS" && ok "(d) 3 consecutive mid-gate deferrals filed the budget-starved gap" || bad "(d) no starvation gap after 3 deferrals (defers file: $(cat "$MARKER_DIR/activity-api.testgate-budget-defers" 2>/dev/null))"
-echo 0 > "$T/stub/sleep"; tick 0
+# The resetting gate needs four suite runs (T1, T2, the two-run overlay): give it a 60 s unit so it FINISHES even
+# under a loaded glue run (with the 10 s unit it occasionally deferred again, a load flake, not a code result).
+echo 0 > "$T/stub/sleep"; UNIT_TIMEOUT_S=60; tick 0; UNIT_TIMEOUT_S=10
 [ ! -f "$MARKER_DIR/activity-api.testgate-budget-defers" ] && ok "(d) a gate that finished measuring resets the deferral count" || bad "(d) the deferral count survived a finished gate"
 
 # ── (e) the live unit's TimeoutStartSec ───────────────────────────────────────────
