@@ -1546,7 +1546,9 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - The record shows the outcome as bounded by a pending ruling, not by operators waiting.
       - **N14 is added** (the user, as reported by qa: "follow the recommendations. stick to this schedule."). It is a class need: the floor's read tools are built from discovery, as its write tools already are.
         - **Schedule:** queued after N6, one need in the lane at a time, with a latest-by of 2026-10-12T18:00Z. It goes ahead of N7 and N9, whose dates are unchanged; if they are not met, they are reported MISSED, not moved later.
-        - **Pre-registration:** the coordinator writes it, sealed. Nothing the walk can read names N14's site before it is scored; that makes four sealed answers.
+        - **Pre-registration: written and sealed** in the coordinator's job directory. The addendum is `3b281758…`, and an annex (`8b358f03…367d`) carries the feasibility branches and the security constraint. Nothing the walk can read names N14's site before it is scored; that makes four sealed answers.
+          - **Feasibility:** a lane-only PASS is feasible without any closed-file edit. The branch that would need a closed edit scores Partial if the lane is blocked, and REFUTED if an operator makes the edit.
+          - **Security:** the new read tools must be read-only shapes. No mutation, no forbidden floor tools, and no outbound-URL resolvers. A violation scores REFUTED, with a must-fail on the advertised tool list.
       - **N6 follows N5,** at its eligibility of 2026-10-12T00:15Z. If N5 is still running then, N6 waits for N5 to reach a terminal state, or until 2026-10-12T06:00Z, whichever comes first.
     - **Pinned for the schedule** (all read-only):
       - **N5:** `PREREG-NEEDS.md` §N5, sha256 `8ed46df7…9867`.
