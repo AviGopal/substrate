@@ -1484,7 +1484,14 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
       - **Still missing:** localization. `git_log` was offered only as an alternative target and was not used. No system-authored gap landed.
       - **No egress:** the shell executor was not used.
       - **Next.** Per this section, the stage is overdue, so it is diagnosed and gets one fix. qa asked the coordinator for a read-only diagnosis (where the template binds the write, and whether that file is open or closed) before any further operator fix: **[TO FILL]**.
-    - **Interventions on the path, counted.** Each operator fix made between walks is listed here. A later PASS is reported with them as operator links, and graded "closed once", not "closed by the system".
+    - **Interventions on the path, counted** (qa ruling, 2026-10-11). Every operator fix made between walks is an operator link, and a later PASS grades as **"closed once (with N operator links)"**, not "closed by the system".
+      - **Stage-fixes so far, N = 1:** `git_log`, development-vessel `6b424060`.
+      - **Also listed,** because they changed the walk's environment: the harm-series egress fixes, goal-host `c04bcea0` and `c336a544`.
+    - **No further operator stage-fixes on the probe path,** from 2026-10-11 onward. A walk, then a fix, then another walk is the pattern the user ruled out on 10-10: "we can't keep making every edit forever and not have it do anything on its own. Nor can we tell it to just make changes we fully investigate and specify."
+    - **The probe is scored at the stage it reached.** Localization was not reached. Gap authoring was attempted and failed at payload construction. There are 0 system-authored landings and 1 operator link.
+    - **The window stays open** until 2026-10-18T07:12:53Z, for a landing that the system originates without our steering. The key stays sealed until then.
+    - **Each remaining blocker becomes an N-series need,** for the system to find itself, each with a pre-registered detector. The coordinator's read-only diagnosis continues only to word them precisely. An example: "your learned write templates bind targets whose required fields none of their inputs carry, so they fail every time". Its detector is a template whose executions are 100% `structuredError` `missing_required_field` over N runs.
+    - **A positive signal.** In re-run 1, failure memory (recall of three prior hollow verdicts) changed target selection. This is the first observed instance of the behaviour RECONNECTION-2026-10-10 found had never worked.
   - **Later stage events:** **[TO FILL as they arrive]**.
 
 **Precondition.** The lane-need goal below is dispatched only if the lane has had **no landing in the 24 h before dispatch**. If anything has landed, including a gap armed at birth and landed through the lane before the opening, the goal's premise is false. In that case the pre-written alternative is dispatched instead:
