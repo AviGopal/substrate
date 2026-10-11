@@ -6,9 +6,11 @@
 # repos/* + docs/ + openspec/. New cruft is rejected at commit time; the
 # message tells you where it should live instead.
 #
-# Rules apply only to NEWLY ADDED or RENAMED-INTO-SUPER-REPO files. Modifying
-# existing tracked files is never blocked — pre-existing cruft is grandfathered
-# until separately removed.
+# Placement rules apply only to NEWLY ADDED or RENAMED-INTO-SUPER-REPO files.
+# Modifying existing tracked files is never blocked by placement — pre-existing
+# cruft is grandfathered until separately removed. The env ratchet (below) is the
+# exception: it judges every added line under scripts/substrate/units/, so a
+# modification there can be refused.
 #
 # Bypass: `git commit --no-verify` (use sparingly; prefer fixing placement).
 #
@@ -24,6 +26,8 @@
 #     repos/* (they belong in submodule asset trees or get gitignored).
 #   - No new ad-hoc *.sh / *.ts / *.js / *.mjs / *.py at root — scripts go
 #     in scripts/.
+#   - No NEW Environment=/EnvironmentFile= line under scripts/substrate/units/ that
+#     sets a non-bootstrap name (the env ratchet, below).
 
 set -euo pipefail
 
@@ -270,6 +274,156 @@ EOF
 
   exit 1
 fi
+
+# ─── env ratchet: behaviour switches in units can only shrink ───
+#
+# WHY THIS IS A GATE. An Environment= line in a unit is frozen at process start, invisible to traces
+# and the walk, and unlearnable (CLAUDE.md law 1): a behaviour switch there steers the substrate where
+# nothing can observe it. The system must not be able to break itself that way by commit. So a staged
+# change under scripts/substrate/units/ (unit files and every *.d/*.conf drop-in) is refused when it
+# ADDS an Environment= line setting a name that scripts/git-hooks/env-ratchet/bootstrap-allowlist.txt
+# does not carry (bootstrap = ports, hosts, ids, endpoints, paths, secrets-file refs), or adds an
+# EnvironmentFile= line loading a path that list does not carry. A new drop-in that sets a
+# non-bootstrap name is refused by the same rule and named as a new drop-in.
+#
+# WHAT IT JUDGES: added lines only (`git diff --cached -U0 --no-renames`), so existing lines are
+# grandfathered and removing one is always allowed. A changed line is a removed line plus an added one:
+# changing the VALUE of a grandfathered behaviour switch is refused too (the change belongs in a shape),
+# and so is moving a drop-in to another unit (a new site). The lists are read from the INDEX, so a
+# commit is judged by the lists it carries:
+#   - bootstrap-allowlist.txt: every entry needs a reason (two words or more), visible in the diff; a
+#     name the HEAD copy of grandfathered-behaviour.txt carries cannot be added (no reclassification).
+#   - grandfathered-behaviour.txt: SHRINK-ONLY. A staged name the HEAD copy lacks is refused, unless it
+#     MOVES here from HEAD's allowlist (a tightening: reclassified behaviour, out of the allowlist in the
+#     same commit). When HEAD has no copy (the seeding commit), its names must already be set by a unit
+#     at HEAD. The committed-tree check bounds the list by a frozen copy as well.
+# No allowlist in the index while a unit line needs judging = refused (fail closed). Nothing staged
+# under units/ or the lists = this block does nothing.
+#
+# NOT COVERED (named, not papered over): PassEnvironment=, `ExecStart=/usr/bin/env X=…`, a value set
+# inside a script the unit runs, backslash-continued lines, and drop-ins written into /etc at runtime
+# by hand or by a script (validation/reports/env-ratchet-2026-10-11/ inventories those).
+# BYPASSED COMMITS (--no-verify, or a clone with no hook installed) are caught by the committed-tree
+# check validation/scripts/env-ratchet-committed-tree.test.sh — but only where the glue corpus runs
+# (this hook, the acceptance run). pull-sync never runs it, so it does NOT block a bypassed commit
+# from converging; the blocking home is the accepted gate fixture corpus
+# (validation/scripts/gate/fixtures/, judged by scripts/substrate/gate/shadow-eval.sh before a
+# units change is promoted on a gated node). Until a fixture carries it, that remains uncovered.
+er_main() {
+  local units=scripts/substrate/units/ dir=scripts/git-hooks/env-ratchet
+  local allow="$dir/bootstrap-allowlist.txt" grand="$dir/grandfathered-behaviour.txt"
+  local -a errs=()
+  local f line rest n p added_lines lists_staged new_files allow_names allow_paths
+  er_entries() { sed -e 's/^[[:space:]]*//' -e '/^#/d' -e '/^$/d'; }
+  er_units_names() { # stdin: unit-file lines -> the names their Environment= lines set
+    sed -nE 's/^[[:space:]]*Environment[[:space:]]*=(.*)$/\1/p' \
+      | /usr/bin/grep -oE '(^|[[:space:]])"?[A-Za-z_][A-Za-z0-9_]*=' | sed -E 's/^[[:space:]]*"?//; s/=$//' || true
+  }
+  added_lines="$(git diff --cached -U0 --no-color --no-ext-diff --no-renames --diff-filter=ACMR -- "$units" 2>/dev/null \
+    | awk '/^\+\+\+ /{f=substr($0,5); sub(/^b\//,"",f); next} /^\+/{print f "\t" substr($0,2)}' \
+    | awk -F'\t' '$1 ~ /^scripts\/substrate\/units\/([^\/]+\.(service|timer|socket|path|target|mount)|[^\/]+\.d\/[^\/]+\.conf)$/' \
+    | /usr/bin/grep -E $'\t''[[:space:]]*(Environment|EnvironmentFile)[[:space:]]*=' || true)"
+  lists_staged="$(git diff --cached --name-only --no-renames -- "$allow" "$grand" 2>/dev/null || true)"
+  [[ -n "$added_lines" || -n "$lists_staged" ]] || return 0
+  new_files="$(git diff --cached --name-only --no-renames --diff-filter=A -- "$units" 2>/dev/null || true)"
+
+  local allow_txt grand_txt head_grand_txt has_allow=0 has_head=0
+  if git cat-file -e ":$allow" 2>/dev/null; then has_allow=1; allow_txt="$(git show ":$allow" | er_entries)"; else allow_txt=""; fi
+  grand_txt="$(git show ":$grand" 2>/dev/null | er_entries || true)"
+  git rev-parse -q --verify HEAD >/dev/null 2>&1 && has_head=1
+  head_grand_txt=""
+  [[ $has_head == 1 ]] && head_grand_txt="$(git show "HEAD:$grand" 2>/dev/null | er_entries || true)"
+  allow_names="$(printf '%s\n' "$allow_txt" | awk '$1 ~ /^[A-Za-z_][A-Za-z0-9_]*$/ {print $1}')"
+  allow_paths="$(printf '%s\n' "$allow_txt" | awk '$1 ~ /^\// {print $1}')"
+
+  # The lists themselves.
+  if [[ -n "$lists_staged" ]]; then
+    if [[ $has_allow == 1 ]]; then
+      while IFS= read -r line; do
+        [[ -n "$line" ]] || continue
+        n="$(awk '{print $1}' <<<"$line")"
+        if ! [[ "$n" =~ ^[A-Za-z_][A-Za-z0-9_]*$ || "$n" == /* ]]; then
+          errs+=("$allow|entry '$n' is neither an environment NAME nor an absolute EnvironmentFile path"); continue
+        fi
+        [[ "$(awk '{print NF}' <<<"$line")" -ge 3 ]] \
+          || errs+=("$allow|entry $n has no reason (NAME then a reason of two words or more)")
+      done <<<"$allow_txt"
+      while IFS= read -r n; do
+        [[ -n "$n" ]] || continue
+        /usr/bin/grep -qxF -- "$n" <<<"$(awk '{print $1}' <<<"$head_grand_txt")" \
+          && errs+=("$allow|$n is a grandfathered BEHAVIOUR switch at HEAD; it cannot be reclassified bootstrap by edit")
+      done <<<"$allow_names"
+    fi
+    local head_set
+    if [[ $has_head == 1 ]] && git cat-file -e "HEAD:$grand" 2>/dev/null; then
+      head_set="$(printf '%s\n' "$head_grand_txt" | awk '{print $1}')"
+    elif [[ $has_head == 1 ]]; then
+      # Seeding: the list may only name what a unit at HEAD already sets.
+      head_set="$(git grep -h -E '^[[:space:]]*Environment[[:space:]]*=' HEAD -- "$units" 2>/dev/null | er_units_names | sort -u)"
+    else
+      head_set=""
+    fi
+    # TIGHTENING is not widening: a name HEAD's allowlist carries as bootstrap may MOVE here (it leaves the
+    # staged allowlist in the same commit). Its unit lines already exist; it only loses the right to new ones.
+    local head_allow=""
+    [[ $has_head == 1 ]] && head_allow="$(git show "HEAD:$allow" 2>/dev/null | er_entries | awk '$1 ~ /^[A-Za-z_][A-Za-z0-9_]*$/ {print $1}' || true)"
+    while IFS= read -r n; do
+      [[ -n "$n" ]] || continue
+      /usr/bin/grep -qxF -- "$n" <<<"$head_set" && continue
+      /usr/bin/grep -qxF -- "$n" <<<"$head_allow" && ! /usr/bin/grep -qxF -- "$n" <<<"$allow_names" && continue
+      errs+=("$grand|adds $n — the grandfathered behaviour list only shrinks (a bootstrap name may move here, out of the allowlist)")
+    done < <(printf '%s\n' "$grand_txt" | awk '{print $1}')
+  fi
+
+  # The unit lines.
+  if [[ -n "$added_lines" && $has_allow == 0 ]]; then
+    errs+=("$allow|not in the index, so no Environment=/EnvironmentFile= line under $units can be judged (fail closed)")
+  elif [[ -n "$added_lines" ]]; then
+    while IFS=$'\t' read -r f line; do
+      local where="$f"
+      /usr/bin/grep -qxF -- "$f" <<<"$new_files" && [[ "$f" == *.d/*.conf ]] && where="$f (new drop-in)"
+      if [[ "$line" =~ ^[[:space:]]*EnvironmentFile[[:space:]]*=[[:space:]]*(.*)$ ]]; then
+        p="${BASH_REMATCH[1]}"; p="${p#-}"; p="${p#\"}"; p="${p%\"}"; p="${p%"${p##*[![:space:]]}"}"
+        /usr/bin/grep -qxF -- "$p" <<<"$allow_paths" \
+          || errs+=("$where|EnvironmentFile=$p is not an allowlisted env file (pinned: $(printf '%s ' $allow_paths))")
+        continue
+      fi
+      while IFS= read -r n; do
+        [[ -n "$n" ]] || continue
+        /usr/bin/grep -qxF -- "$n" <<<"$allow_names" && continue
+        if /usr/bin/grep -qxF -- "$n" <<<"$(awk '{print $1}' <<<"$grand_txt")"; then
+          errs+=("$where|sets $n, a grandfathered BEHAVIOUR switch: its existing lines may only be removed, not added or changed")
+        else
+          errs+=("$where|sets $n, which is not a bootstrap name (bootstrap-allowlist.txt)")
+        fi
+      done < <(printf '%s\n' "$line" | er_units_names)
+    done <<<"$added_lines"
+  fi
+
+  [[ ${#errs[@]} -eq 0 ]] && return 0
+  printf '%s\n' "${RED:-}━━━ env ratchet: behaviour switches in units can only shrink ━━━${NC:-}"
+  local e
+  for e in "${errs[@]}"; do
+    printf '  %s %s\n      %s\n' "${YELLOW:-}✗${NC:-}" "${e%%|*}" "${e#*|}"
+  done
+  cat <<ER_EOF
+
+${DIM:-}Why${NC:-}
+  An Environment= line is frozen at process start and invisible to traces and the walk (CLAUDE.md law 1).
+  Behaviour belongs in a shaped impulse read at use time; units may only set bootstrap names.
+
+${DIM:-}What to do${NC:-}
+  Behaviour switch      ->  read it from a shaped impulse instead; remove the unit line
+  Genuinely bootstrap   ->  add NAME + a reason to scripts/git-hooks/env-ratchet/bootstrap-allowlist.txt
+  New env file          ->  add its absolute path + a reason to the same list
+
+${DIM:-}Bypass${NC:-}
+  git commit --no-verify   ${DIM:-}(visible in review; the ratchet exists because a runtime switch broke a fleet)${NC:-}
+ER_EOF
+  return 1
+}
+er_main || exit 1
+# ─── end env ratchet ───
 
 # ─── ignored paths stay untracked ───
 # .gitignore names runtime state (leases/, pool/, gaps/, state/, the host-sync stream, ...). `git add -f` and
@@ -535,7 +689,7 @@ fi
 # verdict-token block above judges that pin from the object store instead.
 #
 # WHEN: a staged path under scripts/substrate/, validation/scripts/, the seeder, the
-# vendored packages, or this hook. Set GLUE_TESTS_FAST=1 to run the declared --fast subset
+# vendored packages, this hook, or its env-ratchet lists. Set GLUE_TESTS_FAST=1 to run the declared --fast subset
 # instead (it drops pull-sync-hold-channel, ~21s of the run).
 # HOW LONG (measured 2026-10-03, the whole hook, wall clock, in a disposable container from the
 # image node 1 runs, 16 CPUs and no CPU limit, as on the live node, with the live node busy
@@ -546,7 +700,7 @@ fi
 # worst run leaves about 8x headroom. Re-measure when adding a slow test.
 mapfile -t GLUE_STAGED < <(
   git diff --cached --name-only --diff-filter=ACMRD \
-    | grep -E '^(scripts/substrate/|validation/scripts/|scripts/bootstrap-seeder\.ts$|packages/(verdict-token|write-containment)/|scripts/git-hooks/pre-commit$)' || true
+    | grep -E '^(scripts/substrate/|validation/scripts/|scripts/bootstrap-seeder\.ts$|packages/(verdict-token|write-containment)/|scripts/git-hooks/pre-commit$|scripts/git-hooks/env-ratchet/)' || true
 )
 if [[ ${#GLUE_STAGED[@]} -gt 0 ]]; then
   if ! git cat-file -e :validation/scripts/run-glue-tests.sh 2>/dev/null; then

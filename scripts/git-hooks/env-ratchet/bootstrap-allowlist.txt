@@ -1,0 +1,63 @@
+# Environment names a unit under scripts/substrate/units/ may SET (Environment=NAME=...) on a new or
+# changed line, and EnvironmentFile= paths a unit may load. Read by scripts/git-hooks/pre-commit from
+# the INDEX (the staged copy), so a commit is judged by the list it carries.
+#
+# Bootstrap means frozen at process start by necessity: a port, a bind host, an id, an endpoint or URL,
+# a filesystem path, a secrets-file reference, a log level. Anything that steers what a running process
+# DOES (a cadence, a cap, a mode, an on/off switch, a threshold, a route preference, a path that widens
+# what tools may read or write) is behaviour: it
+# belongs in a shaped impulse read at use time (CLAUDE.md law 1), never here.
+#
+# Format: one entry per line, the NAME (or an absolute EnvironmentFile path) then whitespace then a
+# reason of at least two words. The hook refuses an entry without a reason, and refuses adding a name
+# that grandfathered-behaviour.txt carries at HEAD (a behaviour switch is not reclassified by edit).
+# Adding an entry is allowed; the reason is the review surface, visible in the diff.
+
+# ── ports and bind hosts ──
+PORT                       listen port of the vessel process
+HOST                       bind address of the vessel process
+FED_HEALTH_PORT            listen port of the federation transport health endpoint
+
+# ── identity ──
+VESSEL_ID                  the vessel's registered identity
+GOAL_HOST_VESSEL_ID        goal-host's registered identity
+LIGHT_DISPATCH_VESSEL_ID   light-dispatch's registered identity
+LLM_RESOLVER_VESSEL_ID     llm-resolver's registered identity
+STATEFUL_UI_VESSEL_ID      stateful-ui's registered identity
+WATCHDOG_FLOW              the name of the flow a liveness watchdog reports as (an identity label)
+SURREAL_USER               database user name (the credential itself comes from the secrets file)
+
+# ── endpoints and URLs ──
+VESSEL_ENDPOINT            the vessel's own advertised address
+DEV_VESSEL_ENDPOINT        address of development-vessel
+GOAL_HOST_VESSEL_ENDPOINT  address of goal-host
+LIGHT_DISPATCH_ENDPOINT    address of light-dispatch
+LLM_VESSEL_ENDPOINT        address of llm-resolver
+CONCEPT_DB_URL             address of concept-db
+DISCOVERY_URL              address of discovery, the routing fixed point
+OBSIDIAN_LEARN_ENDPOINT    address of the local Obsidian learn bridge
+
+# ── filesystem paths ──
+HOME                       home directory of the process
+WORKSPACE_ROOT             root of the workspace volume
+MITOSIS_PUSH_CLONE_DIR     directory of the push clones
+MITOSIS_RUNTIME_DIR        directory the vessels run from
+INGEST_MANIFEST            path of the docs-ingest manifest file
+OBSIDIAN_VAULT             path of the vault the desktop opens
+SURGICAL_SCAN_REPOS        directory of the repositories the scan reads
+WATCHDOG_ACTIVITY_PATHS    paths whose writes a liveness watchdog reads as progress
+WATCHDOG_RESTART_EXEC      path of the script a liveness watchdog restarts
+
+# ── display ──
+OBSIDIAN_DISPLAY           X display id the desktop draws on
+OBSIDIAN_GEOMETRY          screen geometry of the virtual X server the desktop draws on
+
+# ── EnvironmentFile= paths (a leading '-' in the unit is ignored for matching) ──
+/etc/substrate/env                                         the substrate-wide bootstrap env written by gen-env
+/etc/substrate/concept-db.env                              per-unit bootstrap env for concept-db
+/etc/substrate/local-tools-vessel.env                      per-unit bootstrap env for local-tools-vessel
+/etc/substrate/ribosome-vessel.env                         per-unit bootstrap env for ribosome-vessel
+/etc/substrate/private/env.d/discovery-vessel.env          per-unit secrets out of other units' reach
+/etc/substrate/private/env.d/federation-transport-vessel.env  per-unit secrets out of other units' reach
+/etc/substrate/private/env.d/identity-seeder.env           per-unit secrets out of other units' reach
+/etc/substrate/private/env.d/identity-vessel.env           per-unit secrets out of other units' reach

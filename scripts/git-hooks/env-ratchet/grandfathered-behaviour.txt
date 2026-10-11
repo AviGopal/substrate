@@ -1,0 +1,48 @@
+# Environment names that units under scripts/substrate/units/ set today and that steer BEHAVIOUR: each
+# is a switch the walk and the traces cannot see, so each is debt against CLAUDE.md law 1.
+#
+# SHRINK-ONLY. scripts/git-hooks/pre-commit refuses a commit whose staged copy of this file names a
+# name its HEAD copy does not. A name leaves this list when the last unit line setting it is removed and
+# the behaviour is read from a shaped impulse instead.
+#
+# Grandfathered means the EXISTING lines stay; it does not let a commit add or change one. A new or
+# changed Environment= line naming any of these is refused like any other non-bootstrap name, so a value
+# change is a shape migration, not an edit.
+#
+# Format: one NAME per line, optionally followed by a note.
+AUTO_DESCRIBE_RESOLVERS            on/off switch
+BOREDOM_AUTOPROMOTE_INTERVAL_MS    cadence
+BOREDOM_DAEMON_MODE                mode switch
+BOREDOM_EXERCISE_INTERVAL_MS       cadence
+BOREDOM_IDLE_WINDOW_SECONDS        idle threshold
+BOREDOM_IN_FLIGHT_TIMEOUT_MS       timeout
+BOREDOM_MAX_CONCURRENT             concurrency clamp
+BOREDOM_MIN_DISPATCH_INTERVAL_MS   dispatch throttle
+BOREDOM_POOL_LOOP_INTERVAL_MS      cadence
+BOREDOM_STATE_REFRESH_MS           cadence
+DB_MAINTENANCE                     on/off switch
+EMIT_GAPS                          on/off switch
+EXTRA_WORKSPACE_ROOTS              widens what tools may read (a path, but a reach grant)
+GOAL_HOST_BEHAVIOR_LIMIT           cap
+GOAL_HOST_BEHAVIOR_WINDOW_HOURS    window
+GOAL_HOST_DRAIN_MS                 drain timeout
+GOAL_HOST_WS_SUBSCRIBER            on/off switch
+MAX_PEER_DEPTH                     federation fan-out cap
+MITOSIS_DIRECT_PUSH                landing-path switch
+OBSIDIAN_LEARN_GRANT               grant level
+OBSIDIAN_LEARN_MAX                 cap
+OBSIDIAN_LEARN_MODE                mode switch
+OPERATOR_GOAL_GEN                  on/off switch
+PEER_FANOUT_MODE                   federation mode switch
+PREFER_LIBP2P_ROUTE                route preference
+RECOVER_CAP                        cap
+REPAIR                             on/off switch
+SELF_DEV_TREND                     on/off switch
+SURGICAL_SCAN_CAP                  cap
+SURREAL_ROCKSDB_BLOCK_CACHE_SIZE   database cache tuning
+TASK_GENERATION_ENABLED            on/off switch
+VESSEL_DRAIN_MS                    drain timeout
+WATCHDOG_RELEVANT_SHAPE            what a watchdog counts as progress
+WATCHDOG_RESTART_IMPULSE           what a watchdog dispatches on a stall
+WATCHDOG_ROUTE_FILTER              route filter
+WATCHDOG_STALL_MIN                 stall threshold

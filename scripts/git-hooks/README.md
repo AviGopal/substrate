@@ -51,7 +51,7 @@ If the placement check fails the secrets scan does not run — fix placement fir
 
 ## What the pre-commit hook blocks
 
-A commit is rejected when it adds (or renames into) a file that violates any of these rules. Modifying existing tracked files is never blocked.
+A commit is rejected when it adds (or renames into) a file that violates any of these rules. Modifying existing tracked files is never blocked by these rules (the env ratchet below judges modified unit files too).
 
 1. **Files at the super-repo root** are limited to a small allowlist (project metadata: `CLAUDE.md`, `README.md`, `.gitignore`, `.gitmodules`, lockfiles, dotfile configs, and the launch manifest `docker-compose.yml` with its image recipe `Dockerfile.substrate`). Everything else needs a home under `repos/`, `docs/`, `openspec/`, `scripts/`, `packages/`, `.claude/`, `.github/`, or `.githooks/`.
 2. **No new top-level markdown** outside `docs/` or `openspec/`. If you wrote a writeup that only matters for the current commit, put it in the commit message instead.
@@ -59,6 +59,10 @@ A commit is rejected when it adds (or renames into) a file that violates any of 
 4. **No new image / video / archive files outside `repos/*` and `docs/assets/`**. Screenshots and playwright output should be gitignored, not committed.
 5. **No new ad-hoc scripts at root** (`*.sh`, `*.ts`, `*.js`, `*.mjs`, `*.cjs`, `*.py`). Scripts go in `scripts/`. If a script is one-shot (e.g. apply a migration once), it probably belongs in commit history rather than the tree.
 6. **New top-level directories** outside the allowed set are rejected; pick an existing area.
+
+## The env ratchet: behaviour switches in units can only shrink
+
+Separately from placement, the hook judges every ADDED line under `scripts/substrate/units/` (unit files and every `*.d/*.conf` drop-in), modifications included. An `Environment=` line is frozen at process start and invisible to traces and the walk, so a unit may only set **bootstrap** names: ports, bind hosts, ids, endpoints and URLs, filesystem paths. The names and the `EnvironmentFile=` paths a unit may use are pinned in `env-ratchet/bootstrap-allowlist.txt`, one per line with a reason; adding one is allowed, and its reason is the review surface. The behaviour names units already set are pinned in `env-ratchet/grandfathered-behaviour.txt`: their existing lines stay, but the list only shrinks, and a new or changed line naming one is refused like any other non-bootstrap name. A behaviour change belongs in a shaped impulse read at use time. Both lists are read from the index, so a commit is judged by the lists it carries; `validation/scripts/pre-commit-env-ratchet.test.sh` pins the hook's behaviour. A hook can be skipped (`--no-verify`, an uninstalled clone), so `validation/scripts/env-ratchet-committed-tree.test.sh` judges the committed tree itself: every name and env file a unit uses is classified, the grandfathered list stays within a frozen copy, every allowlist entry has a reason. It runs wherever the glue corpus runs (this hook, the acceptance run); pull-sync does not run the glue corpus, so it does not block convergence of a bypassed commit.
 
 ## Why "in commit history, not the tree"
 
