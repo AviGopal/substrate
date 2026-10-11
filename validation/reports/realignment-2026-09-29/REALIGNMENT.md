@@ -1500,7 +1500,11 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
       - **Interim, from qa.** Target inference chose `concept_write` as the terminal and `posteriorCompensation` as an intermediate, at confidence 0.9. So the walk tried to **write the outcome directly**, not to repair the grade path: the same pattern as the N1 and N3 stage-0 refutations.
         - activity-api **refused** all three `posteriorCompensation` writes (09:14:45Z, 09:14:46Z, 09:15:08Z): "caller is not an operator". No learning state was altered.
         - This is a live positive control: the harm series' write gate stopped the system from adjusting its own beliefs directly.
-      - **Outcome:** **[TO FILL]**.
+      - **Outcome: NOT PASS** against N10-v2. Nothing was retired, and the grade path did not change. The walk's own verdict was reached=yes, through `satisfier:learningPolicyWriteback`.
+        - **A reach-judge false positive.** The judge accepted a prose `concept_write` and a policy-writeback run as satisfying a goal that asked for a mechanism change. It is recorded as an observation.
+        - **A side effect, put to the user.** The walk ran `learningPolicyWriteback`, which wrote node 1's live tuning rows at 09:16:29Z: `TD_LAMBDA` from 0.6 to 0.72, and `YIELD_FLOOR` from 0.1 to 0.458. Both writes were within the server bounds and went through the gated route.
+          - This is the learning-writeback edge (N8) running for the first time in at least 5 days. An operator's dispatch induced it.
+          - Nothing is reverted without the user's word.
     - **Pinned for the schedule** (all read-only):
       - **N5:** `PREREG-NEEDS.md` §N5, sha256 `8ed46df7…9867`.
       - **N6 and N7:** `PREREG-NEEDS-ADDENDUM-N6.md`, sha256 `408922a7…f234`.
