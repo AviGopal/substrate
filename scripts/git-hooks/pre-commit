@@ -306,9 +306,9 @@ fi
 # BYPASSED COMMITS (--no-verify, or a clone with no hook installed) are caught by the committed-tree
 # check validation/scripts/env-ratchet-committed-tree.test.sh — but only where the glue corpus runs
 # (this hook, the acceptance run). pull-sync never runs it, so it does NOT block a bypassed commit
-# from converging; the blocking home is the accepted gate fixture corpus
-# (validation/scripts/gate/fixtures/, judged by scripts/substrate/gate/shadow-eval.sh before a
-# units change is promoted on a gated node). Until a fixture carries it, that remains uncovered.
+# from converging. The blocking form is the gate fixture validation/scripts/gate/fixtures/env-ratchet-units.sh,
+# run by scripts/substrate/gate/shadow-eval.sh on every gate candidate once it is in the accepted corpus;
+# it embeds both lists, so a new bootstrap name needs that fixture edited too (a widening: operator review).
 er_main() {
   local units=scripts/substrate/units/ dir=scripts/git-hooks/env-ratchet
   local allow="$dir/bootstrap-allowlist.txt" grand="$dir/grandfathered-behaviour.txt"

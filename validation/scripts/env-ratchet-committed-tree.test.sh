@@ -15,7 +15,8 @@
 # NOT stop a bypassed commit from converging. What pull-sync does judge, in gated mode, is a commit touching a gate path
 # (scripts/substrate/*, which includes units/): gate/candidate.sh runs the ACCEPTED fixture corpus
 # (validation/scripts/gate/fixtures/*.sh, via gate/shadow-eval.sh) against the candidate's scripts/substrate, and the
-# candidate's units are not installed until promotion. A blocking form of this check belongs in that corpus.
+# candidate's units are not installed until promotion. The blocking form is gate/fixtures/env-ratchet-units.sh
+# (pinned by validation/scripts/gate-fixture-env-ratchet.test.sh).
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; ROOT="$(cd "$HERE/../.." && pwd)"
 T="$(mktemp -d "${TMPDIR:-/tmp}/ertree.XXXXXX")"; trap 'rm -rf "$T"' EXIT
