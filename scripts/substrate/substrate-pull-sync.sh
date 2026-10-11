@@ -2994,7 +2994,52 @@ EOF
     _gl_b=$(( ${UNIT_TIMEOUT_S:-1800} - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} - (_gl_now - ${PULLSYNC_T0:-$GATE_T0}) ))
     if [ "$_gl_a" -lt "$_gl_b" ]; then echo "$_gl_a"; else echo "$_gl_b"; fi
   }
-  SUITE_COST_S=$(( ${TEST_TIMEOUT_SECONDS:-240} + ${TEST_KILL_GRACE_SECONDS:-30} ))
+  # THE PER-RUN WALL IS DERIVED PER VESSEL (2026-10-11). Every whole-suite run was killed at a fixed 240 s
+  # (TEST_TIMEOUT_SECONDS default). On the hub (8 cores, load 6-7) development-vessel's suite runs at or past
+  # 240 s: T1 went BLIND (RC=124 at 240 s) and the overlay parent was killed at the wall (pass=none), so its
+  # candidates were judged on a stale stored baseline and refused for 39 failures that were not theirs. The
+  # wall is now the vessel's last COMPLETED full-run wall x 1.5, floored at 240 s and capped at a QUARTER of the unit
+  # budget less the kill grace: T1, the T2 confirmation and the two-run overlay are four runs that must fit ONE tick,
+  # because a deferred gate starts over next tick (at half, the overlay could never follow T1); with no measurement
+  # yet it is the cap. It is logged with its inputs on every gate run, recorded in $v.suite-wall (JSON), and
+  # carried in the classification_metadata (effective_wall_s, wall_why) of the starvation, regression and
+  # unmeasurable gaps this gate files, which is where the system's gap reader sees it. An explicit TEST_TIMEOUT_SECONDS still wins (tests; an operator pin).
+  SUITE_WALL_FILE="$MARKER_DIR/$v.suite-wall"
+  _sw_cap=$(( ( ${UNIT_TIMEOUT_S:-1800} - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} ) / 4 - ${TEST_KILL_GRACE_SECONDS:-30} ))
+  _sw_floor="${SUITE_WALL_FLOOR_S:-240}"   # the floor (240 s, the old fixed wall); a variable only so tests can scale it
+  [ "$_sw_cap" -lt "$_sw_floor" ] && _sw_cap="$_sw_floor"
+  _sw_last="$(jq -r '.last_completed_wall_s // empty' "$SUITE_WALL_FILE" 2>/dev/null || true)"
+  case "$_sw_last" in ''|*[!0-9]*) _sw_last="" ;; esac
+  if [ -n "$_sw_last" ]; then
+    SUITE_WALL_S=$(( (_sw_last * 3 + 1) / 2 )); [ "$SUITE_WALL_S" -lt "$_sw_floor" ] && SUITE_WALL_S="$_sw_floor"; [ "$SUITE_WALL_S" -gt "$_sw_cap" ] && SUITE_WALL_S="$_sw_cap"
+    SUITE_WALL_WHY="last completed full run ${_sw_last}s x1.5, floor ${_sw_floor}s, cap ${_sw_cap}s"
+  else
+    SUITE_WALL_S="$_sw_cap"; SUITE_WALL_WHY="no completed full run measured yet: the cap ${_sw_cap}s (a quarter of the unit budget less the kill grace)"
+  fi
+  if [ -n "${TEST_TIMEOUT_SECONDS:-}" ]; then
+    log "$v: per-run wall ${TEST_TIMEOUT_SECONDS}s (TEST_TIMEOUT_SECONDS set; the derived wall would be ${SUITE_WALL_S}s: $SUITE_WALL_WHY)"
+  else
+    log "$v: per-run wall ${SUITE_WALL_S}s ($SUITE_WALL_WHY)"
+  fi
+  jq -n -c --argjson w "${TEST_TIMEOUT_SECONDS:-$SUITE_WALL_S}" --argjson d "$SUITE_WALL_S" --argjson c "$_sw_cap" --arg why "$SUITE_WALL_WHY" \
+    --argjson last "${_sw_last:-null}" --arg at "$(date -u +%FT%TZ)" \
+    '{effective_wall_s:$w, derived_wall_s:$d, cap_s:$c, last_completed_wall_s:$last, why:$why, at:$at}' > "$SUITE_WALL_FILE.tmp" 2>/dev/null \
+    && mv -f "$SUITE_WALL_FILE.tmp" "$SUITE_WALL_FILE" 2>/dev/null || true
+  # record_suite_wall <run output>: a COMPLETED full run (not killed at the wall, and it printed a pass count)
+  # becomes the vessel's measurement for the next gate.
+  record_suite_wall() {
+    local _rw_rc _rw_w
+    _rw_rc="$(printf '%s' "$1" | sed -n 's/^__PULLSYNC_RC=\([0-9]*\) wall=\([0-9]*\)s$/\1/p' | tail -1)"
+    _rw_w="$(printf '%s' "$1" | sed -n 's/^__PULLSYNC_RC=\([0-9]*\) wall=\([0-9]*\)s$/\2/p' | tail -1)"
+    case "$_rw_rc" in 124|137|'') return 0 ;; esac
+    [ -n "$_rw_w" ] && [ -n "$(count_pf "$1" pass)" ] || return 0
+    jq -c --argjson w "$_rw_w" '.last_completed_wall_s = $w | .measured_at = (now | todate)' "$SUITE_WALL_FILE" > "$SUITE_WALL_FILE.tmp" 2>/dev/null \
+      && mv -f "$SUITE_WALL_FILE.tmp" "$SUITE_WALL_FILE" 2>/dev/null || true
+  }
+  # killed_at_wall <run output>: the run was killed by the per-run wall (timeout 124, or 137 after the grace).
+  killed_at_wall() { printf '%s' "$1" | grep -qE '^__PULLSYNC_RC=(124|137) '; }
+  SUITE_EFF_WALL_S="${TEST_TIMEOUT_SECONDS:-$SUITE_WALL_S}"; SUITE_WALL_CAP_S="$_sw_cap"; SUITE_WALL_LAST_S="${_sw_last:-null}"
+  SUITE_COST_S=$(( SUITE_EFF_WALL_S + ${TEST_KILL_GRACE_SECONDS:-30} ))
   # WHAT A KNOWN RESULT DEPENDS ON (2026-10-06). A candidate deferred mid-gate has MEASURED how long its
   # gate needs; re-running the same suite on the same inputs only to defer again spends the tick's budget
   # for nothing. The key is everything that result depends on: the HEAD, the outstanding-regression set,
@@ -3013,7 +3058,7 @@ EOF
       while IFS=$'\t' read -r _tk_n _tk_t; do
         [ -n "$_tk_n" ] && echo "filedep $_tk_n $( [ -d "$_tk_t" ] && file_dep_identity "$_tk_t" || echo missing)"
       done <<< "$_tk_fd"
-      echo "env $("$BUN_BIN" --version 2>/dev/null || echo none) ${TEST_TIMEOUT_SECONDS:-240} ${TEST_KILL_GRACE_SECONDS:-30} ${PROTECTED_TEST_TIMEOUT_SECONDS:-120}"
+      echo "env $("$BUN_BIN" --version 2>/dev/null || echo none) ${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}} ${TEST_KILL_GRACE_SECONDS:-30} ${PROTECTED_TEST_TIMEOUT_SECONDS:-120}"
     } | md5sum | cut -d' ' -f1
   }
   TG_NEED_FILE="$MARKER_DIR/$v.testgate-need"
@@ -3039,10 +3084,10 @@ EOF
     if [ "$BD_N" -ge "$BD_MAX" ]; then
       log "$v: !!! TEST GATE BUDGET-STARVED — filing pull-sync-testgate-budget-starved-$v ($BD_N consecutive deferrals at ${HEAD:0:10}, bound $BD_MAX)"
       echo "$HEAD $BD_N" > "$MARKER_DIR/$v.testgate-starved" 2>/dev/null || true
-      emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg n "$BD_N" --arg max "$BD_MAX" --arg b "$GATE_BUDGET_SECONDS" \
+      emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg n "$BD_N" --arg max "$BD_MAX" --arg b "$GATE_BUDGET_SECONDS" --argjson ew "${SUITE_EFF_WALL_S:-240}" --arg why "${SUITE_WALL_WHY:-}" \
         '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-budget-starved-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
           summary:("Repair needed: pull-sync deferred " + $v + " at " + $head + " " + $n + " consecutive ticks because the per-tick test-gate budget (" + $b + "s, capped by the unit timeout) was too short for its gate to finish its runs, past pull_sync.testgate_budget_defer_max (" + $max + "). It is NOT converged ungated: a gate that did not measure never promotes. Repair the capability: a faster suite, a larger budget, or a gate sharded across ticks."),
-          classification_metadata:{vessel:$v,head:$head,consecutive_deferrals:($n | tonumber),bound:($max | tonumber),budget_seconds:($b | tonumber)}}}}}' 2>/dev/null)"
+          classification_metadata:{vessel:$v,head:$head,consecutive_deferrals:($n | tonumber),bound:($max | tonumber),budget_seconds:($b | tonumber),effective_wall_s:$ew,wall_why:$why}}}}}' 2>/dev/null)"
     fi
     # PER-VESSEL STARVATION (2026-10-11, law 6). BD_N counts deferrals of ONE candidate, so a stream of pushes
     # resets it: development-vessel deferred for 1.5 h across successive candidates and never tripped the bound,
@@ -3059,10 +3104,10 @@ EOF
     _sv_el=$(( $(date +%s) - _sv_t0 ))
     if [ "$BD_N" -lt "$BD_MAX" ] && [ "$_sv_el" -ge "$_sv_after" ]; then
       log "$v: !!! TEST GATE BUDGET-STARVED (per vessel) — filing pull-sync-testgate-budget-starved-$v (deferred for ${_sv_el}s since its last convergence ${_sv_cur:0:10}, across candidates; bound ${_sv_after}s)"
-      emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg el "$_sv_el" --arg after "$_sv_after" --arg lg "${_sv_cur:0:10}" --arg b "$GATE_BUDGET_SECONDS" \
+      emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg el "$_sv_el" --arg after "$_sv_after" --arg lg "${_sv_cur:0:10}" --arg b "$GATE_BUDGET_SECONDS" --argjson ew "${SUITE_EFF_WALL_S:-240}" --arg why "${SUITE_WALL_WHY:-}" \
         '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-budget-starved-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
           summary:("Repair needed: pull-sync has deferred " + $v + " for " + $el + "s since its last convergence (" + $lg + "), across successive candidates (now " + $head + "), because the per-tick test-gate budget (" + $b + "s, capped by the unit timeout) is too short for its gate; past pull_sync.testgate_starve_after_seconds (" + $after + "). It is NOT converged ungated. Repair the capability: a faster suite, a larger budget, or a gate sharded across ticks."),
-          classification_metadata:{vessel:$v,head:$head,starved_seconds:($el | tonumber),bound_seconds:($after | tonumber),last_converged:$lg,budget_seconds:($b | tonumber),keyed:"vessel"}}}}}' 2>/dev/null)"
+          classification_metadata:{vessel:$v,head:$head,starved_seconds:($el | tonumber),bound_seconds:($after | tonumber),last_converged:$lg,budget_seconds:($b | tonumber),keyed:"vessel",effective_wall_s:$ew,wall_why:$why}}}}}' 2>/dev/null)"
     fi
   }
   if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the suite run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
@@ -3135,7 +3180,7 @@ EOF
   # captured through $( ) ~45% of the output was lost, cut inside the end-of-run failure list before the totals
   # (324,504 of ~594,000 bytes, mid-line). The same run redirected to a file keeps its summary. That race was the
   # ~40% "TEST GATE BLIND" rate: exit 1 (a normal red), not a timeout, kill or crash.
-  run_suite() { (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && _rs_t0=$(date +%s) && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test > "$_rs_out" 2>&1; _rs_rc=$?; cat "$_rs_out"; echo "__PULLSYNC_RC=$_rs_rc wall=$(( $(date +%s) - _rs_t0 ))s"; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true; }
+  run_suite() { (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && _rs_t0=$(date +%s) && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}" "$BUN_BIN" test > "$_rs_out" 2>&1; _rs_rc=$?; cat "$_rs_out"; echo "__PULLSYNC_RC=$_rs_rc wall=$(( $(date +%s) - _rs_t0 ))s"; case "$_rs_rc" in 124|137) log "$v: !!! suite run KILLED at TEST_TIMEOUT_SECONDS=${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}} (wall $(( $(date +%s) - _rs_t0 ))s, rc $_rs_rc): not a result" >&2 ;; esac; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true; }
   # Run the suite at an arbitrary ref, NOW, under this tick's conditions.
   #
   # The stored baseline is a snapshot taken at some earlier tick; test outcomes here depend on
@@ -3171,7 +3216,7 @@ EOF
       [ -d "$d/$_rsa_n/node_modules" ] && [ -d "$_rsa_wt/$_rsa_n" ] && [ ! -e "$_rsa_wt/$_rsa_n/node_modules" ] \
         && ln -s "$d/$_rsa_n/node_modules" "$_rsa_wt/$_rsa_n/node_modules" 2>/dev/null || true
     done
-    _rsa_out="$( (cd "$_rsa_wt" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-240}" "$BUN_BIN" test > "$_rs_out" 2>&1; cat "$_rs_out"; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true )"
+    _rsa_out="$( (cd "$_rsa_wt" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_out="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && _rs_t0=$(date +%s) && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}" "$BUN_BIN" test > "$_rs_out" 2>&1; _rs_rc=$?; cat "$_rs_out"; echo "__PULLSYNC_RC=$_rs_rc wall=$(( $(date +%s) - _rs_t0 ))s"; case "$_rs_rc" in 124|137) log "$v: !!! suite run at ${_rsa_ref:0:10} KILLED at TEST_TIMEOUT_SECONDS=${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}} (wall $(( $(date +%s) - _rs_t0 ))s, rc $_rs_rc): not a result" >&2 ;; esac; rm -rf "$_rs_root" "$_rs_out" 2>/dev/null) || true )"
     git -C "$d" worktree remove --force "$_rsa_wt" >/dev/null 2>&1 || rm -rf "$_rsa_wt" 2>/dev/null || true
     git -C "$d" worktree prune >/dev/null 2>&1 || true
     printf '%s' "$_rsa_out"
@@ -3185,7 +3230,7 @@ EOF
   # DOWN, so a suite that grew could never converge again. Left as a comment rather than
   # deleted silently because its absence is the point: no count of failures, however measured,
   # can distinguish "a test broke" from "more tests exist".
-  REG=""; REG_F=""; REG_P=""; REG_U=""; REG_NAMED=""; CONF_SET=""; OUT_STILL=""
+  REG=""; REG_F=""; REG_P=""; REG_U=""; REG_NAMED=""; CONF_SET=""; OUT_STILL=""; OVL_KILLED=""; PROT_RED=""
   if [ -z "$BUN_BIN" ]; then
     # NO INSTRUMENT IS NOT A PASS: HOLD (qa, 2026-10-03). This used to converge ungated. A runner is a
     # property of the node, not of the vessel, so the gap is one per node; every vessel holds until it
@@ -3201,7 +3246,7 @@ EOF
     # Re-checked here: ensure_clone_deps (above) can install for minutes.
     if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the suite run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
     date +%s > "$MARKER_DIR/$v.testgate-slot" 2>/dev/null || true
-    T_OUT="$(run_suite)"; T_FAIL="$(count_pf "$T_OUT" fail)"; T_PASS="$(count_pf "$T_OUT" pass)"
+    T_OUT="$(run_suite)"; T_FAIL="$(count_pf "$T_OUT" fail)"; T_PASS="$(count_pf "$T_OUT" pass)"; record_suite_wall "$T_OUT"
     # UNRESOLVABLE MODULES THE PARENT SHARES ARE EXCLUDED, NOT CARRIED AS A SHARED COUNT. A
     # test file that cannot resolve an import is one UNNAMED failure that hides every test in
     # it. When the parent, measured now under identical conditions, cannot resolve the same
@@ -3244,7 +3289,7 @@ EOF
     if [ -n "$GATE_BLIND_WHY" ]; then
       : # blind (above): no verdict, no baseline write
     elif [ -z "$T_FAIL" ]; then
-      log "$v: !!! TEST GATE BLIND — suite produced no countable result (errored or absent); HOLDING $v (a gate that did not measure never promotes; runtime keeps its current code)"
+      log "$v: !!! TEST GATE BLIND — suite produced no countable result ($(killed_at_wall "$T_OUT" && echo "killed_at_wall: TEST_TIMEOUT_SECONDS=${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}" || echo "errored or absent")); HOLDING $v (a gate that did not measure never promotes; runtime keeps its current code)"
       # A blind verdict that discards its output cannot be diagnosed: the same command run
       # by hand, in the unit's cgroup, TasksMax and PATH, printed a summary every time, so
       # the generator is tick-dependent and only the tick's own output can name it. Keep
@@ -3414,7 +3459,7 @@ EOF
         # failure count approximates the deterministic one; a single second sample
         # would fire on that spread, the minimum does not.
         if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the T2 confirmation run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
-        T2_OUT="$(run_suite)"; F2="$(count_pf "$T2_OUT" fail)"; P2="$(count_pf "$T2_OUT" pass)"
+        T2_OUT="$(run_suite)"; F2="$(count_pf "$T2_OUT" fail)"; P2="$(count_pf "$T2_OUT" pass)"; record_suite_wall "$T2_OUT"
         BEST_F="$T_FAIL"; BEST_P="$T_PASS"
         if [ -n "$F2" ] && [ "$F2" -lt "$BEST_F" ]; then BEST_F="$F2"; fi
         if [ -n "$P2" ] && { [ -z "$BEST_P" ] || [ "$P2" -gt "$BEST_P" ]; }; then BEST_P="$P2"; fi
@@ -3513,7 +3558,8 @@ EOF
               # UNUSABLE, NOT CLEAN. A run with no passing tests means the measurement failed
               # (missing deps, timeout), not that the tree was healthy. Subtracting on that basis
               # would wave every candidate through, so keep the stored-baseline refusal instead.
-              log "$v: overlay re-measure UNUSABLE (parent pass=${P_PASS:-none}, candidate pass=${C_PASS:-none}) — keeping the stored-baseline verdict rather than failing open"
+              killed_at_wall "$P_OUT" && OVL_KILLED="parent"; killed_at_wall "$C_OUT" && OVL_KILLED="${OVL_KILLED:+$OVL_KILLED+}candidate"
+              log "$v: overlay re-measure UNUSABLE (parent pass=$(killed_at_wall "$P_OUT" && echo "killed_at_wall" || echo "${P_PASS:-none}"), candidate pass=$(killed_at_wall "$C_OUT" && echo "killed_at_wall" || echo "${C_PASS:-none}")) — keeping the stored-baseline verdict rather than failing open$([ -n "${OVL_KILLED:-}" ] && echo "; a run killed at the per-run wall (${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}s) is not a measurement, so a refusal on it is not counted")"
             fi
           fi
         fi
@@ -3617,6 +3663,42 @@ EOF
   fi
   rm -f "$BD_FILE" "$TG_NEED_FILE" 2>/dev/null || true
   [ -n "${U_GAP_JSON:-}" ] && emit_gap "$U_GAP_JSON"
+  # A NON-MEASUREMENT IS NOT A RED (2026-10-11). When the parent/candidate overlay could not measure because a run
+  # was killed at the per-run wall, the remaining verdict is the stored-baseline one, which on a node behind its
+  # origin charges every failure since its last-good to this candidate (the hub refused bf81499f for 39 such). Hold
+  # the candidate (fail closed, nothing converges) but do not advance the refusal count toward the bound; the next
+  # tick re-measures with the wall derived from this tick's completed runs. A protected-file red still counts.
+  if [ -n "$REG" ] && [ -n "${OVL_KILLED:-}" ] && [ -z "${PROT_RED:-}" ]; then
+    log "$v: HOLDING ${HEAD:0:10} without counting a refusal — the overlay was killed at the per-run wall ($OVL_KILLED, wall ${TEST_TIMEOUT_SECONDS:-${SUITE_WALL_S:-240}}s), so the stored-baseline verdict ($REG) is not attributable; runtime keeps its current code"
+    # THE NO-COUNT HOLD IS BOUNDED (no hold kept indefinitely). A suite whose completed runs exceed the cap is killed at
+    # the wall on every tick: the candidate would hold forever, silently. After TEST_GATE_MAX_REFUSALS consecutive such
+    # holds of the SAME candidate, file (and on later ticks bump) pull-sync-testgate-unmeasurable-<v>; a gate that
+    # measures clears the count and closes the gap (below).
+    _um_head=""; _um_n=0; { read -r _um_head _um_n < "$MARKER_DIR/$v.testgate-unmeasured"; } 2>/dev/null || true
+    case "$_um_n" in ''|*[!0-9]*) _um_n=0 ;; esac; [ "$_um_head" = "$HEAD" ] || _um_n=0
+    _um_n=$((_um_n + 1)); echo "$HEAD $_um_n" > "$MARKER_DIR/$v.testgate-unmeasured" 2>/dev/null || true
+    if [ "$_um_n" -ge "${TEST_GATE_MAX_REFUSALS:-3}" ]; then
+      log "$v: !!! UNMEASURABLE — ${_um_n} consecutive ticks held ${HEAD:0:10} without a measurement (runs killed at the ${SUITE_EFF_WALL_S}s wall, cap ${SUITE_WALL_CAP_S}s) — filing pull-sync-testgate-unmeasurable-$v"
+      emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --argjson ew "${SUITE_EFF_WALL_S:-240}" --argjson cap "${SUITE_WALL_CAP_S:-240}" --argjson last "${SUITE_WALL_LAST_S:-null}" --argjson n "$_um_n" --arg why "${SUITE_WALL_WHY:-}" --arg killed "$OVL_KILLED" \
+        '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-unmeasurable-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
+          summary:("Repair needed: pull-sync cannot measure " + $v + " at " + $head + ": for " + ($n|tostring) + " consecutive ticks its suite runs were killed at the per-run wall (" + ($ew|tostring) + "s; cap " + ($cap|tostring) + "s = a quarter of the unit budget less the kill grace; killed: " + $killed + "), so the candidate is held without a verdict. The unit budget must grow or the suite must shrink."),
+          classification_metadata:{vessel:$v,head:$head,effective_wall_s:$ew,cap_s:$cap,last_completed_wall_s:$last,consecutive_holds:$n,wall_why:$why,edit_site:"scripts/substrate/substrate-pull-sync.sh"}}}}}' 2>/dev/null)"
+    fi
+    skipped=$((skipped + 1)); continue
+  fi
+  # Reaching here, this gate MEASURED (a counted refusal or a pass): the no-count hold streak ends, and an open
+  # unmeasurable gap closes.
+  if [ -s "$MARKER_DIR/$v.testgate-unmeasured" ]; then
+    _um_n=0; { read -r _ _um_n < "$MARKER_DIR/$v.testgate-unmeasured"; } 2>/dev/null || true
+    rm -f "$MARKER_DIR/$v.testgate-unmeasured" 2>/dev/null || true
+    case "$_um_n" in ''|*[!0-9]*) _um_n=0 ;; esac
+    if [ "$_um_n" -ge "${TEST_GATE_MAX_REFUSALS:-3}" ]; then
+      log "$v: the gate measured again at ${HEAD:0:10} — closing pull-sync-testgate-unmeasurable-$v"
+      emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" \
+        '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-unmeasurable-" + $v),category:"systematic_failure",source:"substrate_detected",status:"closed",closed_reason:"testgate_measured",
+          summary:("pull-sync test gate: " + $v + " measured again at " + $head + "."),classification_metadata:{vessel:$v,head:$head,evidence:"a gate run completed and produced a verdict"}}}}}' 2>/dev/null)"
+    fi
+  fi
   if [ -n "$REG" ]; then
     RC_FILE="$MARKER_DIR/$v.testgate-refusals"
     RC="$(cat "$RC_FILE" 2>/dev/null || echo 0)"; case "$RC" in ''|*[!0-9]*) RC=0 ;; esac
@@ -3630,7 +3712,7 @@ EOF
     TG_TESTONLY=""
     test_only_range "$d" "$TG_PREV_GOOD" "$HEAD" && TG_TESTONLY=1
     if [ -n "$TG_TESTONLY" ]; then
-      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. The range ${TG_PREV_GOOD:0:10}..${HEAD:0:10} changes only tests, so it is refused until repaired (refusal $RC); the starvation break never applies to a test-only range, which changes no runtime code.\",\"status\":\"open\"}}}}"
+      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. The range ${TG_PREV_GOOD:0:10}..${HEAD:0:10} changes only tests, so it is refused until repaired (refusal $RC); the starvation break never applies to a test-only range, which changes no runtime code.\",\"status\":\"open\",\"classification_metadata\":{\"vessel\":\"$v\",\"effective_wall_s\":${SUITE_EFF_WALL_S:-240},\"wall_why\":\"${SUITE_WALL_WHY:-}\"}}}}}"
       log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge (refusal $RC; ${TG_PREV_GOOD:0:10}..${HEAD:0:10} is test-only, so no starvation break); runtime keeps running its current code"
       skipped=$((skipped + 1)); continue
     fi
@@ -3641,14 +3723,14 @@ EOF
     # stop. So past the bound the refusal stands and the gap is ESCALATED (severity high, which the gap
     # picker ranks above routine work). Outstanding state left by earlier breaks is still drained above.
     if [ "$RC" -le "${TEST_GATE_MAX_REFUSALS:-3}" ]; then
-      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. Refusal $RC of ${TEST_GATE_MAX_REFUSALS:-3}; the runtime stays on the code it is already running until this is repaired.\",\"status\":\"open\"}}}}"
+      emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-test-regression-$v\",\"category\":\"systematic_failure\",\"source\":\"substrate_detected\",\"summary\":\"pull-sync test gate: $v at ${HEAD:0:10} regressed its own suite ($REG), confirmed on a second run. Refusal $RC of ${TEST_GATE_MAX_REFUSALS:-3}; the runtime stays on the code it is already running until this is repaired.\",\"status\":\"open\",\"classification_metadata\":{\"vessel\":\"$v\",\"effective_wall_s\":${SUITE_EFF_WALL_S:-240},\"wall_why\":\"${SUITE_WALL_WHY:-}\"}}}}}"
       log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge ($RC/${TEST_GATE_MAX_REFUSALS:-3}); runtime keeps running its current code"
       skipped=$((skipped + 1)); continue
     fi
-    emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg reg "$REG" --arg rc "$RC" --arg max "${TEST_GATE_MAX_REFUSALS:-3}" \
+    emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg reg "$REG" --arg rc "$RC" --arg max "${TEST_GATE_MAX_REFUSALS:-3}" --argjson ew "${SUITE_EFF_WALL_S:-240}" --arg why "${SUITE_WALL_WHY:-}" \
       '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-test-regression-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
         summary:("Repair needed (ESCALATED): pull-sync test gate has refused " + $v + " " + $rc + " consecutive runs, past the bound of " + $max + ", at " + $head + " (" + $reg + "). The starvation break defers convergence; it never promotes past red, so the runtime stays on its current code until the regression is repaired."),
-        classification_metadata:{vessel:$v,head:$head,refusals:($rc | tonumber),refusal_bound:($max | tonumber),escalated:true,regression:$reg}}}}}' 2>/dev/null)"
+        classification_metadata:{vessel:$v,head:$head,refusals:($rc | tonumber),refusal_bound:($max | tonumber),escalated:true,regression:$reg,effective_wall_s:$ew,wall_why:$why}}}}}' 2>/dev/null)"
     log "$v: TEST REGRESSION at ${HEAD:0:10} ($REG) — REFUSING to converge (refusal $RC, past the bound ${TEST_GATE_MAX_REFUSALS:-3}: gap ESCALATED; the starvation break defers, it never promotes past red); runtime keeps running its current code"
     skipped=$((skipped + 1)); continue
   fi
