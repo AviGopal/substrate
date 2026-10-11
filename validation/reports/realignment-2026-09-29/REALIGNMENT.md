@@ -1526,6 +1526,12 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **The cleanest judge must-fail:** a verdict asserting a write with zero tool calls is hollow by construction.
       - **N10 is confirmed not passed** by the coordinator: the posterior is unchanged (α 1, β 460.3), and no retirement call was made. One caveat: the row's flags were not read directly.
       - **The judge fix,** goal-host `d949f753`, is built, reviewed and dry-run, and is waiting on the user's approval to push. It is a partial fix: the floor's laundering closes, while the engine/mid-walk path and laundering on the judge's prompt side remain open.
+      - **The user's ruling on four open items, as reported by qa:** "follow the recommendations. stick to this schedule." The docs session has not had it directly; it is recorded on qa's attribution.
+        - **The judge fix:** yes. qa's session was blocked by its permission check when pushing `d949f753`, so **the user runs the push**.
+        - **The learning values:** keep `TD_LAMBDA` 0.72 and `YIELD_FLOOR` 0.458.
+        - **The hub's P5:** on the user's own schedule.
+        - **`goal-target-inference.ts`:** re-tightened only if its hold's expiry at 2026-10-12T00:08Z actually opens it, and kept closed until N6 is scored.
+        - **The schedule is unchanged.**
       - **N6's dispatch rule, pre-registered.**
         - **If the user approves the judge fix earlier,** N6 is dispatched as soon as `d949f753` is live on node 1, and after N6's own eligibility (2026-10-12T00:08Z).
         - **If there is no ruling by 2026-10-12T05:50Z,** N6 is dispatched **at 2026-10-12T06:00Z** under the unfixed judge, and scored only by its pre-registration's effect check.
