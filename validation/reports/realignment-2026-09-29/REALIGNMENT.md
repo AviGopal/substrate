@@ -1476,6 +1476,8 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
     - **Operator interventions between the two walks, all recorded:**
       - (1) The egress harm fixes, goal-host `c04bcea0` and `c336a544`, live on node 1 at 08:12Z and 08:33Z.
       - (2) The one fix at the failed stage, development-vessel `6b424060`, live on node 1 at 08:49:28Z: `git_log` reads the substrate's own clone by default, and its contract declares the repo, cwd, limit, format and since fields.
+        - **Containment.** The argv is always `git log …`. Values beginning with `-` are refused, the limit is capped at 200, and `since` is passed as one element. The spawn runs with `GIT_CONFIG_NOSYSTEM`, a null global config and an empty HOME, so the clone's own config cannot run a helper. Must-fails are in `test/resolvers/git-log.test.ts`, and mutants M4–M7 go red.
+        - **Placement.** `git-log.ts` and `resolver-schema.ts` are open files. It also includes an **operator edit to the closed `src/config.ts`**: the `git_log` shape description.
     - **Outcome:** **[TO FILL]**.
   - **Later stage events:** **[TO FILL as they arrive]**.
 
