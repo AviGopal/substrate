@@ -268,7 +268,7 @@
       "profiles": [
         "*"
       ],
-      "edit_site": "repos/development-vessel/src/resolvers/gap-to-feature.ts",
+      "edit_site": "repos/development-vessel/src/judge/gap-policy.ts",
       "must_fail": "each node's run plants a path into excluded_paths and a class into require_falsifier_classes of the copy it read; both must be reported as a mismatch",
       "pool_shape": "autonomyScope",
       "expected_by_node": {
@@ -504,7 +504,7 @@
       "profiles": [
         "*"
       ],
-      "edit_site": "repos/development-vessel/src/resolvers/gap-to-feature.ts",
+      "edit_site": "repos/development-vessel/src/judge/gap-policy.ts",
       "must_fail": "each node's run perturbs usd_cap_per_hour and flips paused in the copy it read; both must be reported as a mismatch",
       "pool_shape": "spendEnvelope",
       "expected_by_node": {
