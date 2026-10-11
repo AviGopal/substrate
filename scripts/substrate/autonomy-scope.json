@@ -1,5 +1,5 @@
 {
-  "description": "The committed autonomy containment: the excluded paths and falsifier classes autonomous work is held to, and the spend envelope it runs under. Readers: scripts/bootstrap-seeder.ts --pool-policy writes these as the first autonomyScope and spendEnvelope pool records on a FRESH pool (development-vessel.service ExecStartPre); the planned push-time containment check reads the same file. The live records are trust-root pool records written with an operator (admin) key; changing containment means changing this file and the live records in the same operator act, and the self-facts rows autonomy_scope_pinned / spend_envelope_pinned pin the live copies per node. Bodies are the pool record bodies verbatim, minus the reason text. A per-node difference is expressed in those pins and in that node's live record, never here: this file is the fleet default (what a fresh pool is seeded with and what every node's committed-scope readers see), so a path opened on one node only (the opening act, 2026-10-11: repos/development-vessel/src/resolvers/gap-to-feature.ts on node1) stays listed here and is absent only from that node's expected_by_node value and live record.",
+  "description": "The committed autonomy containment: the excluded paths and falsifier classes autonomous work is held to, and the spend envelope it runs under. Readers: scripts/bootstrap-seeder.ts --pool-policy writes these as the first autonomyScope and spendEnvelope pool records on a FRESH pool (development-vessel.service ExecStartPre); the planned push-time containment check reads the same file. The live records are trust-root pool records written with an operator (admin) key; changing containment means changing this file and the live records in the same operator act, and the self-facts rows autonomy_scope_pinned / spend_envelope_pinned pin the live copies per node. Bodies are the pool record bodies verbatim, minus the reason text. A per-node difference is expressed in those pins and in that node's live record, never here: this file is the fleet default (what a fresh pool is seeded with and what every node's committed-scope readers see), so a path opened on one node only (the opening act, 2026-10-11: repos/development-vessel/src/resolvers/gap-to-feature.ts on node1) stays listed here and is absent only from that node's expected_by_node value and live record. A directory entry excludes by prefix, but pull-sync's protected test gate runs ALONE only the entries here that end in .test.ts under a vessel, so a directory of protected tests also lists each of its test files by name (test/judge-split/); those per-file entries are redundant for exclusion and may be absent from the pins and live records.",
   "autonomyScope": {
     "excluded_paths": [
       "repos/development-vessel/src/resolvers/feature-compose.ts",
@@ -64,6 +64,7 @@
       "repos/development-vessel/src/judge/gap-attempt-credit.ts",
       "repos/development-vessel/src/judge/gap-landing-verdict.ts",
       "repos/development-vessel/src/judge/gap-admission.ts",
+      "repos/development-vessel/src/judge/",
       "repos/development-vessel/test/resolvers/judge-modules-closed.test.ts",
       "repos/development-vessel/src/resolvers/attempt-ledger.ts",
       "repos/development-vessel/src/lib/operator-hold.ts",
@@ -72,6 +73,15 @@
       "repos/development-vessel/src/lib/operator-direct.ts",
       "repos/development-vessel/src/resolvers/intervention-evaluate.ts",
       "repos/development-vessel/test/judge-split/",
+      "repos/development-vessel/test/judge-split/pin-arm-decomposition.test.ts",
+      "repos/development-vessel/test/judge-split/pin-arm-gate-closed.test.ts",
+      "repos/development-vessel/test/judge-split/pin-bump-close-settles.test.ts",
+      "repos/development-vessel/test/judge-split/pin-compose-graders.test.ts",
+      "repos/development-vessel/test/judge-split/pin-hopeless-floor-pickskip.test.ts",
+      "repos/development-vessel/test/judge-split/pin-live-producer-probe.test.ts",
+      "repos/development-vessel/test/judge-split/pin-owner-route.test.ts",
+      "repos/development-vessel/test/judge-split/pin-pick-skeleton.test.ts",
+      "repos/development-vessel/test/judge-split/pin-sweep-trigger.test.ts",
       "repos/development-vessel/test/helpers/runtime-root.ts",
       "repos/development-vessel/test/resolvers/composer-interruption-sweep-owned-set.test.ts",
       "repos/development-vessel/test/resolvers/gap-attempt-credit-escalate-wiring.test.ts",
