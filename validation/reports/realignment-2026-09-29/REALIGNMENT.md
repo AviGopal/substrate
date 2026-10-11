@@ -1532,6 +1532,8 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **The hub's P5:** on the user's own schedule.
         - **`goal-target-inference.ts`:** re-tightened only if its hold's expiry at 2026-10-12T00:08Z actually opens it, and kept closed until N6 is scored.
         - **The schedule is unchanged.**
+        - **The judge fix is pushed by the user.** goal-host origin/dev moved from `c336a544` to `d949f753` (patch-id `a9bbcccc041b` verified). N6 is dispatched once it is live on node 1; the 06:00Z fallback stays as a backstop.
+        - **Expected effect, pre-registered.** The floor's reported reach on write and change goals falls, because prose reaches stop counting. Real reaches with a produced shape or a landed sha are unaffected, and that is the negative control.
       - **N6's dispatch rule, pre-registered.**
         - **If the user approves the judge fix earlier,** N6 is dispatched as soon as `d949f753` is live on node 1, and after N6's own eligibility (2026-10-12T00:08Z).
         - **If there is no ruling by 2026-10-12T05:50Z,** N6 is dispatched **at 2026-10-12T06:00Z** under the unfixed judge, and scored only by its pre-registration's effect check.
