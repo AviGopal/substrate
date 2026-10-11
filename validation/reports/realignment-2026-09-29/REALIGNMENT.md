@@ -1478,7 +1478,13 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
       - (2) The one fix at the failed stage, development-vessel `6b424060`, live on node 1 at 08:49:28Z: `git_log` reads the substrate's own clone by default, and its contract declares the repo, cwd, limit, format and since fields.
         - **Containment.** The argv is always `git log …`. Values beginning with `-` are refused, the limit is capped at 200, and `since` is passed as one element. The spawn runs with `GIT_CONFIG_NOSYSTEM`, a null global config and an empty HOME, so the clone's own config cannot run a helper. Must-fails are in `test/resolvers/git-log.test.ts`, and mutants M4–M7 go red.
         - **Placement.** `git-log.ts` and `resolver-schema.ts` are open files. It also includes an **operator edit to the closed `src/config.ts`**: the `git_log` shape description.
-    - **Outcome:** **[TO FILL]**.
+    - **Outcome of re-run 1** (execution `exec_cc9jrur1`, 2 attempts): **not reached**, and HOLLOW. The stage moved forward, though.
+      - **What changed.** Failure recall read the prior hollow verdicts. Target inference moved to `substrateGap_write` (confidence 0.85), so the walk tried to **file a gap**, which is the probe's own success path.
+      - **Where it failed: payload construction.** The learned write template binds no gap object, and the structured correction hint is not consumed on the template path. The sibling writes failed on missing required fields in the same way.
+      - **Still missing:** localization. `git_log` was offered only as an alternative target and was not used. No system-authored gap landed.
+      - **No egress:** the shell executor was not used.
+      - **Next.** Per this section, the stage is overdue, so it is diagnosed and gets one fix. qa asked the coordinator for a read-only diagnosis (where the template binds the write, and whether that file is open or closed) before any further operator fix: **[TO FILL]**.
+    - **Interventions on the path, counted.** Each operator fix made between walks is listed here. A later PASS is reported with them as operator links, and graded "closed once", not "closed by the system".
   - **Later stage events:** **[TO FILL as they arrive]**.
 
 **Precondition.** The lane-need goal below is dispatched only if the lane has had **no landing in the 24 h before dispatch**. If anything has landed, including a gap armed at birth and landed through the lane before the opening, the goal's premise is false. In that case the pre-written alternative is dispatched instead:
