@@ -1549,6 +1549,12 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **The reason that is set aside.** The rule had one recorded reason: to keep needs' stage evidence from being confounded. In its place, each landing and stage event is attributed to its need by dispatchId and goal hash.
         - **N11 and N14 were dispatched** at about 2026-10-11T18:58Z with their pinned text: N11 as `3827b1b0…`, N14 as `40bbc8e4…`. N6 still goes out after 2026-10-12T00:08Z.
         - **The other latest-bys are unchanged,** and a missed one is reported MISSED, not moved later. The seal holds for every sealed answer.
+      - **A hold review: `SATISFIER_PROVEN_BAD_ARMED` is LIFTED** (the user, as reported by qa: "follow the recommendations. stick to this schedule.").
+        - **What the hold was.** Suppression of proven-bad satisfiers had been held by an environment switch since 2026-08-19, with no lift condition and no review date. It broke law 1 and the user's no-indefinite-hold rule.
+        - **The evidence.** Across the probe, N11 and N14, the walk logs show proven-bad satisfiers winning while suppression was held: `shellResult` at α 472, β 2,021, and `code_modification_proposal` at α 38, β 722.
+        - **The change.** deployment-redeployment arms suppression before 2026-10-12T00:08Z, so N6 runs under it. It is recorded as a deliberate intervention (law 12). Any re-run of N11 or N14 that straddles the change is reported with that boundary marked.
+        - **The class** (behaviour gated by an environment switch) becomes sealed need **N15**, which the coordinator is writing.
+      - **First runs of N11 and N14:** both not reached, and both judged honestly. N14 hit the wrong site and was refused at admission.
       - **N14 is added** (the user, as reported by qa: "follow the recommendations. stick to this schedule."). It is a class need: the floor's read tools are built from discovery, as its write tools already are.
         - **Schedule:** queued after N6, one need in the lane at a time, with a latest-by of 2026-10-12T18:00Z. It goes ahead of N7 and N9, whose dates are unchanged; if they are not met, they are reported MISSED, not moved later.
         - **Pre-registration: written and sealed** in the coordinator's job directory. The addendum is `3b281758…`, and an annex (`8b358f03…367d`) carries the feasibility branches and the security constraint. Nothing the walk can read names N14's site before it is scored; that makes four sealed answers.
