@@ -1491,6 +1491,15 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
     - **The probe is scored at the stage it reached.** Localization was not reached. Gap authoring was attempted and failed at payload construction. There are 0 system-authored landings and 1 operator link.
     - **The window stays open** until 2026-10-18T07:12:53Z, for a landing that the system originates without our steering. The key stays sealed until then.
     - **Each remaining blocker becomes an N-series need,** for the system to find itself, each with a pre-registered detector. The coordinator's read-only diagnosis continues only to word them precisely. An example: "your learned write templates bind targets whose required fields none of their inputs carry, so they fail every time". Its detector is a template whose executions are 100% `structuredError` `missing_required_field` over N runs.
+    - **N10, pinned for pre-registration** (coordinator `PREREG-NEEDS-ADDENDUM-N10.md`, sha256 `84d1122a600f122816173a93f56001f2b0b05e08ec82039a0b8402d5a94a530f`). The ground-truth diagnosis stays in that file until the need resolves.
+      - **Need text:** "Some of the system's learned procedures always fail the same way: they call a write step without the data that step requires, and the system keeps choosing them anyway. Make the system notice a learned procedure that fails for the same missing-input reason every time, stop choosing it, and fall back to the way that works."
+      - **Detector D3.** A learned template T calls a `*_write` S. Over its last 20 or more executions, at least 90% of failures share one identical missing-required reason, with 0 successes, while `satisfier:S` has at least 1 success. That files a gap.
+        - Positive control: a live template at 481 runs and 0 successes.
+        - Negative control: satisfiers with successes must not fire.
+      - **Scoring.**
+        - **PASS:** a system landing makes D3 fire on its live instance, the template stops being picked, and the working satisfier is reached on the next targeted walk. It is graded as an operator link, because it comes from an N-dispatch.
+        - **Partial:** D3 fires, but the template is still picked.
+        - **REFUTED:** hollow, the wrong site, global suppression, or an operator edit to a closed file.
     - **A positive signal.** In re-run 1, failure memory (recall of three prior hollow verdicts) changed target selection. This is the first observed instance of the behaviour RECONNECTION-2026-10-10 found had never worked.
   - **Later stage events:** **[TO FILL as they arrive]**.
 
