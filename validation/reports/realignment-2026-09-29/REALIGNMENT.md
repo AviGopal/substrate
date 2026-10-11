@@ -1495,7 +1495,13 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
       > "Some of the system's learned procedures fail every time, and the evidence that they fail is already recorded, yet the system keeps choosing them. Make that evidence stop the system choosing them, and let it fall back to the way that works."
       - **PASS** requires the row state: the live template's activity row retired, with its retirement reason. A log line without that row state scores hollow.
       - **Grading.** It is an operator-link dispatch, scored by N10-v2's own pre-registration, not by the probe.
+      - **Governing pre-registration: N10-v2.** It was pinned at 09:13:51Z, and the walk began at 09:13:58.49Z, according to node 1's goal-host journal.
+      - **A post-dispatch tightening annex: v3** (sha256 `9edd79c931173160…8fd71`), written at 09:14:05.32Z, after the walk began. It adds the row-state effect check (`retired=true`, `retired_reason="poor_performance"`, and `retired_at` set after the landing) and the HOLLOW rule for an identity mismatch. It only makes PASS harder, and it is labelled as written after dispatch.
       - **Outcome:** **[TO FILL]**.
+    - **Pinned for the schedule** (all read-only):
+      - **N5:** `PREREG-NEEDS.md` §N5, sha256 `8ed46df7…9867`.
+      - **N6 and N7:** `PREREG-NEEDS-ADDENDUM-N6.md`, sha256 `408922a7…f234`.
+      - **N9 is not ready.** It is a candidate only: its earlier measure is invalid, because lessons and attempts have separate writers. Its full pre-registration is due before its dispatch date, 2026-10-13T12:00Z.
     - **N10 v1, superseded (kept for the record)** (coordinator `PREREG-NEEDS-ADDENDUM-N10.md`, sha256 `84d1122a600f122816173a93f56001f2b0b05e08ec82039a0b8402d5a94a530f`). The ground-truth diagnosis stays in that file until the need resolves.
       - **Need text:** "Some of the system's learned procedures always fail the same way: they call a write step without the data that step requires, and the system keeps choosing them anyway. Make the system notice a learned procedure that fails for the same missing-input reason every time, stop choosing it, and fall back to the way that works."
       - **Detector D3.** A learned template T calls a `*_write` S. Over its last 20 or more executions, at least 90% of failures share one identical missing-required reason, with 0 successes, while `satisfier:S` has at least 1 success. That files a gap.
