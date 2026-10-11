@@ -19,7 +19,12 @@ EnvironmentFile=/etc/substrate/env
 # gate state without the runner refuses (exit 3): losing one file never re-opens the
 # ungated path. $$ escapes systemd's own variable expansion.
 ExecStart=/bin/sh -c 'r=/usr/local/libexec/substrate/gate-runner; g=/workspace/.gate; if [ -x "$$r" ]; then exec "$$r" tick; fi; for f in accepted.sha accepted history ledger.jsonl bootstrapped; do if [ -e "$$g/$$f" ]; then echo "GAP gate-runner-missing: $$g holds gate state ($$f) but $$r is absent; refusing the ungated path. Break-glass: reinstall the runner from the image"; exit 3; fi; done; echo "gate-runner absent, no gate state: running the pre-gate pull-sync"; exec /usr/local/bin/substrate-pull-sync'
-TimeoutStartSec=900
+# 1800 s (2026-10-11): development-vessel's test gate needs ~1019 s (two whole-suite runs for the parent/candidate
+# overlay, measured on node1 at load 11-12) and activity-api's ~1181 s; at 900 s the per-tick gate budget (this value
+# less GATE_UNIT_MARGIN_S) was 776 s, so both deferred every tick and never converged. pull-sync reads this value live
+# (unit_timeout_s) for the gate budget, the quiesce/drain caps and the admission marker expiry. The unit is a oneshot,
+# so a long tick cannot overlap the next: the timer's start merges into the running job.
+TimeoutStartSec=1800
 StandardOutput=journal
 StandardError=journal
 

@@ -35,20 +35,20 @@ if [ "${PULLSYNC_REEXECED:-}" = 1 ] && [ -n "${PULLSYNC_T0:-}" ]; then :; else P
 # waits, the failing-test generator's) is derived from the value systemd will actually enforce, read from
 # systemd at tick start: a drop-in that changes the timeout is honoured, not shadowed by a constant. Only a
 # LOADED unit's value is trusted (an unknown unit reports systemd's 90 s default, which would starve every
-# gate); unreadable, unparseable, zero or infinity -> 900, the shipped unit file's value. UNIT_TIMEOUT_S
+# gate); unreadable, unparseable, zero or infinity -> 1800, the shipped unit file's value (raised from 900 on 2026-10-11). UNIT_TIMEOUT_S
 # set in the environment wins (tests, and an operator pinning it).
 unit_timeout_s() {
   local _ut_unit="${PULLSYNC_UNIT:-substrate-pull-sync.service}" _ut_v
-  [ "$(systemctl show "$_ut_unit" -p LoadState --value 2>/dev/null || true)" = loaded ] || { echo 900; return 0; }
+  [ "$(systemctl show "$_ut_unit" -p LoadState --value 2>/dev/null || true)" = loaded ] || { echo 1800; return 0; }
   _ut_v="$(systemctl show "$_ut_unit" -p TimeoutStartUSec --value 2>/dev/null || true)"
-  case "$_ut_v" in ''|infinity) echo 900; return 0 ;; esac
+  case "$_ut_v" in ''|infinity) echo 1800; return 0 ;; esac
   printf '%s\n' "$_ut_v" | awk '{ t = 0
     for (i = 1; i <= NF; i++) { n = $i; sub(/[a-z]+$/, "", n); u = $i; sub(/^[0-9.]+/, "", u)
-      if (n == "") { print 900; exit }
+      if (n == "") { print 1800; exit }
       if (u == "us") t += n / 1e6; else if (u == "ms") t += n / 1e3; else if (u == "" || u == "s" || u == "sec") t += n
       else if (u == "min" || u == "m") t += n * 60; else if (u == "h") t += n * 3600; else if (u == "d") t += n * 86400
-      else { print 900; exit } }
-    if (t < 1) t = 900; printf "%d\n", t }'
+      else { print 1800; exit } }
+    if (t < 1) t = 1800; printf "%d\n", t }'
 }
 : "${UNIT_TIMEOUT_S:=$(unit_timeout_s)}"
 GEN_QUEUE=""
@@ -702,7 +702,7 @@ quiesce_release() {
 quiesce_mark() {
   local _qm_exp
   if [ "${2:-}" = carry ]; then _qm_exp=$(( $(date +%s) + 1200 ))
-  else _qm_exp=$(( ${PULLSYNC_T0:-$(date +%s)} + ${UNIT_TIMEOUT_S:-900} )); fi
+  else _qm_exp=$(( ${PULLSYNC_T0:-$(date +%s)} + ${UNIT_TIMEOUT_S:-1800} )); fi
   printf '{"written_by":"pull-sync","pid":%s,"hold":"%s","expires_at":"%s"}\n' "$$" "${2:-tick}" \
     "$(date -u -d "@$_qm_exp" +%Y-%m-%dT%H:%M:%SZ)" > "$1" 2>/dev/null || true
 }
@@ -1205,7 +1205,7 @@ quiesce_drain() {
   log "$1: owed restart QUIESCED (admission closed); waiting for in-flight work to finish"
   : "${GATE_T0:=$(date +%s)}"
   _qd_wait="${QUIESCE_WAIT_S:-900}"
-  _qd_left=$(( ${UNIT_TIMEOUT_S:-900} - ( $(date +%s) - GATE_T0 ) - ${QUIESCE_MARGIN_S:-120} ))
+  _qd_left=$(( ${UNIT_TIMEOUT_S:-1800} - ( $(date +%s) - GATE_T0 ) - ${QUIESCE_MARGIN_S:-120} ))
   [ "$_qd_left" -lt 0 ] && _qd_left=0
   [ "$_qd_wait" -gt "$_qd_left" ] && _qd_wait="$_qd_left"
   _qd_spent=0; _qd_now=1
@@ -2245,7 +2245,7 @@ refresh_clone_dependants() { # pkg-vessel clone-dir
   _rd_need=$(( 2 * ${CLONE_DEPS_INSTALL_TIMEOUT_SECONDS:-180} + ${QUIESCE_MARGIN_S:-120} ))
   for _rd_c in $(grep -lE "\"file:[^\"]*/$_rd_v/?\"" "$CLONE_DIR"/*/package.json 2>/dev/null | xargs -r -n1 dirname | xargs -r -n1 basename); do
     [ "$_rd_c" = "$_rd_v" ] && continue
-    _rd_left=$(( ${UNIT_TIMEOUT_S:-900} - ( $(date +%s) - GATE_T0 ) - ${QUIESCE_MARGIN_S:-120} ))
+    _rd_left=$(( ${UNIT_TIMEOUT_S:-1800} - ( $(date +%s) - GATE_T0 ) - ${QUIESCE_MARGIN_S:-120} ))
     if [ "$_rd_left" -lt "$_rd_need" ]; then
       log "$_rd_v: clone dependant refresh deferred to next tick — tick budget left ${_rd_left}s (one install needs up to ${_rd_need}s)"
       return 0
@@ -2302,11 +2302,13 @@ mirror_quiesce_drain() {
     | grep -o '"in_flight"[[:space:]]*:[[:space:]]*[0-9][0-9]*' | grep -o '[0-9]*$' | head -1)"
   NOW="${NOW:-0}"; case "$NOW" in *[!0-9]*) NOW=0 ;; esac
   log "$1: test gate done; $NOW unit(s) in flight — QUIESCED (admission closed) until the restart; waiting for them to finish rather than restarting into them"
-  : "${GATE_T0:=$(date +%s)}" ; GATE_BUDGET_SECONDS="${GATE_BUDGET_SECONDS:-1000}"
-  _Q_LEFT=$(( ${UNIT_TIMEOUT_S:-900} - ( $(date +%s) - GATE_T0 ) - ${QUIESCE_MARGIN_S:-120} ))
+  # The gate budget defaults to the unit's live TimeoutStartSec (2026-10-11): a fixed 1000 s capped a 1019 s need
+  # even under a longer unit. gate_left still subtracts the margin from the tick's start; an explicit value wins.
+  : "${GATE_T0:=$(date +%s)}" ; GATE_BUDGET_SECONDS="${GATE_BUDGET_SECONDS:-${UNIT_TIMEOUT_S:-1800}}"
+  _Q_LEFT=$(( ${UNIT_TIMEOUT_S:-1800} - ( $(date +%s) - GATE_T0 ) - ${QUIESCE_MARGIN_S:-120} ))
   [ "$_Q_LEFT" -lt 0 ] && _Q_LEFT=0
   if [ "$QWAIT" -gt "$_Q_LEFT" ]; then
-    log "$1: quiesce wait capped ${QWAIT}s -> ${_Q_LEFT}s by what remains of TimeoutStartSec (${UNIT_TIMEOUT_S:-900}s) less a ${QUIESCE_MARGIN_S:-120}s margin — an uncapped wait outlives the unit and converges nothing"
+    log "$1: quiesce wait capped ${QWAIT}s -> ${_Q_LEFT}s by what remains of TimeoutStartSec (${UNIT_TIMEOUT_S:-1800}s) less a ${QUIESCE_MARGIN_S:-120}s margin — an uncapped wait outlives the unit and converges nothing"
     QWAIT="$_Q_LEFT"
   fi
   while [ "$NOW" -gt 0 ] && [ "$QSPENT" -lt "$QWAIT" ]; do
@@ -2981,13 +2983,15 @@ EOF
   # a margin (from the tick's start), and each run is started only if its worst case fits; otherwise the
   # candidate is DEFERRED exactly as before (logged, counted, starvation filed at the bound), never
   # converged on a partial measurement. The counter resets only when a gate finishes measuring.
-  : "${GATE_T0:=$(date +%s)}" ; GATE_BUDGET_SECONDS="${GATE_BUDGET_SECONDS:-1000}"
+  # The gate budget defaults to the unit's live TimeoutStartSec (2026-10-11): a fixed 1000 s capped a 1019 s need
+  # even under a longer unit. gate_left still subtracts the margin from the tick's start; an explicit value wins.
+  : "${GATE_T0:=$(date +%s)}" ; GATE_BUDGET_SECONDS="${GATE_BUDGET_SECONDS:-${UNIT_TIMEOUT_S:-1800}}"
   BD_FILE="$MARKER_DIR/$v.testgate-budget-defers"
   gate_left() {
     local _gl_now _gl_a _gl_b
     _gl_now=$(date +%s)
     _gl_a=$(( GATE_BUDGET_SECONDS - (_gl_now - GATE_T0) ))
-    _gl_b=$(( ${UNIT_TIMEOUT_S:-900} - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} - (_gl_now - ${PULLSYNC_T0:-$GATE_T0}) ))
+    _gl_b=$(( ${UNIT_TIMEOUT_S:-1800} - ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}} - (_gl_now - ${PULLSYNC_T0:-$GATE_T0}) ))
     if [ "$_gl_a" -lt "$_gl_b" ]; then echo "$_gl_a"; else echo "$_gl_b"; fi
   }
   SUITE_COST_S=$(( ${TEST_TIMEOUT_SECONDS:-240} + ${TEST_KILL_GRACE_SECONDS:-30} ))
@@ -3031,7 +3035,7 @@ EOF
     case "$_tn_oneed" in ''|*[!0-9]*) _tn_oneed=0 ;; esac
     [ "$_tn_okey" = "$_tn_key" ] && [ "$_tn_oneed" -gt "$_tn_need" ] && _tn_need="$_tn_oneed"
     echo "$_tn_key $_tn_need ${TG_SKIPS:-0}" > "$TG_NEED_FILE" 2>/dev/null || true
-    log "$v: TEST GATE DEFERRED — $1 needs up to ${2}s but ${_gl}s remain (gate budget ${GATE_BUDGET_SECONDS}s, capped by the unit's TimeoutStartSec ${UNIT_TIMEOUT_S:-900}s less ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}}s from the tick's start); NOT converging ${HEAD:0:10} this tick (consecutive budget deferral $BD_N of this candidate, bound $BD_MAX); it gates FIRST next tick with a fresh budget"
+    log "$v: TEST GATE DEFERRED — $1 needs up to ${2}s but ${_gl}s remain (gate budget ${GATE_BUDGET_SECONDS}s, capped by the unit's TimeoutStartSec ${UNIT_TIMEOUT_S:-1800}s less ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}}s from the tick's start); NOT converging ${HEAD:0:10} this tick (consecutive budget deferral $BD_N of this candidate, bound $BD_MAX); it gates FIRST next tick with a fresh budget"
     if [ "$BD_N" -ge "$BD_MAX" ]; then
       log "$v: !!! TEST GATE BUDGET-STARVED — filing pull-sync-testgate-budget-starved-$v ($BD_N consecutive deferrals at ${HEAD:0:10}, bound $BD_MAX)"
       echo "$HEAD $BD_N" > "$MARKER_DIR/$v.testgate-starved" 2>/dev/null || true
@@ -3039,6 +3043,26 @@ EOF
         '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-budget-starved-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
           summary:("Repair needed: pull-sync deferred " + $v + " at " + $head + " " + $n + " consecutive ticks because the per-tick test-gate budget (" + $b + "s, capped by the unit timeout) was too short for its gate to finish its runs, past pull_sync.testgate_budget_defer_max (" + $max + "). It is NOT converged ungated: a gate that did not measure never promotes. Repair the capability: a faster suite, a larger budget, or a gate sharded across ticks."),
           classification_metadata:{vessel:$v,head:$head,consecutive_deferrals:($n | tonumber),bound:($max | tonumber),budget_seconds:($b | tonumber)}}}}}' 2>/dev/null)"
+    fi
+    # PER-VESSEL STARVATION (2026-10-11, law 6). BD_N counts deferrals of ONE candidate, so a stream of pushes
+    # resets it: development-vessel deferred for 1.5 h across successive candidates and never tripped the bound,
+    # while activity-api (no new pushes) did. So also measure, per VESSEL, the time since its first deferral after
+    # its last convergence (the mirror's own pin, last-good): a new last-good restarts the clock, a new candidate
+    # does not. Not "time since last-good" alone: a vessel idle and current for hours would trip on its first
+    # deferral after a push. Bound: pull_sync.testgate_starve_after_seconds (shaped, default 3600).
+    local _sv_file="$MARKER_DIR/$v.testgate-starve-since" _sv_t0="" _sv_lg="" _sv_cur _sv_after _sv_el
+    _sv_cur="$(cat "$LAST_GOOD_DIR/$v" 2>/dev/null || echo none)"
+    { read -r _sv_t0 _sv_lg < "$_sv_file"; } 2>/dev/null || true
+    case "$_sv_t0" in ''|*[!0-9]*) _sv_t0="" ;; esac
+    if [ -z "$_sv_t0" ] || [ "$_sv_lg" != "$_sv_cur" ]; then _sv_t0=$(date +%s); echo "$_sv_t0 $_sv_cur" > "$_sv_file" 2>/dev/null || true; fi
+    tuning_param pull_sync.testgate_starve_after_seconds 3600; _sv_after="$TP_VALUE"
+    _sv_el=$(( $(date +%s) - _sv_t0 ))
+    if [ "$BD_N" -lt "$BD_MAX" ] && [ "$_sv_el" -ge "$_sv_after" ]; then
+      log "$v: !!! TEST GATE BUDGET-STARVED (per vessel) — filing pull-sync-testgate-budget-starved-$v (deferred for ${_sv_el}s since its last convergence ${_sv_cur:0:10}, across candidates; bound ${_sv_after}s)"
+      emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg el "$_sv_el" --arg after "$_sv_after" --arg lg "${_sv_cur:0:10}" --arg b "$GATE_BUDGET_SECONDS" \
+        '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-budget-starved-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
+          summary:("Repair needed: pull-sync has deferred " + $v + " for " + $el + "s since its last convergence (" + $lg + "), across successive candidates (now " + $head + "), because the per-tick test-gate budget (" + $b + "s, capped by the unit timeout) is too short for its gate; past pull_sync.testgate_starve_after_seconds (" + $after + "). It is NOT converged ungated. Repair the capability: a faster suite, a larger budget, or a gate sharded across ticks."),
+          classification_metadata:{vessel:$v,head:$head,starved_seconds:($el | tonumber),bound_seconds:($after | tonumber),last_converged:$lg,budget_seconds:($b | tonumber),keyed:"vessel"}}}}}' 2>/dev/null)"
     fi
   }
   if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the suite run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
@@ -4371,7 +4395,7 @@ converge_fleet_defs "${SUPER_REPO_DIR:-/workspace/git/super-repo}"
 # FAILING-TEST GENERATOR, deferred to the end of the tick (see the queue note at the test gate).
 while IFS='|' read -r gv gq gh gd; do
   [ -n "$gv" ] || continue
-  gleft=$(( ${UNIT_TIMEOUT_S:-900} - ( $(date +%s) - PULLSYNC_T0 ) - ${FAILTEST_GEN_MARGIN_S:-240} ))
+  gleft=$(( ${UNIT_TIMEOUT_S:-1800} - ( $(date +%s) - PULLSYNC_T0 ) - ${FAILTEST_GEN_MARGIN_S:-240} ))
   if [ "$gleft" -lt 200 ]; then log "$gv: failing-test generator deferred to a later tick (${gleft}s of tick budget left)"; rm -rf "$gq"; continue; fi
   FAILTEST_GEN_DEADLINE=$(( $(date +%s) + gleft )) gen_failing_test_gaps "$gv" "$(cat "$gq/out" 2>/dev/null)" "$gq/prev" "$gh" "$gd" || true
   rm -rf "$gq"

@@ -18,7 +18,7 @@
 #   (d) MUST-FAIL: N consecutive deferrals of the same candidate file the budget-starved gap (no silent
 #       starvation), including deferrals that happen MID-gate (the counter resets only on a finished gate)
 #   (e) MUST-FAIL: the budget follows the LIVE unit's TimeoutStartSec (systemctl), not a constant: 10min ->
-#       600, 1h 30min -> 5400, an unloaded unit / infinity / garbage -> 900
+#       600, 1h 30min -> 5400, an unloaded unit / infinity / garbage -> 1800 (the shipped unit's value)
 #   (h) MUST-FAIL: a slow clone-dependency install eats the time left -> deferred before the first run
 #   (j) MUST-FAIL: time left between 1x and 2x a suite run at the parent/candidate overlay -> deferred BEFORE
 #       either overlay run (the overlay is two runs; starting the first would let the second be killed)
@@ -27,6 +27,12 @@
 #   (l) MUST-FAIL: the real ensure_clone_deps, called from the gate with too little time for its install,
 #       returns 2 (budget) without installing, and the gate defers; control: ample time installs
 #   (f) a deferral leaves the vessel at its current runtime: last-good unchanged, nothing converged
+#   (m) MUST-FAIL: the gate budget follows the live unit timeout, not a fixed 1000 s: on an 1800 s unit a gate
+#       needing 1100 s (dev-vessel measured 1019 s) runs and converges; on the shipped 900 s unit it defers; an
+#       explicit GATE_BUDGET_SECONDS still caps
+#   (n) MUST-FAIL: starvation is keyed per VESSEL: successive candidates each deferring ONCE still file the
+#       budget-starved gap once the vessel has gone unconverged past pull_sync.testgate_starve_after_seconds;
+#       controls: a convergence (new last-good) restarts the clock; a current vessel's first deferral does not file
 #   (g) control: ample budget -> the gate runs exactly as before and converges
 #
 # usage: validation/scripts/pull-sync-testgate-budget.test.sh [path/to/substrate-pull-sync.sh]
@@ -60,7 +66,7 @@ emit_gap() { echo "GAP $1" >> "$CALLS"; }
 tracked_fail_names() { :; }
 ensure_clone_deps() { sleep "${DEPS_SLEEP:-0}"; if [ -n "${DEPS_RC:-}" ]; then CD_BUDGET_SHORT="the clone dependency install (stub)"; return "$DEPS_RC"; fi; return 0; }
 ensure_clone_nested_deps() { CD_NESTED=""; return 0; }
-tuning_param() { TP_VALUE="$2"; }
+tuning_param() { case "$1" in pull_sync.testgate_starve_after_seconds) TP_VALUE="${STARVE_AFTER:-$2}" ;; *) TP_VALUE="$2" ;; esac; }
 
 mkdir -p "$T/bin" "$T/stub"
 # bun test         -> sleeps $S/sleep seconds, prints $S/full; each whole-suite run is recorded
@@ -154,9 +160,9 @@ if declare -F unit_timeout_s >/dev/null; then
   [ "$(ut loaded 10min)" = 600 ] && ok "(e) 10min -> 600 (a drop-in is honoured)" || bad "(e) 10min -> $(ut loaded 10min)"
   [ "$(ut loaded '1h 30min')" = 5400 ] && ok "(e) 1h 30min -> 5400" || bad "(e) 1h 30min -> $(ut loaded '1h 30min')"
   [ "$(ut loaded '1min 30s')" = 90 ] && ok "(e) 1min 30s -> 90" || bad "(e) 1min 30s -> $(ut loaded '1min 30s')"
-  [ "$(ut not-found '1min 30s')" = 900 ] && ok "(e) an unloaded unit's default is NOT trusted -> 900" || bad "(e) unloaded unit -> $(ut not-found '1min 30s')"
-  [ "$(ut loaded infinity)" = 900 ] && ok "(e) infinity -> 900" || bad "(e) infinity -> $(ut loaded infinity)"
-  [ "$(ut loaded 'banana')" = 900 ] && ok "(e) unparseable -> 900" || bad "(e) unparseable -> $(ut loaded banana)"
+  [ "$(ut not-found '1min 30s')" = 1800 ] && ok "(e) an unloaded unit's default is NOT trusted -> 1800 (the shipped value)" || bad "(e) unloaded unit -> $(ut not-found '1min 30s')"
+  [ "$(ut loaded infinity)" = 1800 ] && ok "(e) infinity -> 1800" || bad "(e) infinity -> $(ut loaded infinity)"
+  [ "$(ut loaded 'banana')" = 1800 ] && ok "(e) unparseable -> 1800" || bad "(e) unparseable -> $(ut loaded banana)"
   # and the gate follows it: a 10min unit at 400 s used still gates; the same tick on a 5min unit defers
   real; setup activity-api same; UNIT_TIMEOUT_S="$(ut loaded 10min)"; tick 200
   converged && ok "(e) 10min unit, 200 s used: gates and converges" || bad "(e) 10min unit did not gate (log: $(tr '\n' '|' < "$LOG" | cut -c1-200))"
@@ -216,6 +222,30 @@ real; setup activity-api same; tick 0
 converged && [ "$(suites)" = 1 ] && ! deferred && ok "(g) ample budget: one run, converged, no deferral" || bad "(g) control changed (runs $(suites); log: $(tr '\n' '|' < "$LOG" | cut -c1-300))"
 real; setup development-vessel same; tick 0
 converged && grep -q '^ALONE' "$T/runs.txt" && ok "(g) ample budget: protected tests still run alone and the candidate converges" || bad "(g) dev-vessel control changed"
+
+# ── (m) the gate budget follows the live unit timeout (the 1019 s dev-vessel case) ──────────────────────
+budget_case() { unset GATE_BUDGET_SECONDS GATE_UNIT_MARGIN_S QUIESCE_MARGIN_S PROTECTED_TEST_TIMEOUT_SECONDS; TEST_TIMEOUT_SECONDS=1070; TEST_KILL_GRACE_SECONDS=30; UNIT_TIMEOUT_S="$1"; }
+budget_case 1800; setup activity-api same; tick 0
+converged && ! deferred && ok "(m) 1800 s unit: a gate needing 1100 s runs and converges (no fixed 1000 s cap)" || bad "(m) 1800 s unit still deferred a 1100 s gate (log: $(tr '\n' '|' < "$LOG" | cut -c1-300))"
+budget_case 900; setup activity-api same; tick 0
+deferred && ! converged && ok "(m) the shipped-900 s unit defers the same gate (the starvation it fixes)" || bad "(m) a 900 s unit did not defer a 1100 s gate"
+budget_case 1800; GATE_BUDGET_SECONDS=500; setup activity-api same; tick 0; unset GATE_BUDGET_SECONDS
+deferred && ! converged && ok "(m) an explicit GATE_BUDGET_SECONDS still caps" || bad "(m) the explicit gate budget was ignored"
+
+# ── (n) per-vessel starvation across successive candidates ───────────────────────────────────────────
+small; setup activity-api new; echo 2 > "$T/stub/sleep"; STARVE_AFTER=3600
+starved() { grep -q 'pull-sync-testgate-budget-starved-activity-api' "$CALLS"; }
+tick 3
+deferred && ! starved && ok "(n) a current vessel's FIRST deferral does not file (clock starts now)" || bad "(n) the first deferral filed or did not defer"
+_s0=""; _slg=""; { read -r _s0 _slg < "$MARKER_DIR/activity-api.testgate-starve-since"; } 2>/dev/null || true
+case "$_s0" in ''|*[!0-9]*) bad "(n) no per-vessel starvation record was written (the per-vessel clock does not exist)"; _s0=$(date +%s) ;; esac
+echo "$(( _s0 - 4000 )) $_slg" > "$MARKER_DIR/activity-api.testgate-starve-since"
+for i in 2 3; do echo "export const x = $i$i;" > "$d/src/x.ts"; g commit -am "cand$i"; tick 3; done
+starved && ok "(n) successive candidates, each deferring once, file the starvation gap once the vessel is unconverged past the bound" || bad "(n) per-candidate reset hid the starvation (defers: $(cat "$MARKER_DIR/activity-api.testgate-budget-defers" 2>/dev/null))"
+grep -q '"keyed":"vessel"' "$CALLS" && ok "(n) the gap says it is keyed per vessel" || bad "(n) the per-vessel gap was not the one filed"
+git -C "$d" rev-parse HEAD~1 > "$LAST_GOOD_DIR/activity-api"; echo "export const x = 99;" > "$d/src/x.ts"; g commit -am cand4; tick 3
+starved && bad "(n) a convergence (new last-good) did not restart the clock" || ok "(n) control: a new last-good restarts the clock (no gap)"
+unset STARVE_AFTER
 
 echo
 [ "$FAILS" -eq 0 ] && { echo "PASS"; exit 0; } || { echo "$FAILS FAIL"; exit 1; }
