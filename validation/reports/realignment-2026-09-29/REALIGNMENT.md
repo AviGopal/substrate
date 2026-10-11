@@ -1552,9 +1552,16 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
       - **A hold review: `SATISFIER_PROVEN_BAD_ARMED` is LIFTED** (the user, as reported by qa: "follow the recommendations. stick to this schedule.").
         - **What the hold was.** Suppression of proven-bad satisfiers had been held by an environment switch since 2026-08-19, with no lift condition and no review date. It broke law 1 and the user's no-indefinite-hold rule.
         - **The evidence.** Across the probe, N11 and N14, the walk logs show proven-bad satisfiers winning while suppression was held: `shellResult` at α 472, β 2,021, and `code_modification_proposal` at α 38, β 722.
-        - **The change: lifted, arming pending (the user).** Delegating the environment change was blocked by a session permission check, so the user arms suppression themselves. Arming it is a deliberate intervention (law 12). If it is armed before N6's dispatch, N6 runs under it; otherwise N6's record says it ran without it. The arming record: **[TO FILL]**. Any re-run of N11 or N14 that straddles the change is reported with that boundary marked.
+        - **The change: lifted, arming pending (the user).** Delegating the environment change was blocked by a session permission check, so the user arms suppression themselves. Arming it is a deliberate intervention (law 12). If it is armed before N6's dispatch, N6 runs under it; otherwise N6's record says it ran without it. **Armed by the user** with qa's `arm-suppression.sh` (a drop-in, `50-satisfier-suppression.conf`).
+          - Restarts: node 1 at 2026-10-11T19:44:07Z and compose2 at 19:44:12Z.
+          - Effect observed on both from 19:51Z: the earned-producer probe fires, with 0 HELD lines.
+          - The coordinator recorded it as a deliberate intervention, with an annex. N6 runs under it. Any re-run of N11 or N14 that straddles the change is reported with that boundary marked.
         - **The class** (behaviour gated by an environment switch) becomes sealed need **N15**, which the coordinator is writing.
-      - **First runs of N11 and N14:** both not reached, and both judged honestly. N14 hit the wrong site and was refused at admission.
+      - **First runs of N11 and N14:** both dispatches are terminal and not reached, and both were judged honestly.
+        - **N11** ran a concept-backfill HTTP template, which ended in `execution_error`.
+        - **N14's** edit intent went to a wrong, closed site. A compose was drafted; the semantic gate found it does not address the need, with no falsifier, and it was refused at admission while unarmed. Nothing landed.
+        - **The provisional reading for both:** REFUTED (wrong site, no landing). Neither need is closed until 72 hours pass or a refuting outcome arrives.
+        - **The system-born gap from this round:** one, `route-edit-edc1edbb`, from N14's own run. It is at the wrong site and unarmed. There are 0 landings.
       - **N14 is added** (the user, as reported by qa: "follow the recommendations. stick to this schedule."). It is a class need: the floor's read tools are built from discovery, as its write tools already are.
         - **Schedule:** queued after N6, one need in the lane at a time, with a latest-by of 2026-10-12T18:00Z. It goes ahead of N7 and N9, whose dates are unchanged; if they are not met, they are reported MISSED, not moved later.
         - **Pre-registration: written and sealed** in the coordinator's job directory. The addendum is `3b281758…`, and an annex (`8b358f03…367d`) carries the feasibility branches and the security constraint. Nothing the walk can read names N14's site before it is scored; that makes four sealed answers.
