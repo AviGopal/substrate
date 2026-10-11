@@ -1505,6 +1505,10 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **A side effect, put to the user.** The walk ran `learningPolicyWriteback`, which wrote node 1's live tuning rows at 09:16:29Z: `TD_LAMBDA` from 0.6 to 0.72, and `YIELD_FLOOR` from 0.1 to 0.458. Both writes were within the server bounds and went through the gated route.
           - This is the learning-writeback edge (N8) running for the first time in at least 5 days. An operator's dispatch induced it.
           - Nothing is reverted without the user's word.
+    - **A scoring hazard, pre-registered for every remaining N-need.** A need is never scored from the walk's `reached=yes`; it is scored only from its pre-registration's effect check. N10 is the instance: the closed reach judge passed a mechanism-change goal on prose plus a writeback.
+    - **The schedule after N10.**
+      - **N5 goes next,** dispatched by 2026-10-11T10:45Z. The hold until then is deliberate and bounded at 1 hour: it waits for the answer on what reads `YIELD_FLOOR`. That way the user's keep-or-revert decision does not change a setting in the middle of N5's measurement (law 12). The values live at dispatch are recorded in the dispatch record.
+      - **N6 follows N5,** at its eligibility of 2026-10-12T00:15Z. If N5 is still running then, N6 waits for N5 to reach a terminal state, or until 2026-10-12T06:00Z, whichever comes first.
     - **Pinned for the schedule** (all read-only):
       - **N5:** `PREREG-NEEDS.md` §N5, sha256 `8ed46df7…9867`.
       - **N6 and N7:** `PREREG-NEEDS-ADDENDUM-N6.md`, sha256 `408922a7…f234`.
