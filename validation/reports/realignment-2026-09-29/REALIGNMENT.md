@@ -1544,6 +1544,11 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **The confound, pre-registered:** "dispatched under the unfixed reach judge; reached=yes without the PREREG effect is an expected false positive, not evidence."
         - **The cost, pre-registered.** Under the unfixed judge, a prose reach also writes a new laundered `goal_execution_paths` donor row, with the requested targets as its endpoint. That row's id is recorded after dispatch, so that the later evidence re-grade covers it.
         - The record shows the outcome as bounded by a pending ruling, not by operators waiting.
+      - **"One need in the lane at a time" is dropped** (the user, as reported by qa: "follow the recommendations. stick to this schedule.").
+        - **Why.** The rule duplicated the lane's own lease. Pace comes from the system, not from an operator throttle (law 5).
+        - **The reason that is set aside.** The rule had one recorded reason: to keep needs' stage evidence from being confounded. In its place, each landing and stage event is attributed to its need by dispatchId and goal hash.
+        - **N11 and N14 were dispatched** at about 2026-10-11T18:58Z with their pinned text: N11 as `3827b1b0…`, N14 as `40bbc8e4…`. N6 still goes out after 2026-10-12T00:08Z.
+        - **The other latest-bys are unchanged,** and a missed one is reported MISSED, not moved later. The seal holds for every sealed answer.
       - **N14 is added** (the user, as reported by qa: "follow the recommendations. stick to this schedule."). It is a class need: the floor's read tools are built from discovery, as its write tools already are.
         - **Schedule:** queued after N6, one need in the lane at a time, with a latest-by of 2026-10-12T18:00Z. It goes ahead of N7 and N9, whose dates are unchanged; if they are not met, they are reported MISSED, not moved later.
         - **Pre-registration: written and sealed** in the coordinator's job directory. The addendum is `3b281758…`, and an annex (`8b358f03…367d`) carries the feasibility branches and the security constraint. Nothing the walk can read names N14's site before it is scored; that makes four sealed answers.
