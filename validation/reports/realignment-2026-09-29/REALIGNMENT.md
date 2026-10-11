@@ -1525,6 +1525,13 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **Placement.** activity-api `goal-paths.ts` and goal-host `goal-intent.ts` are open (an N-need candidate for the borrow). The floor gate, `verifyGoalReached`, `completion_shapes` and `recordGoalPath` live in goal-host `index.ts`, which is closed: that is operator judge work, put to the user.
         - **The cleanest judge must-fail:** a verdict asserting a write with zero tool calls is hollow by construction.
       - **N10 is confirmed not passed** by the coordinator: the posterior is unchanged (α 1, β 460.3), and no retirement call was made. One caveat: the row's flags were not read directly.
+      - **The judge fix,** goal-host `d949f753`, is built, reviewed and dry-run, and is waiting on the user's approval to push. It is a partial fix: the floor's laundering closes, while the engine/mid-walk path and laundering on the judge's prompt side remain open.
+      - **N6's dispatch rule, pre-registered.**
+        - **If the user approves the judge fix earlier,** N6 is dispatched as soon as `d949f753` is live on node 1, and after N6's own eligibility (2026-10-12T00:08Z).
+        - **If there is no ruling by 2026-10-12T05:50Z,** N6 is dispatched **at 2026-10-12T06:00Z** under the unfixed judge, and scored only by its pre-registration's effect check.
+        - **The confound, pre-registered:** "dispatched under the unfixed reach judge; reached=yes without the PREREG effect is an expected false positive, not evidence."
+        - **The cost, pre-registered.** Under the unfixed judge, a prose reach also writes a new laundered `goal_execution_paths` donor row, with the requested targets as its endpoint. That row's id is recorded after dispatch, so that the later evidence re-grade covers it.
+        - The record shows the outcome as bounded by a pending ruling, not by operators waiting.
       - **N6 follows N5,** at its eligibility of 2026-10-12T00:15Z. If N5 is still running then, N6 waits for N5 to reach a terminal state, or until 2026-10-12T06:00Z, whichever comes first.
     - **Pinned for the schedule** (all read-only):
       - **N5:** `PREREG-NEEDS.md` §N5, sha256 `8ed46df7…9867`.
