@@ -1234,7 +1234,7 @@ Build 7 (the judge/walk split, user amendment 10-10) does not gate the opening. 
 | Build 4a: P3 (delete `SEMANTIC_CUTOVER_GATE`), P4 (the 3 fail-opens fail closed) and the P1 floor input | serial after evalenv, before the opening |
 | Build 4, the rest | by 2026-10-18T12:00Z |
 | Build 7 | lands no earlier than 24 hours after the slice T0, and no later than 2026-10-17 |
-| Slice T0 | the opening's effect PASS plus one cycle |
+| Slice T0 | the opening's effect PASS plus one cycle. **Defined and met:** the effect PASS is the lane's own read of the new record on node 1 (103 entries, local, 0 unreadable) at 2026-10-11T07:20:44Z. One cycle is the next auto-pick tick. **T0 = 2026-10-11T07:25:29Z.** |
 
 The 2026-10-19T23:59Z it replaces was the earlier commitment. Under the closer-only rule, no date moves back.
 
@@ -1450,6 +1450,12 @@ The measured figures:
 - **A self-measurement inconsistency.** The store counts 188 armed open gaps, while the server's `falsifier_coverage` header reports 39 of 197. The system's two measures of its own arming disagree.
 
 The probe passes only if a system-authored gap appears **and** lands. A hand-authored gap is not evidence (law 13).
+
+**Dispatched.** qa (operator) dispatched the probe at about 2026-10-11T07:29Z through the cockpit's `run_goal_async`, operator-tagged.
+- **dispatchId:** `28a669b3-2a12-480d-bcfb-56f5a089ac22`.
+- **Goal text:** the primary goal text below, verbatim, with nothing added: no variables, no template, no metadata.
+- **Precondition:** re-checked immediately before dispatch. There were 0 non-operator commits on origin/dev, across the super-repo and every submodule, in the previous 24 hours, so the precondition held.
+- **Outcome:** **[TO FILL as stage events arrive]**.
 
 **Precondition.** The lane-need goal below is dispatched only if the lane has had **no landing in the 24 h before dispatch**. If anything has landed, including a gap armed at birth and landed through the lane before the opening, the goal's premise is false. In that case the pre-written alternative is dispatched instead:
 
