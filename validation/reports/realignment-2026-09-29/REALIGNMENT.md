@@ -1469,7 +1469,14 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
   - **A harm found in the same walk.** The `shellResult` executor's self-correction rewrote local commands into requests to invented external hosts, and accepted an unrelated external page as a result. Its suppression has been held since 08-19, although it is proven bad (α 471, β 2020). This is handled under the standing harm exception, outside the probe's scoring.
   - **qa's ruling, the pause and one fix.** Localization failed through information availability: `git_log` ran outside any repo. The one fix chosen is to give `git_log` access to the substrate's own repos. It is an operator intervention, recorded as such. Lane-state visibility is deliberately **not** fixed now, so there is one fix per stage.
   - **Order.** The harm fix lands **before** the re-run, because re-running before containment would repeat the external requests. The harm fix is: the rewrite may never change the scheme, host or port; must-fails cover the exact rewrites seen; sibling paths are grepped; and an exposure audit covers 7 days.
-  - **The re-run** uses the same goal text, verbatim. Its dispatch and outcome: **[TO FILL]**.
+  - **The re-run** uses the same goal text, verbatim.
+    - **Dispatched** at about 2026-10-11T08:50:40Z. dispatchId `01324550-3b13-4e00-b795-dfcb2944a4d8`.
+    - **Not an independent first attempt.** It has the same goal hash as the first walk, so failure memory and the reached-command cache carry over.
+    - **Precondition:** re-checked at 08:50Z. There were 0 lane landings in 24 hours; the only commits were substrate-bot pointer bumps.
+    - **Operator interventions between the two walks, all recorded:**
+      - (1) The egress harm fixes, goal-host `c04bcea0` and `c336a544`, live on node 1 at 08:12Z and 08:33Z.
+      - (2) The one fix at the failed stage, development-vessel `6b424060`, live on node 1 at 08:49:28Z: `git_log` reads the substrate's own clone by default, and its contract declares the repo, cwd, limit, format and since fields.
+    - **Outcome:** **[TO FILL]**.
   - **Later stage events:** **[TO FILL as they arrive]**.
 
 **Precondition.** The lane-need goal below is dispatched only if the lane has had **no landing in the 24 h before dispatch**. If anything has landed, including a gap armed at birth and landed through the lane before the opening, the goal's premise is false. In that case the pre-written alternative is dispatched instead:
