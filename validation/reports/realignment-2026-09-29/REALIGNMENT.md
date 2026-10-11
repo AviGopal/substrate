@@ -1365,7 +1365,11 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
   - **What it is:** per-vessel gate tests, plus a pinned, shrink-only list of the roughly 300 existing behaviour switches, plus a super-repo pre-commit check for unit drop-ins.
   - **What it refuses:** any new behaviour environment variable, unit drop-in, hold without a lift condition, or side script, from **anyone**, operators included.
   - **Who does what:** the coordinator builds it, qa reviews it, and the user pushes it.
-  - **Its must-fails:** a new behaviour env read, a new drop-in, and a hold with no lift condition are each refused; an entry already on the pinned list passes. **[TO FILL with the shas at landing.]**
+  - **Its must-fails:** a new behaviour env read, a new drop-in, and a hold with no lift condition are each refused; an entry already on the pinned list passes.
+  - **Landed on 2026-10-11.**
+    - **Scope was closed first** on node 1, compose2 and the hub (112, 113 and 69 entries).
+    - **The commits pushed:** development-vessel `fb546262`, goal-host `79def6d3`, activity-api `3430f444`, concept-db `ada5b631`, boredom `6694e3a4`, and super-repo `89ecfb92`.
+  - **Its status: the vessel half is blocking; the super-repo half is advisory.** On the vessel side, the pull-sync test gate refuses a regression and never promotes past red. The super-repo check runs only as a pre-commit hook until the gate-fixture act lands: **pending the user's go**, `c94e7036`.
   - **Why it is the last one.** It is the single operator bootstrap that makes "operators stop adding" mechanically true.
 
 **Dates and scope (user rulings, 10-10).**
