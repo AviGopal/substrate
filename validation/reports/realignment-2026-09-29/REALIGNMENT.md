@@ -1500,6 +1500,19 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **PASS:** a system landing makes D3 fire on its live instance, the template stops being picked, and the working satisfier is reached on the next targeted walk. It is graded as an operator link, because it comes from an N-dispatch.
         - **Partial:** D3 fires, but the template is still picked.
         - **REFUTED:** hollow, the wrong site, global suppression, or an operator edit to a closed file.
+    - **The need schedule** (qa, 2026-10-11). Each date is a latest-by date. A need goes **earlier** once the previous one reaches a terminal state: landed, refuted, or scored hollow. One need is in the lane at a time, so that each need's stage evidence is not confounded with another's.
+
+      | Need | Dispatch by |
+      |---|---|
+      | **N10-v2**: make the existing retirement fire on the walk-grading path, with no new detector | 2026-10-11T11:00Z |
+      | **N6**: diagnosis-first | 2026-10-12T00:10Z, when it becomes eligible |
+      | **N5**: noticing a lane stall | 2026-10-12T12:00Z |
+      | **N7**: the deploy scripts made visible | 2026-10-13T00:00Z |
+      | **N9**: failures without lessons | 2026-10-13T12:00Z |
+
+      From 2026-10-13 to 2026-10-18T07:12Z is left for landings and settlement. Build 7 stays clear: no earlier than 2026-10-12T07:25Z, and no later than 2026-10-17.
+      - **For each dispatch:** the need text goes out verbatim and operator-tagged. The precondition and the need's pre-registered scoring are recorded outside the dispatch. qa dispatches and scores.
+      - **N10-v2's checks.** Its effect check is the live template's activity row reading `retired=true` with `retired_reason=poor_performance`, not merely that a call happened. The retirement must use the reach verdict's own org and account identity. Editing the closed `variant-creator.ts`, or minting a parallel retirement mechanism, scores REFUTED.
     - **A positive signal.** In re-run 1, failure memory (recall of three prior hollow verdicts) changed target selection. This is the first observed instance of the behaviour RECONNECTION-2026-10-10 found had never worked.
   - **Later stage events:** **[TO FILL as they arrive]**.
 
