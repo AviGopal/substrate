@@ -1389,6 +1389,13 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
        - **The fix.** It was corrected by a direct push of the same commit to the intended origin (the public super-repo). The template now pushes to an explicit URL and verifies the result with `ls-remote`.
        - **Note:** `origin` (github.com AviGopal/substrate) is a **public** repository.
    - **A seal lapse, recorded.** The reach-judge fix (`d949f753`) put need ids into goal-host code and its commit message. History is not rewritten. Build 7 scrubs the live copies, and the lapse is recorded in L12.
+   - **The landing ledger** (mirrored from the coordinator's operator-only ledger).
+
+     | Part | Pushed (UTC) | Shas |
+     |---|---|---|
+     | Part 1 (capture) | 2026-10-12T07:25:3xZ, at T0 + 24 h | goal-host `fcdb8fb`; development-vessel `e059c31c` (on top of the system's own `bfd2dd8d`, which is kept); super-repo pin `6b3cea23` |
+
+     Gate P acceptance for Part 1: **[TO FILL]**.
    - **The original definition** follows; it still applies to the split itself.
    - The reach judge and the verdict sinks move to a module that stays closed.
    - The walk mechanics move to a file that can open under the opening rule.
