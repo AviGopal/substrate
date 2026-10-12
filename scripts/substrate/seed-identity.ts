@@ -139,6 +139,57 @@ async function waitForIdentity(maxMs = 30_000): Promise<void> {
   throw new Error(`identity-vessel not ready after ${maxMs}ms`);
 }
 
+// goal-host's corpus runner: a SEPARATE principal (2026-10-12, user ruling via qa, key option (d) as refined). Its
+// only scope is verdict-corpus:write, the one credential the verdict-corpus writer accepts. goal-host's main key keeps
+// the default [read, write]: the walk's egress sends that key, so it must never carry the corpus scope.
+export const CORPUS_RUNNER_KEY_NAME = "goal-host-corpus-runner";
+export const CORPUS_RUNNER_KEY_SCOPES: string[] = ["verdict-corpus:write"];
+// goal-host's MAIN key: explicit, and it must NEVER carry verdict-corpus:write or admin (the walk's egress sends it).
+export const GOAL_HOST_KEY_SCOPES: string[] = ["read", "write"];
+
+// ensureCorpusRunnerKey: provision the runner's key on EVERY boot of a node whose identity this seeder serves (spokes
+// skip identity-seeder entirely: ExecCondition), not only on a genuine first boot, so a long-lived substrate gets it
+// too. Idempotent: a stored key that identity validates WITH the scope is kept; otherwise a new one is issued through
+// identity's admin path (/v1/keys/issue with SUBSTRATE_ADMIN_KEY) for the fleet key's own org/user. Persisted to the
+// scoped files (secrets-manifest: goal-host-vessel, identity-seeder) and the store, never to the shared env. Fails
+// OPEN (a warning; the boot continues): the runner then reports "not provisioned" and the credit stop holds.
+async function ensureCorpusRunnerKey(fleetKey: string): Promise<void> {
+  const val = async (k: string) => {
+    const r = await fetch(`${IDENTITY_URL}/v1/keys/validate`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ api_key: k }), signal: AbortSignal.timeout(8_000) });
+    return ((await r.json()) as any)?.data ?? {};
+  };
+  try {
+    const current = (process.env.GOAL_HOST_CORPUS_RUNNER_API_KEY ?? "").trim();
+    if (current) {
+      const v = await val(current);
+      if (v.valid === true && Array.isArray(v.scopes) && v.scopes.includes("verdict-corpus:write")) {
+        console.log("[seed-identity] corpus runner key authenticates with verdict-corpus:write — nothing to issue");
+        return;
+      }
+      console.log("[seed-identity] corpus runner key does not authenticate with its scope — issuing a new one");
+    }
+    const admin = (process.env.SUBSTRATE_ADMIN_KEY ?? "").trim();
+    if (!admin) { console.warn("[seed-identity] corpus runner key not provisioned: SUBSTRATE_ADMIN_KEY empty this boot (retried next boot)"); return; }
+    const owner = await val(fleetKey);
+    if (!owner.org_id || !owner.user_id) { console.warn("[seed-identity] corpus runner key not provisioned: the fleet key resolves to no org/user"); return; }
+    const r = await fetch(`${IDENTITY_URL}/v1/keys/issue`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `ApiKey ${admin}` },
+      body: JSON.stringify({ user_id: owner.user_id, org_id: owner.org_id, scopes: CORPUS_RUNNER_KEY_SCOPES, name: CORPUS_RUNNER_KEY_NAME }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const j = (await r.json()) as any;
+    const key: string | undefined = j?.data?.key;
+    if (!r.ok || !key) { console.warn(`[seed-identity] corpus runner key issue failed ${r.status}: ${JSON.stringify(j?.error ?? {}).slice(0, 200)}`); return; }
+    for (const f of scopedFiles("GOAL_HOST_CORPUS_RUNNER_API_KEY")) upsertEnvVar(f, "GOAL_HOST_CORPUS_RUNNER_API_KEY", key);
+    upsertEnvVar(SECRETS_FILE, "GOAL_HOST_CORPUS_RUNNER_API_KEY", key);
+    console.log(`[seed-identity] issued ${CORPUS_RUNNER_KEY_NAME} key_id=${j?.data?.key_id ?? "?"} (scoped files + store); goal-host-vessel must restart to load it`);
+  } catch (e) {
+    console.warn(`[seed-identity] corpus runner key error: ${(e as Error).message}`);
+  }
+}
+
 async function issueKey(
   token: string,
   user_id: string,
@@ -315,6 +366,7 @@ async function main() {
       // long-lived substrate, so the backfill has to run here too, not only on
       // the re-issue path below.
       await ensureAdminKey(existing);
+      await ensureCorpusRunnerKey(existing);
       return;
     }
     console.log(
@@ -335,6 +387,7 @@ async function main() {
     writeFleetKey(reissued.key);
     console.log(`${describeIssuedKey("substrate-default", reissued)} — re-issued and wrote it to env + secrets; key consumers must restart`);
     await ensureAdminKey(reissued.key);
+    await ensureCorpusRunnerKey(reissued.key);
     return;
   }
 
@@ -392,10 +445,17 @@ async function main() {
   upsertEnvVar(SECRETS_FILE, "LOCAL_TOOLS_VESSEL_API_KEY", localToolsKey.key);
   console.log(`${describeIssuedKey("local-tools-vessel", localToolsKey)} — wrote LOCAL_TOOLS_VESSEL_API_KEY`);
 
-  const goalHostKey = await issueKey(token, user_id, org_id, "goal-host-vessel");
+  const goalHostKey = await issueKey(token, user_id, org_id, "goal-host-vessel", GOAL_HOST_KEY_SCOPES);
   upsertEnvVar("/etc/substrate/env", "GOAL_HOST_VESSEL_API_KEY", goalHostKey.key);
   upsertEnvVar(SECRETS_FILE, "GOAL_HOST_VESSEL_API_KEY", goalHostKey.key);
   console.log(`${describeIssuedKey("goal-host-vessel", goalHostKey)} — wrote GOAL_HOST_VESSEL_API_KEY`);
+
+  // The corpus runner's key is a scoped secret (secrets-manifest.json: goal-host-vessel only): written to the files
+  // the manifest names and the persisted store, NEVER to the shared /etc/substrate/env.
+  const runnerKey = await issueKey(token, user_id, org_id, CORPUS_RUNNER_KEY_NAME, CORPUS_RUNNER_KEY_SCOPES);
+  for (const f of scopedFiles("GOAL_HOST_CORPUS_RUNNER_API_KEY")) upsertEnvVar(f, "GOAL_HOST_CORPUS_RUNNER_API_KEY", runnerKey.key);
+  upsertEnvVar(SECRETS_FILE, "GOAL_HOST_CORPUS_RUNNER_API_KEY", runnerKey.key);
+  console.log(`${describeIssuedKey(CORPUS_RUNNER_KEY_NAME, runnerKey)} — wrote GOAL_HOST_CORPUS_RUNNER_API_KEY (scoped)`);
 
   const conceptDbKey = await issueKey(token, user_id, org_id, "concept-db");
   upsertEnvVar("/etc/substrate/env", "CONCEPT_DB_API_KEY", conceptDbKey.key);

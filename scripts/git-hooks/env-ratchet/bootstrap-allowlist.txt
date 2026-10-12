@@ -59,5 +59,6 @@ OBSIDIAN_GEOMETRY          screen geometry of the virtual X server the desktop d
 /etc/substrate/ribosome-vessel.env                         per-unit bootstrap env for ribosome-vessel
 /etc/substrate/private/env.d/discovery-vessel.env          per-unit secrets out of other units' reach
 /etc/substrate/private/env.d/federation-transport-vessel.env  per-unit secrets out of other units' reach
+/etc/substrate/private/env.d/goal-host-vessel.env          per-unit secrets out of other units' reach (the corpus-runner key)
 /etc/substrate/private/env.d/identity-seeder.env           per-unit secrets out of other units' reach
 /etc/substrate/private/env.d/identity-vessel.env           per-unit secrets out of other units' reach

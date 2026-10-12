@@ -436,7 +436,8 @@ for _n in ANTHROPIC_API_KEY OPENAI_API_KEY OPENAI_BASE_URL GOOGLE_API_KEY GROQ_A
           SUBSTRATE_NAME SUBSTRATE_PORT_PREFIX RELAY_PORT RELAY_ANNOUNCE_PORT \
           SUBSTRATE_CONTAINER WORKSPACE_VOLUME SURREAL_VOLUME LIVE_NAME \
           RUNPOD_ENDPOINT_ID RUNPOD_MODELS \
-          LOCAL_TOOLS_VESSEL_API_KEY GOAL_HOST_VESSEL_API_KEY RIBOSOME_VESSEL_API_KEY CONCEPT_DB_API_KEY; do
+          LOCAL_TOOLS_VESSEL_API_KEY GOAL_HOST_VESSEL_API_KEY RIBOSOME_VESSEL_API_KEY CONCEPT_DB_API_KEY \
+          GOAL_HOST_CORPUS_RUNNER_API_KEY; do
   # BOTH autonomy switches belong here, not one. MITOSIS_DIRECT_PUSH was added
   # and ROUTE_EDIT_INTENT_TO_COMPOSE was not, so substrate-config attributed one
   # kill switch and printed `unrecorded 0` for the other — the exact ambiguity
@@ -678,6 +679,11 @@ for _pvk in LOCAL_TOOLS_VESSEL_API_KEY GOAL_HOST_VESSEL_API_KEY RIBOSOME_VESSEL_
   if [[ -z "${!_pvk:-}" ]]; then printf -v "$_pvk" '%s' "$(persisted_secret "$_pvk")"; fi
   if [[ -z "${!_pvk:-}" ]]; then printf -v "$_pvk" '%s' "$METABOB_API_KEY"; prov "$_pvk" derived; fi
 done
+# goal-host's CORPUS-RUNNER key: explicit env > the persisted store, and NO fleet fallback. It is a separate principal
+# whose only scope is verdict-corpus:write; empty means "not provisioned" and the runner fails closed. A trust-root-class
+# secret: secrets-manifest.json scopes it to goal-host-vessel, so it is rendered only into goal-host's private env.d file
+# (render-secret-scope, below), never into the shared /etc/substrate/env every unit loads.
+GOAL_HOST_CORPUS_RUNNER_API_KEY="${GOAL_HOST_CORPUS_RUNNER_API_KEY:-$(persisted_secret GOAL_HOST_CORPUS_RUNNER_API_KEY)}"
 
 # Self-admin key: the read/write/admin mint credential seed-identity.ts issues
 # after signup (the key operators and the keyctl CLI use to manage this keyspace
@@ -1924,7 +1930,7 @@ fi
 for _pk in $PEER_KEY_NAMES; do export "$_pk"; done
 if ! API_KEY_SECRET="$API_KEY_SECRET" API_KEY_SECRET_PREVIOUS="${API_KEY_SECRET_PREVIOUS:-}" \
      SUBSTRATE_ADMIN_KEY="${SUBSTRATE_ADMIN_KEY:-}" FEDERATION_SIGNING_SECRET="${FEDERATION_SIGNING_SECRET:-}" \
-     PEER_CREDENTIALS="${PEER_CREDENTIALS:-}" \
+     PEER_CREDENTIALS="${PEER_CREDENTIALS:-}" GOAL_HOST_CORPUS_RUNNER_API_KEY="${GOAL_HOST_CORPUS_RUNNER_API_KEY:-}" \
      "$_rss" --mode values --retire-legacy --env-dir /etc/substrate; then
   echo "[gen-env] ERROR: rendering the scoped secret files failed; refusing to boot with consumers that cannot load them." >&2
   exit 1

@@ -61,6 +61,7 @@ ER_PINNED_ENV_FILES="/etc/substrate/env
 /etc/substrate/ribosome-vessel.env
 /etc/substrate/private/env.d/discovery-vessel.env
 /etc/substrate/private/env.d/federation-transport-vessel.env
+/etc/substrate/private/env.d/goal-host-vessel.env
 /etc/substrate/private/env.d/identity-seeder.env
 /etc/substrate/private/env.d/identity-vessel.env"
 ER_GRANDFATHERED="AUTO_DESCRIBE_RESOLVERS BOREDOM_AUTOPROMOTE_INTERVAL_MS BOREDOM_DAEMON_MODE BOREDOM_EXERCISE_INTERVAL_MS

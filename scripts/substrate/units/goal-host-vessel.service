@@ -6,6 +6,10 @@ Wants=activity-api.service
 [Service]
 Type=simple
 EnvironmentFile=/etc/substrate/env
+# Scoped secret (secrets-manifest.json; rendered by render-secret-scope.sh): GOAL_HOST_CORPUS_RUNNER_API_KEY, the
+# corpus runner's verdict-corpus:write key. Loaded only here, after the shared env, never written to the shared env.
+# pull-sync renders the scoped files before it installs a unit, so this file exists when the unit lands.
+EnvironmentFile=/etc/substrate/private/env.d/goal-host-vessel.env
 Environment=PORT=8210
 Environment=HOST=127.0.0.1
 Environment=GOAL_HOST_VESSEL_ID=goal-host-vessel
