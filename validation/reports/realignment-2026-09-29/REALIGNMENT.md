@@ -1638,6 +1638,7 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **N18 supersedes N9,** which is the same class. N9 is recorded as **merged into N18**, not MISSED.
         - **Its date.** N18 inherits N9's earlier latest-by: it is dispatched by 2026-10-13T12:00Z, and as soon as `9cd7532a` is live on node 1.
         - **Its routed gaps** are counted in the operator-work ledger, because they are operator load by design.
+        - **Outcome: REFUTED (wrong site).** Dispatched as `3fa348e8…`. N9 stays merged into it.
       - **N2-v2 dispatched:** `53882755…`.
       - **N2 is off hold** (the user's no-indefinite-hold review, as reported by qa). It is re-pre-registered, sealed, with a latest-by of 2026-10-14T12:00Z.
       - **N14 is added** (the user, as reported by qa: "follow the recommendations. stick to this schedule."). It is a class need: the floor's read tools are built from discovery, as its write tools already are.
