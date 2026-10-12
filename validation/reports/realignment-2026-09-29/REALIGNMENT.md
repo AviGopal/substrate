@@ -1363,6 +1363,9 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
      - **If they do not exist by then,** the opening is reported **MISSED**, with the record count at that time as the reason. 2026-10-20 is the **review of that miss**, not a due date. Everything else in build 7 lands by 2026-10-17 either way.
      - **The rate.** Full-input capture is itself part of build 7, so nothing accrues before it lands. At roughly 130 walks a day, 200 records take about 2 days after capture is live, so **capture must be live by about 2026-10-15** for 10-17 to be reachable.
      - **So the capture lands first,** as a small, separable part of build 7, early in its window (from 2026-10-12T07:25Z).
+   - **Closes made after the code landed, and the windows they left.** The reach-judge fix's write-goal-artifact judge pair was closed on node 1 (125 entries) and compose2 (126). The hub catch-up close (71 → 85) is in progress, and the companion pin push is pending the user.
+     - **No lane activity touched any of these paths in the gaps.** qa read the development-vessel journal from 2026-10-11T15:40Z (before `d949f753` was mirrored) on node 1, compose2 and the hub. It found 0 lane pick, lease, plan, isolation, own-check, pending-land, landed or repair lines naming the write-goal-artifact pair, `test/drafter-split` or its 4 helpers.
+     - **This is the third close made after the code landed.** The twin rules now bind every future act.
    - **A seal lapse, recorded.** The reach-judge fix (`d949f753`) put need ids into goal-host code and its commit message. History is not rewritten. Build 7 scrubs the live copies, and the lapse is recorded in L12.
    - **The original definition** follows; it still applies to the split itself.
    - The reach judge and the verdict sinks move to a module that stays closed.
