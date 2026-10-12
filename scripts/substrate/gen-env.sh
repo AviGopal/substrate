@@ -637,6 +637,7 @@ resolve_retiring_alias() { # new-name old-name -> sets old-name to the resolved 
   return 0
 }
 resolve_retiring_alias SUBSTRATE_API_KEY METABOB_API_KEY
+_MB_KEY_FROM_ENV="${METABOB_API_KEY:-}"
 METABOB_API_KEY="${METABOB_API_KEY:-$(persisted_secret METABOB_API_KEY)}"
 
 # ★ A SPOKE MUST NOT MINT ITS OWN JOIN CREDENTIAL.
@@ -661,8 +662,34 @@ if [[ "$_is_spoke" = "1" && -z "${METABOB_API_KEY:-}" ]]; then
   exit 1
 fi
 
+# THE BOOTSTRAP KEY IS ALSO THE SEED ACCOUNT'S PASSWORD. seed-identity signs the substrate org up with it, and
+# identity-vessel refuses a password without an upper-case letter, a lower-case letter and a digit (WEAK_PASSWORD, 400).
+# The old draw (32 random alphanumerics, no composition check) missed a class about once in 200 boots: measured
+# 2026-10-12 in the podman install acceptance, where every seeder retry re-sent the same persisted value, seeding
+# never happened, and the client key stayed the un-prefixed bootstrap value ("Invalid API key prefix"). Because the
+# value was persisted, re-running the installer could not repair it. So: draw until all three classes appear, and
+# replace a PERSISTED bootstrap value that lacks one. That is safe because such a value cannot have opened an account
+# (signup refused it), and an issued key (mb-) is never touched. An explicit value is the operator's, so it is
+# reported, not replaced.
+bootstrap_key_ok() { [[ ${#1} -ge 8 && "$1" =~ [A-Z] && "$1" =~ [a-z] && "$1" =~ [0-9] ]]; }
+draw_bootstrap_key() {
+  local k=""
+  until bootstrap_key_ok "$k" && [[ ${#k} -eq 32 ]]; do
+    k="$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 32)"
+  done
+  printf '%s' "$k"
+}
+if [[ -n "${METABOB_API_KEY:-}" && "$METABOB_API_KEY" != mb-* ]] && ! bootstrap_key_ok "$METABOB_API_KEY"; then
+  if [[ -n "${_MB_KEY_FROM_ENV:-}" ]]; then
+    echo "[gen-env] WARNING: the supplied SUBSTRATE_API_KEY is not an issued (mb-) key and fails identity's password policy" >&2
+    echo "[gen-env]   (8+ characters with an upper-case letter, a lower-case letter and a digit), so seeding will be refused." >&2
+  else
+    echo "[gen-env] replacing the persisted bootstrap key: it fails identity's password policy, so seeding could never succeed with it" >&2
+    METABOB_API_KEY=""
+  fi
+fi
 if [[ -z "${METABOB_API_KEY:-}" ]]; then
-  METABOB_API_KEY="$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 32)"
+  METABOB_API_KEY="$(draw_bootstrap_key)"
   prov METABOB_API_KEY generated
 fi
 
