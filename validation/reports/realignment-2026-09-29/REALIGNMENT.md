@@ -1580,6 +1580,12 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **Pre-registration: written and sealed** in the coordinator's job directory. The addendum is `3b281758…`, and an annex (`8b358f03…367d`) carries the feasibility branches and the security constraint. Nothing the walk can read names N14's site before it is scored; that makes four sealed answers.
           - **Feasibility:** a lane-only PASS is feasible without any closed-file edit. The branch that would need a closed edit scores Partial if the lane is blocked, and REFUTED if an operator makes the edit.
           - **Security:** the new read tools must be read-only shapes. No mutation, no forbidden floor tools, and no outbound-URL resolvers. A violation scores REFUTED, with a must-fail on the advertised tool list.
+      - **N6 dispatched** at about 2026-10-12T00:10:05Z, dispatchId `ee63ab3a…`, with its pinned text verbatim.
+        - **At-dispatch check:** qa read node 1 before dispatching. The scope record had 111 entries and no holds, and the lane's own read showed 111 at 00:09:58Z. N6's window rule was met.
+        - **It runs under four changes recorded since the probe:** the judge fix, suppression armed, the earn-in holds lifted, and the ratchet.
+        - **Scoring:** only by events carrying its own dispatch or goal hash, reported plainly, with no follow-up fix in the same window.
+        - **Outcome:** **[TO FILL]**.
+        - **Next:** the authorized re-grade of the 36 rows follows N6's dispatch.
       - **N6 follows N5,** at its eligibility of 2026-10-12T00:15Z. If N5 is still running then, N6 waits for N5 to reach a terminal state, or until 2026-10-12T06:00Z, whichever comes first.
     - **Pinned for the schedule** (all read-only):
       - **N5:** `PREREG-NEEDS.md` §N5, sha256 `8ed46df7…9867`.
