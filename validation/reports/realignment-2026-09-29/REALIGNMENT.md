@@ -1371,6 +1371,12 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
     - **The commits pushed:** development-vessel `fb546262`, goal-host `79def6d3`, activity-api `3430f444`, concept-db `ada5b631`, boredom `6694e3a4`, and super-repo `89ecfb92`.
   - **Its status: the vessel half is blocking; the super-repo half is advisory.** On the vessel side, the pull-sync test gate refuses a regression and never promotes past red. The super-repo half is the gate fixture, run by the user and **landed** as super-repo `ce00a7d6` (rebased from `c94e7036`, same patch-id), with scope v2 closed on node 1 (114 entries), compose2 (115) and the hub (71). It becomes **blocking once the fixture promotes** through the gate soak; the coordinator reports the promotion per node. **Node 1 promoted it** at 2026-10-11T23:25:27Z (`d6bf723b`, which contains `ce00a7d6`: shadow pass 3/3, verified by docs from node 1's journal). Per qa, the fixture is now accepted on all three gated nodes, so **both halves of the ratchet are live**.
   - **Why it is the last one.** It is the single operator bootstrap that makes "operators stop adding" mechanically true.
+- **Build 10: the drafter split** (the user, as reported by qa: "follow the recommendations. stick to this schedule."). It is a **recorded scope loosening, by user ruling.**
+  - **What it is.** The drafter's information assembly moves out of the closed `feature-compose.ts` into an open module, `src/drafter/`. Every gate stays closed.
+  - **Why.** Measured compose failures were traced to how the drafter's inputs are assembled. That code lived in a closed file, so the system could not improve its own drafting. The specific defects are kept out of this tree until a need on them is scored.
+  - **How it lands.** It lands with its scope entries in the same act, which is the `src/judge/` lesson.
+  - **Timing.** It lands after N6's dispatch is terminal, so it does not change compose behaviour mid-measurement (law 12).
+  - **Its shas: [TO FILL].**
 
 **Dates and scope (user rulings, 10-10).**
 - **Dates only move closer, never further back.** The objective is self-sufficiency within days.
@@ -1386,7 +1392,7 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
 - **Excluded:** rankers and throttles.
 - **Gate inputs** are protected through outcome-level fixtures: stored rows, plus attempt sequences driven to admit or refuse. So a change that alters what a gate sees fails as surely as a change to the gate itself.
 
-**Each build's must-fail is proven before the clock starts.** The proof is in isolated fixtures and in-container clone trees, never by modifying live state; §7 step 1 forbids supplying negative controls that way. It is then confirmed that the live gate loads the same protected files. **The bootstrap is capped at nine:** the seven, plus builds 8 and 9, each added by explicit ruling. A tenth is a ruling, not a quiet addition.
+**Each build's must-fail is proven before the clock starts.** The proof is in isolated fixtures and in-container clone trees, never by modifying live state; §7 step 1 forbids supplying negative controls that way. It is then confirmed that the live gate loads the same protected files. **The bootstrap is capped at ten:** the seven, plus builds 8, 9 and 10, each added by explicit ruling. An eleventh is a ruling, not a quiet addition.
 
 The builds' shas (development-vessel unless noted):
 
@@ -1575,6 +1581,7 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **N14's** edit intent went to a wrong, closed site. A compose was drafted; the semantic gate found it does not address the need, with no falsifier, and it was refused at admission while unarmed. Nothing landed.
         - **The provisional reading for both:** REFUTED (wrong site, no landing). Neither need is closed until 72 hours pass or a refuting outcome arrives.
         - **The system-born gap from this round:** one, `route-edit-edc1edbb`, from N14's own run. It is at the wrong site and unarmed. There are 0 landings.
+      - **N2 is off hold** (the user's no-indefinite-hold review, as reported by qa). It is re-pre-registered, sealed, with a latest-by of 2026-10-14T12:00Z.
       - **N14 is added** (the user, as reported by qa: "follow the recommendations. stick to this schedule."). It is a class need: the floor's read tools are built from discovery, as its write tools already are.
         - **Schedule:** queued after N6, one need in the lane at a time, with a latest-by of 2026-10-12T18:00Z. It goes ahead of N7 and N9, whose dates are unchanged; if they are not met, they are reported MISSED, not moved later.
         - **Pre-registration: written and sealed** in the coordinator's job directory. The addendum is `3b281758…`, and an annex (`8b358f03…367d`) carries the feasibility branches and the security constraint. Nothing the walk can read names N14's site before it is scored; that makes four sealed answers.
@@ -1685,5 +1692,5 @@ During the window this is watched by an **operator-side overdue watcher** over t
 
 - **Judges and trust stay operator-held.** "No change judges itself" (§10 item 1) applies in full.
 - **Security, locality and auth requirements stay** (§9.0).
-- **"Stop doing" applies outside the nine bootstrap builds.**
+- **"Stop doing" applies outside the ten bootstrap builds.**
 - **An overdue stage pauses the evaluation, it does not close the opening** (15.6). The evaluation stops for one diagnosed fix at that stage, then resumes. The opening itself closes only by 15.5's rule, and the 7-day limit is its outer bound.
