@@ -435,7 +435,8 @@ for _n in ANTHROPIC_API_KEY OPENAI_API_KEY OPENAI_BASE_URL GOOGLE_API_KEY GROQ_A
           SUBSTRATE_REPO_OWNER GITHUB_TOKEN SUBSTRATE_BIND_HOST \
           SUBSTRATE_NAME SUBSTRATE_PORT_PREFIX RELAY_PORT RELAY_ANNOUNCE_PORT \
           SUBSTRATE_CONTAINER WORKSPACE_VOLUME SURREAL_VOLUME LIVE_NAME \
-          RUNPOD_ENDPOINT_ID RUNPOD_MODELS; do
+          RUNPOD_ENDPOINT_ID RUNPOD_MODELS \
+          LOCAL_TOOLS_VESSEL_API_KEY GOAL_HOST_VESSEL_API_KEY RIBOSOME_VESSEL_API_KEY CONCEPT_DB_API_KEY; do
   # BOTH autonomy switches belong here, not one. MITOSIS_DIRECT_PUSH was added
   # and ROUTE_EDIT_INTENT_TO_COMPOSE was not, so substrate-config attributed one
   # kill switch and printed `unrecorded 0` for the other — the exact ambiguity
@@ -666,11 +667,17 @@ fi
 
 SUBSTRATE_API_KEY="$METABOB_API_KEY"   # the alias: same value, rendered beside the retiring name
 
-# Optional per-vessel keys — fall back to METABOB_API_KEY if unset (D4)
-LOCAL_TOOLS_VESSEL_API_KEY="${LOCAL_TOOLS_VESSEL_API_KEY:-${METABOB_API_KEY}}"
-GOAL_HOST_VESSEL_API_KEY="${GOAL_HOST_VESSEL_API_KEY:-${METABOB_API_KEY}}"
-RIBOSOME_VESSEL_API_KEY="${RIBOSOME_VESSEL_API_KEY:-${METABOB_API_KEY}}"
-CONCEPT_DB_API_KEY="${CONCEPT_DB_API_KEY:-${METABOB_API_KEY}}"
+# Optional per-vessel keys (D4): explicit env > the persisted store > METABOB_API_KEY.
+# THE STORE WAS NEVER READ (2026-10-12). seed-identity mints a dedicated key per vessel on a genuine first boot and
+# writes it to /etc/substrate/env AND the persisted store, but this block fell straight back to METABOB_API_KEY, so
+# from the second boot on every per-vessel key was silently the fleet key: measured on node1 and compose2,
+# GOAL_HOST_VESSEL_API_KEY's key_id equalled METABOB_API_KEY's. Per-vessel attribution was lost, and a key minted for
+# one vessel (e.g. goal-host's, with a narrower scope) could not survive a restart. The store writer below carries any
+# name it does not list, so a stored per-vessel key round-trips; it is never written FROM the fleet fallback.
+for _pvk in LOCAL_TOOLS_VESSEL_API_KEY GOAL_HOST_VESSEL_API_KEY RIBOSOME_VESSEL_API_KEY CONCEPT_DB_API_KEY; do
+  if [[ -z "${!_pvk:-}" ]]; then printf -v "$_pvk" '%s' "$(persisted_secret "$_pvk")"; fi
+  if [[ -z "${!_pvk:-}" ]]; then printf -v "$_pvk" '%s' "$METABOB_API_KEY"; prov "$_pvk" derived; fi
+done
 
 # Self-admin key: the read/write/admin mint credential seed-identity.ts issues
 # after signup (the key operators and the keyctl CLI use to manage this keyspace
