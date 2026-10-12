@@ -384,7 +384,19 @@
             "validation/scripts/env-ratchet-committed-tree.test.sh",
             "validation/reports/env-ratchet-2026-10-11/",
             "validation/scripts/gate/fixtures/env-ratchet-units.sh",
-            "validation/scripts/gate-fixture-env-ratchet.test.sh"
+            "validation/scripts/gate-fixture-env-ratchet.test.sh",
+            "repos/development-vessel/test/drafter-split/",
+            "repos/development-vessel/src/control-bytes.ts",
+            "repos/development-vessel/src/cross-file-symbols.ts",
+            "repos/development-vessel/src/edit-provenance.ts",
+            "repos/development-vessel/src/resolvers/region-probe.ts",
+            "repos/development-vessel/test/drafter-split/f1-adversarial-module.test.ts",
+            "repos/development-vessel/test/drafter-split/f2-f3-module-boundary.test.ts",
+            "repos/development-vessel/test/drafter-split/f4-clamps.test.ts",
+            "repos/development-vessel/test/drafter-split/f6-behaviour-preservation.test.ts",
+            "repos/development-vessel/test/drafter-split/f7-floor-self-repair.test.ts",
+            "repos/development-vessel/test/drafter-split/f8-time-bound.test.ts",
+            "repos/development-vessel/test/drafter-split/verdict-diff.golden.test.ts"
           ],
           "require_falsifier_classes": [
             "class2"
@@ -503,14 +515,26 @@
             "validation/scripts/env-ratchet-committed-tree.test.sh",
             "validation/reports/env-ratchet-2026-10-11/",
             "validation/scripts/gate/fixtures/env-ratchet-units.sh",
-            "validation/scripts/gate-fixture-env-ratchet.test.sh"
+            "validation/scripts/gate-fixture-env-ratchet.test.sh",
+            "repos/development-vessel/test/drafter-split/",
+            "repos/development-vessel/src/control-bytes.ts",
+            "repos/development-vessel/src/cross-file-symbols.ts",
+            "repos/development-vessel/src/edit-provenance.ts",
+            "repos/development-vessel/src/resolvers/region-probe.ts",
+            "repos/development-vessel/test/drafter-split/f1-adversarial-module.test.ts",
+            "repos/development-vessel/test/drafter-split/f2-f3-module-boundary.test.ts",
+            "repos/development-vessel/test/drafter-split/f4-clamps.test.ts",
+            "repos/development-vessel/test/drafter-split/f6-behaviour-preservation.test.ts",
+            "repos/development-vessel/test/drafter-split/f7-floor-self-repair.test.ts",
+            "repos/development-vessel/test/drafter-split/f8-time-bound.test.ts",
+            "repos/development-vessel/test/drafter-split/verdict-diff.golden.test.ts"
           ],
           "require_falsifier_classes": [
             "class2"
           ]
         }
       },
-      "notes": "autonomyScope is a trust root and the containment the autonomous lane obeys; an absent record reads closed, so drift is the remaining failure: one node's copy gaining or losing an excluded path, or its falsifier classes changing, while the other keeps the old value. Compared: excluded_paths and require_falsifier_classes as exact-string sets (a directory entry 'x/' and a file entry 'x' differ); the reason text is not compared. Node keys are thisNode(): SUBSTRATE_NAME when set (compose2-live sets compose2), else the node's volume-held vessel identity key, key-<12 hex of sha256(public key)>, which survives a container recreate (substrate-live sets no SUBSTRATE_NAME, so its key is key-595289e706e5). A node that holds the record but has no pinned value here is reported <node>-unpinned, never skipped. Rows naming nodes are skipped on every other node and substrate (nodes field). The pinned value is operator-authored here (a git object), never read from the pool it checks; changing the record means changing this row in the same operator act. THE OPENING ACT (2026-10-11, path (b) re-pin): both values are the live record after the operator edit, so they include the three tightening holds the evaluator placed 2026-10-09 (composer-interruption-sweep.ts, goal-target-inference.ts, write-shapes.test.ts; expiring 2026-10-12T00:08Z on node1, 00:18Z on compose2): their expiry is an evaluator change whose chain starts at this pinned set, so it is accepted. Both gain the gap-judge core and the files it trusts (the act's 45 closes, among them the core's directory entry repos/development-vessel/src/judge/, so a module added there later is excluded by prefix the moment it exists). The committed seed additionally lists the nine test/judge-split/*.test.ts files by name (pull-sync runs only file-named .test.ts entries alone); the directory entry already excludes them, so these values do not repeat them. Only node1's value omits repos/development-vessel/src/resolvers/gap-to-feature.ts: the residue is open to the autonomous lane on node1 alone, while scripts/substrate/autonomy-scope.json (the fleet default) and compose2 keep it excluded. A later operator re-pin set both values to each node's live record after those tightening holds expired; it also carries the env-read ratchet closes (each vessel's test/ratchet/ and the super-repo ratchet files), which had been added to the record without updating this row.",
+      "notes": "autonomyScope is a trust root and the containment the autonomous lane obeys; an absent record reads closed, so drift is the remaining failure: one node's copy gaining or losing an excluded path, or its falsifier classes changing, while the other keeps the old value. Compared: excluded_paths and require_falsifier_classes as exact-string sets (a directory entry 'x/' and a file entry 'x' differ); the reason text is not compared. Node keys are thisNode(): SUBSTRATE_NAME when set (compose2-live sets compose2), else the node's volume-held vessel identity key, key-<12 hex of sha256(public key)>, which survives a container recreate (substrate-live sets no SUBSTRATE_NAME, so its key is key-595289e706e5). A node that holds the record but has no pinned value here is reported <node>-unpinned, never skipped. Rows naming nodes are skipped on every other node and substrate (nodes field). The pinned value is operator-authored here (a git object), never read from the pool it checks; changing the record means changing this row in the same operator act. THE OPENING ACT (2026-10-11, path (b) re-pin): both values are the live record after the operator edit, so they include the three tightening holds the evaluator placed 2026-10-09 (composer-interruption-sweep.ts, goal-target-inference.ts, write-shapes.test.ts; expiring 2026-10-12T00:08Z on node1, 00:18Z on compose2): their expiry is an evaluator change whose chain starts at this pinned set, so it is accepted. Both gain the gap-judge core and the files it trusts (the act's 45 closes, among them the core's directory entry repos/development-vessel/src/judge/, so a module added there later is excluded by prefix the moment it exists). The committed seed additionally lists the nine test/judge-split/*.test.ts files by name (pull-sync runs only file-named .test.ts entries alone); the directory entry already excludes them, so these values do not repeat them. Only node1's value omits repos/development-vessel/src/resolvers/gap-to-feature.ts: the residue is open to the autonomous lane on node1 alone, while scripts/substrate/autonomy-scope.json (the fleet default) and compose2 keep it excluded. A later operator re-pin set both values to each node's live record after those tightening holds expired; it also carries the env-read ratchet closes (each vessel's test/ratchet/ and the super-repo ratchet files), which had been added to the record without updating this row. The drafter-split scope act (development-vessel design 5bc144dc; a LOOSENING approved by the user, relayed by qa) adds to both values repos/development-vessel/test/drafter-split/, its seven pin tests by name (pull-sync's protected gate runs a closed .test.ts alone only when it is named, as the judge split's pins are), and the four helpers on feature-compose's apply and refusal path (src/control-bytes.ts, src/cross-file-symbols.ts, src/edit-provenance.ts, src/resolvers/region-probe.ts); its opening of src/drafter/ and test/drafter/ removes nothing, since neither value excluded them.",
       "nodes": [
         "key-595289e706e5",
         "compose2"
