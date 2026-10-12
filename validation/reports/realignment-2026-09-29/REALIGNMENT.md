@@ -1363,6 +1363,11 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
      - **The routing corpus's seed must-fails:** an edit intent aimed at an excluded site is refused before drafting, and a class need is not routed to a file edit before localization.
      - **The routing code opens to the lane behind its corpus,** on the same terms as the judge. Part 1's capture records routing inputs too.
      - **It is the same build 7, not a new bootstrap,** so the cap stays at ten. It does enlarge build 7's scope inside the same 2026-10-17 date.
+     - **Re-estimated at about 46 builder-hours.**
+       - **With 1 builder, 2026-10-17 does not hold.** With 3 builders after Part 1, it holds for both openings, provided at least 30 pathless routing records exist. That rate is measured in the first 12 hours of capture and reported by about 2026-10-13T08:00Z.
+       - **qa approved 3 builders** under the vital-work-resourced rule.
+       - **Part 1 (capture)** has 2 builders, starts 2026-10-12T07:25Z, and is expected live at about 18:00–20:00Z the same day.
+     - **A stated gap.** The routing files that are open to the lane today stay open, without corpus protection, until the routing opening. This is not containment: landings are still scope-checked.
    - **When the judge and routing code open: both due by 2026-10-17.** Each opening is gated on 200 full-input records existing.
      - **If they do not exist by then,** the opening is reported **MISSED**, with the record count at that time as the reason. 2026-10-20 is the **review of that miss**, not a due date. Everything else in build 7 lands by 2026-10-17 either way.
      - **The rate.** Full-input capture is itself part of build 7, so nothing accrues before it lands. At roughly 130 walks a day, 200 records take about 2 days after capture is live, so **capture must be live by about 2026-10-15** for 10-17 to be reachable.
