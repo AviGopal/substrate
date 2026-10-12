@@ -1354,6 +1354,13 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
      - **The judge code is opened to the lane behind that corpus.** A judge change is admitted only if the corpus passes and no case is weakened.
      - **The operator role afterwards** is to append cases, nothing else.
      - **What this changes.** Containment moves from "closed code" to "pinned behaviour". It follows the user's ruling that "the system should not allow itself to be broken". It is a deliberate change to 15.7's "judges stay operator-held": the judge code opens, and what stays operator-held is the corpus.
+   - **The design is approved** (`d32d2ff2`) with all four required conditions (15.7):
+     - hermetic in-gate replay;
+     - the seeded false-positive classes, red first;
+     - an append-only hash chain, plus glue;
+     - a held-out sample of N=200.
+   - **When the judge code opens.** The opening is held until 200 full-input records exist. If that is not armed by 2026-10-17, everything except the opening lands by 10-17, and the opening itself has review_by 2026-10-20.
+   - **A seal lapse, recorded.** The reach-judge fix (`d949f753`) put need ids into goal-host code and its commit message. History is not rewritten. Build 7 scrubs the live copies, and the lapse is recorded in L12.
    - **The original definition** follows; it still applies to the split itself.
    - The reach judge and the verdict sinks move to a module that stays closed.
    - The walk mechanics move to a file that can open under the opening rule.
@@ -1388,7 +1395,7 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
   - **Build 12** fixes `substrateGap_write` failing on a missing required field, which breaks gap filing from walks; the probe re-run and N17 hit it.
   - **Both are ON HOLD and not built,** by a later user ruling. Their defects are addressed through build 7's verdict corpus instead (below).
     - **The closed paths were closed before the code reached any node, so there was no window.** The split's new files under `test/drafter-split/`, plus 4 helpers, are meant to be CLOSED. qa closed them tighten-only before the mirror: node 1 at 2026-10-12T02:03:24Z (116 entries), compose2 at 02:06:30Z (117). The new files under `src/drafter/` and `test/drafter/` are OPEN by design, and every gate stays in files that were already closed.
-    - **A brief pin drift** lasts until `03a52d81` is accepted. The remaining act adds only the 7 named F-tests and matches the pin.
+    - **Build 10 is complete.** `03a52d81` was accepted on node 1 and compose2, and the scope act was applied (node 1: 123 entries; compose2: 124), equal to the accepted pin. The record and the pin agree again.
 
 **Dates and scope (user rulings, 10-10).**
 - **Dates only move closer, never further back.** The objective is self-sufficiency within days.
