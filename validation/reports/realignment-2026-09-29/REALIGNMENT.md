@@ -1815,6 +1815,10 @@ A low prior is recorded so that a reach is evidence and a miss is information, n
 During the window this is watched by an **operator-side overdue watcher** over the existing journal lines, keyed by gap id, alerting on the first overdue stage. It is an **operator instrument**, so it does not count for §14. Its positive control is real stage events: the bootstrap's own deploys, observed going admission → mirror → effect. It is not a synthetic cycle, which would itself be an operator-authored landing. Shaped stage events with one cycle id, measured by the system, are not built now as a seventh bootstrap item; they are a candidate for the system's own first need after the opening *(user, 10-10)*.
 
 **Supply at T0.** Supply may still be the binding stage, so **"no armed gap in the opened files at T0"** is pre-registered as an outcome of its own. Raising the supply rhythm's budget is decided on 2c's effect evidence, not before: only if conversion is above 0 and cadence is then the binding stage, as an L12 intervention with a time limit *(user, 10-10)*.
+- **Decided 2026-10-12 (the user, as reported by qa):** "We should stick to the schedule. We can make adjustments iff required for autonomy."
+  - **The evidence.** By then, build 2c had produced one system-armed gap in about two days, and with operator dispatch paused the system idles: about one rhythm goal an hour, and auto-pick admitting 1 of about 2,900 candidates.
+  - **No change to the check-supply cadence unless it is required for autonomy.** It becomes eligible only if a stage on the priority path stalls because of cadence. That would be a fresh decision, with evidence.
+  - **"Boredom doesn't fill idle capacity"** is queued as the next class need, after build 7's routing opening. CLAUDE.md law 5 describes it, and production does not show it.
 
 **What each outcome triggers, decided now:**
 - **Success** (a system-authored, consumer-verified landing that originates from the probe): extend, then widen only through earn-in.
