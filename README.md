@@ -93,7 +93,7 @@ substrate itself; the cockpit adds node/npx and [Bun](https://bun.sh) (the cockp
 | **Datastore volume** `<name>-surreal` | traces, posteriors, concept graph, identity | the substrate | recreate and upgrade |
 | **Hub** | the network's identity, trace store, learner, gap store, concept graph | the hub fleet | independently of spokes |
 | **Git origin** (`SUBSTRATE_REPO_OWNER`) | the code every fleet converges to at boot | substrates with push capability, operators | always |
-| **Client** | `~/.metabob/config.json` and the cockpit registration | `substrate-connect` output | until teardown |
+| **Client** | `~/.substrate/config.json` (with `~/.metabob/config.json` kept as a link to it for the cockpit) and the cockpit registration | `substrate-connect` output | until teardown |
 | **CI** | acceptance runs: judge only, no state | the workflow | per run |
 
 ### Profiles: what runs where, and why
@@ -144,7 +144,7 @@ private learning state (memory, gaps, lessons, concepts) and are not hardened fo
 exposure.
 The install provides no authenticated channel to them, so on such a hub a spoke cannot reach
 the hub's lessons and memory; that is the cost of keeping them closed. Exposure is decided only by the
-manifest's port mapping, set by an install input rather than a compose override (an override
+manifest's port mapping, set in the fleet's `.env` (these two are not taken from your shell) rather than by a compose override (an override
 merges port lists and cannot narrow one): `HUMAN_SURFACE_PUBLISH_IP=127.0.0.1` in `.env` keeps
 the surface on the local host, and `SUBSTRATE_PUBLISH_IP=127.0.0.1` keeps every port there.
 
@@ -156,7 +156,7 @@ the surface on the local host, and `SUBSTRATE_PUBLISH_IP=127.0.0.1` keeps every 
 | **Advanced bootstrap** | extra providers, `LLM_ARMS`, retention, federation overrides, `DISABLED_VESSELS`, `RELAY_PORT`, the `MITOSIS_DIRECT_PUSH` kill switch | host `.env`, forwarded by the manifest; documented only in [`docs/operations/CONFIGURATION_SURFACE.md`](docs/operations/CONFIGURATION_SURFACE.md) | at boot | no |
 | **Generated secrets** | `JWT_SECRET`, `SURREAL_PASS`, API-key signing secret, the operator key | workspace `.substrate-private/substrate-secrets` | at boot | n/a (never hand-edited) |
 | **Runtime policy** | vessel additions (`vessel-ctl install`), `pushPolicy`, `llmModelPolicy`, rhythms | impulses in the substrate | at use time | **yes** |
-| **Client** | endpoint + key | `~/.metabob/config.json` (override: `METABOB_CONFIG_PATH`; a project-local `.metabob/config.json` shadows it) | by the cockpit | n/a |
+| **Client** | endpoint + key | `~/.substrate/config.json`, reached by the cockpit through the link `~/.metabob/config.json` (overrides: the installer honours `SUBSTRATE_CONFIG_PATH`, then `METABOB_CONFIG_PATH`; the cockpit honours only `METABOB_CONFIG_PATH`; a project-local `.metabob/config.json` shadows it for the cockpit) | by the cockpit | n/a |
 
 **The install inputs**
 
@@ -200,7 +200,8 @@ One command, with your provider key in place of the placeholder:
 
 ```bash install:standalone
 # Install: writes the manifest and .env into ./substrate, launches, waits for a reached
-# goal, and writes the client config to ~/.metabob/config.json. Exits non-zero and
+# goal, and writes the client config to ~/.substrate/config.json (linked from
+# ~/.metabob/config.json for the cockpit). Exits non-zero and
 # prints the failing level if the fleet does not become usable.
 docker run --rm --pull always ghcr.io/avigopal/substrate:dev install | ANTHROPIC_API_KEY=sk-ant-… sh
 ```
@@ -230,9 +231,10 @@ is at `http://localhost:18310/`.
 
 The installer refuses to start a new fleet whose names or ports another fleet on this host
 already holds, and names what it found. Add `--name <n> --prefix <nn>` (sequence E). It
-writes the client config only when `~/.metabob/config.json` is absent or already points at
-this fleet. Otherwise it leaves that file alone and prints the `METABOB_CONFIG_PATH` to
-use. Only the install inputs (the table above) are taken from your shell. Advanced
+writes the client config only when the existing config is absent or already points at this
+fleet. That is `~/.substrate/config.json`, or `~/.metabob/config.json` on a host whose layout
+has not yet been converged. Otherwise it leaves that file alone and prints the
+`METABOB_CONFIG_PATH` to use. Only the install inputs (the table above) are taken from your shell. Advanced
 variables are read from the fleet's `.env` only, and one that is merely set in your shell
 is ignored with a notice, so an unrelated `GITHUB_TOKEN` never configures a fleet.
 
@@ -248,9 +250,10 @@ docker run --rm --entrypoint substrate-manifest ghcr.io/avigopal/substrate:dev >
 echo 'ANTHROPIC_API_KEY=sk-ant-…' > .env        # the install inputs, one per line
 docker compose up -d
 docker exec substrate-live substrate-status --wait seeded
-mkdir -p ~/.metabob
+mkdir -p ~/.substrate
 # merged on the host, never overwritten: the config's other keys are kept and none of it enters the container
-docker exec substrate-live substrate-connect --merge-script | bash -s -- ~/.metabob/config.json docker exec substrate-live substrate-connect --values
+# the merge also keeps ~/.metabob/config.json as a link to this file, for the cockpit
+docker exec substrate-live substrate-connect --merge-script | bash -s -- ~/.substrate/config.json docker exec substrate-live substrate-connect --values
 docker exec substrate-live substrate-status --wait usable
 ```
 
@@ -408,8 +411,9 @@ git clone --recurse-submodules https://github.com/AviGopal/substrate.git && cd s
 make -C scripts/substrate up REBUILD=1    # build (needs bun) → the same compose → status → connect
 ```
 
-`make up` is a wrapper: it runs exactly sequence A against a locally built tag, with the same
-`.env`, and exits non-zero unless the verdict reaches `usable`. Building needs git with
+`make up` is a wrapper: it runs sequence A against a locally built tag, with the same `.env`,
+and exits non-zero unless the verdict reaches `usable`. Unlike the installer, it writes the
+client config only when run with `CONNECT_WRITE=1`. Building needs git with
 submodule access and bun in addition to the engine.
 
 `.gitmodules` pins each vessel by a URL relative to the superproject (`../<vessel>.git`), so
@@ -434,11 +438,11 @@ the unscoped form rewrites every GitHub URL and breaks anonymous cloning everywh
 | Keep one vessel on an extra host port (e.g. a page URL people already use) | a `docker-compose.override.yml` in the fleet directory adding `ports: ["127.0.0.1:<port>:<container port>"]` to service `substrate` | compose merges port lists, so it adds a mapping beside the derived one; it cannot remove or narrow one. The deprecated per-port inputs (`HUMAN_SURFACE_PORT` …) are refused alongside a prefix |
 | Add or remove one vessel at runtime | `docker exec <c> vessel-ctl install <v>` / `uninstall <v>` | persisted in the workspace; survives recreate |
 | Issue or revoke keys | `docker exec <c> substrate-key issue <name>` / `revoke <id>` | hub-issued keys join spokes |
-| Point a client elsewhere | re-run `substrate-connect` against that fleet | one config path, one override variable |
+| Point a client elsewhere | re-run `substrate-connect` against that fleet | one config home (`~/.substrate/config.json`, linked from `~/.metabob/config.json`); the cockpit's override is `METABOB_CONFIG_PATH` |
 | Back up | `docker compose stop`, then archive both volumes | restore volumes, then `docker compose up -d` |
 | Leave a network | remove the anchor pair from `.env`, then `docker compose up -d` | becomes standalone and needs a provider key |
 | Tear down, keep state | `docker compose down` | |
-| Tear down, destroy state | `docker compose down -v`; remove the fleet's entry from `~/.metabob/config.json`; `claude mcp remove metabob` | destroys all learning state: posteriors, traces, concept graph, memory. It removes the volumes this directory's `SUBSTRATE_NAME` names, whichever fleet created them: with the default name that is any `substrate-*` fleet on the host |
+| Tear down, destroy state | `docker compose down -v`; remove the fleet's entry from `~/.substrate/config.json` (`~/.metabob/config.json` is a link to it); `claude mcp remove metabob` | destroys all learning state: posteriors, traces, concept graph, memory. It removes the volumes this directory's `SUBSTRATE_NAME` names, whichever fleet created them: with the default name that is any `substrate-*` fleet on the host |
 | Know setup works for everyone | the acceptance run on each published digest (Docker and Podman) | CI judges and gates `:dev`; results and gaps land in the hub |
 
 `docker rm` alone leaves both volumes, so a later install with the same `SUBSTRATE_NAME`
