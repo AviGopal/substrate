@@ -24,7 +24,15 @@ log() { echo "[identity-seeder] $*"; }
 # PERSIST_FAILED (observed 2026-07-02 recreate). Transient by nature — retry.
 SEED_OK=0
 for attempt in $(seq 1 10); do
-  if /root/.bun/bin/bun /vessels/seed-identity.ts; then SEED_OK=1; break; fi
+  /root/.bun/bin/bun /vessels/seed-identity.ts; rc=$?
+  if [ "$rc" = 0 ]; then SEED_OK=1; break; fi
+  # 3 = identity refused the seed request itself (e.g. the bootstrap key fails its password policy): not transient.
+  if [ "$rc" = 3 ]; then
+    log "seed-identity REFUSED by identity-vessel (not transient) — stopping retries; the fleet key stays the unseeded bootstrap value"
+    log "  restarting the container repairs a GENERATED bootstrap key (gen-env replaces one that fails identity's password policy);"
+    log "  a supplied SUBSTRATE_API_KEY is kept as given, so the operator must replace it"
+    exit 1
+  fi
   log "seed-identity attempt $attempt failed — retrying in 6s (identity-vessel DB likely still warming)"
   # identity-vessel has NO reconnect logic: if its initial SurrealDB connect
   # lost the race it stays disconnected forever (PERSIST_FAILED on every call)

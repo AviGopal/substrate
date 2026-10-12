@@ -393,6 +393,13 @@ async function main() {
 
   if (!signupRes.ok) {
     const body = await signupRes.text();
+    // A 400 is identity refusing the request itself (e.g. WEAK_PASSWORD: the seed credential fails the password
+    // policy), so re-sending the same value can never succeed. Exit 3 tells reseed-restart to stop retrying and say
+    // so, instead of ten "DB likely still warming" retries (measured 2026-10-12). 5xx stays retryable.
+    if (signupRes.status === 400) {
+      console.error(`[seed-identity] signup REFUSED (400, not transient): ${body}`);
+      process.exit(3);
+    }
     throw new Error(`signup failed ${signupRes.status}: ${body}`);
   }
 
