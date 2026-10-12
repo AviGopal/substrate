@@ -1395,7 +1395,7 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
      - **The honest grading: NOT a verified repair.**
        - The fix sets `region_lint: true` on the tick's only scan task. That mode returns before the scan's closes run, so its shape is a regression.
        - The template's `seed_version` was not bumped, so the change never reaches the running activity on live nodes. It is inert there, and becomes a regression only on a fresh catalogue.
-       - The gap closed on a diff-literal settlement predicate, and its check inspected source rather than behaviour.
+       - The gap closed when the system's own check went green, and that check inspected source rather than behaviour. (Corrected: an earlier note said the close was on a diff-literal predicate; it was the source check.)
        - **Record: "landed by the system, with one upstream operator write (A2); hollow; not a verified repair."**
    - **The landing ledger** (mirrored from the coordinator's operator-only ledger).
 
