@@ -1367,6 +1367,15 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
        - **With 1 builder, 2026-10-17 does not hold.** With 3 builders after Part 1, it holds for both openings, provided at least 30 pathless routing records exist. That rate is measured in the first 12 hours of capture and reported by about 2026-10-13T08:00Z.
        - **qa approved 3 builders** under the vital-work-resourced rule.
        - **Part 1 (capture)** has 2 builders, starts 2026-10-12T07:25Z, and is expected live at about 18:00–20:00Z the same day.
+     - **Started earlier, with more builders** (the user, as reported by qa: "follow the recommendations. stick to this schedule.").
+       - **Build 7 started at about 2026-10-12T04:00Z** instead of 07:25Z, under the closer-only rule, with 5 builders working in parallel:
+         - capture;
+         - the judge split and its corpus;
+         - routing and the admission glue;
+         - guards and must-fails.
+       - **The openings** target about 2026-10-15/16. They are still due 2026-10-17.
+       - **The user authorized qa** to run the pinned, reviewed push scripts directly.
+       - **Landings stay no earlier than T0 + 24 h** (2026-10-12T07:25Z), as originally set. Starting work earlier does not move that bound.
      - **A stated gap.** The routing files that are open to the lane today stay open, without corpus protection, until the routing opening. This is not containment: landings are still scope-checked.
    - **When the judge and routing code open: both due by 2026-10-17.** Each opening is gated on 200 full-input records existing.
      - **If they do not exist by then,** the opening is reported **MISSED**, with the record count at that time as the reason. 2026-10-20 is the **review of that miss**, not a due date. Everything else in build 7 lands by 2026-10-17 either way.
