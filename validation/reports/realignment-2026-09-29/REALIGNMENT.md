@@ -1733,6 +1733,13 @@ During the window this is watched by an **operator-side overdue watcher** over t
 ### 15.7 What this does not change
 
 - **Judges and trust stay operator-held, with one recorded change (user ruling, 10-12).** Once build 7 lands, the reach judge's CODE opens to the lane behind a closed, append-only verdict corpus. What stays operator-held is the corpus. "No change judges itself" (§10 item 1) still applies: the corpus, which the lane cannot edit, judges every change to the judge.
+  **Required conditions** (a build-7 design without all of them is not approved):
+  1. **Admission is hermetic and in the gate.** The pull-sync gate itself runs the corpus deterministically, not an operator's machine.
+  2. **The known false-positive classes are seeded as must-fail cases before the opening:** prose plus writeback (N10), plan text (N5), a write claim with zero tool calls, and re-framing a change goal onto a note (N6).
+  3. **The corpus is append-only by code:** a pinned hash chain or a monotonic count, enforced by the ratchet pattern. A change that deletes or edits a case refuses itself.
+  4. **A loosening guard on held-out data.** Recent live verdicts are re-scored by the old judge and the new. Any reached:false→true flip that no new produced artifact justifies blocks admission.
+
+  **The twin rules also apply:** new files land with their scope entry, and scope changes with its pin, both in the same act.
 - **Security, locality and auth requirements stay** (§9.0).
 - **"Stop doing" applies outside the ten bootstrap builds.**
 - **An overdue stage pauses the evaluation, it does not close the opening** (15.6). The evaluation stops for one diagnosed fix at that stage, then resumes. The opening itself closes only by 15.5's rule, and the 7-day limit is its outer bound.
