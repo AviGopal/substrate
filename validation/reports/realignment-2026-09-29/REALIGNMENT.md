@@ -1621,7 +1621,11 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
             - **(1) One pre-registered re-run of N6.** It is dispatched only when the LLM plane is healthy at dispatch, checked read-only. If that condition is never met within its window, N6 is recorded as **UNMEASURED**, not refuted.
               - **Dispatched** as re-run `4cf83389…` (pinned `3840753…`, with N6's text verbatim). The precondition was met at 2026-10-12T01:26:54Z: 1 non-empty inference and 0 nulls in the previous 15 minutes. The one budget refusal in that time belonged to another dispatch's own cap.
               - **Result: reached=yes, a FALSE POSITIVE. N6 is NOT PASS,** and its window stays open. The walk re-framed its change goal onto an alternative target (`memoryNote_write`) and wrote a note restating the need.
-              - **The write audit from the pre-registration:** the note, and any human-surface write, are retired (L12).
+              - **The write audit from the pre-registration: done.**
+                - The empty public `uiQuestion` panel was dismissed, with its record kept.
+                - The re-framed `memoryNote` was retired in place: marked `[RETIRED]` with weight 0, not deleted.
+                - **Two findings,** recorded as evidence for N1's class (an advertised capability that nothing serves), not as new needs: there is no non-deleting retire for `memoryNote`, and concept-db's retire/supersede is advertised but stubbed.
+                - The L12 entry texts: **[TO FILL from the coordinator]**.
             - **(2) Sealed need N17:** an unavailable reasoning step is recorded as "nothing to do" instead of "couldn't decide", so it is neither retried nor learned from. Latest-by 2026-10-15T12:00Z. **Dispatched** as `41c1e245…` (pinned `41bef8b7…`), running alongside N6's re-run. Each is attributed by its own lineage.
           - **What remains of the prediction.** Stage 0 was the pre-registered prediction, but this run cannot test it.
           - **Across the needs, "stage 0" is two classes, not one** (journals 2026-10-09 to 10-12, read-only).
