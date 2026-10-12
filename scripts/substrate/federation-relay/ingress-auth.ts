@@ -127,11 +127,23 @@ export function shouldAttachCredential(address: string, policy: Policy | null): 
   return peer !== null && policy.same_authority_peers.includes(peer)
 }
 
-/** The pointer to send to `address`: any caller-supplied _fedAuth removed, the caller's key added only when allowed. */
+/**
+ * The pointer to send to `address`. Any caller-supplied _fedAuth is removed; the caller's key is added only when allowed.
+ * The legacy _auth (the shared fleet key registry-shape callers echo) is ALSO a bearer key: once a policy is in force
+ * (mode log or enforce) it reaches only a same-authority peer, and is dropped for every other address. With no policy or
+ * mode off it passes through exactly as before, so a node that has not opted in behaves as it always did.
+ */
 export function pointerForDial(address: string, pointer: unknown, callerKey: string | null, policy: Policy | null): Record<string, unknown> {
   const src = pointer && typeof pointer === 'object' ? (pointer as Record<string, unknown>) : {}
   const { _fedAuth: _drop, ...rest } = src
-  return callerKey && shouldAttachCredential(address, policy) ? { ...rest, _fedAuth: callerKey } : rest
+  const sameAuthority = shouldAttachCredential(address, policy)
+  const out: Record<string, unknown> = policy && policy.mode !== 'off' && !sameAuthority ? withoutLegacyAuth(rest) : rest
+  return callerKey && sameAuthority ? { ...out, _fedAuth: callerKey } : out
+}
+
+function withoutLegacyAuth(p: Record<string, unknown>): Record<string, unknown> {
+  const { _auth: _drop, ...rest } = p
+  return rest
 }
 
 /** A local caller may not smuggle a _fedAuth into the pointer: dropped at every local entry, before any log or proxy. */

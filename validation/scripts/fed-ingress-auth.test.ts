@@ -142,6 +142,16 @@ describe('the caller key crosses only to the same identity authority (no bearer 
     expect(callerKeyFromHeader('Bearer ' + KEY)).toBeNull()
     expect(callerKeyFromHeader('ApiKey ' + KEY)).toBe(KEY)
   })
+  test('MUST-FAIL: the legacy _auth (shared fleet key) never reaches a foreign peer once a policy is in force', () => {
+    expect(pointerForDial(circuitTo(FOREIGN), { type: 'vesselRegistry', _auth: OTHER }, KEY, policy())).toEqual({ type: 'vesselRegistry' })
+    expect(pointerForDial(circuitTo(FOREIGN), { type: 'vesselRegistry', _auth: OTHER }, null, policy({ mode: 'enforce' }))).toEqual({ type: 'vesselRegistry' })
+    expect(pointerForDial('/dns4/x.invalid/tcp/1', { type: 'vesselRegistry', _auth: OTHER }, null, policy())).toEqual({ type: 'vesselRegistry' })
+  })
+  test('the legacy _auth still reaches a same-authority peer, and passes unchanged with no policy or mode off (pre-opt-in behaviour)', () => {
+    expect(pointerForDial(circuitTo(SAME), { type: 'vesselRegistry', _auth: OTHER }, null, policy())).toEqual({ type: 'vesselRegistry', _auth: OTHER })
+    expect(pointerForDial(circuitTo(FOREIGN), { type: 'vesselRegistry', _auth: OTHER }, null, null)).toEqual({ type: 'vesselRegistry', _auth: OTHER })
+    expect(pointerForDial(circuitTo(FOREIGN), { type: 'vesselRegistry', _auth: OTHER }, null, policy({ mode: 'off' }))).toEqual({ type: 'vesselRegistry', _auth: OTHER })
+  })
   test('withoutFedAuth drops a smuggled _fedAuth and keeps everything else (incl. the legacy _auth a local caller may send)', () => {
     expect(withoutFedAuth({ type: 'vesselRegistry', _fedAuth: KEY, _auth: OTHER })).toEqual({ type: 'vesselRegistry', _auth: OTHER })
   })
