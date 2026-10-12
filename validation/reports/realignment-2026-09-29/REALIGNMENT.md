@@ -1625,7 +1625,7 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
                 - The empty public `uiQuestion` panel was dismissed, with its record kept.
                 - The re-framed `memoryNote` was retired in place: marked `[RETIRED]` with weight 0, not deleted.
                 - **Two findings,** recorded as evidence for N1's class (an advertised capability that nothing serves), not as new needs: there is no non-deleting retire for `memoryNote`, and concept-db's retire/supersede is advertised but stubbed.
-                - The L12 entry texts: **[TO FILL from the coordinator]**.
+                - The L12 entries are in `L12-WRITE-AUDIT-2026-10-12.md`.
             - **(2) Sealed need N17:** an unavailable reasoning step is recorded as "nothing to do" instead of "couldn't decide", so it is neither retried nor learned from. Latest-by 2026-10-15T12:00Z. **Dispatched** as `41c1e245…` (pinned `41bef8b7…`), running alongside N6's re-run. Each is attributed by its own lineage.
           - **What remains of the prediction.** Stage 0 was the pre-registered prediction, but this run cannot test it.
           - **Across the needs, "stage 0" is two classes, not one** (journals 2026-10-09 to 10-12, read-only).
