@@ -1585,7 +1585,8 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **It runs under four changes recorded since the probe:** the judge fix, suppression armed, the earn-in holds lifted, and the ratchet.
         - **Scoring:** only by events carrying its own dispatch or goal hash, reported plainly, with no follow-up fix in the same window.
         - **Outcome:** **[TO FILL]**.
-        - **Next:** the authorized re-grade of the 36 rows follows N6's dispatch.
+        - **A duplicate request at 00:11:29Z: coalesced, no walk, source unattributed.** When an identical free-form goal is already running, `/run-goal` returns the existing dispatchId with `coalesced:true` before any walk starts. The only walk is `ee63ab3a`. The caller is not logged; "a client retry" is a hypothesis, not established.
+        - **Next:** the authorized re-grade of the 36 rows is applied once N6's dispatch is terminal.
       - **N6 follows N5,** at its eligibility of 2026-10-12T00:15Z. If N5 is still running then, N6 waits for N5 to reach a terminal state, or until 2026-10-12T06:00Z, whichever comes first.
     - **Pinned for the schedule** (all read-only):
       - **N5:** `PREREG-NEEDS.md` §N5, sha256 `8ed46df7…9867`.
