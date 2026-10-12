@@ -1592,7 +1592,10 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **At-dispatch check:** qa read node 1 before dispatching. The scope record had 111 entries and no holds, and the lane's own read showed 111 at 00:09:58Z. N6's window rule was met.
         - **It runs under four changes recorded since the probe:** the judge fix, suppression armed, the earn-in holds lifted, and the ratchet.
         - **Scoring:** only by events carrying its own dispatch or goal hash, reported plainly, with no follow-up fix in the same window.
-        - **Outcome of the dispatch:** terminal at about 00:22Z, **not reached.** N6's 72-hour gap-lineage window stays open, and it is scored by its own lineage. If an N6-lineage compose happens after the drafter split lands, the split is noted as a fifth change. Why it was not reached: **[TO FILL]**.
+        - **Outcome of the dispatch:** terminal at about 00:22Z, **not reached.** N6's 72-hour gap-lineage window stays open, and it is scored by its own lineage. If an N6-lineage compose happens after the drafter split lands, the split is noted as a fifth change. **Why it was not reached: stage 0.** No target was inferred, so there was no localization, no gap and no compose. This matches its pre-registered prediction.
+          - **The walk** picked unrelated, pre-existing gap-closing activities, and the judge rejected their only output.
+          - **The floor fallback** ran 0 tools.
+          - **Separately, not N6:** once the hold lifted, the lane composed on an unrelated armed gap. It is attributed to that gap's own lineage. Its own check came back red, and nothing landed.
         - **A duplicate request at 00:11:29Z: coalesced, no walk, source unattributed.** When an identical free-form goal is already running, `/run-goal` returns the existing dispatchId with `coalesced:true` before any walk starts. The only walk is `ee63ab3a`. The caller is not logged; "a client retry" is a hypothesis, not established.
         - **Next:** the authorized re-grade of the 36 rows is applied once N6's dispatch is terminal.
       - **N6 follows N5,** at its eligibility of 2026-10-12T00:15Z. If N5 is still running then, N6 waits for N5 to reach a terminal state, or until 2026-10-12T06:00Z, whichever comes first.
