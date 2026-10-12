@@ -1540,7 +1540,7 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
 - **dispatchId:** `28a669b3-2a12-480d-bcfb-56f5a089ac22`.
 - **Goal text:** the primary goal text below, verbatim, with nothing added: no variables, no template, no metadata.
 - **Precondition:** re-checked immediately before dispatch. There were 0 non-operator commits on origin/dev, across the super-repo and every submodule, in the previous 24 hours, so the precondition held.
-- **Excluded from the probe's supply (qa ruling, about 07:45Z):** `self-fact-divergence-autonomy-scope-pinned-key-595289e706e5-mismatch`.
+- **Excluded from the probe's supply (qa ruling, about 07:45Z):** the scope-pin drift row for one node (`self-fact-divergence-autonomy-scope-pinned-<node>-mismatch`).
   - **Why it is excluded.** It is a self-fact drift row born 2026-10-07, before the probe, so nothing it lands originates from the probe.
   - **How it reached the opened file.** The interim `src/judge/` close reopened it at 06:33Z. It still carries `edit_site` `gap-to-feature.ts`, because the gap store carries omitted keys forward: the re-site of pin rows to `src/judge/gap-policy.ts` (`b87ecd44`) applies to new rows only.
   - **What it did.** Node 1's lane picked it at 07:20:54Z, after the re-pin and before T0. Isolation refused it in under a second: no workspace, no draft, no landing.
