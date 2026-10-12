@@ -1456,9 +1456,13 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
 
 **Each build's must-fail is proven before the clock starts.** The proof is in isolated fixtures and in-container clone trees, never by modifying live state; §7 step 1 forbids supplying negative controls that way. It is then confirmed that the live gate loads the same protected files. **The bootstrap is capped at ten:** the seven, plus builds 8, 9 and 10, each added by explicit ruling, and the cap is FULL. Two builds go past it, each recorded as **over the cap, by explicit ruling**:
 - **#11, C-settle-1:** an arming (check-only) commit is not settled as a fix. It is built and verified, and the user approved it ("follow the recommendations").
-- **#12, C-check-1:** the generators. The supply prompt is to ask for consumer-behaviour checks, admission is to refuse literal-only checks, the settlement predicate is never to be a diff literal, and a seed edit without a `seed_version` bump is to fail verification. **Pending the user.**
+- **#12, C-check-1:** the generators. The supply prompt is to ask for consumer-behaviour checks, admission is to refuse literal-only checks, the settlement predicate is never to be a diff literal, and a seed edit without a `seed_version` bump is to fail verification. **Approved by the user** (as reported by qa: "follow the recommendations. stick to this schedule.").
 
 The earlier "judge re-frame" and "gap-write" operator fixes were held and never built; they are not counted.
+
+Two further user rulings in the same message:
+- **The shaped-policy write path is deferred.** Operator policy writes are recorded as they happen, and the path is built later.
+- **The cleanup of a stray directory** is approved for the next maintenance.
 
 The builds' shas (development-vessel unless noted):
 
