@@ -1224,10 +1224,29 @@ Tags: [V] verified in git, code or the live gap store on 10-03. [D] taken from a
 
 Build 7 (the judge/walk split, user amendment 10-10) does not gate the opening. It runs in parallel on its own dates (15.3). When it lands, it widens what can open later, under the same opening rule.
 
+**Headline measures, reported every hour from 2026-10-12** (user ruling, as reported by qa). All three must move the right way:
+- the total operator interventions since 2026-10-10;
+- the number of system-authored landings;
+- the count of node 1's excluded paths.
+
+At 2026-10-12T19:40Z they read: 238 operator commits against 2 system-authored commits (1 a real arming check, 1 hollow); 0 verified system repairs; 103 → 251 excluded paths.
+
+**The priority path to the target:**
+1. C-check-1 (#12) goes live.
+2. The region-lint gap is reopened with its evidence. The user runs the reopen, which counts as one intervention.
+3. The system re-fixes the gap.
+4. The fix is judged by a pre-registered consumer check, under C-check-1's own rule, never by an operator reading the diff:
+   - **(a)** the re-delivered template runs live;
+   - **(b)** the region-lint census runs;
+   - **(c)** the normal lifecycle work still runs.
+
+**New need dispatches are paused** until build 7's routing opening is live, because the refutations share a routing root. N7 is reported MISSED at 2026-10-13T00:00Z, not re-queued.
+
 **Dates.** Measured basis: a move commit of the `gap-to-feature` split took about 17 minutes wall time, including rebase, the suite and the protected runs.
 
 | Item | Date |
 |---|---|
+| **THE TARGET: the first system-authored, consumer-verified repair** | **by 2026-10-18T07:12Z** (the window close; closer-only). Added by user ruling on 2026-10-12, as reported by qa: before this, the plan dated only operator builds and need dispatches, never the goal itself. |
 | **The opening (committed)** | **2026-10-12T06:00Z** |
 | The opening (target) | about 2026-10-11T07:30Z (range 07:30–10:00Z). An estimate from the measured critical path, which depends on how long the gate-budget fix takes to build. |
 | Build 3 | by 2026-10-12T18:00Z, or earlier on the critical path |
