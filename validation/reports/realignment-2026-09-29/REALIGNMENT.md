@@ -1584,6 +1584,7 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
       - **A one-off operator re-pin, and N16** (the user, as reported by qa: "follow the recommendations. stick to this schedule.").
         - **The re-pin.** The act's scope pin is re-pinned to the live sets after the holds expired. This stops the lane re-picking a spurious drift gap whose stale `edit_site` invites a hollow compose. The drafter act updates the pin in the same act.
         - **Counted honestly.** It repeats an existing kind of act, not a new bootstrap, so the cap stays at ten. It is still an operator intervention, and recorded as one.
+        - **Where the drift came from: corrected to operator-caused.** The ratchet's scope closes (at 21:28Z and 22:06Z on 2026-10-11) added 11 entries without updating the pin in the same act. That was an operator lapse, and the system flagged it correctly. The hold expiries removed only 3 more on each node. N16's class is unchanged; this instance was caused by operators.
         - **N16, sealed:** the pin follows the evaluator's own sanctioned scope changes, so that no operator re-pin is needed next time. Latest-by 2026-10-15T12:00Z.
       - **N2-v2 dispatched:** `53882755…`.
       - **N2 is off hold** (the user's no-indefinite-hold review, as reported by qa). It is re-pre-registered, sealed, with a latest-by of 2026-10-14T12:00Z.
