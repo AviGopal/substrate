@@ -1602,6 +1602,10 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
           - **How the outage was recorded.** An unavailable reasoning service is recorded as "no target" (confidence 0), which looks downstream exactly like "nothing to do". The next inference, 3 minutes later, took 6 s.
           - **Proposed to the user (a ruling is pending):** (1) one pre-registered re-run of N6 within its window, with an LLM-health precondition checked at dispatch; (2) sealed need N17: an unavailable reasoning step is recorded as "nothing to do" instead of "couldn't decide", so it is neither retried nor learned from.
           - **What remains of the prediction.** Stage 0 was the pre-registered prediction, but this run cannot test it.
+          - **Across the needs, "stage 0" is two classes, not one** (journals 2026-10-09 to 10-12, read-only).
+            - **(a) A confident WRONG target.** N1, N3, the probe and its re-run, N10, N5, N11 and N14 all got confident, non-empty targets (confidence 0.6–0.9). They then failed on a wrong target or site, a target no producer serves, a compose refusal, or a field error. This is the capability class.
+            - **(b) An unavailable reasoning step recorded as "no target".** Only N6 is in this class. It is N17's class.
+          - **The LLM plane is degraded continuously.** Over 3 days: 1,722 model-exhausted, 818 HTTP 402 and 268 HTTP 429 responses, every hour (free-tier caps), plus bursty refusals at the per-dispatch 400K-token cap. Fleet-wide, 4 of 11 empty inferences were LLM nulls.
           - **The walk** picked unrelated, pre-existing gap-closing activities, and the judge rejected their only output.
           - **The floor fallback** ran 0 tools.
           - **Separately, not N6:** once the hold lifted, the lane composed on an unrelated armed gap. It is attributed to that gap's own lineage. Its own check came back red, and nothing landed.
