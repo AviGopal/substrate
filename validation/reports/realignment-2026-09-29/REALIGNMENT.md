@@ -1231,6 +1231,12 @@ Build 7 (the judge/walk split, user amendment 10-10) does not gate the opening. 
 
 At 2026-10-12T19:40Z they read: 238 operator commits against 2 system-authored commits (1 a real arming check, 1 hollow); 0 verified system repairs; 103 → 251 excluded paths.
 
+**The excluded-path count is split into two measures from now on** (qa back-computed it on node 1, 103 → 254 = +151, nothing removed):
+- **(a) new files, protected when they were created** (judge, trust and test files closed at birth): 85. This is expected to grow with each build.
+- **(b) files that were editable before and are now closed: 61.** This is the real shrink of the lane's surface, and the number that has to stop growing. 5 entries are borderline (created 25–40 h before they were closed), so the counts are at most 89 and 62.
+- **Where the (b) closures came from:** mostly goal-host judge and trust modules, closed as trust roots on 2026-10-11/12, plus the spend/trust and drafter-split acts. There have been no (b) closures since 2026-10-12T10:36Z.
+- **A caveat:** some (a) entries are new paths for logic extracted from older files during the splits.
+
 **The priority path to the target:**
 1. C-check-1 (#12) goes live.
 2. The region-lint gap is reopened with its evidence. The user runs the reopen, which counts as one intervention.
