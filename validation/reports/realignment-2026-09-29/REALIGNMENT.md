@@ -1376,7 +1376,9 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
   - **Why.** Measured compose failures were traced to how the drafter's inputs are assembled. That code lived in a closed file, so the system could not improve its own drafting. The specific defects are kept out of this tree until a need on them is scored.
   - **How it lands.** It lands with its scope entries in the same act, which is the `src/judge/` lesson.
   - **Timing.** It lands after N6's dispatch is terminal, so it does not change compose behaviour mid-measurement (law 12).
-  - **Its shas: [TO FILL].**
+  - **Pushed by the user:** development-vessel `9cd7532a` and super-repo `03a52d81`.
+    - **The closed paths were closed before the code reached any node, so there was no window.** The split's new files under `test/drafter-split/`, plus 4 helpers, are meant to be CLOSED. qa closed them tighten-only before the mirror: node 1 at 2026-10-12T02:03:24Z (116 entries), compose2 at 02:06:30Z (117). The new files under `src/drafter/` and `test/drafter/` are OPEN by design, and every gate stays in files that were already closed.
+    - **A brief pin drift** lasts until `03a52d81` is accepted. The remaining act adds only the 7 named F-tests and matches the pin.
 
 **Dates and scope (user rulings, 10-10).**
 - **Dates only move closer, never further back.** The objective is self-sufficiency within days.
