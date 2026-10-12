@@ -428,6 +428,12 @@ run_ready() { # -> READY_JSON, READY_RC
 core_units() { jq -r '.vessels[] | select(.core == true) | .unit' "$INV" 2>/dev/null; }
 row_status() { printf '%s' "$READY_JSON" | jq -r --arg u "$1" '.vessels[] | select(.unit == $u) | .status' 2>/dev/null | head -n1; }
 
+boot_jobs_sample() { # sets jobs_q (queued) and jobs_r (running) from one systemd job listing
+  local l; l="$(systemctl list-jobs --no-legend 2>/dev/null)"
+  jobs_q="$(printf '%s\n' "$l" | grep -c .)"
+  jobs_r="$(printf '%s\n' "$l" | awk '$4=="running"' | grep -c .)"
+}
+
 eval_live() {
   if [ -z "$READY_BIN" ] || [ -z "$INV" ]; then V=unknown; E="substrate-ready or the vessel inventory is missing from this image"; return; fi
   # No systemd, no unit matrix: every unit would read as down, which is a verdict
@@ -447,8 +453,27 @@ eval_live() {
   local boot_note="" jobs_q jobs_r
   case "$sys_state" in
     initializing|starting)
-      jobs_q="$(systemctl list-jobs --no-legend 2>/dev/null | wc -l | tr -d ' ')"
-      jobs_r="$(systemctl list-jobs --no-legend 2>/dev/null | awk '$4=="running"' | wc -l | tr -d ' ')"
+      boot_jobs_sample
+      # ONE SAMPLE CANNOT TELL A STALL FROM THE GAP BETWEEN TWO JOBS. Right after a boot,
+      # timer-started one-shots run back to back, and for an instant one is queued while none
+      # runs. Read once, that instant failed `live` on a fleet that had just reached `seeded`
+      # (upgrade acceptance, 2026-10-12: "systemd is still starting (1 job(s) queued, 0
+      # running)"). A stall is a state that persists, so it is judged over a short window:
+      # it fails only if no job runs and the boot is still unfinished at every sample.
+      if [ "$sys_state" = starting ] && [ "${jobs_r:-0}" -eq 0 ]; then
+        local _i
+        for _i in 1 2 3 4 5; do
+          sleep "${BOOT_STALL_SAMPLE_S:-2}"
+          sys_state="$(systemctl is-system-running 2>/dev/null || true)"
+          case "$sys_state" in initializing|starting) ;; *) break ;; esac
+          boot_jobs_sample
+          [ "${jobs_r:-0}" -gt 0 ] && break
+        done
+      fi
+    ;;
+  esac
+  case "$sys_state" in
+    initializing|starting)
       if [ "${jobs_r:-0}" -eq 0 ] || [ "$sys_state" = initializing ]; then
         V=fail; E="systemd is still $sys_state ($jobs_q job(s) queued, $jobs_r running)"; return
       fi
