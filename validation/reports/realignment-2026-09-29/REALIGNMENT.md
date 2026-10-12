@@ -1581,6 +1581,10 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **N14's** edit intent went to a wrong, closed site. A compose was drafted; the semantic gate found it does not address the need, with no falsifier, and it was refused at admission while unarmed. Nothing landed.
         - **The provisional reading for both:** REFUTED (wrong site, no landing). Neither need is closed until 72 hours pass or a refuting outcome arrives.
         - **The system-born gap from this round:** one, `route-edit-edc1edbb`, from N14's own run. It is at the wrong site and unarmed. There are 0 landings.
+      - **A one-off operator re-pin, and N16** (the user, as reported by qa: "follow the recommendations. stick to this schedule.").
+        - **The re-pin.** The act's scope pin is re-pinned to the live sets after the holds expired. This stops the lane re-picking a spurious drift gap whose stale `edit_site` invites a hollow compose. The drafter act updates the pin in the same act.
+        - **Counted honestly.** It repeats an existing kind of act, not a new bootstrap, so the cap stays at ten. It is still an operator intervention, and recorded as one.
+        - **N16, sealed:** the pin follows the evaluator's own sanctioned scope changes, so that no operator re-pin is needed next time. Latest-by 2026-10-15T12:00Z.
       - **N2-v2 dispatched:** `53882755…`.
       - **N2 is off hold** (the user's no-indefinite-hold review, as reported by qa). It is re-pre-registered, sealed, with a latest-by of 2026-10-14T12:00Z.
       - **N14 is added** (the user, as reported by qa: "follow the recommendations. stick to this schedule."). It is a class need: the floor's read tools are built from discovery, as its write tools already are.
