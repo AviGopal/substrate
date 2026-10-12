@@ -1590,6 +1590,9 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **N16, sealed:** the pin follows the evaluator's own sanctioned scope changes, so that no operator re-pin is needed next time. Latest-by 2026-10-15T12:00Z.
       - **A rule for new needs (qa, 2026-10-12).** No new N-need without naming which existing need it supersedes, or why it cannot wait for one to resolve. Needs close on their evidence: N11 and N14 at 72 hours, and N7 is reported MISSED at 2026-10-13T00:00Z if its precondition is absent, not re-queued.
       - **N18, pinned** (it is dispatched once `9cd7532a` is live). Its class: "the lane's drafting attempts fail in ways its own records don't classify or explain, so the same failure repeats without a lesson; the system should detect and file these precisely for review." Its sites are closed, so PASS means precise, checkable gaps routed to operator review, not a landing.
+        - **N18 supersedes N9,** which is the same class. N9 is recorded as **merged into N18**, not MISSED.
+        - **Its date.** N18 inherits N9's earlier latest-by: it is dispatched by 2026-10-13T12:00Z, and as soon as `9cd7532a` is live on node 1.
+        - **Its routed gaps** are counted in the operator-work ledger, because they are operator load by design.
       - **N2-v2 dispatched:** `53882755…`.
       - **N2 is off hold** (the user's no-indefinite-hold review, as reported by qa). It is re-pre-registered, sealed, with a latest-by of 2026-10-14T12:00Z.
       - **N14 is added** (the user, as reported by qa: "follow the recommendations. stick to this schedule."). It is a class need: the floor's read tools are built from discovery, as its write tools already are.
