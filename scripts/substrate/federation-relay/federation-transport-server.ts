@@ -12,7 +12,9 @@ import { createVesselLibp2p, serveResolve, serveResolveHttp, resolveViaLibp2p, r
 import { ping } from '@libp2p/ping'
 import { hostname } from 'node:os'
 import { createHash } from 'node:crypto'
-import { existsSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { AsyncLocalStorage } from 'node:async_hooks'
+import { callerKeyFromHeader, decideIngress, makeValidator, parsePolicy, pointerForDial, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
 import { multiaddr } from '@multiformats/multiaddr'
 
 // RESILIENCE: libp2p internals emit 'error' events on streams/sockets that have no
@@ -40,6 +42,59 @@ const API_KEY = process.env.METABOB_API_KEY || ''
 // below, and any future hub fan-out). It falls back to API_KEY so a same-domain / single-
 // substrate deployment (hub==local, or an unfederated node) is byte-for-byte unchanged.
 const HUB_API_KEY = process.env.HUB_API_KEY || API_KEY
+
+// ── INBOUND AUTHENTICATION (operator exception, user ruling 2026-10-12; logic in ./ingress-auth.ts) ─────────────
+// The MODE is a shaped per-node policy record, fedIngressAuthPolicy {mode: off|log|enforce, same_authority_peers,
+// same_authority_substrates, cache}, read from the local development-vessel pool at use time (30 s cache), never an env
+// var (law 1). Absent or unreadable = `off` until this node has once read `enforce`; after that = `enforce` (a ratchet
+// recorded in a sentinel file in the transport's state dir). FED_INGRESS_AUTH_EMERGENCY_OFF=1 is the one env input: the
+// named bootstrap exception, an emergency rollback needing no record, logged loudly whenever it is in force.
+// The CALLER's key reaches a dial only through callerCtx (set at the two local entry points from the caller's own
+// Authorization header); an ingress-originated hop runs with an empty context, so nothing re-attaches a key.
+const callerCtx = new AsyncLocalStorage<{ key: string | null }>()
+const FED_STATE_DIR = process.env.FED_STATE_DIR || '/workspace/.fed-transport'
+const RATCHET_FILE = FED_STATE_DIR + '/ingress-auth-enforce-seen'
+const POLICY_TTL_MS = 30_000
+let policyCache: { at: number; policy: Policy | null } | null = null
+async function readIngressPolicy(): Promise<Policy | null> {
+  if (policyCache && Date.now() - policyCache.at < POLICY_TTL_MS) return policyCache.policy
+  let policy: Policy | null = null
+  try {
+    const r = await fetch((process.env.DEVELOPMENT_VESSEL_URL || 'http://127.0.0.1:8090') + '/v2/impulses/resolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'ApiKey ' + API_KEY },
+      body: JSON.stringify({ impulse: { pointer: { type: 'poolImpulse', shape: 'fedIngressAuthPolicy', status: 'open', limit: 1 } } }),
+      signal: AbortSignal.timeout(5000),
+    })
+    const j: any = r.ok ? await r.json() : null
+    policy = parsePolicy(j?.body?.impulses?.[0]?.body)
+  } catch { policy = null }
+  policyCache = { at: Date.now(), policy }
+  return policy
+}
+const cachedPolicy = (): Policy | null => policyCache?.policy ?? null
+let emergencyLoggedAt = 0
+async function ingressMode(): Promise<Mode> {
+  const policy = await readIngressPolicy()
+  if (policy?.mode === 'enforce' && !existsSync(RATCHET_FILE)) {
+    try { mkdirSync(FED_STATE_DIR, { recursive: true }); writeFileSync(RATCHET_FILE, new Date().toISOString() + '\n') }
+    catch (e) { console.warn('[fed-ingress-auth] could not record the enforce ratchet: ' + String((e as Error)?.message ?? e)) }
+  }
+  const emergencyOff = process.env.FED_INGRESS_AUTH_EMERGENCY_OFF === '1'
+  if (emergencyOff && Date.now() - emergencyLoggedAt >= 60_000) {
+    emergencyLoggedAt = Date.now()
+    console.warn('[fed-ingress-auth] EMERGENCY OFF (FED_INGRESS_AUTH_EMERGENCY_OFF=1): inbound authentication is DISABLED on this node')
+  }
+  return resolveMode(policy, existsSync(RATCHET_FILE), emergencyOff)
+}
+const validateKey = makeValidator({
+  identityUrl: () => process.env.IDENTITY_VESSEL_URL || '',
+  fetchImpl: fetch as any,
+  cacheEnabled: () => cachedPolicy()?.cache !== false,
+})
+// Pointers the ingress authenticated for THIS request. The registry branch (resolveHandler) admits these; local callers
+// keep the transitional `_auth === API_KEY` check there.
+const ingressAuthenticated = new WeakSet<object>()
 const HEALTH_PORT = parseInt(process.env.FED_HEALTH_PORT || '8401', 10)
 
 // "Just point and go": if RELAY_MULTIADDR wasn't handed to us, derive the relay
@@ -294,8 +349,11 @@ async function proxyToLocalOwner(pointer: any): Promise<any> {
     // is a fail-CLOSED change on a live fleet and a rollback must not require a redeploy —
     // not as an invitation to leave it off.
     if ((process.env.FED_DISCOVERY_OVERLAY_AUTH ?? '1') !== '0') {
+      // An overlay frame arrives here with its credential already STRIPPED by ingressHandler, which marks the pointer
+      // when it authenticated it (enforce: identity-validated; off/log: today's shared-key compare). A LOCAL caller
+      // (POST /v2/impulses/resolve, egress to self) still presents the transitional pointer._auth.
       const presented = String((pointer as any)?._auth ?? '')
-      if (!API_KEY || presented !== API_KEY) {
+      if (!ingressAuthenticated.has(pointer) && (!API_KEY || presented !== API_KEY)) {
         console.log(`[fed-transport] refused uncredentialed overlay ${t} (registry contents are not public)`)
         return { error: 'unauthorized', shape: t, note: 'registry shapes over the overlay require pointer._auth; substrateBootstrap is the public anchor-only alternative' }
       }
@@ -630,7 +688,7 @@ const FED_INGRESS_SEED_ALLOWLIST: ReadonlySet<string> = new Set((
 // Exact names, not substrings: `max_tokens` is not a credential. Only the PRESENCE of
 // such a key is logged, never its value.
 const CREDENTIAL_KEYS = new Set([
-  'auth', 'authorization', 'apikey', 'xapikey', 'token', 'accesstoken', 'authtoken', 'bearer',
+  'auth', 'fedauth', 'authorization', 'apikey', 'xapikey', 'token', 'accesstoken', 'authtoken', 'bearer',
   'idtoken', 'refreshtoken', 'sessiontoken', 'jwt', 'secret', 'clientsecret', 'password', 'credential', 'credentials',
 ])
 function carriesCredential(v: any, depth = 0): boolean {
@@ -645,15 +703,35 @@ function carriesCredential(v: any, depth = 0): boolean {
 const logSafe = (x: unknown) => String(x ?? '').replace(/[^A-Za-z0-9_.:@\/-]/g, '?').slice(0, 96) || '?'
 // outcome=error when the handler threw or answered with a top-level `error` (resolveHandler
 // reports its failures as values, so a throw alone would call nearly everything ok).
-const ingressHandler = async (pointer: any, ctx?: { remotePeer?: string, transport?: string }): Promise<any> => {
+const ingressHandler = async (raw: any, ctx?: { remotePeer?: string, transport?: string }): Promise<any> => {
+  // FIRST STATEMENT: the credential leaves the pointer before anything can log, resolve, trace or echo it. Below this
+  // line only presence flags and the validated principal (org, user, key hash) are ever written.
+  const { pointer, credential, legacyAuth } = stripCredentials(raw)
+  const credentialPresent = credential !== null || carriesCredential(pointer)
+  const shape = String((pointer as any)?.type ?? '')
   let outcome = 'error'
+  let mode: Mode = 'off'
+  let decision: Decision | null = null
   try {
-    const res = await resolveHandler(pointer)
+    mode = await ingressMode()
+    if (mode !== 'off') decision = await decideIngress(shape, credential, validateKey)
+    // Who may use the registry branch for this request: under enforce, an identity-validated caller; under off/log,
+    // exactly today's rule (the shared fleet key echoed as _auth), so log mode changes no behaviour.
+    if ((mode === 'enforce' && decision?.allow) || (!!API_KEY && legacyAuth === API_KEY)) ingressAuthenticated.add(pointer)
+    if (mode === 'enforce' && decision && !decision.allow) {
+      outcome = 'refused'
+      return { error: 'unauthorized', shape, reason: decision.reason, note: decision.reason === 'validator_unreachable' ? 'the identity validator could not be reached; refused (fail closed)' : 'this shape requires a caller credential identity validates' }
+    }
+    // An ingress-originated onward hop never re-attaches a key: the context is explicitly empty.
+    const res = await callerCtx.run({ key: null }, () => resolveHandler(pointer))
     outcome = (res && typeof res === 'object' && 'error' in res) ? 'error' : 'ok'
     return res
   } finally {
-    const shape = String(pointer?.type ?? '')
-    console.log(`[fed-ingress] shape=${logSafe(shape)} peer=${logSafe(ctx?.remotePeer ?? 'unknown')} transport=${logSafe(ctx?.transport ?? 'unknown')} carries_credential=${carriesCredential(pointer) ? 'y' : 'n'} would_refuse=${FED_INGRESS_SEED_ALLOWLIST.has(shape) ? 'n' : 'y'} outcome=${outcome}`)
+    console.log(`[fed-ingress] shape=${logSafe(shape)} peer=${logSafe(ctx?.remotePeer ?? 'unknown')} transport=${logSafe(ctx?.transport ?? 'unknown')} carries_credential=${credentialPresent ? 'y' : 'n'} would_refuse=${FED_INGRESS_SEED_ALLOWLIST.has(shape) ? 'n' : 'y'} outcome=${outcome}`)
+    if (mode !== 'off') {
+      const pr = decision?.principal
+      console.log(`[fed-ingress-auth] mode=${mode} shape=${logSafe(shape)} decision=${decision?.allow ? 'allow' : 'refuse'} reason=${decision?.reason ?? 'none'} credential_present=${credentialPresent ? 'y' : 'n'} principal=${pr ? logSafe(pr.org_id) + '/' + logSafe(pr.user_id) + '/' + pr.key_hash : '-'} enforced=${mode === 'enforce' ? 'y' : 'n'}`)
+    }
   }
 }
 await serveResolve(vl, ingressHandler)
@@ -663,8 +741,11 @@ await serveResolveHttp(vl, ingressHandler)
 // legacy HTTP path if the peer hasn't migrated yet (protocol not supported). Keeps
 // cross-substrate resolution working through a mixed-version rollout.
 async function resolveOverLibp2p(target: string, pointer: any): Promise<any> {
-  try { return await resolveViaLibp2p(vl, target, pointer) }
-  catch { return await resolveViaHttp(vl, target, pointer) }
+  // The caller's key (if a local entry point set one) is attached ONLY for a same-authority destination peer, decided
+  // per address; any _fedAuth already in the pointer is dropped first (pointerForDial, ingress-auth.ts).
+  const out = pointerForDial(target, pointer, callerCtx.getStore()?.key ?? null, cachedPolicy())
+  try { return await resolveViaLibp2p(vl, target, out) }
+  catch { return await resolveViaHttp(vl, target, out) }
 }
 
 // The advertisable circuit multiaddr must be derived LIVE, never captured once:
@@ -779,6 +860,9 @@ Bun.serve({
       })
     }
     if (u.pathname === '/egress/resolve' && req.method === 'POST') {
+      // The caller's OWN Authorization header is the only key a dial below may carry (same-authority peers only).
+      return await callerCtx.run({ key: callerKeyFromHeader(req.headers.get('authorization')) }, async () => {
+      await readIngressPolicy()
       try {
         const body = (await req.json().catch(() => ({}))) as any
         // Target may arrive three ways so the caller can stay maximally thin: a
@@ -786,7 +870,7 @@ Bun.serve({
         // threading needed, the goal-host path), an X-Libp2p-Target header, or
         // body.target. Query param wins, then header, then body.
         const target = u.searchParams.get('target') || req.headers.get('x-libp2p-target') || body?.target || ''
-        let pointer = body?.impulse?.pointer ?? body?.impulse ?? body?.pointer ?? body
+        let pointer = withoutFedAuth(body?.impulse?.pointer ?? body?.impulse ?? body?.pointer ?? body) as any
         // Per-vessel addressing: ?vessel=<vesselId[@substrate]> (or body.vessel) names
         // the exact vessel on the target substrate — the remote ingress routes to it
         // instead of shape-owner lookup, so duplicate shapes stay distinguishable.
@@ -949,6 +1033,7 @@ Bun.serve({
       } catch (e) {
         return Response.json({ error: 'libp2p egress failed: ' + String((e as Error)?.message ?? e) }, { status: 502 })
       }
+      })
     }
     // Local resolve surface matching the resolve_endpoint this vessel (and every
     // capability row mirrored under its endpoint) advertises in discovery. A
@@ -956,15 +1041,20 @@ Bun.serve({
     // valid VERBATIM on any substrate: the local transport serves the local owner
     // or hops once over libp2p to the owning substrate (proxyToLocalOwner).
     if (u.pathname === '/v2/impulses/resolve' && req.method === 'POST') {
+      // A mirrored row's resolve URL lands here and may hop once over libp2p (proxyToLocalOwner): the hop carries the
+      // caller's own key, same-authority peers only, exactly like /egress/resolve.
+      return await callerCtx.run({ key: callerKeyFromHeader(req.headers.get('authorization')) }, async () => {
+      await readIngressPolicy()
       try {
         const body = (await req.json().catch(() => ({}))) as any
-        const pointer = body?.impulse?.pointer ?? body?.impulse ?? body?.pointer ?? body
+        const pointer = withoutFedAuth(body?.impulse?.pointer ?? body?.impulse ?? body?.pointer ?? body) as any
         console.log('[fed-transport] local/resolve -> ' + String((pointer as any)?.type ?? '?'))
         const res = await resolveHandler(pointer)
         return Response.json({ content: res, metadata: { shape: String((pointer as any)?.type ?? '') } }, { status: 200 })
       } catch (e) {
         return Response.json({ error: 'local resolve failed: ' + String((e as Error)?.message ?? e) }, { status: 502 })
       }
+      })
     }
     return new Response('not found', { status: 404 })
   },
@@ -1309,6 +1399,9 @@ process.on('SIGINT', () => { void withdrawAndExit('SIGINT') })
 await register()
 await registerAtHub()
 setInterval(register, 120_000) // refresh discovery TTL
+// The inbound-auth census denominator: refusals only mean something per hour the circuit was UP (the reservation lapses
+// for long stretches; a NO_RESERVATION failure never reaches any ingress and is logged on the egress side instead).
+setInterval(() => { void ingressMode().then((m) => console.log(`[fed-ingress-auth] window circuit_up=${currentCircuit() ? 'y' : 'n'} mode=${m}`)).catch(() => {}) }, 300_000)
 setInterval(registerAtHub, 120_000)
 
 // RESERVATION (RE)ACQUISITION HOOK: VesselLibp2p exposes no reservation event, so the

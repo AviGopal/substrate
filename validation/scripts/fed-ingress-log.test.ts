@@ -105,6 +105,7 @@ beforeAll(async () => {
   mkdirSync(join(pkgCopy, 'src'))
   for (const f of readdirSync(join(PKG_DIR, 'src')).filter((f) => f.endsWith('.ts') && !f.endsWith('.d.ts'))) cpSync(join(PKG_DIR, 'src', f), join(pkgCopy, 'src', f))
   cpSync(join(FED_DIR, 'federation-transport-server.ts'), join(fed, 'federation-transport-server.ts'))
+  cpSync(join(FED_DIR, 'ingress-auth.ts'), join(fed, 'ingress-auth.ts'))
 
   pkg = await import(join(pkgCopy, 'src/index.ts'))
   multiaddrFn = (await import(Bun.resolveSync('@multiformats/multiaddr', fed))).multiaddr
@@ -149,6 +150,9 @@ beforeAll(async () => {
       FED_HEALTH_PORT: String(healthPort),
       DISCOVERY_URL: `http://127.0.0.1:${discovery.port}`,
       ACTIVITY_API_URL: dead, DEVELOPMENT_VESSEL_URL: dead, IDENTITY_UPSTREAM_URL: dead,
+      // The inbound-auth ratchet lives in the transport's state dir; a private one, so a live node's ratchet can never
+      // flip this server into enforce (no policy is readable here: mode off, today's behaviour).
+      FED_STATE_DIR: join(work, 'state'),
       METABOB_API_KEY: 'fedlog-test-key-not-a-credential',
       FED_PROBE_PATH: '/nonexistent/federation-probe-tick.ts', BUN_BIN: '/nonexistent/bun',
     },
@@ -235,3 +239,13 @@ test('the fake credential never reaches the server\'s output', () => {
   expect(output.length).toBeGreaterThan(0)
   expect(output.includes(MARKER)).toBe(false)
 })
+
+test('a _fedAuth credential is stripped before anything is written: it never appears in the server output', async () => {
+  const FED_MARKER = 'FEDLOG-FAKE-FEDAUTH-MARKER-3b1d'
+  const before = ingressLines().length
+  await rawResolve({ type: 'fedlog_owned', q: 'fedauth', _fedAuth: FED_MARKER })
+  await waitFor(() => ingressLines().length > before, 5_000, 'the [fed-ingress] line')
+  await sleep(300)
+  expect(ingressLines().slice(before)).toEqual([`[fed-ingress] shape=fedlog_owned peer=${client.peerId} transport=lpstream carries_credential=y would_refuse=y outcome=ok`])
+  expect(output).not.toContain(FED_MARKER)
+}, 30_000)

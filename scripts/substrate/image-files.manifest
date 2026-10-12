@@ -430,6 +430,7 @@ scripts/substrate/federation-relay/fed-resolve-client.d.ts.map	/usr/local/share/
 scripts/substrate/federation-relay/fed-resolve-client.js	/usr/local/share/substrate/super-repo/scripts/substrate/federation-relay/fed-resolve-client.js	0644	B
 scripts/substrate/federation-relay/fed-resolve-client.js.map	/usr/local/share/substrate/super-repo/scripts/substrate/federation-relay/fed-resolve-client.js.map	0644	B
 scripts/substrate/federation-relay/fed-resolve-client.ts	/usr/local/share/substrate/super-repo/scripts/substrate/federation-relay/fed-resolve-client.ts	0644	B
+scripts/substrate/federation-relay/ingress-auth.ts	/usr/local/share/substrate/super-repo/scripts/substrate/federation-relay/ingress-auth.ts	0644	B
 scripts/substrate/federation-relay/obsidian-passthrough.d.ts	/usr/local/share/substrate/super-repo/scripts/substrate/federation-relay/obsidian-passthrough.d.ts	0644	B
 scripts/substrate/federation-relay/obsidian-passthrough.d.ts.map	/usr/local/share/substrate/super-repo/scripts/substrate/federation-relay/obsidian-passthrough.d.ts.map	0644	B
 scripts/substrate/federation-relay/obsidian-passthrough.js	/usr/local/share/substrate/super-repo/scripts/substrate/federation-relay/obsidian-passthrough.js	0644	B
