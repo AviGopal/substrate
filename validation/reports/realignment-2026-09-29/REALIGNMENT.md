@@ -1348,7 +1348,13 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
    - **4b:** the `blockingWeight` row (an input to a floor). The 22 gate must-fails of the earlier recount drop out: `feature-compose.ts` stays closed, and the gates of `gap-to-feature.ts` move into its closed core (§15.4).
 
    Nothing else joins build 4 or the precondition list. Anything found later goes to the system as a need, or to the user as a ruling.
-5. **Build 7 (user amendment 10-10): the judge/walk split of goal-host `index.ts`.**
+5. **Build 7 (user amendment 10-10; re-scoped by user ruling on 10-12): the judge/walk split of goal-host `index.ts`, and a verdict corpus with the judge code opened behind it.**
+   - **The re-scope** (the user, as reported by qa: "follow the recommendations. stick to this schedule.").
+     - **A closed, append-only verdict corpus,** run continuously by the system. If a case flips, the system files a gap and stops crediting that verdict class.
+     - **The judge code is opened to the lane behind that corpus.** A judge change is admitted only if the corpus passes and no case is weakened.
+     - **The operator role afterwards** is to append cases, nothing else.
+     - **What this changes.** Containment moves from "closed code" to "pinned behaviour". It follows the user's ruling that "the system should not allow itself to be broken". It is a deliberate change to 15.7's "judges stay operator-held": the judge code opens, and what stays operator-held is the corpus.
+   - **The original definition** follows; it still applies to the split itself.
    - The reach judge and the verdict sinks move to a module that stays closed.
    - The walk mechanics move to a file that can open under the opening rule.
    - It is a pure move, with no behaviour change.
@@ -1380,7 +1386,7 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
 - **Builds 11 and 12, two operator fixes by explicit ruling** (the user, as reported by qa: "follow the recommendations. stick to this schedule.").
   - **Build 11** closes the reach judge's re-frame loophole for change goals. This is a residual of the reach-judge fix, in closed code. N6's second attempt exposed it.
   - **Build 12** fixes `substrateGap_write` failing on a missing required field, which breaks gap filing from walks; the probe re-run and N17 hit it.
-  - **Their shas: [TO FILL].**
+  - **Both are ON HOLD and not built,** by a later user ruling. Their defects are addressed through build 7's verdict corpus instead (below).
     - **The closed paths were closed before the code reached any node, so there was no window.** The split's new files under `test/drafter-split/`, plus 4 helpers, are meant to be CLOSED. qa closed them tighten-only before the mirror: node 1 at 2026-10-12T02:03:24Z (116 entries), compose2 at 02:06:30Z (117). The new files under `src/drafter/` and `test/drafter/` are OPEN by design, and every gate stays in files that were already closed.
     - **A brief pin drift** lasts until `03a52d81` is accepted. The remaining act adds only the 7 named F-tests and matches the pin.
 
@@ -1398,7 +1404,7 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
 - **Excluded:** rankers and throttles.
 - **Gate inputs** are protected through outcome-level fixtures: stored rows, plus attempt sequences driven to admit or refuse. So a change that alters what a gate sees fails as surely as a change to the gate itself.
 
-**Each build's must-fail is proven before the clock starts.** The proof is in isolated fixtures and in-container clone trees, never by modifying live state; §7 step 1 forbids supplying negative controls that way. It is then confirmed that the live gate loads the same protected files. **The bootstrap is capped at twelve:** the seven, plus builds 8 to 12, each added by explicit ruling. A thirteenth is a ruling, not a quiet addition.
+**Each build's must-fail is proven before the clock starts.** The proof is in isolated fixtures and in-container clone trees, never by modifying live state; §7 step 1 forbids supplying negative controls that way. It is then confirmed that the live gate loads the same protected files. **The bootstrap is capped at ten:** the seven, plus builds 8, 9 and 10, each added by explicit ruling. Builds 11 and 12 are **on hold** and were not built. An eleventh is a ruling, not a quiet addition.
 
 The builds' shas (development-vessel unless noted):
 
@@ -1726,7 +1732,7 @@ During the window this is watched by an **operator-side overdue watcher** over t
 
 ### 15.7 What this does not change
 
-- **Judges and trust stay operator-held.** "No change judges itself" (§10 item 1) applies in full.
+- **Judges and trust stay operator-held, with one recorded change (user ruling, 10-12).** Once build 7 lands, the reach judge's CODE opens to the lane behind a closed, append-only verdict corpus. What stays operator-held is the corpus. "No change judges itself" (§10 item 1) still applies: the corpus, which the lane cannot edit, judges every change to the judge.
 - **Security, locality and auth requirements stay** (§9.0).
-- **"Stop doing" applies outside the twelve bootstrap builds.**
+- **"Stop doing" applies outside the ten bootstrap builds.**
 - **An overdue stage pauses the evaluation, it does not close the opening** (15.6). The evaluation stops for one diagnosed fix at that stage, then resumes. The opening itself closes only by 15.5's rule, and the 7-day limit is its outer bound.
