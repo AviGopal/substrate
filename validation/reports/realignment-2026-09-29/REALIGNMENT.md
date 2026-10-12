@@ -1364,7 +1364,7 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
      - **The routing code opens to the lane behind its corpus,** on the same terms as the judge. Part 1's capture records routing inputs too.
      - **It is the same build 7, not a new bootstrap,** so the cap stays at ten. It does enlarge build 7's scope inside the same 2026-10-17 date.
      - **Re-estimated at about 46 builder-hours.**
-       - **With 1 builder, 2026-10-17 does not hold.** With 3 builders after Part 1, it holds for both openings, provided at least 30 pathless routing records exist. That rate is measured in the first 12 hours of capture and reported by about 2026-10-13T08:00Z.
+       - **With 1 builder, 2026-10-17 does not hold.** With 3 builders after Part 1, it holds for both openings, provided at least 30 pathless routing records exist. That rate is measured in the first 12 hours of capture and reported by about 2026-10-13T08:00Z. **Superseded by user ruling** (as reported by qa): the routing held-out guard is **200 real, delivered routing decisions of all kinds** (a 150/50 mix). The rare case of a file-less need routed to a file, about 1.3 a day fleet-wide, cannot reach a 30-record sub-floor by 2026-10-15, so it is covered by class-level corpus cases instead. The loosening rule is unchanged. Both openings target about 2026-10-14, and are due 2026-10-17.
        - **qa approved 3 builders** under the vital-work-resourced rule.
        - **Part 1 (capture)** has 2 builders, starts 2026-10-12T07:25Z, and is expected live at about 18:00–20:00Z the same day.
      - **Started earlier, with more builders** (the user, as reported by qa: "follow the recommendations. stick to this schedule.").
