@@ -1597,17 +1597,21 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
         - **At-dispatch check:** qa read node 1 before dispatching. The scope record had 111 entries and no holds, and the lane's own read showed 111 at 00:09:58Z. N6's window rule was met.
         - **It runs under four changes recorded since the probe:** the judge fix, suppression armed, the earn-in holds lifted, and the ratchet.
         - **Scoring:** only by events carrying its own dispatch or goal hash, reported plainly, with no follow-up fix in the same window.
-        - **Outcome of the dispatch:** terminal at about 00:22Z, **not reached.** N6's 72-hour gap-lineage window stays open, and it is scored by its own lineage. If an N6-lineage compose happens after the drafter split lands, the split is noted as a fifth change. **Why it was not reached: stage 0, under an LLM outage, so the result is CONFOUNDED.** No target was inferred, so there was no localization, no gap and no compose.
-          - **Why no target.** The reasoning call behind target inference timed out (two producers, each after 60 s), because the local LLM plane had exhausted its models at 23:46Z and 00:16Z.
+        - **Outcome of the dispatch:** terminal at about 00:22Z, **not reached.** N6's 72-hour gap-lineage window stays open, and it is scored by its own lineage. If an N6-lineage compose happens after the drafter split lands, the split is noted as a fifth change. **Why it was not reached: stage 0, under a reasoning-call timeout, so the result is CONFOUNDED.** No target was inferred, so there was no localization, no gap and no compose.
+          - **Why no target.** The reasoning call behind target inference timed out (two producers, each after 60 s), and nothing retried it. Free-tier models were exhausted at 23:46Z and 00:16Z, while paid capacity existed.
           - **How the outage was recorded.** An unavailable reasoning service is recorded as "no target" (confidence 0), which looks downstream exactly like "nothing to do". The next inference, 3 minutes later, took 6 s.
           - **The user's ruling** (as reported by qa: "follow the recommendations. stick to this schedule.").
             - **(1) One pre-registered re-run of N6.** It is dispatched only when the LLM plane is healthy at dispatch, checked read-only. If that condition is never met within its window, N6 is recorded as **UNMEASURED**, not refuted.
-            - **(2) Sealed need N17:** an unavailable reasoning step is recorded as "nothing to do" instead of "couldn't decide", so it is neither retried nor learned from. Latest-by 2026-10-15T12:00Z.
+              - **Dispatched** as re-run `4cf83389…` (pinned `3840753…`, with N6's text verbatim). The precondition was met at 2026-10-12T01:26:54Z: 1 non-empty inference and 0 nulls in the previous 15 minutes. The one budget refusal in that time belonged to another dispatch's own cap.
+            - **(2) Sealed need N17:** an unavailable reasoning step is recorded as "nothing to do" instead of "couldn't decide", so it is neither retried nor learned from. Latest-by 2026-10-15T12:00Z. **Dispatched** as `41c1e245…` (pinned `41bef8b7…`), running alongside N6's re-run. Each is attributed by its own lineage.
           - **What remains of the prediction.** Stage 0 was the pre-registered prediction, but this run cannot test it.
           - **Across the needs, "stage 0" is two classes, not one** (journals 2026-10-09 to 10-12, read-only).
             - **(a) A confident WRONG target.** N1, N3, the probe and its re-run, N10, N5, N11 and N14 all got confident, non-empty targets (confidence 0.6–0.9). They then failed on a wrong target or site, a target no producer serves, a compose refusal, or a field error. This is the capability class.
             - **(b) An unavailable reasoning step recorded as "no target".** Only N6 is in this class. It is N17's class.
-          - **The LLM plane is degraded continuously.** Over 3 days: 1,722 model-exhausted, 818 HTTP 402 and 268 HTTP 429 responses, every hour (free-tier caps), plus bursty refusals at the per-dispatch 400K-token cap. Fleet-wide, 4 of 11 empty inferences were LLM nulls.
+          - **The LLM plane is not degraded; the nulls come from routing, timeouts and budget.** This is the user's correction: "The plane is not truely degraded. There is an openrouter key with quota."
+            - The model-exhausted, 402 and 429 counts in the journals come from free and TEE models, and paid capacity exists.
+            - The nulls come from how calls are routed and bounded: two 60 s timeouts, no retry after 3 s, and the per-dispatch 400K-token cap. That is exactly N17's class.
+            - Fleet-wide, 4 of 11 empty inferences were such nulls.
           - **The walk** picked unrelated, pre-existing gap-closing activities, and the judge rejected their only output.
           - **The floor fallback** ran 0 tools.
           - **Separately, not N6:** once the hold lifted, the lane composed on an unrelated armed gap. It is attributed to that gap's own lineage. Its own check came back red, and nothing landed.
