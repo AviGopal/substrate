@@ -210,9 +210,10 @@ Then run the `claude mcp add …` line it printed (the cockpit needs node/npx an
 a first cockpit call (for example `registry_query`), and read the full verdict:
 
 ```bash install:standalone
-# The exit status reflects `usable`; `connected` passes once a cockpit call has reached
-# the fleet, and reads `unknown` before that.
-docker exec substrate-live substrate-status
+# Waits for `usable`: a pull-sync convergence right after install reads as waiting, not as a
+# failure. The exit status reflects `usable`. `connected` passes once a cockpit call has
+# reached the fleet, and reads `unknown` before that.
+docker exec substrate-live substrate-status --wait usable
 ```
 
 The image prints the installer, and `sh` runs it on the host. It runs the manual sequence
