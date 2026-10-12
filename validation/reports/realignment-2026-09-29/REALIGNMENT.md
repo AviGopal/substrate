@@ -1377,6 +1377,10 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
   - **How it lands.** It lands with its scope entries in the same act, which is the `src/judge/` lesson.
   - **Timing.** It lands after N6's dispatch is terminal, so it does not change compose behaviour mid-measurement (law 12).
   - **Pushed by the user:** development-vessel `9cd7532a` and super-repo `03a52d81`.
+- **Builds 11 and 12, two operator fixes by explicit ruling** (the user, as reported by qa: "follow the recommendations. stick to this schedule.").
+  - **Build 11** closes the reach judge's re-frame loophole for change goals. This is a residual of the reach-judge fix, in closed code. N6's second attempt exposed it.
+  - **Build 12** fixes `substrateGap_write` failing on a missing required field, which breaks gap filing from walks; the probe re-run and N17 hit it.
+  - **Their shas: [TO FILL].**
     - **The closed paths were closed before the code reached any node, so there was no window.** The split's new files under `test/drafter-split/`, plus 4 helpers, are meant to be CLOSED. qa closed them tighten-only before the mirror: node 1 at 2026-10-12T02:03:24Z (116 entries), compose2 at 02:06:30Z (117). The new files under `src/drafter/` and `test/drafter/` are OPEN by design, and every gate stays in files that were already closed.
     - **A brief pin drift** lasts until `03a52d81` is accepted. The remaining act adds only the 7 named F-tests and matches the pin.
 
@@ -1394,7 +1398,7 @@ Seven operator bootstrap builds are bounded here. Builds 1–6 come before the o
 - **Excluded:** rankers and throttles.
 - **Gate inputs** are protected through outcome-level fixtures: stored rows, plus attempt sequences driven to admit or refuse. So a change that alters what a gate sees fails as surely as a change to the gate itself.
 
-**Each build's must-fail is proven before the clock starts.** The proof is in isolated fixtures and in-container clone trees, never by modifying live state; §7 step 1 forbids supplying negative controls that way. It is then confirmed that the live gate loads the same protected files. **The bootstrap is capped at ten:** the seven, plus builds 8, 9 and 10, each added by explicit ruling. An eleventh is a ruling, not a quiet addition.
+**Each build's must-fail is proven before the clock starts.** The proof is in isolated fixtures and in-container clone trees, never by modifying live state; §7 step 1 forbids supplying negative controls that way. It is then confirmed that the live gate loads the same protected files. **The bootstrap is capped at twelve:** the seven, plus builds 8 to 12, each added by explicit ruling. A thirteenth is a ruling, not a quiet addition.
 
 The builds' shas (development-vessel unless noted):
 
@@ -1610,6 +1614,8 @@ The probe passes only if a system-authored gap appears **and** lands. A hand-aut
           - **The user's ruling** (as reported by qa: "follow the recommendations. stick to this schedule.").
             - **(1) One pre-registered re-run of N6.** It is dispatched only when the LLM plane is healthy at dispatch, checked read-only. If that condition is never met within its window, N6 is recorded as **UNMEASURED**, not refuted.
               - **Dispatched** as re-run `4cf83389…` (pinned `3840753…`, with N6's text verbatim). The precondition was met at 2026-10-12T01:26:54Z: 1 non-empty inference and 0 nulls in the previous 15 minutes. The one budget refusal in that time belonged to another dispatch's own cap.
+              - **Result: reached=yes, a FALSE POSITIVE. N6 is NOT PASS,** and its window stays open. The walk re-framed its change goal onto an alternative target (`memoryNote_write`) and wrote a note restating the need.
+              - **The write audit from the pre-registration:** the note, and any human-surface write, are retired (L12).
             - **(2) Sealed need N17:** an unavailable reasoning step is recorded as "nothing to do" instead of "couldn't decide", so it is neither retried nor learned from. Latest-by 2026-10-15T12:00Z. **Dispatched** as `41c1e245…` (pinned `41bef8b7…`), running alongside N6's re-run. Each is attributed by its own lineage.
           - **What remains of the prediction.** Stage 0 was the pre-registered prediction, but this run cannot test it.
           - **Across the needs, "stage 0" is two classes, not one** (journals 2026-10-09 to 10-12, read-only).
@@ -1722,5 +1728,5 @@ During the window this is watched by an **operator-side overdue watcher** over t
 
 - **Judges and trust stay operator-held.** "No change judges itself" (§10 item 1) applies in full.
 - **Security, locality and auth requirements stay** (§9.0).
-- **"Stop doing" applies outside the ten bootstrap builds.**
+- **"Stop doing" applies outside the twelve bootstrap builds.**
 - **An overdue stage pauses the evaluation, it does not close the opening** (15.6). The evaluation stops for one diagnosed fix at that stage, then resumes. The opening itself closes only by 15.5's rule, and the 7-day limit is its outer bound.
