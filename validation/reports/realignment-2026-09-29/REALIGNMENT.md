@@ -1226,7 +1226,7 @@ Build 7 (the judge/walk split, user amendment 10-10) does not gate the opening. 
 
 **How the closed loop is measured, pre-registered on 2026-10-13 (qa, sealed with the coordinator).** The loop goal is chosen by rule, and named before any surgery or re-dispatch. It must be a REAL goal (user- or system-originated, not written for the test), blocked within the last 7 days, where:
 - **(a)** its block is caused by a gap the system can recognise from its own trace: a named missing producer, a refusal, or a failing check;
-- **(b)** closing that gap needs one change at a single site the system may write to;
+- **(b)** closing that gap needs one change at a single site the system may write to. Either a lane commit or a system-made learned or registry close counts (composing existing producers, or binding a shape), provided the re-run reaches. **Guard (C-provenance-1):** the close must go through a sanctioned write path: a lane landing, the ribosome, an activity mint, or a registry advertisement. A walk that writes arbitrary pool or gap rows does not count, and a write to a trust root voids the run;
 - **(c)** its goal text is available verbatim.
 
 Ties go to the most recent goal. The leading candidate is the federation-report goal (no producer for its output shape; 3 hollow runs on one goal hash).
