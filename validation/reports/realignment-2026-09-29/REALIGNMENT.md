@@ -1250,6 +1250,21 @@ At 2026-10-12T19:40Z they read: 238 operator commits against 2 system-authored c
 - **If stage 1 fails because C-check-1's supply prompt yields an inadmissible check,** fixing that prompt is **allowed once.** It is a correction to an approved build, and it is counted as an operator act.
 - **A second failure** means the generator approach is wrong, not under-tuned, and it is not tuned further.
 
+**The priority path, as it went (2026-10-12/13):**
+- **Stage 1 of region-lint did not arm.** At 2026-10-13T01:34Z the system's own check supply dispatched a test-writing goal whose text carried C-check-1's instruction to run the consumer. That shows the prompt reached the system; it does not yet show the generator works by effect. The draft failed at about 01:44Z, nothing was armed, and the gap still reads `goal_dispatched`.
+- **Two system defects explain it.**
+  - **(A)** Check supply never re-reads a failed dispatch, so the gap stays `goal_dispatched` forever.
+  - **(B)** The check file is fixed per gap and cannot be appended to, so a reopened gap's existing file refuses creation. The user's reopen at 2026-10-12T20:55Z therefore could not re-arm the gap: **an operator act whose effect was blocked by design.**
+- **The path was rerouted through (A) at about 2026-10-13T03:00Z,** by evidence, with no operator fix.
+  - (A) is admitted and armed by its own store check, but it is **stalled**. 26 failed attempts have reached the 24-hour backoff cap, so the next attempt is at about 2026-10-13T20:42Z and then daily.
+  - Its drafts are refused as no-effect regions, because they overlap a failed attempt's edits. The exit from that refusal (escalation) is skipped by the hold `pwt-live-tree-writes`, whose review date is 2026-10-17T00:41Z.
+- **The 10-18 target is AT RISK on both paths. The user's ruling** (as reported by qa: "follow the recommendations. stick to this schedule."):
+  - **wait for the system:** (A)'s next attempt at about 2026-10-13T20:42Z, then the `pwt-live-tree-writes` hold's own review on 2026-10-17;
+  - **no early lift of that hold;**
+  - **no operator correction for re-arming a reopened gap;**
+  - **if the target is missed,** it is reported **MISSED at 2026-10-18T07:12Z** and not moved (closer-only).
+- **The class need named:** "a gap whose only exit is a held path should surface as blocked-by-hold, naming the hold's review_by, instead of retrying daily into the same refusal."
+
 **A security fix is in flight** (a federation ingress hardening). It does not gate the priority path.
 
 **New need dispatches are paused** until build 7's routing opening is live, because the refutations share a routing root. N7 is reported MISSED at 2026-10-13T00:00Z, not re-queued.
