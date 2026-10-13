@@ -1281,6 +1281,17 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
 
   Slack is thin at D7. If D6 slips past 2026-10-15T12:00Z, the options go to the user then, not on 10-18.
 
+  **D1 was MET early.** S1, S3, S2 (report-only) and C-window-1 were pushed at 2026-10-13T05:59:48Z (development-vessel `90289225..72e69c9f`) and measured LIVE on node 1 and compose2 at 06:20Z (the hub earlier), about 13 hours ahead of 19:30Z. **The earlier dates** (closer-only; each replaces the old one only when it is measured):
+
+  | # | Link | New date |
+  |---|---|---|
+  | D2 | S1 shows waiting > 0 | by 2026-10-13T12:00Z |
+  | D3 | S2's report reviewed, and the user's filing flip | by 2026-10-13T18:00Z |
+  | D4 | the user's re-run flip, once dry-run redispatch lines appear | by 2026-10-13T22:00Z |
+  | D5 | the loop goal's next run on its rhythm | or by 2026-10-14T06:00Z |
+
+  D6–D10 are unchanged until measured.
+
   **Added by qa, steered toward autonomy:**
   - **D10, durability:** the same loop machinery closes a SECOND, different real goal with ZERO new surgery, **by 2026-10-21** (closer-only). It separates "we built a loop" from "the system closes loops".
   - **G7, inverse generality:** every surgery must act on input that is not the federation goal, and must name its readers. A surgery that would do nothing for any other goal is staged.
