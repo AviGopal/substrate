@@ -1290,7 +1290,17 @@ At 2026-10-12T19:40Z they read: 238 operator commits against 2 system-authored c
   - **Pre-registered on 2026-10-13, before (A)'s attempt at about 20:42Z:**
     - **Success:** (A)'s next failure CLASS MOVES: a different TypeScript code, region or assertion delta. A landing is the strong success.
     - **Failure:** the failure is identical.
-    - **The docs reading:** a move counts only if it is to a LATER stage (for example, typecheck now passes and an assertion fails). A merely different failure at the same stage is noise, not progress.
+    - **The ladder, adopted by qa and sealed by the coordinator.** A move counts only if it is to a LATER rung:
+      1. grounding;
+      2. region accepted;
+      3. typecheck passes;
+      4. the own-check assertion moves toward red → green;
+      5. it lands;
+      6. the consumer check (a)/(b)/(c).
+
+      A sideways move at the same rung is noise.
+    - **A weak rung.** "Region accepted" can be produced by the operators' lock voiding rather than by the system learning. A pass that rests only on that rung is WEAK, and is read through the trace's `locks_voided`.
+    - **The hold.** The review must show, by test, that live-tree writes stay held exactly as before; only clone reads for grounding are decoupled. This narrows the hold's effect to its stated purpose, and the hold record itself is unchanged.
   - **Its shas: [TO FILL].**
 - **The class need named:** "a gap whose only exit is a held path should surface as blocked-by-hold, naming the hold's review_by, instead of retrying daily into the same refusal."
 
