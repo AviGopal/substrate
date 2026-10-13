@@ -1377,6 +1377,48 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
     - **The lane has made 0 system commits since 09:11Z.** Every filed deficiency is an unknown with no repair route, or is waiting on the package.
     - **D5:** the loop goal has not run since about 06:40Z, so there is no tally and no trace yet. That gap is within its historical cadence. **Whether its runs show a missing producer or wrong content is still unknown.** qa's watcher reports the first run, or reports D5 missed at 10-14T06:00Z.
     - **Pre-registered:** if the loop goal has not run by 2026-10-13T18:00Z (about 11 hours, roughly twice its cadence), that is C-starve-1 recurring on the one rhythm family that matters. It is **filed** as a gap (create-only, run by the user) and **never dispatched by hand.** A manual dispatch would void the "zero operator hands" grading for D5 through D9.
+  - **D5 MET on 2026-10-13, well ahead of its date.** The loop goal ran by its own rhythm, with no operator hands.
+    - **Correction:** an earlier relay placed the run on the wrong node. That was a text match, not a dispatch.
+    - **Correction, the label:** the loop goal's label `f7145bc8` was an operator hashing error. The sealed goal text is unchanged, and is byte-identical to what the system dispatches. It is re-hashed under the system's own goal hash, and the identity correction is in a sealed, host-only addendum. The frozen files and the answer key are untouched. Even the capture taken at pre-registration time hashes to the same corrected value, so the label came from a separate operator computation whose input is not on disk. **Its origin is unexplained, and its impact is nil.**
+    - **It is tallied, but its runs split across two classes, each under the 3-run minimum,** so D6 waits for its next run. One more run in the larger class files the gap, inside D6's date. A class-agnostic rule would be a decision for the user, raised only if the split persists.
+  - **Reading at 2026-10-13T16:20Z: the lane is landing system checks again.** Two landed after a 5.5-hour quiet spell, and both have the empty base (6 of 6 system commits today).
+    - **Case C-inverted-1: a check that encodes the defect as the expected behaviour.** In goal-host `b116eb9`, the gap is that the verifier generator mints only quantitative families. The check asserts that a non-quantitative goal gets **no** family, which is true at HEAD. The arm step refused it, correctly, so the detector exists. This is a supply-quality case, and the landing was wasted.
+    - **The first behaviour-level system check:** development-vessel `aedc761e`. It intercepts outbound requests, runs the resolver, and asserts that no escalation is posted. It is **armed** (class 2), but its edit site is a **protected** file, so the lane can never land its fix.
+      - **Case C-armscope-1: arming skips the autonomy-scope refusal that dispatch applies.** Check supply refused a protected site for the boredom gap, but armed this one. Arming must apply the same scope refusal as dispatch. Filed as a gap for the system.
+    - **The package:** an apparent 17-failure blocker was a staging artefact. A fresh clone gives 0 new failures. **It was pushed at 2026-10-13T16:25Z,** and its acceptance on the gated nodes is pending. The freeze is at 18:00Z regardless.
+  - **THE FREEZE STARTED at 2026-10-13T18:00Z (the user's bound), measured.**
+    - **Live at the freeze, on both gated nodes:** the whole D7 package, which is the additive registration rule, the producer-contract judge mode with its classifier branch, and the producer dispatcher. It was pushed at 16:25Z, with the restarts at 16:57Z and 17:02Z. Nothing from the package was unfinished, so no "not live" gap is owed.
+    - **The must-pass item ran (17:09Z),** with correct skips and one send. **That send was a harm path:** it targeted a producer that is deliberately contained. Discovery lists only producers that are up, so a contained producer reads as a missing one. No draft and no landing happened.
+    - **The freeze held because the user decided.** The class fix is a design omission in a new build, not a regression. It proceeds because the user ruled "contain then fix": a blocker found inside the package goes to the user as a decision.
+    - **Law 6, the generator:** nothing minted "discovery conflates contained with missing" from the containment itself. Containment is a unit mask, not a shaped impulse the walk can read (law 1). That missing generator is a gap for the system.
+    - **Containment (user-cleared, "contain then fix"):** the producer dispatch is switched off on all three nodes (verified at 17:38Z). A scope hold protects the contained producer's file, with review by 10-20. It lifts when the contained producer's own fix converges and the class fix is live.
+    - **Open exception-(a) items at the freeze** (our own regressions, still allowed):
+      1. **The containment class fix:** a producer that is declared but not advertised counts as contained, not missing, with a guard on the author route. It is in review, and pushes after containment completes.
+      2. **The long-goal tally still misses some cut rows on one node:** a carry-back fix is scheduled.
+      3. **Siting by activity id:** a candidate gap filed for the system, not built.
+    - **Not exception (a):** the fetch-restore nit is in a system-authored check, so it is system work. The class-split question is a user decision, raised only if the next loop run keeps the split.
+    - **Side finding:** test-hygiene leaks. Test runs leave temporary directories behind, and an old injection-test fixture wrote inert, never-executed artefacts into the live tree. One create-only gap is filed for the system.
+    - **The re-enable protocol, pre-registered.** The producer dispatch goes back on **only** as a recorded user act, and only once both of these hold:
+      - the class fix is live on both gated nodes;
+      - a live must-fail is observed: with dispatch still off, a read-only dry evaluation (or the dispatcher's own skip line on a tick) shows the contained shape refused as "declared but not advertised". If no tick shows it, a read-only in-container run of the route test substitutes.
+
+      Then the user flips it, verified by read-back. The class fix's estimate is live between 19:30Z and 20:15Z, ahead of the loop goal's next run. If it slips past that run, it is said then, and D7's slack is counted from D6's filing.
+    - **D-state at the freeze:** D3 met; **D4 likely missed** (reported at 22:00Z); D5 met; D6 waits on the loop goal's next run; **D7's route is live, but its dispatch is off until the class fix converges.**
+    - **D7, declared now under the closer-only rule: about 10–20%, under 50%, and told to the user tonight.** The rough odds for each step:
+
+      | Step | Odds |
+      |---|---|
+      | Class fix live | 0.85 |
+      | Must-fail observed, and the user flips the dispatch | 0.9 |
+      | D6 files: the class split breaks toward the larger class within about 2 runs | 0.7 |
+      | **The loop goal's deficiency is a missing-producer kind, not wrong content (unmeasured)** | **about 0.5** |
+      | The author route drafts a working resolver, and the additive registration lands | 0.4 |
+      | The producer-contract check turns green, and settlement stamps it | 0.8 |
+
+      The lane's gap-closing reach today was 0 of 36, and this step is a create plus wiring. The date does not move. If it misses, it is reported missed at its date.
+    - **Filed for the system (create-only, run by the user):**
+      - **C-basesha-1**, which was unowned until now: the empty base is on 6 of 6 system commits today;
+      - **the containment-visibility gap.**
   - **D5 is on track:** its predicate is the loop goal's next run on its rhythm. **D6's risk is named as case C-listwindow-1:** runs older than R2's 200-row listing window are never tallied, so the loop goal's candidate needs about 3 new runs after the long-goal fix. That is plausibly 10-14 around midday, inside D6's date.
   - **C-checkpoint-1 repair, live control passed in all three steps:**
     1. The pre-chunk checkpoint was discarded.
@@ -1426,7 +1468,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
     - **Case C-invented-1: a check predicate not derived from the gap's evidence. The invention is upstream, in the check-supply goal builder.** For a code edit site, the builder's goal template carries a literal example assertion, `["name"]`, as the symbol that must exist. This gap's evidence names no symbol at all, so the test writer followed the goal and used the placeholder. The semantic gate passed it "as specified in the goal". The goal-host landed-probe then ended the arming dispatch with `reached=true`, so the reach statistic counts this hollow arming as a reach. The predicate was armed `class2` at 08:41Z.
       - **The right behaviour belongs to the C-provenance family:** when the evidence names no falsifiable symbol or behaviour, the builder refuses to arm, loudly, as falsifier unknown. It does not guess.
     - **Pre-registered before any close:** a close of this gap that adds an export nothing reads is **not** a verified system repair, and counts toward no D-link.
-      - **The predicted close landed, and is disqualified as pre-registered.** Development-vessel `b9efd761` (2026-10-13T09:03Z) adds `export function name()`, which returns a constant. Its only reader is the check itself. The resolver's execution error is untouched. **The gap did close** (2026-10-13T09:08:18Z), so this is **the first system close, and it is disqualified as pre-registered.** It is not a verified repair and counts toward no D-link. **The user reopened and disarmed the gap at 2026-10-13T09:40:51Z,** recording the hollow commit as reopen evidence. The first system close is reversed as disqualified. The expected next reading is check supply recording no anchor for this gap, under the C-invented-1 repair.
+      - **The predicted close landed, and is disqualified as pre-registered.** Development-vessel `b9efd761` (2026-10-13T09:03Z) adds `export function name()`, which returns a constant. Its only reader is the check itself. The resolver's execution error is untouched. **The gap did close** (2026-10-13T09:08:18Z), so this is **the first system close, and it is disqualified as pre-registered.** It is not a verified repair and counts toward no D-link. **The user reopened and disarmed the gap at 2026-10-13T09:40:51Z,** recording the hollow commit as reopen evidence. The first system close is reversed as disqualified: the gap state was reversed, and the source change stands, unread and harmless. The expected next reading is check supply recording no anchor for this gap, under the C-invented-1 repair.
     - **The first repair build was sent back for changes.** CamelCase shape names, and plain words that happen to match exports, would also have been fake anchors. The rule: a symbol anchor must resolve in the edit site, and the goal asks for that symbol's **behaviour**, never its existence.
       - **The reworked repair** (development-vessel `620df994`) was pushed at 2026-10-13T09:23Z. An arming goal now names only what the evidence names, and when the evidence names nothing there is no goal. It is operator surgery on a D-path link.
     - **Law 6, three questions:**
@@ -1452,7 +1494,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
 - **The loop goal, RE-SELECTED on 2026-10-13** (recorded as a re-selection, not a first choice).
   - **Why it changed.** The first selection, the `federation_verification_report` goal, was rejected because its transport vessel is masked on node 1, so its block is placement rather than a recognisable gap.
   - **The rule was amended first.** L2 now covers content failures (the user's option 2), and the selection rule was amended BEFORE the new goal was chosen.
-  - **The new loop goal:** `f7145bc8`, a system-originated rhythm goal whose verbatim text and hash the coordinator holds.
+  - **The new loop goal:** `f7145bc8` (a label error; re-hashed under the system's own goal hash, and the identity correction is in a sealed, host-only addendum), a system-originated rhythm goal whose verbatim text and hash the coordinator holds.
   - **Its record:** 30 not reached and 2 reached in 7 days. The judge's shared deficiency is that its target output is never produced, and no producer for that output exists anywhere.
   - **The no-staging rule binds:** nothing is built for this goal, and its expected close is kept out of the tree until it is scored.
   - **S2 is redesigned** as a content-failure recognition tick.
