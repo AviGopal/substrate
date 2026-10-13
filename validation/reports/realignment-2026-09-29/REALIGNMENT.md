@@ -29,6 +29,8 @@
 > **Amended 2026-10-03 (architecture review):** §13 records whether the method and the fixes adhere to the architecture. The fixes mostly adhere in behavior. The method bypasses dispatch-don't-edit and leaves the operator more load-bearing, and many fixes hard-code policy instead of using `landingAdmissionPolicy` or tuning rows, keep calibration with no reader, and add stores before proving reuse. It binds the corrections.
 >
 > **Amended again 2026-10-02 (user rulings on authority):** §2.1 item 6, §7 step 9 and §10 no longer define a human-governed boundary. The system changes its own limits on evidence applied by the previously accepted version; humans are informed, not gating (§10 item 1).
+>
+> **Amended 2026-10-13:** §16 states the primary objectives in the user's words: operable by humans (setup, maintenance, self-updating, configuration and secret distribution simple for a person) and decentralised in any constellation of vessels. It gives measurable criteria (O1–O6, N1–N7) with operator baselines as context, and the path through existing plan items. It is a target, not a status, and grants no authority.
 
 ### Review disposition (09-29 revision)
 
@@ -2180,3 +2182,64 @@ During the window this is watched by an **operator-side overdue watcher** over t
 - **Security, locality and auth requirements stay** (§9.0).
 - **"Stop doing" applies outside the ten bootstrap builds.**
 - **An overdue stage pauses the evaluation, it does not close the opening** (15.6). The evaluation stops for one diagnosed fix at that stage, then resumes. The opening itself closes only by 15.5's rule, and the 7-day limit is its outer bound.
+
+## 16. Amendment (2026-10-13): operable by humans, decentralised in any constellation
+
+**Basis.** On 2026-10-13 the user stated the primary objectives in these words: "the container, container vessel management, self-updating, configuration, secret distribution and the like are simple for humans to manage. Easy to maintain, and straightforward to set up … We should establish that the system is distributed and decentralized. It should be able to operate in any constellation of vessels."
+
+§1 already names a "decentralised fleet" and says "every shape is reachable from every node over p2p". Neither has a measurable form, and neither says what operating the system costs a human. This amendment supplies both. It gathers rulings already made into one expectation:
+- **10-10:** one secure peer channel inside and between trust groups.
+- **10-12, the hybrid:** operators land only overlay inbound auth; the system earns the rest.
+- **10-12:** the hub is not over-protected, and protection lives in authentication.
+- **10-13:** plug-and-play through the identity-discovery namespaces, with no hardcoded peering.
+- **10-13:** the surface can show anything that becomes important.
+
+**This is a target, not a status. Most criteria below fail today.** The baselines are the network fork's read-only measurements of 10-12 and 10-13. They come from operator instruments, so under §14's rule of measurement they are context, not acceptance. Acceptance is measured by the system's own evaluator rows and by `federation-probe-tick` once its amendments (A1–A4, below) exist.
+
+### 16.1 The two objectives, and how they relate
+
+1. **Operable by humans.** Setting up, maintaining, updating, configuring and distributing secrets to a container or vessel is simple for a person to do and to understand.
+2. **Decentralised in any constellation.** Any set of vessels runs the whole loop with whatever peers it can reach. That covers one container, a hub with spokes, peers without a hub, a host-run vessel, and a node behind NAT or a corporate proxy.
+
+These are one objective seen from two sides. Hardcoded peering is both a decentralisation defect and an operability defect: every pinned address is something a human must know, set, keep current and debug. The measure for both is the same. Count the inputs a human must supply or maintain, and the network facts that live outside discovery and identity. Both should trend to the join anchor alone.
+
+### 16.2 What "simple for humans" means, measurably
+
+| # | Criterion | Exit | Baseline (10-12/13, operator-measured) |
+|---|---|---|---|
+| O1 | **Setup is one input** | Any profile joins with a single join token (discovery + key), and on a fresh volume reaches a held reservation and a reached goal with no further input. J1, the join time from install to the first held reservation, is reported. | J1 not measured. The README states 2 inputs for spoke, surface and compute, and 3 for hub. Joins are proven only in CI acceptance (§7). |
+| O2 | **No hand-maintained network facts** | H1 = 0 beyond the join anchor. H1 counts pinned peer addresses read at runtime, per node: hub URLs, peer endpoints, relay addresses, derived public ports and IP allowlists. | Per node: A 2, B 5, C 4, hub 2. Source: the network fork's census, 2026-10-12 ~18Z and 10-13. It read only the named non-secret peering keys in each node's runtime env file and compose files, read-only. Code defaults that would re-pin an address are also counted. |
+| O3 | **Self-updating needs no human step** | A new accepted image or commit reaches every node by itself, including the components baked into the image (the federation transport and relay), and is verified at the consumer. | Pull-sync converges `/workspace` and `/vessels`, but image-baked units need a recreate or a hand install (route C, 10-13). |
+| O4 | **Configuration is shaped and observable** | Behavioural configuration is a shaped record read at use time (law 1). The few bootstrap inputs are listed in one place, and the system reports their effective values (names only for secrets). | Hub endpoints are derived from install inputs by port arithmetic, not discovered. One behavioural policy record lacked trust-root protection until it was fixed before first use. |
+| O5 | **Secrets reach where they are needed without a human copying them** | A key is issued once by the namespace's identity and travels only on authenticated channels. No secret is read by an agent, printed, or forwarded to a node that cannot validate it. | Keys are copied by hand into env files. Secret distribution has known open defects, tracked as gaps. |
+| O6 | **Failures say what is wrong** | "Looks healthy, federates nothing" cannot happen silently. An unreachable anchor, route or reservation is a reported state with a cause, on the node and on the surface. | The transport can report a reservation its callers cannot use (gap filed 10-12). Nodes advertise anchors and routes nobody can dial (A4). A node with no overlay membership reports nothing about it. |
+
+### 16.3 What "decentralised in any constellation" means, measurably
+
+Each criterion is falsified by taking something away. These are FEDERATION.md's *Design intent* falsifiers, made acceptance criteria here. They are labelled N1–N7, because §15 already uses D1–D10 for the loop's dated links.
+
+| # | Take away | The expectation holds when | Baseline |
+|---|---|---|---|
+| N1 | any one member | every other member keeps reaching goals, and work the lost member held is not silently dropped | Goals on a lost node are lost. A synchronous remote `goal_execution` is lost outright. |
+| N2 | the hub, or the link to it | members keep reaching goals with what they hold locally, and reconcile on reconnect | Spokes resolve identity, traces and model arms on the hub, and freeze without it. |
+| N3 | a relay | members with a direct path keep it; relayed members move to another relay | One relay. No direct path has ever formed (hole-punch successes 0). Two reservation lapses of about 50 minutes each were observed on 10-12. |
+| N4 | a route to an unreachable producer | callers learn it is unreachable promptly and pick another producer, rather than waiting out a timeout | On one node, 3 of 4 advertised producers of one shape were undialable, one of them a 25 s silent drop (10-12). The surface probes dead goal-execution rows every 30 s (10-13). |
+| N5 | the public network between members | nothing that crossed it was readable or usable in transit | Transport hardening is incomplete, tracked under the overlay inbound-auth exception and filed gaps. |
+| N6 | the operator's own network shape | the same image joins from behind NAT, a corporate proxy that allows only 443, or a TLS-inspecting proxy | Untested. A read of the code (10-13) predicts that a proxy-only network cannot join the overlay today; tracked as a later decision. |
+| N7 | membership | every running node's vessels are reachable over the overlay | One of three local nodes, plus the hub. Observed 10-09 and 10-12 by reading each node's transport unit state and transport health; on two nodes the transport unit was not running. |
+
+### 16.4 How this is reached: existing plan items, and what is not yet planned
+
+Items 1, 2, 4 and 5 continue earlier attempts or filed gaps. Items 3 and 6 are partly unplanned, and say so:
+1. **One authenticated overlay** for all cross-node traffic: the overlay inbound-auth exception (the hybrid ruling), exit E1–E5. This is the only item already cleared for operator hands.
+2. **Honest routes and anchors:** no derived public endpoints, rows and `/bootstrap` anchors advertised only after reachability is observed, and route choice and outcome recorded. These are the two gaps filed 10-12, plus the four `federation-probe-tick` amendments (A1 ingress coverage, A2 runtime endpoints, A3 phantom reservation, A4 undialable routes and anchors).
+3. **Plug-and-play anchors** learned from peers over the overlay, in place of pinned hub and peer discovery endpoints. Discovery's no-local-producer path uses the local transport, not HTTP to pinned peers. This continues `openspec/changes/2026-07-19-relay-findability-replication` (its item 3, "honest `/bootstrap`": refuse loopback anchors) and the multiaddr join, which already learns anchors through a peer (FEDERATION.md, *Joining by multiaddr*). **Replacing the pinned peer endpoints is not yet planned; it is a candidate for a system gap.**
+4. **Cross-namespace admission,** so separate trust groups are peers on one channel (10-10 ruling), not separate networks.
+5. **Constellation coverage:** overlay membership for the two local nodes without it, after the auth exit; an overlay and anchor reachable through a 443-only proxy (N6, a later decision); and the host-run vessel sidecar with a local egress (the metabob-mcp conformance requirements C1–C9).
+6. **Removal of single points:** work that survives its node (N1), spokes that work without the hub (N2), and a second relay (N3). The design exists (SUBSTRATE_AS_NETWORK §3, §5, §6). **None of this is yet planned as a plan item or a filed gap; these are candidates for system gaps,** not continuations of an earlier attempt.
+
+**Who builds it.** Under §15's freeze (from 18:00Z on 10-13), items 2–6 are **system work**, not an operator build list. Item 1 is the user-approved operator exception, already cleared. Everything after it lives in autonomy-excluded paths (`scripts/substrate/`, `repos/discovery-vessel/`, `repos/identity-vessel/`, goal-host routing), so it becomes the system's work only when §7 step 9's scope earn-in names those paths as eligible. Until then, the system detects these classes (`federation-probe-tick`) and cannot repair them. That is the year-long recurrence this amendment exists to end.
+
+### 16.5 What it does not change
+
+It grants no authority and does not reorder §7. It does not reopen the 10-05 ruling: operators still stop, except for harm, security exceptions and intractable blockers. It states the end condition that the network and operations work leads to, so that "decentralised" and "easy to run" are never again declared from a diagram, a single join, or an operator's measurement.
