@@ -1292,6 +1292,12 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
 
   D6–D10 are unchanged until measured.
 
+  **D2 was MET at 2026-10-13T06:30:16Z,** 5.5 hours ahead of its date. The first goal-reach tick on the new code logged `linked_filed=1 … goals=78 unlinked=70 waiting=1 redispatched=0`: S1 linked a walk-filed gap back to its goal, and that goal is now waiting.
+
+  **A standing finding: settlement cannot measure most class-2 checks.** Node 1's gap sweep reads "unknown" for 15–19 of every 25 checks ("detection sha unknown"). That was true before D1 as well as after, so it is the baseline, not a D1 effect. It is recorded as case **C-measure-1** (measurement starvation in settlement), for the system after build 7's routing opening.
+  - **The risk:** it can bite D7 and D8 if the loop goal's gap lands in that bucket.
+  - **The rule:** an "unknown" settlement counts as NOT verified. It is never a pass.
+
   **Added by qa, steered toward autonomy:**
   - **D10, durability:** the same loop machinery closes a SECOND, different real goal with ZERO new surgery, **by 2026-10-21** (closer-only). It separates "we built a loop" from "the system closes loops".
   - **G7, inverse generality:** every surgery must act on input that is not the federation goal, and must name its readers. A surgery that would do nothing for any other goal is staged.
