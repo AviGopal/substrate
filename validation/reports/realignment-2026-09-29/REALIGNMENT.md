@@ -1224,6 +1224,15 @@ Tags: [V] verified in git, code or the live gap store on 10-03. [D] taken from a
 
 Build 7 (the judge/walk split, user amendment 10-10) does not gate the opening. It runs in parallel on its own dates (15.3). When it lands, it widens what can open later, under the same opening rule.
 
+**A fourth headline measure, compounding (2026-10-13).** Does the system learn from experience? qa reports it hourly from producing-unit journal lines only: activity-api's trace-read lines print every execution they read, so counting them is noise.
+- **What it reports:**
+  - learned-pathway reuses, and their reach rate;
+  - fresh derivations on repeat goal hashes;
+  - activities minted against activities retired.
+- **The first reading, node 1 over 24 hours:** learned-pathway reuse 0; fresh derivations 6. Reuse is about zero, so the system is not compounding.
+- **No operator instrument is built for it.** After build 7's routing opening, it becomes a system need: "observe whether my own learning compounds, and file a gap when it doesn't".
+- **D8's record states whether the re-run REACHED over a learned pathway** (compounding) or by a fresh derivation (repair only). D10 should then show the reuse.
+
 **How the closed loop is measured, pre-registered on 2026-10-13 (qa, sealed with the coordinator).** The loop goal is chosen by rule, and named before any surgery or re-dispatch. It must be a REAL goal (user- or system-originated, not written for the test), blocked within the last 7 days, where:
 - **(a)** its block is caused by a gap the system can recognise from its own trace: a named missing producer, a refusal, or a failing check;
 - **(b)** closing that gap needs one change at a single site the system may write to. Either a lane commit or a system-made learned or registry close counts (composing existing producers, or binding a shape), provided the re-run reaches. **Guard (C-provenance-1):** the close must go through a sanctioned write path: a lane landing, the ribosome, an activity mint, or a registry advertisement. A walk that writes arbitrary pool or gap rows does not count, and a write to a trust root voids the run;
