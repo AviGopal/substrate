@@ -1307,6 +1307,11 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
     Because the class map is operator-derived, it is **counted as an operator link against D6, recognition**.
   - **Case C-phantom-2:** S1 correctly linked a real human goal to a PHANTOM walk-filed gap, so that goal now waits on a gap that cannot close.
   - **D3's date (2026-10-13T18:00Z) stands but is at risk,** and it is reported as measured either way.
+  - **The S2 follow-up** (`3fbcab5c`) was pushed at 2026-10-13T07:06:56Z. Every classification now records its source, either the judge's code or the operator map. Recognition through the operator map counts as an operator link against D6. Empty reasons are split into UNREAD (the reader starved) and UNRECORDED (the source did not say why).
+
+  **The combined re-pin** (super-repo `0968b9a5`) was pushed at 06:21:32Z. An automatic submodule pointer bump (`61e78ac6`) at 06:31:36Z restarted its soak, and all four gated nodes had accepted it by about 07:24Z.
+  - **Case C-soak-1:** the bot's automatic pointer bumps reset Gate P soaks just as operator pushes do, and nothing coordinates them with the batching rule. The system should batch its own pointer bumps, one per soak window.
+  - **Case C-multifile-1,** as recorded by qa; its detail is in qa's record.
 
   **Added by qa, steered toward autonomy:**
   - **D10, durability:** the same loop machinery closes a SECOND, different real goal with ZERO new surgery, **by 2026-10-21** (closer-only). It separates "we built a loop" from "the system closes loops".
