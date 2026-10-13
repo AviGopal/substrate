@@ -528,7 +528,14 @@
             "validation/scripts/fed-ingress-auth.test.ts",
             "validation/scripts/fed-ingress-auth-enforce.test.ts",
             "validation/scripts/fed-ingress-log.test.ts",
-            "validation/scripts/fed-ingress-auth-unattested.test.ts"
+            "validation/scripts/fed-ingress-auth-unattested.test.ts",
+            "repos/development-vessel/test/resolvers/compose-grounding-window.test.ts",
+            "repos/development-vessel/test/resolvers/compose-typecheck-lessons.test.ts",
+            "repos/development-vessel/test/resolvers/compose-grounding-read-not-write.test.ts",
+            "repos/development-vessel/test/drafter-split/compose-grounding-on.test.ts",
+            "repos/development-vessel/test/resolvers/gap-check-supply-dispatch-outcome.test.ts",
+            "repos/development-vessel/test/resolvers/goal-reach-link-filed.test.ts",
+            "repos/development-vessel/test/resolvers/goal-deficiency.test.ts"
           ],
           "require_falsifier_classes": [
             "class2"
@@ -791,7 +798,14 @@
             "validation/scripts/fed-ingress-auth.test.ts",
             "validation/scripts/fed-ingress-auth-enforce.test.ts",
             "validation/scripts/fed-ingress-log.test.ts",
-            "validation/scripts/fed-ingress-auth-unattested.test.ts"
+            "validation/scripts/fed-ingress-auth-unattested.test.ts",
+            "repos/development-vessel/test/resolvers/compose-grounding-window.test.ts",
+            "repos/development-vessel/test/resolvers/compose-typecheck-lessons.test.ts",
+            "repos/development-vessel/test/resolvers/compose-grounding-read-not-write.test.ts",
+            "repos/development-vessel/test/drafter-split/compose-grounding-on.test.ts",
+            "repos/development-vessel/test/resolvers/gap-check-supply-dispatch-outcome.test.ts",
+            "repos/development-vessel/test/resolvers/goal-reach-link-filed.test.ts",
+            "repos/development-vessel/test/resolvers/goal-deficiency.test.ts"
           ],
           "require_falsifier_classes": [
             "class2"
