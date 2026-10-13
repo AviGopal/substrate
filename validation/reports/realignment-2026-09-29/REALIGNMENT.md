@@ -1239,6 +1239,20 @@ Ties go to the most recent goal. The leading candidate is the federation-report 
 
 Surgery is allowed on links. Each act is recorded with the link it carried, and the verdict reports which links ran unassisted.
 
+**The loop map (qa, verified, 2026-10-13): two tracks that never meet.**
+- **Landed gaps are goal-less.** Gaps that are revealed by a goal are born closed or `needs_information`, and they never land.
+- **The re-run (goal-reach-tick) exists, but nothing writes its goal link,** and it runs in dry-run.
+- **The broken links:**
+  - **L2:** gaps born closed from walks, with no goal link, no route-around counter and no generator;
+  - **L3:** admission takes 1 of 2,917 candidates, and check supply never reads its dispatch outcomes;
+  - **L5:** the re-run, which is dead.
+- **The surgery plan,** each act recorded with the link it carries:
+  1. **S1 + S3 + C-window-1.** S1 is a link writer from a gap back to the goal that revealed it. S3 makes check supply read its dispatch outcomes. C-window-1 is the drafter capability build.
+  2. **S2:** a recognition tick.
+  3. **S5:** the re-run switched on, by a policy the user runs.
+- **Gap (A) is closed by the S3 surgery.** That is recorded as operator surgery, not as a system repair.
+- **The loop goal, named by the sealed rule:** the `federation_verification_report` goal. The coordinator seals its verbatim text and hash before any surgery lands.
+
 **Headline measures, reported every hour from 2026-10-12** (user ruling, as reported by qa). All three must move the right way:
 - the total operator interventions since 2026-10-10;
 - the number of system-authored landings;
