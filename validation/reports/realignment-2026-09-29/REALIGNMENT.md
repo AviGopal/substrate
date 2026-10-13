@@ -1296,7 +1296,17 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
 
   **A standing finding: settlement cannot measure most class-2 checks.** Node 1's gap sweep reads "unknown" for 15–19 of every 25 checks ("detection sha unknown"). That was true before D1 as well as after, so it is the baseline, not a D1 effect. It is recorded as case **C-measure-1** (measurement starvation in settlement), for the system after build 7's routing opening.
   - **The risk:** it can bite D7 and D8 if the loop goal's gap lands in that bucket.
-  - **The rule:** an "unknown" settlement counts as NOT verified. It is never a pass.
+  - **The rule:** an "unknown" settlement counts as NOT verified. It is never a pass. This is sealed as an addendum beside the frozen rule, adding the category "not verified (measurement-starved)".
+
+  **D3, first read: the pre-flip condition is NOT met, so no flip.** S2's report shows 0 candidates. On node 1 there are 78 goals and 120 not-reached runs, 114 of them with EMPTY reasons.
+  - **The cause, case C-tally-1:** reason starvation in dry-run, where the same runs are re-read every tick. The class map is also too literal, and one pattern fails to match.
+  - **The fixes:**
+    - (a) an S2 follow-up surgery, a D1–D4 link;
+    - (b) a shaped class-map policy record, derived only from non-loop samples, with at least one non-loop match for every pattern (the no-staging guard).
+
+    Because the class map is operator-derived, it is **counted as an operator link against D6, recognition**.
+  - **Case C-phantom-2:** S1 correctly linked a real human goal to a PHANTOM walk-filed gap, so that goal now waits on a gap that cannot close.
+  - **D3's date (2026-10-13T18:00Z) stands but is at risk,** and it is reported as measured either way.
 
   **Added by qa, steered toward autonomy:**
   - **D10, durability:** the same loop machinery closes a SECOND, different real goal with ZERO new surgery, **by 2026-10-21** (closer-only). It separates "we built a loop" from "the system closes loops".
