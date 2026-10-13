@@ -1224,6 +1224,21 @@ Tags: [V] verified in git, code or the live gap store on 10-03. [D] taken from a
 
 Build 7 (the judge/walk split, user amendment 10-10) does not gate the opening. It runs in parallel on its own dates (15.3). When it lands, it widens what can open later, under the same opening rule.
 
+**How the closed loop is measured, pre-registered on 2026-10-13 (qa, sealed with the coordinator).** The loop goal is chosen by rule, and named before any surgery or re-dispatch. It must be a REAL goal (user- or system-originated, not written for the test), blocked within the last 7 days, where:
+- **(a)** its block is caused by a gap the system can recognise from its own trace: a named missing producer, a refusal, or a failing check;
+- **(b)** closing that gap needs one change at a single site the system may write to;
+- **(c)** its goal text is available verbatim.
+
+Ties go to the most recent goal. The leading candidate is the federation-report goal (no producer for its output shape; 3 hollow runs on one goal hash).
+
+**The test:**
+1. Re-dispatch the exact goal text, and see it blocked.
+2. See the system file or recognise the gap, with no operator filing it.
+3. See the gap closed by a verified system landing.
+4. Re-run the SAME goal, and see it reached under the fixed judge.
+
+Surgery is allowed on links. Each act is recorded with the link it carried, and the verdict reports which links ran unassisted.
+
 **Headline measures, reported every hour from 2026-10-12** (user ruling, as reported by qa). All three must move the right way:
 - the total operator interventions since 2026-10-10;
 - the number of system-authored landings;
