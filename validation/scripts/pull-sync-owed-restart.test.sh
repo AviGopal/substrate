@@ -92,6 +92,7 @@ bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
   sed -n '/^quiesce_mark() {/,/^}/p' "$SCRIPT"
   sed -n '/^quiesce_release() {/,/^}/p' "$SCRIPT"
   sed -n '/^owed_hold_bound() {/,/^}/p' "$SCRIPT"
+  sed -n '/^unit_start_epoch() {/,/^}/p' "$SCRIPT"
   echo 'run_block() {'
   echo 'for v in "$VESSEL"; do'
   awk '/^  # AN OWED RESTART OUTRANKS THE CONTENT SHORT-CIRCUIT/{on=1} on && /^  if \[ "\$CLONE_HASH" = "\$RUNTIME_HASH" \]; then$/{exit} on{print}' "$SCRIPT"
@@ -399,6 +400,7 @@ probe_window_open() { return 1; }; UNIT_ENABLED=""; Q_HELD=""; Q_CARRY=""; Q_BOU
   sed -n '/^restart_age_defer() {/,/^}/p' "$SCRIPT"
   sed -n '/^quiesce_release() {/,/^}/p' "$SCRIPT"
   sed -n '/^owed_hold_bound() {/,/^}/p' "$SCRIPT"
+  sed -n '/^unit_start_epoch() {/,/^}/p' "$SCRIPT"
   echo 'run_mirror_block() {'
   echo 'for v in "$VESSEL"; do'
   echo 'quiesce_release'

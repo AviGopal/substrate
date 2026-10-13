@@ -1747,6 +1747,14 @@ revert_target_hashes() {
   return 0
 }
 
+# A unit's last start as epoch seconds, or NOTHING when systemd reports no timestamp or one that does not parse.
+# `date -d ""` reads as today's midnight, so an empty timestamp must never reach date: an unknown start is unknown.
+unit_start_epoch() {
+  local ts; ts="$(systemctl show -p ActiveEnterTimestamp --value "$1" 2>/dev/null)"
+  [ -n "$ts" ] || return 0
+  date -d "$ts" +%s 2>/dev/null || true
+}
+
 # THE OWED RESTART ENDS LIKE THE SAME-TICK ONE (2026-10-13). A restart deferred for in-flight work and taken on a later
 # tick ("taking OWED restart") used to fall straight into the content short-circuit: no health check and no last-good
 # write. So the pin stopped tracking what runs (measured 2026-10-13: development-vessel's pin stayed on a commit four
@@ -1814,7 +1822,7 @@ pin_running_baseline() {
   old="$(cat "$LAST_GOOD_DIR/$v" 2>/dev/null || true)"
   [ "$old" != "$head" ] || return 0
   [ -n "$unit" ] && systemctl is-active --quiet "$unit" 2>/dev/null || return 0
-  start="$(date -d "$(systemctl show -p ActiveEnterTimestamp --value "$unit" 2>/dev/null)" +%s 2>/dev/null)" || return 0
+  start="$(unit_start_epoch "$unit")"; [ -n "$start" ] || return 0
   now="$(date +%s)"
   [ $(( now - start )) -ge "${BASELINE_MIN_S:-300}" ] || return 0
   [ -d "$RUNTIME_DIR/$v/src" ] || return 0
@@ -2682,7 +2690,7 @@ for d in "${PASS_ORDER[@]}"; do
       rm -f "$P_DEFER_FILE" "$PENDING_FILE" "$OWED_SINCE_FILE" 2>/dev/null || true
       if [ -n "$P_UNIT" ] && systemctl is-active --quiet "$P_UNIT" 2>/dev/null; then
         restart_breadcrumb "$v" "$P_REASON" "$P_INFLIGHT"
-        P_PREV_START="$(date -d "$(systemctl show -p ActiveEnterTimestamp --value "$P_UNIT" 2>/dev/null)" +%s 2>/dev/null || true)"
+        P_PREV_START="$(unit_start_epoch "$P_UNIT")"
         systemctl restart "$P_UNIT" 2>/dev/null || true
         Q_CARRY=""; quiesce_release   # a carried hold ends with the restart: the new process must find admission open
         sleep "$STAGGER_SECONDS"

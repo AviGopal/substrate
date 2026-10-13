@@ -21,6 +21,8 @@
 #   (i) running 1 min -> not pinned            (j) a src file newer than the start -> not pinned
 #   (k) unhealthy -> not pinned                (l) inactive -> not pinned
 #   (m) pin already HEAD -> not rewritten (one read, nothing else)
+#   (p) an empty start timestamp gives no start      (q) the baseline then pins nothing
+#   (r) owed_restart_settle fed that empty start, even with a fresh pin: no revert, halt
 # structure:
 #   (n) the owed block reads the replaced process's start BEFORE its restart and settles AFTER it, then halts on OWED_HALT
 #   (o) the content short-circuit re-pins (pin_running_baseline) before its `continue`
@@ -35,6 +37,7 @@ ok()  { echo "ok   - $*"; }
 bad() { echo "FAIL - $*"; FAILS=$((FAILS+1)); }
 
 {
+  sed -n '/^unit_start_epoch() {/,/^}/p' "$SCRIPT"
   sed -n '/^owed_restart_settle() {/,/^}/p' "$SCRIPT"
   sed -n '/^pin_running_baseline() {/,/^}/p' "$SCRIPT"
 } > "$T/fns.sh"
@@ -50,7 +53,7 @@ systemctl() {
   case "$1" in
     is-active) [ "$UNIT_ACTIVE" = 1 ] ;;
     restart) echo "RESTART $2" >> "$CALLS" ;;
-    show) [ "$2" = "-p" ] && [ "$3" = "ActiveEnterTimestamp" ] && date -u -d "@$UNIT_STARTED_EPOCH" '+%a %Y-%m-%d %H:%M:%S UTC' ;;
+    show) [ "$2" = "-p" ] && [ "$3" = "ActiveEnterTimestamp" ] && { [ "$UNIT_STARTED_EPOCH" = none ] && echo "" || date -u -d "@$UNIT_STARTED_EPOCH" '+%a %Y-%m-%d %H:%M:%S UTC'; } ;;
     *) : ;;
   esac
 }
@@ -140,10 +143,22 @@ M0="$(stat -c %Y "$LAST_GOOD_DIR/$V")"
 pin_running_baseline "$V" "$U" 9999 "$NEW"
 [ "$(stat -c %Y "$LAST_GOOD_DIR/$V")" = "$M0" ] && ! has "$CALLS" HEALTH && ok "(m) pin already HEAD: not rewritten, nothing probed" || bad "(m) rewritten or probed"
 
+# ── an unknown start is unknown (date -d "" would read as today's midnight) ────
+UNIT_STARTED_EPOCH=none
+[ -z "$(unit_start_epoch "$U")" ] && ok "(p) an empty ActiveEnterTimestamp gives no start (never today's midnight)" || bad "(p) unit_start_epoch printed '$(unit_start_epoch "$U")'"
+reset; set_pin "$OLD" $((NOW - 7200)); touch -d "@$((NOW - 900))" "$RUNTIME_DIR/$V/src/a.ts"; UNIT_STARTED_EPOCH=none
+pin_running_baseline "$V" "$U" 9999 "$NEW"
+[ "$(pin)" = "$OLD" ] && ok "(q) baseline with an empty start timestamp: not pinned" || bad "(q) pin $(pin)"
+
+reset; set_pin "$OLD" $((NOW - 60)); HEALTHY=0; UNIT_STARTED_EPOCH=none
+owed_restart_settle "$V" "$T/clone" "$U" 9999 "$NEW" "$(unit_start_epoch "$U")"
+[ "$OWED_HALT" = 1 ] && ! has "$CALLS" MIRROR && ! has "$CALLS" RESTART && has "$GAPS" "start time was unreadable" \
+  && ok "(r) unhealthy, empty start timestamp, even a FRESH pin: not reverted, halt (the midnight reading would have reverted)" || bad "(r) calls: $(tr '\n' ' ' < "$CALLS")"
+
 # ── structure ─────────────────────────────────────────────────────────────────
 OWED="$(awk '/^  # AN OWED RESTART OUTRANKS THE CONTENT SHORT-CIRCUIT/{on=1} on && /^  if \[ "\$CLONE_HASH" = "\$RUNTIME_HASH" \]; then$/{exit} on{print}' "$SCRIPT")"
 ln_of() { printf '%s\n' "$OWED" | grep -n -F -- "$1" | head -1 | cut -d: -f1; }
-a=$(ln_of 'P_PREV_START="$(date -d "$(systemctl show -p ActiveEnterTimestamp'); b=$(ln_of 'systemctl restart "$P_UNIT"')
+a=$(ln_of 'P_PREV_START="$(unit_start_epoch "$P_UNIT")"'); b=$(ln_of 'systemctl restart "$P_UNIT"')
 c=$(ln_of 'owed_restart_settle "$v"'); e=$(ln_of '[ "${OWED_HALT:-0}" = 1 ] && { failed=')
 [ -n "$a" ] && [ -n "$b" ] && [ -n "$c" ] && [ -n "$e" ] && [ "$a" -lt "$b" ] && [ "$b" -lt "$c" ] && [ "$c" -lt "$e" ] \
   && ok "(n) owed block: replaced process's start read before the restart, settled after it, halt on OWED_HALT" || bad "(n) order a=$a b=$b c=$c e=$e"
