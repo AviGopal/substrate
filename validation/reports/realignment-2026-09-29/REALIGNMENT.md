@@ -1251,6 +1251,11 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
   2. **S2:** a recognition tick.
   3. **S5:** the re-run switched on, by a policy the user runs.
 - **Gap (A) is closed by the S3 surgery.** That is recorded as operator surgery, not as a system repair.
+- **Conditions, adopted by qa and sent to the coordinator:**
+  - **(1) The verdict's grade is "links run unassisted: k of 4"** (recognise, close, verify, re-run).
+  - **(2) Nothing specific to the loop goal may be built.** Any build that references it voids the loop as staged.
+  - **(3) C-window-1's ladder test is RE-PINNED, not voided.** The first lane compose after it is live, on any gap whose edit-site file is over 6 KB and whose fix spans more than one old window, must reach a later rung than that gap's prior attempt, or pass typecheck if it has no prior attempt.
+  - **Gap (A)** is recorded as "defect fixed by operator surgery S3".
 - **The loop goal, named by the sealed rule:** the `federation_verification_report` goal. The coordinator seals its verbatim text and hash before any surgery lands.
 
 **Headline measures, reported every hour from 2026-10-12** (user ruling, as reported by qa). All three must move the right way:
