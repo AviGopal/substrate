@@ -38,17 +38,26 @@
  * LIVE_VIEW_MIN_RATIO it logs, files a gap, writes NOTHING (no edge, no state)
  * and exits non-zero, so the next run tries the full pass again.
  *
- * A FAILED FULL PASS RESUMES. A full pass checkpoints into the state record after
- * every page it completes (full_cursor + full_acc, written with MERGE so the
- * watermark fields stay intact): where it is in the view and in
- * execution_trace_content, and the edge counts accumulated so far. Each page's
+ * A FAILED FULL PASS RESUMES. A full pass checkpoints after every page it
+ * completes: where it is in the view and in execution_trace_content
+ * (full_cursor, MERGEd into the state record so the watermark fields stay intact)
+ * and the edge counts accumulated so far. The accumulator grows with the graph, so
+ * it is written as BOUNDED CHUNKS (reconcile_state rows of kind edge_acc_chunk,
+ * keyed by the pass's start and a generation), each one statement no larger than
+ * the shaped checkpoint_chunk_bytes (compositionEdgeReconcilePolicy, read when the
+ * first checkpoint is written; conservative default). A store that refuses a
+ * statement for its size halves the budget and rewrites the generation; the
+ * refusal is never retried as-is. The cursor is written only AFTER its chunks and
+ * records their count and totals; a resume reads exactly that generation's chunks
+ * and verifies both, and anything missing, extra or mismatched discards the
+ * checkpoint LOUDLY and starts the pass over (never a partial accumulator). Each page's
  * contributions are derived as soon as the page is read — predecessors not yet
  * seen are fetched by indexed execution_id, the same lookup incremental mode
  * uses — so the accumulator is complete for every page before the cursor moves
  * past it. A pass that fails mid-way resumes on the next run from its last
  * completed page and still writes the same absolute counts at the end; the
- * final state write (CONTENT) drops the checkpoint. A checkpoint older than
- * FULL_RESUME_MAX_AGE_MS is discarded and the pass starts over.
+ * final state write (CONTENT) drops the cursor and the chunks are deleted. A
+ * checkpoint older than FULL_RESUME_MAX_AGE_MS is discarded and the pass starts over.
  *
  * Every SQL call has a timeout (SQL_TIMEOUT_MS per attempt), so a hung query
  * fails the attempt instead of holding the oneshot unit forever.
@@ -138,15 +147,27 @@ export type SqlFn = (q: string) => Promise<any[]>;
 export const SQL_TIMEOUT_MS = 120_000;
 export const SQL_ATTEMPTS = 5;
 
+/** The store refused a statement for its size (HTTP 413, or a plain-text "length limit" reply). Never retried as-is. */
+export class SqlBodyTooLargeError extends Error {
+  constructor(readonly bytes: number, readonly status: number, readonly head: string) {
+    super(`sql statement of ${bytes} bytes refused for its size (status ${status}): ${head}`);
+    this.name = "SqlBodyTooLargeError";
+  }
+}
+const SIZE_REFUSAL = /length limit|too large|payload/i;
+const byteLen = (s: string) => Buffer.byteLength(s, "utf8");
+
 export function makeSql(o: {
   url?: string; ns?: string; db?: string; authHeader?: string;
   fetchImpl?: typeof fetch; timeoutMs?: number; attempts?: number; backoffMs?: number;
+  log?: (line: string) => void;
 } = {}): SqlFn {
   const url = o.url ?? SQL_URL;
   const headers = { Accept: "application/json", "Surreal-NS": o.ns ?? NS, "Surreal-DB": o.db ?? DB, Authorization: o.authHeader ?? auth, "Content-Type": "text/plain" };
   const timeoutMs = o.timeoutMs ?? SQL_TIMEOUT_MS;
   const attempts = o.attempts ?? SQL_ATTEMPTS;
   const backoffMs = o.backoffMs ?? 250;
+  const log = o.log ?? ((line: string) => console.error(line));
   return async function sql(q: string): Promise<any[]> {
     // The /sql endpoint intermittently returns an empty/non-JSON body under load (the
     // same contention that rate-limits trace-GET). A single rapid-fire pagination run
@@ -161,12 +182,23 @@ export function makeSql(o: {
         const r = await f(url, { method: "POST", headers, body: q, signal: AbortSignal.timeout(timeoutMs) });
         const text = await r.text();
         if (!text.trim()) throw new Error("empty body (transient contention)");
-        const j = JSON.parse(text);
+        let j: any;
+        try {
+          j = JSON.parse(text);
+        } catch {
+          // A non-JSON reply is named, never parsed blind: its status and first bytes go to the log. A refusal
+          // for size is a property of the statement, so resending it identically cannot succeed: it is thrown now.
+          const head = text.slice(0, 80).replace(/\s+/g, " ");
+          log(`[edge-reconcile] sql: non-JSON reply status=${r.status} statement_bytes=${byteLen(q)} head=${JSON.stringify(head)}`);
+          if (r.status === 413 || SIZE_REFUSAL.test(head)) throw new SqlBodyTooLargeError(byteLen(q), r.status, head);
+          throw new Error(`non-JSON reply (status ${r.status}): ${head}`);
+        }
         if (!Array.isArray(j)) throw new Error("bad resp: " + JSON.stringify(j).slice(0, 300));
         const last = j[j.length - 1];
         if (last && last.status && last.status !== "OK") throw new Error("sql err: " + JSON.stringify(last).slice(0, 300));
         return j.map((s: any) => s.result);
       } catch (e) {
+        if (e instanceof SqlBodyTooLargeError) throw e;
         lastErr = e;
         await new Promise((res) => setTimeout(res, backoffMs * (attempt + 1)));
       }
@@ -188,6 +220,30 @@ export const LIVE_VIEW_MIN_RATIO = 0.9;
  */
 export const FULL_RESUME_MAX_AGE_MS = 12 * 3600 * 1000;
 export const STATE_RID = "reconcile_state:`composition-edge`";
+/** The full-pass accumulator's chunk rows (same table as the state record; deleted on completion or discard). */
+export const ACC_CHUNK_KIND = "edge_acc_chunk";
+/** The shaped knob (law 1): a pool record of this shape, read when a pass writes its first checkpoint. */
+export const RECONCILE_POLICY_SHAPE = "compositionEdgeReconcilePolicy";
+/**
+ * The default size of one checkpoint statement. Deliberately conservative: the store's own request limit is
+ * not assumed anywhere. A refusal halves the budget for the rest of the run (and is reported).
+ */
+export const DEFAULT_CHECKPOINT_CHUNK_BYTES = 256 * 1024;
+const CHUNK_BYTES_MIN = 256;
+const CHUNK_BYTES_MAX = 64 * 1024 * 1024;
+
+/** The policy's checkpoint budget, or the default (with why) when the record is absent or invalid. */
+export function parseReconcilePolicy(body: unknown): { checkpoint_chunk_bytes: number; source: "policy" | "default"; why?: string } {
+  const dflt = (why?: string) => ({ checkpoint_chunk_bytes: DEFAULT_CHECKPOINT_CHUNK_BYTES, source: "default" as const, ...(why ? { why } : {}) });
+  if (body === null || body === undefined) return dflt();
+  if (typeof body !== "object" || Array.isArray(body)) return dflt(`${RECONCILE_POLICY_SHAPE} is not an object`);
+  const v = (body as Record<string, unknown>)["checkpoint_chunk_bytes"];
+  if (v === undefined) return dflt();
+  if (typeof v !== "number" || !Number.isInteger(v) || v < CHUNK_BYTES_MIN || v > CHUNK_BYTES_MAX) {
+    return dflt(`${RECONCILE_POLICY_SHAPE}.checkpoint_chunk_bytes must be an integer in ${CHUNK_BYTES_MIN}..${CHUNK_BYTES_MAX}`);
+  }
+  return { checkpoint_chunk_bytes: v, source: "policy" };
+}
 export const VIEW_GAP_ID = "v-paradigm-execution-traces-not-following-writes";
 
 type ShapeRec = {
@@ -212,16 +268,92 @@ function toShapeRec(r: any): ShapeRec {
 
 export type ReconcileState = {
   watermark?: string; recent_ids?: string[]; last_full_at?: string;
-  full_cursor?: FullCursor; full_acc?: FullAcc;
+  full_cursor?: FullCursor;
 };
-/** Where an interrupted full pass is. `view_after`/`content_after` are the last record ids of the last completed page. */
-export type FullCursor = { started_at: string; view_after: string; view_done: boolean; content_after: string };
+export type Counters = { batch_traces: number; children: number; orphan: number; selfLoop: number; shape_flow_contributions: number };
+/** What a checkpoint's chunks must add up to; a resume that reads anything else discards the checkpoint. */
+export type AccTotals = { edges: number; provenance: number; recent: number; count_sum: number; success_sum: number };
+/**
+ * Where an interrupted full pass is. `view_after`/`content_after` are the last record ids of the last completed page;
+ * `gen`/`chunks`/`totals` name the accumulator generation written (before this cursor) for that page.
+ */
+export type FullCursor = {
+  started_at: string; view_after: string; view_done: boolean; content_after: string;
+  gen: number; chunks: number; totals: AccTotals; counters: Counters;
+};
 export type FullAcc = {
   edges: Array<[string, number, number]>;     // key, count, success — everything the completed pages contributed
   provenance: string[];                        // provenance-backed edge keys
   recent: Array<[string, string]>;             // [execution_id, executed_at] inside the pass's overlap window
-  counters: { batch_traces: number; children: number; orphan: number; selfLoop: number; shape_flow_contributions: number };
 };
+/** One accumulator entry as stored in a chunk: an edge, a provenance key, or a recent pair. */
+type AccItem = ["e", string, number, number] | ["p", string] | ["r", string, string];
+
+export function accTotals(acc: FullAcc): AccTotals {
+  let count_sum = 0, success_sum = 0;
+  for (const [, c, s] of acc.edges) { count_sum += c; success_sum += s; }
+  return { edges: acc.edges.length, provenance: acc.provenance.length, recent: acc.recent.length, count_sum, success_sum };
+}
+function accItems(acc: FullAcc): AccItem[] {
+  return [
+    ...acc.edges.map(([k, c, s]) => ["e", k, c, s] as AccItem),
+    ...acc.provenance.map((k) => ["p", k] as AccItem),
+    ...acc.recent.map(([id, at]) => ["r", id, at] as AccItem),
+  ];
+}
+const chunkRid = (passKey: string, gen: number, n: number) => `reconcile_state:\`composition-edge-acc-${passKey}-g${gen}-${n}\``;
+const chunkStatement = (passKey: string, started_at: string, gen: number, n: number, itemsJson: string) => `UPSERT ${chunkRid(passKey, gen, n)} CONTENT {
+    kind: ${JSON.stringify(ACC_CHUNK_KIND)},
+    pass: ${JSON.stringify(started_at)},
+    gen: ${gen},
+    n: ${n},
+    items: ${itemsJson},
+    updated_at: time::now()
+  };`;
+
+/**
+ * Packs the items into chunk statements each at most `budget` bytes. An item too large to share a chunk goes alone
+ * (the store may still refuse it; the caller halves and, at one item per chunk, gives up loudly).
+ */
+export function packChunks(acc: FullAcc, passKey: string, started_at: string, gen: number, budget: number): string[] {
+  const out: string[] = [];
+  const overhead = byteLen(chunkStatement(passKey, started_at, gen, 999_999, "[]"));
+  let cur: string[] = [], curBytes = 0;
+  const flush = () => { out.push(chunkStatement(passKey, started_at, gen, out.length, `[${cur.join(",")}]`)); cur = []; curBytes = 0; };
+  for (const it of accItems(acc)) {
+    const j = JSON.stringify(it), b = byteLen(j) + 1;
+    if (cur.length && overhead + curBytes + b > budget) flush();
+    cur.push(j); curBytes += b;
+  }
+  if (cur.length || out.length === 0) flush();
+  return out;
+}
+
+/** Rebuilds the accumulator from one generation's chunk rows, or says why it cannot be trusted. */
+export function accFromChunks(rows: any[], cursor: FullCursor): { acc: FullAcc } | { why: string } {
+  const byN = new Map<number, any[]>();
+  for (const r of rows ?? []) {
+    if (!r || typeof r.n !== "number" || !Array.isArray(r.items)) return { why: "a chunk row is malformed" };
+    if (byN.has(r.n)) return { why: `chunk ${r.n} appears twice` };
+    byN.set(r.n, r.items);
+  }
+  for (let n = 0; n < cursor.chunks; n++) if (!byN.has(n)) return { why: `chunk ${n} of ${cursor.chunks} is missing` };
+  const extra = [...byN.keys()].filter((n) => n < 0 || n >= cursor.chunks);
+  if (extra.length) return { why: `${extra.length} chunk(s) beyond the ${cursor.chunks} the cursor records` };
+  const acc: FullAcc = { edges: [], provenance: [], recent: [] };
+  for (let n = 0; n < cursor.chunks; n++) for (const it of byN.get(n)!) {
+    if (!Array.isArray(it)) return { why: `chunk ${n} holds a malformed item` };
+    if (it[0] === "e" && typeof it[1] === "string" && typeof it[2] === "number" && typeof it[3] === "number") acc.edges.push([it[1], it[2], it[3]]);
+    else if (it[0] === "p" && typeof it[1] === "string") acc.provenance.push(it[1]);
+    else if (it[0] === "r" && typeof it[1] === "string" && typeof it[2] === "string") acc.recent.push([it[1], it[2]]);
+    else return { why: `chunk ${n} holds a malformed item` };
+  }
+  const got = accTotals(acc), want = cursor.totals;
+  for (const k of Object.keys(want) as Array<keyof AccTotals>) {
+    if (got[k] !== want[k]) return { why: `totals differ: ${k} ${got[k]} read, ${want[k]} recorded` };
+  }
+  return { acc };
+}
 
 // ---- mode selection: incremental (watermark) vs full rebuild --------------------------
 export function selectFullMode(state: ReconcileState, runStartMs: number, forceFull: boolean): boolean {
@@ -242,15 +374,34 @@ export async function checkViewLiveness(sql: SqlFn): Promise<{ ok: boolean; view
   return { ok: ratio >= LIVE_VIEW_MIN_RATIO, view, execution, ratio };
 }
 
-/** A usable checkpoint, or null (none, malformed, or older than FULL_RESUME_MAX_AGE_MS). */
-export function resumableCheckpoint(state: ReconcileState, runStartMs: number): { cursor: FullCursor; acc: FullAcc } | null {
-  const c = state.full_cursor, a = state.full_acc;
-  if (!c || !a || typeof c !== "object" || typeof a !== "object") return null;
+/** A cursor worth reading chunks for, or why not (none, malformed, a pre-chunk checkpoint, or older than FULL_RESUME_MAX_AGE_MS). */
+export function resumableCursor(state: ReconcileState, runStartMs: number): { cursor: FullCursor } | { why: string } | null {
+  const c = state.full_cursor as any;
+  if (!c) return null;
+  if (typeof c !== "object") return { why: "the cursor is malformed" };
   const startedMs = Date.parse(c.started_at);
-  if (!Number.isFinite(startedMs) || runStartMs - startedMs > FULL_RESUME_MAX_AGE_MS) return null;
-  if (typeof c.view_after !== "string" || typeof c.content_after !== "string" || typeof c.view_done !== "boolean") return null;
-  if (!Array.isArray(a.edges) || !Array.isArray(a.provenance) || !Array.isArray(a.recent) || !a.counters) return null;
-  return { cursor: c, acc: a };
+  if (!Number.isFinite(startedMs)) return { why: "the cursor has no usable started_at" };
+  if (runStartMs - startedMs > FULL_RESUME_MAX_AGE_MS) return { why: `older than ${FULL_RESUME_MAX_AGE_MS / 3_600_000} h` };
+  if (typeof c.view_after !== "string" || typeof c.content_after !== "string" || typeof c.view_done !== "boolean") return { why: "the cursor is malformed" };
+  if (typeof c.gen !== "number" || typeof c.chunks !== "number" || !c.totals || !c.counters) return { why: "a checkpoint without chunk records (written before checkpoints were chunked)" };
+  return { cursor: c as FullCursor };
+}
+
+/** Default policy reader: the open compositionEdgeReconcilePolicy pool record via development-vessel. Never throws (null = absent). */
+async function readPolicyRecord(): Promise<unknown> {
+  try {
+    const r = await fetch(`${DEV}/v2/impulses/resolve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(API_KEY ? { Authorization: `ApiKey ${API_KEY}` } : {}) },
+      body: JSON.stringify({ impulse: { pointer: { type: "poolImpulse", shape: RECONCILE_POLICY_SHAPE, status: "open", limit: 1 } } }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!r.ok) return null;
+    const j = (await r.json()) as any;
+    return j?.body?.impulses?.[0]?.body ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /** Default gap filer: development-vessel's substrateGap_write. Never throws. */
@@ -276,6 +427,8 @@ export type ReconcileDeps = {
   forceFull?: boolean;
   fileGap?: (gap: Record<string, unknown>) => Promise<void>;
   pageSize?: number;
+  /** The compositionEdgeReconcilePolicy record (null = absent); read when the first checkpoint is written. */
+  readPolicy?: () => Promise<unknown>;
 };
 
 export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number; summary: Record<string, unknown> }> {
@@ -286,9 +439,10 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
   const fileGap = deps.fileGap ?? postGap;
   const PAGE_SIZE = deps.pageSize ?? PAGE;
   const forceFull = deps.forceFull ?? process.env.RECONCILE_FULL === "1";
+  const readPolicy = deps.readPolicy ?? readPolicyRecord;
 
   const runStartMs = now();
-  const [stateRows] = await sql(`SELECT watermark, recent_ids, last_full_at, full_cursor, full_acc FROM ${STATE_RID};`);
+  const [stateRows] = await sql(`SELECT watermark, recent_ids, last_full_at, full_cursor FROM ${STATE_RID};`);
   const state: ReconcileState = (Array.isArray(stateRows) && stateRows[0]) || {};
   const fullMode = selectFullMode(state, runStartMs, forceFull);
   const alreadyProcessed = new Set(fullMode ? [] : state.recent_ids ?? []);
@@ -314,8 +468,22 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
     }
   }
 
-  const resume = fullMode ? resumableCheckpoint(state, runStartMs) : null;
-  if (fullMode && state.full_cursor && !resume) log(`[edge-reconcile] full pass: discarding an unusable or stale checkpoint (started ${state.full_cursor?.started_at ?? "?"}) — starting over`);
+  // A resume reads exactly the generation its cursor names and verifies it; anything else starts the pass over.
+  let resume: { cursor: FullCursor; acc: FullAcc } | null = null;
+  if (fullMode) {
+    const rc = resumableCursor(state, runStartMs);
+    let discardWhy: string | null = rc && "why" in rc ? rc.why : null;
+    if (rc && "cursor" in rc) {
+      const c = rc.cursor;
+      const [rows] = await sql(`SELECT n, items FROM reconcile_state WHERE kind = ${JSON.stringify(ACC_CHUNK_KIND)} AND pass = ${JSON.stringify(c.started_at)} AND gen = ${c.gen};`);
+      const got = accFromChunks(rows, c);
+      if ("why" in got) discardWhy = got.why;
+      else resume = { cursor: c, acc: got.acc };
+    }
+    if (discardWhy) log(`[edge-reconcile] full pass: DISCARDING the checkpoint of the pass started ${state.full_cursor?.started_at ?? "?"} (${discardWhy}) — starting over`);
+    // A fresh pass carries nothing from any earlier one: every chunk row goes before its first checkpoint.
+    if (!resume) await sql(`DELETE reconcile_state WHERE kind = ${JSON.stringify(ACC_CHUNK_KIND)};`);
+  }
   if (resume) log(`[edge-reconcile] full pass: RESUMING the pass started ${resume.cursor.started_at} — view after ${resume.cursor.view_after || "-"}${resume.cursor.view_done ? " (done)" : ""}, content after ${resume.cursor.content_after || "-"}, ${resume.acc.edges.length} edges carried`);
   // The pass's start: this run's, or the interrupted pass's. §4's watermark is derived from it.
   const passStartMs = resume ? Date.parse(resume.cursor.started_at) : runStartMs;
@@ -331,7 +499,7 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
   if (resume) {
     for (const [k, c, s] of resume.acc.edges) edges.set(k, { count: c, success: s });
     for (const k of resume.acc.provenance) provenanceEdgeKeys.add(k);
-    Object.assign(counters, resume.acc.counters);
+    Object.assign(counters, resume.cursor.counters);
     recentPairs.push(...resume.acc.recent);
   }
   const newWatermark = new Date(passStartMs - OVERLAP_MS).toISOString();
@@ -477,25 +645,59 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
     }
   };
 
-  // ---- full-pass checkpoint (MERGE: the watermark fields are left as they are) ----------
-  const cursor: FullCursor = {
+  // ---- full-pass checkpoint: chunks first, then the cursor that names them -----------------
+  // The cursor is MERGEd (the watermark fields are left as they are) only AFTER every chunk of its generation is
+  // written, so a run that dies mid-checkpoint leaves the previous generation and its cursor intact; the older
+  // generations go only after the new cursor is in place. full_acc: NONE drops a pre-chunk checkpoint's blob.
+  const cursor: Pick<FullCursor, "started_at" | "view_after" | "view_done" | "content_after"> = {
     started_at: new Date(passStartMs).toISOString(),
     view_after: resume?.cursor.view_after ?? "",
     view_done: resume?.cursor.view_done ?? false,
     content_after: resume?.cursor.content_after ?? "",
   };
+  const passKey = String(passStartMs);
+  let gen = resume?.cursor.gen ?? 0;
+  let budget: number | null = null;
+  let budgetSource = "";
+  let halvings = 0;
   const checkpoint = async () => {
+    if (budget === null) {
+      const pol = parseReconcilePolicy(await readPolicy().catch(() => null));
+      budget = pol.checkpoint_chunk_bytes;
+      budgetSource = pol.source;
+      if (pol.why) log(`[edge-reconcile] ${pol.why}: using the default checkpoint_chunk_bytes ${budget}`);
+    }
     const acc: FullAcc = {
       edges: [...edges].map(([k, e]) => [k, e.count, e.success]),
       provenance: [...provenanceEdgeKeys],
       recent: recentPairs,
-      counters,
     };
-    await sql(`UPSERT ${STATE_RID} MERGE {
-    full_cursor: ${JSON.stringify(cursor)},
-    full_acc: ${JSON.stringify(acc)},
+    const totals = accTotals(acc);
+    const itemCount = totals.edges + totals.provenance + totals.recent;
+    for (;;) {
+      gen++;
+      const stmts = packChunks(acc, passKey, cursor.started_at, gen, budget);
+      try {
+        for (const q of stmts) await sql(q);
+      } catch (e) {
+        if (!(e instanceof SqlBodyTooLargeError)) throw e;
+        if (stmts.length >= itemCount || budget <= CHUNK_BYTES_MIN) {
+          throw new Error(`[edge-reconcile] checkpoint refused for size at ${budget} bytes per chunk with ${stmts.length} chunk(s) for ${itemCount} entries: nothing smaller can be written (${e.message})`);
+        }
+        const from = budget;
+        budget = Math.max(CHUNK_BYTES_MIN, Math.floor(budget / 2));
+        halvings++;
+        log(`[edge-reconcile] checkpoint: the store refused a ${e.bytes}-byte chunk (status ${e.status}); checkpoint_chunk_bytes ${from} -> ${budget} for the rest of this run (halving ${halvings})`);
+        continue;
+      }
+      await sql(`UPSERT ${STATE_RID} MERGE {
+    full_cursor: ${JSON.stringify({ ...cursor, gen, chunks: stmts.length, totals, counters })},
+    full_acc: NONE,
     updated_at: time::now()
   };`);
+      await sql(`DELETE reconcile_state WHERE kind = ${JSON.stringify(ACC_CHUNK_KIND)} AND (pass != ${JSON.stringify(cursor.started_at)} OR gen != ${gen});`);
+      return;
+    }
   };
 
   // ---- 1) load the trace batch -----------------------------------------------------------
@@ -614,7 +816,7 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
   // ---- 3) write edges (idempotent, deterministic id from the pair hash) ------------------
   // FULL mode writes absolute counts (recomputed from all history — self-healing): prior is
   // zero and the accumulator holds every page's contribution exactly once — a resumed pass
-  // restored the completed pages' counts from full_acc and read only the pages after the
+  // restored the completed pages' counts from its verified chunks and read only the pages after the
   // cursor, so nothing is counted twice and nothing is dropped.
   // INCREMENTAL mode ADDS this run's deltas onto the existing row's counts: the touched
   // edge set is small, so read the current counts for exactly those records first, then
@@ -681,7 +883,7 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
   // by the periodic full rebuild. For a full pass the start is the FIRST run of the pass:
   // a resumed pass read the early pages runs ago, so anything that landed since then on an
   // id it had already paged past is picked up by the next incremental run instead of lost.
-  // CONTENT replaces the record, which drops full_cursor/full_acc: the pass is complete.
+  // CONTENT replaces the record, which drops full_cursor (and any pre-chunk full_acc): the pass is complete.
   {
     const recent = fullMode
       ? recentPairs.filter(([, at]) => at >= newWatermark).map(([id]) => id)
@@ -698,6 +900,8 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
     last_full_at: ${JSON.stringify(lastFullAt)},
     updated_at: time::now()
   };`);
+    // The pass is complete: its accumulator chunks are spent.
+    if (fullMode) await sql(`DELETE reconcile_state WHERE kind = ${JSON.stringify(ACC_CHUNK_KIND)};`);
   }
 
   const [cnt] = await sql(`SELECT count() FROM activity_composition_graph GROUP ALL;`);
@@ -753,6 +957,7 @@ export async function reconcile(deps: ReconcileDeps): Promise<{ exitCode: number
     organic_successful_edges, organic_success_rate, upserted: wrote,
     graph_total: (cnt && cnt[0] && cnt[0].count) ?? 0,
     resumed: !!resume, pred_lookup_queries: predLookupQueries,
+    ...(fullMode ? { checkpoint_chunk_bytes: budget, checkpoint_budget_source: budgetSource || null, checkpoint_budget_halvings: halvings } : {}),
     at: new Date(now()).toISOString(),
   };
   out(JSON.stringify(summary));

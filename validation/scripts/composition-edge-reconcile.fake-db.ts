@@ -23,14 +23,19 @@ export type Fixture = {
   state?: Record<string, any> | null;
   graph?: Record<string, any>;  // rid -> edge record
   fail_view_after_id?: string;  // every page query `WHERE id > <this>` answers an empty body
+  max_body_bytes?: number;      // a statement larger than this is refused with a plain-text body (the store's size limit)
+  size_refusal_status?: number; // the HTTP status of that refusal (default 413)
+  chunks?: Record<string, any>; // reconcile_state accumulator chunk rows, by record key
+  fail_chunk_write?: { gen: number; n: number }; // that chunk's write answers an empty body (a run dying mid-checkpoint)
 };
-export type Dump = { state: Record<string, any> | null; graph: Record<string, any>; unhandled: string[] };
+export type Dump = { state: Record<string, any> | null; graph: Record<string, any>; chunks: Record<string, any>; unhandled: string[]; refused: number[] };
 
 function parseLines(body: string): Record<string, any> {
   const o: Record<string, any> = {};
   for (const line of body.split("\n")) {
     const m = /^\s*(\w+): (.*?),?\s*$/.exec(line);
     if (!m) continue;
+    if (m[2] === "NONE") { o[m[1]] = undefined; continue; } // MERGE ... NONE removes the field
     try { o[m[1]] = JSON.parse(m[2]); } catch { /* time::now() etc. */ }
   }
   return o;
@@ -44,10 +49,13 @@ function field(q: string, name: string): any {
 export function makeFakeDb(fx: Fixture, dump?: Dump) {
   const view = [...fx.view].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const content = [...(fx.content ?? [])].sort((a, b) => (a.id < b.id ? -1 : 1));
-  const db: Dump = dump ?? { state: fx.state ?? null, graph: { ...(fx.graph ?? {}) }, unhandled: [] };
+  const db: Dump = dump ?? { state: fx.state ?? null, graph: { ...(fx.graph ?? {}) }, chunks: { ...(fx.chunks ?? {}) }, unhandled: [], refused: [] };
+  db.chunks ??= {};
+  db.refused ??= [];
   const queries: string[] = [];
   const otherUrls: string[] = [];
   let failViewAfter = fx.fail_view_after_id;
+  let failChunk = fx.fail_chunk_write;
 
   const answer = (q: string): any[] | null => {
     const one = (result: any) => [{ status: "OK", result }];
@@ -92,8 +100,29 @@ export function makeFakeDb(fx: Fixture, dump?: Dump) {
     }
     if ((m = /^UPSERT reconcile_state:`composition-edge` (CONTENT|MERGE) \{([\s\S]*)\};$/.exec(q))) {
       const body = parseLines(m[2]);
-      db.state = m[1] === "CONTENT" ? body : { ...(db.state ?? {}), ...body };
+      const next: Record<string, any> = m[1] === "CONTENT" ? body : { ...(db.state ?? {}), ...body };
+      for (const k of Object.keys(next)) if (next[k] === undefined) delete next[k];
+      db.state = next;
       return one([db.state]);
+    }
+    if ((m = /^UPSERT reconcile_state:`(composition-edge-acc-[\w-]+)` CONTENT \{([\s\S]*)\};$/.exec(q))) {
+      const row = parseLines(m[2]);
+      if (failChunk && row.gen === failChunk.gen && row.n === failChunk.n) return null;
+      db.chunks[m[1]] = row;
+      return one([db.chunks[m[1]]]);
+    }
+    if ((m = /^SELECT n, items FROM reconcile_state WHERE kind = "edge_acc_chunk" AND pass = ("(?:[^"\\]|\\.)*") AND gen = (\d+);$/.exec(q))) {
+      const pass = JSON.parse(m[1]), gen = Number(m[2]);
+      return one(Object.values(db.chunks).filter((c: any) => c.kind === "edge_acc_chunk" && c.pass === pass && c.gen === gen).map((c: any) => ({ n: c.n, items: c.items })));
+    }
+    if ((m = /^DELETE reconcile_state WHERE kind = "edge_acc_chunk"(?: AND \(pass != ("(?:[^"\\]|\\.)*") OR gen != (\d+)\))?;$/.exec(q))) {
+      const keepPass = m[1] ? JSON.parse(m[1]) : undefined, keepGen = m[2] ? Number(m[2]) : undefined;
+      for (const [k, c] of Object.entries(db.chunks)) {
+        if ((c as any).kind !== "edge_acc_chunk") continue;
+        if (keepPass !== undefined && (c as any).pass === keepPass && (c as any).gen === keepGen) continue;
+        delete db.chunks[k];
+      }
+      return one([]);
     }
     db.unhandled.push(q);
     return [{ status: "ERR", result: "fake: unhandled statement" }];
@@ -107,6 +136,11 @@ export function makeFakeDb(fx: Fixture, dump?: Dump) {
     }
     const q = String(init?.body ?? "");
     queries.push(q);
+    const bytes = Buffer.byteLength(q, "utf8");
+    if (fx.max_body_bytes !== undefined && bytes > fx.max_body_bytes) {
+      db.refused.push(bytes);
+      return new Response("length limit exceeded", { status: fx.size_refusal_status ?? 413 });
+    }
     const res = answer(q);
     return new Response(res === null ? "" : JSON.stringify(res), { status: 200 });
   }
@@ -114,7 +148,7 @@ export function makeFakeDb(fx: Fixture, dump?: Dump) {
   return {
     fetch: fakeFetch as unknown as typeof fetch,
     queries, otherUrls, db,
-    stopFailing() { failViewAfter = undefined; },
+    stopFailing() { failViewAfter = undefined; failChunk = undefined; },
   };
 }
 

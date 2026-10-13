@@ -266,9 +266,224 @@ describe("composition-edge-reconcile (module)", () => {
         full_acc: { edges: [["A B", 99, 99]], provenance: [], recent: [], counters: { batch_traces: 6, children: 0, orphan: 0, selfLoop: 0, shape_flow_contributions: 0 } },
       },
     });
-    const { res } = await run(fake, 3, { now });
+    const { res, lines } = await run(fake, 3, { now });
+    expect(lines.join("\n")).toMatch(/DISCARDING the checkpoint .*\(older than 12 h\)/);
     expect(res.summary.resumed).toBe(false);
     expect(fake.queries.find(isPageQuery)).not.toContain("WHERE id >");
     expect(edgesOf(fake.db.graph)).toEqual(EXPECTED);
+  });
+});
+
+// ---- bounded checkpoints (the 10-13 failure: the whole accumulator as ONE statement, refused for its size) --------
+// The store's size limit is a fixture value (max_body_bytes); the budget is the shaped compositionEdgeReconcilePolicy
+// knob (injected here). No real store limit is assumed anywhere.
+const WIDE = (k: number): ViewRow[] => {
+  const rows: ViewRow[] = [];
+  for (let i = 0; i < k; i++) {
+    const n = String(i).padStart(4, "0");
+    // child first, parent later: a page boundary falls between most pairs
+    rows.push(exec(VR(`w${n}a`), `c${n}`, `consumer-activity-${n}`, { parent_execution_id: `p${n}`, input_impulse_shapes: [`shape${n}`] }));
+    rows.push(exec(VR(`w${n}b`), `p${n}`, `producer-activity-${n}`, { output_impulse_shapes: [`shape${n}`] }));
+  }
+  return rows;
+};
+const WIDE_EXPECTED = (k: number) => Object.fromEntries(Array.from({ length: k }, (_, i) => {
+  const n = String(i).padStart(4, "0");
+  return [`producer-activity-${n} consumer-activity-${n}`, { count: 2, success: 2, kind: "genuine" }];
+}));
+const chunkRows = (fake: ReturnType<typeof makeFakeDb>) => Object.entries(fake.db.chunks);
+
+describe("bounded checkpoints (unit run, top level)", () => {
+  it("MUST-FAIL 3: a store that refuses large statements — the full pass still COMPLETES, halving its chunk budget, never resending a refused statement", () => {
+    const dir = mkdtempSync(join(tmpdir(), "edge-size-"));
+    const max = 2000;
+    const r = unitRun(dir, { view: WIDE(80), state: null, max_body_bytes: max });
+    expect(r.code).toBe(0);
+    expect(edgesOf(r.dump.graph)).toEqual(WIDE_EXPECTED(80));
+    expect(r.dump.state.last_full_at).toBeString();
+    expect(r.dump.state.full_cursor).toBeUndefined();
+    expect(Object.keys(r.dump.chunks)).toEqual([]);
+    const refused = r.sqls.filter((q) => Buffer.byteLength(q) > max);
+    expect(refused.length).toBeGreaterThan(0);
+    expect(new Set(refused).size).toBe(refused.length); // a refusal is never retried identically
+    expect(r.stderr).toMatch(/non-JSON reply status=413 statement_bytes=\d+ head="length limit exceeded"/);
+    const summary = JSON.parse(r.stdout.trim().split("\n").pop()!);
+    expect(summary.checkpoint_budget_halvings).toBeGreaterThan(0);
+    expect(summary.checkpoint_chunk_bytes).toBeLessThanOrEqual(max);
+  }, 120_000);
+});
+
+describe("bounded checkpoints (module)", () => {
+  async function runP(fake: ReturnType<typeof makeFakeDb>, pageSize: number, policy: unknown, o: { now?: number } = {}) {
+    const { reconcile, makeSql } = await import(SCRIPT);
+    const lines: string[] = [];
+    const sql = makeSql({ url: "http://fake/sql", fetchImpl: fake.fetch, backoffMs: 1, log: (s: string) => lines.push(s) });
+    const res = await reconcile({ sql, pageSize, log: (s: string) => lines.push(s), out: (s: string) => lines.push(s), fileGap: async () => {}, forceFull: false, readPolicy: async () => policy, now: o.now ? () => o.now! : undefined });
+    return { res, lines };
+  }
+  const chunkWrites = (fake: ReturnType<typeof makeFakeDb>) => fake.queries.filter((q) => q.startsWith("UPSERT reconcile_state:`composition-edge-acc-"));
+
+  // G1: the pass completes for a tiny budget (many chunks), a mid one, and one whose chunks sit near the store's limit.
+  const sizes: Array<[string, number, number]> = [["tiny (many chunks)", 700, 600], ["mid", 6000, 4000], ["near the limit", 3000, 2990]];
+  for (const [label, max, knob] of sizes) it(`completes with the store's limit at ${max} bytes and checkpoint_chunk_bytes ${knob}: ${label}`, async () => {
+    const fake = makeFakeDb({ view: WIDE(60), state: null, max_body_bytes: max });
+    const { res } = await runP(fake, 10, { checkpoint_chunk_bytes: knob });
+    expect(res.exitCode).toBe(0);
+    expect(edgesOf(fake.db.graph)).toEqual(WIDE_EXPECTED(60));
+    expect(fake.db.refused).toEqual([]);
+    expect(res.summary).toMatchObject({ checkpoint_chunk_bytes: knob, checkpoint_budget_source: "policy", checkpoint_budget_halvings: 0 });
+    const sizesOf = chunkWrites(fake).map((q) => Buffer.byteLength(q));
+    expect(Math.max(...sizesOf)).toBeLessThanOrEqual(knob);
+    if (label === "near the limit") expect(Math.max(...sizesOf)).toBeGreaterThan(knob * 0.8);
+    if (label.startsWith("tiny")) expect(Math.max(...fake.queries.filter((q) => q.startsWith("UPSERT reconcile_state:`composition-edge` MERGE")).map((q) => JSON.parse(/full_cursor: (.*),$/m.exec(q)![1]).chunks))).toBeGreaterThan(5);
+    expect(chunkRows(fake)).toEqual([]);
+  });
+
+  it("a knob above the store's limit halves on the refusal, records it, and completes", async () => {
+    const fake = makeFakeDb({ view: WIDE(60), state: null, max_body_bytes: 1500 });
+    const { res, lines } = await runP(fake, 10, { checkpoint_chunk_bytes: 100_000 });
+    expect(res.exitCode).toBe(0);
+    expect(edgesOf(fake.db.graph)).toEqual(WIDE_EXPECTED(60));
+    expect(res.summary.checkpoint_budget_halvings).toBeGreaterThan(0);
+    expect(lines.some((l) => /checkpoint: the store refused a \d+-byte chunk \(status 413\); checkpoint_chunk_bytes 100000 -> 50000/.test(l))).toBe(true);
+  });
+
+  it("an absent or invalid policy uses the conservative default (and says why when invalid)", async () => {
+    const { parseReconcilePolicy, DEFAULT_CHECKPOINT_CHUNK_BYTES } = await import(SCRIPT);
+    expect(parseReconcilePolicy(null)).toEqual({ checkpoint_chunk_bytes: DEFAULT_CHECKPOINT_CHUNK_BYTES, source: "default" });
+    for (const bad of [{ checkpoint_chunk_bytes: 10 }, { checkpoint_chunk_bytes: 2.5 }, { checkpoint_chunk_bytes: "big" }, [1]]) {
+      const p = parseReconcilePolicy(bad);
+      expect(p.source).toBe("default");
+      expect(p.why).toBeString();
+    }
+    expect(parseReconcilePolicy({ checkpoint_chunk_bytes: 4096 })).toEqual({ checkpoint_chunk_bytes: 4096, source: "policy" });
+  });
+
+  it("a chunked pass that fails mid-way resumes from its verified chunks, exactly", async () => {
+    const fake = makeFakeDb({ view: WIDE(60), state: null, max_body_bytes: 700, fail_view_after_id: VR("w0029b") });
+    let threw: unknown;
+    try { await runP(fake, 10, { checkpoint_chunk_bytes: 600 }); } catch (e) { threw = e; }
+    expect(threw).toBeDefined();
+    expect(fake.db.state?.full_cursor?.view_after).toBe(VR("w0029b"));
+    expect(fake.db.state?.full_cursor?.chunks).toBeGreaterThan(1);
+    expect(fake.db.state?.last_full_at).toBeUndefined();
+    fake.stopFailing();
+    const { res, lines } = await runP(fake, 10, { checkpoint_chunk_bytes: 600 });
+    expect(res.exitCode).toBe(0);
+    expect(lines.join("\n")).toContain("RESUMING the pass started");
+    expect(res.summary.resumed).toBe(true);
+    expect(edgesOf(fake.db.graph)).toEqual(WIDE_EXPECTED(60));
+    expect(chunkRows(fake)).toEqual([]);
+  });
+
+  // G6 must-fails: a checkpoint whose chunks do not verify is discarded LOUDLY; nothing it held reaches the graph.
+  async function interrupted() {
+    const fake = makeFakeDb({ view: WIDE(60), state: null, max_body_bytes: 700, fail_view_after_id: VR("w0029b") });
+    try { await runP(fake, 10, { checkpoint_chunk_bytes: 600 }); } catch { /* expected */ }
+    const c = fake.db.state!.full_cursor;
+    const mine = chunkRows(fake).filter(([, v]) => v.pass === c.started_at && v.gen === c.gen);
+    expect(mine.length).toBe(c.chunks);
+    return { fake, c, mine };
+  }
+  const tamper: Array<[string, (f: ReturnType<typeof makeFakeDb>, c: any, mine: Array<[string, any]>) => void, RegExp]> = [
+    ["a missing chunk", (f, _c, mine) => { delete f.db.chunks[mine[1][0]]; }, /chunk \d+ of \d+ is missing/],
+    ["an extra chunk (carrying an edge no trace supports)", (f, c) => { f.db.chunks[`composition-edge-acc-x-g${c.gen}-${c.chunks}`] = { kind: "edge_acc_chunk", pass: c.started_at, gen: c.gen, n: c.chunks, items: [["e", "bogus-parent bogus-child", 9, 9]] }; }, /chunk\(s\) beyond the \d+ the cursor records/],
+    ["a chunk whose content no longer adds up", (f, _c, mine) => { const it = f.db.chunks[mine[0][0]].items.find((x: any) => x[0] === "e"); it[2] += 7; }, /totals differ: count_sum/],
+  ];
+  for (const [label, act, why] of tamper) it(`MUST-FAIL 4: ${label} → the checkpoint is DISCARDED loudly and the pass starts over (never a partial accumulator)`, async () => {
+    const { fake, c, mine } = await interrupted();
+    act(fake, c, mine);
+    fake.stopFailing();
+    const before = fake.queries.length;
+    const { res, lines } = await runP(fake, 10, { checkpoint_chunk_bytes: 600 });
+    const text = lines.join("\n");
+    expect(text).toMatch(/\[edge-reconcile\] full pass: DISCARDING the checkpoint of the pass started \S+ \(/);
+    expect(text).toMatch(why);
+    expect(res.summary.resumed).toBe(false);
+    expect(fake.queries.slice(before).find(isPageQuery)).not.toContain("WHERE id >");
+    expect(edgesOf(fake.db.graph)).toEqual(WIDE_EXPECTED(60)); // from scratch: no tampered count, no bogus edge
+  });
+
+  it("a run that dies part-way through writing a checkpoint leaves the previous generation and its cursor intact, and the next run resumes from it", async () => {
+    // gen 3 = the checkpoint after page 3; its chunk 1 never lands
+    const fake = makeFakeDb({ view: WIDE(60), state: null, max_body_bytes: 700, fail_chunk_write: { gen: 3, n: 1 } });
+    let threw: unknown;
+    try { await runP(fake, 10, { checkpoint_chunk_bytes: 600 }); } catch (e) { threw = e; }
+    expect(threw).toBeDefined();
+    const c = fake.db.state!.full_cursor;
+    expect(c.gen).toBe(2);
+    expect(c.view_after).toBe(VR("w0009b"));
+    fake.stopFailing();
+    const { res, lines } = await runP(fake, 10, { checkpoint_chunk_bytes: 600 });
+    expect(lines.join("\n")).toContain("RESUMING the pass started");
+    expect(lines.join("\n")).not.toContain("DISCARDING");
+    expect(res.exitCode).toBe(0);
+    expect(edgesOf(fake.db.graph)).toEqual(WIDE_EXPECTED(60));
+  });
+
+  it("MUST-FAIL 5: an unverifiable checkpoint never advances last_full_at, even while the restarted pass fails again", async () => {
+    const { fake, mine } = await interrupted();
+    fake.db.state!.last_full_at = OLD;
+    delete fake.db.chunks[mine[0][0]];
+    // the restart fails again at the same page: nothing may be written, last_full_at stays
+    let threw: unknown;
+    try { await runP(fake, 10, { checkpoint_chunk_bytes: 600 }); } catch (e) { threw = e; }
+    expect(threw).toBeDefined();
+    expect(fake.db.state!.last_full_at).toBe(OLD);
+    expect(fake.queries.filter(isEdgeUpsert)).toEqual([]);
+  });
+
+  it("a checkpoint written before chunking (one full_acc blob) is discarded loudly and its blob removed", async () => {
+    const now = Date.now();
+    const fake = makeFakeDb({
+      view: SMALL_VIEW(), content: CONTENT,
+      state: {
+        full_cursor: { started_at: new Date(now - 60_000).toISOString(), view_after: VR("r03"), view_done: false, content_after: "" },
+        full_acc: { edges: [["A B", 99, 99]], provenance: [], recent: [], counters: { batch_traces: 3, children: 0, orphan: 0, selfLoop: 0, shape_flow_contributions: 0 } },
+      },
+    });
+    const { res, lines } = await runP(fake, 3, null, { now });
+    expect(lines.join("\n")).toMatch(/DISCARDING the checkpoint .*\(a checkpoint without chunk records/);
+    expect(res.summary.resumed).toBe(false);
+    expect(edgesOf(fake.db.graph)).toEqual(EXPECTED);
+    expect(fake.db.state.full_acc).toBeUndefined();
+    expect(fake.queries.some((q) => q.includes("full_acc: NONE"))).toBe(true);
+  });
+
+  it("the run-start state read no longer pulls the accumulator", async () => {
+    const fake = makeFakeDb({ view: SMALL_VIEW(), content: CONTENT, state: null });
+    await runP(fake, 3, null);
+    expect(fake.queries[0]).toBe("SELECT watermark, recent_ids, last_full_at, full_cursor FROM reconcile_state:`composition-edge`;");
+  });
+});
+
+describe("sql(): a non-JSON reply is named, and a size refusal is never retried as-is (G3)", () => {
+  const reply = (status: number, body: string) => {
+    let calls = 0;
+    const f = (async () => { calls++; return new Response(body, { status }); }) as unknown as typeof fetch;
+    return { f, calls: () => calls };
+  };
+  for (const [status, body] of [[413, "payload too large"], [400, "length limit exceeded"]] as Array<[number, string]>) it(`status ${status} "${body}" → SqlBodyTooLargeError after ONE request, with status and first bytes logged`, async () => {
+    const { makeSql, SqlBodyTooLargeError } = await import(SCRIPT);
+    const lines: string[] = [];
+    const r = reply(status, body);
+    const sql = makeSql({ url: "http://fake/sql", fetchImpl: r.f, attempts: 5, backoffMs: 1, log: (s: string) => lines.push(s) });
+    let err: any;
+    try { await sql("UPSERT x CONTENT { a: 1 };"); } catch (e) { err = e; }
+    expect(err).toBeInstanceOf(SqlBodyTooLargeError);
+    expect(err.name).toBe("SqlBodyTooLargeError");
+    expect(r.calls()).toBe(1);
+    expect(lines).toEqual([`[edge-reconcile] sql: non-JSON reply status=${status} statement_bytes=${Buffer.byteLength("UPSERT x CONTENT { a: 1 };")} head=${JSON.stringify(body)}`]);
+  });
+  it("any other non-JSON reply is logged and retried (transient), naming the status in the final error", async () => {
+    const { makeSql } = await import(SCRIPT);
+    const lines: string[] = [];
+    const r = reply(502, "<html>bad gateway</html>");
+    const sql = makeSql({ url: "http://fake/sql", fetchImpl: r.f, attempts: 3, backoffMs: 1, log: (s: string) => lines.push(s) });
+    let err: any;
+    try { await sql("SELECT 1;"); } catch (e) { err = e; }
+    expect(r.calls()).toBe(3);
+    expect(String(err.message)).toContain("status 502");
+    expect(lines.length).toBe(3);
   });
 });
