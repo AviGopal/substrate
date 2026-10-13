@@ -18,7 +18,7 @@
 #   (d) MUST-FAIL: N consecutive deferrals of the same candidate file the budget-starved gap (no silent
 #       starvation), including deferrals that happen MID-gate (the counter resets only on a finished gate)
 #   (e) MUST-FAIL: the budget follows the LIVE unit's TimeoutStartSec (systemctl), not a constant: 10min ->
-#       600, 1h 30min -> 5400, an unloaded unit / infinity / garbage -> 1800 (the shipped unit's value)
+#       600, 1h 30min -> 5400, an unloaded unit / infinity / garbage -> 3600 (the shipped unit's value; 1800 until 2026-10-13)
 #   (h) MUST-FAIL: a slow clone-dependency install eats the time left -> deferred before the first run
 #   (j) MUST-FAIL: time left between 1x and 2x a suite run at the parent/candidate overlay -> deferred BEFORE
 #       either overlay run (the overlay is two runs; starting the first would let the second be killed)
@@ -162,9 +162,9 @@ if declare -F unit_timeout_s >/dev/null; then
   [ "$(ut loaded 10min)" = 600 ] && ok "(e) 10min -> 600 (a drop-in is honoured)" || bad "(e) 10min -> $(ut loaded 10min)"
   [ "$(ut loaded '1h 30min')" = 5400 ] && ok "(e) 1h 30min -> 5400" || bad "(e) 1h 30min -> $(ut loaded '1h 30min')"
   [ "$(ut loaded '1min 30s')" = 90 ] && ok "(e) 1min 30s -> 90" || bad "(e) 1min 30s -> $(ut loaded '1min 30s')"
-  [ "$(ut not-found '1min 30s')" = 1800 ] && ok "(e) an unloaded unit's default is NOT trusted -> 1800 (the shipped value)" || bad "(e) unloaded unit -> $(ut not-found '1min 30s')"
-  [ "$(ut loaded infinity)" = 1800 ] && ok "(e) infinity -> 1800" || bad "(e) infinity -> $(ut loaded infinity)"
-  [ "$(ut loaded 'banana')" = 1800 ] && ok "(e) unparseable -> 1800" || bad "(e) unparseable -> $(ut loaded banana)"
+  [ "$(ut not-found '1min 30s')" = 3600 ] && ok "(e) an unloaded unit's default is NOT trusted -> 3600 (the shipped value)" || bad "(e) unloaded unit -> $(ut not-found '1min 30s')"
+  [ "$(ut loaded infinity)" = 3600 ] && ok "(e) infinity -> 3600" || bad "(e) infinity -> $(ut loaded infinity)"
+  [ "$(ut loaded 'banana')" = 3600 ] && ok "(e) unparseable -> 3600" || bad "(e) unparseable -> $(ut loaded banana)"
   # and the gate follows it: a 10min unit at 400 s used still gates; the same tick on a 5min unit defers
   real; setup activity-api same; UNIT_TIMEOUT_S="$(ut loaded 10min)"; tick 200
   converged && ok "(e) 10min unit, 200 s used: gates and converges" || bad "(e) 10min unit did not gate (log: $(tr '\n' '|' < "$LOG" | cut -c1-200))"

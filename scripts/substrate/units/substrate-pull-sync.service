@@ -24,7 +24,12 @@ ExecStart=/bin/sh -c 'r=/usr/local/libexec/substrate/gate-runner; g=/workspace/.
 # less GATE_UNIT_MARGIN_S) was 776 s, so both deferred every tick and never converged. pull-sync reads this value live
 # (unit_timeout_s) for the gate budget, the quiesce/drain caps and the admission marker expiry. The unit is a oneshot,
 # so a long tick cannot overlap the next: the timer's start merges into the running job.
-TimeoutStartSec=1800
+# 3600 s (2026-10-13, user ruling "raise timeout fleet-wide"): the per-run suite wall is capped at a quarter of this
+# value less the margin and kill grace, because T1, the T2 confirmation and the two-run overlay must fit one tick (a
+# deferred gate starts over). At 1800 s that cap was 390 s, and the hub's development-vessel suite (completed runs
+# 273-325 s, slower ones killed at 390 s) could never finish a gate: it deferred every tick. At 3600 s the cap is 840 s
+# and the gate budget 3480 s. Fast nodes still finish early; only a tick that needs the time uses it.
+TimeoutStartSec=3600
 StandardOutput=journal
 StandardError=journal
 
