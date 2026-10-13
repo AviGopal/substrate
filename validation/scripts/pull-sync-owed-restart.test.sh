@@ -118,6 +118,7 @@ DEFER=0
 PROBE=0
 restart_age_defer() { RA_INFLIGHT=0; RA_OLDEST=""; RA_DEFER="$DEFER"; RA_WHY=""; RA_PROBE="$PROBE"; [ "$DEFER" = 1 ] && { RA_INFLIGHT=2; RA_WHY="2 in flight"; }; return 0; }
 restart_breadcrumb() { :; }
+owed_restart_settle() { OWED_HALT=0; }   # its own harness: pull-sync-owed-restart-settle.test.sh
 HEALTH_SEQ_FILE="$T/health-seq"   # one in_flight value per line, one per /health call; the last repeats
 health_seq() { printf '%s\n' "$@" > "$HEALTH_SEQ_FILE"; }
 curl() {   # runs inside $( ), so the sequence must live in a file, not a variable

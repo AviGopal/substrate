@@ -1746,6 +1746,83 @@ revert_target_hashes() {
   rm -rf "$wt"; git -C "$1" worktree prune >/dev/null 2>&1 || true
   return 0
 }
+
+# THE OWED RESTART ENDS LIKE THE SAME-TICK ONE (2026-10-13). A restart deferred for in-flight work and taken on a later
+# tick ("taking OWED restart") used to fall straight into the content short-circuit: no health check and no last-good
+# write. So the pin stopped tracking what runs (measured 2026-10-13: development-vessel's pin stayed on a commit four
+# loaded landings old), and an owed restart that came up unhealthy was never seen. This settles it the way the same-tick
+# path does, with one difference that keeps it safe while a pin may already be stale: it reverts to the pin ONLY when
+# the pin was written at or after the start of the process the restart replaced (the pin then names what that process
+# ran). An older pin names something several loads back, and reverting to it would roll all of them back at once; then
+# there is no recorded known-healthy version to return to, so it halts loudly and files the gap instead of reverting.
+# Args: vessel clone-dir unit port head prev-start-epoch. Sets OWED_HALT=1 when the run must halt (unhealthy).
+owed_restart_settle() {
+  local v="$1" d="$2" unit="$3" port="$4" head="$5" prev_start="$6" ok=1 pin pin_m why
+  OWED_HALT=0
+  if [ -n "$port" ]; then
+    ok=0; for _ in 1 2 3 4 5; do healthy "$port" && { ok=1; break; }; sleep 4; done
+  fi
+  if [ "$ok" = 1 ]; then
+    # The unit loaded what is on disk; that is HEAD's content only when the runtime equals the clone. Otherwise the
+    # same-tick path below mirrors HEAD and records the pin itself.
+    if [ -n "$head" ] && [ "${CLONE_HASH:-}" = "${RUNTIME_HASH:-x}" ]; then
+      echo "$head" > "$LAST_GOOD_DIR/$v"
+      log "$v: owed-settle: healthy after the owed restart; last-good = ${head:0:10}"
+    fi
+    return 0
+  fi
+  OWED_HALT=1
+  pin="$(cat "$LAST_GOOD_DIR/$v" 2>/dev/null || true)"
+  pin_m="$(stat -c %Y "$LAST_GOOD_DIR/$v" 2>/dev/null || echo 0)"
+  if [ -z "$pin" ] || [ -z "$prev_start" ] || [ "$pin_m" -lt "$prev_start" ]; then
+    why="last-good ${pin:-<none>} was recorded before the replaced process started, so it does not name what that process ran; reverting to it would roll back every load since"
+    [ -z "$prev_start" ] && why="the replaced process's start time was unreadable, so the last-good pin cannot be dated against it"
+    log "$v: owed-settle: UNHEALTHY after the owed restart of ${head:0:10}; NOT reverting ($why); HALTING run"
+    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-unhealthy-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$v unhealthy after an owed restart onto ${head:0:10}; not reverted: $why. Halted the sync run.\",\"status\":\"open\"}}}}"
+    return 0
+  fi
+  log "$v: owed-settle: UNHEALTHY after the owed restart of ${head:0:10}; reverting to last-good ${pin:0:10} (recorded for the replaced process) and HALTING run"
+  why=""
+  if ! { if [ -n "${PULLSYNC_ACCEPTED_DIR:-}" ]; then bash "$MIRROR_BIN" "$v" "$CLONE_DIR" "$pin" "$pin"; else /usr/local/bin/mirror-to-live "$v" "$CLONE_DIR" "$pin" "$pin"; fi; }; then
+    why="mirror-to-live of ${pin:0:10} failed"
+  elif ! revert_target_hashes "$d" "$pin" "$RUNTIME_DIR/$v"; then
+    why="$RT_WHY"
+  elif [ "$RT_LIVE" != "$RT_WANT" ]; then
+    why="live content ${RT_LIVE:0:10} != ${pin:0:10}'s tree ${RT_WANT:0:10}"
+  fi
+  echo "$(content_hash "$RUNTIME_DIR/$v" "$d")" > "$MARKER_DIR/$v.runtime-sha" 2>/dev/null || true
+  systemctl restart "$unit" 2>/dev/null || true
+  if [ -z "$why" ]; then
+    log "$v: owed-settle: reverted to ${pin:0:10}, verified: live content == its tree"
+    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-unhealthy-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$v unhealthy after an owed restart onto ${head:0:10}; reverted to ${pin:0:10} (live content verified against its tree) and halted the sync run\",\"status\":\"open\"}}}}"
+  else
+    log "$v: owed-settle: revert FAILED: $why; $unit is still serving unhealthy code from ${head:0:10} (pull-sync-revert-failed-$v)"
+    emit_gap "{\"impulse\":{\"pointer\":{\"type\":\"substrateGap_write\",\"gap\":{\"id\":\"pull-sync-revert-failed-$v\",\"category\":\"service_failure\",\"source\":\"substrate_detected\",\"summary\":\"$v unhealthy after an owed restart onto ${head:0:10}; revert to ${pin:0:10} FAILED ($why); still running the unhealthy code; halted the sync run\",\"status\":\"open\"}}}}"
+  fi
+  return 0
+}
+
+# A HEALTHY-RUNNING BASELINE (2026-10-13). The pin also goes stale by every path that loads code without the same-tick
+# write (the owed path before owed_restart_settle, a hand restart), and self-recovery reverts a down unit to it. So a
+# quiet tick re-pins: when the runtime equals the clone (the caller's branch), the unit has run at least BASELINE_MIN_S
+# (default 300) since it last started, no runtime src/ file is newer than that start (the mirror rewrites every mtime, so
+# the process loaded what is on disk), and /health answers now, HEAD is what is running and healthy: it is recorded.
+# Cheap when nothing changed: the first test is one read of the pin.
+pin_running_baseline() {
+  local v="$1" unit="$2" port="$3" head="$4" old start now
+  [ -n "$head" ] || return 0
+  old="$(cat "$LAST_GOOD_DIR/$v" 2>/dev/null || true)"
+  [ "$old" != "$head" ] || return 0
+  [ -n "$unit" ] && systemctl is-active --quiet "$unit" 2>/dev/null || return 0
+  start="$(date -d "$(systemctl show -p ActiveEnterTimestamp --value "$unit" 2>/dev/null)" +%s 2>/dev/null)" || return 0
+  now="$(date +%s)"
+  [ $(( now - start )) -ge "${BASELINE_MIN_S:-300}" ] || return 0
+  [ -d "$RUNTIME_DIR/$v/src" ] || return 0
+  [ -z "$(find "$RUNTIME_DIR/$v/src" -type f -newermt "@$start" 2>/dev/null | head -1)" ] || return 0
+  [ -z "$port" ] || healthy "$port" || return 0
+  echo "$head" > "$LAST_GOOD_DIR/$v"
+  log "$v: last-good baseline: ${head:0:10} has run healthy for $(( (now - start) / 60 )) min (the pin read ${old:0:10}); pinned"
+}
 # content_hash with test files excluded (same patterns as test_only_range).
 # The last-good pin lives on the volume while /vessels can come from a rebuilt
 # image, so the pin alone cannot say what the unit runs: a test-only range after
@@ -2605,9 +2682,12 @@ for d in "${PASS_ORDER[@]}"; do
       rm -f "$P_DEFER_FILE" "$PENDING_FILE" "$OWED_SINCE_FILE" 2>/dev/null || true
       if [ -n "$P_UNIT" ] && systemctl is-active --quiet "$P_UNIT" 2>/dev/null; then
         restart_breadcrumb "$v" "$P_REASON" "$P_INFLIGHT"
+        P_PREV_START="$(date -d "$(systemctl show -p ActiveEnterTimestamp --value "$P_UNIT" 2>/dev/null)" +%s 2>/dev/null || true)"
         systemctl restart "$P_UNIT" 2>/dev/null || true
         Q_CARRY=""; quiesce_release   # a carried hold ends with the restart: the new process must find admission open
         sleep "$STAGGER_SECONDS"
+        owed_restart_settle "$v" "${d:-}" "$P_UNIT" "${P_PORT:-}" "${HEAD:-}" "$P_PREV_START"
+        [ "${OWED_HALT:-0}" = 1 ] && { failed=$(( ${failed:-0} + 1 )); break; }
       fi
       Q_CARRY=""; quiesce_release     # and with the owed restart dropped for an inactive unit
     fi
@@ -2624,6 +2704,7 @@ for d in "${PASS_ORDER[@]}"; do
         echo "$HEAD" > "$MARKER_DIR/$v.noop-head" 2>/dev/null || true
       fi
       refresh_clone_dependants "$v" "$d"   # a converged shared package: its clone dist and file: dependants follow the build
+      pin_running_baseline "$v" "$(vessel_unit "$v")" "$(health_port "$v")" "$HEAD"
       continue
     fi
     log "$v: src converged but dist stale (last-good != ${HEAD:0:10}) — re-running fan-out"
