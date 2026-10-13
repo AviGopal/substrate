@@ -1376,6 +1376,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
     - **The package is built but not pushed.** A restack defect was caught by test count and fixed. The final whole-suite run is due about 15:30Z. The freeze is at 18:00Z regardless.
     - **The lane has made 0 system commits since 09:11Z.** Every filed deficiency is an unknown with no repair route, or is waiting on the package.
     - **D5:** the loop goal has not run since about 06:40Z, so there is no tally and no trace yet. That gap is within its historical cadence. **Whether its runs show a missing producer or wrong content is still unknown.** qa's watcher reports the first run, or reports D5 missed at 10-14T06:00Z.
+    - **Pre-registered:** if the loop goal has not run by 2026-10-13T18:00Z (about 11 hours, roughly twice its cadence), that is C-starve-1 recurring on the one rhythm family that matters. It is **filed** as a gap (create-only, run by the user) and **never dispatched by hand.** A manual dispatch would void the "zero operator hands" grading for D5 through D9.
   - **D5 is on track:** its predicate is the loop goal's next run on its rhythm. **D6's risk is named as case C-listwindow-1:** runs older than R2's 200-row listing window are never tallied, so the loop goal's candidate needs about 3 new runs after the long-goal fix. That is plausibly 10-14 around midday, inside D6's date.
   - **C-checkpoint-1 repair, live control passed in all three steps:**
     1. The pre-chunk checkpoint was discarded.
