@@ -1312,6 +1312,7 @@ At 2026-10-12T19:40Z they read: 238 operator commits against 2 system-authored c
 
 | Item | Date |
 |---|---|
+| **THE TARGET, refined 2026-10-13: the CLOSED LOOP on a real goal**, ahead of 10-18. A goal is blocked; the system recognises the gap; it closes the gap itself; the original goal is re-run and reached. It is built from existing parts. A system-authored, consumer-verified repair is one link of it. | **ahead of 2026-10-18T07:12Z** (closer-only). The user's ruling, as reported by qa: "We are allowed to perform surgery until the coaxes land. remember that the overall schedule requires the system to comprehend when a gap exists and needs closing, closes it, then succeeds at whatever it was trying to do originally. The parts to do all of this already exist, and we must get to that state ahead of schedule." **Surgery is allowed on broken links until coaxing carries them, and every act is recorded.** This refines the earlier "no operator correction" stance for the bootstrap phase. |
 | **THE TARGET: the first system-authored, consumer-verified repair** | **by 2026-10-18T07:12Z** (the window close; closer-only). Added by user ruling on 2026-10-12, as reported by qa: before this, the plan dated only operator builds and need dispatches, never the goal itself. |
 | **The opening (committed)** | **2026-10-12T06:00Z** |
 | The opening (target) | about 2026-10-11T07:30Z (range 07:30–10:00Z). An estimate from the measured critical path, which depends on how long the gate-budget fix takes to build. |
