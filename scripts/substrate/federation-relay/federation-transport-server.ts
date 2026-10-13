@@ -14,7 +14,7 @@ import { hostname } from 'node:os'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { callerKeyFromHeader, decideIngress, makeValidator, parsePolicy, pointerForDial, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
+import { callerKeyFromHeader, decideIngress, makeValidator, pointerForDial, policyFromPoolResponse, resolveMode, stripCredentials, withoutFedAuth, type Decision, type Mode, type Policy } from './ingress-auth'
 import { multiaddr } from '@multiformats/multiaddr'
 
 // RESILIENCE: libp2p internals emit 'error' events on streams/sockets that have no
@@ -66,8 +66,10 @@ async function readIngressPolicy(): Promise<Policy | null> {
       body: JSON.stringify({ impulse: { pointer: { type: 'poolImpulse', shape: 'fedIngressAuthPolicy', status: 'open', limit: 1 } } }),
       signal: AbortSignal.timeout(5000),
     })
+    // Only a VERIFIED OPERATOR row counts (fedIngressAuthPolicy is a trust-root pool shape); an unattested or forged row
+    // is unreadable, so it can neither route a caller's key nor arm the enforce ratchet below.
     const j: any = r.ok ? await r.json() : null
-    policy = parsePolicy(j?.body?.impulses?.[0]?.body)
+    policy = policyFromPoolResponse(j)
   } catch { policy = null }
   policyCache = { at: Date.now(), policy }
   return policy

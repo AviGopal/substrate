@@ -15,7 +15,7 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import {
-  PUBLIC_SHAPES, callerKeyFromHeader, decideIngress, destinationPeer, makeValidator, parsePolicy, pointerForDial,
+  PUBLIC_SHAPES, callerKeyFromHeader, decideIngress, destinationPeer, makeValidator, parsePolicy, pointerForDial, policyFromPoolResponse,
   resolveMode, shouldAttachCredential, stripCredentials, withoutFedAuth, type Policy, type Validate,
 } from '../../scripts/substrate/federation-relay/ingress-auth'
 
@@ -114,6 +114,33 @@ describe('policy and mode (law 1: a shaped record, a fail-closed ratchet)', () =
   })
 })
 
+describe('policy rows count ONLY when the pool verified an operator stamp (a forged row is unreadable)', () => {
+  const body = { mode: 'enforce', same_authority_peers: ['12D3KooWAttackerPlaceholderPeer'] }
+  const read = (row: Record<string, unknown> | null) => ({ body: { impulses: row ? [row] : [] } })
+  test('a verified operator row is the policy', () => {
+    expect(policyFromPoolResponse(read({ body, attested_verified: true, attested: { by: 'operator' } }))?.mode).toBe('enforce')
+  })
+  test('MUST-FAIL: unattested, unverified, forged-verified-without-operator, evaluator, runner, empty and malformed reads are all null', () => {
+    for (const row of [
+      { body },
+      { body, attested: { by: 'operator' } },
+      { body, attested_verified: false, attested: { by: 'operator' } },
+      { body, attested_verified: true },
+      { body, attested_verified: true, attested: { by: 'evaluator' } },
+      { body, attested_verified: true, attested: { by: 'runner' } },
+      { body: { mode: 'nonsense' }, attested_verified: true, attested: { by: 'operator' } },
+    ]) expect([JSON.stringify(row).slice(0, 70), policyFromPoolResponse(read(row))]).toEqual([JSON.stringify(row).slice(0, 70), null])
+    expect(policyFromPoolResponse(read(null))).toBeNull()
+    expect(policyFromPoolResponse(null)).toBeNull()
+    expect(policyFromPoolResponse({ body: { impulses: 'x' } })).toBeNull()
+  })
+  test('MUST-FAIL: so an unattested row naming an attacker peer routes NO key, and its enforce cannot arm the ratchet', () => {
+    const p = policyFromPoolResponse(read({ body, attested_verified: false }))
+    expect(pointerForDial('/dns4/x.invalid/tcp/1/p2p/12D3KooWAttackerPlaceholderPeer', { type: 'concept' }, KEY, p)).toEqual({ type: 'concept' })
+    expect(resolveMode(p, false, false)).toBe('off')
+  })
+})
+
 describe('the caller key crosses only to the same identity authority (no bearer key across a trust boundary)', () => {
   test('destinationPeer is the LAST /p2p/ component (a circuit names the relay first)', () => {
     expect(destinationPeer(circuitTo(SAME))).toBe(SAME)
@@ -171,6 +198,13 @@ describe('wiring pins (federation-transport-server.ts)', () => {
     expect(direct.length).toBe(2)
     const fn = src.slice(src.indexOf('async function resolveOverLibp2p('), src.indexOf('async function resolveOverLibp2p(') + 600)
     expect(fn).toContain('pointerForDial(target, pointer, callerCtx.getStore()?.key ?? null, cachedPolicy())')
+  })
+  test('MUST-FAIL: the policy reader trusts only policyFromPoolResponse (a verified operator row), never a raw body', () => {
+    const reader = src.slice(src.indexOf('async function readIngressPolicy('), src.indexOf('const cachedPolicy ='))
+    expect(reader).toContain('policy = policyFromPoolResponse(j)')
+    expect(reader).not.toMatch(/parsePolicy\(/)
+    const mode = src.slice(src.indexOf('async function ingressMode('), src.indexOf('const validateKey ='))
+    expect(mode).toContain("if (policy?.mode === 'enforce' && !existsSync(RATCHET_FILE))")
   })
   test('MUST-FAIL: an ingress-originated hop runs with an EMPTY caller context (no re-attachment)', () => {
     expect(ingress).toContain('callerCtx.run({ key: null }, () => resolveHandler(pointer))')

@@ -98,6 +98,22 @@ export function parsePolicy(body: unknown): Policy | null {
 }
 
 /**
+ * The policy from a development-vessel poolImpulse read, ONLY when the row is a verified operator write: the pool marks
+ * attested_verified only for a trust-root row whose stamp verifies under that node's key, and fedIngressAuthPolicy is a
+ * trust-root shape (operator credential required). Anything else (no row, an unattested or forged row, an evaluator or
+ * runner stamp, a malformed body) is null: unreadable, so the ratchet decides. A forged {mode: enforce} therefore can
+ * never arm the ratchet, and a forged same_authority_peers can never route a caller's key.
+ */
+export function policyFromPoolResponse(j: unknown): Policy | null {
+  const rows = (j as { body?: { impulses?: unknown } } | null)?.body?.impulses
+  const row = Array.isArray(rows) ? (rows[0] as Record<string, unknown> | undefined) : undefined
+  if (!row || row.attested_verified !== true) return null
+  const by = (row.attested as { by?: unknown } | undefined)?.by
+  if (by !== 'operator') return null
+  return parsePolicy(row.body)
+}
+
+/**
  * The effective mode. emergencyOff is the named bootstrap exception (an env rollback that needs no record). A readable
  * record wins. Absent or unreadable: `off` until this node has once read `enforce`, `enforce` after (fail-closed ratchet).
  */

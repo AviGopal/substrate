@@ -133,7 +133,8 @@ beforeAll(async () => {
   const pool = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(req) {
     const b: any = await req.json().catch(() => ({}))
     const p = b?.impulse?.pointer ?? {}
-    const impulses = p.shape === 'fedIngressAuthPolicy' ? [{ shape: 'fedIngressAuthPolicy', status: 'open', body: policyBody }] : []
+    // A VERIFIED OPERATOR row, as development-vessel's read marks a trust-root write it attested (the transport honours nothing else).
+    const impulses = p.shape === 'fedIngressAuthPolicy' ? [{ shape: 'fedIngressAuthPolicy', status: 'open', body: policyBody, attested_verified: true, attested: { by: 'operator', key_id: 'k-placeholder' } }] : []
     return Response.json({ success: true, body: { impulses } })
   } })
   stubs.push(pool)
