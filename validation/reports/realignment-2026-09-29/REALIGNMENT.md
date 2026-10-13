@@ -1277,6 +1277,20 @@ At 2026-10-12T19:40Z they read: 238 operator commits against 2 system-authored c
   - **Nothing is hand-edited on (A).** A later (A) landing is system-authored and is recorded as **"enabled by operator capability build C-window-1"**: operators build a capability once, and the system closes the gaps.
   - **What it supersedes.** It replaces ruling (a)'s "no operator correction" **for the capability only**, not for (A) itself.
   - **Its must-fails:** a genuine no-effect region (under whole-file grounding) is still refused, so voiding locks must not loosen the gate.
+  - **Refined to close the LOOP, not just widen the window** (after an advisor consult at the user's request):
+    - a whole-file fast path;
+    - typecheck lessons become grounding instructions: the composer resolves where a missing symbol lives, and the next grounding must include it;
+    - re-grounding within an attempt;
+    - clone READS are not gated by the live-write hold, while writes stay held;
+    - a lock audit, after which locks made without the check executing, or under partial grounding, are voided (the must-fail above is kept);
+    - attribution fields in the trace;
+    - shaped knobs.
+
+    Deferred: multiple windows, and the landability predictor (stuck at 0.5).
+  - **Pre-registered on 2026-10-13, before (A)'s attempt at about 20:42Z:**
+    - **Success:** (A)'s next failure CLASS MOVES: a different TypeScript code, region or assertion delta. A landing is the strong success.
+    - **Failure:** the failure is identical.
+    - **The docs reading:** a move counts only if it is to a LATER stage (for example, typecheck now passes and an assertion fails). A merely different failure at the same stage is noise, not progress.
   - **Its shas: [TO FILL].**
 - **The class need named:** "a gap whose only exit is a held path should surface as blocked-by-hold, naming the hold's review_by, instead of retrying daily into the same refusal."
 
