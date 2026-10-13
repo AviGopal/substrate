@@ -1280,7 +1280,14 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
     - boredom does not fill idle capacity;
     - a gap whose only exit is held should read blocked-by-hold;
     - a stale hint, and regions the system's own failed drafts locked.
-- **The loop goal, named by the sealed rule:** the `federation_verification_report` goal. The coordinator seals its verbatim text and hash before any surgery lands.
+- **The loop goal, RE-SELECTED on 2026-10-13** (recorded as a re-selection, not a first choice).
+  - **Why it changed.** The first selection, the `federation_verification_report` goal, was rejected because its transport vessel is masked on node 1, so its block is placement rather than a recognisable gap.
+  - **The rule was amended first.** L2 now covers content failures (the user's option 2), and the selection rule was amended BEFORE the new goal was chosen.
+  - **The new loop goal:** `f7145bc8`, a system-originated rhythm goal whose verbatim text and hash the coordinator holds.
+  - **Its record:** 30 not reached and 2 reached in 7 days. The judge's shared deficiency is that its target output is never produced, and no producer for that output exists anywhere.
+  - **The no-staging rule binds:** nothing is built for this goal, and its expected close is kept out of the tree until it is scored.
+  - **S2 is redesigned** as a content-failure recognition tick.
+- (Superseded first selection:) **The loop goal, named by the sealed rule:** the `federation_verification_report` goal. The coordinator seals its verbatim text and hash before any surgery lands.
 
 **Headline measures, reported every hour from 2026-10-12** (user ruling, as reported by qa). All three must move the right way:
 - the total operator interventions since 2026-10-10;
