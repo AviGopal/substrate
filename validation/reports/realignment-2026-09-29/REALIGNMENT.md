@@ -1263,6 +1263,21 @@ At 2026-10-12T19:40Z they read: 238 operator commits against 2 system-authored c
   - **no early lift of that hold;**
   - **no operator correction for re-arming a reopened gap;**
   - **if the target is missed,** it is reported **MISSED at 2026-10-18T07:12Z** and not moved (closer-only).
+- **Why (A) fails, from a read-only investigation (2026-10-13).**
+  - A stale line hint in the gap's text confines the drafter to about 100 of the file's 486 lines, while the fix needs lines outside that window.
+  - The drafter's own failed drafts then permanently locked 9 regions inside the window.
+  - Both escapes are spent (the single decomposition was used on 10-07) or held.
+  - The feedback reaches the drafter, but it cannot act on it.
+- **A user direction** (as reported by qa): "We need to get the system to a state where autonomy is visible before the deadline. If the system can't close this class of gap then it can't really close any gap."
+  - **Applied as "adjust iff required for autonomy":** one operator **capability** build, **C-window-1**, recorded over the cap by ruling, in closed core (feature-compose and retry-evidence). It provides:
+    - whole-file grounding for the edit site, up to a shaped budget, with multiple windows above that budget;
+    - voiding no-effect locks that were made under partial grounding;
+    - structured typecheck lessons.
+  - **Its target:** to land before (A)'s attempt at about 2026-10-13T20:42Z.
+  - **Nothing is hand-edited on (A).** A later (A) landing is system-authored and is recorded as **"enabled by operator capability build C-window-1"**: operators build a capability once, and the system closes the gaps.
+  - **What it supersedes.** It replaces ruling (a)'s "no operator correction" **for the capability only**, not for (A) itself.
+  - **Its must-fails:** a genuine no-effect region (under whole-file grounding) is still refused, so voiding locks must not loosen the gate.
+  - **Its shas: [TO FILL].**
 - **The class need named:** "a gap whose only exit is a held path should surface as blocked-by-hold, naming the hold's review_by, instead of retrying daily into the same refusal."
 
 **A security fix is in flight** (a federation ingress hardening). It does not gate the priority path.
