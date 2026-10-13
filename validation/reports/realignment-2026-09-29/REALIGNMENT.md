@@ -1256,6 +1256,21 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
   - **(2) Nothing specific to the loop goal may be built.** Any build that references it voids the loop as staged.
   - **(3) C-window-1's ladder test is RE-PINNED, not voided.** The first lane compose after it is live, on any gap whose edit-site file is over 6 KB and whose fix spans more than one old window, must reach a later rung than that gap's prior attempt, or pass typecheck if it has no prior attempt.
   - **Gap (A)** is recorded as "defect fixed by operator surgery S3".
+- **A date for each link** (qa, 2026-10-13). Each is closer-only once set, and a miss on any is reported at that date.
+
+  | # | Link | Date |
+  |---|---|---|
+  | D1 | S1, S3 and C-window-1: packages to qa; live (gate-accepted on node 1 and compose2) | packages 2026-10-13T14:00Z; live 19:30Z |
+  | D2 | S1 evidence: goal-reach-tick shows waiting > 0, with goal_reach demand entries on real walk gaps | 2026-10-14T06:00Z |
+  | D3 | S2, the recognition tick: package; live | package 2026-10-14T06:00Z; live 12:00Z |
+  | D4 | S5, the re-run switched on: the user's shaped `goalReachPolicy` set to `dry_run:false`, after dry-run redispatch lines are seen | 2026-10-14T18:00Z |
+  | D5 | The loop run starts: the federation goal re-dispatched verbatim | 2026-10-14T20:00Z |
+  | D6 | Recognition: an OPEN, goal-linked gap for its missing producer, made by the system (S2 or a walk), with no operator filing | by 2026-10-15T06:00Z |
+  | D7 | The close: by the system, through a sanctioned path (a learned producer or a lane landing), verified | by 2026-10-16T18:00Z |
+  | D8 | The re-run is REACHED (redispatched by goal-reach-tick, or by the next natural run) | by 2026-10-17T12:00Z |
+  | D9 | The verdict, "links run unassisted: k of 4" | 2026-10-18T07:12Z |
+
+  Slack is thin at D7. If D6 slips past 2026-10-15T12:00Z, the options go to the user then, not on 10-18.
 - **The loop goal, named by the sealed rule:** the `federation_verification_report` goal. The coordinator seals its verbatim text and hash before any surgery lands.
 
 **Headline measures, reported every hour from 2026-10-12** (user ruling, as reported by qa). All three must move the right way:
