@@ -1311,7 +1311,9 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
 
   **The combined re-pin** (super-repo `0968b9a5`) was pushed at 06:21:32Z. An automatic submodule pointer bump (`61e78ac6`) at 06:31:36Z restarted its soak, and all four gated nodes had accepted it by about 07:24Z.
   - **Case C-soak-1:** the bot's automatic pointer bumps reset Gate P soaks just as operator pushes do, and nothing coordinates them with the batching rule. The system should batch its own pointer bumps, one per soak window.
-  - **Case C-multifile-1,** as recorded by qa; its detail is in qa's record.
+  - **Case C-multifile-1: a gap can name only one file.** feature_compose can already compose a change across several files. But a gap carries one edit site, and only that file gets whole-file grounding. So a fix that must move several files together cannot be expressed, or is drafted half-blind.
+    - **It is measured before anything is built:** the files the plan touches per attempt, typecheck lessons that point outside the edit site, and could-not-widen events.
+    - **The general fix:** secondary sites the system derives itself, grounding for every touched file, and one commit across the files.
 
   **Added by qa, steered toward autonomy:**
   - **D10, durability:** the same loop machinery closes a SECOND, different real goal with ZERO new surgery, **by 2026-10-21** (closer-only). It separates "we built a loop" from "the system closes loops".
