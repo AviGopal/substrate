@@ -1246,6 +1246,12 @@ At 2026-10-12T19:40Z they read: 238 operator commits against 2 system-authored c
    - **(b)** the region-lint census runs;
    - **(c)** the normal lifecycle work still runs.
 
+**A correction rule, pre-registered on 2026-10-13 at about 00:20Z, before the stage-1 supply tick at about 02:30Z** (the user, as reported by qa: "follow the recommendations. stick to this schedule.").
+- **If stage 1 fails because C-check-1's supply prompt yields an inadmissible check,** fixing that prompt is **allowed once.** It is a correction to an approved build, and it is counted as an operator act.
+- **A second failure** means the generator approach is wrong, not under-tuned, and it is not tuned further.
+
+**A security fix is in flight** (a federation ingress hardening). It does not gate the priority path.
+
 **New need dispatches are paused** until build 7's routing opening is live, because the refutations share a routing root. N7 is reported MISSED at 2026-10-13T00:00Z, not re-queued.
 
 **Dates.** Measured basis: a move commit of the `gap-to-feature` split took about 17 minutes wall time, including rebase, the suite and the protected runs.
