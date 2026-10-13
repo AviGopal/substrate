@@ -1328,6 +1328,54 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
 
     The repair falls under freeze exception (a): attribution by ownership only, unreadable is never final, the legacy fallback is restored, and the poisoned rows are healed. The third gap is composition: every step succeeded and the goal was still unmet, so there is no site.
   - **The freeze starts** when #1b and the boredom selector fix (user-cleared, pushed 11:32Z) are both live on both gated nodes. The time is recorded when measured. The #1a repair above stays allowed after that, under exception (a).
+  - **The #1a repair (#1c) is built, under exception (a):**
+    - ownership is per run, and a node's write merges with other nodes' runs and records the attributing node;
+    - a foreign or node-less "unreadable" is re-attributed at once by the owning node, and a node's own is retried after a shaped interval;
+    - legacy entries resolve through the node's own goal-host, and the unread reason is labelled honestly;
+    - the poisoned rows are healed.
+
+    It is in review. The pre-freeze pushes went out at 11:21Z (#1b with the path fix) and 11:32Z (the boredom selector fix).
+  - **Most first localizations have no repair route.** Of the first 5, 2 were composition (every step succeeded, and the goal was still unmet) and 2 were output errors. Neither kind has a route to a repair. A composition-route gap is drafted for the user to file.
+    - **Law 6, the missing generator:** a loud unknown of the same kind, repeated across rows, is a measured class with no consumer. The localization pass itself should mint "this kind has no repair route". That generator is filed as its own gap.
+    - **A named D7 risk, with its exact condition:** the composition-route fix sites in a lane-open file. The decomposition entry it would need lives in a protected file. The system can close it only if the fix fits entirely in the open file, calling the existing exported entry. If the lane's draft needs the protected file, the gap goes scope-excluded, and D7 becomes a scope earn-in decision for the user.
+    - **D7 admits two branches:** "a learned producer or a lane landing". The composition route is on the loop's path only if D6's gap comes from S2 and the learned-producer branch does not fire. If a walk files it as a missing-producer capability gap, the mint-and-compose path can close it without the lane. Which branch D6's gap enters is open, and is read when it files.
+  - **D7's two branches, measured (read-only; the whole store plus the journals): neither had a working route.**
+    - **The last 14 days:** no walk-filed producer gap was closed by a learned producer or a lane landing. Of 54 closes, 51 were walk artefacts, born closed.
+    - **The two producer-side routes have not run:** the "producer now exists" close last fired on 07-25. The capability-gap author route exists in code but has **never been dispatched**.
+    - **The ribosome learns only from reached runs,** which is circular for a shape that no run can reach.
+  - **User ruling, about 2026-10-13T11:45Z (relayed by qa): one more operator route, then freeze.** Exactly one: the dispatcher into the existing capability-gap author route.
+    - **Read-only checks come first:** born-closed handling; whether a landed resolver is registered as a producer; whether "producer now exists" fires first; and where the dispatcher lives.
+    - **If a landing does not register the producer,** that goes back to the user as a second decision.
+    - **The freeze start moves** to when this route is live on both gated nodes. The time is recorded when measured.
+  - **The dispatcher's read-only checks found the route blocked twice:**
+    - capability gaps are born unarmed, so eligibility reports them "unarmed";
+    - every authored resolver must register in two protected development-vessel files.
+
+    **Also confirmed:** capability gaps with a single demander are born closed. So the loop goal's open D6 gap can arrive **only through S2**.
+  - **User ruling, about 2026-10-13T11:55Z (relayed by qa), the second amendment to the freeze: "Full package, additive-only".** The package is:
+    - the dispatcher;
+    - contract-derived class-2 arming;
+    - a narrow scope rule admitting **only additive registration of a new shape**: a new array entry, plus a new case that calls a new file, in the same landing. No edits and no removals. Must-fail controls prove that nothing existing changes.
+
+    It is a scope widening under the user's ratchet.
+    - **A must-pass acceptance item:** one S2 composition row reaches the dispatcher. There are must-fail controls for targets that are already produced and shapes that are already advertised. If the trace cannot name the unproduced target, that is said before anything is built.
+  - **The run records can name targets.** The walk log records each inferred target and each shape a satisfier produced. On both composition holdouts, every inferred target **was** produced: one produced but hollow, and the other with all four produced. **So composition means wrong content, not a missing producer.**
+    - The package correctly does nothing for that kind. It serves D6's public predicate, "a gap for its missing producer": deficiency rows whose inferred target has no advertised producer, plus capability gaps with at least two demanders.
+    - **Wrong content has no repair route.** It is filed as a gap for the system.
+    - **If the loop goal's runs prove to be wrong content, D7 is reported MISSED.** No third amendment follows.
+  - **Exception (a):** #1d was pushed at 11:52Z.
+  - **User ruling, about 2026-10-13T12:00Z (relayed by qa): THE FREEZE STARTS AT 2026-10-13T18:00Z, REGARDLESS.**
+    - Whatever part of the package is not live by then becomes a filed gap.
+    - Any new blocker found inside the package goes to the user as a decision, never as an automatic third amendment.
+    - Exceptions (a), our own regressions, and (b), intractables, still apply after 18:00Z.
+  - **Exception-(a) repairs:** #1c pushed at 11:43Z. A fix for reasonless legacy entries (a regression from our own S2 follow-up) follows.
+  - **The boredom selector fix (C-starve-1) is live on both nodes from 11:38Z.** Its live control passed at 11:41Z: picks changed by idle decay on both nodes.
+  - **Reading at 2026-10-13T13:37Z:**
+    - **#1c's repair is closed by measurement.** All three D3 gaps now read their traces: two composition and one output error. None reads unreadable.
+    - #1e was pushed at 12:27Z and was live on both nodes by 13:01Z.
+    - **The package is built but not pushed.** A restack defect was caught by test count and fixed. The final whole-suite run is due about 15:30Z. The freeze is at 18:00Z regardless.
+    - **The lane has made 0 system commits since 09:11Z.** Every filed deficiency is an unknown with no repair route, or is waiting on the package.
+    - **D5:** the loop goal has not run since about 06:40Z, so there is no tally and no trace yet. That gap is within its historical cadence. **Whether its runs show a missing producer or wrong content is still unknown.** qa's watcher reports the first run, or reports D5 missed at 10-14T06:00Z.
   - **D5 is on track:** its predicate is the loop goal's next run on its rhythm. **D6's risk is named as case C-listwindow-1:** runs older than R2's 200-row listing window are never tallied, so the loop goal's candidate needs about 3 new runs after the long-goal fix. That is plausibly 10-14 around midday, inside D6's date.
   - **C-checkpoint-1 repair, live control passed in all three steps:**
     1. The pre-chunk checkpoint was discarded.
