@@ -1271,6 +1271,15 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
   | D9 | The verdict, "links run unassisted: k of 4" | 2026-10-18T07:12Z |
 
   Slack is thin at D7. If D6 slips past 2026-10-15T12:00Z, the options go to the user then, not on 10-18.
+
+  **Added by qa, steered toward autonomy:**
+  - **D10, durability:** the same loop machinery closes a SECOND, different real goal with ZERO new surgery, **by 2026-10-21** (closer-only). It separates "we built a loop" from "the system closes loops".
+  - **G7, inverse generality:** every surgery must act on input that is not the federation goal, and must name its readers. A surgery that would do nothing for any other goal is staged.
+  - **A nudge count:** any operator change to the loop gap's priority, cadence or admission is an operator link, counted against D6 and D7.
+  - **After build 7's routing opening,** the queued class needs go to the SYSTEM as needs, not as new surgeries:
+    - boredom does not fill idle capacity;
+    - a gap whose only exit is held should read blocked-by-hold;
+    - a stale hint, and regions the system's own failed drafts locked.
 - **The loop goal, named by the sealed rule:** the `federation_verification_report` goal. The coordinator seals its verbatim text and hash before any surgery lands.
 
 **Headline measures, reported every hour from 2026-10-12** (user ruling, as reported by qa). All three must move the right way:
