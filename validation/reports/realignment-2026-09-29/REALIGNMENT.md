@@ -1602,6 +1602,16 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
                - **Scope note, no action:** the compensation code is lane-editable. That is acceptable, because applying any replay needs the operator-attested trust-root authorisation row.
 
           The system is to earn the correction, not the operator.
+      - **A system-written check with a fixture that does not match its function** (development-vessel `73899581`, 2026-10-14T09:11Z). Check supply wrote and armed its own check here, and that part worked. The gap was filed by a person, so it is hand-fed regardless.
+        - **The defect is the check's validity.** The fixture puts the edit site under a key the function never reads. So the function sees no edit site, and the test is red **because of the fixture, not because of the claimed scope defect.** A correct scope fix would leave it red.
+        - **The class is a fixture-shape mismatch,** red independently of the defect. Its home is the filed tautology and mutation detector.
+        - **Pre-registered before any landing:** a close is **disqualified** if the check turns green through any of these:
+          - reading the edit site from a key other than the two the store uses;
+          - a blanket refusal of gaps that have no edit site;
+          - editing the check file.
+
+          A valid close requires the function to consult the scope exclusion for an edit site read from the store's own keys, shown by a corrected fixture. **Until the check is corrected, no valid close is possible.**
+      - **The engine gap is queued, not excluded.** It is armed, with 0 attempts, about 90 minutes after it was armed. The compose slots are saturated, and the lane made about one pick in that time. This is the law-1 capacity constant in practice.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
       - **Two more findings:**
         - **Two system loops contradict each other.** The trend-expectation loop retires its probe notes, and the observation loop then flags them as "violated". The system files each instance, and most close on recovery. **The class, the contradiction itself, is not yet filed.**
