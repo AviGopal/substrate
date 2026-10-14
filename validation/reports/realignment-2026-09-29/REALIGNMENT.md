@@ -1771,11 +1771,15 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
       - **The schedule's three measures (the 2026-10-12 ruling), restated (measured at 2026-10-14T17:37:31Z from the origin logs, by author; bot commits excluded):**
         - **Operator commits since 2026-10-10:** about 395 across the super-repository and its submodules. About 219 are not documentation. **Post-freeze code acts: 17 to 18,** each listed in this section with its ruling or exception.
         - **System-authored landings since 2026-10-10:** 20, of which 11 came after the freeze. **Verified: 1.**
-        - **Node 1's excluded-path count** is read from the live scope (qa).
+        - **The excluded-path count:** 269 on the primary compose node, and 270 on the other, read from the live scope shortly after 17:40Z.
         - These measures had been missing from the regular status lines, and are reported again from now on.
       - **A system landing on the timeout gap: executor `969f86b`** (2026-10-14T17:33Z, about 10 minutes after filing). A caller-side abort becomes a failed task with timeout as the reason. The change is confined to the resolver.
         - **All the pre-registered disqualifiers are clear.** The check reads green on one node. Settlement is blocked by the same library-served defect.
-        - **Verification is pending:** the gate's comparison, the controls, the own-check, and the live reading on the loop goal's node.
+        - **Verification is pending.**
+          - **The post-land suite ran:** 423 passing and 19 failing, against 422 and 20 at the engine fix's landing. That is consistent with 0 new failures, but the failing test names were not compared.
+          - **The own-check reads green** on one node.
+          - **The controls were not run by the lane;** it ran only the armed case.
+          - **It is not yet served on the loop goal's node.**
         - The gap was hand-fed, so this is **not** a headline landing. Once it is served on that node, the next run is expected to read an **honest failure (timeout), not reached.**
       - **Live harm, noted:** the gap about escalations that no human reads is itself flagged hopeless, so both nodes are escalating it through the same channel no human reads.
       - **Redispatch has taken no live action yet:** neither node has ticked since the switch, and the first candidate is queued on one node.
