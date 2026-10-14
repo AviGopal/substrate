@@ -1590,6 +1590,24 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             | 5. Own-check and settlement | **Pending** |
             | 6. Live binding | **Set up.** The fix converged on the loop goal's node at 14:15Z, so the next run is a real test of the binding |
 
+            - **Item 6, live: PASS (the loop goal's run, 2026-10-14T15:43Z, with the fix live on that node since 14:15Z).** The emitted report carries **no unrendered references.** One section now holds real computed values.
+            - **THE ENGINE FIX'S GRADE:**
+
+              | Item | Result |
+              |---|---|
+              | 2. Confined diff | Pass |
+              | 3. 0 new failures | Pass |
+              | 4. Controls | Pass |
+              | 6. Live binding | Pass |
+              | 1. Red, then green | Pass, by the check |
+              | 5. Settlement | **Blocked by the library-served defect.** Under the user's ruling it is graded on the check plus the served state |
+
+              **It is the first VERIFIED SYSTEM REPAIR by measurement: system-landed, confined, and verified at the consumer.** Two notes keep it honest:
+              - by the strict pre-registered bar, item 5's settlement was not met. The user re-ruled how item 5 is graded, after the defect was found, and before this reading;
+              - it was hand-armed, so it is **not a headline landing.**
+
+              **Verified system repairs: 1.**
+            - **D8: the loop's blocker moved.** It is no longer "references never bind", which the system fixed. It is now "the count step receives a stub on the loop goal's node". Both count sections are bound, but to empty text, because their producing step got a stub report: the producing service is masked on that node. The run was still judged hollow, not reached. Whether this is a placement problem or a resolver mismatch is under read-only investigation.
             - **Items 1 and 5 are blocked by a new finding, not by the repair.** The landing verdict maps the landed repository to a service unit of the same name. A library has no unit, so "not served here" fires forever on every node, and the gap can never settle by measurement.
               - **The fix is served:** the executor build was rebuilt with the new line on both nodes, and its consumers restarted afterwards.
               - **User ruling:** file that gap (its site is protected). Grade items 1 and 5 on the check plus the served state, and record the gap's open status as that defect, not as a non-repair.
