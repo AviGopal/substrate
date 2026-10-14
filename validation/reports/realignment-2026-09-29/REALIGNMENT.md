@@ -1639,6 +1639,20 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             - **The accepted risk:** duplicate picks across nodes (the pick lease is per node, an open gap) and refusals for a stale base, until the duplicate-pick gap is fixed.
             - **Where waste actually comes from:** duplicate picks and stale-base refusals. A "busy" bounce costs almost nothing.
             - **The measure, so this is an intervention per law 12:** compose throughput, and wasted composes (duplicates and stale-base refusals) per landed compose, before and after the change.
+            - **The baseline, taken before the change** (read-only; 24 hours ending 2026-10-14T10:26Z):
+
+              | | Compose host A | Compose host B |
+              |---|---|---|
+              | Composes drafted | 66 | 73 |
+              | Distinct gaps drafted | 44 | 61 |
+              | Busy refusals | 174 | 233 |
+              | Stale-base refusals | 1 | 0 |
+              | Gaps redrafted on the same node | 16 | 11 |
+
+              - **15 gaps were drafted on both nodes.**
+              - **7 system landings reached origin.**
+              - **About 139 composes produced 7 landings.** Duplicate work is already large before any capacity change: about 15 of about 90 distinct gaps were drafted on both nodes, plus about 27 same-node redrafts (some of them legitimate retries).
+              - **The main source of waste is the per-node pick lease, not capacity.** The after-reading uses the same method and the same window length.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
       - **Two more findings:**
         - **Two system loops contradict each other.** The trend-expectation loop retires its probe notes, and the observation loop then flags them as "violated". The system files each instance, and most close on recovery. **The class, the contradiction itself, is not yet filed.**
