@@ -23,7 +23,7 @@ command -v jq >/dev/null || { echo "SKIP - jq not installed"; exit 0; }
 run() {
   printf '%s' "$1" > "$T/bs.json"; printf '%s\n' $2 > "$T/up"
   ( curl() {
-      local url=""; for a in "$@"; do case "$a" in http*://*) url="$a" ;; esac; done
+      local url=""; for a in "$@"; do case "$a" in [hH][tT][tT][pP]*://*) url="$a" ;; esac; done
       case "$url" in
         */bootstrap) [ -s "$T/bs.json" ] && cat "$T/bs.json" && return 0; return 22 ;;
         */health) grep -qx "${url%/health}" "$T/up" && return 0; return 7 ;;
@@ -50,6 +50,12 @@ r="$(run '' "https://hub.example")"
 # (g) TLS DOWNGRADE: the anchor is https, the advertisement is plain http (and answers /health) -> refused
 r="$(run '{"identity_endpoint":"http://other.example:18101","activity_endpoint":"http://other.example:18080"}' "http://other.example:18101 http://other.example:18080")"
 [ "$r" = "|" ] && ok "(g) an https anchor never follows an http advertisement (no TLS downgrade)" || bad "(g) TLS downgrade accepted: '$r'"
+r="$(run '{"identity_endpoint":"HTTP://other.example:18101","activity_endpoint":"Http://other.example:18080"}' "HTTP://other.example:18101 Http://other.example:18080")"
+[ "$r" = "|" ] && ok "(g) the downgrade check is case-insensitive (HTTP:// is refused too)" || bad "(g) uppercase HTTP:// slipped past: '$r'"
+err="$( ( curl() { local url=""; for a in "$@"; do case "$a" in http*://*|HTTP*://*) url="$a" ;; esac; done; case "$url" in */bootstrap) echo '{"identity_endpoint":"http://other.example:18101"}'; return 0 ;; esac; return 0; }
+         DISCOVERY_ENDPOINT="https://hub.example:8443"; IDENTITY_VESSEL_URL=""; ACTIVITY_API_ENDPOINT=""; . "$T/blk.sh" ) 2>&1 >/dev/null )"
+case "$err" in *"downgrade the anchor's TLS"*) ok "(g) the log names the TLS downgrade as the reason" ;; *) bad "(g) the log does not name the downgrade: $err" ;; esac
+case "$err" in *"loopback or does not answer"*) bad "(g) the log still gives the generic reason" ;; *) ok "(g) no misleading generic reason in the log" ;; esac
 r="$(run '{"identity_endpoint":"http://0.0.0.0:8101"}' "http://0.0.0.0:8101")"
 [ "$r" = "|" ] && ok "(c) 0.0.0.0 is treated as loopback" || bad "(c) 0.0.0.0 used: '$r'"
 echo; [ "$FAILS" = 0 ] && { echo PASS; exit 0; } || { echo "$FAILS FAILED"; exit 1; }

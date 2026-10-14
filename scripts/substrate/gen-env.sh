@@ -972,27 +972,32 @@ case "$_disc_host" in
     # always wins. The anchor is the hub the token named, so trusting what it advertises adds no new authority.
     _bs="$(curl -sf --max-time 5 "${DISCOVERY_ENDPOINT%/}/bootstrap" 2>/dev/null || true)"
     _bs_field() { printf '%s' "$_bs" | jq -r --arg f "$1" '.[$f] // empty' 2>/dev/null || true; }
-    _bs_usable() { # $1 = advertised URL -> 0 when it is non-loopback, keeps the anchor's TLS, and answers /health
-      case "$1" in ''|*://127.*|*://localhost*|*://\[::1\]*|*://0.0.0.0*) return 1 ;; esac
+    _bs_usable() { # $1 = advertised URL -> 0 when it is non-loopback, keeps the anchor's TLS, and answers /health;
+                   # otherwise sets _bs_why to the reason. Scheme and host are compared case-insensitively.
+      local u a; u="$(printf '%s' "$1" | tr 'A-Z' 'a-z')"; a="$(printf '%s' "$DISCOVERY_ENDPOINT" | tr 'A-Z' 'a-z')"
+      case "$u" in ''|*://127.*|*://localhost*|*://\[::1\]*|*://0.0.0.0*) _bs_why="it is loopback"; return 1 ;; esac
       # NEVER DOWNGRADE THE ANCHOR'S TLS. A joiner whose token names an https anchor must not follow an http://
       # advertisement: it would send its API key to identity and its traces to the trace store in cleartext, to
       # whatever host is advertised. With an https anchor, an http advertisement falls back to the arithmetic,
       # which keeps the anchor's scheme.
-      case "$DISCOVERY_ENDPOINT" in https://*) case "$1" in http://*)
-        echo "[gen-env] refusing the anchor's advertised $1: it would downgrade the anchor's TLS (${DISCOVERY_ENDPOINT})" >&2
-        return 1 ;; esac ;; esac
-      curl -sf --max-time 4 -o /dev/null "${1%/}/health" 2>/dev/null
+      case "$a" in https://*) case "$u" in http://*)
+        _bs_why="it would downgrade the anchor's TLS (${DISCOVERY_ENDPOINT})"; return 1 ;; esac ;; esac
+      curl -sf --max-time 4 -o /dev/null "${1%/}/health" 2>/dev/null || { _bs_why="it does not answer /health from here"; return 1; }
     }
-    _bs_id="$(_bs_field identity_endpoint)"; _bs_act="$(_bs_field activity_endpoint)"
-    if [ -z "${IDENTITY_VESSEL_URL:-}" ] && _bs_usable "$_bs_id"; then
-      IDENTITY_VESSEL_URL="${_bs_id%/}"; echo "[gen-env] identity from the anchor's /bootstrap: ${IDENTITY_VESSEL_URL}" >&2
-    elif [ -n "$_bs_id" ] && [ -z "${IDENTITY_VESSEL_URL:-}" ]; then
-      echo "[gen-env] the anchor advertises identity ${_bs_id}, but it is loopback or does not answer from here; deriving instead" >&2
+    _bs_id="$(_bs_field identity_endpoint)"; _bs_act="$(_bs_field activity_endpoint)"; _bs_why=""
+    if [ -z "${IDENTITY_VESSEL_URL:-}" ] && [ -n "$_bs_id" ]; then
+      if _bs_usable "$_bs_id"; then
+        IDENTITY_VESSEL_URL="${_bs_id%/}"; echo "[gen-env] identity from the anchor's /bootstrap: ${IDENTITY_VESSEL_URL}" >&2
+      else
+        echo "[gen-env] not using the anchor's advertised identity ${_bs_id}: ${_bs_why}; deriving instead" >&2
+      fi
     fi
-    if [ -z "${ACTIVITY_API_ENDPOINT:-}" ] && _bs_usable "$_bs_act"; then
-      ACTIVITY_API_ENDPOINT="${_bs_act%/}"; echo "[gen-env] trace store from the anchor's /bootstrap: ${ACTIVITY_API_ENDPOINT}" >&2
-    elif [ -n "$_bs_act" ] && [ -z "${ACTIVITY_API_ENDPOINT:-}" ]; then
-      echo "[gen-env] the anchor advertises the trace store ${_bs_act}, but it is loopback or does not answer from here; deriving instead" >&2
+    if [ -z "${ACTIVITY_API_ENDPOINT:-}" ] && [ -n "$_bs_act" ]; then
+      if _bs_usable "$_bs_act"; then
+        ACTIVITY_API_ENDPOINT="${_bs_act%/}"; echo "[gen-env] trace store from the anchor's /bootstrap: ${ACTIVITY_API_ENDPOINT}" >&2
+      else
+        echo "[gen-env] not using the anchor's advertised trace store ${_bs_act}: ${_bs_why}; deriving instead" >&2
+      fi
     fi
     _off_relative=$(( _disc_port - 18100 ))
     _port_off=""
