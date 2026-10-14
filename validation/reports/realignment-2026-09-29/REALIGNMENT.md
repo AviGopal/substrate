@@ -1590,6 +1590,16 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **User rulings (relayed by qa):**
           1. File the tick-path credit class: the generic signature detector reads the task configuration **after** interpolation, so a success whose content carries unrendered references earns no credit.
           2. **No reset of learning state.** ~~File "no ledgered correction of the success count exists".~~ **Re-ruled: folded into the existing gap** (open since 10-07: an operator-ruled posterior correction has no typed channel, so a law-12 reversal could only be a database hand-edit). **No new row.** The finding is kept here as evidence: generalise the existing compensation replay to success counts and context scores, under the same authorisation and ledger.
+             - **The evidence for that gap, recorded here with no row and no act on learning state:**
+               - **The only retroactive, ledgered posterior correction is the failure-leak compensation replay.** It works from a frozen, pinned list for each node, an operator-attested authorisation row with a review date, a compare-and-set write in one transaction, and a unique before-and-after ledger row. It corrects failure counts only, never touches context scores, and does nothing once complete.
+               - **Every other path fails this case:**
+                 - global time decay is untargeted and unrecorded;
+                 - automatic retirement fires only on a low mean;
+                 - a variant leaves the inflated parent its credit;
+                 - withholding failures works only going forward, and only on unreached walks;
+                 - re-registration recounts the hollow successes.
+               - **The measured case:** about 8 templates carry posteriors inflated by successes that were credited while hollow. One is the standing goal's template, which is strongly optimistic. The others are validation ticks, at about 75/10, 43/4, 28/4 and 7/2 successes to failures. The ticks feed no close or settlement verdict.
+               - **Scope note, no action:** the compensation code is lane-editable. That is acceptable, because applying any replay needs the operator-attested trust-root authorisation row.
 
           The system is to earn the correction, not the operator.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
