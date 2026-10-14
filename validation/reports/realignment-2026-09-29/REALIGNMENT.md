@@ -1757,12 +1757,26 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         | Treatment arm, not yet dispatched (tick cap, backoff, or no vessel) | 378 [121] |
 
         - **The control arm is an indefinite hold.** Check supply withholds half of all gaps, by a parity on the gap id, "so the supply's effect can be measured". The hold has no end date, no lift condition and no review date. **It covers about 41% of the system's own detections, against the user's no-indefinite-hold ruling.** Its file is lane-editable. The decision goes to the user.
-        - **A structural deadlock: localization is unreachable for unarmed gaps.** The localizer runs only after a pick, but admission excludes every unarmed gap first. So check supply is the only way in, and **none of the 1,036 gaps with no edit site has ever been localized.**
+        - **Correction: the path for unsited gaps exists, but it starves behind sited gaps.** It is not a deadlock. At arming, check supply takes the edit site from the check's import, and builds anchors from the vessel's declarations when a gap has no site. But its sort puts gaps that already have a site first, so with a small bound per tick the unsited ones never come up. **None of the 1,036 unsited gaps has ever been sited:** supply has armed 4 gaps ever, all already sited. The nearest filed rows are hand-fed, and nothing new is filed yet.
+        - **User ruling, about 17:34Z: "Lift after capacity window".** The control arm is recorded as a hold, with these terms:
+          - **lift:** the end of the capacity after-window;
+          - **review date:** 2026-10-15T17:20Z;
+          - **how it ends:** a reviewed change that moves the split fraction into the supply rhythm's shaped record, with a default of 0, so the system can set it;
+          - nothing changes before the review date (law 12).
         - **Ranking, by expected arms per day:**
           1. **Supply yield** is the multiplier: about 2% of dispatches arm, and over half the failures were compose-slot refusals. The capacity change at 17:12Z is already the intervention for that, so nothing else is stacked on it (law 12). Its after-window counts busy refusals on supply goals separately.
           2. **The control arm** is the largest population withheld, and its measurement value is low at a yield of about 2%.
           3. **A scope earn-in for the top three protected sites** would unlock about 280 gaps, mostly older ones (stop-item 3).
         - **The bottom line: no single code fix makes the system's detections flow.** The pipe is open, at about 2% yield, and half its input is withheld by design.
+      - **The schedule's three measures (the 2026-10-12 ruling), restated (measured at 2026-10-14T17:37:31Z from the origin logs, by author; bot commits excluded):**
+        - **Operator commits since 2026-10-10:** about 395 across the super-repository and its submodules. About 219 are not documentation. **Post-freeze code acts: 17 to 18,** each listed in this section with its ruling or exception.
+        - **System-authored landings since 2026-10-10:** 20, of which 11 came after the freeze. **Verified: 1.**
+        - **Node 1's excluded-path count** is read from the live scope (qa).
+        - These measures had been missing from the regular status lines, and are reported again from now on.
+      - **A system landing on the timeout gap: executor `969f86b`** (2026-10-14T17:33Z, about 10 minutes after filing). A caller-side abort becomes a failed task with timeout as the reason. The change is confined to the resolver.
+        - **All the pre-registered disqualifiers are clear.** The check reads green on one node. Settlement is blocked by the same library-served defect.
+        - **Verification is pending:** the gate's comparison, the controls, the own-check, and the live reading on the loop goal's node.
+        - The gap was hand-fed, so this is **not** a headline landing. Once it is served on that node, the next run is expected to read an **honest failure (timeout), not reached.**
       - **Live harm, noted:** the gap about escalations that no human reads is itself flagged hopeless, so both nodes are escalating it through the same channel no human reads.
       - **Redispatch has taken no live action yet:** neither node has ticked since the switch, and the first candidate is queued on one node.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
