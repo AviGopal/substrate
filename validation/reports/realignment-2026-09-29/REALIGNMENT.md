@@ -1879,6 +1879,15 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           3. the linked gap closing on its test or age, not on the need re-reaching;
           4. redispatch never firing for this need without 2 and 3;
           5. a mid-run restart.
+      - **CHANGE-02, under the process (recorded 2026-10-14T22:17:21Z).**
+        - **The user's call:** "We need to do this now. We know tonight's run will most likely fail if we give it the system as is."
+        - **Field 0, the demanding reading:** the slice's two count reads take 13.8 s and 9.5 s against the 8-second default (measured at 22:08Z). That is the stub break demonstrated at 15:43Z.
+        - **The change:** a template states its own read deadline. The reader honours a timeout set per call, clamped between 1 and 60 seconds and stripped before forwarding. Nothing else changes. Because the deadline lives in the template, it is a shaped value (law 1).
+          - **Part a** (the reader) was pushed at 22:16Z under operator identity, through all push guards.
+          - **Part b** (the slice template's two reads get a 30-second deadline) is a user-run write, once part a is live on the loop goal's node.
+        - **The amended pre-registered reading for tonight:** with a and b both live, both count reads are expected to bind real counts, and **the run to reach.** Without b in time, an honest timeout failure, as before.
+        - **How a reach is graded:** this is an operator act on the slice's template, so under the post-07:30Z rule the link it serves is **assisted.** A reach tonight is a slice reach, **partly operator wiring,** not a system closure.
+        - CHANGE-01 (library settlement) is paused behind it.
           - **THE INVESTIGATION'S FINDINGS (7 stages, read-only, completed before 2026-10-14T20:18:59Z). The pieces exist, and the joints between them do not.**
             1. **Filed gaps do not feed learning.** No selection, producer choice, target inference or pathway recommendation reads gap rows. Most of the learning defects found were already filed between 10-01 and 10-09, and are still unfixed.
             2. **The learned state is skewed to failure.** On one node over 72 hours, success weight came to about 296 and failure weight to about 4,370. 194 of 229 arms received no success credit at all. The causes are one-way grading, double grading, failure charged at insert, and infrastructure failures charged as failure.
