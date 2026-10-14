@@ -1585,7 +1585,13 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - one note-index activity.
         - **The serious part is the optimistic posteriors.** The standing goal's template and the validation ticks were credited as successes while they emitted literal placeholders, **because they were graded on exit, not content.** The validation ticks are part of the system's own grading machinery. **These beliefs will not correct themselves after the engine fix unless grading reads content.**
         - **Law 6, the class:** an execution credited as a success on its exit status while its emitted content is hollow. This is the system-side form of the CLAUDE.md rule "`reached`, not `status`".
-        - **A reset decision goes to the user.** Any reset is an operator act on learning state, so it is recorded as an intervention, with the values from before the reset (law 12).
+        - **The doubt does not spread into verdicts.** The four validation ticks only write to the store, and have been dormant since 07-23. Their outputs have no readers, and no verdict, close or settlement used them (0 of about 5,000 closed rows). Their inflated posteriors affect selection only, and mostly predate the 08-01 regression.
+        - **No mechanism can correct a posterior over a window.** The only ledgered posterior correction never touches the success counts. Decay is global and unrecorded, and retiring a template or minting a variant acts on the whole template.
+        - **User rulings (relayed by qa):**
+          1. File the tick-path credit class: the generic signature detector reads the task configuration **after** interpolation, so a success whose content carries unrendered references earns no credit.
+          2. **No reset of learning state.** Instead, file "no ledgered correction of the success count exists", generalising the existing compensation replay.
+
+          The system is to earn the correction, not the operator.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
       - **Two more findings:**
         - **Two system loops contradict each other.** The trend-expectation loop retires its probe notes, and the observation loop then flags them as "violated". The system files each instance, and most close on recovery. **The class, the contradiction itself, is not yet filed.**
