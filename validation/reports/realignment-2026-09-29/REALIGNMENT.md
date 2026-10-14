@@ -1653,6 +1653,10 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
               - **7 system landings reached origin.**
               - **About 139 composes produced 7 landings.** Duplicate work is already large before any capacity change: about 15 of about 90 distinct gaps were drafted on both nodes, plus about 27 same-node redrafts (some of them legitimate retries).
               - **The main source of waste is the per-node pick lease, not capacity.** The after-reading uses the same method and the same window length.
+            - **User ruling (relayed by qa): "Learnable, bounded 1..8".** The capacity record is not a trust-root shape, so any authenticated writer can change it within its bounds, the autonomous lane included. **The system may change its own compose cap** (the intent of laws 1 and 5), with the bound as the guard.
+              - **A new observable for the after-reading:** whether the system moves the cap, in which direction, and on what evidence.
+              - Every system write to the record is watched.
+            - **The duplicate-pick gaps cannot be picked by the armed reservation.** Both have been open since early October, unarmed, with no attempts. Their site is protected on every node except the one running the scope experiment. A read-only check is under way on why the store-wide landing lease does not also stop drafts across nodes, so that a fix could reuse it at pick time. Who builds that fix is the user's call, after the capacity change.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
       - **Two more findings:**
         - **Two system loops contradict each other.** The trend-expectation loop retires its probe notes, and the observation loop then flags them as "violated". The system files each instance, and most close on recovery. **The class, the contradiction itself, is not yet filed.**
