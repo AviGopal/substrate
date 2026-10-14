@@ -1617,6 +1617,13 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **Filed, 2026-10-14T09:42Z (user):** compose capacity and admission order are code constants, so the system cannot see or learn who gets a compose slot. Its site is protected, so it waits for an earn-in or an operator build.
         - **A durability case (gap triple, measure 3):** this is a **recurrence** of a 09-22 gap about compose-lane starvation. That gap was closed as "expired, not re-detected", which is an idle expiry, not a fix. The same problem came back under a different name.
           - **The system already has a gap for this class** (filed about 07:30Z): nothing links a new gap to earlier rows or designs of the same class, so durability goes unmeasured. Its falsifier sorts gaps into recurrence, never closed, and first seen, and its site is lane-editable. **This capacity recurrence is a fresh positive control for it.** No new gap.
+      - **D8, the expected reading pre-registered (2026-10-14T10:00Z, before the loop goal's next run):** the engine binding is unfixed and unconverged. So the next run is **expected** to emit unrendered references again, be judged hollow, and read not reached. It will not test links 2–4 either. This is recorded as expected, not as a new finding.
+      - **The headline is structurally unreachable for now (as of 2026-10-14T10:00Z).** The system's own supply is blocked:
+        - 153 anchorless re-commit children cannot be closed;
+        - deficiency rows of the wrong-content kind have no route;
+        - check supply's yield is about 2%.
+
+        Every repair to that chain since the 05:00Z ruling was filed by the user: seven gaps, all hand-fed, so none of them counts. **The headline can first move only after the system closes those hand-fed supply gaps, and then its own supply produces an anchored, sited gap.** That is at least two steps away.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
       - **Two more findings:**
         - **Two system loops contradict each other.** The trend-expectation loop retires its probe notes, and the observation loop then flags them as "violated". The system files each instance, and most close on recovery. **The class, the contradiction itself, is not yet filed.**
