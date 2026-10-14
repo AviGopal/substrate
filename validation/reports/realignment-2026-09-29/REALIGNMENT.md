@@ -1736,6 +1736,16 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **Filed by the user at 2026-10-14T17:15Z and verified open.** The site is protected. The expected behaviour is: unjudged, neither a pass nor a dissent, with no child gap, graded like the infrastructure path.
         - **It is not a headline landing:** its parent gap is an operator narrowing, so it is hand-fed by inheritance at read time.
         - Part of the gap's title ("dead table") is stale, and a remaining grouping defect is tracked in a sibling row.
+      - **THE HEADLINE CANNOT MOVE IN THE NEXT 24 HOURS (read from the gap store at 2026-10-14T17:27Z; recorded at 2026-10-14T17:30:01Z).** Of 212 open class-2 gaps, 161 are armed:
+        - 145 are hand-fed, by source, marker or lineage;
+        - 7 are sited in protected paths;
+        - **the remaining 9 are each eliminated on reading.**
+          - Four belong to one operator-prose edit goal whose site is a test file and whose check is not red.
+          - Five carry an operator check-first supply note, and multi-file sites.
+
+        **Zero gaps are system-originated, armed, red for the right reason, and lane-editable.** The binding constraint is **system-originated supply** (stop-item 2), not the lane, capacity or grading. Whatever the lane does in the next 24 hours, the headline stays 0.
+      - **Live harm, noted:** the gap about escalations that no human reads is itself flagged hopeless, so both nodes are escalating it through the same channel no human reads.
+      - **Redispatch has taken no live action yet:** neither node has ticked since the switch, and the first candidate is queued on one node.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
       - **Two more findings:**
         - **Two system loops contradict each other.** The trend-expectation loop retires its probe notes, and the observation loop then flags them as "violated". The system files each instance, and most close on recovery. **The class, the contradiction itself, is not yet filed.**
