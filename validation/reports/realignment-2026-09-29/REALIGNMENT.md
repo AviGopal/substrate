@@ -1589,7 +1589,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **No mechanism can correct a posterior over a window.** The only ledgered posterior correction never touches the success counts. Decay is global and unrecorded, and retiring a template or minting a variant acts on the whole template.
         - **User rulings (relayed by qa):**
           1. File the tick-path credit class: the generic signature detector reads the task configuration **after** interpolation, so a success whose content carries unrendered references earns no credit.
-          2. **No reset of learning state.** Instead, file "no ledgered correction of the success count exists", generalising the existing compensation replay.
+          2. **No reset of learning state.** ~~File "no ledgered correction of the success count exists".~~ **Re-ruled: folded into the existing gap** (open since 10-07: an operator-ruled posterior correction has no typed channel, so a law-12 reversal could only be a database hand-edit). **No new row.** The finding is kept here as evidence: generalise the existing compensation replay to success counts and context scores, under the same authorisation and ledger.
 
           The system is to earn the correction, not the operator.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
