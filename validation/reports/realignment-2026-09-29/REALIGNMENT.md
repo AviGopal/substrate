@@ -1440,6 +1440,21 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         2. The capability filer's single-demand rule, which an open plan item (contained self-development 8.14, "revisit for recurring demand") was meant to revisit.
       - **The measure:** both restrictions are adjusted in the existing goal-host code. This is operator-built, in protected paths, and user-cleared, and it completes plan item 8.14. After that, the system's existing route carries the loop: the filer, the link, the author route, additive registration, and the re-run.
       - **Landed:** goal-host `b1844e4` and development-vessel `1d75af33` (2026-10-14, about 02:00Z). Plan item 8.14's recurring-demand half is complete, and its evidence half is superseded (annotated in the plan). The chain is now complete through existing parts. The loop goal's next run is the first test.
+      - **Pre-registered reading of the first test (written 2026-10-14T03:15Z, before the run):** the first test of the wired chain is the loop goal's next run. Read in order:
+        1. the filer files the capability gap;
+        2. S1 links it to the goal;
+        3. the dispatcher sends it, armed on the goal's own reach;
+        4. the author route starts.
+
+        **The first link that does not fire is the finding, and nothing downstream of it is inferred.** The code must be live on the node that runs the loop goal, not only on origin, or the run tests nothing.
+      - **The ceiling on D9's grade, by mechanism: at most about 1 of 4 unassisted links.** D9 counts four links:
+        - **Recognise:** assisted, by the named-target adjustment and the operator class map.
+        - **Close:** split. The *route* is assisted: the recurring-demand filing, the goal-reach arming, and the dispatcher and additive registration from the package. The *content* is unassisted: the producer the author route writes, and its admission and landing. That content is the actual repair, so it is recorded as the unassisted half of close.
+        - **Verify:** assisted, by the goal-reach arming. The verdict itself is the system's judge.
+        - **Re-run:** the redispatch was operator-built before the freeze, is general, and has been untouched since. So it is unassisted only in the sense that no act is made on this instance.
+        - **Rule from 2026-10-14T07:30Z:** any operator act on this goal or its gaps makes that link assisted, whoever built the machinery.
+      - **The code is live where it is tested:** both changes were restarted onto the node that runs the loop goal before the run, and onto the other gated nodes too. The loop goal has many failed runs and no reach, so recurring demand fires under either counting.
+      - **D7, fresh estimate (qa; estimates, not measured rates):** about 12% for one pass. The steps are filing 0.85, link 0.9, sent armed 0.8, authored, admitted and registered 0.4, and re-run judged reached 0.5. Over the roughly 10 runs before D9, retries mostly help the authoring step, so the estimate is **about 20% by D9**. It is re-estimated from what fires at the first run.
       - **How it is graded:** D7–D9 are recorded as **"partly operator wiring, on a determination"**, with the prior state of each link stated. A reach that needed operator intervention is not counted as autonomous success (the 10-02 ruling). D10's zero-surgery bar is unchanged.
     - **Pre-registered (written 2026-10-14, after the send and before any close): the keyless capability gap.**
       - **The gap:** the gap for the walk-inferred output name `detailed_analysis_report` was sent at 2026-10-13T19:58Z, before the package-flaw fix. It is armed with a producer-contract check that carries **no required keys**.
