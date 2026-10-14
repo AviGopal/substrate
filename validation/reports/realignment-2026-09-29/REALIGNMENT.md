@@ -1658,6 +1658,14 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
               - Every system write to the record is watched.
               - **There is no learner yet, but an existing candidate is named.** Nothing writes the capacity record today, so "learnable" is a permission without a learner. The natural existing learner is the **rhythm conductor.** It already reads conditions (a load bucket, and operator presence), scores due-ness against affordability, decays, and writes rhythm records: this is law 5's selection from conditions. But it reads neither compose outcomes (busy refusals, duplicates, landings per slot) nor the capacity record.
               - **The gap, to be offered to the user for filing after the capacity push, with the baseline as evidence:** the conductor's affordability and compose outcomes do not steer the shaped compose cap. Whether its site is lane-editable is to be checked.
+            - **The duplicates, traced: sequential, not concurrent.** The store-wide landing lease held, and correctly refused 11 concurrent attempts. All 15 cross-node duplicates were re-picks made 1–8 seconds after the other node's compose failed and released the lease. **The picker's cooldowns are per process and never read the store.** There was also one double-draft on restart. This refines the baseline's attribution: the cause is the cooldown, not the lease.
+            - **User ruling (relayed by qa): build the existing-parts fix BEFORE the capacity change,** stacked with it in one push.
+              - the picker skips gaps leased by another node;
+              - a lease release leaves a store-wide stamp that the existing cooldown reads;
+              - re-entry is restart-safe.
+
+              It is an operator build in protected files.
+              - **The cost:** this delays the capacity change, and with it the engine gap's first attempt. **The engine fix's review date (2026-10-17T18:00Z) does not move.** If the delay causes a miss, the miss is reported.
             - **The duplicate-pick gaps cannot be picked by the armed reservation.** Both have been open since early October, unarmed, with no attempts. Their site is protected on every node except the one running the scope experiment. A read-only check is under way on why the store-wide landing lease does not also stop drafts across nodes, so that a fix could reuse it at pick time. Who builds that fix is the user's call, after the capacity change.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
       - **Two more findings:**
