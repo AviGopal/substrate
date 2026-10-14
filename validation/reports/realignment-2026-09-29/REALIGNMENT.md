@@ -1527,11 +1527,14 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **The engine file is lane-editable.**
         - The blast radius, as a lower bound, is the loop goal's template plus one seed template whose model task ran on literal placeholders. About 20 other dotted references are unverified. The full count and the posteriors need a credentialed read.
         - No open gap covered the defect.
-      - **A premature close:** a gap about exactly this class was closed on 2026-09-24 on a landing, while its own falsifier text recorded that the reference form was still literal. The check saw it, and the closer did not read it. Its children are still open.
+      - **A premature close, corrected: it was an operator close.** On 2026-09-24 a gap about exactly this class was closed by an operator, on a prose falsifier with no machine check. That operator's own probe showed the reference was still literal. But the recorded exercise left that case out and reported a pass. The store's close guard checks only that the pass field is a boolean. **This is operator-assisted success on the closing side,** not the system ignoring its own check. **By user re-ruling it is folded into the existing rows on prose falsifiers and operator exercises, with no new row. The durable fix is arming.**
       - **User rulings (relayed by qa):**
         1. **The engine fix goes to the system's lane, filed and armed.** It is a hand-armed instance, so it does not count toward the headline. But it is a one-line, single-file fix with a known site, which makes it **the cleanest test yet of whether the system can repair itself.**
-        2. **File the class:** "a close that ignores its own falsifier's failing output". The old row is left untouched.
+        2. ~~File the class "a close that ignores its own falsifier's failing output".~~ Superseded by the re-ruling above: it is folded, with no new row.
         3. **A credentialed census of templates and posteriors, read-only,** with the key passed on standard input and no database connection.
+      - **User rulings, 2026-10-14 (relayed by qa):**
+        - **The stamp earn-in is pushed:** development-vessel `7e6f6d7e`, at 08:03Z, after four review rounds, with 0 new failures against a base run taken at the same time. The times it goes live follow.
+        - **The engine check is committed, then armed:** one check file goes into the executor repository, as an operator act. As pre-registered, the engine instance is hand-fed.
       - **PRE-REGISTERED GRADE for the engine binding fix (written 2026-10-14, before it is armed and before any lane attempt).**
         - **It counts as a verified system repair if ALL of these hold.** It is hand-armed, so it **never** counts toward the headline.
           1. The armed check is red at HEAD and green after the landing.
