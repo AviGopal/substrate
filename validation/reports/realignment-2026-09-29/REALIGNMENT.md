@@ -1498,6 +1498,22 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         | The hub's trace store made openable to every IPv4 source (`c9bf55f6`) | User ruling, "the hub is not walled; protection lives in authentication"; pushed by qa on the user's direct confirmation |
 
         The last is not a D-path change. It is a §16 O2 movement: the hub's hand-maintained allowlist **would go to none once the user applies it. It is not applied as of 2026-10-14T05:00Z.** The push ships only the script mode, and the hub keeps its allowlist until the apply is run. The freeze now operates as **the freeze plus user rulings**, with every act named.
+      - **THE RUN'S READING (2026-10-14, about 07:14–07:19Z): link 1 did not fire, and the finding reverses the determination.**
+        - **Load:** the host was above 10 throughout, but nothing failed by timeout, so the result is attributable.
+        - **Named-target inference worked:** it kept the target the goal names instead of substituting an advertised shape.
+        - **The walk found an existing template that emits that target shape.** It was created in July, it declares the target as its output, and the goal's own text points to it. Across the loop goal's earlier recorded failures this template was never picked; keeping the named target is what led the walk to it.
+        - **The judge graded its output hollow, correctly.** The final step emits content that still holds unrendered references to the earlier tasks' outputs, although those outputs were in the pool. The feedback retry found no pick, the floor ran, and the result was not reached.
+        - **Link 1 did not fire:** no capability gap was filed. R2 left the failure unclassified, because the class map has no class for "lacks computed values". Links 2–4 were not tested, and nothing downstream is inferred.
+        - **What this reverses:** the producer exists. Our determination ("no vessel declares or advertises the target") confused advertising with declaration, because discovery does not list activity outputs. **The capability-gap route was the wrong route.** The defect is **template binding**: an emit step does not substitute task-output references. That is wrong content with a real site, not a missing producer.
+        - **Law 6, three questions:**
+          - **The instance:** the binding defect, in the executor's emit step or in the template. Under the freeze it is the system's to repair. A template variant is the cheapest repair (law 2).
+          - **The class detector:** a hollow-output verdict whose content contains unrendered references should be filed as a binding gap with a site, not left unclassified.
+          - **The missing generator:** nothing turned "the judge says hollow: unrendered references" into a gap. That generator is itself a gap for the system.
+        - **Our own error, recorded:** the 2026-10-14 determination was wrong in its premise, and the operator wiring built on it (filing a named target as a capability gap, and arming on goal reach) aimed at a route this goal does not need. The keep-named-target change still proved useful, because it surfaced the real producer.
+      - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
+      - **Two more findings:**
+        - **Two system loops contradict each other.** The trend-expectation loop retires its probe notes, and the observation loop then flags them as "violated". The system files each instance, and most close on recovery. **The class, the contradiction itself, is not yet filed.**
+        - **Lab artefacts in the live store.** Parity notes from the operators' lab were written into one node's live store and surfaced as "violated" gaps. This is a hygiene case. They are not system supply, and the headline excludes them.
       - **The ceiling on D9's grade, by mechanism: at most about 1 of 4 unassisted links.** D9 counts four links:
         - **Recognise:** assisted, by the named-target adjustment and the operator class map.
         - **Close:** split. The *route* is assisted: the recurring-demand filing, the goal-reach arming, and the dispatcher and additive registration from the package. The *content* is unassisted: the producer the author route writes, and its admission and landing. That content is the actual repair, so it is recorded as the unassisted half of close.
