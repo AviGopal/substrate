@@ -1899,6 +1899,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             - **This contradicts the user's "no reset" ruling.** qa declared the recompute as a known effect, but did not check it against that ruling before the write. That is **qa's error, recorded as such.**
             - **It cannot be cleanly undone:** no interface sets the posterior, and a database hand-edit is forbidden.
             - **The confound on tonight's run** is small for selection, because the goal names the template directly. But any credit from tonight lands on the reset values. **What follows, if anything, is the user's decision.**
+            - **USER RULING (2026-10-14T22:49:31Z, in the docs session): "Leave it as a recorded intervention."** No correction follows.
           - **THE INVESTIGATION'S FINDINGS (7 stages, read-only, completed before 2026-10-14T20:18:59Z). The pieces exist, and the joints between them do not.**
             1. **Filed gaps do not feed learning.** No selection, producer choice, target inference or pathway recommendation reads gap rows. Most of the learning defects found were already filed between 10-01 and 10-09, and are still unfixed.
             2. **The learned state is skewed to failure.** On one node over 72 hours, success weight came to about 296 and failure weight to about 4,370. 194 of 229 arms received no success credit at all. The causes are one-way grading, double grading, failure charged at insert, and infrastructure failures charged as failure.
