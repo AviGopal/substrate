@@ -1801,6 +1801,13 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **The own-check reads green** on one node.
           - **The controls were not run by the lane;** it ran only the armed case.
           - **It is not yet served on the loop goal's node.**
+          - **Verified independently (read-only):**
+            - **The gap check:** in a fresh clone at the landing, run in-container, 3 of 3 pass. The armed case went from red to green, and both controls hold.
+            - **The existing resolver suite:** 7 of 7, with no regression.
+            - **Live on both nodes:** the fixed line is in the build, and the walk service restarted after it.
+            - **Recorded, not a defect:** the abort match is wider than the error name, so any fetch error whose message says "aborted" is now a failed read.
+            - The gap stays open only because of library settlement.
+          - **Grade: verified on every measured item except the live reading,** which comes from the loop goal's next run (an honest timeout failure is expected). If that run reads as expected, this is the **second verified system repair.** It was hand-fed, so it is not a headline landing.
         - The gap was hand-fed, so this is **not** a headline landing. Once it is served on that node, the next run is expected to read an **honest failure (timeout), not reached.**
       - **Live harm, noted:** the gap about escalations that no human reads is itself flagged hopeless, so both nodes are escalating it through the same channel no human reads.
       - **Redispatch has taken no live action yet:** neither node has ticked since the switch, and the first candidate is queued on one node.
