@@ -1510,6 +1510,18 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **The class detector:** a hollow-output verdict whose content contains unrendered references should be filed as a binding gap with a site, not left unclassified.
           - **The missing generator:** nothing turned "the judge says hollow: unrendered references" into a gap. That generator is itself a gap for the system.
         - **Our own error, recorded:** the 2026-10-14 determination was wrong in its premise, and the operator wiring built on it (filing a named target as a capability gap, and arming on goal reach) aimed at a route this goal does not need. The keep-named-target change still proved useful, because it surfaced the real producer.
+      - **ROOT CAUSE (read-only, from the live executor code): sibling-task binding has been broken fleet-wide since 2026-08-01.**
+        - **What broke:** the engine binds a sibling task's output as a bare task-id reference, its documented convention. Since then, that key receives an undefined property instead of the output.
+        - **The scope:** every engine-run template that uses that convention has bound nothing for about 10.5 weeks. The loop goal's template is one. A census of the others is running.
+        - **What caused it:** a system-authored landing on 2026-08-01, a one-line change from a route-edit compose. It changed a binding line, had no test for it, and passed its gates.
+        - **Law 6:** nothing detected it, because the unrendered-reference guard covers gap summaries only, not emitted impulses.
+        - **Law 12, a learning confound:** for those weeks, selection and credit graded these templates on output that was hollow by construction. Their posteriors and any extractions over that window are suspect until the census bounds them.
+        - **The engine fix** goes to the user once the blast-radius count is in.
+      - **User rulings (relayed by qa):**
+        - (A) File the **missing generator** as a gap: a hollow verdict whose content carries unrendered references becomes a binding gap with a site. File the generator, not the instance.
+        - (B) File the dispatcher-hold defect in our package for the system's lane.
+        - (C) Close two single-goal capability gaps that our demand-rule regression opened, through a reviewed script run by the user, as born-closed walk artefacts with evidence naming the regression. This is an operator act on those two rows, so **both join the headline exclusion.** The other five rows from that window each have at least two real demanders, and are left to the two-demander rule.
+        - **The census also counts the learning,** not just the templates: posteriors and any extractions of the affected templates over the window. The question of whether the executor had any test binding that convention at the time is open. If it had none, "a binding line changed with no covering test" is the landing-time class.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
       - **Two more findings:**
         - **Two system loops contradict each other.** The trend-expectation loop retires its probe notes, and the observation loop then flags them as "violated". The system files each instance, and most close on recovery. **The class, the contradiction itself, is not yet filed.**
