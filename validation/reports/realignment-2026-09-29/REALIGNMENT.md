@@ -1769,7 +1769,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           3. **A scope earn-in for the top three protected sites** would unlock about 280 gaps, mostly older ones (stop-item 3).
         - **The bottom line: no single code fix makes the system's detections flow.** The pipe is open, at about 2% yield, and half its input is withheld by design.
       - **The schedule's three measures (the 2026-10-12 ruling), restated (measured at 2026-10-14T17:37:31Z from the origin logs, by author; bot commits excluded):**
-        - **Operator commits since 2026-10-10:** about 395 across the super-repository and its submodules. About 219 are not documentation. **Post-freeze code acts: 17 to 18,** each listed in this section with its ruling or exception.
+        - **Operator commits since 2026-10-10:** about 395 across the super-repository and its submodules. About 219 are not documentation. **Post-freeze code acts: 17 to 18,** each listed in this section with its ruling or exception. Two of them are status-reporting fixes, made under the user's standing operability objective (§16 O6). qa ruled them outside the D-path, so the freeze does not apply, and they change no vessel's behaviour. The authority for one pull-sync fix is being confirmed with the session that made it.
         - **System-authored landings since 2026-10-10:** 20, of which 11 came after the freeze. **Verified: 1.**
         - **The excluded-path count:** 269 on the primary compose node, and 270 on the other, read from the live scope shortly after 17:40Z.
         - These measures had been missing from the regular status lines, and are reported again from now on.
