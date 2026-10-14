@@ -1573,6 +1573,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - disabling interpolation, or stripping placeholders so the output merely looks non-literal;
           - touching files beyond the binding file and test files.
         - **The review date is 2026-10-17T18:00Z.** If nothing has landed by then, the finding is **"not repaired in the window"**.
+        - **Armed (2026-10-14, about 08:18Z):** the user filed the engine binding gap. It is verified open, with a class-2 falsifier, and its birth verdict reads present: the check found the defect at the check commit, so the gap is correctly born red. The lane picked it up at once, and deferred while another compose was in flight. **The grade above applies from this moment.**
         - **The census also counts the learning,** not just the templates: posteriors and any extractions of the affected templates over the window. The question of whether the executor had any test binding that convention at the time is open. If it had none, "a binding line changed with no covering test" is the landing-time class.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
       - **Two more findings:**
