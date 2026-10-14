@@ -1828,6 +1828,19 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             Each returns its inhibiting conditions with file and line, live evidence, and the existing piece it obstructs.
           - **Early evidence:** the lane's landing prediction moves only from 0.85 to 0.58 after five or more mispredictions. **Learning exists, but barely moves decisions.**
           - **This qualifies the day's filings:** about a dozen gaps were filed today. None has been shown to feed learning, and none is assumed to.
+          - **CORRECTION (recorded at 2026-10-14T20:53:04Z): the investigation below is a RESTATEMENT of §1 and §2.0's Ranks 0–5,** not a finding. Its five classes map one to one onto those ranks. Presenting it as new is the §6.2 anti-pattern "rediscovery presented as a finding", and this record repeated it.
+            - **It also repeated the K4 error:** §1 had already withdrawn floor tool use as a fact, because the counter cannot see the wrapper's internal loop. The item below that says every floor run reads as "no tools" is an instrument reading, not a system fact.
+            - **The delta, the only new content:**
+              - the specific contract boundaries where the information is lost, each with file and line;
+              - the measured skew of the learned state to failure;
+              - the restart and lease continuity breaks;
+              - the confirmation, from the model resolver's own logs, that the model does call tools inside the wrapper.
+          - **"Marked resolved" mostly means expired, not repaired** (from the gap store). Of 641 closures and resolutions since 09-30:
+            - **421 (66%) were age-only expiry,** 393 of them in a two-hour burst on 10-13 by the lifecycle scan, whose own text says "not evidence of repair";
+            - **79 (12%) were verified fixes,** and 10 of those already have an open gap of the same stem born after the close.
+
+            **Durability, the third measure of the gap triple, is not established.**
+          - **§7 step 1, the vertical slice ("the first and only done"), is still NOT DONE.** The status of 10-03 stands. The floor reach it measured on 09-29 (12.6% and 24.1%, by node) is now about 5%.
           - **THE INVESTIGATION'S FINDINGS (7 stages, read-only, completed before 2026-10-14T20:18:59Z). The pieces exist, and the joints between them do not.**
             1. **Filed gaps do not feed learning.** No selection, producer choice, target inference or pathway recommendation reads gap rows. Most of the learning defects found were already filed between 10-01 and 10-09, and are still unfixed.
             2. **The learned state is skewed to failure.** On one node over 72 hours, success weight came to about 296 and failure weight to about 4,370. 194 of 229 arms received no success credit at all. The causes are one-way grading, double grading, failure charged at insert, and infrastructure failures charged as failure.
