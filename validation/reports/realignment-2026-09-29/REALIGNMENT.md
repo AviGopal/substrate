@@ -1688,7 +1688,8 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **Pre-registered before any landing:** a valid fix stops falling back to a surface no human reads, by queueing or by failing visibly. A close is **disqualified** if it turns the check green by changing the pinned surface's reply text, by editing the check, or by special-casing the fake.
       - **Why D4 missed, found 2026-10-14: the redispatch had never run live.** Its policy defaulted to dry run ("interim defaults"), and no policy record existed on either node. **User ruling: turn redispatch on,** through a reviewed, user-run write: dry run off, with the default bounds of 5 cycles and $5 per goal.
         - **It is a law-12 intervention, so its time is recorded when it runs.**
-        - D4's predicate wanted dry-run lines seen first. This switches on without that observation, so the first live redispatches are watched as the first evidence of what it does.
+        - **Correction: dry-run lines did appear, after D4's date.** One node logged "would redispatch" 4 times in 72 hours (3 in the last 24), and the other node logged none. So D4's precondition was met late. **D4 stays missed at its date.**
+        - **The exposure:** about 1 to 1.5 goal re-runs a day at today's rate. Each goal is bounded at $5 and 5 cycles, and the fleet's global spend cap of $5 an hour bounds everything. The expected spend is a few dollars a day.
       - **The capacity and cooldown package is pushed;** convergence is pending. The after-window starts on each node at convergence, and the capacity record is written once the compose node converges.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
       - **Two more findings:**
