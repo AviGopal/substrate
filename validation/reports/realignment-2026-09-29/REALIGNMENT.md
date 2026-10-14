@@ -1744,6 +1744,25 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - Five carry an operator check-first supply note, and multi-file sites.
 
         **Zero gaps are system-originated, armed, red for the right reason, and lane-editable.** The binding constraint is **system-originated supply** (stop-item 2), not the lane, capacity or grading. Whatever the lane does in the next 24 hours, the headline stays 0.
+      - **THE SYSTEM-ORIGINATED FUNNEL** (read at 2026-10-14T17:27Z; recorded at 2026-10-14T17:32:41Z). There are 1,769 open gaps with a non-human source and no hand anywhere in their lineage. Bucketed by replaying check supply's own gates, in order (figures in brackets were created since 10-07):
+
+        | Bucket | Gaps |
+        |---|---|
+        | Already armed (every valid one was eliminated above) | 74 [50] |
+        | Not supply's work by design (orphan, unreachable or literal routes) | 70 [8] |
+        | **Control arm: never sent a goal** | **726 [156]** |
+        | Skipped as scope-excluded, mostly older stock (stop-item 3) | 380 [4] |
+        | No falsifiable anchor | 105 [27] |
+        | Dispatch failed, mostly for compose slots | 36 [1] |
+        | Treatment arm, not yet dispatched (tick cap, backoff, or no vessel) | 378 [121] |
+
+        - **The control arm is an indefinite hold.** Check supply withholds half of all gaps, by a parity on the gap id, "so the supply's effect can be measured". The hold has no end date, no lift condition and no review date. **It covers about 41% of the system's own detections, against the user's no-indefinite-hold ruling.** Its file is lane-editable. The decision goes to the user.
+        - **A structural deadlock: localization is unreachable for unarmed gaps.** The localizer runs only after a pick, but admission excludes every unarmed gap first. So check supply is the only way in, and **none of the 1,036 gaps with no edit site has ever been localized.**
+        - **Ranking, by expected arms per day:**
+          1. **Supply yield** is the multiplier: about 2% of dispatches arm, and over half the failures were compose-slot refusals. The capacity change at 17:12Z is already the intervention for that, so nothing else is stacked on it (law 12). Its after-window counts busy refusals on supply goals separately.
+          2. **The control arm** is the largest population withheld, and its measurement value is low at a yield of about 2%.
+          3. **A scope earn-in for the top three protected sites** would unlock about 280 gaps, mostly older ones (stop-item 3).
+        - **The bottom line: no single code fix makes the system's detections flow.** The pipe is open, at about 2% yield, and half its input is withheld by design.
       - **Live harm, noted:** the gap about escalations that no human reads is itself flagged hopeless, so both nodes are escalating it through the same channel no human reads.
       - **Redispatch has taken no live action yet:** neither node has ticked since the switch, and the first candidate is queued on one node.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
