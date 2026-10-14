@@ -784,6 +784,10 @@ evaluate() {
     elif [ -n "$gate" ]; then VAL[$l]="unknown"; EVID[$l]="not evaluated: $gate"
     else
       V=unknown; E=""
+      # `usable` dispatches a real goal and can take minutes. Measured 2026-10-13: 197 s on a spoke with nothing
+      # printed until the end, which reads as a hang to whoever runs the README's verdict command. Say so first, on
+      # stderr (stdout and --json stay unchanged). Not gated on a TTY: `docker exec` without -t has none.
+      [ "$l" = usable ] && echo "[status] checking usable: a real completion and a known-answer goal; this can take a few minutes" >&2
       "eval_$l"
       VAL[$l]="$V"; EVID[$l]="$E"
       [ "$V" = pass ] || { gate="$l is $V"; FIRST_FAIL="$l"; }
