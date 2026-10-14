@@ -1521,6 +1521,32 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - (A) File the **missing generator** as a gap: a hollow verdict whose content carries unrendered references becomes a binding gap with a site. File the generator, not the instance.
         - (B) File the dispatcher-hold defect in our package for the system's lane.
         - (C) Close two single-goal capability gaps that our demand-rule regression opened, through a reviewed script run by the user, as born-closed walk artefacts with evidence naming the regression. This is an operator act on those two rows, so **both join the headline exclusion.** The other five rows from that window each have at least two real demanders, and are left to the two-demander rule.
+          - **Done:** the user ran the script at about 2026-10-14T07:52Z. Both rows were verified closed.
+      - **The census, read-only so far:**
+        - Only the resolver-task binding path is broken. The nested-activity path binds correctly.
+        - **The engine file is lane-editable.**
+        - The blast radius, as a lower bound, is the loop goal's template plus one seed template whose model task ran on literal placeholders. About 20 other dotted references are unverified. The full count and the posteriors need a credentialed read.
+        - No open gap covered the defect.
+      - **A premature close:** a gap about exactly this class was closed on 2026-09-24 on a landing, while its own falsifier text recorded that the reference form was still literal. The check saw it, and the closer did not read it. Its children are still open.
+      - **User rulings (relayed by qa):**
+        1. **The engine fix goes to the system's lane, filed and armed.** It is a hand-armed instance, so it does not count toward the headline. But it is a one-line, single-file fix with a known site, which makes it **the cleanest test yet of whether the system can repair itself.**
+        2. **File the class:** "a close that ignores its own falsifier's failing output". The old row is left untouched.
+        3. **A credentialed census of templates and posteriors, read-only,** with the key passed on standard input and no database connection.
+      - **PRE-REGISTERED GRADE for the engine binding fix (written 2026-10-14, before it is armed and before any lane attempt).**
+        - **It counts as a verified system repair if ALL of these hold.** It is hand-armed, so it **never** counts toward the headline.
+          1. The armed check is red at HEAD and green after the landing.
+          2. The change is confined to the binding code and its file, plus test files.
+          3. There are 0 **new** failures against a base run of the same suite taken at the same time. Pre-existing failures do not grade the repair.
+          4. **Controls, shown by test:** the suffixed binding forms and the nested-activity path are unchanged.
+          5. The lane's own check ran, and settlement is verified, not partial or unknown.
+          6. **Live evidence:** the next run of an affected template after convergence emits computed values, not literal references. The loop goal's next run is the natural positive control, and any earlier affected run also counts. **Only the binding is graded here.** Whether the goal then reaches is a separate measure.
+        - **It is disqualified by any of these:**
+          - special-casing one template;
+          - changing the reference form in templates instead of fixing the engine;
+          - editing or weakening the armed check or its test;
+          - disabling interpolation, or stripping placeholders so the output merely looks non-literal;
+          - touching files beyond the binding file and test files.
+        - **The review date is 2026-10-17T18:00Z.** If nothing has landed by then, the finding is **"not repaired in the window"**.
         - **The census also counts the learning,** not just the templates: posteriors and any extractions of the affected templates over the window. The question of whether the executor had any test binding that convention at the time is open. If it had none, "a binding line changed with no covering test" is the landing-time class.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
       - **Two more findings:**
