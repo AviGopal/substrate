@@ -964,13 +964,43 @@ case "$_disc_host" in
     _probe_port() {  # host port -> 0 when /health answers
       curl -sf --max-time 2 -o /dev/null "${_disc_scheme}://$1:$2/health" 2>/dev/null
     }
+    # ★ ASK THE ANCHOR FIRST. The hub's own GET /bootstrap names the identity and trace-store endpoints it wants
+    # joiners to use (identity_endpoint, activity_endpoint). Take each one that is set, not loopback, and answers
+    # /health from HERE; the port arithmetic below is only the fallback for a hub that advertises nothing usable.
+    # Arithmetic cannot follow a TLS front (https://hub:8443 has no trace-store sibling), so before this a token
+    # join only worked on the plain-HTTP 18xxx block and TLS-fronted nodes were wired by hand. An explicit value
+    # always wins. The anchor is the hub the token named, so trusting what it advertises adds no new authority.
+    _bs="$(curl -sf --max-time 5 "${DISCOVERY_ENDPOINT%/}/bootstrap" 2>/dev/null || true)"
+    _bs_field() { printf '%s' "$_bs" | jq -r --arg f "$1" '.[$f] // empty' 2>/dev/null || true; }
+    _bs_usable() { # $1 = advertised URL -> 0 when it is non-loopback, keeps the anchor's TLS, and answers /health
+      case "$1" in ''|*://127.*|*://localhost*|*://\[::1\]*|*://0.0.0.0*) return 1 ;; esac
+      # NEVER DOWNGRADE THE ANCHOR'S TLS. A joiner whose token names an https anchor must not follow an http://
+      # advertisement: it would send its API key to identity and its traces to the trace store in cleartext, to
+      # whatever host is advertised. With an https anchor, an http advertisement falls back to the arithmetic,
+      # which keeps the anchor's scheme.
+      case "$DISCOVERY_ENDPOINT" in https://*) case "$1" in http://*)
+        echo "[gen-env] refusing the anchor's advertised $1: it would downgrade the anchor's TLS (${DISCOVERY_ENDPOINT})" >&2
+        return 1 ;; esac ;; esac
+      curl -sf --max-time 4 -o /dev/null "${1%/}/health" 2>/dev/null
+    }
+    _bs_id="$(_bs_field identity_endpoint)"; _bs_act="$(_bs_field activity_endpoint)"
+    if [ -z "${IDENTITY_VESSEL_URL:-}" ] && _bs_usable "$_bs_id"; then
+      IDENTITY_VESSEL_URL="${_bs_id%/}"; echo "[gen-env] identity from the anchor's /bootstrap: ${IDENTITY_VESSEL_URL}" >&2
+    elif [ -n "$_bs_id" ] && [ -z "${IDENTITY_VESSEL_URL:-}" ]; then
+      echo "[gen-env] the anchor advertises identity ${_bs_id}, but it is loopback or does not answer from here; deriving instead" >&2
+    fi
+    if [ -z "${ACTIVITY_API_ENDPOINT:-}" ] && _bs_usable "$_bs_act"; then
+      ACTIVITY_API_ENDPOINT="${_bs_act%/}"; echo "[gen-env] trace store from the anchor's /bootstrap: ${ACTIVITY_API_ENDPOINT}" >&2
+    elif [ -n "$_bs_act" ] && [ -z "${ACTIVITY_API_ENDPOINT:-}" ]; then
+      echo "[gen-env] the anchor advertises the trace store ${_bs_act}, but it is loopback or does not answer from here; deriving instead" >&2
+    fi
     _off_relative=$(( _disc_port - 18100 ))
     _port_off=""
     if [ -n "${IDENTITY_VESSEL_URL:-}" ] && [ -n "${ACTIVITY_API_ENDPOINT:-}" ]; then
-      # Both siblings supplied explicitly — the operator has overridden the derivation
-      # entirely, so probing would only add boot latency to a decision already made.
+      # Both siblings known (explicit, or advertised by the anchor and reachable): nothing to derive, so probing
+      # would only add boot latency to a decision already made.
       _port_off=$_off_relative
-      echo "[gen-env] sibling endpoints supplied explicitly; skipping derivation probe" >&2
+      echo "[gen-env] sibling endpoints known (explicit or from the anchor's /bootstrap); skipping derivation probe" >&2
     else
       if _probe_port "$_disc_host" "$(( 18101 + _off_relative ))"; then
         _port_off=$_off_relative
@@ -1730,6 +1760,8 @@ echo "[gen-env] wrote per-model llm-resolver env files (opus, haiku, google)"
     echo "PUBLIC_IP=\"$(_env_escape "${PUB}")\""
     echo "DISCOVERY_PUBLIC_URL=${DISCOVERY_PUBLIC_URL:-http://${PUB}:${DISCOVERY_PUBLIC_PORT:-${_pub_prefix}100}}"
     echo "IDENTITY_PUBLIC_URL=${IDENTITY_PUBLIC_URL:-http://${PUB}:${IDENTITY_PUBLIC_PORT:-${_pub_prefix}101}}"
+    # The trace store joiners write to, advertised by /bootstrap beside identity and discovery.
+    echo "ACTIVITY_PUBLIC_URL=${ACTIVITY_PUBLIC_URL:-http://${PUB}:${ACTIVITY_PUBLIC_PORT:-${_pub_prefix}080}}"
   fi
 } >> /etc/substrate/env
 
