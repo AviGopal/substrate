@@ -1454,6 +1454,24 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - The loop still files, because its shape's row already carries the loop goal.
         - **The restore landed as goal-host `85be5ea`** (pushed 2026-10-14T04:30Z, with the distinct-run fix folded in). It was live on the loop goal's node from 04:44Z, before the run. The hub's restart was deferred, but the hub does not run the loop goal. The test that the goal is "already on the row" is an exact string match, and the loop goal's text matches byte for byte. A second misfiled gap was sent to an author route at 04:18Z, before the restore went live. It is left to the system, per the ruling.
         - **Classification for D9:** the restore acts on a general rule, not on the loop goal or its gaps, so under the post-07:30Z rule it does not make a link assisted. It was made before the run, so the chain under test is the demand rule *plus* this restore, and the close route stays assisted as already recorded.
+      - **D7's grading fork, pre-registered (2026-10-14T05:00Z), with the user's choice open.** A capability gap with no declared contract is armed on its demanding goal's own reach, which has two readings:
+        - **(i) The consumer's reach counts as D7's verification.** D7 and D8 are graded as one event, and D7 is never credited before the reach. An unknown settlement counts as not verified. If the sealed key disagrees at D9, D7 and D8 fall with it.
+        - **(ii) D7 must stand on its own check.** An undeclared shape cannot have one, so D7 is reported missed, and D8 is graded separately.
+
+        **Under either reading, D7 gets no credit until the user chooses.**
+      - **Operator landings since the freeze, each with its authority:**
+
+        | Landing | Authority |
+        |---|---|
+        | Containment class fix | User: contain then fix |
+        | Hub gate timeout | Exception (a) |
+        | Keyless-arming fix | Exception (a) |
+        | Named-target and demand rules | User ruling on a determined incapability |
+        | Goal-reach arming | Same ruling |
+        | 8.15 restore | Exception (a) |
+        | The hub's trace store made openable to every IPv4 source (`c9bf55f6`) | User ruling, "the hub is not walled; protection lives in authentication"; pushed by qa on the user's direct confirmation |
+
+        The last is not a D-path change. It is a §16 O2 movement: the hub's hand-maintained allowlist **would go to none once the user applies it. It is not applied as of 2026-10-14T05:00Z.** The push ships only the script mode, and the hub keeps its allowlist until the apply is run. The freeze now operates as **the freeze plus user rulings**, with every act named.
       - **The ceiling on D9's grade, by mechanism: at most about 1 of 4 unassisted links.** D9 counts four links:
         - **Recognise:** assisted, by the named-target adjustment and the operator class map.
         - **Close:** split. The *route* is assisted: the recurring-demand filing, the goal-reach arming, and the dispatcher and additive registration from the package. The *content* is unassisted: the producer the author route writes, and its admission and landing. That content is the actual repair, so it is recorded as the unassisted half of close.
