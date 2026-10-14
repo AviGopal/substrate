@@ -1828,6 +1828,28 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             Each returns its inhibiting conditions with file and line, live evidence, and the existing piece it obstructs.
           - **Early evidence:** the lane's landing prediction moves only from 0.85 to 0.58 after five or more mispredictions. **Learning exists, but barely moves decisions.**
           - **This qualifies the day's filings:** about a dozen gaps were filed today. None has been shown to feed learning, and none is assumed to.
+          - **THE INVESTIGATION'S FINDINGS (7 stages, read-only, completed before 2026-10-14T20:18:59Z). The pieces exist, and the joints between them do not.**
+            1. **Filed gaps do not feed learning.** No selection, producer choice, target inference or pathway recommendation reads gap rows. Most of the learning defects found were already filed between 10-01 and 10-09, and are still unfixed.
+            2. **The learned state is skewed to failure.** On one node over 72 hours, success weight came to about 296 and failure weight to about 4,370. 194 of 229 arms received no success credit at all. The causes are one-way grading, double grading, failure charged at insert, and infrastructure failures charged as failure.
+            3. **The tool-using floor blinds itself.** The model does call tools inside the model resolver, but the dispatcher looks for those calls in a different field. So every floor run reads as "no tools", the judge is told the run is unverified, and credit is withheld.
+            4. **Most decisions do not read learned state:**
+               - pinned template ids, about 280 refused a day, which are dead ends with no reroute;
+               - templates that bind a literal endpoint;
+               - the boredom pool's in-process selector, which never reads Thompson;
+               - regex routing behind an environment flag;
+               - a fixed map from category to resolver;
+               - declared producer priority;
+               - **a hand-coded landing score** (the 0.85 → 0.58 movement is **not** learned; this corrects the early evidence above).
+            5. **Self-modification is fed by its own failures.** About 91% of open gaps are unarmed. Re-commit children are armed at birth, so 68% of picks are re-commits. No closure credits the choices that produced it, and 81% of closures are age expiry.
+            6. **Restarts break the sequence.** A drain never releases the landing lease. On one node the drain is a silent no-op. The walk service is force-restarted on a count, because it publishes no in-flight age, and 16 of 55 recent runs were not graded. Policy reads fail closed under load.
+            7. **Nothing governs from the dynamics.** The stability verdicts are incompatible. The one acting governor fails open. Order parameters are published with no reader that changes behaviour. The tuning writer made 0 writes in 72 hours. Budgets apply per node on one shared host. (Whether the spend cap is fleet-wide or per node is contested.)
+            - **Cross-cutting classes:**
+              - contract mismatches between existing parts, where information exists and is lost at a boundary;
+              - decisions that do not read learned state;
+              - corrupted learned state;
+              - self-modification without continuity that survives a restart;
+              - measurements without consumers.
+      - **D8, amended before the run (written 2026-10-14T20:18:59Z): a mid-run restart is NO RUN.** If the walk service on the loop goal's node restarts during the run window (start, stop or drain lines inside it), the run is read as **no run,** not as a verdict.
         - **User, about 19:50Z (relayed by qa): "Not every need requires a gap to be closed to meet it."** The walk routing around is the first answer to an unmet need: another producer, a composition of existing pieces, or adaptation at the first or last mile. A gap and a code change are for when no route reaches.
         - **Two findings against it (read-only; recorded at 2026-10-14T19:35:45Z):**
           - **(A) Need side: a correct refusal the system cannot see.** A scenario dispatches a pinned template whose learned posterior is decisively negative. The engine correctly refuses it, but **by throwing,** so the walk records no reason. The verdict reads "not reached: no reason recorded". Failure memory stores nothing, and the next attempt recalls no prior.
