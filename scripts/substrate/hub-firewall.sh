@@ -10,7 +10,9 @@
 #     deliberate: an empty 18080 list closes 18080, an empty 18333 list leaves 18333 OPEN, because closing the
 #     relay without a list would cut every spoke's federation. Restricting it is an explicit act.
 #   18080 activity-api: SOURCE-RESTRICTED to ALLOW_18080_SRC (comma-separated IPv4, the attached spokes' egress
-#     addresses; empty = closed to every outside source; IPv6 always denied). activity-api's jwtAuth admitted any
+#     addresses; empty = closed to every outside source; IPv6 always denied), or OPEN to every source with
+#     ALLOW_18080_SRC=any (user ruling 2026-10-13: the hub is not walled, protection lives in auth; a token joiner
+#     must be able to reach the trace store). 9443, its TLS twin, follows the same setting. Both open on IPv4 only. activity-api's jwtAuth admitted any
 #     X-Internal-Api-Key value on its trace, impulse and event writes, so an open 18080 let anyone write the
 #     network's learning store. It cannot simply be closed: every hub-attached spoke derives
 #     ACTIVITY_API_ENDPOINT=<hub>:18080 (gen-env) and uses it as its trace store.
@@ -30,7 +32,7 @@
 # in depth, not the only guard. Proving a change from an allowlisted host needs an A/B: apply an empty list
 # (18080 must refuse while 18100 answers), then the real list.
 #
-# Inputs: ALLOW_18080_SRC; ALLOW_18333_SRC (optional); HUB_SSH_KEY (optional identity file). install-boot and
+# Inputs: ALLOW_18080_SRC (a list, empty = closed, or `any` = open to every source); ALLOW_18333_SRC (optional); HUB_SSH_KEY (optional identity file). install-boot and
 # remove-boot change the hub only with --go.
 set -euo pipefail
 valid_v4_list() { # comma-separated dotted quads, octets 0-255, no empty item; never a hostname (iptables would resolve it)
@@ -47,6 +49,12 @@ valid_v4_list() { # comma-separated dotted quads, octets 0-255, no empty item; n
   case "$1" in ,*|*,|*,,*|*[[:space:]]*) echo "bad IPv4 list: empty item or whitespace"; return 1 ;; esac
   local IFS=,; for a in $1; do [[ $a =~ ^($o\.){3}$o$ && $a != 0.* ]] || { echo "bad IPv4: $a"; return 1; }; done
 }
+# ALLOW_18080_SRC=any OPENS activity-api to every source (user ruling 2026-10-13: the hub is not walled; protection
+# lives in auth, and activity-api has refused unauthenticated writes since 0423842). 18080 and its TLS twin 9443 are
+# then admitted from every IPv4 source. IPv6 is unchanged: 18080 stays in DENY6, and it is NOT added to ALLOW, which
+# also feeds both v6 chains. The default-deny for every other published port stays.
+OPEN_18080=0
+if [ "${ALLOW_18080_SRC:-}" = any ]; then OPEN_18080=1; ALLOW_18080_SRC=""; fi
 valid_v4_list "$ALLOW_18080_SRC" || exit 2
 ALLOW_18333_SRC="${ALLOW_18333_SRC:-}"   # an allowlist file written before this variable existed has no line for it
 valid_v4_list "$ALLOW_18333_SRC" || exit 2
@@ -58,6 +66,7 @@ v4() {
   iptables -A $CH -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN
   for p in $ALLOW; do iptables -A $CH -p tcp -m conntrack --ctorigdstport $p -j RETURN; done
   [ -n "$ALLOW_18080_SRC" ] && iptables -A $CH -s "$ALLOW_18080_SRC" -p tcp -m conntrack --ctorigdstport 18080 -j RETURN
+  [ "$OPEN_18080" = 1 ] && iptables -A $CH -p tcp -m conntrack --ctorigdstport 18080 -j RETURN
   [ -n "$ALLOW_18333_SRC" ] && iptables -A $CH -s "$ALLOW_18333_SRC" -p tcp -m conntrack --ctorigdstport 18333 -j RETURN
   # REJECT with a TCP reset, not DROP: a caller still holding an advertised endpoint fails at once instead of
   # hanging for its whole timeout (measured: a dropped connect held a spoke for its full 30 s bound).
@@ -71,6 +80,7 @@ v4() {
   iptables -N ${CH}-IN4 2>/dev/null; iptables -F ${CH}-IN4
   iptables -A ${CH}-IN4 -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN
   [ -n "$ALLOW_18080_SRC" ] && iptables -A ${CH}-IN4 -s "$ALLOW_18080_SRC" -p tcp --dport 9443 -j RETURN
+  [ "$OPEN_18080" = 1 ] && iptables -A ${CH}-IN4 -p tcp --dport 9443 -j RETURN
   for i in eth0 eth1; do iptables -A ${CH}-IN4 -i $i -p tcp --dport 9443 -j REJECT --reject-with tcp-reset; done
   iptables -C INPUT -j ${CH}-IN4 2>/dev/null || iptables -I INPUT 1 -j ${CH}-IN4
 }
@@ -99,7 +109,7 @@ undo() {
   iptables -D INPUT -j ${CH}-IN4 2>/dev/null; iptables -F ${CH}-IN4 2>/dev/null; iptables -X ${CH}-IN4 2>/dev/null
 }
 case "$MODE" in
-  apply) v4; v6; logger -t hub-firewall "applied: allow $ALLOW; 18080 only from ${ALLOW_18080_SRC:-nobody}; 18333 $([ -n "$ALLOW_18333_SRC" ] && echo "only from $ALLOW_18333_SRC" || echo "open to all"); deny other new inbound to docker-published ports"; echo "applied $(date -u +%T)Z" ;;
+  apply) v4; v6; logger -t hub-firewall "applied: allow $ALLOW; 18080 $([ "$OPEN_18080" = 1 ] && echo "open to all" || echo "only from ${ALLOW_18080_SRC:-nobody}"); 18333 $([ -n "$ALLOW_18333_SRC" ] && echo "only from $ALLOW_18333_SRC" || echo "open to all"); deny other new inbound to docker-published ports"; echo "applied $(date -u +%T)Z" ;;
   undo)  undo; logger -t hub-firewall "removed"; echo "removed $(date -u +%T)Z" ;;
 esac
 echo "== status"
@@ -118,7 +128,7 @@ BODY
 HUB="${1:-}"; MODE="${2:-}"; GO="${3:-}"
 case "$HUB" in --print-body) rule_body; exit 0 ;; ''|-*) echo "usage: hub-firewall.sh <user@hub> <apply|undo|status|install-boot|remove-boot> [--go]"; exit 2 ;; esac
 ALLOW="${ALLOW_18080_SRC:-}"; RELAY="${ALLOW_18333_SRC:-}"
-valid_v4_list "$ALLOW" || exit 2
+[ "$ALLOW" = any ] || valid_v4_list "$ALLOW" || exit 2
 valid_v4_list "$RELAY" || exit 2
 SSH=(${HUB_FW_SSH:-ssh} -o BatchMode=yes); [ -n "${HUB_SSH_KEY:-}" ] && SSH+=(-o IdentitiesOnly=yes -i "$HUB_SSH_KEY")
 hub() { "${SSH[@]}" "$HUB" "$@"; }
