@@ -1848,6 +1848,37 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
       - **USER RULING (relayed by qa, about 2026-10-14T21:30Z, verbatim):** "Use the loop goal as the slice; operator bootstrap for protected. We want to not fail due to reasons we have already identified and diagnosed hundreds* of times over the past year. If we miss the deadline it needs to be because of a new reason. If we follow a rigorous process of assessing our history and assigning changes only when needed to meet the goals we are cleared to make direct interventions into the system to achieve the desired outcome. Being able to express and validate the expression of the code and activities should be trivial so we should start by defining the process and then organizing the changes required."
         - **The slice is the loop goal.** Protected breaks are bootstrapped by operators.
         - **The sequence:** first define the process, then organise the changes the slice's path requires. Each change is assigned only when history shows it is needed to meet the goal. **A missed deadline must be for a new reason.**
+      - **THE SLICE PROCESS OF RECORD (adopted 2026-10-14T21:42:39Z).** It is a delta on the existing L12 intervention record, not a new document. It applies reading rule 4, §6.1, §7 and CANON K1–K18, and continues the planned slice re-run, which had no outcome. **The difference:** the slice is a live need, with a linked gap and a system-landed repair already on it.
+        - **The cycle:** a pre-registered slice reading, then the first demonstrated break, then ONE change through the record below, landed in its window. Then the observer that exposed the break re-reads it, and the cycle moves on to the next break. **No change is assigned except from a demonstrated break.**
+        - **The record. Every field is filled, with citations, before landing; an empty field means the change is not assigned:**
+
+          | # | Field | What it contains |
+          |---|---|---|
+          | 0 | Demanding reading | The slice reading and the break it demonstrated |
+          | 1 | History | The § and class key, and every prior attempt, **including closed gaps and why they closed.** It names the concrete difference this time. **"No difference" means not assigned** |
+          | 2 | Expression | The site and the patch. The behaviour changed, as a shape, decision or verdict. The runtime reader of any field written |
+          | 3a | Origin observer | The observer that exposed the defect re-observes it. **Never the fix's own test** |
+          | 3b | Served where the need runs | The build is rebuilt **and** the consumer restarted. A library counts as served through its consumers |
+          | 3c | No regression | Reach on reliable paths through the changed code, before and after, with the revert path shown to act |
+          | 3d | Stays fixed | A standing Rank-1 re-measure, with a must-fail control |
+          | 4 | Known-failure preflight | K1–K18, plus the class file's guards. **A miss whose cause is already known is a process failure** |
+          | 5 | Window | One change per node per window, with every open window checked. A restart of the walk service during a slice run means no run |
+          | 6 | Authority and identity | The ruling, the operator identity, the record committed with the change, the push guards, and every gated node at verdict "none" |
+          | 7 | Outcome | Pass, fail or not evaluable, with the observer's reading and the next break |
+
+        - **Roles:**
+          - **user:** rulings and user-run scripts;
+          - **qa:** pre-registers readings, identifies breaks at the consumer with a positive control, reviews fields 0–6, gates pushes, and appends field 7;
+          - **coordinator:** builds only changes whose record is complete and reviewed;
+          - **docs:** records rulings, pre-registrations and outcomes only;
+          - **deployment:** no infrastructure change inside a slice window;
+          - **the system:** runs the need, repairs editable sites, and re-runs on closure.
+        - **Candidate breaks on the slice's path** are listed from history, and **none is assigned** until a reading demonstrates it:
+          1. the count read against a fixed deadline, where routing around comes first;
+          2. a library landing never reading as served;
+          3. the linked gap closing on its test or age, not on the need re-reaching;
+          4. redispatch never firing for this need without 2 and 3;
+          5. a mid-run restart.
           - **THE INVESTIGATION'S FINDINGS (7 stages, read-only, completed before 2026-10-14T20:18:59Z). The pieces exist, and the joints between them do not.**
             1. **Filed gaps do not feed learning.** No selection, producer choice, target inference or pathway recommendation reads gap rows. Most of the learning defects found were already filed between 10-01 and 10-09, and are still unfixed.
             2. **The learned state is skewed to failure.** On one node over 72 hours, success weight came to about 296 and failure weight to about 4,370. 194 of 229 arms received no success credit at all. The causes are one-way grading, double grading, failure charged at insert, and infrastructure failures charged as failure.
