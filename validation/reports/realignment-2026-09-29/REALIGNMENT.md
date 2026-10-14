@@ -1586,9 +1586,13 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             |---|---|
             | 1. Red, then green | **Partial.** Born red. The check now reads green at head on one node, but settlement waits for that node to serve the new build, and the gap is still open |
             | 3. 0 new failures | **Pass,** on the gate's own comparison against its parent: accepted with no regression line |
-            | 4. Controls | **Not yet evidenced.** A read-only run of the whole check file is requested |
+            | 4. Controls | **Pass: 4 of 4** in a fresh-clone run at the landing. The armed case flipped against the check commit as a control at the same address |
             | 5. Own-check and settlement | **Pending** |
             | 6. Live binding | **Set up.** The fix converged on the loop goal's node at 14:15Z, so the next run is a real test of the binding |
+
+            - **Items 1 and 5 are blocked by a new finding, not by the repair.** The landing verdict maps the landed repository to a service unit of the same name. A library has no unit, so "not served here" fires forever on every node, and the gap can never settle by measurement.
+              - **The fix is served:** the executor build was rebuilt with the new line on both nodes, and its consumers restarted afterwards.
+              - **User ruling:** file that gap (its site is protected). Grade items 1 and 5 on the check plus the served state, and record the gap's open status as that defect, not as a non-repair.
           - **D8's expected reading is amended before the next run:** if the fix has converged on the loop goal's node before that run, the pre-registered "expected hollow" no longer holds, and the run becomes the live positive control for the binding (item 6).
         - **The census also counts the learning,** not just the templates: posteriors and any extractions of the affected templates over the window. The question of whether the executor had any test binding that convention at the time is open. If it had none, "a binding line changed with no covering test" is the landing-time class.
       - **The census of affected learning (read-only, user-run):** of about 2,830 templates, 47 use the bare sibling reference (dotted forms not counted). **Correction:** the detector matched whole task objects, prose included, so **47 is an upper bound.** The heavily used drafting activity was a **false positive:** its reference sits only in a description. It is dropped from the damaged set, and a configuration-only count may follow. The standing goal's template is a real configuration binding. No extractions from them were found (by heuristic).
@@ -1682,6 +1686,10 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
       - **A system-written behavioural check for an escalation fallback** (development-vessel `da962772`, 2026-10-14T11:23Z). The gap was filed by a person in September, so this is **not a headline candidate.** It is evidence that check supply worked.
         - **Red for the right reason, by code reading:** delivery routes by shape, with the retired pinned surface as the last fallback. When the human surface fails, delivery falls through to a vessel no human reads, which is exactly what the check asserts must not happen. Whether the fake discovery reply matches what the parser expects is unverified until the check is armed. The site is lane-editable. The check is not armed yet.
         - **Pre-registered before any landing:** a valid fix stops falling back to a surface no human reads, by queueing or by failing visibly. A close is **disqualified** if it turns the check green by changing the pinned surface's reply text, by editing the check, or by special-casing the fake.
+      - **Why D4 missed, found 2026-10-14: the redispatch had never run live.** Its policy defaulted to dry run ("interim defaults"), and no policy record existed on either node. **User ruling: turn redispatch on,** through a reviewed, user-run write: dry run off, with the default bounds of 5 cycles and $5 per goal.
+        - **It is a law-12 intervention, so its time is recorded when it runs.**
+        - D4's predicate wanted dry-run lines seen first. This switches on without that observation, so the first live redispatches are watched as the first evidence of what it does.
+      - **The capacity and cooldown package is pushed;** convergence is pending. The after-window starts on each node at convergence, and the capacity record is written once the compose node converges.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
       - **Two more findings:**
         - **Two system loops contradict each other.** The trend-expectation loop retires its probe notes, and the observation loop then flags them as "violated". The system files each instance, and most close on recovery. **The class, the contradiction itself, is not yet filed.**
