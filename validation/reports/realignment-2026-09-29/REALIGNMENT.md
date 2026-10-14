@@ -1634,6 +1634,11 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           2. The gap row's text and site are rewritten through a reviewed, user-run update.
              - **Done (user-run, verified):** the summary, the falsifier text, and the edit site and region now point at the binding cap: the slot-cap module, where it reads the environment. The correction is recorded with the prior site. It is an operator act on a hand-filed gap.
           - **The capacity build was sent back** with one blocking defect: the picker and the nudge check capacity without the armed flag, so a reservation for armed gaps would starve the very work it is meant to admit. A fix and three must-fails are requested, with the whole-suite pair run under load against the usual acceptance (both runs finish, and their failures are identical).
+            - **The defect is fixed,** and the build is approved pending the whole-suite pair.
+          - **User ruling (relayed by qa), after "we really don't want wasted work": raise the cap to 3, with 1 reserved for armed gaps.** Unarmed work keeps today's single slot, and armed work gets up to two. The value is written to the shaped record by a reviewed, user-run script once the build converges.
+            - **The accepted risk:** duplicate picks across nodes (the pick lease is per node, an open gap) and refusals for a stale base, until the duplicate-pick gap is fixed.
+            - **Where waste actually comes from:** duplicate picks and stale-base refusals. A "busy" bounce costs almost nothing.
+            - **The measure, so this is an intervention per law 12:** compose throughput, and wasted composes (duplicates and stale-base refusals) per landed compose, before and after the change.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
       - **Two more findings:**
         - **Two system loops contradict each other.** The trend-expectation loop retires its probe notes, and the observation loop then flags them as "violated". The system files each instance, and most close on recovery. **The class, the contradiction itself, is not yet filed.**
