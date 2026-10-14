@@ -1519,6 +1519,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **The engine fix** goes to the user once the blast-radius count is in.
       - **User rulings (relayed by qa):**
         - (A) File the **missing generator** as a gap: a hollow verdict whose content carries unrendered references becomes a binding gap with a site. File the generator, not the instance.
+          - **Redacted, 2026-10-14T09:49Z (user-run, verified):** the gap's summary, measured evidence and falsifier specification were rewritten generically, to remove wording that identified the loop goal, and the redaction is recorded on the row. This is an operator act on a gap that was already hand-filed. The system's check supply picked the gap up at the same moment.
         - (B) File the dispatcher-hold defect in our package for the system's lane.
         - (C) Close two single-goal capability gaps that our demand-rule regression opened, through a reviewed script run by the user, as born-closed walk artefacts with evidence naming the regression. This is an operator act on those two rows, so **both join the headline exclusion.** The other five rows from that window each have at least two real demanders, and are left to the two-demander rule.
           - **Done:** the user ran the script at about 2026-10-14T07:52Z. Both rows were verified closed.
