@@ -202,6 +202,12 @@ auth_hdr() { printf 'Authorization: ApiKey %s' "$KEY"; }
 http_code() { curl -s -o /dev/null -w '%{http_code}' --max-time "${2:-5}" "$1" 2>/dev/null || true; }
 unit_prop() { systemctl show "$1" -p "$2" --value 2>/dev/null || true; }
 unit_active() { [ "$(systemctl is-active "$1" 2>/dev/null || true)" = "active" ]; }
+# A JOB, not a server: a Type=oneshot service started by a timer runs, exits and serves nothing in between, so a
+# failed last run says nothing about whether the node serves. Measured 2026-10-13 on a compute node: rhythm-cadence.service
+# (role compute, timer-triggered oneshot) failed one run and failed `served` for a node whose serving units were all up.
+unit_is_job() {
+  [ "$(systemctl show -p Type --value "$1" 2>/dev/null)" = oneshot ] && [ -n "$(systemctl show -p TriggeredBy --value "$1" 2>/dev/null)" ]
+}
 level_index() { local i=0 l; for l in $LEVELS; do [ "$l" = "$1" ] && { echo "$i"; return; }; i=$((i+1)); done; echo 99; }
 
 # ── Probes (shared with substrate-doctor via --probe) ───────────────────────
@@ -611,14 +617,15 @@ eval_served() {
   # `served` is about the vessels that serve. Self-maintenance units (inventory roles
   # infra, autonomy and seed: pull-sync, recovery, ticks, seeders) can fail without
   # the node serving any less — a self-update that cannot build one package keeps
-  # the live copy. Their failures are reported in the evidence, never hidden, but
-  # they do not fail this level.
+  # the live copy. So can timer-triggered jobs of any role (unit_is_job). Their
+  # failures are reported in the evidence, never hidden, but they do not fail this level.
   local maint_roles='["infra","autonomy","seed"]' all_down maint_down=""
   all_down="$(printf '%s' "$READY_JSON" | jq -r '[.vessels[] | select(.status == "down") | .unit] | join(" ")' 2>/dev/null)"
   down=""
   for u in $all_down; do
     if jq -e --arg u "$u" --argjson m "$maint_roles" \
-         '[.vessels[] | select(.unit == $u) | .role] | any(. as $r | $m | index($r))' "$INV" >/dev/null 2>&1; then
+         '[.vessels[] | select(.unit == $u) | .role] | any(. as $r | $m | index($r))' "$INV" >/dev/null 2>&1 \
+       || unit_is_job "$u"; then
       maint_down="$maint_down $u"
     else
       down="$down $u"
@@ -662,7 +669,7 @@ eval_served() {
     V=fail; E="container port(s) the manifest publishes are unreachable from outside:$bad"
   else
     V=pass; E="${n_ok:-?} selected unit(s) up; container ports the manifest publishes bound non-loopback:${checked:- none selected} ($host_note)"
-    [ -n "$maint_down" ] && E="$E; self-maintenance unit(s) failing, not counted against serving:$maint_down"
+    [ -n "$maint_down" ] && E="$E; self-maintenance unit(s) or job(s) failing, not counted against serving:$maint_down"
   fi
 }
 
