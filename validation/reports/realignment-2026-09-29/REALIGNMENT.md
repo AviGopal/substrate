@@ -1815,6 +1815,19 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **The objective:** "observe repeated need-based gap detection and closure. This should involve code changes, the activities routing around and walking over the existing pieces, and use the same mechanism as reaching the needs themselves."
         - **The invariant:** "everything we observe the system trying to do, it also observes, and when it does it either achieves a gradeable reached result that it can comprehend or gains all the information needed to do that on the next attempt."
         - **The measure:** goal-reach's count of needs reached after a system closure with no operator act. **0 to date.**
+        - **User (relayed by qa, about 20:00Z): "Filing something as a gap does not automatically make it learnable if the system never uses it to learn. And we have not observed the system use them to learn."** Then: "We should perform a full investigation to find every inhibiting condition along this path. Everything has been done before and nothing is new, so we just need to find the right pieces and ensure the system keeps the operational sequence stable during its own self modification, decision making and execution."
+          - **So there are no further gap filings until the investigation is in** (recorded at 2026-10-14T19:59:17Z). Seven read-only investigations run, one per stage:
+            1. outcome to learned state;
+            2. learned state to decisions;
+            3. failure to the next attempt's information;
+            4. the tool-using floor (no tool calls in about 600 runs);
+            5. the self-modification pipeline;
+            6. operational stability during self-modification;
+            7. pacing and governance.
+
+            Each returns its inhibiting conditions with file and line, live evidence, and the existing piece it obstructs.
+          - **Early evidence:** the lane's landing prediction moves only from 0.85 to 0.58 after five or more mispredictions. **Learning exists, but barely moves decisions.**
+          - **This qualifies the day's filings:** about a dozen gaps were filed today. None has been shown to feed learning, and none is assumed to.
         - **User, about 19:50Z (relayed by qa): "Not every need requires a gap to be closed to meet it."** The walk routing around is the first answer to an unmet need: another producer, a composition of existing pieces, or adaptation at the first or last mile. A gap and a code change are for when no route reaches.
         - **Two findings against it (read-only; recorded at 2026-10-14T19:35:45Z):**
           - **(A) Need side: a correct refusal the system cannot see.** A scenario dispatches a pinned template whose learned posterior is decisively negative. The engine correctly refuses it, but **by throwing,** so the walk records no reason. The verdict reads "not reached: no reason recorded". Failure memory stores nothing, and the next attempt recalls no prior.
