@@ -1632,6 +1632,8 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **User rulings (relayed by qa):**
           1. Build the shaped capacity **at the binding site.** It is a shaped record, and when the record is absent the behaviour is exactly today's. The armed-gap reservation is a shaped field. The one claim call in the protected file passes a flag saying whether the gap is armed. It is operator-built, and the user confirms the push.
           2. The gap row's text and site are rewritten through a reviewed, user-run update.
+             - **Done (user-run, verified):** the summary, the falsifier text, and the edit site and region now point at the binding cap: the slot-cap module, where it reads the environment. The correction is recorded with the prior site. It is an operator act on a hand-filed gap.
+          - **The capacity build was sent back** with one blocking defect: the picker and the nudge check capacity without the armed flag, so a reservation for armed gaps would starve the very work it is meant to admit. A fix and three must-fails are requested, with the whole-suite pair run under load against the usual acceptance (both runs finish, and their failures are identical).
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
       - **Two more findings:**
         - **Two system loops contradict each other.** The trend-expectation loop retires its probe notes, and the observation loop then flags them as "violated". The system files each instance, and most close on recovery. **The class, the contradiction itself, is not yet filed.**
