@@ -1446,7 +1446,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         3. the dispatcher sends it, armed on the goal's own reach;
         4. the author route starts.
 
-        **The first link that does not fire is the finding, and nothing downstream of it is inferred.** The code must be live on the node that runs the loop goal, not only on origin, or the run tests nothing.
+        **The first link that does not fire is the finding, and nothing downstream of it is inferred.** **Added 2026-10-14T06:05Z, before the run:** the host that runs the loop goal measured a load average of about 46 on 16 cores at 06:03Z, and was swapping heavily. If the load average is above 10 at run time, a link that fails by **timeout** is unattributed (the forensics rule), so the finding is "not measured", not "did not fire". Links that fire under load still count, and the load is recorded at each link. By user ruling (relayed by qa), the operators' lab load is paused from 07:00Z to 08:30Z for the run. The code must be live on the node that runs the loop goal, not only on origin, or the run tests nothing.
       - **A finding measured before the run: the recurring-demand rule was wider than its description (exception (a)).**
         - **What happened:** the demand rule opened capability gaps for model-*inferred* output names on a goal's first demand, bypassing the two-demander rule (plan item 8.15). There were 6 open filings between 03:18Z and 04:05Z. One was sent to the author route, armed on its goal's reach.
         - **The mismatch:** the plan note says "a deliverable a goal names verbatim", and the code did not match it.
@@ -1464,6 +1464,21 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - "Hand-fed" covers any gap that an operator files, arms, sites or writes the predicate for.
         - The measure is consecutive system landings on system-originated gaps that are each verified (red before the edit, green after, at the consumer), with no operator act on the gap.
         - **This, not the loop's links, is now the headline.** The verified-repairs count stays 0 until such a landing exists.
+        - **The exclusion, as computed today:** a gap counts as hand-fed if any of these hold:
+          - it was filed by a person (1,163 rows, 959 open);
+          - it carries an operator marker on its row (882 rows, 70 open);
+          - it is named in an operator push script, filing record or arming record since 2026-09-28.
+        - **A hole in the measure:** arming, siting and predicate acts leave no mark on the row. Exactly 1 row in about 8,500 records who armed it. So "no operator act on the gap" cannot yet be computed by the system itself.
+          - **Filed for the system:** a gap write by any principal other than the system must stamp that principal and the act on the row. Until it closes, the exclusion relies partly on operator records, and is labelled that way.
+          - **It is filed and verified open.** Inheritance is in its falsifier: a gap minted from a parent that carries operator acts carries them too. The prior art is the refusal-record writer's principal field, in the same file.
+          - **Every candidate file for it is scope-protected,** so closing it needs either a scope earn-in or an operator build.
+          - **User ruling, 2026-10-14 (direct): a scope earn-in, additive only.** The lane may add to the gap-write path of the protected file: new fields stamped on a gap write, and a new helper in a new file, called from that path. It may not edit or remove existing behaviour, and must-fail controls prove that nothing existing changes. This follows the additive registration rule's pattern.
+            - The rule's mechanism, the scope record plus its self-fact pin and controls, is an operator act on the scope record, under the user's ratchet. It is **not** an act on the gap.
+            - **Re-ruled by the user (relayed by qa, about 2026-10-14T05:55Z): no inserts in the judge.** A brief widening to the judge's child-mint calls was superseded once it was shown that follow-up gaps are also minted elsewhere, by single-line literals.
+              - **"Read-time":** inheritance is computed when the headline is counted, by walking each gap's parent, source and root links. A superseding gap filing moves the falsifier's inheritance clause there. It is drafted, not yet filed.
+              - **"Yes, bound it":** the new helper file must be pure: no imports, and no access to the process, the network, the runtime or dynamic evaluation.
+              - The route-half scope build exists but is not pushed. Its whole-suite test pair waits for the load to fall below 10.
+            - **The gap's closure is the system's to do, but it does not count toward the headline.** The gap was filed by a person, so it is hand-fed under the exclusion above. Its close makes the exclusion **system-computable**, and that is what lets *later* headline landings be counted without operator records.
       - **Operator landings since the freeze, each with its authority:**
 
         | Landing | Authority |
