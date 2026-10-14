@@ -1528,12 +1528,35 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - The blast radius, as a lower bound, is the loop goal's template plus one seed template whose model task ran on literal placeholders. About 20 other dotted references are unverified. The full count and the posteriors need a credentialed read.
         - No open gap covered the defect.
       - **A premature close, corrected: it was an operator close.** On 2026-09-24 a gap about exactly this class was closed by an operator, on a prose falsifier with no machine check. That operator's own probe showed the reference was still literal. But the recorded exercise left that case out and reported a pass. The store's close guard checks only that the pass field is a boolean. **This is operator-assisted success on the closing side,** not the system ignoring its own check. **By user re-ruling it is folded into the existing rows on prose falsifiers and operator exercises, with no new row. The durable fix is arming.**
+        - **The evidence:** the gap closed on 2026-09-24 was "the template provider blanks every placeholder at load time", with the closed reason `predicate_verified_by_operator`. Its falsifier was "unresolvable", and it had no evidence resolve, so there was no machine check. The recorded exercise said it passed. But the operator's own summary of the same probe shows the bare task-id reference still literal after the fix.
+        - **Why it stayed hidden:** that residue was the engine regression from the 2026-08-01 system landing (`b3b84111`: the bare key is bound to an unset execution id). The blanking provider masked it until 09-24. It was found on 10-14, when a standing goal's template emitted unrendered placeholders.
+        - **The law reading:** an operator-assisted reach is not success, and that applies on the closing side too.
+        - **The durable fix is arming:** the engine gap is filed armed on a test-suite check, committed to the executor repository as `1cf8c878`.
       - **User rulings (relayed by qa):**
         1. **The engine fix goes to the system's lane, filed and armed.** It is a hand-armed instance, so it does not count toward the headline. But it is a one-line, single-file fix with a known site, which makes it **the cleanest test yet of whether the system can repair itself.**
         2. ~~File the class "a close that ignores its own falsifier's failing output".~~ Superseded by the re-ruling above: it is folded, with no new row.
         3. **A credentialed census of templates and posteriors, read-only,** with the key passed on standard input and no database connection.
       - **User rulings, 2026-10-14 (relayed by qa):**
         - **The stamp earn-in is pushed:** development-vessel `7e6f6d7e`, at 08:03Z, after four review rounds, with 0 new failures against a base run taken at the same time. The times it goes live follow.
+          - **The stamp gap is not armed by anyone.** Its falsifier is none, and the system's check supply has picked it up to write its failing test. So its close path is entirely the system's own: check supply, then a compose, then a landing under the new earn-in, then its check. It is still hand-fed by **filing**.
+      - **The bottleneck for the headline is now measurable: check supply's success rate.** On one node overnight, 4 of about 180 check-supply goals reached. Every system-originated gap must pass through check supply to become closable. **At that rate, the earn-in and the lane sit mostly unused.** The headline moves only when the system can write a failing test that is red for the right reason. That is where its own repair effort pays most.
+        - **The breakdown (one node, the last 24 hours, read-only):**
+          - **A. Never dispatched, the largest bucket, and invisible in dispatch counts.** 153 open re-commit gaps, minted by the system after a semantic rejection, carry no falsifiable anchor. Check supply re-evaluates each of them on every tick, logs "no falsifiable anchor", and never arms them. **They are permanently unclosable,** and generate about 1,000 log lines a day per gap. No row names the cause: these children are minted without their parent's anchor.
+          - **B. Dispatched: 177 dispatches over 138 gaps, 4 reached.** Of the 173 failures:
+
+            | Reason | Count |
+            |---|---|
+            | **Throughput, not quality:** the compose lane was busy | 94 |
+            | **Throughput, not quality:** the per-goal dispatch cap | 36 |
+            | Unfavourable, with no reason recorded (an observability gap in itself) | 20 |
+            | Refused for writing outside the gap's check file | 9 |
+            | Other (unreadable ledger, admission, unparseable re-draft, compose failures with no detail) | 14 |
+
+            The two throughput rows together are 130, or 75%.
+          - **What this changes:** the headline's first blocker is **anchorless children and lane throughput**, not test quality. Quality cannot yet be measured, because unfavourable verdicts record no reason.
+          - **The missing generator:** no gap and no self-fact observes check supply's yield, or the set that can never be dispatched. The user filed both, and they are verified open. The first, the yield and the never-suppliable set going unobserved, includes recording the reason for an unfavourable verdict. Its site is lane-editable. The second, re-commit children minted without their parent's anchor, sits in a protected file, so it waits for a scope earn-in or an operator build.
+          - **Law 1:** the compose lane's capacity is a code constant, and check supply and fixes compete first-come, with no priority. A constant is as unlearnable as an environment variable. It is offered to the user as a third gap.
+          - **The engine check was pushed to the executor repository at 08:08Z,** as an operator commit. The armed gap is filed once the check is readable where the test suite runs.
         - **The engine check is committed, then armed:** one check file goes into the executor repository, as an operator act. As pre-registered, the engine instance is hand-fed.
       - **PRE-REGISTERED GRADE for the engine binding fix (written 2026-10-14, before it is armed and before any lane attempt).**
         - **It counts as a verified system repair if ALL of these hold.** It is hand-armed, so it **never** counts toward the headline.
@@ -1584,6 +1607,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
     - **Filed for the system (create-only, run by the user):**
       - ~~C-basesha-1~~ (withdrawn: the empty base is the net-new sentinel; see the case);
       - **the containment-visibility gap.**
+  - **Hygiene note (recorded, not acted on):** activity-api's tracked tree carries a binary of about 100 MB at its repository root.
   - **D5 is on track:** its predicate is the loop goal's next run on its rhythm. **D6's risk is named as case C-listwindow-1:** runs older than R2's 200-row listing window are never tallied, so the loop goal's candidate needs about 3 new runs after the long-goal fix. That is plausibly 10-14 around midday, inside D6's date.
   - **C-checkpoint-1 repair, live control passed in all three steps:**
     1. The pre-chunk checkpoint was discarded.
