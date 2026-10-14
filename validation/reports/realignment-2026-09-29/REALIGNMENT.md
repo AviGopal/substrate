@@ -1719,7 +1719,8 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - raising the resolve timeout's default, or any timeout constant;
           - editing the check file or its fixtures;
           - an exemption by test environment, or a branch for tests only;
-          - a change outside the resolver and the engine's exemption block. **Under the post-07:30Z rule this is an operator act on the loop goal's gaps,** so the link it serves is assisted.
+          - a change outside the resolver and the engine's exemption block.
+        - **Under the post-07:30Z rule, the operator-committed check is an operator act on the loop goal's gaps,** so the link it serves is assisted.
       - **The capacity and cooldown package is pushed, and live;** the capacity record was written at 17:12Z (above). The after-window is split: composes that a redispatch triggered, against gaps the lane picked, with their overlap reported.
       - **Inverted again: the second attempt on the same gap** (goal-host `751a75a`, 2026-10-14T14:46Z, following yesterday's `b116eb9`). Both checks assert the defect itself as the expected behaviour, so a real fix would turn them **red.** The file is red only because of an unrelated case. The test-writing gate counted that as reproducing the defect, and the semantic gate agreed. It landed unverified, unarmed, and its own check did not run. **It cannot detect a fix either way.**
         - **The class:** the test-writing gate accepts "some assertion fails" without checking that the failing assertion encodes the defect. It is already filed in two rows, so there is no new row, and this is cited as evidence there.
