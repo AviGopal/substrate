@@ -1575,6 +1575,17 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **The review date is 2026-10-17T18:00Z.** If nothing has landed by then, the finding is **"not repaired in the window"**.
         - **Armed (2026-10-14, about 08:18Z):** the user filed the engine binding gap. It is verified open, with a class-2 falsifier, and its birth verdict reads present: the check found the defect at the check commit, so the gap is correctly born red. The lane picked it up at once, and deferred while another compose was in flight. **The grade above applies from this moment.**
         - **The census also counts the learning,** not just the templates: posteriors and any extractions of the affected templates over the window. The question of whether the executor had any test binding that convention at the time is open. If it had none, "a binding line changed with no covering test" is the landing-time class.
+      - **The census of affected learning (read-only, user-run):** of about 2,830 templates, 47 use the bare sibling reference (dotted forms not counted). No extractions from them were found (by heuristic).
+        - **About 35 are cold** (posteriors near the prior), so the effect on learning is negligible.
+        - **About 8 carry the damage:**
+          - a heavily used gap-closing drafting activity, with one broken binding;
+          - the standing goal's template;
+          - **four validation ticks;**
+          - one seed;
+          - one note-index activity.
+        - **The serious part is the optimistic posteriors.** The standing goal's template and the validation ticks were credited as successes while they emitted literal placeholders, **because they were graded on exit, not content.** The validation ticks are part of the system's own grading machinery. **These beliefs will not correct themselves after the engine fix unless grading reads content.**
+        - **Law 6, the class:** an execution credited as a success on its exit status while its emitted content is hollow. This is the system-side form of the CLAUDE.md rule "`reached`, not `status`".
+        - **A reset decision goes to the user.** Any reset is an operator act on learning state, so it is recorded as an intervention, with the values from before the reset (law 12).
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
       - **Two more findings:**
         - **Two system loops contradict each other.** The trend-expectation loop retires its probe notes, and the observation loop then flags them as "violated". The system files each instance, and most close on recovery. **The class, the contradiction itself, is not yet filed.**
