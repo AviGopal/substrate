@@ -1447,6 +1447,12 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         4. the author route starts.
 
         **The first link that does not fire is the finding, and nothing downstream of it is inferred.** The code must be live on the node that runs the loop goal, not only on origin, or the run tests nothing.
+      - **A finding measured before the run: the recurring-demand rule was wider than its description (exception (a)).**
+        - **What happened:** the demand rule opened capability gaps for model-*inferred* output names on a goal's first demand, bypassing the two-demander rule (plan item 8.15). There were 6 open filings between 03:18Z and 04:05Z. One was sent to the author route, armed on its goal's reach.
+        - **The mismatch:** the plan note says "a deliverable a goal names verbatim", and the code did not match it.
+        - **User ruling (direct): "Restore 8.15 only".** A recurring goal now counts as demand only if it is already among that shape's demanders. The fix is folded with a distinct-run fix, and is due live on the loop goal's node before the run. The misfiled gaps are left to the system.
+        - The loop still files, because its shape's row already carries the loop goal.
+        - **Classification for D9:** the restore acts on a general rule, not on the loop goal or its gaps, so under the post-07:30Z rule it does not make a link assisted. It was made before the run, so the chain under test is the demand rule *plus* this restore, and the close route stays assisted as already recorded.
       - **The ceiling on D9's grade, by mechanism: at most about 1 of 4 unassisted links.** D9 counts four links:
         - **Recognise:** assisted, by the named-target adjustment and the operator class map.
         - **Close:** split. The *route* is assisted: the recurring-demand filing, the goal-reach arming, and the dispatcher and additive registration from the package. The *content* is unassisted: the producer the author route writes, and its admission and landing. That content is the actual repair, so it is recorded as the unassisted half of close.
