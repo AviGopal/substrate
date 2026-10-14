@@ -1600,7 +1600,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
               | 4. Controls | Pass |
               | 6. Live binding | Pass |
               | 1. Red, then green | Pass, by the check |
-              | 5. Settlement | **Blocked by the library-served defect.** Under the user's ruling it is graded on the check plus the served state |
+              | 5. Own-check and settlement | **Own-check passed** (it ran, with nothing red, and the cutover's own check passed). **Settlement is blocked by the library-served defect.** Under the user's ruling it is graded on the check plus the served state |
 
               **It is the first VERIFIED SYSTEM REPAIR by measurement: system-landed, confined, and verified at the consumer.** Two notes keep it honest:
               - by the strict pre-registered bar, item 5's settlement was not met. The user re-ruled how item 5 is graded, after the defect was found, and before this reading;
@@ -1718,6 +1718,9 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **But the semantic judge's answer failed to parse.** The gate failed closed, as a "dissent". The change landed over it, unverified, and closed as partial. **The parse failure was then minted as a dissent gap with no finding behind it: an instrument failure filed as a semantic finding.**
           - That class, a judge's unparseable reply recorded as a dissent, is a gap for the system.
           - So is the cost it caused: a valid repair was graded partial for a reason that was not about the repair.
+          - **Traced: two paths.** When the own-check fails, an unparseable judge reply is correctly refused as infrastructure. When the own-check has **passed**, the same failure comes back as "does not address it", a value identical to a real dissent. So the change lands as partial, and a dissent child is minted.
+          - **How often (72 hours, both nodes):** 3 dissent landings in all, 1 of them a parse failure, plus 1 parse failure refused correctly. **Rare, but each one costs a valid repair its verdict, and adds a fake finding.**
+          - It is **not filed** yet, and is offered to the user. The site is protected. The expected behaviour is: unjudged, neither a pass nor a dissent, with no child gap, graded like the infrastructure path.
         - **It is not a headline landing:** its parent gap is an operator narrowing, so it is hand-fed by inheritance at read time.
         - Part of the gap's title ("dead table") is stale, and a remaining grouping defect is tracked in a sibling row.
       - **The lane is drafting, not idle:** since 2026-10-14T00:00Z there were about 37 composes and 5 cutover events across the two nodes, and nothing landed on origin. It drafts, and fails on quality.
