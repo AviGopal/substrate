@@ -1580,7 +1580,15 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **Armed (2026-10-14, about 08:18Z):** the user filed the engine binding gap. It is verified open, with a class-2 falsifier, and its birth verdict reads present: the check found the defect at the check commit, so the gap is correctly born red. The lane picked it up at once, and deferred while another compose was in flight. **The grade above applies from this moment.**
         - **LANDED by the system: executor `0e01b34` (2026-10-14T13:03Z, about 4h45m after arming, with a real base).** It is a one-line change in the engine: the bare task key is now bound to the task's first output, the same value as the text-suffixed key, instead of to an unset id.
           - **Disqualifiers, read from the diff:** none apply. It is confined to the binding line, with no template edit, no edit to the check, and no special case.
-          - **Grade items 1 and 3–6 are pending measurement:** red then green, 0 new failures, the controls, own-check and settlement, and the live binding evidence.
+          - **The grade so far (2026-10-14, about 14:30Z):**
+
+            | Item | Reading |
+            |---|---|
+            | 1. Red, then green | **Partial.** Born red. The check now reads green at head on one node, but settlement waits for that node to serve the new build, and the gap is still open |
+            | 3. 0 new failures | **Pass,** on the gate's own comparison against its parent: accepted with no regression line |
+            | 4. Controls | **Not yet evidenced.** A read-only run of the whole check file is requested |
+            | 5. Own-check and settlement | **Pending** |
+            | 6. Live binding | **Set up.** The fix converged on the loop goal's node at 14:15Z, so the next run is a real test of the binding |
           - **D8's expected reading is amended before the next run:** if the fix has converged on the loop goal's node before that run, the pre-registered "expected hollow" no longer holds, and the run becomes the live positive control for the binding (item 6).
         - **The census also counts the learning,** not just the templates: posteriors and any extractions of the affected templates over the window. The question of whether the executor had any test binding that convention at the time is open. If it had none, "a binding line changed with no covering test" is the landing-time class.
       - **The census of affected learning (read-only, user-run):** of about 2,830 templates, 47 use the bare sibling reference (dotted forms not counted). **Correction:** the detector matched whole task objects, prose included, so **47 is an upper bound.** The heavily used drafting activity was a **false positive:** its reference sits only in a description. It is dropped from the damaged set, and a configuration-only count may follow. The standing goal's template is a real configuration binding. No extractions from them were found (by heuristic).
