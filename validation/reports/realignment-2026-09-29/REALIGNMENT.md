@@ -1459,6 +1459,11 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **(ii) D7 must stand on its own check.** An undeclared shape cannot have one, so D7 is reported missed, and D8 is graded separately.
 
         **Under either reading, D7 gets no credit until the user chooses.**
+      - **User ruling, 2026-10-14T05:00Z: D7 is reported MISSED.** This takes reading (ii): D7 must stand on its own check, and an undeclared shape has none. D8 is graded separately, on the loop goal's reach.
+      - **User objective, the same ruling: observe the system complete a run of clean, consistent edits as soon as possible, without hand-fed gaps.**
+        - "Hand-fed" covers any gap that an operator files, arms, sites or writes the predicate for.
+        - The measure is consecutive system landings on system-originated gaps that are each verified (red before the edit, green after, at the consumer), with no operator act on the gap.
+        - **This, not the loop's links, is now the headline.** The verified-repairs count stays 0 until such a landing exists.
       - **Operator landings since the freeze, each with its authority:**
 
         | Landing | Authority |

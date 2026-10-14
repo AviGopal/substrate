@@ -84,7 +84,7 @@ Full workflow guidance: the `metabob-substrate` skill.
 
 | Plane | Tool | Use |
 |---|---|---|
-| ACT | `mcp__metabob__run_goal` | Synchronous dispatch; short one-shot goals answered inline. |
+| ACT | `mcp__metabob__run_goal` | Dispatch and wait: `goalDispatchAsync` through discovery, then short `goalWalkState` polls until the goal leaves running or ~290 s pass; past that the reply carries the `dispatchId` for `goal_status`. No request is held open. Short one-shot goals. |
 | ACT | `mcp__metabob__run_goal_async` | Default for anything non-trivial; returns a `dispatchId`. |
 | TRACK | `mcp__metabob__goal_status` | Poll a dispatch; the primary line is the honest `reached` verdict. |
 | REASON | `mcp__metabob__goal_reasoning` | Reconstruct the walk's decision log — *why* it reached or fell short. |
