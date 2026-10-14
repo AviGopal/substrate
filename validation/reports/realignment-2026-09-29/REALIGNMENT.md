@@ -1841,6 +1841,10 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
 
             **Durability, the third measure of the gap triple, is not established.**
           - **§7 step 1, the vertical slice ("the first and only done"), is still NOT DONE.** The status of 10-03 stands. The floor reach it measured on 09-29 (12.6% and 24.1%, by node) is now about 5%.
+      - **USER RULING (2026-10-14T21:38:32Z, in the docs session), §7 item 4, on authority before any protected modification: OPERATOR BOOTSTRAP.** When the slice's break lands in a protected file, an operator builds the repair directly.
+        - **This settles the open authority question** that kept §7 step 1 from proceeding.
+        - **How work proceeds from here:** exercise the single slice. Its first demonstrated break decides the next repair, and nothing runs in parallel. Each repair is recorded as operator work, and is followed by the re-measuring evaluator (Rank 1) and a re-run of the slice.
+        - **From now on, §15 records only rulings, decisions, and pre-registered slice readings and verdicts** (§6.1.7). It does not narrate findings.
           - **THE INVESTIGATION'S FINDINGS (7 stages, read-only, completed before 2026-10-14T20:18:59Z). The pieces exist, and the joints between them do not.**
             1. **Filed gaps do not feed learning.** No selection, producer choice, target inference or pathway recommendation reads gap rows. Most of the learning defects found were already filed between 10-01 and 10-09, and are still unfixed.
             2. **The learned state is skewed to failure.** On one node over 72 hours, success weight came to about 296 and failure weight to about 4,370. 194 of 229 arms received no success credit at all. The causes are one-way grading, double grading, failure charged at insert, and infrastructure failures charged as failure.
