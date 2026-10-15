@@ -2024,7 +2024,13 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **Process note:** B4 and B5 were built and pushed on the user's direct instruction in qa's session. Their records are in the batch file.
       - **The whole batch is live on the loop goal's node** (02:19Z and 02:57Z) **for the next slice run, at about 08:30Z.**
       - **CHANGE-03, under the process: deterministic verdicts charge failure, as the credit rule already says (recorded 2026-10-15T03:35:13Z).**
-        - **Authority:** a user ruling in qa's session, "yes, take it through the process now". It was pushed at 03:33:59Z, before 03:34:54Z on this session's clock. The ruling's time was given only as an estimate (about 03:45Z, later than the push), so the exact order is to be confirmed from qa's record.
+        - **Authority:** a user ruling in qa's session, "yes, take it through the process now", at **2026-10-15T03:25:07Z** (taken from the transcript's message timestamp). The push followed it at 03:33:59Z, so **there is no authority deviation.** An earlier estimate of about 03:45Z was wrong. Ruling times are taken from transcripts, never estimated.
+        - **The law-12 effect size, with a review date of 2026-10-16T04:00Z.** Over 24 hours on both nodes:
+          - failure charged against withheld, on deterministic hollow verdicts;
+          - the posterior of the producers that fail most;
+          - the share of picks for the goals they served that moved to another producer, against the same window before.
+
+          Nothing else changes in that window.
         - **Field 0, the demanding reading:** BATCH-01's learning reading (b) failed, because recall did not steer selection.
         - **Field 1, the history; nothing is new:** the symmetric-abstention rule of 08-17 says a deterministic verdict still penalises normally. But its caller read only a flag, and about a dozen verdict builders mark themselves deterministic only in their reason prefix, which the label reader has honoured since 07-30. In the probe window, **112 of 143 withheld updates were deterministic misses,** so the posterior never moved for the producers that fail most. **That is why recall did not change the choice.**
         - **Field 2, the expression:** one shared definition of a deterministic verdict, used by the label reader, the failure-charge decision and its capture. The rule itself is unchanged. A protected guard test's pinned string was updated under operator bootstrap, with a must-fail test added.
@@ -2044,7 +2050,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
       - **USER RULINGS (relayed by qa, about 2026-10-14T23:58Z–00:00Z, verbatim):**
         1. "We can't allow it to be able to execute goals that don't reach. It should not be possible to not reach consistently. Everything needed is already available, but just a step further away, but the whole purpose of the system is to take that step."
         2. "We have clearance to make direct changes, batch and push them such that the reach rate for arbitrary goals and the learning mechanism can be demonstrated before the next loop goal."
-      - **BATCH-01, pre-registered BEFORE landing (recorded 2026-10-15T00:10:00Z).** Batching lifts the one-change-per-window rule for this batch only; records, reviews and push guards remain. **The selection rule (§6.1.3):** only joints that restore the system's own ability to reach or learn, and no patches specific to one need.
+      - **BATCH-01, pre-registered BEFORE landing (recorded 2026-10-15T00:10:00Z).** Batching lifts the one-change-per-window rule for this batch only (the user's top-up and "verify and run the probes" came at 00:57:33Z; "build the floor reason logging now" at 02:36:56Z; "build the supersede change too" at 02:41:42Z, all from the transcript); records, reviews and push guards remain. **The selection rule (§6.1.3):** only joints that restore the system's own ability to reach or learn, and no patches specific to one need.
         - **The changes:**
           - **B1:** a library landing settles once the verified pin carries it.
           - **B2:** the failure reason reaches in-flight recovery and failure memory: one read of the record the engine already writes, at the loop that retries.
