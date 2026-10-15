@@ -282,6 +282,34 @@ const SEED = {
         "paces": "scope_earn_in_tick (criterion-made autonomy-scope proposals; applied only by the accepted applier)",
         "description": "Propose scope changes per excluded file by the adopted earn-in criterion; never self-applied."
       }
+    },
+    // NEW POLICY (2026-10-15): reach on arbitrary multi-step goals, measured by the system's own rhythm instead of an
+    // operator dispatching hand-picked probe rounds. The family's credit, settled on `reached` by the conductor's own
+    // outcome pass, IS the reach record: no new store.
+    //
+    // WHY 0.4: a measuring family must not compete with the work it measures. It is affordable only while
+    // budget <= 1 - bucket/3, i.e. at load buckets 0-1, so probes pause when the substrate is busy and the reading is
+    // not bought with the lane's capacity. 1/1 is an uninformed prior; staleness 1.0 scores it due on the first tick.
+    // axis freshness, not presence, so it runs with no human connected.
+    //
+    // Its members run learning_mode "observe": a replayed cached command cannot score a free reach and no pathway is
+    // minted from a probe (the conductor carries the mode to goal-host's top-level body). The texts are real multi-step
+    // work over live data, taken from the operator goal generator's catalogue (its timer is not reused).
+    {
+      "id": "rhythm-reach-probe",
+      "shape": "timeShapedRhythm",
+      "body": {
+        "axis": "freshness",
+        "axis_code": 2,
+        "family": "reach-probe",
+        "budget": 0.4,
+        "alpha": 1,
+        "beta": 1,
+        "staleness": 1,
+        "transient": false,
+        "paces": "reach on arbitrary multi-step goals, observe-only",
+        "description": "Dispatch five self-contained multi-step goals over live data with learning_mode observe; the family's credit settled on reached is the reach record."
+      }
     }
   ],
   "familyGoals": [
@@ -312,6 +340,58 @@ const SEED = {
       "body": {
         "family": "federation-verification",
         "goal": "Resolve the federation_verification_report shape and report the federation overlay's current state: its coverage fraction, its blocking reason, which invariants are failing, and whether the report is fresh. The shape is served by the federation transport vessel and returns the most recent report measured by an independent ephemeral libp2p peer, starting a new sweep when the last one is stale."
+      }
+    },
+    // NEW POLICY (2026-10-15): the reach-probe members (see the rhythm entry). One member per goal, so siblings dedup
+    // independently; each runs observe-only.
+    {
+      "id": "rhythm-family-goal-reach-probe-top-failures",
+      "shape": "rhythmFamilyGoal",
+      "body": {
+        "family": "reach-probe",
+        "member": "top-failures",
+        "learning_mode": "observe",
+        "goal": "Report the 8 activity templates with the highest failure counts over the last 24 hours. For each, give the template id and its failure count, sorted descending by that count."
+      }
+    },
+    {
+      "id": "rhythm-family-goal-reach-probe-failure-modes",
+      "shape": "rhythmFamilyGoal",
+      "body": {
+        "family": "reach-probe",
+        "member": "failure-modes",
+        "learning_mode": "observe",
+        "goal": "Summarize the most common failure modes across execution traces from the last 24 hours. For each distinct failure_mode.type, report a count and one example execution_id, ordered by count descending."
+      }
+    },
+    {
+      "id": "rhythm-family-goal-reach-probe-unproduced-shapes",
+      "shape": "rhythmFamilyGoal",
+      "body": {
+        "family": "reach-probe",
+        "member": "unproduced-shapes",
+        "learning_mode": "observe",
+        "goal": "List the impulse shapes that are consumed as some activity's input_shapes but have no activity producing them as an output_shape. For each such orphaned shape, name the activities that consume it."
+      }
+    },
+    {
+      "id": "rhythm-family-goal-reach-probe-cost-by-tier",
+      "shape": "rhythmFamilyGoal",
+      "body": {
+        "family": "reach-probe",
+        "member": "cost-by-tier",
+        "learning_mode": "observe",
+        "goal": "Report the total resolution cost grouped by resolver_tier (deterministic, pattern, llm) over the last 24 hours, ordered by total cost highest first. Include the count of resolutions per tier alongside each total."
+      }
+    },
+    {
+      "id": "rhythm-family-goal-reach-probe-pattern-concept",
+      "shape": "rhythmFamilyGoal",
+      "body": {
+        "family": "reach-probe",
+        "member": "pattern-concept",
+        "learning_mode": "observe",
+        "goal": "Examine the most recent successful multi-task execution traces. Identify the recurring task pattern they share (the common sequence of resolver steps and shape flow), and report that pattern with a name, a description, and the activities it generalizes. Report it only; do not create or write a concept."
       }
     }
   ]
