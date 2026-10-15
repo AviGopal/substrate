@@ -2069,6 +2069,9 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
       - **Round 8 and the satisfier-suppression switch:** honest reach was 2 of 20 against 3 of 20 before. One goal class gained and one was lost, which is within round noise.
         - **USER RULING, the conflict resolved, 2026-10-15T17:30:15Z (relayed by qa, from a direct question that named both of the user's earlier answers): "Keep disarmed".** The switch stays disarmed, and it was never touched during the conflict. This supersedes the later "re-arm" answer in the docs session. Recorded at 2026-10-15T17:30:47Z.
         - **The lasting fix is owed either way:** the switch as a shaped row at context grain.
+      - **USER RULING, 2026-10-15T18:09:45Z (relayed by qa; time from the transcript): "Let's do both". Recorded at 2026-10-15T18:10:37Z.**
+        1. **The trace-store reconcile placement fix is left to the system, not built by an operator.** Its existing gaps, one human-filed with a complete falsifier and one detected by the system, go to check supply and to the lane on the node running the sanctioned scope experiment, once the control-arm lift is live. **An operator builds it only if the lane fails,** with a review 48 hours after the lift converges.
+        2. **A predicate hold that removed about 1,700 gaps before admission,** during the capacity after-window, is investigated read-only, history first, to decide whether it is sanctioned or a defect.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
