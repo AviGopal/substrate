@@ -1960,6 +1960,13 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             - **(b)** the fail-closed branch records no reason. B2's class.
           - **Learning moved nothing,** which is correct for an outage.
           - **This needs the user (credits). Until then the BATCH-01 probe and the next slice run's judge are blocked.** It is an intractable blocker, exception (b), for the user.
+          - **Resolved: the user topped up the account.** It was verified on both nodes: no further credit refusals, a paid completion succeeded through each node's own resolver as a positive control, and the local model route is advertised again.
+      - **BATCH-01, the run log (recorded 2026-10-15T01:00:18Z).** Round 1 has been dispatching to one node since 00:59Z, with 20 probe goals (13 held out and 7 fresh). **Three deviations from the pre-registration are named:**
+        1. **B1–B3 are not live yet:** the push was refused by the landing-lease guard, on two leases the system held. So round 1 is a **pre-batch baseline with a healthy model plane.** That is cleaner than the earlier baseline, which was measured while the plane's health was unknown.
+        2. **The spacing is 45 seconds, not 20,** because the host load was about 17.7 on 16 cores. Load is recorded as a covariate.
+        3. **Learning stays on, as pre-registered:** a deliberate exception to the observe-mode rule for probes, because the learning test needs paths to be recorded.
+
+        Round 2 follows at least 20 minutes after round 1 completes. The post-batch rounds come once B1–B3 are live.
       - **USER RULINGS (relayed by qa, about 2026-10-14T23:58Z–00:00Z, verbatim):**
         1. "We can't allow it to be able to execute goals that don't reach. It should not be possible to not reach consistently. Everything needed is already available, but just a step further away, but the whole purpose of the system is to take that step."
         2. "We have clearance to make direct changes, batch and push them such that the reach rate for arbitrary goals and the learning mechanism can be demonstrated before the next loop goal."
