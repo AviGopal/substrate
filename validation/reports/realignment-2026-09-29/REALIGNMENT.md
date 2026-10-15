@@ -1967,6 +1967,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         3. **Learning stays on, as pre-registered:** a deliberate exception to the observe-mode rule for probes, because the learning test needs paths to be recorded.
 
         Round 2 follows at least 20 minutes after round 1 completes. The post-batch rounds come once B1–B3 are live.
+        - **The comparator changed before any result was read (2026-10-15T01:00:53Z, by qa's record; no result had been collected).** Round 1, run before the batch with a healthy plane and the same goals, is **the baseline.** The earlier 2–21% band stays in the report, labelled superseded, so the change is visible.
       - **USER RULINGS (relayed by qa, about 2026-10-14T23:58Z–00:00Z, verbatim):**
         1. "We can't allow it to be able to execute goals that don't reach. It should not be possible to not reach consistently. Everything needed is already available, but just a step further away, but the whole purpose of the system is to take that step."
         2. "We have clearance to make direct changes, batch and push them such that the reach rate for arbitrary goals and the learning mechanism can be demonstrated before the next loop goal."
