@@ -1952,6 +1952,14 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - The floor failed closed, because the reach verifier was unreachable, and concept recall timed out.
           - No belief moved.
         - **Why the judge said no is UNKNOWN, and cannot be recovered from the records.** The report's content is not in the walk state, the answer body is empty, and no reason was recorded. **That missing evidence is exactly B2's class, and B2 is the next change.**
+        - **ROOT CAUSE, measured (recorded 2026-10-15T00:40:41Z): the reach judge NEVER ANSWERED.** Its verdict was null three times, about a minute apart. So the run failed closed as "reach verifier unreachable; verdict unknown", a branch that writes no reason line.
+          - **The cause was the environment: the LLM provider account had no credits** for every paid model, on both nodes. Free models were rate-exhausted. Peer routes were unreachable from one node, which is also why concept recall timed out.
+          - **The slice run's verdict is therefore UNKNOWN (environment), not "not reached" on content. CHANGE-02's origin-observer check (field 3a) is untested:** the reads succeeded, and the judge could not grade.
+          - **Two classes, recorded:**
+            - **(a)** the retry and the capability-gap filing treated an infrastructure non-verdict as a content defect, and **misfiled a gap.**
+            - **(b)** the fail-closed branch records no reason. B2's class.
+          - **Learning moved nothing,** which is correct for an outage.
+          - **This needs the user (credits). Until then the BATCH-01 probe and the next slice run's judge are blocked.** It is an intractable blocker, exception (b), for the user.
       - **USER RULINGS (relayed by qa, about 2026-10-14T23:58Z–00:00Z, verbatim):**
         1. "We can't allow it to be able to execute goals that don't reach. It should not be possible to not reach consistently. Everything needed is already available, but just a step further away, but the whole purpose of the system is to take that step."
         2. "We have clearance to make direct changes, batch and push them such that the reach rate for arbitrary goals and the learning mechanism can be demonstrated before the next loop goal."
