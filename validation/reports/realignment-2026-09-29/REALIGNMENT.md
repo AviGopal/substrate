@@ -1929,6 +1929,20 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
               - corrupted learned state;
               - self-modification without continuity that survives a restart;
               - measurements without consumers.
+      - **THE SLICE READING, 2026-10-15 (the run started about 00:21Z; no restart in its window; recorded 2026-10-15T00:27:42Z). CHANGE-02, field 7:**
+
+        | Pre-registered | Reading |
+        |---|---|
+        | Both count reads bind real counts | **PASS.** All four tasks succeeded, both reads completed inside the template's deadline with no timeout, and the judge's input was about six times larger than at 15:43Z, so real counts were bound |
+        | The run reaches | **FAIL.** The reach gate judged it not reached, and **its reason is not in the record:** only the bare verdict |
+
+        - **The sequence:**
+          1. Selection **reused the learned path** for the goal family. The template's posterior had been reset hours earlier, which is a confound.
+          2. The template completed.
+          3. The judge said not reached, with its reason lost.
+          4. In-flight recovery fired: it fed the prior verdict back, excluded the template, and found no other producer.
+          5. It **filed a capability gap by recurring demand, which is the system's own path,** and entered the floor, whose outcome is pending.
+        - **The read break is cleared (assisted). The next demonstrated break is the reach judgment, and its reason is lost.** That is exactly BATCH-01 B2's class. The next change follows from this break, through the process.
       - **USER RULINGS (relayed by qa, about 2026-10-14T23:58Z–00:00Z, verbatim):**
         1. "We can't allow it to be able to execute goals that don't reach. It should not be possible to not reach consistently. Everything needed is already available, but just a step further away, but the whole purpose of the system is to take that step."
         2. "We have clearance to make direct changes, batch and push them such that the reach rate for arbitrary goals and the learning mechanism can be demonstrated before the next loop goal."
