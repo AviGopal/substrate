@@ -1711,6 +1711,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **Settlement is not yet in.** It landed **partial:** the system's own semantic gate dissented on **location,** preferring the same fix one function upstream, and minted a follow-up gap from that dissent. The behaviour is the same either way.
           - **Small residuals:** the tried list still names the pinned target, which was not attempted. An error label names the wrong vessel, which was pre-existing. When the pinned target is the only one, it is still used.
           - **It is a landing with no hands on it, but the gap was human-filed, so it is hand-fed and not a headline landing.**
+          - **Settled:** both nodes serve it. The sweep closed its gap as **landed partial,** with the semantic dissent left unsettled ("the check that passed is the one the gate doubted"). **So it is graded valid but partial, and not counted as verified,** consistent with the earlier partial landings.
       - **Why D4 missed, found 2026-10-14: the redispatch had never run live.** Its policy defaulted to dry run ("interim defaults"), and no policy record existed on either node. **User ruling: turn redispatch on,** through a reviewed, user-run write: dry run off, with the default bounds of 5 cycles and $5 per goal.
         - **It is a law-12 intervention, so its time is recorded when it runs.**
         - **Correction: dry-run lines did appear, after D4's date.** One node logged "would redispatch" 4 times in 72 hours (3 in the last 24), and the other node logged none. So D4's precondition was met late. **D4 stays missed at its date.**
@@ -2055,7 +2056,8 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **CHANGE-05, reconcile** (user ruling 04:23:09Z; pushed 05:19:29Z; gate green).
           - **The history:** an earlier credential strip assumed template configurations never pass through the walk's pointer builder, and they do. So the trace-store reconcile repaired the store, lost its lease token at release, and was graded failed.
           - **The change:** the existing pattern that keeps a field as data gains its credential counterpart, with one entry: a maintenance lease keeps its own token. Every other credential field is still stripped.
-          - Its live reading is pending.
+          - **Live reading (recorded 2026-10-15T07:11:29Z): UNVERIFIED, not refuted.** Since it converged, no reconcile has reached the release step: each fails earlier, on a parse error. **The cause is a startup race in the walk service.** On one node, two boots lost a proxy registration, so the vessel's shapes ran through the discovery proxy, which pastes an object where text belongs. The race fix (B13) is gate-green and user-approved (06:27:32Z), and pushes after the slice.
+            - **The probe rounds 6 and 7, and one credit change's live reading, ran on that node's degraded proxies, so they are confounded.** That includes the one learning instance.
         - **THE LEARNING READING** (pre-registered; round 7 against round 6; 20 of 20 captured; the instrument fixed before round 7):
           - the approach differed on 10 of 20 goals;
           - **1 LEARNING INSTANCE:** a goal failed for an unsourced answer, took different steps, and **reached with a sourced answer;**
