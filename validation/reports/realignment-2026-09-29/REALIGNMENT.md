@@ -1929,6 +1929,24 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
               - corrupted learned state;
               - self-modification without continuity that survives a restart;
               - measurements without consumers.
+      - **USER RULINGS (relayed by qa, about 2026-10-14T23:58Z–00:00Z, verbatim):**
+        1. "We can't allow it to be able to execute goals that don't reach. It should not be possible to not reach consistently. Everything needed is already available, but just a step further away, but the whole purpose of the system is to take that step."
+        2. "We have clearance to make direct changes, batch and push them such that the reach rate for arbitrary goals and the learning mechanism can be demonstrated before the next loop goal."
+      - **BATCH-01, pre-registered BEFORE landing (recorded 2026-10-15T00:10:00Z).** Batching lifts the one-change-per-window rule for this batch only; records, reviews and push guards remain. **The selection rule (§6.1.3):** only joints that restore the system's own ability to reach or learn, and no patches specific to one need.
+        - **The changes:**
+          - **B1:** a library landing settles once the verified pin carries it.
+          - **B2:** the failure reason reaches in-flight recovery and failure memory: one read of the record the engine already writes, at the loop that retries.
+          - **B3:** the floor's tool use becomes visible, by carrying the resolver's executed-call record through the dispatcher, so floor runs are judged on what they read.
+        - Nothing lands inside tonight's slice run. Everything must be live and measured before the next loop run.
+        - **The baseline:** walk reach 2–21%; floor reach 5% with no grounded runs; about 57 "no reason recorded" verdicts a day per node; 0 needs reached after a system repair.
+        - **The probe:** arbitrary natural-language goals across classes, none naming the loop goal or its shapes. Each is dispatched twice, at least 20 minutes apart, operator-tagged and labelled assisted, with learning on.
+        - **The expected reach:** first runs reached with grounded content, **above the 2–21% band.** A floor run that used tools shows grounded use above zero.
+        - **Learning, demonstrated and not claimed:** on the second run of each goal, at least one of these happens:
+          - a reached path is reused;
+          - a recalled failure reason changes the approach;
+          - the posterior moves in the direction of the first outcome.
+        - **No regression:** reliable paths through the changed code reach at their prior rate.
+        - **Law 12:** a batch confounds attribution between its changes. Each change carries its own sub-reading (B1: the stuck landings settle; B2: "no reason recorded" falls toward 0; B3: grounded use above 0), so a gain can be traced to a joint.
       - **D8, amended before the run (written 2026-10-14T20:18:59Z): a mid-run restart is NO RUN.** If the walk service on the loop goal's node restarts during the run window (start, stop or drain lines inside it), the run is read as **no run,** not as a verdict.
         - **User, about 19:50Z (relayed by qa): "Not every need requires a gap to be closed to meet it."** The walk routing around is the first answer to an unmet need: another producer, a composition of existing pieces, or adaptation at the first or last mile. A gap and a code change are for when no route reaches.
         - **Two findings against it (read-only; recorded at 2026-10-14T19:35:45Z):**
