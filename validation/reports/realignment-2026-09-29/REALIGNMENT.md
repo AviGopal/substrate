@@ -2047,6 +2047,22 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - a mutant fails exactly the expected tests;
           - **deviations recorded:** one changed scenario was predicted and two of the same class occurred; a lesson write on the charged branch was not predicted; the committed golden file was already stale, and was not regenerated.
         - **The live validation:** rounds 5 and 6 on the same goals, after convergence. **The learning reading:** a goal not reached in round 5 differs in approach in round 6 **and reaches.** Round 6 is skipped if it cannot start by 06:40Z.
+      - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
+        - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
+          - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
+          - **The change:** for failure-charging, only receipt-only **write** steps are exempt.
+          - **Live:** failure is now charged on 73% of failed-content verdicts, against 12% before. The dominant failing producer was charged for the first time, and "no producer identifiable" fell to 0.
+        - **CHANGE-05, reconcile** (user ruling 04:23:09Z; pushed 05:19:29Z; gate green).
+          - **The history:** an earlier credential strip assumed template configurations never pass through the walk's pointer builder, and they do. So the trace-store reconcile repaired the store, lost its lease token at release, and was graded failed.
+          - **The change:** the existing pattern that keeps a field as data gains its credential counterpart, with one entry: a maintenance lease keeps its own token. Every other credential field is still stripped.
+          - Its live reading is pending.
+        - **THE LEARNING READING** (pre-registered; round 7 against round 6; 20 of 20 captured; the instrument fixed before round 7):
+          - the approach differed on 10 of 20 goals;
+          - **1 LEARNING INSTANCE:** a goal failed for an unsourced answer, took different steps, and **reached with a sourced answer;**
+          - **causal attribution to the failure-charging changes is NOT established:** the charge had gone to a different step, and the reach followed two hollow attempts within the same run;
+          - **honest reach is flat at 3 of 20.**
+        - **The system's own reach, without the probes:** **0–9%** across tonight's windows. The 13% headline came from the probes.
+        - **A recurring false-reach class, across five rounds:** a verifier that answers a different question, such as a total for a subset, or a file count for a trace count.
       - **The next slice run, pre-registered (written by qa before the run; recorded here at 2026-10-15T03:19:22Z):**
         - **Precondition:** no credit refusal and no de-advertise on the model route in the run window. Otherwise the result is **unknown (environment),** whatever the gate printed.
         - **Reached:** this counts only after the **trust check.** It would be the first **assisted** slice reach on its learned pathway, since operator acts touched its path: the template deadline write and B1–B5. **The autonomy count stays at 0.**
