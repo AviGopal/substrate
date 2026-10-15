@@ -2048,6 +2048,16 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - a mutant fails exactly the expected tests;
           - **deviations recorded:** one changed scenario was predicted and two of the same class occurred; a lesson write on the charged branch was not predicted; the committed golden file was already stale, and was not regenerated.
         - **The live validation:** rounds 5 and 6 on the same goals, after convergence. **The learning reading:** a goal not reached in round 5 differs in approach in round 6 **and reaches.** Round 6 is skipped if it cannot start by 06:40Z.
+      - **THE SLICE REACHED (2026-10-15; dispatched 08:58Z; recorded 2026-10-15T09:03:16Z). The first trusted slice reach since 10-04, ASSISTED. §7 step 1 is met, with operator help.**
+        - The rhythm conductor's affordability gate held the run until host pressure fell. The walk then **reused its learned template,** and the judge found that the report carried the required counts. The floor ran afterwards, judged not reached, and correctly did not override.
+        - **The trust check:**
+          - real counts: **pass;**
+          - the top rows within 0.12% of an independent read taken 90 seconds later: **pass** (5% was pre-registered);
+          - the orphan section: **indicated, not read,** because the previews are truncated.
+        - **Attribution:** the combined served state, which is the read deadline plus B1–B8; B9–B13 were not live. It is labelled **assisted,** so **the autonomy count stays 0.**
+        - **What changed since the 00:21Z run:** the LLM account was funded, so the judge answered; the count reads bound within the deadline; and the proxy substituted real counts.
+        - **D8 is MET, assisted.**
+        - **The learning gap it exposes:** success credit was **withheld** for the template ("no in-chain producer-to-consumer edge"), so **the reach did not move its posterior.** This is the success-side gap for single-step reaches graded by the judge, and it is a candidate for the next break.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
