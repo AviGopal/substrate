@@ -1974,6 +1974,26 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
 
         Round 2 follows at least 20 minutes after round 1 completes. The post-batch rounds come once B1–B3 are live.
         - **The comparator changed before any result was read (2026-10-15T01:00:53Z, by qa's record; no result had been collected).** Round 1, run before the batch with a healthy plane and the same goals, is **the baseline.** The earlier 2–21% band stays in the report, labelled superseded, so the change is visible.
+        - **The pre-batch readings (recorded 2026-10-15T02:02:12Z):**
+
+          | | Round 1 (baseline) | Round 2 |
+          |---|---|---|
+          | Graded reached | 0 of 13 held-out, 1 of 7 fresh | 0 of 13 held-out, 2 of 7 fresh |
+          | **Honest reach** | **1 of 20** | **1 of 20** (one of the two was false) |
+          | Wall time, dispatch to verdict | median about 199 s, max about 1,190 s | median about 158 s, max about 967 s |
+
+          - **A false reach in round 2:** the independent-recompute oracle certified a count about the trace store as zero. It did so from two derivations over **source files,** not the trace store. **Two derivations that share a wrong premise agree, and the oracle passed them.**
+          - **Learning before the batch:**
+            - reuse on the goal that reached: **yes;**
+            - **"a recalled reason changes the approach": FAILS.** Failure recall fired on almost every run, yet the same chain produced the same verdict.
+          - **The dominant failure chain:**
+            1. Target inference maps plain questions to a shell result.
+            2. Its satisfier is proven bad, so a learned composition is preferred instead. That composition leaves only provenance pointers, and has a side-effect write.
+            3. The result is a deterministic error envelope.
+            4. The retry runs the same chain again.
+
+            Separately, **read questions were misrouted as edit intents** into the compose pipeline, taking up to 20 minutes each.
+          - **The batch is live in part:** B1 and B3a converged on one node at 01:41Z, and B2 and B3b were pushed at 02:00Z. The post-batch rounds 3 and 4 follow once the walk service runs the new code.
       - **USER RULINGS (relayed by qa, about 2026-10-14T23:58Z–00:00Z, verbatim):**
         1. "We can't allow it to be able to execute goals that don't reach. It should not be possible to not reach consistently. Everything needed is already available, but just a step further away, but the whole purpose of the system is to take that step."
         2. "We have clearance to make direct changes, batch and push them such that the reach rate for arbitrary goals and the learning mechanism can be demonstrated before the next loop goal."
