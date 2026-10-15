@@ -1999,6 +1999,30 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             - **Scoring:** a reason-recorded failure on an identical chain scores (a) pass and (b) **fail.** The headline learning instance is: the approach differs **and** the run reaches, graded and not a false reach on inspection.
             - **The stated expectation:** B2 moves (a). Nothing in B1–B3 changes selection, so **(b) is expected to fail.** That would demonstrate the next break: **recall does not steer selection,** the "step further away" the user named.
           - **The batch is live in part:** B1 and B3a converged on one node at 01:41Z, and B2 and B3b were pushed at 02:00Z. The post-batch rounds 3 and 4 follow once the walk service runs the new code.
+      - **BATCH-01, final (recorded 2026-10-15T03:17:25Z):**
+
+        | Round | Honest reach (of 20) | Mean wall time |
+        |---|---|---|
+        | 1, pre-batch | 1 | 356 s |
+        | 2, pre-batch | 1 | 229 s |
+        | 3, post-batch | 3 | 131 s |
+        | 4, post-batch | 3 | |
+
+        One goal's graded reach is false in every round: two derivations that share a wrong premise.
+        - **(a) Reason recorded: PASS.**
+          - **B2:** failed-trace reasons rose from 0 to 4, "no reason recorded" fell from 2 to 0, and memory records rose from 15 to 23, in equal windows.
+          - **B5:** most floor non-reaches now carry the floor's reason, and are remembered.
+          - **B4:** every floor decision is now explained. Most are the judge rejecting the **content:** unsourced current information, a read goal judged as a write goal, or a wrong count. None was a tool or fabrication rule.
+        - **B3b, the floor's tool use is visible:** grounded floor runs rose from 0 of 9 to 8 of 13. **The first floor reaches in the probes,** on 2 goals.
+        - **B1:** both stuck library landings closed after convergence. They closed on their own falsifier, not on the origin observer, which is a recorded caveat.
+        - **(b) Approach differs: FAILS, as pre-registered.** From round 3 to round 4, 7 of 20 goals differed, and **none went from failed, to a different approach, to reached.** The round 1 to round 2 comparison is invalid: the walk states had expired before they were collected.
+        - **The next demonstrated breaks, for the process; none is built:**
+          1. **recall does not steer selection;**
+          2. target inference maps plain questions to a shell result, and a composition adds a side-effect write, so read goals are judged as write goals;
+          3. the recompute oracle certifies an answer that rests on a shared wrong premise;
+          4. read questions are misrouted as edit intents.
+        - **Process note:** B4 and B5 were built and pushed on the user's direct instruction in qa's session. Their records are in the batch file.
+      - **The whole batch is live on the loop goal's node** (02:19Z and 02:57Z) **for the next slice run, at about 08:30Z.**
       - **USER RULINGS (relayed by qa, about 2026-10-14T23:58Z–00:00Z, verbatim):**
         1. "We can't allow it to be able to execute goals that don't reach. It should not be possible to not reach consistently. Everything needed is already available, but just a step further away, but the whole purpose of the system is to take that step."
         2. "We have clearance to make direct changes, batch and push them such that the reach rate for arbitrary goals and the learning mechanism can be demonstrated before the next loop goal."
