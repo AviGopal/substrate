@@ -2023,6 +2023,17 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           4. read questions are misrouted as edit intents.
         - **Process note:** B4 and B5 were built and pushed on the user's direct instruction in qa's session. Their records are in the batch file.
       - **The whole batch is live on the loop goal's node** (02:19Z and 02:57Z) **for the next slice run, at about 08:30Z.**
+      - **CHANGE-03, under the process: deterministic verdicts charge failure, as the credit rule already says (recorded 2026-10-15T03:35:13Z).**
+        - **Authority:** a user ruling in qa's session, "yes, take it through the process now". It was pushed at 03:33:59Z, before 03:34:54Z on this session's clock. The ruling's time was given only as an estimate (about 03:45Z, later than the push), so the exact order is to be confirmed from qa's record.
+        - **Field 0, the demanding reading:** BATCH-01's learning reading (b) failed, because recall did not steer selection.
+        - **Field 1, the history; nothing is new:** the symmetric-abstention rule of 08-17 says a deterministic verdict still penalises normally. But its caller read only a flag, and about a dozen verdict builders mark themselves deterministic only in their reason prefix, which the label reader has honoured since 07-30. In the probe window, **112 of 143 withheld updates were deterministic misses,** so the posterior never moved for the producers that fail most. **That is why recall did not change the choice.**
+        - **Field 2, the expression:** one shared definition of a deterministic verdict, used by the label reader, the failure-charge decision and its capture. The rule itself is unchanged. A protected guard test's pinned string was updated under operator bootstrap, with a must-fail test added.
+        - **Field 3, the validation so far:**
+          - the replay harness: 81 of 83 scenarios identical, and the 2 that differ are both deterministic misses, now charged;
+          - the gate: 0 new failures, with identical failure lists and a clean typecheck;
+          - a mutant fails exactly the expected tests;
+          - **deviations recorded:** one changed scenario was predicted and two of the same class occurred; a lesson write on the charged branch was not predicted; the committed golden file was already stale, and was not regenerated.
+        - **The live validation:** rounds 5 and 6 on the same goals, after convergence. **The learning reading:** a goal not reached in round 5 differs in approach in round 6 **and reaches.** Round 6 is skipped if it cannot start by 06:40Z.
       - **The next slice run, pre-registered (written by qa before the run; recorded here at 2026-10-15T03:19:22Z):**
         - **Precondition:** no credit refusal and no de-advertise on the model route in the run window. Otherwise the result is **unknown (environment),** whatever the gate printed.
         - **Reached:** this counts only after the **trust check.** It would be the first **assisted** slice reach on its learned pathway, since operator acts touched its path: the template deadline write and B1–B5. **The autonomy count stays at 0.**
