@@ -2067,7 +2067,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         2. **Revive the dormant stratified goal generator** as a rhythm family in observe mode, so that **reach is measured by the system itself,** not by operator probe rounds. It was built in May for reach on arbitrary goals. Its weekly run has failed since 05-18 on a missing key, and no gap was ever filed.
         3. **The trace-store reconcile is not dispatched on a node with no trace-store producer of its own.** Today it fails every run on spokes.
       - **Round 8 and the satisfier-suppression switch:** honest reach was 2 of 20 against 3 of 20 before. One goal class gained and one was lost, which is within round noise.
-        - **CONFLICTING RULINGS, held until the user resolves them:** a ruling relayed by qa at 14:12:48Z says "keep it disarmed; build the verifier once B10-B13 converge". The user's direct answer in the docs session, later, says **re-arm.**
+        - **USER RULING, the conflict resolved, 2026-10-15T17:30:15Z (relayed by qa, from a direct question that named both of the user's earlier answers): "Keep disarmed".** The switch stays disarmed, and it was never touched during the conflict. This supersedes the later "re-arm" answer in the docs session. Recorded at 2026-10-15T17:30:47Z.
         - **The lasting fix is owed either way:** the switch as a shaped row at context grain.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
