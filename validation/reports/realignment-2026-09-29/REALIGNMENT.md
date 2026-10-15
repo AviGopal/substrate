@@ -1993,6 +1993,11 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             4. The retry runs the same chain again.
 
             Separately, **read questions were misrouted as edit intents** into the compose pipeline, taking up to 20 minutes each.
+          - **Pre-registered at 2026-10-15T02:02Z, by qa, before round 3 dispatched: two separate readings.**
+            - **(a) The reason is recorded (B2).** For each run not reached: a non-empty reach reason, a failed-trace reason line in the walk log, and a failure-memory record for that goal in the window.
+            - **(b) The approach differs (learning).** For each goal, run N+1 against run N differs in its inferred target shapes, its ordered template choices, or its terminal producer. A same-chain rerun by the retry does not count.
+            - **Scoring:** a reason-recorded failure on an identical chain scores (a) pass and (b) **fail.** The headline learning instance is: the approach differs **and** the run reaches, graded and not a false reach on inspection.
+            - **The stated expectation:** B2 moves (a). Nothing in B1–B3 changes selection, so **(b) is expected to fail.** That would demonstrate the next break: **recall does not steer selection,** the "step further away" the user named.
           - **The batch is live in part:** B1 and B3a converged on one node at 01:41Z, and B2 and B3b were pushed at 02:00Z. The post-batch rounds 3 and 4 follow once the walk service runs the new code.
       - **USER RULINGS (relayed by qa, about 2026-10-14T23:58Z–00:00Z, verbatim):**
         1. "We can't allow it to be able to execute goals that don't reach. It should not be possible to not reach consistently. Everything needed is already available, but just a step further away, but the whole purpose of the system is to take that step."
