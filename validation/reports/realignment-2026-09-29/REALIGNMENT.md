@@ -2077,6 +2077,9 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **The defect chosen instead:** the one isolation defect still open. A test leaves a temporary directory behind on every run: hundreds per node, and still growing.
         - **How it was filed:** as a narrowed child of the existing human-filed gap, with a single edit site the lane may edit and a quoted, falsifiable specification, stamped as filed by the operator session.
         - **It is hand-fed by design,** so it is never a headline candidate.
+      - **USER RULING, 2026-10-15T23:03:56Z (relayed by qa; verbatim): "We should make the necessary interventions. until we are confident that there are no identifiable rasons why it might not work, we should test each component of the goal reaching process, ensure that we are not duplicating functionality across the execution flow and that we are following the architecture. Nothing in this system should be 'new' at this point, everything has been built before before decaying". Recorded at 2026-10-15T23:08:33Z.**
+        - **A component audit follows.** It ends only when every component of the self-repair pipeline and the goal walk has either a live positive control, or a named reason with an intervention record. It restores decayed parts, never mints new ones, and resolves duplicates.
+        - **The 48-hour supply reading's single verdict is withdrawn;** the reading stays per stage.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
