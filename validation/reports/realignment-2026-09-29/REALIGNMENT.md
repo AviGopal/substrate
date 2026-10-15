@@ -2072,6 +2072,11 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
       - **USER RULING, 2026-10-15T18:09:45Z (relayed by qa; time from the transcript): "Let's do both". Recorded at 2026-10-15T18:10:37Z.**
         1. **The trace-store reconcile placement fix is left to the system, not built by an operator.** Its existing gaps, one human-filed with a complete falsifier and one detected by the system, go to check supply and to the lane on the node running the sanctioned scope experiment, once the control-arm lift is live. **An operator builds it only if the lane fails,** with a review 48 hours after the lift converges.
         2. **A predicate hold that removed about 1,700 gaps before admission,** during the capacity after-window, is investigated read-only, history first, to decide whether it is sanctioned or a defect.
+      - **USER RULING, 2026-10-15T22:10:52Z (relayed by qa; time from the transcript): "Lane-ready child for the drift-observer leak". Recorded at 2026-10-15T22:13:04Z.**
+        - **What it resolves:** a repeated request to "file the isolation gap". The live-tree isolation it first named has existed since 10-08, so a gap for it would be born green.
+        - **The defect chosen instead:** the one isolation defect still open. A test leaves a temporary directory behind on every run: hundreds per node, and still growing.
+        - **How it was filed:** as a narrowed child of the existing human-filed gap, with a single edit site the lane may edit and a quoted, falsifiable specification, stamped as filed by the operator session.
+        - **It is hand-fed by design,** so it is never a headline candidate.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
