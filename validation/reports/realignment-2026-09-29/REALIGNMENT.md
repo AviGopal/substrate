@@ -2023,7 +2023,7 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           4. read questions are misrouted as edit intents.
         - **Process note:** B4 and B5 were built and pushed on the user's direct instruction in qa's session. Their records are in the batch file.
       - **The whole batch is live on the loop goal's node** (02:19Z and 02:57Z) **for the next slice run, at about 08:30Z.**
-      - **The next slice run, pre-registered (by qa at about 03:2xZ, before the run; recorded here at 2026-10-15T03:19:22Z):**
+      - **The next slice run, pre-registered (written by qa before the run; recorded here at 2026-10-15T03:19:22Z):**
         - **Precondition:** no credit refusal and no de-advertise on the model route in the run window. Otherwise the result is **unknown (environment),** whatever the gate printed.
         - **Reached:** this counts only after the **trust check.** It would be the first **assisted** slice reach on its learned pathway, since operator acts touched its path: the template deadline write and B1–B5. **The autonomy count stays at 0.**
         - **Not reached, with a recorded reason:** the reason names the next break. **It must be a new reason** (user ruling). A known reason recurring is recorded as a process failure.
