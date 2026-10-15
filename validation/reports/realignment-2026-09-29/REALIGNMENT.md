@@ -1808,6 +1808,12 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             - **Recorded, not a defect:** the abort match is wider than the error name, so any fetch error whose message says "aborted" is now a failed read.
             - The gap stays open only because of library settlement.
           - **Grade: verified on every measured item except the live reading,** which comes from the loop goal's next run (an honest timeout failure is expected). If that run reads as expected, this is the **second verified system repair.** It was hand-fed, so it is not a headline landing.
+          - **The live reading (2026-10-15T01:11Z, the coordinator's journal watch):** a caller-side timeout now surfaces as a logged, failed read, with its deadline and source. Before the fix it was a silent success with empty content.
+            - **The caveats:**
+              - it was observed on a **different shape** from the loop goal's reads, on the default deadline;
+              - the pre-registered observer, the loop goal's run, did not exercise a timeout, because its reads finished inside the template's deadline;
+              - the log line's format comes from CHANGE-02, so this reading covers both changes together.
+            - **Grade: the second verified system repair,** with its live evidence taken from another path, not from the pre-registered observer. It was hand-fed, so it is not a headline landing.
         - The gap was hand-fed, so this is **not** a headline landing. Once it is served on that node, the next run is expected to read an **honest failure (timeout), not reached.**
       - **Live harm, noted:** the gap about escalations that no human reads is itself flagged hopeless, so both nodes are escalating it through the same channel no human reads.
       - **Redispatch has taken no live action yet:** neither node has ticked since the switch, and the first candidate is queued on one node.
