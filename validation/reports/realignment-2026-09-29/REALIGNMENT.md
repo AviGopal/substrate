@@ -2234,8 +2234,17 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - The held parent gap **closed at 06:54:35Z, "closed via child"**: retired with its code, not a really-fixed reason. The hold is lifted, and the child carries the table-scan part.
           - **The positive control passes.** After convergence, the remaining reader returned 782,221 observations over 5,815 signatures, with non-zero success rates, so no reader was left on the retired keys.
           - **The writer is gone:** 0 log lines mention the retired pair, and there have been 0 re-derive conflict lines since the restart.
-        - **CHANGE-30 is APPROVED.** Its full gate passed on both repositories: 0 new failures, identical failure lists, 0 of 21 on the golden set, 0 protected-file changes, and a clean typecheck. It pushes after RUN 0's window.
+        - **CHANGE-30 is APPROVED.** Its full gate passed on both repositories: 0 new failures, identical failure lists, 0 of 21 on the golden set, 0 protected-file changes, and a clean typecheck. It pushes after RUN 0's window. **Its two must-fails are confirmed (attested):** the coordinator's test runs show them, and qa read the reports and the test diff without re-running them. On the base, exactly these two were red, each for its own reason:
+          - (a) the base charged a deferred, retryable result as a failed dispatch, where the change records a non-attempt;
+          - (b) the base wrote no record after the receiver refused, where the change records the refusal and does not re-send before its delay, even with the bookkeeping write refused.
+
+          All 3 controls pass on both. The deferred-landing test (3 must-fails, red on the base only) and the non-attempt bound test also flip as expected.
         - **R1 is built.** Its tests flip correctly and the golden set is unchanged. Its full gate is running.
+        - **RUN 0, pre-registration amendment 4** (written 2026-10-16T06:55:48Z, before any draw; relayed by qa; recorded 2026-10-16T06:56:18Z):
+          - **T0** is the first attempt-1 dispatch.
+          - **The hard close is T0 + 4 hours.** Every goal not yet successful is then scored **NOT REACHED** (class "window closed"), collection stops, and pushes resume.
+          - **An attempt with no terminal state 90 minutes after its dispatch** is scored failed ("no terminal in 90 min").
+          - **Expected (not a target):** the attempt-1 dispatches take about 15 minutes, plus up to 35 minutes of re-sends; attempt 1 reaches a terminal state by about T0 + 1h45; attempt 2 starts at least 20 minutes later; everything is done by about T0 + 3h30. If the development-vessel lease releases at about 07:29Z, T0 is about 07:45Z, and the hard close is about 11:45Z at the latest.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
