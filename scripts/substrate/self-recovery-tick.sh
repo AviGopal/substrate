@@ -111,7 +111,17 @@ manifest_vessel() {
          break
        done" 2>/dev/null | grep -q yes
 }
-not_installed() { ! csh "[ -f /etc/systemd/system/$1.service ]" 2>/dev/null; }
+# ...unless the image can already run it (2026-10-16). The guard's real condition is "the baked unit cannot run". Since
+# 9c39f411 (09-17) the image bakes human-surface-vessel's source and enables its unit at build, so on a node with no /etc
+# render this test (an /etc file only) skipped a RUNNING vessel every tick: never health-checked, never recovered (the
+# human surface, on two of three nodes). A manifest vessel is not installed only when nothing can run it: no rendered
+# unit, AND the baked unit is not enabled or has no source under /vessels. metric-collector-vessel (source baked, unit
+# not enabled) still waits for vessel-ctl install; a baked unit with no source (the 08-07 case) still waits.
+not_installed() {
+  csh "[ -f /etc/systemd/system/$1.service ]" 2>/dev/null && return 1
+  if csys is-enabled --quiet "$1" 2>/dev/null && csh "[ -d /vessels/$1 ]" 2>/dev/null; then return 1; fi
+  return 0
+}
 # Still inside its own start phase (2026-08-03): a unit running ExecStartPre/
 # ExecStartPost — DB migrations, template seeding — is not yet serving /health,
 # so probing it reads as death. Restarting then aborts the start work and the
