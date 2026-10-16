@@ -2124,7 +2124,18 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **The readings:** for each goal, its stratum, draw index, attempts, the gate verdict, the trust verdict, and its failure class. Also the fraction that succeeds at attempt 1 and by attempt 2, with denominators and 95% Wilson intervals, per stratum.
           - **The target is 20 of 20 by attempt 2.** The contract floor of about 90% is reported alongside, and every goal that fails is named as a next break.
           - **The schedule:** run 0 after the current pushes converge, then a new run with a fresh frame and seed after each landing.
-        - **The build order** (qa and the coordinator): the gap-store read, then the localization contract (one definition), then the lane's verification failures, then the floor's read tools from discovery, then compose through the walk.
+        - **The AGREED ORDER (qa, the coordinator and docs):**
+          0. **RUN 0, the random-goal baseline, first:** once the pending retirement and the closure-credit changes converge, before any further build. Without a baseline, nothing after it can show movement.
+          1. the gap-store read;
+          2. the localization contract, as one definition (this also feeds step 3, because a mis-sited compose fails verification);
+          3. the root of the lane's verification failures;
+          4. the floor's read tools from discovery;
+          5. target inference and satisfier choice as selections over the posterior;
+          6. the remainder of honest closure counting;
+          7. compose through the walk;
+          8. the decay detector.
+
+          A fresh-draw run follows each landing.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
