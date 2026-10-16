@@ -2209,6 +2209,10 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **RUN 0 frame FROZEN** at 2026-10-16T06:20:52Z (sha256 231d5a2755c6ce8c…).
           - **S1: 132 real-traffic goals,** 108 and 24 by node. By source: 56 from the human surface, 33 gap-closing, 15 gap-decompose, 23 gap asks, and 5 recovery.
           - **S2: 3,203 open gaps.**
+        - **RUN 0, pre-registration amendment 3** (written 2026-10-16T06:22:01Z, after the freeze and before any draw; relayed by qa; recorded 2026-10-16T06:22:23Z):
+          - **A ceiling on non-attempts.** At most 3 front-door non-attempts (429, 503, or no answer) are allowed per goal per attempt, re-sent after 5, 10 and 20 minutes. After the third, the attempt scores as a **failure**, of the class "not reached (front door)". The total of non-attempts is reported per run and per node.
+          - **The excluded class is disclosed.** From the frozen frame's own counts, check-supply test-writing dispatches were 1,278 of 4,020 raw dispatch records in the window: **31.8%** (84 of 2,001 on one node, and 1,194 of 2,019 on the other). That is about 325 distinct texts, against the frame's 132. A result is stated with this, for example "20/20 on a frame that excludes check-supply goals (31.8% of raw traffic)". The other exclusions are reported by rule.
+          - **S2 is drawn uniformly** over the 3,203 frozen open gaps, including system-born noise and the 144 whose ids cannot be attributed. **Nothing is filtered after the freeze.** The only replacement is the original rule (a goal that would move a secret or is destructive), decided per goal, with the reasons listed.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
