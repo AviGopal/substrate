@@ -2080,6 +2080,14 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
       - **USER RULING, 2026-10-15T23:03:56Z (relayed by qa; verbatim): "We should make the necessary interventions. until we are confident that there are no identifiable rasons why it might not work, we should test each component of the goal reaching process, ensure that we are not duplicating functionality across the execution flow and that we are following the architecture. Nothing in this system should be 'new' at this point, everything has been built before before decaying". Recorded at 2026-10-15T23:08:33Z.**
         - **A component audit follows.** It ends only when every component of the self-repair pipeline and the goal walk has either a live positive control, or a named reason with an intervention record. It restores decayed parts, never mints new ones, and resolves duplicates.
         - **The 48-hour supply reading's single verdict is withdrawn;** the reading stays per stage.
+      - **USER RULINGS (2026-10-16T05:32:17Z, in the docs session, verbatim):**
+        1. "We shouldn't have duplicates, but we shouldn't rebuild. The system should have variants of things available in case it needs to try alternative paths to reach. Having a lactic acid cycle as a backup for respiration is as essential as respiration being efficient."
+        2. "All hard-wired callers are antipatterns. everything must be a selection of the next resolver (usually packed into a walk or an activity) with the relevant shaped impulses piped into it to cause the necessary state transition required for the next step."
+        - **How the audit applies it:** each duplicate is classified as one of three things:
+          - **(a) Alternative ways to produce the same shape:** registered as selectable, graded **variants**, with any fallback condition stated as shaped data.
+          - **(b) Rules that disagree:** unified into **one definition,** which several producers may use.
+          - **(c) A hard-wired caller:** replaced by a **selection** of the next resolver, inside a walk or an activity, with shaped impulses piped in.
+        - Nothing is deleted or rebuilt for its own sake.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
