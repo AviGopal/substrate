@@ -2104,6 +2104,14 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **(b) Rules that disagree:** unified into **one definition,** which several producers may use.
           - **(c) A hard-wired caller:** replaced by a **selection** of the next resolver, inside a walk or an activity, with shaped impulses piped in.
         - Nothing is deleted or rebuilt for its own sake.
+      - **USER DIRECTIVE, 2026-10-16T05:49Z (in the docs session, a standing goal, verbatim):** "check against realignment.md, ensure that qa reviews and works with the coordinator to implement every missing step. demonstrate arbitrary reach on randomly obtained goals. goals should always succeed within one or two attempts."
+        - **It is the go for every missing step the audit names, through the process.** That includes building the floor's read tools from discovery. A security or containment change still goes to the user.
+        - **The acceptance measure:**
+          - goals are obtained **at random,** never chosen;
+          - an attempt is one dispatch;
+          - success is graded reached **and** passes the trust check;
+          - the window has learning on, no operator commits inside it, and is pre-registered before reading.
+        - **The target: every goal reaches by its second attempt.**
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
