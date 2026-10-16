@@ -2360,6 +2360,17 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - So **DB2's race is real but now rare in production.** Its must-fail still shows it under 20 concurrent writers.
           - **DB1 still matters:** 17.7 lifecycle writes per goal start before its flip.
         - **DECIDED, the landing order:** DB1 (its flip pending), the CHANGE-35 set, CHANGE-30, R1 with R1b, DB2, CHANGE-34, DB3, 31, 32a, R9, R8, R6, R7, R4, then 29.
+        - **DB1 FLIPPED** (a recorded operator act; relayed by qa; recorded 2026-10-16T11:07:23Z). The lifecycle subscriber trace mode went from 0 to 1 on two nodes at 2026-10-16T10:51:14Z, and it reads back as 1.
+          - **By effect:** subscriber-count batches were applied from 10:53Z on one node and about 10:56Z on the other, with no failures. On one node, lifecycle trace mentions went from 300 in the 11 minutes before to 0 in the first minutes after. The last walk-service consumer restarted on the new shared package at 10:59:46Z, and every node now counts.
+          - The database fork's after-reading (10:52Z to 11:52Z) is due after 11:52Z.
+        - **The CHANGE-35 set LANDED, two of its three parts** (operator, under the user's 09:51:41Z rulings; re-gated clean in all three repositories, with the golden differing only in the approved vocabulary count; docs verified both tips on their repositories' dev):
+          - **The walk-service part,** pushed at 11:06:36Z (7e7c50f..adc270b), in three commits:
+            - A2a: a read goal never infers a mutation target, and only shape names are targets;
+            - class A: a gap investigation is graded by its product on the gap;
+            - A2b-minimal: a retried goal does not choose again the target it just failed on.
+          - **The boredom builder,** pushed at 11:06:41Z (e4a73e4..368b5aa): a gap with no edit site asks for its decomposition, structured.
+          - **The development-vessel part** (the gap-decomposition shape and two builders) waits on a live lane lease on a development-vessel gap, and pushes after it. Until then the new decomposition route is inert, guarded by the vocabulary. A2a and A2b-minimal act now.
+        - **RUN 1, amendment R1-1** (before any draw): DB2 is no longer a precondition, per the 10:49:59Z ruling. RUN 1 runs after DB1 and the CHANGE-35 set converge.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
