@@ -2245,12 +2245,21 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **The hard close is T0 + 4 hours.** Every goal not yet successful is then scored **NOT REACHED** (class "window closed"), collection stops, and pushes resume.
           - **An attempt with no terminal state 90 minutes after its dispatch** is scored failed ("no terminal in 90 min").
           - **Expected (not a target):** the attempt-1 dispatches take about 15 minutes, plus up to 35 minutes of re-sends; attempt 1 reaches a terminal state by about T0 + 1h45; attempt 2 starts at least 20 minutes later; everything is done by about T0 + 3h30. If the development-vessel lease releases at about 07:29Z, T0 is about 07:45Z, and the hard close is about 11:45Z at the latest.
-        - **USER GO** (in qa's session at about 07:05Z, verbatim; relayed by qa; recorded 2026-10-16T07:07:21Z): **"yes, take these through the process"**. It answers qa's schedule report:
+        - **USER GO** (in qa's session at 2026-10-16T07:06:51Z, from the transcript, verbatim; relayed by qa; recorded 2026-10-16T07:07:21Z): **"yes, take these through the process"**. It answers qa's schedule report:
           - the settlement window ends 2026-10-18T07:12Z;
           - the headline is still 0;
           - the queue is CHANGE-30, R1 (with R1b), CHANGE-34, 31, 32a, the rest of 33, then 29;
           - serialized landings take about 2 to 3 hours each, so the late items are at risk.
         - **DECIDED: build ahead, land in sequence.** The coordinator builds and gates every remaining item now, each in its own tree. qa lands them one at a time, each with its own law-12 window, after RUN 0. The order puts first what unblocks a system landing: CHANGE-30, R1, CHANGE-34.
+          - **R1b, R1's instrument** (recorded 2026-10-16T07:08:15Z). It is stacked on R1 and rides with it as one push, if its gate is clean. When R1 actually changes a repair prompt, because the structured evidence led it, R1b journals one line naming the gap, the vessel, the stage, the form ("evidence"), the failing own-check tests and the edit site. Unchanged rounds log nothing, so every golden recording stays identical; a first cut that also logged unchanged rounds was caught by the golden recording diff. **R1's reading by effect:** the evidence-form rounds that write an edit, against "wrote nothing" (a baseline of 33 in about 8 hours).
+          - **DECIDED: each window is set by its own criterion.** A change's law-12 window is the time to its first readable pre-registered effect, plus Gate P's soak on every node, not a flat 2 to 3 hours. Each push record states its window:
+            - CHANGE-30: the next deferred cutover or check-supply tick;
+            - R1: the next lane repair round;
+            - 32a: the next check-supply tick;
+            - CHANGE-34: the next gap-to-feature pick;
+            - CHANGE-31: the next scope-read failure, or a stated cap if none occurs.
+
+            A window with no readable event inside its cap is reported as "no event", never as a pass.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
