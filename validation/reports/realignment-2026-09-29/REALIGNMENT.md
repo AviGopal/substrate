@@ -2270,6 +2270,11 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             - CHANGE-29: 2 hours.
 
             In the worst case the caps add up to about 23 hours plus convergence and soak. Even then, the queue ends inside the settlement window (2026-10-18T07:12Z) if RUN 0 closes on time.
+        - **CHANGE-22, -27 and -28 LANDED** (operator; recorded 2026-10-16T07:33:40Z). They went out as one development-vessel push at 2026-10-16T07:32:56Z (97039381..eab49eb2, 6 commits, verified by docs on that repository's dev), with all guards passing, after the lane's lease ended.
+          - **CHANGE-22:** the registration edits a new producer needs survive the file-scope gate, and the additive registration rule also runs at the scope floor.
+          - **CHANGE-27:** a run's record is read from the walk service that ran it.
+          - **CHANGE-28:** only a repair closure re-runs a waiting goal; a sweep close carries the landed commit; a landing's credit is paid once per gap and landing.
+          - **RUN 0 starts** when this converges on both nodes.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
