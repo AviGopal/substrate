@@ -286,6 +286,35 @@ tuning_param() {
       "$(date -Iseconds)" "$1" "$_tp_why" "$2" >> "$DEFERRAL_LOG" 2>/dev/null || true
   fi
 }
+
+# HOST CONTENTION ADMISSION (2026-10-16). The nodes of one substrate can share a host, and each node's pull-sync
+# gates its candidates on its own timer: after one push, measured, all three co-located nodes ran the whole suite
+# at once (host load 35.8), a protected positive control passed its 5 s per-test timeout on one node, and that node
+# REFUSED to converge a correct commit; 11 of 13 suite kills in 50 h overlapped another node's gate. No lock can
+# serialize them (no shared mount), but the host's own pressure is visible identically in every container
+# (/proc/pressure/cpu), and it is the signal the rhythm conductor already prices affordability by. A candidate
+# whose suite or protected run would start on a contended host is DEFERRED through the existing path (counted,
+# rotated, and filed as starvation past its bound), never converged ungated. Shaped: the threshold is the tuning
+# row pull_sync.testgate_psi_defer_pct (the worse of avg10/avg60, percent); no row, 0, or no PSI = admission off.
+# Top-level, and called from the gate only when defined: a harness that sources the gate slice without it (with any
+# tuning_param stub) keeps admission off, so no test reads the real host's pressure.
+host_contended() {
+  HC_WHY=""
+  declare -F tuning_param >/dev/null 2>&1 || return 1
+  tuning_param pull_sync.testgate_psi_defer_pct 0; local _hc_pct="${TP_VALUE:-0}"
+  case "$_hc_pct" in ''|*[!0-9]*) return 1 ;; esac
+  [ "$_hc_pct" -gt 0 ] || return 1
+  local _hc_f="${PSI_CPU_FILE:-/proc/pressure/cpu}" _hc_line _hc_a10 _hc_a60 _hc_w
+  [ -r "$_hc_f" ] || return 1
+  _hc_line="$(grep '^some' "$_hc_f" 2>/dev/null | head -1)"
+  _hc_a10="$(printf '%s' "$_hc_line" | sed -n 's/.*avg10=\([0-9]*\).*/\1/p')"
+  _hc_a60="$(printf '%s' "$_hc_line" | sed -n 's/.*avg60=\([0-9]*\).*/\1/p')"
+  case "$_hc_a10$_hc_a60" in ''|*[!0-9]*) return 1 ;; esac
+  _hc_w="$_hc_a10"; [ "$_hc_a60" -gt "$_hc_w" ] && _hc_w="$_hc_a60"
+  [ "$_hc_w" -ge "$_hc_pct" ] || return 1
+  HC_WHY="host contended: cpu pressure some avg10=${_hc_a10}% avg60=${_hc_a60}% >= ${_hc_pct}% (pull_sync.testgate_psi_defer_pct)"
+  return 0
+}
 # Failing-test names that are red ON PURPOSE in this commit: an OPEN gap's class2 check (evidence_resolve
 # test_suite for vessel $1) whose test_file is among the files the commit changed ($2, newline-separated).
 # That is a check-first landing (the check landed before its fix), a filed failure, not a regression.
@@ -3153,7 +3182,7 @@ EOF
   TG_NEED_FILE="$MARKER_DIR/$v.testgate-need"
   GV_T0=$(date +%s)
   PROT_COST_S=$(( ${PROTECTED_TEST_TIMEOUT_SECONDS:-120} + ${TEST_KILL_GRACE_SECONDS:-30} ))
-  testgate_budget_defer() { # <the run that would start> <its worst case, s>
+  testgate_budget_defer() { # <the run that would start> <its worst case, s> [<cause, when not the budget: host contention>]
     local BD_HEAD="" BD_N=0 BD_MAX _gl
     _gl="$(gate_left)"
     { read -r BD_HEAD BD_N < "$BD_FILE"; } 2>/dev/null || true
@@ -3169,14 +3198,14 @@ EOF
     case "$_tn_oneed" in ''|*[!0-9]*) _tn_oneed=0 ;; esac
     [ "$_tn_okey" = "$_tn_key" ] && [ "$_tn_oneed" -gt "$_tn_need" ] && _tn_need="$_tn_oneed"
     echo "$_tn_key $_tn_need ${TG_SKIPS:-0}" > "$TG_NEED_FILE" 2>/dev/null || true
-    log "$v: TEST GATE DEFERRED — $1 needs up to ${2}s but ${_gl}s remain (gate budget ${GATE_BUDGET_SECONDS}s, capped by the unit's TimeoutStartSec ${UNIT_TIMEOUT_S:-3600}s less ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}}s from the tick's start); NOT converging ${HEAD:0:10} this tick (consecutive budget deferral $BD_N of this candidate, bound $BD_MAX); it gates FIRST next tick with a fresh budget"
+    if [ -n "${3:-}" ]; then log "$v: TEST GATE DEFERRED — $1 not started: $3 (deferral $BD_N at ${HEAD:0:10}); the candidate holds, never converges ungated"; else log "$v: TEST GATE DEFERRED — $1 needs up to ${2}s but ${_gl}s remain (gate budget ${GATE_BUDGET_SECONDS}s, capped by the unit's TimeoutStartSec ${UNIT_TIMEOUT_S:-3600}s less ${GATE_UNIT_MARGIN_S:-${QUIESCE_MARGIN_S:-120}}s from the tick's start); NOT converging ${HEAD:0:10} this tick (consecutive budget deferral $BD_N of this candidate, bound $BD_MAX); it gates FIRST next tick with a fresh budget"; fi
     if [ "$BD_N" -ge "$BD_MAX" ]; then
       log "$v: !!! TEST GATE BUDGET-STARVED — filing pull-sync-testgate-budget-starved-$v ($BD_N consecutive deferrals at ${HEAD:0:10}, bound $BD_MAX)"
       echo "$HEAD $BD_N" > "$MARKER_DIR/$v.testgate-starved" 2>/dev/null || true
-      emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg n "$BD_N" --arg max "$BD_MAX" --arg b "$GATE_BUDGET_SECONDS" --argjson ew "${SUITE_EFF_WALL_S:-240}" --arg why "${SUITE_WALL_WHY:-}" \
+      emit_gap "$(jq -n -c --arg v "$v" --arg head "${HEAD:0:10}" --arg n "$BD_N" --arg max "$BD_MAX" --arg b "$GATE_BUDGET_SECONDS" --argjson ew "${SUITE_EFF_WALL_S:-240}" --arg why "${SUITE_WALL_WHY:-}" --arg cause "${3:-budget}" \
         '{impulse:{pointer:{type:"substrateGap_write",gap:{id:("pull-sync-testgate-budget-starved-" + $v),category:"systematic_failure",source:"substrate_detected",status:"open",severity:"high",
-          summary:("Repair needed: pull-sync deferred " + $v + " at " + $head + " " + $n + " consecutive ticks because the per-tick test-gate budget (" + $b + "s, capped by the unit timeout) was too short for its gate to finish its runs, past pull_sync.testgate_budget_defer_max (" + $max + "). It is NOT converged ungated: a gate that did not measure never promotes. Repair the capability: a faster suite, a larger budget, or a gate sharded across ticks."),
-          classification_metadata:{vessel:$v,head:$head,consecutive_deferrals:($n | tonumber),bound:($max | tonumber),budget_seconds:($b | tonumber),effective_wall_s:$ew,wall_why:$why}}}}}' 2>/dev/null)"
+          summary:("Repair needed: pull-sync deferred " + $v + " at " + $head + " " + $n + " consecutive ticks because the per-tick test-gate budget (" + $b + "s, capped by the unit timeout) was too short for its gate to finish its runs, past pull_sync.testgate_budget_defer_max (" + $max + "). It is NOT converged ungated: a gate that did not measure never promotes. Repair the capability: a faster suite, a larger budget, or a gate sharded across ticks." + (if $cause == "budget" then "" else (" CAUSE OF THESE DEFERRALS: " + $cause + " (host contention, not the budget).") end)),
+          classification_metadata:{defer_cause:$cause,vessel:$v,head:$head,consecutive_deferrals:($n | tonumber),bound:($max | tonumber),budget_seconds:($b | tonumber),effective_wall_s:$ew,wall_why:$why}}}}}' 2>/dev/null)"
     fi
     # PER-VESSEL STARVATION (2026-10-11, law 6). BD_N counts deferrals of ONE candidate, so a stream of pushes
     # resets it: development-vessel deferred for 1.5 h across successive candidates and never tripped the bound,
@@ -3199,6 +3228,7 @@ EOF
           classification_metadata:{vessel:$v,head:$head,starved_seconds:($el | tonumber),bound_seconds:($after | tonumber),last_converged:$lg,budget_seconds:($b | tonumber),keyed:"vessel",effective_wall_s:$ew,wall_why:$why}}}}}' 2>/dev/null)"
     fi
   }
+  if declare -F host_contended >/dev/null 2>&1 && host_contended; then testgate_budget_defer "the suite run" "$SUITE_COST_S" "$HC_WHY"; skipped=$((skipped + 1)); continue; fi
   if [ "$(gate_left)" -lt "$SUITE_COST_S" ]; then testgate_budget_defer "the suite run" "$SUITE_COST_S"; skipped=$((skipped + 1)); continue; fi
   TG_KEY="$(testgate_key)"; TG_SKIPS=0
   if [ -s "$TG_NEED_FILE" ]; then
@@ -3726,7 +3756,7 @@ EOF
   fi
   PROTECTED_SCOPE_FILE="${PROTECTED_SCOPE_FILE:-${PULLSYNC_SELF_DIR:-.}/autonomy-scope.json}"
   if [ -z "$REG" ] && [ -n "$BUN_BIN" ]; then
-    PROT_RED=""; PROT_DEFER=""
+    PROT_RED=""; PROT_DEFER=""; PROT_DEFER_WHY=""
     if ! PROT_FILES="$(jq -er --arg p "repos/$v/" '[.autonomyScope.excluded_paths[]? | select(type == "string" and startswith($p) and test("\\.test\\.(ts|tsx|js|mjs)$")) | ltrimstr($p)] | .[]' "$PROTECTED_SCOPE_FILE" 2>/dev/null)" \
       && ! jq -e '.autonomyScope.excluded_paths | type == "array"' "$PROTECTED_SCOPE_FILE" >/dev/null 2>&1; then
       PROT_RED="protected-set unreadable ($PROTECTED_SCOPE_FILE)"
@@ -3737,13 +3767,15 @@ EOF
       # A protected run that cannot finish is not started: the candidate HOLDS (deferred), never converges unchecked.
       # RED BEATS DEFER: a protected file already red alone is a refusal now, never re-reported as "budget".
       if [ "$(gate_left)" -lt "$PROT_COST_S" ]; then [ -z "$PROT_RED" ] && PROT_DEFER="$_pf"; break; fi
+      # Nor on a contended host: a protected test's own per-test timeouts are what contention breaks (see host_contended).
+      if declare -F host_contended >/dev/null 2>&1 && host_contended; then [ -z "$PROT_RED" ] && { PROT_DEFER="$_pf"; PROT_DEFER_WHY="$HC_WHY"; }; break; fi
       _pa_out="$( (cd "$d" && _rs_root="$(mktemp -d "${TMPDIR:-/tmp}/pullsync-root-XXXXXX")" && _rs_o="$(mktemp "${TMPDIR:-/tmp}/pullsync-out-XXXXXX")" && scrubbed_env "$_rs_root" timeout --kill-after="${TEST_KILL_GRACE_SECONDS:-30}" "${PROTECTED_TEST_TIMEOUT_SECONDS:-120}" "$BUN_BIN" test "./$_pf" > "$_rs_o" 2>&1; echo "__PROT_RC=$?" >> "$_rs_o"; cat "$_rs_o"; rm -rf "$_rs_root" "$_rs_o" 2>/dev/null) || true )"
       _pa_rc="$(printf '%s' "$_pa_out" | sed -n 's/^__PROT_RC=//p' | tail -1)"
       _pa_pass="$(count_pf "$_pa_out" pass)"; _pa_fail="$(count_pf "$_pa_out" fail)"
       if [ "${_pa_rc:-x}" = 0 ] && [ -n "$_pa_pass" ] && [ "$_pa_pass" -gt 0 ] && [ "${_pa_fail:-0}" = 0 ]; then continue; fi
       PROT_RED="${PROT_RED:+$PROT_RED; }$_pf red alone (rc ${_pa_rc:-?}, ${_pa_pass:-?} pass / ${_pa_fail:-?} fail$( [ -z "$_pa_pass" ] && echo ', no countable result'))"
     done <<< "${PROT_FILES:-}"
-    if [ -n "$PROT_DEFER" ]; then testgate_budget_defer "the protected judge test $PROT_DEFER alone" "$PROT_COST_S"; skipped=$((skipped + 1)); continue; fi
+    if [ -n "$PROT_DEFER" ]; then testgate_budget_defer "the protected judge test $PROT_DEFER alone" "$PROT_COST_S" "$PROT_DEFER_WHY"; skipped=$((skipped + 1)); continue; fi
     if [ -n "$PROT_RED" ]; then
       REG="protected judge test(s) not green when run ALONE at the candidate, independent of the full-suite diff: $PROT_RED"
       REG_NAMED=1
