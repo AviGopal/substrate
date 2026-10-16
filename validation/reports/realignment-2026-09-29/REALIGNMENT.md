@@ -2229,6 +2229,13 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - R1 is built in parallel with CHANGE-30's gate. The two land in sequence, each with its own law-12 window.
           - **The reason:** two independent readings show that blind repair, not scope or quoting, stands between the lane and a landing. One is about 30 of the 62 composes; the other is the system-detected gap's attempt.
           - **R1's must-fail:** a red own-check whose reason lies past character 4,000. The repair prompt must carry the failing test names and the edit site, with the stage and the gate detail as fields of their own, first. **The control:** a typecheck-stage failure keeps today's prompt.
+        - **CHANGE-26, a reading by effect** (relayed by qa; recorded 2026-10-16T06:55:26Z).
+          - It **converged** on one node at 06:48:03Z and on the other at 06:53:43Z.
+          - The held parent gap **closed at 06:54:35Z, "closed via child"**: retired with its code, not a really-fixed reason. The hold is lifted, and the child carries the table-scan part.
+          - **The positive control passes.** After convergence, the remaining reader returned 782,221 observations over 5,815 signatures, with non-zero success rates, so no reader was left on the retired keys.
+          - **The writer is gone:** 0 log lines mention the retired pair, and there have been 0 re-derive conflict lines since the restart.
+        - **CHANGE-30 is APPROVED.** Its full gate passed on both repositories: 0 new failures, identical failure lists, 0 of 21 on the golden set, 0 protected-file changes, and a clean typecheck. It pushes after RUN 0's window.
+        - **R1 is built.** Its tests flip correctly and the golden set is unchanged. Its full gate is running.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
