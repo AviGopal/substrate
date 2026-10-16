@@ -15,7 +15,6 @@
       "repos/development-vessel/src/routes/impulses.ts",
       "repos/development-vessel/src/index.ts",
       "repos/development-vessel/src/config.ts",
-      "repos/goal-host-vessel/src/index.ts",
       "repos/activity-api/src/lib/posterior-update.ts",
       "repos/llm-resolver-vessel/src/index.ts",
       "repos/boredom-vessel/src/index.ts",
@@ -125,7 +124,8 @@
     "autonomyScope": {
       "node": "c951b44f4a99",
       "id": "autonomy-scope",
-      "updated_at": "2026-10-01T11:11:30.475Z"
+      "updated_at": "2026-10-01T11:11:30.475Z",
+      "edited": "2026-10-16: repos/goal-host-vessel/src/index.ts removed from excluded_paths under the user ruling of 2026-10-16T06:20:10Z (fleet-wide: the lane may land on goal-host src/index.ts; the landing gate is its guard). Otherwise as copied from the record above."
     },
     "spendEnvelope": {
       "node": "c951b44f4a99",
