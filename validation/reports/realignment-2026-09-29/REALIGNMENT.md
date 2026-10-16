@@ -2245,6 +2245,12 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **The hard close is T0 + 4 hours.** Every goal not yet successful is then scored **NOT REACHED** (class "window closed"), collection stops, and pushes resume.
           - **An attempt with no terminal state 90 minutes after its dispatch** is scored failed ("no terminal in 90 min").
           - **Expected (not a target):** the attempt-1 dispatches take about 15 minutes, plus up to 35 minutes of re-sends; attempt 1 reaches a terminal state by about T0 + 1h45; attempt 2 starts at least 20 minutes later; everything is done by about T0 + 3h30. If the development-vessel lease releases at about 07:29Z, T0 is about 07:45Z, and the hard close is about 11:45Z at the latest.
+        - **USER GO** (in qa's session at about 07:05Z, verbatim; relayed by qa; recorded 2026-10-16T07:07:21Z): **"yes, take these through the process"**. It answers qa's schedule report:
+          - the settlement window ends 2026-10-18T07:12Z;
+          - the headline is still 0;
+          - the queue is CHANGE-30, R1 (with R1b), CHANGE-34, 31, 32a, the rest of 33, then 29;
+          - serialized landings take about 2 to 3 hours each, so the late items are at risk.
+        - **DECIDED: build ahead, land in sequence.** The coordinator builds and gates every remaining item now, each in its own tree. qa lands them one at a time, each with its own law-12 window, after RUN 0. The order puts first what unblocks a system landing: CHANGE-30, R1, CHANGE-34.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
