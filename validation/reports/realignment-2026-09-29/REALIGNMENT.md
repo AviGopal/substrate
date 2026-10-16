@@ -2260,6 +2260,16 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             - CHANGE-31: the next scope-read failure, or a stated cap if none occurs.
 
             A window with no readable event inside its cap is reported as "no event", never as a pass.
+          - **DECIDED: every window has a cap** (qa; recorded 2026-10-16T07:10:00Z). A window starts at convergence on every node. It ends at the first readable pre-registered event, or at the cap. A cap reached with no event is reported "no event", and the queue moves on. The caps:
+            - CHANGE-30: 2 hours;
+            - R1 with R1b: 3 hours;
+            - CHANGE-34: 1 hour;
+            - CHANGE-31: 2 hours;
+            - CHANGE-32a: 1 hour;
+            - each CHANGE-33 root (R9, R8, R6, R7, R4, R3): 2 hours;
+            - CHANGE-29: 2 hours.
+
+            In the worst case the caps add up to about 23 hours plus convergence and soak. Even then, the queue ends inside the settlement window (2026-10-18T07:12Z) if RUN 0 closes on time.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
