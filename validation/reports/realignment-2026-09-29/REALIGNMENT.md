@@ -2220,6 +2220,10 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **Confounded** by the rest of the same push.
           - **Not readable again:** CHANGE-26 removes the measured writer (the retired pair), so this criterion cannot be re-read after it lands.
           - **CHANGE-26's law-12 hold** (this window) is satisfied. It still waits on the lane's lease on that repository, which ends by 07:36Z.
+        - **CHANGE-26 LANDED** (operator; recorded 2026-10-16T06:39:10Z). It retires the 8-hex context-bucket pair with its code, under the user's ruling "Retire it with the code, go ahead". It was pushed at 2026-10-16T06:38:27Z, with all guards passing (activity-api f1ff7ea, verified by docs on that repository's dev). The law-12 window was recorded first, and the lane released its lease early.
+          - **When it converges,** the held parent gap closes as "retired with its code", via its child. **That is not a really-fixed reason.** The child carries the remaining table-scan part.
+          - **The headline is still 0.** The lane's attempt on the system-detected gap in the same repository ended not landed at 05:52Z.
+          - **RUN 0** now waits only on the development-vessel push (CHANGE-22, -27 and -28), which is held by a lane lease that ends by 07:28Z.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
