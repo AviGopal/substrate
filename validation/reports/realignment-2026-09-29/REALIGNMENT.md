@@ -2572,6 +2572,13 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **CHANGE-34's first by-effect sign:** the lane holds a lease on a gap the system detected whose edit site is the walk service's main file, opened tonight. That lease holds the walk-service chain at the push guard until it expires, and the push then retries automatically.
         - **The public bootstrap's federation ingress was switched to ENFORCE** by the user at 2026-10-16T22:54:41Z (recorded 2026-10-16T22:55:18Z). The operator-attested read-back is verified. The by-effect check is pending: the ratchet, the enforce-mode log lines, and our credentialed spoke still being served. The review of the 24 h log before the switch showed that no call from our own organisation would have been refused.
           - The finding behind the ruling is stated precisely: an uncredentialed external caller had been served in the preceding day, within one short span. It was not a continuing rate.
+        - **READING: RUN 1R's judge misses are 11, not 12** (a read-only analysis by qa; recorded 2026-10-16T22:57:23Z). Position 1's first attempt was judged reached and then failed trust. Every cause is an existing mechanism that is unwired, behind the wrong gate, or in the wrong order:
+          - **The tool-fallback floor never receives the walk's evidence, its reach reason, or its memory of the failure (4).** In two of these the walk had already found the root cause.
+          - **Underspecified goals cannot ask (4).** There is no "needs information" outcome, and asking for clarification is graded as hollow.
+          - **The wrong source answers "what have we learned" (2).**
+          - **A goal truncated at its head (1),** already filed.
+          - Also found: the reframe tries only its first alternative, retries adapt only after write-rule failures, and once the judge gave the same answer opposite verdicts.
+        - **USER RULING (qa session, 2026-10-16T22:56:41Z, relayed by qa): "Yes, J1-J4 + judge check."** The four judge-miss items and a check of the judge's own consistency go through the process. They are ranked after the information items and before RUN 2, with design due by 2026-10-17T10:00Z.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
