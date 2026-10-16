@@ -2332,6 +2332,20 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **A2b-minimal: "Yes, with 35+A2a".** A retried goal whose last attempt failed with no artifact on target X must not choose X again. It reuses the existing failure-recall record, so it is a selection and nothing new is minted. **Its must-fail:** replay a class-B goal twice; attempt 2 picks a different target.
         - **DECIDED, the landing order:** DB1, DB2, CHANGE-35 (with A2a and A2b-minimal), CHANGE-30, R1 with R1b, CHANGE-34, DB3, 31, 32a, R9, R8, R6, R7, R4, then 29.
         - **DECIDED, RUN 1:** pre-registered now under RUN 0's rules (a freshly frozen frame, a fresh seed, both attempts, the trust check, the 4-hour hard close). It runs after the CHANGE-35 set converges, so that its effect on reach is read, not assumed.
+          - **R3: no change; the class is filed for the lane** (recorded 2026-10-16T09:53:11Z). The coordinator's raw-trace pass found R3's refusals correct: those gaps described defects already fixed, with stale edit sites, plus one load error. The real class is filed as a lane gap: a verdict that the test-writing check never went red does not route the gap toward "already fixed", then verify and close.
+          - **The CHANGE-35 set's three parts each keep a must-fail that flips independently at the gate.** All three must go red then green before the push:
+            - CHANGE-35: the oracle and the product path;
+            - A2a: the weather case and the malformed-name case;
+            - A2b-minimal: the replay-twice case.
+        - **RUN 1, the pre-registration** (written 2026-10-16T09:52:25Z, sha 2901181a…, with an addendum; relayed by qa). It runs after DB1, DB2 and the CHANGE-35 set converge (with DB1's flip recorded), on a freshly frozen frame and a fresh seed, under RUN 0's rules. The pre-registered readings:
+          - (2) every drawn investigate-or-decompose gap goal is graded by the outcome oracle. 0 abstentions are expected, and a reached one shows a child created by that run.
+          - (3) no read goal ends as a write goal with no artifact, on an inferred mutation target (expected 0).
+          - (4) A2b-minimal's exclusion, per goal.
+          - (5) classes C and E are expected to persist.
+          - (6) **retry adaptation:** the share of attempt-2 retries whose inferred target set differs from attempt 1's. **RUN 0's baseline, measured from the captures, is 0 of 19.** One goal's class moved from A to B with the same targets, so that shift came from grading, not from choice.
+          - (7) results are reported by class (A, B, C, E).
+
+          No number is pre-registered for the rise in success. The target stays 20 of 20 by attempt 2.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
