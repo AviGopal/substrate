@@ -511,11 +511,18 @@ with information the system obtains for itself.
   expected impact, cost and viability. The choice is a selection that traces grade,
   not an operator's queue.
 
+Each capability is an ordinary goal, written in natural language and walked over
+shapes, producers and traces like any other goal. None of them needs a dedicated
+detector or scorer. The core idioms already contain all three. A capability that
+falls short is an information gap (law 8), not a missing component: name the fact
+that was not available and the step that needed it, and make the fact derivable as
+an impulse from the environment.
+
 A demonstration of autonomy counts only gaps that the system filed, chose and
 closed without operator-supplied context. An operator fix can repair its defect and
 still demonstrate nothing about the loop. Each operator fix should therefore also
-ask which detector would have filed the gap, and what that gap would have needed to
-carry for the system to close it.
+ask which goal the system should have walked to find it, and which fact that walk
+lacked at the moment of use.
 
 ## 6. Scorecard — decision vs. established vs. frontier
 
