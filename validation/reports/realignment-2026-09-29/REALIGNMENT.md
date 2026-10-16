@@ -2534,6 +2534,18 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **Composite-authoring restore (the D4 enabler):** history and design by 2026-10-17T06:00Z, built and gated by 18:00Z, landed by 2026-10-18T02:00Z.
           - Both land before the 2026-10-18T07:12Z settlement.
         - **The sibling sweep has started:** a read-only sweep of the autonomous-commit history, across the five vessels the lane writes to, for capabilities removed with no gap filed (deleted exports, resolver and route registrations, seeds, and cross-vessel shape calls). For each repository it reports the count over its denominator, removal versus refactor, whether the capability is still referenced, whether a gap was filed, and whether any detector covers the class. The class gap is filed with those numbers (§7 step 2, E1).
+        - **The E1 class, sized** (qa's read-only sweep; recorded 2026-10-16T22:16:45Z):
+          - Of 2,739 autonomous commits across the five lane vessels, **12 removed a capability that was still referenced or advertised.**
+          - Only 3 of the 12 ever got a gap, all filed by operators, 10 to 110 days later. 2 are still unrestored: the walk's novel-shape authoring (06-28), and a detector stubbed to a dead endpoint while it was still advertised (07-24). 4 of the 12 were stale-base cutovers that overwrote others' work.
+          - **No detector covers the class.** The class gap ("autonomous landings remove still-referenced capabilities and nothing notices") is filed for the system, linked to the older route-only gap without overwriting it. The stubbed-detector instance is filed too.
+        - **USER STATEMENT (qa session, 2026-10-16T22:14:33Z, relayed by qa), verbatim:** "Rotation shouldn't be a blind reset of all learning"
+          - It supersedes qa's earlier acceptance of an undercount after rotation. Rotation replaces the credential, never the trust history.
+          - Autonomy stamps move to per-epoch asymmetric keys with key ids and a shaped public-key ring, so they verify on any node indefinitely. This folds in I5b.
+          - Every learning artifact keyed on the rotating credential is audited.
+        - **The federation-transport security hold** (in place since 10-09): the code for its lift condition landed on 10-12, but enforcement is not armed on any node.
+          - The lift order is the user's: an operator-attested enforcement policy on each node, then unmasking, then verifying that a dial without credentials is refused.
+          - Until then the hold is justified. Under the 10-09 rule that no hold is kept indefinitely, it needs a review date. qa proposes the user's decision on step 1, and the user is asked.
+          - Meanwhile discovery must not advertise routes through a transport that a node keeps closed. That is the amended gap behind RUN 1R's transport failures.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
