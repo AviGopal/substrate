@@ -2384,6 +2384,16 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
 
           These land after the current queue unless RUN 1's reading reorders them. The current order is unchanged.
           - **qa's estimate, given just before the go:** the narrow criterion happens, but rarely; the headline is at about even odds before 2026-10-18T07:12Z; **20 of 20 random goals is not on this schedule.** RUN 1 is expected to be modest (a judgement of about 10% to 30%), with days of work to full.
+          - **DECIDED, latest-by dates** (qa; recorded 2026-10-16T11:37:48Z). They only move closer, and every one is inside the settlement window (2026-10-18T07:12Z).
+
+            | Item | Designed | Built and gated | Landed |
+            |---|---|---|---|
+            | A2b-proper (dated first: it is the "measurably adapts" item) | 10-16 15:00Z | 10-16 23:00Z | 10-17 12:00Z |
+            | D2 | 10-16 18:00Z | 10-17 06:00Z | 10-17 18:00Z |
+            | Structured replay (qa) | 10-16 13:00Z | tool ready 10-16 16:00Z | used in RUN 2 |
+            | CHANGE-29 | done | in the queue | 10-17 18:00Z |
+
+            The history and design for A2b-proper and D2 started at about 11:37Z, in parallel with the queue: history first, then a design note with a must-fail, then a code-only build. The replay is being built and dry-run only.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
