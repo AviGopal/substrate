@@ -143,13 +143,11 @@ committed inventory change does reach a running fleet's volume without a rebuild
 >
 > To exclude it from a deployment, name it in `DISABLED_VESSELS` — that masks
 > the unit (verified: selection alone does not touch it), but masking only
-> blocks future starts: on a live fleet also `systemctl stop` it, or recreate. `vessel-ctl install human-surface-vessel` is the
-> *source-deployment* path (its manifest workdir is the super-repo checkout,
-> and its rendered unit tracks that checkout instead of the image): on a pulled
-> image with no checkout the install **refuses** (`ok:false`, workdir absent)
-> rather than replacing the working vendor unit with one that dies
-> `status=200/CHDIR` on restart. A refusal there means: keep the vendor unit,
-> or clone the super-repo into the workspace first.
+> blocks future starts: on a live fleet also `systemctl stop` it, or recreate. `vessel-ctl install human-surface-vessel` renders
+> the unit from the manifest, whose workdir is `$RUNTIME`
+> (`/vessels/human-surface-vessel`), the same tree pull-sync mirrors the
+> vessel's code and built UI into for every other vessel. It is not needed for
+> the vessel to serve: the image already enables the baked unit.
 >
 > The manifest units flagged in the inventory are `human-surface-vessel`,
 > `federation-relay` and `federation-transport-vessel`. The set `vessel-ctl`
@@ -157,7 +155,7 @@ committed inventory change does reach a running fleet's volume without a rebuild
 > includes `metric-collector-vessel`. Ask the source of truth for each:
 >
 > ```bash
-> # what a default boot leaves disabled (inventory flags)
+> # which inventory entries are manifest units (managed outside apply-inventory's selection)
 > jq -r '.vessels[] | select(.manifest) | .unit' scripts/substrate/vessels.inventory.json
 > # what vessel-ctl can install, by the NAME the install command takes
 > docker exec substrate-live jq -r '.vessels[].name' /workspace/substrate/fleet/vessels.manifest.json
