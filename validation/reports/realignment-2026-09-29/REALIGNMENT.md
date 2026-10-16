@@ -2275,6 +2275,15 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **CHANGE-27:** a run's record is read from the walk service that ran it.
           - **CHANGE-28:** only a repair closure re-runs a waiting goal; a sweep close carries the landed commit; a landing's credit is paid once per gap and landing.
           - **RUN 0 starts** when this converges on both nodes.
+        - **USER RULINGS on the database load** (in qa's session at 2026-10-16T07:53:50Z, from a question with options; relayed by qa; recorded 2026-10-16T07:54:48Z). They follow a database analysis the user had sent to qa.
+          - **The load fixes land "First, right after RUN 0"**, chosen over "after R1 + 34" and "end of the queue":
+            - **DB1:** lifecycle-subscriber runs stop writing full traces. They keep a counter, plus a trace on anomalies. This is about half of all database write work, and it is consistent with the trace store holding only gradable runs.
+            - **DB2:** the per-trace posterior writes collapse into one transaction. This is the existing gap, in a protected file.
+          - **Caching on the recommend path** also goes through the process: **"Yes, after the DB fixes"**. qa places it, as DB3, after the headline fixes, and stated that placement to the user.
+        - **DECIDED, the landing sequence:** RUN 0, then DB1, DB2, CHANGE-30, R1 with R1b, CHANGE-34, DB3, 31, 32a, R9, R8, R6, R7, R4, R3, then 29.
+          - **R4's golden:** 2 of 21 fixtures gain exactly one new field (the lock's edit fingerprint). qa approved this as a named fixture re-record in the commit.
+          - **CHANGE-31's development-vessel suite ran blind.** It timed out under load, partly from the builder's own concurrent runs. It re-runs after RUN 0, on a quiet host.
+        - **A live reading** (relayed by qa): the trace store has drained to its protected floor, about 218,000 rows from 396,000. Database p99 went from 8.1 s to 0.69 s, and the metrics endpoint's p95 from 4.8 s to 0.32 s.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
