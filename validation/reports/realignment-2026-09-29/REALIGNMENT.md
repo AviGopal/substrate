@@ -2346,6 +2346,11 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - (7) results are reported by class (A, B, C, E).
 
           No number is pre-registered for the rise in success. The target stays 20 of 20 by attempt 2.
+        - **DB1 LANDED, three of its four parts** (operator, under the user's 07:53:50Z ruling; recorded 2026-10-16T10:21:06Z). It was re-gated clean on all four repositories. Docs verified the three tips on their repositories' dev.
+          - **Pushed:** the development-vessel part at 10:20:23Z (eab49eb2..fd4be09a); the shared executor package at 10:20:28Z (1d3727b..2a63a83); the walk-service part at 10:20:35Z (bcf5549..7e7c50f).
+          - **The activity-api part** (the counts route, and the switch's create-only seed at 0) waits on a live lane landing lease on an activity-api gap, until 10:28Z at the latest. It pushes after that.
+          - **DB1 is inert until its switch is flipped.** The seeded mode is 0, which keeps full traces as today. The flip to 1 is one recorded act, made after all four parts converge, with the shared package read from the running process. The database fork's before-and-after reading is taken around it.
+          - **A push-guard refinement:** a lease whose gap has no edit site now finds its repository from the gap's summary. It still fails closed when the summary names none.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
