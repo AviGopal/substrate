@@ -185,6 +185,25 @@ DYNAMICS / REPRESENTATION / NETWORK / FLEET. `IMPULSE_ACTIVITY_FOUNDATION.md` "T
 Execution Flow" and its 9-step "Topology Discovery Is the Purpose" loop are the
 prose walk-throughs the table compresses.)*
 
+### 3.0 A goal is read for its meaning, not its wording
+
+Step 0 gives the walk a goal in natural language. Every later step chooses by
+meaning, not by the sentence's surface form. The same intent in a different sentence
+form selects the same targets, the same producers and the same path.
+
+- **The system's own goals carry structure.** When the substrate writes a goal for
+  itself (a gap to investigate, a check to supply, a retry), the identifiers and
+  intended shapes travel as fields of the goal impulse. Downstream steps read those
+  fields. They do not recover the identifiers by parsing prose the system wrote.
+- **Human goals are interpreted, not pattern-matched.** Deciding whether a goal asks to
+  read or to write, and which shapes it targets, is a selection over learned evidence
+  (law 13: humans are resolvers, not preprocessors). A fixed pattern on a sentence's
+  opening words or punctuation is a hard-wired caller. It is not part of the walk.
+- **Wording sensitivity is a defect class.** Two phrasings of one intent that reach
+  differently mark a gap. Any change that decides anything from goal text carries a
+  paraphrase control in its must-fail set: the same intent in another sentence form
+  must decide the same way.
+
 ### 3.1 The durability crossing, step by step
 
 The walk obeys one fixed crossing pattern (consolidated in §4): **Recall reads
