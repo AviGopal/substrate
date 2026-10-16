@@ -2039,6 +2039,22 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - the share of picks for the goals they served that moved to another producer, against the same window before.
 
           Nothing else changes in that window.
+        - **THE EFFECT-SIZE REVIEW SLIPPED.** It was due 2026-10-16T04:00Z and was read late, at about 05:40Z (recorded at 2026-10-16T05:43:18Z). The windows were the 24 hours after against the 24 hours before.
+          - **Failure is now charged on deterministic hollow verdicts:**
+
+            | Node | Charged after | Charged before |
+            |---|---|---|
+            | First | 118 of 134 lines | 38 of 295 |
+            | Second | 59 of 75 lines | 3 of 75 |
+
+            The "success structurally unreachable" withhold fell to 0 on both nodes. Some culpability withholds remain.
+          - **The posterior of the most-failing producer did not fall:** its mean went from about 0.211 to 0.215. Its failure charge matches its logged charges, so it is outweighed, not missed.
+          - **Some picks moved, on the failure side only.** On one node, one cohort's share fell from 62% to 49%, but part of that move went to a near-duplicate of the same satisfier, an (a) variant pair under the 10-16 ruling. On the other node, another cohort's share fell from 55% to 14%.
+          - **Attribution is confounded:** six walk-service restarts in the window carried other changes.
+          - **Verdict:** the change does what it was built to do. **Learning is partial and confounded.**
+      - **The lane, 2026-10-15T21:27Z to 2026-10-16T05:40Z: drafting and failing, not idle.** There were 62 compose starts over 37 gaps, and **0 landings.**
+        - **The dominant failure is verification:** typecheck on one node; on the other, the own-check never ran, or the target had no test file. Repair "wrote nothing" 33 times.
+        - **One draft passed the gate,** but its cutover was refused because a node's read of the hub gap store failed. It was never retried. Those failed gap-store reads are **the next demonstrated break on the headline path.**
         - **Field 0, the demanding reading:** BATCH-01's learning reading (b) failed, because recall did not steer selection.
         - **Field 1, the history; nothing is new:** the symmetric-abstention rule of 08-17 says a deterministic verdict still penalises normally. But its caller read only a flag, and about a dozen verdict builders mark themselves deterministic only in their reason prefix, which the label reader has honoured since 07-30. In the probe window, **112 of 143 withheld updates were deterministic misses,** so the posterior never moved for the producers that fail most. **That is why recall did not change the choice.**
         - **Field 2, the expression:** one shared definition of a deterministic verdict, used by the label reader, the failure-charge decision and its capture. The rule itself is unchanged. A protected guard test's pinned string was updated under operator bootstrap, with a must-fail test added.
