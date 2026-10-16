@@ -2428,6 +2428,23 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             - It is recorded as "the system did not detect this class". The filed gap stays open as the class need. The question was put to the user because the 10-13 ruling bars operator security patches for single holes.
           - **Dates:** the A2b-proper design (met about 11:55Z) and the D2 design (met about 12:05Z; steps 1–2 approved) were both on time. The structured-replay design was delivered about 12:03Z, on time. The **structured-replay tool MISSED 16:00Z.** The frame tool exists, but the seeded S3 draw and the observe reader do not. qa's recovery commitment is 19:00Z today; the 16:00Z date stands as missed.
           - **Ready to land:** CHANGE-30's walk-service part, the three activity-api changes (DB2', DB3 and the scope-floor migration), and R1+R1b are gated clean. They are held only for RUN 1's quiet window, and R1+R1b also for their flake re-runs. They land when RUN 1 ends.
+        - **RUN 1 READING: 1/20 reached and trusted (5%), the same as RUN 0; the expectation of about 90% within two attempts is NOT MET** (recorded 2026-10-16T20:04:16Z; reading by qa):
+          - Attempt 1 reached 1 of 20, and its trust pass is weak: the credited step was written inside the window, the older steps were not credited, and the step carries no dispatch id. Attempt 2 reached 0 of 19. The run ended at 18:54:01Z, with no front-door non-attempts. The structured-replay tool was delivered at 18:02:32Z, ahead of its 19:00Z recovery time.
+          - Classes over 39 attempts:
+            - **P, the producer declined: 11.** The decomposition producer refused for reasons of autonomy scope, no falsifier, no single source file, or a missing gap. S2 reached 0 of 12.
+            - **B, write rule with no artifact: 10.** Five target only the decomposition shape, because of the investigation gate's order. Five are investigations with no gap id or a stale decision.
+            - **J, LLM judge: 13.** Two have no referent, two are underspecified, and nine are real misses.
+            - **E, admission refused on a closed gap: 2. K, lane busy: 1** (the livelock pair). **D, false absence after transport: 1.**
+          - RUN 0's class A (citation abstain, 8 goals) is GONE. The deterministic investigation grading from CHANGE-35 works.
+          - The class-B split by phrasing: every B residual is led by an imperative ("investigate and decompose …"). No question-led goal fell into B, so A2a's read rule did not misfire on questions.
+          - Retry adaptation: 2 of the 3 adaptable B goals changed target on retry, and neither reached. One repeated the same targets; that case is A2b-minimal's repair.
+          - **The biggest lever is class P:** the decomposition producer applies what look like compose-eligibility refusals to decomposition. The mechanism is being read, and it is a candidate for CHANGE-37.
+        - **USER RULINGS on the order and on D2 step 3** (qa session, 2026-10-16T19:59:54Z, relayed by qa; confirmed in the docs session at 20:03:46Z):
+          - **31 and CHANGE-32a move up.** They land right after RUN 1's queued landings and ahead of CHANGE-34 and the rest of the 10:49:59Z order. Both are gated clean. The reason: since 12:00Z, the livelock pair took 133 of 144 check-supply picks and 43 compose runs, which starves every other gap.
+          - **CHANGE-36a and 36b land when gated,** with 36a's judge scope entry in the same act.
+          - **D2 step 3 is allowed through the freeze** as one single-file executor change: a shaped per-task timeout with the default unchanged, through the full process, after steps 1–2 land. It must remove the blocker in which a resolve is aborted after 10 s while compose needs up to 900 s.
+        - **Gate catches:** the whole-suite gate caught R9 importing a residue module into the closed judge core, and R6 interpolating a bare value into shell commands. Both were fixed and restacked; R6's golden change is the quoting only.
+        - **No code has landed since RUN 1.** CHANGE-30's walk-service part was refused at the push guard on a lease with no edit site, and the retry is with the user.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
