@@ -115,11 +115,19 @@ manifest_vessel() {
 # 9c39f411 (09-17) the image bakes human-surface-vessel's source and enables its unit at build, so on a node with no /etc
 # render this test (an /etc file only) skipped a RUNNING vessel every tick: never health-checked, never recovered (the
 # human surface, on two of three nodes). A manifest vessel is not installed only when nothing can run it: no rendered
-# unit, AND the baked unit is not enabled or has no source under /vessels. metric-collector-vessel (source baked, unit
-# not enabled) still waits for vessel-ctl install; a baked unit with no source (the 08-07 case) still waits.
+# unit, AND the baked unit is not enabled or cannot start. metric-collector-vessel (source baked, unit not enabled)
+# still waits for vessel-ctl install; a baked unit with no source (the 08-07 case) still waits.
+# "Cannot start" is the unit's OWN WorkingDirectory missing: that is the chdir the 08-07 unit looped on, and it is what
+# systemd renders from the manifest's workdir. Keying the source by /vessels/<unit> instead missed every vessel whose
+# source is elsewhere: federation-transport-vessel (and federation-relay) run from the super-repo's federation-relay
+# dir, so the transport was skipped as NOT INSTALLED while enabled and running, on two nodes (2026-10-16).
+# An empty WorkingDirectory falls back to /vessels/<unit>, the $RUNTIME default.
 not_installed() {
   csh "[ -f /etc/systemd/system/$1.service ]" 2>/dev/null && return 1
-  if csys is-enabled --quiet "$1" 2>/dev/null && csh "[ -d /vessels/$1 ]" 2>/dev/null; then return 1; fi
+  csys is-enabled --quiet "$1" 2>/dev/null || return 0
+  local wd; wd="$(csys show -p WorkingDirectory --value "$1" 2>/dev/null)"
+  [ -n "$wd" ] || wd="/vessels/$1"
+  csh "[ -d '$wd' ]" 2>/dev/null && return 1
   return 0
 }
 # Still inside its own start phase (2026-08-03): a unit running ExecStartPre/
