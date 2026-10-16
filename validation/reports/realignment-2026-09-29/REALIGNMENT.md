@@ -2136,6 +2136,14 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           8. the decay detector.
 
           A fresh-draw run follows each landing.
+        - **Order change (qa and the coordinator, about 06:00Z): localization moves behind the verification-failure root and the floor's read tools.** Siting already reaches compose through the edit site. Nothing produces a localization record or acts on one, so a producer alone would be a hollow write. It becomes one producer-and-consumer change later.
+          - **The new order:** run 0, the gap-store read, the verification-failure root, the floor's read tools, localization (producer and consumer), target inference and satisfier choice, the closure-counting remainder, compose through the walk, then the decay detector.
+        - **The gap-store read, decided:**
+          - **No code decay.** The gap-store holder's event-loop stalls grew from 4 to about 300 a day over three days, and every read re-parses the whole gap file, uncached. The night's only gate-passing draft died on that read's timeout.
+          - **It was never retried, because two definitions of "deferred" contradict each other:** the cutover keeps the staged tree for a retry, while compose deletes it and charges a failed attempt.
+          - **The change:** one definition of deferred, with the error detail logged. The holder stall is **measured before anything is built.**
+        - **A recurrence (law 7, durability):** a pinned dispatch, sent by a hardcoded template id about every 3 minutes, was refused 92 times in 6 hours. The gap that named it was closed on 09-26 with no reason and no landing. It is reopened with the evidence, as a (c) item under the 10-16 ruling.
+        - **Parked for the user:** whether the scope-floor read may keep its last good scope for a bounded time. That is containment-adjacent. The safe variant uses a stale scope only to refuse, never to admit.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
