@@ -2579,6 +2579,12 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **A goal truncated at its head (1),** already filed.
           - Also found: the reframe tries only its first alternative, retries adapt only after write-rule failures, and once the judge gave the same answer opposite verdicts.
         - **USER RULING (qa session, 2026-10-16T22:56:41Z, relayed by qa): "Yes, J1-J4 + judge check."** The four judge-miss items and a check of the judge's own consistency go through the process. They are ranked after the information items and before RUN 2, with design due by 2026-10-17T10:00Z.
+        - **LATEST-BY dates to settlement** (set by qa; recorded 2026-10-16T22:58:14Z):
+          - **J1–J4 and the judge check:** design by 2026-10-17T10:00Z, built and gated by 22:00Z, landed by 23:00Z.
+          - **RUN 2** (a fresh seeded draw with paraphrase pairs and two attempts): its preconditions are the walk-service chain, CHANGE-37, I1, I4, I3 and J1–J4 all landed and converged, plus a clean plane check. **Earliest T0 is 2026-10-18T00:00Z,** with the hard close at 03:00Z and the reading by 04:00Z. That leaves about 3 h of margin before the 07:12Z settlement. If any precondition slips, T0 slips with it, and the record names which one.
+          - **D4 (novel shape)** runs as its own short demonstration after the composite-authoring restore lands (by 02:00Z), from about 02:30Z to 04:30Z, in parallel with RUN 2's reading.
+          - **D2 (closure)** runs over a window, gated by I5a′ (gated by 2026-10-17T18:00Z), not inside RUN 2.
+          - **Stated risk:** one coordinator builds and gates everything through shared gate slots. The slip most likely to move T0 is the J items, which are the newest.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
