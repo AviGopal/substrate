@@ -2414,6 +2414,9 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
         - **Gaps filed:**
           - the check-supply sender dispatches gaps with no edit site, which admission refuses by construction;
           - a guard on the check-supply ledger can be bypassed.
+        - **The CHANGE-35 set is fully LANDED** (operator; recorded 2026-10-16T12:08:46Z). Its development-vessel part was pushed at 2026-10-16T12:08:14Z (fd4be09a..e2fd1582, verified by docs on that repository's dev), with all guards passing. It is the existing decomposition writer advertised as gapDecomposition, with the two builders sending the gap id structured.
+          - It went out under the file-disjoint ruling, because the lane's live lease was on an untouched test file. It used a gap between the coordinator's gate runs, by a handshake.
+          - With the walk-service part (11:06:36Z) and the boredom part (11:06:41Z), the set is complete. **RUN 1 starts when it converges,** on a freshly frozen frame and a fresh seed.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
