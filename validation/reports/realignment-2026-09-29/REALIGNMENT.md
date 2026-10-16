@@ -2154,6 +2154,10 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **CHANGE-21b:** the contention threshold is live, at 30.
         - **DECIDED, the gap-store read path (built with CHANGE-30):** one read-path snapshot keyed on the gap file's identity, so a read by id no longer re-parses the 21.6 MB file. Writers are unchanged.
         - **RUN 0** (the random-goal baseline) runs once CHANGE-26 and the development-vessel push carrying CHANGE-22, -27 and -28 converge. Its pre-registered reading will name the frame commit, the seed, the 20 drawn goals (described generically), the attempts per goal, and the gate and trust verdicts.
+          - **Pre-registration amendment 1** (written 2026-10-16T06:00:17Z, before any frame enumeration or draw; relayed by qa). The original text did not fix which node each goal is dispatched to. Left open, the choice of node could flatter the result, because one node resolves several write and report shapes through peers that refuse them (105 refusals in 24 hours). The rule is now fixed:
+            - a real-traffic goal goes to the node it was originally sent to (the earliest occurrence, if both);
+            - an open-gap goal gets a drawn node (an even index goes to the first node, an odd one to the second);
+            - readings are reported per node as well as overall, so a break on one node shows as that.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
