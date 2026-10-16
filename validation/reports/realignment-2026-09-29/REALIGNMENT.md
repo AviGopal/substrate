@@ -2290,6 +2290,22 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **DB3:** the next recommend call reads through the cache.
         - **RUN 0 has not started.** Convergence of the development-vessel push is held. One node's landing test gate was killed at its 284-second wall under load (07:46:54Z, blind, held) and has been re-running since 07:52:38Z. The other node's gate has been running since 07:43:06Z. T0 waits for both to converge and for host load below about 10. Operator gates, a large share of that load, are paused for RUN 0.
         - **CHANGE-21, a note by effect:** its contention check runs and reads its threshold every tick. But at each tick's start the pressure was below 30%, and the load rose during the run. **A design limit:** admission at start time cannot foresee load that arrives mid-run. There is no positive control yet.
+        - **RUN 0 STARTED** (relayed by qa; recorded 2026-10-16T08:13:55Z).
+          - **T0 = 2026-10-16T08:13:05Z**, the first attempt-1 dispatch (accepted, 202). **The hard close is 12:13:05Z** (amendment 4).
+          - **The preconditions were met:** CHANGE-26 converged; the development-vessel push converged on both nodes (one at 07:58Z, the other at about 08:11Z, after two gate runs were killed under load, the second attributed to operator gate load); no qa push was pending; host load was about 6, and CPU pressure about 1%.
+          - **The LLM plane is degraded but working.** One provider answers 402 (out of credit), failover covers it, and 48 judgements succeeded in the 20 minutes before. The judge-null rate inside the window will be reported.
+          - **The draw,** recorded in the pre-registration before any dispatch:
+            - seed `5fd2b6021f580a2b5a05f3f95283cc4e2111c6497f04d5d0f698724b060ea606`, from the OS random source;
+            - frame 231d5a27…;
+            - S1 indices [115, 7, 95, 88, 66, 25, 1, 84, 36, 18, 98, 73, 75, 121];
+            - S2 indices [1771, 2017, 783, 2008, 291, 906].
+
+            No goal was flagged and none replaced. 16 goals went to one node and 4 to the other.
+          - **What was drawn,** described generically:
+            - 4 human questions (weather, identity, location, and a network-location question);
+            - 5 of the walk service's own "investigate the gap before composing" asks;
+            - 5 operator-tagged investigate-or-decompose asks;
+            - 6 open-gap investigations.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
