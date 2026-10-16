@@ -2306,6 +2306,27 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
             - 5 of the walk service's own "investigate the gap before composing" asks;
             - 5 operator-tagged investigate-or-decompose asks;
             - 6 open-gap investigations.
+        - **RUN 0, THE FINAL READING** (pre-registered; relayed by qa; recorded 2026-10-16T09:48:11Z). The window ran from 08:13:05Z to 09:46:53Z. All 20 goals reached a terminal state after attempt 2, well inside the hard close.
+          - **Success** (the gate says reached AND the trust check passes): **1 of 20 at attempt 1, and 1 of 20 by attempt 2, which is 5%** (95% Wilson interval about 0.9% to 23.6%).
+            - **The target of 20 of 20: NOT MET.** The contract floor of about 90%: NOT MET.
+            - **Attempt 2 added nothing:** 19 goals were retried and 0 reached. **With learning on, attempt 2 chose the same targets and failed the same way.** Target inference has no learned selection, so the system did not adapt between attempts.
+          - **By stratum and node:** real traffic, 1 of 13 on one node and 0 of 1 on the other; open gaps, 0 of 3 and 0 of 3.
+          - **Instrument checks:** 0 front-door non-attempts; 0 coalesced dispatches; 0 disagreements between the gate and the trust check. The one reach passed the trust check, but weakly: a literal location answer with one wrong intermediate claim.
+          - **The failure classes** (attempt 1 / attempt 2):
+            - **A** (8 / 7): the system's own gap-investigation goals have no grader, and they write nothing onto the gap.
+            - **B** (8 / 9): read and question goals were given write targets, then failed for "no artifact".
+            - **C** (2 / 2): the fallback loop had no tool for the question (a name; a network location).
+            - **E** (1 / 1): an edit-intent compose was refused, first for a no-effect region, then for no unique anchor.
+          - **Null verdicts** were deterministic oracle abstentions (class A), not LLM failures. One model provider was out of credit, and failover covered it.
+          - **The excluded class** (check-supply goals, 31.8% of raw traffic) is not tested here.
+          - **Confounds:** one 20-second operator verification at nice 19 (08:33:17Z to 08:33:37Z), and a collector fault that lost no data. There was no operator push inside the window.
+          - **The next breaks** (all built code-only, and re-gating now):
+            - **A → CHANGE-35:** a product path through the existing decomposition writer, plus an outcome oracle that counts only the children this run created.
+            - **B → A2a:** question goals drop mutation targets, with a shape-identifier rule on every vocabulary feed. **A2b,** a learned target selection, comes later.
+            - **C → CHANGE-29,** with A2.
+            - **E → R4 and R1.**
+          - A prose "shape" name advertised by a substrate-authored resolver was found and filed as a gap.
+          - **Pending a user answer:** qa has proposed moving CHANGE-35 and A2a to just after R1.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
