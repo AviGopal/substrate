@@ -57,20 +57,17 @@ sequenceDiagram
     else Cold
         Proxy->>Disc: POST /resolve<br/>{pointer: {type: "vesselCapability", shape}}
         Disc-->>Proxy: content.vessels[] (endpoint, resolve_endpoint,<br/>protocol, libp2p_multiaddr, peerEndpoint)
-        alt resolve_endpoint is absolute (http/https)
-            Proxy->>Proxy: use its origin + path
-        else protocol = libp2p with a multiaddr
+        Note over Proxy: takes the first discovery row
+        alt protocol = libp2p with a multiaddr
             Proxy->>Proxy: route via federation egress<br/>/egress/resolve?target=<multiaddr>
         else peer row with a non-loopback http(s) endpoint
             Proxy->>Proxy: use the row's own endpoint + resolve_endpoint<br/>(discovery re-homes a peer's loopback rows onto the peer host)
-        else peer row with a peerEndpoint but no dialable endpoint
+        else peer row with a peerEndpoint
             Proxy->>Proxy: use peerEndpoint + resolve_endpoint
-        else peer row with no peerEndpoint
-            Proxy->>Proxy: route via federation egress<br/>/egress/resolve?vessel=<vesselId>
-        else direct
+        else otherwise
             Proxy->>Proxy: use endpoint + resolve_endpoint<br/>(default /v2/impulses/resolve)
         end
-        Note over Proxy: peerEndpoint is the peer's discovery URL. It is used only<br/>for a peer row with no dialable endpoint of its own, and<br/>discovery serves no impulse resolve route there (a known residual).<br/>Own-substrate rows are tried first in the walk's producer pick,<br/>not on this proxy path, which takes the first discovery row.
+        Note over Proxy: peerEndpoint is the peer's discovery URL. It is used only<br/>for a peer row with no dialable endpoint of its own, and<br/>discovery serves no impulse resolve route there (a known residual).<br/>Own-substrate rows come first in the registry cache (the warm<br/>path and the walk's pick); the cold path takes the first discovery row.
     end
 
     Proxy->>Vessel: POST {endpoint}{resolvePath}<br/>{impulse: {pointer}}
