@@ -2112,6 +2112,19 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - success is graded reached **and** passes the trust check;
           - the window has learning on, no operator commits inside it, and is pre-registered before reading.
         - **The target: every goal reaches by its second attempt.**
+        - **PRE-REGISTERED by qa at 2026-10-16T05:50:43Z, before any draw (recorded here at 2026-10-16T05:51:32Z):**
+          - **The random source:** the sampling frame is enumerated and frozen, with a hash, before the draw. The seed comes from the OS random source at draw time, and is recorded with the drawn indices before the first dispatch. There are 20 goals per run, drawn without replacement:
+            - **14 from real traffic:** distinct goal texts sent to the walk service in the 7 days before the freeze, from external sources. Excluded by rule: internal maintenance ticks, earlier probe texts, and duplicates.
+            - **6 from the system's own open gaps,** each posed as the walk's own "investigate and decompose gap" ask.
+          - **Replacement** is only for goals that would move secrets or destroy something, and the reason is listed. Hard goals are never replaced. Hand-picked sets are excluded.
+          - **An attempt is one dispatch,** with in-run retries counted inside it. A second attempt uses the same text, at least 20 minutes later, and only for goals that did not succeed. There is no third attempt.
+          - **Success** is reached **and** the trust check, which judges the content against the goal text's own criterion. False and hollow reaches count as failures.
+          - **Learning is on** (a declared deviation from the observe-mode rule for probes).
+          - **The window:** no operator push inside it, and pushes by anyone else are logged as confounds. Landings by the lane are allowed and logged.
+          - **The readings:** for each goal, its stratum, draw index, attempts, the gate verdict, the trust verdict, and its failure class. Also the fraction that succeeds at attempt 1 and by attempt 2, with denominators and 95% Wilson intervals, per stratum.
+          - **The target is 20 of 20 by attempt 2.** The contract floor of about 90% is reported alongside, and every goal that fails is named as a next break.
+          - **The schedule:** run 0 after the current pushes converge, then a new run with a fresh frame and seed after each landing.
+        - **The build order** (qa and the coordinator): the gap-store read, then the localization contract (one definition), then the lane's verification failures, then the floor's read tools from discovery, then compose through the walk.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
