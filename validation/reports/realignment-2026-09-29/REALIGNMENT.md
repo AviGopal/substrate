@@ -2284,6 +2284,12 @@ Surgery is allowed on links. Each act is recorded with the link it carried, and 
           - **R4's golden:** 2 of 21 fixtures gain exactly one new field (the lock's edit fingerprint). qa approved this as a named fixture re-record in the commit.
           - **CHANGE-31's development-vessel suite ran blind.** It timed out under load, partly from the builder's own concurrent runs. It re-runs after RUN 0, on a quiet host.
         - **A live reading** (relayed by qa): the trace store has drained to its protected floor, about 218,000 rows from 396,000. Database p99 went from 8.1 s to 0.69 s, and the metrics endpoint's p95 from 4.8 s to 0.32 s.
+        - **DECIDED, caps for the database fixes** (qa; recorded 2026-10-16T07:56:22Z), effect-based and each 1 hour:
+          - **DB1:** the next lifecycle run writes a counter and no full trace. **Its must-fail:** an anomalous lifecycle run (a failure, or degraded output) still writes its full trace. **The control:** a normal run writes only the counter.
+          - **DB2:** the next trace ingest shows one transaction for its posterior deltas.
+          - **DB3:** the next recommend call reads through the cache.
+        - **RUN 0 has not started.** Convergence of the development-vessel push is held. One node's landing test gate was killed at its 284-second wall under load (07:46:54Z, blind, held) and has been re-running since 07:52:38Z. The other node's gate has been running since 07:43:06Z. T0 waits for both to converge and for host load below about 10. Operator gates, a large share of that load, are paused for RUN 0.
+        - **CHANGE-21, a note by effect:** its contention check runs and reads its threshold every tick. But at each tick's start the pressure was below 30%, and the load rose during the run. **A design limit:** admission at start time cannot foresee load that arrives mid-run. There is no positive control yet.
       - **CHANGE-04 and CHANGE-05, and the learning reading (recorded 2026-10-15T05:20:20Z; ruling times from the transcript):**
         - **CHANGE-04, culpability** (user ruling 03:45:44Z; pushed about 04:04Z; gate green).
           - **The history:** an earlier change reused success-credit's rule that "a receipt is not work" for failure-charging. So a step that claims a read deliverable but returns only a receipt escaped blame.
